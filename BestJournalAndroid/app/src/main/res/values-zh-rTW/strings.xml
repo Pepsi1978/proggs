@@ -1146,4 +1146,46 @@
     <string name="legal_title_datenschutz">隱私政策</string>
     <string name="legal_title_nutzungsbedingungen">使用條款</string>
     <string name="legal_title_impressum">法律資訊</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">歡迎使用 Best Journal</string>
+    <string name="consent_welcome_intro">開始前，我們先在這裡快速設定你的隱私偏好。</string>
+    <string name="consent_promise_local">隱私法規要求取得你的同意。</string>
+    <string name="consent_promise_no_training">你在這裡決定哪些功能處於啟用狀態。</string>
+    <string name="consent_promise_optional_ai">可隨時在「設定」中變更。</string>
+    <string name="consent_btn_manual_selection">手動選擇</string>
+    <string name="privacy_sheet_title">自訂隱私</string>
+    <string name="privacy_sheet_subtitle">按照適合你的方式個別啟用功能。所有設定都可隨時變更。</string>
+    <string name="privacy_sheet_save">儲存選擇</string>
+    <string name="privacy_sheet_all_on">全部開啟</string>
+    <string name="privacy_sheet_all_off">全部關閉</string>
+    <string name="consent_toggle_analytics_title">匿名使用分析</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 協助我們改善應用程式。沒有個人內容，僅匿名點擊次數。資料傳輸：Google 美國（Data Privacy Framework）。</string>
+    <string name="consent_toggle_groq_title">語音轉文字（Groq Whisper）</string>
+    <string name="consent_toggle_groq_body">支援口述項目。你的語音錄音會加密傳送至 Groq（美國），轉換為文字後刪除。你的錄音不會用於訓練。</string>
+    <string name="consent_toggle_gemini_title">AI 反思（Google Gemini）</string>
+    <string name="consent_toggle_gemini_body">儀表板 AI、摘要、回顧和文字改善。將文字片段傳送至 Google Gemini（美國）。你的項目不會用於訓練。</string>
+    <string name="consent_toggle_tts_title">朗讀（Microsoft Edge TTS）</string>
+    <string name="consent_toggle_tts_body">以自然聲音朗讀項目。將文字傳送至 Microsoft（美國）。替代方案：離線系統 TTS。</string>
+    <string name="consent_toggle_drive_title">Google 雲端硬碟備份</string>
+    <string name="consent_toggle_drive_body">將項目加密儲存到你自己的 Google 雲端硬碟。你保有完全控制權 — 檔案在你的帳戶中，不在我們這裡。</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">加州選擇退出（CCPA/CPRA 2026）。啟用時，所有選用資料處理均停用 — 僅保留本地功能。</string>
+    <string name="consent_btn_accept_all">全部接受</string>
+    <string name="consent_btn_save_selection">儲存我的選擇</string>
+    <string name="consent_btn_minimum_only">全部拒絕</string>
+    <string name="consent_saved_snackbar">設定已儲存</string>
+    <string name="consent_revoke_snackbar">已撤回同意</string>
+    <string name="consent_footer_version">你的選擇可隨時在「設定」中變更。</string>
+    <string name="consent_details_expand">詳細資訊</string>
+    <string name="settings_open_privacy_sheet">自訂隱私設定</string>
+    <string name="settings_privacy_section_header">隱私與同意</string>
+    <string name="settings_ai_groq_title">語音轉文字（Groq）</string>
+    <string name="settings_ai_groq_subtitle">將語音錄音傳送至 Groq 美國進行轉錄</string>
+    <string name="settings_ai_gemini_title">AI 反思（Gemini）</string>
+    <string name="settings_ai_gemini_subtitle">將文字傳送至 Google 美國以產生 AI 摘要</string>
+    <string name="settings_ai_tts_title">朗讀（Edge TTS）</string>
+    <string name="settings_ai_tts_subtitle">將文字傳送至 Microsoft 美國以進行語音輸出</string>
+    <string name="settings_drive_backup_title">Google 雲端硬碟備份</string>
+    <string name="settings_drive_backup_subtitle">將項目加密儲存到你的雲端硬碟</string>
 </resources>
