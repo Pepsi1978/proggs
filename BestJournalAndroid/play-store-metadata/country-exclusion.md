@@ -121,4 +121,24 @@ MX (Spanisch empfohlen), AR, CL, CO, PE, KE, NG, EG, MA, AE, IL, ID (Bahasa empf
 **Meine Empfehlung:** Option A für Release 0.5.1, bis französische Rechtstexte vorhanden sind.
 Wenn später ROI rechtfertigt, französische PRIVACY.fr/TERMS.fr/IMPRINT.fr erstellen und auf Option B wechseln.
 
-**Entscheidung Benutzer:** ⬜ Option A  ⬜ Option B  (auszufüllen vor Play-Console-Upload)
+**Entscheidung Benutzer (2026-04-21):** ☑ **Option A — Kanada komplett ausschließen**
+⬜ Option B
+
+### Geplantes späteres Kanada-Update (NICHT in 0.12.30)
+
+Nach dem initialen Release soll Kanada in einer späteren dedizierten Session rechtssicher freigegeben werden.
+**Für diese spätere Session ist geplant:**
+
+1. `values-fr-rCA/strings.xml` erstellen (Quebec-spezifische Terminologie, z.B. „courriel" statt „e-mail")
+2. Französische Rechtstexte erstellen:
+   - `app/src/main/assets/legal/fr/PRIVACY.md` (inkl. Loi 25/96-spezifischer Abschnitte)
+   - `app/src/main/assets/legal/fr/TERMS.md`
+   - `app/src/main/assets/legal/fr/IMPRINT.md`
+3. `LegalDocumentScreen` für französische Locale verdrahten
+4. DPO (Data Protection Officer) bestimmen und in PRIVACY.fr kontaktbar machen
+5. Consent-Screen auf Französisch testen
+6. CAI-Meldepflichten bei Datenschutzverletzungen dokumentieren
+7. Play Console: CA aktivieren, Quebec-Nutzern französische Version ausliefern
+
+**Trigger für diese Session:** Benutzer sagt „wir machen jetzt das Kanada-Update" oder ähnlich.
+**Tomorrow-Continue-Memory:** `project_quebec_canada_future_update.md`
