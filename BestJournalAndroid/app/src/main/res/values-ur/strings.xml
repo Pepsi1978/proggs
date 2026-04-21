@@ -1151,4 +1151,46 @@
     <string name="legal_title_datenschutz">رازداری کی پالیسی</string>
     <string name="legal_title_nutzungsbedingungen">استعمال کی شرائط</string>
     <string name="legal_title_impressum">قانونی معلومات</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal میں خوش آمدید</string>
+    <string name="consent_welcome_intro">شروع کرنے سے پہلے، آئیے یہاں جلدی سے آپ کی پرائیویسی ترجیحات سیٹ کریں۔</string>
+    <string name="consent_promise_local">پرائیویسی قوانین آپ کی رضامندی کا تقاضا کرتے ہیں۔</string>
+    <string name="consent_promise_no_training">کون سے فیچرز فعال ہوں گے، آپ یہاں فیصلہ کرتے ہیں۔</string>
+    <string name="consent_promise_optional_ai">ترتیبات میں کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="consent_btn_manual_selection">دستی انتخاب</string>
+    <string name="privacy_sheet_title">پرائیویسی کو حسب ضرورت بنائیں</string>
+    <string name="privacy_sheet_subtitle">اپنی سہولت کے مطابق انفرادی فیچرز کو فعال کریں۔ سب کچھ کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="privacy_sheet_save">انتخاب محفوظ کریں</string>
+    <string name="privacy_sheet_all_on">سب آن</string>
+    <string name="privacy_sheet_all_off">سب آف</string>
+    <string name="consent_toggle_analytics_title">گمنام استعمال تجزیہ</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ایپ کو بہتر بنانے میں ہماری مدد کرتا ہے۔ کوئی ذاتی مواد نہیں، صرف گمنام ٹیپ گنتی۔ ڈیٹا منتقلی: Google USA (Data Privacy Framework)۔</string>
+    <string name="consent_toggle_groq_title">تقریر سے متن (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">اندراجات کو املا کرنے کی اجازت دیتا ہے۔ آپ کی آواز کی ریکارڈنگ خفیہ کردہ شکل میں Groq (USA) کو بھیجی جاتی ہے، متن میں تبدیل کی جاتی ہے، پھر حذف کر دی جاتی ہے۔ آپ کی ریکارڈنگز تربیت کے لیے استعمال نہیں ہوتیں۔</string>
+    <string name="consent_toggle_gemini_title">AI عکس (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ڈیش بورڈ AI، خلاصے، جائزے اور متن کی بہتری۔ متن کے ٹکڑے Google Gemini (USA) کو بھیجتا ہے۔ آپ کے اندراجات تربیت کے لیے استعمال نہیں ہوتے۔</string>
+    <string name="consent_toggle_tts_title">بلند آواز سے پڑھنا (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">قدرتی آواز میں اندراجات پڑھتا ہے۔ متن کو Microsoft (USA) کو بھیجتا ہے۔ متبادل: آف لائن سسٹم TTS۔</string>
+    <string name="consent_toggle_drive_title">Google Drive بیک اپ</string>
+    <string name="consent_toggle_drive_body">اندراجات کو خفیہ کردہ شکل میں آپ کے اپنے Google Drive میں محفوظ کرتا ہے۔ آپ مکمل کنٹرول برقرار رکھتے ہیں — فائل آپ کے اکاؤنٹ میں ہے، ہمارے پاس نہیں۔</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">کیلیفورنیا آپٹ آؤٹ (CCPA/CPRA 2026)۔ جب فعال ہو، تمام اختیاری ڈیٹا پروسیسنگ غیر فعال کر دی جاتی ہے — صرف مقامی فیچرز باقی رہتے ہیں۔</string>
+    <string name="consent_btn_accept_all">سب قبول کریں</string>
+    <string name="consent_btn_save_selection">میرا انتخاب محفوظ کریں</string>
+    <string name="consent_btn_minimum_only">سب مسترد کریں</string>
+    <string name="consent_saved_snackbar">ترتیب محفوظ ہو گئی</string>
+    <string name="consent_revoke_snackbar">رضامندی واپس لے لی گئی</string>
+    <string name="consent_footer_version">آپ کا انتخاب ترتیبات میں کسی بھی وقت تبدیل کیا جا سکتا ہے۔</string>
+    <string name="consent_details_expand">تفصیلات</string>
+    <string name="settings_open_privacy_sheet">پرائیویسی ترتیبات کو حسب ضرورت بنائیں</string>
+    <string name="settings_privacy_section_header">پرائیویسی اور رضامندیاں</string>
+    <string name="settings_ai_groq_title">تقریر سے متن (Groq)</string>
+    <string name="settings_ai_groq_subtitle">نقل کے لیے Groq USA کو آواز کی ریکارڈنگ بھیجیں</string>
+    <string name="settings_ai_gemini_title">AI عکس (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI خلاصوں کے لیے Google USA کو متن بھیجیں</string>
+    <string name="settings_ai_tts_title">بلند آواز سے پڑھنا (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">آواز کی آؤٹ پٹ کے لیے Microsoft USA کو متن بھیجیں</string>
+    <string name="settings_drive_backup_title">Google Drive بیک اپ</string>
+    <string name="settings_drive_backup_subtitle">اپنے Drive میں خفیہ کردہ اندراجات محفوظ کریں</string>
 </resources>
