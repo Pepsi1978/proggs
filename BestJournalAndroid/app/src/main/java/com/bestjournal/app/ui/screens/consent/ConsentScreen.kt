@@ -43,7 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,12 +107,12 @@ fun ConsentScreen(
     }
 
     // Current toggle state (starts all off — EDSA 03/2023 default).
-    val analyticsOn by viewModel.analyticsEnabled.collectAsState()
-    val groqOn by viewModel.groqEnabled.collectAsState()
-    val geminiOn by viewModel.geminiEnabled.collectAsState()
-    val ttsOn by viewModel.ttsEnabled.collectAsState()
-    val driveOn by viewModel.driveBackupEnabled.collectAsState()
-    val doNotSellOn by viewModel.doNotSellEnabled.collectAsState()
+    val analyticsOn by viewModel.analyticsEnabled.collectAsStateWithLifecycle()
+    val groqOn by viewModel.groqEnabled.collectAsStateWithLifecycle()
+    val geminiOn by viewModel.geminiEnabled.collectAsStateWithLifecycle()
+    val ttsOn by viewModel.ttsEnabled.collectAsStateWithLifecycle()
+    val driveOn by viewModel.driveBackupEnabled.collectAsStateWithLifecycle()
+    val doNotSellOn by viewModel.doNotSellEnabled.collectAsStateWithLifecycle()
 
     var showSheet by remember { mutableStateOf(false) }
     val isExiting = remember { mutableStateOf<ExitMode?>(null) }

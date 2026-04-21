@@ -827,7 +827,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
 
                         item(key = "relevance_legend") { SummaryRelevanceLegend() }
 
-                        // All observations sorted by relevance
+                        // All observations sorted by relevance (remembered to skip re-computation on every recompose)
                         val allObservations =
                             blocks
                                 .flatMap { block ->

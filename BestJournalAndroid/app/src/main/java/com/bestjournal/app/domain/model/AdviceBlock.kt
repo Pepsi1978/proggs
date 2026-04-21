@@ -1,5 +1,8 @@
 package com.bestjournal.app.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class AdviceBlock(
     val id: Long = 0,
     val categoryName: String,
@@ -14,6 +17,7 @@ data class AdviceBlock(
     val basedOnEntryCount: Int
 )
 
+@Immutable
 data class Advice(
     val title: String,
     val description: String,
@@ -22,11 +26,13 @@ data class Advice(
     val derivation: List<DerivationEntry> = emptyList()
 )
 
+@Immutable
 data class DerivationEntry(
     val date: String,
     val summary: String
 )
 
+@Immutable
 data class TopAction(
     val title: String,
     val description: String,

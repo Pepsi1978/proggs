@@ -11,6 +11,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -1062,12 +1064,12 @@ private fun SummaryDetailDialog(
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier =
-                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        // Performance: LazyRow with stable keys — only visible photos are composed and load their bitmaps
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            photos.forEach { photo ->
+                            items(photos, key = { it.filePath }) { photo ->
                                 Box {
                                     AsyncImage(
                                         model = photo.filePath,
