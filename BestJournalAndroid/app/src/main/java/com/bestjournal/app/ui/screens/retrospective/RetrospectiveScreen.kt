@@ -287,6 +287,15 @@ fun RetrospectiveScreen(
                         )
                     }
                 }
+                // Last-updated timestamp (same format + string resource as Dashboard)
+                val lastUpdated = remember(weekly, monthly, yearly) { viewModel.getLastUpdatedText() }
+                if (lastUpdated != null) {
+                    Text(
+                        text = lastUpdated,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Scrollable content

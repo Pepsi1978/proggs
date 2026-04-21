@@ -281,6 +281,32 @@ constructor(
     }
 
     /**
+     * Returns a localized "Letzte Aktualisierung am <timestamp>" text for the newest
+     * retrospective summary, or null if no summaries exist yet. Reuses the exact string
+     * resource and format used by the Dashboard so both screens stay visually consistent
+     * and we reuse the existing 26-language translations.
+     */
+    fun getLastUpdatedText(): String? {
+        val newest =
+            (weeklySummaries.value + monthlySummaries.value + yearlySummaries.value)
+                .maxByOrNull { it.createdAt }
+                ?: return null
+        val locale = java.util.Locale.getDefault()
+        val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMHHmm")
+        val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
+        val formatted =
+            java.time.ZonedDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(newest.createdAt),
+                    java.time.ZoneId.systemDefault(),
+                )
+                .format(formatter)
+        return context.getString(
+            com.bestjournal.app.R.string.dashboard_last_updated,
+            formatted,
+        )
+    }
+
+    /**
      * Called whenever the user re-enters the Retrospective screen. Checks the profile-change flag
      * and triggers a full regeneration if the user switched dashboard scenarios since last visit.
      */
