@@ -908,7 +908,34 @@ fun SettingsScreen(
                                     soundsPrefs
                                         .edit()
                                         .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
-                                        .commit()
+                                        .apply()
+                                    // Keep the Edge-TTS privacy consent in sync with the
+                                    // user-facing switch. On → consent granted + locale
+                                    // default voice selected if none. Off → implicit
+                                    // withdrawal under DSGVO Art. 7 Abs. 3.
+                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                                        context,
+                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService.EdgeTts,
+                                        enabled,
+                                    )
+                                    if (enabled &&
+                                        soundsPrefs.getString(
+                                            Constants.PREF_EDGE_TTS_VOICE,
+                                            null,
+                                        ).isNullOrBlank()
+                                    ) {
+                                        val defaultVoice =
+                                            com.bestjournal.app.util.TtsVoiceRegistry
+                                                .getLocaleVoices()
+                                                .defaultVoiceId
+                                        soundsPrefs
+                                            .edit()
+                                            .putString(
+                                                Constants.PREF_EDGE_TTS_VOICE,
+                                                defaultVoice,
+                                            )
+                                            .apply()
+                                    }
                                 },
                                 colors =
                                     SwitchDefaults.colors(
