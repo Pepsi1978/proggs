@@ -167,9 +167,19 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                             currentRoute = mainPages[pagerState.currentPage].route,
                             onItemClick = { item ->
                                 val targetPage = mainPages.indexOf(item)
-                                if (targetPage >= 0) {
+                                if (targetPage >= 0 && targetPage != pagerState.currentPage) {
                                     coroutineScope.launch {
-                                        pagerState.animateScrollToPage(targetPage)
+                                        // Fixed-duration tween instead of default spring —
+                                        // programmatic scroll no longer tries to fling based
+                                        // on distance, which eliminated the frame drop when
+                                        // tapping between tabs (distance >= 1 page).
+                                        pagerState.animateScrollToPage(
+                                            page = targetPage,
+                                            animationSpec = tween(
+                                                durationMillis = 300,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                        )
                                     }
                                 }
                             },
