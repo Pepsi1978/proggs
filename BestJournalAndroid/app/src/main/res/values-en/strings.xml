@@ -1075,6 +1075,19 @@
     <string name="consent_disable_stats">Disable statistics and continue</string>
     <string name="consent_confirmation">By tapping \"Agree and get started\" you confirm that you have read the Privacy Policy, the Terms of Use and the Imprint, and that you agree to the data processing described. You can change your decision at any time in settings.</string>
 
+    <!-- Consent-Screen v4: friendly welcome + layered consent -->
+    <string name="consent_welcome_title">Welcome to Best Journal</string>
+    <string name="consent_welcome_intro">Your journal is a private space. So you can start in peace, here\'s a quick and honest overview of what you should know.</string>
+    <string name="consent_promise_local">All entries stay on your device — always.</string>
+    <string name="consent_promise_no_training">Your data is NEVER used to train AI models.</string>
+    <string name="consent_promise_optional_ai">AI features are optional — you decide.</string>
+    <string name="consent_btn_manual_selection">Manual selection</string>
+
+    <!-- Detail sheet: Privacy Preferences (reused in Consent + Settings) -->
+    <string name="privacy_sheet_title">Customize privacy</string>
+    <string name="privacy_sheet_subtitle">Enable individual features however it suits you. Everything can be changed any time.</string>
+    <string name="privacy_sheet_save">Save selection</string>
+
     <!-- Consent-Screen v3: granular toggles (Phase A) -->
     <string name="consent_section_essential">Required (always on)</string>
     <string name="consent_section_optional">Optional features — your choice</string>
@@ -1103,6 +1116,9 @@
     <string name="consent_revoke_snackbar">Consent revoked</string>
     <string name="consent_footer_version">Privacy policy v%1$s · All settings changeable any time in Settings.</string>
     <string name="consent_details_expand">Details</string>
+
+    <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
+    <string name="settings_open_privacy_sheet">Customize privacy settings</string>
 
     <!-- Settings-Screen v3: granular toggles + revoke button -->
     <string name="settings_privacy_section_header">Privacy &amp; Consents</string>

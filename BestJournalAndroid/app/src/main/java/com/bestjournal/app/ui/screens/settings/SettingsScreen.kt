@@ -2479,6 +2479,7 @@ fun SettingsScreen(
                 }
                 var showDeleteDialog by remember { mutableStateOf(false) }
                 var showRevokeAllDialog by remember { mutableStateOf(false) }
+                var showPrivacySheet by remember { mutableStateOf(false) }
                 val consentTimestamp =
                     privacyPrefs.getLong(Constants.PREF_CONSENT_TIMESTAMP, 0L)
                 val consentPolicyVersion =
@@ -2510,265 +2511,34 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Analytics toggle
+                        // Open privacy preferences sheet — layered consent UX (EDSA 03/2023).
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_analytics_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                            Button(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showPrivacySheet = true
+                                },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Rounded.Tune,
+                                    null,
+                                    modifier = Modifier.size(18.dp),
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    stringResource(R.string.settings_analytics_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    stringResource(R.string.settings_open_privacy_sheet),
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                 )
                             }
-                            Switch(
-                                checked = analyticsEnabled,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    analyticsEnabled = enabled
-                                    privacyPrefs
-                                        .edit()
-                                        .putBoolean(Constants.PREF_ANALYTICS_ENABLED, enabled)
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                    com.google.firebase.analytics.FirebaseAnalytics.getInstance(
-                                            context
-                                        )
-                                        .setAnalyticsCollectionEnabled(enabled)
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-
-                        // Crashlytics toggle
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_crashlytics_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_crashlytics_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = crashlyticsEnabled,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    crashlyticsEnabled = enabled
-                                    privacyPrefs
-                                        .edit()
-                                        .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, enabled)
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-
-                        // Groq Speech-to-Text toggle
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_ai_groq_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_ai_groq_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = groqConsented,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    groqConsented = enabled
-                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
-                                        context,
-                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
-                                            .Groq,
-                                        enabled,
-                                    )
-                                    privacyPrefs
-                                        .edit()
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-
-                        // Gemini AI toggle
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_ai_gemini_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_ai_gemini_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = geminiConsented,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    geminiConsented = enabled
-                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
-                                        context,
-                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
-                                            .Gemini,
-                                        enabled,
-                                    )
-                                    privacyPrefs
-                                        .edit()
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-
-                        // Edge TTS toggle
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_ai_tts_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_ai_tts_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = ttsConsented,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    ttsConsented = enabled
-                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
-                                        context,
-                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
-                                            .EdgeTts,
-                                        enabled,
-                                    )
-                                    privacyPrefs
-                                        .edit()
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-
-                        // Drive backup toggle
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    stringResource(R.string.settings_drive_backup_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    stringResource(R.string.settings_drive_backup_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = driveBackupEnabled,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    driveBackupEnabled = enabled
-                                    privacyPrefs
-                                        .edit()
-                                        .putBoolean(
-                                            Constants.PREF_DRIVE_BACKUP_ENABLED,
-                                            enabled,
-                                        )
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
                         }
 
                         // Revoke all + metadata footer
@@ -3117,6 +2887,62 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                // Layered-consent: Privacy Preferences Sheet
+                com.bestjournal.app.ui.components.PrivacyPreferencesSheet(
+                    visible = showPrivacySheet,
+                    initial = com.bestjournal.app.ui.components.PrivacyPreferences(
+                        analytics = analyticsEnabled,
+                        crashlytics = crashlyticsEnabled,
+                        groq = groqConsented,
+                        gemini = geminiConsented,
+                        tts = ttsConsented,
+                        driveBackup = driveBackupEnabled,
+                        doNotSell = privacyPrefs.getBoolean(Constants.PREF_DO_NOT_SELL, false),
+                    ),
+                    onDismiss = { showPrivacySheet = false },
+                    onSave = { prefs ->
+                        analyticsEnabled = prefs.analytics
+                        crashlyticsEnabled = prefs.crashlytics
+                        driveBackupEnabled = prefs.driveBackup
+                        groqConsented = prefs.groq
+                        geminiConsented = prefs.gemini
+                        ttsConsented = prefs.tts
+                        privacyPrefs
+                            .edit()
+                            .putBoolean(Constants.PREF_ANALYTICS_ENABLED, prefs.analytics)
+                            .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, prefs.crashlytics)
+                            .putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, prefs.driveBackup)
+                            .putBoolean(Constants.PREF_DO_NOT_SELL, prefs.doNotSell)
+                            .putLong(
+                                Constants.PREF_CONSENT_TIMESTAMP,
+                                System.currentTimeMillis(),
+                            )
+                            .apply()
+                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+                            .setAnalyticsCollectionEnabled(prefs.analytics)
+                        com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.Groq,
+                            prefs.groq,
+                        )
+                        com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.Gemini,
+                            prefs.gemini,
+                        )
+                        com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.EdgeTts,
+                            prefs.tts,
+                        )
+                    },
+                    showDoNotSell = run {
+                        val loc =
+                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+                        loc.language == "en" && loc.country == "US"
+                    },
+                )
 
                 if (showRevokeAllDialog) {
                     androidx.compose.material3.AlertDialog(

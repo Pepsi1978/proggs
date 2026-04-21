@@ -553,6 +553,19 @@
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
     <string name="consent_confirmation">Mit „Loslegen" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.</string>
 
+    <!-- Consent-Screen v4: freundliche Einleitung + Layered Consent -->
+    <string name="consent_welcome_title">Willkommen bei Best Journal</string>
+    <string name="consent_welcome_intro">Dein Tagebuch ist ein privater Ort. Damit du ruhig loslegen kannst, hier kurz und ehrlich, was du wissen solltest.</string>
+    <string name="consent_promise_local">Alle Einträge bleiben auf deinem Gerät — immer.</string>
+    <string name="consent_promise_no_training">Deine Daten werden NIE für KI-Training verwendet.</string>
+    <string name="consent_promise_optional_ai">KI-Funktionen sind optional — du entscheidest selbst.</string>
+    <string name="consent_btn_manual_selection">Manuelle Auswahl</string>
+
+    <!-- Detail-Sheet: Privacy Preferences (wiederverwendet in Consent + Settings) -->
+    <string name="privacy_sheet_title">Datenschutz anpassen</string>
+    <string name="privacy_sheet_subtitle">Aktiviere einzelne Funktionen so, wie es für dich passt. Alles kann jederzeit geändert werden.</string>
+    <string name="privacy_sheet_save">Auswahl speichern</string>
+
     <!-- Consent-Screen v3: granulare Toggles (Phase A) -->
     <string name="consent_section_essential">Notwendig (immer aktiv)</string>
     <string name="consent_section_optional">Optionale Funktionen — deine Wahl</string>
@@ -581,6 +594,9 @@
     <string name="consent_revoke_snackbar">Einwilligung widerrufen</string>
     <string name="consent_footer_version">Datenschutzerklärung v%1$s · Alle Einstellungen jederzeit in den Einstellungen änderbar.</string>
     <string name="consent_details_expand">Details</string>
+
+    <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
+    <string name="settings_open_privacy_sheet">Datenschutz-Einstellungen anpassen</string>
 
     <!-- Settings-Screen v3: granulare Toggles + Widerruf-Button -->
     <string name="settings_privacy_section_header">Datenschutz &amp; Einwilligungen</string>
