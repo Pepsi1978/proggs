@@ -1159,4 +1159,46 @@
     <string name="legal_title_datenschutz">தனியுரிமைக் கொள்கை</string>
     <string name="legal_title_nutzungsbedingungen">பயன்பாட்டு விதிமுறைகள்</string>
     <string name="legal_title_impressum">சட்ட தகவல்</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal‌க்கு வரவேற்கிறோம்</string>
+    <string name="consent_welcome_intro">தொடங்கும் முன், உங்கள் தனியுரிமை விருப்பத்தேர்வுகளை இங்கே விரைவாக அமைப்போம்.</string>
+    <string name="consent_promise_local">தனியுரிமைச் சட்டங்களுக்கு உங்கள் ஒப்புதல் தேவை.</string>
+    <string name="consent_promise_no_training">எந்த அம்சங்கள் செயல்படும் என்பதை நீங்கள் இங்கே தீர்மானிக்கிறீர்கள்.</string>
+    <string name="consent_promise_optional_ai">அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
+    <string name="consent_btn_manual_selection">கைமுறை தேர்வு</string>
+    <string name="privacy_sheet_title">தனியுரிமையைத் தனிப்பயனாக்கு</string>
+    <string name="privacy_sheet_subtitle">உங்களுக்கு ஏற்றவாறு தனிப்பட்ட அம்சங்களை இயக்கு. எல்லாவற்றையும் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
+    <string name="privacy_sheet_save">தேர்வைச் சேமி</string>
+    <string name="privacy_sheet_all_on">அனைத்தும் இயக்கு</string>
+    <string name="privacy_sheet_all_off">அனைத்தும் நிறுத்து</string>
+    <string name="consent_toggle_analytics_title">அநாமதேய பயன்பாட்டு பகுப்பாய்வு</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — பயன்பாட்டை மேம்படுத்த எங்களுக்கு உதவுகிறது. தனிப்பட்ட உள்ளடக்கம் இல்லை, அநாமதேய தொடுதல் எண்ணிக்கை மட்டுமே. தரவு பரிமாற்றம்: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">பேச்சு முதல் உரை (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">உள்ளீடுகளைச் சொல்ல அனுமதிக்கிறது. உங்கள் குரல் பதிவு குறியாக்கம் செய்யப்பட்டு Groq (USA)‌க்கு அனுப்பப்பட்டு, உரையாக மாற்றப்பட்டு, பின்னர் நீக்கப்படுகிறது. உங்கள் பதிவுகள் பயிற்சிக்கு பயன்படுத்தப்படுவதில்லை.</string>
+    <string name="consent_toggle_gemini_title">AI பிரதிபலிப்பு (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">டாஷ்போர்டு AI, சுருக்கங்கள், மறுபரிசீலனைகள் மற்றும் உரை மேம்படுத்தல். உரை பகுதிகளை Google Gemini (USA)‌க்கு அனுப்புகிறது. உங்கள் உள்ளீடுகள் பயிற்சிக்கு பயன்படுத்தப்படுவதில்லை.</string>
+    <string name="consent_toggle_tts_title">உரக்க வாசிப்பு (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">இயற்கையான குரலில் உள்ளீடுகளைப் படிக்கிறது. உரையை Microsoft (USA)‌க்கு அனுப்புகிறது. மாற்று: ஆஃப்லைன் சிஸ்டம் TTS.</string>
+    <string name="consent_toggle_drive_title">Google Drive காப்புப்பிரதி</string>
+    <string name="consent_toggle_drive_body">உள்ளீடுகளை குறியாக்கம் செய்து உங்கள் சொந்த Google Drive இல் சேமிக்கிறது. நீங்கள் முழு கட்டுப்பாட்டை வைத்திருக்கிறீர்கள் — கோப்பு உங்கள் கணக்கில் உள்ளது, எங்களிடம் இல்லை.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">கலிபோர்னியா விலகல் (CCPA/CPRA 2026). செயல்படுத்தும்போது, அனைத்து விருப்பத்தேர்வு தரவு செயலாக்கமும் முடக்கப்படுகிறது — உள்ளூர் அம்சங்கள் மட்டுமே இருக்கும்.</string>
+    <string name="consent_btn_accept_all">அனைத்தையும் ஏற்கவும்</string>
+    <string name="consent_btn_save_selection">என் தேர்வைச் சேமி</string>
+    <string name="consent_btn_minimum_only">அனைத்தையும் நிராகரி</string>
+    <string name="consent_saved_snackbar">அமைப்பு சேமிக்கப்பட்டது</string>
+    <string name="consent_revoke_snackbar">ஒப்புதல் திரும்பப் பெறப்பட்டது</string>
+    <string name="consent_footer_version">உங்கள் தேர்வை அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
+    <string name="consent_details_expand">விவரங்கள்</string>
+    <string name="settings_open_privacy_sheet">தனியுரிமை அமைப்புகளைத் தனிப்பயனாக்கு</string>
+    <string name="settings_privacy_section_header">தனியுரிமை மற்றும் ஒப்புதல்கள்</string>
+    <string name="settings_ai_groq_title">பேச்சு முதல் உரை (Groq)</string>
+    <string name="settings_ai_groq_subtitle">படியெடுத்தலுக்காக Groq USA‌க்கு குரல் பதிவுகளை அனுப்பவும்</string>
+    <string name="settings_ai_gemini_title">AI பிரதிபலிப்பு (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI சுருக்கங்களுக்காக Google USA‌க்கு உரைகளை அனுப்பவும்</string>
+    <string name="settings_ai_tts_title">உரக்க வாசிப்பு (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">குரல் வெளியீட்டிற்காக Microsoft USA‌க்கு உரைகளை அனுப்பவும்</string>
+    <string name="settings_drive_backup_title">Google Drive காப்புப்பிரதி</string>
+    <string name="settings_drive_backup_subtitle">உங்கள் Drive இல் குறியாக்கப்பட்ட உள்ளீடுகளைச் சேமிக்கவும்</string>
 </resources>
