@@ -59,17 +59,96 @@ enum class LegalDocument(
     );
 
     /**
-     * Picks the locale-appropriate asset path. German is the only non-English
-     * locale with dedicated legal translations, for every other system language
-     * we fall back to the English set which covers CCPA, UK GDPR, Quebec, APPs etc.
+     * Picks the locale-appropriate asset path.
+     *
+     * Three tiers of legal coverage:
+     *  1. German (de) — full legally binding versions (DATENSCHUTZ / NUTZUNGSBEDINGUNGEN / IMPRESSUM)
+     *  2. English (en) — full legally binding versions covering CCPA, UK GDPR, APPs, LGPD, PIPL etc.
+     *  3. Other supported UI languages — a localized *summary* (LEGAL_SUMMARY.html) that links
+     *     prominently to the full English and German versions. This satisfies the GDPR Art. 12
+     *     transparency requirement ("clear and plain language the data subject understands")
+     *     while keeping the legally binding text in the professionally drafted EN/DE originals.
+     *  4. Any other language — falls back to the English full versions.
      */
     fun assetPath(): String {
-        val lang = Locale.getDefault().language
-        return if (lang == "de") {
-            "legal/de/$deFileName"
-        } else {
-            "legal/en/$enFileName"
-        }
+        val locale = Locale.getDefault()
+        val lang = locale.language
+        val country = locale.country
+
+        // Tier 1: German — separate full documents
+        if (lang == "de") return "legal/de/$deFileName"
+
+        // Tier 2: English — separate full documents
+        if (lang == "en") return "legal/en/$enFileName"
+
+        // Tier 3: Other supported UI languages — single localized summary (all 3 buttons open it)
+        val summaryFolder = summaryFolderFor(lang, country)
+        if (summaryFolder != null) return "legal/$summaryFolder/LEGAL_SUMMARY.html"
+
+        // Tier 4: Fallback to English full documents
+        return "legal/en/$enFileName"
+    }
+
+    companion object {
+        /**
+         * Maps an Android locale (language + country) to the asset folder that contains
+         * its LEGAL_SUMMARY.html. Returns null when no localized summary exists — the caller
+         * then falls back to the English full version.
+         *
+         * Only languages that already ship a LEGAL_SUMMARY.html may appear here, otherwise
+         * users would see an empty WebView. Extend this map together with adding the asset.
+         */
+        internal fun summaryFolderFor(lang: String, country: String): String? =
+            when (lang) {
+                // Variant-sensitive languages first (country matters)
+                "pt" -> when (country) {
+                    "BR" -> "pt-BR".onlyIfTranslated()
+                    "PT" -> "pt-PT".onlyIfTranslated()
+                    else -> "pt-PT".onlyIfTranslated() // European Portuguese as default for pt-*
+                }
+                "zh" -> when (country) {
+                    "CN", "SG" -> "zh-CN".onlyIfTranslated()
+                    "TW", "HK", "MO" -> "zh-TW".onlyIfTranslated()
+                    else -> "zh-CN".onlyIfTranslated()
+                }
+                // "in" is Android's legacy code for Indonesian (ISO 639-1 changed to "id" in 1989
+                // but Java/Android kept the old code for backwards compatibility).
+                "in", "id" -> "id".onlyIfTranslated()
+                // Simple language-only matches
+                "fr" -> "fr".onlyIfTranslated()
+                "es" -> "es".onlyIfTranslated()
+                "it" -> "it".onlyIfTranslated()
+                "nl" -> "nl".onlyIfTranslated()
+                "pl" -> "pl".onlyIfTranslated()
+                "uk" -> "uk".onlyIfTranslated()
+                "tr" -> "tr".onlyIfTranslated()
+                "ja" -> "ja".onlyIfTranslated()
+                "ko" -> "ko".onlyIfTranslated()
+                "ar" -> "ar".onlyIfTranslated()
+                "hi" -> "hi".onlyIfTranslated()
+                "th" -> "th".onlyIfTranslated()
+                "bn" -> "bn".onlyIfTranslated()
+                "te" -> "te".onlyIfTranslated()
+                "mr" -> "mr".onlyIfTranslated()
+                "ta" -> "ta".onlyIfTranslated()
+                "ur" -> "ur".onlyIfTranslated()
+                "gu" -> "gu".onlyIfTranslated()
+                "kn" -> "kn".onlyIfTranslated()
+                "ml" -> "ml".onlyIfTranslated()
+                else -> null
+            }
+
+        /**
+         * Gate for languages whose LEGAL_SUMMARY.html has actually been created in assets.
+         * Add the folder name here the moment its asset is committed; until then the caller
+         * falls back to the English full versions, so users never see a blank WebView.
+         */
+        private val TRANSLATED_SUMMARIES = setOf<String>(
+            // filled in commit-by-commit as translations land
+        )
+
+        private fun String.onlyIfTranslated(): String? =
+            if (this in TRANSLATED_SUMMARIES) this else null
     }
 }
 
