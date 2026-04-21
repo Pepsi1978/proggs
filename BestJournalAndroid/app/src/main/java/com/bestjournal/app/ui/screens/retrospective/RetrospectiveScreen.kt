@@ -300,8 +300,12 @@ fun RetrospectiveScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        // AI Act Art. 50 inline marker — right-aligned under the info icon
-                        com.bestjournal.app.ui.components.AiGeneratedBadgeInline()
+                        // AI Act Art. 50 inline marker — right-aligned with 8.dp (~2mm) offset
+                        // from the edge; longer translations grow leftwards while the trailing
+                        // edge stays fixed.
+                        com.bestjournal.app.ui.components.AiGeneratedBadgeInline(
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
                     }
                 }
             }
