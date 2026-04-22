@@ -52,6 +52,18 @@ constructor(
 
     private var manualRefreshActive = false
 
+    // CRITICAL: these two properties must be declared BEFORE the init block.
+    // viewModelScope.launch uses Dispatchers.Main.immediate (coroutines ≥ 1.6), so the
+    // polling coroutine runs INLINE on the current thread until its first suspension
+    // point (delay(500)). If these properties were declared after init, they would
+    // still be 0L during that first inline pass — and any Pref that had ever been
+    // touched in the past (e.g. the user toggled 'Längere Version' once) would look
+    // strictly greater than 0L and spuriously trigger clearDashboard + refreshDashboard
+    // on every cold start. Declaring them here guarantees the initial Pref read.
+    private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+    private var lastVerboseChangedAt =
+        encryptedPrefs.getLong(Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+
     init {
         // PREF_DASHBOARD_UPDATING / PREF_DASHBOARD_UPDATE_IS_DELETE are runtime-only
         // flags used for cross-ViewModel communication during a live analysis. If the
@@ -173,10 +185,6 @@ constructor(
             kotlinx.coroutines.delay(3000)
         }
     }
-
-    private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
-    private var lastVerboseChangedAt =
-        encryptedPrefs.getLong(Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
 
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)
