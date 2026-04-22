@@ -5,29 +5,38 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -48,39 +57,66 @@ fun ShareEntryDialog(
     onDismiss: () -> Unit,
 ) {
     val hasImproved = entry.isImproved && !entry.improvedText.isNullOrBlank()
-    var useImproved by remember { mutableStateOf(hasImproved) }
+    var includeEntry by remember { mutableStateOf(true) }
+    val selectedFollowUps = remember { List(followUps.size) { true }.toMutableStateList() }
     val selectedPhotos = remember { List(photos.size) { true }.toMutableStateList() }
+
+    val anySelected =
+        includeEntry ||
+            selectedFollowUps.any { it } ||
+            selectedPhotos.any { it }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Eintrag teilen", color = MaterialTheme.colorScheme.onSurface) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (hasImproved) {
-                    Text(
-                        "Welche Version teilen?",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    "Was möchtest du teilen?",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { includeEntry = !includeEntry },
+                ) {
+                    Checkbox(
+                        checked = includeEntry,
+                        onCheckedChange = { includeEntry = it },
                     )
+                    Text("Tagebucheintrag", color = MaterialTheme.colorScheme.onSurface)
+                }
+
+                followUps.forEachIndexed { index, _ ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { useImproved = false },
+                        modifier =
+                            Modifier.fillMaxWidth().clickable {
+                                selectedFollowUps[index] = !selectedFollowUps[index]
+                            },
                     ) {
-                        RadioButton(selected = !useImproved, onClick = { useImproved = false })
-                        Text("Original", color = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { useImproved = true },
-                    ) {
-                        RadioButton(selected = useImproved, onClick = { useImproved = true })
-                        Text("Verbesserte Version", color = MaterialTheme.colorScheme.onSurface)
+                        Checkbox(
+                            checked = selectedFollowUps[index],
+                            onCheckedChange = { selectedFollowUps[index] = it },
+                        )
+                        Text(
+                            "Nachtrag ${index + 1}",
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
 
-                if (photos.size > 1) {
+                if (photos.isNotEmpty()) {
+                    Spacer(modifier = Modifier.fillMaxWidth())
                     Text(
-                        "Fotos/Videos mitteilen:",
+                        "Fotos und Videos",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -96,17 +132,27 @@ fun ShareEntryDialog(
                                 checked = selectedPhotos[index],
                                 onCheckedChange = { selectedPhotos[index] = it },
                             )
-                            AsyncImage(
-                                model = photo.filePath,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier =
-                                    Modifier.size(48.dp)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .padding(end = 8.dp),
-                            )
+                            Box {
+                                AsyncImage(
+                                    model = photo.filePath,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier =
+                                        Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)),
+                                )
+                                if (photo.isVideo) {
+                                    Icon(
+                                        Icons.Rounded.PlayCircle,
+                                        contentDescription = null,
+                                        tint = Color.White.copy(alpha = 0.9f),
+                                        modifier =
+                                            Modifier.size(20.dp).align(Alignment.Center),
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                if (photo.isVideo) "Video" else "Foto",
+                                if (photo.isVideo) "Video ${index + 1}" else "Foto ${index + 1}",
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -117,18 +163,22 @@ fun ShareEntryDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val text = buildShareText(entry, useImproved && hasImproved, followUps)
+                    val includedFollowUps =
+                        followUps.filterIndexed { i, _ -> selectedFollowUps[i] }
+                    val text =
+                        buildShareText(
+                            entry = entry,
+                            useImproved = hasImproved,
+                            followUps = includedFollowUps,
+                            includeEntryBody = includeEntry,
+                        )
                     val photoUris =
-                        if (photos.size == 1) {
-                            listOf(getPhotoUri(context, photos[0]))
-                        } else {
-                            photos
-                                .filterIndexed { i, _ -> selectedPhotos[i] }
-                                .map { getPhotoUri(context, it) }
-                        }
+                        photos.filterIndexed { i, _ -> selectedPhotos[i] }
+                            .map { getPhotoUri(context, it) }
                     executeShare(context, text, photoUris)
                     onDismiss()
                 },
+                enabled = anySelected,
                 colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald),
             ) {
                 Text("Teilen")
@@ -146,36 +196,26 @@ fun buildShareText(
     entry: JournalEntry,
     useImproved: Boolean,
     followUps: List<EntryFollowUpEntity> = emptyList(),
+    includeEntryBody: Boolean = true,
 ): String = buildString {
     append("Tagebucheintrag von der BestJournal App")
     append("\n")
     append(DateTimeFormatter.formatFull(entry.timestamp))
-    if (!entry.moodTag.isNullOrBlank()) append(" \u00b7 ${entry.moodTag}")
+    if (!entry.moodTag.isNullOrBlank()) append(" · ${entry.moodTag}")
     append(
-        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        "\n────────────────────"
     )
-    if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
-    val bodyText = if (useImproved) entry.improvedText!! else entry.displayText
-    append("\n\n$bodyText")
-    val shareFollowUps =
-        if (followUps.isNotEmpty()) {
-            followUps
-        } else if (!entry.followUpText.isNullOrBlank()) {
-            listOf(
-                EntryFollowUpEntity(
-                    entryId = entry.id,
-                    text = entry.followUpText,
-                    createdAt = entry.timestamp,
-                    updatedAt = entry.timestamp,
-                )
-            )
-        } else {
-            emptyList()
-        }
-    if (shareFollowUps.isNotEmpty()) {
-        shareFollowUps.forEachIndexed { index, followUp ->
+    if (includeEntryBody) {
+        if (!entry.title.isNullOrBlank()) append("\n\n✨ ${entry.title}")
+        val bodyText =
+            if (useImproved && !entry.improvedText.isNullOrBlank()) entry.improvedText!!
+            else entry.displayText
+        append("\n\n$bodyText")
+    }
+    if (followUps.isNotEmpty()) {
+        followUps.forEachIndexed { index, followUp ->
             append("\n\n")
-            append(if (shareFollowUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+            append(if (followUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
             append("\n${followUp.text}")
         }
     }

@@ -1018,27 +1018,7 @@ fun EntryDetailScreen(
                         IconButton(
                             onClick = {
                                 doHaptic(HapticFeedbackType.LongPress)
-                                val hasImprovedForShare =
-                                    entry.isImproved &&
-                                        !entry.improvedText.isNullOrBlank()
-                                val photos = uiState.photos
-                                if (!hasImprovedForShare && photos.size <= 1) {
-                                    val shareText =
-                                        buildShareText(
-                                            entry = entry,
-                                            useImproved = false,
-                                            followUps = uiState.followUps,
-                                        )
-                                    val photoUris =
-                                        if (photos.size == 1) {
-                                            listOf(getPhotoUri(context, photos[0]))
-                                        } else {
-                                            emptyList()
-                                        }
-                                    executeShare(context, shareText, photoUris)
-                                } else {
-                                    showShareDialog = true
-                                }
+                                showShareDialog = true
                             },
                             modifier = Modifier.size(36.dp),
                         ) {
