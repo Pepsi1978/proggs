@@ -518,21 +518,34 @@ fun EntryDetailScreen(
                     }
                 }
 
-                uiState.followUps.forEach { followUp ->
+                uiState.followUps.forEachIndexed { _, followUp ->
+                    val fuHasImproved =
+                        followUp.isImproved && !followUp.improvedText.isNullOrBlank()
+                    var selectedTabFu by
+                        remember(followUp.id, fuHasImproved) { mutableIntStateOf(0) }
+                    val isShowingOriginalFu = selectedTabFu == 1 && fuHasImproved
+
+                    val fuFieldColors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        )
+
                     GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
-                        Column(
-                            modifier =
-                                Modifier.fillMaxWidth().clickable {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.editFollowUp(followUp.id)
-                                }
-                        ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // ── Header row: title + datetime + delete ──
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     Icon(
                                         Icons.Rounded.Book,
                                         contentDescription = null,
@@ -545,19 +558,156 @@ fun EntryDetailScreen(
                                         style = MaterialTheme.typography.titleSmall,
                                         color = NeonAmber,
                                     )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        "${DateTimeFormatter.formatFull(followUp.createdAt)} · ${DateTimeFormatter.formatRelative(followUp.updatedAt)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
                                 }
-                                Text(
-                                    DateTimeFormatter.formatRelative(followUp.updatedAt),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
+                                IconButton(
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.deleteInlineFollowUp(followUp.id)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Delete,
+                                        contentDescription = "Nachtrag löschen",
+                                        tint = NeonRed,
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                followUp.text,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+
+                            if (fuHasImproved) {
+                                TabRow(
+                                    selectedTabIndex = selectedTabFu,
+                                    containerColor = Color.Transparent,
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                    indicator = { tabPositions ->
+                                        if (selectedTabFu < tabPositions.size) {
+                                            SecondaryIndicator(
+                                                Modifier.tabIndicatorOffset(
+                                                    tabPositions[selectedTabFu]
+                                                ),
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    },
+                                ) {
+                                    Tab(
+                                        selected = selectedTabFu == 0,
+                                        onClick = {
+                                            selectedTabFu = 0
+                                            viewModel.toggleInlineFollowUpVersion(
+                                                followUp.id,
+                                                showImproved = true,
+                                            )
+                                        },
+                                    ) {
+                                        Text(
+                                            "Verbessert",
+                                            modifier = Modifier.padding(8.dp),
+                                            color =
+                                                if (selectedTabFu == 0)
+                                                    MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outline,
+                                        )
+                                    }
+                                    Tab(
+                                        selected = selectedTabFu == 1,
+                                        onClick = {
+                                            selectedTabFu = 1
+                                            viewModel.toggleInlineFollowUpVersion(
+                                                followUp.id,
+                                                showImproved = false,
+                                            )
+                                        },
+                                    ) {
+                                        Text(
+                                            "Original",
+                                            modifier = Modifier.padding(8.dp),
+                                            color =
+                                                if (selectedTabFu == 1)
+                                                    MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outline,
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            AnimatedContent(
+                                targetState = isShowingOriginalFu,
+                                transitionSpec = {
+                                    if (targetState) {
+                                        slideInHorizontally { it } togetherWith
+                                            slideOutHorizontally { -it }
+                                    } else {
+                                        slideInHorizontally { -it } togetherWith
+                                            slideOutHorizontally { it }
+                                    }
+                                },
+                                label = "followup_tab_slide",
+                            ) { showOriginal ->
+                                if (showOriginal) {
+                                    TextField(
+                                        value = followUp.rawText,
+                                        onValueChange = {
+                                            viewModel.updateInlineFollowUpRaw(followUp.id, it)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textStyle =
+                                            MaterialTheme.typography.bodyLarge.copy(
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                        colors = fuFieldColors,
+                                    )
+                                } else {
+                                    val displayValue =
+                                        if (fuHasImproved)
+                                            (followUp.improvedText ?: followUp.text)
+                                        else followUp.rawText
+                                    TextField(
+                                        value = displayValue,
+                                        onValueChange = {
+                                            if (fuHasImproved)
+                                                viewModel.updateInlineFollowUpImproved(
+                                                    followUp.id,
+                                                    it,
+                                                )
+                                            else
+                                                viewModel.updateInlineFollowUpRaw(followUp.id, it)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textStyle =
+                                            MaterialTheme.typography.bodyLarge.copy(
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                        colors = fuFieldColors,
+                                    )
+                                }
+                            }
+
+                            if (!fuHasImproved && followUp.rawText.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = { viewModel.improveInlineFollowUp(followUp.id) },
+                                    shape = RoundedCornerShape(12.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.AutoAwesome,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Mit KI nachträglich verbessern",
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -823,9 +973,18 @@ fun EntryDetailScreen(
                                 } else {
                                     isTtsLoading = true
                                     isSpeaking = true
-                                    val speakText =
+                                    val baseText =
                                         if (isShowingOriginal) entry.rawText
                                         else entry.displayText
+                                    val speakText = buildString {
+                                        append(baseText)
+                                        uiState.followUps.forEachIndexed { index, followUp ->
+                                            append("\n\nNachtrag ")
+                                            append(index + 1)
+                                            append(". ")
+                                            append(followUp.text)
+                                        }
+                                    }
                                     val started = tts.speak(
                                         speakText,
                                         onPlaybackStart = { isTtsLoading = false },
