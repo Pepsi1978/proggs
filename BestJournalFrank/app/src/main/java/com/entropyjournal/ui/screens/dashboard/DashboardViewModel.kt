@@ -53,6 +53,18 @@ constructor(
     private var manualRefreshActive = false
 
     init {
+        // PREF_DASHBOARD_UPDATING / PREF_DASHBOARD_UPDATE_IS_DELETE are runtime-only
+        // flags used for cross-ViewModel communication during a live analysis. If the
+        // app was killed mid-analysis (OOM, swipe-away, crash), the finally-blocks that
+        // reset them never ran, leaving stale `true` values in persistent prefs. The
+        // polling loop below would then render the "Dashboard wird aktualisiert" state
+        // on every cold start even though nothing is actually running. Clear them here.
+        encryptedPrefs
+            .edit()
+            .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+            .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
+            .apply()
+
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         _uiState.value =
             _uiState.value.copy(
@@ -121,19 +133,25 @@ constructor(
             }
         }
 
-        // Auto-generate dashboard on first load after Google restore.
-        // Mirrors RetrospectiveViewModel's pattern: wait for restore to finish,
-        // then if the dashboard is empty but journal entries exist, regenerate
-        // the dashboard from those entries using the active profile prompt.
+        // Auto-generate dashboard only on first load after an ACTUAL Google restore.
+        // Previously this block ran on every cold start, so if blockCount happened to
+        // be 0 (empty dashboard DB for any reason) it would fire an AI refresh even
+        // though the user had not added any new entries. We now only trigger the
+        // refresh when PREF_RESTORE_PENDING was actually true when the VM started —
+        // i.e. the user really came back from a Drive restore.
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val hadRestore =
+                    encryptedPrefs.getBoolean(Constants.PREF_RESTORE_PENDING, false)
                 awaitRestoreComplete()
+                if (!hadRestore) return@launch
+
                 val blockCount = adviceRepository.getBlockCount()
                 val entryCount = journalEntryDao.getEntryCount()
                 if (blockCount == 0 && entryCount > 0) {
                     Log.d(
                         "DashboardVM",
-                        "Dashboard empty after restore, generating from $entryCount entries",
+                        "Dashboard empty after real restore, generating from $entryCount entries",
                     )
                     refreshDashboard()
                 }
