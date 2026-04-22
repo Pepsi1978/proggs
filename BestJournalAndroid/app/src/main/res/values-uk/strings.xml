@@ -1082,7 +1082,7 @@
     <string name="consent_card1_title">Локальне зберігання</string>
     <string name="consent_card1_body">Ваші записи залишаються на Вашому пристрої.</string>
     <string name="consent_card2_title">Функції ШІ (США)</string>
-    <string name="consent_card2_body">За бажанням тексти надсилаються до Google Gemini, голосові записи — до Groq, а тексти для озвучення — до Microsoft Edge у США (EU-US Data Privacy Framework + стандартні договірні положення).</string>
+    <string name="consent_card2_body">За бажанням тексти надсилаються до Google Gemini, а тексти для озвучення — до Microsoft Edge у США (EU-US Data Privacy Framework). Голосові записи надсилаються до Groq (США) на підставі стандартних договірних положень (EU SCCs).</string>
     <string name="consent_card3_title">Анонімна статистика</string>
     <string name="consent_card3_body">Firebase Analytics, за бажанням, можна змінити будь-коли в налаштуваннях.</string>
     <string name="consent_links_header">Наші правові документи:</string>

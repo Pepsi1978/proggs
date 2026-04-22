@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">การจัดเก็บในเครื่อง</string>
     <string name="consent_card1_body">บันทึกของคุณยังอยู่ในอุปกรณ์</string>
     <string name="consent_card2_title">ฟีเจอร์ AI (สหรัฐอเมริกา)</string>
-    <string name="consent_card2_body">โดยเลือกได้ ข้อความจะถูกส่งไปยัง Google Gemini การบันทึกเสียงไปยัง Groq และข้อความอ่านออกเสียงไปยัง Microsoft Edge ในสหรัฐอเมริกา (EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน)</string>
+    <string name="consent_card2_body">เลือกได้ว่าจะส่งข้อความไปยัง Google Gemini และข้อความสำหรับอ่านออกเสียงไปยัง Microsoft Edge ในสหรัฐอเมริกา (EU-US Data Privacy Framework) การบันทึกเสียงจะถูกส่งไปยัง Groq (สหรัฐอเมริกา) ภายใต้ข้อสัญญามาตรฐาน (EU SCCs)</string>
     <string name="consent_card3_title">สถิติแบบไม่ระบุตัวตน</string>
     <string name="consent_card3_body">Firebase Analytics แบบเลือกใช้ เปลี่ยนได้ตลอดในการตั้งค่า</string>
     <string name="consent_links_header">เอกสารทางกฎหมายของเรา:</string>

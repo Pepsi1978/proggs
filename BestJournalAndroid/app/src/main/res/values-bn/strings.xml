@@ -1075,7 +1075,7 @@
     <string name="consent_card1_title">স্থানীয় সংরক্ষণ</string>
     <string name="consent_card1_body">তোমার এন্ট্রি তোমার ডিভাইসে থাকে।</string>
     <string name="consent_card2_title">AI ফিচার (USA)</string>
-    <string name="consent_card2_body">ঐচ্ছিকভাবে, টেক্সট Google Gemini-তে, ভয়েস রেকর্ডিং Groq-এ এবং পাঠ্য-থেকে-বক্তৃতার টেক্সট Microsoft Edge-এ USA-তে পাঠানো হয় (EU-US Data Privacy Framework + Standard Contractual Clauses)।</string>
+    <string name="consent_card2_body">ঐচ্ছিকভাবে টেক্সট Google Gemini-তে এবং জোরে পড়ার টেক্সট Microsoft Edge-এ USA-তে পাঠানো হয় (EU-US Data Privacy Framework)। ভয়েস রেকর্ডিং Standard Contractual Clauses (EU SCCs) অনুযায়ী Groq (USA)-এ পাঠানো হয়।</string>
     <string name="consent_card3_title">বেনামী পরিসংখ্যান</string>
     <string name="consent_card3_body">Firebase Analytics, ঐচ্ছিক, সেটিংস থেকে যেকোনো সময় পরিবর্তন করা যায়।</string>
     <string name="consent_links_header">আমাদের আইনি নথি:</string>

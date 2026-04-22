@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">Penyimpanan lokal</string>
     <string name="consent_card1_body">Catatanmu tetap di perangkatmu.</string>
     <string name="consent_card2_title">Fitur AI (AS)</string>
-    <string name="consent_card2_body">Secara opsional, teks dikirim ke Google Gemini, rekaman suara ke Groq, dan teks pembacaan ke Microsoft Edge di AS (EU-US Data Privacy Framework + klausul kontrak standar).</string>
+    <string name="consent_card2_body">Secara opsional, teks dikirim ke Google Gemini dan teks untuk dibacakan ke Microsoft Edge di AS (EU-US Data Privacy Framework). Rekaman suara dikirim ke Groq (AS) berdasarkan Klausul Kontrak Standar (EU SCCs).</string>
     <string name="consent_card3_title">Statistik anonim</string>
     <string name="consent_card3_body">Firebase Analytics, opsional, bisa diubah kapan saja di pengaturan.</string>
     <string name="consent_links_header">Dokumen hukum kami:</string>

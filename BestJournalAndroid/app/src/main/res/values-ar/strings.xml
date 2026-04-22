@@ -1090,7 +1090,7 @@
     <string name="consent_card1_title">التخزين المحلي</string>
     <string name="consent_card1_body">تبقى إدخالاتك على جهازك.</string>
     <string name="consent_card2_title">ميزات الذكاء الاصطناعي (الولايات المتحدة)</string>
-    <string name="consent_card2_body">اختياريًا تُرسل النصوص إلى Google Gemini، والتسجيلات الصوتية إلى Groq، ونصوص القراءة بصوت عالٍ إلى Microsoft Edge في الولايات المتحدة (إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية).</string>
+    <string name="consent_card2_body">اختياريًا تُرسل النصوص إلى Google Gemini ونصوص القراءة بصوت عالٍ إلى Microsoft Edge في الولايات المتحدة (إطار EU-US Data Privacy Framework). التسجيلات الصوتية تُرسل إلى Groq (الولايات المتحدة) وفق الشروط التعاقدية النموذجية (EU SCCs).</string>
     <string name="consent_card3_title">إحصائيات مجهولة</string>
     <string name="consent_card3_body">Firebase Analytics، اختياري، يمكن تغييره في أي وقت من الإعدادات.</string>
     <string name="consent_links_header">نصوصنا القانونية:</string>

@@ -1082,7 +1082,7 @@
     <string name="consent_card1_title">Zapis lokalny</string>
     <string name="consent_card1_body">Twoje wpisy pozostają na Twoim urządzeniu.</string>
     <string name="consent_card2_title">Funkcje AI (USA)</string>
-    <string name="consent_card2_body">Opcjonalnie teksty są wysyłane do Google Gemini, nagrania głosowe do Groq, a teksty do odczytu na głos do Microsoft Edge w USA (EU-US Data Privacy Framework + standardowe klauzule umowne).</string>
+    <string name="consent_card2_body">Opcjonalnie teksty są wysyłane do Google Gemini, a teksty do odczytu do Microsoft Edge w USA (EU-US Data Privacy Framework). Nagrania głosowe trafiają do Groq (USA) na podstawie standardowych klauzul umownych (EU SCCs).</string>
     <string name="consent_card3_title">Anonimowe statystyki</string>
     <string name="consent_card3_body">Firebase Analytics, opcjonalnie, możesz zmienić w dowolnej chwili w ustawieniach.</string>
     <string name="consent_links_header">Nasze dokumenty prawne:</string>

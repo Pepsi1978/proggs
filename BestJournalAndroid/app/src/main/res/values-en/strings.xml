@@ -1098,7 +1098,7 @@
     <string name="consent_card1_title">Local storage</string>
     <string name="consent_card1_body">Your entries stay on your device.</string>
     <string name="consent_card2_title">AI features (USA)</string>
-    <string name="consent_card2_body">Optionally, text is sent to Google Gemini, voice recordings to Groq, and read-aloud text to Microsoft Edge in the USA (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">Optionally, text is sent to Google Gemini and read-aloud text to Microsoft Edge in the USA (EU-US Data Privacy Framework). Voice recordings are sent to Groq (USA) under Standard Contractual Clauses (EU SCCs).</string>
     <string name="consent_card3_title">Anonymous statistics</string>
     <string name="consent_card3_body">Firebase Analytics, optional, you can change this at any time in settings.</string>
     <string name="consent_links_header">Our legal documents:</string>
@@ -1169,7 +1169,7 @@
 
     <!-- Pre-Usage Consent Dialog (K4, TDDDG/EDSA Guideline 03/2023) -->
     <string name="privacy_gate_groq_title">Enable cloud speech recognition</string>
-    <string name="privacy_gate_groq_body">This feature sends your voice recording encrypted to Groq (USA) and converts it to text — faster and more accurate than on-device recognition.\n\n✓ Recording is deleted immediately after conversion\n✓ Never used to train AI models\n✓ Encrypted under EU-US Data Privacy Framework\n\nAlternative: on-device offline recognition in Settings.</string>
+    <string name="privacy_gate_groq_body">This feature sends your voice recording encrypted to Groq (USA) and converts it to text — faster and more accurate than on-device recognition.\n\n✓ Recording is deleted immediately after conversion\n✓ Never used to train AI models\n✓ Legal basis: Standard Contractual Clauses (EU SCCs)\n\nAlternative: on-device offline recognition in Settings.</string>
     <string name="privacy_gate_groq_accept">Enable</string>
     <string name="privacy_gate_groq_local">Use local instead</string>
 

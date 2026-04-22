@@ -518,13 +518,13 @@
     <string name="consent_card1_title">Lokale Speicherung</string>
     <string name="consent_card1_body">Deine Einträge bleiben auf deinem Gerät.</string>
     <string name="consent_card2_title">KI-Funktionen (USA)</string>
-    <string name="consent_card2_body">Optional werden Texte an Google Gemini, Sprachaufnahmen an Groq und Vorlese-Texte an Microsoft Edge in den USA gesendet (EU-US Data Privacy Framework + Standardvertragsklauseln).</string>
+    <string name="consent_card2_body">Optional werden Texte an Google Gemini und Vorlese-Texte an Microsoft Edge in den USA gesendet (EU-US Data Privacy Framework). Sprachaufnahmen gehen an Groq (USA) mit Standardvertragsklauseln (EU SCCs).</string>
     <string name="consent_card3_title">Anonyme Statistiken</string>
     <string name="consent_card3_body">Firebase Analytics, optional, jederzeit in den Einstellungen änderbar.</string>
 
     <!-- Pre-Usage Consent Dialog (K4 fix, TDDDG/EDSA Guideline 03/2023) -->
     <string name="privacy_gate_groq_title">Cloud-Spracherkennung aktivieren</string>
-    <string name="privacy_gate_groq_body">Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\n\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\n✓ Kein KI-Training mit deinen Aufnahmen\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nAlternative: Lokale Offline-Erkennung in den Einstellungen.</string>
+    <string name="privacy_gate_groq_body">Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\n\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\n✓ Kein KI-Training mit deinen Aufnahmen\n✓ Rechtsgrundlage: Standardvertragsklauseln (EU SCCs)\n\nAlternative: Lokale Offline-Erkennung in den Einstellungen.</string>
     <string name="privacy_gate_groq_accept">Aktivieren</string>
     <string name="privacy_gate_groq_local">Lieber lokal</string>
 

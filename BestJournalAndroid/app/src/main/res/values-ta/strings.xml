@@ -1083,7 +1083,7 @@
     <string name="consent_card1_title">உள்ளமை சேமிப்பு</string>
     <string name="consent_card1_body">உங்கள் பதிவுகள் உங்கள் சாதனத்திலேயே இருக்கும்.</string>
     <string name="consent_card2_title">AI அம்சங்கள் (USA)</string>
-    <string name="consent_card2_body">விருப்பமாக, உரை Google Gemini-க்கும், குரல் பதிவுகள் Groq-க்கும், உரை-வாசிப்பு Microsoft Edge-க்கும் USA-வில் அனுப்பப்படும் (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">விருப்பப்படி உரைகள் Google Gemini-க்கும், உரக்கப் படிக்கும் உரைகள் Microsoft Edge-க்கும் USA-வில் அனுப்பப்படும் (EU-US Data Privacy Framework). குரல் பதிவுகள் Standard Contractual Clauses (EU SCCs)-ன் கீழ் Groq (USA)-க்கு அனுப்பப்படும்.</string>
     <string name="consent_card3_title">அடையாளமற்ற புள்ளிவிவரங்கள்</string>
     <string name="consent_card3_body">Firebase Analytics, விருப்பத்தேர்வு, அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
     <string name="consent_links_header">எங்கள் சட்டப்பூர்வ ஆவணங்கள்:</string>

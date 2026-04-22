@@ -1074,7 +1074,7 @@
     <string name="consent_card1_title">लोकल स्टोरेज</string>
     <string name="consent_card1_body">आपकी एंट्रीज़ आपके डिवाइस पर रहती हैं।</string>
     <string name="consent_card2_title">AI फ़ीचर्स (USA)</string>
-    <string name="consent_card2_body">वैकल्पिक रूप से टेक्स्ट Google Gemini को, वॉयस रिकॉर्डिंग Groq को और टेक्स्ट-टू-स्पीच के टेक्स्ट Microsoft Edge को USA में भेजे जाते हैं (EU-US Data Privacy Framework + Standard Contractual Clauses)।</string>
+    <string name="consent_card2_body">वैकल्पिक रूप से टेक्स्ट Google Gemini को और टेक्स्ट-टू-स्पीच के टेक्स्ट Microsoft Edge को USA में भेजे जाते हैं (EU-US Data Privacy Framework)। वॉयस रिकॉर्डिंग Standard Contractual Clauses (EU SCCs) के तहत Groq (USA) को भेजी जाती हैं।</string>
     <string name="consent_card3_title">अनाम आँकड़े</string>
     <string name="consent_card3_body">Firebase Analytics, वैकल्पिक, Settings में कभी भी बदल सकते हैं।</string>
     <string name="consent_links_header">हमारे कानूनी दस्तावेज़:</string>

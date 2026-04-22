@@ -1074,7 +1074,7 @@
     <string name="consent_card1_title">Archiviazione locale</string>
     <string name="consent_card1_body">Le tue voci restano sul tuo dispositivo.</string>
     <string name="consent_card2_title">Funzioni IA (USA)</string>
-    <string name="consent_card2_body">Facoltativamente, i testi vengono inviati a Google Gemini, le registrazioni vocali a Groq e i testi da leggere a Microsoft Edge negli USA (EU-US Data Privacy Framework + clausole contrattuali standard).</string>
+    <string name="consent_card2_body">Facoltativamente, i testi vengono inviati a Google Gemini e i testi da leggere ad alta voce a Microsoft Edge negli USA (EU-US Data Privacy Framework). Le registrazioni vocali vengono inviate a Groq (USA) in base alle clausole contrattuali tipo (EU SCCs).</string>
     <string name="consent_card3_title">Statistiche anonime</string>
     <string name="consent_card3_body">Firebase Analytics, opzionale, puoi modificarlo in qualsiasi momento dalle impostazioni.</string>
     <string name="consent_links_header">I nostri testi legali:</string>

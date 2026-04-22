@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">本機儲存</string>
     <string name="consent_card1_body">你的記錄會保留在你的裝置上。</string>
     <string name="consent_card2_title">AI 功能（美國）</string>
-    <string name="consent_card2_body">可選擇將文字傳送到 Google Gemini、語音錄音傳送到 Groq、朗讀文字傳送到 Microsoft Edge 位於美國的伺服器（EU-US Data Privacy Framework + 標準契約條款）。</string>
+    <string name="consent_card2_body">選用時,文字會傳送到位於美國的 Google Gemini,朗讀文字則傳送到 Microsoft Edge(EU-US Data Privacy Framework)。語音錄音依據標準合約條款(EU SCCs)傳送到 Groq(美國)。</string>
     <string name="consent_card3_title">匿名統計</string>
     <string name="consent_card3_body">Firebase Analytics,選用，可隨時在設定中變更。</string>
     <string name="consent_links_header">我們的法律文件：</string>

@@ -1075,7 +1075,7 @@
     <string name="consent_card1_title">ಸ್ಥಳೀಯ ಸಂಗ್ರಹ</string>
     <string name="consent_card1_body">ನಿಮ್ಮ ಪ್ರವೇಶಗಳು ನಿಮ್ಮ ಸಾಧನದಲ್ಲೇ ಉಳಿಯುತ್ತವೆ.</string>
     <string name="consent_card2_title">AI ವೈಶಿಷ್ಟ್ಯಗಳು (USA)</string>
-    <string name="consent_card2_body">ಐಚ್ಛಿಕವಾಗಿ, ಪಠ್ಯವನ್ನು Google Gemini ಗೆ, ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳನ್ನು Groq ಗೆ ಮತ್ತು ಓದಿಸುವ ಪಠ್ಯವನ್ನು Microsoft Edge ಗೆ USA ನಲ್ಲಿ ಕಳುಹಿಸಲಾಗುತ್ತದೆ (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">ಐಚ್ಛಿಕವಾಗಿ ಪಠ್ಯಗಳು Google Gemini ಗೆ ಮತ್ತು ಧ್ವನಿ-ಓದುವ ಪಠ್ಯಗಳು Microsoft Edge ಗೆ USA ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತವೆ (EU-US Data Privacy Framework). ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್‌ಗಳು Standard Contractual Clauses (EU SCCs) ಅಡಿಯಲ್ಲಿ Groq (USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತವೆ.</string>
     <string name="consent_card3_title">ಅನಾಮಧೇಯ ಅಂಕಿಅಂಶಗಳು</string>
     <string name="consent_card3_body">Firebase Analytics, ಐಚ್ಛಿಕ, ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗ ಬೇಕಾದರೂ ಬದಲಾಯಿಸಬಹುದು.</string>
     <string name="consent_links_header">ನಮ್ಮ ಕಾನೂನು ದಾಖಲೆಗಳು:</string>

@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">로컬 저장</string>
     <string name="consent_card1_body">기록은 기기에 남아 있어요.</string>
     <string name="consent_card2_title">AI 기능 (미국)</string>
-    <string name="consent_card2_body">선택적으로 텍스트는 Google Gemini로, 음성 녹음은 Groq로, 읽어주기 텍스트는 Microsoft Edge로 미국에 전송돼요 (EU-US Data Privacy Framework + 표준 계약 조항).</string>
+    <string name="consent_card2_body">선택적으로 텍스트는 Google Gemini로, 읽어주기 텍스트는 Microsoft Edge로 미국에 전송됩니다 (EU-US Data Privacy Framework). 음성 녹음은 표준계약조항 (EU SCCs) 에 따라 Groq (미국) 로 전송됩니다.</string>
     <string name="consent_card3_title">익명 통계</string>
     <string name="consent_card3_body">Firebase Analytics, 선택, 설정에서 언제든 변경할 수 있어요.</string>
     <string name="consent_links_header">법적 문서:</string>

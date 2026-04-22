@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">本地存储</string>
     <string name="consent_card1_body">你的记录保留在你的设备上。</string>
     <string name="consent_card2_title">AI 功能（美国）</string>
-    <string name="consent_card2_body">可选地，文本会发送到 Google Gemini,语音录音发送到 Groq,朗读文本发送到 Microsoft Edge 位于美国的服务器（EU-US Data Privacy Framework + 标准合同条款）。</string>
+    <string name="consent_card2_body">可选地,文本会发送到 Google Gemini,朗读文本发送到 Microsoft Edge 位于美国的服务器(EU-US Data Privacy Framework)。语音录音会依据标准合同条款(EU SCCs)发送到 Groq(美国)。</string>
     <string name="consent_card3_title">匿名统计</string>
     <string name="consent_card3_body">Firebase Analytics,可选，可随时在设置中更改。</string>
     <string name="consent_links_header">我们的法律文本：</string>

@@ -1074,7 +1074,7 @@
     <string name="consent_card1_title">Yerel depolama</string>
     <string name="consent_card1_body">Girişlerin cihazında kalır.</string>
     <string name="consent_card2_title">Yapay zekâ özellikleri (ABD)</string>
-    <string name="consent_card2_body">Opsiyonel olarak metinler Google Gemini\'ye, ses kayıtları Groq\'a ve sesli okuma metinleri Microsoft Edge\'e ABD\'de gönderilir (EU-US Data Privacy Framework + standart sözleşme hükümleri).</string>
+    <string name="consent_card2_body">İsteğe bağlı olarak metinler Google Gemini\'ye ve seslendirilecek metinler Microsoft Edge\'e ABD\'de gönderilir (EU-US Data Privacy Framework). Ses kayıtları, Standart Sözleşme Hükümleri (EU SCCs) kapsamında Groq\'a (ABD) gönderilir.</string>
     <string name="consent_card3_title">Anonim istatistikler</string>
     <string name="consent_card3_body">Firebase Analytics, isteğe bağlı, ayarlardan istediğin zaman değiştirebilirsin.</string>
     <string name="consent_links_header">Yasal metinlerimiz:</string>

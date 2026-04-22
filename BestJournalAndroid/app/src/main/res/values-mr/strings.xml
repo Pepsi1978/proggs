@@ -1074,7 +1074,7 @@
     <string name="consent_card1_title">स्थानिक संचय</string>
     <string name="consent_card1_body">तुमच्या नोंदी तुमच्या उपकरणावर राहतात.</string>
     <string name="consent_card2_title">AI वैशिष्ट्ये (USA)</string>
-    <string name="consent_card2_body">पर्यायाने, मजकूर Google Gemini ला, आवाज रेकॉर्डिंग Groq ला आणि वाचनासाठी मजकूर Microsoft Edge ला USA मध्ये पाठवला जातो (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">पर्यायाने मजकूर Google Gemini ला आणि मोठ्याने वाचायचे मजकूर Microsoft Edge ला USA मध्ये पाठवले जातात (EU-US Data Privacy Framework). आवाज रेकॉर्डिंग मानक करार कलमांखाली (EU SCCs) Groq (USA) ला पाठवली जातात.</string>
     <string name="consent_card3_title">निनावी आकडेवारी</string>
     <string name="consent_card3_body">Firebase Analytics, पर्यायी, सेटिंग्जमध्ये कधीही बदलता येते.</string>
     <string name="consent_links_header">आमची कायदेशीर कागदपत्रे:</string>

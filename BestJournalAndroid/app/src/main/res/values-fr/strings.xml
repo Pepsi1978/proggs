@@ -1078,7 +1078,7 @@
     <string name="consent_card1_title">Stockage local</string>
     <string name="consent_card1_body">Tes entrées restent sur ton appareil.</string>
     <string name="consent_card2_title">Fonctions IA (États-Unis)</string>
-    <string name="consent_card2_body">Tes textes peuvent être envoyés à Google Gemini, tes enregistrements vocaux à Groq et les textes à lire à Microsoft Edge aux États-Unis (cadre EU-US Data Privacy Framework + clauses contractuelles types).</string>
+    <string name="consent_card2_body">Tes textes peuvent être envoyés à Google Gemini et les textes à lire à Microsoft Edge aux États-Unis (cadre EU-US Data Privacy Framework). Les enregistrements vocaux sont transmis à Groq (États-Unis) sous clauses contractuelles types (EU SCCs).</string>
     <string name="consent_card3_title">Statistiques anonymes</string>
     <string name="consent_card3_body">Firebase Analytics, en option, modifiable à tout moment dans les paramètres.</string>
     <string name="consent_links_header">Nos documents juridiques\u00A0:</string>

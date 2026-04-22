@@ -1031,7 +1031,7 @@
     <string name="consent_card1_title">સ્થાનિક સ્ટોરેજ</string>
     <string name="consent_card1_body">તમારી એન્ટ્રીઓ તમારા ઉપકરણ પર જ રહે છે.</string>
     <string name="consent_card2_title">AI ફીચર્સ (USA)</string>
-    <string name="consent_card2_body">વૈકલ્પિક રીતે, ટેક્સ્ટ Google Gemini ને, વૉઇસ રેકોર્ડિંગ Groq ને અને વાંચીને સંભળાવવાનો ટેક્સ્ટ Microsoft Edge ને USA માં મોકલવામાં આવે છે (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">વૈકલ્પિક રીતે ટેક્સ્ટ Google Gemini ને અને મોટેથી વાંચવાનો ટેક્સ્ટ Microsoft Edge ને USA માં મોકલવામાં આવે છે (EU-US Data Privacy Framework). વૉઇસ રેકોર્ડિંગ માનક કરાર કલમો (EU SCCs) હેઠળ Groq (USA) ને મોકલવામાં આવે છે.</string>
     <string name="consent_card3_title">અજ્ઞાત આંકડા</string>
     <string name="consent_card3_body">Firebase Analytics, વૈકલ્પિક, સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
     <string name="consent_links_header">અમારા કાયદેસર દસ્તાવેજો:</string>

@@ -1074,7 +1074,7 @@
     <string name="consent_card1_title">Lokale opslag</string>
     <string name="consent_card1_body">Je invoer blijft op je apparaat.</string>
     <string name="consent_card2_title">AI-functies (VS)</string>
-    <string name="consent_card2_body">Optioneel worden teksten naar Google Gemini, spraakopnames naar Groq en voorleesteksten naar Microsoft Edge in de VS gestuurd (EU-US Data Privacy Framework + standaard contractbepalingen).</string>
+    <string name="consent_card2_body">Optioneel worden teksten verzonden naar Google Gemini en voorgelezen teksten naar Microsoft Edge in de VS (EU-US Data Privacy Framework). Spraakopnames gaan naar Groq (VS) onder Standaard Contractbepalingen (EU SCCs).</string>
     <string name="consent_card3_title">Anonieme statistieken</string>
     <string name="consent_card3_body">Firebase Analytics, optioneel, op elk moment aan te passen in de instellingen.</string>
     <string name="consent_links_header">Onze juridische teksten:</string>

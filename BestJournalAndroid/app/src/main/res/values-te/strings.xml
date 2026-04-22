@@ -1006,7 +1006,7 @@
     <string name="consent_card1_title">స్థానిక నిల్వ</string>
     <string name="consent_card1_body">మీ ఎంట్రీలు మీ పరికరంలోనే ఉంటాయి.</string>
     <string name="consent_card2_title">AI ఫీచర్లు (USA)</string>
-    <string name="consent_card2_body">ఐచ్ఛికంగా, టెక్స్ట్ Google Gemini-కి, వాయిస్ రికార్డింగ్‌లు Groq-కి మరియు పఠన టెక్స్ట్ Microsoft Edge-కి USA లో పంపబడతాయి (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card2_body">ఐచ్ఛికంగా టెక్స్ట్‌లు Google Gemini కి మరియు చదివే టెక్స్ట్‌లు Microsoft Edge కి USA లో పంపబడతాయి (EU-US Data Privacy Framework). వాయిస్ రికార్డింగ్‌లు Standard Contractual Clauses (EU SCCs) ప్రకారం Groq (USA) కి పంపబడతాయి.</string>
     <string name="consent_card3_title">అనామక గణాంకాలు</string>
     <string name="consent_card3_body">Firebase Analytics, ఐచ్ఛికం, సెట్టింగ్స్‌లో ఎప్పుడైనా మార్చవచ్చు.</string>
     <string name="consent_links_header">మా చట్టపరమైన పత్రాలు:</string>

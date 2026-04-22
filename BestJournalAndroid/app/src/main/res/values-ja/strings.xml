@@ -1070,7 +1070,7 @@
     <string name="consent_card1_title">ローカル保存</string>
     <string name="consent_card1_body">入力内容はデバイスに保存されます。</string>
     <string name="consent_card2_title">AI機能（米国）</string>
-    <string name="consent_card2_body">任意でテキストはGoogle Geminiへ、音声録音はGroqへ、読み上げ用テキストはMicrosoft Edgeへ米国に送信されます（EU-US Data Privacy Framework + 標準契約条項）。</string>
+    <string name="consent_card2_body">任意でテキストはGoogle Geminiへ、読み上げ用テキストはMicrosoft Edgeへ米国に送信されます（EU-US Data Privacy Framework）。音声録音は標準契約条項（EU SCCs）に基づきGroq（米国）に送信されます。</string>
     <string name="consent_card3_title">匿名の統計情報</string>
     <string name="consent_card3_body">Firebase Analytics、任意、設定からいつでも変更できます。</string>
     <string name="consent_links_header">当社の法的文書：</string>
