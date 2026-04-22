@@ -841,16 +841,59 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
             }
             else -> entropyAnalysisSystemPrompt
         }
+        // If the user turned on "Längere Version", rewrite the hard-coded
+        // length/count constraints in the base prompt itself — a suffix alone
+        // isn't enough because Gemini obeys the explicit "genau 5 Einträge"
+        // in the base prompt over any trailing guidance.
+        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
+        val intensified = if (verbose) intensifyVerbosity(base) else base
         // Append the global no-em-dash rule to every dashboard scenario so
         // generated analyses, summaries, advice and top actions never show
         // the LLM-style em-dash the user dislikes.
-        val withNoEmDash = base + "\n\n" + Constants.NO_EM_DASH_RULE
-        // If the user turned on "Längere Version", append the verbose-length
-        // rule so every profile produces ~2x longer analyses and more items
-        // while keeping profile semantics and priority sorting intact.
-        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
+        val withNoEmDash = intensified + "\n\n" + Constants.NO_EM_DASH_RULE
         return if (verbose) withNoEmDash + "\n\n" + Constants.VERBOSE_LENGTH_RULE
         else withNoEmDash
+    }
+
+    /**
+     * Rewrites hard-coded count and length constraints in a dashboard prompt
+     * so Gemini produces ~2x longer analyses and an unbounded (priority-
+     * sorted) number of top actions. Regex-based so it covers all four
+     * profiles without duplicating the prompts themselves.
+     */
+    private fun intensifyVerbosity(prompt: String): String {
+        var p = prompt
+        // top_massnahmen: "genau 5 Einträge" → "mindestens 10, so viele wie die Einträge hergeben, nach Priorität sortiert"
+        p = p.replace(
+            Regex("genau 5 Eintr(?:\\u00e4|ä)ge"),
+            "mindestens 10 Einträge, so viele wie die Tagebucheinträge hergeben, absteigend nach Priorität/Wirksamkeit sortiert"
+        )
+        p = p.replace(
+            Regex("genau 5\\)"),
+            "mindestens 10, so viele wie die Einträge hergeben, priorisiert)"
+        )
+        p = p.replace(
+            Regex("Die 5 wichtigsten Ma(?:\\u00df|ß)nahmen"),
+            "Die wichtigsten Maßnahmen (mindestens 10, so viele wie die Einträge hergeben)"
+        )
+        // Überschriften: "Top 5" → "Top-Liste"
+        p = p.replace("Top 5", "Top-Liste")
+        // Zusammenfassung: "3–5 Sätze" / "3-5 Sätze" → "6–10 Sätze"
+        p = p.replace(Regex("3[–-]5 S(?:\\u00e4|ä)tze"), "6–10 Sätze")
+        // beschreibung: "13–21 Wörter" → "25–45 Wörter"
+        p = p.replace(Regex("13[–-]21 W(?:\\u00f6|ö)rter"), "25–45 Wörter")
+        // erklaerung: "5–8 Sätze" → "10–16 Sätze"
+        p = p.replace(Regex("5[–-]8 S(?:\\u00e4|ä)tze"), "10–16 Sätze")
+        // gesamtanalyse: "15–25 Sätze" → "30–50 Sätze"
+        p = p.replace(Regex("15[–-]25 S(?:\\u00e4|ä)tze"), "30–50 Sätze")
+        // fortschritte: "0–5 Einträge" / "0–8 Einträge" → doppelt
+        p = p.replace(Regex("0[–-]5 Eintr(?:\\u00e4|ä)ge"), "0–10 Einträge")
+        p = p.replace(Regex("0[–-]8 Eintr(?:\\u00e4|ä)ge"), "0–15 Einträge")
+        // Mindestmenge Ratschläge: "mindestens 15 ... weniger als 10" → verdoppelt
+        p = p.replace("mindestens 15 betragen", "mindestens 30 betragen")
+        p = p.replace("Weniger als 10 ist ein Fehler", "Weniger als 20 ist ein Fehler")
+        // Titel-Wortgrenzen bleiben bewusst unberührt (Kategorien-Namen kurz halten).
+        return p
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {

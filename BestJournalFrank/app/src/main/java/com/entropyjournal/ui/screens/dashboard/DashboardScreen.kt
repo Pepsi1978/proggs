@@ -1942,7 +1942,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
     GlassCard(glowColor = NeonAmber, glowIntensity = 0.3f) {
         Column {
             Text(
-                "Top 5 Massnahmen",
+                "Top ${actions.size} Massnahmen",
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,

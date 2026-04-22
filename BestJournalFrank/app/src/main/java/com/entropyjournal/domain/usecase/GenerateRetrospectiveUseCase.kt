@@ -208,7 +208,7 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
-- Sprache: Deutsch$profileStyle
+- Sprache: Deutsch$profileStyle${getVerbosityInstruction(200, "3-5", "7-12")}
 
 ${Constants.NO_EM_DASH_RULE}
 
@@ -389,7 +389,7 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
-- Sprache: Deutsch$profileStyle
+- Sprache: Deutsch$profileStyle${getVerbosityInstruction(300, "4-6", "9-14")}
 
 ${Constants.NO_EM_DASH_RULE}
 
@@ -511,7 +511,7 @@ REGELN:
 - Schließe mit einem Gedanken der nach vorne blickt
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
-- Sprache: Deutsch$profileStyle
+- Sprache: Deutsch$profileStyle${getVerbosityInstruction(400, "5-8", "11-18")}
 
 ${Constants.NO_EM_DASH_RULE}
 
@@ -591,6 +591,24 @@ ${summaryText.take(500)}"""
     }
 
     // ── Profile style ───────────────────────────────────────────────────────
+
+    /**
+     * When the user turned on "Längere Version" in Einstellungen → KI-Automatisierungen,
+     * every retrospective prompt gets an extra instruction telling Gemini to roughly
+     * double the output length and emit more bullet points without changing the
+     * structure or tone.
+     */
+    private fun getVerbosityInstruction(baseMinWords: Int, baseBulletRange: String, verboseBulletRange: String): String {
+        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
+        if (!verbose) return ""
+        val verboseMinWords = baseMinWords * 2
+        return "\n- AUSFÜHRLICHE VERSION aktiv: Schreibe ungefähr DOPPELT so viel Text. " +
+            "Mindestens $verboseMinWords Wörter. Die Stichpunkt-Zusammenfassung am Anfang " +
+            "darf $verboseBulletRange statt $baseBulletRange Punkte enthalten. Die einzelnen " +
+            "Abschnitte werden jeweils ausführlicher mit mehr Kontext, konkreten Zitaten aus " +
+            "den Einträgen und Erkenntnissen. Struktur, Überschriften und Stil bleiben " +
+            "unverändert."
+    }
 
     private fun getProfileStyleInstruction(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
