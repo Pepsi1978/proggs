@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -307,50 +308,9 @@ fun EntryDetailScreen(
                 modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Book,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = NeonAmber,
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Tagebucheintrag",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = NeonAmber,
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.showDeleteDialog(true)
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Delete,
-                                    contentDescription = "Tagebucheintrag l\u00f6schen",
-                                    tint = NeonRed,
-                                )
-                            }
-                        }
-                        Text(
-                            "${DateTimeFormatter.formatFull(entry.timestamp)} \u00b7 ${DateTimeFormatter.formatRelative(entry.timestamp)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        if (!entry.summary.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                if (!entry.summary.isNullOrBlank()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
                             Text(
                                 "Zusammenfassung",
                                 style = MaterialTheme.typography.labelMedium,
@@ -475,9 +435,51 @@ fun EntryDetailScreen(
                                     if (dragAmount > 40) selectedTab = 0
                                 }
                             }
-                        else Modifier
+                        else Modifier,
+                    glowColor = NeonAmber,
                 ) {
-                    Column {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Book,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = NeonAmber,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Tagebucheintrag",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = NeonAmber,
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.showDeleteDialog(true)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = "Tagebucheintrag l\u00f6schen",
+                                    tint = NeonRed,
+                                )
+                            }
+                        }
+                        Text(
+                            "${DateTimeFormatter.formatFull(entry.timestamp)} \u00b7 ${DateTimeFormatter.formatRelative(entry.timestamp)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         AnimatedContent(
                             targetState = isShowingOriginal,
                             transitionSpec = {
@@ -647,10 +649,14 @@ fun EntryDetailScreen(
                                 }
                             }
                             // ── Date + time + relative time row (thin, under title) ──
+                            // Aligned to the Book icon's X-position (plus ~1mm right),
+                            // pulled up ~2mm to sit close under the title row.
                             Text(
                                 "${DateTimeFormatter.formatFull(followUp.createdAt)} · ${DateTimeFormatter.formatRelative(followUp.updatedAt)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline,
+                                modifier =
+                                    Modifier.padding(start = 4.dp).offset(y = (-8).dp),
                             )
 
                             if (fuHasImproved) {
@@ -1084,6 +1090,8 @@ fun EntryDetailScreen(
             isImproving = uiState.followUpRecordingState == RecordingState.IMPROVING,
             isUsingImproved = uiState.isUsingImprovedFollowUp,
             canDelete = uiState.activeFollowUpId != null,
+            engineLabel =
+                if (viewModel.isGroqActive()) "Groq API" else "Lokales Whisper-Modell",
             onImproveClick = { viewModel.improveFollowUp() },
             onToggleVersion = { useImproved -> viewModel.setUseImprovedFollowUp(useImproved) },
             onTextEdit = { viewModel.updateFollowUpDraft(it) },
@@ -1564,6 +1572,7 @@ private fun FollowUpDialog(
     isImproving: Boolean,
     isUsingImproved: Boolean,
     canDelete: Boolean,
+    engineLabel: String,
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
@@ -1690,7 +1699,7 @@ private fun FollowUpDialog(
                                     WaveformVisualizer(amplitude = amplitude)
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Text(
-                                        "Lokales Whisper-Modell",
+                                        engineLabel,
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
