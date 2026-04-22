@@ -718,60 +718,46 @@ fun EntryDetailScreen(
                 }
 
                 if (!hasImproved) {
-                    GlassCard(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        glowColor = MaterialTheme.colorScheme.primary,
+                        horizontalAlignment = Alignment.Start,
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                        OutlinedButton(
+                            onClick = { viewModel.improveTextWithAi() },
+                            enabled = !uiState.isImproving,
+                            shape = RoundedCornerShape(12.dp),
                         ) {
-                            Button(
-                                onClick = { viewModel.improveTextWithAi() },
-                                enabled = !uiState.isImproving,
-                                shape = RoundedCornerShape(14.dp),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                        disabledContainerColor =
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                        disabledContentColor =
-                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                                    ),
-                            ) {
-                                if (uiState.isImproving) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        "Wird verbessert\u2026",
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Rounded.AutoAwesome,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        "Mit KI nachtr\u00e4glich verbessern",
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
-                                }
-                            }
-                            uiState.improveError?.let { error ->
-                                Spacer(modifier = Modifier.height(8.dp))
+                            if (uiState.isImproving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    error,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = NeonRed,
+                                    "Wird verbessert\u2026",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Mit KI nachtr\u00e4glich verbessern",
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
                             }
+                        }
+                        uiState.improveError?.let { error ->
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                error,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NeonRed,
+                            )
                         }
                     }
                 }
@@ -845,12 +831,6 @@ fun EntryDetailScreen(
                                 onClick = { doHaptic(HapticFeedbackType.LongPress); showPhotoSourceDialog = true },
                                 shape = RoundedCornerShape(12.dp),
                             ) {
-                                Icon(
-                                    Icons.Rounded.AddPhotoAlternate,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     "Hinzuf\u00fcgen",
                                     style = MaterialTheme.typography.labelMedium,
@@ -1128,6 +1108,40 @@ fun EntryDetailScreen(
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.showDeleteFollowUpDialog(false) }) {
                     Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+        )
+    }
+
+    pendingInlineFollowUpDeletion?.let { (followUpId, number) ->
+        val nachtragTitle = "Nachtrag ${germanNumberWord(number)}"
+        AlertDialog(
+            onDismissRequest = { pendingInlineFollowUpDeletion = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text("$nachtragTitle löschen?", color = MaterialTheme.colorScheme.onSurface)
+            },
+            text = {
+                Text(
+                    "Möchtest du $nachtragTitle wirklich unwiderruflich löschen?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        doHaptic(HapticFeedbackType.LongPress)
+                        viewModel.deleteInlineFollowUp(followUpId)
+                        pendingInlineFollowUpDeletion = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
+                ) {
+                    Text("Ja")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { pendingInlineFollowUpDeletion = null }) {
+                    Text("Nein", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )
