@@ -57,6 +57,20 @@ constructor(
     private val _currentPhotos = MutableStateFlow<List<EntryPhotoEntity>>(emptyList())
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
 
+    /**
+     * Returns "Letzte Aktualisierung am <timestamp>" for the newest retrospective summary,
+     * or null if no summaries exist yet. Uses the same format as the Dashboard so both screens
+     * stay visually consistent. Ported from BestJournalAndroid.
+     */
+    fun getLastUpdatedText(): String? {
+        val newest =
+            (weeklySummaries.value + monthlySummaries.value + yearlySummaries.value)
+                .maxByOrNull { it.createdAt }
+                ?: return null
+        val sdf = java.text.SimpleDateFormat("dd.MM. 'um' HH:mm", java.util.Locale.GERMAN)
+        return "Letzte Aktualisierung am ${sdf.format(java.util.Date(newest.createdAt))}"
+    }
+
     private suspend fun awaitSyncComplete() {
         _isWaitingForRestore.value = true
         try {

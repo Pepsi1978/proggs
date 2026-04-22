@@ -206,6 +206,16 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                         SunMoonToggle()
                     }
                 }
+                val lastUpdated = remember(weekly, monthly, yearly) {
+                    viewModel.getLastUpdatedText()
+                }
+                if (lastUpdated != null) {
+                    Text(
+                        text = lastUpdated,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Scrollable content
