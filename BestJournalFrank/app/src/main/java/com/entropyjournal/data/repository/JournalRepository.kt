@@ -63,6 +63,10 @@ class JournalRepository @Inject constructor(
     suspend fun getUnsyncedEntries(): List<JournalEntry> {
         return journalEntryDao.getUnsyncedEntries().map { it.toDomain() }
     }
+
+    suspend fun updateFollowUpSummary(entryId: Long, followUpText: String?) {
+        journalEntryDao.updateFollowUpSummary(entryId, followUpText)
+    }
 }
 
 private fun JournalEntryEntity.toDomain() = JournalEntry(

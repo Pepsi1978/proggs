@@ -386,13 +386,21 @@ constructor(
                 tempFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
             )
             val remoteHasFollowUpText = remoteDb.hasColumn("journal_entries", "followUpText")
+            val remoteHasFollowUpTable = remoteDb.hasColumn("entry_follow_ups", "text")
             val localTimestamps = mutableSetOf<Long>()
+            val localEntryIdByTimestamp = mutableMapOf<Long, Long>()
             val localDb = database.openHelper.readableDatabase
-            val tsCursor = localDb.query("SELECT timestamp FROM journal_entries")
-            while (tsCursor.moveToNext()) { localTimestamps.add(tsCursor.getLong(0)) }
+            val tsCursor = localDb.query("SELECT id, timestamp FROM journal_entries")
+            while (tsCursor.moveToNext()) {
+                val localEntryId = tsCursor.getLong(0)
+                val localTimestamp = tsCursor.getLong(1)
+                localTimestamps.add(localTimestamp)
+                localEntryIdByTimestamp[localTimestamp] = localEntryId
+            }
             tsCursor.close()
+            val remoteEntryIdByTimestamp = mutableMapOf<Long, Long>()
             val remoteCursor = remoteDb.rawQuery(
-                "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
+                "SELECT id, timestamp, rawText, improvedText, isImproved, displayText, " +
                     "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
                     "summary, title" +
                     if (remoteHasFollowUpText) ", followUpText, isSynced " else ", isSynced " +
@@ -402,30 +410,72 @@ constructor(
             val writableDb = database.openHelper.writableDatabase
             var imported = 0
             while (remoteCursor.moveToNext()) {
-                val ts = remoteCursor.getLong(0)
+                val remoteEntryId = remoteCursor.getLong(0)
+                val ts = remoteCursor.getLong(1)
+                remoteEntryIdByTimestamp[remoteEntryId] = ts
                 if (ts !in localTimestamps) {
                     val values = android.content.ContentValues().apply {
                         put("timestamp", ts)
-                        put("rawText", remoteCursor.getString(1))
-                        if (!remoteCursor.isNull(2)) put("improvedText", remoteCursor.getString(2))
-                        put("isImproved", remoteCursor.getInt(3))
-                        put("displayText", remoteCursor.getString(4))
-                        put("audioDurationSeconds", remoteCursor.getInt(5))
-                        if (!remoteCursor.isNull(6)) put("moodTag", remoteCursor.getString(6))
-                        if (!remoteCursor.isNull(7)) put("entropyScore", remoteCursor.getFloat(7))
-                        if (!remoteCursor.isNull(8)) put("adviceCategoryTags", remoteCursor.getString(8))
-                        if (!remoteCursor.isNull(9)) put("summary", remoteCursor.getString(9))
-                        if (!remoteCursor.isNull(10)) put("title", remoteCursor.getString(10))
-                        if (remoteHasFollowUpText && !remoteCursor.isNull(11)) {
-                            put("followUpText", remoteCursor.getString(11))
+                        put("rawText", remoteCursor.getString(2))
+                        if (!remoteCursor.isNull(3)) put("improvedText", remoteCursor.getString(3))
+                        put("isImproved", remoteCursor.getInt(4))
+                        put("displayText", remoteCursor.getString(5))
+                        put("audioDurationSeconds", remoteCursor.getInt(6))
+                        if (!remoteCursor.isNull(7)) put("moodTag", remoteCursor.getString(7))
+                        if (!remoteCursor.isNull(8)) put("entropyScore", remoteCursor.getFloat(8))
+                        if (!remoteCursor.isNull(9)) put("adviceCategoryTags", remoteCursor.getString(9))
+                        if (!remoteCursor.isNull(10)) put("summary", remoteCursor.getString(10))
+                        if (!remoteCursor.isNull(11)) put("title", remoteCursor.getString(11))
+                        if (remoteHasFollowUpText && !remoteCursor.isNull(12)) {
+                            put("followUpText", remoteCursor.getString(12))
                         }
-                        put("isSynced", remoteCursor.getInt(if (remoteHasFollowUpText) 12 else 11))
+                        put("isSynced", remoteCursor.getInt(if (remoteHasFollowUpText) 13 else 12))
                     }
-                    writableDb.insert("journal_entries", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
+                    val insertedId =
+                        writableDb.insert(
+                            "journal_entries",
+                            android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
+                            values,
+                        )
+                    if (insertedId > 0) {
+                        localTimestamps.add(ts)
+                        localEntryIdByTimestamp[ts] = insertedId
+                    }
                     imported++
                 }
             }
-            remoteCursor.close(); remoteDb.close(); tempFile.delete()
+            remoteCursor.close()
+
+            if (remoteHasFollowUpTable) {
+                val remoteFollowUpCursor = remoteDb.rawQuery(
+                    "SELECT entryId, text, createdAt, updatedAt FROM entry_follow_ups ORDER BY createdAt ASC",
+                    null,
+                )
+                var mergedFollowUps = 0
+                while (remoteFollowUpCursor.moveToNext()) {
+                    val remoteParentId = remoteFollowUpCursor.getLong(0)
+                    val remoteParentTimestamp = remoteEntryIdByTimestamp[remoteParentId] ?: continue
+                    val localParentId = localEntryIdByTimestamp[remoteParentTimestamp] ?: continue
+                    val values = android.content.ContentValues().apply {
+                        put("entryId", localParentId)
+                        put("text", remoteFollowUpCursor.getString(1))
+                        put("createdAt", remoteFollowUpCursor.getLong(2))
+                        put("updatedAt", remoteFollowUpCursor.getLong(3))
+                    }
+                    writableDb.insert(
+                        "entry_follow_ups",
+                        android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
+                        values,
+                    )
+                    mergedFollowUps++
+                }
+                remoteFollowUpCursor.close()
+                if (mergedFollowUps > 0) {
+                    Log.d("SyncDebug", "Auto-merged $mergedFollowUps follow-ups from Drive")
+                }
+            }
+
+            remoteDb.close(); tempFile.delete()
             if (imported > 0) {
                 writableDb.execSQL("UPDATE journal_entries SET isSynced = isSynced WHERE 1=0")
                 Log.d("SyncDebug", "Auto-merged $imported entries from Drive")

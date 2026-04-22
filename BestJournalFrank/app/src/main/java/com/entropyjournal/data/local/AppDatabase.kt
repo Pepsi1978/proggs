@@ -6,14 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.entropyjournal.data.local.dao.EntryFollowUpDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
+import com.entropyjournal.data.local.entity.EntryFollowUpEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
 
 @Database(
-    entities = [JournalEntryEntity::class, EntryPhotoEntity::class],
-    version = 10,
+    entities = [JournalEntryEntity::class, EntryPhotoEntity::class, EntryFollowUpEntity::class],
+    version = 11,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +23,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun journalEntryDao(): JournalEntryDao
 
     abstract fun entryPhotoDao(): EntryPhotoDao
+
+    abstract fun entryFollowUpDao(): EntryFollowUpDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -120,6 +124,34 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_10_11 =
+            object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """CREATE TABLE IF NOT EXISTS entry_follow_ups (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entryId INTEGER NOT NULL,
+                        text TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        FOREIGN KEY (entryId) REFERENCES journal_entries(id) ON DELETE CASCADE
+                    )"""
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_entry_follow_ups_entryId ON entry_follow_ups(entryId)"
+                    )
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_entry_follow_ups_entryId_createdAt ON entry_follow_ups(entryId, createdAt)"
+                    )
+                    db.execSQL(
+                        """INSERT INTO entry_follow_ups (entryId, text, createdAt, updatedAt)
+                        SELECT id, followUpText, timestamp, timestamp
+                        FROM journal_entries
+                        WHERE followUpText IS NOT NULL AND TRIM(followUpText) != ''"""
+                    )
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -139,6 +171,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_7_8,
                                 MIGRATION_8_9,
                                 MIGRATION_9_10,
+                                MIGRATION_10_11,
                             )
                             .build()
                     INSTANCE = instance

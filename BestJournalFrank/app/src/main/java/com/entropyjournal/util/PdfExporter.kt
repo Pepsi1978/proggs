@@ -10,6 +10,7 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.media.ExifInterface
+import com.entropyjournal.data.local.entity.EntryFollowUpEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
 import java.io.File
@@ -69,13 +70,24 @@ object PdfExporter {
         entries: List<JournalEntryEntity>,
         outputStream: OutputStream,
         photosPerEntry: Map<Long, List<EntryPhotoEntity>> = emptyMap(),
+        followUpsPerEntry: Map<Long, List<EntryFollowUpEntity>> = emptyMap(),
     ): Int {
         val document = PdfDocument()
         var pageNumber = 0
         for ((index, entry) in entries.withIndex()) {
             pageNumber++
             val photos = photosPerEntry[entry.id] ?: emptyList()
-            pageNumber = renderEntry(document, entry, pageNumber, entries.size, index + 1, photos)
+            val followUps = followUpsPerEntry[entry.id] ?: emptyList()
+            pageNumber =
+                renderEntry(
+                    document = document,
+                    entry = entry,
+                    startPageNum = pageNumber,
+                    totalEntries = entries.size,
+                    entryIndex = index + 1,
+                    photos = photos,
+                    followUps = followUps,
+                )
         }
         document.writeTo(outputStream)
         document.close()
@@ -86,6 +98,7 @@ object PdfExporter {
         document: PdfDocument, entry: JournalEntryEntity,
         startPageNum: Int, totalEntries: Int, entryIndex: Int,
         photos: List<EntryPhotoEntity>,
+        followUps: List<EntryFollowUpEntity>,
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
         val titleText = entry.title ?: "Eintrag #$entryIndex"
@@ -93,9 +106,26 @@ object PdfExporter {
         val bodyText =
             buildString {
                 append(entry.displayText)
-                if (!entry.followUpText.isNullOrBlank()) {
-                    append("\n\nNachtrag\n")
-                    append(entry.followUpText)
+                val pdfFollowUps =
+                    if (followUps.isNotEmpty()) {
+                        followUps
+                    } else if (!entry.followUpText.isNullOrBlank()) {
+                        listOf(
+                            EntryFollowUpEntity(
+                                entryId = entry.id,
+                                text = entry.followUpText,
+                                createdAt = entry.timestamp,
+                                updatedAt = entry.timestamp,
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
+                pdfFollowUps.forEachIndexed { index, followUp ->
+                    append("\n\n")
+                    append(if (pdfFollowUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+                    append("\n")
+                    append(followUp.text)
                 }
             }
         val bodyLines = wrapText(bodyText, bodyPaint(), CONTENT_WIDTH)

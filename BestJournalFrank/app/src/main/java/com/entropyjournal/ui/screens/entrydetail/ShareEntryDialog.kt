@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil3.compose.AsyncImage
+import com.entropyjournal.data.local.entity.EntryFollowUpEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.ui.theme.NeonEmerald
@@ -41,6 +42,7 @@ import java.io.File
 @Composable
 fun ShareEntryDialog(
     entry: JournalEntry,
+    followUps: List<EntryFollowUpEntity>,
     photos: List<EntryPhotoEntity>,
     context: Context,
     onDismiss: () -> Unit,
@@ -115,7 +117,7 @@ fun ShareEntryDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val text = buildShareText(entry, useImproved && hasImproved)
+                    val text = buildShareText(entry, useImproved && hasImproved, followUps)
                     val photoUris =
                         if (photos.size == 1) {
                             listOf(getPhotoUri(context, photos[0]))
@@ -140,7 +142,11 @@ fun ShareEntryDialog(
     )
 }
 
-fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildString {
+fun buildShareText(
+    entry: JournalEntry,
+    useImproved: Boolean,
+    followUps: List<EntryFollowUpEntity> = emptyList(),
+): String = buildString {
     append("Tagebucheintrag von der BestJournal App")
     append("\n")
     append(DateTimeFormatter.formatFull(entry.timestamp))
@@ -151,9 +157,27 @@ fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildStr
     if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
     val bodyText = if (useImproved) entry.improvedText!! else entry.displayText
     append("\n\n$bodyText")
-    if (!entry.followUpText.isNullOrBlank()) {
-        append("\n\nNachtrag")
-        append("\n${entry.followUpText}")
+    val shareFollowUps =
+        if (followUps.isNotEmpty()) {
+            followUps
+        } else if (!entry.followUpText.isNullOrBlank()) {
+            listOf(
+                EntryFollowUpEntity(
+                    entryId = entry.id,
+                    text = entry.followUpText,
+                    createdAt = entry.timestamp,
+                    updatedAt = entry.timestamp,
+                )
+            )
+        } else {
+            emptyList()
+        }
+    if (shareFollowUps.isNotEmpty()) {
+        shareFollowUps.forEachIndexed { index, followUp ->
+            append("\n\n")
+            append(if (shareFollowUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+            append("\n${followUp.text}")
+        }
     }
 }
 

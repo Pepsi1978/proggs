@@ -6,7 +6,9 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.entity.EntryFollowUpEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
+import com.entropyjournal.data.repository.EntryFollowUpRepository
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.data.repository.PhotoRepository
 import com.entropyjournal.domain.model.JournalEntry
@@ -39,7 +41,10 @@ data class EntryDetailUiState(
     val isImproving: Boolean = false,
     val improveError: String? = null,
     val photos: List<EntryPhotoEntity> = emptyList(),
+    val followUps: List<EntryFollowUpEntity> = emptyList(),
     val showFollowUpDialog: Boolean = false,
+    val activeFollowUpId: Long? = null,
+    val showDeleteFollowUpDialog: Boolean = false,
     val followUpDraftText: String = "",
     val followUpImprovedText: String? = null,
     val isUsingImprovedFollowUp: Boolean = false,
@@ -53,6 +58,7 @@ class EntryDetailViewModel
 constructor(
     private val journalRepository: JournalRepository,
     private val photoRepository: PhotoRepository,
+    private val entryFollowUpRepository: EntryFollowUpRepository,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
@@ -78,18 +84,16 @@ constructor(
     init {
         loadEntry()
         loadPhotos()
+        loadFollowUps()
     }
 
     private fun loadEntry() {
         viewModelScope.launch {
             val entry = journalRepository.getEntryById(entryId)
-            _uiState.update { current ->
-                current.copy(
+            _uiState.update {
+                it.copy(
                     entry = entry,
                     editedDisplayText = entry?.displayText ?: "",
-                    followUpDraftText =
-                        if (current.showFollowUpDialog) current.followUpDraftText
-                        else entry?.followUpText.orEmpty(),
                 )
             }
         }
@@ -99,6 +103,14 @@ constructor(
         viewModelScope.launch {
             photoRepository.getPhotosForEntry(entryId).collect { photos ->
                 _uiState.value = _uiState.value.copy(photos = photos)
+            }
+        }
+    }
+
+    private fun loadFollowUps() {
+        viewModelScope.launch {
+            entryFollowUpRepository.observeForEntry(entryId).collect { followUps ->
+                _uiState.update { it.copy(followUps = followUps) }
             }
         }
     }
@@ -259,12 +271,29 @@ constructor(
             )
     }
 
-    fun openFollowUpDialog() {
-        val savedText = _uiState.value.entry?.followUpText.orEmpty()
+    fun openNewFollowUpDialog() {
         _uiState.update {
             it.copy(
                 showFollowUpDialog = true,
-                followUpDraftText = savedText,
+                activeFollowUpId = null,
+                showDeleteFollowUpDialog = false,
+                followUpDraftText = "",
+                followUpImprovedText = null,
+                isUsingImprovedFollowUp = false,
+                followUpRecordingState = RecordingState.PREVIEW,
+                followUpError = null,
+            )
+        }
+    }
+
+    fun editFollowUp(followUpId: Long) {
+        val followUp = _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        _uiState.update {
+            it.copy(
+                showFollowUpDialog = true,
+                activeFollowUpId = followUp.id,
+                showDeleteFollowUpDialog = false,
+                followUpDraftText = followUp.text,
                 followUpImprovedText = null,
                 isUsingImprovedFollowUp = false,
                 followUpRecordingState = RecordingState.PREVIEW,
@@ -274,17 +303,28 @@ constructor(
     }
 
     fun dismissFollowUpDialog() {
-        val savedText = _uiState.value.entry?.followUpText.orEmpty()
+        if (_uiState.value.followUpRecordingState == RecordingState.TRANSCRIBING) return
         _uiState.update {
             it.copy(
                 showFollowUpDialog = false,
-                followUpDraftText = savedText,
+                activeFollowUpId = null,
+                showDeleteFollowUpDialog = false,
+                followUpDraftText = "",
                 followUpImprovedText = null,
                 isUsingImprovedFollowUp = false,
                 followUpRecordingState = RecordingState.IDLE,
                 followUpError = null,
             )
         }
+    }
+
+    fun requestFollowUpDeletion() {
+        if (_uiState.value.activeFollowUpId == null) return
+        _uiState.update { it.copy(showDeleteFollowUpDialog = true) }
+    }
+
+    fun showDeleteFollowUpDialog(show: Boolean) {
+        _uiState.update { it.copy(showDeleteFollowUpDialog = show) }
     }
 
     fun updateFollowUpDraft(newText: String) {
@@ -340,7 +380,6 @@ constructor(
 
     fun saveFollowUp() {
         val state = _uiState.value
-        val entry = state.entry ?: return
         val followUpText =
             if (state.isUsingImprovedFollowUp && !state.followUpImprovedText.isNullOrBlank()) {
                 state.followUpImprovedText.trim()
@@ -351,13 +390,24 @@ constructor(
         if (followUpText.isBlank()) return
 
         viewModelScope.launch {
-            val updatedEntry = entry.copy(followUpText = followUpText)
-            journalRepository.updateEntry(updatedEntry)
+            val existingFollowUp = currentActiveFollowUp()
+            if (existingFollowUp == null) {
+                entryFollowUpRepository.saveNewFollowUp(entryId = entryId, text = followUpText)
+            } else {
+                entryFollowUpRepository.updateFollowUp(
+                    existingFollowUp.copy(
+                        text = followUpText,
+                        updatedAt = System.currentTimeMillis(),
+                    )
+                )
+            }
+            syncLatestFollowUpSummary()
             _uiState.update {
                 it.copy(
-                    entry = updatedEntry,
                     showFollowUpDialog = false,
-                    followUpDraftText = followUpText,
+                    activeFollowUpId = null,
+                    showDeleteFollowUpDialog = false,
+                    followUpDraftText = "",
                     followUpImprovedText = null,
                     isUsingImprovedFollowUp = false,
                     followUpRecordingState = RecordingState.IDLE,
@@ -381,7 +431,7 @@ constructor(
         currentFollowUpAudioFile = audioFile
         _uiState.update {
             it.copy(
-                showFollowUpDialog = false,
+                showFollowUpDialog = true,
                 followUpRecordingState = RecordingState.RECORDING,
                 followUpImprovedText = null,
                 isUsingImprovedFollowUp = false,
@@ -451,6 +501,41 @@ constructor(
 
     fun clearFollowUpError() {
         _uiState.update { it.copy(followUpError = null) }
+    }
+
+    fun deleteActiveFollowUp() {
+        val activeFollowUp = currentActiveFollowUp() ?: return
+        viewModelScope.launch {
+            entryFollowUpRepository.deleteFollowUp(activeFollowUp)
+            syncLatestFollowUpSummary()
+            _uiState.update {
+                it.copy(
+                    showFollowUpDialog = false,
+                    activeFollowUpId = null,
+                    showDeleteFollowUpDialog = false,
+                    followUpDraftText = "",
+                    followUpImprovedText = null,
+                    isUsingImprovedFollowUp = false,
+                    followUpRecordingState = RecordingState.IDLE,
+                    followUpError = null,
+                )
+            }
+            triggerAutoBackup()
+        }
+    }
+
+    private fun currentActiveFollowUp(): EntryFollowUpEntity? {
+        val activeId = _uiState.value.activeFollowUpId ?: return null
+        return _uiState.value.followUps.firstOrNull { it.id == activeId }
+    }
+
+    private suspend fun syncLatestFollowUpSummary() {
+        val latestFollowUpText =
+            entryFollowUpRepository.getForEntryOnce(entryId).maxByOrNull { it.createdAt }?.text
+        journalRepository.updateFollowUpSummary(entryId, latestFollowUpText)
+        _uiState.update { state ->
+            state.copy(entry = state.entry?.copy(followUpText = latestFollowUpText))
+        }
     }
 
     fun showDeleteDialog(show: Boolean) {

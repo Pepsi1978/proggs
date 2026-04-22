@@ -5,6 +5,7 @@ import com.entropyjournal.data.local.AppDatabase
 import com.entropyjournal.data.local.DashboardDatabase
 import com.entropyjournal.data.local.RetrospectiveDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
+import com.entropyjournal.data.local.dao.EntryFollowUpDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.local.dao.RetrospectiveDao
@@ -55,5 +56,10 @@ object DatabaseModule {
     @Provides
     fun provideEntryPhotoDao(database: AppDatabase): EntryPhotoDao {
         return database.entryPhotoDao()
+    }
+
+    @Provides
+    fun provideEntryFollowUpDao(database: AppDatabase): EntryFollowUpDao {
+        return database.entryFollowUpDao()
     }
 }

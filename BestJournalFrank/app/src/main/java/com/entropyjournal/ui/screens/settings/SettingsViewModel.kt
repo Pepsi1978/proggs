@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.dao.EntryFollowUpDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.remote.googledrive.NeedConsentException
@@ -71,6 +72,7 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
     private val journalEntryDao: JournalEntryDao,
     private val entryPhotoDao: EntryPhotoDao,
+    private val entryFollowUpDao: EntryFollowUpDao,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -496,9 +498,18 @@ constructor(
                         } else {
                             emptyMap()
                         }
+                        val followUpsPerEntry =
+                            entries.associate { entry ->
+                                entry.id to entryFollowUpDao.getForEntryOnce(entry.id)
+                            }
 
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            PdfExporter.export(entries, outputStream, photosPerEntry)
+                            PdfExporter.export(
+                                entries = entries,
+                                outputStream = outputStream,
+                                photosPerEntry = photosPerEntry,
+                                followUpsPerEntry = followUpsPerEntry,
+                            )
                         }
                     }
 
