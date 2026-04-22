@@ -474,10 +474,13 @@ fun EntryDetailScreen(
                                 )
                             }
                         }
+                        // Date + time + relative time — aligned like the follow-up timestamp:
+                        // starts at the Book icon X-position (plus ~1mm right) and pulled up ~2mm.
                         Text(
                             "${DateTimeFormatter.formatFull(entry.timestamp)} \u00b7 ${DateTimeFormatter.formatRelative(entry.timestamp)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 4.dp).offset(y = (-8).dp),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         AnimatedContent(

@@ -117,6 +117,11 @@ constructor(
         }
     }
 
+    fun isGroqActive(): Boolean {
+        val key = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
+        return key.isNotBlank()
+    }
+
     @Suppress("OPT_IN_USAGE")
     private fun triggerAutoBackup() {
         val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
