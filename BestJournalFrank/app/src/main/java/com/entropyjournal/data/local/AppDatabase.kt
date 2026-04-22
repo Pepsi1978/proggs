@@ -13,7 +13,7 @@ import com.entropyjournal.data.local.entity.JournalEntryEntity
 
 @Database(
     entities = [JournalEntryEntity::class, EntryPhotoEntity::class],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -111,6 +111,15 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_9_10 =
+            object : Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE journal_entries ADD COLUMN followUpText TEXT DEFAULT NULL"
+                    )
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -129,6 +138,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_6_7,
                                 MIGRATION_7_8,
                                 MIGRATION_8_9,
+                                MIGRATION_9_10,
                             )
                             .build()
                     INSTANCE = instance

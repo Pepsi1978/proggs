@@ -13,5 +13,6 @@ data class JournalEntry(
     val adviceCategoryTags: String? = null, // comma-separated
     val summary: String? = null,
     val title: String? = null,
+    val followUpText: String? = null,
     val isSynced: Boolean = false
 )

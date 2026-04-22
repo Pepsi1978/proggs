@@ -1,5 +1,6 @@
 package com.entropyjournal.ui.screens.entrydetail
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
@@ -11,14 +12,20 @@ import com.entropyjournal.data.repository.PhotoRepository
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.ImproveTextUseCase
+import com.entropyjournal.domain.usecase.RecordAudioUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
+import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
+import com.entropyjournal.ui.screens.journal.RecordingState
 import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class EntryDetailUiState(
@@ -32,6 +39,12 @@ data class EntryDetailUiState(
     val isImproving: Boolean = false,
     val improveError: String? = null,
     val photos: List<EntryPhotoEntity> = emptyList(),
+    val showFollowUpDialog: Boolean = false,
+    val followUpDraftText: String = "",
+    val followUpImprovedText: String? = null,
+    val isUsingImprovedFollowUp: Boolean = false,
+    val followUpRecordingState: RecordingState = RecordingState.IDLE,
+    val followUpError: String? = null,
 )
 
 @HiltViewModel
@@ -43,6 +56,9 @@ constructor(
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
+    private val recordAudioUseCase: RecordAudioUseCase,
+    private val transcribeAudioUseCase: TranscribeAudioUseCase,
+    @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -50,9 +66,14 @@ constructor(
     private val _uiState = MutableStateFlow(EntryDetailUiState())
     val uiState: StateFlow<EntryDetailUiState> = _uiState
 
+    val followUpAmplitude: StateFlow<Float> = recordAudioUseCase.amplitude
+    val followUpDurationSeconds: StateFlow<Int> = recordAudioUseCase.durationSeconds
+
     private val entryId: Long = savedStateHandle.get<Long>("entryId") ?: 0L
     private var autoSaveJob: Job? = null
     private var autoBackupJob: Job? = null
+    private var followUpRecordingJob: Job? = null
+    private var currentFollowUpAudioFile: File? = null
 
     init {
         loadEntry()
@@ -62,8 +83,15 @@ constructor(
     private fun loadEntry() {
         viewModelScope.launch {
             val entry = journalRepository.getEntryById(entryId)
-            _uiState.value =
-                _uiState.value.copy(entry = entry, editedDisplayText = entry?.displayText ?: "")
+            _uiState.update { current ->
+                current.copy(
+                    entry = entry,
+                    editedDisplayText = entry?.displayText ?: "",
+                    followUpDraftText =
+                        if (current.showFollowUpDialog) current.followUpDraftText
+                        else entry?.followUpText.orEmpty(),
+                )
+            }
         }
     }
 
@@ -120,7 +148,7 @@ constructor(
 
     fun createCameraUri() = photoRepository.createCameraUri()
 
-    fun onCameraPhotoTaken(file: java.io.File) {
+    fun onCameraPhotoTaken(file: File) {
         viewModelScope.launch {
             photoRepository.addPhotoFromFile(entryId, file)
             triggerAutoBackup()
@@ -231,6 +259,200 @@ constructor(
             )
     }
 
+    fun openFollowUpDialog() {
+        val savedText = _uiState.value.entry?.followUpText.orEmpty()
+        _uiState.update {
+            it.copy(
+                showFollowUpDialog = true,
+                followUpDraftText = savedText,
+                followUpImprovedText = null,
+                isUsingImprovedFollowUp = false,
+                followUpRecordingState = RecordingState.PREVIEW,
+                followUpError = null,
+            )
+        }
+    }
+
+    fun dismissFollowUpDialog() {
+        val savedText = _uiState.value.entry?.followUpText.orEmpty()
+        _uiState.update {
+            it.copy(
+                showFollowUpDialog = false,
+                followUpDraftText = savedText,
+                followUpImprovedText = null,
+                isUsingImprovedFollowUp = false,
+                followUpRecordingState = RecordingState.IDLE,
+                followUpError = null,
+            )
+        }
+    }
+
+    fun updateFollowUpDraft(newText: String) {
+        _uiState.update { state ->
+            if (state.isUsingImprovedFollowUp && state.followUpImprovedText != null) {
+                state.copy(followUpImprovedText = newText)
+            } else {
+                state.copy(followUpDraftText = newText)
+            }
+        }
+    }
+
+    fun setUseImprovedFollowUp(useImproved: Boolean) {
+        _uiState.update { it.copy(isUsingImprovedFollowUp = useImproved) }
+    }
+
+    fun improveFollowUp() {
+        val rawText = _uiState.value.followUpDraftText.trim()
+        if (rawText.isBlank()) return
+
+        _uiState.update {
+            it.copy(
+                showFollowUpDialog = true,
+                followUpRecordingState = RecordingState.IMPROVING,
+                followUpError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            improveTextUseCase(rawText)
+                .onSuccess { improved ->
+                    _uiState.update {
+                        it.copy(
+                            showFollowUpDialog = true,
+                            followUpImprovedText = improved,
+                            isUsingImprovedFollowUp = true,
+                            followUpRecordingState = RecordingState.PREVIEW,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            showFollowUpDialog = true,
+                            followUpRecordingState = RecordingState.PREVIEW,
+                            followUpError =
+                                error.message ?: "Textverbesserung fehlgeschlagen",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun saveFollowUp() {
+        val state = _uiState.value
+        val entry = state.entry ?: return
+        val followUpText =
+            if (state.isUsingImprovedFollowUp && !state.followUpImprovedText.isNullOrBlank()) {
+                state.followUpImprovedText.trim()
+            } else {
+                state.followUpDraftText.trim()
+            }
+
+        if (followUpText.isBlank()) return
+
+        viewModelScope.launch {
+            val updatedEntry = entry.copy(followUpText = followUpText)
+            journalRepository.updateEntry(updatedEntry)
+            _uiState.update {
+                it.copy(
+                    entry = updatedEntry,
+                    showFollowUpDialog = false,
+                    followUpDraftText = followUpText,
+                    followUpImprovedText = null,
+                    isUsingImprovedFollowUp = false,
+                    followUpRecordingState = RecordingState.IDLE,
+                    followUpError = null,
+                )
+            }
+            triggerAutoBackup()
+        }
+    }
+
+    fun toggleFollowUpRecording() {
+        when (_uiState.value.followUpRecordingState) {
+            RecordingState.RECORDING -> stopFollowUpRecording()
+            RecordingState.IDLE, RecordingState.PREVIEW -> startFollowUpRecording()
+            else -> Unit
+        }
+    }
+
+    private fun startFollowUpRecording() {
+        val audioFile = File(context.cacheDir, "follow_up_${System.currentTimeMillis()}.wav")
+        currentFollowUpAudioFile = audioFile
+        _uiState.update {
+            it.copy(
+                showFollowUpDialog = false,
+                followUpRecordingState = RecordingState.RECORDING,
+                followUpImprovedText = null,
+                isUsingImprovedFollowUp = false,
+                followUpError = null,
+            )
+        }
+
+        followUpRecordingJob = viewModelScope.launch {
+            playStartToneIfEnabled()
+            try {
+                recordAudioUseCase.startRecording(audioFile)
+            } catch (e: Exception) {
+                currentFollowUpAudioFile = null
+                _uiState.update {
+                    it.copy(
+                        showFollowUpDialog = true,
+                        followUpRecordingState = RecordingState.PREVIEW,
+                        followUpError = "Aufnahme fehlgeschlagen: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun stopFollowUpRecording() {
+        recordAudioUseCase.stopRecording()
+
+        viewModelScope.launch {
+            followUpRecordingJob?.join()
+            _uiState.update { it.copy(followUpRecordingState = RecordingState.TRANSCRIBING) }
+
+            val audioFile = currentFollowUpAudioFile ?: return@launch
+            transcribeAudioUseCase(audioFile)
+                .onSuccess { text ->
+                    currentFollowUpAudioFile = null
+                    audioFile.delete()
+                    _uiState.update {
+                        it.copy(
+                            showFollowUpDialog = true,
+                            followUpRecordingState = RecordingState.PREVIEW,
+                            followUpDraftText = text.trim(),
+                            followUpImprovedText = null,
+                            isUsingImprovedFollowUp = false,
+                        )
+                    }
+
+                    val autoImprove =
+                        encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false)
+                    if (autoImprove) {
+                        improveFollowUp()
+                    }
+                }
+                .onFailure { error ->
+                    currentFollowUpAudioFile = null
+                    audioFile.delete()
+                    _uiState.update {
+                        it.copy(
+                            showFollowUpDialog = true,
+                            followUpRecordingState = RecordingState.PREVIEW,
+                            followUpError =
+                                "Transkription fehlgeschlagen: ${error.message}",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun clearFollowUpError() {
+        _uiState.update { it.copy(followUpError = null) }
+    }
+
     fun showDeleteDialog(show: Boolean) {
         _uiState.value = _uiState.value.copy(showDeleteDialog = show)
     }
@@ -286,6 +508,57 @@ constructor(
                 }
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
             }
+        }
+    }
+
+    private suspend fun playStartToneIfEnabled() {
+        val soundsEnabled = encryptedPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)
+        val beepMs = 150
+        if (!soundsEnabled) return
+
+        try {
+            val sampleRate = 44100
+            val beepSamples = sampleRate * beepMs / 1000
+            val samples = ShortArray(beepSamples)
+            val freq = 880.0
+            val fadeLen = beepSamples / 8
+            for (i in 0 until beepSamples) {
+                val t = i.toDouble() / sampleRate
+                val envelope =
+                    when {
+                        i < fadeLen -> i.toDouble() / fadeLen
+                        i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
+                        else -> 1.0
+                    }
+                samples[i] =
+                    (Short.MAX_VALUE *
+                            0.5 *
+                            envelope *
+                            kotlin.math.sin(2 * Math.PI * freq * t))
+                        .toInt()
+                        .toShort()
+            }
+            val track =
+                android.media.AudioTrack(
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build(),
+                    android.media.AudioFormat.Builder()
+                        .setSampleRate(sampleRate)
+                        .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                        .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                        .build(),
+                    beepSamples * 2,
+                    android.media.AudioTrack.MODE_STATIC,
+                    android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+                )
+            track.write(samples, 0, beepSamples)
+            track.play()
+            delay(beepMs.toLong() + 100)
+            track.release()
+        } catch (_: Exception) {
+            // The confirmation tone is optional.
         }
     }
 }

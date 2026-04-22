@@ -19,7 +19,11 @@ interface JournalEntryDao {
     suspend fun getById(id: Long): JournalEntryEntity?
 
     @Query(
-        "SELECT * FROM journal_entries WHERE displayText LIKE '%' || :query || '%' OR rawText LIKE '%' || :query || '%' ORDER BY timestamp DESC"
+        "SELECT * FROM journal_entries " +
+            "WHERE displayText LIKE '%' || :query || '%' " +
+            "OR rawText LIKE '%' || :query || '%' " +
+            "OR followUpText LIKE '%' || :query || '%' " +
+            "ORDER BY timestamp DESC"
     )
     fun search(query: String): Flow<List<JournalEntryEntity>>
 

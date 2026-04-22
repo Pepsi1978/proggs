@@ -385,6 +385,7 @@ constructor(
             val remoteDb = android.database.sqlite.SQLiteDatabase.openDatabase(
                 tempFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
             )
+            val remoteHasFollowUpText = remoteDb.hasColumn("journal_entries", "followUpText")
             val localTimestamps = mutableSetOf<Long>()
             val localDb = database.openHelper.readableDatabase
             val tsCursor = localDb.query("SELECT timestamp FROM journal_entries")
@@ -393,7 +394,9 @@ constructor(
             val remoteCursor = remoteDb.rawQuery(
                 "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
                     "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
-                    "summary, title, isSynced FROM journal_entries",
+                    "summary, title" +
+                    if (remoteHasFollowUpText) ", followUpText, isSynced " else ", isSynced " +
+                    "FROM journal_entries",
                 null,
             )
             val writableDb = database.openHelper.writableDatabase
@@ -413,7 +416,10 @@ constructor(
                         if (!remoteCursor.isNull(8)) put("adviceCategoryTags", remoteCursor.getString(8))
                         if (!remoteCursor.isNull(9)) put("summary", remoteCursor.getString(9))
                         if (!remoteCursor.isNull(10)) put("title", remoteCursor.getString(10))
-                        put("isSynced", remoteCursor.getInt(11))
+                        if (remoteHasFollowUpText && !remoteCursor.isNull(11)) {
+                            put("followUpText", remoteCursor.getString(11))
+                        }
+                        put("isSynced", remoteCursor.getInt(if (remoteHasFollowUpText) 12 else 11))
                     }
                     writableDb.insert("journal_entries", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
                     imported++
@@ -431,6 +437,20 @@ constructor(
             tempFile.delete(); return 0
         }
     }
+
+    private fun android.database.sqlite.SQLiteDatabase.hasColumn(
+        tableName: String,
+        columnName: String,
+    ): Boolean =
+        rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameIndex) == columnName) {
+                    return@use true
+                }
+            }
+            false
+        }
 
     private fun zipPhotos(
         photosDir: File,

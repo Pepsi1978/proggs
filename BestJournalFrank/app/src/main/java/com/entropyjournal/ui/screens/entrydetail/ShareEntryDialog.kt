@@ -151,6 +151,10 @@ fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildStr
     if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
     val bodyText = if (useImproved) entry.improvedText!! else entry.displayText
     append("\n\n$bodyText")
+    if (!entry.followUpText.isNullOrBlank()) {
+        append("\n\nNachtrag")
+        append("\n${entry.followUpText}")
+    }
 }
 
 fun getPhotoUri(context: Context, photo: EntryPhotoEntity): Uri =

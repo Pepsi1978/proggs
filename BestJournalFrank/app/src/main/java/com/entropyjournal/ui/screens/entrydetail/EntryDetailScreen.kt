@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,9 +51,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
@@ -63,6 +68,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -113,6 +120,8 @@ import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.screens.journal.RecordingOverlay
+import com.entropyjournal.ui.screens.journal.RecordingState
 import com.entropyjournal.util.DateTimeFormatter
 import com.entropyjournal.util.TtsManager
 import java.io.File
@@ -155,9 +164,12 @@ fun EntryDetailScreen(
     var showShareDialog by remember { mutableStateOf(false) }
     var isSpeaking by remember { mutableStateOf(false) }
     var isTtsLoading by remember { mutableStateOf(false) }
+    var pendingFollowUpMicStart by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val tts = remember { TtsManager(context) }
+    val followUpAmplitude by viewModel.followUpAmplitude.collectAsState()
+    val followUpDuration by viewModel.followUpDurationSeconds.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -210,6 +222,34 @@ fun EntryDetailScreen(
             }
         }
 
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            granted ->
+            if (granted && pendingFollowUpMicStart) {
+                viewModel.toggleFollowUpRecording()
+            }
+            pendingFollowUpMicStart = false
+        }
+
+    val onFollowUpMicClick: () -> Unit = {
+        doHaptic(HapticFeedbackType.LongPress)
+        if (uiState.followUpRecordingState == RecordingState.RECORDING) {
+            viewModel.toggleFollowUpRecording()
+        } else {
+            val hasPermission =
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.RECORD_AUDIO,
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (hasPermission) {
+                viewModel.toggleFollowUpRecording()
+            } else {
+                pendingFollowUpMicStart = true
+                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
     LaunchedEffect(lastEditTime) {
         if (lastEditTime > 0 && isFocused) {
             delay(5000)
@@ -222,6 +262,13 @@ fun EntryDetailScreen(
         if (!imeVisible && isFocused) {
             focusManager.clearFocus()
             viewModel.saveNow()
+        }
+    }
+
+    LaunchedEffect(uiState.followUpError) {
+        uiState.followUpError?.let { error ->
+            android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearFollowUpError()
         }
     }
 
@@ -470,6 +517,33 @@ fun EntryDetailScreen(
                     }
                 }
 
+                entry.followUpText?.takeIf { it.isNotBlank() }?.let { followUpText ->
+                    GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Book,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = NeonAmber,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Nachtrag",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = NeonAmber,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                followUpText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+
                 if (!hasImproved) {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -523,6 +597,50 @@ fun EntryDetailScreen(
                                     error,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = NeonRed,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.EditNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        "Zusatzeintrag",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        "Füge später einen Nachtrag zu diesem Eintrag hinzu.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.openFollowUpDialog()
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text(
+                                    "Nachtrag",
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
                             }
                         }
@@ -778,6 +896,67 @@ fun EntryDetailScreen(
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
+    }
+
+    if (uiState.followUpRecordingState == RecordingState.RECORDING) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize().clickable(
+                    interactionSource =
+                        remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    onFollowUpMicClick()
+                }
+        ) {
+            RecordingOverlay(
+                amplitude = followUpAmplitude,
+                durationSeconds = followUpDuration,
+                transcriptionModel = "Lokales Whisper-Modell",
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
+
+    if (uiState.followUpRecordingState == RecordingState.TRANSCRIBING) {
+        Dialog(onDismissRequest = {}) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 3.dp,
+                    )
+                    Text(
+                        "Nachtrag wird transkribiert…",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+
+    if (uiState.showFollowUpDialog) {
+        FollowUpDialog(
+            rawText = uiState.followUpDraftText,
+            improvedText = uiState.followUpImprovedText,
+            isImproving = uiState.followUpRecordingState == RecordingState.IMPROVING,
+            isUsingImproved = uiState.isUsingImprovedFollowUp,
+            onImproveClick = { viewModel.improveFollowUp() },
+            onToggleVersion = { useImproved -> viewModel.setUseImprovedFollowUp(useImproved) },
+            onTextEdit = { viewModel.updateFollowUpDraft(it) },
+            onSave = { viewModel.saveFollowUp() },
+            onDismiss = { viewModel.dismissFollowUpDialog() },
+            onRecordClick = onFollowUpMicClick,
+        )
     }
 
     // Full-screen photo viewer with pinch-to-zoom and horizontal paging
@@ -1173,4 +1352,288 @@ fun EntryDetailScreen(
             },
         )
     }
+}
+
+@Composable
+private fun FollowUpDialog(
+    rawText: String,
+    improvedText: String?,
+    isImproving: Boolean,
+    isUsingImproved: Boolean,
+    onImproveClick: () -> Unit,
+    onToggleVersion: (Boolean) -> Unit,
+    onTextEdit: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+    onRecordClick: () -> Unit,
+) {
+    val showingImproved = isUsingImproved && improvedText != null
+    val displayText = if (showingImproved) improvedText!! else rawText
+    var inputModeChosen by remember(rawText) { mutableStateOf(rawText.isNotBlank()) }
+    val dialogFocusManager = LocalFocusManager.current
+    val dialogFocusRequester = remember { FocusRequester() }
+    var dialogLastEditTime by remember { mutableLongStateOf(0L) }
+    var dialogIsFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(inputModeChosen, rawText) {
+        if (inputModeChosen && rawText.isBlank()) {
+            delay(300)
+            dialogFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(dialogLastEditTime) {
+        if (dialogLastEditTime > 0 && dialogIsFocused) {
+            delay(5000)
+            dialogFocusManager.clearFocus()
+        }
+    }
+
+    val dialogImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    LaunchedEffect(dialogImeVisible) {
+        if (!dialogImeVisible && dialogIsFocused) {
+            dialogFocusManager.clearFocus()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            dialogFocusManager.clearFocus()
+            onDismiss()
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Book,
+                    contentDescription = null,
+                    tint = NeonAmber,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Nachtrag",
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+        text = {
+            Column {
+                if (!inputModeChosen) {
+                    Text(
+                        "Wie möchtest du deinen Nachtrag hinzufügen?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            FloatingActionButton(
+                                onClick = { inputModeChosen = true },
+                                modifier = Modifier.size(56.dp),
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                shape = CircleShape,
+                                elevation =
+                                    FloatingActionButtonDefaults.elevation(
+                                        defaultElevation = 8.dp,
+                                    ),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    contentDescription = "Schreiben",
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "Schreiben",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Box(
+                            modifier =
+                                Modifier.height(32.dp)
+                                    .width(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            FloatingActionButton(
+                                onClick = onRecordClick,
+                                modifier = Modifier.size(56.dp),
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                shape = CircleShape,
+                                elevation =
+                                    FloatingActionButtonDefaults.elevation(
+                                        defaultElevation = 8.dp,
+                                    ),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Mic,
+                                    contentDescription = "Einsprechen",
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "Einsprechen",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Dein Nachtrag:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Surface(
+                            onClick = onRecordClick,
+                            shape = RoundedCornerShape(20.dp),
+                            color =
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Mic,
+                                    contentDescription = "Einsprechen",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Einsprechen",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TextField(
+                        value = displayText,
+                        onValueChange = { newText ->
+                            dialogLastEditTime = System.currentTimeMillis()
+                            onTextEdit(newText)
+                        },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .heightIn(min = 120.dp, max = 300.dp)
+                                .focusRequester(dialogFocusRequester)
+                                .onFocusChanged { state ->
+                                    dialogIsFocused = state.isFocused
+                                    if (state.isFocused) {
+                                        dialogLastEditTime = System.currentTimeMillis()
+                                    }
+                                },
+                        textStyle =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                            ),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        placeholder = {
+                            Text(
+                                "Schreibe hier deinen Nachtrag…",
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (improvedText != null && !isImproving) {
+                        OutlinedButton(
+                            onClick = { onToggleVersion(!showingImproved) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                ),
+                        ) {
+                            Text(
+                                if (showingImproved) "↩ Original anzeigen"
+                                else "✨ Verbesserte Version anzeigen",
+                            )
+                        }
+                    }
+
+                    if (improvedText == null && !isImproving && displayText.isNotBlank()) {
+                        Button(
+                            onClick = onImproveClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor =
+                                        MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor =
+                                        MaterialTheme.colorScheme.onSecondaryContainer,
+                                ),
+                        ) {
+                            Text("✨ Text verbessern")
+                        }
+                    }
+
+                    if (isImproving) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Text(
+                                "KI verbessert den Nachtrag…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (displayText.isNotBlank()) {
+                Button(onClick = onSave) {
+                    Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                }
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(
+                    if (displayText.isBlank()) "Abbrechen" else "Verwerfen",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
 }

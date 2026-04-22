@@ -90,7 +90,14 @@ object PdfExporter {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
         val titleText = entry.title ?: "Eintrag #$entryIndex"
         val summaryText = entry.summary
-        val bodyText = entry.displayText
+        val bodyText =
+            buildString {
+                append(entry.displayText)
+                if (!entry.followUpText.isNullOrBlank()) {
+                    append("\n\nNachtrag\n")
+                    append(entry.followUpText)
+                }
+            }
         val bodyLines = wrapText(bodyText, bodyPaint(), CONTENT_WIDTH)
         val titleLines = wrapText(titleText, titlePaint(), CONTENT_WIDTH)
 
