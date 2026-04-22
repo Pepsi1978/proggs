@@ -312,7 +312,7 @@ fun EntryDetailScreen(
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.Start,
                         ) {
                             Text(
                                 "Zusammenfassung",
