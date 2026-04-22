@@ -473,16 +473,20 @@ constructor(
 
             val audioFile = currentFollowUpAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
-                .onSuccess { text ->
+                .onSuccess { outcome ->
                     currentFollowUpAudioFile = null
                     audioFile.delete()
+                    val fallbackNotice = outcome.groqError?.let {
+                        "Groq fehlgeschlagen ($it) — lokales Whisper verwendet."
+                    }
                     _uiState.update {
                         it.copy(
                             showFollowUpDialog = true,
                             followUpRecordingState = RecordingState.PREVIEW,
-                            followUpDraftText = text.trim(),
+                            followUpDraftText = outcome.text.trim(),
                             followUpImprovedText = null,
                             isUsingImprovedFollowUp = false,
+                            followUpError = fallbackNotice,
                         )
                     }
 

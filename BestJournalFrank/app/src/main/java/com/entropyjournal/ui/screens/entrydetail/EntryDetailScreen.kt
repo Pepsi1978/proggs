@@ -1908,8 +1908,9 @@ private fun FollowUpDialog(
     )
 }
 
-// Spells a positive integer as a German word so the TTS engine reads
-// "Nachtrag drei" instead of "Nachtrag 3". Falls back to digits above 99.
+// Spells a positive integer as a capitalised German word for display in
+// the yellow follow-up label ("Nachtrag Eins", "Nachtrag Zwei", ...).
+// Falls back to digits for values above 99.
 private fun germanNumberWord(n: Int): String {
     if (n < 1 || n > 99) return n.toString()
     val ones = listOf(
@@ -1924,11 +1925,15 @@ private fun germanNumberWord(n: Int): String {
         "", "", "zwanzig", "dreißig", "vierzig", "fünfzig",
         "sechzig", "siebzig", "achtzig", "neunzig",
     )
-    if (n < 10) return ones[n]
-    if (n < 20) return teens[n - 10]
-    val t = n / 10
-    val o = n % 10
-    if (o == 0) return tens[t]
-    val onesPart = if (o == 1) "ein" else ones[o]
-    return "${onesPart}und${tens[t]}"
+    val word = when {
+        n < 10 -> ones[n]
+        n < 20 -> teens[n - 10]
+        n % 10 == 0 -> tens[n / 10]
+        else -> {
+            val o = n % 10
+            val onesPart = if (o == 1) "ein" else ones[o]
+            "${onesPart}und${tens[n / 10]}"
+        }
+    }
+    return word.replaceFirstChar { it.uppercase() }
 }
