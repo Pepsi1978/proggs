@@ -310,13 +310,15 @@ fun EntryDetailScreen(
             ) {
                 if (!entry.summary.isNullOrBlank()) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 "Zusammenfassung",
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             entry.summary
                                 .lines()
                                 .filter { it.trimStart().startsWith("\u2022") }
