@@ -623,20 +623,12 @@ fun EntryDetailScreen(
                                 if (fuHasImproved)
                                     Modifier.pointerInput(followUp.id) {
                                         detectHorizontalDragGestures { _, dragAmount ->
-                                            if (dragAmount < -40) {
-                                                selectedTabFu = 1
-                                                viewModel.toggleInlineFollowUpVersion(
-                                                    followUp.id,
-                                                    showImproved = false,
-                                                )
-                                            }
-                                            if (dragAmount > 40) {
-                                                selectedTabFu = 0
-                                                viewModel.toggleInlineFollowUpVersion(
-                                                    followUp.id,
-                                                    showImproved = true,
-                                                )
-                                            }
+                                            // Local UI state only — same mechanic as
+                                            // the main entry: the swipe just flips the
+                                            // visible tab, it does NOT change the stored
+                                            // isImproved flag.
+                                            if (dragAmount < -40) selectedTabFu = 1
+                                            if (dragAmount > 40) selectedTabFu = 0
                                         }
                                     }
                                 else Modifier
@@ -712,10 +704,6 @@ fun EntryDetailScreen(
                                         selected = selectedTabFu == 0,
                                         onClick = {
                                             selectedTabFu = 0
-                                            viewModel.toggleInlineFollowUpVersion(
-                                                followUp.id,
-                                                showImproved = true,
-                                            )
                                         },
                                     ) {
                                         Text(
@@ -731,10 +719,6 @@ fun EntryDetailScreen(
                                         selected = selectedTabFu == 1,
                                         onClick = {
                                             selectedTabFu = 1
-                                            viewModel.toggleInlineFollowUpVersion(
-                                                followUp.id,
-                                                showImproved = false,
-                                            )
                                         },
                                     ) {
                                         Text(
@@ -825,43 +809,6 @@ fun EntryDetailScreen(
                     }
                 }
 
-                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Rounded.EditNote,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Nachtrag",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.openNewFollowUpDialog()
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                Text(
-                                    "Hinzufügen",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-                    }
-                }
-
                 // Gallery card: shows photos/videos under the main entry (or
                 // under the last follow-up when any exist). Only rendered when
                 // at least one item exists. The separate add-media card below
@@ -932,6 +879,43 @@ fun EntryDetailScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.EditNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Nachtrag",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.openNewFollowUpDialog()
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text(
+                                    "Hinzufügen",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
                             }
                         }
                     }
