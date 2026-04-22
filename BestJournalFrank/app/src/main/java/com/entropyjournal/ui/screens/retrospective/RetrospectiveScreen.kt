@@ -226,6 +226,39 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                if (isWaitingForRestore || isGenerating) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                        com.entropyjournal.ui.components.ShimmerLoadingEffect(
+                            height = 80.dp,
+                            cornerRadius = 16.dp,
+                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        ) {
+                            Text(
+                                "Bitte warten",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                when {
+                                    isWaitingForRestore ->
+                                        "Backup wird geladen\u2026 Rückblicke starten danach automatisch."
+                                    isProfileSwitch ->
+                                        "Rückblicke werden nach Profilwechsel automatisch aktualisiert"
+                                    else -> "Rückblicke werden erstellt\u2026"
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 Box(
                     modifier =
                         Modifier.fillMaxWidth()
@@ -279,39 +312,6 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     }
                 }
 
-                if (isWaitingForRestore || isGenerating) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-                        com.entropyjournal.ui.components.ShimmerLoadingEffect(
-                            height = 80.dp,
-                            cornerRadius = 16.dp,
-                        )
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        ) {
-                            Text(
-                                "Bitte warten",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                when {
-                                    isWaitingForRestore ->
-                                        "Backup wird geladen\u2026 Rückblicke starten danach automatisch."
-                                    isProfileSwitch ->
-                                        "Rückblicke werden nach Profilwechsel automatisch aktualisiert"
-                                    else -> "Rückblicke werden erstellt\u2026"
-                                },
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
 
                 if (errorMessage != null && !isGenerating) {
                     Spacer(modifier = Modifier.height(16.dp))
