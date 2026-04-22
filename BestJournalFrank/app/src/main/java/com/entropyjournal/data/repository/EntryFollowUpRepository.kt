@@ -22,13 +22,20 @@ constructor(
 
     suspend fun saveNewFollowUp(
         entryId: Long,
-        text: String,
+        rawText: String,
+        improvedText: String? = null,
+        isImproved: Boolean = false,
         createdAt: Long = System.currentTimeMillis(),
     ): Long {
+        val display =
+            if (isImproved && !improvedText.isNullOrBlank()) improvedText.trim() else rawText.trim()
         return entryFollowUpDao.insert(
             EntryFollowUpEntity(
                 entryId = entryId,
-                text = text.trim(),
+                text = display,
+                rawText = rawText.trim(),
+                improvedText = improvedText?.trim()?.takeIf { it.isNotBlank() },
+                isImproved = isImproved && !improvedText.isNullOrBlank(),
                 createdAt = createdAt,
                 updatedAt = createdAt,
             )

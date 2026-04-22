@@ -380,23 +380,29 @@ constructor(
 
     fun saveFollowUp() {
         val state = _uiState.value
-        val followUpText =
-            if (state.isUsingImprovedFollowUp && !state.followUpImprovedText.isNullOrBlank()) {
-                state.followUpImprovedText.trim()
-            } else {
-                state.followUpDraftText.trim()
-            }
+        val rawText = state.followUpDraftText.trim()
+        val improvedText = state.followUpImprovedText?.trim()?.takeIf { it.isNotBlank() }
+        val isImproved = state.isUsingImprovedFollowUp && improvedText != null
 
-        if (followUpText.isBlank()) return
+        if (rawText.isBlank() && improvedText.isNullOrBlank()) return
 
         viewModelScope.launch {
             val existingFollowUp = currentActiveFollowUp()
             if (existingFollowUp == null) {
-                entryFollowUpRepository.saveNewFollowUp(entryId = entryId, text = followUpText)
+                entryFollowUpRepository.saveNewFollowUp(
+                    entryId = entryId,
+                    rawText = rawText.ifBlank { improvedText.orEmpty() },
+                    improvedText = improvedText,
+                    isImproved = isImproved,
+                )
             } else {
+                val display = if (isImproved && improvedText != null) improvedText else rawText
                 entryFollowUpRepository.updateFollowUp(
                     existingFollowUp.copy(
-                        text = followUpText,
+                        text = display,
+                        rawText = rawText.ifBlank { existingFollowUp.rawText },
+                        improvedText = improvedText ?: existingFollowUp.improvedText,
+                        isImproved = isImproved,
                         updatedAt = System.currentTimeMillis(),
                     )
                 )
@@ -522,6 +528,119 @@ constructor(
             }
             triggerAutoBackup()
         }
+    }
+
+    // ── Inline follow-up editing (no dialog) ──
+
+    private var followUpAutoSaveJobs: MutableMap<Long, Job> = mutableMapOf()
+
+    fun updateInlineFollowUpRaw(followUpId: Long, newText: String) {
+        val current =
+            _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        val showingImproved = current.isImproved && current.improvedText != null
+        val updated =
+            current.copy(
+                rawText = newText,
+                text = if (showingImproved) current.text else newText,
+                updatedAt = System.currentTimeMillis(),
+            )
+        _uiState.update { state ->
+            state.copy(followUps = state.followUps.map { if (it.id == followUpId) updated else it })
+        }
+        scheduleFollowUpAutoSave(followUpId)
+    }
+
+    fun updateInlineFollowUpImproved(followUpId: Long, newText: String) {
+        val current =
+            _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        val showingImproved = current.isImproved && current.improvedText != null
+        val updated =
+            current.copy(
+                improvedText = newText,
+                text = if (showingImproved) newText else current.text,
+                updatedAt = System.currentTimeMillis(),
+            )
+        _uiState.update { state ->
+            state.copy(followUps = state.followUps.map { if (it.id == followUpId) updated else it })
+        }
+        scheduleFollowUpAutoSave(followUpId)
+    }
+
+    fun toggleInlineFollowUpVersion(followUpId: Long, showImproved: Boolean) {
+        val current =
+            _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        if (current.improvedText.isNullOrBlank()) return
+        val newDisplay = if (showImproved) current.improvedText else current.rawText
+        val updated =
+            current.copy(
+                isImproved = showImproved,
+                text = newDisplay,
+                updatedAt = System.currentTimeMillis(),
+            )
+        _uiState.update { state ->
+            state.copy(followUps = state.followUps.map { if (it.id == followUpId) updated else it })
+        }
+        scheduleFollowUpAutoSave(followUpId, delayMs = 0L)
+    }
+
+    fun improveInlineFollowUp(followUpId: Long) {
+        val current =
+            _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        if (current.rawText.isBlank()) return
+
+        viewModelScope.launch {
+            improveTextUseCase(current.rawText)
+                .onSuccess { improved ->
+                    val updated =
+                        current.copy(
+                            improvedText = improved,
+                            isImproved = true,
+                            text = improved,
+                            updatedAt = System.currentTimeMillis(),
+                        )
+                    entryFollowUpRepository.updateFollowUp(updated)
+                    _uiState.update { state ->
+                        state.copy(
+                            followUps =
+                                state.followUps.map { if (it.id == followUpId) updated else it }
+                        )
+                    }
+                    syncLatestFollowUpSummary()
+                    triggerAutoBackup()
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            followUpError =
+                                error.message ?: "Textverbesserung fehlgeschlagen"
+                        )
+                    }
+                }
+        }
+    }
+
+    fun deleteInlineFollowUp(followUpId: Long) {
+        val target =
+            _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return
+        followUpAutoSaveJobs.remove(followUpId)?.cancel()
+        viewModelScope.launch {
+            entryFollowUpRepository.deleteFollowUp(target)
+            syncLatestFollowUpSummary()
+            triggerAutoBackup()
+        }
+    }
+
+    private fun scheduleFollowUpAutoSave(followUpId: Long, delayMs: Long = 1500L) {
+        followUpAutoSaveJobs[followUpId]?.cancel()
+        followUpAutoSaveJobs[followUpId] =
+            viewModelScope.launch {
+                if (delayMs > 0L) delay(delayMs)
+                val target =
+                    _uiState.value.followUps.firstOrNull { it.id == followUpId } ?: return@launch
+                entryFollowUpRepository.updateFollowUp(target)
+                syncLatestFollowUpSummary()
+                triggerAutoBackup()
+            }
     }
 
     private fun currentActiveFollowUp(): EntryFollowUpEntity? {

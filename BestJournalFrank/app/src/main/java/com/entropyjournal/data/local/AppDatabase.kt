@@ -15,7 +15,7 @@ import com.entropyjournal.data.local.entity.JournalEntryEntity
 
 @Database(
     entities = [JournalEntryEntity::class, EntryPhotoEntity::class, EntryFollowUpEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -152,6 +152,26 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Follow-ups: add rawText / improvedText / isImproved columns so follow-ups
+                    // can track original + AI-improved versions side by side, matching the
+                    // main journal entry editing model.
+                    db.execSQL(
+                        "ALTER TABLE entry_follow_ups ADD COLUMN rawText TEXT NOT NULL DEFAULT ''"
+                    )
+                    db.execSQL(
+                        "ALTER TABLE entry_follow_ups ADD COLUMN improvedText TEXT DEFAULT NULL"
+                    )
+                    db.execSQL(
+                        "ALTER TABLE entry_follow_ups ADD COLUMN isImproved INTEGER NOT NULL DEFAULT 0"
+                    )
+                    // Back-fill rawText with the existing text so existing follow-ups remain editable.
+                    db.execSQL("UPDATE entry_follow_ups SET rawText = text WHERE rawText = ''")
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -172,6 +192,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_8_9,
                                 MIGRATION_9_10,
                                 MIGRATION_10_11,
+                                MIGRATION_11_12,
                             )
                             .build()
                     INSTANCE = instance

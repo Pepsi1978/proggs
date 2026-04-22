@@ -26,4 +26,7 @@ data class EntryFollowUpEntity(
     val text: String,
     val createdAt: Long,
     val updatedAt: Long = createdAt,
+    val rawText: String = text,
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
 )
