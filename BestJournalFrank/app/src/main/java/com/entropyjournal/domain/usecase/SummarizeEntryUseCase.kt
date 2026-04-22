@@ -25,17 +25,17 @@ constructor(
         """
 Du erhältst einen Tagebucheintrag, eventuell mit Nachträgen. Erstelle:
 1. Eine Überschrift (erste Zeile)
-2. Dann 2-4 Stichpunkte als Zusammenfassung, die den Haupteintrag UND alle Nachträge abdecken
+2. Dann 2 bis 10 Stichpunkte als Zusammenfassung, die den Haupteintrag UND alle Nachträge abdecken. Nutze so viele Stichpunkte wie nötig — bei kurzen Einträgen genügen 2-3, bei langen und komplexen Einträgen mit mehreren Nachträgen können es auch 8-10 sein. Lieber ein Stichpunkt mehr als ein wichtiger Aspekt weg.
 
-FORMAT (exakt so):
+FORMAT (exakt so, für jeden Stichpunkt eine neue Zeile, beginnend mit •):
 TITEL: [Überschrift — max $MAX_TITLE_CHARS Zeichen, inklusive Leerzeichen]
 • [Stichpunkt 1]
 • [Stichpunkt 2]
-• [Stichpunkt 3]
+... (so viele wie nötig, bis zu 10)
 
 REGELN:
 - Überschrift: HART maximal $MAX_TITLE_CHARS Zeichen (inkl. Leerzeichen). Kürzer ist besser. 2-3 Wörter.
-- Stichpunkte: Kurz und prägnant, nur Kernaussagen. Berücksichtige Haupttext UND Nachträge.
+- Stichpunkte: Kurz und prägnant, nur Kernaussagen. Berücksichtige Haupttext UND Nachträge vollständig.
 - Sprache: Deutsch
 - Gib NUR das Format oben zurück, nichts anderes
 
@@ -85,7 +85,7 @@ $text
                 GeminiRequestBuilder.build(
                     userText = buildPrompt(combinedText),
                     temperature = 0.3f,
-                    maxOutputTokens = 512,
+                    maxOutputTokens = 1024,
                 )
             val response =
                 geminiApi.generateContent(model = model, apiKey = apiKey, request = request)

@@ -310,7 +310,10 @@ fun EntryDetailScreen(
             ) {
                 if (!entry.summary.isNullOrBlank()) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
                             Text(
                                 "Zusammenfassung",
                                 style = MaterialTheme.typography.titleMedium,
