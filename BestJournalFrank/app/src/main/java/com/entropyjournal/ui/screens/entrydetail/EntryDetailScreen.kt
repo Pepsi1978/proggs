@@ -617,7 +617,32 @@ fun EntryDetailScreen(
                             cursorColor = MaterialTheme.colorScheme.primary,
                         )
 
-                    GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                    GlassCard(
+                        modifier =
+                            Modifier.fillMaxWidth().then(
+                                if (fuHasImproved)
+                                    Modifier.pointerInput(followUp.id) {
+                                        detectHorizontalDragGestures { _, dragAmount ->
+                                            if (dragAmount < -40) {
+                                                selectedTabFu = 1
+                                                viewModel.toggleInlineFollowUpVersion(
+                                                    followUp.id,
+                                                    showImproved = false,
+                                                )
+                                            }
+                                            if (dragAmount > 40) {
+                                                selectedTabFu = 0
+                                                viewModel.toggleInlineFollowUpVersion(
+                                                    followUp.id,
+                                                    showImproved = true,
+                                                )
+                                            }
+                                        }
+                                    }
+                                else Modifier
+                            ),
+                        glowColor = NeonAmber,
+                    ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // ── Header row: title + delete ──
                             Row(
@@ -837,14 +862,14 @@ fun EntryDetailScreen(
                     }
                 }
 
-                // Photos section
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                // Gallery card: shows photos/videos under the main entry (or
+                // under the last follow-up when any exist). Only rendered when
+                // at least one item exists. The separate add-media card below
+                // is purely a control surface so the button always sits at the
+                // very bottom of the entry stack.
+                if (uiState.photos.isNotEmpty()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Rounded.PhotoLibrary,
@@ -854,23 +879,11 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Fotos/Videos",
+                                    "Fotos und Videos",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
-                            Button(
-                                onClick = { doHaptic(HapticFeedbackType.LongPress); showPhotoSourceDialog = true },
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                Text(
-                                    "Hinzuf\u00fcgen",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-
-                        if (uiState.photos.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(uiState.photos, key = { it.id }) { photo ->
@@ -920,6 +933,43 @@ fun EntryDetailScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Add-media card: always at the bottom of the entry stack,
+                // purely a control surface with the add button.
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Fotos/Videos hinzufügen",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                showPhotoSourceDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text(
+                                "Hinzufügen",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
                         }
                     }
                 }
