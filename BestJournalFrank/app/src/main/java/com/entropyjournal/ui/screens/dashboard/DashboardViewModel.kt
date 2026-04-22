@@ -107,6 +107,16 @@ constructor(
                         }
                     }
                 }
+                // Re-run analysis whenever the "Längere Version" switch flips so
+                // the user sees the new length immediately without leaving settings.
+                val verboseChangedAt =
+                    encryptedPrefs.getLong(Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+                if (verboseChangedAt > lastVerboseChangedAt && verboseChangedAt > 0L) {
+                    lastVerboseChangedAt = verboseChangedAt
+                    adviceRepository.clearDashboard()
+                    _uiState.value = _uiState.value.copy(isScenarioSwitch = true)
+                    refreshDashboard()
+                }
                 kotlinx.coroutines.delay(500)
             }
         }
@@ -147,6 +157,8 @@ constructor(
     }
 
     private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+    private var lastVerboseChangedAt =
+        encryptedPrefs.getLong(Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
 
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)

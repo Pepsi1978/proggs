@@ -29,6 +29,8 @@ object Constants {
     const val PREF_TEXT_IMPROVEMENT_DEFAULT = "text_improvement_default"
     const val PREF_MAX_RECORDING_DURATION = "max_recording_duration"
     const val PREF_AUTO_UPDATE_DASHBOARD = "auto_update_dashboard"
+    const val PREF_VERBOSE_DASHBOARD = "verbose_dashboard"
+    const val PREF_VERBOSE_DASHBOARD_CHANGED_AT = "verbose_dashboard_changed_at"
     const val PREF_GOOGLE_ACCOUNT_NAME = "google_account_name"
     const val PREF_GOOGLE_ACCOUNT_EMAIL = "google_account_email"
     const val PREF_GOOGLE_AVATAR_URL = "google_avatar_url"
@@ -216,4 +218,30 @@ object Constants {
             "Zusammenfassungen, Rueckblicken und verbesserten Texten nicht vorkommen. " +
             "In Ueberschriften ist ein Gedankenstrich nur im aeussersten Notfall erlaubt, " +
             "wenn keine natuerlichere Formulierung moeglich ist."
+
+    /**
+     * Verbose-Mode-Suffix fuer Dashboard-Analyseprompts. Aktiviert wenn der Schalter
+     * "Laengere Version" in den Einstellungen an ist. Das Profil-Prompt und die
+     * Sortierung bleiben identisch, nur die Ausfuehrlichkeit wird erhoeht.
+     */
+    const val VERBOSE_LENGTH_RULE =
+        "LAENGEN-MODUS (AUSFUEHRLICH): Der Benutzer hat die ausfuehrliche Version " +
+            "aktiviert. Behalte das bestehende Profil, den Aufbau und die Sortierung " +
+            "nach Prioritaet bzw. Wichtigkeit EXAKT bei, liefere aber deutlich mehr " +
+            "Inhalt:\n" +
+            "1. Beschraenke die Top-Massnahmen oder Kernpunkte NICHT auf 5 Stueck. " +
+            "Erzeuge stattdessen so viele priorisierte Punkte wie die Tagebucheintraege " +
+            "tatsaechlich hergeben, nach Wichtigkeit absteigend sortiert. Nimm " +
+            "mindestens 10 Punkte auf, sofern genug Substanz vorhanden ist.\n" +
+            "2. Pro Kategorie bzw. Bereich: statt 3–5 Ratschlaegen 6–12 Ratschlaege, " +
+            "jeweils mit vollstaendiger Herleitung aus allen relevanten Eintraegen.\n" +
+            "3. Gesamt- oder Kernanalyse-Text: etwa DOPPELT so lang wie im Standard, " +
+            "mit konkreten Zeilen aus den Eintraegen als Belege.\n" +
+            "4. Empfehlungen und \"Patterns\"-Beschreibungen: deutlich ausfuehrlicher, " +
+            "mit Kontext, Beispiel-Situationen aus den Eintraegen und konkreten " +
+            "Folgeschritten. Die Kurzbeschreibung im Feld \"beschreibung\" darf dafuer " +
+            "ruhig 20–40 Woerter lang sein statt 13–21.\n" +
+            "Sortierung, Prioritaeten (hoch/mittel/niedrig) und JSON-Struktur bleiben " +
+            "unveraendert. Fuege KEINE neuen Felder hinzu. Fuelle die vorhandenen " +
+            "Felder nur ausfuehrlicher."
 }

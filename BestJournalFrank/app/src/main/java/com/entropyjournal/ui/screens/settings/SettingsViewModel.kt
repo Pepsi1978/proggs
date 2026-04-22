@@ -38,6 +38,7 @@ data class SettingsUiState(
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
     val autoUpdateDashboard: Boolean = true,
+    val verboseDashboard: Boolean = false,
     val isDarkTheme: Boolean = false,
     val followSystem: Boolean = false,
     val followSun: Boolean = false,
@@ -167,6 +168,8 @@ constructor(
                     encryptedPrefs.getInt(Constants.PREF_MAX_RECORDING_DURATION, 5),
                 autoUpdateDashboard =
                     encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true),
+                verboseDashboard =
+                    encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false),
                 isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
                 followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                 followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
@@ -289,6 +292,15 @@ constructor(
     fun updateAutoUpdateDashboard(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, enabled).apply()
         _uiState.value = _uiState.value.copy(autoUpdateDashboard = enabled)
+    }
+
+    fun updateVerboseDashboard(enabled: Boolean) {
+        encryptedPrefs
+            .edit()
+            .putBoolean(Constants.PREF_VERBOSE_DASHBOARD, enabled)
+            .putLong(Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, System.currentTimeMillis())
+            .apply()
+        _uiState.value = _uiState.value.copy(verboseDashboard = enabled)
     }
 
     fun updateBiometricLock(enabled: Boolean) {

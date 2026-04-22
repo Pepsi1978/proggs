@@ -844,7 +844,13 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
         // Append the global no-em-dash rule to every dashboard scenario so
         // generated analyses, summaries, advice and top actions never show
         // the LLM-style em-dash the user dislikes.
-        return base + "\n\n" + Constants.NO_EM_DASH_RULE
+        val withNoEmDash = base + "\n\n" + Constants.NO_EM_DASH_RULE
+        // If the user turned on "Längere Version", append the verbose-length
+        // rule so every profile produces ~2x longer analyses and more items
+        // while keeping profile semantics and priority sorting intact.
+        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
+        return if (verbose) withNoEmDash + "\n\n" + Constants.VERBOSE_LENGTH_RULE
+        else withNoEmDash
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
