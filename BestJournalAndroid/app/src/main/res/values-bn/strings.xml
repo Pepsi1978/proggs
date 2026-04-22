@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1102,9 +1102,9 @@
     <string name="settings_analytics_title">বেনামী পরিসংখ্যান</string>
     <string name="settings_analytics_subtitle">ত্রুটি বিশ্লেষণ ও পণ্য উন্নতির জন্য Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">অ্যাকাউন্ট ও ডেটা মুছে ফেলো</string>
+    <string name="settings_delete_account_title">অ্যাপের ডেটা ও ব্যাকআপ মুছে ফেলো</string>
     <string name="settings_delete_account_subtitle">সব স্থানীয় ডেটা, Google অ্যাকাউন্ট এবং Drive ব্যাকআপ স্থায়ীভাবে মুছে ফেলে</string>
-    <string name="settings_delete_account_confirm_title">অ্যাকাউন্ট স্থায়ীভাবে মুছবে?</string>
+    <string name="settings_delete_account_confirm_title">অ্যাপের সব ডেটা মুছে ফেলবে?</string>
     <string name="settings_delete_account_confirm_body">এই ক্রিয়া ফিরিয়ে আনা যাবে না এবং এগুলো মুছে ফেলবে:\n\n• সব স্থানীয় ডায়েরি এন্ট্রি, ছবি ও ভিডিও\n• তোমার Firebase অ্যাকাউন্ট\n• অ্যাপের Google Drive ব্যাকআপ\n\nঅ্যাপ নতুন ইনস্টলেশনের মতো পুনরায় চালু হবে।</string>
     <string name="settings_delete_account_cancel">বাতিল</string>
     <string name="settings_delete_account_confirm">হ্যাঁ, সব মুছে ফেলো</string>

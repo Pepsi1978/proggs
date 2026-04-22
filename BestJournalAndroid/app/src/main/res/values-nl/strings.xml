@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Ontgrendeld op %1$s</string>
     <!-- About -->
     <string name="settings_about">Over de app</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">Jouw persoonlijke AI-dagboek</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uitloggen?</string>
@@ -1101,9 +1101,9 @@
     <string name="settings_analytics_title">Anonieme statistieken</string>
     <string name="settings_analytics_subtitle">Firebase Analytics voor foutanalyse en productverbetering</string>
 
-    <string name="settings_delete_account_title">Account en gegevens verwijderen</string>
+    <string name="settings_delete_account_title">App-gegevens en back-up verwijderen</string>
     <string name="settings_delete_account_subtitle">Verwijdert onomkeerbaar alle lokale gegevens, je Google-account en de Drive-back-up</string>
-    <string name="settings_delete_account_confirm_title">Account definitief verwijderen?</string>
+    <string name="settings_delete_account_confirm_title">Alle app-gegevens verwijderen?</string>
     <string name="settings_delete_account_confirm_body">Deze actie is onomkeerbaar en verwijdert:\n\n• Alle lokale dagboekinvoer, foto\'s en video\'s\n• Je Firebase-account\n• De Google Drive-back-up van de app\n\nDe app start daarna opnieuw op als verse installatie.</string>
     <string name="settings_delete_account_cancel">Annuleren</string>
     <string name="settings_delete_account_confirm">Ja, alles verwijderen</string>

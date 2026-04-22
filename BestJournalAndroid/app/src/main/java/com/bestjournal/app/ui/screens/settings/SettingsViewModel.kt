@@ -29,7 +29,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
@@ -593,7 +592,7 @@ constructor(
      * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO / CCPA Right to Delete.
      * Removes:
      *  - Drive appDataFolder backup (verified empty afterwards — see [DriveBackupManager.deleteAllAppData])
-     *  - Firebase Auth user record (app-specific sign-in only — does NOT delete the Google account itself)
+     *  - App sign-in state (cached Google ID profile in encrypted preferences — not the Google account itself)
      *  - Local on-device photos and videos (filesDir/photos)
      *  - Cached audio recordings and temp DB snapshots from cacheDir — these can contain journal content
      *  - Everything signOut() also removes: local Room DBs, encrypted prefs, reminder alarms
@@ -642,21 +641,14 @@ constructor(
                 )
             }
 
-            // 2) Firebase Auth user (app sign-in only — NOT the Google account itself).
-            try {
-                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()?.await()
-            } catch (e: Exception) {
-                android.util.Log.w("DeleteAccount", "Firebase user delete skipped: ${e.message}")
-            }
-
-            // 3) Local photo/video directory — not cleared by signOut().
+            // 2) Local photo/video directory — not cleared by signOut().
             try {
                 java.io.File(context.filesDir, "photos").deleteRecursively()
             } catch (e: Exception) {
                 android.util.Log.w("DeleteAccount", "Photo dir cleanup skipped: ${e.message}")
             }
 
-            // 4) cacheDir — contains audio recordings (recording_*.wav), Edge-TTS cache
+            // 3) cacheDir — contains audio recordings (recording_*.wav), Edge-TTS cache
             //    (tts_audio.mp3), and — CRITICALLY — drive_merge_temp.db which holds a FULL
             //    copy of the journal database during sync. Wiping the whole cache is safe
             //    because cache content is by definition regenerable.
@@ -666,7 +658,7 @@ constructor(
                 android.util.Log.w("DeleteAccount", "Cache cleanup skipped: ${e.message}")
             }
 
-            // 5) Fall through to signOut: clears Room DBs, encrypted prefs, alarms, restarts app.
+            // 4) Fall through to signOut: clears Room DBs, encrypted prefs, alarms, restarts app.
             signOut(context)
         }
     }

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s に獲得</string>
     <!-- About -->
     <string name="settings_about">アプリについて</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">あなたのAI日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ログアウトしますか？</string>
@@ -1097,9 +1097,9 @@
     <string name="settings_analytics_title">匿名の統計情報</string>
     <string name="settings_analytics_subtitle">エラー分析と製品改善のためのFirebase Analytics</string>
 
-    <string name="settings_delete_account_title">アカウントとデータの削除</string>
+    <string name="settings_delete_account_title">アプリデータとバックアップを削除</string>
     <string name="settings_delete_account_subtitle">すべてのローカルデータ、Googleアカウント、Driveバックアップを元に戻せない形で削除します</string>
-    <string name="settings_delete_account_confirm_title">アカウントを完全に削除しますか？</string>
+    <string name="settings_delete_account_confirm_title">すべてのアプリデータを削除しますか？</string>
     <string name="settings_delete_account_confirm_body">この操作は元に戻せず、以下を削除します：\n\n• すべてのローカル日記エントリー、写真、動画\n• Firebaseアカウント\n• アプリのGoogle Driveバックアップ\n\nアプリは新規インストール状態で再起動します。</string>
     <string name="settings_delete_account_cancel">キャンセル</string>
     <string name="settings_delete_account_confirm">はい、すべて削除</string>

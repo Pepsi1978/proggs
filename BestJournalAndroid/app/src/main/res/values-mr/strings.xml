@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s रोजी अनलॉक</string>
     <!-- About -->
     <string name="settings_about">App बद्दल</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">तुमची वैयक्तिक AI दैनंदिनी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करायचे का?</string>
@@ -1101,9 +1101,9 @@
     <string name="settings_analytics_title">निनावी आकडेवारी</string>
     <string name="settings_analytics_subtitle">त्रुटी विश्लेषण आणि उत्पादन सुधारणेसाठी Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">खाते आणि डेटा हटवा</string>
+    <string name="settings_delete_account_title">अॅप डेटा आणि बॅकअप हटवा</string>
     <string name="settings_delete_account_subtitle">सर्व स्थानिक डेटा, Google खाते आणि Drive बॅकअप कायमस्वरूपी हटवते</string>
-    <string name="settings_delete_account_confirm_title">खाते कायमस्वरूपी हटवायचे का?</string>
+    <string name="settings_delete_account_confirm_title">सर्व अॅप डेटा हटवायचा का?</string>
     <string name="settings_delete_account_confirm_body">ही क्रिया पूर्ववत करता येणार नाही आणि हे हटवते:\n\n• सर्व स्थानिक डायरी नोंदी, फोटो आणि व्हिडिओ\n• तुमचे Firebase खाते\n• अॅपचा Google Drive बॅकअप\n\nअॅप नवीन इन्स्टॉलेशनप्रमाणे पुन्हा सुरू होईल.</string>
     <string name="settings_delete_account_cancel">रद्द करा</string>
     <string name="settings_delete_account_confirm">होय, सर्व हटवा</string>

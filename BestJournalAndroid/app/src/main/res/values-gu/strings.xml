@@ -443,7 +443,7 @@
     <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
     
     <string name="settings_about">App વિશે</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
     
     <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
@@ -1058,9 +1058,9 @@
     <string name="settings_analytics_title">અજ્ઞાત આંકડા</string>
     <string name="settings_analytics_subtitle">ભૂલ વિશ્લેષણ અને ઉત્પાદન સુધારણા માટે Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">એકાઉન્ટ અને ડેટા કાઢી નાખો</string>
+    <string name="settings_delete_account_title">એપનો ડેટા અને બેકઅપ કાઢી નાખો</string>
     <string name="settings_delete_account_subtitle">બધા સ્થાનિક ડેટા, Google એકાઉન્ટ અને Drive બેકઅપને કાયમી રૂપે કાઢી નાખે છે</string>
-    <string name="settings_delete_account_confirm_title">એકાઉન્ટ કાયમી રીતે કાઢવું?</string>
+    <string name="settings_delete_account_confirm_title">એપનો બધો ડેટા કાઢી નાખવો?</string>
     <string name="settings_delete_account_confirm_body">આ ક્રિયા પાછી મેળવી શકાતી નથી અને આ કાઢી નાખે છે:\n\n• બધી સ્થાનિક ડાયરી એન્ટ્રીઓ, ફોટા અને વીડિયો\n• તમારું Firebase એકાઉન્ટ\n• ઍપનો Google Drive બેકઅપ\n\nઍપ નવા ઇન્સ્ટોલેશન તરીકે ફરીથી શરૂ થશે.</string>
     <string name="settings_delete_account_cancel">રદ કરો</string>
     <string name="settings_delete_account_confirm">હા, બધું કાઢો</string>

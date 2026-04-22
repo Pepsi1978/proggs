@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1110,9 +1110,9 @@
     <string name="settings_analytics_title">அடையாளமற்ற புள்ளிவிவரங்கள்</string>
     <string name="settings_analytics_subtitle">பிழை பகுப்பாய்வு மற்றும் தயாரிப்பு மேம்பாட்டிற்கான Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">கணக்கையும் தரவையும் நீக்கு</string>
+    <string name="settings_delete_account_title">ஆப் தரவும் காப்புப்பிரதியும் நீக்கு</string>
     <string name="settings_delete_account_subtitle">அனைத்து உள்ளமை தரவு, Google கணக்கு மற்றும் Drive காப்புப்பிரதியை நிரந்தரமாக நீக்குகிறது</string>
-    <string name="settings_delete_account_confirm_title">கணக்கை நிரந்தரமாக நீக்கவா?</string>
+    <string name="settings_delete_account_confirm_title">அனைத்து ஆப் தரவையும் நீக்கவா?</string>
     <string name="settings_delete_account_confirm_body">இந்தச் செயலை மீட்க முடியாது மற்றும் நீக்குவது:\n\n• அனைத்து உள்ளமை நாட்குறிப்புப் பதிவுகள், புகைப்படங்கள் மற்றும் வீடியோக்கள்\n• உங்கள் Firebase கணக்கு\n• பயன்பாட்டின் Google Drive காப்புப்பிரதி\n\nஅதன்பிறகு பயன்பாடு புதிய நிறுவலாக மீண்டும் தொடங்கும்.</string>
     <string name="settings_delete_account_cancel">ரத்து</string>
     <string name="settings_delete_account_confirm">ஆம், அனைத்தையும் நீக்கு</string>

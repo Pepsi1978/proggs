@@ -433,7 +433,7 @@
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1033,9 +1033,9 @@
     <string name="settings_analytics_title">అనామక గణాంకాలు</string>
     <string name="settings_analytics_subtitle">లోప విశ్లేషణ మరియు ఉత్పత్తి మెరుగుదల కోసం Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ఖాతా మరియు డేటా తొలగించండి</string>
+    <string name="settings_delete_account_title">యాప్ డేటా మరియు బ్యాకప్ తొలగించండి</string>
     <string name="settings_delete_account_subtitle">అన్ని స్థానిక డేటా, Google ఖాతా మరియు Drive బ్యాకప్‌ను శాశ్వతంగా తొలగిస్తుంది</string>
-    <string name="settings_delete_account_confirm_title">ఖాతాను శాశ్వతంగా తొలగించాలా?</string>
+    <string name="settings_delete_account_confirm_title">అన్ని యాప్ డేటాను తొలగించాలా?</string>
     <string name="settings_delete_account_confirm_body">ఈ చర్య తిరిగి పొందలేనిది మరియు వీటిని తొలగిస్తుంది:\n\n• అన్ని స్థానిక డైరీ ఎంట్రీలు, ఫోటోలు మరియు వీడియోలు\n• మీ Firebase ఖాతా\n• యాప్ యొక్క Google Drive బ్యాకప్\n\nయాప్ కొత్త ఇన్‌స్టాలేషన్‌గా మళ్లీ ప్రారంభమవుతుంది.</string>
     <string name="settings_delete_account_cancel">రద్దు</string>
     <string name="settings_delete_account_confirm">అవును, అన్నీ తొలగించండి</string>

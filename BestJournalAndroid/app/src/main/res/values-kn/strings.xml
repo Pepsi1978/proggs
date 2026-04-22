@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
     <!-- About -->
     <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
@@ -1102,9 +1102,9 @@
     <string name="settings_analytics_title">ಅನಾಮಧೇಯ ಅಂಕಿಅಂಶಗಳು</string>
     <string name="settings_analytics_subtitle">ದೋಷ ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಉತ್ಪನ್ನ ಸುಧಾರಣೆಗಾಗಿ Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ಖಾತೆ ಮತ್ತು ಡೇಟಾ ಅಳಿಸಿ</string>
+    <string name="settings_delete_account_title">ಅಪ್ ಡೇಟಾ ಮತ್ತು ಬ್ಯಾಕಪ್ ಅಳಿಸಿ</string>
     <string name="settings_delete_account_subtitle">ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೇಟಾ, Google ಖಾತೆ ಮತ್ತು Drive ಬ್ಯಾಕಪ್ ಅನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುತ್ತದೆ</string>
-    <string name="settings_delete_account_confirm_title">ಖಾತೆಯನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುವುದೇ?</string>
+    <string name="settings_delete_account_confirm_title">ಎಲ್ಲಾ ಅಪ್ ಡೇಟಾವನ್ನು ಅಳಿಸುವುದೇ?</string>
     <string name="settings_delete_account_confirm_body">ಈ ಕ್ರಿಯೆಯನ್ನು ಹಿಂಪಡೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ ಮತ್ತು ಇದನ್ನು ಅಳಿಸುತ್ತದೆ:\n\n• ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೈರಿ ಪ್ರವೇಶಗಳು, ಫೋಟೋಗಳು ಮತ್ತು ವೀಡಿಯೊಗಳು\n• ನಿಮ್ಮ Firebase ಖಾತೆ\n• ಆ್ಯಪ್‌ನ Google Drive ಬ್ಯಾಕಪ್\n\nಆ್ಯಪ್ ಹೊಸ ಸ್ಥಾಪನೆಯಂತೆ ಮತ್ತೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.</string>
     <string name="settings_delete_account_cancel">ರದ್ದುಮಾಡಿ</string>
     <string name="settings_delete_account_confirm">ಹೌದು, ಎಲ್ಲವನ್ನೂ ಅಳಿಸಿ</string>

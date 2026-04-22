@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Dibuka pada %1$s</string>
     <!-- About -->
     <string name="settings_about">Tentang aplikasi</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">Jurnal AI pribadimu</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Keluar?</string>
@@ -1097,9 +1097,9 @@
     <string name="settings_analytics_title">Statistik anonim</string>
     <string name="settings_analytics_subtitle">Firebase Analytics untuk analisis kesalahan dan peningkatan produk</string>
 
-    <string name="settings_delete_account_title">Hapus akun dan data</string>
+    <string name="settings_delete_account_title">Hapus data aplikasi dan cadangan</string>
     <string name="settings_delete_account_subtitle">Menghapus semua data lokal, akun Google, dan cadangan Drive secara permanen</string>
-    <string name="settings_delete_account_confirm_title">Hapus akun secara permanen?</string>
+    <string name="settings_delete_account_confirm_title">Hapus semua data aplikasi?</string>
     <string name="settings_delete_account_confirm_body">Tindakan ini tidak bisa dibatalkan dan menghapus:\n\n• Semua catatan jurnal, foto, dan video lokal\n• Akun Firebase-mu\n• Cadangan aplikasi di Google Drive\n\nAplikasi akan memulai ulang sebagai instalasi baru.</string>
     <string name="settings_delete_account_cancel">Batal</string>
     <string name="settings_delete_account_confirm">Ya, hapus semua</string>

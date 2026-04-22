@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">‏Best Journal V0.12.29</string>
+    <string name="settings_about_version">‏Best Journal V0.12.50</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
@@ -1102,9 +1102,9 @@
     <string name="settings_analytics_title">گمنام شماریات</string>
     <string name="settings_analytics_subtitle">نقص کے تجزیہ اور پروڈکٹ کی بہتری کے لیے Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">اکاؤنٹ اور ڈیٹا حذف کریں</string>
+    <string name="settings_delete_account_title">ایپ ڈیٹا اور بیک اپ حذف کریں</string>
     <string name="settings_delete_account_subtitle">تمام مقامی ڈیٹا، Google اکاؤنٹ اور Drive بیک اپ کو مستقل طور پر حذف کرتا ہے</string>
-    <string name="settings_delete_account_confirm_title">اکاؤنٹ مستقل طور پر حذف کریں؟</string>
+    <string name="settings_delete_account_confirm_title">تمام ایپ ڈیٹا حذف کریں؟</string>
     <string name="settings_delete_account_confirm_body">یہ عمل واپس نہیں کیا جا سکتا اور درج ذیل کو حذف کرتا ہے:\n\n• تمام مقامی ڈائری اندراجات، تصاویر اور ویڈیوز\n• آپ کا Firebase اکاؤنٹ\n• ایپ کا Google Drive بیک اپ\n\nاس کے بعد ایپ نئے انسٹالیشن کے طور پر دوبارہ شروع ہو گی۔</string>
     <string name="settings_delete_account_cancel">منسوخ</string>
     <string name="settings_delete_account_confirm">ہاں، سب کچھ حذف کریں</string>

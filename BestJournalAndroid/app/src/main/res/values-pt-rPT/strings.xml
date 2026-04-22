@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
     <!-- About -->
     <string name="settings_about">Sobre o app</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">O teu diário pessoal com IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sair da conta?</string>
@@ -1101,9 +1101,9 @@
     <string name="settings_analytics_title">Estatísticas anónimas</string>
     <string name="settings_analytics_subtitle">Firebase Analytics para análise de erros e melhoria do produto</string>
 
-    <string name="settings_delete_account_title">Eliminar conta e dados</string>
+    <string name="settings_delete_account_title">Eliminar dados da app e cópia de segurança</string>
     <string name="settings_delete_account_subtitle">Remove de forma irreversível todos os dados locais, a tua conta Google e a cópia de segurança do Drive</string>
-    <string name="settings_delete_account_confirm_title">Eliminar a conta definitivamente?</string>
+    <string name="settings_delete_account_confirm_title">Eliminar todos os dados da app?</string>
     <string name="settings_delete_account_confirm_body">Esta ação é irreversível e elimina:\n\n• Todas as entradas, fotografias e vídeos locais\n• A tua conta Firebase\n• A cópia de segurança da aplicação no Google Drive\n\nA aplicação reinicia como uma nova instalação.</string>
     <string name="settings_delete_account_cancel">Cancelar</string>
     <string name="settings_delete_account_confirm">Sim, eliminar tudo</string>

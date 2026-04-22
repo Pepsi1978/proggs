@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">解锁于 %1$s</string>
     <!-- About -->
     <string name="settings_about">关于应用</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.50</string>
     <string name="settings_about_desc">你的个人 AI 日记</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登录吗？</string>
@@ -1097,9 +1097,9 @@
     <string name="settings_analytics_title">匿名统计</string>
     <string name="settings_analytics_subtitle">用于错误分析和产品改进的 Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">删除账户和数据</string>
+    <string name="settings_delete_account_title">删除应用数据和备份</string>
     <string name="settings_delete_account_subtitle">不可撤销地删除所有本地数据、你的 Google 账户和 Drive 备份</string>
-    <string name="settings_delete_account_confirm_title">永久删除账户？</string>
+    <string name="settings_delete_account_confirm_title">删除全部应用数据？</string>
     <string name="settings_delete_account_confirm_body">此操作不可撤销，将删除：\n\n• 所有本地日记记录、照片和视频\n• 你的 Firebase 账户\n• 应用的 Google Drive 备份\n\n应用将以全新安装状态重新启动。</string>
     <string name="settings_delete_account_cancel">取消</string>
     <string name="settings_delete_account_confirm">是的，全部删除</string>
