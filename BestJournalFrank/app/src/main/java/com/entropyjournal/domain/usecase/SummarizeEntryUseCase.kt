@@ -6,6 +6,7 @@ import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.data.repository.EntryFollowUpRepository
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.stripEmDashes
 import javax.inject.Inject
 
 class SummarizeEntryUseCase
@@ -35,9 +36,10 @@ TITEL: [Überschrift — max $MAX_TITLE_CHARS Zeichen, inklusive Leerzeichen]
 REGELN:
 - Überschrift: HART maximal $MAX_TITLE_CHARS Zeichen (inkl. Leerzeichen). Kürzer ist besser. 2-3 Wörter.
 - Stichpunkte: Kurz und prägnant, nur Kernaussagen. Berücksichtige Haupttext UND Nachträge.
-- Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
 - Sprache: Deutsch
 - Gib NUR das Format oben zurück, nichts anderes
+
+${Constants.NO_EM_DASH_RULE}
 
 TEXT:
 $text
@@ -87,7 +89,7 @@ $text
                 )
             val response =
                 geminiApi.generateContent(model = model, apiKey = apiKey, request = request)
-            val result = response.extractText()?.trim()?.replace("—", ", ") ?: return
+            val result = response.extractText()?.trim()?.stripEmDashes() ?: return
 
             // Parse title and summary from response
             val lines = result.lines()

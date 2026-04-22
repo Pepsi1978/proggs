@@ -12,6 +12,7 @@ import com.entropyjournal.domain.model.AdvicePriority
 import com.entropyjournal.domain.model.DerivationEntry
 import com.entropyjournal.domain.model.TopAction
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.stripEmDashes
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -829,7 +830,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
 
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
+        val base = when (scenario) {
             0 -> summaryAnalysisSystemPrompt
             2 -> selfInsightAnalysisSystemPrompt
             3 -> goalsAnalysisSystemPrompt
@@ -840,6 +841,10 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
             }
             else -> entropyAnalysisSystemPrompt
         }
+        // Append the global no-em-dash rule to every dashboard scenario so
+        // generated analyses, summaries, advice and top actions never show
+        // the LLM-style em-dash the user dislikes.
+        return base + "\n\n" + Constants.NO_EM_DASH_RULE
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
@@ -973,7 +978,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
                     .removePrefix("```json")
                     .removePrefix("```")
                     .removeSuffix("```")
-                    .replace("—", ", ")
+                    .stripEmDashes()
                     .trim()
             val blocks = parseAdviceJson(cleanJson, entryCount)
 

@@ -8,6 +8,7 @@ import com.entropyjournal.data.remote.gemini.GeminiApi
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.data.repository.RetrospectiveRepository
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.stripEmDashes
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -78,7 +79,7 @@ constructor(
                 )
             val response =
                 geminiApi.generateContent(model = modelName, apiKey = apiKey, request = request)
-            val text = response.extractText()?.replace("—", ", ")
+            val text = response.extractText()?.stripEmDashes()
             if (text != null) Result.success(text)
             else Result.failure(Exception("No response text from Gemini"))
         } catch (e: Exception) {
@@ -207,8 +208,9 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
 
 EINTRÄGE DER WOCHE:
 ${task.entriesText}"""
@@ -387,8 +389,9 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
 
 WOCHENRÜCKBLICKE:
 ${task.weeksText}"""
@@ -508,8 +511,9 @@ REGELN:
 - Schließe mit einem Gedanken der nach vorne blickt
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
 
 MONATSRÜCKBLICKE:
 $monthsText"""

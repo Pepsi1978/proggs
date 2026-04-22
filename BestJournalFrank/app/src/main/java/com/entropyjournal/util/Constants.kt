@@ -202,4 +202,18 @@ object Constants {
 
     // Daily Writing Prompt
     const val PREF_PROMPT_DISMISSED_DATE = "prompt_dismissed_date"
+
+    /**
+     * Anti-em-dash rule appended to every AI prompt so generated text reads
+     * naturally and does not look machine-written. Em-dashes (— and –) are a
+     * tell-tale sign of LLM output, so we forbid them in body text. Headlines
+     * may use them only as an absolute last resort.
+     */
+    const val NO_EM_DASH_RULE =
+        "STILREGEL (wichtig): Verwende im Fliesstext KEINE Gedankenstriche " +
+            "(— oder –). Nutze stattdessen Kommas, Doppelpunkte, Klammern oder zwei " +
+            "separate Saetze. Dieses Zeichen wirkt maschinell und soll in Analysen, " +
+            "Zusammenfassungen, Rueckblicken und verbesserten Texten nicht vorkommen. " +
+            "In Ueberschriften ist ein Gedankenstrich nur im aeussersten Notfall erlaubt, " +
+            "wenn keine natuerlichere Formulierung moeglich ist."
 }

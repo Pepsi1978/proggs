@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.entropyjournal.data.remote.gemini.GeminiApi
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.stripEmDashes
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -38,8 +39,9 @@ GRENZEN (strikt):
 - Keine neuen Informationen, Fakten oder Inhalte hinzufügen.
 - Keine Vermutungen über nicht Gesagtes.
 - Die Intention des Originals muss vollständig erhalten bleiben.
-- Keine langen Gedankenstriche (—). Nutze Kommas oder kurze Sätze.
 - Sprache: Deutsch.
+
+${Constants.NO_EM_DASH_RULE}
 
 REGEL:
 Gib AUSSCHLIESSLICH den überarbeiteten Text zurück.
@@ -72,7 +74,7 @@ $text
                 apiKey = getApiKey(),
                 request = request,
             )
-        return response.extractText()?.trim()?.replace("—", ", ") ?: text
+        return response.extractText()?.trim()?.stripEmDashes() ?: text
     }
 
     /**
