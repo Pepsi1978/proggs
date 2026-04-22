@@ -665,6 +665,11 @@ constructor(
         val entry = _uiState.value.entry ?: return
         if (entry.displayText.isNotBlank()) {
             summarizeEntryUseCase(entryId, entry.displayText)
+            // Reload the entry so the freshly-written summary/title appear in the UI.
+            val refreshed = journalRepository.getEntryById(entryId)
+            if (refreshed != null) {
+                _uiState.update { it.copy(entry = refreshed) }
+            }
         }
     }
 

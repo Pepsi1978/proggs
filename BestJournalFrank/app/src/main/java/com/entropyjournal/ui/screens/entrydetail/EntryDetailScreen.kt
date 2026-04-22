@@ -299,11 +299,6 @@ fun EntryDetailScreen(
                     )
                 }
             },
-            actions = {
-                IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
-                    Icon(Icons.Rounded.Delete, "L\u00f6schen", tint = NeonRed)
-                }
-            },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         )
 
@@ -312,11 +307,46 @@ fun EntryDetailScreen(
                 modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
+                GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Book,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = NeonAmber,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Tagebucheintrag",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = NeonAmber,
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.showDeleteDialog(true)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = "Tagebucheintrag l\u00f6schen",
+                                    tint = NeonRed,
+                                )
+                            }
+                        }
                         Text(
                             "${DateTimeFormatter.formatFull(entry.timestamp)} \u00b7 ${DateTimeFormatter.formatRelative(entry.timestamp)}",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
                         if (!entry.summary.isNullOrBlank()) {
@@ -518,6 +548,46 @@ fun EntryDetailScreen(
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
+                        if (!hasImproved) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.improveTextWithAi() },
+                                enabled = !uiState.isImproving,
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                if (uiState.isImproving) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Wird verbessert\u2026",
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.AutoAwesome,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Mit KI nachtr\u00e4glich verbessern",
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                }
+                            }
+                            uiState.improveError?.let { error ->
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    error,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NeonRed,
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -581,7 +651,6 @@ fun EntryDetailScreen(
                                 "${DateTimeFormatter.formatFull(followUp.createdAt)} · ${DateTimeFormatter.formatRelative(followUp.updatedAt)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.padding(start = 26.dp, top = 2.dp),
                             )
 
                             if (fuHasImproved) {
@@ -717,51 +786,6 @@ fun EntryDetailScreen(
                     }
                 }
 
-                if (!hasImproved) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start,
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.improveTextWithAi() },
-                            enabled = !uiState.isImproving,
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            if (uiState.isImproving) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Wird verbessert\u2026",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.AutoAwesome,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Mit KI nachtr\u00e4glich verbessern",
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-                        uiState.improveError?.let { error ->
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                error,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NeonRed,
-                            )
-                        }
-                    }
-                }
-
                 GlassCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonAmber) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -796,12 +820,6 @@ fun EntryDetailScreen(
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Füge später einen Nachtrag zu diesem Eintrag hinzu.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
                     }
                 }
 
@@ -888,13 +906,6 @@ fun EntryDetailScreen(
                                     }
                                 }
                             }
-                        } else {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Noch keine Fotos/Videos hinzugef\u00fcgt",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
                         }
                     }
                 }
