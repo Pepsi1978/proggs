@@ -24,12 +24,8 @@ namespace TerminalVoiceOverlay.Services
                 Clipboard.SetText(text);
             });
 
-            // Bring terminal to foreground
-            if (terminalHwnd != IntPtr.Zero)
-            {
-                Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(150); // macOS uses usleep 150ms
-            }
+            // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
+            BringToForeground(terminalHwnd);
 
             // Send Ctrl+V
             SendCtrlV();
@@ -38,11 +34,7 @@ namespace TerminalVoiceOverlay.Services
             if (autoEnter)
             {
                 Thread.Sleep(300); // macOS uses 300ms before optional Enter
-                if (terminalHwnd != IntPtr.Zero)
-                {
-                    Win32.SetForegroundWindow(terminalHwnd);
-                    Thread.Sleep(100);
-                }
+                BringToForeground(terminalHwnd);
                 SendKey(VK_RETURN);
             }
 
@@ -65,12 +57,7 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void ClearLine(IntPtr terminalHwnd)
         {
-            if (terminalHwnd != IntPtr.Zero)
-            {
-                Win32.AllowSetForegroundWindow(unchecked((uint)-1));
-                Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(150);
-            }
+            BringToForeground(terminalHwnd);
 
             // Ctrl+C — cancels current input, fresh prompt (same as macOS)
             SendKeyCombo(Win32.VK_CONTROL, VK_C);
@@ -82,12 +69,7 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void CopySelection(IntPtr terminalHwnd)
         {
-            if (terminalHwnd != IntPtr.Zero)
-            {
-                Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(50);
-            }
-
+            BringToForeground(terminalHwnd);
             SendKeyCombo(Win32.VK_CONTROL, VK_C);
         }
 
@@ -97,12 +79,7 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void PasteClipboard(IntPtr terminalHwnd)
         {
-            if (terminalHwnd != IntPtr.Zero)
-            {
-                Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(50);
-            }
-
+            BringToForeground(terminalHwnd);
             SendCtrlV();
         }
 
@@ -129,12 +106,40 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void PressReturn(IntPtr terminalHwnd)
         {
-            if (terminalHwnd != IntPtr.Zero)
-            {
-                Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(100);
-            }
+            BringToForeground(terminalHwnd);
             SendKey(VK_RETURN);
+        }
+
+        /// <summary>
+        /// Robustly brings a window to the foreground, overcoming the Windows foreground-lock
+        /// restriction by attaching to the target window's input queue. Ported from the sister
+        /// project ClaudeVoiceOverlay-Windows/Services/AppController.cs — proven in production.
+        /// </summary>
+        private static void BringToForeground(IntPtr terminalHwnd)
+        {
+            if (terminalHwnd == IntPtr.Zero) return;
+
+            var currentFg = Win32.GetForegroundWindow();
+            if (currentFg == terminalHwnd)
+            {
+                Thread.Sleep(30);
+                return;
+            }
+
+            uint ourThread = Win32.GetCurrentThreadId();
+            uint targetThread = Win32.GetWindowThreadProcessId(terminalHwnd, out _);
+
+            bool attached = false;
+            if (ourThread != targetThread)
+                attached = Win32.AttachThreadInput(ourThread, targetThread, true);
+
+            Win32.AllowSetForegroundWindow(unchecked((uint)-1));
+            Win32.SetForegroundWindow(terminalHwnd);
+            Win32.BringWindowToTop(terminalHwnd);
+            Thread.Sleep(200);
+
+            if (attached)
+                Win32.AttachThreadInput(ourThread, targetThread, false);
         }
 
         private static void SendKeyCombo(ushort modifier, ushort key)
