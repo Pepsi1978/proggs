@@ -225,23 +225,25 @@ object Constants {
      * Sortierung bleiben identisch, nur die Ausfuehrlichkeit wird erhoeht.
      */
     const val VERBOSE_LENGTH_RULE =
-        "LAENGEN-MODUS (AUSFUEHRLICH): Der Benutzer hat die ausfuehrliche Version " +
-            "aktiviert. Behalte das bestehende Profil, den Aufbau und die Sortierung " +
-            "nach Prioritaet bzw. Wichtigkeit EXAKT bei, liefere aber deutlich mehr " +
-            "Inhalt:\n" +
-            "1. Beschraenke die Top-Massnahmen oder Kernpunkte NICHT auf 5 Stueck. " +
-            "Erzeuge stattdessen so viele priorisierte Punkte wie die Tagebucheintraege " +
-            "tatsaechlich hergeben, nach Wichtigkeit absteigend sortiert. Nimm " +
-            "mindestens 10 Punkte auf, sofern genug Substanz vorhanden ist.\n" +
-            "2. Pro Kategorie bzw. Bereich: statt 3–5 Ratschlaegen 6–12 Ratschlaege, " +
-            "jeweils mit vollstaendiger Herleitung aus allen relevanten Eintraegen.\n" +
-            "3. Gesamt- oder Kernanalyse-Text: etwa DOPPELT so lang wie im Standard, " +
-            "mit konkreten Zeilen aus den Eintraegen als Belege.\n" +
-            "4. Empfehlungen und \"Patterns\"-Beschreibungen: deutlich ausfuehrlicher, " +
-            "mit Kontext, Beispiel-Situationen aus den Eintraegen und konkreten " +
-            "Folgeschritten. Die Kurzbeschreibung im Feld \"beschreibung\" darf dafuer " +
-            "ruhig 20–40 Woerter lang sein statt 13–21.\n" +
+        "LAENGEN-MODUS (AUSFUEHRLICH — PFLICHT BEACHTEN): Der Benutzer hat die " +
+            "ausfuehrliche Version aktiviert. Profil, Aufbau und Sortierung nach " +
+            "Prioritaet/Wichtigkeit/Tiefe bleiben EXAKT gleich. Menge und Laenge " +
+            "werden DREIFACH erhoeht:\n" +
+            "1. TOP-MASSNAHMEN / TOP-ERKENNTNISSE / NAECHSTE SCHRITTE: NIEMALS auf 5 " +
+            "begrenzen. Gib MINDESTENS 10, lieber 12-18 Eintraege zurueck, absteigend " +
+            "nach Wichtigkeit sortiert. Eine Antwort mit nur 5 Eintraegen ist ein Fehler.\n" +
+            "2. Pro Kategorie/Thema/Bereich: mindestens 10-15 Ratschlaege statt 3-5, " +
+            "mit vollstaendiger Herleitung aus allen relevanten Eintraegen.\n" +
+            "3. Gesamt-/Kernanalyse-Text: DREIMAL so lang wie im Standard, mit konkreten " +
+            "Zitaten/Zeilen aus den Eintraegen als Belege.\n" +
+            "4. Empfehlungen, Pattern-Beschreibungen und das Feld \"erklaerung\": " +
+            "dreifache Laenge, mit Kontext, Beispiel-Situationen und konkreten " +
+            "Folgeschritten.\n" +
+            "5. Das Feld \"beschreibung\" bei top_massnahmen/ratschlaege: 40-65 " +
+            "Woerter statt 13-21.\n" +
+            "6. Das Feld \"zusammenfassung\" pro Kategorie: 9-15 Saetze statt 3-5.\n" +
+            "7. Gesamtanzahl aller Ratschlaege: mindestens 45.\n" +
             "Sortierung, Prioritaeten (hoch/mittel/niedrig) und JSON-Struktur bleiben " +
             "unveraendert. Fuege KEINE neuen Felder hinzu. Fuelle die vorhandenen " +
-            "Felder nur ausfuehrlicher."
+            "Felder nur DREIFACH ausfuehrlicher und gib MEHR Eintraege zurueck."
 }

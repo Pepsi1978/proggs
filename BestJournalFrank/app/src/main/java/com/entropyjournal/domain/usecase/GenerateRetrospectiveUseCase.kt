@@ -112,6 +112,17 @@ constructor(
         return generated
     }
 
+    /**
+     * Wipes every existing weekly/monthly/yearly retrospective summary and regenerates
+     * them from scratch using the currently active profile + verbose setting. Called
+     * when the user switches dashboard profile or toggles "Längere Version" so every
+     * existing retro reflects the new style — not only future ones.
+     */
+    suspend fun regenerateAll(): Int {
+        retroRepo.deleteAll()
+        return generateMissing()
+    }
+
     // ── Weekly ──────────────────────────────────────────────────────────────
 
     private data class WeeklyTask(
@@ -185,35 +196,10 @@ constructor(
         profileStyle: String,
     ): RetrospectiveSummaryEntity? {
         try {
+            val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
             val prompt =
-                """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Tagebucheinträge zu einem strukturierten Wochenrückblick zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (3-5 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 2-4 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
-
-REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
-- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 200 Wörter
-- Sprache: Deutsch$profileStyle${getVerbosityInstruction(200, "3-5", "7-12")}
-
-${Constants.NO_EM_DASH_RULE}
-
-EINTRÄGE DER WOCHE:
-${task.entriesText}"""
+                if (verbose) buildWeeklyPromptVerbose(task, profileStyle)
+                else buildWeeklyPromptStandard(task, profileStyle)
 
             val result =
                 generateContent(
@@ -365,36 +351,10 @@ ${summaryText.take(500)}"""
         profileStyle: String,
     ): RetrospectiveSummaryEntity? {
         try {
+            val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
             val prompt =
-                """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für ${task.monthName} ${task.year} zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
-
-REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
-- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 300 Wörter
-- Sprache: Deutsch$profileStyle${getVerbosityInstruction(300, "4-6", "9-14")}
-
-${Constants.NO_EM_DASH_RULE}
-
-WOCHENRÜCKBLICKE:
-${task.weeksText}"""
+                if (verbose) buildMonthlyPromptVerbose(task, profileStyle)
+                else buildMonthlyPromptStandard(task, profileStyle)
 
             val result =
                 generateContent(
@@ -486,37 +446,10 @@ ${summaryText.take(500)}"""
             }
 
         val profileStyle = getProfileStyleInstruction()
+        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
         val prompt =
-            """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für $year zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
-
-REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
-- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr
-- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
-- Schließe mit einem Gedanken der nach vorne blickt
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 400 Wörter
-- Sprache: Deutsch$profileStyle${getVerbosityInstruction(400, "5-8", "11-18")}
-
-${Constants.NO_EM_DASH_RULE}
-
-MONATSRÜCKBLICKE:
-$monthsText"""
+            if (verbose) buildYearlyPromptVerbose(year, monthsText, profileStyle)
+            else buildYearlyPromptStandard(year, monthsText, profileStyle)
 
         val result =
             generateContent(
@@ -590,25 +523,206 @@ ${summaryText.take(500)}"""
         }
     }
 
-    // ── Profile style ───────────────────────────────────────────────────────
+    // ── Retrospective prompt builders (6 total: 3 standard + 3 verbose) ─────
+    //
+    // Mirrors the dashboard's 10-prompt architecture: instead of a runtime
+    // suffix that Gemini can ignore, each period (weekly/monthly/yearly) has
+    // two fully separate prompt templates. `generateSingle{Weekly,Monthly,
+    // Yearly}` picks one of the two based on PREF_VERBOSE_DASHBOARD.
 
-    /**
-     * When the user turned on "Längere Version" in Einstellungen → KI-Automatisierungen,
-     * every retrospective prompt gets an extra instruction telling Gemini to roughly
-     * double the output length and emit more bullet points without changing the
-     * structure or tone.
-     */
-    private fun getVerbosityInstruction(baseMinWords: Int, baseBulletRange: String, verboseBulletRange: String): String {
-        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
-        if (!verbose) return ""
-        val verboseMinWords = baseMinWords * 2
-        return "\n- AUSFÜHRLICHE VERSION aktiv: Schreibe ungefähr DOPPELT so viel Text. " +
-            "Mindestens $verboseMinWords Wörter. Die Stichpunkt-Zusammenfassung am Anfang " +
-            "darf $verboseBulletRange statt $baseBulletRange Punkte enthalten. Die einzelnen " +
-            "Abschnitte werden jeweils ausführlicher mit mehr Kontext, konkreten Zitaten aus " +
-            "den Einträgen und Erkenntnissen. Struktur, Überschriften und Stil bleiben " +
-            "unverändert."
-    }
+    private fun buildWeeklyPromptStandard(task: WeeklyTask, profileStyle: String): String =
+        """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Tagebucheinträge zu einem strukturierten Wochenrückblick zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (3-5 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 2-4 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
+- Schreibe warm und persönlich, aber nicht übertrieben
+- Mindestens 200 Wörter
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+EINTRÄGE DER WOCHE:
+${task.entriesText}"""
+
+    private fun buildWeeklyPromptVerbose(task: WeeklyTask, profileStyle: String): String =
+        """AUSFÜHRLICHE VERSION (PFLICHT BEACHTEN): Der Benutzer hat den Schalter "Längere Version" aktiviert. Liefere etwa DOPPELT so viel Text wie im Standard. Alle Zahlen- und Längenvorgaben unten sind bereits entsprechend gesetzt.
+
+Du bist ein Erzähler, der aus Tagebucheinträgen einen ausführlichen, gut lesbaren Wochenrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Tagebucheinträge zu einem ausführlichen, strukturierten Wochenrückblick zusammen, mit mehr Kontext, konkreten Zitaten aus den Einträgen und tieferen Beobachtungen als üblich.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als Stichpunkte (6-10 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 4-7 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])
+5. Nach der Überschrift folgt ein ausführlicher erzählender Text mit mehr Details, konkreten Zitaten/Formulierungen aus den Einträgen und persönlichen Beobachtungen
+6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte, jeder Abschnitt deutlich ausführlicher als im Standard
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Erwähne konkrete Ereignisse, Gefühle, Erkenntnisse — möglichst mit Zitaten oder Formulierungen aus den Einträgen
+- Alltägliches darf ausführlicher erwähnt werden, solange es Kontext liefert
+- Hebe Positives besonders hervor — verschweige Herausforderungen nicht, ordne sie ausführlich ein
+- Schreibe warm, persönlich und detailreich
+- MINDESTENS 400 Wörter insgesamt, lieber mehr
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+EINTRÄGE DER WOCHE:
+${task.entriesText}"""
+
+    private fun buildMonthlyPromptStandard(task: MonthlyTask, profileStyle: String): String =
+        """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für ${task.monthName} ${task.year} zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
+- Schreibe warm und persönlich, aber nicht übertrieben
+- Mindestens 300 Wörter
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+WOCHENRÜCKBLICKE:
+${task.weeksText}"""
+
+    private fun buildMonthlyPromptVerbose(task: MonthlyTask, profileStyle: String): String =
+        """AUSFÜHRLICHE VERSION (PFLICHT BEACHTEN): Der Benutzer hat den Schalter "Längere Version" aktiviert. Liefere etwa DOPPELT so viel Text wie im Standard. Alle Zahlen- und Längenvorgaben unten sind bereits entsprechend gesetzt.
+
+Du bist ein Erzähler, der aus Wochenrückblicken einen ausführlichen, tiefen Monatsrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Wochenrückblicke zu einem ausführlichen, strukturierten Monatsrückblick für ${task.monthName} ${task.year} zusammen, mit mehr Details, thematischen Verbindungen und tieferen Einsichten als üblich.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als Stichpunkte (8-12 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 5-8 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])
+5. Nach der Überschrift folgt ein ausführlicher erzählender Text mit mehr Kontext, Zitaten aus den Wochenrückblicken und persönlichen Entwicklungslinien
+6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit tiefen Übergängen innerhalb der Abschnitte, jeder Abschnitt deutlich ausführlicher als im Standard
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Ziehe ausführliche Verbindungen zwischen den Wochen, zeige Entwicklungen und rote Fäden mit konkreten Beispielen
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch und zeige das größere Bild
+- Alltägliches darf ausführlicher erwähnt werden, solange es Kontext für Muster liefert
+- Hebe Positives besonders hervor — ordne Herausforderungen ausführlich ein
+- Schreibe warm, persönlich und detailreich
+- MINDESTENS 600 Wörter insgesamt, lieber mehr
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+WOCHENRÜCKBLICKE:
+${task.weeksText}"""
+
+    private fun buildYearlyPromptStandard(year: Int, monthsText: String, profileStyle: String): String =
+        """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für $year zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
+- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr
+- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
+- Schließe mit einem Gedanken der nach vorne blickt
+- Schreibe warm und persönlich, aber nicht übertrieben
+- Mindestens 400 Wörter
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+MONATSRÜCKBLICKE:
+$monthsText"""
+
+    private fun buildYearlyPromptVerbose(year: Int, monthsText: String, profileStyle: String): String =
+        """AUSFÜHRLICHE VERSION (PFLICHT BEACHTEN): Der Benutzer hat den Schalter "Längere Version" aktiviert. Liefere etwa DOPPELT so viel Text wie im Standard. Alle Zahlen- und Längenvorgaben unten sind bereits entsprechend gesetzt.
+
+Du bist ein Erzähler, der aus Monatsrückblicken einen ausführlichen, tiefen Jahresrückblick schreibt.
+
+AUFGABE: Fasse die folgenden Monatsrückblicke zu einem ausführlichen, strukturierten Jahresrückblick für $year zusammen, mit tiefen thematischen Linien, konkreten Zitaten aus den Monatsrückblicken und einem umfassenden Blick auf das Jahr.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als Stichpunkte (10-16 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 7-12 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])
+5. Nach der Überschrift folgt ein ausführlicher erzählender Text mit konkreten Beispielen, Zitaten aus den Monatsrückblicken und persönlicher Einordnung
+6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
+
+REGELN:
+- Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit tiefen Übergängen innerhalb der Abschnitte, jeder Abschnitt deutlich ausführlicher als im Standard
+- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
+- Ziehe ausführliche Verbindungen zwischen den Monaten — zeige Entwicklungen, Wendepunkte und rote Fäden über das Jahr mit konkreten Beispielen
+- Erkenne die großen Themen des Jahres und ordne Ereignisse ausführlich in diese Linien ein
+- Alltägliches darf erwähnt werden, wenn es zu einem Muster gehört
+- Hebe Positives besonders hervor — ordne Herausforderungen ausführlich ein
+- Schließe mit einem ausführlichen Gedanken der nach vorne blickt
+- Schreibe warm, persönlich und detailreich
+- MINDESTENS 800 Wörter insgesamt, lieber mehr
+- Sprache: Deutsch$profileStyle
+
+${Constants.NO_EM_DASH_RULE}
+
+MONATSRÜCKBLICKE:
+$monthsText"""
+
+    // ── Profile style ───────────────────────────────────────────────────────
 
     private fun getProfileStyleInstruction(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)

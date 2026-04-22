@@ -24,6 +24,7 @@ constructor(
     private val repository: RetrospectiveRepository,
     private val generateUseCase: GenerateRetrospectiveUseCase,
     private val entryPhotoDao: EntryPhotoDao,
+    private val encryptedPrefs: android.content.SharedPreferences,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -186,6 +187,14 @@ constructor(
         }
     }
 
+    // Track the last dashboard scenario + verbose-timestamp so we can regenerate
+    // all retros whenever the user switches profile or toggles "Längere Version"
+    // in Einstellungen. Initialized lazily after the first generation so we don't
+    // trigger a regeneration on app start.
+    private var lastScenario: Int = encryptedPrefs.getInt(com.entropyjournal.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
+    private var lastVerboseChangedAt: Long =
+        encryptedPrefs.getLong(com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -209,6 +218,32 @@ constructor(
                 _errorMessage.value = e.message
             } finally {
                 _isGenerating.value = false
+            }
+        }
+
+        // Watch for profile switches and verbose-toggle changes while on any
+        // screen. When either flips we regenerate ALL existing retrospectives
+        // so the user sees the new prompt style immediately, not only for new
+        // future weeks/months/years.
+        viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                try {
+                    val currentScenario = encryptedPrefs.getInt(com.entropyjournal.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
+                    val currentVerboseChangedAt = encryptedPrefs.getLong(com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+                    val scenarioChanged = currentScenario != lastScenario
+                    val verboseFlipped = currentVerboseChangedAt > lastVerboseChangedAt && currentVerboseChangedAt > 0L
+                    if (scenarioChanged || verboseFlipped) {
+                        lastScenario = currentScenario
+                        lastVerboseChangedAt = currentVerboseChangedAt
+                        if (!_isGenerating.value) {
+                            Log.d("RetroVM", "Trigger regenerateAll (scenario=$currentScenario verboseFlipped=$verboseFlipped)")
+                            regenerateAll()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("RetroVM", "Watcher error: ${e.message}")
+                }
+                kotlinx.coroutines.delay(500)
             }
         }
     }
