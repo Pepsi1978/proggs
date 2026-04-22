@@ -67,7 +67,17 @@ TRANSLATIONS["nl"] = r"""
     <string name="settings_revoke_confirm">Herroeping aanmaken</string>
     <string name="settings_revoke_no_email">Geen e-mailapp gevonden. Stuur de herroeping naar dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Herroeping Premium-contract Best Journal</string>
-    <string name="settings_revoke_email_body">Hallo,\n\nhierbij herroep ik het door mij afgesloten contract over de Premium-functies van Best Journal.\n\nBesteld op: [in te vullen]\nGoogle-account-e-mail: [in te vullen indien afwijkend]\nNaam: [in te vullen]\n\nDatum: [vandaag]</string>
+    <string name="settings_revoke_email_body">Hierbij herroep ik mijn contract voor de Premium-functies van Best Journal.\n\nAfzender (Google-account): %1$s\nMoment van herroeping: %2$s\n\nDeze herroeping is in twee stappen gestart via de aan § 356a BGB conforme herroepingsknop in de app en automatisch verzonden via de Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Jouw ontvangstbevestiging: herroeping bij Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Hallo,\n\nwe hebben je herroeping van %1$s ontvangen. Dit is jouw ontvangstbevestiging volgens § 356a BGB.\n\nWe verwerken je herroeping zo snel mogelijk en nemen bij vragen contact op via dev.app.support@gmail.com.\n\nOm verdere betalingen te stoppen, zeg je abonnement ook op in de Google Play Store onder "Abonnementen".\n\nBedankt en vriendelijke groeten\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Er is geen aangemeld Google-accountadres gevonden. Meld je in Instellingen aan met je Google-account of stuur de herroeping handmatig naar dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Herroeping wordt verzonden…</string>
+    <string name="settings_revoke_success_title">Herroeping ontvangen</string>
+    <string name="settings_revoke_success_body">Je herroeping is verzonden naar dev.app.support@gmail.com. De ontvangstbevestiging staat ook in je inbox.</string>
+    <string name="settings_revoke_success_close">Sluiten</string>
+    <string name="settings_revoke_error_title">Kon de herroeping niet verzenden</string>
+    <string name="settings_revoke_error_body">Automatisch verzenden is mislukt: %1$s\n\nJe kunt ook handmatig een e-mail sturen naar dev.app.support@gmail.com. Tik daarvoor op "E-mailapp openen".</string>
+    <string name="settings_revoke_error_email_fallback">E-mailapp openen</string>
 """
 
 # ═══════════ POLISH (pl) — Informal "ty", prefer impersonal ═══════════
@@ -132,7 +142,17 @@ TRANSLATIONS["pl"] = r"""
     <string name="settings_revoke_confirm">Utwórz odstąpienie</string>
     <string name="settings_revoke_no_email">Nie znaleziono aplikacji pocztowej. Wyślij odstąpienie na dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Odstąpienie od umowy Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Dzień dobry,\n\nniniejszym odstępuję od zawartej przeze mnie umowy dotyczącej funkcji Premium w Best Journal.\n\nZamówiono dnia: [do uzupełnienia]\nE-mail konta Google: [do uzupełnienia, jeśli inny niż nadawca]\nImię i nazwisko: [do uzupełnienia]\n\nData: [dzisiaj]</string>
+    <string name="settings_revoke_email_body">Niniejszym odstępuję od umowy dotyczącej funkcji Premium w Best Journal.\n\nNadawca (konto Google): %1$s\nMoment odstąpienia: %2$s\n\nTo odstąpienie zostało uruchomione dwuetapowo za pomocą zgodnego z § 356a BGB przycisku odstąpienia w aplikacji i wysłane automatycznie przez Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Twoje potwierdzenie odbioru: odstąpienie w Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Dzień dobry,\n\notrzymaliśmy Twoje odstąpienie z %1$s. To jest Twoje potwierdzenie odbioru zgodnie z § 356a BGB.\n\nPrzetworzymy Twoje odstąpienie tak szybko, jak to możliwe, i skontaktujemy się pod adresem dev.app.support@gmail.com, jeśli pojawią się pytania.\n\nAby zatrzymać dalsze opłaty, anuluj także subskrypcję w Google Play Store w sekcji „Subskrypcje”.\n\nDziękujemy i pozdrawiamy\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Nie znaleziono zalogowanego adresu konta Google. Zaloguj się na swoje konto Google w Ustawieniach albo wyślij odstąpienie ręcznie na dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Wysyłanie odstąpienia…</string>
+    <string name="settings_revoke_success_title">Odstąpienie otrzymane</string>
+    <string name="settings_revoke_success_body">Twoje odstąpienie zostało wysłane na dev.app.support@gmail.com. Potwierdzenie odbioru znajduje się również w Twojej skrzynce odbiorczej.</string>
+    <string name="settings_revoke_success_close">Zamknij</string>
+    <string name="settings_revoke_error_title">Nie udało się wysłać odstąpienia</string>
+    <string name="settings_revoke_error_body">Automatyczna wysyłka nie powiodła się: %1$s\n\nMożesz też wysłać ręczny e-mail na dev.app.support@gmail.com. W tym celu kliknij „Otwórz aplikację e-mail”.</string>
+    <string name="settings_revoke_error_email_fallback">Otwórz aplikację e-mail</string>
 """
 
 # ═══════════ UKRAINIAN (uk) — Formal Ви, NO Russisms, Ukrainian Cyrillic ═══════════
@@ -197,7 +217,17 @@ TRANSLATIONS["uk"] = r"""
     <string name="settings_revoke_confirm">Створити відкликання</string>
     <string name="settings_revoke_no_email">Поштовий застосунок не знайдено. Надішліть відкликання на dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Відкликання контракту Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Доброго дня,\n\nцим повідомляю про відкликання укладеного мною договору щодо функцій Premium у Best Journal.\n\nЗамовлено: [заповнити]\nE-mail облікового запису Google: [заповнити, якщо відрізняється від відправника]\nІм\'я: [заповнити]\n\nДата: [сьогодні]</string>
+    <string name="settings_revoke_email_body">Цим повідомляю про відкликання мого договору щодо функцій Premium у Best Journal.\n\nВідправник (обліковий запис Google): %1$s\nЧас відкликання: %2$s\n\nЦе відкликання було ініційовано у два етапи через кнопку відкликання в застосунку, що відповідає § 356a BGB, і автоматично надіслано через Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Ваше підтвердження отримання: відкликання в Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Вітаємо,\n\nми отримали ваше відкликання від %1$s. Це ваше підтвердження отримання відповідно до § 356a BGB.\n\nМи опрацюємо ваше відкликання якнайшвидше і зв’яжемося з вами через dev.app.support@gmail.com, якщо виникнуть запитання.\n\nЩоб припинити подальші списання, будь ласка, також скасуйте підписку в Google Play Store у розділі «Підписки».\n\nДякуємо та з повагою\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Не знайдено жодної адреси увійшовшого облікового запису Google. Будь ласка, увійдіть у свій Google-акаунт у Налаштуваннях або надішліть відкликання вручну на dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Надсилання відкликання…</string>
+    <string name="settings_revoke_success_title">Відкликання отримано</string>
+    <string name="settings_revoke_success_body">Ваше відкликання надіслано на dev.app.support@gmail.com. Підтвердження отримання також є у вашій поштовій скриньці.</string>
+    <string name="settings_revoke_success_close">Закрити</string>
+    <string name="settings_revoke_error_title">Не вдалося надіслати відкликання</string>
+    <string name="settings_revoke_error_body">Автоматичне надсилання не вдалося: %1$s\n\nВи також можете надіслати ручний електронний лист на dev.app.support@gmail.com. Для цього натисніть «Відкрити поштову програму».</string>
+    <string name="settings_revoke_error_email_fallback">Відкрити поштову програму</string>
 """
 
 # ═══════════ TURKISH (tr) — Informal "sen", vowel harmony ═══════════
@@ -262,7 +292,17 @@ TRANSLATIONS["tr"] = r"""
     <string name="settings_revoke_confirm">Cayma oluştur</string>
     <string name="settings_revoke_no_email">E-posta uygulaması bulunamadı. Cayma bildirimini dev.app.support@gmail.com adresine gönder.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium sözleşme cayması</string>
-    <string name="settings_revoke_email_body">Merhaba,\n\nişbu yazıyla Best Journal\'ın Premium özelliklerine ilişkin sözleşmeden caydığımı bildiririm.\n\nSipariş tarihi: [doldurulacak]\nGoogle hesap e-postası: [gönderenden farklıysa doldurulacak]\nAd Soyad: [doldurulacak]\n\nTarih: [bugün]</string>
+    <string name="settings_revoke_email_body">İşbu bildirimle Best Journal\'ın Premium özelliklerine ilişkin sözleşmeden caydığımı bildiririm.\n\nGönderen (Google hesabı): %1$s\nCayma zamanı: %2$s\n\nBu cayma, uygulamadaki § 356a BGB uyumlu iki aşamalı cayma düğmesi üzerinden başlatılmış ve Gmail API aracılığıyla otomatik olarak gönderilmiştir.</string>
+    <string name="settings_revoke_confirm_subject">Alındı onayınız: Best Journal\'da cayma</string>
+    <string name="settings_revoke_confirm_user_body">Merhaba,\n\n%1$s tarihli cayma bildiriminizi aldık. Bu, § 356a BGB kapsamında alındı onayınızdır.\n\nCayma bildiriminizi en kısa sürede işleme alacağız; sorular olursa dev.app.support@gmail.com üzerinden size ulaşacağız.\n\nYeni ücretlendirmelerin durması için Google Play Store\'da "Abonelikler" bölümünden aboneliğinizi ayrıca iptal edin.\n\nTeşekkürler ve saygılarımızla\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Oturum açmış bir Google hesap adresi bulunamadı. Lütfen Ayarlar\'da Google hesabınızla oturum açın veya caymayı dev.app.support@gmail.com adresine manuel olarak gönderin.</string>
+    <string name="settings_revoke_sending">Cayma gönderiliyor…</string>
+    <string name="settings_revoke_success_title">Cayma alındı</string>
+    <string name="settings_revoke_success_body">Cayma bildiriminiz dev.app.support@gmail.com adresine gönderildi. Alındı onayı da gelen kutunuzda yer alıyor.</string>
+    <string name="settings_revoke_success_close">Kapat</string>
+    <string name="settings_revoke_error_title">Cayma gönderilemedi</string>
+    <string name="settings_revoke_error_body">Otomatik gönderim başarısız oldu: %1$s\n\nAlternatif olarak dev.app.support@gmail.com adresine manuel bir e-posta gönderebilirsiniz. Bunun için "E-posta uygulamasını aç" seçeneğine dokunun.</string>
+    <string name="settings_revoke_error_email_fallback">E-posta uygulamasını aç</string>
 """
 
 # ═══════════ JAPANESE (ja) — Teineigo (です/ます), full-width punctuation ═══════════
@@ -327,7 +367,17 @@ TRANSLATIONS["ja"] = r"""
     <string name="settings_revoke_confirm">解除通知を作成</string>
     <string name="settings_revoke_no_email">メールアプリが見つかりません。dev.app.support@gmail.com に解除通知を送信してください。</string>
     <string name="settings_revoke_email_subject">Best Journal プレミアム契約解除</string>
-    <string name="settings_revoke_email_body">こんにちは、\n\n本通知により、Best Journal のプレミアム機能に関する契約の解除を通知します。\n\n注文日:[記入してください]\nGoogleアカウントのメール:[送信者と異なる場合は記入してください]\n氏名:[記入してください]\n\n日付:[今日]</string>
+    <string name="settings_revoke_email_body">本通知により、Best Journal の Premium 機能に関する契約の撤回を通知します。\n\n送信者（Google アカウント）：%1$s\n撤回時刻：%2$s\n\nこの撤回は、アプリ内の § 356a BGB 準拠の二段階撤回ボタンによって開始され、Gmail API を介して自動送信されました。</string>
+    <string name="settings_revoke_confirm_subject">受領確認: Best Journal での撤回</string>
+    <string name="settings_revoke_confirm_user_body">こんにちは。\n\n%1$s の撤回を受領しました。これは § 356a BGB に基づく受領確認です。\n\n撤回はできるだけ早く処理し、確認が必要な場合は dev.app.support@gmail.com からご連絡します。\n\n今後の請求を止めるため、Google Play ストアの「定期購入」でも解約してください。\n\nありがとうございます\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ログイン中の Google アカウントのアドレスが見つかりませんでした。設定で Google アカウントにログインするか、撤回を dev.app.support@gmail.com 宛てに手動で送信してください。</string>
+    <string name="settings_revoke_sending">撤回を送信中…</string>
+    <string name="settings_revoke_success_title">撤回を受領しました</string>
+    <string name="settings_revoke_success_body">撤回は dev.app.support@gmail.com へ送信されました。受領確認も受信トレイに届いています。</string>
+    <string name="settings_revoke_success_close">閉じる</string>
+    <string name="settings_revoke_error_title">撤回を送信できませんでした</string>
+    <string name="settings_revoke_error_body">自動送信に失敗しました: %1$s\n\n代わりに dev.app.support@gmail.com 宛てに手動でメールを送れます。その場合は「メールアプリを開く」をタップしてください。</string>
+    <string name="settings_revoke_error_email_fallback">メールアプリを開く</string>
 """
 
 

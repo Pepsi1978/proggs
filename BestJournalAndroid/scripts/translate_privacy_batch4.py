@@ -67,7 +67,17 @@ TRANSLATIONS["th"] = r"""
     <string name="settings_revoke_confirm">สร้างการเพิกถอน</string>
     <string name="settings_revoke_no_email">ไม่พบแอปอีเมล โปรดส่งการเพิกถอนไปที่ dev.app.support@gmail.com</string>
     <string name="settings_revoke_email_subject">เพิกถอนสัญญา Best Journal Premium</string>
-    <string name="settings_revoke_email_body">สวัสดี,\n\nโดยหนังสือนี้ ฉันขอเพิกถอนสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal\n\nวันที่สั่งซื้อ: [กรุณากรอก]\nอีเมลบัญชี Google: [กรอกหากแตกต่างจากผู้ส่ง]\nชื่อ: [กรุณากรอก]\n\nวันที่: [วันนี้]</string>
+    <string name="settings_revoke_email_body">ข้าพเจ้าขอแจ้งการถอนตัวจากสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal ผ่านหนังสือนี้\n\nผู้ส่ง (บัญชี Google): %1$s\nเวลาที่ถอนตัว: %2$s\n\nการถอนตัวนี้ถูกดำเนินการแบบสองขั้นตอนผ่านปุ่มถอนตัวในแอปที่สอดคล้องกับ § 356a BGB และส่งโดยอัตโนมัติผ่าน Gmail API</string>
+    <string name="settings_revoke_confirm_subject">การยืนยันการรับของคุณ: การถอนตัวใน Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">สวัสดี\n\nเราได้รับคำขอถอนตัวของคุณเมื่อ %1$s แล้ว นี่คือการยืนยันการรับตาม § 356a BGB\n\nเราจะดำเนินการคำขอถอนตัวของคุณโดยเร็วที่สุด และจะติดต่อคุณผ่าน dev.app.support@gmail.com หากมีคำถาม\n\nเพื่อไม่ให้มีการเรียกเก็บเงินเพิ่มเติม โปรดยกเลิกการสมัครของคุณใน Google Play Store ใต้ "Subscriptions" ด้วย\n\nขอบคุณและขอแสดงความนับถือ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ไม่พบบัญชี Google ที่ลงชื่อเข้าใช้อยู่ โปรดลงชื่อเข้าใช้ด้วยบัญชี Google ของคุณใน Settings หรือส่งการถอนตัวด้วยตนเองไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_revoke_sending">กำลังส่งการถอนตัว…</string>
+    <string name="settings_revoke_success_title">ได้รับการถอนตัวแล้ว</string>
+    <string name="settings_revoke_success_body">การถอนตัวของคุณถูกส่งไปที่ dev.app.support@gmail.com แล้ว การยืนยันการรับก็อยู่ในกล่องจดหมายของคุณด้วย</string>
+    <string name="settings_revoke_success_close">ปิด</string>
+    <string name="settings_revoke_error_title">ไม่สามารถส่งการถอนตัวได้</string>
+    <string name="settings_revoke_error_body">การส่งอัตโนมัติล้มเหลว: %1$s\n\nคุณสามารถส่งอีเมลด้วยตนเองไปที่ dev.app.support@gmail.com ได้เช่นกัน ให้แตะ "เปิดแอปอีเมล" เพื่อทำเช่นนั้น</string>
+    <string name="settings_revoke_error_email_fallback">เปิดแอปอีเมล</string>
 """
 
 # ═══════════ INDONESIAN (id -> values-in/) — kamu (not Anda) ═══════════
@@ -132,7 +142,17 @@ TRANSLATIONS["in"] = r"""
     <string name="settings_revoke_confirm">Buat pembatalan</string>
     <string name="settings_revoke_no_email">Aplikasi email tidak ditemukan. Kirim pembatalan ke dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Pembatalan kontrak Best Journal Premium</string>
-    <string name="settings_revoke_email_body">Halo,\n\ndengan ini saya memberitahukan pembatalan kontrak atas fitur Premium Best Journal.\n\nDipesan pada: [isi]\nEmail akun Google: [isi jika berbeda dari pengirim]\nNama: [isi]\n\nTanggal: [hari ini]</string>
+    <string name="settings_revoke_email_body">Dengan ini saya memberitahukan pembatalan kontrak saya atas fitur Premium Best Journal.\n\nPengirim (akun Google): %1$s\nWaktu pembatalan: %2$s\n\nPembatalan ini dipicu dalam dua tahap melalui tombol pembatalan di aplikasi yang sesuai dengan § 356a BGB dan dikirim secara otomatis melalui Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Tanda terima Anda: pembatalan di Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Halo,\n\nkami telah menerima pembatalan Anda pada %1$s. Ini adalah tanda terima Anda sesuai § 356a BGB.\n\nKami akan memproses pembatalan Anda secepat mungkin dan akan menghubungi Anda melalui dev.app.support@gmail.com jika ada pertanyaan.\n\nAgar tidak ada penagihan baru, mohon batalkan juga langganan Anda di Google Play Store pada bagian "Subscriptions".\n\nTerima kasih dan salam hangat\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Tidak ditemukan alamat akun Google yang sedang masuk. Silakan masuk dengan akun Google Anda di Settings atau kirim pembatalan secara manual ke dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Mengirim pembatalan…</string>
+    <string name="settings_revoke_success_title">Pembatalan diterima</string>
+    <string name="settings_revoke_success_body">Pembatalan Anda telah dikirim ke dev.app.support@gmail.com. Tanda terima juga ada di kotak masuk Anda.</string>
+    <string name="settings_revoke_success_close">Tutup</string>
+    <string name="settings_revoke_error_title">Tidak dapat mengirim pembatalan</string>
+    <string name="settings_revoke_error_body">Pengiriman otomatis gagal: %1$s\n\nSebagai alternatif, Anda dapat mengirim email manual ke dev.app.support@gmail.com. Ketuk "Buka aplikasi email" untuk itu.</string>
+    <string name="settings_revoke_error_email_fallback">Buka aplikasi email</string>
 """
 
 # ═══════════ BENGALI (bn) — তুমি, Bengali script, Arabic numerals ═══════════
@@ -197,7 +217,17 @@ TRANSLATIONS["bn"] = r"""
     <string name="settings_revoke_confirm">প্রত্যাহার তৈরি করো</string>
     <string name="settings_revoke_no_email">কোনো ইমেইল অ্যাপ পাওয়া যায়নি। অনুগ্রহ করে প্রত্যাহার dev.app.support@gmail.com-এ পাঠাও।</string>
     <string name="settings_revoke_email_subject">Best Journal Premium চুক্তি প্রত্যাহার</string>
-    <string name="settings_revoke_email_body">নমস্কার,\n\nএর মাধ্যমে আমি Best Journal-এর Premium ফিচার সংক্রান্ত চুক্তির প্রত্যাহার জানাচ্ছি।\n\nক্রয় তারিখ: [অনুগ্রহ করে পূরণ করো]\nGoogle অ্যাকাউন্ট ইমেইল: [প্রেরকের থেকে ভিন্ন হলে পূরণ করো]\nনাম: [অনুগ্রহ করে পূরণ করো]\n\nতারিখ: [আজ]</string>
+    <string name="settings_revoke_email_body">এর মাধ্যমে আমি Best Journal-এর Premium ফিচার সম্পর্কিত চুক্তি থেকে প্রত্যাহারের নোটিশ দিচ্ছি।\n\nপ্রেরক (Google অ্যাকাউন্ট): %1$s\nপ্রত্যাহারের সময়: %2$s\n\nএই প্রত্যাহারটি অ্যাপের § 356a BGB-সম্মত দুই-ধাপের প্রত্যাহার বোতামের মাধ্যমে শুরু করা হয়েছে এবং Gmail API-এর মাধ্যমে স্বয়ংক্রিয়ভাবে পাঠানো হয়েছে।</string>
+    <string name="settings_revoke_confirm_subject">তোমার গ্রহণ-নিশ্চিতকরণ: Best Journal-এ প্রত্যাহার</string>
+    <string name="settings_revoke_confirm_user_body">নমস্কার,\n\nআমরা %1$s-এর তোমার প্রত্যাহার পেয়েছি। এটি § 356a BGB অনুযায়ী তোমার গ্রহণ-নিশ্চিতকরণ।\n\nআমরা যত দ্রুত সম্ভব তোমার প্রত্যাহার প্রক্রিয়া করব এবং কোনো প্রশ্ন থাকলে dev.app.support@gmail.com-এ তোমার সঙ্গে যোগাযোগ করব।\n\nআর কোনো বিলিং না হওয়ার জন্য, Google Play Store-এর "Subscriptions" অংশেও তোমার সাবস্ক্রিপশন বাতিল করো।\n\nধন্যবাদ ও শুভেচ্ছা\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">কোনো সাইন-ইন করা Google অ্যাকাউন্টের ঠিকানা পাওয়া যায়নি। অনুগ্রহ করে Settings-এ তোমার Google অ্যাকাউন্ট দিয়ে সাইন ইন করো অথবা dev.app.support@gmail.com-এ প্রত্যাহারটি হাতে পাঠাও।</string>
+    <string name="settings_revoke_sending">প্রত্যাহার পাঠানো হচ্ছে…</string>
+    <string name="settings_revoke_success_title">প্রত্যাহার গৃহীত হয়েছে</string>
+    <string name="settings_revoke_success_body">তোমার প্রত্যাহার dev.app.support@gmail.com-এ পাঠানো হয়েছে। গ্রহণ-নিশ্চিতকরণও তোমার ইনবক্সে রয়েছে।</string>
+    <string name="settings_revoke_success_close">বন্ধ করো</string>
+    <string name="settings_revoke_error_title">প্রত্যাহার পাঠানো যায়নি</string>
+    <string name="settings_revoke_error_body">স্বয়ংক্রিয় পাঠানো ব্যর্থ হয়েছে: %1$s\n\nবিকল্প হিসেবে তুমি dev.app.support@gmail.com-এ হাতে একটি ইমেইল পাঠাতে পারো। এর জন্য "ইমেইল অ্যাপ খোলো"-এ ট্যাপ করো।</string>
+    <string name="settings_revoke_error_email_fallback">ইমেইল অ্যাপ খোলো</string>
 """
 
 # ═══════════ TELUGU (te) — మీరు, Telugu script, Arabic numerals ═══════════
@@ -262,7 +292,17 @@ TRANSLATIONS["te"] = r"""
     <string name="settings_revoke_confirm">ఉపసంహరణ సృష్టించండి</string>
     <string name="settings_revoke_no_email">ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి ఉపసంహరణను dev.app.support@gmail.com-కి పంపండి.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ఒప్పందం ఉపసంహరణ</string>
-    <string name="settings_revoke_email_body">నమస్కారం,\n\nదీని ద్వారా Best Journal యొక్క Premium ఫీచర్లపై కుదుర్చుకున్న ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\n\nఆర్డర్ తేదీ: [దయచేసి పూరించండి]\nGoogle ఖాతా ఇమెయిల్: [పంపినవారి నుండి భిన్నంగా ఉంటే పూరించండి]\nపేరు: [దయచేసి పూరించండి]\n\nతేదీ: [నేడు]</string>
+    <string name="settings_revoke_email_body">దీని ద్వారా Best Journal యొక్క Premium ఫీచర్లకు సంబంధించిన నా ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\n\nపంపినవారు (Google ఖాతా): %1$s\nఉపసంహరణ సమయం: %2$s\n\nఈ ఉపసంహరణ యాప్‌లోని § 356a BGB‌కు అనుగుణమైన రెండు-దశల ఉపసంహరణ బటన్ ద్వారా ప్రారంభించబడింది మరియు Gmail API ద్వారా స్వయంచాలకంగా పంపబడింది.</string>
+    <string name="settings_revoke_confirm_subject">మీ స్వీకరణ నిర్ధారణ: Best Journal లో ఉపసంహరణ</string>
+    <string name="settings_revoke_confirm_user_body">నమస్కారం,\n\n%1$s నాటి మీ ఉపసంహరణ మాకు అందింది. ఇది § 356a BGB ప్రకారం మీ స్వీకరణ నిర్ధారణ.\n\nమీ ఉపసంహరణను వీలైనంత త్వరగా ప్రాసెస్ చేస్తాము మరియు ఏవైనా ప్రశ్నలు ఉంటే dev.app.support@gmail.com ద్వారా మిమ్మల్ని సంప్రదిస్తాము.\n\nఇంకా బిల్లింగ్ జరగకుండా ఉండేందుకు, దయచేసి Google Play Store లోని "Subscriptions" వద్ద మీ సభ్యత్వాన్ని కూడా రద్దు చేయండి.\n\nధన్యవాదాలు మరియు శుభాకాంక్షలు\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">సైన్-ఇన్ చేసిన Google ఖాతా చిరునామా కనబడలేదు. దయచేసి Settings లో మీ Google ఖాతాతో సైన్ ఇన్ చేయండి లేదా ఉపసంహరణను dev.app.support@gmail.com కు చేతితో పంపండి.</string>
+    <string name="settings_revoke_sending">ఉపసంహరణ పంపిస్తోంది…</string>
+    <string name="settings_revoke_success_title">ఉపసంహరణ అందింది</string>
+    <string name="settings_revoke_success_body">మీ ఉపసంహరణ dev.app.support@gmail.com కు పంపబడింది. స్వీకరణ నిర్ధారణ కూడా మీ ఇన్‌బాక్స్‌లో ఉంది.</string>
+    <string name="settings_revoke_success_close">మూసివేయండి</string>
+    <string name="settings_revoke_error_title">ఉపసంహరణను పంపలేకపోయాం</string>
+    <string name="settings_revoke_error_body">స్వయంచాలక పంపింపు విఫలమైంది: %1$s\n\nప్రత్యామ్నాయంగా మీరు dev.app.support@gmail.com కు చేతితో ఈమెయిల్ పంపవచ్చు. అందుకు "ఈమెయిల్ యాప్ తెరవండి" ను తట్టండి.</string>
+    <string name="settings_revoke_error_email_fallback">ఈమెయిల్ యాప్ తెరవండి</string>
 """
 
 # ═══════════ MARATHI (mr) — तुम्ही, Devanagari, Arabic numerals ═══════════
@@ -327,7 +367,17 @@ TRANSLATIONS["mr"] = r"""
     <string name="settings_revoke_confirm">रद्दबातल तयार करा</string>
     <string name="settings_revoke_no_email">कोणतेही ईमेल अॅप सापडले नाही. कृपया रद्दबातल dev.app.support@gmail.com वर पाठवा.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium करार रद्दबातल</string>
-    <string name="settings_revoke_email_body">नमस्कार,\n\nयाद्वारे मी Best Journal च्या Premium वैशिष्ट्यांबाबत केलेला करार रद्दबातल करत असल्याचे कळवतो.\n\nऑर्डर केलेली तारीख: [कृपया भरा]\nGoogle खात्याचा ईमेल: [पाठवणाऱ्यापेक्षा वेगळा असल्यास भरा]\nनाव: [कृपया भरा]\n\nदिनांक: [आज]</string>
+    <string name="settings_revoke_email_body">याद्वारे मी Best Journal च्या Premium वैशिष्ट्यांबाबतच्या माझ्या करारातून माघार घेत असल्याची सूचना देत आहे.\n\nपाठवणारा (Google खाते): %1$s\nमाघारीची वेळ: %2$s\n\nही माघार अॅपमधील § 356a BGB-सुसंगत दोन-टप्प्यातील माघार बटणाद्वारे सुरू करण्यात आली आणि Gmail API मार्फत आपोआप पाठवण्यात आली.</string>
+    <string name="settings_revoke_confirm_subject">तुमची प्राप्ती-पुष्टी: Best Journal मधील माघार</string>
+    <string name="settings_revoke_confirm_user_body">नमस्कार,\n\n%1$s रोजीची तुमची माघार आम्हाला प्राप्त झाली आहे. ही § 356a BGB नुसार तुमची प्राप्ती-पुष्टी आहे.\n\nआम्ही तुमची माघार शक्य तितक्या लवकर प्रक्रिया करू आणि काही प्रश्न असल्यास dev.app.support@gmail.com वर तुमच्याशी संपर्क करू.\n\nपुढील बिलिंग थांबवण्यासाठी, कृपया Google Play Store मधील "Subscriptions" अंतर्गत तुमची सदस्यताही रद्द करा.\n\nधन्यवाद आणि शुभेच्छा\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">साइन-इन केलेला Google खात्याचा पत्ता सापडला नाही. कृपया Settings मध्ये तुमच्या Google खात्याने साइन इन करा किंवा माघार dev.app.support@gmail.com वर हाताने पाठवा.</string>
+    <string name="settings_revoke_sending">माघार पाठवली जात आहे…</string>
+    <string name="settings_revoke_success_title">माघार प्राप्त झाली</string>
+    <string name="settings_revoke_success_body">तुमची माघार dev.app.support@gmail.com वर पाठवण्यात आली आहे. प्राप्ती-पुष्टीही तुमच्या इनबॉक्समध्ये आहे.</string>
+    <string name="settings_revoke_success_close">बंद करा</string>
+    <string name="settings_revoke_error_title">माघार पाठवता आली नाही</string>
+    <string name="settings_revoke_error_body">स्वयंचलित पाठवणे अयशस्वी झाले: %1$s\n\nपर्यायाने तुम्ही dev.app.support@gmail.com वर हाताने ई-मेल पाठवू शकता. त्यासाठी "ई-मेल अॅप उघडा" वर टॅप करा.</string>
+    <string name="settings_revoke_error_email_fallback">ई-मेल अॅप उघडा</string>
 """
 
 

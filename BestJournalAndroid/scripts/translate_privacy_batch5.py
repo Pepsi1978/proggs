@@ -67,7 +67,17 @@ TRANSLATIONS["ta"] = r"""
     <string name="settings_revoke_confirm">ரத்து உருவாக்கு</string>
     <string name="settings_revoke_no_email">மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து ரத்தை dev.app.support@gmail.com-க்கு அனுப்பவும்.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ஒப்பந்த ரத்து</string>
-    <string name="settings_revoke_email_body">வணக்கம்,\n\nஇதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் ரத்து செய்கிறேன்.\n\nஆர்டர் செய்த தேதி: [தயவுசெய்து நிரப்பவும்]\nGoogle கணக்கு மின்னஞ்சல்: [அனுப்புநரிடமிருந்து வேறுபட்டிருந்தால் நிரப்பவும்]\nபெயர்: [தயவுசெய்து நிரப்பவும்]\n\nதேதி: [இன்று]</string>
+    <string name="settings_revoke_email_body">இதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் திரும்பப் பெறுவதை அறிவிக்கிறேன்.\n\nஅனுப்புநர் (Google கணக்கு): %1$s\nதிரும்பப் பெறும் நேரம்: %2$s\n\nஇந்த திரும்பப் பெறல், பயன்பாட்டின் § 356a BGB-க்கு உடன்பட்ட இரு-அடுக்கு திரும்பப் பெறும் பொத்தானின் மூலம் தொடங்கப்பட்டு Gmail API வழியாக தானாக அனுப்பப்பட்டது.</string>
+    <string name="settings_revoke_confirm_subject">உங்கள் பெறல் உறுதி: Best Journal இல் திரும்பப் பெறல்</string>
+    <string name="settings_revoke_confirm_user_body">வணக்கம்,\n\n%1$s அன்று செய்யப்பட்ட உங்கள் திரும்பப் பெறலை நாங்கள் பெற்றுள்ளோம். இது § 356a BGB படி உங்கள் பெறல் உறுதிப்படுத்தல்.\n\nஉங்கள் திரும்பப் பெறலை மிக விரைவாக செயல்படுத்துவோம்; கேள்விகள் இருந்தால் dev.app.support@gmail.com மூலம் உங்களைத் தொடர்புகொள்வோம்.\n\nமேலும் கட்டணங்கள் வராமல் இருக்க, Google Play Store இல் "Subscriptions" கீழும் உங்கள் சந்தாவை ரத்து செய்யவும்.\n\nநன்றி மற்றும் அன்புடன்\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">உள்நுழைந்த Google கணக்கு முகவரி எதுவும் கிடைக்கவில்லை. தயவுசெய்து Settings இல் உங்கள் Google கணக்கில் உள்நுழையவும் அல்லது திரும்பப் பெறலை dev.app.support@gmail.com க்கு கையால் அனுப்பவும்.</string>
+    <string name="settings_revoke_sending">திரும்பப் பெறல் அனுப்பப்படுகிறது…</string>
+    <string name="settings_revoke_success_title">திரும்பப் பெறல் பெறப்பட்டது</string>
+    <string name="settings_revoke_success_body">உங்கள் திரும்பப் பெறல் dev.app.support@gmail.com க்கு அனுப்பப்பட்டது. பெறல் உறுதிப்படுத்தலும் உங்கள் இன்பாக்ஸில் உள்ளது.</string>
+    <string name="settings_revoke_success_close">மூடு</string>
+    <string name="settings_revoke_error_title">திரும்பப் பெறலை அனுப்ப முடியவில்லை</string>
+    <string name="settings_revoke_error_body">தானியங்கி அனுப்பல் தோல்வியடைந்தது: %1$s\n\nமாற்றாக நீங்கள் dev.app.support@gmail.com க்கு கையால் ஒரு மின்னஞ்சலை அனுப்பலாம். அதற்கு "மின்னஞ்சல் பயன்பாட்டைத் திற" என்பதைத் தட்டவும்.</string>
+    <string name="settings_revoke_error_email_fallback">மின்னஞ்சல் பயன்பாட்டைத் திற</string>
 """
 
 # ═══════════ URDU (ur) — آپ, Arabic script, RTL, Urdu-Persian vocabulary ═══════════
@@ -132,7 +142,17 @@ TRANSLATIONS["ur"] = r"""
     <string name="settings_revoke_confirm">منسوخی بنائیں</string>
     <string name="settings_revoke_no_email">ای میل ایپ نہیں ملی۔ براہ کرم منسوخی dev.app.support@gmail.com کو بھیجیں۔</string>
     <string name="settings_revoke_email_subject">Best Journal Premium معاہدے کی منسوخی</string>
-    <string name="settings_revoke_email_body">سلام،\n\nاس کے ذریعے میں Best Journal کی Premium خصوصیات سے متعلق معاہدے کو منسوخ کرتا ہوں۔\n\nآرڈر کی تاریخ: [براہ کرم بھریں]\nGoogle اکاؤنٹ ای میل: [اگر بھیجنے والے سے مختلف ہو تو بھریں]\nنام: [براہ کرم بھریں]\n\nتاریخ: [آج]</string>
+    <string name="settings_revoke_email_body">اس کے ذریعے میں Best Journal کی Premium خصوصیات سے متعلق اپنے معاہدے سے دستبرداری کی اطلاع دیتا ہوں۔\n\nبھیجنے والا (Google اکاؤنٹ): %1$s\nدستبرداری کا وقت: %2$s\n\nیہ دستبرداری ایپ میں موجود § 356a BGB کے مطابق دو مرحلہ وار دستبرداری کے بٹن کے ذریعے شروع کی گئی اور Gmail API کے ذریعے خودکار طور پر بھیجی گئی۔</string>
+    <string name="settings_revoke_confirm_subject">آپ کی وصولی کی تصدیق: Best Journal میں دستبرداری</string>
+    <string name="settings_revoke_confirm_user_body">سلام،\n\nہمیں %1$s کی آپ کی دستبرداری موصول ہو گئی ہے۔ یہ § 356a BGB کے مطابق آپ کی وصولی کی تصدیق ہے۔\n\nہم آپ کی دستبرداری کو جلد از جلد پراسیس کریں گے، اور اگر کوئی سوال ہوا تو dev.app.support@gmail.com کے ذریعے آپ سے رابطہ کریں گے۔\n\nمزید بلنگ روکنے کے لیے، براہ کرم Google Play Store میں "Subscriptions" کے تحت اپنی سبسکرپشن بھی منسوخ کریں۔\n\nشکریہ اور نیک تمنائیں\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">سائن اِن شدہ Google اکاؤنٹ کا پتہ نہیں ملا۔ براہ کرم Settings میں اپنے Google اکاؤنٹ سے سائن اِن کریں یا دستبرداری کو dev.app.support@gmail.com پر دستی طور پر بھیجیں۔</string>
+    <string name="settings_revoke_sending">دستبرداری بھیجی جا رہی ہے…</string>
+    <string name="settings_revoke_success_title">دستبرداری موصول ہو گئی</string>
+    <string name="settings_revoke_success_body">آپ کی دستبرداری dev.app.support@gmail.com پر بھیج دی گئی ہے۔ وصولی کی تصدیق بھی آپ کے اِن باکس میں موجود ہے۔</string>
+    <string name="settings_revoke_success_close">بند کریں</string>
+    <string name="settings_revoke_error_title">دستبرداری نہیں بھیجی جا سکی</string>
+    <string name="settings_revoke_error_body">خودکار ارسال ناکام رہا: %1$s\n\nمتبادل کے طور پر آپ dev.app.support@gmail.com پر دستی ای میل بھیج سکتے ہیں۔ اس کے لیے "ای میل ایپ کھولیں" پر ٹیپ کریں۔</string>
+    <string name="settings_revoke_error_email_fallback">ای میل ایپ کھولیں</string>
 """
 
 # ═══════════ GUJARATI (gu) — તમે, Gujarati script, Arabic numerals ═══════════
@@ -197,7 +217,17 @@ TRANSLATIONS["gu"] = r"""
     <string name="settings_revoke_confirm">રદ બનાવો</string>
     <string name="settings_revoke_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને રદ dev.app.support@gmail.com પર મોકલો.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium કરાર રદ</string>
-    <string name="settings_revoke_email_body">નમસ્તે,\n\nઆ દ્વારા હું Best Journal ની Premium સુવિધાઓ અંગેના કરારને રદ કરવાની સૂચના આપું છું.\n\nઓર્ડર તારીખ: [કૃપા કરીને ભરો]\nGoogle એકાઉન્ટ ઇમેઇલ: [જો મોકલનાર કરતાં અલગ હોય તો ભરો]\nનામ: [કૃપા કરીને ભરો]\n\nતારીખ: [આજે]</string>
+    <string name="settings_revoke_email_body">આ દ્વારા હું Best Journal ની Premium સુવિધાઓ સંબંધિત મારા કરારના રદ કરવાની સૂચના આપું છું.\n\nમોકલનાર (Google એકાઉન્ટ): %1$s\nરદ કરવાની ક્ષણ: %2$s\n\nઆ રદ પ્રક્રિયા એપમાં આવેલા § 356a BGB-અનુરૂપ બે-પગલાના રદ બટન દ્વારા શરૂ કરવામાં આવી હતી અને Gmail API મારફતે આપમેળે મોકલવામાં આવી હતી.</string>
+    <string name="settings_revoke_confirm_subject">તમારી પ્રાપ્તી પુષ્ટિ: Best Journal માં રદ</string>
+    <string name="settings_revoke_confirm_user_body">નમસ્તે,\n\n%1$sની તમારી રદ કરવાની જાણ અમને મળી ગઈ છે. આ § 356a BGB મુજબ તમારી પ્રાપ્તી પુષ્ટિ છે.\n\nઅમે તમારી રદ પ્રક્રિયા શક્ય તેટલી વહેલી તકે કરીશું અને કોઈ પ્રશ્ન હોય તો dev.app.support@gmail.com દ્વારા તમારો સંપર્ક કરીશું.\n\nઆગળ કોઈ નવી બિલિંગ ન થાય તે માટે, કૃપા કરીને Google Play Store માં "Subscriptions" હેઠળ તમારી સબ્સ્ક્રિપ્શન પણ રદ કરો.\n\nઆભાર અને શુભેચ્છાઓ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">સાઇન-ઇન થયેલ Google ખાતાનું સરનામું મળ્યું નથી. કૃપા કરીને Settings માં તમારા Google ખાતાથી સાઇન ઇન કરો અથવા રદ કરવાની જાણ dev.app.support@gmail.com પર હાથેથી મોકલો.</string>
+    <string name="settings_revoke_sending">રદ મોકલાઈ રહ્યું છે…</string>
+    <string name="settings_revoke_success_title">રદ પ્રાપ્ત થયું</string>
+    <string name="settings_revoke_success_body">તમારી રદ કરવાની જાણ dev.app.support@gmail.com પર મોકલવામાં આવી છે. પ્રાપ્તી પુષ્ટિ પણ તમારા ઇનબોક્સમાં છે.</string>
+    <string name="settings_revoke_success_close">બંધ કરો</string>
+    <string name="settings_revoke_error_title">રદ મોકલી શકાયું નથી</string>
+    <string name="settings_revoke_error_body">સ્વચાલિત મોકલાણ નિષ્ફળ ગયું: %1$s\n\nવૈકલ્પિક રીતે તમે dev.app.support@gmail.com પર હાથેથી ઇમેઇલ મોકલી શકો છો. તેના માટે "ઇમેઇલ એપ ખોલો" પર ટેપ કરો.</string>
+    <string name="settings_revoke_error_email_fallback">ઇમેઇલ એપ ખોલો</string>
 """
 
 # ═══════════ KANNADA (kn) — ನೀವು, Kannada script ═══════════
@@ -262,7 +292,17 @@ TRANSLATIONS["kn"] = r"""
     <string name="settings_revoke_confirm">ರದ್ದು ರಚಿಸಿ</string>
     <string name="settings_revoke_no_email">ಇಮೇಲ್ ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ರದ್ದನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಿ.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ಒಪ್ಪಂದ ರದ್ದು</string>
-    <string name="settings_revoke_email_body">ನಮಸ್ಕಾರ,\n\nಇದರ ಮೂಲಕ Best Journal ನ Premium ವೈಶಿಷ್ಟ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ಒಪ್ಪಂದವನ್ನು ರದ್ದುಗೊಳಿಸುತ್ತಿದ್ದೇನೆ ಎಂದು ಸೂಚಿಸುತ್ತೇನೆ.\n\nಆರ್ಡರ್ ದಿನಾಂಕ: [ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\nGoogle ಖಾತೆ ಇಮೇಲ್: [ಕಳುಹಿಸುವವರಿಂದ ಬೇರೆಯಾಗಿದ್ದರೆ ಭರ್ತಿ ಮಾಡಿ]\nಹೆಸರು: [ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nದಿನಾಂಕ: [ಇಂದು]</string>
+    <string name="settings_revoke_email_body">ಇದರ ಮೂಲಕ Best Journal ನ Premium ವೈಶಿಷ್ಟ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ನನ್ನ ಒಪ್ಪಂದದಿಂದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಕುರಿತು ತಿಳಿಸುತ್ತೇನೆ.\n\nಕಳುಹಿಸಿದವರು (Google ಖಾತೆ): %1$s\nಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಸಮಯ: %2$s\n\nಈ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಆ್ಯಪ್‌ನ § 356a BGB ಗೆ ಅನುಗುಣವಾದ ಎರಡು ಹಂತದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಬಟನ್ ಮೂಲಕ ಪ್ರಾರಂಭಗೊಂಡು Gmail API ಮೂಲಕ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಳುಹಿಸಲಾಯಿತು.</string>
+    <string name="settings_revoke_confirm_subject">ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣ: Best Journal ನಲ್ಲಿ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ</string>
+    <string name="settings_revoke_confirm_user_body">ನಮಸ್ಕಾರ,\n\n%1$sರ ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ನಮಗೆ ತಲುಪಿದೆ. ಇದು § 356a BGB ಪ್ರಕಾರ ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವಾಗಿದೆ.\n\nನಾವು ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಸಾಧ್ಯವಾದಷ್ಟು ಬೇಗ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುತ್ತೇವೆ ಮತ್ತು ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿದ್ದರೆ dev.app.support@gmail.com ಮೂಲಕ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ.\n\nಮುಂದಿನ ಬಿಲ್ಲಿಂಗ್ ಆಗದಂತೆ, ದಯವಿಟ್ಟು Google Play Store ನಲ್ಲಿ "Subscriptions" ಅಡಿಯಲ್ಲಿ ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆಯನ್ನು ಸಹ ರದ್ದುಮಾಡಿ.\n\nಧನ್ಯವಾದಗಳು ಮತ್ತು ಶುಭಾಶಯಗಳು\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ಸೈನ್ ಇನ್ ಆಗಿರುವ Google ಖಾತೆಯ ವಿಳಾಸ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು Settings ನಲ್ಲಿ ನಿಮ್ಮ Google ಖಾತೆಯಿಂದ ಸೈನ್ ಇನ್ ಮಾಡಿ ಅಥವಾ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಕಳುಹಿಸಿ.</string>
+    <string name="settings_revoke_sending">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="settings_revoke_success_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ</string>
+    <string name="settings_revoke_success_body">ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ. ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವೂ ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ಇದೆ.</string>
+    <string name="settings_revoke_success_close">ಮುಚ್ಚಿ</string>
+    <string name="settings_revoke_error_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಕಳುಹಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="settings_revoke_error_body">ಸ್ವಯಂಚಾಲಿತ ಕಳುಹಿಸುವಿಕೆ ವಿಫಲವಾಯಿತು: %1$s\n\nಪರ್ಯಾಯವಾಗಿ ನೀವು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಇಮೇಲ್ ಕಳುಹಿಸಬಹುದು. ಅದಕ್ಕಾಗಿ "ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ" ಅನ್ನು ತಟ್ಟಿರಿ.</string>
+    <string name="settings_revoke_error_email_fallback">ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ</string>
 """
 
 # ═══════════ MALAYALAM (ml) — നിങ്ങൾ, Malayalam script, simplified orthography ═══════════
@@ -327,7 +367,17 @@ TRANSLATIONS["ml"] = r"""
     <string name="settings_revoke_confirm">റദ്ദാക്കൽ സൃഷ്ടിക്കുക</string>
     <string name="settings_revoke_no_email">ഇമെയിൽ ആപ്പ് കണ്ടെത്തിയില്ല. ദയവായി റദ്ദാക്കൽ dev.app.support@gmail.com-ലേക്ക് അയയ്ക്കുക.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium കരാർ റദ്ദാക്കൽ</string>
-    <string name="settings_revoke_email_body">നമസ്കാരം,\n\nഇതിനാൽ Best Journal-ന്റെ Premium ഫീച്ചറുകൾ സംബന്ധിച്ച കരാർ ഞാൻ റദ്ദാക്കുന്നു എന്ന് അറിയിക്കുന്നു.\n\nഓർഡർ ചെയ്ത തീയതി: [ദയവായി പൂരിപ്പിക്കുക]\nGoogle അക്കൗണ്ട് ഇമെയിൽ: [അയയ്ക്കുന്നയാളിൽ നിന്ന് വ്യത്യസ്തമാണെങ്കിൽ പൂരിപ്പിക്കുക]\nപേര്: [ദയവായി പൂരിപ്പിക്കുക]\n\nതീയതി: [ഇന്ന്]</string>
+    <string name="settings_revoke_email_body">ഇതിനാൽ Best Journal-ന്റെ Premium ഫീച്ചറുകളുമായി ബന്ധപ്പെട്ട കരാറിൽ നിന്നുള്ള എന്റെ പിന്മാറ്റം അറിയിക്കുന്നു.\n\nഅയച്ചയാൾ (Google അക്കൗണ്ട്): %1$s\nപിന്മാറ്റ സമയം: %2$s\n\nഈ പിന്മാറ്റം ആപ്പിലെ § 356a BGB-അനുസൃതമായ രണ്ട് ഘട്ട പിന്മാറ്റ ബട്ടൺ വഴി ആരംഭിക്കുകയും Gmail API വഴി സ്വയമേവ അയയ്ക്കപ്പെടുകയും ചെയ്തു.</string>
+    <string name="settings_revoke_confirm_subject">നിങ്ങളുടെ ലഭ്യത സ്ഥിരീകരണം: Best Journal ലെ പിന്മാറ്റം</string>
+    <string name="settings_revoke_confirm_user_body">നമസ്കാരം,\n\n%1$s ലെ നിങ്ങളുടെ പിന്മാറ്റം ഞങ്ങൾക്ക് ലഭിച്ചു. ഇത് § 356a BGB പ്രകാരമുള്ള നിങ്ങളുടെ ലഭ്യത സ്ഥിരീകരണമാണ്.\n\nനിങ്ങളുടെ പിന്മാറ്റം എത്രയും വേഗം പ്രോസസ് ചെയ്യും; ചോദ്യങ്ങളുണ്ടെങ്കിൽ dev.app.support@gmail.com വഴി നിങ്ങളെ ബന്ധപ്പെടും.\n\nഇനി പുതിയ ബില്ലിംഗ് ഉണ്ടാകാതിരിക്കാനായി, ദയവായി Google Play Store ലെ "Subscriptions" വിഭാഗത്തിലും നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ റദ്ദാക്കുക.\n\nനന്ദിയും ആശംസകളും\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">സൈൻ ഇൻ ചെയ്ത Google അക്കൗണ്ട് വിലാസം കണ്ടെത്തിയില്ല. ദയവായി Settings ൽ നിങ്ങളുടെ Google അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്യുക അല്ലെങ്കിൽ പിന്മാറ്റം dev.app.support@gmail.com ലേക്ക് കൈയോടെ അയയ്ക്കുക.</string>
+    <string name="settings_revoke_sending">പിന്മാറ്റം അയയ്ക്കുന്നു…</string>
+    <string name="settings_revoke_success_title">പിന്മാറ്റം ലഭിച്ചു</string>
+    <string name="settings_revoke_success_body">നിങ്ങളുടെ പിന്മാറ്റം dev.app.support@gmail.com ലേക്ക് അയച്ചു. ലഭ്യത സ്ഥിരീകരണവും നിങ്ങളുടെ ഇൻബോക്സിലുണ്ട്.</string>
+    <string name="settings_revoke_success_close">അടയ്ക്കുക</string>
+    <string name="settings_revoke_error_title">പിന്മാറ്റം അയയ്ക്കാനായില്ല</string>
+    <string name="settings_revoke_error_body">സ്വയമേവയുള്ള അയയ്ക്കൽ പരാജയപ്പെട്ടു: %1$s\n\nമാറ്റായി നിങ്ങൾ dev.app.support@gmail.com ലേക്ക് കൈയോടെ ഒരു ഇമെയിൽ അയയ്ക്കാം. അതിന് "ഇമെയിൽ ആപ്പ് തുറക്കുക" അമർത്തുക.</string>
+    <string name="settings_revoke_error_email_fallback">ഇമെയിൽ ആപ്പ് തുറക്കുക</string>
 """
 
 

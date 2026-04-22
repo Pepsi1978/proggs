@@ -443,7 +443,7 @@
     <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
     
     <string name="settings_about">App વિશે</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
     
     <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
@@ -1083,9 +1083,40 @@
     <string name="settings_revoke_confirm">રદ બનાવો</string>
     <string name="settings_revoke_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને રદ dev.app.support@gmail.com પર મોકલો.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium કરાર રદ</string>
-    <string name="settings_revoke_email_body">નમસ્તે,\n\nઆ દ્વારા હું Best Journal ની Premium સુવિધાઓ અંગેના કરારને રદ કરવાની સૂચના આપું છું.\n\nઓર્ડર તારીખ: [કૃપા કરીને ભરો]\nGoogle એકાઉન્ટ ઇમેઇલ: [જો મોકલનાર કરતાં અલગ હોય તો ભરો]\nનામ: [કૃપા કરીને ભરો]\n\nતારીખ: [આજે]</string>
+    <string name="settings_revoke_email_body">આ દ્વારા હું Best Journal ની Premium સુવિધાઓ સંબંધિત મારા કરારના રદ કરવાની સૂચના આપું છું.\n\nમોકલનાર (Google એકાઉન્ટ): %1$s\nરદ કરવાની ક્ષણ: %2$s\n\nઆ રદ પ્રક્રિયા એપમાં આવેલા § 356a BGB-અનુરૂપ બે-પગલાના રદ બટન દ્વારા શરૂ કરવામાં આવી હતી અને Gmail API મારફતે આપમેળે મોકલવામાં આવી હતી.</string>
+    <string name="settings_revoke_confirm_subject">તમારી પ્રાપ્તી પુષ્ટિ: Best Journal માં રદ</string>
+    <string name="settings_revoke_confirm_user_body">નમસ્તે,\n\n%1$sની તમારી રદ કરવાની જાણ અમને મળી ગઈ છે. આ § 356a BGB મુજબ તમારી પ્રાપ્તી પુષ્ટિ છે.\n\nઅમે તમારી રદ પ્રક્રિયા શક્ય તેટલી વહેલી તકે કરીશું અને કોઈ પ્રશ્ન હોય તો dev.app.support@gmail.com દ્વારા તમારો સંપર્ક કરીશું.\n\nઆગળ કોઈ નવી બિલિંગ ન થાય તે માટે, કૃપા કરીને Google Play Store માં "Subscriptions" હેઠળ તમારી સબ્સ્ક્રિપ્શન પણ રદ કરો.\n\nઆભાર અને શુભેચ્છાઓ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">સાઇન-ઇન થયેલ Google ખાતાનું સરનામું મળ્યું નથી. કૃપા કરીને Settings માં તમારા Google ખાતાથી સાઇન ઇન કરો અથવા રદ કરવાની જાણ dev.app.support@gmail.com પર હાથેથી મોકલો.</string>
+    <string name="settings_revoke_sending">રદ મોકલાઈ રહ્યું છે…</string>
+    <string name="settings_revoke_success_title">રદ પ્રાપ્ત થયું</string>
+    <string name="settings_revoke_success_body">તમારી રદ કરવાની જાણ dev.app.support@gmail.com પર મોકલવામાં આવી છે. પ્રાપ્તી પુષ્ટિ પણ તમારા ઇનબોક્સમાં છે.</string>
+    <string name="settings_revoke_success_close">બંધ કરો</string>
+    <string name="settings_revoke_error_title">રદ મોકલી શકાયું નથી</string>
+    <string name="settings_revoke_error_body">સ્વચાલિત મોકલાણ નિષ્ફળ ગયું: %1$s\n\nવૈકલ્પિક રીતે તમે dev.app.support@gmail.com પર હાથેથી ઇમેઇલ મોકલી શકો છો. તેના માટે "ઇમેઇલ એપ ખોલો" પર ટેપ કરો.</string>
+    <string name="settings_revoke_error_email_fallback">ઇમેઇલ એપ ખોલો</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">સંકટ સહાય</string>
+    <string name="settings_crisis_subtitle">આકસ્મિક પરિસ્થિતિઓ માટે મહત્વપૂર્ણ હેલ્પલાઇન</string>
+    <string name="settings_crisis_dialog_title">તમે એકલા નથી</string>
+    <string name="settings_crisis_dialog_body">Best Journal એક જર્નલ એપ છે અને તે વ્યાવસાયિક માનસિક અથવા તબીબી સહાયનું સ્થાન લઈ શકતી નથી. AI દ્વારા બનાવાયેલા વિશ્લેષણો થેરાપી નથી.\n\nજો તમે ગંભીર સંકટમાં હો અથવા પોતાને ઇજા પહોંચાડવા કે આત્મહત્યાના વિચારો આવતા હોય, તો તમને આ બધું એકલા પાર કરવું નથી. મફત અને ગોપનીય મદદ 24/7 ઉપલબ્ધ છે.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge જર્મની</string>
+    <string name="settings_crisis_hotline_de_hours">મફત, 24/7, ગોપનીય</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 પર કૉલ કરો</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 પર કૉલ કરો</string>
+    <string name="settings_crisis_emergency_name">આપાત્કાલીન મદદ</string>
+    <string name="settings_crisis_call_emergency">112 પર કૉલ કરો</string>
+    <string name="settings_crisis_international_name">આંતરરાષ્ટ્રીય હેલ્પલાઇન</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com ખોલો</string>
+    <string name="settings_crisis_close">બંધ કરો</string>
+    <string name="settings_crisis_no_dialer">ફોન એપ મળી નથી.</string>
+    <string name="settings_crisis_no_browser">બ્રાઉઝર મળ્યો નથી.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI દ્વારા બનાવેલ</string>
+    <string name="ai_generated_tooltip">આ સામગ્રી AI સિસ્ટમ (Google Gemini) દ્વારા બનાવવામાં આવી છે અને તેમાં ભૂલો હોઈ શકે છે. કૃપા કરીને તમે જાતે ચકાસો.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ઓપ્ટ-આઉટ સાચવ્યું — આંકડાકીય માહિતી બંધ છે.</string>

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
     <!-- About -->
     <string name="settings_about">Sobre o app</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">Seu diário pessoal com IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sair da conta?</string>
@@ -1126,9 +1126,40 @@
     <string name="settings_revoke_confirm">Criar solicitação</string>
     <string name="settings_revoke_no_email">Nenhum aplicativo de e-mail encontrado. Envie a solicitação para dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Arrependimento contrato Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Olá,\n\npor meio desta notifico o exercício do direito de arrependimento do contrato sobre os recursos Premium do Best Journal.\n\nContratado em: [preencher]\nE-mail da conta Google: [preencher se diferente do remetente]\nNome: [preencher]\n\nData: [hoje]</string>
+    <string name="settings_revoke_email_body">Por meio desta notifico minha desistência do contrato relativo aos recursos Premium do Best Journal.\n\nRemetente (conta Google): %1$s\nMomento da desistência: %2$s\n\nEssa desistência foi acionada em duas etapas pelo botão de desistência no aplicativo, em conformidade com o § 356a BGB, e enviada automaticamente pela API do Gmail.</string>
+    <string name="settings_revoke_confirm_subject">Seu comprovante de recebimento: desistência na Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Olá,\n\nrecebemos sua desistência de %1$s. Este é o seu comprovante de recebimento nos termos do § 356a BGB.\n\nProcessaremos sua desistência o mais rápido possível e entraremos em contato pelo dev.app.support@gmail.com se houver dúvidas.\n\nPara evitar novas cobranças, cancele também sua assinatura na Google Play Store em "Assinaturas".\n\nObrigado e cordialmente\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Nenhum endereço de conta Google conectado foi encontrado. Entre com sua conta Google em Configurações ou envie a desistência manualmente para dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Enviando desistência…</string>
+    <string name="settings_revoke_success_title">Desistência recebida</string>
+    <string name="settings_revoke_success_body">Sua desistência foi enviada para dev.app.support@gmail.com. O comprovante de recebimento também está na sua caixa de entrada.</string>
+    <string name="settings_revoke_success_close">Fechar</string>
+    <string name="settings_revoke_error_title">Não foi possível enviar a desistência</string>
+    <string name="settings_revoke_error_body">O envio automático falhou: %1$s\n\nComo alternativa, você pode enviar um e-mail manual para dev.app.support@gmail.com. Toque em "Abrir app de e-mail" para isso.</string>
+    <string name="settings_revoke_error_email_fallback">Abrir app de e-mail</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Apoio em crise</string>
+    <string name="settings_crisis_subtitle">Linhas de ajuda importantes para emergências</string>
+    <string name="settings_crisis_dialog_title">Você não está só</string>
+    <string name="settings_crisis_dialog_body">Best Journal é um app de diário e não substitui apoio psicológico ou médico profissional. As análises geradas por IA não são terapia.\n\nSe você estiver em uma crise aguda ou tiver pensamentos de se machucar ou de suicídio: você não precisa passar por isso só. Há ajuda gratuita, anônima e disponível 24/7.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Alemanha</string>
+    <string name="settings_crisis_hotline_de_hours">Gratuito, 24/7, anônimo</string>
+    <string name="settings_crisis_call_de">Ligar para 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Ligar para 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Emergência</string>
+    <string name="settings_crisis_call_emergency">Ligar para 112</string>
+    <string name="settings_crisis_international_name">Linhas de ajuda internacionais</string>
+    <string name="settings_crisis_open_findahelpline">Abrir findahelpline.com</string>
+    <string name="settings_crisis_close">Fechar</string>
+    <string name="settings_crisis_no_dialer">Nenhum app de telefone encontrado.</string>
+    <string name="settings_crisis_no_browser">Nenhum navegador encontrado.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">Gerado por IA</string>
+    <string name="ai_generated_tooltip">Este conteúdo foi criado por um sistema de IA (Google Gemini) e pode conter erros. Verifique por conta própria.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">Opt-Out salvo — as estatísticas estão desativadas.</string>

@@ -433,7 +433,7 @@
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1058,9 +1058,40 @@
     <string name="settings_revoke_confirm">ఉపసంహరణ సృష్టించండి</string>
     <string name="settings_revoke_no_email">ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి ఉపసంహరణను dev.app.support@gmail.com-కి పంపండి.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ఒప్పందం ఉపసంహరణ</string>
-    <string name="settings_revoke_email_body">నమస్కారం,\n\nదీని ద్వారా Best Journal యొక్క Premium ఫీచర్లపై కుదుర్చుకున్న ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\n\nఆర్డర్ తేదీ: [దయచేసి పూరించండి]\nGoogle ఖాతా ఇమెయిల్: [పంపినవారి నుండి భిన్నంగా ఉంటే పూరించండి]\nపేరు: [దయచేసి పూరించండి]\n\nతేదీ: [నేడు]</string>
+    <string name="settings_revoke_email_body">దీని ద్వారా Best Journal యొక్క Premium ఫీచర్లకు సంబంధించిన నా ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\n\nపంపినవారు (Google ఖాతా): %1$s\nఉపసంహరణ సమయం: %2$s\n\nఈ ఉపసంహరణ యాప్‌లోని § 356a BGB‌కు అనుగుణమైన రెండు-దశల ఉపసంహరణ బటన్ ద్వారా ప్రారంభించబడింది మరియు Gmail API ద్వారా స్వయంచాలకంగా పంపబడింది.</string>
+    <string name="settings_revoke_confirm_subject">మీ స్వీకరణ నిర్ధారణ: Best Journal లో ఉపసంహరణ</string>
+    <string name="settings_revoke_confirm_user_body">నమస్కారం,\n\n%1$s నాటి మీ ఉపసంహరణ మాకు అందింది. ఇది § 356a BGB ప్రకారం మీ స్వీకరణ నిర్ధారణ.\n\nమీ ఉపసంహరణను వీలైనంత త్వరగా ప్రాసెస్ చేస్తాము మరియు ఏవైనా ప్రశ్నలు ఉంటే dev.app.support@gmail.com ద్వారా మిమ్మల్ని సంప్రదిస్తాము.\n\nఇంకా బిల్లింగ్ జరగకుండా ఉండేందుకు, దయచేసి Google Play Store లోని "Subscriptions" వద్ద మీ సభ్యత్వాన్ని కూడా రద్దు చేయండి.\n\nధన్యవాదాలు మరియు శుభాకాంక్షలు\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">సైన్-ఇన్ చేసిన Google ఖాతా చిరునామా కనబడలేదు. దయచేసి Settings లో మీ Google ఖాతాతో సైన్ ఇన్ చేయండి లేదా ఉపసంహరణను dev.app.support@gmail.com కు చేతితో పంపండి.</string>
+    <string name="settings_revoke_sending">ఉపసంహరణ పంపిస్తోంది…</string>
+    <string name="settings_revoke_success_title">ఉపసంహరణ అందింది</string>
+    <string name="settings_revoke_success_body">మీ ఉపసంహరణ dev.app.support@gmail.com కు పంపబడింది. స్వీకరణ నిర్ధారణ కూడా మీ ఇన్‌బాక్స్‌లో ఉంది.</string>
+    <string name="settings_revoke_success_close">మూసివేయండి</string>
+    <string name="settings_revoke_error_title">ఉపసంహరణను పంపలేకపోయాం</string>
+    <string name="settings_revoke_error_body">స్వయంచాలక పంపింపు విఫలమైంది: %1$s\n\nప్రత్యామ్నాయంగా మీరు dev.app.support@gmail.com కు చేతితో ఈమెయిల్ పంపవచ్చు. అందుకు "ఈమెయిల్ యాప్ తెరవండి" ను తట్టండి.</string>
+    <string name="settings_revoke_error_email_fallback">ఈమెయిల్ యాప్ తెరవండి</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">సంక్షోభ సహాయం</string>
+    <string name="settings_crisis_subtitle">అత్యవసర పరిస్థితుల కోసం ముఖ్యమైన హెల్ప్‌లైన్‌లు</string>
+    <string name="settings_crisis_dialog_title">మీరు ఒంటరిగా లేరు</string>
+    <string name="settings_crisis_dialog_body">Best Journal ఒక జర్నల్ యాప్. ఇది నిపుణుల మానసిక లేదా వైద్య సహాయానికి ప్రత్యామ్నాయం కాదు. AI రూపొందించిన విశ్లేషణలు థెరపీ కావు.\n\nమీరు తీవ్రమైన సంక్షోభంలో ఉన్నా లేదా స్వీయహాని లేదా ఆత్మహత్య ఆలోచనలు వస్తున్నా, దీనిని మీరు ఒంటరిగా ఎదుర్కోవాల్సిన అవసరం లేదు. ఉచితంగా, గోప్యంగా సహాయం 24/7 అందుబాటులో ఉంది.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge జర్మనీ</string>
+    <string name="settings_crisis_hotline_de_hours">ఉచితం, 24/7, గోప్యంగా</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 కు కాల్ చేయండి</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 కు కాల్ చేయండి</string>
+    <string name="settings_crisis_emergency_name">అత్యవసరం</string>
+    <string name="settings_crisis_call_emergency">112 కు కాల్ చేయండి</string>
+    <string name="settings_crisis_international_name">అంతర్జాతీయ హెల్ప్‌లైన్‌లు</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com తెరవండి</string>
+    <string name="settings_crisis_close">మూసివేయండి</string>
+    <string name="settings_crisis_no_dialer">ఫోన్ యాప్ కనబడలేదు.</string>
+    <string name="settings_crisis_no_browser">బ్రౌజర్ కనబడలేదు.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI రూపొందించినది</string>
+    <string name="ai_generated_tooltip">ఈ కంటెంట్‌ను AI సిస్టమ్ (Google Gemini) రూపొందించింది. ఇందులో తప్పులు ఉండవచ్చు. దయచేసి మీరు స్వయంగా తనిఖీ చేయండి.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ఆప్ట్-అవుట్ సేవ్ చేశాం — గణాంకాలు ఆఫ్‌లో ఉన్నాయి.</string>

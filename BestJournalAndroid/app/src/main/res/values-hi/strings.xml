@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s को अनलॉक</string>
     <!-- About -->
     <string name="settings_about">ऐप के बारे में</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">आपकी व्यक्तिगत AI डायरी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करें?</string>
@@ -1126,9 +1126,40 @@
     <string name="settings_revoke_confirm">रद्द अनुरोध बनाएँ</string>
     <string name="settings_revoke_no_email">कोई ईमेल ऐप नहीं मिला। कृपया रद्द अनुरोध dev.app.support@gmail.com पर भेजें।</string>
     <string name="settings_revoke_email_subject">Best Journal Premium अनुबंध रद्द</string>
-    <string name="settings_revoke_email_body">नमस्ते,\n\nइसके द्वारा मैं Best Journal की Premium सुविधाओं के लिए अपने अनुबंध को रद्द करने की सूचना देता हूँ।\n\nऑर्डर की तारीख: [कृपया भरें]\nGoogle अकाउंट ईमेल: [यदि भेजने वाले से अलग हो तो भरें]\nनाम: [कृपया भरें]\n\nतारीख: [आज]</string>
+    <string name="settings_revoke_email_body">इसके द्वारा मैं Best Journal की Premium सुविधाओं से संबंधित अपने अनुबंध की वापसी की सूचना देता हूँ।\n\nप्रेषक (Google खाता): %1$s\nवापसी का समय: %2$s\n\nयह वापसी ऐप में मौजूद § 356a BGB-अनुरूप दो-चरणीय वापसी बटन के जरिए शुरू की गई और Gmail API के माध्यम से अपने-आप भेजी गई।</string>
+    <string name="settings_revoke_confirm_subject">आपकी प्राप्ति-पुष्टि: Best Journal में वापसी</string>
+    <string name="settings_revoke_confirm_user_body">नमस्ते,\n\nहमें %1$s की आपकी वापसी मिल गई है। यह § 356a BGB के तहत आपकी प्राप्ति-पुष्टि है।\n\nहम आपकी वापसी को जल्द से जल्द प्रक्रिया में लाएँगे और अगर कोई सवाल हुआ तो dev.app.support@gmail.com पर आपसे संपर्क करेंगे।\n\nआगे कोई नई बिलिंग न हो, इसके लिए कृपया Google Play Store में "Subscriptions" के तहत अपना सब्सक्रिप्शन भी रद्द करें।\n\nधन्यवाद और शुभकामनाएँ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">किसी साइन-इन किए हुए Google खाते का पता नहीं मिला। कृपया Settings में अपने Google खाते से साइन इन करें या वापसी को मैन्युअल रूप से dev.app.support@gmail.com पर भेजें।</string>
+    <string name="settings_revoke_sending">वापसी भेजी जा रही है…</string>
+    <string name="settings_revoke_success_title">वापसी प्राप्त हुई</string>
+    <string name="settings_revoke_success_body">आपकी वापसी dev.app.support@gmail.com पर भेज दी गई है। प्राप्ति-पुष्टि भी आपके इनबॉक्स में है।</string>
+    <string name="settings_revoke_success_close">बंद करें</string>
+    <string name="settings_revoke_error_title">वापसी भेजी नहीं जा सकी</string>
+    <string name="settings_revoke_error_body">स्वचालित भेजना विफल रहा: %1$s\n\nवैकल्पिक रूप से आप dev.app.support@gmail.com पर मैन्युअल ई-मेल भेज सकते हैं। इसके लिए "ई-मेल ऐप खोलें" पर टैप करें।</string>
+    <string name="settings_revoke_error_email_fallback">ई-मेल ऐप खोलें</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">संकट सहायता</string>
+    <string name="settings_crisis_subtitle">आपात स्थिति के लिए महत्वपूर्ण हेल्पलाइनें</string>
+    <string name="settings_crisis_dialog_title">आप अकेले नहीं हैं</string>
+    <string name="settings_crisis_dialog_body">Best Journal एक जर्नल ऐप है और यह पेशेवर मनोवैज्ञानिक या चिकित्सीय सहायता का विकल्प नहीं है। AI से बने विश्लेषण थेरेपी नहीं हैं।\n\nअगर आप किसी तीव्र संकट में हैं या खुद को नुकसान पहुँचाने या आत्महत्या के विचार आ रहे हैं, तो आपको इससे अकेले नहीं गुजरना है। मुफ्त, गुमनाम मदद 24/7 उपलब्ध है।</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge जर्मनी</string>
+    <string name="settings_crisis_hotline_de_hours">मुफ्त, 24/7, गुमनाम</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 पर कॉल करें</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 पर कॉल करें</string>
+    <string name="settings_crisis_emergency_name">आपातकाल</string>
+    <string name="settings_crisis_call_emergency">112 पर कॉल करें</string>
+    <string name="settings_crisis_international_name">अंतरराष्ट्रीय हेल्पलाइनें</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com खोलें</string>
+    <string name="settings_crisis_close">बंद करें</string>
+    <string name="settings_crisis_no_dialer">कोई फ़ोन ऐप नहीं मिला।</string>
+    <string name="settings_crisis_no_browser">कोई ब्राउज़र नहीं मिला।</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI-जनित</string>
+    <string name="ai_generated_tooltip">यह सामग्री AI सिस्टम (Google Gemini) द्वारा बनाई गई है और इसमें गलतियाँ हो सकती हैं। कृपया इसे खुद जाँच लें।</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ऑप्ट-आउट सहेज लिया गया — आँकड़े बंद हैं.</string>

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Ontgrendeld op %1$s</string>
     <!-- About -->
     <string name="settings_about">Over de app</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">Jouw persoonlijke AI-dagboek</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uitloggen?</string>
@@ -1126,9 +1126,40 @@
     <string name="settings_revoke_confirm">Herroeping aanmaken</string>
     <string name="settings_revoke_no_email">Geen e-mailapp gevonden. Stuur de herroeping naar dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Herroeping Premium-contract Best Journal</string>
-    <string name="settings_revoke_email_body">Hallo,\n\nhierbij herroep ik het door mij afgesloten contract over de Premium-functies van Best Journal.\n\nBesteld op: [in te vullen]\nGoogle-account-e-mail: [in te vullen indien afwijkend]\nNaam: [in te vullen]\n\nDatum: [vandaag]</string>
+    <string name="settings_revoke_email_body">Hierbij herroep ik mijn contract voor de Premium-functies van Best Journal.\n\nAfzender (Google-account): %1$s\nMoment van herroeping: %2$s\n\nDeze herroeping is in twee stappen gestart via de aan § 356a BGB conforme herroepingsknop in de app en automatisch verzonden via de Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Jouw ontvangstbevestiging: herroeping bij Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Hallo,\n\nwe hebben je herroeping van %1$s ontvangen. Dit is jouw ontvangstbevestiging volgens § 356a BGB.\n\nWe verwerken je herroeping zo snel mogelijk en nemen bij vragen contact op via dev.app.support@gmail.com.\n\nOm verdere betalingen te stoppen, zeg je abonnement ook op in de Google Play Store onder "Abonnementen".\n\nBedankt en vriendelijke groeten\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Er is geen aangemeld Google-accountadres gevonden. Meld je in Instellingen aan met je Google-account of stuur de herroeping handmatig naar dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Herroeping wordt verzonden…</string>
+    <string name="settings_revoke_success_title">Herroeping ontvangen</string>
+    <string name="settings_revoke_success_body">Je herroeping is verzonden naar dev.app.support@gmail.com. De ontvangstbevestiging staat ook in je inbox.</string>
+    <string name="settings_revoke_success_close">Sluiten</string>
+    <string name="settings_revoke_error_title">Kon de herroeping niet verzenden</string>
+    <string name="settings_revoke_error_body">Automatisch verzenden is mislukt: %1$s\n\nJe kunt ook handmatig een e-mail sturen naar dev.app.support@gmail.com. Tik daarvoor op "E-mailapp openen".</string>
+    <string name="settings_revoke_error_email_fallback">E-mailapp openen</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Crisishulp</string>
+    <string name="settings_crisis_subtitle">Belangrijke hulplijnen voor noodgevallen</string>
+    <string name="settings_crisis_dialog_title">Je staat er niet alleen voor</string>
+    <string name="settings_crisis_dialog_body">Best Journal is een dagboek-app en vervangt geen professionele psychologische of medische hulp. Door AI gegenereerde analyses zijn geen therapie.\n\nAls je in een acute crisis zit of gedachten hebt aan zelfbeschadiging of zelfdoding: je staat er niet alleen voor. Er is gratis, anonieme hulp beschikbaar, dag en nacht.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Duitsland</string>
+    <string name="settings_crisis_hotline_de_hours">Gratis, 24/7, anoniem</string>
+    <string name="settings_crisis_call_de">Bel 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Bel 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Noodnummer</string>
+    <string name="settings_crisis_call_emergency">Bel 112</string>
+    <string name="settings_crisis_international_name">Internationale hulplijnen</string>
+    <string name="settings_crisis_open_findahelpline">Open findahelpline.com</string>
+    <string name="settings_crisis_close">Sluiten</string>
+    <string name="settings_crisis_no_dialer">Geen telefoon-app gevonden.</string>
+    <string name="settings_crisis_no_browser">Geen browser gevonden.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI-gegenereerd</string>
+    <string name="ai_generated_tooltip">Deze inhoud is gemaakt door een AI-systeem (Google Gemini) en kan fouten bevatten. Controleer dit zelf.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">Opt-out opgeslagen — statistieken zijn uitgeschakeld.</string>

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Відкрито: %1$s</string>
     <!-- About -->
     <string name="settings_about">Про застосунок</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Вийти?</string>
@@ -1134,9 +1134,40 @@
     <string name="settings_revoke_confirm">Створити відкликання</string>
     <string name="settings_revoke_no_email">Поштовий застосунок не знайдено. Надішліть відкликання на dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Відкликання контракту Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Доброго дня,\n\nцим повідомляю про відкликання укладеного мною договору щодо функцій Premium у Best Journal.\n\nЗамовлено: [заповнити]\nE-mail облікового запису Google: [заповнити, якщо відрізняється від відправника]\nІм\'я: [заповнити]\n\nДата: [сьогодні]</string>
+    <string name="settings_revoke_email_body">Цим повідомляю про відкликання мого договору щодо функцій Premium у Best Journal.\n\nВідправник (обліковий запис Google): %1$s\nЧас відкликання: %2$s\n\nЦе відкликання було ініційовано у два етапи через кнопку відкликання в застосунку, що відповідає § 356a BGB, і автоматично надіслано через Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Ваше підтвердження отримання: відкликання в Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Вітаємо,\n\nми отримали ваше відкликання від %1$s. Це ваше підтвердження отримання відповідно до § 356a BGB.\n\nМи опрацюємо ваше відкликання якнайшвидше і зв’яжемося з вами через dev.app.support@gmail.com, якщо виникнуть запитання.\n\nЩоб припинити подальші списання, будь ласка, також скасуйте підписку в Google Play Store у розділі «Підписки».\n\nДякуємо та з повагою\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Не знайдено жодної адреси увійшовшого облікового запису Google. Будь ласка, увійдіть у свій Google-акаунт у Налаштуваннях або надішліть відкликання вручну на dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Надсилання відкликання…</string>
+    <string name="settings_revoke_success_title">Відкликання отримано</string>
+    <string name="settings_revoke_success_body">Ваше відкликання надіслано на dev.app.support@gmail.com. Підтвердження отримання також є у вашій поштовій скриньці.</string>
+    <string name="settings_revoke_success_close">Закрити</string>
+    <string name="settings_revoke_error_title">Не вдалося надіслати відкликання</string>
+    <string name="settings_revoke_error_body">Автоматичне надсилання не вдалося: %1$s\n\nВи також можете надіслати ручний електронний лист на dev.app.support@gmail.com. Для цього натисніть «Відкрити поштову програму».</string>
+    <string name="settings_revoke_error_email_fallback">Відкрити поштову програму</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Кризова допомога</string>
+    <string name="settings_crisis_subtitle">Важливі гарячі лінії на випадок невідкладної ситуації</string>
+    <string name="settings_crisis_dialog_title">Ви не самі</string>
+    <string name="settings_crisis_dialog_body">Best Journal — це застосунок-щоденник і він не замінює професійну психологічну чи медичну допомогу. Аналізи, згенеровані ШІ, не є терапією.\n\nЯкщо ви перебуваєте в гострій кризі або маєте думки про самоушкодження чи самогубство: ви не повинні залишатися з цим наодинці. Безкоштовна, анонімна допомога доступна цілодобово.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Німеччина</string>
+    <string name="settings_crisis_hotline_de_hours">Безкоштовно, 24/7, анонімно</string>
+    <string name="settings_crisis_call_de">Зателефонувати за номером 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Зателефонувати за номером 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Екстрена допомога</string>
+    <string name="settings_crisis_call_emergency">Зателефонувати 112</string>
+    <string name="settings_crisis_international_name">Міжнародні гарячі лінії</string>
+    <string name="settings_crisis_open_findahelpline">Відкрити findahelpline.com</string>
+    <string name="settings_crisis_close">Закрити</string>
+    <string name="settings_crisis_no_dialer">Не знайдено застосунку для дзвінків.</string>
+    <string name="settings_crisis_no_browser">Не знайдено браузера.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">Створено ШІ</string>
+    <string name="ai_generated_tooltip">Цей вміст створено системою ШІ (Google Gemini), і він може містити помилки. Будь ласка, перевірте його самостійно.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">Відмову збережено — статистику вимкнено.</string>

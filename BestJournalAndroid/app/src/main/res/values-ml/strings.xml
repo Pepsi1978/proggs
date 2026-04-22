@@ -433,7 +433,7 @@
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>
@@ -1061,9 +1061,40 @@
     <string name="settings_revoke_confirm">റദ്ദാക്കൽ സൃഷ്ടിക്കുക</string>
     <string name="settings_revoke_no_email">ഇമെയിൽ ആപ്പ് കണ്ടെത്തിയില്ല. ദയവായി റദ്ദാക്കൽ dev.app.support@gmail.com-ലേക്ക് അയയ്ക്കുക.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium കരാർ റദ്ദാക്കൽ</string>
-    <string name="settings_revoke_email_body">നമസ്കാരം,\n\nഇതിനാൽ Best Journal-ന്റെ Premium ഫീച്ചറുകൾ സംബന്ധിച്ച കരാർ ഞാൻ റദ്ദാക്കുന്നു എന്ന് അറിയിക്കുന്നു.\n\nഓർഡർ ചെയ്ത തീയതി: [ദയവായി പൂരിപ്പിക്കുക]\nGoogle അക്കൗണ്ട് ഇമെയിൽ: [അയയ്ക്കുന്നയാളിൽ നിന്ന് വ്യത്യസ്തമാണെങ്കിൽ പൂരിപ്പിക്കുക]\nപേര്: [ദയവായി പൂരിപ്പിക്കുക]\n\nതീയതി: [ഇന്ന്]</string>
+    <string name="settings_revoke_email_body">ഇതിനാൽ Best Journal-ന്റെ Premium ഫീച്ചറുകളുമായി ബന്ധപ്പെട്ട കരാറിൽ നിന്നുള്ള എന്റെ പിന്മാറ്റം അറിയിക്കുന്നു.\n\nഅയച്ചയാൾ (Google അക്കൗണ്ട്): %1$s\nപിന്മാറ്റ സമയം: %2$s\n\nഈ പിന്മാറ്റം ആപ്പിലെ § 356a BGB-അനുസൃതമായ രണ്ട് ഘട്ട പിന്മാറ്റ ബട്ടൺ വഴി ആരംഭിക്കുകയും Gmail API വഴി സ്വയമേവ അയയ്ക്കപ്പെടുകയും ചെയ്തു.</string>
+    <string name="settings_revoke_confirm_subject">നിങ്ങളുടെ ലഭ്യത സ്ഥിരീകരണം: Best Journal ലെ പിന്മാറ്റം</string>
+    <string name="settings_revoke_confirm_user_body">നമസ്കാരം,\n\n%1$s ലെ നിങ്ങളുടെ പിന്മാറ്റം ഞങ്ങൾക്ക് ലഭിച്ചു. ഇത് § 356a BGB പ്രകാരമുള്ള നിങ്ങളുടെ ലഭ്യത സ്ഥിരീകരണമാണ്.\n\nനിങ്ങളുടെ പിന്മാറ്റം എത്രയും വേഗം പ്രോസസ് ചെയ്യും; ചോദ്യങ്ങളുണ്ടെങ്കിൽ dev.app.support@gmail.com വഴി നിങ്ങളെ ബന്ധപ്പെടും.\n\nഇനി പുതിയ ബില്ലിംഗ് ഉണ്ടാകാതിരിക്കാനായി, ദയവായി Google Play Store ലെ "Subscriptions" വിഭാഗത്തിലും നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ റദ്ദാക്കുക.\n\nനന്ദിയും ആശംസകളും\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">സൈൻ ഇൻ ചെയ്ത Google അക്കൗണ്ട് വിലാസം കണ്ടെത്തിയില്ല. ദയവായി Settings ൽ നിങ്ങളുടെ Google അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്യുക അല്ലെങ്കിൽ പിന്മാറ്റം dev.app.support@gmail.com ലേക്ക് കൈയോടെ അയയ്ക്കുക.</string>
+    <string name="settings_revoke_sending">പിന്മാറ്റം അയയ്ക്കുന്നു…</string>
+    <string name="settings_revoke_success_title">പിന്മാറ്റം ലഭിച്ചു</string>
+    <string name="settings_revoke_success_body">നിങ്ങളുടെ പിന്മാറ്റം dev.app.support@gmail.com ലേക്ക് അയച്ചു. ലഭ്യത സ്ഥിരീകരണവും നിങ്ങളുടെ ഇൻബോക്സിലുണ്ട്.</string>
+    <string name="settings_revoke_success_close">അടയ്ക്കുക</string>
+    <string name="settings_revoke_error_title">പിന്മാറ്റം അയയ്ക്കാനായില്ല</string>
+    <string name="settings_revoke_error_body">സ്വയമേവയുള്ള അയയ്ക്കൽ പരാജയപ്പെട്ടു: %1$s\n\nമാറ്റായി നിങ്ങൾ dev.app.support@gmail.com ലേക്ക് കൈയോടെ ഒരു ഇമെയിൽ അയയ്ക്കാം. അതിന് "ഇമെയിൽ ആപ്പ് തുറക്കുക" അമർത്തുക.</string>
+    <string name="settings_revoke_error_email_fallback">ഇമെയിൽ ആപ്പ് തുറക്കുക</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">പ്രതിസന്ധി സഹായം</string>
+    <string name="settings_crisis_subtitle">അടിയന്തര സാഹചര്യങ്ങൾക്ക് പ്രധാന ഹെൽപ്‌ലൈനുകൾ</string>
+    <string name="settings_crisis_dialog_title">നിങ്ങൾ ഒറ്റയ്ക്കല്ല</string>
+    <string name="settings_crisis_dialog_body">Best Journal ഒരു ജേർണൽ ആപ്പാണ്. ഇത് പ്രൊഫഷണൽ മാനസികയോ വൈദ്യസഹായത്തിനോ പകരമല്ല. AI സൃഷ്ടിക്കുന്ന വിശകലനങ്ങൾ ചികിത്സയല്ല.\n\nനിങ്ങൾ ഗുരുതരമായ പ്രതിസന്ധിയിലാണെങ്കിൽ, അല്ലെങ്കിൽ സ്വയംഹാനിയെയോ ആത്മഹത്യയെയോ കുറിച്ചുള്ള ചിന്തകൾ ഉണ്ടെങ്കിൽ, ഇത് നിങ്ങൾ ഒറ്റയ്ക്ക് നേരിടേണ്ടതില്ല. സൗജന്യവും രഹസ്യപരവുമായ സഹായം 24/7 ലഭ്യമാണ്.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge ജർമനി</string>
+    <string name="settings_crisis_hotline_de_hours">സൗജന്യം, 24/7, രഹസ്യമായി</string>
+    <string name="settings_crisis_call_de">0800 111 0 111ിലേക്ക് വിളിക്കുക</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222ിലേക്ക് വിളിക്കുക</string>
+    <string name="settings_crisis_emergency_name">അടിയന്തര സഹായം</string>
+    <string name="settings_crisis_call_emergency">112ിലേക്ക് വിളിക്കുക</string>
+    <string name="settings_crisis_international_name">അന്തർദേശീയ ഹെൽപ്‌ലൈനുകൾ</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com തുറക്കുക</string>
+    <string name="settings_crisis_close">അടയ്ക്കുക</string>
+    <string name="settings_crisis_no_dialer">ഫോൺ ആപ്പ് കണ്ടെത്താനായില്ല.</string>
+    <string name="settings_crisis_no_browser">ബ്രൗസർ കണ്ടെത്താനായില്ല.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI സൃഷ്ടിച്ചത്</string>
+    <string name="ai_generated_tooltip">ഈ ഉള്ളടക്കം AI സിസ്റ്റം (Google Gemini) സൃഷ്ടിച്ചതാണ്, അതിൽ പിഴവുകൾ ഉണ്ടാകാം. ദയവായി നിങ്ങൾ തന്നെ പരിശോധിക്കുക.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ഓപ്റ്റ്-ഔട്ട് സംരക്ഷിച്ചു — സ്ഥിതിവിവരക്കണക്ക് ഓഫാണ്.</string>

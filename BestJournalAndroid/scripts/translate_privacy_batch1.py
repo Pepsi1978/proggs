@@ -74,7 +74,17 @@ TRANSLATIONS["fr"] = r"""
     <string name="settings_revoke_confirm">Créer la rétractation</string>
     <string name="settings_revoke_no_email">Aucune application de messagerie trouvée. Merci d\'envoyer la rétractation à dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Rétractation contrat Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Bonjour,\n\nje notifie par la présente ma rétractation du contrat portant sur les fonctions Premium de Best Journal.\n\nCommandé le\u00A0: [à compléter]\nE-mail du compte Google\u00A0: [à compléter si différent de l\'expéditeur]\nNom\u00A0: [à compléter]\n\nDate\u00A0: [aujourd\'hui]</string>
+    <string name="settings_revoke_email_body">Par la présente, j’exerce mon droit de rétractation sur le contrat relatif aux fonctions Premium de Best Journal.\n\nExpéditeur (compte Google)\u00A0: %1$s\nMoment de la rétractation\u00A0: %2$s\n\nCette rétractation a été déclenchée en deux étapes via le bouton de rétractation de l’application conforme au § 356a BGB et envoyée automatiquement via l’API Gmail.</string>
+    <string name="settings_revoke_confirm_subject">Ton accusé de réception : rétractation chez Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Bonjour,\n\nnous avons reçu ta rétractation du %1$s. Ceci est ton accusé de réception au titre du § 356a BGB.\n\nNous traiterons ta rétractation dès que possible et te contacterons à l’adresse dev.app.support@gmail.com en cas de questions.\n\nPour éviter toute nouvelle facturation, pense aussi à résilier ton abonnement dans le Google Play Store sous "Abonnements".\n\nMerci et bien cordialement\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Aucune adresse de compte Google connectée n’a été trouvée. Merci de te connecter avec ton compte Google dans les paramètres ou d’envoyer la rétractation manuellement à dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Envoi de la rétractation…</string>
+    <string name="settings_revoke_success_title">Rétractation reçue</string>
+    <string name="settings_revoke_success_body">Ta rétractation a été envoyée à dev.app.support@gmail.com. L’accusé de réception se trouve aussi dans ta boîte de réception.</string>
+    <string name="settings_revoke_success_close">Fermer</string>
+    <string name="settings_revoke_error_title">Impossible d’envoyer la rétractation</string>
+    <string name="settings_revoke_error_body">L’envoi automatique a échoué : %1$s\n\nTu peux aussi envoyer un e-mail manuel à dev.app.support@gmail.com. Clique sur "Ouvrir l’application e-mail" pour cela.</string>
+    <string name="settings_revoke_error_email_fallback">Ouvrir l’application e-mail</string>
 """
 
 # ══════════════════════════════════════════════════════════════════
@@ -141,7 +151,17 @@ TRANSLATIONS["es"] = r"""
     <string name="settings_revoke_confirm">Crear desistimiento</string>
     <string name="settings_revoke_no_email">No se encontró una aplicación de correo. Envía el desistimiento a dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Desistimiento contrato Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Hola,\n\npor la presente notifico mi desistimiento del contrato sobre las funciones Premium de Best Journal.\n\nContratado el: [completar]\nCorreo de la cuenta de Google: [completar si difiere del remitente]\nNombre: [completar]\n\nFecha: [hoy]</string>
+    <string name="settings_revoke_email_body">Por la presente notifico mi desistimiento del contrato relativo a las funciones Premium de Best Journal.\n\nRemitente (cuenta de Google): %1$s\nMomento del desistimiento: %2$s\n\nEste desistimiento se activó en dos pasos mediante el botón de desistimiento de la aplicación conforme al § 356a BGB y se envió automáticamente a través de la API de Gmail.</string>
+    <string name="settings_revoke_confirm_subject">Tu acuse de recibo: desistimiento en Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Hola,\n\nhemos recibido tu desistimiento del %1$s. Este es tu acuse de recibo conforme al § 356a BGB.\n\nProcesaremos tu desistimiento lo antes posible y te escribiremos a dev.app.support@gmail.com si hay preguntas.\n\nPara evitar nuevos cobros, cancela también tu suscripción en Google Play Store, en "Suscripciones".\n\nGracias y saludos\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">No se ha encontrado ninguna dirección de cuenta de Google conectada. Inicia sesión con tu cuenta de Google en Ajustes o envía el desistimiento manualmente a dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Enviando desistimiento…</string>
+    <string name="settings_revoke_success_title">Desistimiento recibido</string>
+    <string name="settings_revoke_success_body">Tu desistimiento se ha enviado a dev.app.support@gmail.com. El acuse de recibo también está en tu bandeja de entrada.</string>
+    <string name="settings_revoke_success_close">Cerrar</string>
+    <string name="settings_revoke_error_title">No se pudo enviar el desistimiento</string>
+    <string name="settings_revoke_error_body">El envío automático ha fallado: %1$s\n\nTambién puedes enviar manualmente un correo a dev.app.support@gmail.com. Pulsa "Abrir la app de correo" para hacerlo.</string>
+    <string name="settings_revoke_error_email_fallback">Abrir la app de correo</string>
 """
 
 # ══════════════════════════════════════════════════════════════════
@@ -208,7 +228,17 @@ TRANSLATIONS["pt-rBR"] = r"""
     <string name="settings_revoke_confirm">Criar solicitação</string>
     <string name="settings_revoke_no_email">Nenhum aplicativo de e-mail encontrado. Envie a solicitação para dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Arrependimento contrato Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Olá,\n\npor meio desta notifico o exercício do direito de arrependimento do contrato sobre os recursos Premium do Best Journal.\n\nContratado em: [preencher]\nE-mail da conta Google: [preencher se diferente do remetente]\nNome: [preencher]\n\nData: [hoje]</string>
+    <string name="settings_revoke_email_body">Por meio desta notifico minha desistência do contrato relativo aos recursos Premium do Best Journal.\n\nRemetente (conta Google): %1$s\nMomento da desistência: %2$s\n\nEssa desistência foi acionada em duas etapas pelo botão de desistência no aplicativo, em conformidade com o § 356a BGB, e enviada automaticamente pela API do Gmail.</string>
+    <string name="settings_revoke_confirm_subject">Seu comprovante de recebimento: desistência na Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Olá,\n\nrecebemos sua desistência de %1$s. Este é o seu comprovante de recebimento nos termos do § 356a BGB.\n\nProcessaremos sua desistência o mais rápido possível e entraremos em contato pelo dev.app.support@gmail.com se houver dúvidas.\n\nPara evitar novas cobranças, cancele também sua assinatura na Google Play Store em "Assinaturas".\n\nObrigado e cordialmente\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Nenhum endereço de conta Google conectado foi encontrado. Entre com sua conta Google em Configurações ou envie a desistência manualmente para dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Enviando desistência…</string>
+    <string name="settings_revoke_success_title">Desistência recebida</string>
+    <string name="settings_revoke_success_body">Sua desistência foi enviada para dev.app.support@gmail.com. O comprovante de recebimento também está na sua caixa de entrada.</string>
+    <string name="settings_revoke_success_close">Fechar</string>
+    <string name="settings_revoke_error_title">Não foi possível enviar a desistência</string>
+    <string name="settings_revoke_error_body">O envio automático falhou: %1$s\n\nComo alternativa, você pode enviar um e-mail manual para dev.app.support@gmail.com. Toque em "Abrir app de e-mail" para isso.</string>
+    <string name="settings_revoke_error_email_fallback">Abrir app de e-mail</string>
 """
 
 # ══════════════════════════════════════════════════════════════════
@@ -276,7 +306,17 @@ TRANSLATIONS["pt-rPT"] = r"""
     <string name="settings_revoke_confirm">Criar pedido</string>
     <string name="settings_revoke_no_email">Não foi encontrada uma aplicação de e-mail. Envia o pedido para dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Rescisão contrato Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Olá,\n\nnotifico pela presente a minha rescisão do contrato sobre as funções Premium do Best Journal.\n\nContratado em: [preencher]\nE-mail da conta Google: [preencher se diferente do remetente]\nNome: [preencher]\n\nData: [hoje]</string>
+    <string name="settings_revoke_email_body">Pela presente notifico a minha livre resolução do contrato relativo às funcionalidades Premium do Best Journal.\n\nRemetente (conta Google): %1$s\nMomento da resolução: %2$s\n\nEsta resolução foi acionada em duas etapas através do botão de resolução da aplicação, em conformidade com o § 356a BGB, e enviada automaticamente através da API do Gmail.</string>
+    <string name="settings_revoke_confirm_subject">O teu comprovativo de receção: resolução na Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Olá,\n\nrecebemos a tua resolução de %1$s. Este é o teu comprovativo de receção ao abrigo do § 356a BGB.\n\nProcessaremos a tua resolução o mais rapidamente possível e contactaremos-te através de dev.app.support@gmail.com se houver dúvidas.\n\nPara evitar novas cobranças, cancela também a tua subscrição na Google Play Store em "Subscrições".\n\nObrigado e cumprimentos\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Não foi encontrado nenhum endereço de conta Google com sessão iniciada. Inicia sessão com a tua conta Google nas Definições ou envia a resolução manualmente para dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">A enviar resolução…</string>
+    <string name="settings_revoke_success_title">Resolução recebida</string>
+    <string name="settings_revoke_success_body">A tua resolução foi enviada para dev.app.support@gmail.com. O comprovativo de receção também está na tua caixa de entrada.</string>
+    <string name="settings_revoke_success_close">Fechar</string>
+    <string name="settings_revoke_error_title">Não foi possível enviar a resolução</string>
+    <string name="settings_revoke_error_body">O envio automático falhou: %1$s\n\nEm alternativa, podes enviar um e-mail manual para dev.app.support@gmail.com. Toca em "Abrir app de e-mail" para isso.</string>
+    <string name="settings_revoke_error_email_fallback">Abrir app de e-mail</string>
 """
 
 # ══════════════════════════════════════════════════════════════════
@@ -343,7 +383,17 @@ TRANSLATIONS["it"] = r"""
     <string name="settings_revoke_confirm">Crea recesso</string>
     <string name="settings_revoke_no_email">Nessuna app e-mail trovata. Invia il recesso a dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Recesso contratto Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Salve,\n\ncon la presente comunico il recesso dal contratto relativo alle funzioni Premium di Best Journal.\n\nOrdinato il: [da compilare]\nE-mail dell\'account Google: [da compilare se diversa dal mittente]\nNome: [da compilare]\n\nData: [oggi]</string>
+    <string name="settings_revoke_email_body">Con la presente comunico il recesso dal contratto relativo alle funzioni Premium di Best Journal.\n\nMittente (account Google): %1$s\nMomento del recesso: %2$s\n\nQuesto recesso è stato avviato in due fasi tramite il pulsante di recesso dell’app conforme al § 356a BGB ed è stato inviato automaticamente tramite Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">La tua conferma di ricezione: recesso presso Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Ciao,\n\nabbiamo ricevuto il tuo recesso del %1$s. Questa è la tua conferma di ricezione ai sensi del § 356a BGB.\n\nElaboreremo il tuo recesso il prima possibile e ti contatteremo all’indirizzo dev.app.support@gmail.com in caso di domande.\n\nPer evitare ulteriori addebiti, annulla anche il tuo abbonamento nel Google Play Store alla voce "Abbonamenti".\n\nGrazie e cordiali saluti\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Non è stato trovato alcun indirizzo dell’account Google con accesso effettuato. Accedi con il tuo account Google nelle Impostazioni oppure invia manualmente il recesso a dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Invio del recesso…</string>
+    <string name="settings_revoke_success_title">Recesso ricevuto</string>
+    <string name="settings_revoke_success_body">Il tuo recesso è stato inviato a dev.app.support@gmail.com. La conferma di ricezione è anche nella tua casella di posta.</string>
+    <string name="settings_revoke_success_close">Chiudi</string>
+    <string name="settings_revoke_error_title">Impossibile inviare il recesso</string>
+    <string name="settings_revoke_error_body">L’invio automatico non è riuscito: %1$s\n\nIn alternativa puoi inviare un’e-mail manuale a dev.app.support@gmail.com. Tocca "Apri app e-mail" per farlo.</string>
+    <string name="settings_revoke_error_email_fallback">Apri app e-mail</string>
 """
 
 

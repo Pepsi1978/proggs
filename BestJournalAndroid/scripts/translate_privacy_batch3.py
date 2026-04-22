@@ -67,7 +67,17 @@ TRANSLATIONS["ko"] = r"""
     <string name="settings_revoke_confirm">철회 작성</string>
     <string name="settings_revoke_no_email">이메일 앱을 찾을 수 없어요. 철회 요청을 dev.app.support@gmail.com 로 보내주세요.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium 계약 철회</string>
-    <string name="settings_revoke_email_body">안녕하세요,\n\nBest Journal의 Premium 기능에 관하여 체결한 계약의 철회를 이로써 통지합니다.\n\n주문일: [작성해 주세요]\nGoogle 계정 이메일: [발송자와 다를 경우 작성]\n이름: [작성해 주세요]\n\n날짜: [오늘]</string>
+    <string name="settings_revoke_email_body">이로써 Best Journal의 Premium 기능과 관련하여 체결한 계약의 철회를 통지합니다.\n\n발신자 (Google 계정): %1$s\n철회 시각: %2$s\n\n이 철회는 앱 내의 § 356a BGB 준수 2단계 철회 버튼을 통해 시작되었으며 Gmail API로 자동 발송되었습니다.</string>
+    <string name="settings_revoke_confirm_subject">수신 확인: Best Journal 철회</string>
+    <string name="settings_revoke_confirm_user_body">안녕하세요.\n\n%1$s 철회 요청을 접수했습니다. 이는 § 356a BGB에 따른 수신 확인입니다.\n\n철회 요청은 가능한 한 빨리 처리되며, 문의가 있으면 dev.app.support@gmail.com 으로 연락드리겠습니다.\n\n추가 결제를 막으려면 Google Play 스토어의 "구독"에서도 구독을 취소해 주세요.\n\n감사합니다\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">로그인된 Google 계정 주소를 찾지 못했습니다. 설정에서 Google 계정으로 로그인하거나 철회 요청을 dev.app.support@gmail.com 으로 직접 보내 주세요.</string>
+    <string name="settings_revoke_sending">철회 전송 중…</string>
+    <string name="settings_revoke_success_title">철회가 접수되었습니다</string>
+    <string name="settings_revoke_success_body">철회 요청이 dev.app.support@gmail.com 으로 전송되었습니다. 수신 확인도 받은편지함에 도착해 있습니다.</string>
+    <string name="settings_revoke_success_close">닫기</string>
+    <string name="settings_revoke_error_title">철회를 보낼 수 없습니다</string>
+    <string name="settings_revoke_error_body">자동 전송에 실패했습니다: %1$s\n\n대신 dev.app.support@gmail.com 으로 수동 이메일을 보낼 수 있습니다. 그러려면 "이메일 앱 열기"를 누르세요.</string>
+    <string name="settings_revoke_error_email_fallback">이메일 앱 열기</string>
 """
 
 # ═══════════ SIMPLIFIED CHINESE (zh-rCN) — 你, mainland vocab, full-width ═══════════
@@ -132,7 +142,17 @@ TRANSLATIONS["zh-rCN"] = r"""
     <string name="settings_revoke_confirm">创建撤销</string>
     <string name="settings_revoke_no_email">未找到邮件应用。请将撤销通知发送到 dev.app.support@gmail.com。</string>
     <string name="settings_revoke_email_subject">Best Journal Premium 合同撤销</string>
-    <string name="settings_revoke_email_body">你好,\n\n我特此撤销与 Best Journal Premium 功能相关的合同。\n\n订购日期:[请填写]\nGoogle 账户邮箱:[如与发件人不同,请填写]\n姓名:[请填写]\n\n日期:[今天]</string>
+    <string name="settings_revoke_email_body">本人特此撤销我就 Best Journal Premium 功能订立的合同。\n\n发件人（Google 账户）：%1$s\n撤销时间：%2$s\n\n本次撤销通过应用内符合 § 356a BGB 的两步式撤销按钮触发，并经由 Gmail API 自动发送。</string>
+    <string name="settings_revoke_confirm_subject">你的回执：Best Journal 撤销</string>
+    <string name="settings_revoke_confirm_user_body">你好，\n\n我们已收到你在 %1$s 提交的撤销。这是你根据 § 356a BGB 获得的回执确认。\n\n我们会尽快处理你的撤销；如有疑问，将通过 dev.app.support@gmail.com 与你联系。\n\n为了避免后续继续扣费，请也在 Google Play 商店的“订阅”中取消你的订阅。\n\n谢谢，顺祝安好\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">未找到已登录的 Google 账户地址。请在设置中登录你的 Google 账户，或将撤销邮件手动发送到 dev.app.support@gmail.com。</string>
+    <string name="settings_revoke_sending">正在发送撤销…</string>
+    <string name="settings_revoke_success_title">已收到撤销</string>
+    <string name="settings_revoke_success_body">你的撤销已发送至 dev.app.support@gmail.com。回执确认邮件也已发到你的收件箱。</string>
+    <string name="settings_revoke_success_close">关闭</string>
+    <string name="settings_revoke_error_title">无法发送撤销</string>
+    <string name="settings_revoke_error_body">自动发送失败：%1$s\n\n你也可以手动向 dev.app.support@gmail.com 发送邮件。为此请点击“打开邮件应用”。</string>
+    <string name="settings_revoke_error_email_fallback">打开邮件应用</string>
 """
 
 # ═══════════ TRADITIONAL CHINESE (zh-rTW) — 你, Taiwan vocab, full-width ═══════════
@@ -197,7 +217,17 @@ TRANSLATIONS["zh-rTW"] = r"""
     <string name="settings_revoke_confirm">建立解除</string>
     <string name="settings_revoke_no_email">找不到郵件應用程式。請將解除通知寄到 dev.app.support@gmail.com。</string>
     <string name="settings_revoke_email_subject">Best Journal Premium 契約解除</string>
-    <string name="settings_revoke_email_body">你好,\n\n我特此解除與 Best Journal Premium 功能相關的契約。\n\n訂購日期:[請填寫]\nGoogle 帳戶信箱:[如與寄件者不同,請填寫]\n姓名:[請填寫]\n\n日期:[今天]</string>
+    <string name="settings_revoke_email_body">本人特此撤銷我就 Best Journal Premium 功能訂立的契約。\n\n寄件人（Google 帳戶）：%1$s\n撤銷時間：%2$s\n\n本次撤銷透過應用程式內符合 § 356a BGB 的兩步式撤銷按鈕觸發，並經由 Gmail API 自動寄出。</string>
+    <string name="settings_revoke_confirm_subject">你的收訖確認：Best Journal 撤銷</string>
+    <string name="settings_revoke_confirm_user_body">你好，\n\n我們已收到你在 %1$s 提交的撤銷。這是你依 § 356a BGB 取得的收訖確認。\n\n我們會盡快處理你的撤銷；如有疑問，將透過 dev.app.support@gmail.com 與你聯絡。\n\n為避免後續繼續扣款，請也在 Google Play 商店的「訂閱」中取消你的訂閱。\n\n謝謝，敬祝安好\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">未找到已登入的 Google 帳戶地址。請在設定中登入你的 Google 帳戶，或將撤銷郵件手動寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_revoke_sending">正在傳送撤銷…</string>
+    <string name="settings_revoke_success_title">已收到撤銷</string>
+    <string name="settings_revoke_success_body">你的撤銷已傳送至 dev.app.support@gmail.com。收訖確認郵件也已寄到你的收件匣。</string>
+    <string name="settings_revoke_success_close">關閉</string>
+    <string name="settings_revoke_error_title">無法傳送撤銷</string>
+    <string name="settings_revoke_error_body">自動傳送失敗：%1$s\n\n你也可以手動將郵件寄到 dev.app.support@gmail.com。為此請點選「打開郵件應用」。</string>
+    <string name="settings_revoke_error_email_fallback">打開郵件應用</string>
 """
 
 # ═══════════ ARABIC (ar) — MSA, RTL, masculine default ═══════════
@@ -262,7 +292,17 @@ TRANSLATIONS["ar"] = r"""
     <string name="settings_revoke_confirm">إنشاء الرجوع</string>
     <string name="settings_revoke_no_email">لم يتم العثور على تطبيق بريد. يرجى إرسال الرجوع إلى dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">الرجوع عن عقد Best Journal Premium</string>
-    <string name="settings_revoke_email_body">مرحبًا،\n\nأعلن بموجبه الرجوع عن العقد المبرم بشأن ميزات Premium في Best Journal.\n\nتاريخ الطلب: [يُرجى التعبئة]\nبريد حساب Google: [إن كان مختلفًا عن المرسل]\nالاسم: [يُرجى التعبئة]\n\nالتاريخ: [اليوم]</string>
+    <string name="settings_revoke_email_body">أُعلن بموجب هذا عدولي عن العقد الذي أبرمته بشأن ميزات Premium في Best Journal.\n\nالمرسل (حساب Google): %1$s\nوقت العدول: %2$s\n\nتم إرسال هذا العدول تلقائيًا عبر Gmail API بعد تأكيده من خلال زر العدول ثنائي الخطوة داخل التطبيق والمتوافق مع § 356a BGB.</string>
+    <string name="settings_revoke_confirm_subject">تأكيد الاستلام: العدول لدى Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">مرحبًا،\n\nلقد تلقّينا عدولك المؤرخ %1$s. وهذه هي رسالة تأكيد الاستلام وفقًا للمادة § 356a BGB.\n\nسنعالج عدولك في أسرع وقت ممكن، وسنتواصل معك عبر dev.app.support@gmail.com إذا كانت هناك أسئلة.\n\nولإيقاف أي رسوم مستقبلية، يُرجى أيضًا إلغاء اشتراكك في Google Play Store ضمن "الاشتراكات".\n\nشكرًا مع أطيب التحيات\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">لم يتم العثور على عنوان حساب Google مسجَّل الدخول. يُرجى تسجيل الدخول بحساب Google من الإعدادات أو إرسال العدول يدويًا إلى dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">جارٍ إرسال العدول…</string>
+    <string name="settings_revoke_success_title">تم استلام العدول</string>
+    <string name="settings_revoke_success_body">تم إرسال عدولك إلى dev.app.support@gmail.com. كما أن رسالة تأكيد الاستلام موجودة في بريدك الوارد.</string>
+    <string name="settings_revoke_success_close">إغلاق</string>
+    <string name="settings_revoke_error_title">تعذّر إرسال العدول</string>
+    <string name="settings_revoke_error_body">فشل الإرسال التلقائي: %1$s\n\nيمكنك بدلاً من ذلك إرسال رسالة بريد إلكتروني يدويًا إلى dev.app.support@gmail.com. اضغط على "فتح تطبيق البريد الإلكتروني" لذلك.</string>
+    <string name="settings_revoke_error_email_fallback">فتح تطبيق البريد الإلكتروني</string>
 """
 
 # ═══════════ HINDI (hi) — Polite आप, Devanagari, Arabic numerals ═══════════
@@ -327,7 +367,17 @@ TRANSLATIONS["hi"] = r"""
     <string name="settings_revoke_confirm">रद्द अनुरोध बनाएँ</string>
     <string name="settings_revoke_no_email">कोई ईमेल ऐप नहीं मिला। कृपया रद्द अनुरोध dev.app.support@gmail.com पर भेजें।</string>
     <string name="settings_revoke_email_subject">Best Journal Premium अनुबंध रद्द</string>
-    <string name="settings_revoke_email_body">नमस्ते,\n\nइसके द्वारा मैं Best Journal की Premium सुविधाओं के लिए अपने अनुबंध को रद्द करने की सूचना देता हूँ।\n\nऑर्डर की तारीख: [कृपया भरें]\nGoogle अकाउंट ईमेल: [यदि भेजने वाले से अलग हो तो भरें]\nनाम: [कृपया भरें]\n\nतारीख: [आज]</string>
+    <string name="settings_revoke_email_body">इसके द्वारा मैं Best Journal की Premium सुविधाओं से संबंधित अपने अनुबंध की वापसी की सूचना देता हूँ।\n\nप्रेषक (Google खाता): %1$s\nवापसी का समय: %2$s\n\nयह वापसी ऐप में मौजूद § 356a BGB-अनुरूप दो-चरणीय वापसी बटन के जरिए शुरू की गई और Gmail API के माध्यम से अपने-आप भेजी गई।</string>
+    <string name="settings_revoke_confirm_subject">आपकी प्राप्ति-पुष्टि: Best Journal में वापसी</string>
+    <string name="settings_revoke_confirm_user_body">नमस्ते,\n\nहमें %1$s की आपकी वापसी मिल गई है। यह § 356a BGB के तहत आपकी प्राप्ति-पुष्टि है।\n\nहम आपकी वापसी को जल्द से जल्द प्रक्रिया में लाएँगे और अगर कोई सवाल हुआ तो dev.app.support@gmail.com पर आपसे संपर्क करेंगे।\n\nआगे कोई नई बिलिंग न हो, इसके लिए कृपया Google Play Store में "Subscriptions" के तहत अपना सब्सक्रिप्शन भी रद्द करें।\n\nधन्यवाद और शुभकामनाएँ\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">किसी साइन-इन किए हुए Google खाते का पता नहीं मिला। कृपया Settings में अपने Google खाते से साइन इन करें या वापसी को मैन्युअल रूप से dev.app.support@gmail.com पर भेजें।</string>
+    <string name="settings_revoke_sending">वापसी भेजी जा रही है…</string>
+    <string name="settings_revoke_success_title">वापसी प्राप्त हुई</string>
+    <string name="settings_revoke_success_body">आपकी वापसी dev.app.support@gmail.com पर भेज दी गई है। प्राप्ति-पुष्टि भी आपके इनबॉक्स में है।</string>
+    <string name="settings_revoke_success_close">बंद करें</string>
+    <string name="settings_revoke_error_title">वापसी भेजी नहीं जा सकी</string>
+    <string name="settings_revoke_error_body">स्वचालित भेजना विफल रहा: %1$s\n\nवैकल्पिक रूप से आप dev.app.support@gmail.com पर मैन्युअल ई-मेल भेज सकते हैं। इसके लिए "ई-मेल ऐप खोलें" पर टैप करें।</string>
+    <string name="settings_revoke_error_email_fallback">ई-मेल ऐप खोलें</string>
 """
 
 

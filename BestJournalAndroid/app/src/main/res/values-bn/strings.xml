@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1127,9 +1127,40 @@
     <string name="settings_revoke_confirm">প্রত্যাহার তৈরি করো</string>
     <string name="settings_revoke_no_email">কোনো ইমেইল অ্যাপ পাওয়া যায়নি। অনুগ্রহ করে প্রত্যাহার dev.app.support@gmail.com-এ পাঠাও।</string>
     <string name="settings_revoke_email_subject">Best Journal Premium চুক্তি প্রত্যাহার</string>
-    <string name="settings_revoke_email_body">নমস্কার,\n\nএর মাধ্যমে আমি Best Journal-এর Premium ফিচার সংক্রান্ত চুক্তির প্রত্যাহার জানাচ্ছি।\n\nক্রয় তারিখ: [অনুগ্রহ করে পূরণ করো]\nGoogle অ্যাকাউন্ট ইমেইল: [প্রেরকের থেকে ভিন্ন হলে পূরণ করো]\nনাম: [অনুগ্রহ করে পূরণ করো]\n\nতারিখ: [আজ]</string>
+    <string name="settings_revoke_email_body">এর মাধ্যমে আমি Best Journal-এর Premium ফিচার সম্পর্কিত চুক্তি থেকে প্রত্যাহারের নোটিশ দিচ্ছি।\n\nপ্রেরক (Google অ্যাকাউন্ট): %1$s\nপ্রত্যাহারের সময়: %2$s\n\nএই প্রত্যাহারটি অ্যাপের § 356a BGB-সম্মত দুই-ধাপের প্রত্যাহার বোতামের মাধ্যমে শুরু করা হয়েছে এবং Gmail API-এর মাধ্যমে স্বয়ংক্রিয়ভাবে পাঠানো হয়েছে।</string>
+    <string name="settings_revoke_confirm_subject">তোমার গ্রহণ-নিশ্চিতকরণ: Best Journal-এ প্রত্যাহার</string>
+    <string name="settings_revoke_confirm_user_body">নমস্কার,\n\nআমরা %1$s-এর তোমার প্রত্যাহার পেয়েছি। এটি § 356a BGB অনুযায়ী তোমার গ্রহণ-নিশ্চিতকরণ।\n\nআমরা যত দ্রুত সম্ভব তোমার প্রত্যাহার প্রক্রিয়া করব এবং কোনো প্রশ্ন থাকলে dev.app.support@gmail.com-এ তোমার সঙ্গে যোগাযোগ করব।\n\nআর কোনো বিলিং না হওয়ার জন্য, Google Play Store-এর "Subscriptions" অংশেও তোমার সাবস্ক্রিপশন বাতিল করো।\n\nধন্যবাদ ও শুভেচ্ছা\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">কোনো সাইন-ইন করা Google অ্যাকাউন্টের ঠিকানা পাওয়া যায়নি। অনুগ্রহ করে Settings-এ তোমার Google অ্যাকাউন্ট দিয়ে সাইন ইন করো অথবা dev.app.support@gmail.com-এ প্রত্যাহারটি হাতে পাঠাও।</string>
+    <string name="settings_revoke_sending">প্রত্যাহার পাঠানো হচ্ছে…</string>
+    <string name="settings_revoke_success_title">প্রত্যাহার গৃহীত হয়েছে</string>
+    <string name="settings_revoke_success_body">তোমার প্রত্যাহার dev.app.support@gmail.com-এ পাঠানো হয়েছে। গ্রহণ-নিশ্চিতকরণও তোমার ইনবক্সে রয়েছে।</string>
+    <string name="settings_revoke_success_close">বন্ধ করো</string>
+    <string name="settings_revoke_error_title">প্রত্যাহার পাঠানো যায়নি</string>
+    <string name="settings_revoke_error_body">স্বয়ংক্রিয় পাঠানো ব্যর্থ হয়েছে: %1$s\n\nবিকল্প হিসেবে তুমি dev.app.support@gmail.com-এ হাতে একটি ইমেইল পাঠাতে পারো। এর জন্য "ইমেইল অ্যাপ খোলো"-এ ট্যাপ করো।</string>
+    <string name="settings_revoke_error_email_fallback">ইমেইল অ্যাপ খোলো</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">সংকট সহায়তা</string>
+    <string name="settings_crisis_subtitle">জরুরি অবস্থার জন্য গুরুত্বপূর্ণ হেল্পলাইন</string>
+    <string name="settings_crisis_dialog_title">তুমি একা নও</string>
+    <string name="settings_crisis_dialog_body">Best Journal একটি জার্নাল অ্যাপ এবং এটি পেশাদার মানসিক বা চিকিৎসা সহায়তার বিকল্প নয়। AI-তৈরি বিশ্লেষণ থেরাপি নয়।\n\nতুমি যদি তীব্র সংকটে থাকো বা আত্মক্ষতি বা আত্মহত্যার চিন্তা আসে, তাহলে তোমাকে এটি একা সামলাতে হবে না। বিনামূল্যে, গোপনীয় সাহায্য 24/7 পাওয়া যায়।</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge জার্মানি</string>
+    <string name="settings_crisis_hotline_de_hours">বিনামূল্যে, 24/7, গোপনীয়</string>
+    <string name="settings_crisis_call_de">0800 111 0 111-এ কল করো</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222-এ কল করো</string>
+    <string name="settings_crisis_emergency_name">জরুরি সহায়তা</string>
+    <string name="settings_crisis_call_emergency">112-এ কল করো</string>
+    <string name="settings_crisis_international_name">আন্তর্জাতিক হেল্পলাইন</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com খোলো</string>
+    <string name="settings_crisis_close">বন্ধ করো</string>
+    <string name="settings_crisis_no_dialer">কোনো ফোন অ্যাপ পাওয়া যায়নি।</string>
+    <string name="settings_crisis_no_browser">কোনো ব্রাউজার পাওয়া যায়নি।</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI-তৈরি</string>
+    <string name="ai_generated_tooltip">এই কনটেন্টটি একটি AI সিস্টেম (Google Gemini) দ্বারা তৈরি হয়েছে এবং এতে ভুল থাকতে পারে। অনুগ্রহ করে নিজে যাচাই করে নাও।</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">অপ্ট-আউট সংরক্ষিত হয়েছে — পরিসংখ্যান বন্ধ আছে।</string>

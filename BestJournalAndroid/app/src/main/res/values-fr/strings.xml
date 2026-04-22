@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>
@@ -1130,9 +1130,40 @@
     <string name="settings_revoke_confirm">Créer la rétractation</string>
     <string name="settings_revoke_no_email">Aucune application de messagerie trouvée. Merci d\'envoyer la rétractation à dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Rétractation contrat Premium Best Journal</string>
-    <string name="settings_revoke_email_body">Bonjour,\n\nje notifie par la présente ma rétractation du contrat portant sur les fonctions Premium de Best Journal.\n\nCommandé le\u00A0: [à compléter]\nE-mail du compte Google\u00A0: [à compléter si différent de l\'expéditeur]\nNom\u00A0: [à compléter]\n\nDate\u00A0: [aujourd\'hui]</string>
+    <string name="settings_revoke_email_body">Par la présente, j’exerce mon droit de rétractation sur le contrat relatif aux fonctions Premium de Best Journal.\n\nExpéditeur (compte Google)\u00A0: %1$s\nMoment de la rétractation\u00A0: %2$s\n\nCette rétractation a été déclenchée en deux étapes via le bouton de rétractation de l’application conforme au § 356a BGB et envoyée automatiquement via l’API Gmail.</string>
+    <string name="settings_revoke_confirm_subject">Ton accusé de réception : rétractation chez Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Bonjour,\n\nnous avons reçu ta rétractation du %1$s. Ceci est ton accusé de réception au titre du § 356a BGB.\n\nNous traiterons ta rétractation dès que possible et te contacterons à l’adresse dev.app.support@gmail.com en cas de questions.\n\nPour éviter toute nouvelle facturation, pense aussi à résilier ton abonnement dans le Google Play Store sous "Abonnements".\n\nMerci et bien cordialement\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">Aucune adresse de compte Google connectée n’a été trouvée. Merci de te connecter avec ton compte Google dans les paramètres ou d’envoyer la rétractation manuellement à dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Envoi de la rétractation…</string>
+    <string name="settings_revoke_success_title">Rétractation reçue</string>
+    <string name="settings_revoke_success_body">Ta rétractation a été envoyée à dev.app.support@gmail.com. L’accusé de réception se trouve aussi dans ta boîte de réception.</string>
+    <string name="settings_revoke_success_close">Fermer</string>
+    <string name="settings_revoke_error_title">Impossible d’envoyer la rétractation</string>
+    <string name="settings_revoke_error_body">L’envoi automatique a échoué : %1$s\n\nTu peux aussi envoyer un e-mail manuel à dev.app.support@gmail.com. Clique sur "Ouvrir l’application e-mail" pour cela.</string>
+    <string name="settings_revoke_error_email_fallback">Ouvrir l’application e-mail</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">Aide de crise</string>
+    <string name="settings_crisis_subtitle">Lignes d’aide importantes en cas d’urgence</string>
+    <string name="settings_crisis_dialog_title">Tu n’es pas seul·e</string>
+    <string name="settings_crisis_dialog_body">Best Journal est une appli de journal et ne remplace pas un accompagnement psychologique ou médical professionnel. Les analyses générées par l’IA ne sont pas une thérapie.\n\nSi tu traverses une crise aiguë ou si tu as des pensées d’automutilation ou de suicide : tu n’as pas à affronter cela seul·e. Une aide gratuite, anonyme et disponible 24 h/24 existe.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Allemagne</string>
+    <string name="settings_crisis_hotline_de_hours">Gratuit, 24 h/24, anonyme</string>
+    <string name="settings_crisis_call_de">Appeler le 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Appeler le 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Urgence</string>
+    <string name="settings_crisis_call_emergency">Appeler le 112</string>
+    <string name="settings_crisis_international_name">Lignes d’aide internationales</string>
+    <string name="settings_crisis_open_findahelpline">Ouvrir findahelpline.com</string>
+    <string name="settings_crisis_close">Fermer</string>
+    <string name="settings_crisis_no_dialer">Aucune application Téléphone trouvée.</string>
+    <string name="settings_crisis_no_browser">Aucun navigateur trouvé.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">Généré par l’IA</string>
+    <string name="ai_generated_tooltip">Ce contenu a été créé par un système d’IA (Google Gemini) et peut contenir des erreurs. Merci de le vérifier par vous-même.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">Opt-Out enregistré — les statistiques sont désactivées.</string>

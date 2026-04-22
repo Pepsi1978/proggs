@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1135,9 +1135,40 @@
     <string name="settings_revoke_confirm">ரத்து உருவாக்கு</string>
     <string name="settings_revoke_no_email">மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து ரத்தை dev.app.support@gmail.com-க்கு அனுப்பவும்.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ஒப்பந்த ரத்து</string>
-    <string name="settings_revoke_email_body">வணக்கம்,\n\nஇதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் ரத்து செய்கிறேன்.\n\nஆர்டர் செய்த தேதி: [தயவுசெய்து நிரப்பவும்]\nGoogle கணக்கு மின்னஞ்சல்: [அனுப்புநரிடமிருந்து வேறுபட்டிருந்தால் நிரப்பவும்]\nபெயர்: [தயவுசெய்து நிரப்பவும்]\n\nதேதி: [இன்று]</string>
+    <string name="settings_revoke_email_body">இதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் திரும்பப் பெறுவதை அறிவிக்கிறேன்.\n\nஅனுப்புநர் (Google கணக்கு): %1$s\nதிரும்பப் பெறும் நேரம்: %2$s\n\nஇந்த திரும்பப் பெறல், பயன்பாட்டின் § 356a BGB-க்கு உடன்பட்ட இரு-அடுக்கு திரும்பப் பெறும் பொத்தானின் மூலம் தொடங்கப்பட்டு Gmail API வழியாக தானாக அனுப்பப்பட்டது.</string>
+    <string name="settings_revoke_confirm_subject">உங்கள் பெறல் உறுதி: Best Journal இல் திரும்பப் பெறல்</string>
+    <string name="settings_revoke_confirm_user_body">வணக்கம்,\n\n%1$s அன்று செய்யப்பட்ட உங்கள் திரும்பப் பெறலை நாங்கள் பெற்றுள்ளோம். இது § 356a BGB படி உங்கள் பெறல் உறுதிப்படுத்தல்.\n\nஉங்கள் திரும்பப் பெறலை மிக விரைவாக செயல்படுத்துவோம்; கேள்விகள் இருந்தால் dev.app.support@gmail.com மூலம் உங்களைத் தொடர்புகொள்வோம்.\n\nமேலும் கட்டணங்கள் வராமல் இருக்க, Google Play Store இல் "Subscriptions" கீழும் உங்கள் சந்தாவை ரத்து செய்யவும்.\n\nநன்றி மற்றும் அன்புடன்\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">உள்நுழைந்த Google கணக்கு முகவரி எதுவும் கிடைக்கவில்லை. தயவுசெய்து Settings இல் உங்கள் Google கணக்கில் உள்நுழையவும் அல்லது திரும்பப் பெறலை dev.app.support@gmail.com க்கு கையால் அனுப்பவும்.</string>
+    <string name="settings_revoke_sending">திரும்பப் பெறல் அனுப்பப்படுகிறது…</string>
+    <string name="settings_revoke_success_title">திரும்பப் பெறல் பெறப்பட்டது</string>
+    <string name="settings_revoke_success_body">உங்கள் திரும்பப் பெறல் dev.app.support@gmail.com க்கு அனுப்பப்பட்டது. பெறல் உறுதிப்படுத்தலும் உங்கள் இன்பாக்ஸில் உள்ளது.</string>
+    <string name="settings_revoke_success_close">மூடு</string>
+    <string name="settings_revoke_error_title">திரும்பப் பெறலை அனுப்ப முடியவில்லை</string>
+    <string name="settings_revoke_error_body">தானியங்கி அனுப்பல் தோல்வியடைந்தது: %1$s\n\nமாற்றாக நீங்கள் dev.app.support@gmail.com க்கு கையால் ஒரு மின்னஞ்சலை அனுப்பலாம். அதற்கு "மின்னஞ்சல் பயன்பாட்டைத் திற" என்பதைத் தட்டவும்.</string>
+    <string name="settings_revoke_error_email_fallback">மின்னஞ்சல் பயன்பாட்டைத் திற</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">அவசர நெருக்கடி உதவி</string>
+    <string name="settings_crisis_subtitle">அவசர நிலைகளுக்கான முக்கிய உதவி எண்கள்</string>
+    <string name="settings_crisis_dialog_title">நீங்கள் தனியாக இல்லை</string>
+    <string name="settings_crisis_dialog_body">Best Journal ஒரு நாட்குறிப்பு ஆப். இது தொழில்முறை உளவியல் அல்லது மருத்துவ உதவிக்கு மாற்றாகாது. AI உருவாக்கும் பகுப்பாய்வுகள் சிகிச்சை அல்ல.\n\nநீங்கள் கடுமையான நெருக்கடியில் இருந்தாலோ, சுயகாயம் அல்லது தற்கொலை பற்றிய எண்ணங்கள் வந்தாலோ, இதை நீங்கள் தனியாகச் சமாளிக்க வேண்டியதில்லை. இலவசமாகவும் பெயர் வெளியிடாமலும் உதவி 24/7 கிடைக்கும்.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge ஜெர்மனி</string>
+    <string name="settings_crisis_hotline_de_hours">இலவசம், 24/7, பெயர் வெளியிடாமல்</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 ஐ அழைக்கவும்</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 ஐ அழைக்கவும்</string>
+    <string name="settings_crisis_emergency_name">அவசர உதவி</string>
+    <string name="settings_crisis_call_emergency">112 ஐ அழைக்கவும்</string>
+    <string name="settings_crisis_international_name">சர்வதேச உதவி எண்கள்</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com ஐ திறக்கவும்</string>
+    <string name="settings_crisis_close">மூடவும்</string>
+    <string name="settings_crisis_no_dialer">தொலைபேசி ஆப் கிடைக்கவில்லை.</string>
+    <string name="settings_crisis_no_browser">உலாவி கிடைக்கவில்லை.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI உருவாக்கியது</string>
+    <string name="ai_generated_tooltip">இந்த உள்ளடக்கம் AI அமைப்பு (Google Gemini) மூலம் உருவாக்கப்பட்டது. இதில் பிழைகள் இருக்கலாம். தயவுசெய்து நீங்களே சரிபார்க்கவும்.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ஆப்ட்-அவுட் சேமிக்கப்பட்டது — புள்ளிவிவரங்கள் முடக்கப்பட்டுள்ளன.</string>

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
     <!-- About -->
     <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
-    <string name="settings_about_version">Best Journal V0.12.50</string>
+    <string name="settings_about_version">Best Journal V0.12.51</string>
     <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
@@ -1127,9 +1127,40 @@
     <string name="settings_revoke_confirm">ರದ್ದು ರಚಿಸಿ</string>
     <string name="settings_revoke_no_email">ಇಮೇಲ್ ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ರದ್ದನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಿ.</string>
     <string name="settings_revoke_email_subject">Best Journal Premium ಒಪ್ಪಂದ ರದ್ದು</string>
-    <string name="settings_revoke_email_body">ನಮಸ್ಕಾರ,\n\nಇದರ ಮೂಲಕ Best Journal ನ Premium ವೈಶಿಷ್ಟ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ಒಪ್ಪಂದವನ್ನು ರದ್ದುಗೊಳಿಸುತ್ತಿದ್ದೇನೆ ಎಂದು ಸೂಚಿಸುತ್ತೇನೆ.\n\nಆರ್ಡರ್ ದಿನಾಂಕ: [ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\nGoogle ಖಾತೆ ಇಮೇಲ್: [ಕಳುಹಿಸುವವರಿಂದ ಬೇರೆಯಾಗಿದ್ದರೆ ಭರ್ತಿ ಮಾಡಿ]\nಹೆಸರು: [ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nದಿನಾಂಕ: [ಇಂದು]</string>
+    <string name="settings_revoke_email_body">ಇದರ ಮೂಲಕ Best Journal ನ Premium ವೈಶಿಷ್ಟ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ನನ್ನ ಒಪ್ಪಂದದಿಂದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಕುರಿತು ತಿಳಿಸುತ್ತೇನೆ.\n\nಕಳುಹಿಸಿದವರು (Google ಖಾತೆ): %1$s\nಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಸಮಯ: %2$s\n\nಈ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಆ್ಯಪ್‌ನ § 356a BGB ಗೆ ಅನುಗುಣವಾದ ಎರಡು ಹಂತದ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವ ಬಟನ್ ಮೂಲಕ ಪ್ರಾರಂಭಗೊಂಡು Gmail API ಮೂಲಕ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಳುಹಿಸಲಾಯಿತು.</string>
+    <string name="settings_revoke_confirm_subject">ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣ: Best Journal ನಲ್ಲಿ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ</string>
+    <string name="settings_revoke_confirm_user_body">ನಮಸ್ಕಾರ,\n\n%1$sರ ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ನಮಗೆ ತಲುಪಿದೆ. ಇದು § 356a BGB ಪ್ರಕಾರ ನಿಮ್ಮ ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವಾಗಿದೆ.\n\nನಾವು ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಸಾಧ್ಯವಾದಷ್ಟು ಬೇಗ ಪ್ರಕ್ರಿಯೆಗೊಳಿಸುತ್ತೇವೆ ಮತ್ತು ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿದ್ದರೆ dev.app.support@gmail.com ಮೂಲಕ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ.\n\nಮುಂದಿನ ಬಿಲ್ಲಿಂಗ್ ಆಗದಂತೆ, ದಯವಿಟ್ಟು Google Play Store ನಲ್ಲಿ "Subscriptions" ಅಡಿಯಲ್ಲಿ ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆಯನ್ನು ಸಹ ರದ್ದುಮಾಡಿ.\n\nಧನ್ಯವಾದಗಳು ಮತ್ತು ಶುಭಾಶಯಗಳು\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">ಸೈನ್ ಇನ್ ಆಗಿರುವ Google ಖಾತೆಯ ವಿಳಾಸ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು Settings ನಲ್ಲಿ ನಿಮ್ಮ Google ಖಾತೆಯಿಂದ ಸೈನ್ ಇನ್ ಮಾಡಿ ಅಥವಾ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಕಳುಹಿಸಿ.</string>
+    <string name="settings_revoke_sending">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="settings_revoke_success_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ</string>
+    <string name="settings_revoke_success_body">ನಿಮ್ಮ ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ. ಸ್ವೀಕೃತಿ ದೃಢೀಕರಣವೂ ನಿಮ್ಮ ಇನ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ ಇದೆ.</string>
+    <string name="settings_revoke_success_close">ಮುಚ್ಚಿ</string>
+    <string name="settings_revoke_error_title">ಹಿಂತೆಗೆದುಕೊಳ್ಳುವಿಕೆಯನ್ನು ಕಳುಹಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="settings_revoke_error_body">ಸ್ವಯಂಚಾಲಿತ ಕಳುಹಿಸುವಿಕೆ ವಿಫಲವಾಯಿತು: %1$s\n\nಪರ್ಯಾಯವಾಗಿ ನೀವು dev.app.support@gmail.com ಗೆ ಕೈಯಾರೆ ಇಮೇಲ್ ಕಳುಹಿಸಬಹುದು. ಅದಕ್ಕಾಗಿ "ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ" ಅನ್ನು ತಟ್ಟಿರಿ.</string>
+    <string name="settings_revoke_error_email_fallback">ಇಮೇಲ್ ಆಪ್ ತೆರೆಯಿರಿ</string>
 
 
+
+    <!-- Crisis Support / Mental Health Disclaimer -->
+    <string name="settings_crisis_title">ಸಂಕಟ ಸಹಾಯ</string>
+    <string name="settings_crisis_subtitle">ತುರ್ತು ಪರಿಸ್ಥಿತಿಗಳಿಗಾಗಿ ಪ್ರಮುಖ ಹೆಲ್ಪ್‌ಲೈನ್‌ಗಳು</string>
+    <string name="settings_crisis_dialog_title">ನೀವು ಒಬ್ಬರೇ ಇಲ್ಲ</string>
+    <string name="settings_crisis_dialog_body">Best Journal ಒಂದು ಜರ್ನಲ್ ಆಪ್ ಆಗಿದ್ದು, ಇದು ವೃತ್ತಿಪರ ಮನೋವೈಜ್ಞಾನಿಕ ಅಥವಾ ವೈದ್ಯಕೀಯ ಸಹಾಯಕ್ಕೆ ಬದಲಿಯಾಗುವುದಿಲ್ಲ. AI ರಚಿಸಿದ ವಿಶ್ಲೇಷಣೆಗಳು ಚಿಕಿತ್ಸೆ ಅಲ್ಲ.\n\nನೀವು ತೀವ್ರ ಸಂಕಟದಲ್ಲಿದ್ದರೆ ಅಥವಾ ಸ್ವಯಂಹಾನಿ ಅಥವಾ ಆತ್ಮಹತ್ಯೆಯ ಆಲೋಚನೆಗಳು ಬಂದರೆ, ಇದನ್ನು ನೀವು ಒಬ್ಬರೇ ಎದುರಿಸಬೇಕಾಗಿಲ್ಲ. ಉಚಿತ, ಗೌಪ್ಯ ಸಹಾಯ 24/7 ಲಭ್ಯವಿದೆ.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge ಜರ್ಮನಿ</string>
+    <string name="settings_crisis_hotline_de_hours">ಉಚಿತ, 24/7, ಗೌಪ್ಯ</string>
+    <string name="settings_crisis_call_de">0800 111 0 111 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_call_de_alt">0800 111 0 222 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_emergency_name">ತುರ್ತು ಸಹಾಯ</string>
+    <string name="settings_crisis_call_emergency">112 ಗೆ ಕರೆ ಮಾಡಿ</string>
+    <string name="settings_crisis_international_name">ಅಂತರರಾಷ್ಟ್ರೀಯ ಹೆಲ್ಪ್‌ಲೈನ್‌ಗಳು</string>
+    <string name="settings_crisis_open_findahelpline">findahelpline.com ತೆರೆಯಿರಿ</string>
+    <string name="settings_crisis_close">ಮುಚ್ಚಿ</string>
+    <string name="settings_crisis_no_dialer">ಫೋನ್ ಆಪ್ ಕಂಡುಬಂದಿಲ್ಲ.</string>
+    <string name="settings_crisis_no_browser">ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ.</string>
+
+    <!-- AI-generated content badge -->
+    <string name="ai_generated_badge">AI ರಚಿಸಿದದು</string>
+    <string name="ai_generated_tooltip">ಈ ವಿಷಯವನ್ನು AI ವ್ಯವಸ್ಥೆ (Google Gemini) ರಚಿಸಿದೆ ಮತ್ತು ಇದರಲ್ಲಿ ದೋಷಗಳು ಇರಬಹುದು. ದಯವಿಟ್ಟು ನೀವು ಸ್ವತಃ ಪರಿಶೀಲಿಸಿ.</string>
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
     <string name="consent_optout_confirmation">ಆಪ್ಟ್-ಔಟ್ ಉಳಿಸಲಾಗಿದೆ — ಅಂಕಿಅಂಶಗಳು ನಿಷ್ಕ್ರಿಯವಾಗಿವೆ.</string>
