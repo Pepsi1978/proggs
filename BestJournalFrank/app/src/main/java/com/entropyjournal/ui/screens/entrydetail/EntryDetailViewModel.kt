@@ -15,6 +15,7 @@ import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.ImproveTextUseCase
 import com.entropyjournal.domain.usecase.RecordAudioUseCase
+import com.entropyjournal.domain.usecase.SummarizeEntryUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
 import com.entropyjournal.ui.screens.journal.RecordingState
@@ -64,6 +65,7 @@ constructor(
     private val improveTextUseCase: ImproveTextUseCase,
     private val recordAudioUseCase: RecordAudioUseCase,
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
+    private val summarizeEntryUseCase: SummarizeEntryUseCase,
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
@@ -654,6 +656,11 @@ constructor(
         journalRepository.updateFollowUpSummary(entryId, latestFollowUpText)
         _uiState.update { state ->
             state.copy(entry = state.entry?.copy(followUpText = latestFollowUpText))
+        }
+        // Regenerate title + bullet-point summary so it covers main entry + all follow-ups.
+        val entry = _uiState.value.entry ?: return
+        if (entry.displayText.isNotBlank()) {
+            summarizeEntryUseCase(entryId, entry.displayText)
         }
     }
 
