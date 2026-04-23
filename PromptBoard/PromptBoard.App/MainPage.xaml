@@ -45,7 +45,8 @@
                         Command="{x:Bind InsertCommand}"
                         Content="{x:Bind ShortLabel, Mode=OneWay}"
                         HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left">
+                        HorizontalContentAlignment="Left"
+                        DoubleTapped="OnPromptLabelDoubleTapped">
                     <ToolTipService.ToolTip>
                         <ToolTip>
                             <TextBlock Text="{Binding EffectiveText, Mode=OneWay}"

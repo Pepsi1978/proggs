@@ -168,6 +168,21 @@ public sealed partial class MainPage : UserControl
     }
 
     /// <summary>
+    /// Double-tapping a prompt's label button opens the editor instead of
+    /// inserting. The single-click behaviour (insert into the active CLI)
+    /// remains unchanged so the main use case is untouched.
+    /// </summary>
+    private void OnPromptLabelDoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is PromptViewModel pvm
+            && pvm.EditCommand.CanExecute(null))
+        {
+            pvm.EditCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
     /// Keyboard shortcuts for individual prompts.
     /// F2 opens the editor, Delete removes the prompt (with confirmation inside the VM).
     /// Enter is handled by WinUI for free — the Insert-button is the default button.
