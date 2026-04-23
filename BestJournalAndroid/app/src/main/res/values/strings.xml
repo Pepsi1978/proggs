@@ -92,7 +92,7 @@
     <!-- Default label for the transcription model (local Whisper, runs on-device). -->
     <string name="transcription_model_local">Lokales Whisper-Modell</string>
     <!-- Brand name of the Groq transcription model — do not translate. -->
-    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="transcription_model_groq" translatable="false">whisper-large-v3-turbo</string>
     <string name="journal_text_upsell_title">Beeindruckend, oder?</string>
     <string name="journal_text_upsell_body">Mit Premium kannst du jeden Eintrag verbessern.</string>
     <string name="journal_discover_premium">Premium entdecken →</string>
@@ -487,7 +487,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.14.6</string>
+    <string name="settings_about_version">Best Journal V0.14.7</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>

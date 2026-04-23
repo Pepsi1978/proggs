@@ -1371,11 +1371,14 @@ fun EntryDetailScreen(
 
     // Nachtrag create / edit dialog (Schreiben / Einsprechen / Verbessern).
     if (uiState.showFollowUpDialog) {
-        // Engine badge now reflects the actual transcription path — Groq (hosted
-        // whisper-large-v3-turbo) or local Whisper — instead of being hardcoded.
-        // Falls back to "Whisper" when no audio has been transcribed yet (e.g.
-        // the dialog is opened for typed input).
-        val engineLabel = uiState.followUpTranscriptionModel ?: "Whisper"
+        // Engine badge: after a successful transcription it shows whichever
+        // engine actually handled the audio. BEFORE transcription (while the
+        // mic is still recording or the dialog is typed-only) we fall back to
+        // the Groq model name — same string the journal flow displays — so
+        // the user sees the expected model immediately, instead of a generic
+        // "Whisper" label that never changes.
+        val engineLabel = uiState.followUpTranscriptionModel
+            ?: stringResource(R.string.transcription_model_groq)
         FollowUpDialog(
             rawText = uiState.followUpDraftText,
             improvedText = uiState.followUpImprovedText,
