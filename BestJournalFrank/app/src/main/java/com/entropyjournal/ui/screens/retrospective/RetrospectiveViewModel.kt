@@ -10,6 +10,7 @@ import com.entropyjournal.domain.usecase.GenerateRetrospectiveUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -195,31 +196,42 @@ constructor(
     private var lastVerboseChangedAt: Long =
         encryptedPrefs.getLong(com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
 
+    // Single source of truth for ANY running retrospective work (init, regenerate,
+    // retry). Every new launch waits for the previous one to fully terminate
+    // (cancelAndJoin) before it calls deleteAll() + generateMissing(). Without this
+    // serialization, a second trigger arriving while the first is still running in
+    // parallel async-tasks would leave stale inserts racing the fresh deleteAll(),
+    // producing duplicate weekly entries (e.g. "Woche 3" appearing multiple times).
+    private var currentJob: kotlinx.coroutines.Job? = null
+
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                awaitSyncComplete()
+        currentJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    awaitSyncComplete()
 
-                // One-time cleanup via local flag file (not backed up to Drive)
-                val flagFile = java.io.File(context.filesDir, ".retro_cleaned_v3")
-                if (!flagFile.exists()) {
-                    repository.deleteAll()
-                    flagFile.createNewFile()
-                    Log.d("RetroVM", "One-time cleanup: cleared old retrospective data")
-                }
+                    // One-time cleanup via local flag file (not backed up to Drive)
+                    val flagFile = java.io.File(context.filesDir, ".retro_cleaned_v3")
+                    if (!flagFile.exists()) {
+                        repository.deleteAll()
+                        flagFile.createNewFile()
+                        Log.d("RetroVM", "One-time cleanup: cleared old retrospective data")
+                    }
 
-                _isGenerating.value = true
-                val count = generateUseCase.generateMissing()
-                if (count > 0) {
-                    Log.d("RetroVM", "Generated $count new reviews")
+                    _isGenerating.value = true
+                    val count = generateUseCase.generateMissing()
+                    if (count > 0) {
+                        Log.d("RetroVM", "Generated $count new reviews")
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("RetroVM", "Review generation failed: ${e.message}", e)
+                    _errorMessage.value = e.message
+                } finally {
+                    _isGenerating.value = false
                 }
-            } catch (e: Exception) {
-                Log.e("RetroVM", "Review generation failed: ${e.message}", e)
-                _errorMessage.value = e.message
-            } finally {
-                _isGenerating.value = false
             }
-        }
 
         // Watch for profile switches and verbose-toggle changes while on any
         // screen. When either flips we regenerate ALL existing retrospectives
@@ -235,10 +247,8 @@ constructor(
                     if (scenarioChanged || verboseFlipped) {
                         lastScenario = currentScenario
                         lastVerboseChangedAt = currentVerboseChangedAt
-                        if (!_isGenerating.value) {
-                            Log.d("RetroVM", "Trigger regenerateAll (scenario=$currentScenario verboseFlipped=$verboseFlipped)")
-                            regenerateAll()
-                        }
+                        Log.d("RetroVM", "Trigger regenerateAll (scenario=$currentScenario verboseFlipped=$verboseFlipped)")
+                        regenerateAll()
                     }
                 } catch (e: Exception) {
                     Log.e("RetroVM", "Watcher error: ${e.message}")
@@ -248,12 +258,19 @@ constructor(
         }
     }
 
-    private var regenerationJob: kotlinx.coroutines.Job? = null
-
     fun regenerateAll() {
-        regenerationJob?.cancel()
-        regenerationJob =
+        val previous = currentJob
+        currentJob =
             viewModelScope.launch(Dispatchers.IO) {
+                // Wait for the previous generation to FULLY terminate (all parallel
+                // async-tasks inside generateMissing*() returned) before wiping the
+                // DB. Plain cancel() is non-blocking and would let stale inserts
+                // land AFTER deleteAll() → duplicate weeks.
+                try {
+                    previous?.cancelAndJoin()
+                } catch (_: kotlinx.coroutines.CancellationException) {
+                    // Expected when the previous job was already cancelling
+                }
                 try {
                     _isProfileSwitch.value = true
                     _isGenerating.value = true
@@ -285,18 +302,27 @@ constructor(
 
     fun retryGeneration() {
         _errorMessage.value = null
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _isGenerating.value = true
-                awaitSyncComplete()
-                val count = generateUseCase.generateMissing()
-                Log.d("RetroVM", "Retry generated $count reviews")
-            } catch (e: Exception) {
-                Log.e("RetroVM", "Retry failed: ${e.message}", e)
-                _errorMessage.value = e.message
-            } finally {
-                _isGenerating.value = false
+        val previous = currentJob
+        currentJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    previous?.cancelAndJoin()
+                } catch (_: kotlinx.coroutines.CancellationException) {
+                    // Expected
+                }
+                try {
+                    _isGenerating.value = true
+                    awaitSyncComplete()
+                    val count = generateUseCase.generateMissing()
+                    Log.d("RetroVM", "Retry generated $count reviews")
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("RetroVM", "Retry failed: ${e.message}", e)
+                    _errorMessage.value = e.message
+                } finally {
+                    _isGenerating.value = false
+                }
             }
-        }
     }
 }

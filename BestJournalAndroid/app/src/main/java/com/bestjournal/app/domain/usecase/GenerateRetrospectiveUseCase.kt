@@ -19,6 +19,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -219,6 +221,11 @@ constructor(
                     async {
                         semaphore.withPermit {
                             generateSingleWeekly(task, profileStyle)?.let { entity ->
+                                // Defense in depth: if the caller (ViewModel) has
+                                // already cancelled this job (e.g. user toggled the
+                                // verbose switch twice in quick succession), do NOT
+                                // insert stale data into the fresh DB state.
+                                currentCoroutineContext().ensureActive()
                                 retroRepo.insert(entity)
                                 generated.incrementAndGet()
                                 Log.d(
@@ -387,6 +394,7 @@ constructor(
                     async {
                         semaphore.withPermit {
                             generateSingleMonthly(task, profileStyle)?.let { entity ->
+                                currentCoroutineContext().ensureActive()
                                 retroRepo.insert(entity)
                                 generated.incrementAndGet()
                                 Log.d(
@@ -557,6 +565,7 @@ constructor(
             titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60)
                 ?: context.getString(R.string.retro_fallback_year, year)
 
+        currentCoroutineContext().ensureActive()
         retroRepo.insert(
             RetrospectiveSummaryEntity(
                 type = "YEARLY",
