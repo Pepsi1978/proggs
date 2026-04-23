@@ -195,6 +195,10 @@ constructor(
     private var lastScenario: Int = encryptedPrefs.getInt(com.entropyjournal.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
     private var lastVerboseChangedAt: Long =
         encryptedPrefs.getLong(com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+    // Track last custom-prompt save timestamp so a new "Individuelle Analyse" prompt
+    // also regenerates every retrospective (weekly/monthly/yearly), not only the dashboard.
+    private var lastCustomPromptSavedAt: Long =
+        encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
 
     // Single source of truth for ANY running retrospective work (init, regenerate,
     // retry). Every new launch waits for the previous one to fully terminate
@@ -242,12 +246,20 @@ constructor(
                 try {
                     val currentScenario = encryptedPrefs.getInt(com.entropyjournal.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
                     val currentVerboseChangedAt = encryptedPrefs.getLong(com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT, 0L)
+                    val currentCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                     val scenarioChanged = currentScenario != lastScenario
                     val verboseFlipped = currentVerboseChangedAt > lastVerboseChangedAt && currentVerboseChangedAt > 0L
-                    if (scenarioChanged || verboseFlipped) {
+                    val customPromptChanged =
+                        currentCustomPromptSavedAt > lastCustomPromptSavedAt &&
+                            currentCustomPromptSavedAt > 0L
+                    if (scenarioChanged || verboseFlipped || customPromptChanged) {
                         lastScenario = currentScenario
                         lastVerboseChangedAt = currentVerboseChangedAt
-                        Log.d("RetroVM", "Trigger regenerateAll (scenario=$currentScenario verboseFlipped=$verboseFlipped)")
+                        lastCustomPromptSavedAt = currentCustomPromptSavedAt
+                        Log.d(
+                            "RetroVM",
+                            "Trigger regenerateAll (scenario=$currentScenario verboseFlipped=$verboseFlipped customPromptChanged=$customPromptChanged)",
+                        )
                         regenerateAll()
                     }
                 } catch (e: Exception) {

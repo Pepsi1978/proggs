@@ -2053,18 +2053,7 @@ fun SettingsScreen(
                                                 )
                                             }
 
-                                            Spacer(modifier = Modifier.width(16.dp))
-
-                                            Box(
-                                                modifier =
-                                                    Modifier.height(40.dp)
-                                                        .width(1.dp)
-                                                        .background(
-                                                            MaterialTheme.colorScheme.outlineVariant
-                                                        )
-                                            )
-
-                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Spacer(modifier = Modifier.width(32.dp))
 
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -2139,6 +2128,8 @@ fun SettingsScreen(
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color =
                                                     MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
 

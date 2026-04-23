@@ -1873,18 +1873,7 @@ fun SettingsScreen(
                                                 )
                                             }
 
-                                            Spacer(modifier = Modifier.width(16.dp))
-
-                                            Box(
-                                                modifier =
-                                                    Modifier.height(40.dp)
-                                                        .width(1.dp)
-                                                        .background(
-                                                            MaterialTheme.colorScheme.outlineVariant
-                                                        )
-                                            )
-
-                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Spacer(modifier = Modifier.width(32.dp))
 
                                             // Mic button → record via Whisper/Groq (72dp outer)
                                             Column(
@@ -1970,6 +1959,8 @@ fun SettingsScreen(
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color =
                                                     MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
 
@@ -2058,13 +2049,25 @@ fun SettingsScreen(
                                                         Constants.PREF_CUSTOM_PROMPT,
                                                         promptText,
                                                     )
-                                            if (promptText != previousPrompt) {
+                                            val promptChanged = promptText != previousPrompt
+                                            if (promptChanged) {
                                                 editor.putLong(
                                                     "custom_prompt_saved_at",
                                                     System.currentTimeMillis(),
                                                 )
+                                                // New prompt → regenerate dashboard AND all
+                                                // retrospectives (weekly/monthly/yearly) so they
+                                                // reflect the new focus.
+                                                editor.putBoolean(
+                                                    Constants.PREF_RETRO_NEEDS_REGEN,
+                                                    true,
+                                                )
                                             }
                                             editor.apply()
+                                            if (promptChanged) {
+                                                viewModel.notifyProfileChanged()
+                                                onProfileChanged()
+                                            }
                                             viewModel.clearPromptVoiceState()
                                             showCustomPromptDialog = false
                                         }
