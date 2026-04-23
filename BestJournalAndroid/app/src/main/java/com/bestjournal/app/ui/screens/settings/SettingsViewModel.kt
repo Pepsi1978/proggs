@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.data.local.dao.EntryFollowUpDao
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.remote.googledrive.DriveBackupManager
@@ -101,6 +102,7 @@ constructor(
     private val reminderManager: DailyReminderManager,
     private val journalEntryDao: JournalEntryDao,
     private val entryPhotoDao: EntryPhotoDao,
+    private val entryFollowUpDao: EntryFollowUpDao,
     val analyticsTracker: AnalyticsTracker,
     private val profileChangeBus: com.bestjournal.app.util.ProfileChangeBus,
     private val driveBackupManager: DriveBackupManager,
@@ -584,8 +586,21 @@ constructor(
                                 emptyMap()
                             }
 
+                        // Always include Nachtraege in the PDF — they are part
+                        // of the entry content, not an optional extra like photos.
+                        val followUpsPerEntry =
+                            entries.associate { entry ->
+                                entry.id to entryFollowUpDao.getForEntryOnce(entry.id)
+                            }
+
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            PdfExporter.export(entries, outputStream, photosPerEntry, context)
+                            PdfExporter.export(
+                                entries,
+                                outputStream,
+                                photosPerEntry,
+                                context,
+                                followUpsPerEntry,
+                            )
                         }
                     }
 

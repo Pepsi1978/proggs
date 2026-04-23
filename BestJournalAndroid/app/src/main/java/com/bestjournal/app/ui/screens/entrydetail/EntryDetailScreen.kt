@@ -1301,6 +1301,7 @@ fun EntryDetailScreen(
                 photos = uiState.photos,
                 context = context,
                 onDismiss = { showShareDialog = false },
+                followUps = uiState.followUps,
             )
         }
     }

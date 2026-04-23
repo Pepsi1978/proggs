@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import com.bestjournal.app.data.local.entity.EntryFollowUpEntity
 import android.media.ExifInterface
 import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
@@ -115,6 +116,7 @@ object PdfExporter {
         outputStream: OutputStream,
         photosPerEntry: Map<Long, List<EntryPhotoEntity>> = emptyMap(),
         context: Context,
+        followUpsPerEntry: Map<Long, List<EntryFollowUpEntity>> = emptyMap(),
     ): Int {
         val document = PdfDocument()
         try {
@@ -123,6 +125,7 @@ object PdfExporter {
             for ((index, entry) in entries.withIndex()) {
                 pageNumber++
                 val photos = photosPerEntry[entry.id] ?: emptyList()
+                val followUps = followUpsPerEntry[entry.id] ?: emptyList()
                 val pages =
                     renderEntry(
                         context,
@@ -132,6 +135,7 @@ object PdfExporter {
                         entries.size,
                         index + 1,
                         photos,
+                        followUps,
                     )
                 pageNumber = pages
             }
@@ -157,12 +161,41 @@ object PdfExporter {
         totalEntries: Int,
         entryIndex: Int,
         photos: List<EntryPhotoEntity>,
+        followUps: List<EntryFollowUpEntity> = emptyList(),
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
         val titleText =
             entry.title ?: context.getString(R.string.pdf_entry_fallback_title, entryIndex)
         val summaryText = entry.summary
-        val bodyText = entry.displayText
+        // Body = main entry text plus each follow-up labeled "Nachtrag <n>".
+        // Falls back to the denormalised followUpText cache column when the
+        // caller didn't pass the structured follow-up list (e.g. an old
+        // Drive backup restore path that only has the cache).
+        val bodyText =
+            buildString {
+                append(entry.displayText)
+                val pdfFollowUps =
+                    if (followUps.isNotEmpty()) {
+                        followUps
+                    } else if (!entry.followUpText.isNullOrBlank()) {
+                        listOf(
+                            EntryFollowUpEntity(
+                                entryId = entry.id,
+                                text = entry.followUpText,
+                                createdAt = entry.timestamp,
+                                updatedAt = entry.timestamp,
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
+                pdfFollowUps.forEachIndexed { index, followUp ->
+                    append("\n\n")
+                    append(if (pdfFollowUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+                    append("\n")
+                    append(followUp.text)
+                }
+            }
 
         // Prepare text lines for body
         val bodyLines = wrapText(bodyText, bodyPaint(), CONTENT_WIDTH)
