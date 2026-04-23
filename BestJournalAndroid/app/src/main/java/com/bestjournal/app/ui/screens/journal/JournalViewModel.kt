@@ -620,10 +620,12 @@ constructor(
                 // If entry was from a writing prompt, dismiss the banner for today
                 if (state.activePrompt.isNotBlank()) {
                     val todayStr = java.time.LocalDate.now().toString()
+                    // Use commit() (synchronous) so the dismissed date survives abrupt process
+                    // termination — apply() can lose the write if Android force-kills the process.
                     encryptedPrefs
                         .edit()
                         .putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr)
-                        .apply()
+                        .commit()
                 }
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
@@ -786,7 +788,9 @@ constructor(
 
     fun dismissPromptBanner() {
         val todayStr = java.time.LocalDate.now().toString()
-        encryptedPrefs.edit().putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+        // commit() (synchronous) ensures the dismissed date is written to disk before returning,
+        // so the banner stays dismissed even if Android force-kills the process right after.
+        encryptedPrefs.edit().putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).commit()
         _uiState.update { it.copy(showPromptBanner = false) }
     }
 

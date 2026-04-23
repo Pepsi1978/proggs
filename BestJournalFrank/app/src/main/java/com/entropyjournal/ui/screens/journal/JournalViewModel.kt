@@ -403,13 +403,15 @@ constructor(
                 // Dismiss prompt banner if entry was from a prompt
                 if (state.activePrompt.isNotBlank()) {
                     val todayStr = java.time.LocalDate.now().toString()
+                    // Use commit() (synchronous) so the dismissed date survives abrupt process
+                    // termination — apply() can lose the write if Android force-kills the process.
                     encryptedPrefs
                         .edit()
                         .putString(
                             com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE,
                             todayStr,
                         )
-                        .apply()
+                        .commit()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         _uiState.update { it.copy(showPromptBanner = false) }
                     }
@@ -487,10 +489,12 @@ constructor(
 
     fun dismissPromptBanner() {
         val todayStr = java.time.LocalDate.now().toString()
+        // commit() (synchronous) ensures the dismissed date is written to disk before returning,
+        // so the banner stays dismissed even if Android force-kills the process right after.
         encryptedPrefs
             .edit()
             .putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr)
-            .apply()
+            .commit()
         _uiState.update { it.copy(showPromptBanner = false) }
     }
 
