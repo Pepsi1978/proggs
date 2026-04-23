@@ -341,6 +341,13 @@
     <string name="profile_custom_rename">Umbenennen</string>
     <string name="profile_custom_rename_save">Name übernehmen</string>
 
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Mehrere individuelle Profile</string>
+    <string name="profiles_premium_desc">Mit Premium legst du so viele individuelle Analyse-Profile an, wie du willst. Zum Beispiel eins für Sport, eins für deine Arbeit, eins für deine Familie. Jedes Profil analysiert deine Tagebucheinträge mit seinem eigenen Fokus.</string>
+    <string name="profiles_benefit_many">Unendlich viele individuelle Profile anlegen</string>
+    <string name="profiles_benefit_switch">Jederzeit zwischen deinen Fokussen wechseln</string>
+    <string name="profiles_benefit_named">Jedem Profil einen eigenen Namen geben</string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
          ════════════════════════════════════════════════════════════════════ -->
@@ -434,6 +441,8 @@
     <string name="settings_premium_feature_pdf_desc">Alle Tagebucheinträge mit Bilder als Dokument</string>
     <string name="settings_premium_feature_voice">Präzisere Spracherkennung</string>
     <string name="settings_premium_feature_voice_desc">Höhere Qualität für deine Spracheinträge</string>
+    <string name="settings_premium_feature_profiles">Unbegrenzte individuelle Profile</string>
+    <string name="settings_premium_feature_profiles_desc">Mehrere Analyse-Schwerpunkte nebeneinander</string>
     <string name="settings_unlock_premium">Premium freischalten</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -475,7 +484,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.13.1</string>
+    <string name="settings_about_version">Best Journal V0.14.0</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -993,6 +1002,7 @@
     <string name="paywall_feature_retro">Wochen-, Monats- und Jahresrückblicke mit KI</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
     <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
+    <string name="paywall_feature_profiles">Unbegrenzte individuelle Analyse-Profile</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Finde deine innere Ruhe</string>
@@ -1253,4 +1263,8 @@
     <string name="profile_style_coach">\n- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen</string>
     <string name="profile_style_custom">\n- Schreibe den Rückblick mit folgendem persönlichen Fokus des Benutzers: \"%1$s\"</string>
 
+    <!-- Premium feature: unlimited Nachträge per journal entry -->
+    <string name="paywall_feature_followups">Unbegrenzte Nachträge zu jedem Tagebucheintrag</string>
+    <string name="settings_premium_feature_followups">Unbegrenzte Nachträge</string>
+    <string name="settings_premium_feature_followups_desc">Ergänze jederzeit neue Gedanken zu bereits gespeicherten Einträgen, so oft du möchtest. Jeder Nachtrag fließt automatisch ins Dashboard mit ein.</string>
 </resources>

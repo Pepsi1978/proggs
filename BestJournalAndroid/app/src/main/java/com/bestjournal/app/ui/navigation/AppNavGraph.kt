@@ -272,6 +272,9 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
                 searchQuery = searchQuery,
+                onNavigateToPaywall = { source ->
+                    navController.navigate("paywall?source=$source")
+                },
             )
         }
 

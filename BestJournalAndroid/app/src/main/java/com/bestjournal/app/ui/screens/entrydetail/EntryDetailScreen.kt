@@ -137,6 +137,7 @@ fun EntryDetailScreen(
     viewModel: EntryDetailViewModel,
     onBack: () -> Unit,
     searchQuery: String = "",
+    onNavigateToPaywall: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -1376,12 +1377,17 @@ fun EntryDetailScreen(
         )
     }
 
-    // Premium upsell for the second Nachtrag.
+    // Premium upsell for the second Nachtrag. "Abo starten" routes the user
+    // into the full PaywallScreen via the navigation callback so the purchase
+    // flow is identical to every other upsell entry point (limit reached,
+    // retrospective, profiles, etc.). The source parameter "nachtrag_upsell"
+    // shows up in analytics so we can measure how many subscriptions come in
+    // from the follow-up gate specifically.
     if (uiState.showFollowUpPremiumDialog) {
         FollowUpPremiumUpsellDialog(
             onStartSubscription = {
                 viewModel.dismissFollowUpPremiumDialog()
-                // TODO Phase 6: route into BillingManager purchase flow.
+                onNavigateToPaywall("nachtrag_upsell")
             },
             onDismiss = { viewModel.dismissFollowUpPremiumDialog() },
         )

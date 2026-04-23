@@ -105,6 +105,8 @@ fun PaywallScreen(
         stringResource(R.string.paywall_feature_improve),
         stringResource(R.string.paywall_feature_dashboard),
         stringResource(R.string.paywall_feature_retro),
+        stringResource(R.string.paywall_feature_profiles),
+        stringResource(R.string.paywall_feature_followups),
         stringResource(R.string.paywall_feature_pdf),
         stringResource(R.string.paywall_feature_noads),
     )

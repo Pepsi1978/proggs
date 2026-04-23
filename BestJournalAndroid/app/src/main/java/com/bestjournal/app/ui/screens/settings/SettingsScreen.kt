@@ -32,6 +32,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.DarkMode
@@ -1587,6 +1589,9 @@ fun SettingsScreen(
                         // prompt saves always write to the right id, even after the list
                         // changes underneath.
                         var editingCustomId by remember { mutableStateOf<String?>(null) }
+                        // Free-tier gate: adding a third custom analysis (customList.size >= 2
+                        // before the add) opens the Premium upsell sheet instead.
+                        var showProfilesPremiumSheet by remember { mutableStateOf(false) }
 
                         val scenarioNames = fixedScenarioNames + customList.map { it.name }
 
@@ -1681,14 +1686,26 @@ fun SettingsScreen(
                                     IconButton(
                                         onClick = {
                                             doHaptic(HapticFeedbackType.LongPress)
-                                            com.bestjournal.app.data.prefs
-                                                .CustomAnalysesStore
-                                                .add(scenarioPrefs, defaultCustomName)
-                                            customList =
+                                            // Free tier: the default entry and one extra
+                                            // custom analysis are free. Trying to add a
+                                            // third opens the Premium upsell sheet instead.
+                                            val limitReached =
+                                                !uiState.isSubscribed && customList.size >= 2
+                                            if (limitReached) {
+                                                showProfilesPremiumSheet = true
+                                            } else {
                                                 com.bestjournal.app.data.prefs
                                                     .CustomAnalysesStore
-                                                    .load(scenarioPrefs, defaultCustomName)
-                                            viewModel.backupCustomAnalysesToDrive()
+                                                    .add(scenarioPrefs, defaultCustomName)
+                                                customList =
+                                                    com.bestjournal.app.data.prefs
+                                                        .CustomAnalysesStore
+                                                        .load(
+                                                            scenarioPrefs,
+                                                            defaultCustomName,
+                                                        )
+                                                viewModel.backupCustomAnalysesToDrive()
+                                            }
                                         },
                                         modifier = Modifier.size(32.dp),
                                     ) {
@@ -2450,6 +2467,16 @@ fun SettingsScreen(
                                 },
                             )
                         }
+
+                        if (showProfilesPremiumSheet) {
+                            CustomAnalysesPremiumSheet(
+                                onSubscribe = {
+                                    showProfilesPremiumSheet = false
+                                    onNavigateToPaywall("custom_analyses_limit")
+                                },
+                                onDismiss = { showProfilesPremiumSheet = false },
+                            )
+                        }
                     }
                 }
 
@@ -2677,6 +2704,22 @@ fun SettingsScreen(
                                         Icons.Rounded.MusicNote,
                                         stringResource(R.string.settings_premium_feature_voice),
                                         stringResource(R.string.settings_premium_feature_voice_desc),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.Category,
+                                        stringResource(R.string.settings_premium_feature_profiles),
+                                        stringResource(
+                                            R.string.settings_premium_feature_profiles_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.EditNote,
+                                        stringResource(
+                                            R.string.settings_premium_feature_followups
+                                        ),
+                                        stringResource(
+                                            R.string.settings_premium_feature_followups_desc
+                                        ),
                                     ),
                                 )
                             featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
@@ -4548,3 +4591,124 @@ private fun WeeklyReviewPickerDialog(
 // ── Churn / Retention Dialog ────────────────────────────────────────────────
 // ChurnFlowDialog is now in its own file: ChurnFlowDialog.kt
 // Old ChurnRetentionDialog removed — replaced by 3-step ChurnFlowDialog
+
+/**
+ * Premium upsell sheet shown when a free user tries to add a third custom
+ * analysis profile. Mirrors the layout of ReviewPremiumSheet (monthly-review
+ * paywall) so the visual language is consistent across the app.
+ *
+ * The sheet does not subscribe the user directly — it routes to the full
+ * PaywallScreen on "Abo starten" so the normal billing flow runs.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomAnalysesPremiumSheet(
+    onSubscribe: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState =
+        androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "profilesCta")
+    val ctaScale by
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.03f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(2000, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "profilesCtaScale",
+        )
+
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Rounded.Category,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.profiles_premium_title),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.profiles_premium_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CustomAnalysesBenefitPoint(stringResource(R.string.profiles_benefit_many))
+                CustomAnalysesBenefitPoint(stringResource(R.string.profiles_benefit_switch))
+                CustomAnalysesBenefitPoint(stringResource(R.string.profiles_benefit_named))
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Button(
+                onClick = onSubscribe,
+                modifier =
+                    Modifier.fillMaxWidth().height(54.dp).graphicsLayer {
+                        scaleX = ctaScale
+                        scaleY = ctaScale
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+            ) {
+                Text(
+                    stringResource(R.string.retro_start_sub),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.retro_decide_later),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun CustomAnalysesBenefitPoint(text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            imageVector = Icons.Rounded.Star,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp).padding(top = 2.dp),
+            tint = FeatureAccentOrange,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
