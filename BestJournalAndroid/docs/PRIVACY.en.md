@@ -95,9 +95,10 @@ sunset times are calculated entirely on your device.
 
 ## 3a. Scope and international availability
 
-The app is available in **more than 25 languages** (including English, German,
-French, Spanish, Italian, Dutch, Portuguese, Polish, Czech, Turkish, Russian,
-Chinese, Japanese, Korean, Arabic, Hindi, and others) in the Google Play Store. The
+The app is available in **27 languages** (English, German, French, Spanish,
+Italian, Dutch, Polish, Portuguese [Brazil and Portugal], Ukrainian, Turkish, Arabic,
+Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu, Indonesian,
+Thai, Japanese, Korean, Chinese [Simplified and Traditional]) in the Google Play Store. The
 language is chosen automatically based on your Android system language
 (`Locale.getDefault()`), and the timezone from Android settings (`TimeZone.getDefault()`).
 Both happen **on the device only**, **no additional location, language, or timezone

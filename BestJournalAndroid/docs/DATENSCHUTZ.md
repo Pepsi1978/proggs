@@ -100,9 +100,10 @@ deinem Gerät bestimmt.
 
 ## 3a. Geltungsbereich und internationale Verfügbarkeit
 
-Die App ist in **mehr als 25 Sprachen** (u. a. Deutsch, Englisch, Französisch,
-Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Tschechisch, Türkisch,
-Russisch, Chinesisch, Japanisch, Koreanisch, Arabisch, Hindi und weitere)
+Die App ist in **27 Sprachen** (Deutsch, Englisch, Französisch, Spanisch, Italienisch,
+Niederländisch, Polnisch, Portugiesisch [Brasilien und Portugal], Ukrainisch, Türkisch,
+Arabisch, Hindi, Bengalisch, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu,
+Indonesisch, Thailändisch, Japanisch, Koreanisch, Chinesisch [vereinfacht und traditionell])
 im Google Play Store verfügbar. Die Sprache wird automatisch auf Basis deiner
 Android-Systemsprache gewählt (`Locale.getDefault()`), die Zeitzone aus der
 Android-Systemeinstellung (`TimeZone.getDefault()`). Beides erfolgt ausschließlich
