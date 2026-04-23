@@ -167,6 +167,7 @@
     <string name="entry_delete_message">Diesen Eintrag unwiderruflich löschen?</string>
     <string name="entry_journal_entry_title">Tagebucheintrag</string>
     <string name="entry_delete_entry_cd">Tagebucheintrag löschen</string>
+    <string name="entry_photos_videos_add_title">Fotos/Videos hinzufügen</string>
 
     <!-- Share dialog -->
     <string name="share_title">Eintrag teilen</string>
@@ -486,7 +487,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.14.1</string>
+    <string name="settings_about_version">Best Journal V0.14.2</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>

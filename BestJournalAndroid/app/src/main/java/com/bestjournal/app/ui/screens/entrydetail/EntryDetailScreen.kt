@@ -662,20 +662,14 @@ fun EntryDetailScreen(
                     )
                 }
 
-                // "Nachtrag hinzufuegen" card. Carries the "ab dem zweiten
-                // Nachtrag" Premium hint. The ViewModel gates the second
-                // Nachtrag and flips showFollowUpPremiumDialog instead of
-                // opening the editor when the user is on the Free tier.
-                AddFollowUpCard(onAddClick = { viewModel.openNewFollowUpDialog() })
-
-                // Photos section
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                // Photos section — Frank-style: only rendered when at least one
+                // item exists, and it sits under the last Nachtrag (or right
+                // under the main entry when there are none). The add button is
+                // NOT here — it lives in its own card at the very bottom so
+                // the gallery card is a pure display surface.
+                if (uiState.photos.isNotEmpty()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Rounded.PhotoLibrary,
@@ -690,27 +684,6 @@ fun EntryDetailScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
-                            Button(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    showPhotoSourceDialog = true
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                Icon(
-                                    Icons.Rounded.AddPhotoAlternate,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    stringResource(R.string.entry_add),
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-
-                        if (uiState.photos.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(uiState.photos, key = { it.id }) { photo ->
@@ -764,12 +737,49 @@ fun EntryDetailScreen(
                                     }
                                 }
                             }
-                        } else {
-                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+
+                // "Nachtrag hinzufuegen" card. Carries the "ab dem zweiten
+                // Nachtrag" Premium hint. The ViewModel gates the second
+                // Nachtrag and flips showFollowUpPremiumDialog instead of
+                // opening the editor when the user is on the Free tier.
+                AddFollowUpCard(onAddClick = { viewModel.openNewFollowUpDialog() })
+
+                // Add-media card — Frank parity: always at the bottom of the
+                // entry stack. Pure control surface, shown even when no media
+                // exists yet. Tapping opens the camera-or-gallery picker.
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                stringResource(R.string.entry_no_photos_yet),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                stringResource(R.string.entry_photos_videos_add_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                showPhotoSourceDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.entry_add),
+                                style = MaterialTheme.typography.labelMedium,
                             )
                         }
                     }
@@ -840,19 +850,16 @@ fun EntryDetailScreen(
                                         edgeTtsGate.run {
                                             isTtsLoading = true
                                             isSpeaking = true
-                                            // Frank-style TTS: read the full bubble
-                                            // tree — main entry (prefixed with its
-                                            // timestamp per the user's request) plus
-                                            // every Nachtrag, each announced as
-                                            // "Nachtrag Eins/Zwei/..." before its text.
+                                            // TTS reads labels, not timestamps: the
+                                            // main entry is announced as "Tagebucheintrag."
+                                            // followed by its text, then every Nachtrag as
+                                            // "Nachtrag Eins/Zwei/..." + its text. No dates
+                                            // are spoken — per the user's request.
                                             val baseText =
                                                 if (isShowingOriginal) entry.rawText
                                                 else entry.displayText
                                             val speakText = buildString {
-                                                append(
-                                                    DateTimeFormatter.formatFull(entry.timestamp)
-                                                )
-                                                append(". ")
+                                                append("Tagebucheintrag. ")
                                                 append(baseText)
                                                 uiState.followUps.forEachIndexed { index, fu ->
                                                     append("\n\nNachtrag ")
