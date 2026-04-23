@@ -51,6 +51,9 @@
 - [Hilt/Dagger](#hiltdagger)
 - [Sonnenauf-/untergang](#sonnenauf-untergang)
 
+**CLI & Terminal:**
+- [Terminal-Input leeren ohne Interrupt: Ctrl+U ist der einzige sichere Weg](#terminal-input-leeren-ohne-interrupt-ctrlu-ist-der-einzige-sichere-weg-kritisch) ⭐⭐
+
 ---
 
 ## Scroll-Pattern: LazyRow statt Row+horizontalScroll
@@ -716,3 +719,74 @@ import androidx.compose.ui.input.pointer.pointerInput
 3. **IMMER `awaitEachGesture`** mit manueller Pointer-Zaehlung fuer Zoom+Pager-Kombination
 4. **Events nur konsumieren wenn noetig** — das ist der Kern der Loesung
 5. **graphicsLayer fuer die Transformation** — scaleX, scaleY, translationX, translationY
+
+## Terminal-Input leeren ohne Interrupt: Ctrl+U ist der einzige sichere Weg (KRITISCH)
+
+**Problem:** In Voice-Overlays (TerminalVoiceOverlay-Windows/macOS, ClaudeVoiceOverlay)
+soll ein X-Button die aktuelle Input-Zeile im Terminal leeren. Wenn Claude Code CLI
+gerade eine Aufgabe bearbeitet, darf das X **niemals** die Aufgabe abbrechen.
+
+**Was NICHT funktioniert (mehrfach in verschiedenen Sessions ausprobiert):**
+
+| Versuch | Warum es scheitert |
+|---------|-------------------|
+| **Ctrl+C** | Sendet SIGINT → Claude Code CLI, bash, zsh, pwsh unterbrechen die laufende Aufgabe ("Interrupted"). Der Benutzer muss jedes Mal "mache weiter" sagen. |
+| **Home + Shift+End + Delete** | Terminals haben keine Cursor-basierte Textselektion — Shift+End selektiert NICHTS. Ergebnis: Der Text bleibt stehen, X tut nichts. Selektion per Keyboard ist ein reines GUI-Konzept (WPF/Cocoa), in TUIs unbekannt. |
+| **Escape** | In Claude Code CLI stoppt Escape die aktuelle Generierung (auch das ist ein Interrupt) — nicht das Input-Leeren. Und in normalen Shells ist Escape oft unbelegt. |
+| **Backspace mehrfach** | Unzuverlaessig (Laenge des Textes unbekannt) und laut. |
+| **Ctrl+A + Backspace** | Funktioniert in Electron-Apps (Claude Desktop, Codex Desktop), aber NICHT in echten Terminals — Ctrl+A ist dort "move to beginning of line", nicht "select all". |
+
+**Was zuverlaessig funktioniert: `Ctrl+U`** — der readline-Standard "kill line".
+
+| Umgebung | Ctrl+U-Verhalten |
+|----------|-----------------|
+| Claude Code CLI (Ink/React TUI) | Leert Input — explizit so dokumentiert |
+| PowerShell / PSReadLine | Kill line from cursor to start |
+| bash | Kill line from cursor to start |
+| zsh | Kill entire line |
+| cmd.exe (neu) | Kill line |
+| Node.js REPL | Kill line |
+| Python REPL | Kill line |
+| Codex CLI | Leert Input |
+
+Entscheidend: **Ctrl+U sendet nie SIGINT**. Auch wenn das Input leer ist (weil gerade
+eine Aufgabe laeuft), ist Ctrl+U ein harmloser No-Op — die Aufgabe laeuft
+unbeeinflusst weiter. Das ist das Verhalten das man fuer einen X-Button braucht.
+
+**Implementation (plattformspezifisch gleiches Konzept):**
+
+```csharp
+// Windows (C#, Win32 keybd_event)
+private const ushort VK_U = 0x55;
+public static void ClearLine(IntPtr terminalHwnd)
+{
+    BringToForeground(terminalHwnd);
+    SendKeyCombo(Win32.VK_CONTROL, VK_U);  // Ctrl+U
+}
+```
+
+```swift
+// macOS (Swift, CGEvent)
+static func clearLine() {
+    activateTerminal()
+    usleep(150_000)
+    // 'u' = 0x20 on macOS CGKeyCode; Ctrl+U = kill line
+    sendKeyCombo(keyCode: 0x20, flags: .maskControl)
+}
+```
+
+**Verifiziert am 2026-04-23:** Funktioniert 100% in TerminalVoiceOverlay-Windows
+gegen Claude Code CLI in Windows Terminal / PowerShell. Vom Benutzer explizit
+bestaetigt: "Einwandfrei. Das funktioniert zu 100%."
+
+**Wichtigste Regel fuer zukuenftige CLI-Tools:** Wenn "Input leeren ohne Interrupt"
+gebraucht wird → IMMER Ctrl+U. Nichts anderes ausprobieren. Diese Frage ist
+endgueltig geklaert.
+
+**Trennlinie zwischen "Terminal" und "Electron-App" (wichtig!):**
+- **Terminals** (PowerShell, Windows Terminal, iTerm, Terminal.app, bash) → **Ctrl+U**
+- **Electron-Apps** (Claude Desktop, Codex Desktop) → **Ctrl+A + Backspace**
+  (weil diese echte Text-Selektion per Keyboard unterstuetzen)
+
+Das ist der Grund warum TerminalVoiceOverlay und ClaudeVoiceOverlay unterschiedliche
+Tastenkombis brauchen, obwohl sie ~80% Code teilen.

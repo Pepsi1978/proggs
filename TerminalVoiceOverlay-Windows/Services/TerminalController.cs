@@ -50,29 +50,25 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Clears the current terminal input line via Home → Shift+End → Delete.
-        /// This approach ONLY removes text from the input line without sending any
-        /// control signal. Critical for Claude Code CLI and similar TUIs: Ctrl+C
-        /// would interrupt a running task ("Interrupted"), but Home/End/Delete are
-        /// plain navigation/edit keys that the TUI simply applies to the input buffer.
-        /// If the input line is empty (task is running), these keystrokes are a no-op.
-        /// Matches the pattern documented in this project's CLAUDE.md:
-        ///   "Line clearing: Home + Shift+End + Delete (terminal-specific)"
+        /// Clears the current terminal input line via Ctrl+U — the universal
+        /// "kill line" readline shortcut. Works identically across:
+        ///   • Claude Code CLI (Ink/React TUI — official shortcut for clearing input)
+        ///   • PowerShell (PSReadLine default binding)
+        ///   • bash, zsh, sh (readline default)
+        ///   • Node.js / Python interactive REPLs
+        ///   • Codex CLI
+        /// Critical property: Ctrl+U clears ONLY the input buffer. It never sends
+        /// SIGINT. If a task is running and the input is empty, Ctrl+U is a
+        /// harmless no-op — the running task stays untouched.
+        /// Earlier attempts (Ctrl+C, Home+Shift+End+Delete) both failed:
+        ///   • Ctrl+C = SIGINT → interrupts running task
+        ///   • Shift+End does not select text in a terminal (shift-selection is
+        ///     a GUI-only concept; terminals have no cursor-based selection model)
         /// </summary>
         public static void ClearLine(IntPtr terminalHwnd)
         {
             BringToForeground(terminalHwnd);
-
-            // Home: move caret to start of line
-            SendKey(VK_HOME);
-            Thread.Sleep(30);
-
-            // Shift+End: select from caret to end of line
-            SendKeyCombo(Win32.VK_SHIFT, VK_END);
-            Thread.Sleep(30);
-
-            // Delete: remove the selection
-            SendKey(VK_DELETE);
+            SendKeyCombo(Win32.VK_CONTROL, VK_U);
         }
 
         /// <summary>
@@ -96,6 +92,7 @@ namespace TerminalVoiceOverlay.Services
         }
 
         private const ushort VK_C = 0x43;
+        private const ushort VK_U = 0x55;
 
         private const byte VK_HOME = 0x24;
         private const byte VK_END = 0x23;
