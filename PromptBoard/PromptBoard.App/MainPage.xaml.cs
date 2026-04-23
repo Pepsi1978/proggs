@@ -40,6 +40,18 @@ public sealed partial class MainPage : UserControl
             UpdateSeparators();
         };
 
+        BackupButton.Click += async (_, _) =>
+        {
+            var dialogs = _services.GetRequiredService<IDialogService>();
+            bool restored = await dialogs.ShowBackupAsync();
+            if (restored)
+            {
+                await ViewModel.InitializeAsync();
+                UpdateEmptyHint();
+                UpdateSeparators();
+            }
+        };
+
         Loaded += async (_, _) =>
         {
             try

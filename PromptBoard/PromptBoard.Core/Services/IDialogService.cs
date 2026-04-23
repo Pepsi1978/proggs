@@ -20,6 +20,12 @@ public interface IDialogService
 
     /// <summary>Open the prompt editor and return the updated fields (or null on Cancel).</summary>
     Task<PromptEditorResult?> ShowPromptEditorAsync(PromptEditorRequest request);
+
+    /// <summary>
+    /// Show the backup / restore dialog. Returns true when a restore was
+    /// applied (so the caller can refresh its views).
+    /// </summary>
+    Task<bool> ShowBackupAsync();
 }
 
 public sealed record NewCategoryResult(string Name, CategoryType Type);

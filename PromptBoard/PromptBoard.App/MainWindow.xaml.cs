@@ -12,6 +12,13 @@ public sealed partial class MainWindow : Window
 {
     private const int DefaultBarHeight = 200;
 
+    /// <summary>
+    /// HWND of the currently open main window. Needed by components
+    /// (Phase 6 file pickers, Phase 7 OAuth) that have to call
+    /// InitializeWithWindow.Initialize before opening.
+    /// </summary>
+    public static IntPtr CurrentHwnd { get; private set; }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -26,6 +33,7 @@ public sealed partial class MainWindow : Window
     private void ConfigureAsPromptBar()
     {
         IntPtr hwnd = WindowNative.GetWindowHandle(this);
+        CurrentHwnd = hwnd;
         WindowId windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
 

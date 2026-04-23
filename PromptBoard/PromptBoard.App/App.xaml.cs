@@ -95,6 +95,12 @@ public partial class App : Application
                 });
                 services.AddTransient<IPromptImprovementService, PromptImprovementService>();
 
+                // Backup / restore (Phase 6): DbContext-backed BackupService,
+                // local JSON file round-trip, Drive stub (real impl in Phase 7).
+                services.AddTransient<IBackupService, BackupService>();
+                services.AddTransient<IBackupFileService, BackupFileService>();
+                services.AddSingleton<IGoogleDriveBackupService, StubGoogleDriveBackupService>();
+
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
 

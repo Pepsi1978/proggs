@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentDialog
+    x:Class="PromptBoard.App.Views.BackupDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:PromptBoard.App.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    Title="Sichern und wiederherstellen"
+    CloseButtonText="Schliessen"
+    DefaultButton="Close">
+
+    <Grid MinWidth="520" RowSpacing="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="Lokale Datei" FontWeight="SemiBold" FontSize="14" />
+            <TextBlock TextWrapping="Wrap"
+                       Opacity="0.75"
+                       Text="Sichere alle Kategorien und Prompts als JSON-Datei oder spiele ein vorhandenes Backup ein. API-Keys werden nicht exportiert." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <Button x:Name="ExportButton" Content="In Datei sichern...">
+                <Button.Resources>
+                    <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}" />
+                </Button.Resources>
+            </Button>
+            <Button x:Name="ImportReplaceButton" Content="Ersetzen aus Datei..." />
+            <Button x:Name="ImportMergeButton" Content="Zusammenfuehren aus Datei..." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Spacing="6" Margin="0,14,0,0">
+            <TextBlock Text="Google Drive" FontWeight="SemiBold" FontSize="14" />
+            <TextBlock TextWrapping="Wrap"
+                       Opacity="0.75"
+                       Text="Automatische Sicherung in deinem persoenlichen Drive-App-Ordner. Der OAuth-Anmeldeflow folgt mit Phase 7 (Settings-Dialog)." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+            <Button x:Name="DriveUploadButton" Content="In Drive sichern" IsEnabled="False" />
+            <Button x:Name="DriveRestoreButton" Content="Aus Drive wiederherstellen" IsEnabled="False" />
+        </StackPanel>
+
+        <Border Grid.Row="4"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="6"
+                Padding="10"
+                Visibility="Collapsed"
+                x:Name="StatusBox">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ProgressRing x:Name="StatusSpinner" Width="18" Height="18" IsActive="False" />
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ContentDialog>

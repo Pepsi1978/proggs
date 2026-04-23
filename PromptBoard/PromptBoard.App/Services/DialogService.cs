@@ -87,4 +87,18 @@ public sealed class DialogService : IDialogService
         ContentDialogResult result = await dialog.ShowAsync();
         return result == ContentDialogResult.Primary ? dialog.Result : null;
     }
+
+    public async Task<bool> ShowBackupAsync()
+    {
+        // Fresh per dialog open so each run starts with a clean DbContext.
+        var backup = _services.GetRequiredService<IBackupService>();
+        var backupFiles = _services.GetRequiredService<IBackupFileService>();
+
+        var dialog = new BackupDialog(backup, backupFiles, MainWindow.CurrentHwnd)
+        {
+            XamlRoot = EnsureRoot(),
+        };
+        await dialog.ShowAsync();
+        return dialog.DidRestore;
+    }
 }
