@@ -72,4 +72,27 @@ public sealed class BackupFileService : IBackupFileService
             path, document.SchemaVersion, document.Categories.Count, document.Prompts.Count);
         return document;
     }
+
+    public async Task<string> SerializeAsync(CancellationToken ct = default)
+    {
+        BackupDocument document = await _backupService.CreateAsync(ct);
+        return JsonSerializer.Serialize(document, s_jsonOptions);
+    }
+
+    public BackupDocument Deserialize(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new InvalidDataException("Backup-Inhalt ist leer.");
+        }
+        BackupDocument? document = JsonSerializer.Deserialize<BackupDocument>(json, s_jsonOptions);
+        if (document is null)
+        {
+            throw new InvalidDataException("Backup-Inhalt enthielt kein gueltiges JSON-Dokument.");
+        }
+        _logger.LogInformation(
+            "Backup deserialized (in-memory): schema {Schema}, {Cat} categories, {Prm} prompts.",
+            document.SchemaVersion, document.Categories.Count, document.Prompts.Count);
+        return document;
+    }
 }

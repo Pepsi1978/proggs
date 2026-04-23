@@ -84,6 +84,54 @@
                     </StackPanel>
                 </StackPanel>
             </PivotItem>
+
+            <PivotItem Header="Google-Konto">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="14" Padding="0,12,0,0">
+
+                        <TextBlock TextWrapping="Wrap" Opacity="0.8"
+                                   Text="Fuer die Drive-Sicherung brauchst du eine eigene OAuth-Credential (Desktop-App) aus deinem Google-Cloud-Projekt. Lege dort das Drive-API frei und trage ID und Secret hier ein." />
+
+                        <HyperlinkButton x:Name="GoogleCloudLink"
+                                         Content="Google Cloud Console oeffnen"
+                                         NavigateUri="https://console.cloud.google.com/apis/credentials" />
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="OAuth Client-ID" FontWeight="SemiBold" />
+                            <TextBox x:Name="GoogleClientIdBox" PlaceholderText="123456789-abc.apps.googleusercontent.com" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="OAuth Client-Secret" FontWeight="SemiBold" />
+                            <PasswordBox x:Name="GoogleClientSecretBox" PlaceholderText="GOCSPX-..." />
+                        </StackPanel>
+
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="6"
+                                Padding="12"
+                                Margin="0,4,0,0">
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ProgressRing x:Name="GoogleBusyRing" Width="18" Height="18" IsActive="False" />
+                                    <TextBlock x:Name="GoogleStatusText" VerticalAlignment="Center" TextWrapping="Wrap"
+                                               Text="Noch nicht verbunden." />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="GoogleConnectButton" Content="Verbinden">
+                                        <Button.Resources>
+                                            <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}" />
+                                        </Button.Resources>
+                                    </Button>
+                                    <Button x:Name="GoogleDisconnectButton" Content="Trennen" IsEnabled="False" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock FontStyle="Italic" Opacity="0.6" TextWrapping="Wrap"
+                                   Text="Hinweis: Die Anmeldung oeffnet kurz deinen Standardbrowser. Die Sicherung landet im versteckten App-Ordner in deinem Drive und ist fuer andere Apps unsichtbar." />
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
         </Pivot>
     </Grid>
 </ContentDialog>

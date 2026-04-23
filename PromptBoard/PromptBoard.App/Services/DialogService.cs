@@ -93,8 +93,9 @@ public sealed class DialogService : IDialogService
         // Fresh per dialog open so each run starts with a clean DbContext.
         var backup = _services.GetRequiredService<IBackupService>();
         var backupFiles = _services.GetRequiredService<IBackupFileService>();
+        var drive = _services.GetRequiredService<IGoogleDriveBackupService>();
 
-        var dialog = new BackupDialog(backup, backupFiles, MainWindow.CurrentHwnd)
+        var dialog = new BackupDialog(backup, backupFiles, drive, MainWindow.CurrentHwnd)
         {
             XamlRoot = EnsureRoot(),
         };

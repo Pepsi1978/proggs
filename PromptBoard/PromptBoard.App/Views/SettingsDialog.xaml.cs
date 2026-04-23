@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -24,6 +26,9 @@ public sealed partial class SettingsDialog : ContentDialog
         // The dialog's own PrimaryButtonClick is async; we guard save there.
         PrimaryButtonClick += OnSaveClick;
 
+        GoogleConnectButton.Click += async (_, _) => await HandleConnectAsync();
+        GoogleDisconnectButton.Click += async (_, _) => await HandleDisconnectAsync();
+
         Opened += async (_, _) => await InitializeFromViewModelAsync();
     }
 
@@ -47,6 +52,11 @@ public sealed partial class SettingsDialog : ContentDialog
             {
                 GroqModelBox.SelectedIndex = 0;
             }
+
+            // Populate Google fields.
+            GoogleClientIdBox.Text = ViewModel.GoogleClientId ?? string.Empty;
+            GoogleClientSecretBox.Password = ViewModel.GoogleClientSecret ?? string.Empty;
+            ApplyGoogleStateToUi();
         }
         catch (System.Exception ex)
         {
@@ -68,6 +78,8 @@ public sealed partial class SettingsDialog : ContentDialog
                 .Replace("\\t", "\t");
             ViewModel.AlwaysOnTop = AlwaysOnTopToggle.IsOn;
             ViewModel.GroqModel = GroqModelBox.SelectedItem as string ?? SettingsViewModel.GroqModels[0];
+            ViewModel.GoogleClientId = GoogleClientIdBox.Text;
+            ViewModel.GoogleClientSecret = GoogleClientSecretBox.Password;
 
             await ViewModel.SaveAsync();
             Saved = true;
@@ -81,5 +93,60 @@ public sealed partial class SettingsDialog : ContentDialog
         {
             deferral.Complete();
         }
+    }
+
+    private async Task HandleConnectAsync()
+    {
+        // Push text box contents into the VM before the flow runs.
+        ViewModel.GoogleClientId = GoogleClientIdBox.Text;
+        ViewModel.GoogleClientSecret = GoogleClientSecretBox.Password;
+        SetGoogleBusy(true);
+        try
+        {
+            await ViewModel.ConnectGoogleCommand.ExecuteAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Google connect failed in dialog.");
+        }
+        finally
+        {
+            SetGoogleBusy(false);
+            ApplyGoogleStateToUi();
+        }
+    }
+
+    private async Task HandleDisconnectAsync()
+    {
+        SetGoogleBusy(true);
+        try
+        {
+            await ViewModel.DisconnectGoogleCommand.ExecuteAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Google disconnect failed in dialog.");
+        }
+        finally
+        {
+            SetGoogleBusy(false);
+            ApplyGoogleStateToUi();
+        }
+    }
+
+    private void SetGoogleBusy(bool busy)
+    {
+        GoogleBusyRing.IsActive = busy;
+        GoogleConnectButton.IsEnabled = !busy;
+        GoogleDisconnectButton.IsEnabled = !busy && ViewModel.IsGoogleConnected;
+    }
+
+    private void ApplyGoogleStateToUi()
+    {
+        GoogleStatusText.Text = string.IsNullOrEmpty(ViewModel.GoogleStatusMessage)
+            ? (ViewModel.IsGoogleConnected ? "Verbunden." : "Noch nicht verbunden.")
+            : ViewModel.GoogleStatusMessage;
+        GoogleConnectButton.IsEnabled = !ViewModel.IsGoogleBusy;
+        GoogleDisconnectButton.IsEnabled = !ViewModel.IsGoogleBusy && ViewModel.IsGoogleConnected;
     }
 }

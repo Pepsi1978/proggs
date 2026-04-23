@@ -14,6 +14,7 @@ public sealed partial class BackupDialog : ContentDialog
 {
     private readonly IBackupService _backup;
     private readonly IBackupFileService _backupFiles;
+    private readonly IGoogleDriveBackupService _drive;
     private readonly IntPtr _ownerHwnd;
 
     /// <summary>
@@ -25,16 +26,109 @@ public sealed partial class BackupDialog : ContentDialog
     public BackupDialog(
         IBackupService backup,
         IBackupFileService backupFiles,
+        IGoogleDriveBackupService drive,
         IntPtr ownerHwnd)
     {
         InitializeComponent();
         _backup = backup;
         _backupFiles = backupFiles;
+        _drive = drive;
         _ownerHwnd = ownerHwnd;
 
         ExportButton.Click += async (_, _) => await HandleExportAsync();
         ImportReplaceButton.Click += async (_, _) => await HandleImportAsync(RestoreMode.Replace);
         ImportMergeButton.Click += async (_, _) => await HandleImportAsync(RestoreMode.Merge);
+        DriveUploadButton.Click += async (_, _) => await HandleDriveUploadAsync();
+        DriveRestoreButton.Click += async (_, _) => await HandleDriveRestoreAsync();
+    }
+
+    private async Task HandleDriveUploadAsync()
+    {
+        if (!await _drive.IsAuthenticatedAsync())
+        {
+            ShowError("Google Drive ist nicht angemeldet. Bitte zuerst in den Einstellungen unter 'Google-Konto' verbinden.");
+            return;
+        }
+
+        await RunWithStatusAsync("Sichere in Google Drive...", async () =>
+        {
+            string json = await _backupFiles.SerializeAsync();
+            await _drive.UploadAsync(json);
+            string? email = await _drive.GetAccountEmailAsync();
+            ShowSuccess(email is null
+                ? "Backup erfolgreich in Google Drive gespeichert."
+                : $"Backup in Drive gespeichert ({email}).");
+        });
+    }
+
+    private async Task HandleDriveRestoreAsync()
+    {
+        if (!await _drive.IsAuthenticatedAsync())
+        {
+            ShowError("Google Drive ist nicht angemeldet. Bitte zuerst in den Einstellungen unter 'Google-Konto' verbinden.");
+            return;
+        }
+
+        string? json = null;
+        try
+        {
+            SetRunning("Lade Backup aus Google Drive...");
+            ToggleAllButtons(false);
+            json = await _drive.DownloadLatestAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Drive-Download fehlgeschlagen: {ex.Message}");
+            Log.Error(ex, "Drive download failed.");
+            ToggleAllButtons(true);
+            return;
+        }
+
+        if (json is null)
+        {
+            ShowError("In Google Drive wurde noch kein Backup abgelegt.");
+            ToggleAllButtons(true);
+            return;
+        }
+
+        BackupDocument? document;
+        try
+        {
+            document = _backupFiles.Deserialize(json);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Drive-Backup konnte nicht gelesen werden: {ex.Message}");
+            ToggleAllButtons(true);
+            return;
+        }
+
+        bool confirmed = await AskInlineConfirmAsync(
+            $"Drive-Backup enthaelt {document!.Categories.Count} Kategorie(n) und {document.Prompts.Count} Prompt(s). Lokale Daten werden ersetzt.");
+        if (!confirmed)
+        {
+            StatusBox.Visibility = Visibility.Collapsed;
+            ToggleAllButtons(true);
+            return;
+        }
+
+        await RunWithStatusAsync("Wende Drive-Backup an...", async () =>
+        {
+            RestoreResult result = await _backup.ApplyAsync(document!, RestoreMode.Replace);
+            DidRestore = true;
+            ShowSuccess(
+                $"Fertig. Kategorien: +{result.CategoriesAdded} / geaendert {result.CategoriesUpdated} / entfernt {result.CategoriesRemoved}. " +
+                $"Prompts: +{result.PromptsAdded} / geaendert {result.PromptsUpdated} / entfernt {result.PromptsRemoved}.");
+        });
+    }
+
+    private void ToggleAllButtons(bool enabled)
+    {
+        ExportButton.IsEnabled = enabled;
+        ImportReplaceButton.IsEnabled = enabled;
+        ImportMergeButton.IsEnabled = enabled;
+        DriveUploadButton.IsEnabled = enabled;
+        DriveRestoreButton.IsEnabled = enabled;
     }
 
     private async Task HandleExportAsync()

@@ -41,12 +41,12 @@
             <TextBlock Text="Google Drive" FontWeight="SemiBold" FontSize="14" />
             <TextBlock TextWrapping="Wrap"
                        Opacity="0.75"
-                       Text="Automatische Sicherung in deinem persoenlichen Drive-App-Ordner. Der OAuth-Anmeldeflow folgt mit Phase 7 (Settings-Dialog)." />
+                       Text="Automatische Sicherung in deinem versteckten Drive-App-Ordner. Vorher einmalig in den Einstellungen unter 'Google-Konto' anmelden." />
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
-            <Button x:Name="DriveUploadButton" Content="In Drive sichern" IsEnabled="False" />
-            <Button x:Name="DriveRestoreButton" Content="Aus Drive wiederherstellen" IsEnabled="False" />
+            <Button x:Name="DriveUploadButton" Content="In Drive sichern" />
+            <Button x:Name="DriveRestoreButton" Content="Aus Drive wiederherstellen" />
         </StackPanel>
 
         <Border Grid.Row="4"
