@@ -11,6 +11,7 @@ using PromptBoard.Core.Repositories;
 using PromptBoard.Core.Services;
 using PromptBoard.Data;
 using PromptBoard.Data.Repositories;
+using PromptBoard.Services;
 using PromptBoard.ViewModels;
 using Serilog;
 
@@ -71,6 +72,12 @@ public partial class App : Application
                 // Utilities
                 services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();
                 services.AddSingleton<IDialogService, DialogService>();
+
+                // Insert pipeline (Phase 2): chain builder is pure, injection is Win32,
+                // orchestrator glues them together with repo + settings lookups.
+                services.AddSingleton<IPromptChainBuilder, PromptChainBuilder>();
+                services.AddSingleton<ITextInjectionService, TextInjectionService>();
+                services.AddTransient<IInsertOrchestrator, InsertOrchestrator>();
 
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
