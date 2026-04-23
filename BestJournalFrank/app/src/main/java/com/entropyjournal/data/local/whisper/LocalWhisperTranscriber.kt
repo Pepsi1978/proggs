@@ -22,16 +22,21 @@ class LocalWhisperTranscriber @Inject constructor(
     private fun getOrCreateRecognizer(): OfflineRecognizer {
         recognizer?.let { return it }
 
+        // Upgraded from Whisper base to small (INT8 quantised) on 2026-04-23.
+        // Why: the user wanted higher offline transcription quality for Frank,
+        // even at the cost of a bigger APK and slower inference. Small has ~3.3x
+        // more parameters than base (244M vs 74M) and recognises German
+        // compound words, names and mumbled speech noticeably better.
         val whisperConfig = OfflineWhisperModelConfig(
-            encoder = "whisper/base-encoder.int8.onnx",
-            decoder = "whisper/base-decoder.int8.onnx",
+            encoder = "whisper/small-encoder.int8.onnx",
+            decoder = "whisper/small-decoder.int8.onnx",
             language = "de",
             task = "transcribe"
         )
 
         val modelConfig = OfflineModelConfig()
         modelConfig.whisper = whisperConfig
-        modelConfig.tokens = "whisper/base-tokens.txt"
+        modelConfig.tokens = "whisper/small-tokens.txt"
         modelConfig.numThreads = 4
 
         val featConfig = FeatureConfig()
