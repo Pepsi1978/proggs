@@ -87,6 +87,14 @@ public partial class App : Application
                     client.Timeout = TimeSpan.FromSeconds(60);
                 });
 
+                // AI improvement pipeline (Phase 5): Gemini HttpClient + a facade
+                // that looks up the currently active meta-prompt on each call.
+                services.AddHttpClient<IGeminiService, GeminiService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(60);
+                });
+                services.AddTransient<IPromptImprovementService, PromptImprovementService>();
+
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
 

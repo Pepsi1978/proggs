@@ -16,11 +16,14 @@ namespace PromptBoard.ViewModels;
 /// ViewModel for one column in the bar (a category and its prompts).
 /// Phase 3: IsProject/IsInline flags drive the two rendering paths
 /// (inline tile vs. flyout-only header).
+/// Phase 5: creating a prompt in an AiLibrary category auto-activates
+/// it as the current Gemini meta-prompt (enforces "exactly one active").
 /// </summary>
 public partial class CategoryViewModel : ObservableObject
 {
     private readonly ICategoryRepository _categories;
     private readonly IPromptRepository _prompts;
+    private readonly IAiImprovementPromptRepository _aiImprovementRepo;
     private readonly IDialogService _dialogs;
     private readonly IInsertOrchestrator _insertOrchestrator;
     private readonly ILoggerFactory _loggerFactory;
@@ -48,6 +51,7 @@ public partial class CategoryViewModel : ObservableObject
         Category category,
         ICategoryRepository categories,
         IPromptRepository prompts,
+        IAiImprovementPromptRepository aiImprovementRepo,
         IDialogService dialogs,
         IInsertOrchestrator insertOrchestrator,
         ILoggerFactory loggerFactory)
@@ -55,6 +59,7 @@ public partial class CategoryViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(category);
         _categories = categories;
         _prompts = prompts;
+        _aiImprovementRepo = aiImprovementRepo;
         _dialogs = dialogs;
         _insertOrchestrator = insertOrchestrator;
         _loggerFactory = loggerFactory;
@@ -109,11 +114,14 @@ public partial class CategoryViewModel : ObservableObject
     [RelayCommand]
     private async Task AddPromptAsync()
     {
+        bool isAiLibrary = Type == CategoryType.AiLibrary;
+
         var request = new PromptEditorRequest(
             ShortLabel: "Neuer Prompt",
             OriginalText: string.Empty,
             ImprovedText: null,
-            ActiveVersion: PromptVersion.Original);
+            ActiveVersion: PromptVersion.Original,
+            IsAiImprovementPrompt: isAiLibrary);
 
         var result = await _dialogs.ShowPromptEditorAsync(request);
         if (result is null || string.IsNullOrWhiteSpace(result.ShortLabel))
@@ -121,7 +129,7 @@ public partial class CategoryViewModel : ObservableObject
             return;
         }
 
-        Prompt prompt = Type == CategoryType.AiLibrary
+        Prompt prompt = isAiLibrary
             ? new AiImprovementPrompt
             {
                 CategoryId = Id,
@@ -130,6 +138,8 @@ public partial class CategoryViewModel : ObservableObject
                 ImprovedText = result.ImprovedText,
                 ActiveVersion = result.ActiveVersion,
                 SortOrder = Prompts.Count,
+                GeminiModel = "gemini-2.5-flash",
+                IsActiveForImprovement = false, // set below via repo to enforce exclusivity
             }
             : new Prompt
             {
@@ -142,8 +152,22 @@ public partial class CategoryViewModel : ObservableObject
             };
 
         await _prompts.AddAsync(prompt);
+
+        if (isAiLibrary && prompt is AiImprovementPrompt)
+        {
+            // Auto-activate the newly-created meta-prompt; repo also
+            // deactivates any previously active one in a single tx.
+            await _aiImprovementRepo.SetActiveAsync(prompt.Id);
+            if (prompt is AiImprovementPrompt ai)
+            {
+                ai.IsActiveForImprovement = true;
+            }
+        }
+
         AttachPrompt(prompt);
-        _logger.LogInformation("Prompt added: {Label} in {Category}", prompt.ShortLabel, Name);
+        _logger.LogInformation(
+            "Prompt added: {Label} in {Category}{Active}",
+            prompt.ShortLabel, Name, isAiLibrary ? " (auto-activated as meta-prompt)" : "");
     }
 
     private void AttachPrompt(Prompt prompt)

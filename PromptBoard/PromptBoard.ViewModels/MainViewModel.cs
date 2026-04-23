@@ -22,22 +22,16 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly ICategoryRepository _categories;
     private readonly IPromptRepository _prompts;
+    private readonly IAiImprovementPromptRepository _aiImprovementRepo;
     private readonly IPastelColorGenerator _colors;
     private readonly IDialogService _dialogs;
     private readonly IInsertOrchestrator _insertOrchestrator;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<MainViewModel> _logger;
 
-    /// <summary>All categories — used for color generation and as source of truth.</summary>
     public ObservableCollection<CategoryViewModel> Categories { get; } = [];
-
-    /// <summary>Bucket for Standard-type categories (leftmost zone in the bar).</summary>
     public ObservableCollection<CategoryViewModel> StandardCategories { get; } = [];
-
-    /// <summary>Bucket for Project-type categories (middle zone, rendered as flyout buttons).</summary>
     public ObservableCollection<CategoryViewModel> ProjectCategories { get; } = [];
-
-    /// <summary>Bucket for AiLibrary-type categories (rightmost zone).</summary>
     public ObservableCollection<CategoryViewModel> AiLibraryCategories { get; } = [];
 
     [ObservableProperty]
@@ -46,6 +40,7 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         ICategoryRepository categories,
         IPromptRepository prompts,
+        IAiImprovementPromptRepository aiImprovementRepo,
         IPastelColorGenerator colors,
         IDialogService dialogs,
         IInsertOrchestrator insertOrchestrator,
@@ -53,6 +48,7 @@ public partial class MainViewModel : ObservableObject
     {
         _categories = categories;
         _prompts = prompts;
+        _aiImprovementRepo = aiImprovementRepo;
         _colors = colors;
         _dialogs = dialogs;
         _insertOrchestrator = insertOrchestrator;
@@ -60,7 +56,6 @@ public partial class MainViewModel : ObservableObject
         _logger = loggerFactory.CreateLogger<MainViewModel>();
     }
 
-    /// <summary>Load all categories and their prompts from the database.</summary>
     public async Task InitializeAsync()
     {
         IsLoading = true;
@@ -123,6 +118,7 @@ public partial class MainViewModel : ObservableObject
             entity,
             _categories,
             _prompts,
+            _aiImprovementRepo,
             _dialogs,
             _insertOrchestrator,
             _loggerFactory)

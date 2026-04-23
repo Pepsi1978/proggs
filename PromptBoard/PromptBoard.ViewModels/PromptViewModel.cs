@@ -12,6 +12,9 @@ namespace PromptBoard.ViewModels;
 
 /// <summary>
 /// ViewModel wrapping a single <see cref="Prompt"/> row in the bar.
+/// Phase 5: tracks whether the underlying entity is an
+/// <see cref="AiImprovementPrompt"/> so ToEntity() preserves the TPH
+/// subtype and the editor dialog hides its own "Improve" button.
 /// </summary>
 public partial class PromptViewModel : ObservableObject
 {
@@ -22,6 +25,11 @@ public partial class PromptViewModel : ObservableObject
 
     public Guid Id { get; }
     public Guid CategoryId { get; }
+    public bool IsAiImprovementPrompt { get; }
+
+    // Only meaningful when IsAiImprovementPrompt == true.
+    public string GeminiModel { get; private set; }
+    public bool IsActiveForImprovement { get; internal set; }
 
     [ObservableProperty]
     private string _shortLabel;
@@ -64,6 +72,17 @@ public partial class PromptViewModel : ObservableObject
         _activeVersion = prompt.ActiveVersion;
         _isAlwaysOn = prompt.IsAlwaysOn;
         _sortOrder = prompt.SortOrder;
+
+        if (prompt is AiImprovementPrompt ai)
+        {
+            IsAiImprovementPrompt = true;
+            GeminiModel = ai.GeminiModel;
+            IsActiveForImprovement = ai.IsActiveForImprovement;
+        }
+        else
+        {
+            GeminiModel = "gemini-2.5-flash";
+        }
     }
 
     public bool CanToggleVersion => !string.IsNullOrEmpty(ImprovedText);
@@ -110,8 +129,14 @@ public partial class PromptViewModel : ObservableObject
     [RelayCommand]
     private async Task EditAsync()
     {
-        var result = await _dialogs.ShowPromptEditorAsync(new PromptEditorRequest(
-            ShortLabel, OriginalText, ImprovedText, ActiveVersion));
+        var request = new PromptEditorRequest(
+            ShortLabel,
+            OriginalText,
+            ImprovedText,
+            ActiveVersion,
+            IsAiImprovementPrompt);
+
+        var result = await _dialogs.ShowPromptEditorAsync(request);
         if (result is null)
         {
             return;
@@ -167,15 +192,35 @@ public partial class PromptViewModel : ObservableObject
         await _prompts.UpdateAsync(entity);
     }
 
-    internal Prompt ToEntity() => new()
+    internal Prompt ToEntity()
     {
-        Id = Id,
-        CategoryId = CategoryId,
-        ShortLabel = ShortLabel,
-        OriginalText = OriginalText,
-        ImprovedText = ImprovedText,
-        ActiveVersion = ActiveVersion,
-        IsAlwaysOn = IsAlwaysOn,
-        SortOrder = SortOrder,
-    };
+        if (IsAiImprovementPrompt)
+        {
+            return new AiImprovementPrompt
+            {
+                Id = Id,
+                CategoryId = CategoryId,
+                ShortLabel = ShortLabel,
+                OriginalText = OriginalText,
+                ImprovedText = ImprovedText,
+                ActiveVersion = ActiveVersion,
+                IsAlwaysOn = IsAlwaysOn,
+                SortOrder = SortOrder,
+                GeminiModel = GeminiModel,
+                IsActiveForImprovement = IsActiveForImprovement,
+            };
+        }
+
+        return new Prompt
+        {
+            Id = Id,
+            CategoryId = CategoryId,
+            ShortLabel = ShortLabel,
+            OriginalText = OriginalText,
+            ImprovedText = ImprovedText,
+            ActiveVersion = ActiveVersion,
+            IsAlwaysOn = IsAlwaysOn,
+            SortOrder = SortOrder,
+        };
+    }
 }

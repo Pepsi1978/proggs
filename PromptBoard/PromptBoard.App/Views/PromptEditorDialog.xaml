@@ -61,9 +61,28 @@
                        TextWrapping="Wrap" />
 
             <Button x:Name="ImproveButton"
-                    ToolTipService.ToolTip="Mit KI verbessern (folgt in Phase 5)"
-                    IsEnabled="False"
-                    Content="Mit KI verbessern" />
+                    ToolTipService.ToolTip="Mit aktivem Meta-Prompt via Google Gemini verbessern">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <FontIcon Glyph="&#xE8E1;" FontSize="14" />
+                    <TextBlock Text="Mit KI verbessern" />
+                </StackPanel>
+            </Button>
+
+            <StackPanel x:Name="ImprovingHint"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                <ProgressRing IsActive="True" Width="16" Height="16" />
+                <TextBlock Text="Gemini arbeitet..." VerticalAlignment="Center" Opacity="0.7" />
+            </StackPanel>
+
+            <TextBlock x:Name="ImproveErrorHint"
+                       Foreground="#C72E2E"
+                       FontStyle="Italic"
+                       VerticalAlignment="Center"
+                       Visibility="Collapsed"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
         <TextBox Grid.Row="3"

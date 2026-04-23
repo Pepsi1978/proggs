@@ -13,16 +13,20 @@ public sealed partial class PromptEditorDialog : ContentDialog
 {
     private readonly IAudioRecorder _recorder;
     private readonly IGroqTranscriptionService _transcription;
-    private bool _isBusy; // recording or transcribing
+    private readonly IPromptImprovementService _improvement;
+    private bool _isDictating;
+    private bool _isImproving;
 
     public PromptEditorDialog(
         PromptEditorRequest request,
         IAudioRecorder recorder,
-        IGroqTranscriptionService transcription)
+        IGroqTranscriptionService transcription,
+        IPromptImprovementService improvement)
     {
         InitializeComponent();
         _recorder = recorder;
         _transcription = transcription;
+        _improvement = improvement;
 
         ShortLabelTextBox.Text = request.ShortLabel;
         OriginalTextBox.Text = request.OriginalText;
@@ -39,6 +43,16 @@ public sealed partial class PromptEditorDialog : ContentDialog
         else
         {
             UseOriginalRadio.IsChecked = true;
+        }
+
+        // Hide the Improve button when editing a meta-prompt itself.
+        if (request.IsAiImprovementPrompt)
+        {
+            ImproveButton.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ImproveButton.Click += OnImproveClicked;
         }
 
         Opened += (_, _) => ShortLabelTextBox.Focus(FocusState.Programmatic);
@@ -66,40 +80,40 @@ public sealed partial class PromptEditorDialog : ContentDialog
         }
     }
 
+    // -------- Dictation (Phase 4) --------
+
     private async void OnDictatePointerPressed(object sender, PointerRoutedEventArgs e)
     {
-        if (_isBusy)
+        if (_isDictating || _isImproving)
         {
             return;
         }
 
         try
         {
-            _isBusy = true;
-            ClearStatus();
+            _isDictating = true;
+            ClearDictateError();
             await _recorder.StartAsync();
             RecordingHint.Visibility = Visibility.Visible;
             IsPrimaryButtonEnabled = false;
+            ImproveButton.IsEnabled = false;
             Log.Information("Dictation: recording started.");
         }
         catch (Exception ex)
         {
-            ShowError($"Mikrofon konnte nicht gestartet werden: {ex.Message}");
-            _isBusy = false;
+            ShowDictateError($"Mikrofon konnte nicht gestartet werden: {ex.Message}");
+            _isDictating = false;
             IsPrimaryButtonEnabled = true;
+            ImproveButton.IsEnabled = true;
             Log.Error(ex, "Failed to start dictation.");
         }
     }
 
     private async void OnDictatePointerReleased(object sender, PointerRoutedEventArgs e)
-    {
-        await StopAndTranscribeAsync();
-    }
+        => await StopAndTranscribeAsync();
 
     private async void OnDictatePointerCanceled(object sender, PointerRoutedEventArgs e)
-    {
-        await StopAndTranscribeAsync();
-    }
+        => await StopAndTranscribeAsync();
 
     private async Task StopAndTranscribeAsync()
     {
@@ -115,8 +129,9 @@ public sealed partial class PromptEditorDialog : ContentDialog
 
             if (wav.Length == 0)
             {
-                _isBusy = false;
+                _isDictating = false;
                 IsPrimaryButtonEnabled = true;
+                ImproveButton.IsEnabled = true;
                 return;
             }
 
@@ -129,23 +144,24 @@ public sealed partial class PromptEditorDialog : ContentDialog
         }
         catch (GroqApiKeyMissingException)
         {
-            ShowError("Kein Groq-API-Key gesetzt. Bitte im Settings-Dialog eintragen.");
+            ShowDictateError("Kein Groq-API-Key gesetzt. Bitte im Settings-Dialog eintragen.");
         }
         catch (GroqTranscriptionException ex)
         {
-            ShowError(ex.Message);
+            ShowDictateError(ex.Message);
             Log.Warning(ex, "Groq transcription failed.");
         }
         catch (Exception ex)
         {
-            ShowError($"Diktat-Fehler: {ex.Message}");
+            ShowDictateError($"Diktat-Fehler: {ex.Message}");
             Log.Error(ex, "Unexpected dictation error.");
         }
         finally
         {
             TranscribingHint.Visibility = Visibility.Collapsed;
-            _isBusy = false;
+            _isDictating = false;
             IsPrimaryButtonEnabled = true;
+            ImproveButton.IsEnabled = true;
         }
     }
 
@@ -158,15 +174,95 @@ public sealed partial class PromptEditorDialog : ContentDialog
         OriginalTextBox.SelectionStart = OriginalTextBox.Text.Length;
     }
 
-    private void ShowError(string message)
+    private void ShowDictateError(string message)
     {
         DictateErrorHint.Text = message;
         DictateErrorHint.Visibility = Visibility.Visible;
     }
 
-    private void ClearStatus()
+    private void ClearDictateError()
     {
         DictateErrorHint.Visibility = Visibility.Collapsed;
         DictateErrorHint.Text = string.Empty;
+    }
+
+    // -------- Improvement (Phase 5) --------
+
+    private async void OnImproveClicked(object sender, RoutedEventArgs e)
+    {
+        if (_isDictating || _isImproving)
+        {
+            return;
+        }
+
+        string source = OriginalTextBox.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(source))
+        {
+            ShowImproveError("Bitte zuerst einen Originaltext eingeben oder diktieren.");
+            return;
+        }
+
+        try
+        {
+            _isImproving = true;
+            ClearImproveError();
+            ImprovingHint.Visibility = Visibility.Visible;
+            IsPrimaryButtonEnabled = false;
+            DictateButton.IsEnabled = false;
+            ImproveButton.IsEnabled = false;
+
+            string improved = await _improvement.ImproveAsync(source);
+
+            if (!string.IsNullOrWhiteSpace(improved))
+            {
+                ImprovedTextBox.Text = improved.Trim();
+                ImprovedHint.Visibility = Visibility.Collapsed;
+                UseImprovedRadio.IsEnabled = true;
+                // Per spec: do NOT auto-switch ActiveVersion; user decides.
+                Log.Information("Gemini improvement applied: {Chars} chars.", improved.Length);
+            }
+            else
+            {
+                ShowImproveError("Gemini lieferte keine Antwort.");
+            }
+        }
+        catch (NoActiveMetaPromptException ex)
+        {
+            ShowImproveError(ex.Message);
+        }
+        catch (GeminiApiKeyMissingException)
+        {
+            ShowImproveError("Kein Gemini-API-Key gesetzt. Bitte im Settings-Dialog eintragen.");
+        }
+        catch (GeminiServiceException ex)
+        {
+            ShowImproveError(ex.Message);
+            Log.Warning(ex, "Gemini improvement failed.");
+        }
+        catch (Exception ex)
+        {
+            ShowImproveError($"Verbesserungs-Fehler: {ex.Message}");
+            Log.Error(ex, "Unexpected improvement error.");
+        }
+        finally
+        {
+            ImprovingHint.Visibility = Visibility.Collapsed;
+            _isImproving = false;
+            IsPrimaryButtonEnabled = true;
+            DictateButton.IsEnabled = true;
+            ImproveButton.IsEnabled = true;
+        }
+    }
+
+    private void ShowImproveError(string message)
+    {
+        ImproveErrorHint.Text = message;
+        ImproveErrorHint.Visibility = Visibility.Visible;
+    }
+
+    private void ClearImproveError()
+    {
+        ImproveErrorHint.Visibility = Visibility.Collapsed;
+        ImproveErrorHint.Text = string.Empty;
     }
 }

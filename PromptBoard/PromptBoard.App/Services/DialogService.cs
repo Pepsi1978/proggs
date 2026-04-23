@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using PromptBoard.App.Views;
@@ -14,12 +15,17 @@ namespace PromptBoard.App.Services;
 /// </summary>
 public sealed class DialogService : IDialogService
 {
+    private readonly IServiceProvider _services;
     private readonly IAudioRecorder _recorder;
     private readonly IGroqTranscriptionService _transcription;
     private XamlRoot? _xamlRoot;
 
-    public DialogService(IAudioRecorder recorder, IGroqTranscriptionService transcription)
+    public DialogService(
+        IServiceProvider services,
+        IAudioRecorder recorder,
+        IGroqTranscriptionService transcription)
     {
+        _services = services;
         _recorder = recorder;
         _transcription = transcription;
     }
@@ -70,7 +76,11 @@ public sealed class DialogService : IDialogService
 
     public async Task<PromptEditorResult?> ShowPromptEditorAsync(PromptEditorRequest request)
     {
-        var dialog = new PromptEditorDialog(request, _recorder, _transcription)
+        // Resolve the improvement service fresh per dialog so its transient
+        // dependencies (repository) get a clean DbContext.
+        var improvement = _services.GetRequiredService<IPromptImprovementService>();
+
+        var dialog = new PromptEditorDialog(request, _recorder, _transcription, improvement)
         {
             XamlRoot = EnsureRoot(),
         };

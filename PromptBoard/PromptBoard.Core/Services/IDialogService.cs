@@ -22,17 +22,20 @@ public interface IDialogService
     Task<PromptEditorResult?> ShowPromptEditorAsync(PromptEditorRequest request);
 }
 
-/// <summary>Result when the user creates a new category.</summary>
 public sealed record NewCategoryResult(string Name, CategoryType Type);
 
-/// <summary>Data handed to the editor dialog.</summary>
+/// <summary>
+/// Data handed to the editor dialog. The <see cref="IsAiImprovementPrompt"/>
+/// flag tells the dialog whether it is editing a Gemini meta-prompt
+/// (in which case the "Mit KI verbessern" button is hidden).
+/// </summary>
 public sealed record PromptEditorRequest(
     string ShortLabel,
     string OriginalText,
     string? ImprovedText,
-    PromptVersion ActiveVersion);
+    PromptVersion ActiveVersion,
+    bool IsAiImprovementPrompt = false);
 
-/// <summary>Updated fields returned from the editor.</summary>
 public sealed record PromptEditorResult(
     string ShortLabel,
     string OriginalText,
