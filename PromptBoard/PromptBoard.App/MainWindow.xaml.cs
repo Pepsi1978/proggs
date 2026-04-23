@@ -1,0 +1,63 @@
+using System;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Serilog;
+using Windows.Graphics;
+using WinRT.Interop;
+
+namespace PromptBoard.App;
+
+public sealed partial class MainWindow : Window
+{
+    private const int DefaultBarHeight = 140;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        ConfigureAsPromptBar();
+    }
+
+    /// <summary>
+    /// Docks the window to the top of the primary screen, makes it borderless,
+    /// always-on-top, and sets WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW so clicking
+    /// the bar does not steal focus from the underlying CLI.
+    /// </summary>
+    private void ConfigureAsPromptBar()
+    {
+        IntPtr hwnd = WindowNative.GetWindowHandle(this);
+        WindowId windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+        AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
+
+        if (appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.SetBorderAndTitleBar(false, false);
+            presenter.IsAlwaysOnTop = true;
+            presenter.IsMaximizable = false;
+            presenter.IsMinimizable = false;
+            presenter.IsResizable = true;
+        }
+
+        DisplayArea? displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
+        if (displayArea is not null)
+        {
+            RectInt32 workArea = displayArea.WorkArea;
+            appWindow.MoveAndResize(new RectInt32(
+                workArea.X,
+                workArea.Y,
+                workArea.Width,
+                DefaultBarHeight));
+        }
+
+        // Apply WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW so the bar does not steal focus.
+        try
+        {
+            NativeMethods.MakeNoActivateToolWindow(hwnd);
+            Log.Information("PromptBar configured: borderless, topmost, no-focus-stealing.");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not apply WS_EX_NOACTIVATE/WS_EX_TOOLWINDOW.");
+        }
+    }
+}

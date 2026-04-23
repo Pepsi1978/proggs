@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PromptBoard.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PromptBoard.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
