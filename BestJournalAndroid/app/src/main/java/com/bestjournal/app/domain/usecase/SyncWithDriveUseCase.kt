@@ -613,56 +613,139 @@ constructor(
                     null,
                     android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
                 )
+            // Backups from older app versions (pre-Nachtrag) don't have the
+            // followUpText column or the entry_follow_ups table yet. Feature-detect
+            // both so the merge still works across version combinations.
+            val remoteHasFollowUpText = remoteDb.hasColumn("journal_entries", "followUpText")
+            val remoteHasFollowUpTable = remoteDb.hasColumn("entry_follow_ups", "text")
+
             val localTimestamps = mutableSetOf<Long>()
+            val localEntryIdByTimestamp = mutableMapOf<Long, Long>()
             val localDb = database.openHelper.readableDatabase
-            localDb.query("SELECT timestamp FROM journal_entries").use { tsCursor ->
+            localDb.query("SELECT id, timestamp FROM journal_entries").use { tsCursor ->
                 while (tsCursor.moveToNext()) {
-                    localTimestamps.add(tsCursor.getLong(0))
+                    val localId = tsCursor.getLong(0)
+                    val localTs = tsCursor.getLong(1)
+                    localTimestamps.add(localTs)
+                    localEntryIdByTimestamp[localTs] = localId
                 }
             }
+
             val writableDb = database.openHelper.writableDatabase
+            val remoteEntryIdByTimestamp = mutableMapOf<Long, Long>()
             var imported = 0
+            val baseCols =
+                "id, timestamp, rawText, improvedText, isImproved, displayText, " +
+                    "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
+                    "summary, title"
+            val selectCols =
+                if (remoteHasFollowUpText) "$baseCols, followUpText, isSynced"
+                else "$baseCols, isSynced"
             remoteDb
-                .rawQuery(
-                    "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
-                        "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
-                        "summary, title, isSynced FROM journal_entries",
-                    null,
-                )
+                .rawQuery("SELECT $selectCols FROM journal_entries", null)
                 .use { remoteCursor ->
                     while (remoteCursor.moveToNext()) {
-                        val ts = remoteCursor.getLong(0)
+                        val remoteEntryId = remoteCursor.getLong(0)
+                        val ts = remoteCursor.getLong(1)
+                        remoteEntryIdByTimestamp[remoteEntryId] = ts
                         if (ts !in localTimestamps) {
                             val values =
                                 android.content.ContentValues().apply {
                                     put("timestamp", ts)
-                                    put("rawText", remoteCursor.getString(1))
-                                    if (!remoteCursor.isNull(2))
-                                        put("improvedText", remoteCursor.getString(2))
-                                    put("isImproved", remoteCursor.getInt(3))
-                                    put("displayText", remoteCursor.getString(4))
-                                    put("audioDurationSeconds", remoteCursor.getInt(5))
-                                    if (!remoteCursor.isNull(6))
-                                        put("moodTag", remoteCursor.getString(6))
+                                    put("rawText", remoteCursor.getString(2))
+                                    if (!remoteCursor.isNull(3))
+                                        put("improvedText", remoteCursor.getString(3))
+                                    put("isImproved", remoteCursor.getInt(4))
+                                    put("displayText", remoteCursor.getString(5))
+                                    put("audioDurationSeconds", remoteCursor.getInt(6))
                                     if (!remoteCursor.isNull(7))
-                                        put("entropyScore", remoteCursor.getFloat(7))
+                                        put("moodTag", remoteCursor.getString(7))
                                     if (!remoteCursor.isNull(8))
-                                        put("adviceCategoryTags", remoteCursor.getString(8))
+                                        put("entropyScore", remoteCursor.getFloat(8))
                                     if (!remoteCursor.isNull(9))
-                                        put("summary", remoteCursor.getString(9))
+                                        put("adviceCategoryTags", remoteCursor.getString(9))
                                     if (!remoteCursor.isNull(10))
-                                        put("title", remoteCursor.getString(10))
-                                    put("isSynced", remoteCursor.getInt(11))
+                                        put("summary", remoteCursor.getString(10))
+                                    if (!remoteCursor.isNull(11))
+                                        put("title", remoteCursor.getString(11))
+                                    if (remoteHasFollowUpText && !remoteCursor.isNull(12)) {
+                                        put("followUpText", remoteCursor.getString(12))
+                                    }
+                                    val isSyncedIdx = if (remoteHasFollowUpText) 13 else 12
+                                    put("isSynced", remoteCursor.getInt(isSyncedIdx))
                                 }
-                            writableDb.insert(
-                                "journal_entries",
-                                android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
-                                values,
-                            )
+                            val insertedId =
+                                writableDb.insert(
+                                    "journal_entries",
+                                    android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
+                                    values,
+                                )
+                            if (insertedId > 0) {
+                                localTimestamps.add(ts)
+                                localEntryIdByTimestamp[ts] = insertedId
+                            }
                             imported++
                         }
                     }
                 }
+
+            // Nachtraege aus dem Remote-Backup mergen. Weil die lokalen und
+            // remote-seitigen entryIds nicht identisch sein muessen (beide Tabellen
+            // nutzen AUTOINCREMENT), mappen wir ueber den timestamp-Wert des
+            // zugehoerigen Haupteintrags.
+            if (remoteHasFollowUpTable) {
+                var mergedFollowUps = 0
+                val followUpCols =
+                    if (remoteDb.hasColumn("entry_follow_ups", "rawText"))
+                        "entryId, text, createdAt, updatedAt, rawText, improvedText, isImproved"
+                    else "entryId, text, createdAt, updatedAt"
+                val remoteHasExtraCols = followUpCols.contains("rawText")
+                remoteDb
+                    .rawQuery(
+                        "SELECT $followUpCols FROM entry_follow_ups ORDER BY createdAt ASC",
+                        null,
+                    )
+                    .use { fuCursor ->
+                        while (fuCursor.moveToNext()) {
+                            val remoteParentId = fuCursor.getLong(0)
+                            val parentTimestamp =
+                                remoteEntryIdByTimestamp[remoteParentId] ?: continue
+                            val localParentId =
+                                localEntryIdByTimestamp[parentTimestamp] ?: continue
+                            val values =
+                                android.content.ContentValues().apply {
+                                    put("entryId", localParentId)
+                                    put("text", fuCursor.getString(1))
+                                    put("createdAt", fuCursor.getLong(2))
+                                    put("updatedAt", fuCursor.getLong(3))
+                                    if (remoteHasExtraCols) {
+                                        put(
+                                            "rawText",
+                                            fuCursor.getString(4) ?: fuCursor.getString(1),
+                                        )
+                                        if (!fuCursor.isNull(5))
+                                            put("improvedText", fuCursor.getString(5))
+                                        put("isImproved", fuCursor.getInt(6))
+                                    } else {
+                                        // Back-fill rawText with the display text so rows inserted
+                                        // from legacy backups remain editable post-merge.
+                                        put("rawText", fuCursor.getString(1))
+                                        put("isImproved", 0)
+                                    }
+                                }
+                            writableDb.insert(
+                                "entry_follow_ups",
+                                android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE,
+                                values,
+                            )
+                            mergedFollowUps++
+                        }
+                    }
+                if (mergedFollowUps > 0) {
+                    Log.d("SyncDebug", "Auto-merged $mergedFollowUps follow-ups from Drive")
+                }
+            }
+
             if (imported > 0) {
                 writableDb.execSQL("UPDATE journal_entries SET isSynced = isSynced WHERE 1=0")
                 Log.d("SyncDebug", "Auto-merged $imported entries from Drive")
@@ -680,6 +763,21 @@ constructor(
             runCatching { tempFile.delete() }
         }
     }
+
+    private fun android.database.sqlite.SQLiteDatabase.hasColumn(
+        tableName: String,
+        columnName: String,
+    ): Boolean =
+        rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            if (nameIndex < 0) return@use false
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameIndex) == columnName) {
+                    return@use true
+                }
+            }
+            false
+        }
 
     private fun zipPhotos(
         photosDir: File,
