@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -103,6 +105,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -2046,50 +2049,85 @@ fun SettingsScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        OutlinedTextField(
-                                            value = promptText,
-                                            onValueChange = { promptText = it },
+                                        Box(
                                             modifier =
                                                 Modifier.fillMaxWidth()
                                                     .height(420.dp)
-                                                    .focusRequester(focusRequester),
-                                            placeholder = {
-                                                val isDark = LocalIsDarkTheme.current
-                                                Text(
-                                                    "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
-                                                    color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                            .copy(
-                                                                alpha =
-                                                                    if (isDark) 0.25f
-                                                                    else 0.35f
-                                                            ),
-                                                )
-                                            },
-                                            textStyle = MaterialTheme.typography.bodyMedium,
-                                            trailingIcon =
-                                                if (promptText.isNotBlank()) {
-                                                    {
-                                                        IconButton(
-                                                            onClick = {
-                                                                showClearConfirm = true
-                                                            },
-                                                            modifier = Modifier.size(28.dp),
-                                                        ) {
-                                                            Icon(
-                                                                imageVector =
-                                                                    Icons.Rounded.Close,
-                                                                contentDescription =
-                                                                    "Text l\u00f6schen",
-                                                                tint =
-                                                                    MaterialTheme.colorScheme
-                                                                        .onSurfaceVariant,
-                                                                modifier = Modifier.size(16.dp),
-                                                            )
-                                                        }
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color =
+                                                            MaterialTheme.colorScheme
+                                                                .outlineVariant,
+                                                        shape = RoundedCornerShape(4.dp),
+                                                    )
+                                        ) {
+                                            val promptScroll =
+                                                androidx.compose.foundation
+                                                    .rememberScrollState()
+                                            BasicTextField(
+                                                value = promptText,
+                                                onValueChange = { promptText = it },
+                                                modifier =
+                                                    Modifier.fillMaxSize()
+                                                        .padding(
+                                                            start = 14.dp,
+                                                            end = 14.dp,
+                                                            top = 40.dp,
+                                                            bottom = 12.dp,
+                                                        )
+                                                        .verticalScroll(promptScroll)
+                                                        .focusRequester(focusRequester),
+                                                textStyle =
+                                                    MaterialTheme.typography.bodyMedium.copy(
+                                                        color =
+                                                            MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                cursorBrush =
+                                                    SolidColor(
+                                                        MaterialTheme.colorScheme.primary
+                                                    ),
+                                                decorationBox = { innerTextField ->
+                                                    if (promptText.isEmpty()) {
+                                                        val isDark = LocalIsDarkTheme.current
+                                                        Text(
+                                                            "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+                                                            style =
+                                                                MaterialTheme.typography
+                                                                    .bodyMedium,
+                                                            color =
+                                                                MaterialTheme.colorScheme
+                                                                    .onSurfaceVariant
+                                                                    .copy(
+                                                                        alpha =
+                                                                            if (isDark) 0.25f
+                                                                            else 0.35f
+                                                                    ),
+                                                        )
                                                     }
-                                                } else null,
-                                        )
+                                                    innerTextField()
+                                                },
+                                            )
+
+                                            if (promptText.isNotBlank()) {
+                                                IconButton(
+                                                    onClick = { showClearConfirm = true },
+                                                    modifier =
+                                                        Modifier.align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(28.dp),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Close,
+                                                        contentDescription = "Text l\u00f6schen",
+                                                        tint =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
 
                                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -2296,6 +2334,11 @@ fun SettingsScreen(
                                                 )
                                             }
                                             editor.apply()
+                                            // Push the new prompt to Drive right away so it syncs to
+                                            // other devices and survives a fresh sign-in.
+                                            if (promptText != previousPrompt) {
+                                                viewModel.backupCustomPromptToDrive(promptText)
+                                            }
                                             viewModel.clearPromptVoiceState()
                                             showCustomPromptDialog = false
                                         }

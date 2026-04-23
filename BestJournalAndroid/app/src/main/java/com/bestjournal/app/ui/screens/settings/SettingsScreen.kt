@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -98,6 +100,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1864,57 +1867,91 @@ fun SettingsScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        OutlinedTextField(
-                                            value = promptText,
-                                            onValueChange = { promptText = it },
+                                        Box(
                                             modifier =
                                                 Modifier.fillMaxWidth()
                                                     .height(420.dp)
-                                                    .focusRequester(focusRequester),
-                                            placeholder = {
-                                                val isDark = LocalIsDarkTheme.current
-                                                Text(
-                                                    stringResource(
-                                                        R.string
-                                                            .settings_custom_prompt_placeholder
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color =
+                                                            MaterialTheme.colorScheme
+                                                                .outlineVariant,
+                                                        shape = RoundedCornerShape(4.dp),
+                                                    )
+                                        ) {
+                                            val promptScroll =
+                                                androidx.compose.foundation
+                                                    .rememberScrollState()
+                                            BasicTextField(
+                                                value = promptText,
+                                                onValueChange = { promptText = it },
+                                                modifier =
+                                                    Modifier.fillMaxSize()
+                                                        .padding(
+                                                            start = 14.dp,
+                                                            end = 14.dp,
+                                                            top = 40.dp,
+                                                            bottom = 12.dp,
+                                                        )
+                                                        .verticalScroll(promptScroll)
+                                                        .focusRequester(focusRequester),
+                                                textStyle =
+                                                    MaterialTheme.typography.bodyMedium.copy(
+                                                        color =
+                                                            MaterialTheme.colorScheme.onSurface
                                                     ),
-                                                    color =
-                                                        MaterialTheme.colorScheme
-                                                            .onSurfaceVariant
-                                                            .copy(
-                                                                alpha =
-                                                                    if (isDark) 0.25f
-                                                                    else 0.35f
+                                                cursorBrush =
+                                                    SolidColor(
+                                                        MaterialTheme.colorScheme.primary
+                                                    ),
+                                                decorationBox = { innerTextField ->
+                                                    if (promptText.isEmpty()) {
+                                                        val isDark = LocalIsDarkTheme.current
+                                                        Text(
+                                                            stringResource(
+                                                                R.string
+                                                                    .settings_custom_prompt_placeholder
                                                             ),
-                                                )
-                                            },
-                                            textStyle = MaterialTheme.typography.bodyMedium,
-                                            trailingIcon =
-                                                if (promptText.isNotBlank()) {
-                                                    {
-                                                        IconButton(
-                                                            onClick = {
-                                                                showClearConfirm = true
-                                                            },
-                                                            modifier = Modifier.size(28.dp),
-                                                        ) {
-                                                            Icon(
-                                                                imageVector =
-                                                                    Icons.Rounded.Close,
-                                                                contentDescription =
-                                                                    stringResource(
-                                                                        R.string
-                                                                            .prompt_clear_content_desc
+                                                            style =
+                                                                MaterialTheme.typography
+                                                                    .bodyMedium,
+                                                            color =
+                                                                MaterialTheme.colorScheme
+                                                                    .onSurfaceVariant
+                                                                    .copy(
+                                                                        alpha =
+                                                                            if (isDark) 0.25f
+                                                                            else 0.35f
                                                                     ),
-                                                                tint =
-                                                                    MaterialTheme.colorScheme
-                                                                        .onSurfaceVariant,
-                                                                modifier = Modifier.size(16.dp),
-                                                            )
-                                                        }
+                                                        )
                                                     }
-                                                } else null,
-                                        )
+                                                    innerTextField()
+                                                },
+                                            )
+
+                                            if (promptText.isNotBlank()) {
+                                                IconButton(
+                                                    onClick = { showClearConfirm = true },
+                                                    modifier =
+                                                        Modifier.align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(28.dp),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Close,
+                                                        contentDescription =
+                                                            stringResource(
+                                                                R.string.prompt_clear_content_desc
+                                                            ),
+                                                        tint =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
 
                                         Spacer(modifier = Modifier.height(12.dp))
 
