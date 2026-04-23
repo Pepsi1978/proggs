@@ -116,6 +116,7 @@ import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.highlightMatches
+import com.bestjournal.app.ui.screens.journal.RecordingState
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
@@ -160,6 +161,12 @@ fun EntryDetailScreen(
     var fullScreenIsVideo by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
+    // Pending inline-delete: (followUpId, 1-based index for the confirm dialog title).
+    var pendingFollowUpDeletion by remember { mutableStateOf<Pair<Long, Int>?>(null) }
+    // Mic-permission + record launcher state for the Nachtrag dialog.
+    var pendingFollowUpMicStart by remember { mutableStateOf(false) }
+    val followUpAmplitude by viewModel.followUpAmplitude.collectAsStateWithLifecycle()
+    val followUpDuration by viewModel.followUpDurationSeconds.collectAsStateWithLifecycle()
     var isSpeaking by remember { mutableStateOf(false) }
     var isTtsLoading by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
@@ -228,6 +235,15 @@ fun EntryDetailScreen(
                 cameraFile?.delete()
             }
             cameraFile = null
+        }
+
+    val micPermissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            granted ->
+            if (granted && pendingFollowUpMicStart) {
+                viewModel.toggleFollowUpRecording()
+            }
+            pendingFollowUpMicStart = false
         }
 
     val cameraPermissionLauncher =
@@ -599,6 +615,31 @@ fun EntryDetailScreen(
                         }
                     }
                 }
+
+                // Nachtraege — inline cards for every existing follow-up. Each
+                // card carries its own tab switch between Verbessert/Original
+                // when an improved version exists, inline editing, and a
+                // per-card delete-confirmation flow driven from the ViewModel.
+                uiState.followUps.forEachIndexed { index, followUp ->
+                    FollowUpInlineCard(
+                        index = index,
+                        followUp = followUp,
+                        onRawTextChanged = { viewModel.updateInlineFollowUpRaw(followUp.id, it) },
+                        onImprovedTextChanged = {
+                            viewModel.updateInlineFollowUpImproved(followUp.id, it)
+                        },
+                        onImproveClick = { viewModel.improveInlineFollowUp(followUp.id) },
+                        onDeleteRequested = {
+                            pendingFollowUpDeletion = followUp.id to (index + 1)
+                        },
+                    )
+                }
+
+                // "Nachtrag hinzufuegen" card. Carries the "ab dem zweiten
+                // Nachtrag" Premium hint. The ViewModel gates the second
+                // Nachtrag and flips showFollowUpPremiumDialog instead of
+                // opening the editor when the user is on the Free tier.
+                AddFollowUpCard(onAddClick = { viewModel.openNewFollowUpDialog() })
 
                 // Photos section
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -1262,6 +1303,87 @@ fun EntryDetailScreen(
                 onDismiss = { showShareDialog = false },
             )
         }
+    }
+
+    // Nachtrag create / edit dialog (Schreiben / Einsprechen / Verbessern).
+    if (uiState.showFollowUpDialog) {
+        // Static engine label until Phase 5 hooks the Groq/local Whisper toggle
+        // into the dialog. Hardcoded per the "strings later" plan for Phase 4.
+        val engineLabel = "Whisper"
+        FollowUpDialog(
+            rawText = uiState.followUpDraftText,
+            improvedText = uiState.followUpImprovedText,
+            recordingState = uiState.followUpRecordingState,
+            amplitude = followUpAmplitude,
+            durationSeconds = followUpDuration,
+            isImproving = uiState.followUpRecordingState == RecordingState.IMPROVING,
+            isUsingImproved = uiState.isUsingImprovedFollowUp,
+            canDelete = uiState.activeFollowUpId != null,
+            engineLabel = engineLabel,
+            onImproveClick = { geminiGate.run { viewModel.improveFollowUp() } },
+            onToggleVersion = { viewModel.setUseImprovedFollowUp(it) },
+            onTextEdit = { viewModel.updateFollowUpDraft(it) },
+            onSave = {
+                doHaptic(HapticFeedbackType.LongPress)
+                viewModel.saveFollowUp()
+            },
+            onDismiss = { viewModel.dismissFollowUpDialog() },
+            onRecordClick = {
+                doHaptic(HapticFeedbackType.LongPress)
+                if (uiState.followUpRecordingState == RecordingState.RECORDING) {
+                    viewModel.toggleFollowUpRecording()
+                } else {
+                    val granted =
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.RECORD_AUDIO,
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        viewModel.toggleFollowUpRecording()
+                    } else {
+                        pendingFollowUpMicStart = true
+                        micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
+                }
+            },
+            onDeleteClick = { viewModel.requestFollowUpDeletion() },
+        )
+    }
+
+    // Confirm delete for an inline Nachtrag (triangle icon in the inline card).
+    pendingFollowUpDeletion?.let { (followUpId, number) ->
+        FollowUpDeleteConfirmDialog(
+            followUpNumber = number,
+            onConfirm = {
+                viewModel.deleteInlineFollowUp(followUpId)
+                pendingFollowUpDeletion = null
+            },
+            onDismiss = { pendingFollowUpDeletion = null },
+        )
+    }
+
+    // Confirm delete for the Nachtrag that is currently open in the dialog.
+    if (uiState.showDeleteFollowUpDialog && uiState.activeFollowUpId != null) {
+        val number =
+            uiState.followUps.indexOfFirst { it.id == uiState.activeFollowUpId }.let { idx ->
+                if (idx >= 0) idx + 1 else 1
+            }
+        FollowUpDeleteConfirmDialog(
+            followUpNumber = number,
+            onConfirm = { viewModel.deleteActiveFollowUp() },
+            onDismiss = { viewModel.showDeleteFollowUpDialog(false) },
+        )
+    }
+
+    // Premium upsell for the second Nachtrag.
+    if (uiState.showFollowUpPremiumDialog) {
+        FollowUpPremiumUpsellDialog(
+            onStartSubscription = {
+                viewModel.dismissFollowUpPremiumDialog()
+                // TODO Phase 6: route into BillingManager purchase flow.
+            },
+            onDismiss = { viewModel.dismissFollowUpPremiumDialog() },
+        )
     }
 
     if (uiState.showDeleteDialog) {
