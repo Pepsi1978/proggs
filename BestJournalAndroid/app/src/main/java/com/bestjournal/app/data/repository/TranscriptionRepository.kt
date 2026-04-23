@@ -2,6 +2,7 @@ package com.bestjournal.app.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.bestjournal.app.BuildConfig
 import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
@@ -36,12 +37,17 @@ class TranscriptionRepository @Inject constructor(
     private val aiUsageTracker: AiUsageTracker
 ) {
     suspend fun transcribeAudio(audioFile: File): Result<TranscriptionResult> {
-        // Use Groq for subscribers AND trial users (free tier covers trial usage)
+        // Use Groq for subscribers AND trial users (free tier covers trial usage).
+        // Debug builds always use Groq — mirrors Frank's behaviour so developers
+        // can exercise the hosted whisper-large-v3-turbo path without juggling
+        // subscription state on their test devices. Release builds keep the
+        // paywall unchanged.
         val isSubscribed = billingManager.subscriptionState.value is SubscriptionState.Subscribed
         // Record usage day so trial clock starts even for voice-only users
         aiUsageTracker.recordUsageDay()
         val isTrialActive = aiUsageTracker.getCurrentPhase() == AiPhase.TRIAL
-        if (isSubscribed || isTrialActive) {
+        val isDebug = BuildConfig.DEBUG
+        if (isSubscribed || isTrialActive || isDebug) {
             try {
                 val remoteConfig = FirebaseRemoteConfig.getInstance()
                 remoteConfig.fetchAndActivate().await()
@@ -50,7 +56,11 @@ class TranscriptionRepository @Inject constructor(
                 // Groq API file size limit: 25 MB. Skip Groq for large files (~14+ min recordings)
                 val fileSizeMb = audioFile.length() / (1024.0 * 1024.0)
                 if (groqKey.isNotBlank() && fileSizeMb <= 25.0) {
-                    val userType = if (isSubscribed) "premium subscriber" else "trial user"
+                    val userType = when {
+                        isSubscribed -> "premium subscriber"
+                        isTrialActive -> "trial user"
+                        else -> "debug build"
+                    }
                     Log.d("Transcription", "Using Groq API for $userType (${String.format("%.1f", fileSizeMb)} MB)")
                     val filePart = MultipartBody.Part.createFormData(
                         "file", audioFile.name,
