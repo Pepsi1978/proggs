@@ -335,6 +335,12 @@
     <string name="profile_custom_prompt">Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?</string>
     <string name="profile_select_hint">Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.</string>
 
+    <!-- Multi-Custom-Analysis buttons (settings screen) -->
+    <string name="profile_custom_add">Individuelle Analyse hinzufügen</string>
+    <string name="profile_custom_remove">Individuelle Analyse entfernen</string>
+    <string name="profile_custom_rename">Umbenennen</string>
+    <string name="profile_custom_rename_save">Name übernehmen</string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
          ════════════════════════════════════════════════════════════════════ -->
@@ -469,7 +475,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.12.62</string>
+    <string name="settings_about_version">Best Journal V0.13.0</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>

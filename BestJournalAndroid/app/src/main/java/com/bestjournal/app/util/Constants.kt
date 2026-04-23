@@ -63,6 +63,17 @@ object Constants {
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
     const val DASHBOARD_SCENARIO_COUNT = 5
 
+    /**
+     * JSON list of named custom analyses. Replaces the single-string PREF_CUSTOM_PROMPT.
+     * Format: [{"id":"uuid","name":"...","prompt":"..."}, ...]
+     * Migration from PREF_CUSTOM_PROMPT happens lazily in CustomAnalysesStore.load().
+     * Szenario-Index 4..N-1 refers to the custom entry at (scenario - 4) in this list.
+     */
+    const val PREF_CUSTOM_ANALYSES_JSON = "custom_analyses_json"
+
+    // Indices 0..3 are fixed; from index 4 onwards: dynamic list of custom analyses.
+    const val FIRST_CUSTOM_SCENARIO_INDEX = 4
+
     // Onboarding
     const val PREF_ONBOARDING_COMPLETED = "onboarding_completed"
     const val PREF_ONBOARDING_GOALS = "onboarding_goals"

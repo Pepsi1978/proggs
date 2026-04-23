@@ -151,15 +151,17 @@ constructor(
 
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
+        return when {
             // Goals prompt is fully localized via string resources
-            3 -> buildGoalsAnalysisSystemPrompt()
+            scenario == 3 -> buildGoalsAnalysisSystemPrompt()
             // Self-insight prompt is fully localized via string resources
-            2 -> buildSelfInsightAnalysisSystemPrompt()
+            scenario == 2 -> buildSelfInsightAnalysisSystemPrompt()
             // Summary prompt is fully localized via string resources
-            0 -> buildSummaryAnalysisSystemPrompt()
-            4 -> {
-                val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+            scenario == 0 -> buildSummaryAnalysisSystemPrompt()
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX -> {
+                val custom =
+                    com.bestjournal.app.data.prefs.CustomAnalysesStore
+                        .activePromptOrEmpty(encryptedPrefs, scenario)
                 if (custom.isNotBlank()) buildCustomAnalysisPrompt(custom)
                 else buildEntropyAnalysisSystemPrompt()
             }
@@ -172,11 +174,12 @@ constructor(
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
         if (!freshAnalysis) return ""
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        val text = when (scenario) {
-            0 -> context.getString(R.string.ai_prompt_fresh_summary)
-            2 -> context.getString(R.string.ai_prompt_fresh_insight)
-            3 -> context.getString(R.string.ai_prompt_fresh_goals)
-            4 -> context.getString(R.string.ai_prompt_fresh_custom)
+        val text = when {
+            scenario == 0 -> context.getString(R.string.ai_prompt_fresh_summary)
+            scenario == 2 -> context.getString(R.string.ai_prompt_fresh_insight)
+            scenario == 3 -> context.getString(R.string.ai_prompt_fresh_goals)
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX ->
+                context.getString(R.string.ai_prompt_fresh_custom)
             else -> context.getString(R.string.ai_prompt_fresh_default)
         }
         return "=== $text ==="
@@ -184,11 +187,12 @@ constructor(
 
     private fun getActiveUserPromptSuffix(entryCount: Int): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        val text = when (scenario) {
-            0 -> context.getString(R.string.ai_prompt_check_summary, entryCount)
-            2 -> context.getString(R.string.ai_prompt_check_insight, entryCount)
-            3 -> context.getString(R.string.ai_prompt_check_goals, entryCount)
-            4 -> context.getString(R.string.ai_prompt_check_custom, entryCount)
+        val text = when {
+            scenario == 0 -> context.getString(R.string.ai_prompt_check_summary, entryCount)
+            scenario == 2 -> context.getString(R.string.ai_prompt_check_insight, entryCount)
+            scenario == 3 -> context.getString(R.string.ai_prompt_check_goals, entryCount)
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX ->
+                context.getString(R.string.ai_prompt_check_custom, entryCount)
             else -> context.getString(R.string.ai_prompt_check_default, entryCount)
         }
         return "=== $text ==="
@@ -402,9 +406,9 @@ constructor(
         val categories = json.optJSONArray(keys.categories) ?: json.getJSONArray("kategorien")
         val now = System.currentTimeMillis()
 
-        // Save dynamic headers for custom analysis (scenario 4)
+        // Save dynamic headers for any custom analysis (scenario >= 4)
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        if (scenario == 4) {
+        if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
             val top5 = json.optString(keys.headingTop5, json.optString("ueberschrift_top5", ""))
             val analyse = json.optString(keys.headingAnalysis, json.optString("ueberschrift_analyse", ""))
             val ergebnisse = json.optString(keys.headingResults, json.optString("ueberschrift_ergebnisse", ""))

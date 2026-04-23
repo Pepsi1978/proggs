@@ -516,7 +516,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                if (uiState.currentScenario == 4) {
+                                if (uiState.currentScenario >= com.bestjournal.app.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                                     val customPrompt = viewModel.getCustomPrompt()
                                     if (customPrompt.isBlank()) {
                                         Text(
@@ -1061,7 +1061,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 onClick = { selectedAdvice = Pair(advice, catName) },
                             )
                         }
-                    } else if (uiState.currentScenario == 4) {
+                    } else if (uiState.currentScenario >= com.bestjournal.app.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                         // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
                         val fallbackTop5 =
                             context.getString(R.string.dashboard_top_results_fallback)
@@ -1371,11 +1371,12 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
 @Composable
 private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
     val title =
-        when (scenario) {
-            0 -> stringResource(R.string.profile_summary)
-            2 -> stringResource(R.string.profile_insight)
-            3 -> stringResource(R.string.profile_goals)
-            4 -> stringResource(R.string.profile_custom)
+        when {
+            scenario == 0 -> stringResource(R.string.profile_summary)
+            scenario == 2 -> stringResource(R.string.profile_insight)
+            scenario == 3 -> stringResource(R.string.profile_goals)
+            scenario >= com.bestjournal.app.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX ->
+                stringResource(R.string.profile_custom)
             else -> stringResource(R.string.profile_entropy)
         }
     AlertDialog(

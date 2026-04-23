@@ -218,9 +218,10 @@ constructor(
                         it.copy(currentScenario = currentScenario, isScenarioSwitch = true)
                     }
                     adviceRepository.clearDashboard()
-                    if (currentScenario == 4) {
+                    if (currentScenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                         val customPrompt =
-                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                            com.bestjournal.app.data.prefs.CustomAnalysesStore
+                                .activePromptOrEmpty(encryptedPrefs, currentScenario)
                         if (customPrompt.isNotBlank()) {
                             refreshDashboard()
                         }
@@ -231,9 +232,11 @@ constructor(
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
-                    if (_uiState.value.currentScenario == 4) {
+                    val active = _uiState.value.currentScenario
+                    if (active >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                         val customPrompt =
-                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                            com.bestjournal.app.data.prefs.CustomAnalysesStore
+                                .activePromptOrEmpty(encryptedPrefs, active)
                         adviceRepository.clearDashboard()
                         if (customPrompt.isNotBlank()) {
                             _uiState.update { it.copy(isScenarioSwitch = true) }
@@ -403,7 +406,9 @@ constructor(
     }
 
     fun getCustomPrompt(): String {
-        return encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return com.bestjournal.app.data.prefs.CustomAnalysesStore
+            .activePromptOrEmpty(encryptedPrefs, scenario)
     }
 
     fun undoDashboard() {

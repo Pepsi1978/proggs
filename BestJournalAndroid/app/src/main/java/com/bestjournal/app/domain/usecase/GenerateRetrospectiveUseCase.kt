@@ -628,14 +628,15 @@ constructor(
     private fun getProfileStyleInstruction(): String {
         val prefs = cachedPrefs ?: return ""
         val scenario = prefs.getInt(com.bestjournal.app.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
-            0 -> context.getString(R.string.profile_style_chronicler)
-            1 -> context.getString(R.string.profile_style_advisor)
-            2 -> context.getString(R.string.profile_style_insight)
-            3 -> context.getString(R.string.profile_style_coach)
-            4 -> {
+        return when {
+            scenario == 0 -> context.getString(R.string.profile_style_chronicler)
+            scenario == 1 -> context.getString(R.string.profile_style_advisor)
+            scenario == 2 -> context.getString(R.string.profile_style_insight)
+            scenario == 3 -> context.getString(R.string.profile_style_coach)
+            scenario >= com.bestjournal.app.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX -> {
                 val custom =
-                    prefs.getString(com.bestjournal.app.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                    com.bestjournal.app.data.prefs.CustomAnalysesStore
+                        .activePromptOrEmpty(prefs, scenario)
                 if (custom.isNotBlank()) context.getString(R.string.profile_style_custom, custom)
                 else ""
             }
