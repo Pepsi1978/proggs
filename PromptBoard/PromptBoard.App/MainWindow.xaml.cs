@@ -13,6 +13,14 @@ public sealed partial class MainWindow : Window
     private const int DefaultBarHeight = 200;
 
     /// <summary>
+    /// Pixel offset from the top of the work area so the user's Terminal
+    /// (Windows Terminal, Claude Code CLI, etc.) still shows its tab strip
+    /// above the PromptBoard bar. Roughly two fingers worth of vertical
+    /// space at 100% DPI.
+    /// </summary>
+    private const int TopOffset = 80;
+
+    /// <summary>
     /// HWND of the currently open main window. Needed by components
     /// (Phase 6 file pickers, Phase 7 OAuth) that have to call
     /// InitializeWithWindow.Initialize before opening.
@@ -52,7 +60,7 @@ public sealed partial class MainWindow : Window
             RectInt32 workArea = displayArea.WorkArea;
             appWindow.MoveAndResize(new RectInt32(
                 workArea.X,
-                workArea.Y,
+                workArea.Y + TopOffset,
                 workArea.Width,
                 DefaultBarHeight));
         }

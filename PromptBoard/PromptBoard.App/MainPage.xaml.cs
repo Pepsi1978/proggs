@@ -66,6 +66,14 @@ public sealed partial class MainPage : UserControl
             }
         };
 
+        // The bar has WS_EX_NOACTIVATE so clicks on prompts do not steal focus
+        // from the underlying CLI. That same flag however blocks the search box
+        // from ever receiving keyboard input. We flip the flag only while the
+        // search box is being interacted with.
+        SearchBox.GotFocus += OnSearchBoxGotFocus;
+        SearchBox.LostFocus += OnSearchBoxLostFocus;
+        SearchBox.PointerPressed += OnSearchBoxPointerPressed;
+
         BackupButton.Click += async (_, _) =>
         {
             var dialogs = _services.GetRequiredService<IDialogService>();
@@ -88,6 +96,11 @@ public sealed partial class MainPage : UserControl
         {
             var dialogs = _services.GetRequiredService<IDialogService>();
             await dialogs.ShowAboutAsync();
+        };
+
+        CloseButton.Click += (_, _) =>
+        {
+            Application.Current.Exit();
         };
 
         Loaded += async (_, _) =>
@@ -177,6 +190,33 @@ public sealed partial class MainPage : UserControl
     {
         UndoBar.IsOpen = false;
         ViewModel.DismissUndo();
+    }
+
+    private void OnSearchBoxPointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+    {
+        // Before WinUI tries to give focus to the AutoSuggestBox, drop the
+        // NoActivate flag. Otherwise the focus request is swallowed by Win32
+        // and keystrokes leak through to the underlying CLI.
+        if (MainWindow.CurrentHwnd != IntPtr.Zero)
+        {
+            NativeMethods.AllowActivation(MainWindow.CurrentHwnd);
+        }
+    }
+
+    private void OnSearchBoxGotFocus(object sender, RoutedEventArgs e)
+    {
+        if (MainWindow.CurrentHwnd != IntPtr.Zero)
+        {
+            NativeMethods.AllowActivation(MainWindow.CurrentHwnd);
+        }
+    }
+
+    private void OnSearchBoxLostFocus(object sender, RoutedEventArgs e)
+    {
+        if (MainWindow.CurrentHwnd != IntPtr.Zero)
+        {
+            NativeMethods.ForbidActivation(MainWindow.CurrentHwnd);
+        }
     }
 
     /// <summary>

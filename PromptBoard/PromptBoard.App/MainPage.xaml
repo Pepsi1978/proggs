@@ -390,6 +390,13 @@
                     <TextBlock Text="Kategorie" />
                 </StackPanel>
             </Button>
+
+            <Button x:Name="CloseButton"
+                    ToolTipService.ToolTip="PromptBoard schliessen"
+                    Padding="8,4"
+                    MinWidth="0">
+                <FontIcon Glyph="&#xE8BB;" FontSize="14" />
+            </Button>
         </StackPanel>
 
         <TextBlock x:Name="EmptyHint"
