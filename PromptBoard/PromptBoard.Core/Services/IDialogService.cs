@@ -26,6 +26,15 @@ public interface IDialogService
     /// applied (so the caller can refresh its views).
     /// </summary>
     Task<bool> ShowBackupAsync();
+
+    /// <summary>
+    /// Show the settings dialog. Returns true when the user saved changes
+    /// (so the host can re-apply things like bar height on the window).
+    /// </summary>
+    Task<bool> ShowSettingsAsync();
+
+    /// <summary>Show the About-this-app dialog.</summary>
+    Task ShowAboutAsync();
 }
 
 public sealed record NewCategoryResult(string Name, CategoryType Type);

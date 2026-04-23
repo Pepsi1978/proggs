@@ -101,4 +101,18 @@ public sealed class DialogService : IDialogService
         await dialog.ShowAsync();
         return dialog.DidRestore;
     }
+
+    public async Task<bool> ShowSettingsAsync()
+    {
+        var vm = _services.GetRequiredService<PromptBoard.ViewModels.SettingsViewModel>();
+        var dialog = new SettingsDialog(vm) { XamlRoot = EnsureRoot() };
+        await dialog.ShowAsync();
+        return dialog.Saved;
+    }
+
+    public async Task ShowAboutAsync()
+    {
+        var dialog = new AboutDialog { XamlRoot = EnsureRoot() };
+        await dialog.ShowAsync();
+    }
 }
