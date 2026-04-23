@@ -59,6 +59,10 @@ data class EntryDetailUiState(
     val isUsingImprovedFollowUp: Boolean = false,
     val followUpRecordingState: RecordingState = RecordingState.IDLE,
     val followUpError: String? = null,
+    // Which engine handled the last follow-up transcription (Groq vs local
+    // Whisper). Populated by stopFollowUpRecording() and shown as the engine
+    // badge inside FollowUpDialog — replaces the old hardcoded "Whisper" label.
+    val followUpTranscriptionModel: String? = null,
     // Premium gate: the first Nachtrag per entry is free, the second and every
     // following one requires an active subscription. The dialog is shown to the
     // user when they try to add a second Nachtrag without Premium.
@@ -583,6 +587,7 @@ constructor(
                             followUpImprovedText = null,
                             isUsingImprovedFollowUp = false,
                             followUpError = null,
+                            followUpTranscriptionModel = outcome.model,
                         )
                     }
 

@@ -1371,9 +1371,11 @@ fun EntryDetailScreen(
 
     // Nachtrag create / edit dialog (Schreiben / Einsprechen / Verbessern).
     if (uiState.showFollowUpDialog) {
-        // Static engine label until Phase 5 hooks the Groq/local Whisper toggle
-        // into the dialog. Hardcoded per the "strings later" plan for Phase 4.
-        val engineLabel = "Whisper"
+        // Engine badge now reflects the actual transcription path — Groq (hosted
+        // whisper-large-v3-turbo) or local Whisper — instead of being hardcoded.
+        // Falls back to "Whisper" when no audio has been transcribed yet (e.g.
+        // the dialog is opened for typed input).
+        val engineLabel = uiState.followUpTranscriptionModel ?: "Whisper"
         FollowUpDialog(
             rawText = uiState.followUpDraftText,
             improvedText = uiState.followUpImprovedText,
