@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
+import com.entropyjournal.data.prefs.CustomAnalysesStore
 import com.entropyjournal.data.remote.gemini.GeminiApi
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.data.repository.RetrospectiveRepository
@@ -735,17 +736,18 @@ $monthsText"""
 
     private fun getProfileStyleInstruction(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
-            0 ->
+        return when {
+            scenario == 0 ->
                 "\n- Schreibe im Stil einer zusammenfassenden Erzählung — fasse die wichtigsten Ereignisse und Gefühle zusammen, wie ein persönlicher Chronist"
-            1 ->
+            scenario == 1 ->
                 "\n- Schreibe im Stil eines Lebensberaters — hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefühl von Klarheit und Ordnung"
-            2 ->
+            scenario == 2 ->
                 "\n- Schreibe im Stil einer tiefgründigen Selbsterkenntnis-Erzählung — decke Denkmuster, wiederkehrende Gefühle und verborgene Stärken auf"
-            3 ->
+            scenario == 3 ->
                 "\n- Schreibe im Stil eines motivierenden Ziel-Begleiters — zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen"
-            4 -> {
-                val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX -> {
+                val custom =
+                    CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario)
                 if (custom.isNotBlank())
                     "\n- Schreibe den Rückblick mit folgendem persönlichen Fokus des Benutzers: \"$custom\""
                 else ""

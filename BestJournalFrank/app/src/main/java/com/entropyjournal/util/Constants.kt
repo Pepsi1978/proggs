@@ -167,7 +167,21 @@ object Constants {
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
-    const val DASHBOARD_SCENARIO_COUNT = 5
+
+    /**
+     * JSON list of named custom analyses. Replaces the single-string PREF_CUSTOM_PROMPT.
+     * Format: [{"id":"uuid","name":"...","prompt":"..."}, ...]
+     * Migration from PREF_CUSTOM_PROMPT happens lazily in CustomAnalysesStore.load().
+     * Szenario-Index 4..N-1 refers to the custom entry at (scenario - 4) in this list.
+     */
+    const val PREF_CUSTOM_ANALYSES_JSON = "custom_analyses_json"
+
+    // Default name used for the first custom analysis (and when renaming back to empty).
+    const val DEFAULT_CUSTOM_ANALYSIS_NAME = "Individuelle Analyse"
+
+    // Indices 0..3 are fixed (summary / clean up / self-insight / goals).
+    // From index 4 onwards: dynamic list of custom analyses.
+    const val FIRST_CUSTOM_SCENARIO_INDEX = 4
 
     // Gemini Flash models: sorted strongest→weakest, prices per 1M tokens (input/output)
     data class GeminiModel(val id: String, val displayName: String, val price: String)

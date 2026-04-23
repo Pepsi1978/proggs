@@ -843,6 +843,9 @@ constructor(
      * Uploads the current custom-analysis prompt to Google Drive immediately.
      * Called right after the user saves the Individuelle-Analyse focus text
      * so it syncs to other devices and survives a fresh sign-in.
+     *
+     * Legacy entry point — prefer [backupCustomAnalysesToDrive] which uploads
+     * the full list. Kept so any remaining callers continue to work.
      */
     fun backupCustomPromptToDrive(promptText: String) {
         viewModelScope.launch {
@@ -852,6 +855,24 @@ constructor(
                 android.util.Log.e(
                     "SettingsViewModel",
                     "Custom prompt backup failed (non-critical): ${e.message}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Uploads the full list of custom analyses (names + prompts) to Drive.
+     * Called after any add/remove/rename/prompt-save in the Individuelle-Analyse
+     * settings so all devices see the same list.
+     */
+    fun backupCustomAnalysesToDrive() {
+        viewModelScope.launch {
+            try {
+                syncUseCase.backupCustomAnalyses()
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "SettingsViewModel",
+                    "Custom analyses backup failed (non-critical): ${e.message}",
                 )
             }
         }

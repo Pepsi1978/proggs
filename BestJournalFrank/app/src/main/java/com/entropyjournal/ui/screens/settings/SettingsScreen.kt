@@ -7,6 +7,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.entropyjournal.data.prefs.CustomAnalysesStore
 import com.entropyjournal.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,10 +34,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
@@ -1732,13 +1735,12 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        val scenarioNames =
+                        val fixedScenarioNames =
                             listOf(
                                 "Zusammenfassung",
                                 "R\u00e4ume dein Leben auf",
                                 "Selbsterkenntnis",
                                 "Pers\u00f6nliche Ziele",
-                                "Individuelle Analyse",
                             )
                         val scenarioPrefs = remember {
                             val masterKey =
@@ -1764,47 +1766,63 @@ fun SettingsScreen(
                         var showCustomPromptDialog by remember { mutableStateOf(false) }
                         var showScenarioInfoIndex by remember { mutableIntStateOf(-1) }
 
+                        // Dynamic list of user-defined custom analyses. Kept in sync with
+                        // encrypted prefs \u2014 every add/remove/rename reloads from the store so
+                        // the UI, the dashboard and the Drive backup stay consistent.
+                        var customList by remember {
+                            mutableStateOf(CustomAnalysesStore.load(scenarioPrefs))
+                        }
+                        // Remembers which custom entry the dialog is editing so renames and
+                        // prompt saves always write to the right id, even after the list
+                        // changes underneath.
+                        var editingCustomId by remember { mutableStateOf<String?>(null) }
+
+                        val scenarioNames = fixedScenarioNames + customList.map { it.name }
+
+                        fun selectScenario(index: Int) {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            previousScenario = currentScenario
+                            currentScenario = index
+                            scenarioPrefs
+                                .edit()
+                                .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
+                                .apply()
+                            showScenarioInfoIndex = index
+                            if (index >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
+                                editingCustomId =
+                                    customList
+                                        .getOrNull(index - Constants.FIRST_CUSTOM_SCENARIO_INDEX)
+                                        ?.id
+                                showCustomPromptDialog = true
+                            }
+                            onProfileChanged()
+                        }
+
                         scenarioNames.forEachIndexed { index, name ->
+                            val isCustom = index >= Constants.FIRST_CUSTOM_SCENARIO_INDEX
+                            val localCustomIndex =
+                                index - Constants.FIRST_CUSTOM_SCENARIO_INDEX
+                            val customEntry =
+                                if (isCustom) customList.getOrNull(localCustomIndex) else null
+                            val canDelete = isCustom && localCustomIndex > 0
                             Row(
                                 modifier =
                                     Modifier.fillMaxWidth()
                                         .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            doHaptic(HapticFeedbackType.LongPress)
-                                            previousScenario = currentScenario
-                                            currentScenario = index
-                                            scenarioPrefs
-                                                .edit()
-                                                .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
-                                                .apply()
-                                            showScenarioInfoIndex = index
-                                            if (index == 4) showCustomPromptDialog = true
-                                            onProfileChanged()
-                                        }
+                                        .clickable { selectScenario(index) }
                                         .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 RadioButton(
                                     selected = currentScenario == index,
-                                    onClick = {
-                                        doHaptic(HapticFeedbackType.LongPress)
-                                        previousScenario = currentScenario
-                                        currentScenario = index
-                                        scenarioPrefs
-                                            .edit()
-                                            .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
-                                            .apply()
-                                        showScenarioInfoIndex = index
-                                        if (index == 4) showCustomPromptDialog = true
-                                        onProfileChanged()
-                                    },
+                                    onClick = { selectScenario(index) },
                                     colors =
                                         RadioButtonDefaults.colors(
                                             selectedColor = MaterialTheme.colorScheme.primary
                                         ),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         name,
                                         style = MaterialTheme.typography.bodyLarge,
@@ -1838,12 +1856,73 @@ fun SettingsScreen(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
-                                        4 ->
+                                        else ->
                                             Text(
                                                 "Eigenen Analyse-Fokus festlegen",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
+                                    }
+                                }
+                                if (isCustom) {
+                                    IconButton(
+                                        onClick = {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            CustomAnalysesStore.add(scenarioPrefs)
+                                            customList = CustomAnalysesStore.load(scenarioPrefs)
+                                            viewModel.backupCustomAnalysesToDrive()
+                                        },
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Add,
+                                            contentDescription = "Individuelle Analyse hinzuf\u00fcgen",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    if (canDelete && customEntry != null) {
+                                        IconButton(
+                                            onClick = {
+                                                doHaptic(HapticFeedbackType.LongPress)
+                                                val removed =
+                                                    CustomAnalysesStore.remove(
+                                                        scenarioPrefs,
+                                                        customEntry.id,
+                                                    )
+                                                if (removed) {
+                                                    customList =
+                                                        CustomAnalysesStore.load(scenarioPrefs)
+                                                    // If the active scenario pointed at the
+                                                    // deleted entry, fall back to the summary
+                                                    // profile so the dashboard does not end
+                                                    // up on an empty index.
+                                                    val total =
+                                                        fixedScenarioNames.size + customList.size
+                                                    if (currentScenario >= total) {
+                                                        previousScenario = currentScenario
+                                                        currentScenario = 0
+                                                        scenarioPrefs
+                                                            .edit()
+                                                            .putInt(
+                                                                Constants.PREF_DASHBOARD_SCENARIO,
+                                                                0,
+                                                            )
+                                                            .apply()
+                                                        onProfileChanged()
+                                                    }
+                                                    viewModel.backupCustomAnalysesToDrive()
+                                                }
+                                            },
+                                            modifier = Modifier.size(32.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Remove,
+                                                contentDescription = "Individuelle Analyse entfernen",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1927,9 +2006,24 @@ fun SettingsScreen(
                         }
 
                         if (showCustomPromptDialog) {
-                            val savedPrompt =
-                                scenarioPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                            var promptText by remember { mutableStateOf(savedPrompt) }
+                            // Resolve the entry being edited. If editingCustomId was lost
+                            // (e.g. entry deleted under us), fall back to the first entry so
+                            // the dialog stays usable instead of crashing.
+                            val activeEntry =
+                                customList.firstOrNull { it.id == editingCustomId }
+                                    ?: customList.firstOrNull()
+                            val activeEntryId = activeEntry?.id
+                            val savedPrompt = activeEntry?.prompt.orEmpty()
+                            val savedName =
+                                activeEntry?.name
+                                    ?: Constants.DEFAULT_CUSTOM_ANALYSIS_NAME
+                            var promptText by
+                                remember(activeEntryId) { mutableStateOf(savedPrompt) }
+                            var titleText by
+                                remember(activeEntryId) { mutableStateOf(savedName) }
+                            var titleEditing by
+                                remember(activeEntryId) { mutableStateOf(false) }
+                            val titleFocus = remember(activeEntryId) { FocusRequester() }
                             val focusRequester = remember { FocusRequester() }
 
                             var preImproveText by remember { mutableStateOf<String?>(null) }
@@ -2030,16 +2124,94 @@ fun SettingsScreen(
                                 onDismissRequest = {
                                     viewModel.clearPromptVoiceState()
                                     showCustomPromptDialog = false
+                                    editingCustomId = null
+                                    titleEditing = false
                                 },
                                 modifier = Modifier.fillMaxWidth(0.95f),
                                 properties =
                                     DialogProperties(usePlatformDefaultWidth = false),
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
-                                    Text(
-                                        "Individuelle Analyse",
-                                        style = MaterialTheme.typography.titleLarge,
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (titleEditing && activeEntryId != null) {
+                                            BasicTextField(
+                                                value = titleText,
+                                                onValueChange = { titleText = it },
+                                                singleLine = true,
+                                                modifier =
+                                                    Modifier.weight(1f)
+                                                        .focusRequester(titleFocus),
+                                                textStyle =
+                                                    MaterialTheme.typography.titleLarge.copy(
+                                                        color =
+                                                            MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                cursorBrush =
+                                                    SolidColor(
+                                                        MaterialTheme.colorScheme.primary
+                                                    ),
+                                            )
+                                            androidx.compose.runtime.LaunchedEffect(
+                                                activeEntryId
+                                            ) {
+                                                titleFocus.requestFocus()
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    doHaptic(HapticFeedbackType.LongPress)
+                                                    CustomAnalysesStore.rename(
+                                                        scenarioPrefs,
+                                                        activeEntryId,
+                                                        titleText,
+                                                    )
+                                                    customList =
+                                                        CustomAnalysesStore.load(scenarioPrefs)
+                                                    titleText =
+                                                        customList
+                                                            .firstOrNull { it.id == activeEntryId }
+                                                            ?.name
+                                                            ?: titleText
+                                                    titleEditing = false
+                                                    viewModel.backupCustomAnalysesToDrive()
+                                                },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Close,
+                                                    contentDescription = "Name übernehmen",
+                                                    tint =
+                                                        MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp),
+                                                )
+                                            }
+                                        } else {
+                                            Text(
+                                                titleText,
+                                                style = MaterialTheme.typography.titleLarge,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            if (activeEntryId != null) {
+                                                IconButton(
+                                                    onClick = {
+                                                        doHaptic(HapticFeedbackType.LongPress)
+                                                        titleEditing = true
+                                                    },
+                                                    modifier = Modifier.size(32.dp),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Edit,
+                                                        contentDescription = "Umbenennen",
+                                                        tint =
+                                                            MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 },
                                 text = {
                                     Column {
@@ -2315,33 +2487,48 @@ fun SettingsScreen(
                                 confirmButton = {
                                     TextButton(
                                         onClick = {
-                                            val previousPrompt =
-                                                scenarioPrefs.getString(
-                                                    Constants.PREF_CUSTOM_PROMPT,
-                                                    "",
-                                                ) ?: ""
-                                            val editor =
-                                                scenarioPrefs
-                                                    .edit()
-                                                    .putString(
-                                                        Constants.PREF_CUSTOM_PROMPT,
-                                                        promptText,
+                                            if (activeEntryId != null) {
+                                                // Commit any unsaved rename first so the name and
+                                                // prompt land together on disk and on Drive.
+                                                if (titleEditing) {
+                                                    CustomAnalysesStore.rename(
+                                                        scenarioPrefs,
+                                                        activeEntryId,
+                                                        titleText,
                                                     )
-                                            if (promptText != previousPrompt) {
-                                                editor.putLong(
-                                                    "custom_prompt_saved_at",
-                                                    System.currentTimeMillis(),
+                                                }
+                                                val previousPrompt =
+                                                    customList
+                                                        .firstOrNull { it.id == activeEntryId }
+                                                        ?.prompt
+                                                        .orEmpty()
+                                                CustomAnalysesStore.setPrompt(
+                                                    scenarioPrefs,
+                                                    activeEntryId,
+                                                    promptText,
                                                 )
+                                                customList =
+                                                    CustomAnalysesStore.load(scenarioPrefs)
+                                                if (promptText != previousPrompt) {
+                                                    scenarioPrefs
+                                                        .edit()
+                                                        .putLong(
+                                                            "custom_prompt_saved_at",
+                                                            System.currentTimeMillis(),
+                                                        )
+                                                        .apply()
+                                                }
+                                                // Always push to Drive on save — even if the text
+                                                // did not change — so the sync timestamp gets
+                                                // refreshed and the user has visible confirmation
+                                                // that the save reached the cloud. "Speichern =
+                                                // Backup" matches the user's mental model.
+                                                viewModel.backupCustomAnalysesToDrive()
                                             }
-                                            editor.apply()
-                                            // Always push to Drive on save — even if the text did
-                                            // not change — so the sync timestamp gets refreshed and
-                                            // the user has visible confirmation that the save reached
-                                            // the cloud. "Speichern = Backup" matches the user's
-                                            // mental model.
-                                            viewModel.backupCustomPromptToDrive(promptText)
                                             viewModel.clearPromptVoiceState()
                                             showCustomPromptDialog = false
+                                            editingCustomId = null
+                                            titleEditing = false
                                         }
                                     ) {
                                         Text("Speichern", color = MaterialTheme.colorScheme.primary)
@@ -2352,6 +2539,8 @@ fun SettingsScreen(
                                         onClick = {
                                             viewModel.clearPromptVoiceState()
                                             showCustomPromptDialog = false
+                                            editingCustomId = null
+                                            titleEditing = false
                                         }
                                     ) {
                                         Text(
@@ -2803,7 +2992,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.9.6",
+                            "Entropy Journal V0.10.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

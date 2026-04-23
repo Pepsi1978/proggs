@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.entropyjournal.data.local.AppDatabase
+import com.entropyjournal.data.prefs.CustomAnalysesStore
 import com.entropyjournal.data.remote.googledrive.DriveBackupManager
 import com.entropyjournal.data.remote.googledrive.DriveRestoreManager
 import com.entropyjournal.util.Constants
@@ -152,15 +153,12 @@ constructor(
             }
         }
 
-        // Also include the custom-analysis prompt in every full backup run,
+        // Also include the custom-analysis list in every full backup run,
         // in case a previous immediate-save attempt failed (no network etc.).
         try {
-            val currentPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-            if (currentPrompt.isNotBlank()) {
-                backupCustomPrompt(currentPrompt)
-            }
+            backupCustomAnalyses()
         } catch (e: Exception) {
-            Log.e("SyncDebug", "Custom prompt backup (non-critical) failed: ${e.message}")
+            Log.e("SyncDebug", "Custom analyses backup (non-critical) failed: ${e.message}")
         }
 
         driveBackupManager.endSession()
@@ -252,25 +250,66 @@ constructor(
             Log.e("SyncDebug", "TTS favorites restore failed (non-critical): ${e.message}")
         }
 
-        // Restore custom-analysis prompt from Drive if available — overwrites any
-        // local value so the same prompt follows the user across devices.
+        // Restore the custom-analysis list from Drive if available. Tries the new
+        // JSON list file first, falls back to the legacy single-prompt file so a
+        // user upgrading from an older build still sees their prompt again.
         try {
-            val promptFile = File(context.cacheDir, "custom_prompt_restore.tmp")
-            val restoreResult =
-                driveRestoreManager.restoreFile("custom_analysis_prompt.txt", promptFile)
-            if (restoreResult.isSuccess && promptFile.exists()) {
-                val promptContent = promptFile.readText()
-                encryptedPrefs.edit()
-                    .putString(Constants.PREF_CUSTOM_PROMPT, promptContent)
-                    .putLong("custom_prompt_saved_at", System.currentTimeMillis())
-                    .commit()
-                Log.d("SyncDebug", "Restored custom analysis prompt from Drive (${promptContent.length} chars)")
-                promptFile.delete()
+            val newFile = File(context.cacheDir, "custom_analyses_restore.tmp")
+            val newResult =
+                driveRestoreManager.restoreFile("custom_analyses.json", newFile)
+            if (newResult.isSuccess && newFile.exists()) {
+                val json = newFile.readText()
+                newFile.delete()
+                val list =
+                    try {
+                        CustomAnalysesStore.parse(json)
+                    } catch (e: Exception) {
+                        Log.e("SyncDebug", "Custom analyses JSON parse failed: ${e.message}")
+                        emptyList()
+                    }
+                if (list.isNotEmpty()) {
+                    CustomAnalysesStore.save(encryptedPrefs, list)
+                    encryptedPrefs
+                        .edit()
+                        .putLong("custom_prompt_saved_at", System.currentTimeMillis())
+                        .commit()
+                    Log.d(
+                        "SyncDebug",
+                        "Restored ${list.size} custom analyses from Drive (new JSON format)",
+                    )
+                }
             } else {
-                Log.d("SyncDebug", "No custom prompt backup found on Drive — skipping restore")
+                // Legacy fallback: plain-text single prompt.
+                val promptFile = File(context.cacheDir, "custom_prompt_restore.tmp")
+                val legacyResult =
+                    driveRestoreManager.restoreFile(
+                        "custom_analysis_prompt.txt",
+                        promptFile,
+                    )
+                if (legacyResult.isSuccess && promptFile.exists()) {
+                    val promptContent = promptFile.readText()
+                    promptFile.delete()
+                    val existing = CustomAnalysesStore.load(encryptedPrefs)
+                    val migrated =
+                        existing.mapIndexed { idx, item ->
+                            if (idx == 0) item.copy(prompt = promptContent) else item
+                        }
+                    CustomAnalysesStore.save(encryptedPrefs, migrated)
+                    encryptedPrefs
+                        .edit()
+                        .putString(Constants.PREF_CUSTOM_PROMPT, promptContent)
+                        .putLong("custom_prompt_saved_at", System.currentTimeMillis())
+                        .commit()
+                    Log.d(
+                        "SyncDebug",
+                        "Restored legacy single prompt (${promptContent.length} chars)",
+                    )
+                } else {
+                    Log.d("SyncDebug", "No custom analyses backup found on Drive — skipping")
+                }
             }
         } catch (e: Exception) {
-            Log.e("SyncDebug", "Custom prompt restore failed (non-critical): ${e.message}")
+            Log.e("SyncDebug", "Custom analyses restore failed (non-critical): ${e.message}")
         }
 
         // Photos are downloaded AFTER app restart via downloadMissingPhotos()
@@ -278,34 +317,66 @@ constructor(
     }
 
     /**
-     * Immediately backs up the custom-analysis prompt text to Drive as a plain
-     * text file so it syncs across devices. Called every time the user saves the
-     * Individuelle-Analyse focus field in Settings.
+     * Immediately backs up the full list of custom analyses to Drive. Called
+     * every time the user saves, renames, adds or deletes an entry in the
+     * Individuelle-Analyse settings. Writes two Drive files:
+     *  - `custom_analyses.json` (new format, full list with ids/names/prompts)
+     *  - `custom_analysis_prompt.txt` (legacy format, first entry's prompt only)
+     *
+     * The legacy file keeps older builds of the app working across devices.
+     * Returns success if the new-format upload succeeded; the legacy upload is
+     * best-effort.
      */
-    suspend fun backupCustomPrompt(promptText: String): Result<Unit> {
+    suspend fun backupCustomAnalyses(): Result<Unit> {
         return try {
-            val tmpFile = File(context.cacheDir, "custom_analysis_prompt_backup.tmp")
-            tmpFile.writeText(promptText)
-            val result = driveBackupManager.backupFile(tmpFile, "custom_analysis_prompt.txt")
-            tmpFile.delete()
-            if (result.isSuccess) {
-                // Refresh the global last-sync timestamp so every UI showing it
-                // (Google-account row in Settings, green sync-cloud in the journal)
-                // updates to the exact moment of this successful upload. The prefs
-                // listeners in SettingsViewModel and JournalViewModel re-read the
-                // value automatically and push it into their UI state.
+            val list = CustomAnalysesStore.load(encryptedPrefs)
+            val json = CustomAnalysesStore.serialise(list)
+
+            val tmpJson = File(context.cacheDir, "custom_analyses_backup.tmp")
+            tmpJson.writeText(json)
+            val jsonResult =
+                driveBackupManager.backupFile(tmpJson, "custom_analyses.json")
+            tmpJson.delete()
+
+            // Best-effort legacy upload so older builds still get the main prompt.
+            try {
+                val legacyText = list.firstOrNull()?.prompt.orEmpty()
+                val tmpLegacy = File(context.cacheDir, "custom_analysis_prompt_backup.tmp")
+                tmpLegacy.writeText(legacyText)
+                driveBackupManager.backupFile(tmpLegacy, "custom_analysis_prompt.txt")
+                tmpLegacy.delete()
+            } catch (e: Exception) {
+                Log.w("SyncDebug", "Legacy prompt upload failed (non-critical): ${e.message}")
+            }
+
+            if (jsonResult.isSuccess) {
                 encryptedPrefs
                     .edit()
                     .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
-                    .apply()
-                SyncProgressHolder.setSynced()
-                Log.d("SyncDebug", "Custom analysis prompt backed up to Drive (${promptText.length} chars)")
-            } else {
-                Log.e("SyncDebug", "Custom prompt backup failed: ${result.exceptionOrNull()?.message}")
+                    .commit()
             }
-            result
+            jsonResult
         } catch (e: Exception) {
-            Log.e("SyncDebug", "Custom prompt backup exception: ${e.message}")
+            Log.e("SyncDebug", "Custom analyses backup failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Legacy single-prompt backup path, kept for callers that still pass a
+     * single prompt string. Writes the prompt into the active custom analysis
+     * and triggers a full list backup.
+     */
+    suspend fun backupCustomPrompt(promptText: String): Result<Unit> {
+        return try {
+            val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+            val active = CustomAnalysesStore.resolve(encryptedPrefs, scenario)
+            if (active != null) {
+                CustomAnalysesStore.setPrompt(encryptedPrefs, active.id, promptText)
+            }
+            backupCustomAnalyses()
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Legacy custom prompt backup failed: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -436,25 +507,64 @@ constructor(
     }
 
     /**
-     * Pulls the custom-analysis prompt from Drive if the Drive copy is newer than
-     * the local one. Runs every time the user opens Settings (via mergeFromDrive),
-     * so a second device that signs in with the same account or opens Settings
-     * picks up the prompt saved on the first device — without a fresh re-install.
+     * Pulls the list of custom analyses from Drive if the Drive copy is newer
+     * than the local one. Runs every time the user opens Settings or the journal
+     * screen (via mergeFromDrive), so a second device signed into the same
+     * account picks up the list saved on the first device — without a fresh
+     * re-install.
      *
-     * Returns true if local content was overwritten.
+     * Tries the new JSON-list file first, falls back to the legacy
+     * single-prompt file so a device with an older Drive backup still syncs.
+     *
+     * Returns true if the local list was overwritten.
      */
     suspend fun syncCustomPromptFromDriveIfNewer(): Boolean {
-        return try {
-            val driveTime =
-                driveRestoreManager.getFileModifiedTime("custom_analysis_prompt.txt")
-                    ?: return false
-            val localSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
-            // 5s grace so a just-uploaded file doesn't immediately re-download on
-            // the same device (clock skew between Drive and phone).
-            if (driveTime <= localSavedAt + 5_000) {
-                Log.d("SyncDebug", "Custom prompt sync: local is equal-or-newer — skipping")
+        val localSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+
+        // Prefer the new JSON list file.
+        val newDriveTime = driveRestoreManager.getFileModifiedTime("custom_analyses.json")
+        if (newDriveTime != null) {
+            if (newDriveTime <= localSavedAt + 5_000) {
+                Log.d("SyncDebug", "Custom analyses sync: local is equal-or-newer — skipping")
                 return false
             }
+            try {
+                val tmpFile = File(context.cacheDir, "custom_analyses_sync.tmp")
+                val result = driveRestoreManager.restoreFile("custom_analyses.json", tmpFile)
+                if (result.isSuccess && tmpFile.exists()) {
+                    val json = tmpFile.readText()
+                    tmpFile.delete()
+                    val list =
+                        try {
+                            CustomAnalysesStore.parse(json)
+                        } catch (e: Exception) {
+                            Log.e("SyncDebug", "Custom analyses JSON parse failed: ${e.message}")
+                            emptyList()
+                        }
+                    if (list.isNotEmpty()) {
+                        CustomAnalysesStore.save(encryptedPrefs, list)
+                        encryptedPrefs
+                            .edit()
+                            .putLong("custom_prompt_saved_at", newDriveTime)
+                            .commit()
+                        Log.d(
+                            "SyncDebug",
+                            "Custom analyses synced from Drive (${list.size} entries, Drive time $newDriveTime)",
+                        )
+                        return true
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SyncDebug", "Custom analyses sync failed (non-critical): ${e.message}")
+            }
+        }
+
+        // Legacy fallback: single-prompt text file. Updates the first entry only.
+        return try {
+            val legacyDriveTime =
+                driveRestoreManager.getFileModifiedTime("custom_analysis_prompt.txt")
+                    ?: return false
+            if (legacyDriveTime <= localSavedAt + 5_000) return false
             val tmpFile = File(context.cacheDir, "custom_prompt_sync.tmp")
             val result = driveRestoreManager.restoreFile("custom_analysis_prompt.txt", tmpFile)
             if (result.isFailure || !tmpFile.exists()) {
@@ -463,20 +573,29 @@ constructor(
             }
             val driveContent = tmpFile.readText()
             tmpFile.delete()
-            val localContent = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-            if (driveContent == localContent) {
-                Log.d("SyncDebug", "Custom prompt sync: content identical — skipping overwrite")
+            val existing = CustomAnalysesStore.load(encryptedPrefs)
+            val firstPrompt = existing.firstOrNull()?.prompt.orEmpty()
+            if (driveContent == firstPrompt) {
+                Log.d("SyncDebug", "Legacy prompt sync: identical content — skipping")
                 return false
             }
+            val merged =
+                existing.mapIndexed { idx, item ->
+                    if (idx == 0) item.copy(prompt = driveContent) else item
+                }
+            CustomAnalysesStore.save(encryptedPrefs, merged)
             encryptedPrefs
                 .edit()
                 .putString(Constants.PREF_CUSTOM_PROMPT, driveContent)
-                .putLong("custom_prompt_saved_at", driveTime)
+                .putLong("custom_prompt_saved_at", legacyDriveTime)
                 .commit()
-            Log.d("SyncDebug", "Custom prompt synced from Drive (${driveContent.length} chars, Drive time $driveTime)")
+            Log.d(
+                "SyncDebug",
+                "Legacy prompt synced from Drive (${driveContent.length} chars, Drive time $legacyDriveTime)",
+            )
             true
         } catch (e: Exception) {
-            Log.e("SyncDebug", "Custom prompt sync failed (non-critical): ${e.message}")
+            Log.e("SyncDebug", "Legacy prompt sync failed (non-critical): ${e.message}")
             false
         }
     }

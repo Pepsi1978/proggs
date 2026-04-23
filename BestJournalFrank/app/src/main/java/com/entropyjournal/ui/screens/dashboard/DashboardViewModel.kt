@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.entropyjournal.data.local.dao.JournalEntryDao
+import com.entropyjournal.data.prefs.CustomAnalysesStore
 import com.entropyjournal.data.repository.AdviceRepository
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.GenerateAdviceUseCase
@@ -108,9 +109,12 @@ constructor(
                             isScenarioSwitch = true,
                         )
                     adviceRepository.clearDashboard()
-                    if (currentScenario == 4) {
+                    if (currentScenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                         val customPrompt =
-                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                            CustomAnalysesStore.activePromptOrEmpty(
+                                encryptedPrefs,
+                                currentScenario,
+                            )
                         if (customPrompt.isNotBlank()) {
                             refreshDashboard()
                         }
@@ -121,9 +125,10 @@ constructor(
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
-                    if (_uiState.value.currentScenario == 4) {
+                    val active = _uiState.value.currentScenario
+                    if (active >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                         val customPrompt =
-                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                            CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, active)
                         adviceRepository.clearDashboard()
                         if (customPrompt.isNotBlank()) {
                             _uiState.value = _uiState.value.copy(isScenarioSwitch = true)
@@ -236,8 +241,8 @@ constructor(
     }
 
     fun getCustomPrompt(): String {
-        return encryptedPrefs.getString(com.entropyjournal.util.Constants.PREF_CUSTOM_PROMPT, "")
-            ?: ""
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario)
     }
 
     fun undoDashboard() {

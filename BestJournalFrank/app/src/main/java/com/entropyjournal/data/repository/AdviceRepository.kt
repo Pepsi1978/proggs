@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.entity.AdviceBlockEntity
+import com.entropyjournal.data.prefs.CustomAnalysesStore
 import com.entropyjournal.data.remote.gemini.GeminiApi
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.domain.model.Advice
@@ -1721,20 +1722,27 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
-        val base = when (scenario) {
-            0 -> if (verbose) summaryAnalysisSystemPromptVerbose else summaryAnalysisSystemPrompt
-            2 -> if (verbose) selfInsightAnalysisSystemPromptVerbose else selfInsightAnalysisSystemPrompt
-            3 -> if (verbose) goalsAnalysisSystemPromptVerbose else goalsAnalysisSystemPrompt
-            4 -> {
-                val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+        val base = when {
+            scenario == 0 ->
+                if (verbose) summaryAnalysisSystemPromptVerbose else summaryAnalysisSystemPrompt
+            scenario == 2 ->
+                if (verbose) selfInsightAnalysisSystemPromptVerbose
+                else selfInsightAnalysisSystemPrompt
+            scenario == 3 ->
+                if (verbose) goalsAnalysisSystemPromptVerbose else goalsAnalysisSystemPrompt
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX -> {
+                val custom =
+                    CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario)
                 if (custom.isNotBlank()) {
                     if (verbose) buildCustomAnalysisPromptVerbose(custom)
                     else buildCustomAnalysisPrompt(custom)
                 } else {
-                    if (verbose) entropyAnalysisSystemPromptVerbose else entropyAnalysisSystemPrompt
+                    if (verbose) entropyAnalysisSystemPromptVerbose
+                    else entropyAnalysisSystemPrompt
                 }
             }
-            else -> if (verbose) entropyAnalysisSystemPromptVerbose else entropyAnalysisSystemPrompt
+            else ->
+                if (verbose) entropyAnalysisSystemPromptVerbose else entropyAnalysisSystemPrompt
         }
         return base + "\n\n" + Constants.NO_EM_DASH_RULE
     }
@@ -1747,7 +1755,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
             "=== FRISCHE SELBSTERKENNTNIS-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
         } else if (scenario == 3 && freshAnalysis) {
             "=== FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
-        } else if (scenario == 4 && freshAnalysis) {
+        } else if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX && freshAnalysis) {
             "=== FRISCHE INDIVIDUELLE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse basierend auf dem Benutzer-Fokus. ==="
         } else if (freshAnalysis) {
             "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
@@ -1756,14 +1764,14 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
 
     private fun getActiveUserPromptSuffix(entryCount: Int): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
-            0 ->
+        return when {
+            scenario == 0 ->
                 "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Zusammenfassung und in mindestens einem Thema erscheinen. ==="
-            2 ->
+            scenario == 2 ->
                 "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Denkmuster, Gef${"\u00fc"}hle, ${"\u00dc"}berzeugungen und pers${"\u00f6"}nliche St${"\u00e4"}rken durchsucht werden. ==="
-            3 ->
+            scenario == 3 ->
                 "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Ziele, W${"\u00fc"}nsche und Vorhaben durchsucht werden. ==="
-            4 ->
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX ->
                 "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf den Benutzer-Fokus hin durchsucht werden. ==="
             else ->
                 "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Analyse und in mindestens einer Kategorie erscheinen. ==="
@@ -1955,7 +1963,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
         val now = System.currentTimeMillis()
 
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        if (scenario == 4) {
+        if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
             encryptedPrefs
                 .edit()
                 .putString("custom_header_top5", json.optString("ueberschrift_top5", ""))

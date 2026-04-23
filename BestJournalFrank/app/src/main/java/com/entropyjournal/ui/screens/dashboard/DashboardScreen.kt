@@ -1,6 +1,7 @@
 package com.entropyjournal.ui.screens.dashboard
 
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.entropyjournal.util.Constants
 import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -248,7 +249,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
                                     )
-                                } else if (uiState.currentScenario == 4) {
+                                } else if (uiState.currentScenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                                     val customPrompt = viewModel.getCustomPrompt()
                                     if (customPrompt.isBlank()) {
                                         Text(
