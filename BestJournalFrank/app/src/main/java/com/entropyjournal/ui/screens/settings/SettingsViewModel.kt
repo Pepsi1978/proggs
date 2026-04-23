@@ -10,8 +10,11 @@ import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.remote.googledrive.NeedConsentException
 import com.entropyjournal.domain.model.UserProfile
+import com.entropyjournal.domain.usecase.ImproveTextUseCase
+import com.entropyjournal.domain.usecase.RecordAudioUseCase
 import com.entropyjournal.domain.usecase.SignInWithGoogleUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
+import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DailyReminderManager
 import com.entropyjournal.util.PdfExporter
@@ -62,7 +65,20 @@ data class SettingsUiState(
     val userTimezone: String = "",
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
+    // Voice-input state for the Custom Prompt dialog (Individuelle Analyse).
+    val promptRecState: PromptRecState = PromptRecState.IDLE,
+    val promptTranscribed: String? = null,
+    val promptImproved: String? = null,
+    val promptUseImproved: Boolean = false,
+    val promptError: String? = null,
 )
+
+enum class PromptRecState {
+    IDLE,
+    RECORDING,
+    TRANSCRIBING,
+    IMPROVING,
+}
 
 @HiltViewModel
 class SettingsViewModel
@@ -74,10 +90,18 @@ constructor(
     private val journalEntryDao: JournalEntryDao,
     private val entryPhotoDao: EntryPhotoDao,
     private val entryFollowUpDao: EntryFollowUpDao,
+    private val recordAudioUseCase: RecordAudioUseCase,
+    private val transcribeAudioUseCase: TranscribeAudioUseCase,
+    private val improveTextUseCase: ImproveTextUseCase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
     private lateinit var reminderManager: DailyReminderManager
+
+    val promptAmplitude: StateFlow<Float> = recordAudioUseCase.amplitude
+
+    private var promptAudioFile: java.io.File? = null
+    private var promptRecordingJob: kotlinx.coroutines.Job? = null
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
@@ -619,5 +643,190 @@ constructor(
         viewModelScope.launch(Dispatchers.IO) {
             syncUseCase.backupFavorites(favorites.joinToString(","))
         }
+    }
+
+    // --- Custom-Prompt voice input (mirrors JournalViewModel.toggleRecording/improveText) ---
+
+    fun togglePromptRecording() {
+        when (_uiState.value.promptRecState) {
+            PromptRecState.RECORDING -> stopPromptRecording()
+            PromptRecState.IDLE -> startPromptRecording()
+            else -> Unit
+        }
+    }
+
+    private fun startPromptRecording() {
+        val audioFile =
+            java.io.File(context.cacheDir, "prompt_recording_${System.currentTimeMillis()}.wav")
+        promptAudioFile = audioFile
+        _uiState.value =
+            _uiState.value.copy(
+                promptRecState = PromptRecState.RECORDING,
+                promptError = null,
+                promptTranscribed = null,
+                promptImproved = null,
+                promptUseImproved = false,
+            )
+
+        promptRecordingJob =
+            viewModelScope.launch {
+                val soundsEnabled = encryptedPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)
+                val beepMs = 150
+                if (soundsEnabled)
+                    try {
+                        val sampleRate = 44100
+                        val beepSamples = sampleRate * beepMs / 1000
+                        val samples = ShortArray(beepSamples)
+                        val freq = 880.0
+                        val fadeLen = beepSamples / 8
+                        for (i in 0 until beepSamples) {
+                            val t = i.toDouble() / sampleRate
+                            val envelope =
+                                when {
+                                    i < fadeLen -> i.toDouble() / fadeLen
+                                    i > beepSamples - fadeLen ->
+                                        (beepSamples - i).toDouble() / fadeLen
+                                    else -> 1.0
+                                }
+                            samples[i] =
+                                (Short.MAX_VALUE *
+                                        0.5 *
+                                        envelope *
+                                        kotlin.math.sin(2 * Math.PI * freq * t))
+                                    .toInt()
+                                    .toShort()
+                        }
+                        val track =
+                            android.media.AudioTrack(
+                                android.media.AudioAttributes.Builder()
+                                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                    .setContentType(
+                                        android.media.AudioAttributes.CONTENT_TYPE_MUSIC
+                                    )
+                                    .build(),
+                                android.media.AudioFormat.Builder()
+                                    .setSampleRate(sampleRate)
+                                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                                    .build(),
+                                beepSamples * 2,
+                                android.media.AudioTrack.MODE_STATIC,
+                                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+                            )
+                        track.write(samples, 0, beepSamples)
+                        track.play()
+                        delay(beepMs.toLong() + 100)
+                        track.release()
+                    } catch (_: Exception) {
+                        /* Tone is optional */
+                    }
+
+                try {
+                    recordAudioUseCase.startRecording(audioFile)
+                } catch (e: Exception) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError = "Aufnahme fehlgeschlagen: ${e.message}",
+                        )
+                }
+            }
+
+        // Auto-stop after max duration
+        viewModelScope.launch {
+            val maxMinutes = encryptedPrefs.getInt(Constants.PREF_MAX_RECORDING_DURATION, 5)
+            delay(maxMinutes * 60 * 1000L)
+            if (_uiState.value.promptRecState == PromptRecState.RECORDING) {
+                stopPromptRecording()
+            }
+        }
+    }
+
+    private fun stopPromptRecording() {
+        recordAudioUseCase.stopRecording()
+
+        viewModelScope.launch {
+            promptRecordingJob?.join()
+            _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.TRANSCRIBING)
+
+            val audioFile = promptAudioFile ?: return@launch
+            transcribeAudioUseCase(audioFile)
+                .onSuccess { outcome ->
+                    val transcribed = outcome.text.trim()
+                    val fallbackNotice = outcome.groqError?.let {
+                        "Groq fehlgeschlagen ($it) — lokales Whisper verwendet."
+                    }
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptTranscribed = transcribed,
+                            promptError = fallbackNotice,
+                        )
+                    audioFile.delete()
+
+                    val autoImprove =
+                        encryptedPrefs.getBoolean(
+                            Constants.PREF_TEXT_IMPROVEMENT_DEFAULT,
+                            false,
+                        )
+                    if (autoImprove && transcribed.isNotBlank()) {
+                        improvePromptText()
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError = "Transkription fehlgeschlagen: ${error.message}",
+                        )
+                    audioFile.delete()
+                }
+        }
+    }
+
+    fun improvePromptText() {
+        val raw = _uiState.value.promptTranscribed ?: return
+        if (raw.isBlank()) return
+
+        _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.IMPROVING)
+        viewModelScope.launch {
+            improveTextUseCase(raw)
+                .onSuccess { improved ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptImproved = improved,
+                            promptUseImproved = true,
+                        )
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError = "Textverbesserung fehlgeschlagen: ${error.message}",
+                        )
+                }
+        }
+    }
+
+    fun setPromptUseImproved(use: Boolean) {
+        _uiState.value = _uiState.value.copy(promptUseImproved = use)
+    }
+
+    fun clearPromptVoiceState() {
+        promptAudioFile?.delete()
+        promptAudioFile = null
+        _uiState.value =
+            _uiState.value.copy(
+                promptRecState = PromptRecState.IDLE,
+                promptTranscribed = null,
+                promptImproved = null,
+                promptUseImproved = false,
+                promptError = null,
+            )
+    }
+
+    fun clearPromptError() {
+        _uiState.value = _uiState.value.copy(promptError = null)
     }
 }

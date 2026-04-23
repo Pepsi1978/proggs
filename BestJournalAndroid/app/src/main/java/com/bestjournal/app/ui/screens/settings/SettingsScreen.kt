@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Feedback
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -66,6 +68,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -90,6 +93,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -107,6 +112,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
+import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.ParticleBackground
 import com.bestjournal.app.ui.components.TwinklingStars
@@ -1729,8 +1735,39 @@ fun SettingsScreen(
                             val savedPrompt =
                                 scenarioPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                             var promptText by remember { mutableStateOf(savedPrompt) }
+                            val focusRequester = remember { FocusRequester() }
+
+                            // Sync transcription/improvement result into the text field.
+                            // When useImproved is on and improved exists → show improved.
+                            // Otherwise, as soon as a fresh transcription arrives, replace.
+                            val lastTranscribed = uiState.promptTranscribed
+                            val lastImproved = uiState.promptImproved
+                            val useImproved = uiState.promptUseImproved
+                            LaunchedEffect(lastTranscribed, lastImproved, useImproved) {
+                                when {
+                                    useImproved && lastImproved != null ->
+                                        promptText = lastImproved
+                                    lastTranscribed != null && lastImproved == null ->
+                                        promptText = lastTranscribed
+                                    !useImproved && lastTranscribed != null ->
+                                        promptText = lastTranscribed
+                                }
+                            }
+
+                            // Audio permission launcher
+                            val micPermissionLauncher =
+                                rememberLauncherForActivityResult(
+                                    androidx.activity.result.contract.ActivityResultContracts
+                                        .RequestPermission()
+                                ) { granted ->
+                                    if (granted) viewModel.togglePromptRecording()
+                                }
+
                             AlertDialog(
-                                onDismissRequest = { showCustomPromptDialog = false },
+                                onDismissRequest = {
+                                    viewModel.clearPromptVoiceState()
+                                    showCustomPromptDialog = false
+                                },
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
                                     Text(
@@ -1749,7 +1786,10 @@ fun SettingsScreen(
                                         OutlinedTextField(
                                             value = promptText,
                                             onValueChange = { promptText = it },
-                                            modifier = Modifier.fillMaxWidth().height(350.dp),
+                                            modifier =
+                                                Modifier.fillMaxWidth()
+                                                    .height(280.dp)
+                                                    .focusRequester(focusRequester),
                                             placeholder = {
                                                 val isDark = LocalIsDarkTheme.current
                                                 Text(
@@ -1765,6 +1805,194 @@ fun SettingsScreen(
                                             },
                                             textStyle = MaterialTheme.typography.bodyMedium,
                                         )
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        // Pen + Mic row below the text field (same layout as
+                                        // the Journal entry dialog)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            // Pen button → focus TextField / open keyboard
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                FloatingActionButton(
+                                                    onClick = { focusRequester.requestFocus() },
+                                                    modifier = Modifier.size(56.dp),
+                                                    containerColor =
+                                                        MaterialTheme.colorScheme.surfaceVariant,
+                                                    contentColor =
+                                                        MaterialTheme.colorScheme.onSurface,
+                                                    shape = CircleShape,
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Edit,
+                                                        contentDescription =
+                                                            stringResource(R.string.journal_write),
+                                                        modifier = Modifier.size(22.dp),
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    stringResource(R.string.journal_write),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color =
+                                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(16.dp))
+
+                                            Box(
+                                                modifier =
+                                                    Modifier.height(32.dp)
+                                                        .width(1.dp)
+                                                        .background(
+                                                            MaterialTheme.colorScheme.outlineVariant
+                                                        )
+                                            )
+
+                                            Spacer(modifier = Modifier.width(16.dp))
+
+                                            // Mic button → record via Whisper/Groq
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                AnimatedMicButton(
+                                                    isRecording =
+                                                        uiState.promptRecState ==
+                                                            PromptRecState.RECORDING,
+                                                    onClick = {
+                                                        val granted =
+                                                            androidx.core.content.ContextCompat
+                                                                .checkSelfPermission(
+                                                                    context,
+                                                                    android.Manifest.permission
+                                                                        .RECORD_AUDIO,
+                                                                ) ==
+                                                                android.content.pm.PackageManager
+                                                                    .PERMISSION_GRANTED
+                                                        if (granted) {
+                                                            viewModel.togglePromptRecording()
+                                                        } else {
+                                                            micPermissionLauncher.launch(
+                                                                android.Manifest.permission
+                                                                    .RECORD_AUDIO
+                                                            )
+                                                        }
+                                                    },
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    stringResource(R.string.journal_speak),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color =
+                                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+
+                                        // State banner below the buttons
+                                        val stateLabel =
+                                            when (uiState.promptRecState) {
+                                                PromptRecState.TRANSCRIBING ->
+                                                    stringResource(
+                                                        R.string.journal_state_transcribing
+                                                    )
+                                                PromptRecState.IMPROVING ->
+                                                    stringResource(R.string.journal_state_improving)
+                                                else -> null
+                                            }
+                                        if (stateLabel != null) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                androidx.compose.material3
+                                                    .CircularProgressIndicator(
+                                                        modifier = Modifier.size(16.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                    )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    stateLabel,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color =
+                                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+
+                                        // Improve text button / improved/original toggle
+                                        val canImprove =
+                                            uiState.promptTranscribed?.isNotBlank() == true &&
+                                                uiState.promptRecState == PromptRecState.IDLE
+                                        if (canImprove && uiState.promptImproved == null) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.Center,
+                                            ) {
+                                                OutlinedButton(
+                                                    onClick = { viewModel.improvePromptText() }
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.AutoAwesome,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        stringResource(R.string.journal_improve),
+                                                        style =
+                                                            MaterialTheme.typography.labelMedium,
+                                                    )
+                                                }
+                                            }
+                                        } else if (uiState.promptImproved != null) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                androidx.compose.material3.FilterChip(
+                                                    selected = !uiState.promptUseImproved,
+                                                    onClick = {
+                                                        viewModel.setPromptUseImproved(false)
+                                                    },
+                                                    label = {
+                                                        Text(stringResource(R.string.label_original))
+                                                    },
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                androidx.compose.material3.FilterChip(
+                                                    selected = uiState.promptUseImproved,
+                                                    onClick = {
+                                                        viewModel.setPromptUseImproved(true)
+                                                    },
+                                                    label = {
+                                                        Text(stringResource(R.string.label_improved))
+                                                    },
+                                                )
+                                            }
+                                        }
+
+                                        // Error display
+                                        uiState.promptError?.let { err ->
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                err,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
                                     }
                                 },
                                 confirmButton = {
@@ -1789,6 +2017,7 @@ fun SettingsScreen(
                                                 )
                                             }
                                             editor.apply()
+                                            viewModel.clearPromptVoiceState()
                                             showCustomPromptDialog = false
                                         }
                                     ) {
@@ -1799,7 +2028,12 @@ fun SettingsScreen(
                                     }
                                 },
                                 dismissButton = {
-                                    TextButton(onClick = { showCustomPromptDialog = false }) {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.clearPromptVoiceState()
+                                            showCustomPromptDialog = false
+                                        }
+                                    ) {
                                         Text(
                                             stringResource(R.string.action_cancel),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,

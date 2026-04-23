@@ -15,8 +15,11 @@ import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.remote.googledrive.DriveBackupManager
 import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
+import com.bestjournal.app.domain.usecase.ImproveTextUseCase
+import com.bestjournal.app.domain.usecase.RecordAudioUseCase
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
+import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyReminderManager
@@ -67,7 +70,21 @@ data class SettingsUiState(
     val deleteAccountInProgress: Boolean = false,
     // null = no error; non-null reason string triggers the error dialog in the screen.
     val deleteAccountDriveError: String? = null,
+    // Voice-input state for the Custom Prompt dialog (Individuelle Analyse).
+    // Mirrors the Journal mic/pen flow: record → transcribe → optional improve.
+    val promptRecState: PromptRecState = PromptRecState.IDLE,
+    val promptTranscribed: String? = null,
+    val promptImproved: String? = null,
+    val promptUseImproved: Boolean = false,
+    val promptError: String? = null,
 )
+
+enum class PromptRecState {
+    IDLE,
+    RECORDING,
+    TRANSCRIBING,
+    IMPROVING,
+}
 
 @HiltViewModel
 class SettingsViewModel
@@ -84,7 +101,16 @@ constructor(
     val analyticsTracker: AnalyticsTracker,
     private val profileChangeBus: com.bestjournal.app.util.ProfileChangeBus,
     private val driveBackupManager: DriveBackupManager,
+    private val recordAudioUseCase: RecordAudioUseCase,
+    private val transcribeAudioUseCase: TranscribeAudioUseCase,
+    private val improveTextUseCase: ImproveTextUseCase,
 ) : ViewModel() {
+
+    // Expose amplitude for potential animation inside the prompt dialog.
+    val promptAmplitude: StateFlow<Float> = recordAudioUseCase.amplitude
+
+    private var promptAudioFile: java.io.File? = null
+    private var promptRecordingJob: kotlinx.coroutines.Job? = null
 
     /** Call this whenever the user switches the dashboard scenario / profile. */
     fun notifyProfileChanged() {
@@ -710,5 +736,190 @@ constructor(
         )
         context.startActivity(intent)
         Runtime.getRuntime().exit(0)
+    }
+
+    // --- Custom-Prompt voice input (mirrors JournalViewModel.toggleRecording/improveText) ---
+
+    fun togglePromptRecording() {
+        when (_uiState.value.promptRecState) {
+            PromptRecState.RECORDING -> stopPromptRecording()
+            PromptRecState.IDLE -> startPromptRecording()
+            else -> Unit
+        }
+    }
+
+    private fun startPromptRecording() {
+        val audioFile =
+            java.io.File(context.cacheDir, "prompt_recording_${System.currentTimeMillis()}.wav")
+        promptAudioFile = audioFile
+        _uiState.value =
+            _uiState.value.copy(
+                promptRecState = PromptRecState.RECORDING,
+                promptError = null,
+                promptTranscribed = null,
+                promptImproved = null,
+                promptUseImproved = false,
+            )
+
+        promptRecordingJob =
+            viewModelScope.launch {
+                // Beep sound before recording
+                val soundsEnabled = encryptedPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)
+                val beepMs = 150
+                if (soundsEnabled)
+                    try {
+                        val sampleRate = 44100
+                        val beepSamples = sampleRate * beepMs / 1000
+                        val samples = ShortArray(beepSamples)
+                        val freq = 880.0
+                        val fadeLen = beepSamples / 8
+                        for (i in 0 until beepSamples) {
+                            val t = i.toDouble() / sampleRate
+                            val envelope =
+                                when {
+                                    i < fadeLen -> i.toDouble() / fadeLen
+                                    i > beepSamples - fadeLen ->
+                                        (beepSamples - i).toDouble() / fadeLen
+                                    else -> 1.0
+                                }
+                            samples[i] =
+                                (Short.MAX_VALUE *
+                                        0.5 *
+                                        envelope *
+                                        kotlin.math.sin(2 * Math.PI * freq * t))
+                                    .toInt()
+                                    .toShort()
+                        }
+                        val track =
+                            android.media.AudioTrack(
+                                android.media.AudioAttributes.Builder()
+                                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                    .setContentType(
+                                        android.media.AudioAttributes.CONTENT_TYPE_MUSIC
+                                    )
+                                    .build(),
+                                android.media.AudioFormat.Builder()
+                                    .setSampleRate(sampleRate)
+                                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                                    .build(),
+                                beepSamples * 2,
+                                android.media.AudioTrack.MODE_STATIC,
+                                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+                            )
+                        track.write(samples, 0, beepSamples)
+                        track.play()
+                        delay(beepMs.toLong() + 100)
+                        track.release()
+                    } catch (_: Exception) {
+                        /* Tone is optional */
+                    }
+
+                try {
+                    recordAudioUseCase.startRecording(audioFile)
+                } catch (e: Exception) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError =
+                                context.getString(R.string.journal_recording_error, e.message ?: ""),
+                        )
+                }
+            }
+
+        // Auto-stop after max duration
+        viewModelScope.launch {
+            val maxMinutes = encryptedPrefs.getInt(Constants.PREF_MAX_RECORDING_DURATION, 5)
+            delay(maxMinutes * 60 * 1000L)
+            if (_uiState.value.promptRecState == PromptRecState.RECORDING) {
+                stopPromptRecording()
+            }
+        }
+    }
+
+    private fun stopPromptRecording() {
+        recordAudioUseCase.stopRecording()
+
+        viewModelScope.launch {
+            promptRecordingJob?.join()
+            _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.TRANSCRIBING)
+
+            val audioFile = promptAudioFile ?: return@launch
+            transcribeAudioUseCase(audioFile)
+                .onSuccess { result ->
+                    val transcribed = result.text.trim()
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptTranscribed = transcribed,
+                        )
+                    audioFile.delete()
+
+                    val autoImprove =
+                        encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false)
+                    if (autoImprove && transcribed.isNotBlank()) {
+                        improvePromptText()
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError =
+                                context.getString(
+                                    R.string.journal_transcription_error,
+                                    error.message ?: "",
+                                ),
+                        )
+                    audioFile.delete()
+                }
+        }
+    }
+
+    fun improvePromptText() {
+        val raw = _uiState.value.promptTranscribed ?: return
+        if (raw.isBlank()) return
+
+        _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.IMPROVING)
+        viewModelScope.launch {
+            improveTextUseCase(raw)
+                .onSuccess { improved ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptImproved = improved,
+                            promptUseImproved = true,
+                        )
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            promptRecState = PromptRecState.IDLE,
+                            promptError =
+                                context.getString(R.string.error_generic, error.message ?: ""),
+                        )
+                }
+        }
+    }
+
+    fun setPromptUseImproved(use: Boolean) {
+        _uiState.value = _uiState.value.copy(promptUseImproved = use)
+    }
+
+    fun clearPromptVoiceState() {
+        promptAudioFile?.delete()
+        promptAudioFile = null
+        _uiState.value =
+            _uiState.value.copy(
+                promptRecState = PromptRecState.IDLE,
+                promptTranscribed = null,
+                promptImproved = null,
+                promptUseImproved = false,
+                promptError = null,
+            )
+    }
+
+    fun clearPromptError() {
+        _uiState.value = _uiState.value.copy(promptError = null)
     }
 }

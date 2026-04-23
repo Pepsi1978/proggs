@@ -112,6 +112,9 @@
     <string name="journal_improve_error">Textverbesserung fehlgeschlagen: %1$s</string>
     <string name="journal_save_error">Speichern fehlgeschlagen: %1$s</string>
     <string name="recording_tap_stop">Erneut tippen zum Stoppen</string>
+    <string name="journal_improve">Text verbessern</string>
+    <string name="journal_state_transcribing">Wird transkribiert…</string>
+    <string name="journal_state_improving">Wird verbessert…</string>
 
     <!-- Streak messages -->
     <string name="streak_365">Ein ganzes Jahr!</string>
