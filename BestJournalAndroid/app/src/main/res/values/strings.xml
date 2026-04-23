@@ -165,6 +165,8 @@
     <string name="entry_gallery">Galerie</string>
     <string name="entry_delete_title">Eintrag löschen?</string>
     <string name="entry_delete_message">Diesen Eintrag unwiderruflich löschen?</string>
+    <string name="entry_journal_entry_title">Tagebucheintrag</string>
+    <string name="entry_delete_entry_cd">Tagebucheintrag löschen</string>
 
     <!-- Share dialog -->
     <string name="share_title">Eintrag teilen</string>
@@ -484,7 +486,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.14.0</string>
+    <string name="settings_about_version">Best Journal V0.14.1</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -1266,5 +1268,5 @@
     <!-- Premium feature: unlimited Nachträge per journal entry -->
     <string name="paywall_feature_followups">Unbegrenzte Nachträge zu jedem Tagebucheintrag</string>
     <string name="settings_premium_feature_followups">Unbegrenzte Nachträge</string>
-    <string name="settings_premium_feature_followups_desc">Ergänze jederzeit neue Gedanken zu bereits gespeicherten Einträgen, so oft du möchtest. Jeder Nachtrag fließt automatisch ins Dashboard mit ein.</string>
+    <string name="settings_premium_feature_followups_desc">So viele Nachträge pro Eintrag wie du möchtest</string>
 </resources>

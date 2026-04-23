@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -307,15 +309,9 @@ fun EntryDetailScreen(
                     )
                 }
             },
-            actions = {
-                IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
-                    Icon(
-                        Icons.Rounded.Delete,
-                        stringResource(R.string.action_delete),
-                        tint = NeonRed,
-                    )
-                }
-            },
+            // Delete icon moved into the yellow entry bubble itself so it sits
+            // next to the "Tagebucheintrag"-header and the timestamp, mirroring
+            // the Nachtrag bubble layout.
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         )
 
@@ -324,21 +320,25 @@ fun EntryDetailScreen(
                 modifier = Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text(
-                            "${DateTimeFormatter.formatFull(entry.timestamp)} \u00b7 ${DateTimeFormatter.formatRelative(context, entry.timestamp)}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        if (!entry.summary.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                // Summary card \u2014 Frank-style: only rendered when a summary exists.
+                // Centered "Zusammenfassung" label in primary color with titleMedium
+                // typography and a 16dp spacer to the bullet list. Bullets are bold.
+                // No timestamp here \u2014 the timestamp lives inside the yellow entry
+                // bubble below, not in the summary card.
+                if (!entry.summary.isNullOrBlank()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start,
+                        ) {
                             Text(
                                 stringResource(R.string.entry_summary),
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             entry.summary
                                 .lines()
                                 .filter { it.trimStart().startsWith("\u2022") }
@@ -457,13 +457,6 @@ fun EntryDetailScreen(
                     }
                 }
 
-                // AI Act Art. 50 — show "AI-generated" badge while the improved text is shown
-                if (hasImproved && !isShowingOriginal) {
-                    com.bestjournal.app.ui.components.AiGeneratedBadgeInline(
-                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
-                    )
-                }
-
                 val textFieldColors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -473,6 +466,11 @@ fun EntryDetailScreen(
                         cursorColor = MaterialTheme.colorScheme.primary,
                     )
 
+                // Main journal-entry bubble — Frank 1:1: yellow "Tagebucheintrag"
+                // header with Book icon, in-bubble delete IconButton (NeonRed),
+                // timestamp row, saved indicator, and the "Mit KI nachtraeglich
+                // verbessern" OutlinedButton INSIDE the bubble (only when the
+                // entry has not been improved yet).
                 GlassCard(
                     modifier =
                         if (hasImproved)
@@ -482,9 +480,56 @@ fun EntryDetailScreen(
                                     if (dragAmount > 40) selectedTab = 0
                                 }
                             }
-                        else Modifier
+                        else Modifier,
+                    glowColor = NeonAmber,
                 ) {
-                    Column {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Book,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = NeonAmber,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.entry_journal_entry_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = NeonAmber,
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.showDeleteDialog(true)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription =
+                                        stringResource(R.string.entry_delete_entry_cd),
+                                    tint = NeonRed,
+                                )
+                            }
+                        }
+                        // Date + relative time, aligned under the Book icon with
+                        // a small negative offset so it sits tight under the
+                        // header row — mirrors FollowUpInlineCard.
+                        Text(
+                            "${DateTimeFormatter.formatFull(entry.timestamp)} · ${DateTimeFormatter.formatRelative(context, entry.timestamp)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(start = 4.dp).offset(y = (-8).dp),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         AnimatedContent(
                             targetState = isShowingOriginal,
                             transitionSpec = {
@@ -555,53 +600,34 @@ fun EntryDetailScreen(
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
-                    }
-                }
-
-                if (!hasImproved) {
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        glowColor = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Button(
+                        if (!hasImproved) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
                                 onClick = { geminiGate.run { viewModel.improveTextWithAi() } },
                                 enabled = !uiState.isImproving,
-                                shape = RoundedCornerShape(14.dp),
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                        disabledContainerColor =
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                        disabledContentColor =
-                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                                    ),
+                                shape = RoundedCornerShape(12.dp),
                             ) {
                                 if (uiState.isImproving) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(16.dp),
                                         strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         stringResource(R.string.entry_improving),
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = MaterialTheme.typography.labelMedium,
                                     )
                                 } else {
                                     Icon(
                                         Icons.Rounded.AutoAwesome,
                                         contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(16.dp),
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         stringResource(R.string.entry_improve_with_ai),
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = MaterialTheme.typography.labelMedium,
                                     )
                                 }
                             }
@@ -814,9 +840,33 @@ fun EntryDetailScreen(
                                         edgeTtsGate.run {
                                             isTtsLoading = true
                                             isSpeaking = true
-                                            val speakText =
+                                            // Frank-style TTS: read the full bubble
+                                            // tree — main entry (prefixed with its
+                                            // timestamp per the user's request) plus
+                                            // every Nachtrag, each announced as
+                                            // "Nachtrag Eins/Zwei/..." before its text.
+                                            val baseText =
                                                 if (isShowingOriginal) entry.rawText
                                                 else entry.displayText
+                                            val speakText = buildString {
+                                                append(
+                                                    DateTimeFormatter.formatFull(entry.timestamp)
+                                                )
+                                                append(". ")
+                                                append(baseText)
+                                                uiState.followUps.forEachIndexed { index, fu ->
+                                                    append("\n\nNachtrag ")
+                                                    append(germanNumberWord(index + 1))
+                                                    append(". ")
+                                                    val fuText =
+                                                        if (fu.isImproved &&
+                                                            !fu.improvedText.isNullOrBlank()
+                                                        )
+                                                            fu.improvedText!!
+                                                        else fu.text
+                                                    append(fuText)
+                                                }
+                                            }
                                             val voice =
                                                 ttsPrefs?.getString(
                                                     com.bestjournal.app.util.Constants

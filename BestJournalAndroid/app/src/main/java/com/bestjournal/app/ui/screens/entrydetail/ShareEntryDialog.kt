@@ -26,7 +26,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,8 +58,10 @@ fun ShareEntryDialog(
     onDismiss: () -> Unit,
     followUps: List<EntryFollowUpEntity> = emptyList(),
 ) {
+    // Frank-style auto-logic: if an improved version exists, always use it;
+    // otherwise fall back to the original. No more RadioButtons — the user
+    // asked us to drop the "Original vs. Verbessert" choice here.
     val hasImproved = entry.isImproved && !entry.improvedText.isNullOrBlank()
-    var useImproved by remember { mutableStateOf(hasImproved) }
     var includeEntry by remember { mutableStateOf(true) }
     val selectedFollowUps = remember(followUps) { List(followUps.size) { true }.toMutableStateList() }
     val selectedPhotos = remember(photos) { List(photos.size) { true }.toMutableStateList() }
@@ -83,38 +84,6 @@ fun ShareEntryDialog(
                         .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // Original / Verbessert — Android-specific: the share dialog had
-                // this radio pair before Nachtraege existed, keep it so users
-                // can still pick which version of the main text goes out.
-                if (hasImproved) {
-                    Text(
-                        stringResource(R.string.share_which_version),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { useImproved = false },
-                    ) {
-                        RadioButton(selected = !useImproved, onClick = { useImproved = false })
-                        Text(
-                            stringResource(R.string.label_original),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { useImproved = true },
-                    ) {
-                        RadioButton(selected = useImproved, onClick = { useImproved = true })
-                        Text(
-                            stringResource(R.string.share_improved_version),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    Spacer(modifier = Modifier.fillMaxWidth())
-                }
-
                 // "Was möchtest du teilen?" section — lets the user drop the
                 // main entry entirely (e.g. share only a Nachtrag), and
                 // individually toggle each Nachtrag.
@@ -210,7 +179,7 @@ fun ShareEntryDialog(
                     val text =
                         buildShareText(
                             entry = entry,
-                            useImproved = useImproved && hasImproved,
+                            useImproved = hasImproved,
                             context = context,
                             followUps = includedFollowUps,
                             includeEntryBody = includeEntry,
