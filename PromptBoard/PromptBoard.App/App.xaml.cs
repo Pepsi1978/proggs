@@ -6,7 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using PromptBoard.App.Services;
+using PromptBoard.Core.Repositories;
+using PromptBoard.Core.Services;
 using PromptBoard.Data;
+using PromptBoard.Data.Repositories;
+using PromptBoard.ViewModels;
 using Serilog;
 
 namespace PromptBoard.App;
@@ -52,8 +57,26 @@ public partial class App : Application
             .UseSerilog()
             .ConfigureServices((context, services) =>
             {
+                // EF Core (scoped is the default; transient for WinUI so each
+                // resolution gets a fresh unit-of-work, simpler for MVP).
                 services.AddDbContext<PromptBoardDbContext>(options =>
-                    options.UseSqlite($"Data Source={dbPath}"));
+                    options.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Transient);
+
+                // Repositories
+                services.AddTransient<ICategoryRepository, CategoryRepository>();
+                services.AddTransient<IPromptRepository, PromptRepository>();
+                services.AddTransient<IAiImprovementPromptRepository, AiImprovementPromptRepository>();
+                services.AddTransient<IAppSettingsRepository, AppSettingsRepository>();
+
+                // Utilities
+                services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();
+                services.AddSingleton<IDialogService, DialogService>();
+
+                // ViewModels
+                services.AddSingleton<MainViewModel>();
+
+                // Window has a parameterless ctor; MainPage resolves MainViewModel
+                // from the container lazily in its Loaded handler.
             })
             .Build();
 

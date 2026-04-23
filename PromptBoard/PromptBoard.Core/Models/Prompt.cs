@@ -1,0 +1,48 @@
+using System;
+using PromptBoard.Core.Enums;
+
+namespace PromptBoard.Core.Models;
+
+/// <summary>
+/// A single prompt. Stored together with AiImprovementPrompt in one
+/// table using a TPH discriminator.
+/// </summary>
+public class Prompt : BaseEntity
+{
+    public Guid CategoryId { get; set; }
+
+    public Category Category { get; set; } = null!;
+
+    /// <summary>
+    /// Short label shown on the bar (5–7 words). The spec allows free text
+    /// but UI will hint the user to keep it short.
+    /// </summary>
+    public string ShortLabel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The canonical user-authored or dictated prompt text. Never null and
+    /// never overwritten by AI improvement.
+    /// </summary>
+    public string OriginalText { get; set; } = string.Empty;
+
+    /// <summary>AI-improved version. Null until Gemini has been run at least once.</summary>
+    public string? ImprovedText { get; set; }
+
+    /// <summary>Which version gets inserted on click.</summary>
+    public PromptVersion ActiveVersion { get; set; } = PromptVersion.Original;
+
+    /// <summary>
+    /// If true, this prompt is automatically appended to every insertion
+    /// (a "header" that stays pinned to the chain).
+    /// </summary>
+    public bool IsAlwaysOn { get; set; }
+
+    /// <summary>Ordering within the category.</summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// Which Gemini meta-prompt produced the last ImprovedText. Lets the
+    /// user see provenance and re-run against a different meta-prompt.
+    /// </summary>
+    public Guid? ImprovedByAiPromptId { get; set; }
+}

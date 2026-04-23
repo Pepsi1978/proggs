@@ -10,7 +10,7 @@ namespace PromptBoard.App;
 
 public sealed partial class MainWindow : Window
 {
-    private const int DefaultBarHeight = 140;
+    private const int DefaultBarHeight = 200;
 
     public MainWindow()
     {
@@ -49,7 +49,6 @@ public sealed partial class MainWindow : Window
                 DefaultBarHeight));
         }
 
-        // Apply WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW so the bar does not steal focus.
         try
         {
             NativeMethods.MakeNoActivateToolWindow(hwnd);
