@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Ви самі вирішуєте, на чому ШІ має зосередитися.\n\nНапишіть власну тему аналізу, наприклад:\n\n• «Знайди всі згадки про спорт»\n• «Проаналізуй мої перепади настрою»\n• «Покажи, коли я найпродуктивніший»\n\nПовний контроль для тих, хто точно знає, що шукає.</string>
     <string name="profile_custom_prompt">Що для вас особливо важливо? На чому ШІ має зосередитися при аналізі ваших записів?</string>
     <string name="profile_select_hint">Виберіть профіль. Торкніться профілю, щоб отримати докладніше пояснення.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Кілька власних профілів</string>
+    <string name="profiles_premium_desc">Із Premium ти створюєш стільки власних профілів аналізу, скільки хочеш. Наприклад, один для спорту, один для роботи, один для сім’ї. Кожен профіль аналізує твої записи щоденника зі своїм фокусом.</string>
+    <string name="profiles_benefit_many">Створюй необмежену кількість власних профілів</string>
+    <string name="profiles_benefit_switch">Перемикайся між фокусами будь-коли</string>
+    <string name="profiles_benefit_named">Давай кожному профілю свою назву</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Усі записи з фото як документ</string>
     <string name="settings_premium_feature_voice">Точніше розпізнавання мови</string>
     <string name="settings_premium_feature_voice_desc">Вища якість голосових записів</string>
+    <string name="settings_premium_feature_profiles">Необмежені власні профілі</string>
+    <string name="settings_premium_feature_profiles_desc">Кілька напрямків аналізу поруч</string>
     <string name="settings_unlock_premium">Відкрити Преміум</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Підсумки тижня, місяця і року з ШІ</string>
     <string name="paywall_feature_pdf">Експорт записів з фото у PDF</string>
     <string name="paywall_feature_noads">Говоріть або пишіть спокійно, без реклами</string>
+    <string name="paywall_feature_profiles">Необмежені власні профілі аналізу</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Знайдіть внутрішній спокій</string>

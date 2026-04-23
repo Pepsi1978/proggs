@@ -323,6 +323,12 @@
     <string name="profile_custom_long">AI가 무엇에 집중할지 직접 정해요.\n\n자신의 분석 주제를 적어 주세요. 예를 들어:\n\n• 「운동에 대한 모든 언급을 찾아 줘」\n• 「내 기분 변화를 분석해 줘」\n• 「내가 가장 생산적인 때를 보여 줘」\n\n원하는 것을 정확히 아는 사람을 위한 완전한 자유.</string>
     <string name="profile_custom_prompt">당신에게 특히 중요한 것은 무엇인가요? 기록을 분석할 때 AI가 무엇에 집중해야 할까요?</string>
     <string name="profile_select_hint">프로필을 고르세요. 자세한 설명을 보려면 프로필을 눌러 주세요.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">여러 맞춤 프로필</string>
+    <string name="profiles_premium_desc">Premium으로 원하는 만큼 맞춤 분석 프로필을 만들 수 있어요. 예를 들어 운동용, 일용, 가족용 등. 각 프로필이 자기만의 관점으로 일기를 분석해요.</string>
+    <string name="profiles_benefit_many">무제한 맞춤 프로필 만들기</string>
+    <string name="profiles_benefit_switch">언제든 관점 전환하기</string>
+    <string name="profiles_benefit_named">각 프로필에 원하는 이름 붙이기</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">사진이 담긴 모든 기록을 문서로</string>
     <string name="settings_premium_feature_voice">더 정확한 음성 인식</string>
     <string name="settings_premium_feature_voice_desc">음성 기록의 품질이 더 높아져요</string>
+    <string name="settings_premium_feature_profiles">무제한 맞춤 프로필</string>
+    <string name="settings_premium_feature_profiles_desc">여러 분석 관점을 동시에</string>
     <string name="settings_unlock_premium">프리미엄 열기</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">AI가 만드는 주간·월간·연간 돌아보기</string>
     <string name="paywall_feature_pdf">사진과 함께 기록을 PDF로 내보내기</string>
     <string name="paywall_feature_noads">광고 없이 말하고 적기</string>
+    <string name="paywall_feature_profiles">무제한 맞춤 분석 프로필</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">내 안의 고요함을 찾아요</string>

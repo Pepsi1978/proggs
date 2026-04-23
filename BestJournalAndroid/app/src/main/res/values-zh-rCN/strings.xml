@@ -323,6 +323,12 @@
     <string name="profile_custom_long">由你决定 AI 关注什么。\n\n写下自己的分析焦点，例如：\n\n•「找出所有关于运动的提及」\n•「分析我的情绪起伏」\n•「告诉我我在哪些时候最有效率」\n\n给很清楚自己在找什么的人完全的掌控。</string>
     <string name="profile_custom_prompt">对你特别重要的是什么？分析你的条目时 AI 该关注什么？</string>
     <string name="profile_select_hint">选一个模板。点一下模板查看更多说明。</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">多个自定义档案</string>
+    <string name="profiles_premium_desc">用 Premium 你可以创建任意多个自定义分析档案。例如一个用于运动，一个用于工作，一个用于家庭。每个档案都以自己的重点来分析你的日记。</string>
+    <string name="profiles_benefit_many">创建无限个自定义档案</string>
+    <string name="profiles_benefit_switch">随时在你的重点之间切换</string>
+    <string name="profiles_benefit_named">为每个档案取自己的名字</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">把带图片的条目导出成文档</string>
     <string name="settings_premium_feature_voice">更准的语音识别</string>
     <string name="settings_premium_feature_voice_desc">语音条目质量更高</string>
+    <string name="settings_premium_feature_profiles">无限个自定义档案</string>
+    <string name="settings_premium_feature_profiles_desc">多个分析重点并排进行</string>
     <string name="settings_unlock_premium">解锁高级版</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">AI 生成每周、每月、每年的回顾</string>
     <string name="paywall_feature_pdf">把带照片的条目导出为 PDF</string>
     <string name="paywall_feature_noads">没有广告，安心说话或书写</string>
+    <string name="paywall_feature_profiles">无限个自定义分析档案</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">找回内心的宁静</string>

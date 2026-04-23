@@ -323,6 +323,12 @@
     <string name="profile_custom_long">तुम्ही स्वतः ठरवता AI ने काय पहावे.\n\nतुमचा स्वतःचा विश्लेषण फोकस लिहा, उदाहरणार्थ:\n\n• \u201cखेळाचे सर्व उल्लेख शोधा\u201d\n• \u201cमाझ्या मनस्थितीतील बदल विश्लेषण करा\u201d\n• \u201cमी सर्वात उत्पादक कधी असतो ते दाखव\u201d\n\nज्यांना नेमके काय शोधायचे आहे ते माहीत आहे त्यांच्यासाठी पूर्ण नियंत्रण.</string>
     <string name="profile_custom_prompt">तुम्हाला काय महत्त्वाचे वाटते? तुमच्या दैनंदिनी नोंदींच्या विश्लेषणात AI ने कशावर लक्ष केंद्रित करावे?</string>
     <string name="profile_select_hint">एक प्रोफाइल निवडा. सविस्तर स्पष्टीकरणासाठी प्रोफाइलवर टॅप करा.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">अनेक सानुकूल प्रोफाइल</string>
+    <string name="profiles_premium_desc">Premium सह तू हव्या तितक्या सानुकूल विश्लेषण प्रोफाइल बनवू शकतोस. उदाहरणार्थ एक खेळासाठी, एक कामासाठी, एक कुटुंबासाठी. प्रत्येक प्रोफाइल तुझ्या डायरी नोंदींचे स्वतःच्या फोकसने विश्लेषण करते.</string>
+    <string name="profiles_benefit_many">अमर्यादित सानुकूल प्रोफाइल बनव</string>
+    <string name="profiles_benefit_switch">कधीही फोकसमध्ये बदल कर</string>
+    <string name="profiles_benefit_named">प्रत्येक प्रोफाइलला स्वतःचे नाव दे</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">सर्व दैनंदिनी नोंदी फोटोसह दस्तऐवज म्हणून</string>
     <string name="settings_premium_feature_voice">अधिक अचूक वाक् ओळख</string>
     <string name="settings_premium_feature_voice_desc">तुमच्या वाक् नोंदींसाठी उच्च गुणवत्ता</string>
+    <string name="settings_premium_feature_profiles">अमर्यादित सानुकूल प्रोफाइल</string>
+    <string name="settings_premium_feature_profiles_desc">अनेक विश्लेषण फोकस एकत्र</string>
     <string name="settings_unlock_premium">Premium अनलॉक करा</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">AI सह साप्ताहिक, मासिक आणि वार्षिक आढावे</string>
     <string name="paywall_feature_pdf">फोटोसह दैनंदिनी नोंदी PDF म्हणून निर्यात करा</string>
     <string name="paywall_feature_noads">जाहिरातींशिवाय निर्विघ्नपणे बोला किंवा लिहा</string>
+    <string name="paywall_feature_profiles">अमर्यादित सानुकूल विश्लेषण प्रोफाइल</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">तुमची आंतरिक शांती मिळवा</string>

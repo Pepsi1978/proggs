@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Tu décides toi-même ce sur quoi l\'IA doit se concentrer.\n\nÉcris ton propre centre d\'analyse, par exemple\u00A0:\n\n• «\u00A0Trouve toutes les mentions du sport\u00A0»\n• «\u00A0Analyse mes variations d\'humeur\u00A0»\n• «\u00A0Montre-moi quand je suis le plus productif\u00A0»\n\nContrôle total pour celles et ceux qui savent exactement ce qu\'ils cherchent.</string>
     <string name="profile_custom_prompt">Qu\'est-ce qui compte particulièrement pour toi\u202F? Sur quoi l\'IA doit-elle se concentrer dans l\'analyse de tes entrées de journal\u202F?</string>
     <string name="profile_select_hint">Choisis un profil. Appuie sur un profil pour une explication plus détaillée.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Plusieurs profils personnalisés</string>
+    <string name="profiles_premium_desc">Avec Premium, tu crées autant de profils d’analyse personnalisés que tu veux. Par exemple un pour le sport, un pour ton travail, un pour ta famille. Chaque profil analyse tes entrées de journal avec son propre focus.</string>
+    <string name="profiles_benefit_many">Créer un nombre illimité de profils personnalisés</string>
+    <string name="profiles_benefit_switch">Passer entre tes focus à tout moment</string>
+    <string name="profiles_benefit_named">Donner un nom propre à chaque profil</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Toutes tes entrées de journal avec photos en document</string>
     <string name="settings_premium_feature_voice">Reconnaissance vocale plus précise</string>
     <string name="settings_premium_feature_voice_desc">Qualité supérieure pour tes entrées vocales</string>
+    <string name="settings_premium_feature_profiles">Profils personnalisés illimités</string>
+    <string name="settings_premium_feature_profiles_desc">Plusieurs axes d’analyse en parallèle</string>
     <string name="settings_unlock_premium">Débloquer Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -810,6 +818,7 @@
     <string name="paywall_feature_retro">Rétrospectives hebdo, mensuelles et annuelles avec IA</string>
     <string name="paywall_feature_pdf">Exporte tes entrées avec photos en PDF</string>
     <string name="paywall_feature_noads">Parle ou écris tranquillement, sans publicité</string>
+    <string name="paywall_feature_profiles">Profils d’analyse personnalisés illimités</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Trouve ton calme intérieur</string>

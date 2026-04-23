@@ -323,6 +323,12 @@
     <string name="profile_custom_long">YZ\'nin neye odaklanacağına sen karar verirsin.\n\nKendi analiz odağını yaz, örneğin:\n\n• «Spora dair tüm anmaları bul»\n• «Ruh hali dalgalanmalarımı incele»\n• «En verimli olduğum anları göster»\n\nNe aradığını tam bilenler için tam kontrol.</string>
     <string name="profile_custom_prompt">Senin için özellikle önemli olan nedir? YZ girişlerini analiz ederken neye odaklanmalı?</string>
     <string name="profile_select_hint">Bir profil seç. Daha ayrıntılı açıklama için profile dokun.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Birden fazla özel profil</string>
+    <string name="profiles_premium_desc">Premium ile istediğin kadar özel analiz profili oluşturabilirsin. Örneğin biri spor için, biri işin için, biri ailen için. Her profil günlük kayıtlarını kendi odağıyla analiz eder.</string>
+    <string name="profiles_benefit_many">Sınırsız özel profil oluştur</string>
+    <string name="profiles_benefit_switch">Odakların arasında istediğin zaman geçiş yap</string>
+    <string name="profiles_benefit_named">Her profile kendi adını ver</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Tüm girişler fotoğraflarla belge olarak</string>
     <string name="settings_premium_feature_voice">Daha kesin ses tanıma</string>
     <string name="settings_premium_feature_voice_desc">Sesli girişler için daha yüksek kalite</string>
+    <string name="settings_premium_feature_profiles">Sınırsız özel profil</string>
+    <string name="settings_premium_feature_profiles_desc">Birden fazla analiz odağı yan yana</string>
     <string name="settings_unlock_premium">Premium\'u aç</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">YZ ile haftalık, aylık ve yıllık geri bakışlar</string>
     <string name="paywall_feature_pdf">Girişlerini fotoğraflarla PDF\'ye aktar</string>
     <string name="paywall_feature_noads">Reklam olmadan konuş ya da yaz</string>
+    <string name="paywall_feature_profiles">Sınırsız özel analiz profili</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">İç huzurunu bul</string>

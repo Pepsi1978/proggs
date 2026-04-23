@@ -314,6 +314,12 @@
     <string name="profile_custom_long">You decide what the AI should focus on.\n\nWrite your own analysis focus, for example:\n\n• "Find all mentions of exercise"\n• "Analyze my mood swings"\n• "Show me when I\'m most productive"\n\nFull control for anyone who knows exactly what they\'re looking for.</string>
     <string name="profile_custom_prompt">What matters most to you? What should the AI focus on when analyzing your journal entries?</string>
     <string name="profile_select_hint">Choose a profile. Tap a profile for a detailed explanation.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Multiple custom profiles</string>
+    <string name="profiles_premium_desc">With Premium you can create as many custom analysis profiles as you want. For example one for sports, one for your work, one for your family. Each profile analyzes your journal entries with its own focus.</string>
+    <string name="profiles_benefit_many">Create unlimited custom profiles</string>
+    <string name="profiles_benefit_switch">Switch between your focuses anytime</string>
+    <string name="profiles_benefit_named">Give each profile its own name</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -404,6 +410,8 @@
     <string name="settings_premium_feature_pdf_desc">All journal entries with photos as a document</string>
     <string name="settings_premium_feature_voice">More precise voice recognition</string>
     <string name="settings_premium_feature_voice_desc">Higher quality for your voice entries</string>
+    <string name="settings_premium_feature_profiles">Unlimited custom profiles</string>
+    <string name="settings_premium_feature_profiles_desc">Multiple analysis focuses side by side</string>
     <string name="settings_unlock_premium">Unlock Premium</string>
     <!-- Export dialog -->
     <string name="settings_export_dialog_title">PDF Export</string>
@@ -766,6 +774,7 @@
     <string name="paywall_feature_retro">Weekly, monthly, and yearly AI reviews</string>
     <string name="paywall_feature_pdf">Export journal entries with photos as PDF</string>
     <string name="paywall_feature_noads">Speak or write without distractions, ad-free</string>
+    <string name="paywall_feature_profiles">Unlimited custom analysis profiles</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Find your inner peace</string>

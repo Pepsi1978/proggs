@@ -323,6 +323,12 @@
     <string name="profile_custom_long">คุณเป็นผู้กำหนดว่า AI ควรใส่ใจอะไร\n\nเขียนจุดโฟกัสของคุณเอง เช่น:\n\n• «หาการเอ่ยถึงการออกกำลังกายทั้งหมด»\n• «วิเคราะห์อารมณ์ขึ้นลงของฉัน»\n• «แสดงเวลาที่ฉันประสิทธิภาพสูงสุด»\n\nควบคุมเต็มที่สำหรับคนที่รู้ชัดว่าตามหาอะไร</string>
     <string name="profile_custom_prompt">อะไรสำคัญเป็นพิเศษสำหรับคุณ? AI ควรใส่ใจอะไรในการวิเคราะห์บันทึก?</string>
     <string name="profile_select_hint">เลือกโปรไฟล์ แตะโปรไฟล์เพื่อดูคำอธิบายละเอียด</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">หลายโปรไฟล์ที่กำหนดเอง</string>
+    <string name="profiles_premium_desc">ด้วย Premium คุณสร้างโปรไฟล์วิเคราะห์ที่กำหนดเองได้มากเท่าที่ต้องการ เช่น หนึ่งสำหรับกีฬา หนึ่งสำหรับงาน หนึ่งสำหรับครอบครัว แต่ละโปรไฟล์จะวิเคราะห์บันทึกของคุณในมุมของตัวเอง</string>
+    <string name="profiles_benefit_many">สร้างโปรไฟล์ที่กำหนดเองได้ไม่จำกัด</string>
+    <string name="profiles_benefit_switch">สลับระหว่างมุมวิเคราะห์ได้ทุกเมื่อ</string>
+    <string name="profiles_benefit_named">ตั้งชื่อเฉพาะให้แต่ละโปรไฟล์</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">บันทึกพร้อมภาพเป็นเอกสาร</string>
     <string name="settings_premium_feature_voice">การรู้จำเสียงแม่นยำกว่า</string>
     <string name="settings_premium_feature_voice_desc">คุณภาพสูงขึ้นสำหรับบันทึกเสียง</string>
+    <string name="settings_premium_feature_profiles">โปรไฟล์ที่กำหนดเองไม่จำกัด</string>
+    <string name="settings_premium_feature_profiles_desc">หลายมุมวิเคราะห์พร้อมกัน</string>
     <string name="settings_unlock_premium">ปลดล็อก Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี ด้วย AI</string>
     <string name="paywall_feature_pdf">ส่งออกบันทึกพร้อมภาพเป็น PDF</string>
     <string name="paywall_feature_noads">พูดหรือเขียนอย่างสงบ ไม่มีโฆษณา</string>
+    <string name="paywall_feature_profiles">โปรไฟล์วิเคราะห์ที่กำหนดเองไม่จำกัด</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">หาความสงบภายใน</string>

@@ -323,6 +323,12 @@
     <string name="profile_custom_long">AI ಏನನ್ನು ಗಮನಿಸಬೇಕು ಎಂಬುದನ್ನು ನೀವೇ ನಿರ್ಧರಿಸುತ್ತೀರಿ.\n\nನಿಮ್ಮ ಸ್ವಂತ ವಿಶ್ಲೇಷಣಾ ಫೋಕಸ್ ಬರೆಯಿರಿ, ಉದಾಹರಣೆಗೆ:\n\n• „ಕ್ರೀಡೆಯ ಎಲ್ಲಾ ಉಲ್ಲೇಖಗಳನ್ನು ಹುಡುಕಿ"\n• „ನನ್ನ ಮನಸ್ಥಿತಿ ಏರಿಳಿತಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ"\n• „ನಾನು ಯಾವಾಗ ಹೆಚ್ಚು ಉತ್ಪಾದಕ ಎಂದು ತೋರಿಸಿ"\n\nತಾವು ಏನನ್ನು ಹುಡುಕುತ್ತಿದ್ದಾರೆ ಎಂದು ನಿಖರವಾಗಿ ತಿಳಿದವರಿಗೆ ಪೂರ್ಣ ನಿಯಂತ್ರಣ.</string>
     <string name="profile_custom_prompt">ನಿಮಗೆ ವಿಶೇಷವಾಗಿ ಏನು ಮುಖ್ಯ? ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುವಾಗ AI ಯಾವುದರ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸಬೇಕು?</string>
     <string name="profile_select_hint">ಪ್ರೊಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ. ವಿವರವಾದ ವಿವರಣೆಗಾಗಿ ಪ್ರೊಫೈಲ್ ಮೇಲೆ ಟ್ಯಾಪ್ ಮಾಡಿ.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">ಬಹು ಕಸ್ಟಮ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="profiles_premium_desc">Premium ನೊಂದಿಗೆ ನೀನು ಬೇಕಾದಷ್ಟು ಕಸ್ಟಮ್ ವಿಶ್ಲೇಷಣಾ ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ರಚಿಸಬಹುದು. ಉದಾಹರಣೆಗೆ ಒಂದು ಕ್ರೀಡೆಗೆ, ಒಂದು ಕೆಲಸಕ್ಕೆ, ಒಂದು ಕುಟುಂಬಕ್ಕೆ. ಪ್ರತಿ ಪ್ರೊಫೈಲ್ ನಿನ್ನ ಡೈರಿ ನಮೂದುಗಳನ್ನು ತನ್ನದೇ ಗಮನದೊಂದಿಗೆ ವಿಶ್ಲೇಷಿಸುತ್ತದೆ.</string>
+    <string name="profiles_benefit_many">ಅಪರಿಮಿತ ಕಸ್ಟಮ್ ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ರಚಿಸು</string>
+    <string name="profiles_benefit_switch">ಯಾವಾಗ ಬೇಕಾದರೂ ಗಮನವನ್ನು ಬದಲಾಯಿಸು</string>
+    <string name="profiles_benefit_named">ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ತನ್ನದೇ ಹೆಸರು ಕೊಡು</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳು ಚಿತ್ರಗಳೊಂದಿಗೆ ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ</string>
     <string name="settings_premium_feature_voice">ನಿಖರ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
     <string name="settings_premium_feature_voice_desc">ನಿಮ್ಮ ಧ್ವನಿ ನಮೂದುಗಳಿಗೆ ಹೆಚ್ಚಿನ ಗುಣಮಟ್ಟ</string>
+    <string name="settings_premium_feature_profiles">ಅಪರಿಮಿತ ಕಸ್ಟಮ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
+    <string name="settings_premium_feature_profiles_desc">ಬಹು ವಿಶ್ಲೇಷಣಾ ಗಮನಗಳು ಪಕ್ಕಪಕ್ಕ</string>
     <string name="settings_unlock_premium">Premium ಅನ್‌ಲಾಕ್ ಮಾಡಿ</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -807,6 +815,7 @@
     <string name="paywall_feature_retro">AI ನೊಂದಿಗೆ ವಾರ, ತಿಂಗಳ ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು</string>
     <string name="paywall_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ ಡೈರಿ ನಮೂದುಗಳನ್ನು PDF ಆಗಿ ರಫ್ತು ಮಾಡಿ</string>
     <string name="paywall_feature_noads">ಜಾಹೀರಾತು ಇಲ್ಲದೆ, ಅಡಚಣೆಯಿಲ್ಲದೆ ಮಾತನಾಡಿ ಅಥವಾ ಬರೆಯಿರಿ</string>
+    <string name="paywall_feature_profiles">ಅಪರಿಮಿತ ಕಸ್ಟಮ್ ವಿಶ್ಲೇಷಣಾ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">ನಿಮ್ಮ ಆಂತರಿಕ ಶಾಂತಿ ಹುಡುಕಿ</string>

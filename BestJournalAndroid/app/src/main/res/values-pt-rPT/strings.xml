@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Decides no que a IA deve se concentrar.\n\nEscreva seu próprio foco de análise, por exemplo:\n\n• «Encontra todas as menções a esporte»\n• «Analisa as minhas oscilações de humor»\n• «Me mostra quando sou mais produtivo»\n\nControle total para quem sabe exatamente o que procura.</string>
     <string name="profile_custom_prompt">O que é mais importante para ti? No que a IA deve se concentrar ao analisar as tuas entradas de diário?</string>
     <string name="profile_select_hint">Escolha um perfil. Toca num perfil para uma explicação mais detalhada.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Vários perfis personalizados</string>
+    <string name="profiles_premium_desc">Com o Premium crias tantos perfis de análise personalizados quantos quiseres. Por exemplo um para desporto, um para o teu trabalho, um para a tua família. Cada perfil analisa as tuas entradas do diário com o seu próprio foco.</string>
+    <string name="profiles_benefit_many">Criar perfis personalizados ilimitados</string>
+    <string name="profiles_benefit_switch">Alternar entre os teus focos a qualquer momento</string>
+    <string name="profiles_benefit_named">Dar a cada perfil um nome próprio</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Todas as entradas com fotos como documento</string>
     <string name="settings_premium_feature_voice">Reconhecimento de voz mais preciso</string>
     <string name="settings_premium_feature_voice_desc">Qualidade maior para as tuas entradas de voz</string>
+    <string name="settings_premium_feature_profiles">Perfis personalizados ilimitados</string>
+    <string name="settings_premium_feature_profiles_desc">Vários focos de análise em paralelo</string>
     <string name="settings_unlock_premium">Desbloquear Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Retrospetivas semanal, mensal e anual com IA</string>
     <string name="paywall_feature_pdf">Exporte as tuas entradas com fotos em PDF</string>
     <string name="paywall_feature_noads">Fale ou escreve tranquilo, sem anúncios</string>
+    <string name="paywall_feature_profiles">Perfis de análise personalizados ilimitados</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Encontra sua calma interior</string>

@@ -323,6 +323,12 @@
     <string name="profile_custom_long">তুমি নিজে ঠিক করো এআই কিসের উপর মনোযোগ দেবে।\n\nনিজের বিশ্লেষণ ফোকাস লিখো, উদাহরণস্বরূপ:\n\n• „খেলার সব উল্লেখ খুঁজে বের করো\"\n• „আমার মেজাজের ওঠানামা বিশ্লেষণ করো\"\n• „দেখাও আমি কখন সবচেয়ে উৎপাদনশীল\"\n\nযারা ঠিক জানে তারা কী খুঁজছে তাদের জন্য পূর্ণ নিয়ন্ত্রণ।</string>
     <string name="profile_custom_prompt">তোমার কাছে কী বিশেষভাবে গুরুত্বপূর্ণ? তোমার দিনলিপির লেখা বিশ্লেষণে এআই কিসের উপর মনোযোগ দেবে?</string>
     <string name="profile_select_hint">একটি প্রোফাইল বেছে নাও। বিস্তারিত ব্যাখ্যার জন্য একটি প্রোফাইলে টাচ করো।</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">একাধিক কাস্টম প্রোফাইল</string>
+    <string name="profiles_premium_desc">Premium দিয়ে তুমি যত খুশি কাস্টম বিশ্লেষণ প্রোফাইল তৈরি করতে পারো। যেমন একটি খেলার জন্য, একটি কাজের জন্য, একটি পরিবারের জন্য। প্রতিটি প্রোফাইল তোমার ডায়েরি এন্ট্রিকে তার নিজস্ব ফোকাসে বিশ্লেষণ করে।</string>
+    <string name="profiles_benefit_many">অসীম কাস্টম প্রোফাইল তৈরি করো</string>
+    <string name="profiles_benefit_switch">যেকোনো সময় ফোকাসের মধ্যে পাল্টাও</string>
+    <string name="profiles_benefit_named">প্রতিটি প্রোফাইলকে নিজস্ব নাম দাও</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">সব দিনলিপির লেখা ছবি সহ নথি হিসেবে</string>
     <string name="settings_premium_feature_voice">আরো নির্ভুল ভয়েস রিকগনিশন</string>
     <string name="settings_premium_feature_voice_desc">তোমার ভয়েস লেখার জন্য উচ্চতর গুণমান</string>
+    <string name="settings_premium_feature_profiles">অসীম কাস্টম প্রোফাইল</string>
+    <string name="settings_premium_feature_profiles_desc">একাধিক বিশ্লেষণ ফোকাস পাশাপাশি</string>
     <string name="settings_unlock_premium">Premium আনলক করো</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -807,6 +815,7 @@
     <string name="paywall_feature_retro">এআই দিয়ে সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="paywall_feature_pdf">দিনলিপির লেখা ছবি সহ পিডিএফ হিসেবে এক্সপোর্ট করো</string>
     <string name="paywall_feature_noads">বিজ্ঞাপন ছাড়াই বলো বা লিখো</string>
+    <string name="paywall_feature_profiles">অসীম কাস্টম বিশ্লেষণ প্রোফাইল</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">তোমার ভেতরের শান্তি খুঁজে পাও</string>

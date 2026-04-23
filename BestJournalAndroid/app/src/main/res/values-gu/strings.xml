@@ -310,6 +310,12 @@
     <string name="profile_custom_long">AI શું ધ્યાન આપવું તે તમે જ નક્કી કરો.\n\nતમારો પોતાનો વિશ્લેષણ ફોકસ લખો, ઉદાહરણ:\n\n• \"રમતગમતના બધા ઉલ્લેખ શોધો\"\n• \"મારા મૂડ ફેરફારો વિશ્લેષણ કરો\"\n• \"ક્યારે હું સૌથી વધુ ઉત્પાદક છું\"\n\nજેઓ ઠીક ઠીક જાણે છે કે શું શોધવું છે.</string>
     <string name="profile_custom_prompt">તમારા માટે ખાસ શું મહત્વપૂર્ણ છે? AI ડાયરી નોંધો વિશ્લેષણ કરતી વખતે શેના પર ધ્યાન આપવું?</string>
     <string name="profile_select_hint">પ્રોફાઇલ પસંદ કરો. વધુ સ્પષ્ટ સ્પષ્ટીકરણ માટે પ્રોફાઇલ પર ટૅપ કરો.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">બહુવિધ કસ્ટમ પ્રોફાઇલ</string>
+    <string name="profiles_premium_desc">Premium સાથે તું તારે જેટલી જોઈએ એટલી કસ્ટમ વિશ્લેષણ પ્રોફાઇલ બનાવી શકે છે. જેમ કે એક રમત માટે, એક કામ માટે, એક પરિવાર માટે. દરેક પ્રોફાઇલ તારી ડાયરી એન્ટ્રીનું પોતાના ફોકસથી વિશ્લેષણ કરે છે.</string>
+    <string name="profiles_benefit_many">અમર્યાદિત કસ્ટમ પ્રોફાઇલ બનાવ</string>
+    <string name="profiles_benefit_switch">કોઈપણ સમયે ફોકસ વચ્ચે બદલ</string>
+    <string name="profiles_benefit_named">દરેક પ્રોફાઇલને પોતાનું નામ આપ</string>
 
     
     <string name="settings_title">સેટિંગ્સ</string>
@@ -402,6 +408,8 @@
     <string name="settings_premium_feature_pdf_desc">ફોટો સાથે document તરીકે ડાયરી</string>
     <string name="settings_premium_feature_voice">ચોક્કસ વાણી ઓળખ</string>
     <string name="settings_premium_feature_voice_desc">અવાજ નોંધ માટે ઊંચી ગુણવત્તા</string>
+    <string name="settings_premium_feature_profiles">અમર્યાદિત કસ્ટમ પ્રોફાઇલ</string>
+    <string name="settings_premium_feature_profiles_desc">બહુવિધ વિશ્લેષણ ફોકસ એક સાથે</string>
     <string name="settings_unlock_premium">Premium ખોલો</string>
     
     
@@ -781,6 +789,7 @@
     <string name="paywall_feature_retro">♻</string>
     <string name="paywall_feature_pdf">PDF ♻</string>
     <string name="paywall_feature_noads">♻</string>
+    <string name="paywall_feature_profiles">અમર્યાદિત કસ્ટમ વિશ્લેષણ પ્રોફાઇલ</string>
 
     
     <string name="paywall_headline_stress">♻</string>

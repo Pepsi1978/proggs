@@ -323,6 +323,12 @@
     <string name="profile_custom_long">آپ خود طے کرتے ہیں کہ AI کو کس پر توجہ دینی چاہیے۔\n\nاپنا تجزیاتی توجہ لکھیں، مثال کے طور پر:\n\n• \"کھیل کے تمام ذکر تلاش کریں\"\n• \"میرے موڈ کے اتار چڑھاؤ کا تجزیہ کریں\"\n• \"مجھے بتائیں کہ میں کب سب سے زیادہ پیداور ہوں\"\n\nان سب کے لیے پوری خودمختاری جو جانتے ہیں کہ وہ کیا ڈھونڈ رہے ہیں۔</string>
     <string name="profile_custom_prompt">آپ کے لیے کیا خاص اہمیت رکھتا ہے؟ AI کو آپ کے ڈائری اندراجات کے تجزیے میں کس پر توجہ دینی چاہیے؟</string>
     <string name="profile_select_hint">ایک پروفائل منتخب کریں۔ تفصیلی وضاحت کے لیے کسی پروفائل پر ٹیپ کریں۔</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">متعدد ذاتی پروفائلز</string>
+    <string name="profiles_premium_desc">Premium کے ساتھ تم جتنے چاہو ذاتی تجزیاتی پروفائلز بنا سکتے ہو۔ مثلاً ایک کھیل کے لیے، ایک کام کے لیے، ایک خاندان کے لیے۔ ہر پروفائل تمہاری ڈائری کے اندراجات کو اپنے فوکس سے تجزیہ کرتا ہے۔</string>
+    <string name="profiles_benefit_many">لامحدود ذاتی پروفائلز بناؤ</string>
+    <string name="profiles_benefit_switch">کسی بھی وقت فوکس تبدیل کرو</string>
+    <string name="profiles_benefit_named">ہر پروفائل کو اپنا نام دو</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">تمام ڈائری اندراجات تصاویر کے ساتھ دستاویز کے طور پر</string>
     <string name="settings_premium_feature_voice">زیادہ درست آواز شناخت</string>
     <string name="settings_premium_feature_voice_desc">آپ کے آواز اندراجات کے لیے اعلی معیار</string>
+    <string name="settings_premium_feature_profiles">لامحدود ذاتی پروفائلز</string>
+    <string name="settings_premium_feature_profiles_desc">متعدد تجزیاتی فوکس ساتھ ساتھ</string>
     <string name="settings_unlock_premium">‏Premium کھولیں</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -807,6 +815,7 @@
     <string name="paywall_feature_retro">‏AI کے ساتھ ہفتہ وار، ماہانہ اور سالانہ جائزے</string>
     <string name="paywall_feature_pdf">ڈائری اندراجات تصاویر کے ساتھ PDF کے طور پر ایکسپورٹ کریں</string>
     <string name="paywall_feature_noads">بغیر اشتہار کے بولیں یا لکھیں</string>
+    <string name="paywall_feature_profiles">لامحدود ذاتی تجزیاتی پروفائلز</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">اپنی اندرونی سکون پائیں</string>

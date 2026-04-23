@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Jij bepaalt zelf waar de AI op moet letten.\n\nSchrijf je eigen analysefocus, bijvoorbeeld:\n\n• «Vind alle vermeldingen van sport»\n• «Analyseer mijn stemmingswisselingen»\n• «Laat zien wanneer ik het productiefst ben»\n\nVolle controle voor wie precies weet wat hij zoekt.</string>
     <string name="profile_custom_prompt">Wat is voor jou extra belangrijk? Waarop moet de AI zich richten bij het analyseren van je dagboeknotities?</string>
     <string name="profile_select_hint">Kies een profiel. Tik op een profiel voor een uitgebreidere uitleg.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Meerdere persoonlijke profielen</string>
+    <string name="profiles_premium_desc">Met Premium maak je zoveel persoonlijke analyseprofielen aan als je wilt. Bijvoorbeeld een voor sport, een voor je werk, een voor je gezin. Elk profiel analyseert je dagboeknotities met zijn eigen focus.</string>
+    <string name="profiles_benefit_many">Onbeperkt persoonlijke profielen aanmaken</string>
+    <string name="profiles_benefit_switch">Op elk moment tussen je focussen wisselen</string>
+    <string name="profiles_benefit_named">Elk profiel een eigen naam geven</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Alle dagboeknotities met foto\'s als document</string>
     <string name="settings_premium_feature_voice">Nauwkeurigere spraakherkenning</string>
     <string name="settings_premium_feature_voice_desc">Hogere kwaliteit voor je spraaknotities</string>
+    <string name="settings_premium_feature_profiles">Onbeperkt persoonlijke profielen</string>
+    <string name="settings_premium_feature_profiles_desc">Meerdere analysefocussen naast elkaar</string>
     <string name="settings_unlock_premium">Premium ontgrendelen</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Week-, maand- en jaarterugblikken met AI</string>
     <string name="paywall_feature_pdf">Exporteer je notities met foto\'s als pdf</string>
     <string name="paywall_feature_noads">Praat of schrijf ongestoord, zonder reclame</string>
+    <string name="paywall_feature_profiles">Onbeperkt persoonlijke analyseprofielen</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Vind je innerlijke rust</string>

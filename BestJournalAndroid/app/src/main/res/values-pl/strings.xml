@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Sam decydujesz, na czym SI ma się skupić.\n\nWpisz własny temat analizy, na przykład:\n\n• «Znajdź wszystkie wzmianki o sporcie»\n• «Przeanalizuj moje wahania nastroju»\n• «Pokaż, kiedy jestem najbardziej produktywny»\n\nPełna kontrola dla tych, którzy wiedzą, czego szukają.</string>
     <string name="profile_custom_prompt">Co jest dla Ciebie szczególnie ważne? Na czym SI ma się skupić przy analizie Twoich wpisów?</string>
     <string name="profile_select_hint">Wybierz profil. Dotknij profilu, aby zobaczyć dokładniejsze wyjaśnienie.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Wiele własnych profili</string>
+    <string name="profiles_premium_desc">Dzięki Premium tworzysz tyle własnych profili analizy, ile chcesz. Na przykład jeden do sportu, jeden do pracy, jeden dla rodziny. Każdy profil analizuje twoje wpisy w dzienniku z własnym focusem.</string>
+    <string name="profiles_benefit_many">Twórz nieograniczoną liczbę własnych profili</string>
+    <string name="profiles_benefit_switch">Przełączaj się między focusami w każdej chwili</string>
+    <string name="profiles_benefit_named">Nadaj każdemu profilowi własną nazwę</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Wszystkie wpisy ze zdjęciami jako dokument</string>
     <string name="settings_premium_feature_voice">Dokładniejsze rozpoznawanie mowy</string>
     <string name="settings_premium_feature_voice_desc">Wyższa jakość dla nagrań głosowych</string>
+    <string name="settings_premium_feature_profiles">Nieograniczone własne profile</string>
+    <string name="settings_premium_feature_profiles_desc">Wiele kierunków analizy obok siebie</string>
     <string name="settings_unlock_premium">Odblokuj Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Podsumowania tygodniowe, miesięczne i roczne z SI</string>
     <string name="paywall_feature_pdf">Eksportuj wpisy ze zdjęciami jako PDF</string>
     <string name="paywall_feature_noads">Mów lub pisz w spokoju, bez reklam</string>
+    <string name="paywall_feature_profiles">Nieograniczone własne profile analizy</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Znajdź wewnętrzny spokój</string>

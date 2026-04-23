@@ -309,6 +309,12 @@
     <string name="profile_custom_long">AI ఏమి గమనించాలో మీరే నిర్ణయిస్తారు.\n\nమీ స్వంత విశ్లేషణ ఫోకస్‌ని రాయండి, ఉదాహరణకి:\n\n• „క్రీడ యొక్క అన్ని ప్రస్తావనలను కనుగొనండి"\n• „నా మూడ్ హెచ్చుతగ్గులను విశ్లేషించండి"\n• „నేను ఎప్పుడు అత్యంత ఉత్పాదకంగా ఉన్నానో చూపించండి"\n\nమీరు ఏమి వెతుకుతున్నారో ఖచ్చితంగా తెలిసిన వారికి పూర్తి నియంత్రణ.</string>
     <string name="profile_custom_prompt">మీకు ప్రత్యేకంగా ఏమి ముఖ్యం? మీ డైరీ నమోదులను విశ్లేషించేటప్పుడు AI ఏదానిపై దృష్టి పెట్టాలి?</string>
     <string name="profile_select_hint">ప్రొఫైల్ ఎంచుకోండి. వివరణాత్మక వివరణ కోసం ప్రొఫైల్‌ని నొక్కండి.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">బహుళ అనుకూల ప్రొఫైల్స్</string>
+    <string name="profiles_premium_desc">Premium తో నువ్వు ఎన్ని అనుకూల విశ్లేషణ ప్రొఫైల్స్ కావాలంటే అన్ని సృష్టించవచ్చు. ఉదాహరణకు ఒకటి క్రీడకు, ఒకటి పనికి, ఒకటి కుటుంబానికి. ప్రతి ప్రొఫైల్ నీ డైరీ ఎంట్రీలను దాని స్వంత దృష్టితో విశ్లేషిస్తుంది.</string>
+    <string name="profiles_benefit_many">అపరిమిత అనుకూల ప్రొఫైల్స్ సృష్టించు</string>
+    <string name="profiles_benefit_switch">ఎప్పుడైనా ఫోకస్ మధ్య మారు</string>
+    <string name="profiles_benefit_named">ప్రతి ప్రొఫైల్‌కు దాని స్వంత పేరు ఇవ్వు</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -399,6 +405,8 @@
     <string name="settings_premium_feature_pdf_desc">అన్ని డైరీ నమోదులు చిత్రాలతో డాక్యుమెంట్‌గా</string>
     <string name="settings_premium_feature_voice">ఖచ్చితమైన వాయిస్ గుర్తింపు</string>
     <string name="settings_premium_feature_voice_desc">మీ వాయిస్ నమోదులకి అధిక నాణ్యత</string>
+    <string name="settings_premium_feature_profiles">అపరిమిత అనుకూల ప్రొఫైల్స్</string>
+    <string name="settings_premium_feature_profiles_desc">బహుళ విశ్లేషణ ఫోకస్‌లు పక్కపక్కన</string>
     <string name="settings_unlock_premium">Premium అన్‌లాక్ చేయండి</string>
     <string name="settings_export_dialog_title">PDF ఎగుమతి</string>
     <string name="settings_export_what">ఏమి ఎగుమతి చేయాలి?</string>
@@ -742,6 +750,7 @@
     <string name="paywall_feature_retro">AI తో వారపు, నెలవారీ మరియు వార్షిక అవలోకనాలు</string>
     <string name="paywall_feature_pdf">ఫోటోలతో డైరీ నమోదులను PDF గా ఎగుమతి చేయండి</string>
     <string name="paywall_feature_noads">ప్రకటనలు లేకుండా అంతరాయం లేకుండా మాట్లాడండి లేదా రాయండి</string>
+    <string name="paywall_feature_profiles">అపరిమిత అనుకూల విశ్లేషణ ప్రొఫైల్స్</string>
 
     <string name="paywall_headline_stress">మీ అంతర్గత శాంతిని కనుగొనండి</string>
     <string name="paywall_headline_stress_sub">మిమ్మల్ని అధిగమించే ముందు ఏమి ఒత్తిడి పెడుతోందో గుర్తించండి</string>

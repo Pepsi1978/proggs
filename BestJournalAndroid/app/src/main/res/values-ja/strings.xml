@@ -323,6 +323,12 @@
     <string name="profile_custom_long">AIが何に注目するかを自分で決められます。\n\n自分の分析フォーカスを書いてください。例：\n\n•「スポーツに関するすべての言及を見つける」\n•「気分の変化を分析する」\n•「最も生産的な時間を教えて」\n\n目的がはっきりしている方に、完全な自由度を。</string>
     <string name="profile_custom_prompt">あなたにとって特に大切なことは何ですか？ 記録を分析するとき、AIは何に注目すべきですか？</string>
     <string name="profile_select_hint">プロフィールを選んでください。詳しい説明を見るにはプロフィールをタップしてください。</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">複数のカスタムプロフィール</string>
+    <string name="profiles_premium_desc">Premiumなら、好きなだけカスタム分析プロフィールを作れます。例えばスポーツ用、仕事用、家族用など。それぞれのプロフィールが独自の視点で日記を分析します。</string>
+    <string name="profiles_benefit_many">カスタムプロフィールを無制限に作成</string>
+    <string name="profiles_benefit_switch">いつでもフォーカスを切り替え</string>
+    <string name="profiles_benefit_named">プロフィールごとに好きな名前を設定</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">写真つきの記録を文書として</string>
     <string name="settings_premium_feature_voice">より正確な音声認識</string>
     <string name="settings_premium_feature_voice_desc">音声記録の品質が向上</string>
+    <string name="settings_premium_feature_profiles">無制限のカスタムプロフィール</string>
+    <string name="settings_premium_feature_profiles_desc">複数の分析視点を並行して</string>
     <string name="settings_unlock_premium">プレミアムを解除</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">AIによる週・月・年の振り返り</string>
     <string name="paywall_feature_pdf">記録と写真をPDFで書き出し</string>
     <string name="paywall_feature_noads">広告なしで話したり書いたり</string>
+    <string name="paywall_feature_profiles">無制限のカスタム分析プロフィール</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">心の静けさを見つけて</string>

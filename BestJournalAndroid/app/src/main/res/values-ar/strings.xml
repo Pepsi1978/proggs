@@ -323,6 +323,12 @@
     <string name="profile_custom_long">أنت تحدّد ما على الذكاء الاصطناعي الانتباه إليه.\n\nاكتب محور التحليل الخاص بك، مثلا:\n\n• «اعثر على كل إشارات الرياضة»\n• «حلّل تقلّبات مزاجي»\n• «أرني متى أكون الأكثر إنتاجا»\n\nتحكّم كامل لمن يعرف بالضبط ما يبحث عنه.</string>
     <string name="profile_custom_prompt">ما المهمّ لك تحديدا؟ على ماذا يجب أن يركّز الذكاء الاصطناعي عند تحليل تسجيلاتك؟</string>
     <string name="profile_select_hint">اختر ملفا. اضغط على الملف لشرح أدقّ.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">عدة ملفات شخصية مخصّصة</string>
+    <string name="profiles_premium_desc">مع Premium تُنشئ ما تشاء من ملفات التحليل الشخصية. مثلًا واحد للرياضة، واحد لعملك، واحد لعائلتك. يحلّل كل ملف مدخلات يومياتك بتركيزه الخاص.</string>
+    <string name="profiles_benefit_many">أنشئ عددًا غير محدود من الملفات الشخصية</string>
+    <string name="profiles_benefit_switch">انتقل بين محاور تركيزك في أي وقت</string>
+    <string name="profiles_benefit_named">امنح كل ملف اسمه الخاص</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">تسجيلات مع صور كمستند</string>
     <string name="settings_premium_feature_voice">تعرّف صوتي أدقّ</string>
     <string name="settings_premium_feature_voice_desc">جودة أعلى لتسجيلاتك الصوتية</string>
+    <string name="settings_premium_feature_profiles">ملفات شخصية غير محدودة</string>
+    <string name="settings_premium_feature_profiles_desc">عدّة محاور للتحليل جنبًا إلى جنب</string>
     <string name="settings_unlock_premium">افتح المميّز</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">مراجعات أسبوعية وشهرية وسنوية بالذكاء الاصطناعي</string>
     <string name="paywall_feature_pdf">تصدير التسجيلات مع الصور كـPDF</string>
     <string name="paywall_feature_noads">تكلّم أو اكتب بهدوء، بلا إعلانات</string>
+    <string name="paywall_feature_profiles">ملفات تحليل شخصية غير محدودة</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">استعد سكينتك</string>

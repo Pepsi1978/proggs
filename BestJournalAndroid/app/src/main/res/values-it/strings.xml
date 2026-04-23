@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Sei tu a decidere su cosa l\'IA deve concentrarsi.\n\nScrivi il tuo focus di analisi, per esempio:\n\n• «Trova tutte le menzioni dello sport»\n• «Analizza i miei sbalzi d\'umore»\n• «Mostrami quando sono più produttivo»\n\nControllo totale per chi sa esattamente cosa cerca.</string>
     <string name="profile_custom_prompt">Cosa è particolarmente importante per te? Su cosa deve concentrarsi l\'IA nell\'analisi delle tue voci di diario?</string>
     <string name="profile_select_hint">Scegli un profilo. Tocca un profilo per una spiegazione più dettagliata.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Più profili personalizzati</string>
+    <string name="profiles_premium_desc">Con Premium crei tutti i profili di analisi personalizzati che vuoi. Per esempio uno per lo sport, uno per il tuo lavoro, uno per la tua famiglia. Ogni profilo analizza le tue voci di diario con il proprio focus.</string>
+    <string name="profiles_benefit_many">Crea profili personalizzati illimitati</string>
+    <string name="profiles_benefit_switch">Passa tra i tuoi focus in qualsiasi momento</string>
+    <string name="profiles_benefit_named">Dai a ogni profilo il suo nome</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Tutte le voci di diario con foto come documento</string>
     <string name="settings_premium_feature_voice">Riconoscimento vocale più preciso</string>
     <string name="settings_premium_feature_voice_desc">Qualità superiore per le tue voci vocali</string>
+    <string name="settings_premium_feature_profiles">Profili personalizzati illimitati</string>
+    <string name="settings_premium_feature_profiles_desc">Più focus di analisi affiancati</string>
     <string name="settings_unlock_premium">Sblocca Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Retrospettive settimanali, mensili e annuali con IA</string>
     <string name="paywall_feature_pdf">Esporta le tue voci con foto in PDF</string>
     <string name="paywall_feature_noads">Parla o scrivi tranquillo, senza pubblicità</string>
+    <string name="paywall_feature_profiles">Profili di analisi personalizzati illimitati</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Trova la tua calma interiore</string>

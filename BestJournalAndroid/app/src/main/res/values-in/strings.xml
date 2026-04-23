@@ -323,6 +323,12 @@
     <string name="profile_custom_long">Kamu yang menentukan apa yang harus diperhatikan AI.\n\nTulis fokus analisismu, contohnya:\n\n• «Temukan semua sebutan olahraga»\n• «Analisis naik-turun suasana hatiku»\n• «Tunjukkan kapan aku paling produktif»\n\nKontrol penuh untuk yang tahu persis apa yang dicari.</string>
     <string name="profile_custom_prompt">Apa yang penting buatmu? Pada apa AI harus berfokus saat menganalisis entrimu?</string>
     <string name="profile_select_hint">Pilih profil. Ketuk profil untuk penjelasan lebih rinci.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">Beberapa profil khusus</string>
+    <string name="profiles_premium_desc">Dengan Premium kamu bisa membuat profil analisis khusus sebanyak yang kamu mau. Misalnya satu untuk olahraga, satu untuk pekerjaan, satu untuk keluarga. Setiap profil menganalisis entri jurnalmu dengan fokusnya sendiri.</string>
+    <string name="profiles_benefit_many">Buat profil khusus tanpa batas</string>
+    <string name="profiles_benefit_switch">Ganti fokus kapan saja</string>
+    <string name="profiles_benefit_named">Beri nama sendiri untuk tiap profil</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">Entri bergambar sebagai dokumen</string>
     <string name="settings_premium_feature_voice">Pengenalan suara lebih akurat</string>
     <string name="settings_premium_feature_voice_desc">Kualitas lebih tinggi untuk entri suaramu</string>
+    <string name="settings_premium_feature_profiles">Profil khusus tanpa batas</string>
+    <string name="settings_premium_feature_profiles_desc">Beberapa fokus analisis berdampingan</string>
     <string name="settings_unlock_premium">Buka Premium</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">Tinjauan mingguan, bulanan, dan tahunan dengan AI</string>
     <string name="paywall_feature_pdf">Ekspor entri bergambar sebagai PDF</string>
     <string name="paywall_feature_noads">Bicara atau tulis dengan tenang, tanpa iklan</string>
+    <string name="paywall_feature_profiles">Profil analisis khusus tanpa batas</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Temukan ketenangan batin</string>

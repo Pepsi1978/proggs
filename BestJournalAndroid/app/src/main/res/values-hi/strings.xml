@@ -323,6 +323,12 @@
     <string name="profile_custom_long">आप खुद तय करें कि AI किस पर ध्यान दे।\n\nअपना विश्लेषण फोकस लिखें, जैसे:\n\n• «खेल के सारे ज़िक्र ढूंढें»\n• «मेरे मूड के उतार-चढ़ाव का विश्लेषण करें»\n• «बताएं कि मैं कब सबसे ज़्यादा प्रोडक्टिव होता हूं»\n\nउनके लिए पूरा नियंत्रण जिन्हें ठीक-ठीक पता है वे क्या चाहते हैं।</string>
     <string name="profile_custom_prompt">आपके लिए क्या खास अहम है? आपकी एंट्री के विश्लेषण में AI को किस पर ध्यान देना चाहिए?</string>
     <string name="profile_select_hint">एक प्रोफ़ाइल चुनें। अधिक जानकारी के लिए प्रोफ़ाइल पर टैप करें।</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">कई कस्टम प्रोफ़ाइल</string>
+    <string name="profiles_premium_desc">Premium के साथ तुम जितने चाहो उतने कस्टम एनालिसिस प्रोफ़ाइल बना सकते हो। जैसे एक खेल के लिए, एक काम के लिए, एक परिवार के लिए। हर प्रोफ़ाइल तुम्हारी डायरी एंट्री को अपने फ़ोकस से एनालाइज़ करती है।</string>
+    <string name="profiles_benefit_many">असीमित कस्टम प्रोफ़ाइल बनाओ</string>
+    <string name="profiles_benefit_switch">कभी भी फ़ोकस बदलो</string>
+    <string name="profiles_benefit_named">हर प्रोफ़ाइल को अपना नाम दो</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">तस्वीरों वाली एंट्री दस्तावेज़ के रूप में</string>
     <string name="settings_premium_feature_voice">ज़्यादा सटीक आवाज़ पहचान</string>
     <string name="settings_premium_feature_voice_desc">आपकी वॉइस एंट्री की बेहतर गुणवत्ता</string>
+    <string name="settings_premium_feature_profiles">असीमित कस्टम प्रोफ़ाइल</string>
+    <string name="settings_premium_feature_profiles_desc">कई एनालिसिस फ़ोकस एक साथ</string>
     <string name="settings_unlock_premium">Premium अनलॉक करें</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -806,6 +814,7 @@
     <string name="paywall_feature_retro">AI से हफ्तावार, माहवार और सालाना समीक्षाएं</string>
     <string name="paywall_feature_pdf">फोटो के साथ एंट्री PDF के रूप में एक्सपोर्ट</string>
     <string name="paywall_feature_noads">शांति से बोलें या लिखें, बिना विज्ञापन</string>
+    <string name="paywall_feature_profiles">असीमित कस्टम एनालिसिस प्रोफ़ाइल</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">अपनी भीतरी शांति पाएं</string>

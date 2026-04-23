@@ -306,6 +306,12 @@
     <string name="profile_custom_long">AI ശ്രദ്ധിക്കേണ്ടതെന്ന് നിങ്ങൾ തന്നെ നിർണ്ണയിക്കുന്നു.\n\nനിങ്ങളുടെ സ്വന്തം വിശകലന ഫോക്കസ് എഴുതൂ, ഉദാഹരണത്തിന്:\n\n• \"സ്പോർട്സ്-സംബന്ധിച്ച എല്ലാ പ്രസ്താവനകളും കണ്ടെത്തുക\"\n• \"എന്റെ മൂഡ് ഏറ്റക്കുറച്ചിലുകൾ വിശകലനം ചെയ്യുക\"\n• \"ഞാൻ ഏറ്റവും ഉൽപ്പാദനക്ഷമനാകുന്ന സമയം കാണിക്കുക\"\n\nതങ്ങൾ എന്ത് തിരയുന്നു എന്ന് കൃത്യമായി അറിയുന്നവർക്ക് പൂർണ്ണ നിയന്ത്രണം.</string>
     <string name="profile_custom_prompt">നിങ്ങൾക്ക് ഏറ്റവും പ്രധാനപ്പെട്ടത് എന്ത്? AI നിങ്ങളുടെ ഡയറി എൻട്രികൾ വിശകലനം ചെയ്യുമ്പോൾ എന്തിൽ ശ്രദ്ധ കേന്ദ്രീകരിക്കണം?</string>
     <string name="profile_select_hint">ഒരു പ്രൊഫൈൽ തിരഞ്ഞെടുക്കൂ. കൂടുതൽ വിശദീകരണത്തിന് ഒരു പ്രൊഫൈൽ ടാപ്പ് ചെയ്യൂ.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">ഒന്നിലധികം ഇഷ്ടാനുസൃത പ്രൊഫൈലുകൾ</string>
+    <string name="profiles_premium_desc">Premium ഉപയോഗിച്ച് നീ ഇഷ്ടമുള്ളത്ര ഇഷ്ടാനുസൃത വിശകലന പ്രൊഫൈലുകൾ സൃഷ്ടിക്കാം. ഉദാഹരണത്തിന് ഒന്ന് കായികത്തിന്, ഒന്ന് ജോലിക്ക്, ഒന്ന് കുടുംബത്തിന്. ഓരോ പ്രൊഫൈലും നിന്റെ ഡയറി എൻട്രികളെ സ്വന്തം ശ്രദ്ധയോടെ വിശകലനം ചെയ്യുന്നു.</string>
+    <string name="profiles_benefit_many">പരിധിയില്ലാത്ത ഇഷ്ടാനുസൃത പ്രൊഫൈലുകൾ സൃഷ്ടിക്കുക</string>
+    <string name="profiles_benefit_switch">എപ്പോൾ വേണമെങ്കിലും ശ്രദ്ധകൾക്കിടയിൽ മാറുക</string>
+    <string name="profiles_benefit_named">ഓരോ പ്രൊഫൈലിനും സ്വന്തം പേര് കൊടുക്കുക</string>
 
     <!-- SETTINGS SCREEN -->
     <string name="settings_title">ക്രമീകരണങ്ങൾ</string>
@@ -394,6 +400,8 @@
     <string name="settings_premium_feature_pdf_desc">എല്ലാ ഡയറി എൻട്രികളും ചിത്രങ്ങളും ഡോക്യുമെൻറ്ആയി</string>
     <string name="settings_premium_feature_voice">കൂടുതൽ കൃത്യമായ ശബ്ദ തിരിച്ചറിയൽ</string>
     <string name="settings_premium_feature_voice_desc">നിങ്ങളുടെ ശബ്ദ എൻട്രികൾക്ക് ഉയർന്ന ഗുണനിലവാരം</string>
+    <string name="settings_premium_feature_profiles">പരിധിയില്ലാത്ത ഇഷ്ടാനുസൃത പ്രൊഫൈലുകൾ</string>
+    <string name="settings_premium_feature_profiles_desc">ഒന്നിലധികം വിശകലന ശ്രദ്ധകൾ ഒരുമിച്ച്</string>
     <string name="settings_unlock_premium">Premium അൺലോക്ക്</string>
     <!-- Export dialog -->
     <string name="settings_export_dialog_title">PDF Export</string>
@@ -760,6 +768,7 @@
     <string name="paywall_feature_retro">AI ഉള്ള ആഴ്ച, മാസ, വർഷ അവലോകനങ്ങൾ</string>
     <string name="paywall_feature_pdf">ഫോട്ടോകളോടെ ഡയറി എൻട്രികൾ PDF ആക്കൂ</string>
     <string name="paywall_feature_noads">പരസ്യം ഇല്ലാതെ ശാന്തിയോടെ സംസാരിക്കൂ അല്ലെങ്കിൽ എഴുതൂ</string>
+    <string name="paywall_feature_profiles">പരിധിയില്ലാത്ത ഇഷ്ടാനുസൃത വിശകലന പ്രൊഫൈലുകൾ</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">ആന്തരിക ശാന്തി കണ്ടെത്തൂ</string>

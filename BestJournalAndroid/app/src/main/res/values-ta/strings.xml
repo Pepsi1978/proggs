@@ -323,6 +323,12 @@
     <string name="profile_custom_long">KI என்ன கவனிக்க வேண்டும் என்பதை நீங்களே தீர்மானிக்கிறீர்கள்.\n\nஉங்கள் சொந்த பகுப்பாய்வு கவனத்தை எழுதுங்கள், உதாரணமாக:\n\n• \u201eவிளையாட்டின் அனைத்து குறிப்புகளையும் கண்டுபிடி\u201c\n• \u201eமனநிலை மாற்றங்களை பகுப்பாய்வு செய்\u201c\n• \u201eநான் எப்போது மிகவும் உற்பத்தியாக இருக்கிறேன் என்பதை காட்டு\u201c\n\nதாங்கள் என்ன தேடுகிறோம் என்று தெளிவாக தெரிந்தவர்களுக்கு முழு கட்டுப்பாடு.</string>
     <string name="profile_custom_prompt">உங்களுக்கு எது மிகவும் முக்கியம்? உங்கள் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யும்போது KI எதில் கவனம் செலுத்த வேண்டும்?</string>
     <string name="profile_select_hint">ஒரு சுயவிவரத்தை தேர்வு செய்யுங்கள். விரிவான விளக்கத்திற்கு சுயவிவரத்தை தொடுங்கள்.</string>
+    <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
+    <string name="profiles_premium_title">பல தனிப்பட்ட சுயவிவரங்கள்</string>
+    <string name="profiles_premium_desc">Premium மூலம் நீ விரும்பும் அளவுக்கு தனிப்பட்ட பகுப்பாய்வு சுயவிவரங்களை உருவாக்கலாம். உதாரணமாக ஒன்று விளையாட்டிற்கு, ஒன்று வேலைக்கு, ஒன்று குடும்பத்திற்கு. ஒவ்வொரு சுயவிவரமும் உனது நாட்குறிப்பை அதன் சொந்த கவனத்துடன் பகுப்பாய்வு செய்கிறது.</string>
+    <string name="profiles_benefit_many">வரம்பற்ற தனிப்பட்ட சுயவிவரங்களை உருவாக்கு</string>
+    <string name="profiles_benefit_switch">எப்போது வேண்டுமானாலும் கவனத்தை மாற்று</string>
+    <string name="profiles_benefit_named">ஒவ்வொரு சுயவிவரத்திற்கும் சொந்த பெயர் கொடு</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -417,6 +423,8 @@
     <string name="settings_premium_feature_pdf_desc">படங்களுடன் அனைத்து நாட்குறிப்பு பதிவுகளும் ஆவணமாக</string>
     <string name="settings_premium_feature_voice">மிகவும் துல்லியமான குரல் அங்கீகாரம்</string>
     <string name="settings_premium_feature_voice_desc">குரல் பதிவுகளுக்கு அதிக தரம்</string>
+    <string name="settings_premium_feature_profiles">வரம்பற்ற தனிப்பட்ட சுயவிவரங்கள்</string>
+    <string name="settings_premium_feature_profiles_desc">பல பகுப்பாய்வு கவனங்கள் அருகருகே</string>
     <string name="settings_unlock_premium">Premium திறக்கவும்</string>
     <!-- Export dialog -->
     <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
@@ -816,6 +824,7 @@
     <string name="paywall_feature_retro">KI மூலம் வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
     <string name="paywall_feature_pdf">புகைப்படங்களுடன் நாட்குறிப்பு பதிவுகளை PDF ஆக ஏற்றுமதி செய்யுங்கள்</string>
     <string name="paywall_feature_noads">விளம்பரங்கள் இல்லாமல் பேசுங்கள் அல்லது எழுதுங்கள்</string>
+    <string name="paywall_feature_profiles">வரம்பற்ற தனிப்பட்ட பகுப்பாய்வு சுயவிவரங்கள்</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">உங்கள் உள் அமைதியை கண்டுபிடியுங்கள்</string>
