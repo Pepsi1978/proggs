@@ -2392,24 +2392,29 @@ fun SettingsScreen(
                                                         .load(scenarioPrefs, defaultCustomName)
                                                 val promptChanged =
                                                     promptText != previousPrompt
-                                                if (promptChanged) {
+                                                // Refresh the local save timestamp on EVERY Save,
+                                                // even if nothing changed, so both devices agree
+                                                // that this was the last authoritative save and
+                                                // the same device does not later pull an
+                                                // identical Drive copy as "newer".
+                                                val editor =
                                                     scenarioPrefs
                                                         .edit()
                                                         .putLong(
                                                             "custom_prompt_saved_at",
                                                             System.currentTimeMillis(),
                                                         )
-                                                        .putBoolean(
-                                                            Constants.PREF_RETRO_NEEDS_REGEN,
-                                                            true,
-                                                        )
-                                                        .apply()
+                                                if (promptChanged) {
+                                                    editor.putBoolean(
+                                                        Constants.PREF_RETRO_NEEDS_REGEN,
+                                                        true,
+                                                    )
                                                 }
+                                                editor.apply()
                                                 // Always push to Drive on save — even if the text
-                                                // did not change — so the sync timestamp gets
-                                                // refreshed and the user has visible confirmation
-                                                // that the save reached the cloud. "Speichern =
-                                                // Backup" matches the user's mental model.
+                                                // did not change — so all other devices pick up
+                                                // the refreshed timestamp and re-download if
+                                                // their local copy was stale.
                                                 viewModel.backupCustomAnalysesToDrive()
                                                 if (promptChanged) {
                                                     viewModel.notifyProfileChanged()
