@@ -49,6 +49,11 @@ public partial class PromptViewModel : ObservableObject
     [ObservableProperty]
     private int _sortOrder;
 
+    /// <summary>Controls whether the prompt row renders in the bar. Flipped by
+    /// the search filter; default true.</summary>
+    [ObservableProperty]
+    private bool _isVisible = true;
+
     public Func<PromptViewModel, Task>? OnDeleteRequested { get; set; }
 
     /// <summary>Published after a successful delete so the snackbar can show.</summary>
@@ -89,6 +94,22 @@ public partial class PromptViewModel : ObservableObject
     }
 
     public bool CanToggleVersion => !string.IsNullOrEmpty(ImprovedText);
+
+    /// <summary>Case-insensitive substring match against label, original and improved text.</summary>
+    public bool MatchesQuery(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+        return ContainsIgnoreCase(ShortLabel, query)
+            || ContainsIgnoreCase(OriginalText, query)
+            || ContainsIgnoreCase(ImprovedText, query);
+    }
+
+    private static bool ContainsIgnoreCase(string? haystack, string needle) =>
+        !string.IsNullOrEmpty(haystack)
+        && haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
 
     public string EffectiveText => ActiveVersion == PromptVersion.Improved && !string.IsNullOrEmpty(ImprovedText)
         ? ImprovedText!

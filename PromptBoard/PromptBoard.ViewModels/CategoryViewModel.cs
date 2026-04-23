@@ -45,6 +45,11 @@ public partial class CategoryViewModel : ObservableObject
 
     public ObservableCollection<PromptViewModel> Prompts { get; } = [];
 
+    /// <summary>Controls whether the whole category tile/flyout renders. Flipped by
+    /// the search filter; default true.</summary>
+    [ObservableProperty]
+    private bool _isVisible = true;
+
     public Func<CategoryViewModel, Task>? OnDeleteRequested { get; set; }
 
     /// <summary>
@@ -85,6 +90,36 @@ public partial class CategoryViewModel : ObservableObject
 
     public bool IsProject => Type == CategoryType.Project;
     public bool IsInline => Type != CategoryType.Project;
+
+    /// <summary>
+    /// Applies a search query: shows the category if its name matches or any of
+    /// its prompts match; individual prompts are also hidden if the category matches
+    /// only via its name (so the user still sees the full category content in that case).
+    /// </summary>
+    public void ApplyFilter(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            IsVisible = true;
+            foreach (PromptViewModel p in Prompts)
+            {
+                p.IsVisible = true;
+            }
+            return;
+        }
+
+        bool nameHit = Name.Contains(query, StringComparison.OrdinalIgnoreCase);
+        bool anyPromptHit = false;
+        foreach (PromptViewModel p in Prompts)
+        {
+            bool promptHit = p.MatchesQuery(query);
+            // When the category name matches, show ALL prompts so the user sees
+            // the full category. Otherwise only show the matching prompts.
+            p.IsVisible = nameHit || promptHit;
+            anyPromptHit = anyPromptHit || promptHit;
+        }
+        IsVisible = nameHit || anyPromptHit;
+    }
 
     [RelayCommand]
     private async Task RenameAsync()

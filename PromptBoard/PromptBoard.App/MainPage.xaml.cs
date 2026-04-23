@@ -58,6 +58,14 @@ public sealed partial class MainPage : UserControl
             UpdateSeparators();
         };
 
+        SearchBox.TextChanged += (sender, args) =>
+        {
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                ViewModel.SearchQuery = sender.Text ?? string.Empty;
+            }
+        };
+
         BackupButton.Click += async (_, _) =>
         {
             var dialogs = _services.GetRequiredService<IDialogService>();

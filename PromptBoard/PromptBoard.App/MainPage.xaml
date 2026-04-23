@@ -13,9 +13,11 @@
     <UserControl.Resources>
         <conv:HexToBrushConverter x:Key="HexToBrush" />
         <conv:BoolToOpacityConverter x:Key="BoolToOpacity" />
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
 
         <DataTemplate x:Key="PromptTemplate" x:DataType="vm:PromptViewModel">
-            <Grid Padding="2" ColumnSpacing="6" KeyDown="OnPromptKeyDown">
+            <Grid Padding="2" ColumnSpacing="6" KeyDown="OnPromptKeyDown"
+                  Visibility="{x:Bind IsVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -79,7 +81,8 @@
                     BorderThickness="1"
                     MinWidth="260"
                     MaxWidth="320"
-                    Padding="0">
+                    Padding="0"
+                    Visibility="{x:Bind IsVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -145,7 +148,8 @@
                     MinWidth="140"
                     MaxWidth="220"
                     Padding="10,6"
-                    VerticalAlignment="Top">
+                    VerticalAlignment="Top"
+                    Visibility="{x:Bind IsVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="{x:Bind Name, Mode=OneWay}"
                                FontWeight="SemiBold"
@@ -283,6 +287,13 @@
                     Spacing="4"
                     VerticalAlignment="Top"
                     Margin="8,4,4,0">
+
+            <AutoSuggestBox x:Name="SearchBox"
+                            PlaceholderText="Suchen..."
+                            QueryIcon="Find"
+                            Width="200"
+                            VerticalAlignment="Center"
+                            ToolTipService.ToolTip="Kategorien und Prompts filtern" />
 
             <Button x:Name="BackupButton"
                     ToolTipService.ToolTip="Sichern und wiederherstellen">

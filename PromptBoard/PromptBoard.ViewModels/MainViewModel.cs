@@ -44,6 +44,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private UndoAction? _pendingUndo;
 
+    /// <summary>Current live search query. Empty → no filter.</summary>
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        foreach (CategoryViewModel c in Categories)
+        {
+            c.ApplyFilter(value);
+        }
+    }
+
     public MainViewModel(
         ICategoryRepository categories,
         IPromptRepository prompts,
