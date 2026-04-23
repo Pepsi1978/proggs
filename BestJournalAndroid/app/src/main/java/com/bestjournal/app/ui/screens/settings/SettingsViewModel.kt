@@ -224,6 +224,17 @@ constructor(
                 } catch (e: Exception) {
                     android.util.Log.e("SettingsVM", "Auto-merge failed: ${e.message}")
                 }
+                // Pull the custom-analysis prompt from Drive if another device
+                // uploaded a newer copy — runs every time Settings opens so a
+                // second phone without a fresh re-install still gets it.
+                try {
+                    val updated = syncUseCase.syncCustomPromptFromDriveIfNewer()
+                    if (updated) {
+                        android.util.Log.d("SettingsVM", "Custom prompt pulled from Drive")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SettingsVM", "Custom prompt sync failed: ${e.message}")
+                }
                 try {
                     val count = syncUseCase.downloadMissingPhotos()
                     if (count > 0) android.util.Log.d("SettingsVM", "Photo download: $count files")

@@ -116,6 +116,25 @@ constructor(
             }
         }
 
+    /** Returns Drive modifiedTime (epoch ms) for any helper file in appDataFolder, or null. */
+    suspend fun getFileModifiedTime(remoteName: String): Long? =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService() ?: return@withContext null
+                val files =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '$remoteName'")
+                        .setFields("files(id, modifiedTime)")
+                        .execute()
+                files.files?.firstOrNull()?.modifiedTime?.value
+            } catch (e: Exception) {
+                null
+            }
+        }
+
     suspend fun restore(targetFile: File): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {

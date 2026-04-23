@@ -427,6 +427,55 @@ constructor(
         return driveRestoreManager.hasBackup()
     }
 
+    /**
+     * Pulls the custom-analysis prompt from Drive if the Drive copy is newer than
+     * the local one. Runs every time the user opens Settings (via mergeFromDrive),
+     * so a second device that signs in with the same account or opens Settings
+     * picks up the prompt saved on the first device — without a fresh re-install.
+     *
+     * Returns true if local content was overwritten.
+     */
+    suspend fun syncCustomPromptFromDriveIfNewer(): Boolean {
+        return try {
+            val driveTime =
+                driveRestoreManager.getFileModifiedTime("custom_analysis_prompt.txt")
+                    ?: return false
+            val localSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+            // 5s grace so a just-uploaded file doesn't immediately re-download on
+            // the same device (clock skew between Drive and phone).
+            if (driveTime <= localSavedAt + 5_000) {
+                Log.d("SyncDebug", "Custom prompt sync: local is equal-or-newer — skipping")
+                return false
+            }
+            val tmpFile = File(context.cacheDir, "custom_prompt_sync.tmp")
+            val result = driveRestoreManager.restoreFile("custom_analysis_prompt.txt", tmpFile)
+            if (result.isFailure || !tmpFile.exists()) {
+                tmpFile.delete()
+                return false
+            }
+            val driveContent = tmpFile.readText()
+            tmpFile.delete()
+            val localContent = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+            if (driveContent == localContent) {
+                Log.d("SyncDebug", "Custom prompt sync: content identical — skipping overwrite")
+                return false
+            }
+            encryptedPrefs
+                .edit()
+                .putString(Constants.PREF_CUSTOM_PROMPT, driveContent)
+                .putLong("custom_prompt_saved_at", driveTime)
+                .commit()
+            Log.d(
+                "SyncDebug",
+                "Custom prompt synced from Drive (${driveContent.length} chars, Drive time $driveTime)",
+            )
+            true
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Custom prompt sync failed (non-critical): ${e.message}")
+            false
+        }
+    }
+
     suspend fun mergeFromDrive(): Int {
         val lastLocalSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
         val driveModifiedTime = driveRestoreManager.getBackupModifiedTime()
