@@ -790,12 +790,17 @@ constructor(
         }
     }
 
-    /** Improves whatever is CURRENTLY in the text field (not just the latest transcription). */
+    /**
+     * Improves the custom analysis focus text using the dedicated prompt optimizer.
+     * Rewrites the user's rough wording into a precise, mode-aware task description
+     * that the downstream analysis system can act on. Used by the "Text verbessern"
+     * button in the Individuelle Analyse settings field — NOT for journal entries.
+     */
     fun improvePromptText(fullText: String) {
         if (fullText.isBlank()) return
         _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.IMPROVING)
         viewModelScope.launch {
-            improveTextUseCase(fullText)
+            improveTextUseCase.optimizeCustomAnalysisPrompt(fullText)
                 .onSuccess { improved ->
                     _uiState.value =
                         _uiState.value.copy(
