@@ -2189,10 +2189,13 @@ fun SettingsScreen(
                                                 )
                                             }
                                             editor.apply()
+                                            // Always push to Drive on save — even if the text did
+                                            // not change — so the sync timestamp gets refreshed and
+                                            // the user has visible confirmation that the save reached
+                                            // the cloud. "Speichern = Backup" matches the user's
+                                            // mental model.
+                                            viewModel.backupCustomPromptToDrive(promptText)
                                             if (promptChanged) {
-                                                // Push the new prompt to Drive right away so it
-                                                // syncs to other devices and survives a fresh sign-in.
-                                                viewModel.backupCustomPromptToDrive(promptText)
                                                 viewModel.notifyProfileChanged()
                                                 onProfileChanged()
                                             }

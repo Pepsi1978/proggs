@@ -305,6 +305,30 @@ constructor(
         // Stored as a field so it can be unregistered in onCleared() to prevent a listener leak.
         encryptedPrefs.registerOnSharedPreferenceChangeListener(syncPrefsListener)
 
+        // Auto-pull the custom analysis prompt from Drive at app start, so a
+        // second device that just opens the app (without visiting Settings) still
+        // picks up a newer copy uploaded from another device.
+        val isSignedIn =
+            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
+        if (isSignedIn) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val updated = syncWithDriveUseCase.syncCustomPromptFromDriveIfNewer()
+                    if (updated) {
+                        android.util.Log.d(
+                            "JournalVM",
+                            "Custom analysis prompt pulled from Drive at app start",
+                        )
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(
+                        "JournalVM",
+                        "Startup custom-prompt sync failed (non-critical): ${e.message}",
+                    )
+                }
+            }
+        }
+
         // Observe subscription state changes
         viewModelScope.launch {
             billingManager.subscriptionState.collect { state ->

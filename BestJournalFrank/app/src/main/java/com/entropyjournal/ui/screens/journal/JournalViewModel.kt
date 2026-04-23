@@ -201,6 +201,30 @@ constructor(
                 }
             }
         }
+
+        // Auto-pull the custom analysis prompt from Drive at app start, so a
+        // second device that just opens the app (without visiting Settings) still
+        // picks up a newer copy uploaded from another device.
+        val hasGoogleEmail =
+            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
+        if (hasGoogleEmail) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val updated = syncWithDriveUseCase.syncCustomPromptFromDriveIfNewer()
+                    if (updated) {
+                        android.util.Log.d(
+                            "JournalVM",
+                            "Custom analysis prompt pulled from Drive at app start",
+                        )
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(
+                        "JournalVM",
+                        "Startup custom-prompt sync failed (non-critical): ${e.message}",
+                    )
+                }
+            }
+        }
     }
 
     fun toggleRecording() {
