@@ -82,6 +82,11 @@ constructor(
     private var autoBackupJob: Job? = null
     private var followUpRecordingJob: Job? = null
     private var currentFollowUpAudioFile: File? = null
+    // Debounced follow-up dashboard refresh: saving (or inline-editing) a Nachtrag
+    // counts as new content for the active profile, so the dashboard has to rerun
+    // the Gemini analysis. A single shared job is cancelled on repeated edits so
+    // fast typing collapses into one API call 3s after the user stops.
+    private var followUpAnalysisDebounceJob: Job? = null
 
     init {
         loadEntry()
@@ -428,6 +433,7 @@ constructor(
                 )
             }
             triggerAutoBackup()
+            triggerDebouncedAnalysis()
         }
     }
 
@@ -618,6 +624,7 @@ constructor(
                     }
                     syncLatestFollowUpSummary()
                     triggerAutoBackup()
+                    triggerDebouncedAnalysis()
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -651,6 +658,7 @@ constructor(
                 entryFollowUpRepository.updateFollowUp(target)
                 syncLatestFollowUpSummary()
                 triggerAutoBackup()
+                triggerDebouncedAnalysis()
             }
     }
 
@@ -674,6 +682,38 @@ constructor(
             val refreshed = journalRepository.getEntryById(entryId)
             if (refreshed != null) {
                 _uiState.update { it.copy(entry = refreshed) }
+            }
+        }
+    }
+
+    /**
+     * Debounced dashboard refresh after a Nachtrag (follow-up) was saved, edited or
+     * improved. Mirrors JournalViewModel.triggerDebouncedAnalysis: cancels the
+     * previous scheduled run so rapid edits collapse into a single Gemini call 3s
+     * after the last save. Respects the user's PREF_AUTO_UPDATE_DASHBOARD switch
+     * and sets the runtime flags the DashboardViewModel's polling loop observes.
+     */
+    private fun triggerDebouncedAnalysis() {
+        val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+        if (!autoUpdate) return
+
+        followUpAnalysisDebounceJob?.cancel()
+        followUpAnalysisDebounceJob = viewModelScope.launch {
+            encryptedPrefs
+                .edit()
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
+                .apply()
+            try {
+                delay(3_000)
+                analyzeEntropyUseCase(freshAnalysis = true)
+                val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                encryptedPrefs
+                    .edit()
+                    .putLong("dashboard_last_updated_$scenario", System.currentTimeMillis())
+                    .apply()
+            } finally {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
             }
         }
     }
