@@ -115,6 +115,9 @@
     <string name="journal_improve">Text verbessern</string>
     <string name="journal_state_transcribing">Wird transkribiert…</string>
     <string name="journal_state_improving">Wird verbessert…</string>
+    <string name="prompt_recording_with_model">Aufnahme läuft — Modell: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s transkribiert…</string>
+    <string name="prompt_transcription_model_hint">Transkribiert mit %1$s</string>
 
     <!-- Streak messages -->
     <string name="streak_365">Ein ganzes Jahr!</string>

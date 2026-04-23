@@ -1927,21 +1927,42 @@ fun SettingsScreen(
                             var promptText by remember { mutableStateOf(savedPrompt) }
                             val focusRequester = remember { FocusRequester() }
 
-                            val lastTranscribed = uiState.promptTranscribed
-                            val lastImproved = uiState.promptImproved
-                            val useImproved = uiState.promptUseImproved
+                            var preImproveText by remember { mutableStateOf<String?>(null) }
+                            var improvedText by remember { mutableStateOf<String?>(null) }
+                            var useImproved by remember { mutableStateOf(false) }
+
                             androidx.compose.runtime.LaunchedEffect(
-                                lastTranscribed,
-                                lastImproved,
-                                useImproved,
+                                uiState.promptPendingTranscription
                             ) {
-                                when {
-                                    useImproved && lastImproved != null ->
-                                        promptText = lastImproved
-                                    lastTranscribed != null && lastImproved == null ->
-                                        promptText = lastTranscribed
-                                    !useImproved && lastTranscribed != null ->
-                                        promptText = lastTranscribed
+                                uiState.promptPendingTranscription?.let { t ->
+                                    val separator = if (promptText.isBlank()) "" else " "
+                                    val newFull = promptText + separator + t.text
+                                    promptText = newFull
+                                    preImproveText = null
+                                    improvedText = null
+                                    useImproved = false
+                                    viewModel.consumePromptTranscription()
+
+                                    val autoImprove =
+                                        scenarioPrefs.getBoolean(
+                                            Constants.PREF_TEXT_IMPROVEMENT_DEFAULT,
+                                            false,
+                                        )
+                                    if (autoImprove && newFull.isNotBlank()) {
+                                        viewModel.improvePromptText(newFull)
+                                    }
+                                }
+                            }
+
+                            androidx.compose.runtime.LaunchedEffect(
+                                uiState.promptPendingImprovement
+                            ) {
+                                uiState.promptPendingImprovement?.let { imp ->
+                                    preImproveText = promptText
+                                    improvedText = imp
+                                    promptText = imp
+                                    useImproved = true
+                                    viewModel.consumePromptImprovement()
                                 }
                             }
 
@@ -2003,20 +2024,25 @@ fun SettingsScreen(
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally
                                             ) {
-                                                FloatingActionButton(
-                                                    onClick = { focusRequester.requestFocus() },
-                                                    modifier = Modifier.size(56.dp),
-                                                    containerColor =
-                                                        MaterialTheme.colorScheme.surfaceVariant,
-                                                    contentColor =
-                                                        MaterialTheme.colorScheme.onSurface,
-                                                    shape = CircleShape,
+                                                Box(
+                                                    modifier = Modifier.size(72.dp),
+                                                    contentAlignment = Alignment.Center,
                                                 ) {
-                                                    Icon(
-                                                        imageVector = Icons.Rounded.Edit,
-                                                        contentDescription = "Schreiben",
-                                                        modifier = Modifier.size(22.dp),
-                                                    )
+                                                    FloatingActionButton(
+                                                        onClick = { focusRequester.requestFocus() },
+                                                        modifier = Modifier.size(64.dp),
+                                                        containerColor =
+                                                            MaterialTheme.colorScheme.surfaceVariant,
+                                                        contentColor =
+                                                            MaterialTheme.colorScheme.onSurface,
+                                                        shape = CircleShape,
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Edit,
+                                                            contentDescription = "Schreiben",
+                                                            modifier = Modifier.size(28.dp),
+                                                        )
+                                                    }
                                                 }
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
@@ -2031,7 +2057,7 @@ fun SettingsScreen(
 
                                             Box(
                                                 modifier =
-                                                    Modifier.height(32.dp)
+                                                    Modifier.height(40.dp)
                                                         .width(1.dp)
                                                         .background(
                                                             MaterialTheme.colorScheme.outlineVariant
@@ -2105,19 +2131,30 @@ fun SettingsScreen(
                                                         MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
+                                        } else if (uiState.promptTranscriptionModel != null &&
+                                            uiState.promptRecState == PromptRecState.IDLE) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                "Transkribiert mit ${uiState.promptTranscriptionModel}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color =
+                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
                                         }
 
                                         val canImprove =
-                                            uiState.promptTranscribed?.isNotBlank() == true &&
+                                            promptText.isNotBlank() &&
                                                 uiState.promptRecState == PromptRecState.IDLE
-                                        if (canImprove && uiState.promptImproved == null) {
+                                        if (canImprove && improvedText == null) {
                                             Spacer(modifier = Modifier.height(10.dp))
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.Center,
                                             ) {
                                                 OutlinedButton(
-                                                    onClick = { viewModel.improvePromptText() }
+                                                    onClick = {
+                                                        viewModel.improvePromptText(promptText)
+                                                    }
                                                 ) {
                                                     Icon(
                                                         Icons.Rounded.AutoAwesome,
@@ -2132,7 +2169,7 @@ fun SettingsScreen(
                                                     )
                                                 }
                                             }
-                                        } else if (uiState.promptImproved != null) {
+                                        } else if (improvedText != null) {
                                             Spacer(modifier = Modifier.height(10.dp))
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -2140,17 +2177,19 @@ fun SettingsScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
                                                 FilterChip(
-                                                    selected = !uiState.promptUseImproved,
+                                                    selected = !useImproved,
                                                     onClick = {
-                                                        viewModel.setPromptUseImproved(false)
+                                                        preImproveText?.let { promptText = it }
+                                                        useImproved = false
                                                     },
                                                     label = { Text("Original") },
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 FilterChip(
-                                                    selected = uiState.promptUseImproved,
+                                                    selected = useImproved,
                                                     onClick = {
-                                                        viewModel.setPromptUseImproved(true)
+                                                        improvedText?.let { promptText = it }
+                                                        useImproved = true
                                                     },
                                                     label = { Text("Verbessert") },
                                                 )

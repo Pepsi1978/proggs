@@ -73,11 +73,14 @@ data class SettingsUiState(
     // Voice-input state for the Custom Prompt dialog (Individuelle Analyse).
     // Mirrors the Journal mic/pen flow: record → transcribe → optional improve.
     val promptRecState: PromptRecState = PromptRecState.IDLE,
-    val promptTranscribed: String? = null,
-    val promptImproved: String? = null,
-    val promptUseImproved: Boolean = false,
+    // One-shot events consumed by the dialog (dialog owns the text field).
+    val promptPendingTranscription: PromptTranscription? = null,
+    val promptPendingImprovement: String? = null,
+    val promptTranscriptionModel: String? = null,
     val promptError: String? = null,
 )
+
+data class PromptTranscription(val text: String, val model: String)
 
 enum class PromptRecState {
     IDLE,
@@ -756,9 +759,8 @@ constructor(
             _uiState.value.copy(
                 promptRecState = PromptRecState.RECORDING,
                 promptError = null,
-                promptTranscribed = null,
-                promptImproved = null,
-                promptUseImproved = false,
+                promptPendingTranscription = null,
+                promptPendingImprovement = null,
             )
 
         promptRecordingJob =
@@ -851,15 +853,15 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             promptRecState = PromptRecState.IDLE,
-                            promptTranscribed = transcribed,
+                            promptPendingTranscription =
+                                if (transcribed.isNotBlank())
+                                    PromptTranscription(transcribed, result.model)
+                                else null,
+                            promptTranscriptionModel = result.model,
                         )
                     audioFile.delete()
-
-                    val autoImprove =
-                        encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false)
-                    if (autoImprove && transcribed.isNotBlank()) {
-                        improvePromptText()
-                    }
+                    // Auto-improve is triggered by the dialog after it appends the text
+                    // so the ENTIRE field content gets improved, not just the new chunk.
                 }
                 .onFailure { error ->
                     _uiState.value =
@@ -876,19 +878,17 @@ constructor(
         }
     }
 
-    fun improvePromptText() {
-        val raw = _uiState.value.promptTranscribed ?: return
-        if (raw.isBlank()) return
-
+    /** Improves whatever is CURRENTLY in the text field (not just the latest transcription). */
+    fun improvePromptText(fullText: String) {
+        if (fullText.isBlank()) return
         _uiState.value = _uiState.value.copy(promptRecState = PromptRecState.IMPROVING)
         viewModelScope.launch {
-            improveTextUseCase(raw)
+            improveTextUseCase(fullText)
                 .onSuccess { improved ->
                     _uiState.value =
                         _uiState.value.copy(
                             promptRecState = PromptRecState.IDLE,
-                            promptImproved = improved,
-                            promptUseImproved = true,
+                            promptPendingImprovement = improved,
                         )
                 }
                 .onFailure { error ->
@@ -902,8 +902,12 @@ constructor(
         }
     }
 
-    fun setPromptUseImproved(use: Boolean) {
-        _uiState.value = _uiState.value.copy(promptUseImproved = use)
+    fun consumePromptTranscription() {
+        _uiState.value = _uiState.value.copy(promptPendingTranscription = null)
+    }
+
+    fun consumePromptImprovement() {
+        _uiState.value = _uiState.value.copy(promptPendingImprovement = null)
     }
 
     fun clearPromptVoiceState() {
@@ -912,9 +916,9 @@ constructor(
         _uiState.value =
             _uiState.value.copy(
                 promptRecState = PromptRecState.IDLE,
-                promptTranscribed = null,
-                promptImproved = null,
-                promptUseImproved = false,
+                promptPendingTranscription = null,
+                promptPendingImprovement = null,
+                promptTranscriptionModel = null,
                 promptError = null,
             )
     }
