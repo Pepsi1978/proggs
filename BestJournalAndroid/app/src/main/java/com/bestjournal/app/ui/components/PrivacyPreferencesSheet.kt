@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestjournal.app.R
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 
 /**
  * Reusable privacy preferences bottom sheet (layered consent per EDSA 03/2023).
@@ -92,10 +93,16 @@ fun PrivacyPreferencesSheet(
     // Do-Not-Sell cascades: when on, force all optional flows off.
     val lockedByDnS = doNotSell
 
+    val isDark = LocalIsDarkTheme.current
+    val sheetContainer = if (isDark) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.surface
+    val titleColor = if (isDark) Color(0xFFE5E2E1) else MaterialTheme.colorScheme.onSurface
+    val subtitleColor = if (isDark) Color(0xFFB8B2AE) else MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = if (isDark) Color(0xFFECC165) else Color(0xFFB85D15)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = sheetContainer,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -111,7 +118,7 @@ fun PrivacyPreferencesSheet(
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                     ),
-                    color = Color(0xFFE5E2E1),
+                    color = titleColor,
                 )
                 val anyOn = analytics || groq || gemini || tts || driveBackup
                 androidx.compose.material3.TextButton(
@@ -138,7 +145,7 @@ fun PrivacyPreferencesSheet(
                             if (anyOn) R.string.privacy_sheet_all_off
                             else R.string.privacy_sheet_all_on
                         ),
-                        color = Color(0xFFECC165),
+                        color = accentColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -148,7 +155,7 @@ fun PrivacyPreferencesSheet(
             Text(
                 text = stringResource(R.string.privacy_sheet_subtitle),
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
-                color = Color(0xFFB8B2AE),
+                color = subtitleColor,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -275,8 +282,26 @@ private fun PrefToggleCard(
     emphasized: Boolean = false,
 ) {
     var expanded by rememberSaveable(title) { mutableStateOf(false) }
-    val cardBg = if (emphasized) Color(0x22FFB689) else Color(0x14FFB689)
-    val cardBorder = if (emphasized) Color(0x80FFB689) else Color(0x33FFB689)
+    val isDark = LocalIsDarkTheme.current
+
+    val cardBg = if (isDark) {
+        if (emphasized) Color(0x22FFB689) else Color(0x14FFB689)
+    } else {
+        if (emphasized) Color(0x30DF741E) else Color(0x18DF741E)
+    }
+    val cardBorder = if (isDark) {
+        if (emphasized) Color(0x80FFB689) else Color(0x33FFB689)
+    } else {
+        if (emphasized) Color(0x80DF741E) else Color(0x40DF741E)
+    }
+    val iconBg = if (isDark) Color(0x40DF741E) else Color(0x30DF741E)
+    val iconTint = if (isDark) Color(0xFFFFB689) else Color(0xFFB85D15)
+    val titleColor = if (isDark) Color(0xFFE5E2E1) else MaterialTheme.colorScheme.onSurface
+    val bodyColor = if (isDark) Color(0xFFB8B2AE) else MaterialTheme.colorScheme.onSurfaceVariant
+    val expandColor = if (isDark) Color(0xFFECC165) else Color(0xFFB85D15)
+    val uncheckedThumb = if (isDark) Color(0xFFB8B2AE) else MaterialTheme.colorScheme.onSurfaceVariant
+    val uncheckedTrack = if (isDark) Color(0x22FFFFFF) else Color(0x14000000)
+    val uncheckedBorder = uncheckedThumb.copy(alpha = 0.4f)
     val contentAlpha = if (enabled) 1f else 0.45f
 
     Box(
@@ -291,13 +316,13 @@ private fun PrefToggleCard(
                 Box(
                     modifier = Modifier.size(34.dp)
                         .clip(CircleShape)
-                        .background(Color(0x40DF741E)),
+                        .background(iconBg),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color(0xFFFFB689).copy(alpha = contentAlpha),
+                        tint = iconTint.copy(alpha = contentAlpha),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -305,7 +330,7 @@ private fun PrefToggleCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        color = Color(0xFFE5E2E1).copy(alpha = contentAlpha),
+                        color = titleColor.copy(alpha = contentAlpha),
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -315,14 +340,14 @@ private fun PrefToggleCard(
                     ) {
                         Text(
                             text = stringResource(R.string.consent_details_expand),
-                            color = Color(0xFFECC165).copy(alpha = contentAlpha),
+                            color = expandColor.copy(alpha = contentAlpha),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Medium,
                         )
                         Icon(
                             imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                             contentDescription = null,
-                            tint = Color(0xFFECC165).copy(alpha = contentAlpha),
+                            tint = expandColor.copy(alpha = contentAlpha),
                             modifier = Modifier.size(14.dp),
                         )
                     }
@@ -334,9 +359,9 @@ private fun PrefToggleCard(
                         checkedThumbColor = Color(0xFF512400),
                         checkedTrackColor = Color(0xFFFFB689),
                         checkedBorderColor = Color(0xFFDF741E),
-                        uncheckedThumbColor = Color(0xFFB8B2AE),
-                        uncheckedTrackColor = Color(0x22FFFFFF),
-                        uncheckedBorderColor = Color(0xFFB8B2AE).copy(alpha = 0.4f),
+                        uncheckedThumbColor = uncheckedThumb,
+                        uncheckedTrackColor = uncheckedTrack,
+                        uncheckedBorderColor = uncheckedBorder,
                     ),
                 )
             }
@@ -345,7 +370,7 @@ private fun PrefToggleCard(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = body,
-                        color = Color(0xFFB8B2AE),
+                        color = bodyColor,
                         fontSize = 11.5.sp,
                         lineHeight = 16.sp,
                     )
