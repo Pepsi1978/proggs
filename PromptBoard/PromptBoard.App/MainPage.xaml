@@ -134,10 +134,24 @@
                         </Grid>
                     </Border>
 
-                    <ItemsControl Grid.Row="1"
-                                  ItemsSource="{x:Bind Prompts, Mode=OneWay}"
-                                  ItemTemplate="{StaticResource PromptTemplate}"
-                                  Padding="4" />
+                    <ListView Grid.Row="1"
+                              ItemsSource="{x:Bind Prompts, Mode=OneWay}"
+                              ItemTemplate="{StaticResource PromptTemplate}"
+                              CanReorderItems="True"
+                              CanDragItems="True"
+                              AllowDrop="True"
+                              SelectionMode="None"
+                              Padding="4"
+                              IsItemClickEnabled="False">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="MinHeight" Value="0" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -206,12 +220,23 @@
                                 </Button>
                             </Grid>
 
-                            <ScrollViewer Grid.Row="1"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollMode="Disabled">
-                                <ItemsControl ItemsSource="{x:Bind Prompts, Mode=OneWay}"
-                                              ItemTemplate="{StaticResource PromptTemplate}" />
-                            </ScrollViewer>
+                            <ListView Grid.Row="1"
+                                      ItemsSource="{x:Bind Prompts, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource PromptTemplate}"
+                                      CanReorderItems="True"
+                                      CanDragItems="True"
+                                      AllowDrop="True"
+                                      SelectionMode="None"
+                                      IsItemClickEnabled="False">
+                                <ListView.ItemContainerStyle>
+                                    <Style TargetType="ListViewItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="0,1" />
+                                        <Setter Property="MinHeight" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListView.ItemContainerStyle>
+                            </ListView>
                         </Grid>
                     </Flyout>
                 </Button.Flyout>
@@ -237,14 +262,27 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
 
                 <!-- Standard zone -->
-                <ItemsControl x:Name="StandardList"
-                              ItemTemplate="{StaticResource InlineCategoryTemplate}">
-                    <ItemsControl.ItemsPanel>
+                <ListView x:Name="StandardList"
+                          ItemTemplate="{StaticResource InlineCategoryTemplate}"
+                          CanReorderItems="True"
+                          CanDragItems="True"
+                          AllowDrop="True"
+                          SelectionMode="None"
+                          IsItemClickEnabled="False"
+                          ScrollViewer.HorizontalScrollMode="Disabled"
+                          ScrollViewer.VerticalScrollMode="Disabled">
+                    <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="8" />
                         </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
 
                 <Border x:Name="SeparatorAfterStandard"
                         Width="1"
@@ -253,15 +291,28 @@
                         Opacity="0.5" />
 
                 <!-- Project zone -->
-                <ItemsControl x:Name="ProjectList"
-                              ItemTemplate="{StaticResource ProjectFlyoutTemplate}"
-                              VerticalAlignment="Top">
-                    <ItemsControl.ItemsPanel>
+                <ListView x:Name="ProjectList"
+                          ItemTemplate="{StaticResource ProjectFlyoutTemplate}"
+                          VerticalAlignment="Top"
+                          CanReorderItems="True"
+                          CanDragItems="True"
+                          AllowDrop="True"
+                          SelectionMode="None"
+                          IsItemClickEnabled="False"
+                          ScrollViewer.HorizontalScrollMode="Disabled"
+                          ScrollViewer.VerticalScrollMode="Disabled">
+                    <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6" />
                         </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
 
                 <Border x:Name="SeparatorAfterProjects"
                         Width="1"
@@ -270,14 +321,27 @@
                         Opacity="0.5" />
 
                 <!-- AiLibrary zone -->
-                <ItemsControl x:Name="AiLibraryList"
-                              ItemTemplate="{StaticResource InlineCategoryTemplate}">
-                    <ItemsControl.ItemsPanel>
+                <ListView x:Name="AiLibraryList"
+                          ItemTemplate="{StaticResource InlineCategoryTemplate}"
+                          CanReorderItems="True"
+                          CanDragItems="True"
+                          AllowDrop="True"
+                          SelectionMode="None"
+                          IsItemClickEnabled="False"
+                          ScrollViewer.HorizontalScrollMode="Disabled"
+                          ScrollViewer.VerticalScrollMode="Disabled">
+                    <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="8" />
                         </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
 
             </StackPanel>
         </ScrollViewer>

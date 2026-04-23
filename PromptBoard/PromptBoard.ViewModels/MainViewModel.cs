@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -73,11 +74,44 @@ public partial class MainViewModel : ObservableObject
         _insertOrchestrator = insertOrchestrator;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<MainViewModel>();
+
+        // Drag & drop: each zone's ListView fires CollectionChanged(Move) when the
+        // user reorders items. We renumber the global SortOrder so the stored
+        // order matches what the user sees across zones.
+        StandardCategories.CollectionChanged += OnZoneCollectionChanged;
+        ProjectCategories.CollectionChanged += OnZoneCollectionChanged;
+        AiLibraryCategories.CollectionChanged += OnZoneCollectionChanged;
+    }
+
+    private bool _suppressReorderPersist;
+
+    private async void OnZoneCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_suppressReorderPersist) return;
+        if (e.Action != NotifyCollectionChangedAction.Move) return;
+        try
+        {
+            int index = 0;
+            foreach (CategoryViewModel c in StandardCategories) c.SortOrder = index++;
+            foreach (CategoryViewModel c in ProjectCategories) c.SortOrder = index++;
+            foreach (CategoryViewModel c in AiLibraryCategories) c.SortOrder = index++;
+
+            foreach (CategoryViewModel c in Categories)
+            {
+                await c.PersistAsync();
+            }
+            _logger.LogInformation("Categories reordered via drag and drop.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist category reorder.");
+        }
     }
 
     public async Task InitializeAsync()
     {
         IsLoading = true;
+        _suppressReorderPersist = true;
         try
         {
             Categories.Clear();
@@ -99,6 +133,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            _suppressReorderPersist = false;
             IsLoading = false;
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -85,6 +86,29 @@ public partial class CategoryViewModel : ObservableObject
         foreach (Prompt p in category.Prompts.OrderBy(p => p.SortOrder))
         {
             AttachPrompt(p);
+        }
+
+        Prompts.CollectionChanged += OnPromptsCollectionChanged;
+    }
+
+    private async void OnPromptsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action != NotifyCollectionChangedAction.Move) return;
+        try
+        {
+            for (int i = 0; i < Prompts.Count; i++)
+            {
+                if (Prompts[i].SortOrder != i)
+                {
+                    Prompts[i].SortOrder = i;
+                    await Prompts[i].PersistAsync();
+                }
+            }
+            _logger.LogInformation("Prompts reordered in category '{Name}'.", Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist prompt reorder in category '{Name}'.", Name);
         }
     }
 
