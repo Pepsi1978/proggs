@@ -152,6 +152,17 @@ constructor(
             }
         }
 
+        // Also include the custom-analysis prompt in every full backup run,
+        // in case a previous immediate-save attempt failed (no network etc.).
+        try {
+            val currentPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+            if (currentPrompt.isNotBlank()) {
+                backupCustomPrompt(currentPrompt)
+            }
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Custom prompt backup (non-critical) failed: ${e.message}")
+        }
+
         driveBackupManager.endSession()
         SyncProgressHolder.setSynced()
         return Result.success(Unit)
@@ -241,8 +252,52 @@ constructor(
             Log.e("SyncDebug", "TTS favorites restore failed (non-critical): ${e.message}")
         }
 
+        // Restore custom-analysis prompt from Drive if available — overwrites any
+        // local value so the same prompt follows the user across devices.
+        try {
+            val promptFile = File(context.cacheDir, "custom_prompt_restore.tmp")
+            val restoreResult =
+                driveRestoreManager.restoreFile("custom_analysis_prompt.txt", promptFile)
+            if (restoreResult.isSuccess && promptFile.exists()) {
+                val promptContent = promptFile.readText()
+                encryptedPrefs.edit()
+                    .putString(Constants.PREF_CUSTOM_PROMPT, promptContent)
+                    .putLong("custom_prompt_saved_at", System.currentTimeMillis())
+                    .commit()
+                Log.d("SyncDebug", "Restored custom analysis prompt from Drive (${promptContent.length} chars)")
+                promptFile.delete()
+            } else {
+                Log.d("SyncDebug", "No custom prompt backup found on Drive — skipping restore")
+            }
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Custom prompt restore failed (non-critical): ${e.message}")
+        }
+
         // Photos are downloaded AFTER app restart via downloadMissingPhotos()
         return Result.success(Unit)
+    }
+
+    /**
+     * Immediately backs up the custom-analysis prompt text to Drive as a plain
+     * text file so it syncs across devices. Called every time the user saves the
+     * Individuelle-Analyse focus field in Settings.
+     */
+    suspend fun backupCustomPrompt(promptText: String): Result<Unit> {
+        return try {
+            val tmpFile = File(context.cacheDir, "custom_analysis_prompt_backup.tmp")
+            tmpFile.writeText(promptText)
+            val result = driveBackupManager.backupFile(tmpFile, "custom_analysis_prompt.txt")
+            tmpFile.delete()
+            if (result.isSuccess) {
+                Log.d("SyncDebug", "Custom analysis prompt backed up to Drive (${promptText.length} chars)")
+            } else {
+                Log.e("SyncDebug", "Custom prompt backup failed: ${result.exceptionOrNull()?.message}")
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Custom prompt backup exception: ${e.message}")
+            Result.failure(e)
+        }
     }
 
     /** Immediately backs up TTS voice favorites to Drive as a plain text file. */

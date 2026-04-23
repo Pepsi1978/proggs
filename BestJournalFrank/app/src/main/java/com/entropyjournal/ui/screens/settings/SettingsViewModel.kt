@@ -826,6 +826,24 @@ constructor(
         _uiState.value = _uiState.value.copy(promptPendingImprovement = null)
     }
 
+    /**
+     * Uploads the current custom-analysis prompt to Google Drive immediately.
+     * Called right after the user saves the Individuelle-Analyse focus text
+     * so it syncs to other devices and survives a fresh sign-in.
+     */
+    fun backupCustomPromptToDrive(promptText: String) {
+        viewModelScope.launch {
+            try {
+                syncUseCase.backupCustomPrompt(promptText)
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "SettingsViewModel",
+                    "Custom prompt backup failed (non-critical): ${e.message}",
+                )
+            }
+        }
+    }
+
     fun clearPromptVoiceState() {
         promptAudioFile?.delete()
         promptAudioFile = null
