@@ -308,34 +308,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                             GlassCard(glowColor = SummaryPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
+                                    Text(
+                                        "\u00dcberblick",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SummaryPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center,
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(SummaryPalette.primary.copy(alpha = 0.12f)),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.AutoStories,
-                                                contentDescription = null,
-                                                tint = SummaryPalette.primary,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "\u00dcberblick",
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = SummaryPalette.primary,
-                                        )
-                                Spacer(modifier = Modifier.width(40.dp))
-                                    }
+                                        textAlign = TextAlign.Center,
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = overallAnalysis,
@@ -394,34 +374,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(20.dp))
                             NeonDivider()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                            Text(
+                                "Alle Beobachtungen",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = SummaryPalette.secondary,
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier.size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Search,
-                                        contentDescription = null,
-                                        tint = SummaryPalette.secondary,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Alle Beobachtungen",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SummaryPalette.secondary,
-                                )
-                                Spacer(modifier = Modifier.width(40.dp))
-                            }
+                                textAlign = TextAlign.Center,
+                            )
                         }
 
                         item(key = "relevance_legend") { SummaryRelevanceLegend() }
@@ -458,34 +418,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                             GlassCard(glowColor = InsightPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
+                                    Text(
+                                        "Innerer Spiegel",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = InsightPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center,
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(InsightPalette.primary.copy(alpha = 0.12f)),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.SelfImprovement,
-                                                contentDescription = null,
-                                                tint = InsightPalette.primary,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "Innerer Spiegel",
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = InsightPalette.primary,
-                                        )
-                                Spacer(modifier = Modifier.width(40.dp))
-                                    }
+                                        textAlign = TextAlign.Center,
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = overallAnalysis,
@@ -544,34 +484,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(20.dp))
                             NeonDivider()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                            Text(
+                                "Alle Einsichten",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = InsightPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier.size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(InsightPalette.primary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Visibility,
-                                        contentDescription = null,
-                                        tint = InsightPalette.primary,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Alle Einsichten",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = InsightPalette.primary,
-                                )
-                                Spacer(modifier = Modifier.width(40.dp))
-                            }
+                                textAlign = TextAlign.Center,
+                            )
                         }
 
                         item(key = "insight_depth_legend") { InsightDepthLegend() }
@@ -608,34 +528,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                             GlassCard(glowColor = GoalPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
+                                    Text(
+                                        "Ziel-\u00dcberblick",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = GoalPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center,
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(GoalPalette.primary.copy(alpha = 0.12f)),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.Map,
-                                                contentDescription = null,
-                                                tint = GoalPalette.primary,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "Ziel-\u00dcberblick",
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = GoalPalette.primary,
-                                        )
-                                Spacer(modifier = Modifier.width(40.dp))
-                                    }
+                                        textAlign = TextAlign.Center,
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = overallAnalysis,
@@ -694,34 +594,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(20.dp))
                             NeonDivider()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                            Text(
+                                "Alle Ziele",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = GoalPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier.size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(GoalPalette.primary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.RocketLaunch,
-                                        contentDescription = null,
-                                        tint = GoalPalette.primary,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Alle Ziele",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GoalPalette.primary,
-                                )
-                                Spacer(modifier = Modifier.width(40.dp))
-                            }
+                                textAlign = TextAlign.Center,
+                            )
                         }
 
                         item(key = "goal_status_legend") { GoalStatusLegend() }
@@ -764,35 +644,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                             GlassCard(glowColor = CustomPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
+                                    Text(
+                                        customAnalyse,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CustomPalette.primary,
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier.size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(CustomPalette.primary.copy(alpha = 0.12f)),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.Science,
-                                                contentDescription = null,
-                                                tint = CustomPalette.primary,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            customAnalyse,
-                                            style =
-                                                MaterialTheme.typography.titleLarge.copy(
-                                                    fontWeight = FontWeight.Bold
-                                                ),
-                                            color = CustomPalette.primary,
-                                        )
-                                    }
+                                        textAlign = TextAlign.Center,
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         overallAnalysis,
@@ -851,35 +710,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Spacer(modifier = Modifier.height(20.dp))
                             NeonDivider()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                            Text(
+                                customErgebnisse,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = CustomPalette.primary,
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier.size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(CustomPalette.primary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Assignment,
-                                        contentDescription = null,
-                                        tint = CustomPalette.primary,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    customErgebnisse,
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                    color = CustomPalette.primary,
-                                )
-                            }
+                                textAlign = TextAlign.Center,
+                            )
                         }
                         item(key = "custom_legend") { CustomRelevanceLegend() }
 
@@ -2086,32 +1924,14 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = SummaryPalette.secondary, glowIntensity = 0.25f) {
         Column {
-            Row(
+            Text(
+                "Kernerkenntnisse",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = SummaryPalette.secondary,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier.size(32.dp)
-                            .clip(CircleShape)
-                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Rounded.TipsAndUpdates,
-                        contentDescription = null,
-                        tint = SummaryPalette.secondary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Kernerkenntnisse",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = SummaryPalette.secondary,
-                )
-            }
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Punkte aus deinen Eintr\u00e4gen",
@@ -2371,32 +2191,14 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = InsightPalette.primary, glowIntensity = 0.25f) {
         Column {
-            Row(
+            Text(
+                "Tiefste Erkenntnisse",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = InsightPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier.size(32.dp)
-                            .clip(CircleShape)
-                            .background(InsightPalette.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Rounded.Psychology,
-                        contentDescription = null,
-                        tint = InsightPalette.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Tiefste Erkenntnisse",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = InsightPalette.primary,
-                )
-            }
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Was deine Eintr\u00e4ge \u00fcber dich verraten",
@@ -2651,32 +2453,14 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = GoalPalette.primary, glowIntensity = 0.25f) {
         Column {
-            Row(
+            Text(
+                "N\u00e4chste Schritte",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = GoalPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier.size(32.dp)
-                            .clip(CircleShape)
-                            .background(GoalPalette.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Rounded.RocketLaunch,
-                        contentDescription = null,
-                        tint = GoalPalette.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "N\u00e4chste Schritte",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = GoalPalette.primary,
-                )
-            }
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Schritte f\u00fcr deine Ziele",
@@ -2913,32 +2697,14 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
     GlassCard(glowColor = CustomPalette.primary, glowIntensity = 0.25f) {
         Column {
-            Row(
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = CustomPalette.primary,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier.size(32.dp)
-                            .clip(CircleShape)
-                            .background(CustomPalette.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Rounded.Lightbulb,
-                        contentDescription = null,
-                        tint = CustomPalette.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = CustomPalette.primary,
-                )
-            }
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Basierend auf deiner individuellen Analyse",
