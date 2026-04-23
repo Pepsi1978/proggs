@@ -345,9 +345,10 @@ namespace TerminalVoiceOverlay.Views
                     if (ultrathinkEnabled && !hasPastedText)
                         finalText = "ultrathink - " + finalText;
 
-                    // Prepend space if text was already pasted on this line
-                    if (hasPastedText)
-                        finalText = " " + finalText;
+                    // Append " ; " separator so the AI recognizes multiple spoken tasks as separate items.
+                    // Omit when auto-enter is active (the line gets sent immediately).
+                    if (!autoEnterEnabled)
+                        finalText = finalText + " ; ";
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);

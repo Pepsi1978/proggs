@@ -268,8 +268,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if ultrathinkEnabled && !hasPastedText {
                 finalText = "ultrathink - " + finalText
             }
-            if hasPastedText {
-                finalText = " " + finalText
+            // Append " ; " separator so the AI recognizes multiple spoken tasks as separate items.
+            // Omit when auto-enter is active (the line gets sent immediately).
+            if !autoEnterEnabled {
+                finalText = finalText + " ; "
             }
         }
 
