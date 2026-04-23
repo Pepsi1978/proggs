@@ -1593,7 +1593,16 @@ fun SettingsScreen(
                         // before the add) opens the Premium upsell sheet instead.
                         var showProfilesPremiumSheet by remember { mutableStateOf(false) }
 
-                        val scenarioNames = fixedScenarioNames + customList.map { it.name }
+                        // Fall back to the current `profile_custom` translation for any
+                        // entry the user has not renamed. Keeps the list in sync with the
+                        // device language even after an entry was created in a different
+                        // locale (the stored name in prefs is a frozen literal).
+                        val scenarioNames =
+                            fixedScenarioNames +
+                                customList.map {
+                                    com.bestjournal.app.data.prefs.CustomAnalysesStore
+                                        .displayName(it, defaultCustomName)
+                                }
 
                         fun selectScenario(index: Int) {
                             doHaptic(HapticFeedbackType.LongPress)
@@ -1860,7 +1869,13 @@ fun SettingsScreen(
                                     ?: customList.firstOrNull()
                             val activeEntryId = activeEntry?.id
                             val savedPrompt = activeEntry?.prompt.orEmpty()
-                            val savedName = activeEntry?.name ?: defaultCustomName
+                            // Mirror the list display: entries the user has not renamed
+                            // show the current locale's default, not the frozen literal.
+                            val savedName =
+                                activeEntry?.let {
+                                    com.bestjournal.app.data.prefs.CustomAnalysesStore
+                                        .displayName(it, defaultCustomName)
+                                } ?: defaultCustomName
                             var promptText by
                                 remember(activeEntryId) { mutableStateOf(savedPrompt) }
                             var titleText by

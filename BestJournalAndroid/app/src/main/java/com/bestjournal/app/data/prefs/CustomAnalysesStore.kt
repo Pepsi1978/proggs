@@ -18,6 +18,13 @@ data class CustomAnalysis(
     val id: String,
     val name: String,
     val prompt: String,
+    /**
+     * True once the user has manually renamed this entry. When false, UI code
+     * should ignore [name] and render the current `R.string.profile_custom`
+     * instead — so the default name follows the device language even after
+     * the entry was created in a different locale.
+     */
+    val isRenamed: Boolean = false,
 )
 
 /**
@@ -47,6 +54,46 @@ object CustomAnalysesStore {
     private const val KEY_ID = "id"
     private const val KEY_NAME = "name"
     private const val KEY_PROMPT = "prompt"
+    private const val KEY_IS_RENAMED = "isRenamed"
+
+    /**
+     * Every known translation of `R.string.profile_custom`. Used for lazy
+     * migration: if a stored entry's name matches one of these, we can safely
+     * treat it as the untranslated default and flip `isRenamed` to false — so
+     * the display name follows the current device language again.
+     *
+     * Must stay in sync with `values[-*]/strings.xml` `profile_custom`. When a
+     * translation changes there, add the old value here so legacy entries keep
+     * migrating correctly.
+     */
+    private val KNOWN_DEFAULT_NAMES: Set<String> = setOf(
+        "Individuelle Analyse",          // de
+        "Custom Analysis",                // en
+        "Analyse personnalisée",          // fr
+        "Análisis personalizado",         // es
+        "Análise personalizada",          // pt-BR / pt-PT
+        "Analisi personalizzata",         // it
+        "Aangepaste analyse",             // nl
+        "Analiza własna",                 // pl
+        "Власний аналіз",                 // uk
+        "Kişisel analiz",                 // tr
+        "カスタム分析",                    // ja
+        "맞춤 분석",                      // ko
+        "自定义分析",                      // zh-Hans
+        "自定義分析",                      // zh-Hant
+        "تحليل مخصّص",                    // ar
+        "व्यक्तिगत विश्लेषण",              // hi
+        "การวิเคราะห์เฉพาะ",              // th
+        "Analisis kustom",                 // id
+        "ব্যক্তিগত বিশ্লেষণ",            // bn
+        "వ్యక్తిగత విశ్లేషణ",             // te
+        "वैयक्तिक विश्लेषण",              // mr
+        "தனிப்பட்ட பகுப்பாய்வு",          // ta
+        "انفرادی تجزیہ",                   // ur
+        "વ્યક્તિગત વિશ્લેષણ",             // gu
+        "ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ",             // kn
+        "വ്യക്തിഗത വിശകലനം",              // ml
+    )
 
     /**
      * Hard fallback name used when the caller cannot supply a localised default
@@ -98,7 +145,17 @@ object CustomAnalysesStore {
             val id = obj.optString(KEY_ID).ifEmpty { UUID.randomUUID().toString() }
             val name = obj.optString(KEY_NAME, FALLBACK_DEFAULT_NAME)
             val prompt = obj.optString(KEY_PROMPT, "")
-            out.add(CustomAnalysis(id = id, name = name, prompt = prompt))
+            // Lazy migration: legacy JSON has no isRenamed flag. Derive it from
+            // the stored name — if it matches a known default translation we
+            // treat the entry as not-renamed so display falls back to the
+            // current R.string.profile_custom. Any non-default name is assumed
+            // to be a user rename and stays stable.
+            val isRenamed =
+                if (obj.has(KEY_IS_RENAMED)) obj.optBoolean(KEY_IS_RENAMED, false)
+                else name !in KNOWN_DEFAULT_NAMES
+            out.add(
+                CustomAnalysis(id = id, name = name, prompt = prompt, isRenamed = isRenamed)
+            )
         }
         return out
     }
@@ -111,6 +168,7 @@ object CustomAnalysesStore {
             obj.put(KEY_ID, item.id)
             obj.put(KEY_NAME, item.name)
             obj.put(KEY_PROMPT, item.prompt)
+            obj.put(KEY_IS_RENAMED, item.isRenamed)
             arr.put(obj)
         }
         return arr.toString()
@@ -137,6 +195,7 @@ object CustomAnalysesStore {
             id = UUID.randomUUID().toString(),
             name = defaultName,
             prompt = "",
+            isRenamed = false,
         )
         list.add(newEntry)
         save(prefs, list)
@@ -166,8 +225,15 @@ object CustomAnalysesStore {
         defaultName: String = FALLBACK_DEFAULT_NAME,
     ) {
         val sanitised = newName.trim().ifEmpty { defaultName }
+        // A rename to the exact current default (or empty, which resolves to it)
+        // is treated as "reset to default" — isRenamed stays false so the entry
+        // keeps following the device language.
+        val isRealRename = sanitised != defaultName
         val list = load(prefs, defaultName)
-        val updated = list.map { if (it.id == id) it.copy(name = sanitised) else it }
+        val updated =
+            list.map {
+                if (it.id == id) it.copy(name = sanitised, isRenamed = isRealRename) else it
+            }
         if (updated != list) save(prefs, updated)
     }
 
@@ -198,12 +264,28 @@ object CustomAnalysesStore {
     fun activePromptOrEmpty(prefs: SharedPreferences, scenario: Int): String =
         resolve(prefs, scenario)?.prompt ?: ""
 
-    /** Name for the currently-selected custom scenario, or the supplied fallback. */
+    /**
+     * Name for the currently-selected custom scenario, or the supplied fallback.
+     * If the entry has not been renamed by the user, returns [defaultName] so
+     * the display name follows the current device language.
+     */
     fun activeNameOrDefault(
         prefs: SharedPreferences,
         scenario: Int,
         defaultName: String = FALLBACK_DEFAULT_NAME,
-    ): String = resolve(prefs, scenario)?.name ?: defaultName
+    ): String {
+        val entry = resolve(prefs, scenario) ?: return defaultName
+        return if (entry.isRenamed) entry.name else defaultName
+    }
+
+    /**
+     * Display name for an entry: its stored name if the user renamed it,
+     * otherwise the supplied [defaultName] (usually the current
+     * `R.string.profile_custom`). Lets UI code stay language-reactive without
+     * rewriting the stored JSON every time the device language changes.
+     */
+    fun displayName(entry: CustomAnalysis, defaultName: String): String =
+        if (entry.isRenamed) entry.name else defaultName
 
     // ── Migration from legacy single-prompt key ─────────────────────────────
 
@@ -217,6 +299,7 @@ object CustomAnalysesStore {
                 id = UUID.randomUUID().toString(),
                 name = defaultName,
                 prompt = legacy,
+                isRenamed = false,
             )
         )
     }
