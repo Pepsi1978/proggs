@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DateRange
@@ -69,6 +70,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -110,6 +112,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
@@ -1785,11 +1788,67 @@ fun SettingsScreen(
                                     if (granted) viewModel.togglePromptRecording()
                                 }
 
+                            // Clear-text confirmation
+                            var showClearConfirm by remember { mutableStateOf(false) }
+                            if (showClearConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { showClearConfirm = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    title = {
+                                        Text(
+                                            stringResource(
+                                                R.string.prompt_clear_confirm_title
+                                            ),
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                R.string.prompt_clear_confirm_text
+                                            ),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color =
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                promptText = ""
+                                                preImproveText = null
+                                                improvedText = null
+                                                useImproved = false
+                                                viewModel.clearPromptVoiceState()
+                                                showClearConfirm = false
+                                            }
+                                        ) {
+                                            Text(
+                                                stringResource(R.string.action_yes),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showClearConfirm = false }) {
+                                            Text(
+                                                stringResource(R.string.action_no),
+                                                color =
+                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+
                             AlertDialog(
                                 onDismissRequest = {
                                     viewModel.clearPromptVoiceState()
                                     showCustomPromptDialog = false
                                 },
+                                modifier = Modifier.fillMaxWidth(0.95f),
+                                properties =
+                                    DialogProperties(usePlatformDefaultWidth = false),
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
                                     Text(
@@ -1805,28 +1864,64 @@ fun SettingsScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        OutlinedTextField(
-                                            value = promptText,
-                                            onValueChange = { promptText = it },
+                                        Box(
                                             modifier =
-                                                Modifier.fillMaxWidth()
-                                                    .height(280.dp)
-                                                    .focusRequester(focusRequester),
-                                            placeholder = {
-                                                val isDark = LocalIsDarkTheme.current
-                                                Text(
-                                                    stringResource(
-                                                        R.string.settings_custom_prompt_placeholder
-                                                    ),
-                                                    color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                            .copy(
-                                                                alpha = if (isDark) 0.25f else 0.35f
+                                                Modifier.fillMaxWidth().height(440.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = promptText,
+                                                onValueChange = { promptText = it },
+                                                modifier =
+                                                    Modifier.fillMaxWidth()
+                                                        .height(400.dp)
+                                                        .align(Alignment.BottomCenter)
+                                                        .focusRequester(focusRequester),
+                                                placeholder = {
+                                                    val isDark = LocalIsDarkTheme.current
+                                                    Text(
+                                                        stringResource(
+                                                            R.string
+                                                                .settings_custom_prompt_placeholder
+                                                        ),
+                                                        color =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant
+                                                                .copy(
+                                                                    alpha =
+                                                                        if (isDark) 0.25f
+                                                                        else 0.35f
+                                                                ),
+                                                    )
+                                                },
+                                                textStyle = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            if (promptText.isNotBlank()) {
+                                                IconButton(
+                                                    onClick = { showClearConfirm = true },
+                                                    modifier =
+                                                        Modifier.align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(32.dp)
+                                                            .background(
+                                                                MaterialTheme.colorScheme
+                                                                    .surfaceVariant,
+                                                                shape = CircleShape,
                                                             ),
-                                                )
-                                            },
-                                            textStyle = MaterialTheme.typography.bodyMedium,
-                                        )
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Close,
+                                                        contentDescription =
+                                                            stringResource(
+                                                                R.string.prompt_clear_content_desc
+                                                            ),
+                                                        tint =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
 
                                         Spacer(modifier = Modifier.height(12.dp))
 

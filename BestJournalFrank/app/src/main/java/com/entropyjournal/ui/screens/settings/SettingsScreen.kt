@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DateRange
@@ -110,6 +111,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.CircleShape
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
@@ -1973,11 +1975,62 @@ fun SettingsScreen(
                                     if (granted) viewModel.togglePromptRecording()
                                 }
 
+                            var showClearConfirm by remember { mutableStateOf(false) }
+                            if (showClearConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { showClearConfirm = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    title = {
+                                        Text(
+                                            "Text löschen?",
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            "Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color =
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(
+                                            onClick = {
+                                                promptText = ""
+                                                preImproveText = null
+                                                improvedText = null
+                                                useImproved = false
+                                                viewModel.clearPromptVoiceState()
+                                                showClearConfirm = false
+                                            }
+                                        ) {
+                                            Text(
+                                                "Ja",
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showClearConfirm = false }) {
+                                            Text(
+                                                "Nein",
+                                                color =
+                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+
                             AlertDialog(
                                 onDismissRequest = {
                                     viewModel.clearPromptVoiceState()
                                     showCustomPromptDialog = false
                                 },
+                                modifier = Modifier.fillMaxWidth(0.95f),
+                                properties =
+                                    DialogProperties(usePlatformDefaultWidth = false),
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
                                     Text(
@@ -1993,26 +2046,57 @@ fun SettingsScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        OutlinedTextField(
-                                            value = promptText,
-                                            onValueChange = { promptText = it },
+                                        Box(
                                             modifier =
-                                                Modifier.fillMaxWidth()
-                                                    .height(280.dp)
-                                                    .focusRequester(focusRequester),
-                                            placeholder = {
-                                                val isDark = LocalIsDarkTheme.current
-                                                Text(
-                                                    "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
-                                                    color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                            .copy(
-                                                                alpha = if (isDark) 0.25f else 0.35f
+                                                Modifier.fillMaxWidth().height(440.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = promptText,
+                                                onValueChange = { promptText = it },
+                                                modifier =
+                                                    Modifier.fillMaxWidth()
+                                                        .height(400.dp)
+                                                        .align(Alignment.BottomCenter)
+                                                        .focusRequester(focusRequester),
+                                                placeholder = {
+                                                    val isDark = LocalIsDarkTheme.current
+                                                    Text(
+                                                        "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+                                                        color =
+                                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                                                .copy(
+                                                                    alpha =
+                                                                        if (isDark) 0.25f
+                                                                        else 0.35f
+                                                                ),
+                                                    )
+                                                },
+                                                textStyle = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            if (promptText.isNotBlank()) {
+                                                IconButton(
+                                                    onClick = { showClearConfirm = true },
+                                                    modifier =
+                                                        Modifier.align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(32.dp)
+                                                            .background(
+                                                                MaterialTheme.colorScheme
+                                                                    .surfaceVariant,
+                                                                shape = CircleShape,
                                                             ),
-                                                )
-                                            },
-                                            textStyle = MaterialTheme.typography.bodyMedium,
-                                        )
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Close,
+                                                        contentDescription = "Text l\u00f6schen",
+                                                        tint =
+                                                            MaterialTheme.colorScheme
+                                                                .onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
 
                                         Spacer(modifier = Modifier.height(12.dp))
 

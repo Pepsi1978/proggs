@@ -118,6 +118,11 @@
     <string name="prompt_recording_with_model">Aufnahme läuft — Modell: %1$s</string>
     <string name="prompt_transcribing_with_model">%1$s transkribiert…</string>
     <string name="prompt_transcription_model_hint">Transkribiert mit %1$s</string>
+    <string name="prompt_clear_content_desc">Text löschen</string>
+    <string name="prompt_clear_confirm_title">Text löschen?</string>
+    <string name="prompt_clear_confirm_text">Die Individuelle Analyse wird unwiderruflich gelöscht. Möchtest du wirklich fortfahren?</string>
+    <string name="action_yes">Ja</string>
+    <string name="action_no">Nein</string>
 
     <!-- Streak messages -->
     <string name="streak_365">Ein ganzes Jahr!</string>
