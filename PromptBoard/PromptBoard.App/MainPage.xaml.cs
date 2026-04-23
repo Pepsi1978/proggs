@@ -78,6 +78,18 @@ public sealed partial class MainPage : UserControl
             }
         };
 
+        SettingsButton.Click += async (_, _) =>
+        {
+            var dialogs = _services.GetRequiredService<IDialogService>();
+            await dialogs.ShowSettingsAsync();
+        };
+
+        AboutButton.Click += async (_, _) =>
+        {
+            var dialogs = _services.GetRequiredService<IDialogService>();
+            await dialogs.ShowAboutAsync();
+        };
+
         Loaded += async (_, _) =>
         {
             try

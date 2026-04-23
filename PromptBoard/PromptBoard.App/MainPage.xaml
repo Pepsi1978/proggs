@@ -360,6 +360,20 @@
                             VerticalAlignment="Center"
                             ToolTipService.ToolTip="Kategorien und Prompts filtern" />
 
+            <Button x:Name="SettingsButton"
+                    ToolTipService.ToolTip="Einstellungen"
+                    Padding="8,4"
+                    MinWidth="0">
+                <FontIcon Glyph="&#xE713;" FontSize="14" />
+            </Button>
+
+            <Button x:Name="AboutButton"
+                    ToolTipService.ToolTip="Ueber PromptBoard"
+                    Padding="8,4"
+                    MinWidth="0">
+                <FontIcon Glyph="&#xE946;" FontSize="14" />
+            </Button>
+
             <Button x:Name="BackupButton"
                     ToolTipService.ToolTip="Sichern und wiederherstellen">
                 <StackPanel Orientation="Horizontal" Spacing="4">
