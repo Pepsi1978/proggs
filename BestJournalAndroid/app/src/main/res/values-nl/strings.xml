@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Ontgrendeld op %1$s</string>
     <!-- About -->
     <string name="settings_about">Over de app</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Jouw persoonlijke AI-dagboek</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uitloggen?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">In plaats daarvan lokaal transcriberen</string>
 
     <string name="privacy_gate_gemini_title">Tekst naar Google Gemini sturen?</string>
-    <string name="privacy_gate_gemini_body">Voor AI-functies (dashboard, samenvattingen, terugblikken, tekstverbetering) worden fragmenten van je invoer versleuteld naar Google Gemini (Firebase AI, VS) gestuurd. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen. Verzoeken worden na verwerking verwijderd en niet voor training gebruikt.</string>
+    <string name="privacy_gate_gemini_body">Fijn dat je de slimme functies van Best Journal wilt gebruiken! Voor samenvattingen, terugblikken, dashboardinzichten en tekstverbeteringen wordt je tekst versleuteld naar Google Gemini gestuurd.\n\n✓ Nooit gebruikt om AI-modellen te trainen\n✓ Verzoeken worden direct na verwerking verwijderd\n✓ Versleuteld volgens het EU-US Data Privacy Framework\n\nBelangrijke mededeling: omdat je dagboeknotities bijzonder gevoelige gegevens kunnen bevatten (gezondheid, religie, persoonlijke relaties — Art. 9 AVG, bijzondere categorieën), vragen we hier je uitdrukkelijke toestemming voor AI-verwerking. De antwoorden van de AI zijn suggesties, geen professioneel advies, en vervangen geen gekwalificeerde persoon.\n\nJe kunt dit altijd wijzigen in Instellingen.</string>
     <string name="privacy_gate_gemini_accept">Akkoord en verzenden</string>
     <string name="privacy_gate_gemini_cancel">Annuleren</string>
 

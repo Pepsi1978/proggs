@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s に獲得</string>
     <!-- About -->
     <string name="settings_about">アプリについて</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">あなたのAI日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ログアウトしますか？</string>
@@ -1084,7 +1084,7 @@
     <string name="privacy_gate_groq_local">ローカルで文字起こしする</string>
 
     <string name="privacy_gate_gemini_title">テキストをGoogle Geminiに送信しますか？</string>
-    <string name="privacy_gate_gemini_body">AI機能（ダッシュボード、要約、振り返り、テキスト改善）のため、記録の一部が暗号化されてGoogle Gemini(Firebase AI、米国)に送信されます。法的根拠：EU-US Data Privacy Framework + 標準契約条項。リクエストは処理後に削除され、トレーニングには使用されません。</string>
+    <string name="privacy_gate_gemini_body">Best Journalの高度な機能をお使いいただきありがとうございます！要約、振り返り、ダッシュボードの気づき、テキスト改善のために、テキストは暗号化してGoogle Geminiへ送信されます。\n\n✓ あなたのデータはAIモデルの学習には使われません\n✓ リクエストは処理後すぐに削除されます\n✓ EU-US Data Privacy Frameworkに基づき暗号化されます\n\n重要なお知らせ：日記の記述には特に機微な情報（健康、宗教、個人的な関係 — GDPR第9条、特別カテゴリ）が含まれる場合があるため、AI処理への明示的な同意をここでお願いしています。AIの出力は提案であり、専門家の助言の代わりにはなりません。\n\n設定からいつでも変更できます。</string>
     <string name="privacy_gate_gemini_accept">同意して送信</string>
     <string name="privacy_gate_gemini_cancel">キャンセル</string>
 

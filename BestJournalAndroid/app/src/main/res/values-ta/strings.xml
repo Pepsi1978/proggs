@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1097,7 +1097,7 @@
     <string name="privacy_gate_groq_local">அதற்குப் பதிலாக உள்ளமையில் டிரான்ஸ்கிரைப் செய்</string>
 
     <string name="privacy_gate_gemini_title">Google Gemini-க்கு உரையை அனுப்பவா?</string>
-    <string name="privacy_gate_gemini_body">AI அம்சங்களுக்காக (டாஷ்போர்டு, சுருக்கங்கள், பின்னோக்கம், உரை மேம்பாடு) உங்கள் பதிவுகளின் பகுதிகள் குறியாக்கப்பட்டு Google Gemini-க்கு (Firebase AI, USA) அனுப்பப்படும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses. கோரிக்கைகள் செயலாக்கத்திற்குப் பிறகு அழிக்கப்படும், பயிற்சிக்குப் பயன்படுத்தப்படாது.</string>
+    <string name="privacy_gate_gemini_body">Best Journal-இன் அறிவார்ந்த அம்சங்களைப் பயன்படுத்த விரும்புவதில் மகிழ்ச்சி! சுருக்கங்கள், மீள்பார்வைகள், டாஷ்போர்டு பார்வைகள், உரை மேம்பாடுகளுக்காக உங்கள் உரை என்கிரிப்ட் செய்யப்பட்டு Google Gemini-க்கு அனுப்பப்படுகிறது.\n\n✓ உங்கள் தரவு AI மாதிரிகளைப் பயிற்சி செய்ய ஒருபோதும் பயன்படுத்தப்படாது\n✓ செயலாக்கத்திற்குப் பிறகு கோரிக்கைகள் உடனடியாக நீக்கப்படும்\n✓ EU-US Data Privacy Framework படி என்கிரிப்ட் செய்யப்பட்டுள்ளது\n\nமுக்கிய அறிவிப்பு: உங்கள் நாட்குறிப்பு உள்ளீடுகளில் குறிப்பாக முக்கியமான தரவு (உடல்நலம், மதம், தனிப்பட்ட உறவுகள் — GDPR பிரிவு 9, சிறப்பு வகைகள்) இருக்கலாம் என்பதால், AI செயலாக்கத்திற்கான உங்களின் வெளிப்படையான ஒப்புதலை நாங்கள் இங்கே கேட்கிறோம். AI வெளியீடுகள் பரிந்துரைகள், தொழில்முறை ஆலோசனை அல்ல, மற்றும் தகுதியான ஒருவரை மாற்றாது.\n\nநீங்கள் எப்போது வேண்டுமானாலும் அமைப்புகளில் மாற்றலாம்.</string>
     <string name="privacy_gate_gemini_accept">ஒப்புக்கொண்டு அனுப்பு</string>
     <string name="privacy_gate_gemini_cancel">ரத்து</string>
 

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
@@ -1104,7 +1104,7 @@
     <string name="privacy_gate_groq_local">النسخ محليًا بدلًا من ذلك</string>
 
     <string name="privacy_gate_gemini_title">إرسال النص إلى Google Gemini؟</string>
-    <string name="privacy_gate_gemini_body">لميزات الذكاء الاصطناعي (لوحة التحكم، الملخصات، الاستعراضات، تحسين النص) تُرسل مقتطفات من إدخالاتك مشفرة إلى Google Gemini (Firebase AI، الولايات المتحدة). الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية. تُحذف الطلبات بعد المعالجة ولا تُستخدم للتدريب.</string>
+    <string name="privacy_gate_gemini_body">يسعدنا أنك تريد استخدام الميزات الذكية لتطبيق Best Journal! للحصول على الملخصات والاستعراضات ورؤى لوحة المعلومات وتحسين النصوص، يُرسل نصك مشفرًّا إلى Google Gemini.\n\n✓ لا يُستخدم أبدًا لتدريب نماذج الذكاء الاصطناعي\n✓ تُحذف الطلبات فور انتهاء معالجتها\n✓ مشفّر وفق إطار EU-US Data Privacy Framework\n\nتنبيه هام: نظرًا لأن إدخالات يومياتك قد تحتوي على بيانات حساسة بشكل خاص (الصحة، الدين، العلاقات الشخصية — المادة 9 من اللائحة العامة لحماية البيانات، الفئات الخاصة)، نطلب هنا موافقتك الصريحة على معالجتها بالذكاء الاصطناعي. مخرجات الذكاء الاصطناعي اقتراحات وليست استشارة مهنية، ولا تغني عن المختصين.\n\nيمكنك تغيير ذلك في أي وقت من الإعدادات.</string>
     <string name="privacy_gate_gemini_accept">الموافقة والإرسال</string>
     <string name="privacy_gate_gemini_cancel">إلغاء</string>
 

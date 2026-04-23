@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Dibuka pada %1$s</string>
     <!-- About -->
     <string name="settings_about">Tentang aplikasi</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Jurnal AI pribadimu</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Keluar?</string>
@@ -1084,7 +1084,7 @@
     <string name="privacy_gate_groq_local">Transkripsi lokal saja</string>
 
     <string name="privacy_gate_gemini_title">Kirim teks ke Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Untuk fitur AI (dasbor, ringkasan, retrospeksi, penyempurnaan teks), kutipan catatanmu dikirim terenkripsi ke Google Gemini (Firebase AI, AS). Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar. Permintaan dihapus setelah pemrosesan dan tidak dipakai untuk pelatihan.</string>
+    <string name="privacy_gate_gemini_body">Senang kamu ingin menggunakan fitur cerdas Best Journal! Untuk ringkasan, tinjauan, wawasan dasbor, dan perbaikan teks, teks kamu dikirim terenkripsi ke Google Gemini.\n\n✓ Tidak pernah digunakan untuk melatih model AI\n✓ Permintaan dihapus segera setelah diproses\n✓ Terenkripsi sesuai EU-US Data Privacy Framework\n\nPemberitahuan penting: Karena catatan jurnal kamu bisa mengandung data yang sangat sensitif (kesehatan, agama, hubungan pribadi — Pasal 9 GDPR, kategori khusus), kami meminta persetujuan eksplisit kamu di sini untuk pemrosesan oleh AI. Output AI adalah saran, bukan nasihat profesional, dan tidak menggantikan seorang profesional.\n\nKamu bisa mengubahnya kapan saja di Pengaturan.</string>
     <string name="privacy_gate_gemini_accept">Setuju dan kirim</string>
     <string name="privacy_gate_gemini_cancel">Batal</string>
 

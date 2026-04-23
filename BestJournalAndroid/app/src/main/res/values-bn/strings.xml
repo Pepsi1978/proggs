@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1089,7 +1089,7 @@
     <string name="privacy_gate_groq_local">এর পরিবর্তে স্থানীয়ভাবে ট্রান্সক্রাইব করো</string>
 
     <string name="privacy_gate_gemini_title">Google Gemini-তে টেক্সট পাঠাবে?</string>
-    <string name="privacy_gate_gemini_body">AI ফিচারগুলোর জন্য (ড্যাশবোর্ড, সারাংশ, পুনরাবলোকন, টেক্সট উন্নতি) তোমার এন্ট্রির অংশ এনক্রিপ্টেড অবস্থায় Google Gemini-তে (Firebase AI, USA) পাঠানো হয়। আইনি ভিত্তি: EU-US Data Privacy Framework + Standard Contractual Clauses। অনুরোধ প্রক্রিয়াকরণের পর মুছে ফেলা হয় এবং প্রশিক্ষণের জন্য ব্যবহৃত হয় না।</string>
+    <string name="privacy_gate_gemini_body">Best Journal-এর বুদ্ধিমান ফিচার ব্যবহার করতে চাও শুনে ভালো লাগল! সারসংক্ষেপ, পর্যালোচনা, ড্যাশবোর্ড অন্তর্দৃষ্টি এবং টেক্সট উন্নতির জন্য তোমার টেক্সট এনক্রিপ্ট করে Google Gemini-তে পাঠানো হয়।\n\n✓ AI মডেল প্রশিক্ষণে কখনো ব্যবহৃত হয় না\n✓ অনুরোধ প্রক্রিয়াকরণের পরপরই মুছে ফেলা হয়\n✓ EU-US Data Privacy Framework অনুযায়ী এনক্রিপ্টেড\n\nগুরুত্বপূর্ণ বিজ্ঞপ্তি: যেহেতু তোমার ডায়েরির এন্ট্রিতে বিশেষভাবে সংবেদনশীল তথ্য (স্বাস্থ্য, ধর্ম, ব্যক্তিগত সম্পর্ক — GDPR অনুচ্ছেদ 9, বিশেষ বিভাগ) থাকতে পারে, তাই আমরা এখানে AI প্রসেসিংয়ের জন্য তোমার স্পষ্ট সম্মতি চাইছি। AI-এর আউটপুট পরামর্শ মাত্র, পেশাদার পরামর্শ নয়, এবং কোনো যোগ্য ব্যক্তির বিকল্প নয়।\n\nতুমি যেকোনো সময় সেটিংসে এটি পরিবর্তন করতে পারো।</string>
     <string name="privacy_gate_gemini_accept">সম্মত হয়ে পাঠাও</string>
     <string name="privacy_gate_gemini_cancel">বাতিল</string>
 

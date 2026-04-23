@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
     <!-- About -->
     <string name="settings_about">เกี่ยวกับแอป</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ออกจากระบบ?</string>
@@ -1084,7 +1084,7 @@
     <string name="privacy_gate_groq_local">ถอดเสียงในเครื่องแทน</string>
 
     <string name="privacy_gate_gemini_title">ส่งข้อความไปยัง Google Gemini หรือไม่</string>
-    <string name="privacy_gate_gemini_body">สำหรับฟีเจอร์ AI (แดชบอร์ด สรุป ทบทวน ปรับปรุงข้อความ) ส่วนหนึ่งของบันทึกจะถูกส่งแบบเข้ารหัสไปยัง Google Gemini (Firebase AI สหรัฐอเมริกา) ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน คำขอจะถูกลบหลังการประมวลผลและไม่ใช้ในการฝึกโมเดล</string>
+    <string name="privacy_gate_gemini_body">ยินดีที่คุณต้องการใช้ฟีเจอร์อัจฉริยะของ Best Journal! สำหรับสรุป ทบทวน อินไซต์แดชบอร์ด และการปรับปรุงข้อความ ข้อความของคุณจะถูกส่งแบบเข้ารหัสไปยัง Google Gemini\n\n✓ ไม่เคยใช้เพื่อฝึก AI\n✓ คำขอจะถูกลบทันทีหลังการประมวลผล\n✓ เข้ารหัสตาม EU-US Data Privacy Framework\n\nข้อควรทราบ: เนื่องจากบันทึกไดอารีของคุณอาจมีข้อมูลที่ละเอียดอ่อนเป็นพิเศษ (สุขภาพ ศาสนา ความสัมพันธ์ส่วนตัว — GDPR มาตรา 9 หมวดพิเศษ) เราจึงขอคำยินยอมอย่างชัดแจ้งของคุณในการประมวลผลด้วย AI ผลลัพธ์ AI เป็นคำแนะนำ ไม่ใช่คำปรึกษาจากผู้เชี่ยวชาญ และไม่สามารถทดแทนผู้เชี่ยวชาญได้\n\nคุณสามารถเปลี่ยนได้ทุกเมื่อในการตั้งค่า</string>
     <string name="privacy_gate_gemini_accept">ยอมรับและส่ง</string>
     <string name="privacy_gate_gemini_cancel">ยกเลิก</string>
 

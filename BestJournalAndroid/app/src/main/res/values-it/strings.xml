@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Sbloccato il %1$s</string>
     <!-- About -->
     <string name="settings_about">Informazioni sull\'app</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Il tuo diario personale con IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uscire?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">Trascrivere localmente</string>
 
     <string name="privacy_gate_gemini_title">Inviare il testo a Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Per le funzioni IA (dashboard, riassunti, retrospettive, miglioramento del testo), estratti delle tue voci vengono inviati crittografati a Google Gemini (Firebase AI, USA). Base giuridica: EU-US Data Privacy Framework + clausole contrattuali standard. Le richieste vengono eliminate dopo l\'elaborazione e non usate per l\'addestramento.</string>
+    <string name="privacy_gate_gemini_body">Bello che tu voglia usare le funzioni intelligenti di Best Journal! Per riepiloghi, retrospettive, informazioni della dashboard e miglioramenti del testo, il tuo testo viene inviato criptato a Google Gemini.\n\n✓ Mai usato per addestrare modelli di IA\n✓ Le richieste vengono eliminate subito dopo l’elaborazione\n✓ Criptato secondo l’EU-US Data Privacy Framework\n\nAvviso importante: poiché le tue voci del diario possono contenere dati particolarmente sensibili (salute, religione, relazioni personali — Art. 9 del GDPR, categorie particolari), ti chiediamo qui il tuo consenso esplicito al trattamento tramite IA. Le risposte dell’IA sono suggerimenti, non consulenza professionale, e non sostituiscono una persona qualificata.\n\nPuoi cambiarlo in qualsiasi momento nelle Impostazioni.</string>
     <string name="privacy_gate_gemini_accept">Accetta e invia</string>
     <string name="privacy_gate_gemini_cancel">Annulla</string>
 

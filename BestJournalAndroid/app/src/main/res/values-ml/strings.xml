@@ -433,7 +433,7 @@
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>
@@ -1023,7 +1023,7 @@
     <string name="privacy_gate_groq_local">പകരം ലോക്കലായി ട്രാൻസ്ക്രൈബ് ചെയ്യുക</string>
 
     <string name="privacy_gate_gemini_title">ടെക്സ്റ്റ് Google Gemini-ലേക്ക് അയയ്ക്കണോ?</string>
-    <string name="privacy_gate_gemini_body">AI ഫീച്ചറുകൾക്ക് (ഡാഷ്ബോർഡ്, സംഗ്രഹങ്ങൾ, പുനരവലോകനം, ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ) നിങ്ങളുടെ എൻട്രികളുടെ ഭാഗങ്ങൾ എൻക്രിപ്റ്റ് ചെയ്ത് Google Gemini (Firebase AI, USA)-ലേക്ക് അയയ്ക്കുന്നു. നിയമപരമായ അടിസ്ഥാനം: EU-US Data Privacy Framework + Standard Contractual Clauses. അഭ്യർത്ഥനകൾ പ്രോസസിംഗിനു ശേഷം നീക്കം ചെയ്യും, പരിശീലനത്തിന് ഉപയോഗിക്കില്ല.</string>
+    <string name="privacy_gate_gemini_body">Best Journal-ന്റെ സ്മാര്ട് സവിശേഷതകള് ഉപയോഗിക്കാൻ നിങ്ങൾ ആഗ്രഹിക്കുന്നതിൽ സന്തോഷം! സംഗ്രഹങ്ങൾ, അവലോകനങ്ങൾ, ഡാഷ്‌ബോർഡ് ഉൾക്കാഴ്ചകൾ, വാചക മെച്ചപ്പെടുത്തലുകൾ എന്നിവയ്ക്കായി നിങ്ങളുടെ വാചകം എൻക്രിപ്റ്റ് ചെയ്ത് Google Gemini-ലേക്ക് അയക്കുന്നു.\n\n✓ നിങ്ങളുടെ ഡാറ്റ AI മോഡലുകൾ പരിശീലിപ്പിക്കാൻ ഒരിക്കലും ഉപയോഗിക്കില്ല\n✓ പ്രോസസ്സിംഗിനു ശേഷം അഭ്യർത്ഥനകൾ ഉടൻ ഇല്ലാതാക്കും\n✓ EU-US Data Privacy Framework അനുസരിച്ച് എൻക്രിപ്റ്റ് ചെയ്തിരിക്കുന്നു\n\nപ്രധാന അറിയിപ്പ്: നിങ്ങളുടെ ഡയറി എൻട്രികളിൽ പ്രത്യേകിച്ച് സെൻസിറ്റീവ് ഡാറ്റ (ആരോഗ്യം, മതം, വ്യക്തിപരമായ ബന്ധങ്ങൾ — GDPR ആർട്ടിക്കിൾ 9, പ്രത്യേക വിഭാഗങ്ങൾ) അടങ്ങിയിരിക്കാം, അതിനാല് AI പ്രോസസിങ്ങിനു നിങ്ങളുടെ വ്യക്തമായ സമ്മതം ഇവിടെ ചോദിക്കുന്നു. AI പ്രയോഗിക്കുന്നത് നിർദ്ദേശങ്ങളാണ്, പ്രൊഫഷണൽ ഉപദേശം അല്ല, ഒരു വിദഗ്ധനെ പകരം വയ്ക്കാനും കഴിയില്ല.\n\nക്രമീകരണങ്ങളിൽ എപ്പോൾ വേണെങ്കിലും ഇത് മാറ്റാൻ കഴിയും.</string>
     <string name="privacy_gate_gemini_accept">സമ്മതിച്ച് അയയ്ക്കുക</string>
     <string name="privacy_gate_gemini_cancel">റദ്ദാക്കുക</string>
 

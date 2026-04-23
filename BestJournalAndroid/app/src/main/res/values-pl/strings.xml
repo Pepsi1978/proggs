@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Odblokowano: %1$s</string>
     <!-- About -->
     <string name="settings_about">O aplikacji</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Twój osobisty dziennik SI</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Wylogować?</string>
@@ -1096,7 +1096,7 @@
     <string name="privacy_gate_groq_local">Transkrybuj lokalnie</string>
 
     <string name="privacy_gate_gemini_title">Wysłać tekst do Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Dla funkcji AI (pulpit, podsumowania, retrospekcje, poprawa tekstu) fragmenty Twoich wpisów są wysyłane zaszyfrowane do Google Gemini (Firebase AI, USA). Podstawa prawna: EU-US Data Privacy Framework + standardowe klauzule umowne. Zapytania są usuwane po przetworzeniu i nie są używane do trenowania.</string>
+    <string name="privacy_gate_gemini_body">Super, że chcesz korzystać z inteligentnych funkcji Best Journal! Na potrzeby podsumowań, retrospektyw, spostrzeżeń panelu i ulepszania tekstu Twój tekst jest wysyłany zaszyfrowany do Google Gemini.\n\n✓ Nigdy nie używane do trenowania modeli AI\n✓ Żądania są usuwane natychmiast po przetworzeniu\n✓ Zaszyfrowane zgodnie z EU-US Data Privacy Framework\n\nWażna informacja: ponieważ Twoje wpisy w dzienniku mogą zawierać szczególnie wrażliwe dane (zdrowie, religia, relacje osobiste — Art. 9 RODO, szczególne kategorie), prosimy tutaj o Twoją wyraźną zgodę na przetwarzanie przez AI. Wyniki AI są sugestiami, nie poradą profesjonalną, i nie zastępują wykwalifikowanej osoby.\n\nMożesz to zmienić w dowolnej chwili w Ustawieniach.</string>
     <string name="privacy_gate_gemini_accept">Zgadzam się i wysyłam</string>
     <string name="privacy_gate_gemini_cancel">Anuluj</string>
 

@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
     <!-- About -->
     <string name="settings_about">Sobre o app</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">O teu diário pessoal com IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sair da conta?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">Transcrever localmente</string>
 
     <string name="privacy_gate_gemini_title">Enviar o texto ao Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Para as funções de IA (painel, resumos, retrospetivas, melhoria de texto), excertos das tuas entradas são enviados cifrados ao Google Gemini (Firebase AI, EUA). Base jurídica: EU-US Data Privacy Framework + cláusulas contratuais-tipo. Os pedidos são eliminados após o processamento e não são utilizados para treino.</string>
+    <string name="privacy_gate_gemini_body">Que bom que queres usar as funcionalidades inteligentes do Best Journal! Para resumos, retrospetivas, informações do painel e melhorias de texto, o teu texto é enviado encriptado para o Google Gemini.\n\n✓ Nunca utilizado para treinar modelos de IA\n✓ Os pedidos são eliminados imediatamente após o processamento\n✓ Encriptado ao abrigo do EU-US Data Privacy Framework\n\nAviso importante: uma vez que as tuas entradas do diário podem conter dados particularmente sensíveis (saúde, religião, relações pessoais — Art. 9.º do RGPD, categorias especiais), pedimos aqui o teu consentimento explícito ao processamento por IA. As respostas da IA são sugestões, não aconselhamento profissional, e não substituem um profissional qualificado.\n\nPodes alterar isto em qualquer altura nas Definições.</string>
     <string name="privacy_gate_gemini_accept">Aceitar e enviar</string>
     <string name="privacy_gate_gemini_cancel">Cancelar</string>
 

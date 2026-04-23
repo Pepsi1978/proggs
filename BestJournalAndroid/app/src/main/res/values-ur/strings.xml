@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">‏Best Journal V0.12.60</string>
+    <string name="settings_about_version">‏Best Journal V0.12.61</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
@@ -1089,7 +1089,7 @@
     <string name="privacy_gate_groq_local">اس کے بجائے مقامی طور پر ٹرانسکرائب کریں</string>
 
     <string name="privacy_gate_gemini_title">متن Google Gemini کو بھیجیں؟</string>
-    <string name="privacy_gate_gemini_body">AI خصوصیات (ڈیش بورڈ، خلاصے، جائزہ، متن کی بہتری) کے لیے آپ کی اندراجات کے اقتباسات خفیہ کر کے Google Gemini (Firebase AI، امریکہ) کو بھیجے جاتے ہیں۔ قانونی بنیاد: EU-US Data Privacy Framework + Standard Contractual Clauses۔ درخواستیں پروسیسنگ کے بعد حذف کر دی جاتی ہیں اور تربیت کے لیے استعمال نہیں ہوتیں۔</string>
+    <string name="privacy_gate_gemini_body">خوشی کی بات ہے کہ آپ Best Journal کی ذہین خصوصیات استعمال کرنا چاہتے ہیں! خلاصوں، جائزوں، ڈیش بورڈ بصیرتوں اور متن کی بہتری کے لیے آپ کا متن خفیہ کاری کے ساتھ Google Gemini کو بھیجا جاتا ہے۔\n\n✓ آپ کے ڈیٹا سے AI ماڈلز کو کبھی تربیت نہیں دی جاتی\n✓ درخواستیں پراسیسنگ کے فوراً بعد حذف ہو جاتی ہیں\n✓ EU-US Data Privacy Framework کے مطابق خفیہ کردہ\n\nاہم اطلاع: چونکہ آپ کی ڈائری کی اندراج خاصی حساس معلومات (صحت، مذہب، ذاتی تعلقات — GDPR آرٹیکل 9، خصوصی زمرے) پر مشتمل ہو سکتی ہیں، اس لیے ہم یہاں AI پراسیسنگ کے لیے آپ کی واضح رضامندی مانگ رہے ہیں۔ AI کی پیداوار تجاویز ہیں، پیشہ ورانہ مشورہ نہیں، اور کسی ماہر کی جگہ نہیں لے سکتیں۔\n\nآپ اسے کسی بھی وقت ترتیبات میں تبدیل کر سکتے ہیں۔</string>
     <string name="privacy_gate_gemini_accept">اتفاق اور بھیجیں</string>
     <string name="privacy_gate_gemini_cancel">منسوخ</string>
 

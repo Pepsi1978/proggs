@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>
@@ -1092,7 +1092,7 @@
     <string name="privacy_gate_groq_local">Transcrire localement à la place</string>
 
     <string name="privacy_gate_gemini_title">Envoyer le texte à Google Gemini\u202F?</string>
-    <string name="privacy_gate_gemini_body">Pour les fonctions IA (tableau de bord, résumés, rétrospectives, amélioration de texte), des extraits de tes entrées sont envoyés chiffrés à Google Gemini (Firebase AI, États-Unis). Base juridique\u00A0: cadre EU-US Data Privacy Framework + clauses contractuelles types. Les requêtes sont supprimées après traitement et ne sont pas utilisées pour l\'entraînement.</string>
+    <string name="privacy_gate_gemini_body">Super que tu veuilles utiliser les fonctions intelligentes de Best Journal ! Pour les résumés, rétrospectives, aperçus du tableau de bord et améliorations de texte, tes textes sont envoyés chiffrés à Google Gemini.\n\n✓ Aucun entraînement d’IA avec tes données\n✓ Les requêtes sont supprimées immédiatement après traitement\n✓ Chiffré selon le cadre EU-US Data Privacy Framework\n\nInformation importante : comme tes entrées de journal peuvent contenir des données particulièrement sensibles (santé, religion, relations personnelles — Art. 9 du RGPD, catégories particulières), nous te demandons ici ton consentement explicite au traitement par IA. Les réponses de l’IA sont des suggestions, pas des conseils professionnels, et ne remplacent pas une personne qualifiée.\n\nTu peux changer cela à tout moment dans les Paramètres.</string>
     <string name="privacy_gate_gemini_accept">Accepter et envoyer</string>
     <string name="privacy_gate_gemini_cancel">Annuler</string>
 

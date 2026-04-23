@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
     <!-- About -->
     <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
@@ -1089,7 +1089,7 @@
     <string name="privacy_gate_groq_local">ಬದಲಿಗೆ ಸ್ಥಳೀಯವಾಗಿ ಪ್ರತಿಲೇಖಿಸಿ</string>
 
     <string name="privacy_gate_gemini_title">Google Gemini ಗೆ ಪಠ್ಯ ಕಳುಹಿಸುವುದೇ?</string>
-    <string name="privacy_gate_gemini_body">AI ವೈಶಿಷ್ಟ್ಯಗಳಿಗಾಗಿ (ಡ್ಯಾಶ್‌ಬೋರ್ಡ್, ಸಾರಾಂಶಗಳು, ಹಿಂತಿರುಗಿ ನೋಡು, ಪಠ್ಯ ಸುಧಾರಣೆ) ನಿಮ್ಮ ಪ್ರವೇಶಗಳ ಭಾಗಗಳು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ Google Gemini (Firebase AI, USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ. ಕಾನೂನು ಆಧಾರ: EU-US Data Privacy Framework + Standard Contractual Clauses. ವಿನಂತಿಗಳು ಸಂಸ್ಕರಣೆಯ ನಂತರ ಅಳಿಸಲಾಗುತ್ತವೆ ಮತ್ತು ತರಬೇತಿಗಾಗಿ ಬಳಸಲಾಗುವುದಿಲ್ಲ.</string>
+    <string name="privacy_gate_gemini_body">Best Journal ನ ಸ್ಮಾರ್ಟ್ ವೈಶಿಷ್ಟ್ಯಗಳನ್ನು ಬಳಸಲು ಬಯಸುತ್ತಿರುವುದಕ್ಕೆ ಸಂತೋಷ! ಸಾರಾಂಶಗಳು, ಪರಿಶೀಲನೆಗಳು, ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಒಳನೋಟಗಳು ಮತ್ತು ಪචಯ ಸುಧಾರಣೆಗಳಿಗಾಗಿ ನಿಮ್ಮ ಪචಯವನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿ Google Gemini ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.\n\n✓ ನಿಮ್ಮ ಡೇಟಾವನ್ನು AI ಮಾದರಿಗಳನ್ನು ತರಬೇತಿ ನೀಡಲು ಎಂದಿಗೂ ಬಳಸುವುದಿಲ್ಲ\n✓ ಪචಯೆ ನಂತರ ವಿನಂತಿಗಳು ತಕ್ಷಣ ವೆ ಅಳಿಸಲૌdಪಡುತ್ತವೆ\n✓ EU-US Data Privacy Framework ಪ್ರಕಾರ ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಲಾಗಿದೆ\n\nಪ್ರಮುಖ ಸೂಚನೆ: ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳಲ್ಲಿ ವಿಶೇಷವಾಗಿ ಸೂಕ್ಷ್ಮ ಡೇಟಾ (ಆರೋಗ್ಯ, ಧರ್ಮ, ವೈಯಕ್ತಿಕ ಸಂಬಂಧಗಳು — GDPR ಕಲಂ 9, ವಿಶೇಷ ವರ್ಗಗಳು) ಇರಬಹುದಾದ್ದರಿಂದ, AI ಪචಯಗೆ ನಿಮ್ಮ ಸ್ಪಷ್ಟ ಸಮ್ಮತಿಯನ್ನು ಇಲ್ಲಿ ಕೇಳುತ್ತಿದ್ದೇವೆ. AI ಔತ್‌ಪುಟ್ ಗಳು ಸಲಹೆಗಳು, ವ್ಯಾವಸಾಯಿಕ ಸಲಹೆ ಅಲ್ಲ, ಮತ್ತು ૿ಾವುದೇ ತಜ್ಞರ ವ್ಯಕ್ತಿಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.\n\nನೀವು ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಸೆಟ್ಟಿಂಗ್ಸ್‌ನಲ್ಲಿ ಇದನ್ನು ಬದಲಾಯಿಸಬಹುದು.</string>
     <string name="privacy_gate_gemini_accept">ಒಪ್ಪಿ ಕಳುಹಿಸಿ</string>
     <string name="privacy_gate_gemini_cancel">ರದ್ದುಮಾಡಿ</string>
 

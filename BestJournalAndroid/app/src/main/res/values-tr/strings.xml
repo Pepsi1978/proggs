@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s tarihinde açıldı</string>
     <!-- About -->
     <string name="settings_about">Uygulama hakkında</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Kişisel YZ günlüğün</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Çıkış yapılsın mı?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">Yerel olarak transkribe et</string>
 
     <string name="privacy_gate_gemini_title">Metin Google Gemini\'ye gönderilsin mi?</string>
-    <string name="privacy_gate_gemini_body">Yapay zekâ özellikleri (pano, özetler, retrospektifler, metin iyileştirme) için girişlerinin parçaları şifrelenmiş olarak Google Gemini\'ye (Firebase AI, ABD) gönderilir. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri. Talepler işlendikten sonra silinir ve eğitim için kullanılmaz.</string>
+    <string name="privacy_gate_gemini_body">Best Journal’ın akıllı özelliklerini kullanmak istemene sevindik! Özetler, geriye bakışlar, gösterge paneli içgörüleri ve metin iyileştirmeleri için metnin şifrelenmiş olarak Google Gemini’ye gönderilir.\n\n✓ YZ modellerini eğitmek için asla kullanılmaz\n✓ İstekler işlendikten hemen sonra silinir\n✓ EU-US Data Privacy Framework uyarınca şifrelenir\n\nÖnemli uyarı: Günlük girdilerin özellikle hassas veriler (sağlık, din, kişisel ilişkiler — GDPR Md. 9 / özel kategoriler) içerebileceği için, burada YZ işleme için açık onayını istiyoruz. YZ çıktıları önerilerdir, profesyonel danışmanlık değildir ve kalifiye bir uzmanın yerini tutmaz.\n\nBunu istediğin zaman Ayarlar’dan değiştirebilirsin.</string>
     <string name="privacy_gate_gemini_accept">Kabul et ve gönder</string>
     <string name="privacy_gate_gemini_cancel">İptal</string>
 

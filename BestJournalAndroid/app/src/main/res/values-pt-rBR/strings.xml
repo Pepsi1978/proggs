@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
     <!-- About -->
     <string name="settings_about">Sobre o app</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Seu diário pessoal com IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sair da conta?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">Transcrever localmente</string>
 
     <string name="privacy_gate_gemini_title">Enviar o texto ao Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Para recursos de IA (dashboard, resumos, retrospectivas, melhoria de texto), trechos das suas entradas são enviados criptografados ao Google Gemini (Firebase AI, EUA). Base jurídica: estrutura EU-US Data Privacy Framework + cláusulas contratuais padrão. As solicitações são excluídas após o processamento e não são usadas para treinamento.</string>
+    <string name="privacy_gate_gemini_body">Que bom que você quer usar os recursos inteligentes do Best Journal! Para resumos, retrospectivas, insights do painel e melhorias de texto, seu texto é enviado criptografado para o Google Gemini.\n\n✓ Nunca usado para treinar modelos de IA\n✓ As solicitações são excluídas imediatamente após o processamento\n✓ Criptografado conforme o EU-US Data Privacy Framework\n\nAviso importante: como suas entradas do diário podem conter dados especialmente sensíveis (saúde, religião, relacionamentos pessoais — Art. 9 do GDPR, categorias especiais), pedimos aqui seu consentimento explícito para o processamento por IA. As respostas da IA são sugestões, não aconselhamento profissional, e não substituem um profissional qualificado.\n\nVocê pode mudar isso a qualquer momento em Configurações.</string>
     <string name="privacy_gate_gemini_accept">Concordar e enviar</string>
     <string name="privacy_gate_gemini_cancel">Cancelar</string>
 

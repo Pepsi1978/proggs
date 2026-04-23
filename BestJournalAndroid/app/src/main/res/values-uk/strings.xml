@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Відкрито: %1$s</string>
     <!-- About -->
     <string name="settings_about">Про застосунок</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Вийти?</string>
@@ -1096,7 +1096,7 @@
     <string name="privacy_gate_groq_local">Транскрибувати локально</string>
 
     <string name="privacy_gate_gemini_title">Надіслати текст до Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">Для функцій ШІ (панель, підсумки, ретроспективи, покращення тексту) фрагменти Ваших записів надсилаються зашифрованими до Google Gemini (Firebase AI, США). Правова підстава: EU-US Data Privacy Framework + стандартні договірні положення. Запити видаляються після обробки і не використовуються для навчання.</string>
+    <string name="privacy_gate_gemini_body">Чудово, що Ви хочете користуватися інтелектуальними функціями Best Journal! Для резюме, ретроспектив, повідомлень панелі та покращення тексту Ваш текст надсилається зашифрованим до Google Gemini.\n\n✓ Ніколи не використовується для навчання моделей ШІ\n✓ Запити видаляються одразу після обробки\n✓ Зашифровано згідно з EU-US Data Privacy Framework\n\nВажливе повідомлення: оскільки Ваші записи щоденника можуть містити особливо чутливі дані (здоров’я, релігія, особисті стосунки — ст. 9 GDPR, особливі категорії), ми просимо тут Вашої явної згоди на обробку ШІ. Відповіді ШІ є пропозиціями, а не професійною консультацією, і не замінюють кваліфіковану особу.\n\nВи можете змінити це в будь-який час у Налаштуваннях.</string>
     <string name="privacy_gate_gemini_accept">Погоджуюсь і надсилаю</string>
     <string name="privacy_gate_gemini_cancel">Скасувати</string>
 

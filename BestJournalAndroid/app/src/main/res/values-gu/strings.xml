@@ -443,7 +443,7 @@
     <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
     
     <string name="settings_about">App વિશે</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
     
     <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
@@ -1045,7 +1045,7 @@
     <string name="privacy_gate_groq_local">તેના બદલે સ્થાનિક રીતે ટ્રાન્સક્રાઇબ કરો</string>
 
     <string name="privacy_gate_gemini_title">ટેક્સ્ટ Google Gemini ને મોકલવો?</string>
-    <string name="privacy_gate_gemini_body">AI ફીચર્સ (ડેશબોર્ડ, સારાંશ, રેટ્રોસ્પેક્ટિવ, ટેક્સ્ટ સુધારો) માટે તમારી એન્ટ્રીઓના અંશો એન્ક્રિપ્ટેડ સ્વરૂપમાં Google Gemini (Firebase AI, USA) ને મોકલવામાં આવે છે. કાનૂની આધાર: EU-US Data Privacy Framework + Standard Contractual Clauses. વિનંતીઓ પ્રક્રિયા પછી કાઢી નાખવામાં આવે છે અને તાલીમ માટે ઉપયોગમાં લેવાતી નથી.</string>
+    <string name="privacy_gate_gemini_body">Best Journal સ્માર્ટ સુવિધાઓ વાપરવા માગો છો એ જાણીને આનંદ થયો! સારાંશ, સમીક્ષા, ડેશબોર્ડ ઇન્સાઇટ્સ અને ટેક્સ્ટ સુધારણા માટે તમારો ટેક્સ્ટ એન્ક્રિપ્ટ કરીને Google Gemini ને મોકલવામાં આવે છે.\n\n✓ તમારા ડેટાથી AI મોડેલ્સને ક્યારેય તાલીમ આપવામાં આવતી નથી\n✓ પ્રક્રિયા પછી વિનંતીઓ તરત જ કાઢી નાખવામાં આવે છે\n✓ EU-US Data Privacy Framework મુજબ એન્ક્રિપ્ટેડ\n\nમહત્વપૂર્ણ સૂચના: તમારા ડાયરી એન્ટ્રીમાં ખાસ કરીને સંવેદનશીલ માહિતી (સ્વાસ્થ્ય, ધર્મ, વ્યક્તિગત સંબંધો — GDPR કલમ 9, વિશેષ શ્રેણીઓ) હોઈ શકે છે, તેથી અમે અહીન2 AI પ્રોસેસિંગ માટે તમારી સ્પષ્ટ સંમતિ માગી રહ્યા છિએ. AI આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નથી, અને કોઈ વ્યાવસાયિકનું સ્થાન લઈ શકતા નથી.\n\nતમે કોઈપણ સમયે સેટિંગ્સમાં આ બદલી શકો છો.</string>
     <string name="privacy_gate_gemini_accept">સંમત અને મોકલો</string>
     <string name="privacy_gate_gemini_cancel">રદ કરો</string>
 

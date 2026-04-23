@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">解锁于 %1$s</string>
     <!-- About -->
     <string name="settings_about">关于应用</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">你的个人 AI 日记</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登录吗？</string>
@@ -1084,7 +1084,7 @@
     <string name="privacy_gate_groq_local">改为本地转写</string>
 
     <string name="privacy_gate_gemini_title">将文本发送到 Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">为使用 AI 功能（仪表盘、摘要、回顾、文本优化）,你的记录片段会加密发送到 Google Gemini(Firebase AI, 美国)。法律依据：EU-US Data Privacy Framework + 标准合同条款。请求在处理后删除，不用于训练。</string>
+    <string name="privacy_gate_gemini_body">很高兴你想使用 Best Journal 的智能功能！为生成摘要、回顾、仪表板洞察和文本改进，你的文本会加密发送至 Google Gemini。\n\n✓ 绝不用于训练 AI 模型\n✓ 请求在处理后立即删除\n✓ 按照 EU-US Data Privacy Framework 加密\n\n重要提示：日记内容可能包含特别敏感的数据（健康、宗教、人际关系——GDPR 第 9 条，特殊类别），因此我们在此请求你对 AI 处理的明确同意。AI 输出仅为建议，不是专业意见，无法代替专业人士。\n\n你可以随时在设置中更改此项。</string>
     <string name="privacy_gate_gemini_accept">同意并发送</string>
     <string name="privacy_gate_gemini_cancel">取消</string>
 

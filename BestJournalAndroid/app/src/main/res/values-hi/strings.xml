@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">%1$s को अनलॉक</string>
     <!-- About -->
     <string name="settings_about">ऐप के बारे में</string>
-    <string name="settings_about_version">Best Journal V0.12.60</string>
+    <string name="settings_about_version">Best Journal V0.12.61</string>
     <string name="settings_about_desc">आपकी व्यक्तिगत AI डायरी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करें?</string>
@@ -1088,7 +1088,7 @@
     <string name="privacy_gate_groq_local">इसके बजाय लोकल ट्रांसक्राइब करें</string>
 
     <string name="privacy_gate_gemini_title">टेक्स्ट Google Gemini को भेजें?</string>
-    <string name="privacy_gate_gemini_body">AI फ़ीचर्स (Dashboard, सारांश, Retrospective, Text Improvement) के लिए आपकी एंट्रीज़ के अंश एन्क्रिप्टेड रूप में Google Gemini (Firebase AI, USA) को भेजे जाते हैं। कानूनी आधार: EU-US Data Privacy Framework + Standard Contractual Clauses। अनुरोध प्रोसेसिंग के बाद डिलीट कर दिए जाते हैं और ट्रेनिंग में उपयोग नहीं होते।</string>
+    <string name="privacy_gate_gemini_body">बढ़िया! आप Best Journal की इंटेलिजेंट सुविधाओं का उपयोग करना चाहते हैं। सारांश, रिव्यू, डैशबोर्ड इनसाइट्स और टेक्स्ट सुधार के लिए आपका टेक्स्ट एन्क्रिप्टेड रूप में Google Gemini को भेजा जाता है।\n\n✓ आपके डेटा से AI मॉडल कभी ट्रेन नहीं किए जाते\n✓ प्रोसेसिंग के तुरंत बाद रिक्वेस्ट डिलीट हो जाती हैं\n✓ EU-US Data Privacy Framework के अनुसार एन्क्रिप्टेड\n\nमहत्वपूर्ण सूचना: चूंकि आपकी डायरी की एंट्री में विशेष रूप से संवेदनशील डेटा (स्वास्थ्य, धर्म, व्यक्तिगत रिश्ते — GDPR अनुच्छेद 9, विशेष श्रेणियाँ) हो सकते हैं, इसलिए हम यहाँ AI प्रोसेसिंग के लिए आपकी स्पष्ट सहमति माँग रहे हैं। AI का आउटपुट सुझाव है, पेशेवर सलाह नहीं, और किसी विशेषज्ञ की जगह नहीं लेता।\n\nआप इसे कभी भी सेटिंग्स में बदल सकते हैं।</string>
     <string name="privacy_gate_gemini_accept">सहमत हूँ, भेजें</string>
     <string name="privacy_gate_gemini_cancel">रद्द करें</string>
 
