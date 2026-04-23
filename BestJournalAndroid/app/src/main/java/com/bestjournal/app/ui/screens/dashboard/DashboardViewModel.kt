@@ -77,6 +77,17 @@ constructor(
     private val _weeklyDashboardMax = MutableStateFlow(Constants.FREE_WEEKLY_DASHBOARD_LIMIT)
     val weeklyDashboardMax: StateFlow<Int> = _weeklyDashboardMax
 
+    // IMPORTANT: declare these BEFORE the init block. With Dispatchers.Main.immediate,
+    // viewModelScope.launch { while(true) { ... } } begins executing synchronously until
+    // the first suspension point (`delay(500)`). If `lastCustomPromptSavedAt` were
+    // declared below the init block, its Kotlin default 0L would still be live during
+    // that first inline pass — and any Pref that had ever been touched in the past
+    // would look strictly greater than 0L and spuriously trigger clearDashboard +
+    // refreshDashboard on every cold start. Declaring them here guarantees the initial
+    // Pref read runs before the polling loop observes them.
+    private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+    private var manualRefreshActive = false
+
     val isFreemiumUser: StateFlow<Boolean> =
         billingManager.subscriptionState
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SubscriptionState.Free)
@@ -137,19 +148,21 @@ constructor(
         }
         // Continuously poll the auto-update flag so the loading indicator
         // appears even if the user navigates to the dashboard mid-update.
-        // Safety: reset stuck flag on startup if no timestamp exists (legacy stuck state)
-        // or if update has been "running" for >2 minutes
+        //
+        // PREF_DASHBOARD_UPDATING / PREF_DASHBOARD_UPDATE_IS_DELETE are runtime-only
+        // flags used for cross-ViewModel communication during a live analysis. If the
+        // app was killed mid-analysis (OOM, swipe-away, crash), the finally-blocks that
+        // reset them never ran, leaving stale `true` values in persistent prefs. The
+        // polling loop below would then render the "Dashboard wird aktualisiert" state
+        // on every cold start even though nothing is actually running. Clear them here:
+        // any previous process that set the flag is definitely dead by now.
         val updateStartKey = "dashboard_update_started_at"
-        if (encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)) {
-            val startedAt = encryptedPrefs.getLong(updateStartKey, 0L)
-            if (startedAt == 0L || System.currentTimeMillis() - startedAt > 240_000L) {
-                encryptedPrefs
-                    .edit()
-                    .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
-                    .remove(updateStartKey)
-                    .apply()
-            }
-        }
+        encryptedPrefs
+            .edit()
+            .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+            .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
+            .remove(updateStartKey)
+            .apply()
         viewModelScope.launch {
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
@@ -232,19 +245,28 @@ constructor(
             }
         }
 
-        // Auto-generate dashboard on first load after Google restore.
-        // Mirrors RetrospectiveViewModel's pattern: wait for restore to finish,
-        // then if the dashboard is empty but journal entries exist, regenerate
-        // the dashboard from those entries using the active profile prompt.
+        // Auto-generate dashboard ONLY on first load after an ACTUAL Google restore.
+        // Previously this block ran on every cold start, so if blockCount happened to
+        // be 0 (e.g. advice_blocks was cleared by a scenario switch whose follow-up
+        // analysis never completed) it would fire a fresh AI refresh on every app
+        // start even though the user had not added any new entries. We now only
+        // trigger the refresh when PREF_RESTORE_PENDING was actually true when the VM
+        // started — i.e. the user really came back from a Drive restore. Dashboard
+        // refreshes must only happen on: profile switch, custom analysis saved, or
+        // restored journal entries — never on a plain cold start.
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val hadRestore =
+                    encryptedPrefs.getBoolean(Constants.PREF_RESTORE_PENDING, false)
                 awaitRestoreComplete()
+                if (!hadRestore) return@launch
+
                 val blockCount = adviceRepository.getBlockCount()
                 val entryCount = journalEntryDao.getEntryCount()
                 if (blockCount == 0 && entryCount > 0) {
                     Log.d(
                         "DashboardVM",
-                        "Dashboard empty after restore, generating from $entryCount entries",
+                        "Dashboard empty after real restore, generating from $entryCount entries",
                     )
                     refreshDashboard()
                 }
@@ -265,9 +287,6 @@ constructor(
             kotlinx.coroutines.delay(3000)
         }
     }
-
-    private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
-    private var manualRefreshActive = false
 
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)
