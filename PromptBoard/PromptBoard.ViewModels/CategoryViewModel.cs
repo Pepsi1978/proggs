@@ -47,6 +47,12 @@ public partial class CategoryViewModel : ObservableObject
 
     public Func<CategoryViewModel, Task>? OnDeleteRequested { get; set; }
 
+    /// <summary>
+    /// Invoked after a successful delete so the MainViewModel can publish
+    /// an UndoAction to the snackbar. May be null in unit tests.
+    /// </summary>
+    public Action<UndoAction>? OnUndoRequested { get; set; }
+
     public CategoryViewModel(
         Category category,
         ICategoryRepository categories,
@@ -104,11 +110,23 @@ public partial class CategoryViewModel : ObservableObject
             return;
         }
 
+        // Snapshot BEFORE delete so Undo can rebuild the whole category.
+        Category snapshot = ToEntity();
+        var promptSnapshots = Prompts.Select(p => p.ToEntity()).ToList();
+
         await _categories.DeleteAsync(Id);
         if (OnDeleteRequested is not null)
         {
             await OnDeleteRequested(this);
         }
+
+        OnUndoRequested?.Invoke(new UndoAction
+        {
+            Kind = UndoActionKind.DeletedCategory,
+            Message = $"Kategorie \"{snapshot.Name}\" geloescht.",
+            Category = snapshot,
+            Prompts = promptSnapshots,
+        });
     }
 
     [RelayCommand]
@@ -180,9 +198,13 @@ public partial class CategoryViewModel : ObservableObject
             _loggerFactory.CreateLogger<PromptViewModel>())
         {
             OnDeleteRequested = RemovePromptAsync,
+            OnUndoRequested = OnUndoRequested,
         };
         Prompts.Add(vm);
     }
+
+    /// <summary>Called from MainViewModel.RestoreUndoAsync when a single prompt is brought back.</summary>
+    public void AttachRestoredPrompt(Prompt prompt) => AttachPrompt(prompt);
 
     private Task RemovePromptAsync(PromptViewModel vm)
     {
@@ -190,16 +212,14 @@ public partial class CategoryViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    internal Task PersistAsync()
+    internal Task PersistAsync() => _categories.UpdateAsync(ToEntity());
+
+    internal Category ToEntity() => new()
     {
-        Category entity = new()
-        {
-            Id = Id,
-            Name = Name,
-            BackgroundColorHex = BackgroundColorHex,
-            Type = Type,
-            SortOrder = SortOrder,
-        };
-        return _categories.UpdateAsync(entity);
-    }
+        Id = Id,
+        Name = Name,
+        BackgroundColorHex = BackgroundColorHex,
+        Type = Type,
+        SortOrder = SortOrder,
+    };
 }

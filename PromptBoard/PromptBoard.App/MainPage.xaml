@@ -213,6 +213,10 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
         <ScrollViewer Grid.Column="0"
                       HorizontalScrollMode="Enabled"
@@ -299,5 +303,19 @@
                    FontSize="14"
                    Text="Noch keine Kategorien. Rechts auf &quot;+ Kategorie&quot; klicken, um zu starten."
                    Visibility="Collapsed" />
+
+        <InfoBar x:Name="UndoBar"
+                 Grid.Row="1"
+                 Grid.Column="0"
+                 Grid.ColumnSpan="2"
+                 IsOpen="False"
+                 IsClosable="True"
+                 Severity="Informational"
+                 Margin="0,8,0,0"
+                 Title="Rueckgaengig moeglich">
+            <InfoBar.ActionButton>
+                <Button x:Name="UndoButton" Content="Rueckgaengig" />
+            </InfoBar.ActionButton>
+        </InfoBar>
     </Grid>
 </UserControl>

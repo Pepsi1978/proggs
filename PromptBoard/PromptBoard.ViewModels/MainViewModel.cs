@@ -37,6 +37,13 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoading;
 
+    /// <summary>
+    /// The most recent undoable deletion. Set by the child VMs, watched by MainPage
+    /// which displays an InfoBar with a restore button for 10 seconds.
+    /// </summary>
+    [ObservableProperty]
+    private UndoAction? _pendingUndo;
+
     public MainViewModel(
         ICategoryRepository categories,
         IPromptRepository prompts,
@@ -124,6 +131,7 @@ public partial class MainViewModel : ObservableObject
             _loggerFactory)
         {
             OnDeleteRequested = RemoveCategoryAsync,
+            OnUndoRequested = PublishUndo,
         };
         Categories.Add(vm);
         GetBucket(vm.Type).Add(vm);
@@ -134,6 +142,61 @@ public partial class MainViewModel : ObservableObject
         Categories.Remove(vm);
         GetBucket(vm.Type).Remove(vm);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Called by child VMs after a successful delete.</summary>
+    public void PublishUndo(UndoAction action)
+    {
+        PendingUndo = action;
+    }
+
+    /// <summary>Drops the currently pending undo, used by the 10s-timer in the view.</summary>
+    public void DismissUndo()
+    {
+        PendingUndo = null;
+    }
+
+    [RelayCommand]
+    private async Task RestoreUndoAsync()
+    {
+        UndoAction? action = PendingUndo;
+        if (action is null)
+        {
+            return;
+        }
+        PendingUndo = null;
+
+        try
+        {
+            if (action.Kind == UndoActionKind.DeletedCategory && action.Category is not null)
+            {
+                await _categories.AddAsync(action.Category);
+                foreach (Prompt p in action.Prompts)
+                {
+                    await _prompts.AddAsync(p);
+                }
+                // Re-attach so the VM + its prompts reappear in the bar.
+                Category restored = action.Category;
+                restored.Prompts = action.Prompts.ToList();
+                AttachCategory(restored);
+                _logger.LogInformation(
+                    "Restored category '{Name}' with {Count} prompts.",
+                    restored.Name, action.Prompts.Count);
+            }
+            else if (action.Kind == UndoActionKind.DeletedPrompt && action.Prompts.Count == 1)
+            {
+                Prompt prompt = action.Prompts[0];
+                await _prompts.AddAsync(prompt);
+                // Find the owning category VM and attach the prompt back.
+                CategoryViewModel? owner = Categories.FirstOrDefault(c => c.Id == prompt.CategoryId);
+                owner?.AttachRestoredPrompt(prompt);
+                _logger.LogInformation("Restored prompt '{Label}'.", prompt.ShortLabel);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Restore from undo failed.");
+        }
     }
 
     private ObservableCollection<CategoryViewModel> GetBucket(CategoryType type) => type switch

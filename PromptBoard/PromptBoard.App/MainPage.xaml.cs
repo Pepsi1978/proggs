@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using PromptBoard.App.Services;
+using PromptBoard.Core.Models;
 using PromptBoard.Core.Services;
 using PromptBoard.ViewModels;
 using Serilog;
@@ -23,6 +25,7 @@ public sealed partial class MainPage : UserControl
     public MainViewModel ViewModel { get; }
 
     private readonly IServiceProvider _services;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _undoTimer;
 
     public MainPage()
     {
@@ -30,6 +33,19 @@ public sealed partial class MainPage : UserControl
 
         _services = App.Host.Services;
         ViewModel = _services.GetRequiredService<MainViewModel>();
+
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UndoButton.Click += async (_, _) =>
+        {
+            _undoTimer?.Stop();
+            UndoBar.IsOpen = false;
+            await ViewModel.RestoreUndoCommand.ExecuteAsync(null);
+        };
+        UndoBar.Closed += (_, _) =>
+        {
+            _undoTimer?.Stop();
+            ViewModel.DismissUndo();
+        };
 
         StandardList.ItemsSource = ViewModel.StandardCategories;
         ProjectList.ItemsSource = ViewModel.ProjectCategories;
@@ -108,6 +124,39 @@ public sealed partial class MainPage : UserControl
         SeparatorAfterProjects.Visibility = hasProjects && hasAi
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainViewModel.PendingUndo))
+        {
+            return;
+        }
+
+        UndoAction? action = ViewModel.PendingUndo;
+        if (action is null)
+        {
+            UndoBar.IsOpen = false;
+            _undoTimer?.Stop();
+            return;
+        }
+
+        UndoBar.Message = action.Message;
+        UndoBar.IsOpen = true;
+
+        _undoTimer ??= DispatcherQueue.CreateTimer();
+        _undoTimer.Stop();
+        _undoTimer.Interval = TimeSpan.FromSeconds(10);
+        _undoTimer.IsRepeating = false;
+        _undoTimer.Tick -= OnUndoTimerTick;
+        _undoTimer.Tick += OnUndoTimerTick;
+        _undoTimer.Start();
+    }
+
+    private void OnUndoTimerTick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender, object args)
+    {
+        UndoBar.IsOpen = false;
+        ViewModel.DismissUndo();
     }
 
     /// <summary>

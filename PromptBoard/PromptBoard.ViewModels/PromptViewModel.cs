@@ -51,6 +51,9 @@ public partial class PromptViewModel : ObservableObject
 
     public Func<PromptViewModel, Task>? OnDeleteRequested { get; set; }
 
+    /// <summary>Published after a successful delete so the snackbar can show.</summary>
+    public Action<UndoAction>? OnUndoRequested { get; set; }
+
     public PromptViewModel(
         Prompt prompt,
         IPromptRepository prompts,
@@ -161,11 +164,21 @@ public partial class PromptViewModel : ObservableObject
             return;
         }
 
+        // Snapshot BEFORE delete so Undo gets the exact TPH subtype back.
+        Prompt snapshot = ToEntity();
+
         await _prompts.DeleteAsync(Id);
         if (OnDeleteRequested is not null)
         {
             await OnDeleteRequested(this);
         }
+
+        OnUndoRequested?.Invoke(new UndoAction
+        {
+            Kind = UndoActionKind.DeletedPrompt,
+            Message = $"Prompt \"{snapshot.ShortLabel}\" geloescht.",
+            Prompts = new[] { snapshot },
+        });
     }
 
     [RelayCommand]
