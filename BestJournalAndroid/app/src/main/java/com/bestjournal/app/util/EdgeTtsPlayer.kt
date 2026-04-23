@@ -145,25 +145,19 @@ class EdgeTtsPlayer(private val context: Context) {
                                 text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
                             val lang = TtsVoiceRegistry.extractLocale(voice)
-                            // Multilingual voices (Seraphina, Florian, Ava, Andrew...)
-                            // run per-word language detection and will happily switch
-                            // to English for compound words like "Tagebucheintrag"
-                            // even when the outer <speak xml:lang> is set to German.
-                            // Wrapping the body in an explicit <lang xml:lang='...'>
-                            // tag overrides the detection and locks the whole phrase
-                            // to the voice's own locale.
-                            val bodyText =
-                                if (voice.contains("Multilingual", ignoreCase = true)) {
-                                    "<lang xml:lang='$lang'>$escaped</lang>"
-                                } else {
-                                    escaped
-                                }
+                            // Earlier attempt wrapped the body in <lang xml:lang='...'>
+                            // to stop multilingual voices from mispronouncing compound
+                            // German words. Edge TTS's consumer endpoint silently
+                            // dropped those requests (no audio, no turn.end), so the
+                            // UI hung on the spinner forever. The wrapper was reverted;
+                            // the multilingual pronunciation issue is now handled on
+                            // the caller side (see speakText builder in EntryDetailScreen).
                             val ssml =
                                 "X-RequestId:$requestId\r\n" +
                                     "Content-Type:application/ssml+xml\r\n" +
                                     "Path:ssml\r\n\r\n" +
                                     "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$lang'>" +
-                                    "<voice name='$voice'>$bodyText</voice>" +
+                                    "<voice name='$voice'>$escaped</voice>" +
                                     "</speak>"
                             webSocket.send(ssml)
                         }

@@ -850,16 +850,21 @@ fun EntryDetailScreen(
                                         edgeTtsGate.run {
                                             isTtsLoading = true
                                             isSpeaking = true
-                                            // TTS reads labels, not timestamps: the
-                                            // main entry is announced as "Tagebucheintrag."
-                                            // followed by its text, then every Nachtrag as
-                                            // "Nachtrag Eins/Zwei/..." + its text. No dates
-                                            // are spoken — per the user's request.
+                                            // TTS reads labels, not timestamps. Comma
+                                            // instead of a period after "Tagebucheintrag"
+                                            // keeps it inside one spoken sentence so
+                                            // Azure multilingual voices (Seraphina,
+                                            // Ava, ...) classify the whole phrase as
+                                            // German via sentence context — isolating
+                                            // the compound word behind a period made
+                                            // them mispronounce it as "Tagebuchchen-
+                                            // Track" (English detector kicking in on a
+                                            // stand-alone token).
                                             val baseText =
                                                 if (isShowingOriginal) entry.rawText
                                                 else entry.displayText
                                             val speakText = buildString {
-                                                append("Tagebucheintrag. ")
+                                                append("Tagebucheintrag, ")
                                                 append(baseText)
                                                 uiState.followUps.forEachIndexed { index, fu ->
                                                     append("\n\nNachtrag ")
