@@ -9,12 +9,20 @@ namespace PromptBoard.App.Services;
 
 /// <summary>
 /// Concrete WinUI 3 implementation of <see cref="IDialogService"/>.
-/// Dialogs require a <see cref="XamlRoot"/>; the MainWindow sets it
+/// Dialogs require a <see cref="XamlRoot"/>; the MainPage sets it
 /// once its content has loaded.
 /// </summary>
 public sealed class DialogService : IDialogService
 {
+    private readonly IAudioRecorder _recorder;
+    private readonly IGroqTranscriptionService _transcription;
     private XamlRoot? _xamlRoot;
+
+    public DialogService(IAudioRecorder recorder, IGroqTranscriptionService transcription)
+    {
+        _recorder = recorder;
+        _transcription = transcription;
+    }
 
     public void Initialize(XamlRoot xamlRoot) => _xamlRoot = xamlRoot;
 
@@ -22,7 +30,7 @@ public sealed class DialogService : IDialogService
     {
         if (_xamlRoot is null)
         {
-            throw new InvalidOperationException("DialogService is not initialized. Call Initialize from MainWindow first.");
+            throw new InvalidOperationException("DialogService is not initialized. Call Initialize from MainPage first.");
         }
         return _xamlRoot;
     }
@@ -62,7 +70,10 @@ public sealed class DialogService : IDialogService
 
     public async Task<PromptEditorResult?> ShowPromptEditorAsync(PromptEditorRequest request)
     {
-        var dialog = new PromptEditorDialog(request) { XamlRoot = EnsureRoot() };
+        var dialog = new PromptEditorDialog(request, _recorder, _transcription)
+        {
+            XamlRoot = EnsureRoot(),
+        };
         ContentDialogResult result = await dialog.ShowAsync();
         return result == ContentDialogResult.Primary ? dialog.Result : null;
     }

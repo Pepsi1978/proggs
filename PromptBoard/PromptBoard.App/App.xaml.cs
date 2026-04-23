@@ -79,6 +79,14 @@ public partial class App : Application
                 services.AddSingleton<ITextInjectionService, TextInjectionService>();
                 services.AddTransient<IInsertOrchestrator, InsertOrchestrator>();
 
+                // Dictation pipeline (Phase 4): NAudio-backed recorder (singleton holds
+                // transient mic state) plus an HttpClient-based Groq Whisper client.
+                services.AddSingleton<IAudioRecorder, AudioRecorder>();
+                services.AddHttpClient<IGroqTranscriptionService, GroqTranscriptionService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(60);
+                });
+
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
 
