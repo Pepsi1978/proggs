@@ -2190,6 +2190,9 @@ fun SettingsScreen(
                                             }
                                             editor.apply()
                                             if (promptChanged) {
+                                                // Push the new prompt to Drive right away so it
+                                                // syncs to other devices and survives a fresh sign-in.
+                                                viewModel.backupCustomPromptToDrive(promptText)
                                                 viewModel.notifyProfileChanged()
                                                 onProfileChanged()
                                             }

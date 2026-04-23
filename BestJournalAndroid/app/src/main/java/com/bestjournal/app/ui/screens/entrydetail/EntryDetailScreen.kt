@@ -440,6 +440,13 @@ fun EntryDetailScreen(
                     }
                 }
 
+                // AI Act Art. 50 — show "AI-generated" badge while the improved text is shown
+                if (hasImproved && !isShowingOriginal) {
+                    com.bestjournal.app.ui.components.AiGeneratedBadgeInline(
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
+                    )
+                }
+
                 val textFieldColors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,

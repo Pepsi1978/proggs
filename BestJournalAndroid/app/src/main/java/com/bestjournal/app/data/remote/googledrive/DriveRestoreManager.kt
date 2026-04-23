@@ -148,6 +148,46 @@ constructor(
             }
         }
 
+    /**
+     * Download a single file from the appDataFolder by its remote name.
+     * Used for small helper files (TTS favorites, custom analysis prompt, ...)
+     * that sit next to the main database backup.
+     */
+    suspend fun restoreFile(remoteName: String, targetFile: File): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService =
+                    getDriveService()
+                        ?: return@withContext Result.failure(
+                            IllegalStateException("Nicht angemeldet")
+                        )
+
+                val files =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '$remoteName'")
+                        .setFields("files(id)")
+                        .execute()
+
+                val driveFile =
+                    files.files?.firstOrNull()
+                        ?: return@withContext Result.failure(
+                            Exception("Datei nicht gefunden: $remoteName")
+                        )
+
+                FileOutputStream(targetFile).use { outputStream ->
+                    driveService.files().get(driveFile.id).executeMediaAndDownloadTo(outputStream)
+                }
+                Result.success(Unit)
+            } catch (e: UserRecoverableAuthException) {
+                Result.failure(NeedConsentException(e.intent ?: android.content.Intent()))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     suspend fun restoreAllPhotos(
         targetDir: File,
         onProgress: ((current: Int, total: Int) -> Unit)? = null,
