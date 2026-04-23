@@ -18,6 +18,19 @@ public class AppSettings : BaseEntity
 
     public string? GoogleOAuthRefreshToken { get; set; }
 
+    /// <summary>
+    /// OAuth 2.0 Client ID for the user's own Google Cloud project.
+    /// The user creates a Desktop-App OAuth credential at console.cloud.google.com
+    /// and pastes both id + secret into the Settings dialog. We persist them here.
+    /// </summary>
+    public string? GoogleClientId { get; set; }
+
+    /// <summary>OAuth 2.0 Client Secret (paired with <see cref="GoogleClientId"/>).</summary>
+    public string? GoogleClientSecret { get; set; }
+
+    /// <summary>Primary e-mail of the connected Google account, cached after successful login.</summary>
+    public string? GoogleAccountEmail { get; set; }
+
     public string GroqModel { get; set; } = "whisper-large-v3-turbo";
 
     public bool AlwaysOnTop { get; set; } = true;

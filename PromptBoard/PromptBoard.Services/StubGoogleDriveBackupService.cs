@@ -24,4 +24,6 @@ public sealed class StubGoogleDriveBackupService : IGoogleDriveBackupService
 
     public Task<string?> DownloadLatestAsync(CancellationToken ct = default)
         => throw new GoogleDriveNotConfiguredException();
+
+    public Task<string?> GetAccountEmailAsync(CancellationToken ct = default) => Task.FromResult<string?>(null);
 }
