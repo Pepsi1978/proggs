@@ -78,9 +78,10 @@ AUSGABE-REGELN:
 - Reiner Fließtext, direkt einfügbar in ein Eingabefeld.
 
 LÄNGE:
-- 2 bis 4 Sätze.
-- 30 bis 80 Wörter.
-- Lang genug für Präzision, kurz genug für Klarheit.
+- Keine feste Begrenzung nach oben oder unten.
+- Formuliere so ausführlich, dass die Aufgabe perfekt und vollständig umgesetzt werden kann.
+- Lieber ein paar Sätze mehr, die alle nötigen Hinweise liefern, als zu knapp.
+- Keine Füllwörter, keine Wiederholungen, aber auch keine künstliche Kürzung.
 
 STIL:
 - Einfach, klar, direkt.
