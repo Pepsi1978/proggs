@@ -196,6 +196,16 @@ constructor(
             val result = driveBackupManager.backupFile(tmpFile, "custom_analysis_prompt.txt")
             tmpFile.delete()
             if (result.isSuccess) {
+                // Refresh the global last-sync timestamp so every UI showing it
+                // (Google-account row in Settings, green sync-cloud in the journal)
+                // updates to the exact moment of this successful upload. The prefs
+                // listeners in SettingsViewModel and JournalViewModel re-read the
+                // value automatically and push it into their UI state.
+                encryptedPrefs
+                    .edit()
+                    .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                    .apply()
+                SyncProgressHolder.setSynced()
                 Log.d(
                     "SyncDebug",
                     "Custom analysis prompt backed up to Drive (${promptText.length} chars)",
