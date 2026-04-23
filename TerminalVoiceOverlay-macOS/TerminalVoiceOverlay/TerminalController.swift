@@ -11,11 +11,19 @@ final class TerminalController {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Sends Ctrl+C to discard the entire input (works for multi-line)
+    /// Clears the current terminal input line via Ctrl+U (kill-line-to-start).
+    /// Ctrl+U is the standard readline/bash/zsh shortcut for clearing the input
+    /// buffer WITHOUT sending SIGINT. Critical for Claude Code CLI and similar
+    /// TUIs: Ctrl+C would interrupt a running task ("Interrupted"), but Ctrl+U
+    /// only clears the text in the input line. If no input is present (task is
+    /// running), Ctrl+U is a safe no-op.
+    /// Matches the pattern documented in this project's CLAUDE.md:
+    ///   "Line clearing: Ctrl+U (terminal-specific)"
     static func clearLine() {
         activateTerminal()
         usleep(150_000)
-        sendKeyCombo(keyCode: 0x08, flags: .maskControl) // 'c' = 0x08
+        // 'u' = 0x20 on macOS CGKeyCode; Ctrl+U = kill line to start of input
+        sendKeyCombo(keyCode: 0x20, flags: .maskControl)
     }
 
     /// Pastes text via clipboard + Cmd+V, optionally sends Enter afterwards.

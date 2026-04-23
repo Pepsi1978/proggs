@@ -50,17 +50,29 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Clears the current terminal input line by sending Ctrl+C.
-        /// Matches macOS approach (TerminalController.swift clearLine).
-        /// Ctrl+C discards the entire pending input and gives a fresh prompt
-        /// in PowerShell (PSReadLine CancelLine), cmd.exe, and bash/zsh.
+        /// Clears the current terminal input line via Home → Shift+End → Delete.
+        /// This approach ONLY removes text from the input line without sending any
+        /// control signal. Critical for Claude Code CLI and similar TUIs: Ctrl+C
+        /// would interrupt a running task ("Interrupted"), but Home/End/Delete are
+        /// plain navigation/edit keys that the TUI simply applies to the input buffer.
+        /// If the input line is empty (task is running), these keystrokes are a no-op.
+        /// Matches the pattern documented in this project's CLAUDE.md:
+        ///   "Line clearing: Home + Shift+End + Delete (terminal-specific)"
         /// </summary>
         public static void ClearLine(IntPtr terminalHwnd)
         {
             BringToForeground(terminalHwnd);
 
-            // Ctrl+C — cancels current input, fresh prompt (same as macOS)
-            SendKeyCombo(Win32.VK_CONTROL, VK_C);
+            // Home: move caret to start of line
+            SendKey(VK_HOME);
+            Thread.Sleep(30);
+
+            // Shift+End: select from caret to end of line
+            SendKeyCombo(Win32.VK_SHIFT, VK_END);
+            Thread.Sleep(30);
+
+            // Delete: remove the selection
+            SendKey(VK_DELETE);
         }
 
         /// <summary>
