@@ -17,6 +17,7 @@ public partial class PromptViewModel : ObservableObject
 {
     private readonly IPromptRepository _prompts;
     private readonly IDialogService _dialogs;
+    private readonly IInsertOrchestrator _insertOrchestrator;
     private readonly ILogger<PromptViewModel> _logger;
 
     public Guid Id { get; }
@@ -40,18 +41,19 @@ public partial class PromptViewModel : ObservableObject
     [ObservableProperty]
     private int _sortOrder;
 
-    /// <summary>Set by parent CategoryViewModel so we can request our own removal.</summary>
     public Func<PromptViewModel, Task>? OnDeleteRequested { get; set; }
 
     public PromptViewModel(
         Prompt prompt,
         IPromptRepository prompts,
         IDialogService dialogs,
+        IInsertOrchestrator insertOrchestrator,
         ILogger<PromptViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(prompt);
         _prompts = prompts;
         _dialogs = dialogs;
+        _insertOrchestrator = insertOrchestrator;
         _logger = logger;
 
         Id = prompt.Id;
@@ -64,10 +66,8 @@ public partial class PromptViewModel : ObservableObject
         _sortOrder = prompt.SortOrder;
     }
 
-    /// <summary>True when there is an AI-improved text and the toggle is meaningful.</summary>
     public bool CanToggleVersion => !string.IsNullOrEmpty(ImprovedText);
 
-    /// <summary>The text that would be inserted into the CLI on click.</summary>
     public string EffectiveText => ActiveVersion == PromptVersion.Improved && !string.IsNullOrEmpty(ImprovedText)
         ? ImprovedText!
         : OriginalText;
@@ -94,15 +94,17 @@ public partial class PromptViewModel : ObservableObject
         _ = PersistAsync();
     }
 
-    /// <summary>
-    /// Called by the UI when the user clicks the prompt's label. In Phase 1
-    /// this is a stub; Phase 2 wires it to the CLI text injection.
-    /// </summary>
     [RelayCommand]
-    private Task InsertAsync()
+    private async Task InsertAsync()
     {
-        _logger.LogInformation("Insert requested for prompt {Id} ({Label}). Will be wired in Phase 2.", Id, ShortLabel);
-        return Task.CompletedTask;
+        try
+        {
+            await _insertOrchestrator.InsertAsync(Id, EffectiveText);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Insert failed for prompt {Id} ({Label}).", Id, ShortLabel);
+        }
     }
 
     [RelayCommand]
@@ -144,7 +146,7 @@ public partial class PromptViewModel : ObservableObject
     [RelayCommand]
     private void ToggleAlwaysOn()
     {
-        IsAlwaysOn = !IsAlwaysOn; // partial OnChanged handler persists.
+        IsAlwaysOn = !IsAlwaysOn;
     }
 
     [RelayCommand]
@@ -157,7 +159,6 @@ public partial class PromptViewModel : ObservableObject
         ActiveVersion = ActiveVersion == PromptVersion.Original
             ? PromptVersion.Improved
             : PromptVersion.Original;
-        // partial OnChanged handler persists.
     }
 
     internal async Task PersistAsync()

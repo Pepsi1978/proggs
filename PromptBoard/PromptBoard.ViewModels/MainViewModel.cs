@@ -14,7 +14,9 @@ using PromptBoard.Core.Services;
 namespace PromptBoard.ViewModels;
 
 /// <summary>
-/// Root ViewModel for the main bar. Holds all categories and the "+ Kategorie" command.
+/// Root ViewModel for the main bar. Holds all categories grouped into
+/// three horizontal zones (Standard left, Projects middle, AiLibrary right)
+/// plus the global "+ Kategorie" command.
 /// </summary>
 public partial class MainViewModel : ObservableObject
 {
@@ -22,10 +24,21 @@ public partial class MainViewModel : ObservableObject
     private readonly IPromptRepository _prompts;
     private readonly IPastelColorGenerator _colors;
     private readonly IDialogService _dialogs;
+    private readonly IInsertOrchestrator _insertOrchestrator;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<MainViewModel> _logger;
 
+    /// <summary>All categories — used for color generation and as source of truth.</summary>
     public ObservableCollection<CategoryViewModel> Categories { get; } = [];
+
+    /// <summary>Bucket for Standard-type categories (leftmost zone in the bar).</summary>
+    public ObservableCollection<CategoryViewModel> StandardCategories { get; } = [];
+
+    /// <summary>Bucket for Project-type categories (middle zone, rendered as flyout buttons).</summary>
+    public ObservableCollection<CategoryViewModel> ProjectCategories { get; } = [];
+
+    /// <summary>Bucket for AiLibrary-type categories (rightmost zone).</summary>
+    public ObservableCollection<CategoryViewModel> AiLibraryCategories { get; } = [];
 
     [ObservableProperty]
     private bool _isLoading;
@@ -35,12 +48,14 @@ public partial class MainViewModel : ObservableObject
         IPromptRepository prompts,
         IPastelColorGenerator colors,
         IDialogService dialogs,
+        IInsertOrchestrator insertOrchestrator,
         ILoggerFactory loggerFactory)
     {
         _categories = categories;
         _prompts = prompts;
         _colors = colors;
         _dialogs = dialogs;
+        _insertOrchestrator = insertOrchestrator;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<MainViewModel>();
     }
@@ -52,12 +67,21 @@ public partial class MainViewModel : ObservableObject
         try
         {
             Categories.Clear();
+            StandardCategories.Clear();
+            ProjectCategories.Clear();
+            AiLibraryCategories.Clear();
+
             IReadOnlyList<Category> entities = await _categories.GetAllAsync();
             foreach (Category c in entities)
             {
                 AttachCategory(c);
             }
-            _logger.LogInformation("Loaded {Count} categories.", Categories.Count);
+            _logger.LogInformation(
+                "Loaded {Total} categories ({Std} standard, {Prj} projects, {Ai} ai-library).",
+                Categories.Count,
+                StandardCategories.Count,
+                ProjectCategories.Count,
+                AiLibraryCategories.Count);
         }
         finally
         {
@@ -86,26 +110,40 @@ public partial class MainViewModel : ObservableObject
         };
         await _categories.AddAsync(entity);
         AttachCategory(entity);
-        _logger.LogInformation("Category created: {Name} ({Type}) color={Color}", entity.Name, entity.Type, entity.BackgroundColorHex);
+        _logger.LogInformation(
+            "Category created: {Name} ({Type}) color={Color}",
+            entity.Name,
+            entity.Type,
+            entity.BackgroundColorHex);
     }
 
     private void AttachCategory(Category entity)
     {
-        var vm = new CategoryViewModel(entity, _categories, _prompts, _dialogs, _loggerFactory)
+        var vm = new CategoryViewModel(
+            entity,
+            _categories,
+            _prompts,
+            _dialogs,
+            _insertOrchestrator,
+            _loggerFactory)
         {
             OnDeleteRequested = RemoveCategoryAsync,
         };
         Categories.Add(vm);
+        GetBucket(vm.Type).Add(vm);
     }
 
     private Task RemoveCategoryAsync(CategoryViewModel vm)
     {
         Categories.Remove(vm);
+        GetBucket(vm.Type).Remove(vm);
         return Task.CompletedTask;
     }
 
-    /// <summary>Grouped view: Standard categories first, then Projects, then AiLibrary.</summary>
-    public IEnumerable<CategoryViewModel> StandardCategories => Categories.Where(c => c.Type == CategoryType.Standard);
-    public IEnumerable<CategoryViewModel> ProjectCategories => Categories.Where(c => c.Type == CategoryType.Project);
-    public IEnumerable<CategoryViewModel> AiLibraryCategories => Categories.Where(c => c.Type == CategoryType.AiLibrary);
+    private ObservableCollection<CategoryViewModel> GetBucket(CategoryType type) => type switch
+    {
+        CategoryType.Project => ProjectCategories,
+        CategoryType.AiLibrary => AiLibraryCategories,
+        _ => StandardCategories,
+    };
 }

@@ -14,12 +14,15 @@ namespace PromptBoard.ViewModels;
 
 /// <summary>
 /// ViewModel for one column in the bar (a category and its prompts).
+/// Phase 3: IsProject/IsInline flags drive the two rendering paths
+/// (inline tile vs. flyout-only header).
 /// </summary>
 public partial class CategoryViewModel : ObservableObject
 {
     private readonly ICategoryRepository _categories;
     private readonly IPromptRepository _prompts;
     private readonly IDialogService _dialogs;
+    private readonly IInsertOrchestrator _insertOrchestrator;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<CategoryViewModel> _logger;
 
@@ -39,7 +42,6 @@ public partial class CategoryViewModel : ObservableObject
 
     public ObservableCollection<PromptViewModel> Prompts { get; } = [];
 
-    /// <summary>Set by MainViewModel so we can signal our own removal.</summary>
     public Func<CategoryViewModel, Task>? OnDeleteRequested { get; set; }
 
     public CategoryViewModel(
@@ -47,12 +49,14 @@ public partial class CategoryViewModel : ObservableObject
         ICategoryRepository categories,
         IPromptRepository prompts,
         IDialogService dialogs,
+        IInsertOrchestrator insertOrchestrator,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(category);
         _categories = categories;
         _prompts = prompts;
         _dialogs = dialogs;
+        _insertOrchestrator = insertOrchestrator;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<CategoryViewModel>();
 
@@ -67,6 +71,9 @@ public partial class CategoryViewModel : ObservableObject
             AttachPrompt(p);
         }
     }
+
+    public bool IsProject => Type == CategoryType.Project;
+    public bool IsInline => Type != CategoryType.Project;
 
     [RelayCommand]
     private async Task RenameAsync()
@@ -141,7 +148,12 @@ public partial class CategoryViewModel : ObservableObject
 
     private void AttachPrompt(Prompt prompt)
     {
-        var vm = new PromptViewModel(prompt, _prompts, _dialogs, _loggerFactory.CreateLogger<PromptViewModel>())
+        var vm = new PromptViewModel(
+            prompt,
+            _prompts,
+            _dialogs,
+            _insertOrchestrator,
+            _loggerFactory.CreateLogger<PromptViewModel>())
         {
             OnDeleteRequested = RemovePromptAsync,
         };
