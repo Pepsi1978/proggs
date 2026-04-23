@@ -103,6 +103,7 @@ public partial class App : Application
 
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
+                services.AddTransient<SettingsViewModel>();
 
                 // Window has a parameterless ctor; MainPage resolves MainViewModel
                 // from the container lazily in its Loaded handler.

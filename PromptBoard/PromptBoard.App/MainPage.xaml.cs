@@ -76,26 +76,47 @@ public sealed partial class MainPage : UserControl
 
         BackupButton.Click += async (_, _) =>
         {
-            var dialogs = _services.GetRequiredService<IDialogService>();
-            bool restored = await dialogs.ShowBackupAsync();
-            if (restored)
+            try
             {
-                await ViewModel.InitializeAsync();
-                UpdateEmptyHint();
-                UpdateSeparators();
+                var dialogs = _services.GetRequiredService<IDialogService>();
+                bool restored = await dialogs.ShowBackupAsync();
+                if (restored)
+                {
+                    await ViewModel.InitializeAsync();
+                    UpdateEmptyHint();
+                    UpdateSeparators();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "BackupButton.Click failed");
             }
         };
 
         SettingsButton.Click += async (_, _) =>
         {
-            var dialogs = _services.GetRequiredService<IDialogService>();
-            await dialogs.ShowSettingsAsync();
+            try
+            {
+                var dialogs = _services.GetRequiredService<IDialogService>();
+                await dialogs.ShowSettingsAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "SettingsButton.Click failed");
+            }
         };
 
         AboutButton.Click += async (_, _) =>
         {
-            var dialogs = _services.GetRequiredService<IDialogService>();
-            await dialogs.ShowAboutAsync();
+            try
+            {
+                var dialogs = _services.GetRequiredService<IDialogService>();
+                await dialogs.ShowAboutAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "AboutButton.Click failed");
+            }
         };
 
         CloseButton.Click += (_, _) =>
