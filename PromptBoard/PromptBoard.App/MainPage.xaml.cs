@@ -3,10 +3,12 @@ using System.Collections.Specialized;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using PromptBoard.App.Services;
 using PromptBoard.Core.Services;
 using PromptBoard.ViewModels;
 using Serilog;
+using Windows.System;
 
 namespace PromptBoard.App;
 
@@ -106,5 +108,68 @@ public sealed partial class MainPage : UserControl
         SeparatorAfterProjects.Visibility = hasProjects && hasAi
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Keyboard shortcuts for individual prompts.
+    /// F2 opens the editor, Delete removes the prompt (with confirmation inside the VM).
+    /// Enter is handled by WinUI for free — the Insert-button is the default button.
+    /// </summary>
+    private void OnPromptKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.DataContext is not PromptViewModel pvm)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case VirtualKey.F2:
+                if (pvm.EditCommand.CanExecute(null))
+                {
+                    pvm.EditCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
+
+            case VirtualKey.Delete:
+                if (pvm.DeleteCommand.CanExecute(null))
+                {
+                    pvm.DeleteCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Keyboard shortcuts for category headers (inline + project flyout).
+    /// F2 triggers Rename, Delete triggers Delete (each command confirms in the VM).
+    /// </summary>
+    private void OnCategoryKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.DataContext is not CategoryViewModel cvm)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case VirtualKey.F2:
+                if (cvm.RenameCommand.CanExecute(null))
+                {
+                    cvm.RenameCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
+
+            case VirtualKey.Delete:
+                if (cvm.DeleteCommand.CanExecute(null))
+                {
+                    cvm.DeleteCommand.Execute(null);
+                    e.Handled = true;
+                }
+                break;
+        }
     }
 }

@@ -15,7 +15,7 @@
         <conv:BoolToOpacityConverter x:Key="BoolToOpacity" />
 
         <DataTemplate x:Key="PromptTemplate" x:DataType="vm:PromptViewModel">
-            <Grid Padding="2" ColumnSpacing="6">
+            <Grid Padding="2" ColumnSpacing="6" KeyDown="OnPromptKeyDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -83,7 +83,7 @@
                             Background="{x:Bind BackgroundColorHex, Converter={StaticResource HexToBrush}, Mode=OneWay}"
                             CornerRadius="8,8,0,0"
                             Padding="8,6">
-                        <Grid ColumnSpacing="4">
+                        <Grid ColumnSpacing="4" KeyDown="OnCategoryKeyDown">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -156,7 +156,7 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0" ColumnSpacing="4">
+                            <Grid Grid.Row="0" ColumnSpacing="4" KeyDown="OnCategoryKeyDown">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
