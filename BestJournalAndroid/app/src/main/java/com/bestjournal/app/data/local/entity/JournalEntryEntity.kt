@@ -18,5 +18,6 @@ data class JournalEntryEntity(
     val adviceCategoryTags: String?,
     val summary: String? = null,
     val title: String? = null,
+    val followUpText: String? = null,
     val isSynced: Boolean = false,
 )

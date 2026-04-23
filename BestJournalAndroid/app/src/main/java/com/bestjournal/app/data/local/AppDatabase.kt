@@ -6,14 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.bestjournal.app.data.local.dao.EntryFollowUpDao
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
+import com.bestjournal.app.data.local.entity.EntryFollowUpEntity
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
 
 @Database(
-    entities = [JournalEntryEntity::class, EntryPhotoEntity::class],
-    version = 10,
+    entities = [JournalEntryEntity::class, EntryPhotoEntity::class, EntryFollowUpEntity::class],
+    version = 11,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -21,6 +23,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun journalEntryDao(): JournalEntryDao
 
     abstract fun entryPhotoDao(): EntryPhotoDao
+
+    abstract fun entryFollowUpDao(): EntryFollowUpDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -123,6 +127,39 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        // Nachtrag / follow-up support. Adds a denormalised `followUpText` summary
+        // column to journal_entries (for fast search + legacy compatibility with
+        // Frank's schema) and creates the new `entry_follow_ups` table with all
+        // columns present from the very beginning (rawText + improvedText +
+        // isImproved included) so we don't need a second migration step later.
+        private val MIGRATION_10_11 =
+            object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE journal_entries ADD COLUMN followUpText TEXT DEFAULT NULL"
+                    )
+                    db.execSQL(
+                        """CREATE TABLE IF NOT EXISTS entry_follow_ups (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entryId INTEGER NOT NULL,
+                        text TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        rawText TEXT NOT NULL DEFAULT '',
+                        improvedText TEXT DEFAULT NULL,
+                        isImproved INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (entryId) REFERENCES journal_entries(id) ON DELETE CASCADE
+                    )"""
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_entry_follow_ups_entryId ON entry_follow_ups(entryId)"
+                    )
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_entry_follow_ups_entryId_createdAt ON entry_follow_ups(entryId, createdAt)"
+                    )
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -142,6 +179,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_7_8,
                                 MIGRATION_8_9,
                                 MIGRATION_9_10,
+                                MIGRATION_10_11,
                             )
                             .build()
                     INSTANCE = instance

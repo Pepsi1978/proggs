@@ -5,6 +5,7 @@ import com.bestjournal.app.data.local.AppDatabase
 import com.bestjournal.app.data.local.DashboardDatabase
 import com.bestjournal.app.data.local.RetrospectiveDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
+import com.bestjournal.app.data.local.dao.EntryFollowUpDao
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.local.dao.RetrospectiveDao
@@ -55,5 +56,10 @@ object DatabaseModule {
     @Provides
     fun provideEntryPhotoDao(database: AppDatabase): EntryPhotoDao {
         return database.entryPhotoDao()
+    }
+
+    @Provides
+    fun provideEntryFollowUpDao(database: AppDatabase): EntryFollowUpDao {
+        return database.entryFollowUpDao()
     }
 }
