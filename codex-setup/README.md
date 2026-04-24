@@ -11,6 +11,7 @@ Purpose:
 Core paths:
 - `codex-setup/agent-memory/shared/MEMORY.md`
 - `codex-setup/rules/`
+- `codex-setup/hooks/`
 - `codex-setup/scripts/`
 - `codex-setup/state/`
 - `codex-setup/bridges/`
@@ -43,4 +44,4 @@ Operational rules:
 
 Validation:
 - Run `node codex-setup/scripts/validate-codex-setup.mjs` after Codex-environment changes.
-- The validator checks repo and live `SKILL.md` frontmatter safety, blocks Windows Bash-to-Python heredoc drift in Codex rules/scripts, and verifies that the active PowerShell launcher still invokes `session-scorer.ts` without whiteboard side effects.
+- The validator checks repo and live `SKILL.md` frontmatter safety, blocks Windows Bash-to-Python heredoc drift in Codex rules/scripts, and verifies that the active PowerShell launcher still invokes `session-scorer.ts` without whiteboard side effects. Hooks are validated separately with shell and PowerShell syntax checks because macOS `.sh` hooks may intentionally use heredocs.

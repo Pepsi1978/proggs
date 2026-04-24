@@ -8,7 +8,6 @@ codex_home="$HOME/.codex"
 copy_directory_children() {
   local source_dir="$1"
   local target_dir="$2"
-  local count=0
 
   [[ -d "$source_dir" ]] || {
     echo 0
@@ -16,13 +15,9 @@ copy_directory_children() {
   }
 
   mkdir -p "$target_dir"
-  shopt -s nullglob dotglob
-  local entry
-  for entry in "$source_dir"/*; do
-    cp -R "$entry" "$target_dir/$(basename "$entry")"
-    count=$((count + 1))
-  done
-  shopt -u nullglob dotglob
+  local count
+  count="$(find "$source_dir" -mindepth 1 -maxdepth 1 | wc -l | tr -d '[:space:]')"
+  cp -R "$source_dir"/. "$target_dir"/
   echo "$count"
 }
 
