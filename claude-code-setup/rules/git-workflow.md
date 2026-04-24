@@ -119,3 +119,46 @@ Edit + Version-Bump als zusammengehoeriger Schritt geplant werden.
 
 **Vorfall:** 9 Tampermonkey-Skripte parallel editiert, danach Version-Bump fehlgeschlagen
 weil alle Dateien nach dem ersten Edit "stale" waren (9 extra Reads noetig).
+
+---
+
+## 7. Keine untracked Projektdateien liegen lassen (KRITISCH)
+
+**Regel:** Alles was ein Agent im Repository erstellt oder bearbeitet und was zum Projekt
+gehoert, MUSS am Ende der Aufgabe committed und nach GitHub gepusht werden. Neue Dateien
+duerfen nicht still als `??` / untracked im Working Tree liegen bleiben, weil sonst der
+naechste Codex-Start den Auto-Pull ueberspringt und GitHub nicht den echten Arbeitsstand
+abbildet.
+
+### Pflicht-Ablauf am Ende jeder Aufgabe
+
+```bash
+git status --short
+```
+
+Jeder Eintrag muss bewusst eingeordnet werden:
+
+| Typ | Aktion |
+|-----|--------|
+| Projektdatei, Quellcode, Doku, Regel, Script, Test | Namentlich `git add <pfad>`, committen, fetch+rebase, pushen |
+| Lokale Konfiguration, Secret, API-Key, maschinenspezifische Datei | NICHT committen; in `.gitignore` einordnen oder als redaktiertes Template ersetzen |
+| Generierte Build-Artefakte, Cache, temporaere Dateien | Loeschen oder `.gitignore` ergaenzen |
+| Unklar | Benutzer kurz fragen oder Datei pruefen; niemals still liegen lassen |
+
+### Wichtige Grenze
+
+"Alles nach GitHub" bedeutet NICHT, dass Secrets blind committed werden. Echte Secrets,
+lokale Tokens, `.env`-Dateien, private Keys und maschinenspezifische Credentials bleiben
+aus dem Repo draussen. In solchen Faellen wird ein sicheres Template oder eine README-
+Anweisung committed, damit GitHub trotzdem den reproduzierbaren Projektstand enthaelt.
+
+### Commit-Regel
+
+Nur Dateien stagen, die diese Aufgabe wirklich betrifft:
+
+```bash
+git add pfad/zu/neuer-datei pfad/zu/geaenderter-datei
+```
+
+Niemals `git add .` oder `git add -A` verwenden, weil parallele Sessions sonst fremde
+unfertige Dateien mitcommitted bekommen.

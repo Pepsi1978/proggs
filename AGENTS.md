@@ -64,3 +64,4 @@
 - Every feature must pass `quality-gate` agent before commit
 - Build must be green before commit (no broken builds pushed)
 - Cross-platform: .ps1 hooks need .sh counterpart (and vice versa)
+- Do not leave project files untracked. Anything an agent creates or edits in the repo must be committed and pushed to GitHub, except secrets/local/generated files which must be explicitly ignored or replaced with a safe template.
