@@ -367,10 +367,13 @@ namespace TerminalVoiceOverlay.Views
                             finalText = aoPrefix + finalText;
                     }
 
-                    // Append " ; " separator so the AI recognizes multiple spoken tasks as separate items.
-                    // Omit when auto-enter is active (the line gets sent immediately).
-                    if (!autoEnterEnabled)
-                        finalText = finalText + " ; ";
+                    // Always append "\n\n;\n\n" after the dictated text —
+                    // the blank-line + semicolon + blank-line separator
+                    // marks every dictation as its own task, regardless of
+                    // auto-enter. With auto-enter on, the trailing return
+                    // still fires and the separator ends up in the
+                    // submitted text.
+                    finalText = finalText + "\n\n;\n\n";
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
