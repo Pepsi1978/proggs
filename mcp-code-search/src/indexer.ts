@@ -64,9 +64,31 @@ const SKIP_DIRS = [
 	".swiftpm",
 ];
 
-const CHUNK_SIZE = 40; // Reduced from 50 to stay within embedding context
-const MAX_FILE_SIZE = 100 * 1024; // 100 KB
-const MAX_CHUNK_CHARS = 4000; // nomic-embed-text context ≈ 8192 tokens, conservative limit
+// File patterns to skip even when their extension would otherwise be indexable.
+// These are usually machine-generated or minified — indexing them pollutes search
+// results with noise AND routinely blows through the embedding model's token limit.
+const SKIP_FILE_PATTERNS = [
+	"**/package-lock.json",
+	"**/pnpm-lock.yaml",
+	"**/yarn.lock",
+	"**/bun.lock",
+	"**/Cargo.lock",
+	"**/Gemfile.lock",
+	"**/poetry.lock",
+	"**/composer.lock",
+	"**/*.min.js",
+	"**/*.min.css",
+	"**/*.map",
+	"**/*.lock.json",
+	"**/*-lock.json",
+];
+
+const CHUNK_SIZE = 40; // target number of lines per chunk
+const MAX_FILE_SIZE = 300 * 1024; // 300 KB — snowflake-arctic-embed2 handles larger files
+// Conservative char budget per chunk. snowflake-arctic-embed2 has 8192 token context;
+// at ~3.5 chars/token that's ~28000 chars. We stay well below (6000) because smaller
+// chunks produce sharper semantic matches in retrieval — see retrieval literature.
+const MAX_CHUNK_CHARS = 6000;
 
 /**
  * Walk a directory and find all indexable code files.
@@ -81,8 +103,11 @@ export async function findCodeFiles(rootDir: string): Promise<string[]> {
 	);
 	const extPattern = `**/*.{${extensions.join(",")}}`;
 
-	// Build ignore patterns from SKIP_DIRS
-	const ignore = SKIP_DIRS.flatMap((dir) => [`**/${dir}/**`, `**/${dir}`]);
+	// Build ignore patterns from SKIP_DIRS and SKIP_FILE_PATTERNS.
+	const ignore = [
+		...SKIP_DIRS.flatMap((dir) => [`**/${dir}/**`, `**/${dir}`]),
+		...SKIP_FILE_PATTERNS,
+	];
 
 	const matches = await glob(extPattern, {
 		cwd: rootDir,
@@ -118,7 +143,9 @@ export function detectLanguage(filePath: string): string {
 
 /**
  * Recursively split lines into chunks that fit within the embedding model context.
- * If a chunk is too long, it gets halved. Repeats until every piece fits.
+ * If a chunk is too long, it gets halved. Single lines that exceed the budget are
+ * sliced by character count — that's the Poka-Yoke against minified / machine-
+ * generated files where one "line" can be hundreds of thousands of characters.
  */
 function splitAndPush(
 	chunkLines: string[],
@@ -127,9 +154,10 @@ function splitAndPush(
 	language: string,
 	out: CodeChunk[],
 ): void {
-	const content = `File: ${relPath}\n${chunkLines.join("\n")}`;
+	const headerPrefix = `File: ${relPath}\n`;
+	const content = `${headerPrefix}${chunkLines.join("\n")}`;
 
-	if (content.length <= MAX_CHUNK_CHARS || chunkLines.length <= 1) {
+	if (content.length <= MAX_CHUNK_CHARS) {
 		out.push({
 			filePath: relPath,
 			startLine,
@@ -140,7 +168,26 @@ function splitAndPush(
 		return;
 	}
 
-	// Split in half and recurse
+	// Single line exceeds the budget — slice by characters. Without this guard
+	// minified files (e.g. one-line 500k-char bundles) crash Ollama with HTTP 400
+	// "input length exceeds the context length".
+	if (chunkLines.length <= 1) {
+		const line = chunkLines[0] ?? "";
+		const usable = Math.max(1, MAX_CHUNK_CHARS - headerPrefix.length);
+		for (let offset = 0; offset < line.length; offset += usable) {
+			const piece = line.slice(offset, offset + usable);
+			out.push({
+				filePath: relPath,
+				startLine,
+				endLine: startLine,
+				content: `${headerPrefix}${piece}`,
+				language,
+			});
+		}
+		return;
+	}
+
+	// Split in half and recurse.
 	const mid = Math.floor(chunkLines.length / 2);
 	splitAndPush(chunkLines.slice(0, mid), relPath, startLine, language, out);
 	splitAndPush(chunkLines.slice(mid), relPath, startLine + mid, language, out);

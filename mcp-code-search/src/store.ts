@@ -12,7 +12,7 @@ if (useBun) {
 	// Bun has built-in SQLite support
 	const { Database: BunDatabase } = await import("bun:sqlite");
 	Database = BunDatabase;
-	// We still need the sqlite-vec extension path if possible, 
+	// We still need the sqlite-vec extension path if possible,
 	// but Bun on Windows might need a different approach for extensions.
 	// For now, let's try to load it via the same package.
 	sqliteVec = await import("sqlite-vec");
@@ -22,7 +22,7 @@ if (useBun) {
 	sqliteVec = await import("sqlite-vec");
 }
 
-const VECTOR_DIM = 768; // nomic-embed-text dimension
+const VECTOR_DIM = 1024; // snowflake-arctic-embed2 dimension
 
 export interface CodeChunk {
 	filePath: string;
@@ -82,10 +82,14 @@ export class VectorStore {
 	/** Delete all chunks belonging to a file path. Returns number of deleted chunks. */
 	deleteByFilePath(filePath: string): number {
 		const prepare = (sql: string) => this.db.prepare(sql);
-		
-		const ids = useBun 
-			? prepare("SELECT id FROM chunks WHERE file_path = ?").all(filePath) as Array<{ id: number }>
-			: prepare("SELECT id FROM chunks WHERE file_path = ?").all(filePath) as Array<{ id: number }>;
+
+		const ids = useBun
+			? (prepare("SELECT id FROM chunks WHERE file_path = ?").all(
+					filePath,
+				) as Array<{ id: number }>)
+			: (prepare("SELECT id FROM chunks WHERE file_path = ?").all(
+					filePath,
+				) as Array<{ id: number }>);
 
 		if (ids.length === 0) return 0;
 
@@ -129,7 +133,7 @@ export class VectorStore {
 		);
 
 		const buf = new Float32Array(embedding);
-		
+
 		if (useBun) {
 			const transaction = this.db.transaction((c: any, e: any) => {
 				const result = insertChunk.run(
@@ -304,4 +308,3 @@ export class VectorStore {
 		this.db.close();
 	}
 }
-

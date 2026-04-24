@@ -46,14 +46,14 @@ try {
     } else { exit 0 }
 }
 
-# Ensure nomic-embed-text model is available
+# Ensure snowflake-arctic-embed2 model is available (8192 token context, 1024 dim)
 try {
     $models = (Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -TimeoutSec 2).Content | ConvertFrom-Json
-    $hasNomic = $models.models | Where-Object { $_.name -match "nomic-embed-text" }
-    if (-not $hasNomic) {
+    $hasArctic = $models.models | Where-Object { $_.name -match "snowflake-arctic-embed2" }
+    if (-not $hasArctic) {
         $ollamaExe = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
         if (Test-Path $ollamaExe) {
-            Start-Process -FilePath $ollamaExe -ArgumentList "pull", "nomic-embed-text" -NoNewWindow -Wait
+            Start-Process -FilePath $ollamaExe -ArgumentList "pull", "snowflake-arctic-embed2" -NoNewWindow -Wait
         }
     }
 } catch {}

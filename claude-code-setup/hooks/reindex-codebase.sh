@@ -56,11 +56,11 @@ if ! curl -s --max-time 2 http://localhost:11434/api/tags > /dev/null 2>&1; then
     fi
 fi
 
-# Ensure nomic-embed-text model is available
+# Ensure snowflake-arctic-embed2 model is available (8192 token context, 1024 dim)
 MODELS_JSON=$(curl -s --max-time 2 http://localhost:11434/api/tags 2>/dev/null)
 if [ $? -eq 0 ] && [ -n "$MODELS_JSON" ]; then
-    if ! echo "$MODELS_JSON" | grep -q "nomic-embed-text"; then
-        ollama pull nomic-embed-text 2>/dev/null || exit 0
+    if ! echo "$MODELS_JSON" | grep -q "snowflake-arctic-embed2"; then
+        ollama pull snowflake-arctic-embed2 2>/dev/null || exit 0
     fi
 fi
 

@@ -1,11 +1,11 @@
 // Ollama Embedding Client
 // Calls Ollama's /api/embed endpoint to generate vector embeddings for code chunks.
-// Uses nomic-embed-text model (768 dimensions).
+// Uses snowflake-arctic-embed2 model (1024 dimensions, 8192 token context).
 
 import { spawnSync, spawn } from "child_process";
 
 const OLLAMA_URL = "http://localhost:11434";
-const EMBED_MODEL = "nomic-embed-text";
+const EMBED_MODEL = "snowflake-arctic-embed2";
 const BATCH_SIZE = 32;
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000; // exponential backoff: 1s, 2s, 4s
@@ -51,12 +51,18 @@ async function ensureOllamaService(): Promise<{ ok: boolean; error?: string }> {
 				// Continue waiting
 			}
 		}
-		return { ok: false, error: "Failed to start Ollama service automatically." };
+		return {
+			ok: false,
+			error: "Failed to start Ollama service automatically.",
+		};
 	}
 	return { ok: true };
 }
 
-async function ensureModelAvailable(): Promise<{ ok: boolean; error?: string }> {
+async function ensureModelAvailable(): Promise<{
+	ok: boolean;
+	error?: string;
+}> {
 	const response = await fetch(`${OLLAMA_URL}/api/tags`);
 	const data = (await response.json()) as { models?: { name: string }[] };
 	const models = data.models ?? [];
@@ -66,9 +72,14 @@ async function ensureModelAvailable(): Promise<{ ok: boolean; error?: string }> 
 
 	if (!hasModel) {
 		console.error(`Model "${EMBED_MODEL}" missing. Pulling...`);
-		const pullResult = spawnSync("ollama", ["pull", EMBED_MODEL], { encoding: "utf8" });
+		const pullResult = spawnSync("ollama", ["pull", EMBED_MODEL], {
+			encoding: "utf8",
+		});
 		if (pullResult.status !== 0) {
-			return { ok: false, error: `Failed to pull model ${EMBED_MODEL}: ${pullResult.stderr}` };
+			return {
+				ok: false,
+				error: `Failed to pull model ${EMBED_MODEL}: ${pullResult.stderr}`,
+			};
 		}
 	}
 	return { ok: true };
@@ -77,15 +88,15 @@ async function ensureModelAvailable(): Promise<{ ok: boolean; error?: string }> 
 /**
  * Generate embeddings for one or more text inputs via Ollama.
  * @param texts Array of text strings to embed
- * @returns Array of embedding vectors (each 768-dimensional)
+ * @returns Array of embedding vectors (each 1024-dimensional)
  * @throws Error if Ollama is not running or model not found
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-    const health = await checkOllama();
-    if (!health.ok) {
-        throw new Error(health.error);
-    }
-    
+	const health = await checkOllama();
+	if (!health.ok) {
+		throw new Error(health.error);
+	}
+
 	const results: number[][] = [];
 
 	// Process in batches of BATCH_SIZE to avoid overloading Ollama

@@ -24,7 +24,7 @@ Der Server laeuft vollstaendig lokal — keine Cloud, keine API-Kosten, keine La
 
 **Technologie-Stack**:
 - **Ollama** — lokale LLM-Laufzeit (fuehrt das Embedding-Modell aus)
-- **nomic-embed-text** — Embedding-Modell (768 Dimensionen, 274 MB)
+- **snowflake-arctic-embed2** — Embedding-Modell (1024 Dimensionen, 1.2 GB, 8192 Token Context)
 - **SQLite + sqlite-vec** — Vektor-Datenbank (speichert die Embeddings)
 - **MCP-Server** — TypeScript-Server der die 3 Tools bereitstellt
 - **tsx** — TypeScript-Runner (fuehrt den Server und den Indexer aus)
@@ -112,10 +112,10 @@ ollama serve &
 # ODER: Ollama.app starten (hat GUI + Auto-Start)
 
 # Embedding-Modell herunterladen (einmalig, ~274 MB)
-ollama pull nomic-embed-text
+ollama pull snowflake-arctic-embed2
 
 # Verifizieren
-curl -s http://localhost:11434/api/tags | grep nomic-embed-text
+curl -s http://localhost:11434/api/tags | grep snowflake-arctic-embed2
 ```
 
 **Windows:**
@@ -124,7 +124,7 @@ curl -s http://localhost:11434/api/tags | grep nomic-embed-text
 # Installer ausfuehren — startet automatisch als Dienst
 
 # Embedding-Modell herunterladen
-ollama pull nomic-embed-text
+ollama pull snowflake-arctic-embed2
 
 # Verifizieren
 curl -s http://localhost:11434/api/tags
@@ -331,7 +331,7 @@ Erwartete Ausgabe:
 - Files indexed: 659
 - Code chunks: 11052
 - Database: .../index.db
-- Ollama model: nomic-embed-text (768 dimensions)
+- Ollama model: snowflake-arctic-embed2 (1024 dimensions, 8192 token context)
 - Last successful reindex: 2026-03-23T18:56:44+01:00
 - Last mode: incremental
 ```
@@ -348,7 +348,7 @@ ls -lh ~/proggs/.code-search/$(cat ~/proggs/.code-search/current.txt)
 # Sollte ~70 MB zeigen
 
 # Pruefen ob Ollama laeuft
-curl -s http://localhost:11434/api/tags | grep nomic-embed-text
+curl -s http://localhost:11434/api/tags | grep snowflake-arctic-embed2
 ```
 
 ---
@@ -375,7 +375,7 @@ curl -s http://localhost:11434/api/tags | grep nomic-embed-text
 | `search_code` liefert 0 Ergebnisse | Index existiert nicht oder ist leer | `tsx src/reindex.ts ~/proggs` ausfuehren |
 | `search_code` liefert veraltete Ergebnisse | Reindex lief nicht | `.last-index-time` loeschen, Reindex ausfuehren |
 | "Ollama not reachable" | Ollama laeuft nicht | `ollama serve` starten |
-| "nomic-embed-text not found" | Modell nicht heruntergeladen | `ollama pull nomic-embed-text` |
+| "snowflake-arctic-embed2 not found" | Modell nicht heruntergeladen | `ollama pull snowflake-arctic-embed2` |
 | `npm install` schlaegt fehl (better-sqlite3) | Kein C++-Compiler | macOS: `xcode-select --install`, Windows: VS Build Tools |
 | Reindex haengt (>30 Min) | Lock-File blockiert | `.code-search/.reindex.lock` loeschen |
 | "SQLITE_ERROR: no such module: vec0" | sqlite-vec nicht installiert | `cd mcp-code-search && npm install` |
@@ -415,7 +415,7 @@ Ausgeschlossene Verzeichnisse:
 - Ihr muesst die `.code-search/` Datenbank NICHT synchronisieren — jede Plattform hat ihre eigene
 - Ihr muesst den Reindex-Hook NICHT identisch uebernehmen — passt ihn an eure Hook-Architektur an
 - Ihr MUESST die `.mcp.json` an eure Plattform anpassen (absolute Pfade!)
-- Ihr MUESST Ollama + nomic-embed-text installiert haben bevor der Server startet
+- Ihr MUESST Ollama + snowflake-arctic-embed2 installiert haben bevor der Server startet
 
 ---
 

@@ -23,7 +23,7 @@ Claude Code liest dieses Dokument beim Setup und richtet alles automatisch ein.
 | **Node.js** | Laufzeit fuer MCP + Native Addons | nodejs.org |
 | **tsx** | TypeScript-Runner fuer Server und Reindex | `npm install -g tsx` |
 | **Ollama** | Embedding-Modell lokal ausfuehren | `brew install ollama` (macOS) / ollama.com (Windows) |
-| **nomic-embed-text** | 768-dimensionale Embeddings | `ollama pull nomic-embed-text` |
+| **snowflake-arctic-embed2** | 1024-dimensionale Embeddings | `ollama pull snowflake-arctic-embed2` |
 
 ## Setup-Schritte (Claude fuehrt diese automatisch aus)
 
@@ -34,7 +34,7 @@ node --version
 tsx --version
 
 # Ollama laeuft?
-curl -s http://localhost:11434/api/tags | grep nomic-embed-text
+curl -s http://localhost:11434/api/tags | grep snowflake-arctic-embed2
 ```
 
 ### 2. npm-Abhaengigkeiten installieren
@@ -143,6 +143,6 @@ Das bedeutet: **Suchen funktionieren immer**, auch waehrend des Re-Indexierens.
 |---|---|
 | `search_code` liefert keine Ergebnisse | `current.txt` pruefen: Zeigt auf existierende .db? |
 | Ollama nicht erreichbar | `ollama serve` starten (macOS: laeuft als App) |
-| `nomic-embed-text` fehlt | `ollama pull nomic-embed-text` |
+| `snowflake-arctic-embed2` fehlt | `ollama pull snowflake-arctic-embed2` |
 | `bun` nicht gefunden | PATH pruefen: `~/.bun/bin/` muss drin sein |
 | Reindex-Hook lief nicht | `.last-index-time` loeschen, Session neu starten |

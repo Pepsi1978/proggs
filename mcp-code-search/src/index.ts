@@ -120,7 +120,9 @@ function readLastWriteInfo(
 		const logText = readFileSync(logPath, "utf8");
 		for (const rawLine of logText.split(/\r?\n/)) {
 			const line = rawLine.trim();
-			const checkMatch = line.match(/^\[(.+?)\]\s+Codex auto-reindex check for /);
+			const checkMatch = line.match(
+				/^\[(.+?)\]\s+Codex auto-reindex check for /,
+			);
 			if (checkMatch) {
 				currentCheckAt = checkMatch[1] ?? null;
 				continue;
@@ -139,7 +141,11 @@ function readLastWriteInfo(
 		}
 	}
 
-	if (!lastWriteMode && state && (state.lastMode === "incremental" || state.lastMode === "full")) {
+	if (
+		!lastWriteMode &&
+		state &&
+		(state.lastMode === "incremental" || state.lastMode === "full")
+	) {
 		lastWriteAt = state.lastSuccessAt;
 		lastWriteMode = state.lastMode;
 	}
@@ -334,7 +340,7 @@ server.tool(
 						`- Files indexed: ${stats.totalFiles}\n` +
 						`- Code chunks: ${stats.totalChunks}\n` +
 						`- Database: ${currentDbPath}\n` +
-						`- Ollama model: nomic-embed-text (768 dimensions)` +
+						`- Ollama model: snowflake-arctic-embed2 (1024 dimensions, 8192 token context)` +
 						extraState,
 				},
 			],
