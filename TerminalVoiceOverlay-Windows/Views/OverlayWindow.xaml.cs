@@ -367,13 +367,11 @@ namespace TerminalVoiceOverlay.Views
                             finalText = aoPrefix + finalText;
                     }
 
-                    // Always append "\n\n;\n\n" after the dictated text —
-                    // the blank-line + semicolon + blank-line separator
-                    // marks every dictation as its own task, regardless of
-                    // auto-enter. With auto-enter on, the trailing return
-                    // still fires and the separator ends up in the
-                    // submitted text.
-                    finalText = finalText + "\n\n;\n\n";
+                    // Always append " ; " after the dictated text — inline
+                    // space + semicolon + space marks every dictation as
+                    // its own task without forcing line breaks in the
+                    // terminal. Applies regardless of auto-enter.
+                    finalText = finalText + " ; ";
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
