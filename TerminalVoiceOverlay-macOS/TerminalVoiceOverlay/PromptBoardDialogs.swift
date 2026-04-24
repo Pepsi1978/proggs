@@ -22,24 +22,14 @@ enum PBTextInput {
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
-        let response = parent != nil
-            ? alert.runSheetModal(for: parent!)
-            : alert.runModal()
+        // Free-floating modal (no sheet binding) — sheet-modal on NSPanel was buggy
+        // and caused the parent panel to collapse.
+        _ = parent  // kept for API compatibility
+        let response = alert.runModal()
 
         guard response == .alertFirstButtonReturn else { return nil }
         let v = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         return v.isEmpty ? nil : v
-    }
-}
-
-extension NSAlert {
-    fileprivate func runSheetModal(for window: NSWindow) -> NSApplication.ModalResponse {
-        var response: NSApplication.ModalResponse = .abort
-        beginSheetModal(for: window) { r in
-            response = r
-            NSApp.stopModal(withCode: r)
-        }
-        return NSApp.runModal(for: window)
     }
 }
 
@@ -55,9 +45,8 @@ enum PBConfirm {
         alert.alertStyle = .warning
         alert.addButton(withTitle: confirmLabel)
         alert.addButton(withTitle: "Abbrechen")
-        let response = parent != nil
-            ? alert.runSheetModal(for: parent!)
-            : alert.runModal()
+        _ = parent  // kept for API compatibility; runSheetModal on NSPanel was buggy
+        let response = alert.runModal()
         return response == .alertFirstButtonReturn
     }
 }

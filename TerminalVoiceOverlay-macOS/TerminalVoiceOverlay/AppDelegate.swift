@@ -114,12 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appWatcher = AppWatcher()
         appWatcher.onTerminalActivated = { [weak self] in
             DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.panel.orderFront(nil)
-                if self.alwaysOnActive, let p = self.promptBoardPanel {
-                    p.dock(rightOf: self.panel)
-                    p.orderFrontRegardless()
-                }
+                self?.panel.orderFront(nil)
             }
         }
         appWatcher.onTerminalDeactivated = { [weak self] in
@@ -127,7 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
                 if !self.isRecording && !self.isProcessing {
                     self.panel.orderOut(nil)
-                    self.promptBoardPanel?.orderOut(nil)
                 }
             }
         }
