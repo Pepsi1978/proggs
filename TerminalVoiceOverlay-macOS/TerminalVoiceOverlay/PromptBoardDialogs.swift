@@ -4,6 +4,85 @@ import AppKit
 /// file because each dialog is only a handful of lines in AppKit — no
 /// need for separate XIBs.
 
+// MARK: - Shared dark theme
+
+/// The PromptBoard panel is always dark (calibratedWhite 0.11, 0.97 alpha).
+/// To keep the auxiliary dialogs (new/edit prompt, settings, confirms,
+/// text input) visually consistent, every dialog window is forced into
+/// dark-aqua appearance and content views/fields are tinted explicitly.
+enum PBDarkTheme {
+    static let panelBackground = NSColor(calibratedWhite: 0.13, alpha: 1)
+    static let fieldBackground = NSColor(calibratedWhite: 0.19, alpha: 1)
+    static let fieldBorder     = NSColor(calibratedWhite: 0.38, alpha: 1)
+    static let textPrimary     = NSColor.white
+    static let textSecondary   = NSColor(calibratedWhite: 0.85, alpha: 1)
+
+    static func apply(to window: NSWindow) {
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.backgroundColor = panelBackground
+    }
+
+    /// Applies dark appearance to an NSAlert so system alerts also blend
+    /// with the PromptBoard style.
+    static func apply(to alert: NSAlert) {
+        alert.window.appearance = NSAppearance(named: .darkAqua)
+    }
+
+    static func styleLabel(_ label: NSTextField) {
+        label.textColor = textSecondary
+        label.drawsBackground = false
+    }
+
+    static func styleField(_ field: NSTextField) {
+        field.textColor = textPrimary
+        field.backgroundColor = fieldBackground
+        field.drawsBackground = true
+        field.wantsLayer = true
+        field.layer?.cornerRadius = 4
+        field.layer?.borderColor = fieldBorder.cgColor
+        field.layer?.borderWidth = 1
+        field.focusRingType = .none
+    }
+
+    /// Accent-filled action button (e.g. "Speichern", "Verbinden").
+    static func makePrimaryButton(title: String, target: AnyObject?, action: Selector) -> NSButton {
+        let btn = NSButton(title: "", target: target, action: action)
+        btn.isBordered = false
+        btn.wantsLayer = true
+        btn.layer?.backgroundColor = NSColor(red: 0.29, green: 0.56, blue: 0.99, alpha: 1).cgColor
+        btn.layer?.cornerRadius = 6
+        btn.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
+            ])
+        btn.widthAnchor.constraint(greaterThanOrEqualToConstant: 96).isActive = true
+        btn.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        return btn
+    }
+
+    /// Neutral outline button (e.g. "Abbrechen", "Trennen").
+    static func makeSecondaryButton(title: String, target: AnyObject?, action: Selector) -> NSButton {
+        let btn = NSButton(title: "", target: target, action: action)
+        btn.isBordered = false
+        btn.wantsLayer = true
+        btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.24, alpha: 1).cgColor
+        btn.layer?.borderColor = NSColor(calibratedWhite: 0.45, alpha: 1).cgColor
+        btn.layer?.borderWidth = 1
+        btn.layer?.cornerRadius = 6
+        btn.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium)
+            ])
+        btn.widthAnchor.constraint(greaterThanOrEqualToConstant: 96).isActive = true
+        btn.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        return btn
+    }
+}
+
 // MARK: - Text input
 
 enum PBTextInput {
@@ -16,9 +95,11 @@ enum PBTextInput {
         alert.informativeText = label
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Abbrechen")
+        PBDarkTheme.apply(to: alert)
 
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 22))
         field.stringValue = initialValue
+        PBDarkTheme.styleField(field)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
@@ -45,6 +126,7 @@ enum PBConfirm {
         alert.alertStyle = .warning
         alert.addButton(withTitle: confirmLabel)
         alert.addButton(withTitle: "Abbrechen")
+        PBDarkTheme.apply(to: alert)
         _ = parent  // kept for API compatibility; runSheetModal on NSPanel was buggy
         let response = alert.runModal()
         return response == .alertFirstButtonReturn
@@ -72,28 +154,42 @@ final class PBPromptEditDialog: NSWindowController {
             backing: .buffered, defer: false)
         window.title = title
         window.isReleasedWhenClosed = false
+        PBDarkTheme.apply(to: window)
         super.init(window: window)
 
         labelField.placeholderString = "Kurzbezeichnung"
         labelField.stringValue = initialLabel
+        PBDarkTheme.styleField(labelField)
 
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
-        scroll.borderType = .bezelBorder
+        scroll.borderType = .noBorder
+        scroll.drawsBackground = true
+        scroll.backgroundColor = PBDarkTheme.fieldBackground
+        scroll.wantsLayer = true
+        scroll.layer?.cornerRadius = 6
+        scroll.layer?.borderWidth = 1
+        scroll.layer?.borderColor = PBDarkTheme.fieldBorder.cgColor
         textView.isEditable = true
         textView.isRichText = false
         textView.string = initialText
         textView.font = NSFont.systemFont(ofSize: 13)
+        textView.textColor = PBDarkTheme.textPrimary
+        textView.backgroundColor = PBDarkTheme.fieldBackground
+        textView.drawsBackground = true
+        textView.insertionPointColor = PBDarkTheme.textPrimary
         textView.autoresizingMask = [.width]
         scroll.documentView = textView
 
         alwaysOnCheckbox.state = initialAlwaysOn ? .on : .off
+        alwaysOnCheckbox.contentTintColor = PBDarkTheme.textPrimary
+        alwaysOnCheckbox.attributedTitle = NSAttributedString(
+            string: "Immer mitschicken (Always-On Prefix)",
+            attributes: [.foregroundColor: PBDarkTheme.textPrimary])
 
-        let ok = NSButton(title: "Speichern", target: self, action: #selector(save))
-        ok.bezelStyle = .rounded
+        let ok = PBDarkTheme.makePrimaryButton(title: "Speichern", target: self, action: #selector(save))
         ok.keyEquivalent = "\r"
-        let cancel = NSButton(title: "Abbrechen", target: self, action: #selector(cancel))
-        cancel.bezelStyle = .rounded
+        let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(self.cancel))
 
         let buttonRow = NSStackView(views: [cancel, ok])
         buttonRow.orientation = .horizontal
@@ -101,7 +197,9 @@ final class PBPromptEditDialog: NSWindowController {
         buttonRow.alignment = .centerY
 
         let labelTop = NSTextField(labelWithString: "Kurzbezeichnung:")
+        PBDarkTheme.styleLabel(labelTop)
         let textTop = NSTextField(labelWithString: "Prompt-Text:")
+        PBDarkTheme.styleLabel(textTop)
 
         let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, buttonRow])
         stack.orientation = .vertical
@@ -168,8 +266,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     private let clientIdField = NSTextField()
     private let clientSecretField = NSTextField()
     private let statusLabel = NSTextField(labelWithString: "nicht verbunden")
-    private let connectButton = NSButton(title: "Verbinden", target: nil, action: nil)
-    private let disconnectButton = NSButton(title: "Trennen", target: nil, action: nil)
+    private var connectButton: NSButton!
+    private var disconnectButton: NSButton!
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -182,25 +280,26 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             backing: .buffered, defer: false)
         window.title = "Einstellungen"
         window.isReleasedWhenClosed = false
+        PBDarkTheme.apply(to: window)
         super.init(window: window)
+
+        for field in [groqField, geminiField, separatorField, clientIdField, clientSecretField] {
+            PBDarkTheme.styleField(field)
+        }
 
         groqField.stringValue = settings.groqApiKey ?? ""
         geminiField.stringValue = settings.geminiApiKey ?? ""
         separatorField.stringValue = settings.separatorTemplate
         clientIdField.stringValue = settings.googleClientId ?? ""
         clientSecretField.stringValue = settings.googleClientSecret ?? ""
-        updateStatus()
 
-        connectButton.target = self
-        connectButton.action = #selector(connectGoogle)
-        disconnectButton.target = self
-        disconnectButton.action = #selector(disconnectGoogle)
-
-        let ok = NSButton(title: "Speichern", target: self, action: #selector(save))
-        ok.bezelStyle = .rounded
+        // Themed buttons kept as instance variables so connectGoogle() can
+        // still flip their enabled state / title mid-OAuth flow.
+        connectButton = PBDarkTheme.makeSecondaryButton(title: "Verbinden", target: self, action: #selector(connectGoogle))
+        disconnectButton = PBDarkTheme.makeSecondaryButton(title: "Trennen", target: self, action: #selector(disconnectGoogle))
+        let ok = PBDarkTheme.makePrimaryButton(title: "Speichern", target: self, action: #selector(save))
         ok.keyEquivalent = "\r"
-        let cancel = NSButton(title: "Abbrechen", target: self, action: #selector(cancelDlg))
-        cancel.bezelStyle = .rounded
+        let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(cancelDlg))
 
         let connectRow = NSStackView(views: [connectButton, disconnectButton])
         connectRow.orientation = .horizontal
@@ -210,17 +309,26 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 8
 
+        func label(_ text: String) -> NSTextField {
+            let l = NSTextField(labelWithString: text)
+            PBDarkTheme.styleLabel(l)
+            return l
+        }
+
+        PBDarkTheme.styleLabel(statusLabel)
+        updateStatus()
+
         let stack = NSStackView(views: [
-            NSTextField(labelWithString: "Groq API Key (Whisper-Transkription)"),
+            label("Groq API Key (Whisper-Transkription)"),
             groqField,
-            NSTextField(labelWithString: "Gemini API Key (optional)"),
+            label("Gemini API Key (optional)"),
             geminiField,
-            NSTextField(labelWithString: "Separator-Template"),
+            label("Separator-Template"),
             separatorField,
-            NSTextField(labelWithString: "Google Drive Backup"),
-            NSTextField(labelWithString: "Client ID"),
+            label("Google Drive Backup"),
+            label("Client ID"),
             clientIdField,
-            NSTextField(labelWithString: "Client Secret"),
+            label("Client Secret"),
             clientSecretField,
             statusLabel,
             connectRow,
@@ -291,13 +399,13 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         try? PromptBoardStore.shared.updateSettings(settings)
 
         connectButton.isEnabled = false
-        connectButton.title = "Oeffne Browser..."
+        setButtonTitle(connectButton, "Oeffne Browser...")
 
         GoogleDriveBackupService.shared.connect(clientId: id, clientSecret: secret) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.connectButton.isEnabled = true
-                self.connectButton.title = "Verbinden"
+                self.setButtonTitle(self.connectButton, "Verbinden")
                 switch result {
                 case .success(let info):
                     self.settings.googleOAuthRefreshToken = info.refreshToken
@@ -333,6 +441,16 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t
     }
+
+    /// Update the visible title of a themed button (which uses attributedTitle).
+    private func setButtonTitle(_ btn: NSButton, _ title: String) {
+        btn.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium)
+            ])
+    }
 }
 
 extension NSAlert {
@@ -340,6 +458,7 @@ extension NSAlert {
         let a = NSAlert()
         a.messageText = "PromptBoard"
         a.informativeText = message
+        PBDarkTheme.apply(to: a)
         a.runModal()
     }
 }
