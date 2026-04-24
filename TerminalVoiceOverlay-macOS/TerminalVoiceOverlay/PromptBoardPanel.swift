@@ -15,6 +15,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     private let promptStack = NSStackView()
     private let addPromptButton = NSButton(title: "+ Neuer Prompt", target: nil, action: nil)
     private let titleLabel = NSTextField(labelWithString: "PromptBoard")
+    /// Small muted label next to the title that shows when the Google Drive
+    /// backup last completed. Updated after every successful auto-backup
+    /// and persisted in UserDefaults so it survives app restarts.
+    private let syncLabel = NSTextField(labelWithString: "")
+    private static let lastSyncKey = "pbLastBackupDate"
 
     private var categories: [PBCategory] = []
     /// Multiple categories can be active at the same time — prompts from every
@@ -125,11 +130,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         }
         do {
             let json = try buildBackupJson()
-            GoogleDriveBackupService.shared.upload(json: json) { result in
+            GoogleDriveBackupService.shared.upload(json: json) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
                         tvoDebug("[PBPanel] auto-backup uploaded")
+                        self?.recordSuccessfulSync()
                     case .failure(let e):
                         tvoDebug("[PBPanel] auto-backup failed: \(e.localizedDescription)")
                     }
@@ -137,6 +143,33 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             }
         } catch {
             tvoDebug("[PBPanel] auto-backup build failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Persists "now" as the last successful sync time and repaints the
+    /// header badge next to the title.
+    private func recordSuccessfulSync() {
+        UserDefaults.standard.set(Date(), forKey: Self.lastSyncKey)
+        refreshSyncLabel()
+    }
+
+    /// Reads the persisted last-sync timestamp and renders it as a short
+    /// muted badge like "· sync 22:39" (same day) or "· sync 24.04. 22:39"
+    /// (older day). Empty string when no sync has happened yet.
+    private func refreshSyncLabel() {
+        guard let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date else {
+            syncLabel.stringValue = ""
+            return
+        }
+        let cal = Calendar.current
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "de_DE")
+        if cal.isDateInToday(last) {
+            fmt.dateFormat = "HH:mm"
+            syncLabel.stringValue = "· sync \(fmt.string(from: last))"
+        } else {
+            fmt.dateFormat = "dd.MM. HH:mm"
+            syncLabel.stringValue = "· sync \(fmt.string(from: last))"
         }
     }
 
@@ -195,16 +228,22 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         titleLabel.textColor = NSColor(calibratedWhite: 0.8, alpha: 1)
         titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
 
+        syncLabel.textColor = NSColor(calibratedWhite: 0.50, alpha: 1)
+        syncLabel.font = NSFont.systemFont(ofSize: 10)
+        refreshSyncLabel()   // show the last known date from UserDefaults
+
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
         let backupBtn = makeIconButton(symbol: "⇪", tooltip: "Backup / Wiederherstellen", action: #selector(onBackup))
         let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
 
-        let header = NSStackView(views: [titleLabel, NSView(), addCatBtn, backupBtn, settingsBtn])
+        let header = NSStackView(views: [titleLabel, syncLabel, NSView(), addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 6
         header.distribution = .fill
-        (header.arrangedSubviews[1]).setContentHuggingPriority(.defaultLow, for: .horizontal)
+        // Index 2 is the stretchable spacer NSView() between the sync label
+        // and the header's right-side icon buttons.
+        (header.arrangedSubviews[2]).setContentHuggingPriority(.defaultLow, for: .horizontal)
 
         // Vertical container that holds one horizontal row-stack per line of tabs.
         // Tabs wrap to the next row automatically when they don't fit horizontally.
@@ -916,11 +955,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         }
         do {
             let json = try buildBackupJson()
-            GoogleDriveBackupService.shared.upload(json: json) { result in
+            GoogleDriveBackupService.shared.upload(json: json) { [weak self] result in
                 DispatchQueue.main.async {
                     switch result {
-                    case .success: NSAlert.warn("Backup bei Google Drive gespeichert.")
-                    case .failure(let e): NSAlert.warn("Upload fehlgeschlagen: \(e.localizedDescription)")
+                    case .success:
+                        self?.recordSuccessfulSync()
+                        NSAlert.warn("Backup bei Google Drive gespeichert.")
+                    case .failure(let e):
+                        NSAlert.warn("Upload fehlgeschlagen: \(e.localizedDescription)")
                     }
                 }
             }
