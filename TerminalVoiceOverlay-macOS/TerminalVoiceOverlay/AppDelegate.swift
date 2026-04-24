@@ -90,6 +90,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("PromptBoardStore open failed: %@", error.localizedDescription)
         }
 
+        // Async check: if the Drive backup is newer than our local state,
+        // pull it down and apply. Runs once per launch, silent on all error
+        // paths — the user's workflow is never blocked by this.
+        checkForRemoteBackupOnLaunch()
+
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
         }
@@ -500,6 +505,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 TerminalController.activateTerminal()
                 usleep(150_000)
                 TerminalController.sendKeyCombo(keyCode: 0x24, flags: []) // Return
+            }
+        }
+    }
+
+    // MARK: - Launch-time Drive restore
+
+    /// On launch, pull the latest backup from Google Drive and compare its
+    /// `ExportedAt` timestamp against our local "last sync" mark. If the
+    /// remote is newer (typical case: the user edited prompts on another
+    /// machine), apply it as the authoritative state. Silent on every
+    /// failure path — Drive not connected, network off, JSON malformed,
+    /// etc. — because a startup check must never block the overlay UI.
+    private func checkForRemoteBackupOnLaunch() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] launch-restore skipped (Drive not connected)")
+            return
+        }
+        GoogleDriveBackupService.shared.downloadLatest { [weak self] result in
+            switch result {
+            case .failure(let e):
+                tvoDebug("[App] launch-restore download failed: \(e.localizedDescription)")
+            case .success(let json):
+                guard let json = json else {
+                    tvoDebug("[App] launch-restore: no backup on Drive yet")
+                    return
+                }
+                guard let remoteDate = PromptBoardPanel.backupExportedAt(from: json) else {
+                    tvoDebug("[App] launch-restore: no ExportedAt in backup")
+                    return
+                }
+                let localDate = UserDefaults.standard.object(forKey: "pbLastBackupDate") as? Date
+                    ?? .distantPast
+                // Give a small grace window so a backup we uploaded ourselves
+                // moments earlier doesn't trigger a self-restore race.
+                if remoteDate > localDate.addingTimeInterval(2) {
+                    DispatchQueue.main.async {
+                        do {
+                            try PromptBoardPanel.applyBackupJson(json)
+                            UserDefaults.standard.set(remoteDate, forKey: "pbLastBackupDate")
+                            tvoDebug("[App] launch-restore applied remote backup from \(remoteDate)")
+                            // If the PromptBoard panel has already been created
+                            // (lazy — only after ★ click), refresh it so the
+                            // new data is visible immediately.
+                            self?.promptBoardPanel?.refresh()
+                        } catch {
+                            tvoDebug("[App] launch-restore apply failed: \(error.localizedDescription)")
+                        }
+                    }
+                } else {
+                    tvoDebug("[App] launch-restore: local is up-to-date (remote=\(remoteDate), local=\(localDate))")
+                }
             }
         }
     }

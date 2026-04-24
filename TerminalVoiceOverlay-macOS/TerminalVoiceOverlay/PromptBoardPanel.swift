@@ -866,6 +866,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func applyBackupJson(_ json: String) throws {
+        try Self.applyBackupJson(json)
+    }
+
+    /// Applies a backup JSON as the authoritative state of the local store.
+    /// Upserts everything the backup contains AND deletes any local prompt
+    /// or category whose id is NOT in the backup — otherwise a prompt
+    /// deleted on another machine would re-appear locally on restore.
+    /// Static so it can run at app launch before the PromptBoard panel
+    /// is lazily created.
+    static func applyBackupJson(_ json: String) throws {
         guard let data = json.data(using: .utf8),
               let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw NSError(domain: "PromptBoardPanel", code: 1,
@@ -874,8 +884,13 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let cats = root["Categories"] as? [[String: Any]] ?? []
         let prompts = root["Prompts"] as? [[String: Any]] ?? []
 
+        // Collect the ids the backup considers authoritative.
+        var remoteCategoryIds = Set<UUID>()
+        var remotePromptIds = Set<UUID>()
+
         for c in cats {
             guard let idStr = c["Id"] as? String, let id = UUID(uuidString: idStr) else { continue }
+            remoteCategoryIds.insert(id)
             let now = Date()
             let cat = PBCategory(
                 id: id,
@@ -889,6 +904,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         for p in prompts {
             guard let idStr = p["Id"] as? String, let id = UUID(uuidString: idStr),
                   let catStr = p["CategoryId"] as? String, let catId = UUID(uuidString: catStr) else { continue }
+            remotePromptIds.insert(id)
             let now = Date()
             let prompt = PBPrompt(
                 id: id, categoryId: catId,
@@ -905,6 +921,39 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 createdAt: now, updatedAt: now)
             try PromptBoardStore.shared.upsertPrompt(prompt)
         }
+
+        // Delete local rows that aren't in the authoritative backup.
+        // Prompts first (they reference categories), categories after.
+        if let localCats = try? PromptBoardStore.shared.allCategories() {
+            for cat in localCats where !remoteCategoryIds.contains(cat.id) {
+                if let localPrompts = try? PromptBoardStore.shared.prompts(in: cat.id) {
+                    for p in localPrompts {
+                        try? PromptBoardStore.shared.deletePrompt(p.id)
+                    }
+                }
+                try? PromptBoardStore.shared.deleteCategory(cat.id)
+            }
+            // Also drop stale prompts whose category still exists but whose
+            // id vanished from the backup.
+            for cat in localCats where remoteCategoryIds.contains(cat.id) {
+                if let localPrompts = try? PromptBoardStore.shared.prompts(in: cat.id) {
+                    for p in localPrompts where !remotePromptIds.contains(p.id) {
+                        try? PromptBoardStore.shared.deletePrompt(p.id)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Returns the `ExportedAt` timestamp from a backup JSON, or nil if
+    /// the field is missing / unparseable. Used to decide whether the
+    /// remote backup is newer than the local state.
+    static func backupExportedAt(from json: String) -> Date? {
+        guard let data = json.data(using: .utf8),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let iso = root["ExportedAt"] as? String else { return nil }
+        let f = ISO8601DateFormatter()
+        return f.date(from: iso)
     }
 
     private func exportToFile() {
