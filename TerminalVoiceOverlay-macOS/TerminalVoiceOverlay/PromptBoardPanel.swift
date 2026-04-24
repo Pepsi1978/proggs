@@ -361,9 +361,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let rowClick = NSClickGestureRecognizer(target: self, action: #selector(onRowClick(_:)))
         rowClick.delegate = self
         row.addGestureRecognizer(rowClick)
-        // Same for the short-label button itself: route its click through the
-        // row's insert path so the action is identical no matter where on the
-        // bar the user clicks (text, spacer, or right-aligned padding).
+
+        // Right-click anywhere on the row opens the prompt editor — same as
+        // clicking the ✎ pencil, but with the whole bar as hit area. Uses the
+        // same delegate guard so right-clicks on the three interactive
+        // buttons still run their own action.
+        let rowRightClick = NSClickGestureRecognizer(target: self, action: #selector(onRowRightClick(_:)))
+        rowRightClick.buttonMask = 0x2   // secondary (right) mouse button
+        rowRightClick.delegate = self
+        row.addGestureRecognizer(rowRightClick)
 
         let alwaysOnToggle = NSButton(title: "", target: self, action: #selector(onToggleAlwaysOn(_:)))
         alwaysOnToggle.isBordered = false
@@ -544,6 +550,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         insertPromptByIdString(sender.view?.identifier?.rawValue)
     }
 
+    /// Fired when the user RIGHT-clicks the row. Opens the prompt editor —
+    /// same result as clicking the ✎ pencil, but with the whole bar as a
+    /// larger hit target. Handy when the pencil is too small to hit
+    /// reliably on Retina displays.
+    @objc private func onRowRightClick(_ sender: NSClickGestureRecognizer) {
+        tvoDebug("[PBPanel] onRowRightClick id=\(sender.view?.identifier?.rawValue ?? "nil")")
+        guard let idStr = sender.view?.identifier?.rawValue,
+              let id = UUID(uuidString: idStr) else { return }
+        openEditorForPrompt(id: id)
+    }
+
     // MARK: - NSGestureRecognizerDelegate
 
     /// Block the row-level click when the mouse is over an NSButton subview
@@ -572,8 +589,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     @objc private func onEditPrompt(_ sender: NSButton) {
         guard let idStr = sender.identifier?.rawValue,
-              let id = UUID(uuidString: idStr),
-              var prompt = currentPrompts.first(where: { $0.id == id }) else { return }
+              let id = UUID(uuidString: idStr) else { return }
+        openEditorForPrompt(id: id)
+    }
+
+    /// Shared entry point for opening the prompt editor — reused by both
+    /// the ✎ button and the whole-row right-click gesture.
+    private func openEditorForPrompt(id: UUID) {
+        guard var prompt = currentPrompts.first(where: { $0.id == id }) else { return }
         guard let result = PBPromptEditDialog.ask(parent: self,
                                                   title: "Prompt bearbeiten",
                                                   label: prompt.shortLabel,
