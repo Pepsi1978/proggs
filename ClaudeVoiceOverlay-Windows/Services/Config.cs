@@ -85,8 +85,11 @@ namespace ClaudeVoiceOverlay.Services
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
+            // SK — Secret Keys Zentrale (cross-platform: $HOME/SK/VoiceOverlays/.env).
+            // Alle API-Keys leben dort. Projekt-lokale Fallback-Pfade bleiben als Legacy.
             string[] searchPaths =
             {
+                Path.Combine(userProfile, "SK", "VoiceOverlays", ".env"),
                 Path.Combine(exeDir, ".env"),
                 Path.Combine(cwd, ".env"),
                 Path.Combine(cwd, "publish", ".env"),

@@ -30,16 +30,15 @@ struct Config {
 
     private static func parseEnvFile() -> [String: String] {
         let bundleParent = Bundle.main.bundleURL.deletingLastPathComponent()
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        // SK — Secret Keys Zentrale (cross-platform: $HOME/SK/VoiceOverlays/.env).
+        // Alle API-Keys leben dort. Projekt-lokale Fallback-Pfade bleiben als Legacy.
         let searchPaths = [
-            // Next to .app bundle (build/)
+            home.appendingPathComponent("SK/VoiceOverlays/.env"),
             bundleParent.appendingPathComponent(".env"),
-            // One level up from build/ (project root)
             bundleParent.deletingLastPathComponent().appendingPathComponent(".env"),
-            // Current working directory
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(".env"),
-            // ~/.config/ClaudeCodexVoiceOverlay/.env
-            FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".config/ClaudeCodexVoiceOverlay/.env"),
+            home.appendingPathComponent(".config/ClaudeCodexVoiceOverlay/.env"),
         ]
 
         for path in searchPaths {

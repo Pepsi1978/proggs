@@ -9,6 +9,36 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
+// SK — Secret Keys Zentrale (cross-platform: $HOME/SK/BestJournalAndroid/).
+// Alle Secrets (google-services.json, keystores, keystore.properties) liegen dort.
+// syncSecretsFromSk-Task kopiert sie beim Build an die erwarteten Pfade.
+val skBase: File = File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalAndroid")
+
+val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
+    doLast {
+        if (!skBase.isDirectory) {
+            throw GradleException(
+                "SK-Ordner fehlt: ${skBase.absolutePath}\n" +
+                "Erwartete Inhalte: google-services-debug.json, google-services-release.json, " +
+                "debug-shared.keystore, release.keystore, keystore.properties\n" +
+                "Siehe ~/SK/README.md fuer Details."
+            )
+        }
+        val copies = listOf(
+            skBase.resolve("google-services-debug.json") to project.file("src/debug/google-services.json"),
+            skBase.resolve("google-services-release.json") to project.file("google-services.json"),
+            skBase.resolve("debug-shared.keystore") to rootProject.file("debug-shared.keystore"),
+            skBase.resolve("release.keystore") to rootProject.file("release.keystore")
+        )
+        copies.forEach { (src, dst) ->
+            if (!src.exists()) throw GradleException("SK-Datei fehlt: ${src.absolutePath}")
+            dst.parentFile.mkdirs()
+            src.copyTo(dst, overwrite = true)
+        }
+    }
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFromSk) }
+
 android {
     namespace = "com.bestjournal.app"
     compileSdk = 36
@@ -21,14 +51,18 @@ android {
             keyPassword = "android"
         }
         create("release") {
-            val props = rootProject.file("local.properties")
-            if (props.exists()) {
-                val localProps = Properties()
-                props.inputStream().use { localProps.load(it) }
-                storeFile = file(localProps.getProperty("RELEASE_STORE_FILE", ""))
-                storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD", "")
-                keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS", "")
-                keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD", "")
+            val keystoreProps = skBase.resolve("keystore.properties")
+            if (keystoreProps.exists()) {
+                val props = Properties()
+                keystoreProps.inputStream().use { props.load(it) }
+                val storeFileValue = props.getProperty("RELEASE_STORE_FILE", "")
+                val resolvedStoreFile = File(storeFileValue).let {
+                    if (it.isAbsolute) it else skBase.resolve(storeFileValue)
+                }
+                storeFile = resolvedStoreFile
+                storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
             }
         }
     }
