@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "scope": "programming-environment-only",
+  "entries": [
+    {
+      "id": "envfix-codex-setup-bootstrap-2026-04-22",
+      "summary": "Repo-local codex-setup bootstrap for self-improve",
+      "context": "The self-improve skill was installed locally but could not run legitimately because the workspace had no codex-setup control plane.",
+      "symptom": "Stage 0 failed because codex-setup/ and codex-setup/agent-memory/shared/MEMORY.md were missing.",
+      "root_cause": "The workspace had a local deployed skill in ~/.codex/skills/self-improve but no repo-native Codex source-of-truth, whiteboard, state, or bridge helpers.",
+      "fixed_at": "2026-04-22T00:00:00+02:00",
+      "verification": "Created codex-setup, mirrored the self-improve skill into codex-setup/skills/self-improve, verified whiteboard-bridge print-directive and directive-token, and ran session-start-sync successfully.",
+      "portability_notes": "Other CLIs should bootstrap their own repo-local control plane before relying on locally deployed skills.",
+      "resilience_summary": "Added repo-native whiteboard, rules, state files, bridge registry, delta audit stubs, and ledger helper scripts so future runs no longer depend on claude-code-setup or hidden local state."
+    },
+    {
+      "id": "envfix-self-improve-hardening-2026-04-22",
+      "summary": "Hardening for self-improve loader, Windows heredoc guard, and session scorer runtime binding",
+      "context": "The A1/A2/B1 tranche from the 2026-04-22 self-improve review targeted three recurring environment failures in Codex.",
+      "symptom": "self-improve could disappear from loader visibility, Bash heredoc Python snippets stayed possible on Windows, and session-scores.jsonl was never produced by the active runtime.",
+      "root_cause": "The environment lacked a shared validator, the Windows Bash guard did not block Python heredocs, and the active Codex launch path no longer invoked a scorer that understood the current transcript location and schema.",
+      "fixed_at": "2026-04-22T13:16:19.8610291+02:00",
+      "verification": "Added the codex-setup validator, deployed the updated self-improve skill, blocked Python heredoc in bash-guard.ps1, rebound the session scorer via the PowerShell profile, manually created ~/.codex/session-scores.jsonl through the scorer, and reached clean validator status.",
+      "portability_notes": "Other CLIs should keep a repo-native validator plus an active-runtime scorer hook that is tested against the current transcript schema.",
+      "resilience_summary": "A1 adds loader-safe frontmatter checks, A2 blocks the Windows failure mode before execution, and B1 restores session score generation with a schema-tolerant scorer and active launcher binding."
+    }
+  ]
+}

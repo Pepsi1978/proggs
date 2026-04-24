@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "source_cli": "Codex",
+  "description": "Implemented Codex intelligence suggestions for this workspace.",
+  "entries": [
+    {
+      "id": "intel-self-improve-a1-a2-b1-2026-04-22",
+      "summary": "Codify A1/A2/B1 as permanent self-improve guardrails",
+      "proposal_text": "Add a repo validator for SKILL frontmatter and heredoc anti-patterns, block Bash Python heredocs on Windows, and keep the session scorer bound to the active launcher.",
+      "context_for_other_clis": "This came from the 2026-04-22 self-improve run after repeated loader blindness and missing session score telemetry.",
+      "why_it_was_implemented": "The three issues break discoverability, one-off command reliability, and longitudinal self-observation.",
+      "how_it_was_implemented": "Added validate-codex-setup.mjs, expanded the self-improve workflow to require it, patched bash-guard.ps1, patched session-scorer.ts for modern transcripts, and wired Microsoft.PowerShell_profile.ps1 to run the scorer after Codex exits.",
+      "resilience_summary": "The fix uses defense in depth: static validation, runtime blocking, session-end scoring, and local skill deployment.",
+      "future_failure_review": "Without these guards, a long description can hide a skill again, Windows one-offs can fail silently, and trend analysis goes blind because session-scores.jsonl never appears.",
+      "status": "implemented",
+      "created_at": "2026-04-22T13:16:25.2386268+02:00"
+    }
+  ]
+}

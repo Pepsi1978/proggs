@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "registry_name": "codex-bridge-registry",
+  "registry_path": "codex-setup/bridges/bridge-registry.json",
+  "proposal_prefix": "💡 Intelligenz-Vorschlag:",
+  "global_policies": {
+    "proposal_only": true,
+    "replace_requires_confirmation": true,
+    "foreign_sources_read_only": true
+  },
+  "peer_registry_targets": {
+    "Claude Code": {
+      "repo_path": "claude-code-setup/bridges/bridge-registry.json",
+      "write_policy": "read-only-from-codex"
+    },
+    "Gemini CLI": {
+      "repo_path": "Gemini-Setup/bridges/bridge-registry.json",
+      "write_policy": "read-only-from-codex"
+    }
+  },
+  "ledger_addresses": {
+    "codex_fixes": "codex-setup/state/environment-fixes.json",
+    "codex_suggestions": "codex-setup/state/implemented-intelligence-suggestions.json"
+  },
+  "exchange_bridges": {
+    "environment-fix-exchange": {
+      "bridge_file": "codex-setup/bridges/environment-fix-exchange-bridge.md",
+      "state_file": "codex-setup/state/environment-fixes.json"
+    },
+    "intelligence-suggestion-exchange": {
+      "bridge_file": "codex-setup/bridges/intelligence-suggestion-exchange-bridge.md",
+      "state_file": "codex-setup/state/implemented-intelligence-suggestions.json"
+    }
+  }
+}

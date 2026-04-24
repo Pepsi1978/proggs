@@ -1,0 +1,148 @@
+{
+  "project_info": {
+    "project_number": "314424175660",
+    "project_id": "bestjurnal-a15b9",
+    "storage_bucket": "bestjurnal-a15b9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314424175660:android:0cc8bc49ae4a4c5914b589",
+        "android_client_info": {
+          "package_name": "com.bestjournal.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "314424175660-46gctrmn3pj1lbr37laoop4ds4h34h6a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app",
+            "certificate_hash": "0b686c06e8681e9137c9a617cfc32b8e25f8454c"
+          }
+        },
+        {
+          "client_id": "314424175660-d5kagat5j53dg6p1uikr0v0166cmf5jm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app",
+            "certificate_hash": "642feff41c6073e41f46c9eefa77a5e3b4eab4d8"
+          }
+        },
+        {
+          "client_id": "314424175660-l74srd034tl99s8vooee9163ojkjfmrt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app",
+            "certificate_hash": "03032ca7c1ed5fc2e06c51845908f24dc3359bfa"
+          }
+        },
+        {
+          "client_id": "314424175660-ms0bcninbud5ubhcmle6s0aedmrp7qso.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app",
+            "certificate_hash": "50dbd495943d4f0083f3c90be0b6c45e9d5416af"
+          }
+        },
+        {
+          "client_id": "314424175660-v239baajohu1ghautiomrrsjdbmocvkt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app",
+            "certificate_hash": "e80fe1c549550897dcaaad07598b060a9135d33d"
+          }
+        },
+        {
+          "client_id": "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYdrNfijeTSfotnqVdLzGMfiDWdAycpBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314424175660:android:561053ed2efc541214b589",
+        "android_client_info": {
+          "package_name": "com.bestjournal.app.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "314424175660-8evk84dc04etfk2jt6f5b18le38uj61s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app.debug",
+            "certificate_hash": "cc5640391e6132eeee1532e5df8b32e996f47ccd"
+          }
+        },
+        {
+          "client_id": "314424175660-8inkduv5vjbaurml5h5v99qhmts5jri9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app.debug",
+            "certificate_hash": "642feff41c6073e41f46c9eefa77a5e3b4eab4d8"
+          }
+        },
+        {
+          "client_id": "314424175660-c41283tt1kckac3pcrouap29tovki1ic.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app.debug",
+            "certificate_hash": "50dbd495943d4f0083f3c90be0b6c45e9d5416af"
+          }
+        },
+        {
+          "client_id": "314424175660-fdas5mm3728adkdtlk9mo8tqsjc8tvoo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app.debug",
+            "certificate_hash": "0b686c06e8681e9137c9a617cfc32b8e25f8454c"
+          }
+        },
+        {
+          "client_id": "314424175660-u371rgc492b3de7gr3igbuq99685j1gc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bestjournal.app.debug",
+            "certificate_hash": "03032ca7c1ed5fc2e06c51845908f24dc3359bfa"
+          }
+        },
+        {
+          "client_id": "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYdrNfijeTSfotnqVdLzGMfiDWdAycpBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
