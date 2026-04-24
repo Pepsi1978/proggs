@@ -18,6 +18,7 @@ Core paths:
 
 Operational rules:
 - The authoritative Codex whiteboard is `codex-setup/agent-memory/shared/MEMORY.md`.
+- Cross-platform supplemental Codex rules live in `codex-setup/rules/` and are synced to `~/.codex/rules/` by `codex-setup/scripts/session-start-sync.ps1` and `.sh` when explicitly allowlisted in those scripts.
 - `claude-code-setup/` is a read-only comparison source for Codex.
 - `.claude/` and `~/.claude/` are not valid Codex control planes.
 - Repository automation should target `codex-setup/**` when the change is Codex-specific.

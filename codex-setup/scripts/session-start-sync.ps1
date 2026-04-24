@@ -4,6 +4,10 @@ param(
 
 Push-Location $Workspace
 try {
+    git config --global pull.rebase true
+    git config --global rebase.autoStash true
+    git config --global rerere.enabled true
+
     git fetch origin
     git diff --stat HEAD..origin/main
     git diff --name-status HEAD..origin/main
@@ -13,6 +17,19 @@ try {
     $mcpTarget = Join-Path $Workspace ".mcp.json"
     if (Test-Path $mcpSource) {
         Copy-Item $mcpSource $mcpTarget -Force
+    }
+
+    $rulesSource = Join-Path $Workspace "codex-setup\rules"
+    $rulesTarget = Join-Path $env:USERPROFILE ".codex\rules"
+    if (Test-Path $rulesSource) {
+        New-Item -ItemType Directory -Force -Path $rulesTarget | Out-Null
+        foreach ($ruleName in @("parallel-sessions-git.md", "semicolon-task-separator.md")) {
+            $ruleSource = Join-Path $rulesSource $ruleName
+            if (Test-Path $ruleSource) {
+                Copy-Item -Force $ruleSource (Join-Path $rulesTarget $ruleName)
+                Write-Host "Codex rule $ruleName synced to $rulesTarget"
+            }
+        }
     }
 
     $repairScript = Join-Path $Workspace "codex-setup\scripts\repair_codex_skill_visibility.py"

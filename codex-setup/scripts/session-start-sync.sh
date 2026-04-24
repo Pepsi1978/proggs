@@ -4,6 +4,10 @@ set -euo pipefail
 workspace="${1:-$(pwd)}"
 cd "$workspace"
 
+git config --global pull.rebase true
+git config --global rebase.autoStash true
+git config --global rerere.enabled true
+
 git fetch origin
 git diff --stat HEAD..origin/main
 git diff --name-status HEAD..origin/main
@@ -11,6 +15,18 @@ git pull --rebase --autostash origin main
 
 if [[ -f "$workspace/codex-setup/mcp-macos.json" ]]; then
   cp "$workspace/codex-setup/mcp-macos.json" "$workspace/.mcp.json"
+fi
+
+rules_source_dir="$workspace/codex-setup/rules"
+rules_target_dir="$HOME/.codex/rules"
+if [[ -d "$rules_source_dir" ]]; then
+  mkdir -p "$rules_target_dir"
+  for rule_name in parallel-sessions-git.md semicolon-task-separator.md; do
+    if [[ -f "$rules_source_dir/$rule_name" ]]; then
+      cp "$rules_source_dir/$rule_name" "$rules_target_dir/$rule_name"
+      echo "Codex rule $rule_name synced to $rules_target_dir"
+    fi
+  done
 fi
 
 repair_script="$workspace/codex-setup/scripts/repair_codex_skill_visibility.py"
