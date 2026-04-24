@@ -154,6 +154,10 @@ final class PBPromptEditDialog: NSWindowController {
             backing: .buffered, defer: false)
         window.title = title
         window.isReleasedWhenClosed = false
+        // Keep the editor above our .floating pillar/panel instead of demoting
+        // those panels temporarily — demotion caused stuck-low-level panels
+        // when runModal didn't return cleanly.
+        window.level = .modalPanel
         PBDarkTheme.apply(to: window)
         super.init(window: window)
 
@@ -280,6 +284,10 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             backing: .buffered, defer: false)
         window.title = "Einstellungen"
         window.isReleasedWhenClosed = false
+        // Keep Settings above the .floating overlay/panel. No demotion of
+        // other panels required — that approach was fragile (stuck level
+        // if runModal didn't exit cleanly = beeping app).
+        window.level = .modalPanel
         PBDarkTheme.apply(to: window)
         super.init(window: window)
 

@@ -2,6 +2,16 @@ import AppKit
 import AVFoundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Safety net: whenever the app becomes active, make sure our overlay /
+    /// prompt-board panels still have the correct `.floating` level. If a
+    /// previous modal dialog or a crash-path ever left them demoted to
+    /// `.normal` they would slip under other windows and clicks would only
+    /// produce a system beep. This restores them automatically.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if let p = panel, p.level != .floating { p.level = .floating }
+        if let pb = promptBoardPanel, pb.level != .floating { pb.level = .floating }
+    }
+
     private var panel: OverlayPanel!
     private var appWatcher: AppWatcher!
     private var audioRecorder: AudioRecorder!

@@ -593,15 +593,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     @objc private func onSettings() {
         guard let settings = try? PromptBoardStore.shared.settings() else { return }
-
-        // Temporarily demote our floating panels (the OverlayPanel pillar and this
-        // PromptBoard panel) so the regular settings window can appear above them.
-        // Without this, `.floating`-level panels cover the modal settings window
-        // and it looks like the dialog "disappeared" behind the pillar.
-        let demoted = NSApp.windows.filter { $0.level == .floating }
-        demoted.forEach { $0.level = .normal }
-        defer { demoted.forEach { $0.level = .floating } }
-
+        // The settings window itself sits at .modalPanel level, so it naturally
+        // appears above our .floating pillar — no level juggling needed.
         guard let result = PBSettingsDialog.ask(parent: self, settings: settings) else { return }
         var latest = (try? PromptBoardStore.shared.settings()) ?? settings
         latest.groqApiKey = result.groqApiKey
