@@ -145,7 +145,6 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     private var pulseTimer: Timer?
     private var btwPulseTimer: Timer?
-    private var xButtonCooldown = false
 
     // Right-click drag state
     private var isDragging = false
@@ -332,17 +331,17 @@ final class OverlayPanel: NSPanel {
         }
     }
 
-    func flashXButton() -> Bool {
-        if xButtonCooldown { return false }
-        xButtonCooldown = true
+    /// Matches the Windows Voice Overlay behavior 1:1: every click fires
+    /// ClearInput immediately. The button flashes gray for 2s but further
+    /// clicks are NOT blocked during that window — rapid ✕-ing funktioniert
+    /// ohne Cooldown, genau wie auf Windows.
+    func flashXButton() {
         DispatchQueue.main.async { [weak self] in
             self?.xButton.buttonColor = .btnIdle
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.xButton.buttonColor = .btnX
-                self?.xButtonCooldown = false
             }
         }
-        return true
     }
 
     func flashCopyButton() {

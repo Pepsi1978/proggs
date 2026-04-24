@@ -64,9 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.onXClicked = { [weak self] in
             guard let self = self else { return }
-            if self.panel.flashXButton() {
-                self.clearLine()
-            }
+            // No cooldown — rapid ✕-ing fires ClearInput every time,
+            // matching the Windows Voice Overlay behavior.
+            self.panel.flashXButton()
+            self.clearLine()
         }
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
