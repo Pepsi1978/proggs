@@ -153,14 +153,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // whether clicks are even reaching our process. If a click lands on
         // a coordinate inside one of our panels but no button-handler fires,
         // we have a hit-testing / event-routing bug.
-        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self else { return }
             let loc = NSEvent.mouseLocation
             let inPanel = self.panel?.frame.contains(loc) ?? false
             let inPB = self.promptBoardPanel?.frame.contains(loc) ?? false
-            tvoDebug("[App] GLOBAL mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPromptBoard=\(inPB) panelLevel=\(self.panel?.level.rawValue ?? -99) pbLevel=\(self.promptBoardPanel?.level.rawValue ?? -99) active=\(NSApp.isActive)")
+            let which = event.type == .rightMouseDown ? "RIGHT" : "LEFT"
+            tvoDebug("[App] GLOBAL \(which)-mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPromptBoard=\(inPB) panelLevel=\(self.panel?.level.rawValue ?? -99) pbLevel=\(self.promptBoardPanel?.level.rawValue ?? -99) active=\(NSApp.isActive)")
         }
-        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self else { return event }
             let loc = NSEvent.mouseLocation
             let inPanel = self.panel?.frame.contains(loc) ?? false
@@ -169,7 +170,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let keyWinTitle = NSApp.keyWindow?.title ?? "<none>"
             let mainWinTitle = NSApp.mainWindow?.title ?? "<none>"
             let windowAtPoint = event.window?.title ?? "<nil>"
-            tvoDebug("[App] LOCAL mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPB=\(inPB) active=\(NSApp.isActive) modal=\(modalWinTitle) key=\(keyWinTitle) main=\(mainWinTitle) evtWin=\(windowAtPoint)")
+            let which = event.type == .rightMouseDown ? "RIGHT" : "LEFT"
+            tvoDebug("[App] LOCAL \(which)-mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPB=\(inPB) active=\(NSApp.isActive) modal=\(modalWinTitle) key=\(keyWinTitle) main=\(mainWinTitle) evtWin=\(windowAtPoint)")
             return event
         }
 

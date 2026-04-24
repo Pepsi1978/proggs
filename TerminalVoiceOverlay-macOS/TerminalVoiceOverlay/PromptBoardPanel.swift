@@ -23,6 +23,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     private var activeCategoryIds: Set<UUID> = []
     private var currentPrompts: [PBPrompt] = []
 
+    /// Maps each rendered row's NSView → prompt id, so the right-mouse
+    /// event monitor can quickly resolve "which prompt was right-clicked"
+    /// by testing window coordinates without relying on gesture recognizers
+    /// (which don't fire reliably on .nonactivatingPanel floating windows).
+    private var rowViewsByPromptId: [UUID: NSView] = [:]
+
+    /// Local event monitor for right-mouse-down events. Needed as a fallback
+    /// because NSClickGestureRecognizer with buttonMask=.secondary sometimes
+    /// refuses to fire inside a borderless, canBecomeKey=false NSPanel.
+    private var rightClickMonitor: Any?
+
     /// Fixed palette used to assign a distinct color per category by its
     /// position in the categories array. Kept deterministic so the colors
     /// stay stable across renders.
@@ -73,10 +84,54 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         becomesKeyOnlyIfNeeded = true
 
         buildUI()
+        installRightClickMonitor()
+    }
+
+    deinit {
+        if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
     }
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+
+    /// Installs a local event monitor for right-mouse-down. When the click
+    /// lands inside one of our rendered prompt rows, open the editor —
+    /// same effect as clicking the ✎ pencil. Using a direct event monitor
+    /// instead of NSClickGestureRecognizer because the gesture variant is
+    /// flaky on floating nonactivating panels.
+    private func installRightClickMonitor() {
+        rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown]) { [weak self] event in
+            guard let self = self else { return event }
+            // Only handle events meant for this panel.
+            guard event.window === self else { return event }
+            // Translate click point into each known row's coordinate space.
+            // The event window-coord → root view → row works reliably even
+            // through nested NSStackView / NSScrollView containers.
+            let windowPoint = event.locationInWindow
+            for (id, row) in self.rowViewsByPromptId {
+                // Skip detached rows (can happen during a re-render that
+                // crosses an event delivery).
+                guard row.window === self else { continue }
+                let rowPoint = row.convert(windowPoint, from: nil)
+                if row.bounds.contains(rowPoint) {
+                    // Don't fire when the right-click is on one of the
+                    // interactive subviews (checkbox / ✎ / ✕) — pick any
+                    // descendant button at that spot; if one is hit, we
+                    // bail and let its own handling (or nothing) run.
+                    if let hit = row.hitTest(row.superview?.convert(windowPoint, from: nil) ?? .zero),
+                       hit is NSButton {
+                        return event
+                    }
+                    tvoDebug("[PBPanel] rightClickMonitor → open editor id=\(id.uuidString)")
+                    DispatchQueue.main.async { [weak self] in
+                        self?.openEditorForPrompt(id: id)
+                    }
+                    return nil  // consume the event — no menu, no beep
+                }
+            }
+            return event
+        }
+    }
 
     private func buildUI() {
         let root = NSView(frame: contentView!.bounds)
@@ -310,6 +365,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
         if activeCategoryIds.isEmpty {
             currentPrompts = []
+            rowViewsByPromptId.removeAll()
             renderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.")
             return
         }
@@ -333,12 +389,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         currentPrompts = sorted.map { $0.0 }
 
         if sorted.isEmpty {
+            rowViewsByPromptId.removeAll()
             renderEmptyState("Keine Prompts in den aktiven Kategorien.")
             return
         }
 
+        // Reset row map before we rebuild the list so stale views can't
+        // intercept right-click lookups after a re-render.
+        rowViewsByPromptId.removeAll()
         for (prompt, catId) in sorted {
             let row = buildRow(for: prompt, categoryId: catId)
+            rowViewsByPromptId[prompt.id] = row
             promptStack.addArrangedSubview(row)
             // Width constraint must be activated AFTER adding to superview hierarchy,
             // otherwise NSISEngine throws on restore-triggered re-render (views live).
