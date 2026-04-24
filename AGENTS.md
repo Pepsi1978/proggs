@@ -66,6 +66,22 @@
 - Cross-platform: .ps1 hooks need .sh counterpart (and vice versa)
 - Do not leave project files untracked. Anything an agent creates or edits in the repo must be committed and pushed to GitHub, except secrets/local/generated files which must be explicitly ignored or replaced with a safe template.
 
+## Secrets: zentrale SK-Ablage (KRITISCH)
+
+Alle API-Keys, Signing-Keys, Tokens und vertraulichen Zugangsdaten liegen zentral in
+`$HOME/SK/` (`C:\Users\barwa\SK\` auf Windows, `/Users/barwa/SK/` auf macOS), niemals im Repo.
+Vor Secrets-bezogenen Aenderungen immer `$HOME/SK/README.md` lesen.
+
+- Niemals `.env`, `google-services.json`, `google-services-*.json`, `credentials.json`,
+  Keystores, `keystore.properties`, API-Keys oder Tokens committen.
+- Niemals `.gitignore`-Ausnahmen wie `!app/src/debug/google-services.json`, `!*.keystore`
+  oder `!.env` erstellen oder belassen.
+- Android nutzt einen `syncSecretsFromSk`-Gradle-Task; C#/.NET, Swift, Python und Node
+  suchen `$HOME/SK/<projekt-name>/.env` bzw. Projektdateien aus SK als erste Prioritaet.
+- Ins Repo gehoeren nur `.example`-/`.template`-Dateien mit `REDACTED`-Werten.
+- Release-Keystores, besonders `$HOME/SK/BestJournalAndroid/release.keystore`, sind
+  unwiederbringbar und muessen extern/verschluesselt gesichert werden.
+
 # Parallele Sessions — Commit & Push am geteilten main-Branch (KRITISCH)
 
 Diese Regel gilt AUTOMATISCH in JEDER Session, auf ALLEN Plattformen

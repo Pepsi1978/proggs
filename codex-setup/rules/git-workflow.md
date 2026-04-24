@@ -69,40 +69,51 @@ NIEMALS blind `checkout --ours/--theirs` verwenden.
 
 ### Wo Secrets leben duerfen (NICHT im Repo)
 
-| Datei | Zweck |
-|-------|-------|
-| `~/.codex/settings.json` | Aktive Codex-Settings mit echten Tokens |
-| `~/.codex/settings.local.json` | Lokale Overrides |
-| `.env`-Dateien | Projekt-Secrets (gitignored) |
-| System-Umgebungsvariablen | OS-level Secrets |
+Alle Projekt-Secrets leben zentral in `$HOME/SK/<projekt-name>/`.
+Vor Secrets-bezogenen Aenderungen immer `$HOME/SK/README.md` lesen.
+
+| Pfad | Zweck |
+|------|-------|
+| `$HOME/SK/BestJournalAndroid/` | Firebase-Configs, Keystores, `keystore.properties` |
+| `$HOME/SK/BestJournalFrank/` | Shared Debug-Keystore |
+| `$HOME/SK/VoiceOverlays/` | `.env` fuer Voice-Overlay-Projekte |
+| `$HOME/SK/<neues-projekt>/` | Secrets fuer neue Projekte |
 
 ### Wo Secrets NIEMALS stehen duerfen (IM Repo)
 
 | Datei | Was stattdessen drinsteht |
 |-------|--------------------------|
-| `codex-harness/settings-reference.json` | `"REDACTED — set locally in ~/.codex/settings.json"` |
-| Jede `.json`, `.md`, `.yaml` im Repo | Verweis auf lokale Datei statt echtem Secret |
+| `.env` | `.env.example` mit `REDACTED`-Werten |
+| `google-services.json` / `google-services-*.json` | `google-services.json.template` mit `REDACTED`-Werten |
+| `credentials.json` | Template oder Doku mit SK-Pfad |
+| `*.keystore`, `*.jks`, `*.p12`, `*.pem` | Nur Verweis auf `$HOME/SK/<projekt>/` |
+| `keystore.properties` | `keystore.properties.template` mit `REDACTED`-Werten |
 
-### Pflicht-Ablauf beim Kopieren von Settings ins Repo
+### Keine .gitignore-Ausnahmen fuer Secrets
 
-1. Kopieren: `cp ~/.codex/settings.json codex-harness/settings-reference.json`
-2. **SOFORT danach redaktieren** — BEVOR staged/committed wird:
-   ```python
-   python3 -c "
-   import os, re
-   path = os.path.expanduser('~/Codex/codex-harness/settings-reference.json')
-   with open(path, 'r', encoding='utf-8') as f:
-       content = f.read()
-   content = re.sub(r'gho_[A-Za-z0-9]{30,}', 'REDACTED — set locally in ~/.codex/settings.json', content)
-   content = re.sub(r'ghp_[A-Za-z0-9]{30,}', 'REDACTED — set locally in ~/.codex/settings.json', content)
-   content = re.sub(r'sk-[A-Za-z0-9]{20,}', 'REDACTED — set locally in ~/.codex/settings.json', content)
-   content = re.sub(r'AIza[A-Za-z0-9_-]{30,}', 'REDACTED — set locally in ~/.codex/settings.json', content)
-   with open(path, 'w', encoding='utf-8') as f:
-       f.write(content)
-   print('Secrets redacted')
-   "
-   ```
-3. Erst DANN: `git add` + `git commit`
+NIEMALS `.gitignore`-Ausnahmen wie diese erstellen oder belassen:
+
+```gitignore
+!app/src/debug/google-services.json
+!app/src/release/google-services.json
+!*.keystore
+!keystore.properties
+!.env
+```
+
+Solche Ausnahmen umgehen die Ignore-Regel und waren die Ursache frueherer Leaks.
+
+### Pflichtmuster pro Stack
+
+| Stack | Pflichtmuster |
+|-------|---------------|
+| Android / Gradle | `syncSecretsFromSk` kopiert beim Build aus `$HOME/SK/<projekt>/` |
+| C# / .NET | `Config.cs` sucht SK als erste Prioritaet |
+| Swift / macOS | `Config.swift` sucht SK als erste Prioritaet |
+| Python / Node | `$HOME/SK/<projekt>/.env` ist erste Prioritaet |
+
+Release-Keystores sind unwiederbringbar. `$HOME/SK/BestJournalAndroid/release.keystore`
+muss extra extern oder verschluesselt gesichert werden.
 
 ---
 
