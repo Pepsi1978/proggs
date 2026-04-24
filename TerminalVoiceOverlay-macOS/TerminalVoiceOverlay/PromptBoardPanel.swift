@@ -34,6 +34,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// refuses to fire inside a borderless, canBecomeKey=false NSPanel.
     private var rightClickMonitor: Any?
 
+    /// Debounce timer for auto-backup to Google Drive. Every mutation
+    /// (add / edit / delete / toggle) reschedules the timer; the actual
+    /// upload only fires once the user has stopped clicking for the delay
+    /// window below. This prevents a rapid sequence of edits from
+    /// generating ten separate Drive round-trips.
+    private var autoBackupTimer: Timer?
+    private static let autoBackupDelay: TimeInterval = 2.0
+
     /// Fixed palette used to assign a distinct color per category by its
     /// position in the categories array. Kept deterministic so the colors
     /// stay stable across renders.
@@ -89,6 +97,47 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     deinit {
         if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
+        autoBackupTimer?.invalidate()
+    }
+
+    // MARK: - Auto-backup
+
+    /// Schedules a Google Drive backup after a short debounce window. Safe
+    /// to call from any mutation path — many rapid calls collapse into
+    /// one upload. Does nothing if Drive isn't connected yet.
+    private func scheduleAutoBackup() {
+        autoBackupTimer?.invalidate()
+        autoBackupTimer = Timer.scheduledTimer(
+            withTimeInterval: Self.autoBackupDelay,
+            repeats: false) { [weak self] _ in
+            self?.runAutoBackupIfConnected()
+        }
+    }
+
+    /// Runs the actual upload silently. Success / failure is only written
+    /// to the debug log — never a dialog, because auto-backup must not
+    /// interrupt the user's flow. Manual "upload now" (in the ⇪ menu)
+    /// still shows a confirmation dialog as before.
+    private func runAutoBackupIfConnected() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[PBPanel] auto-backup skipped (Drive not connected)")
+            return
+        }
+        do {
+            let json = try buildBackupJson()
+            GoogleDriveBackupService.shared.upload(json: json) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        tvoDebug("[PBPanel] auto-backup uploaded")
+                    case .failure(let e):
+                        tvoDebug("[PBPanel] auto-backup failed: \(e.localizedDescription)")
+                    }
+                }
+            }
+        } catch {
+            tvoDebug("[PBPanel] auto-backup build failed: \(error.localizedDescription)")
+        }
     }
 
     override var canBecomeKey: Bool { false }
@@ -541,6 +590,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         do {
             try PromptBoardStore.shared.addCategory(cat)
             activeCategoryIds.insert(cat.id)
+            scheduleAutoBackup()
         } catch {
             NSAlert.warn("Kategorie konnte nicht angelegt werden: \(error.localizedDescription)")
         }
@@ -555,8 +605,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                                             label: "Neuer Name:",
                                             initialValue: cat.name, parent: self) else { return }
         cat.name = newName
-        do { try PromptBoardStore.shared.updateCategory(cat) }
-        catch { NSAlert.warn(error.localizedDescription) }
+        do {
+            try PromptBoardStore.shared.updateCategory(cat)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn(error.localizedDescription)
+        }
         refresh()
     }
 
@@ -570,6 +624,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         do {
             try PromptBoardStore.shared.deleteCategory(id)
             activeCategoryIds.remove(id)
+            scheduleAutoBackup()
         } catch { NSAlert.warn(error.localizedDescription) }
         refresh()
     }
@@ -594,8 +649,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                               geminiModel: nil, isActiveForImprovement: false,
                               improvedByAiPromptId: nil,
                               createdAt: now, updatedAt: now)
-        do { try PromptBoardStore.shared.addPrompt(prompt) }
-        catch { NSAlert.warn(error.localizedDescription) }
+        do {
+            try PromptBoardStore.shared.addPrompt(prompt)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn(error.localizedDescription)
+        }
         renderPrompts()
     }
 
@@ -666,8 +725,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         prompt.shortLabel = result.shortLabel
         prompt.originalText = result.originalText
         prompt.isAlwaysOn = result.isAlwaysOn
-        do { try PromptBoardStore.shared.updatePrompt(prompt) }
-        catch { NSAlert.warn(error.localizedDescription) }
+        do {
+            try PromptBoardStore.shared.updatePrompt(prompt)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn(error.localizedDescription)
+        }
         renderPrompts()
     }
 
@@ -678,8 +741,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         guard PBConfirm.ask(title: "Prompt loeschen?",
                             message: "Prompt '\(prompt.shortLabel)' wirklich loeschen?",
                             parent: self) else { return }
-        do { try PromptBoardStore.shared.deletePrompt(id) }
-        catch { NSAlert.warn(error.localizedDescription) }
+        do {
+            try PromptBoardStore.shared.deletePrompt(id)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn(error.localizedDescription)
+        }
         renderPrompts()
     }
 
@@ -705,6 +772,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         prompt.updatedAt = Date()
         do {
             try PromptBoardStore.shared.updatePrompt(prompt)
+            scheduleAutoBackup()
             renderPrompts()
         } catch {
             NSLog("toggle isAlwaysOn failed: \(error.localizedDescription)")
