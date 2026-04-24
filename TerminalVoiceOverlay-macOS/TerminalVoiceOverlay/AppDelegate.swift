@@ -1,6 +1,30 @@
 import AppKit
 import AVFoundation
 
+/// Append a debug line to a stable file so we can diagnose without
+/// os_log privacy masking eating our strings. Safe to call from any
+/// thread — uses a serial queue so lines don't interleave.
+private let tvoDebugQueue = DispatchQueue(label: "tvo.debug.log")
+func tvoDebug(_ message: @autoclosure @escaping () -> String,
+              file: String = #file, line: Int = #line) {
+    let msg = message()
+    tvoDebugQueue.async {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        let src = (file as NSString).lastPathComponent
+        let entry = "[\(stamp)] \(src):\(line) \(msg)\n"
+        let url = URL(fileURLWithPath: "/tmp/tvo-debug.log")
+        if let h = try? FileHandle(forWritingTo: url) {
+            h.seekToEndOfFile()
+            if let data = entry.data(using: .utf8) { h.write(data) }
+            try? h.close()
+        } else {
+            try? entry.write(to: url, atomically: false, encoding: .utf8)
+        }
+        // Also mirror to stderr so `log stream` or console can see it
+        FileHandle.standardError.write((entry.data(using: .utf8)) ?? Data())
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Safety net: whenever the app becomes active, make sure our overlay /
     /// prompt-board panels still have the correct `.floating` level. If a
@@ -8,8 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `.normal` they would slip under other windows and clicks would only
     /// produce a system beep. This restores them automatically.
     func applicationDidBecomeActive(_ notification: Notification) {
-        if let p = panel, p.level != .floating { p.level = .floating }
-        if let pb = promptBoardPanel, pb.level != .floating { pb.level = .floating }
+        let pl = self.panel?.level.rawValue ?? -99
+        let pbl = self.promptBoardPanel?.level.rawValue ?? -99
+        tvoDebug("[App] applicationDidBecomeActive panelLevel=\(pl) pbLevel=\(pbl)")
+        if let p = self.panel, p.level != .floating { p.level = .floating }
+        if let pb = self.promptBoardPanel, pb.level != .floating { pb.level = .floating }
     }
 
     private var panel: OverlayPanel!
@@ -87,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.onXClicked = { [weak self] in
             guard let self = self else { return }
+            tvoDebug("[App] onXClicked panelLevel=\(self.panel.level.rawValue) active=\(NSApp.isActive)")
             // No cooldown — rapid ✕-ing fires ClearLine every time,
             // matching the Windows Voice Overlay behavior.
             self.panel.flashXButton()
@@ -121,14 +149,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupStatusItem()
 
+        // Debug: log every mouseDown anywhere in the system so we can see
+        // whether clicks are even reaching our process. If a click lands on
+        // a coordinate inside one of our panels but no button-handler fires,
+        // we have a hit-testing / event-routing bug.
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            guard let self = self else { return }
+            let loc = NSEvent.mouseLocation
+            let inPanel = self.panel?.frame.contains(loc) ?? false
+            let inPB = self.promptBoardPanel?.frame.contains(loc) ?? false
+            tvoDebug("[App] GLOBAL mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPromptBoard=\(inPB) panelLevel=\(self.panel?.level.rawValue ?? -99) pbLevel=\(self.promptBoardPanel?.level.rawValue ?? -99) active=\(NSApp.isActive)")
+        }
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            guard let self = self else { return event }
+            let loc = NSEvent.mouseLocation
+            let inPanel = self.panel?.frame.contains(loc) ?? false
+            let inPB = self.promptBoardPanel?.frame.contains(loc) ?? false
+            let modalWinTitle = NSApp.modalWindow?.title ?? "<none>"
+            let keyWinTitle = NSApp.keyWindow?.title ?? "<none>"
+            let mainWinTitle = NSApp.mainWindow?.title ?? "<none>"
+            let windowAtPoint = event.window?.title ?? "<nil>"
+            tvoDebug("[App] LOCAL mouseDown loc=(\(Int(loc.x)),\(Int(loc.y))) inPillar=\(inPanel) inPB=\(inPB) active=\(NSApp.isActive) modal=\(modalWinTitle) key=\(keyWinTitle) main=\(mainWinTitle) evtWin=\(windowAtPoint)")
+            return event
+        }
+
         // Setup app watcher
         appWatcher = AppWatcher()
         appWatcher.onTerminalActivated = { [weak self] in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.panel.orderFront(nil)
+                tvoDebug("[App] onTerminalActivated — panelLevel=\(self.panel.level.rawValue) pbLevel=\(self.promptBoardPanel?.level.rawValue ?? -1) active=\(NSApp.isActive)")
+                // CRITICAL: use orderFrontRegardless instead of orderFront(nil).
+                // When the terminal becomes active, our own app is *not* active.
+                // AppKit logs in that case: "ordered front from a non-active
+                // application and may order beneath the active application's
+                // windows" — and the panel visibly slips below the terminal.
+                // After that, clicks miss our buttons (they hit the terminal)
+                // and the user only hears system beeps.
+                self.panel.orderFrontRegardless()
+                // Keep the pillar pinned to the floating level. Earlier bugs
+                // left it demoted to .normal, which reproduces the same
+                // clicks-fall-through-to-terminal symptom.
+                self.panel.level = .floating
                 if self.alwaysOnActive, let p = self.promptBoardPanel {
                     p.dock(rightOf: self.panel)
+                    p.level = .floating
                     p.orderFrontRegardless()
                 }
             }
@@ -136,6 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appWatcher.onTerminalDeactivated = { [weak self] in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                tvoDebug("[App] onTerminalDeactivated isRec=\(self.isRecording) isProc=\(self.isProcessing)")
                 if !self.isRecording && !self.isProcessing {
                     self.panel.orderOut(nil)
                     self.promptBoardPanel?.orderOut(nil)
@@ -161,7 +227,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showOverlay() {
-        panel.orderFront(nil)
+        // Status-bar item action: our app is inactive while the user clicks
+        // the menu bar, so use orderFrontRegardless to avoid the panel
+        // landing behind other apps' windows.
+        panel.orderFrontRegardless()
+        panel.level = .floating
     }
 
     @objc private func quitApp() {
@@ -384,6 +454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let p = PromptBoardPanel()
             p.onInsertText = { [weak self] text in
                 guard let self = self, !text.isEmpty else { return }
+                tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
                 TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
             }
             promptBoardPanel = p

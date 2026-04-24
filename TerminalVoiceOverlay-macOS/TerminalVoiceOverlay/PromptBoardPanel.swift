@@ -445,6 +445,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     // MARK: - Actions
 
     @objc private func onSelectCategory(_ sender: NSButton) {
+        tvoDebug("[PBPanel] onSelectCategory tag=\(sender.tag) panelLevel=\(self.level.rawValue)")
         guard sender.tag >= 0, sender.tag < categories.count else { return }
         let id = categories[sender.tag].id
         // Toggle: clicking an already-active tab turns it off, clicking an
@@ -532,12 +533,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     @objc private func onInsertPrompt(_ sender: NSButton) {
+        tvoDebug("[PBPanel] onInsertPrompt (label-button) id=\(sender.identifier?.rawValue ?? "nil")")
         insertPromptByIdString(sender.identifier?.rawValue)
     }
 
     /// Fired when the user clicks the row background (outside checkbox / edit /
     /// delete). Inserts the prompt exactly as the label-button would.
     @objc private func onRowClick(_ sender: NSClickGestureRecognizer) {
+        tvoDebug("[PBPanel] onRowClick id=\(sender.view?.identifier?.rawValue ?? "nil") panelLevel=\(self.level.rawValue)")
         insertPromptByIdString(sender.view?.identifier?.rawValue)
     }
 
@@ -558,7 +561,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     private func insertPromptByIdString(_ idStr: String?) {
         guard let idStr = idStr,
               let id = UUID(uuidString: idStr),
-              let prompt = currentPrompts.first(where: { $0.id == id }) else { return }
+              let prompt = currentPrompts.first(where: { $0.id == id }) else {
+            let n = self.currentPrompts.count
+            tvoDebug("[PBPanel] insertPromptByIdString MISS idStr=\(idStr ?? "nil") currentPrompts.count=\(n)")
+            return
+        }
+        tvoDebug("[PBPanel] insertPromptByIdString HIT label=\(prompt.shortLabel) textLen=\(prompt.effectiveText.count)")
         onInsertText?(prompt.effectiveText)
     }
 
@@ -717,7 +725,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let save = NSSavePanel()
         save.nameFieldStringValue = "promptboard-backup-\(Int(Date().timeIntervalSince1970)).json"
         save.allowedContentTypes = [.json]
-        guard save.runModal() == .OK, let url = save.url else { return }
+        // Use the presenter so the Save panel is guaranteed visible (it would
+        // otherwise open behind our floating pillar → user doesn't see it,
+        // clicks fall into the modal trap → beep beep).
+        guard PBModalPresenter.runModal(on: save) == .OK, let url = save.url else { return }
         do {
             let json = try buildBackupJson()
             try json.write(to: url, atomically: true, encoding: .utf8)
@@ -731,7 +742,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let open = NSOpenPanel()
         open.allowedContentTypes = [.json]
         open.allowsMultipleSelection = false
-        guard open.runModal() == .OK, let url = open.url else { return }
+        // NSOpenPanel is a subclass of NSSavePanel — same presenter works.
+        guard PBModalPresenter.runModal(on: open) == .OK, let url = open.url else { return }
         guard PBConfirm.ask(title: "Import bestaetigen",
                             message: "Vorhandene Eintraege mit gleicher ID werden ueberschrieben.",
                             confirmLabel: "Importieren", parent: self) else { return }

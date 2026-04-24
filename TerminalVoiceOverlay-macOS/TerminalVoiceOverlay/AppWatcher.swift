@@ -38,6 +38,14 @@ final class AppWatcher {
 
     @objc private func appActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+        // Ignore our own process becoming active — otherwise every time we
+        // call NSApp.activate() (e.g. to force a modal dialog forward) we'd
+        // also fire onTerminalDeactivated and order our own panels out
+        // while the modal session is still opening. That race produced
+        // invisible-dialog/beep-loops in past builds.
+        if app.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return
+        }
         if Self.isTargetApp(app.bundleIdentifier) {
             lastActiveTerminalBundleID = app.bundleIdentifier
             TerminalController.lastActiveTerminalBundleID = app.bundleIdentifier
