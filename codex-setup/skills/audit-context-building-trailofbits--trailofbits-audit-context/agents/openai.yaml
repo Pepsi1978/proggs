@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-audit-context"
+  short_description: "Builds deep architectural context before vulnerability hunting"
+  default_prompt: "Use $audit-context-building-trailofbits--trailofbits-audit-context for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "gradle-build"
+  short_description: "Fix Gradle build errors for Android and KMP projects"
+  default_prompt: "Use $everything-codex-everything-codex--gradle-build for this task."
+
+policy:
+  allow_implicit_invocation: false

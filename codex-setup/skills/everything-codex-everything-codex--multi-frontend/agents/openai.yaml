@@ -1,0 +1,7 @@
+interface:
+  display_name: "multi-frontend"
+  short_description: "multi-frontend"
+  default_prompt: "Use $everything-codex-everything-codex--multi-frontend for this task."
+
+policy:
+  allow_implicit_invocation: false

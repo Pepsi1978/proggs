@@ -1,0 +1,7 @@
+interface:
+  display_name: "wycheproof"
+  short_description: "wycheproof skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--wycheproof for this task."
+
+policy:
+  allow_implicit_invocation: false

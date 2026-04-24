@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:analyze-issue"
+  short_description: "Analyze a GitHub issue and create a detailed technical"
+  default_prompt: "Use $git-context-engineering-kit--git-analyze-issue for this task."
+
+policy:
+  allow_implicit_invocation: false

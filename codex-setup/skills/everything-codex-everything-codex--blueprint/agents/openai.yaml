@@ -1,0 +1,7 @@
+interface:
+  display_name: "blueprint"
+  short_description: "blueprint skill"
+  default_prompt: "Use $everything-codex-everything-codex--blueprint for this task."
+
+policy:
+  allow_implicit_invocation: true

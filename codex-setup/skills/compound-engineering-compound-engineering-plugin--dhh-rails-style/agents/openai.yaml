@@ -1,0 +1,7 @@
+interface:
+  display_name: "dhh-rails-style"
+  short_description: "writing Ruby and Rails code in DHH's distinctive 37signals style"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--dhh-rails-style for this task."
+
+policy:
+  allow_implicit_invocation: false

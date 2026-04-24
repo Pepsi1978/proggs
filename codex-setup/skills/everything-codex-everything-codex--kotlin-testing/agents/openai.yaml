@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-testing"
+  short_description: "Kotlin testing patterns with Kotest, MockK, coroutine testing"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

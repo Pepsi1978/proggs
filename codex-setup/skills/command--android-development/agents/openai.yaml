@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--android-development"
+  short_description: "Android applications following Google's official architecture"
+  default_prompt: "Use $command--android-development for this task."
+
+policy:
+  allow_implicit_invocation: false

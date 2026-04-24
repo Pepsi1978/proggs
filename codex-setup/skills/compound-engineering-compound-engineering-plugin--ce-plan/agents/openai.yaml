@@ -1,0 +1,7 @@
+interface:
+  display_name: "ce:plan"
+  short_description: "Transform feature descriptions into well-structured project"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ce-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

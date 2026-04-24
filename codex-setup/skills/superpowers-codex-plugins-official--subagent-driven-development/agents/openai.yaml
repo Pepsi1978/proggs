@@ -1,0 +1,7 @@
+interface:
+  display_name: "subagent-driven-development"
+  short_description: "executing implementation plans with independent tasks in the"
+  default_prompt: "Use $superpowers-codex-plugins-official--subagent-driven-development for this task."
+
+policy:
+  allow_implicit_invocation: false

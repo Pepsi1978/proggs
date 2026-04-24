@@ -1,0 +1,7 @@
+interface:
+  display_name: "nutrient-document-processing"
+  short_description: "Process, convert, OCR, extract, redact, sign, and fill"
+  default_prompt: "Use $everything-codex-everything-codex--nutrient-document-processing for this task."
+
+policy:
+  allow_implicit_invocation: false

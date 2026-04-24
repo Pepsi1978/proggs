@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-briefing"
+  short_description: "Prepare concise subagent context briefs"
+  default_prompt: "Use $agent-briefing for this task."
+
+policy:
+  allow_implicit_invocation: true

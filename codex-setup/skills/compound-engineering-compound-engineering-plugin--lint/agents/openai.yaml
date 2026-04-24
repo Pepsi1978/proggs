@@ -1,0 +1,7 @@
+interface:
+  display_name: "lint"
+  short_description: "Use this agent when you need to run linting and code quality"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--lint for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "supply-chain-risk-auditor"
+  short_description: "Identifies dependencies at heightened risk of exploitation or"
+  default_prompt: "Use $supply-chain-risk-auditor-trailofbits--supply-chain-risk-auditor for this task."
+
+policy:
+  allow_implicit_invocation: false

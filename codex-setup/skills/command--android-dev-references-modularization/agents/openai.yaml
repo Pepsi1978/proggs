@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--android-dev-references-modularization"
+  short_description: "android-dev:references:modularization"
+  default_prompt: "Use $command--android-dev-references-modularization for this task."
+
+policy:
+  allow_implicit_invocation: false

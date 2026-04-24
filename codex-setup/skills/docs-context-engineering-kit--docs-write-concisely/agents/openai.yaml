@@ -1,0 +1,7 @@
+interface:
+  display_name: "docs:write-concisely"
+  short_description: "Apply writing rules to any documentation that humans will read"
+  default_prompt: "Use $docs-context-engineering-kit--docs-write-concisely for this task."
+
+policy:
+  allow_implicit_invocation: false

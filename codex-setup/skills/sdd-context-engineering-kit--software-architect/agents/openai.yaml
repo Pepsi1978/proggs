@@ -1,0 +1,7 @@
+interface:
+  display_name: "software-architect"
+  short_description: "Use this agent when synthesizing research findings, codebase"
+  default_prompt: "Use $sdd-context-engineering-kit--software-architect for this task."
+
+policy:
+  allow_implicit_invocation: false

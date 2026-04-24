@@ -1,0 +1,7 @@
+interface:
+  display_name: "brainstorm"
+  short_description: "Deprecated - use the superpowers:brainstorming skill instead"
+  default_prompt: "Use $superpowers-codex-plugins-official--brainstorm for this task."
+
+policy:
+  allow_implicit_invocation: false

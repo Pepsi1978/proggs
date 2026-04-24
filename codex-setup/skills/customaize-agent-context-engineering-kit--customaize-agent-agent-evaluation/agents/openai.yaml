@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:agent-evaluation"
+  short_description: "Evaluate and improve Codex commands, skills, and agents"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-agent-evaluation for this task."
+
+policy:
+  allow_implicit_invocation: false

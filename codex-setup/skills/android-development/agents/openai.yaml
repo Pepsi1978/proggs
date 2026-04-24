@@ -1,0 +1,7 @@
+interface:
+  display_name: "android-development"
+  short_description: "Production Android architecture and Compose guidance"
+  default_prompt: "Use $android-development for this task."
+
+policy:
+  allow_implicit_invocation: true

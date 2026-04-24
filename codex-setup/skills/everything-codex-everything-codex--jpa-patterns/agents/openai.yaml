@@ -1,0 +1,7 @@
+interface:
+  display_name: "jpa-patterns"
+  short_description: "JPA/Hibernate patterns for entity design, relationships, query"
+  default_prompt: "Use $everything-codex-everything-codex--jpa-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

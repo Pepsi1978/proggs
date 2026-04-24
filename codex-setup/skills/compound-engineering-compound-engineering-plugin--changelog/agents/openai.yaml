@@ -1,0 +1,7 @@
+interface:
+  display_name: "changelog"
+  short_description: "Create engaging changelogs for recent merges to main branch"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--changelog for this task."
+
+policy:
+  allow_implicit_invocation: false

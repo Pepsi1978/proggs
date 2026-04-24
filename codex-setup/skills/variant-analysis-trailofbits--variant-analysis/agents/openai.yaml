@@ -1,0 +1,7 @@
+interface:
+  display_name: "variant-analysis"
+  short_description: "Find similar vulnerabilities and bugs across codebases using"
+  default_prompt: "Use $variant-analysis-trailofbits--variant-analysis for this task."
+
+policy:
+  allow_implicit_invocation: false

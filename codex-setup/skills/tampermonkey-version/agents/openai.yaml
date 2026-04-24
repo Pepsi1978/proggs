@@ -1,0 +1,7 @@
+interface:
+  display_name: "tampermonkey-version"
+  short_description: "Bump Tampermonkey versions consistently"
+  default_prompt: "Use $tampermonkey-version for this task."
+
+policy:
+  allow_implicit_invocation: false

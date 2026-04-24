@@ -1,0 +1,7 @@
+interface:
+  display_name: "conversation-analyzer"
+  short_description: "Use this agent when analyzing conversation transcripts to find"
+  default_prompt: "Use $hookify-codex-plugins-official--conversation-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "django-verification"
+  short_description: "Verification loop for Django projects: migrations, linting"
+  default_prompt: "Use $everything-codex-everything-codex--django-verification for this task."
+
+policy:
+  allow_implicit_invocation: false

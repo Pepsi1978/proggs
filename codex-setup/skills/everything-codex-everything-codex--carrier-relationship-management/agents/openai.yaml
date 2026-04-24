@@ -1,0 +1,7 @@
+interface:
+  display_name: "carrier-relationship-management"
+  short_description: "carrier-relationship-management skill"
+  default_prompt: "Use $everything-codex-everything-codex--carrier-relationship-management for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "trajectory-analyzer"
+  short_description: "Trajectory-Analyzer — analysiert vergangene Session-Protokolle"
+  default_prompt: "Use $trajectory-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

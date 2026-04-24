@@ -1,0 +1,7 @@
+interface:
+  display_name: "pr-test-analyzer"
+  short_description: "Use after PR changes to review whether key behavior and edge"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--pr-test-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

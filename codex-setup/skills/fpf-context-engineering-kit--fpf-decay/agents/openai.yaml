@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:decay"
+  short_description: "Manage evidence freshness by identifying stale decisions and"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-decay for this task."
+
+policy:
+  allow_implicit_invocation: false

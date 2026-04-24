@@ -1,0 +1,7 @@
+interface:
+  display_name: "swiftui-patterns"
+  short_description: "SwiftUI architecture patterns, state management with"
+  default_prompt: "Use $everything-codex-everything-codex--swiftui-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

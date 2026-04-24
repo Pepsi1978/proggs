@@ -1,0 +1,7 @@
+interface:
+  display_name: "brainstorming"
+  short_description: "You MUST use this before any creative work - creating features"
+  default_prompt: "Use $superpowers-codex-plugins-official--brainstorming for this task."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "pattern-recognition-specialist"
+  short_description: "Analyzes code for design patterns, anti-patterns, naming"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--pattern-recognition-specialist for this task."
+
+policy:
+  allow_implicit_invocation: false

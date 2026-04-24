@@ -1,0 +1,7 @@
+interface:
+  display_name: "resolve-pr-parallel"
+  short_description: "Resolve all PR comments using parallel processing"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--resolve-pr-parallel for this task."
+
+policy:
+  allow_implicit_invocation: false

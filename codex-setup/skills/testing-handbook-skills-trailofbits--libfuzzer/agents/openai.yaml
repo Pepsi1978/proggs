@@ -1,0 +1,7 @@
+interface:
+  display_name: "libfuzzer"
+  short_description: "libfuzzer skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--libfuzzer for this task."
+
+policy:
+  allow_implicit_invocation: false

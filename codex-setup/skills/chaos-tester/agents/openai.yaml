@@ -1,0 +1,7 @@
+interface:
+  display_name: "chaos-tester"
+  short_description: "Nutze diesen Agenten um die Self-Healing-Faehigkeiten der"
+  default_prompt: "Use $chaos-tester for this task."
+
+policy:
+  allow_implicit_invocation: false

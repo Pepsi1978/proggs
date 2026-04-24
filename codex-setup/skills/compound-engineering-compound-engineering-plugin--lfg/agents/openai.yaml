@@ -1,0 +1,7 @@
+interface:
+  display_name: "lfg"
+  short_description: "Full autonomous engineering workflow"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--lfg for this task."
+
+policy:
+  allow_implicit_invocation: false

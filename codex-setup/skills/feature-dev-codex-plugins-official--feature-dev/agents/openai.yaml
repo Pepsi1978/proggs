@@ -1,0 +1,7 @@
+interface:
+  display_name: "feature-dev"
+  short_description: "Guided feature development with codebase understanding and"
+  default_prompt: "Use $feature-dev-codex-plugins-official--feature-dev for this task."
+
+policy:
+  allow_implicit_invocation: false

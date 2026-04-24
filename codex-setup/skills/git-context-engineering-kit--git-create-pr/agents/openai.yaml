@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:create-pr"
+  short_description: "Create pull requests using GitHub CLI with proper templates and"
+  default_prompt: "Use $git-context-engineering-kit--git-create-pr for this task."
+
+policy:
+  allow_implicit_invocation: false

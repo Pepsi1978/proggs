@@ -1,0 +1,7 @@
+interface:
+  display_name: "fal-ai-media"
+  short_description: "Unified media generation via fal.ai MCP — image, video, and"
+  default_prompt: "Use $everything-codex-everything-codex--fal-ai-media for this task."
+
+policy:
+  allow_implicit_invocation: false

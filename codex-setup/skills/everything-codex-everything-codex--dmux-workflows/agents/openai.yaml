@@ -1,0 +1,7 @@
+interface:
+  display_name: "dmux-workflows"
+  short_description: "Multi-agent orchestration using dmux (tmux pane manager for AI"
+  default_prompt: "Use $everything-codex-everything-codex--dmux-workflows for this task."
+
+policy:
+  allow_implicit_invocation: false

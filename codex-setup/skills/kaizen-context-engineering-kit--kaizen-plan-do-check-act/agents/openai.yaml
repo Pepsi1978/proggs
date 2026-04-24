@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:plan-do-check-act"
+  short_description: "Iterative PDCA cycle for systematic experimentation and"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-plan-do-check-act for this task."
+
+policy:
+  allow_implicit_invocation: false

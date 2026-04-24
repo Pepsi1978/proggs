@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-native-architecture"
+  short_description: "Build applications where agents are first-class citizens"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--agent-native-architecture for this task."
+
+policy:
+  allow_implicit_invocation: false

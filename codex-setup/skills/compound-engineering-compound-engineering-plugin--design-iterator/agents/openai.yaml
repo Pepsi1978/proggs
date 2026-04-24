@@ -1,0 +1,7 @@
+interface:
+  display_name: "design-iterator"
+  short_description: "Iteratively refines UI design through N"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--design-iterator for this task."
+
+policy:
+  allow_implicit_invocation: false

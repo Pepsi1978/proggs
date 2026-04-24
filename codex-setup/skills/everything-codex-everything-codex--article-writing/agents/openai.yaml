@@ -1,0 +1,7 @@
+interface:
+  display_name: "article-writing"
+  short_description: "Write articles, guides, blog posts, tutorials, newsletter"
+  default_prompt: "Use $everything-codex-everything-codex--article-writing for this task."
+
+policy:
+  allow_implicit_invocation: false

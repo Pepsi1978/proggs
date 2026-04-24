@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:create-command"
+  short_description: "Interactive assistant for creating new Codex commands with"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-create-command for this task."
+
+policy:
+  allow_implicit_invocation: false

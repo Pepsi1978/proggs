@@ -1,0 +1,7 @@
+interface:
+  display_name: "investor-materials"
+  short_description: "Create and update pitch decks, one-pagers, investor memos"
+  default_prompt: "Use $everything-codex-everything-codex--investor-materials for this task."
+
+policy:
+  allow_implicit_invocation: false

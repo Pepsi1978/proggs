@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--hook-forge-references-ps1-template"
+  short_description: "hook-forge:references:ps1-template"
+  default_prompt: "Use $command--hook-forge-references-ps1-template for this task."
+
+policy:
+  allow_implicit_invocation: false

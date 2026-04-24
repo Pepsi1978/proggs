@@ -1,0 +1,7 @@
+interface:
+  display_name: "frontend-design"
+  short_description: "Build polished frontends with strong visual direction"
+  default_prompt: "Use $frontend-design-codex-plugins-official--frontend-design for this task."
+
+policy:
+  allow_implicit_invocation: true

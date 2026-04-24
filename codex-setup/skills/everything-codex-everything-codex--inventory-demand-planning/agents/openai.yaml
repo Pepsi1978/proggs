@@ -1,0 +1,7 @@
+interface:
+  display_name: "inventory-demand-planning"
+  short_description: "inventory-demand-planning skill"
+  default_prompt: "Use $everything-codex-everything-codex--inventory-demand-planning for this task."
+
+policy:
+  allow_implicit_invocation: false

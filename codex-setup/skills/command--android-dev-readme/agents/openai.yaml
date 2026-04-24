@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--android-dev-readme"
+  short_description: "android-dev:README"
+  default_prompt: "Use $command--android-dev-readme for this task."
+
+policy:
+  allow_implicit_invocation: false

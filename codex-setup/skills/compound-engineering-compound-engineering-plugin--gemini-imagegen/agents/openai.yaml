@@ -1,0 +1,7 @@
+interface:
+  display_name: "gemini-imagegen"
+  short_description: "generating and editing images using the Gemini API (Nano Banana"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--gemini-imagegen for this task."
+
+policy:
+  allow_implicit_invocation: false

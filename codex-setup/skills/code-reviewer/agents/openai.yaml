@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-reviewer"
+  short_description: "Reviews code for quality, security, and design"
+  default_prompt: "Use $code-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

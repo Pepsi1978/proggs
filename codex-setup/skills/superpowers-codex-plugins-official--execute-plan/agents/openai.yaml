@@ -1,0 +1,7 @@
+interface:
+  display_name: "execute-plan"
+  short_description: "Deprecated - use the superpowers:executing-plans skill instead"
+  default_prompt: "Use $superpowers-codex-plugins-official--execute-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

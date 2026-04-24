@@ -1,0 +1,7 @@
+interface:
+  display_name: "perl-testing"
+  short_description: "Perl testing patterns using Test2::V0, Test::More, prove"
+  default_prompt: "Use $everything-codex-everything-codex--perl-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

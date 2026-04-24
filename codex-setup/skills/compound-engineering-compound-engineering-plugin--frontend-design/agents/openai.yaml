@@ -1,0 +1,7 @@
+interface:
+  display_name: "frontend-design"
+  short_description: "creating distinctive, production-grade frontend interfaces with"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--frontend-design for this task."
+
+policy:
+  allow_implicit_invocation: false

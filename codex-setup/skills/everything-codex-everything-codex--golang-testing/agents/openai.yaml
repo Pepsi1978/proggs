@@ -1,0 +1,7 @@
+interface:
+  display_name: "golang-testing"
+  short_description: "Go testing patterns including table-driven tests, subtests"
+  default_prompt: "Use $everything-codex-everything-codex--golang-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

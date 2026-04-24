@@ -1,0 +1,7 @@
+interface:
+  display_name: "spec-compliance-checker"
+  short_description: "Performs full specification-to-code compliance analysis for"
+  default_prompt: "Use $spec-to-code-compliance-trailofbits--spec-compliance-checker for this task."
+
+policy:
+  allow_implicit_invocation: false

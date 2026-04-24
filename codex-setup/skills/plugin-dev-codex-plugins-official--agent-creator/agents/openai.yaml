@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-creator"
+  short_description: "Create Codex agents from user requirements, including role"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--agent-creator for this task."
+
+policy:
+  allow_implicit_invocation: true

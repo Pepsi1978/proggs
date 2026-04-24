@@ -1,0 +1,7 @@
+interface:
+  display_name: "tdd-guide"
+  short_description: "Test-Driven Development specialist enforcing write-tests-first"
+  default_prompt: "Use $everything-codex-everything-codex--tdd-guide for this task."
+
+policy:
+  allow_implicit_invocation: false

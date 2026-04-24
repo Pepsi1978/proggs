@@ -1,0 +1,7 @@
+interface:
+  display_name: "selbstbeobachtung"
+  short_description: "Apply the self-observation directive in Codex"
+  default_prompt: "Use $selbstbeobachtung for this task."
+
+policy:
+  allow_implicit_invocation: false

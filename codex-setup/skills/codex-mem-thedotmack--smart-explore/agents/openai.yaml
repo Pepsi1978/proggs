@@ -1,0 +1,7 @@
+interface:
+  display_name: "smart-explore"
+  short_description: "Token-optimized structural code search using tree-sitter AST"
+  default_prompt: "Use $codex-mem-thedotmack--smart-explore for this task."
+
+policy:
+  allow_implicit_invocation: false

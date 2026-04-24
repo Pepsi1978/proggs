@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--tool-check"
+  short_description: "Systematic code health scanner (~5-20 min) that audits projects"
+  default_prompt: "Use $command--tool-check for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "import"
+  short_description: "Import pending mirror-ledger changes into Codex"
+  default_prompt: "Use $import for this task."
+
+policy:
+  allow_implicit_invocation: true

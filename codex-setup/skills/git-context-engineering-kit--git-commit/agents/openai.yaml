@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:commit"
+  short_description: "Create well-formatted commits with conventional commit messages"
+  default_prompt: "Use $git-context-engineering-kit--git-commit for this task."
+
+policy:
+  allow_implicit_invocation: false

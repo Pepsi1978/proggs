@@ -1,0 +1,7 @@
+interface:
+  display_name: "coverage-analysis"
+  short_description: "coverage-analysis skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--coverage-analysis for this task."
+
+policy:
+  allow_implicit_invocation: false

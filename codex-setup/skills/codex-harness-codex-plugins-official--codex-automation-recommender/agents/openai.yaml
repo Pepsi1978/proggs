@@ -1,0 +1,7 @@
+interface:
+  display_name: "codex-automation-recommender"
+  short_description: "Analyze a codebase and recommend Codex automations (hooks"
+  default_prompt: "Use $codex-harness-codex-plugins-official--codex-automation-recommender for this task."
+
+policy:
+  allow_implicit_invocation: false

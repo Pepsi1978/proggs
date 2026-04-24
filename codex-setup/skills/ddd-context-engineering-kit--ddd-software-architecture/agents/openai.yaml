@@ -1,0 +1,7 @@
+interface:
+  display_name: "ddd:software-architecture"
+  short_description: "quality focused software architecture"
+  default_prompt: "Use $ddd-context-engineering-kit--ddd-software-architecture for this task."
+
+policy:
+  allow_implicit_invocation: false

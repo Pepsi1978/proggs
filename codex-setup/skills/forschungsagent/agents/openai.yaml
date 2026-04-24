@@ -1,0 +1,7 @@
+interface:
+  display_name: "forschungsagent"
+  short_description: "Spezialisierter Forschungsagent der die Forschung.md im"
+  default_prompt: "Use $forschungsagent for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "commit-push-pr"
+  short_description: "Commit, push, and open a PR"
+  default_prompt: "Use $commit-commands-codex-plugins-official--commit-push-pr for this task."
+
+policy:
+  allow_implicit_invocation: true

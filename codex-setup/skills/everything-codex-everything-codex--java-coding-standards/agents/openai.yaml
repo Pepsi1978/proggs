@@ -1,0 +1,7 @@
+interface:
+  display_name: "java-coding-standards"
+  short_description: "Java coding standards for Spring Boot services: naming"
+  default_prompt: "Use $everything-codex-everything-codex--java-coding-standards for this task."
+
+policy:
+  allow_implicit_invocation: false

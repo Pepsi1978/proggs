@@ -168,7 +168,6 @@ function validatePythonHeredoc(repoRoot, codexSetupDir, errors) {
   const controlRoots = [
     path.join(codexSetupDir, "rules"),
     path.join(codexSetupDir, "scripts"),
-    path.join(codexSetupDir, "skills"),
     path.join(codexSetupDir, "README.md"),
   ];
   const controlFiles = [];

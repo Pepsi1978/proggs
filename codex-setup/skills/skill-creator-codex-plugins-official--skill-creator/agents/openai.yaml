@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-creator"
+  short_description: "Create new skills, modify and improve existing skills, and"
+  default_prompt: "Use $skill-creator-codex-plugins-official--skill-creator for this task."
+
+policy:
+  allow_implicit_invocation: false

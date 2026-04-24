@@ -1,0 +1,7 @@
+interface:
+  display_name: "workflows:plan"
+  short_description: "[DEPRECATED] Use /ce:plan instead — renamed for clarity"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--workflows-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

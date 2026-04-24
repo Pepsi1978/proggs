@@ -1,0 +1,7 @@
+interface:
+  display_name: "evolve"
+  short_description: "Analyze instincts and suggest or generate evolved structures"
+  default_prompt: "Use $everything-codex-everything-codex--evolve for this task."
+
+policy:
+  allow_implicit_invocation: false

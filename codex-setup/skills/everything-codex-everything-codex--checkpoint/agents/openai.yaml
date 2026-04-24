@@ -1,0 +1,7 @@
+interface:
+  display_name: "checkpoint"
+  short_description: "checkpoint"
+  default_prompt: "Use $everything-codex-everything-codex--checkpoint for this task."
+
+policy:
+  allow_implicit_invocation: false

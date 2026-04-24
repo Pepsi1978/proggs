@@ -1,0 +1,7 @@
+interface:
+  display_name: "verification-loop"
+  short_description: "A comprehensive verification system for Codex sessions"
+  default_prompt: "Use $everything-codex-everything-codex--verification-loop for this task."
+
+policy:
+  allow_implicit_invocation: false

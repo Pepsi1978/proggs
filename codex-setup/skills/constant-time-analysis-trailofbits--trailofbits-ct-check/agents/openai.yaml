@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-ct-check"
+  short_description: "Detects timing side-channels in cryptographic code"
+  default_prompt: "Use $constant-time-analysis-trailofbits--trailofbits-ct-check for this task."
+
+policy:
+  allow_implicit_invocation: false

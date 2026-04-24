@@ -1,0 +1,7 @@
+interface:
+  display_name: "build-fix"
+  short_description: "build-fix"
+  default_prompt: "Use $everything-codex-everything-codex--build-fix for this task."
+
+policy:
+  allow_implicit_invocation: false

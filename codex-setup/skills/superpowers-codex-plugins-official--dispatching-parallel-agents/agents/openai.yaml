@@ -1,0 +1,7 @@
+interface:
+  display_name: "dispatching-parallel-agents"
+  short_description: "facing 2+ independent tasks that can be worked on without"
+  default_prompt: "Use $superpowers-codex-plugins-official--dispatching-parallel-agents for this task."
+
+policy:
+  allow_implicit_invocation: false

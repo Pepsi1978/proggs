@@ -1,0 +1,7 @@
+interface:
+  display_name: "entry-point-analyzer"
+  short_description: "Analyzes smart contract codebases to identify state-changing"
+  default_prompt: "Use $entry-point-analyzer-trailofbits--entry-point-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

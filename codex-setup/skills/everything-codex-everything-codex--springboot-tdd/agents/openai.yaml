@@ -1,0 +1,7 @@
+interface:
+  display_name: "springboot-tdd"
+  short_description: "Test-driven development for Spring Boot using JUnit 5, Mockito"
+  default_prompt: "Use $everything-codex-everything-codex--springboot-tdd for this task."
+
+policy:
+  allow_implicit_invocation: false

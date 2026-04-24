@@ -1,0 +1,7 @@
+interface:
+  display_name: "team-lead"
+  short_description: "Use this agent when reorganizing implementation steps for"
+  default_prompt: "Use $sdd-context-engineering-kit--team-lead for this task."
+
+policy:
+  allow_implicit_invocation: false

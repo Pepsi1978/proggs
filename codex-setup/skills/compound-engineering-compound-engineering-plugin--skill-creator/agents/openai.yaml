@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-creator"
+  short_description: "creating effective skills"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--skill-creator for this task."
+
+policy:
+  allow_implicit_invocation: false

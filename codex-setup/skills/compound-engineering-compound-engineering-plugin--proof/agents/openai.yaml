@@ -1,0 +1,7 @@
+interface:
+  display_name: "proof"
+  short_description: "Create, edit, comment on, and share markdown documents via"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--proof for this task."
+
+policy:
+  allow_implicit_invocation: false

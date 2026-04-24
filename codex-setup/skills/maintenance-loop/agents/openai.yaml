@@ -1,0 +1,7 @@
+interface:
+  display_name: "maintenance-loop"
+  short_description: "Automatischer Wartungs-Loop: Wenn Tests fehlschlagen"
+  default_prompt: "Use $maintenance-loop for this task."
+
+policy:
+  allow_implicit_invocation: false

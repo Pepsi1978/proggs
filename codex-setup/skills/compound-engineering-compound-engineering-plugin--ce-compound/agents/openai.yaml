@@ -1,0 +1,7 @@
+interface:
+  display_name: "ce:compound"
+  short_description: "Document a recently solved problem to compound your team's"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ce-compound for this task."
+
+policy:
+  allow_implicit_invocation: false

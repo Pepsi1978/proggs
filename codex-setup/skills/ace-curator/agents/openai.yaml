@@ -1,0 +1,7 @@
+interface:
+  display_name: "ace-curator"
+  short_description: "Improve Codex rules from repeated session evidence"
+  default_prompt: "Use $ace-curator for this task."
+
+policy:
+  allow_implicit_invocation: true

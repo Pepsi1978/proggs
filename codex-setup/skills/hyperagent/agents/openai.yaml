@@ -1,0 +1,7 @@
+interface:
+  display_name: "hyperagent"
+  short_description: "Analyze drift, efficiency, and learning after work"
+  default_prompt: "Use $hyperagent for this task."
+
+policy:
+  allow_implicit_invocation: true

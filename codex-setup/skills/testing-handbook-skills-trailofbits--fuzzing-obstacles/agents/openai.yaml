@@ -1,0 +1,7 @@
+interface:
+  display_name: "fuzzing-obstacles"
+  short_description: "fuzzing-obstacles skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--fuzzing-obstacles for this task."
+
+policy:
+  allow_implicit_invocation: false

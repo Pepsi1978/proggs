@@ -1,0 +1,7 @@
+interface:
+  display_name: "optimizer"
+  short_description: "Optimizes code for performance, binary size, and resource usage"
+  default_prompt: "Use $optimizer for this task."
+
+policy:
+  allow_implicit_invocation: false

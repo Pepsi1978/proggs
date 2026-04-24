@@ -1,0 +1,7 @@
+interface:
+  display_name: "metacognitive-observer"
+  short_description: "Separate observer agent that analyzes the current session from"
+  default_prompt: "Use $metacognitive-observer for this task."
+
+policy:
+  allow_implicit_invocation: false

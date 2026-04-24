@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-exposed-patterns"
+  short_description: "JetBrains Exposed ORM patterns including DSL queries, DAO"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-exposed-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

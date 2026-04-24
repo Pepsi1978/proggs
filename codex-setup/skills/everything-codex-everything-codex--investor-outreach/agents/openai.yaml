@@ -1,0 +1,7 @@
+interface:
+  display_name: "investor-outreach"
+  short_description: "Draft cold emails, warm intro blurbs, follow-ups, update"
+  default_prompt: "Use $everything-codex-everything-codex--investor-outreach for this task."
+
+policy:
+  allow_implicit_invocation: false

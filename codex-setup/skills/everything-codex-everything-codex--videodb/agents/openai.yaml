@@ -1,0 +1,7 @@
+interface:
+  display_name: "videodb"
+  short_description: "See, Understand, Act on video and audio"
+  default_prompt: "Use $everything-codex-everything-codex--videodb for this task."
+
+policy:
+  allow_implicit_invocation: false

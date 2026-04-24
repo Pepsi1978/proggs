@@ -1,0 +1,7 @@
+interface:
+  display_name: "ddd:setup-code-formating"
+  short_description: "Sets up code formatting rules and style guidelines in AGENTS.md"
+  default_prompt: "Use $ddd-context-engineering-kit--ddd-setup-code-formating for this task."
+
+policy:
+  allow_implicit_invocation: false

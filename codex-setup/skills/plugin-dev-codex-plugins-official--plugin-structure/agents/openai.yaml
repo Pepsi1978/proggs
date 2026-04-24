@@ -1,0 +1,7 @@
+interface:
+  display_name: "plugin-structure"
+  short_description: "the user asks to \"create a plugin\", \"scaffold a plugin\""
+  default_prompt: "Use $plugin-dev-codex-plugins-official--plugin-structure for this task."
+
+policy:
+  allow_implicit_invocation: false

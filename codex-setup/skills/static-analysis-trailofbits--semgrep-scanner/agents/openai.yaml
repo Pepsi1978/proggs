@@ -1,0 +1,7 @@
+interface:
+  display_name: "semgrep-scanner"
+  short_description: "Executes Semgrep CLI scans for a specific language category and"
+  default_prompt: "Use $static-analysis-trailofbits--semgrep-scanner for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "iterative-retrieval"
+  short_description: "Pattern for progressively refining context retrieval to solve"
+  default_prompt: "Use $everything-codex-everything-codex--iterative-retrieval for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "swift-concurrency-6-2"
+  short_description: "Swift 6.2 Approachable Concurrency — single-threaded by"
+  default_prompt: "Use $everything-codex-everything-codex--swift-concurrency-6-2 for this task."
+
+policy:
+  allow_implicit_invocation: false

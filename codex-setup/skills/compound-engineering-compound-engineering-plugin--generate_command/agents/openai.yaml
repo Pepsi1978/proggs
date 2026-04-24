@@ -1,0 +1,7 @@
+interface:
+  display_name: "generate_command"
+  short_description: "Create a new custom slash command following conventions and"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--generate_command for this task."
+
+policy:
+  allow_implicit_invocation: false

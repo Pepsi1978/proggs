@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--auto-verify-iterate"
+  short_description: "Use AUTOMATICALLY after completing ANY coding task (new"
+  default_prompt: "Use $command--auto-verify-iterate for this task."
+
+policy:
+  allow_implicit_invocation: false

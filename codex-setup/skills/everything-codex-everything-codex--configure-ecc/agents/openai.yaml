@@ -1,0 +1,7 @@
+interface:
+  display_name: "configure-ecc"
+  short_description: "Interactive installer for Everything Codex — guides users"
+  default_prompt: "Use $everything-codex-everything-codex--configure-ecc for this task."
+
+policy:
+  allow_implicit_invocation: false

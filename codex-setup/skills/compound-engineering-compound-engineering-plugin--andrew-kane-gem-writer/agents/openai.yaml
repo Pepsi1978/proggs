@@ -1,0 +1,7 @@
+interface:
+  display_name: "andrew-kane-gem-writer"
+  short_description: "writing Ruby gems following Andrew Kane's proven patterns and"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--andrew-kane-gem-writer for this task."
+
+policy:
+  allow_implicit_invocation: false

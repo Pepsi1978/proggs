@@ -1,0 +1,7 @@
+interface:
+  display_name: "eval-harness"
+  short_description: "Formal evaluation framework for Codex sessions implementing"
+  default_prompt: "Use $everything-codex-everything-codex--eval-harness for this task."
+
+policy:
+  allow_implicit_invocation: false

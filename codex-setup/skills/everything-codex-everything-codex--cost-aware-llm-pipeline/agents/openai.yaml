@@ -1,0 +1,7 @@
+interface:
+  display_name: "cost-aware-llm-pipeline"
+  short_description: "Cost optimization patterns for LLM API usage — model routing by"
+  default_prompt: "Use $everything-codex-everything-codex--cost-aware-llm-pipeline for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "backend-patterns"
+  short_description: "Backend architecture patterns, API design, database"
+  default_prompt: "Use $everything-codex-everything-codex--backend-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

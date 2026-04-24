@@ -1,0 +1,7 @@
+interface:
+  display_name: "git:load-issues"
+  short_description: "Load all open issues from GitHub and save them as markdown files"
+  default_prompt: "Use $git-context-engineering-kit--git-load-issues for this task."
+
+policy:
+  allow_implicit_invocation: false

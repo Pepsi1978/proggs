@@ -1,0 +1,7 @@
+interface:
+  display_name: "eval"
+  short_description: "eval skill"
+  default_prompt: "Use $everything-codex-everything-codex--eval for this task."
+
+policy:
+  allow_implicit_invocation: false

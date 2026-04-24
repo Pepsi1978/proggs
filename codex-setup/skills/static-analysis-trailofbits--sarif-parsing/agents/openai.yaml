@@ -1,0 +1,7 @@
+interface:
+  display_name: "sarif-parsing"
+  short_description: "sarif-parsing skill"
+  default_prompt: "Use $static-analysis-trailofbits--sarif-parsing for this task."
+
+policy:
+  allow_implicit_invocation: false

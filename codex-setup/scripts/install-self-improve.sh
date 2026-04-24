@@ -18,10 +18,9 @@ echo "Deployed self-improve to $target_dir"
 
 if [[ -d "$rules_source_dir" ]]; then
   mkdir -p "$rules_target_dir"
-  for rule_name in parallel-sessions-git.md semicolon-task-separator.md; do
-    if [[ -f "$rules_source_dir/$rule_name" ]]; then
-      cp "$rules_source_dir/$rule_name" "$rules_target_dir/$rule_name"
-      echo "Deployed Codex rule $rule_name to $rules_target_dir"
-    fi
+  for rule_path in "$rules_source_dir"/*.md; do
+    [[ -f "$rule_path" ]] || continue
+    cp "$rule_path" "$rules_target_dir/$(basename "$rule_path")"
+    echo "Deployed Codex rule $(basename "$rule_path") to $rules_target_dir"
   done
 fi

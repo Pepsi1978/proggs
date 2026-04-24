@@ -1,0 +1,7 @@
+interface:
+  display_name: "healer"
+  short_description: "Liest das Whiteboard (MEMORY.md), findet alle Eintraege mit"
+  default_prompt: "Use $healer for this task."
+
+policy:
+  allow_implicit_invocation: false

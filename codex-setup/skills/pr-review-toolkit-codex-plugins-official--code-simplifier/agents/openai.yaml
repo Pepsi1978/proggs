@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-simplifier"
+  short_description: "Simplify recently modified code while preserving exact"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--code-simplifier for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "security-sentinel"
+  short_description: "Performs security audits for vulnerabilities, input validation"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--security-sentinel for this task."
+
+policy:
+  allow_implicit_invocation: false

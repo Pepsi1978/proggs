@@ -1,0 +1,7 @@
+interface:
+  display_name: "frontend-patterns"
+  short_description: "Frontend development patterns for React, Next.js, state"
+  default_prompt: "Use $everything-codex-everything-codex--frontend-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

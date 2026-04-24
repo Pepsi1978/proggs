@@ -1,0 +1,7 @@
+interface:
+  display_name: "project-guidelines-example"
+  short_description: "Example project-specific skill template based on a real"
+  default_prompt: "Use $everything-codex-everything-codex--project-guidelines-example for this task."
+
+policy:
+  allow_implicit_invocation: false

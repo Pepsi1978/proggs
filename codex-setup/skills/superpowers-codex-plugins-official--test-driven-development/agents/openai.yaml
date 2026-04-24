@@ -1,0 +1,7 @@
+interface:
+  display_name: "test-driven-development"
+  short_description: "implementing any feature or bugfix, before writing"
+  default_prompt: "Use $superpowers-codex-plugins-official--test-driven-development for this task."
+
+policy:
+  allow_implicit_invocation: true

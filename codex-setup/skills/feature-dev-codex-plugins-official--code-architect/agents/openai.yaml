@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-architect"
+  short_description: "Designs feature architectures by analyzing existing codebase"
+  default_prompt: "Use $feature-dev-codex-plugins-official--code-architect for this task."
+
+policy:
+  allow_implicit_invocation: false

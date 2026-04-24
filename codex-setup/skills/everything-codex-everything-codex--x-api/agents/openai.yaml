@@ -1,0 +1,7 @@
+interface:
+  display_name: "x-api"
+  short_description: "X/Twitter API integration for posting tweets, threads, reading"
+  default_prompt: "Use $everything-codex-everything-codex--x-api for this task."
+
+policy:
+  allow_implicit_invocation: false

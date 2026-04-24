@@ -1,0 +1,7 @@
+interface:
+  display_name: "evolution-analyst"
+  short_description: "Analyzes session quality trends, recurring weaknesses, and"
+  default_prompt: "Use $evolution-analyst for this task."
+
+policy:
+  allow_implicit_invocation: false

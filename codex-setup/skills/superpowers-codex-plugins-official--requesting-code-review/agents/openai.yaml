@@ -1,0 +1,7 @@
+interface:
+  display_name: "requesting-code-review"
+  short_description: "completing tasks, implementing major features, or before"
+  default_prompt: "Use $superpowers-codex-plugins-official--requesting-code-review for this task."
+
+policy:
+  allow_implicit_invocation: false

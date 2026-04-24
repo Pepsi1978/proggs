@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:actualize"
+  short_description: "Reconcile the project's FPF state with recent repository changes"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-actualize for this task."
+
+policy:
+  allow_implicit_invocation: false

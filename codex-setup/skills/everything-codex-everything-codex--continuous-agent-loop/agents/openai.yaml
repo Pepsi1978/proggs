@@ -1,0 +1,7 @@
+interface:
+  display_name: "continuous-agent-loop"
+  short_description: "Patterns for continuous autonomous agent loops with quality"
+  default_prompt: "Use $everything-codex-everything-codex--continuous-agent-loop for this task."
+
+policy:
+  allow_implicit_invocation: false

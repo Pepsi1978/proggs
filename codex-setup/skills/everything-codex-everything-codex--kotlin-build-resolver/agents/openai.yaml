@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-build-resolver"
+  short_description: "Kotlin/Gradle build, compilation, and dependency error"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-build-resolver for this task."
+
+policy:
+  allow_implicit_invocation: false

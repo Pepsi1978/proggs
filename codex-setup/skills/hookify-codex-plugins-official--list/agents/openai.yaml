@@ -1,0 +1,7 @@
+interface:
+  display_name: "list"
+  short_description: "List all configured hookify rules"
+  default_prompt: "Use $hookify-codex-plugins-official--list for this task."
+
+policy:
+  allow_implicit_invocation: false

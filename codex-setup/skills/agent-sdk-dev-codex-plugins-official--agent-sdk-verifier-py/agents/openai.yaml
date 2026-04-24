@@ -1,0 +1,7 @@
+interface:
+  display_name: "agent-sdk-verifier-py"
+  short_description: "Use this agent to verify that a Python Agent SDK application is"
+  default_prompt: "Use $agent-sdk-dev-codex-plugins-official--agent-sdk-verifier-py for this task."
+
+policy:
+  allow_implicit_invocation: false

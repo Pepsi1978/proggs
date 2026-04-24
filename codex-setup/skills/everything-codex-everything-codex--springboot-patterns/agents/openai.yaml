@@ -1,0 +1,7 @@
+interface:
+  display_name: "springboot-patterns"
+  short_description: "Spring Boot architecture patterns, REST API design, layered"
+  default_prompt: "Use $everything-codex-everything-codex--springboot-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

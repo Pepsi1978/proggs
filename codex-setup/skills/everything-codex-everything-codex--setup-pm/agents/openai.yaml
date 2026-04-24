@@ -1,0 +1,7 @@
+interface:
+  display_name: "setup-pm"
+  short_description: "Configure your preferred package manager (npm/pnpm/yarn/bun)"
+  default_prompt: "Use $everything-codex-everything-codex--setup-pm for this task."
+
+policy:
+  allow_implicit_invocation: false

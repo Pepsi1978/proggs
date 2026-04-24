@@ -1,0 +1,7 @@
+interface:
+  display_name: "deployment-verification-agent"
+  short_description: "Produces Go/No-Go deployment checklists with SQL verification"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--deployment-verification-agent for this task."
+
+policy:
+  allow_implicit_invocation: false

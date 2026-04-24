@@ -1,0 +1,7 @@
+interface:
+  display_name: "loop-status"
+  short_description: "loop-status"
+  default_prompt: "Use $everything-codex-everything-codex--loop-status for this task."
+
+policy:
+  allow_implicit_invocation: false

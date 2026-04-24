@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:create-workflow-command"
+  short_description: "Create a workflow command that orchestrates multi-step"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-create-workflow-command for this task."
+
+policy:
+  allow_implicit_invocation: false

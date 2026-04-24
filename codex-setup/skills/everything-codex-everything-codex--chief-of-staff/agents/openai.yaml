@@ -1,0 +1,7 @@
+interface:
+  display_name: "chief-of-staff"
+  short_description: "Personal communication chief of staff that triages email"
+  default_prompt: "Use $everything-codex-everything-codex--chief-of-staff for this task."
+
+policy:
+  allow_implicit_invocation: false

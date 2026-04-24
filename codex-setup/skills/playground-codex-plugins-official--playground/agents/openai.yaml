@@ -1,0 +1,7 @@
+interface:
+  display_name: "playground"
+  short_description: "Build interactive single-file HTML playgrounds"
+  default_prompt: "Use $playground-codex-plugins-official--playground for this task."
+
+policy:
+  allow_implicit_invocation: true

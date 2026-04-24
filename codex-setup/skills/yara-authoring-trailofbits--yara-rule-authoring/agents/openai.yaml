@@ -1,0 +1,7 @@
+interface:
+  display_name: "yara-rule-authoring"
+  short_description: "yara-rule-authoring skill"
+  default_prompt: "Use $yara-authoring-trailofbits--yara-rule-authoring for this task."
+
+policy:
+  allow_implicit_invocation: false

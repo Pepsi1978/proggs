@@ -1,0 +1,7 @@
+interface:
+  display_name: "secure-workflow-guide"
+  short_description: "Guides through Trail of Bits' 5-step secure development workflow"
+  default_prompt: "Use $building-secure-contracts-trailofbits--secure-workflow-guide for this task."
+
+policy:
+  allow_implicit_invocation: false

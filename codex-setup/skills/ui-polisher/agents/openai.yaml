@@ -1,0 +1,7 @@
+interface:
+  display_name: "ui-polisher"
+  short_description: "Reviews and improves UI code to look professional and"
+  default_prompt: "Use $ui-polisher for this task."
+
+policy:
+  allow_implicit_invocation: false

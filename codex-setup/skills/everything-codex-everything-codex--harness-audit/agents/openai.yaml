@@ -1,0 +1,7 @@
+interface:
+  display_name: "harness-audit"
+  short_description: "harness-audit"
+  default_prompt: "Use $everything-codex-everything-codex--harness-audit for this task."
+
+policy:
+  allow_implicit_invocation: false

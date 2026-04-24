@@ -1,0 +1,7 @@
+interface:
+  display_name: "cpp-testing"
+  short_description: "Use only when writing/updating/fixing C++ tests, configuring"
+  default_prompt: "Use $everything-codex-everything-codex--cpp-testing for this task."
+
+policy:
+  allow_implicit_invocation: false

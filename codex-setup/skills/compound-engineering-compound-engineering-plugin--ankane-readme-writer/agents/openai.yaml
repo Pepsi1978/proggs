@@ -1,0 +1,7 @@
+interface:
+  display_name: "ankane-readme-writer"
+  short_description: "Creates or updates README files following Ankane-style template"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--ankane-readme-writer for this task."
+
+policy:
+  allow_implicit_invocation: false

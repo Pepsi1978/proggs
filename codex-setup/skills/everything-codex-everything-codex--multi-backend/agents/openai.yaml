@@ -1,0 +1,7 @@
+interface:
+  display_name: "multi-backend"
+  short_description: "multi-backend"
+  default_prompt: "Use $everything-codex-everything-codex--multi-backend for this task."
+
+policy:
+  allow_implicit_invocation: false

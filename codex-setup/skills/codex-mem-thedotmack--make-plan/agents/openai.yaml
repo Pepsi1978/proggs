@@ -1,0 +1,7 @@
+interface:
+  display_name: "make-plan"
+  short_description: "Create a detailed, phased implementation plan with"
+  default_prompt: "Use $codex-mem-thedotmack--make-plan for this task."
+
+policy:
+  allow_implicit_invocation: false

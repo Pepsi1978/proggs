@@ -1,0 +1,7 @@
+interface:
+  display_name: "tdd:write-tests"
+  short_description: "Systematically add test coverage for all local code changes"
+  default_prompt: "Use $tdd-context-engineering-kit--tdd-write-tests for this task."
+
+policy:
+  allow_implicit_invocation: false

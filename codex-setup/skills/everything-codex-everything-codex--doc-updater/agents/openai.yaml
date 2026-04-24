@@ -1,0 +1,7 @@
+interface:
+  display_name: "doc-updater"
+  short_description: "Documentation and codemap specialist"
+  default_prompt: "Use $everything-codex-everything-codex--doc-updater for this task."
+
+policy:
+  allow_implicit_invocation: false

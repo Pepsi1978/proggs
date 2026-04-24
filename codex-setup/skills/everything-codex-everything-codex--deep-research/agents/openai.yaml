@@ -1,0 +1,7 @@
+interface:
+  display_name: "deep-research"
+  short_description: "Multi-source deep research using firecrawl and exa MCPs"
+  default_prompt: "Use $everything-codex-everything-codex--deep-research for this task."
+
+policy:
+  allow_implicit_invocation: true

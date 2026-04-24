@@ -1,0 +1,7 @@
+interface:
+  display_name: "address-sanitizer"
+  short_description: "address-sanitizer skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--address-sanitizer for this task."
+
+policy:
+  allow_implicit_invocation: false

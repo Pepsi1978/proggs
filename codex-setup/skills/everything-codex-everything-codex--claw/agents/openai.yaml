@@ -1,0 +1,7 @@
+interface:
+  display_name: "claw"
+  short_description: "Start NanoClaw v2 — ECC's persistent, zero-dependency REPL with"
+  default_prompt: "Use $everything-codex-everything-codex--claw for this task."
+
+policy:
+  allow_implicit_invocation: false

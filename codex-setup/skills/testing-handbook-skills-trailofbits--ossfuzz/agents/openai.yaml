@@ -1,0 +1,7 @@
+interface:
+  display_name: "ossfuzz"
+  short_description: "ossfuzz skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--ossfuzz for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "plankton-code-quality"
+  short_description: "Write-time code quality enforcement using Plankton —"
+  default_prompt: "Use $everything-codex-everything-codex--plankton-code-quality for this task."
+
+policy:
+  allow_implicit_invocation: false

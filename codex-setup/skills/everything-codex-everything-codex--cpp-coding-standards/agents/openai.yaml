@@ -1,0 +1,7 @@
+interface:
+  display_name: "cpp-coding-standards"
+  short_description: "C++ coding standards based on the C++ Core Guidelines"
+  default_prompt: "Use $everything-codex-everything-codex--cpp-coding-standards for this task."
+
+policy:
+  allow_implicit_invocation: false

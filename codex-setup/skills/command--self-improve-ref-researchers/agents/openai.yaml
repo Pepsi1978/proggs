@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--self-improve-ref-researchers"
+  short_description: "self-improve-ref:researchers"
+  default_prompt: "Use $command--self-improve-ref-researchers for this task."
+
+policy:
+  allow_implicit_invocation: false

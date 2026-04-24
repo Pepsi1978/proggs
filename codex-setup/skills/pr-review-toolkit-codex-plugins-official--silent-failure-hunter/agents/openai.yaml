@@ -1,0 +1,7 @@
+interface:
+  display_name: "silent-failure-hunter"
+  short_description: "Use after code changes to find silent failures, weak error"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--silent-failure-hunter for this task."
+
+policy:
+  allow_implicit_invocation: false

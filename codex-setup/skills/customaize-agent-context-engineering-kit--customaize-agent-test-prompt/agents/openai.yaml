@@ -1,0 +1,7 @@
+interface:
+  display_name: "customaize-agent:test-prompt"
+  short_description: "creating or editing any prompt (commands, hooks, skills"
+  default_prompt: "Use $customaize-agent-context-engineering-kit--customaize-agent-test-prompt for this task."
+
+policy:
+  allow_implicit_invocation: false

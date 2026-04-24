@@ -1,0 +1,7 @@
+interface:
+  display_name: "go-test"
+  short_description: "Enforce TDD workflow for Go"
+  default_prompt: "Use $everything-codex-everything-codex--go-test for this task."
+
+policy:
+  allow_implicit_invocation: false

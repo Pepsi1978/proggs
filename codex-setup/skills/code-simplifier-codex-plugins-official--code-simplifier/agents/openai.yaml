@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-simplifier"
+  short_description: "Simplifies and refines code for clarity, consistency, and"
+  default_prompt: "Use $code-simplifier-codex-plugins-official--code-simplifier for this task."
+
+policy:
+  allow_implicit_invocation: false

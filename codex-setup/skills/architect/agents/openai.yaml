@@ -1,0 +1,7 @@
+interface:
+  display_name: "architect"
+  short_description: "Plan system architecture before implementation"
+  default_prompt: "Use $architect for this task."
+
+policy:
+  allow_implicit_invocation: true

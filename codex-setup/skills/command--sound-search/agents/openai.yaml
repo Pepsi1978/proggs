@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--sound-search"
+  short_description: "command--command--sound-search skill"
+  default_prompt: "Use $command--sound-search for this task."
+
+policy:
+  allow_implicit_invocation: false

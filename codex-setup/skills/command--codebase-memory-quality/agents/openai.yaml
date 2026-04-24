@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--command--codebase-memory-quality"
+  short_description: "command--command--codebase-memory-quality skill"
+  default_prompt: "Use $command--codebase-memory-quality for this task."
+
+policy:
+  allow_implicit_invocation: false

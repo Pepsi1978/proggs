@@ -1,0 +1,7 @@
+interface:
+  display_name: "tdd-workflow"
+  short_description: "writing new features, fixing bugs, or refactoring code"
+  default_prompt: "Use $everything-codex-everything-codex--tdd-workflow for this task."
+
+policy:
+  allow_implicit_invocation: false

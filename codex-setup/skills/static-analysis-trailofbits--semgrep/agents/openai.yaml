@@ -1,0 +1,7 @@
+interface:
+  display_name: "semgrep"
+  short_description: "semgrep skill"
+  default_prompt: "Use $static-analysis-trailofbits--semgrep for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "android-development"
+  short_description: "Android applications following Google's official architecture"
+  default_prompt: "Use $android-dev for this task."
+
+policy:
+  allow_implicit_invocation: false

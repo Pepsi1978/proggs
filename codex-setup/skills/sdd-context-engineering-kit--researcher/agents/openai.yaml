@@ -1,0 +1,7 @@
+interface:
+  display_name: "researcher"
+  short_description: "Use this agent when researching unknown technologies"
+  default_prompt: "Use $sdd-context-engineering-kit--researcher for this task."
+
+policy:
+  allow_implicit_invocation: false

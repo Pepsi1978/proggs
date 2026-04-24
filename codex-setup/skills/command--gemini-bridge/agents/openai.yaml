@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--gemini-bridge"
+  short_description: "gemini-bridge"
+  default_prompt: "Use $command--gemini-bridge for this task."
+
+policy:
+  allow_implicit_invocation: false

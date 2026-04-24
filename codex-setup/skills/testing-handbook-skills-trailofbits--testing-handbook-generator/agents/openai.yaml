@@ -1,0 +1,7 @@
+interface:
+  display_name: "testing-handbook-generator"
+  short_description: "testing-handbook-generator skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--testing-handbook-generator for this task."
+
+policy:
+  allow_implicit_invocation: false

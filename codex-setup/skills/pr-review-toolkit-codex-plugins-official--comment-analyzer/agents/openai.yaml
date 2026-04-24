@@ -1,0 +1,7 @@
+interface:
+  display_name: "comment-analyzer"
+  short_description: "comments or docstrings change and need an accuracy and"
+  default_prompt: "Use $pr-review-toolkit-codex-plugins-official--comment-analyzer for this task."
+
+policy:
+  allow_implicit_invocation: false

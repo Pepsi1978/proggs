@@ -1,0 +1,7 @@
+interface:
+  display_name: "skill-improver-2"
+  short_description: "Iteratively reviews and fixes a Codex skill until it meets"
+  default_prompt: "Use $skill-improver-trailofbits--skill-improver-2 for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "resolve_parallel"
+  short_description: "Resolve all TODO comments using parallel processing"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--resolve_parallel for this task."
+
+policy:
+  allow_implicit_invocation: false

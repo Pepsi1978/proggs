@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-entry-points"
+  short_description: "Identifies state-changing entry points in smart contracts"
+  default_prompt: "Use $entry-point-analyzer-trailofbits--trailofbits-entry-points for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp:setup-codemap-cli"
+  short_description: "setup Codemap CLI for intelligent codebase visualization and"
+  default_prompt: "Use $mcp-context-engineering-kit--mcp-setup-codemap-cli for this task."
+
+policy:
+  allow_implicit_invocation: false

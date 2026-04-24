@@ -1,0 +1,7 @@
+interface:
+  display_name: "guidelines-advisor"
+  short_description: "Smart contract development advisor based on Trail of Bits' best"
+  default_prompt: "Use $building-secure-contracts-trailofbits--guidelines-advisor for this task."
+
+policy:
+  allow_implicit_invocation: false

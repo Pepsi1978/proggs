@@ -1,0 +1,7 @@
+interface:
+  display_name: "model-route"
+  short_description: "model-route"
+  default_prompt: "Use $everything-codex-everything-codex--model-route for this task."
+
+policy:
+  allow_implicit_invocation: false

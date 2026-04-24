@@ -1,0 +1,7 @@
+interface:
+  display_name: "auto-verify-iterate"
+  short_description: "Verify, test, and tighten completed coding work"
+  default_prompt: "Use $auto-verify-iterate for this task."
+
+policy:
+  allow_implicit_invocation: true

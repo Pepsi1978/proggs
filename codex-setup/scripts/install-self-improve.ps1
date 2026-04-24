@@ -17,11 +17,8 @@ Write-Host "Deployed self-improve to $target"
 
 if (Test-Path $rulesSource) {
     New-Item -ItemType Directory -Force -Path $rulesTarget | Out-Null
-    foreach ($ruleName in @("parallel-sessions-git.md", "semicolon-task-separator.md")) {
-        $ruleSource = Join-Path $rulesSource $ruleName
-        if (Test-Path $ruleSource) {
-            Copy-Item -Force $ruleSource (Join-Path $rulesTarget $ruleName)
-            Write-Host "Deployed Codex rule $ruleName to $rulesTarget"
-        }
+    foreach ($ruleSource in Get-ChildItem -Path $rulesSource -Filter "*.md" -File) {
+        Copy-Item -Force $ruleSource.FullName (Join-Path $rulesTarget $ruleSource.Name)
+        Write-Host "Deployed Codex rule $($ruleSource.Name) to $rulesTarget"
     }
 }

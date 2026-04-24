@@ -1,0 +1,7 @@
+interface:
+  display_name: "codex-api"
+  short_description: "Anthropic Codex API patterns for Python and TypeScript"
+  default_prompt: "Use $everything-codex-everything-codex--codex-api for this task."
+
+policy:
+  allow_implicit_invocation: false

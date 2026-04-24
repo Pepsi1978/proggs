@@ -1,0 +1,7 @@
+interface:
+  display_name: "challenger"
+  short_description: "Devil's advocate that challenges plans, architectures, and"
+  default_prompt: "Use $challenger for this task."
+
+policy:
+  allow_implicit_invocation: false

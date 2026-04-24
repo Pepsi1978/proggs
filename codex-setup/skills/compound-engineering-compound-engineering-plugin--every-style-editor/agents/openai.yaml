@@ -1,0 +1,7 @@
+interface:
+  display_name: "every-style-editor"
+  short_description: "reviewing or editing copy to ensure adherence to Every's style"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--every-style-editor for this task."
+
+policy:
+  allow_implicit_invocation: false

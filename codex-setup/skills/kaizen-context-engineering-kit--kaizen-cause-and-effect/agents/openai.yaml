@@ -1,0 +1,7 @@
+interface:
+  display_name: "kaizen:cause-and-effect"
+  short_description: "Systematic Fishbone analysis exploring problem causes across"
+  default_prompt: "Use $kaizen-context-engineering-kit--kaizen-cause-and-effect for this task."
+
+policy:
+  allow_implicit_invocation: false

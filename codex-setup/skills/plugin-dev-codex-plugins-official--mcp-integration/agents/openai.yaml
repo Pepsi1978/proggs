@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp-integration"
+  short_description: "the user asks to \"add MCP server\", \"integrate MCP\", \"configure"
+  default_prompt: "Use $plugin-dev-codex-plugins-official--mcp-integration for this task."
+
+policy:
+  allow_implicit_invocation: true

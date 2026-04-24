@@ -1,0 +1,7 @@
+interface:
+  display_name: "kotlin-build"
+  short_description: "Fix Kotlin/Gradle build errors, compiler warnings, and"
+  default_prompt: "Use $everything-codex-everything-codex--kotlin-build for this task."
+
+policy:
+  allow_implicit_invocation: true

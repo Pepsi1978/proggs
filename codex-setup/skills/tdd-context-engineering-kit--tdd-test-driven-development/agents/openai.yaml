@@ -1,0 +1,7 @@
+interface:
+  display_name: "tdd:test-driven-development"
+  short_description: "implementing any feature or bugfix, before writing"
+  default_prompt: "Use $tdd-context-engineering-kit--tdd-test-driven-development for this task."
+
+policy:
+  allow_implicit_invocation: false

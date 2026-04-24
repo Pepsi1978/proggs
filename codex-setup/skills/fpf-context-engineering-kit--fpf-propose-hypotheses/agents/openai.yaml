@@ -1,0 +1,7 @@
+interface:
+  display_name: "fpf:propose-hypotheses"
+  short_description: "Execute complete FPF cycle from hypothesis generation to"
+  default_prompt: "Use $fpf-context-engineering-kit--fpf-propose-hypotheses for this task."
+
+policy:
+  allow_implicit_invocation: false

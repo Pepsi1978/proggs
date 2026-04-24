@@ -1,0 +1,7 @@
+interface:
+  display_name: "dwarf-expert"
+  short_description: "Provides expertise for analyzing DWARF debug files and"
+  default_prompt: "Use $dwarf-expert-trailofbits--dwarf-expert for this task."
+
+policy:
+  allow_implicit_invocation: false

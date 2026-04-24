@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp:setup-context7-mcp"
+  short_description: "setup Context7 MCP server to load documentation for specific"
+  default_prompt: "Use $mcp-context-engineering-kit--mcp-setup-context7-mcp for this task."
+
+policy:
+  allow_implicit_invocation: false

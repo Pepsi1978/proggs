@@ -1,0 +1,7 @@
+interface:
+  display_name: "string-extraktor"
+  short_description: "Extract and normalize Android string resources"
+  default_prompt: "Use $string-extraktor for this task."
+
+policy:
+  allow_implicit_invocation: false

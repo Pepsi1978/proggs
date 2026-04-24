@@ -1,0 +1,7 @@
+interface:
+  display_name: "logistics-exception-management"
+  short_description: "logistics-exception-management skill"
+  default_prompt: "Use $everything-codex-everything-codex--logistics-exception-management for this task."
+
+policy:
+  allow_implicit_invocation: false

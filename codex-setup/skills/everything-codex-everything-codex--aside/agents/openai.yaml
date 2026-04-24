@@ -1,0 +1,7 @@
+interface:
+  display_name: "aside"
+  short_description: "Answer a quick side question without interrupting or losing"
+  default_prompt: "Use $everything-codex-everything-codex--aside for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "e2e"
+  short_description: "Generate and run end-to-end tests with Playwright"
+  default_prompt: "Use $everything-codex-everything-codex--e2e for this task."
+
+policy:
+  allow_implicit_invocation: true

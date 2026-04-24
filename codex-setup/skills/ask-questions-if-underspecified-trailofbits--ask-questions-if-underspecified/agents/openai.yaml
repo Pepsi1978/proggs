@@ -1,0 +1,7 @@
+interface:
+  display_name: "ask-questions-if-underspecified"
+  short_description: "Clarify requirements before implementing"
+  default_prompt: "Use $ask-questions-if-underspecified-trailofbits--ask-questions-if-underspecified for this task."
+
+policy:
+  allow_implicit_invocation: false

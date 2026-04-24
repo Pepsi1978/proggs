@@ -1,0 +1,7 @@
+interface:
+  display_name: "codex-md-improver"
+  short_description: "Audit and improve AGENTS.md files in repositories"
+  default_prompt: "Use $codex-md-management-codex-plugins-official--codex-md-improver for this task."
+
+policy:
+  allow_implicit_invocation: true

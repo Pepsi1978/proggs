@@ -1,0 +1,7 @@
+interface:
+  display_name: "learn-eval"
+  short_description: "Extract reusable patterns from the session, self-evaluate"
+  default_prompt: "Use $everything-codex-everything-codex--learn-eval for this task."
+
+policy:
+  allow_implicit_invocation: false

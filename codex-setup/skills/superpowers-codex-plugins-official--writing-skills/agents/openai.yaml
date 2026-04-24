@@ -1,0 +1,7 @@
+interface:
+  display_name: "writing-skills"
+  short_description: "creating new skills, editing existing skills, or verifying"
+  default_prompt: "Use $superpowers-codex-plugins-official--writing-skills for this task."
+
+policy:
+  allow_implicit_invocation: false

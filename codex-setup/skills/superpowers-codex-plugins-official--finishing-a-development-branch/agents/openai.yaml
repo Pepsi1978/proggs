@@ -1,0 +1,7 @@
+interface:
+  display_name: "finishing-a-development-branch"
+  short_description: "implementation is complete, all tests pass, and you need to"
+  default_prompt: "Use $superpowers-codex-plugins-official--finishing-a-development-branch for this task."
+
+policy:
+  allow_implicit_invocation: false

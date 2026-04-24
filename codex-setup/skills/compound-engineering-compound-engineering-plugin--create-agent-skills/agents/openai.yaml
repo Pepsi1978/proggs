@@ -1,0 +1,7 @@
+interface:
+  display_name: "create-agent-skills"
+  short_description: "Expert guidance for creating Codex skills and slash commands"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--create-agent-skills for this task."
+
+policy:
+  allow_implicit_invocation: false

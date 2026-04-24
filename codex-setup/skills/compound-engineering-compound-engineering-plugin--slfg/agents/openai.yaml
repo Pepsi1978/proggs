@@ -1,0 +1,7 @@
+interface:
+  display_name: "slfg"
+  short_description: "Full autonomous engineering workflow using swarm mode for"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--slfg for this task."
+
+policy:
+  allow_implicit_invocation: false

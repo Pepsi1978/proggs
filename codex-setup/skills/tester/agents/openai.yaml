@@ -1,0 +1,7 @@
+interface:
+  display_name: "tester"
+  short_description: "Creates and runs tests for code"
+  default_prompt: "Use $tester for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "security-scan"
+  short_description: "Scan your Codex configuration (.codex/ directory) for security"
+  default_prompt: "Use $everything-codex-everything-codex--security-scan for this task."
+
+policy:
+  allow_implicit_invocation: false

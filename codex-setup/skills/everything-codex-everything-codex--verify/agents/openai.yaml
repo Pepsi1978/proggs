@@ -1,0 +1,7 @@
+interface:
+  display_name: "verify"
+  short_description: "verify skill"
+  default_prompt: "Use $everything-codex-everything-codex--verify for this task."
+
+policy:
+  allow_implicit_invocation: false

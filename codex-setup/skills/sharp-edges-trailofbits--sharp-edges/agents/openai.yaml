@@ -1,0 +1,7 @@
+interface:
+  display_name: "sharp-edges"
+  short_description: "Identifies error-prone APIs, dangerous configurations, and"
+  default_prompt: "Use $sharp-edges-trailofbits--sharp-edges for this task."
+
+policy:
+  allow_implicit_invocation: false

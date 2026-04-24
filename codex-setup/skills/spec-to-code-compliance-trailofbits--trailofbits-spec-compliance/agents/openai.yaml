@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-spec-compliance"
+  short_description: "Verifies code implements specification requirements"
+  default_prompt: "Use $spec-to-code-compliance-trailofbits--trailofbits-spec-compliance for this task."
+
+policy:
+  allow_implicit_invocation: false

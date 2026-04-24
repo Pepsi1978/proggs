@@ -23,12 +23,9 @@ try {
     $rulesTarget = Join-Path $env:USERPROFILE ".codex\rules"
     if (Test-Path $rulesSource) {
         New-Item -ItemType Directory -Force -Path $rulesTarget | Out-Null
-        foreach ($ruleName in @("parallel-sessions-git.md", "semicolon-task-separator.md")) {
-            $ruleSource = Join-Path $rulesSource $ruleName
-            if (Test-Path $ruleSource) {
-                Copy-Item -Force $ruleSource (Join-Path $rulesTarget $ruleName)
-                Write-Host "Codex rule $ruleName synced to $rulesTarget"
-            }
+        foreach ($ruleSource in Get-ChildItem -Path $rulesSource -Filter "*.md" -File) {
+            Copy-Item -Force $ruleSource.FullName (Join-Path $rulesTarget $ruleSource.Name)
+            Write-Host "Codex rule $($ruleSource.Name) synced to $rulesTarget"
         }
     }
 

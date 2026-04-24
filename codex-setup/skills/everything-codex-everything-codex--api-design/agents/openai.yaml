@@ -1,0 +1,7 @@
+interface:
+  display_name: "api-design"
+  short_description: "REST API design patterns including resource naming, status"
+  default_prompt: "Use $everything-codex-everything-codex--api-design for this task."
+
+policy:
+  allow_implicit_invocation: false

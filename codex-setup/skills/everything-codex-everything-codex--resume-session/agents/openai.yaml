@@ -1,0 +1,7 @@
+interface:
+  display_name: "resume-session"
+  short_description: "Load the most recent session file from ~/.codex/sessions/ and"
+  default_prompt: "Use $everything-codex-everything-codex--resume-session for this task."
+
+policy:
+  allow_implicit_invocation: false

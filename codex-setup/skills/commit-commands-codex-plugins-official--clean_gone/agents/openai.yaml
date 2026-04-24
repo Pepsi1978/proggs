@@ -1,0 +1,7 @@
+interface:
+  display_name: "clean_gone"
+  short_description: "Cleans up all git branches marked as [gone] (branches that have"
+  default_prompt: "Use $commit-commands-codex-plugins-official--clean_gone for this task."
+
+policy:
+  allow_implicit_invocation: true

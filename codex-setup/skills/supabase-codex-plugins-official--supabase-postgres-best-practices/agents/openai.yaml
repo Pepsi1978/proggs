@@ -1,0 +1,7 @@
+interface:
+  display_name: "supabase-postgres-best-practices"
+  short_description: "Postgres performance optimization and best practices from"
+  default_prompt: "Use $supabase-codex-plugins-official--supabase-postgres-best-practices for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "ai-first-engineering"
+  short_description: "Engineering operating model for teams where AI agents generate"
+  default_prompt: "Use $everything-codex-everything-codex--ai-first-engineering for this task."
+
+policy:
+  allow_implicit_invocation: false

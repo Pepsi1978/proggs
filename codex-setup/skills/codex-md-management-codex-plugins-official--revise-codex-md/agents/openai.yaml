@@ -1,0 +1,7 @@
+interface:
+  display_name: "revise-codex-md"
+  short_description: "Update AGENTS.md with learnings from this session"
+  default_prompt: "Use $codex-md-management-codex-plugins-official--revise-codex-md for this task."
+
+policy:
+  allow_implicit_invocation: false

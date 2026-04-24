@@ -1,0 +1,7 @@
+interface:
+  display_name: "save-session"
+  short_description: "Save current session state to a dated file in"
+  default_prompt: "Use $everything-codex-everything-codex--save-session for this task."
+
+policy:
+  allow_implicit_invocation: false

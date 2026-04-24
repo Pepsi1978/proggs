@@ -1,0 +1,7 @@
+interface:
+  display_name: "libafl"
+  short_description: "libafl skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--libafl for this task."
+
+policy:
+  allow_implicit_invocation: false

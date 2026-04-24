@@ -1,0 +1,7 @@
+interface:
+  display_name: "code-reviewer"
+  short_description: "Expert code review specialist"
+  default_prompt: "Use $everything-codex-everything-codex--code-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

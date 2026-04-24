@@ -1,0 +1,7 @@
+interface:
+  display_name: "brainstorming"
+  short_description: "implementing features, building components, or making changes"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--brainstorming for this task."
+
+policy:
+  allow_implicit_invocation: false

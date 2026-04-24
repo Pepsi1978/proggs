@@ -1,0 +1,7 @@
+interface:
+  display_name: "kieran-typescript-reviewer"
+  short_description: "Reviews TypeScript code with an extremely high quality bar for"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--kieran-typescript-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

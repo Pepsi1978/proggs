@@ -1,0 +1,7 @@
+interface:
+  display_name: "burpsuite-project-parser"
+  short_description: "Searches and explores Burp Suite project files (.burp) from the"
+  default_prompt: "Use $burpsuite-project-parser-trailofbits--burpsuite-project-parser for this task."
+
+policy:
+  allow_implicit_invocation: false

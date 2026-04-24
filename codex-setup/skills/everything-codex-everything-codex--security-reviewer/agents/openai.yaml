@@ -1,0 +1,7 @@
+interface:
+  display_name: "security-reviewer"
+  short_description: "Security vulnerability detection and remediation specialist"
+  default_prompt: "Use $everything-codex-everything-codex--security-reviewer for this task."
+
+policy:
+  allow_implicit_invocation: false

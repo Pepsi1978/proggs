@@ -1,0 +1,40 @@
+---
+name: promote
+description: Promote project-scoped instincts to global scope
+---
+
+# Promote Command
+
+Promote instincts from project scope to global scope in continuous-learning-v2.
+
+## Implementation
+
+Run the instinct CLI using the plugin root path:
+
+```bash
+python3 "${CODEX_PLUGIN_ROOT}/skills/continuous-learning-v2/scripts/instinct-cli.py" promote [instinct-id] [--force] [--dry-run]
+```
+
+Or if `CODEX_PLUGIN_ROOT` is not set (manual installation):
+
+```bash
+python3 ~/.codex/skills/continuous-learning-v2/scripts/instinct-cli.py promote [instinct-id] [--force] [--dry-run]
+```
+
+## Usage
+
+```bash
+/prompts:everything-codex-everything-codex--promote                      # Auto-detect promotion candidates
+/prompts:everything-codex-everything-codex--promote --dry-run            # Preview auto-promotion candidates
+/prompts:everything-codex-everything-codex--promote --force              # Promote all qualified candidates without prompt
+/prompts:everything-codex-everything-codex--promote grep-before-edit     # Promote one specific instinct from current project
+```
+
+## What to Do
+
+1. Detect current project
+2. If `instinct-id` is provided, promote only that instinct (if present in current project)
+3. Otherwise, find cross-project candidates that:
+   - Appear in at least 2 projects
+   - Meet confidence threshold
+4. Write promoted instincts to `~/.codex/homunculus/instincts/personal/` with `scope: global`

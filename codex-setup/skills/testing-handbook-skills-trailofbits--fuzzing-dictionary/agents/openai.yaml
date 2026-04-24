@@ -1,0 +1,7 @@
+interface:
+  display_name: "fuzzing-dictionary"
+  short_description: "fuzzing-dictionary skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--fuzzing-dictionary for this task."
+
+policy:
+  allow_implicit_invocation: false

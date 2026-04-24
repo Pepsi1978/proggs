@@ -1,0 +1,7 @@
+interface:
+  display_name: "market-research"
+  short_description: "Conduct market research, competitive analysis, investor due"
+  default_prompt: "Use $everything-codex-everything-codex--market-research for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "docs:update-docs"
+  short_description: "Update and maintain project documentation for local code"
+  default_prompt: "Use $docs-context-engineering-kit--docs-update-docs for this task."
+
+policy:
+  allow_implicit_invocation: false

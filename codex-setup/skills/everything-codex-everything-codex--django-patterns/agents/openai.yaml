@@ -1,0 +1,7 @@
+interface:
+  display_name: "django-patterns"
+  short_description: "Django architecture patterns, REST API design with DRF, ORM"
+  default_prompt: "Use $everything-codex-everything-codex--django-patterns for this task."
+
+policy:
+  allow_implicit_invocation: false

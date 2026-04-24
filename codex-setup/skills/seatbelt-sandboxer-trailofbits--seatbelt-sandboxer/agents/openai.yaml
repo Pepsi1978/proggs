@@ -1,0 +1,7 @@
+interface:
+  display_name: "seatbelt-sandboxer"
+  short_description: "Generates minimal macOS Seatbelt sandbox configurations"
+  default_prompt: "Use $seatbelt-sandboxer-trailofbits--seatbelt-sandboxer for this task."
+
+policy:
+  allow_implicit_invocation: false

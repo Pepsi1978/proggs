@@ -1,0 +1,7 @@
+interface:
+  display_name: "harness-writing"
+  short_description: "harness-writing skill"
+  default_prompt: "Use $testing-handbook-skills-trailofbits--harness-writing for this task."
+
+policy:
+  allow_implicit_invocation: false

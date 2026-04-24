@@ -1,0 +1,7 @@
+interface:
+  display_name: "content-engine"
+  short_description: "Create platform-native content systems for X, LinkedIn, TikTok"
+  default_prompt: "Use $everything-codex-everything-codex--content-engine for this task."
+
+policy:
+  allow_implicit_invocation: false

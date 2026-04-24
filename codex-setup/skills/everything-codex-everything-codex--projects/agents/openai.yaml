@@ -1,0 +1,7 @@
+interface:
+  display_name: "projects"
+  short_description: "List known projects and their instinct statistics"
+  default_prompt: "Use $everything-codex-everything-codex--projects for this task."
+
+policy:
+  allow_implicit_invocation: false

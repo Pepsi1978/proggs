@@ -1,0 +1,7 @@
+interface:
+  display_name: "mirror-import"
+  short_description: "Reads the Universal Mirror Ledger and automatically applies all"
+  default_prompt: "Use $mirror-import for this task."
+
+policy:
+  allow_implicit_invocation: false

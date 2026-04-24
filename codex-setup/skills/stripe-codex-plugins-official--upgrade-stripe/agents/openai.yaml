@@ -1,0 +1,7 @@
+interface:
+  display_name: "upgrade-stripe"
+  short_description: "upgrading Stripe API versions and SDKs"
+  default_prompt: "Use $stripe-codex-plugins-official--upgrade-stripe for this task."
+
+policy:
+  allow_implicit_invocation: false

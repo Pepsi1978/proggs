@@ -1,0 +1,7 @@
+interface:
+  display_name: "insecure-defaults"
+  short_description: "Detects fail-open insecure defaults (hardcoded secrets, weak"
+  default_prompt: "Use $insecure-defaults-trailofbits--insecure-defaults for this task."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "feature-video"
+  short_description: "Record a video walkthrough of a feature and add it to the PR"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--feature-video for this task."
+
+policy:
+  allow_implicit_invocation: false

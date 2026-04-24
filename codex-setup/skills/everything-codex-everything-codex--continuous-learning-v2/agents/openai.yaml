@@ -1,0 +1,7 @@
+interface:
+  display_name: "continuous-learning-v2"
+  short_description: "Instinct-based learning system that observes sessions via"
+  default_prompt: "Use $everything-codex-everything-codex--continuous-learning-v2 for this task."
+
+policy:
+  allow_implicit_invocation: false

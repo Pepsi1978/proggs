@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--android-clean-architecture"
+  short_description: "Android applications following Google's official architecture"
+  default_prompt: "Use $command--android-clean-architecture for this task."
+
+policy:
+  allow_implicit_invocation: false

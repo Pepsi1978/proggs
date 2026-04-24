@@ -1,0 +1,7 @@
+interface:
+  display_name: "app-monetizer"
+  short_description: "Audit Android monetization and paywall strategy"
+  default_prompt: "Use $app-monetizer for this task."
+
+policy:
+  allow_implicit_invocation: true

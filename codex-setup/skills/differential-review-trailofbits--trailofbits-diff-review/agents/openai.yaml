@@ -1,0 +1,7 @@
+interface:
+  display_name: "trailofbits-diff-review"
+  short_description: "Performs security-focused differential review of code changes"
+  default_prompt: "Use $differential-review-trailofbits--trailofbits-diff-review for this task."
+
+policy:
+  allow_implicit_invocation: false

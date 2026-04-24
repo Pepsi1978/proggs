@@ -1,0 +1,7 @@
+interface:
+  display_name: "report-bug"
+  short_description: "Report a bug in the compound-engineering plugin"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--report-bug for this task."
+
+policy:
+  allow_implicit_invocation: false

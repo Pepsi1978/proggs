@@ -1,0 +1,7 @@
+interface:
+  display_name: "reproduce-bug"
+  short_description: "Reproduce and investigate a bug using logs, console inspection"
+  default_prompt: "Use $compound-engineering-compound-engineering-plugin--reproduce-bug for this task."
+
+policy:
+  allow_implicit_invocation: false

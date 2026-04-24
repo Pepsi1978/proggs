@@ -1,0 +1,7 @@
+interface:
+  display_name: "command--self-improve-ref-report-and-creative"
+  short_description: "self-improve-ref:report-and-creative"
+  default_prompt: "Use $command--self-improve-ref-report-and-creative for this task."
+
+policy:
+  allow_implicit_invocation: false
