@@ -80,6 +80,8 @@ final class PromptBoardPanel: NSPanel {
 
         let promptScroll = NSScrollView()
         promptScroll.hasVerticalScroller = true
+        promptScroll.scrollerStyle = .overlay
+        promptScroll.autohidesScrollers = true
         promptScroll.drawsBackground = false
         promptScroll.borderType = .noBorder
         promptScroll.documentView = promptStack
@@ -276,7 +278,9 @@ final class PromptBoardPanel: NSPanel {
             promptStack.addArrangedSubview(row)
             // Width constraint must be activated AFTER adding to superview hierarchy,
             // otherwise NSISEngine throws on restore-triggered re-render (views live).
-            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor, constant: -4).isActive = true
+            // Reserve ~16pt on the right so the delete-✕ never runs under the panel
+            // border (and leaves room if macOS falls back to a legacy scrollbar).
+            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor, constant: -16).isActive = true
         }
     }
 
