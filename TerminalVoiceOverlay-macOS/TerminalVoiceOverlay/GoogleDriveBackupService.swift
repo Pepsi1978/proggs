@@ -42,22 +42,32 @@ final class GoogleDriveBackupService {
         startLoopbackListener()
     }
 
-    /// Upload the given JSON as promptboard-backup.json. Replaces the
-    /// existing file if present. Caller is responsible for building the
-    /// JSON body (PromptBoardPanel does that).
+    /// Upload the given JSON as promptboard-backup.json. If an older copy
+    /// already exists, it is overwritten in place. Any additional duplicate
+    /// files with the same name (leftovers from earlier upload attempts)
+    /// are deleted — same cleanup strategy the BestJournal project uses
+    /// to keep its Drive backup folder from accumulating 95% stale files.
     func upload(json: String, completion: @escaping (Result<Void, Error>) -> Void) {
         freshAccessToken { tokenResult in
             switch tokenResult {
             case .failure(let e):
                 completion(.failure(e))
             case .success(let token):
-                self.findBackupFileId(token: token) { result in
+                self.findAllBackupFileIds(token: token) { result in
                     switch result {
                     case .failure(let e):
                         completion(.failure(e))
-                    case .success(let existingId):
-                        if let id = existingId {
-                            self.replaceBackup(id: id, token: token, json: json, completion: completion)
+                    case .success(let existingIds):
+                        if let keepId = existingIds.first {
+                            // One in-place update + async delete of the duplicates.
+                            self.replaceBackup(id: keepId, token: token, json: json) { replaceResult in
+                                // Fire-and-forget cleanup — the main upload is already done.
+                                let duplicates = Array(existingIds.dropFirst())
+                                if !duplicates.isEmpty {
+                                    self.deleteFiles(ids: duplicates, token: token)
+                                }
+                                completion(replaceResult)
+                            }
                         } else {
                             self.createBackup(token: token, json: json, completion: completion)
                         }
@@ -72,7 +82,10 @@ final class GoogleDriveBackupService {
             switch tokenResult {
             case .failure(let e): completion(.failure(e))
             case .success(let token):
-                self.findBackupFileId(token: token) { result in
+                // Always grab the newest one (modifiedTime desc) and skip the
+                // stale duplicates. Prevents the "95% wrong data" restore
+                // that BestJournal hit before its cleanup rule existed.
+                self.findNewestBackupFileId(token: token) { result in
                     switch result {
                     case .failure(let e): completion(.failure(e))
                     case .success(let fileId):
@@ -245,13 +258,19 @@ final class GoogleDriveBackupService {
         }.resume()
     }
 
-    private func findBackupFileId(token: String, completion: @escaping (Result<String?, Error>) -> Void) {
+    /// Lists every non-trashed `promptboard-backup.json` in the appDataFolder,
+    /// newest first (modifiedTime desc). Return value is [] when nothing
+    /// exists yet. Used both for "upload + cleanup duplicates" and for
+    /// "download the newest one".
+    private func findAllBackupFileIds(token: String,
+                                       completion: @escaping (Result<[String], Error>) -> Void) {
         var comps = URLComponents(string: "https://www.googleapis.com/drive/v3/files")!
         comps.queryItems = [
             URLQueryItem(name: "spaces", value: "appDataFolder"),
             URLQueryItem(name: "q", value: "name = 'promptboard-backup.json' and trashed = false"),
-            URLQueryItem(name: "fields", value: "files(id)"),
-            URLQueryItem(name: "pageSize", value: "1"),
+            URLQueryItem(name: "fields", value: "files(id, modifiedTime)"),
+            URLQueryItem(name: "orderBy", value: "modifiedTime desc"),
+            URLQueryItem(name: "pageSize", value: "100"),
         ]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -260,10 +279,42 @@ final class GoogleDriveBackupService {
             guard let data = data,
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let files = dict["files"] as? [[String: Any]] else {
-                completion(.success(nil)); return
+                completion(.success([])); return
             }
-            completion(.success(files.first?["id"] as? String))
+            let ids = files.compactMap { $0["id"] as? String }
+            completion(.success(ids))
         }.resume()
+    }
+
+    /// Convenience wrapper: returns just the id of the newest backup, or nil
+    /// if there is none.
+    private func findNewestBackupFileId(token: String,
+                                        completion: @escaping (Result<String?, Error>) -> Void) {
+        findAllBackupFileIds(token: token) { result in
+            switch result {
+            case .success(let ids): completion(.success(ids.first))
+            case .failure(let e):   completion(.failure(e))
+            }
+        }
+    }
+
+    /// Fire-and-forget batch deletion — ignores individual errors because
+    /// losing a duplicate isn't fatal (it just means we'll try again next
+    /// time). Errors go into the debug stream for diagnostics.
+    private func deleteFiles(ids: [String], token: String) {
+        for id in ids {
+            var req = URLRequest(url: URL(string: "https://www.googleapis.com/drive/v3/files/\(id)")!)
+            req.httpMethod = "DELETE"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            URLSession.shared.dataTask(with: req) { _, resp, err in
+                if let err = err {
+                    NSLog("[DriveBackup] duplicate-cleanup delete failed for \(id): \(err.localizedDescription)")
+                } else if let http = resp as? HTTPURLResponse,
+                          !(200..<300).contains(http.statusCode) && http.statusCode != 404 {
+                    NSLog("[DriveBackup] duplicate-cleanup HTTP \(http.statusCode) on \(id)")
+                }
+            }.resume()
+        }
     }
 
     private func createBackup(token: String, json: String,
