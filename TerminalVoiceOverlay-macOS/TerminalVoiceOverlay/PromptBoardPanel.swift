@@ -17,8 +17,43 @@ final class PromptBoardPanel: NSPanel {
     private let titleLabel = NSTextField(labelWithString: "PromptBoard")
 
     private var categories: [PBCategory] = []
-    private var activeCategoryId: UUID?
+    /// Multiple categories can be active at the same time — prompts from every
+    /// active category show up in the list, each tinted with that category's
+    /// color. Clicking an active tab toggles it off.
+    private var activeCategoryIds: Set<UUID> = []
     private var currentPrompts: [PBPrompt] = []
+
+    /// Fixed palette used to assign a distinct color per category by its
+    /// position in the categories array. Kept deterministic so the colors
+    /// stay stable across renders.
+    private static let categoryPalette: [NSColor] = [
+        NSColor(calibratedRed: 0.29, green: 0.56, blue: 0.99, alpha: 1), // blue
+        NSColor(calibratedRed: 0.95, green: 0.44, blue: 0.26, alpha: 1), // orange
+        NSColor(calibratedRed: 0.40, green: 0.73, blue: 0.42, alpha: 1), // green
+        NSColor(calibratedRed: 0.67, green: 0.28, blue: 0.74, alpha: 1), // purple
+        NSColor(calibratedRed: 0.95, green: 0.65, blue: 0.15, alpha: 1), // amber
+        NSColor(calibratedRed: 0.15, green: 0.72, blue: 0.82, alpha: 1), // cyan
+        NSColor(calibratedRed: 0.93, green: 0.30, blue: 0.52, alpha: 1), // pink
+        NSColor(calibratedRed: 0.47, green: 0.56, blue: 0.61, alpha: 1), // blue-grey
+    ]
+
+    private func color(for categoryId: UUID) -> NSColor {
+        if let idx = categories.firstIndex(where: { $0.id == categoryId }) {
+            return Self.categoryPalette[idx % Self.categoryPalette.count]
+        }
+        return Self.categoryPalette[0]
+    }
+
+    /// A dim but clearly tinted row background: keeps the dark-panel aesthetic
+    /// so the white prompt text stays legible, but you can instantly tell
+    /// which category each prompt belongs to by the tinted bar.
+    private func rowBackground(for categoryId: UUID) -> NSColor {
+        let base = color(for: categoryId)
+        guard let rgb = base.usingColorSpace(.deviceRGB) else { return base }
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        rgb.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        return NSColor(deviceHue: h, saturation: min(s, 0.55), brightness: 0.30, alpha: 1)
+    }
 
     init() {
         let contentRect = NSRect(x: 0, y: 0, width: 380, height: 528)
@@ -86,6 +121,11 @@ final class PromptBoardPanel: NSPanel {
         promptScroll.borderType = .noBorder
         promptScroll.documentView = promptStack
         promptScroll.translatesAutoresizingMaskIntoConstraints = false
+        // Let the scroll view expand to fill the remaining vertical space in
+        // the outer stack; if there are more prompts than fit, the overflow
+        // scrolls instead of pushing the "+ Neuer Prompt" button off-screen.
+        promptScroll.setContentHuggingPriority(.defaultLow, for: .vertical)
+        promptScroll.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         promptStack.translatesAutoresizingMaskIntoConstraints = false
 
         addPromptButton.target = self
@@ -167,14 +207,19 @@ final class PromptBoardPanel: NSPanel {
             NSLog("refresh failed: \(error.localizedDescription)")
             categories = []
         }
+        // Prune stale ids (category deleted elsewhere) but keep every id the
+        // user still has active.
+        let known = Set(categories.map { $0.id })
+        activeCategoryIds = activeCategoryIds.intersection(known)
+        // First-time / after-delete fallback: activate the first category so
+        // the user isn't greeted with an empty list.
+        if activeCategoryIds.isEmpty, let first = categories.first {
+            activeCategoryIds.insert(first.id)
+        }
         renderCategoryTabs()
         if categories.isEmpty {
-            activeCategoryId = nil
             renderEmptyState("Noch keine Kategorien. Klick +")
             return
-        }
-        if activeCategoryId == nil || !categories.contains(where: { $0.id == activeCategoryId }) {
-            activeCategoryId = categories[0].id
         }
         renderPrompts()
     }
@@ -186,7 +231,8 @@ final class PromptBoardPanel: NSPanel {
 
         // Build the tab buttons first so we can measure their fitting widths.
         let tabButtons: [NSButton] = categories.map { cat in
-            let isActive = (cat.id == activeCategoryId)
+            let isActive = activeCategoryIds.contains(cat.id)
+            let catColor = color(for: cat.id)
 
             let btn = NSButton(title: "", target: self, action: #selector(onSelectCategory(_:)))
             btn.tag = categories.firstIndex(where: { $0.id == cat.id }) ?? 0
@@ -194,10 +240,12 @@ final class PromptBoardPanel: NSPanel {
             btn.wantsLayer = true
             btn.layer?.cornerRadius = 11
             btn.layer?.backgroundColor = isActive
-                ? NSColor(red: 0.29, green: 0.56, blue: 0.99, alpha: 1).cgColor  // accent blue
+                ? catColor.cgColor
                 : NSColor(calibratedWhite: 0.22, alpha: 1).cgColor
-            btn.layer?.borderWidth = isActive ? 0 : 1
-            btn.layer?.borderColor = NSColor(calibratedWhite: 0.35, alpha: 1).cgColor
+            btn.layer?.borderWidth = 1
+            btn.layer?.borderColor = isActive
+                ? catColor.cgColor
+                : NSColor(calibratedWhite: 0.35, alpha: 1).cgColor
 
             let textColor: NSColor = isActive
                 ? .white
@@ -259,22 +307,38 @@ final class PromptBoardPanel: NSPanel {
 
     private func renderPrompts() {
         promptStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        guard let catId = activeCategoryId else { return }
 
-        let prompts: [PBPrompt]
-        do { prompts = try PromptBoardStore.shared.prompts(in: catId) }
-        catch { NSLog("load prompts: \(error.localizedDescription)"); prompts = [] }
-
-        let sorted = prompts.sorted(by: { ($0.sortOrder, $0.shortLabel) < ($1.sortOrder, $1.shortLabel) })
-        currentPrompts = sorted
-
-        if prompts.isEmpty {
-            renderEmptyState("Keine Prompts in dieser Kategorie.")
+        if activeCategoryIds.isEmpty {
+            currentPrompts = []
+            renderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.")
             return
         }
 
-        for p in sorted {
-            let row = buildRow(for: p)
+        // Collect prompts from every active category, carrying the category id
+        // along so we can tint each row accordingly.
+        var combined: [(PBPrompt, UUID)] = []
+        for catId in activeCategoryIds {
+            do {
+                let prompts = try PromptBoardStore.shared.prompts(in: catId)
+                combined.append(contentsOf: prompts.map { ($0, catId) })
+            } catch {
+                NSLog("load prompts for \(catId): \(error.localizedDescription)")
+            }
+        }
+
+        let sorted = combined.sorted(by: { lhs, rhs in
+            if lhs.0.sortOrder != rhs.0.sortOrder { return lhs.0.sortOrder < rhs.0.sortOrder }
+            return lhs.0.shortLabel.localizedCaseInsensitiveCompare(rhs.0.shortLabel) == .orderedAscending
+        })
+        currentPrompts = sorted.map { $0.0 }
+
+        if sorted.isEmpty {
+            renderEmptyState("Keine Prompts in den aktiven Kategorien.")
+            return
+        }
+
+        for (prompt, catId) in sorted {
+            let row = buildRow(for: prompt, categoryId: catId)
             promptStack.addArrangedSubview(row)
             // Width constraint must be activated AFTER adding to superview hierarchy,
             // otherwise NSISEngine throws on restore-triggered re-render (views live).
@@ -284,10 +348,10 @@ final class PromptBoardPanel: NSPanel {
         }
     }
 
-    private func buildRow(for prompt: PBPrompt) -> NSView {
+    private func buildRow(for prompt: PBPrompt, categoryId: UUID) -> NSView {
         let row = NSView()
         row.wantsLayer = true
-        row.layer?.backgroundColor = NSColor(calibratedWhite: 0.15, alpha: 1).cgColor
+        row.layer?.backgroundColor = rowBackground(for: categoryId).cgColor
         row.layer?.cornerRadius = 8
         row.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
         // Whole-row click inserts the prompt. The three interactive controls
@@ -381,7 +445,14 @@ final class PromptBoardPanel: NSPanel {
 
     @objc private func onSelectCategory(_ sender: NSButton) {
         guard sender.tag >= 0, sender.tag < categories.count else { return }
-        activeCategoryId = categories[sender.tag].id
+        let id = categories[sender.tag].id
+        // Toggle: clicking an already-active tab turns it off, clicking an
+        // inactive one adds it. Multiple can be active at once.
+        if activeCategoryIds.contains(id) {
+            activeCategoryIds.remove(id)
+        } else {
+            activeCategoryIds.insert(id)
+        }
         renderCategoryTabs()
         renderPrompts()
     }
@@ -400,7 +471,7 @@ final class PromptBoardPanel: NSPanel {
                              createdAt: now, updatedAt: now)
         do {
             try PromptBoardStore.shared.addCategory(cat)
-            activeCategoryId = cat.id
+            activeCategoryIds.insert(cat.id)
         } catch {
             NSAlert.warn("Kategorie konnte nicht angelegt werden: \(error.localizedDescription)")
         }
@@ -429,13 +500,15 @@ final class PromptBoardPanel: NSPanel {
                             parent: self) else { return }
         do {
             try PromptBoardStore.shared.deleteCategory(id)
-            if activeCategoryId == id { activeCategoryId = nil }
+            activeCategoryIds.remove(id)
         } catch { NSAlert.warn(error.localizedDescription) }
         refresh()
     }
 
     @objc private func onAddPrompt() {
-        guard let catId = activeCategoryId else {
+        // New prompts land in the first active category. If none are active,
+        // fall back to the first category overall (or refuse if truly empty).
+        guard let catId = activeCategoryIds.first ?? categories.first?.id else {
             NSAlert.warn("Lege zuerst eine Kategorie an.")
             return
         }
@@ -470,18 +543,14 @@ final class PromptBoardPanel: NSPanel {
     private func insertPromptByIdString(_ idStr: String?) {
         guard let idStr = idStr,
               let id = UUID(uuidString: idStr),
-              let catId = activeCategoryId,
-              let prompt = (try? PromptBoardStore.shared.prompts(in: catId))?
-                .first(where: { $0.id == id }) else { return }
+              let prompt = currentPrompts.first(where: { $0.id == id }) else { return }
         onInsertText?(prompt.effectiveText)
     }
 
     @objc private func onEditPrompt(_ sender: NSButton) {
         guard let idStr = sender.identifier?.rawValue,
               let id = UUID(uuidString: idStr),
-              let catId = activeCategoryId,
-              var prompt = (try? PromptBoardStore.shared.prompts(in: catId))?
-                .first(where: { $0.id == id }) else { return }
+              var prompt = currentPrompts.first(where: { $0.id == id }) else { return }
         guard let result = PBPromptEditDialog.ask(parent: self,
                                                   title: "Prompt bearbeiten",
                                                   label: prompt.shortLabel,
@@ -498,9 +567,7 @@ final class PromptBoardPanel: NSPanel {
     @objc private func onDeletePrompt(_ sender: NSButton) {
         guard let idStr = sender.identifier?.rawValue,
               let id = UUID(uuidString: idStr),
-              let catId = activeCategoryId,
-              let prompt = (try? PromptBoardStore.shared.prompts(in: catId))?
-                .first(where: { $0.id == id }) else { return }
+              let prompt = currentPrompts.first(where: { $0.id == id }) else { return }
         guard PBConfirm.ask(title: "Prompt loeschen?",
                             message: "Prompt '\(prompt.shortLabel)' wirklich loeschen?",
                             parent: self) else { return }
