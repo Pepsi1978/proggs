@@ -198,7 +198,11 @@ final class PromptBoardPanel: NSPanel {
         }
 
         for p in prompts.sorted(by: { ($0.sortOrder, $0.shortLabel) < ($1.sortOrder, $1.shortLabel) }) {
-            promptStack.addArrangedSubview(buildRow(for: p))
+            let row = buildRow(for: p)
+            promptStack.addArrangedSubview(row)
+            // Width constraint must be activated AFTER adding to superview hierarchy,
+            // otherwise NSISEngine throws on restore-triggered re-render (views live).
+            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor, constant: -4).isActive = true
         }
     }
 
@@ -252,7 +256,6 @@ final class PromptBoardPanel: NSPanel {
             rowStack.topAnchor.constraint(equalTo: row.topAnchor, constant: 6),
             rowStack.bottomAnchor.constraint(equalTo: row.bottomAnchor, constant: -6),
             row.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
-            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor, constant: -4),
             dot.widthAnchor.constraint(equalToConstant: 10),
             dot.heightAnchor.constraint(equalToConstant: 10),
             editBtn.widthAnchor.constraint(equalToConstant: 22),
