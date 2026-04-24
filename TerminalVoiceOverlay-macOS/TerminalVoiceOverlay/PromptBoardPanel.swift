@@ -46,9 +46,9 @@ final class PromptBoardPanel: NSPanel {
         let root = NSView(frame: contentView!.bounds)
         root.autoresizingMask = [.width, .height]
         root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor(calibratedWhite: 0.12, alpha: 0.9).cgColor
+        root.layer?.backgroundColor = NSColor(calibratedWhite: 0.11, alpha: 0.97).cgColor
         root.layer?.cornerRadius = 16
-        root.layer?.borderColor = NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
+        root.layer?.borderColor = NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
         root.layer?.borderWidth = 1
         contentView?.addSubview(root)
 
@@ -160,15 +160,31 @@ final class PromptBoardPanel: NSPanel {
     private func renderCategoryTabs() {
         categoryStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         for cat in categories {
-            let btn = NSButton(title: cat.name, target: self, action: #selector(onSelectCategory(_:)))
-            btn.bezelStyle = .rounded
+            let isActive = (cat.id == activeCategoryId)
+
+            let btn = NSButton(title: "", target: self, action: #selector(onSelectCategory(_:)))
             btn.tag = categories.firstIndex(where: { $0.id == cat.id }) ?? 0
-            if cat.id == activeCategoryId {
-                btn.attributedTitle = NSAttributedString(string: cat.name, attributes: [
-                    .foregroundColor: NSColor.white,
-                    .font: NSFont.boldSystemFont(ofSize: 12)
-                ])
-            }
+            btn.isBordered = false
+            btn.wantsLayer = true
+            btn.layer?.cornerRadius = 11
+            btn.layer?.backgroundColor = isActive
+                ? NSColor(red: 0.29, green: 0.56, blue: 0.99, alpha: 1).cgColor  // accent blue
+                : NSColor(calibratedWhite: 0.22, alpha: 1).cgColor
+            btn.layer?.borderWidth = isActive ? 0 : 1
+            btn.layer?.borderColor = NSColor(calibratedWhite: 0.35, alpha: 1).cgColor
+
+            let textColor: NSColor = isActive
+                ? .white
+                : NSColor(calibratedWhite: 0.90, alpha: 1)
+            btn.attributedTitle = NSAttributedString(string: "  \(cat.name)  ", attributes: [
+                .foregroundColor: textColor,
+                .font: isActive
+                    ? NSFont.boldSystemFont(ofSize: 12)
+                    : NSFont.systemFont(ofSize: 12, weight: .medium)
+            ])
+
+            btn.heightAnchor.constraint(equalToConstant: 22).isActive = true
+
             // Right-click for context menu
             let menu = NSMenu()
             let rename = NSMenuItem(title: "Umbenennen", action: #selector(onRenameCategory(_:)), keyEquivalent: "")
