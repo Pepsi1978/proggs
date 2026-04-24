@@ -627,10 +627,12 @@ namespace TerminalVoiceOverlay.Views
             {
                 string prefix = await _alwaysOnPrefix.BuildAsync();
                 if (string.IsNullOrEmpty(prefix)) return string.Empty;
-                // The chain already contains the configured separator between
-                // always-on prompts; add one more separator so the dictated
-                // text becomes the final segment of the chain.
-                return prefix + "\n\n;\n\n";
+                // Append the dictated text directly after the prefix — the
+                // prompt author controls the trailing whitespace/colon. No
+                // separator in between so the prompt and user text read as
+                // a single instruction; the closing " ; " is added by the
+                // caller after the dictated text.
+                return prefix;
             }
             catch (Exception ex)
             {

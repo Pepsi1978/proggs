@@ -41,13 +41,16 @@ public sealed class AlwaysOnPrefixService : IAlwaysOnPrefixService
             return string.Empty;
         }
 
-        var appSettings = await settings.GetAsync(ct);
+        // Kompakter Multi-Task-Separator identisch zum VTO-Ende (" ; ").
+        // Ignoriert AppSettings.SeparatorTemplate absichtlich, damit der
+        // Prefix auf einer Zeile bleibt statt Leerzeilen zu erzeugen.
+        const string inlineSeparator = " ; ";
 
         var items = alwaysOn
             .OrderBy(p => p.SortOrder)
             .Select(p => new PromptChainItem(p.Id, p.EffectiveText()));
 
-        string prefix = _builder.Build(items, clicked: null, appSettings.SeparatorTemplate);
+        string prefix = _builder.Build(items, clicked: null, inlineSeparator);
 
         _logger.LogDebug("Always-on prefix built: {Count} prompts, {Chars} chars.",
             alwaysOn.Count, prefix.Length);
