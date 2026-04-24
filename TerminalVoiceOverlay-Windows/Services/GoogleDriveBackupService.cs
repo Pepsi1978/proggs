@@ -85,10 +85,13 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
     public async Task UploadAsync(string json, CancellationToken ct = default)
     {
         var drive = await BuildDriveAsync(ct);
-        var existingId = await FindFileIdAsync(drive, ct);
+        // Cleanup rule (ported from BestJournal): list ALL promptboard-backup.json
+        // files in the appDataFolder, keep the newest, delete every duplicate.
+        // Prevents the "95% stale data on restore" accumulation problem.
+        var existingIds = await FindAllFileIdsAsync(drive, ct);
         using var content = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
-        if (existingId is null)
+        if (existingIds.Count == 0)
         {
             var metadata = new DriveFile
             {
@@ -101,20 +104,37 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         }
         else
         {
-            var update = drive.Files.Update(new DriveFile(), existingId, content, "application/json");
+            var keepId = existingIds[0];
+            var update = drive.Files.Update(new DriveFile(), keepId, content, "application/json");
             update.Fields = "id";
             await update.UploadAsync(ct);
+
+            // Fire-and-forget cleanup of duplicates. Errors are logged but
+            // don't fail the upload — losing a stale duplicate is not fatal.
+            for (int i = 1; i < existingIds.Count; i++)
+            {
+                var dupId = existingIds[i];
+                try
+                {
+                    await drive.Files.Delete(dupId).ExecuteAsync(ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Duplicate-cleanup delete failed for {Id}", dupId);
+                }
+            }
         }
     }
 
     public async Task<string?> DownloadLatestAsync(CancellationToken ct = default)
     {
         var drive = await BuildDriveAsync(ct);
-        var fileId = await FindFileIdAsync(drive, ct);
-        if (fileId is null) return null;
+        // Always grab the newest backup, skipping any stale duplicates.
+        var ids = await FindAllFileIdsAsync(drive, ct);
+        if (ids.Count == 0) return null;
 
         using var buffer = new MemoryStream();
-        await drive.Files.Get(fileId).DownloadAsync(buffer, ct);
+        await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct);
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
@@ -153,15 +173,28 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         });
     }
 
-    private static async Task<string?> FindFileIdAsync(DriveService drive, CancellationToken ct)
+    /// Lists every non-trashed promptboard-backup.json in the appDataFolder,
+    /// newest first (modifiedTime desc). Used both for the upload+cleanup
+    /// path and for finding the freshest file on download.
+    private static async Task<System.Collections.Generic.List<string>> FindAllFileIdsAsync(
+        DriveService drive, CancellationToken ct)
     {
         var list = drive.Files.List();
         list.Spaces = AppDataFolderSpace;
         list.Q = $"name = '{BackupFileName}' and trashed = false";
-        list.Fields = "files(id)";
-        list.PageSize = 1;
+        list.Fields = "files(id, modifiedTime)";
+        list.OrderBy = "modifiedTime desc";
+        list.PageSize = 100;
         var result = await list.ExecuteAsync(ct);
-        return result.Files?.Count > 0 ? result.Files[0].Id : null;
+        var ids = new System.Collections.Generic.List<string>();
+        if (result.Files != null)
+        {
+            foreach (var f in result.Files)
+            {
+                if (!string.IsNullOrEmpty(f.Id)) ids.Add(f.Id);
+            }
+        }
+        return ids;
     }
 
     private async Task<string?> FetchEmailAsync(string accessToken, CancellationToken ct)
