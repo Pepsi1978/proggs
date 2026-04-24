@@ -14,22 +14,26 @@ plugins {
 // syncSecretsFromSk-Task kopiert sie beim Build an die erwarteten Pfade.
 val skBase: File = File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalAndroid")
 
+// Pfade zur Configuration-Zeit aufloesen (Configuration-Cache-kompatibel).
+val syncCopies: List<Pair<File, File>> = listOf(
+    skBase.resolve("google-services-debug.json") to project.file("src/debug/google-services.json"),
+    skBase.resolve("google-services-release.json") to project.file("google-services.json"),
+    skBase.resolve("debug-shared.keystore") to rootProject.file("debug-shared.keystore"),
+    skBase.resolve("release.keystore") to rootProject.file("release.keystore")
+)
+
 val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
+    val sk = skBase
+    val copies = syncCopies
     doLast {
-        if (!skBase.isDirectory) {
+        if (!sk.isDirectory) {
             throw GradleException(
-                "SK-Ordner fehlt: ${skBase.absolutePath}\n" +
+                "SK-Ordner fehlt: ${sk.absolutePath}\n" +
                 "Erwartete Inhalte: google-services-debug.json, google-services-release.json, " +
                 "debug-shared.keystore, release.keystore, keystore.properties\n" +
                 "Siehe ~/SK/README.md fuer Details."
             )
         }
-        val copies = listOf(
-            skBase.resolve("google-services-debug.json") to project.file("src/debug/google-services.json"),
-            skBase.resolve("google-services-release.json") to project.file("google-services.json"),
-            skBase.resolve("debug-shared.keystore") to rootProject.file("debug-shared.keystore"),
-            skBase.resolve("release.keystore") to rootProject.file("release.keystore")
-        )
         copies.forEach { (src, dst) ->
             if (!src.exists()) throw GradleException("SK-Datei fehlt: ${src.absolutePath}")
             dst.parentFile.mkdirs()
