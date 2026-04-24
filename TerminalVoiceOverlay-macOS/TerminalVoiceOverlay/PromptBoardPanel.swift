@@ -7,7 +7,7 @@ import AppKit
 /// - per-row edit and delete icons
 /// - "+ Neuer Prompt" at the bottom
 /// Click on a prompt -> dictation-less insert via callback.
-final class PromptBoardPanel: NSPanel {
+final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     var onInsertText: ((String) -> Void)?
 
@@ -354,11 +354,12 @@ final class PromptBoardPanel: NSPanel {
         row.layer?.backgroundColor = rowBackground(for: categoryId).cgColor
         row.layer?.cornerRadius = 8
         row.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
-        // Whole-row click inserts the prompt. The three interactive controls
-        // (checkbox, edit, delete) consume their own mouseDown events, so the
-        // recognizer only fires on the empty spacer / background areas — which
-        // is exactly "balken anklicken fuegt ein" behavior.
+        // Whole-row click inserts the prompt. The gesture recognizer has a
+        // delegate that blocks the recognition when the click lands on an
+        // NSButton child (checkbox, edit ✎, delete ✕) — so those buttons run
+        // only their own action and never double-trigger an insert.
         let rowClick = NSClickGestureRecognizer(target: self, action: #selector(onRowClick(_:)))
+        rowClick.delegate = self
         row.addGestureRecognizer(rowClick)
         // Same for the short-label button itself: route its click through the
         // row's insert path so the action is identical no matter where on the
@@ -538,6 +539,20 @@ final class PromptBoardPanel: NSPanel {
     /// delete). Inserts the prompt exactly as the label-button would.
     @objc private func onRowClick(_ sender: NSClickGestureRecognizer) {
         insertPromptByIdString(sender.view?.identifier?.rawValue)
+    }
+
+    // MARK: - NSGestureRecognizerDelegate
+
+    /// Block the row-level click when the mouse is over an NSButton subview
+    /// (checkbox, ✎, ✕). Those buttons drive their own actions; without this
+    /// guard, clicking ✎ would both open the editor AND insert the prompt.
+    func gestureRecognizer(_ gestureRecognizer: NSGestureRecognizer,
+                           shouldAttemptToRecognizeWith event: NSEvent) -> Bool {
+        guard let row = gestureRecognizer.view,
+              let superview = row.superview else { return true }
+        let pointInSuper = superview.convert(event.locationInWindow, from: nil)
+        let hit = row.hitTest(pointInSuper)
+        return !(hit is NSButton)
     }
 
     private func insertPromptByIdString(_ idStr: String?) {
