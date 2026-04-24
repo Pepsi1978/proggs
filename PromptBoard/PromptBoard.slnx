@@ -1,8 +1,4 @@
 <Solution>
-  <Project Path="PromptBoard.App/PromptBoard.App.csproj" />
   <Project Path="PromptBoard.Core/PromptBoard.Core.csproj" />
   <Project Path="PromptBoard.Data/PromptBoard.Data.csproj" />
-  <Project Path="PromptBoard.Services/PromptBoard.Services.csproj" />
-  <Project Path="PromptBoard.Tests/PromptBoard.Tests.csproj" />
-  <Project Path="PromptBoard.ViewModels/PromptBoard.ViewModels.csproj" />
 </Solution>

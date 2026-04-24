@@ -15,8 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isProcessing = false
     private var geminiEnabled = false
     private var autoEnterEnabled = true
-    private var ultrathinkEnabled = false
+    private var alwaysOnActive = false
     private var i18nPromptEnabled = false
+    private var promptBoardPanel: PromptBoardPanel?
     private var isBtwRecording = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
@@ -40,6 +41,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         NSLog("TerminalVoiceOverlay started")
+
+        // Bring up the shared PromptBoard database before the overlay so
+        // the star-button panel can pull categories/prompts on demand.
+        // Failures are non-fatal: the overlay still works, the star just
+        // opens an empty panel in that case.
+        do {
+            try PromptBoardStore.shared.open()
+            NSLog("PromptBoard DB: %@", PromptBoardStore.shared.dbPath)
+        } catch {
+            NSLog("PromptBoardStore open failed: %@", error.localizedDescription)
+        }
 
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
@@ -257,26 +269,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func insertText(_ text: String, wasBtw: Bool) {
         var finalText = text
         if wasBtw {
-            let prefix = ultrathinkEnabled ? "ultrathink - /btw " : "/btw "
-            finalText = prefix + finalText
+            // BTW dictations stay simple — no always-on prefix here,
+            // these are short asides, not full prompts.
+            finalText = "/btw " + finalText
             isBtwRecording = false
         } else {
             // Prepend i18n prompt if enabled (persistent toggle)
             if i18nPromptEnabled && !hasPastedText {
                 finalText = AppDelegate.i18nPromptPrefix + finalText
             }
-            if ultrathinkEnabled && !hasPastedText {
-                finalText = "ultrathink - " + finalText
+            // Prepend the PromptBoard always-on prefix when the star
+            // toggle is active. Only on the first paste per line;
+            // follow-up dictations are appended without prefix.
+            if alwaysOnActive && !hasPastedText {
+                let aoPrefix = AlwaysOnPrefixService.build()
+                if !aoPrefix.isEmpty {
+                    // No separator between prefix and user text — the
+                    // prompt author controls the trailing whitespace.
+                    finalText = aoPrefix + finalText
+                }
             }
-            // Append " ; " separator so the AI recognizes multiple spoken tasks as separate items.
-            // Omit when auto-enter is active (the line gets sent immediately).
-            if !autoEnterEnabled {
-                finalText = finalText + " ; "
-            }
+            // Always append " ; " — compact inline task separator.
+            finalText = finalText + " ; "
         }
 
         TerminalController.pasteText(finalText, autoEnter: autoEnterEnabled)
-        resetUltrathink()
         isProcessing = false
 
         if wasBtw {
@@ -332,19 +349,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Ultrathink Toggle (one-shot)
+    // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)
 
     private func toggleUltrathink() {
-        ultrathinkEnabled.toggle()
-        panel.setUltrathinkEnabled(ultrathinkEnabled)
-        NSLog("Ultrathink %@", ultrathinkEnabled ? "ON (one-shot)" : "OFF")
+        alwaysOnActive.toggle()
+        panel.setUltrathinkEnabled(alwaysOnActive)
+        if alwaysOnActive {
+            showPromptBoardPanel()
+        } else {
+            hidePromptBoardPanel()
+        }
+        NSLog("PromptBoard panel %@", alwaysOnActive ? "OPEN" : "CLOSED")
     }
 
-    private func resetUltrathink() {
-        guard ultrathinkEnabled else { return }
-        ultrathinkEnabled = false
-        panel.setUltrathinkEnabled(false)
-        NSLog("Ultrathink auto-OFF (one-shot used)")
+    private func showPromptBoardPanel() {
+        if promptBoardPanel == nil {
+            let p = PromptBoardPanel()
+            p.onInsertText = { [weak self] text in
+                guard let self = self, !text.isEmpty else { return }
+                TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
+            }
+            promptBoardPanel = p
+        }
+        guard let p = promptBoardPanel else { return }
+        p.dock(rightOf: panel)
+        p.orderFrontRegardless()
+        p.refresh()
+    }
+
+    private func hidePromptBoardPanel() {
+        promptBoardPanel?.orderOut(nil)
     }
 
     // MARK: - i18n Prompt Toggle (persistent)

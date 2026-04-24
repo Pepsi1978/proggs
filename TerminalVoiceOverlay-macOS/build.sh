@@ -27,6 +27,12 @@ SWIFT_FILES=(
     "$SRC_DIR/TerminalController.swift"
     "$SRC_DIR/OverlayPanel.swift"
     "$SRC_DIR/ErrorDescriptions.swift"
+    "$SRC_DIR/PromptBoardModels.swift"
+    "$SRC_DIR/PromptBoardStore.swift"
+    "$SRC_DIR/AlwaysOnPrefixService.swift"
+    "$SRC_DIR/PromptBoardDialogs.swift"
+    "$SRC_DIR/GoogleDriveBackupService.swift"
+    "$SRC_DIR/PromptBoardPanel.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )
@@ -38,6 +44,8 @@ swiftc \
     -framework AppKit \
     -framework AVFoundation \
     -framework CoreGraphics \
+    -framework Network \
+    -lsqlite3 \
     "${SWIFT_FILES[@]}"
 
 # Copy entitlements and sign with persistent certificate (not ad-hoc)
