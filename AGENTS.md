@@ -226,11 +226,73 @@ Jede Commit-Nachricht beginnt mit einer fortlaufenden Nummer:
 Die Nummerierung wird anhand der existierenden Commits im Repo automatisch
 ermittelt (letzte Nummer + 1).
 
+## Pre-Push-Check: Keine eigene Datei darf vergessen werden (KRITISCH)
+
+Die Regel "nur eigene Dateien namentlich stagen" schuetzt davor, fremde Arbeit
+einer parallelen Session zu klauen — hat aber eine Luecke: sie kann nicht
+pruefen ob DEINE eigenen Aenderungen vollstaendig sind. Wenn eine eigene Datei
+nicht gestaged wird, bleibt sie nach dem Push als unstaged liegen und geht bei
+der naechsten Operation womoeglich verloren.
+
+### Pflicht-Ablauf VOR jedem `git push`
+
+Unmittelbar nach `git commit` und vor `git push` MUSS dieser Check laufen:
+
+    git status --short
+
+Jede Zeile in der Ausgabe MUSS bewusst einer dieser drei Kategorien zugeordnet
+werden:
+
+| Symbol / Praefix                         | Typ                                        | Aktion |
+|------------------------------------------|--------------------------------------------|--------|
+| `??`, `M `, ` M`, `MM`, `A `, `AM` — eigene Aenderung | Datei gehoert zu DIESER Aufgabe    | STOP. Erst `git add <pfad>` + neuer Commit, DANN push |
+| `??`, `M ` etc. — fremde Aenderung       | Gehoert zu fremder paralleler Session      | Ignorieren, aber dem Benutzer 1 Zeile melden: "Datei X liegt unstaged, gehoert nicht zu dieser Aufgabe" |
+| `??` — lokaler Muell                     | Build-Artefakte, Temp-Dateien, .env, Backups | Ignorieren oder in .gitignore eintragen, niemals committen |
+| Ausgabe leer                             | Working Tree sauber                        | Push ist sauber, weitermachen |
+
+### Was "bewusst zuordnen" bedeutet
+
+Pro Zeile gedanklich beantworten:
+1. Habe ich diese Datei geaendert? Ja → gehoert zu meiner Aufgabe, muss committed werden
+2. Nein, aber sie gehoert zum Projekt? → fremde Session, ignorieren aber melden
+3. Nein, und sie gehoert nicht zum Projekt? → Muell, ignorieren
+
+Nicht einfach `git status --short` ansehen und denken "passt schon". Jede Zeile
+wird einzeln klassifiziert.
+
+### Pflicht-Meldung an den Benutzer (wenn fremde Dateien vorhanden)
+
+Wenn nach dem Check fremde unstaged Dateien im Working Tree liegen, MUSS in der
+Status-Meldung eine kurze Zeile erscheinen, z.B.:
+
+    Hinweis: 2 Dateien liegen noch unstaged (fremde Session?):
+      .claude/scheduled_tasks.lock
+      some-other-file.md
+    Nicht committed, weil nicht zu dieser Aufgabe gehoerend.
+
+Damit weiss der Benutzer dass der Check gelaufen ist und die Dateien bewusst
+liegengelassen wurden — nicht aus Vergesslichkeit.
+
+### Was NIEMALS passieren darf
+
+- `git push` ohne vorheriges `git status --short`
+- Eigene Dateien unstaged lassen weil "der Push ist schon durch"
+- `git status --short` ausfuehren, aber die Ausgabe nicht Zeile fuer Zeile klassifizieren
+- Fremde Dateien blind mit `git add -A` mitnehmen "damit der Check sauber ist"
+- Die Pflicht-Meldung an den Benutzer weglassen wenn fremde Dateien da sind
+
+### Warum das noetig ist (Poka-Yoke Stufe 2)
+
+Diese Regel macht Vergesslichkeit bei eigenen Dateien unmoeglich, ohne die
+Sicherheit gegen parallele Sessions zu opfern. Der Benutzer sieht in jedem
+Status-Bericht entweder "Push sauber" oder eine explizite Liste
+liegengelassener Dateien — nie mehr "irgendwas fehlt und keiner merkt's".
+
 ## Zusammenfassung in einem Satz
 
-Parallele Sessions (auch ueber verschiedene CLIs hinweg) sind OK, solange
-jede Session vor dem Push `git fetch + git rebase origin/main` ausfuehrt,
-nur ihre eigenen Dateien namentlich staged und bei Rejection einfach
+Parallele Sessions sind OK solange jede Session vor dem Push
+`git status --short` ausfuehrt, nur ihre eigenen Dateien namentlich staged,
+`git fetch + git rebase origin/main` macht und bei Rejection einfach
 `fetch + rebase + push` wiederholt — statt zu force-pushen oder zu resetten.
 
 ## Geltungsbereich
