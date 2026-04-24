@@ -289,6 +289,16 @@ final class PromptBoardPanel: NSPanel {
         row.wantsLayer = true
         row.layer?.backgroundColor = NSColor(calibratedWhite: 0.15, alpha: 1).cgColor
         row.layer?.cornerRadius = 8
+        row.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+        // Whole-row click inserts the prompt. The three interactive controls
+        // (checkbox, edit, delete) consume their own mouseDown events, so the
+        // recognizer only fires on the empty spacer / background areas — which
+        // is exactly "balken anklicken fuegt ein" behavior.
+        let rowClick = NSClickGestureRecognizer(target: self, action: #selector(onRowClick(_:)))
+        row.addGestureRecognizer(rowClick)
+        // Same for the short-label button itself: route its click through the
+        // row's insert path so the action is identical no matter where on the
+        // bar the user clicks (text, spacer, or right-aligned padding).
 
         let alwaysOnToggle = NSButton(title: "", target: self, action: #selector(onToggleAlwaysOn(_:)))
         alwaysOnToggle.isBordered = false
@@ -448,7 +458,17 @@ final class PromptBoardPanel: NSPanel {
     }
 
     @objc private func onInsertPrompt(_ sender: NSButton) {
-        guard let idStr = sender.identifier?.rawValue,
+        insertPromptByIdString(sender.identifier?.rawValue)
+    }
+
+    /// Fired when the user clicks the row background (outside checkbox / edit /
+    /// delete). Inserts the prompt exactly as the label-button would.
+    @objc private func onRowClick(_ sender: NSClickGestureRecognizer) {
+        insertPromptByIdString(sender.view?.identifier?.rawValue)
+    }
+
+    private func insertPromptByIdString(_ idStr: String?) {
+        guard let idStr = idStr,
               let id = UUID(uuidString: idStr),
               let catId = activeCategoryId,
               let prompt = (try? PromptBoardStore.shared.prompts(in: catId))?
