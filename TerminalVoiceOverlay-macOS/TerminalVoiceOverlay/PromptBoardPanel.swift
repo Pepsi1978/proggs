@@ -66,17 +66,11 @@ final class PromptBoardPanel: NSPanel {
         header.distribution = .fill
         (header.arrangedSubviews[1]).setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        categoryStack.orientation = .horizontal
-        categoryStack.alignment = .centerY
+        // Vertical container that holds one horizontal row-stack per line of tabs.
+        // Tabs wrap to the next row automatically when they don't fit horizontally.
+        categoryStack.orientation = .vertical
+        categoryStack.alignment = .leading
         categoryStack.spacing = 4
-
-        let categoryScroll = NSScrollView()
-        categoryScroll.hasHorizontalScroller = true
-        categoryScroll.hasVerticalScroller = false
-        categoryScroll.drawsBackground = false
-        categoryScroll.borderType = .noBorder
-        categoryScroll.documentView = categoryStack
-        categoryScroll.translatesAutoresizingMaskIntoConstraints = false
         categoryStack.translatesAutoresizingMaskIntoConstraints = false
 
         promptStack.orientation = .vertical
@@ -95,7 +89,7 @@ final class PromptBoardPanel: NSPanel {
         addPromptButton.action = #selector(onAddPrompt)
         addPromptButton.bezelStyle = .rounded
 
-        let stack = NSStackView(views: [header, categoryScroll, promptScroll, addPromptButton])
+        let stack = NSStackView(views: [header, categoryStack, promptScroll, addPromptButton])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -108,8 +102,7 @@ final class PromptBoardPanel: NSPanel {
             stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
             stack.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -10),
             header.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            categoryScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            categoryScroll.heightAnchor.constraint(equalToConstant: 32),
+            categoryStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
             promptScroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
             promptScroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 300),
             addPromptButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -159,7 +152,9 @@ final class PromptBoardPanel: NSPanel {
 
     private func renderCategoryTabs() {
         categoryStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for cat in categories {
+
+        // Build the tab buttons first so we can measure their fitting widths.
+        let tabButtons: [NSButton] = categories.map { cat in
             let isActive = (cat.id == activeCategoryId)
 
             let btn = NSButton(title: "", target: self, action: #selector(onSelectCategory(_:)))
@@ -196,8 +191,39 @@ final class PromptBoardPanel: NSPanel {
             menu.addItem(rename)
             menu.addItem(del)
             btn.menu = menu
-            categoryStack.addArrangedSubview(btn)
+            return btn
         }
+
+        // Flow-layout: pack buttons into horizontal rows, wrap when a row would overflow.
+        // Panel is 380 wide with 10pt padding on each side → effective row width ≈ 360pt.
+        let rowSpacing: CGFloat = 4
+        let maxRowWidth: CGFloat = 360
+
+        var currentRow = makeRowStack(spacing: rowSpacing)
+        var currentWidth: CGFloat = 0
+        categoryStack.addArrangedSubview(currentRow)
+
+        for btn in tabButtons {
+            let btnWidth = ceil(btn.fittingSize.width)
+            let needsBreak = !currentRow.arrangedSubviews.isEmpty
+                && currentWidth + rowSpacing + btnWidth > maxRowWidth
+            if needsBreak {
+                currentRow = makeRowStack(spacing: rowSpacing)
+                categoryStack.addArrangedSubview(currentRow)
+                currentWidth = 0
+            }
+            currentRow.addArrangedSubview(btn)
+            currentWidth += (currentWidth == 0 ? btnWidth : btnWidth + rowSpacing)
+        }
+    }
+
+    private func makeRowStack(spacing: CGFloat) -> NSStackView {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = spacing
+        row.translatesAutoresizingMaskIntoConstraints = false
+        return row
     }
 
     private func renderPrompts() {

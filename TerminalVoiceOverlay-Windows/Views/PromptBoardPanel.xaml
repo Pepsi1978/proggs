@@ -167,12 +167,10 @@
                         ToolTip="Einstellungen"/>
             </Grid>
 
-            <ScrollViewer Grid.Row="1"
-                          HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled"
-                          Margin="0,0,0,8">
-                <StackPanel x:Name="CategoryTabs" Orientation="Horizontal"/>
-            </ScrollViewer>
+            <WrapPanel Grid.Row="1"
+                       x:Name="CategoryTabs"
+                       Orientation="Horizontal"
+                       Margin="0,0,0,8"/>
 
             <ScrollViewer Grid.Row="2"
                           VerticalScrollBarVisibility="Auto"
