@@ -18,6 +18,7 @@ final class PromptBoardPanel: NSPanel {
 
     private var categories: [PBCategory] = []
     private var activeCategoryId: UUID?
+    private var currentPrompts: [PBPrompt] = []
 
     init() {
         let contentRect = NSRect(x: 0, y: 0, width: 380, height: 528)
@@ -57,7 +58,7 @@ final class PromptBoardPanel: NSPanel {
 
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
         let backupBtn = makeIconButton(symbol: "⇪", tooltip: "Backup / Wiederherstellen", action: #selector(onBackup))
-        let settingsBtn = makeIconButton(symbol: "⚙", tooltip: "Einstellungen", action: #selector(onSettings))
+        let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
 
         let header = NSStackView(views: [titleLabel, NSView(), addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
@@ -87,7 +88,21 @@ final class PromptBoardPanel: NSPanel {
 
         addPromptButton.target = self
         addPromptButton.action = #selector(onAddPrompt)
-        addPromptButton.bezelStyle = .rounded
+        addPromptButton.isBordered = false
+        addPromptButton.wantsLayer = true
+        addPromptButton.layer?.backgroundColor = NSColor(calibratedWhite: 0.24, alpha: 1).cgColor
+        addPromptButton.layer?.borderColor = NSColor(calibratedWhite: 0.45, alpha: 1).cgColor
+        addPromptButton.layer?.borderWidth = 1
+        addPromptButton.layer?.cornerRadius = 8
+        addPromptButton.contentTintColor = .white
+        addPromptButton.attributedTitle = NSAttributedString(
+            string: "+ Neuer Prompt",
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold)
+            ]
+        )
+        addPromptButton.heightAnchor.constraint(equalToConstant: 30).isActive = true
 
         let stack = NSStackView(views: [header, categoryStack, promptScroll, addPromptButton])
         stack.orientation = .vertical
@@ -110,11 +125,25 @@ final class PromptBoardPanel: NSPanel {
         ])
     }
 
-    private func makeIconButton(symbol: String, tooltip: String, action: Selector) -> NSButton {
-        let btn = NSButton(title: symbol, target: self, action: action)
-        btn.bezelStyle = .circular
+    private func makeIconButton(symbol: String, tooltip: String, action: Selector, fontSize: CGFloat = 14) -> NSButton {
+        let btn = NSButton(title: "", target: self, action: action)
+        btn.isBordered = false
         btn.toolTip = tooltip
-        btn.setButtonType(.momentaryPushIn)
+        btn.setButtonType(.momentaryChange)
+        btn.wantsLayer = true
+        btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.22, alpha: 1).cgColor
+        btn.layer?.borderColor = NSColor(calibratedWhite: 0.42, alpha: 1).cgColor
+        btn.layer?.borderWidth = 1
+        btn.layer?.cornerRadius = 13
+        btn.attributedTitle = NSAttributedString(
+            string: symbol,
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold)
+            ]
+        )
+        btn.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        btn.heightAnchor.constraint(equalToConstant: 26).isActive = true
         return btn
     }
 
@@ -234,12 +263,15 @@ final class PromptBoardPanel: NSPanel {
         do { prompts = try PromptBoardStore.shared.prompts(in: catId) }
         catch { NSLog("load prompts: \(error.localizedDescription)"); prompts = [] }
 
+        let sorted = prompts.sorted(by: { ($0.sortOrder, $0.shortLabel) < ($1.sortOrder, $1.shortLabel) })
+        currentPrompts = sorted
+
         if prompts.isEmpty {
             renderEmptyState("Keine Prompts in dieser Kategorie.")
             return
         }
 
-        for p in prompts.sorted(by: { ($0.sortOrder, $0.shortLabel) < ($1.sortOrder, $1.shortLabel) }) {
+        for p in sorted {
             let row = buildRow(for: p)
             promptStack.addArrangedSubview(row)
             // Width constraint must be activated AFTER adding to superview hierarchy,
@@ -254,12 +286,28 @@ final class PromptBoardPanel: NSPanel {
         row.layer?.backgroundColor = NSColor(calibratedWhite: 0.15, alpha: 1).cgColor
         row.layer?.cornerRadius = 8
 
-        let dot = NSView(frame: NSRect(x: 0, y: 0, width: 10, height: 10))
-        dot.wantsLayer = true
-        dot.layer?.cornerRadius = 5
-        dot.layer?.backgroundColor = (prompt.isAlwaysOn
+        let alwaysOnToggle = NSButton(title: "", target: self, action: #selector(onToggleAlwaysOn(_:)))
+        alwaysOnToggle.isBordered = false
+        alwaysOnToggle.setButtonType(.momentaryChange)
+        alwaysOnToggle.wantsLayer = true
+        alwaysOnToggle.layer?.cornerRadius = 4
+        alwaysOnToggle.layer?.borderWidth = 1.5
+        alwaysOnToggle.layer?.backgroundColor = (prompt.isAlwaysOn
             ? NSColor(red: 1, green: 0xD7/255.0, blue: 0, alpha: 1)
-            : NSColor(calibratedWhite: 0.23, alpha: 1)).cgColor
+            : NSColor(calibratedWhite: 0.18, alpha: 1)).cgColor
+        alwaysOnToggle.layer?.borderColor = (prompt.isAlwaysOn
+            ? NSColor(red: 1, green: 0xD7/255.0, blue: 0, alpha: 1)
+            : NSColor(calibratedWhite: 0.55, alpha: 1)).cgColor
+        alwaysOnToggle.attributedTitle = prompt.isAlwaysOn
+            ? NSAttributedString(string: "✓", attributes: [
+                .foregroundColor: NSColor(calibratedWhite: 0.12, alpha: 1),
+                .font: NSFont.boldSystemFont(ofSize: 12)
+            ])
+            : NSAttributedString()
+        alwaysOnToggle.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+        alwaysOnToggle.toolTip = prompt.isAlwaysOn
+            ? "Immer aktiv — wird bei jedem Prompt dauerhaft eingefuegt. Klicken zum Deaktivieren."
+            : "Anhaken, damit dieser Prompt bei jedem Insert dauerhaft mitgeschickt wird."
 
         let insertBtn = NSButton(title: prompt.shortLabel, target: self, action: #selector(onInsertPrompt(_:)))
         insertBtn.bezelStyle = .recessed
@@ -284,7 +332,7 @@ final class PromptBoardPanel: NSPanel {
         deleteBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
         deleteBtn.toolTip = "Loeschen"
 
-        let rowStack = NSStackView(views: [dot, insertBtn, NSView(), editBtn, deleteBtn])
+        let rowStack = NSStackView(views: [alwaysOnToggle, insertBtn, NSView(), editBtn, deleteBtn])
         rowStack.orientation = .horizontal
         rowStack.alignment = .centerY
         rowStack.spacing = 6
@@ -298,8 +346,8 @@ final class PromptBoardPanel: NSPanel {
             rowStack.topAnchor.constraint(equalTo: row.topAnchor, constant: 6),
             rowStack.bottomAnchor.constraint(equalTo: row.bottomAnchor, constant: -6),
             row.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
-            dot.widthAnchor.constraint(equalToConstant: 10),
-            dot.heightAnchor.constraint(equalToConstant: 10),
+            alwaysOnToggle.widthAnchor.constraint(equalToConstant: 18),
+            alwaysOnToggle.heightAnchor.constraint(equalToConstant: 18),
             editBtn.widthAnchor.constraint(equalToConstant: 22),
             deleteBtn.widthAnchor.constraint(equalToConstant: 22),
         ])
@@ -439,6 +487,15 @@ final class PromptBoardPanel: NSPanel {
 
     @objc private func onSettings() {
         guard let settings = try? PromptBoardStore.shared.settings() else { return }
+
+        // Temporarily demote our floating panels (the OverlayPanel pillar and this
+        // PromptBoard panel) so the regular settings window can appear above them.
+        // Without this, `.floating`-level panels cover the modal settings window
+        // and it looks like the dialog "disappeared" behind the pillar.
+        let demoted = NSApp.windows.filter { $0.level == .floating }
+        demoted.forEach { $0.level = .normal }
+        defer { demoted.forEach { $0.level = .floating } }
+
         guard let result = PBSettingsDialog.ask(parent: self, settings: settings) else { return }
         var latest = (try? PromptBoardStore.shared.settings()) ?? settings
         latest.groqApiKey = result.groqApiKey
@@ -447,6 +504,20 @@ final class PromptBoardPanel: NSPanel {
         latest.googleClientId = result.googleClientId
         latest.googleClientSecret = result.googleClientSecret
         try? PromptBoardStore.shared.updateSettings(latest)
+    }
+
+    @objc private func onToggleAlwaysOn(_ sender: NSButton) {
+        guard let idStr = sender.identifier?.rawValue,
+              let id = UUID(uuidString: idStr),
+              var prompt = currentPrompts.first(where: { $0.id == id }) else { return }
+        prompt.isAlwaysOn.toggle()
+        prompt.updatedAt = Date()
+        do {
+            try PromptBoardStore.shared.updatePrompt(prompt)
+            renderPrompts()
+        } catch {
+            NSLog("toggle isAlwaysOn failed: \(error.localizedDescription)")
+        }
     }
 
     @objc private func onBackup() {
