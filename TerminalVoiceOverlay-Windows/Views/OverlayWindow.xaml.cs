@@ -59,8 +59,11 @@ namespace TerminalVoiceOverlay.Views
         private bool geminiEnabled          = false; // macOS default
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
-        private bool ultrathinkEnabled      = false;
+        private bool alwaysOnActive         = false;
         private bool i18nPromptEnabled      = false;
+
+        // PromptBoard integration: on-demand prefix lookup.
+        private IAlwaysOnPrefixService? _alwaysOnPrefix;
         private string? lastRawTranscript   = null;
 
         // i18n prompt prefix (verbatim, persistent toggle)
@@ -126,7 +129,7 @@ namespace TerminalVoiceOverlay.Views
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             CopyButton.Background  = BtnCopy;        // light blue
             PasteButton.Background = BtnPaste;       // purple
-            UltrathinkButton.Background = ToggleOff;  // dark (ultrathink starts disabled)
+            UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
             I18nButton.Background = ToggleOff;            // dark (i18n starts disabled)
 
             // ── Hover animations ──
@@ -145,6 +148,19 @@ namespace TerminalVoiceOverlay.Views
             _terminalWatcher.TerminalActivated   += OnTerminalActivated;
             _terminalWatcher.TerminalDeactivated += OnTerminalDeactivated;
             _terminalWatcher.Start();
+
+            // Resolve the PromptBoard prefix service if the DI host is up.
+            // Silent fallback when PromptBoard is unavailable — the star
+            // button simply toggles nothing in that case.
+            try
+            {
+                _alwaysOnPrefix = PromptBoardHost.Get<IAlwaysOnPrefixService>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AlwaysOnPrefixService not available: {ex.Message}");
+                _alwaysOnPrefix = null;
+            }
         }
 
         // ── Hover animation helper ──
@@ -341,9 +357,15 @@ namespace TerminalVoiceOverlay.Views
                     if (i18nPromptEnabled && !hasPastedText)
                         finalText = I18nPromptPrefix + finalText;
 
-                    // Prepend ultrathink prefix if enabled
-                    if (ultrathinkEnabled && !hasPastedText)
-                        finalText = "ultrathink - " + finalText;
+                    // Prepend the PromptBoard always-on prefix when the star
+                    // toggle is active. Only for the first paste on a line —
+                    // follow-up dictations are appended to the existing line.
+                    if (!hasPastedText)
+                    {
+                        string aoPrefix = await BuildAlwaysOnPrefixAsync();
+                        if (!string.IsNullOrEmpty(aoPrefix))
+                            finalText = aoPrefix + finalText;
+                    }
 
                     // Append " ; " separator so the AI recognizes multiple spoken tasks as separate items.
                     // Omit when auto-enter is active (the line gets sent immediately).
@@ -352,7 +374,6 @@ namespace TerminalVoiceOverlay.Views
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
-                    ResetUltrathink();
                     Console.WriteLine("Text inserted");
 
                     // Track paste state
@@ -444,18 +465,18 @@ namespace TerminalVoiceOverlay.Views
                         finalText = transcript;
                     }
 
-                    // Build prefix: ultrathink + /btw
-                    var prefix = ultrathinkEnabled ? "ultrathink - /btw " : "/btw ";
+                    // BTW prefix stays simple (no always-on chaining here —
+                    // BTW lines are short asides, not full prompts).
+                    const string btwMarker = "/btw ";
 
                     // Prepend space if text was already pasted on this line, then prefix
                     if (hasPastedText)
-                        finalText = " " + prefix + finalText;
+                        finalText = " " + btwMarker + finalText;
                     else
-                        finalText = prefix + finalText;
+                        finalText = btwMarker + finalText;
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetBtwMicState(RecordingState.Success);
-                    ResetUltrathink();
                     Console.WriteLine("BTW text inserted");
 
                     hasPastedText = !autoEnterEnabled;
@@ -565,14 +586,15 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>Star button — one-shot ultrathink toggle.
-        /// When ON, "ultrathink - " is prepended to the NEXT voice input only,
-        /// then automatically turns off.</summary>
+        /// <summary>Star button — persistent toggle for the PromptBoard
+        /// always-on prefix. When ON, every voice insert is preceded by
+        /// the chain built from every IsAlwaysOn prompt in the shared
+        /// PromptBoard database.</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
-            ultrathinkEnabled = !ultrathinkEnabled;
+            alwaysOnActive = !alwaysOnActive;
 
-            if (ultrathinkEnabled)
+            if (alwaysOnActive)
             {
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
@@ -583,7 +605,7 @@ namespace TerminalVoiceOverlay.Views
                 UltrathinkStar.Fill = StarMuted;
             }
 
-            Console.WriteLine($"Ultrathink {(ultrathinkEnabled ? "ON (one-shot)" : "OFF")}");
+            Console.WriteLine($"PromptBoard always-on prefix {(alwaysOnActive ? "ON" : "OFF")}");
         }
 
         /// <summary>ü button — toggle i18n prompt prefix (persistent, stays on until manually turned off).</summary>
@@ -594,17 +616,27 @@ namespace TerminalVoiceOverlay.Views
             Console.WriteLine($"i18n prompt {(i18nPromptEnabled ? "ON" : "OFF")}");
         }
 
-        /// <summary>Reset ultrathink after one-shot use (auto-disable after text insertion).</summary>
-        private void ResetUltrathink()
+        /// <summary>Build the PromptBoard always-on prefix when the star
+        /// toggle is active. Returns an empty string when the toggle is
+        /// off, the service is unavailable, or no IsAlwaysOn prompts exist.</summary>
+        private async Task<string> BuildAlwaysOnPrefixAsync()
         {
-            if (!ultrathinkEnabled) return;
-            ultrathinkEnabled = false;
-            Dispatcher.Invoke(() =>
+            if (!alwaysOnActive || _alwaysOnPrefix is null) return string.Empty;
+
+            try
             {
-                UltrathinkButton.Background = ToggleOff;
-                UltrathinkStar.Fill = StarMuted;
-            });
-            Console.WriteLine("Ultrathink auto-OFF (one-shot used)");
+                string prefix = await _alwaysOnPrefix.BuildAsync();
+                if (string.IsNullOrEmpty(prefix)) return string.Empty;
+                // The chain already contains the configured separator between
+                // always-on prompts; add one more separator so the dictated
+                // text becomes the final segment of the chain.
+                return prefix + "\n\n;\n\n";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AlwaysOnPrefix build failed: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         /// <summary>C button — copy selected text via Ctrl+C.</summary>
