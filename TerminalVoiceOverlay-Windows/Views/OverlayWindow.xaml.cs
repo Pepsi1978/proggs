@@ -62,8 +62,9 @@ namespace TerminalVoiceOverlay.Views
         private bool alwaysOnActive         = false;
         private bool i18nPromptEnabled      = false;
 
-        // PromptBoard integration: on-demand prefix lookup.
+        // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
+        private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
         // i18n prompt prefix (verbatim, persistent toggle)
@@ -587,10 +588,10 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>Star button — persistent toggle for the PromptBoard
-        /// always-on prefix. When ON, every voice insert is preceded by
-        /// the chain built from every IsAlwaysOn prompt in the shared
-        /// PromptBoard database.</summary>
+        /// <summary>Star button — toggles the full PromptBoard integration:
+        /// opens/closes the side panel AND enables/disables the always-on
+        /// prefix. The panel docks to the right of the pillar so it looks
+        /// like a single unit.</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
             alwaysOnActive = !alwaysOnActive;
@@ -599,14 +600,75 @@ namespace TerminalVoiceOverlay.Views
             {
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
+                ShowPromptPanel();
             }
             else
             {
                 UltrathinkButton.Background = ToggleOff;
                 UltrathinkStar.Fill = StarMuted;
+                HidePromptPanel();
             }
 
-            Console.WriteLine($"PromptBoard always-on prefix {(alwaysOnActive ? "ON" : "OFF")}");
+            Console.WriteLine($"PromptBoard panel {(alwaysOnActive ? "OPEN" : "CLOSED")}");
+        }
+
+        private void ShowPromptPanel()
+        {
+            if (_promptPanel is null)
+            {
+                _promptPanel = new PromptBoardPanel();
+                _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
+                _promptPanel.Closed += (_, _) =>
+                {
+                    _promptPanel = null;
+                    // If the panel was closed by something other than the
+                    // star toggle, keep the toggle state in sync.
+                    if (alwaysOnActive)
+                    {
+                        alwaysOnActive = false;
+                        UltrathinkButton.Background = ToggleOff;
+                        UltrathinkStar.Fill = StarMuted;
+                    }
+                };
+            }
+
+            PositionPromptPanel();
+            _promptPanel.Show();
+            _ = _promptPanel.RefreshAsync();
+        }
+
+        private void HidePromptPanel()
+        {
+            if (_promptPanel is null) return;
+            var p = _promptPanel;
+            _promptPanel = null;
+            p.Close();
+        }
+
+        private void PositionPromptPanel()
+        {
+            if (_promptPanel is null) return;
+            // Dock the panel directly to the LEFT of the pillar with a
+            // 4-pixel seam, matching the pillar's vertical extent. The
+            // VTO typically sits at the right screen edge, so docking to
+            // the left keeps the panel on-screen.
+            _promptPanel.Left = Left - _promptPanel.Width - 4;
+            _promptPanel.Top = Top;
+            _promptPanel.Height = Height;
+        }
+
+        private void OnPromptPanelInsert(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            try
+            {
+                TerminalController.PasteText(text, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                Console.WriteLine($"Panel prompt inserted: {text.Length} chars.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Panel insert failed: {ex.Message}");
+            }
         }
 
         /// <summary>ü button — toggle i18n prompt prefix (persistent, stays on until manually turned off).</summary>
