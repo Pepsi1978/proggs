@@ -129,6 +129,19 @@ namespace TerminalVoiceOverlay
                 return;
             }
 
+            // Bring up the shared PromptBoard DI container so the star-button
+            // panel can read prompts and build the always-on prefix. Failures
+            // are non-fatal: the overlay stays usable without PromptBoard.
+            try
+            {
+                PromptBoardHost.Initialize();
+                Console.WriteLine($"PromptBoard DB: {PromptBoardHost.DbPath}");
+            }
+            catch (Exception phEx)
+            {
+                Console.WriteLine($"PromptBoardHost init failed: {phEx.Message}");
+            }
+
             _overlayWindow = new OverlayWindow(config);
             SetupTrayIcon();
 
