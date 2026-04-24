@@ -53,7 +53,9 @@ public static class PromptBoardHost
             services.AddTransient<IAppSettingsRepository, AppSettingsRepository>();
 
             services.AddSingleton<IPromptChainBuilder, PromptChainBuilder>();
+            services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();
             services.AddSingleton<IAlwaysOnPrefixService, AlwaysOnPrefixService>();
+            services.AddSingleton<IGoogleDriveBackupService, GoogleDriveBackupService>();
 
             _provider = services.BuildServiceProvider();
         }
