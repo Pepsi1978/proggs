@@ -278,9 +278,9 @@ final class PromptBoardPanel: NSPanel {
             promptStack.addArrangedSubview(row)
             // Width constraint must be activated AFTER adding to superview hierarchy,
             // otherwise NSISEngine throws on restore-triggered re-render (views live).
-            // Reserve ~16pt on the right so the delete-✕ never runs under the panel
-            // border (and leaves room if macOS falls back to a legacy scrollbar).
-            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor, constant: -16).isActive = true
+            // Full width — matches the "+ Neuer Prompt" button exactly. The delete ✕
+            // gets its breathing room from the rowStack's trailing padding.
+            row.widthAnchor.constraint(equalTo: promptStack.widthAnchor).isActive = true
         }
     }
 
@@ -355,8 +355,8 @@ final class PromptBoardPanel: NSPanel {
         row.addSubview(rowStack)
 
         NSLayoutConstraint.activate([
-            rowStack.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 8),
-            rowStack.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -8),
+            rowStack.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 12),
+            rowStack.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -12),
             rowStack.topAnchor.constraint(equalTo: row.topAnchor, constant: 6),
             rowStack.bottomAnchor.constraint(equalTo: row.bottomAnchor, constant: -6),
             row.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
