@@ -154,23 +154,18 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     /// Reads the persisted last-sync timestamp and renders it as a short
-    /// muted badge like "· sync 22:39" (same day) or "· sync 24.04. 22:39"
-    /// (older day). Empty string when no sync has happened yet.
+    /// muted badge like "· sync 24.04. 22:39". Always shows date + time so
+    /// you can tell at a glance how fresh the last sync is, even right
+    /// after restarting the app. Empty when no sync has happened yet.
     private func refreshSyncLabel() {
         guard let last = UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date else {
             syncLabel.stringValue = ""
             return
         }
-        let cal = Calendar.current
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "de_DE")
-        if cal.isDateInToday(last) {
-            fmt.dateFormat = "HH:mm"
-            syncLabel.stringValue = "· sync \(fmt.string(from: last))"
-        } else {
-            fmt.dateFormat = "dd.MM. HH:mm"
-            syncLabel.stringValue = "· sync \(fmt.string(from: last))"
-        }
+        fmt.dateFormat = "dd.MM. HH:mm"
+        syncLabel.stringValue = "· sync \(fmt.string(from: last))"
     }
 
     override var canBecomeKey: Bool { false }
