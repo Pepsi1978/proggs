@@ -12,7 +12,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     var onInsertText: ((String) -> Void)?
 
     private let categoryStack = NSStackView()
-    private let promptStack = NSStackView()
+    private let promptStack = PBFlippedStackView()
     private let addPromptButton = NSButton(title: "+ Neuer Prompt", target: nil, action: nil)
     private let titleLabel = NSTextField(labelWithString: "PromptBoard")
     /// Small muted label next to the title that shows when the Google Drive
@@ -548,14 +548,28 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         // matching the Windows-side 5-column layout.
         let (titleText, timestampText) = Self.splitLabel(prompt.shortLabel)
 
-        let insertBtn = NSButton(title: titleText, target: self, action: #selector(onInsertPrompt(_:)))
-        insertBtn.bezelStyle = .recessed
-        insertBtn.setButtonType(.momentaryLight)
-        insertBtn.isBordered = false
-        insertBtn.contentTintColor = .white
-        insertBtn.alignment = .left
-        insertBtn.toolTip = prompt.effectiveText.prefix(500).description
-        insertBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+        // Title is rendered as a non-interactive NSTextField (not NSButton)
+        // so mouseDown/mouseDragged events propagate to the parent
+        // PBPromptRowView. With an NSButton the mouse event was eaten by
+        // the button — so dragging from the title text never armed the
+        // drag session, only dragging from the empty area between title
+        // and timestamp worked. The row-level NSClickGestureRecognizer
+        // already handles the "click → insert" path, so we don't lose
+        // the insert behavior. Hit-test forwarding (see PBPromptRowView)
+        // ensures the title still doesn't swallow drags.
+        let insertLabel = NSTextField(labelWithString: titleText)
+        insertLabel.textColor = .white
+        insertLabel.font = NSFont.systemFont(ofSize: 13)
+        insertLabel.lineBreakMode = .byTruncatingTail
+        insertLabel.maximumNumberOfLines = 1
+        insertLabel.drawsBackground = false
+        insertLabel.isBordered = false
+        insertLabel.isEditable = false
+        insertLabel.isSelectable = false
+        insertLabel.toolTip = prompt.effectiveText.prefix(500).description
+        insertLabel.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+        insertLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        insertLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Timestamp label — small, dim, vertically centered next to icons.
         // hidden when the label has no timestamp suffix yet (legacy data).
@@ -580,8 +594,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         deleteBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
         deleteBtn.toolTip = "Loeschen"
 
-        // Layout: [checkbox][insertBtn (huggable)][stretchable spacer][timestamp][edit][delete]
-        let rowStack = NSStackView(views: [alwaysOnToggle, insertBtn, NSView(), timestampLabel, editBtn, deleteBtn])
+        // Layout: [checkbox][insertLabel (huggable)][stretchable spacer][timestamp][edit][delete]
+        let rowStack = NSStackView(views: [alwaysOnToggle, insertLabel, NSView(), timestampLabel, editBtn, deleteBtn])
         rowStack.orientation = .horizontal
         rowStack.alignment = .centerY
         rowStack.spacing = 6
@@ -1179,6 +1193,20 @@ fileprivate final class PBPromptRowView: NSView, NSDraggingSource {
 
         beginDraggingSession(with: [item], event: event, source: self)
     }
+}
+
+// MARK: - Flipped vertical stack
+
+/// NSStackView subclass that reports `isFlipped = true` so Y-origin sits at
+/// the TOP of the view, not the bottom. Without this the prompt rows pile
+/// up at the bottom of the scroll view's document area when there are
+/// fewer prompts than fit on screen — because plain AppKit views use the
+/// mathematical convention (Y grows upward). Flipping aligns the layout
+/// with how a list naturally reads from top to bottom and matches the
+/// Windows panel's WPF default. The change has no effect when the stack
+/// already overflows the scroll view (scrolling logic is unaffected).
+fileprivate final class PBFlippedStackView: NSStackView {
+    override var isFlipped: Bool { true }
 }
 
 // MARK: - Drop-target category tab
