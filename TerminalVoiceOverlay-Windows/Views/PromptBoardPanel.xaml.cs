@@ -235,11 +235,14 @@ public partial class PromptBoardPanel : Window
         }
         else
         {
-            // Restore by re-rendering the entire tab row — cheaper than
-            // unwinding the various overrides we may have applied (background,
-            // FontWeight, etc.) and guarantees identical visuals to a fresh
-            // render.
-            RenderCategoryTabs();
+            // Restore JUST this button. We must NOT re-render the whole tab
+            // row here — that throws the live drag target out of the visual
+            // tree mid-drag, which silently kills the Drop event and leaves
+            // dragging looking like it does nothing.
+            bool isActive = btn.Tag is Guid id && _activeCategoryIds.Contains(id);
+            btn.Background = isActive
+                ? new SolidColorBrush(catColor)
+                : new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D));
         }
     }
 

@@ -81,9 +81,48 @@ public partial class PromptEditDialog : Window
     private void SaveAs(string text)
     {
         var label = ShortLabelBox.Text?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(label)) return;
+        var safeText = (text ?? string.Empty).Trim();
+
+        // If the user filled in only the prompt text (e.g. dictated via mic
+        // and ran G without ever touching the short-label box) auto-derive a
+        // label from the first few words. Beats the silent no-op the macOS
+        // version still has.
+        if (label.Length == 0 && safeText.Length > 0)
+        {
+            label = AutoLabelFromText(safeText);
+            ShortLabelBox.Text = label;
+        }
+
+        if (label.Length == 0)
+        {
+            ShowStatus("Bitte eine Kurzbezeichnung eintragen oder Prompt-Text einsprechen.");
+            ShortLabelBox.Focus();
+            return;
+        }
+
         Result = new PromptEditResult(label, text ?? string.Empty, AlwaysOnCheckbox.IsChecked == true);
         Close();
+    }
+
+    /// <summary>
+    /// Builds a short label out of the first few non-empty words of the
+    /// prompt text. Trims at ~40 chars so the bar stays compact, and falls
+    /// back to "Prompt" if nothing usable is in there.
+    /// </summary>
+    private static string AutoLabelFromText(string text)
+    {
+        var words = text.Split(new[] { ' ', '\t', '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return "Prompt";
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < words.Length && i < 7; i++)
+        {
+            if (sb.Length > 0) sb.Append(' ');
+            sb.Append(words[i]);
+            if (sb.Length >= 40) break;
+        }
+        var s = sb.ToString().TrimEnd('.', ',', ';', ':', '!', '?');
+        return s.Length == 0 ? "Prompt" : s;
     }
 
     public static PromptEditResult? Ask(
