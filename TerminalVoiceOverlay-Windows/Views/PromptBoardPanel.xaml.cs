@@ -853,7 +853,9 @@ public partial class PromptBoardPanel : Window
             return;
         }
 
-        var result = PromptEditDialog.Ask(this, "Neuer Prompt", string.Empty, string.Empty, false);
+        var result = PromptEditDialog.Ask(
+            this, "Neuer Prompt", string.Empty, string.Empty,
+            alwaysOn: false, prePrompt: true, postPrompt: false);
         if (result is null) return;
 
         try
@@ -867,6 +869,8 @@ public partial class PromptBoardPanel : Window
                 ShortLabel = result.ShortLabel,
                 OriginalText = result.OriginalText,
                 IsAlwaysOn = result.IsAlwaysOn,
+                IsPrePrompt = result.IsPrePrompt,
+                IsPostPrompt = result.IsPostPrompt,
                 ActiveVersion = PromptVersion.Original,
                 SortOrder = 0,
             };
@@ -885,7 +889,8 @@ public partial class PromptBoardPanel : Window
     {
         var result = PromptEditDialog.Ask(
             this, "Prompt bearbeiten",
-            prompt.ShortLabel, prompt.OriginalText, prompt.IsAlwaysOn);
+            prompt.ShortLabel, prompt.OriginalText, prompt.IsAlwaysOn,
+            prompt.IsPrePrompt, prompt.IsPostPrompt);
         if (result is null) return;
 
         try
@@ -895,6 +900,8 @@ public partial class PromptBoardPanel : Window
             prompt.ShortLabel = result.ShortLabel;
             prompt.OriginalText = result.OriginalText;
             prompt.IsAlwaysOn = result.IsAlwaysOn;
+            prompt.IsPrePrompt = result.IsPrePrompt;
+            prompt.IsPostPrompt = result.IsPostPrompt;
             await repo.UpdateAsync(prompt);
             ScheduleAutoBackup();
         }
@@ -1216,7 +1223,10 @@ public partial class PromptBoardPanel : Window
                 Id = p.Id, CategoryId = p.CategoryId,
                 ShortLabel = p.ShortLabel, OriginalText = p.OriginalText,
                 ImprovedText = p.ImprovedText, ActiveVersion = (int)p.ActiveVersion,
-                IsAlwaysOn = p.IsAlwaysOn, SortOrder = p.SortOrder,
+                IsAlwaysOn = p.IsAlwaysOn,
+                IsPrePrompt = p.IsPrePrompt,
+                IsPostPrompt = p.IsPostPrompt,
+                SortOrder = p.SortOrder,
             }).ToList(),
             SeparatorTemplate = appSettings.SeparatorTemplate,
         };
@@ -1275,7 +1285,14 @@ public partial class PromptBoardPanel : Window
                 ShortLabel = p.ShortLabel, OriginalText = p.OriginalText,
                 ImprovedText = p.ImprovedText,
                 ActiveVersion = (PromptVersion)p.ActiveVersion,
-                IsAlwaysOn = p.IsAlwaysOn, SortOrder = p.SortOrder,
+                IsAlwaysOn = p.IsAlwaysOn,
+                // Older backups (pre-#1820) don't carry the Pre/Post
+                // fields — BackupPrompt's defaults (Pre=true, Post=false)
+                // give those rows the legacy "always-on means prefix"
+                // behaviour automatically.
+                IsPrePrompt = p.IsPrePrompt,
+                IsPostPrompt = p.IsPostPrompt,
+                SortOrder = p.SortOrder,
             };
             if (existingPromptIds.ContainsKey(p.Id))
                 await promptRepo.UpdateAsync(entity);
@@ -1417,6 +1434,13 @@ public partial class PromptBoardPanel : Window
         public string? ImprovedText { get; set; }
         public int ActiveVersion { get; set; }
         public bool IsAlwaysOn { get; set; }
+        // Defaults match the macOS backup parser: a backup written by an
+        // older client (pre-#1820) lacks these fields and JsonSerializer
+        // leaves the property at its declared default — Pre=true matches
+        // the legacy "always-on means prefix" behaviour, Post=false
+        // disables the new suffix path.
+        public bool IsPrePrompt { get; set; } = true;
+        public bool IsPostPrompt { get; set; } = false;
         public int SortOrder { get; set; }
     }
 }

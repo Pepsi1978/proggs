@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,13 +28,23 @@ public sealed class AlwaysOnPrefixService : IAlwaysOnPrefixService
         _logger = logger;
     }
 
-    public async Task<string> BuildAsync(CancellationToken ct = default)
+    public Task<string> BuildAsync(CancellationToken ct = default) => BuildPreAsync(ct);
+
+    public Task<string> BuildPreAsync(CancellationToken ct = default) =>
+        // A prompt with neither flag set falls back to Pre so legacy /
+        // hand-imported rows aren't silently dropped.
+        BuildJoinedAsync(p => p.IsPrePrompt || (!p.IsPrePrompt && !p.IsPostPrompt), "Pre", ct);
+
+    public Task<string> BuildPostAsync(CancellationToken ct = default) =>
+        BuildJoinedAsync(p => p.IsPostPrompt, "Post", ct);
+
+    private async Task<string> BuildJoinedAsync(
+        Func<Prompt, bool> filter, string label, CancellationToken ct)
     {
         // Transient DbContext per call — the shared SQLite file is the
         // coordination point between the VTO and the standalone app.
         using var scope = _root.CreateScope();
         var prompts = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-        var settings = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
 
         var alwaysOn = await prompts.GetAllAlwaysOnAsync(ct);
         if (alwaysOn.Count == 0)
@@ -47,13 +58,21 @@ public sealed class AlwaysOnPrefixService : IAlwaysOnPrefixService
         const string inlineSeparator = " ; ";
 
         var items = alwaysOn
+            .Where(filter)
             .OrderBy(p => p.SortOrder)
-            .Select(p => new PromptChainItem(p.Id, p.EffectiveText()));
+            .Select(p => new PromptChainItem(p.Id, p.EffectiveText()))
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            return string.Empty;
+        }
 
         string prefix = _builder.Build(items, clicked: null, inlineSeparator);
 
-        _logger.LogDebug("Always-on prefix built: {Count} prompts, {Chars} chars.",
-            alwaysOn.Count, prefix.Length);
+        _logger.LogDebug(
+            "Always-on {Side} built: {Count} prompts, {Chars} chars.",
+            label, items.Count, prefix.Length);
 
         return prefix;
     }

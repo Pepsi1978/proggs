@@ -1,5 +1,7 @@
 using System;
+using System.Data.Common;
 using System.IO;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PromptBoard.Core.Repositories;
@@ -58,7 +60,43 @@ public static class PromptBoardHost
             services.AddSingleton<IGoogleDriveBackupService, GoogleDriveBackupService>();
 
             _provider = services.BuildServiceProvider();
+
+            // Idempotent schema migration for older Windows DBs that
+            // pre-date the per-prompt Pre/Post split (#1820 macOS, this
+            // commit Windows). SQLite throws on duplicate-column ALTER
+            // TABLE, which we swallow because we just want "the columns
+            // exist" — exactly mirrors the macOS approach.
+            EnsurePrePostColumns();
         }
+    }
+
+    private static void EnsurePrePostColumns()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            TryRun(conn, "ALTER TABLE Prompts ADD COLUMN IsPrePrompt INTEGER NOT NULL DEFAULT 1");
+            TryRun(conn, "ALTER TABLE Prompts ADD COLUMN IsPostPrompt INTEGER NOT NULL DEFAULT 0");
+        }
+        catch
+        {
+            // Database might not exist yet on first run — EF-Core will
+            // create it from the model below with the columns already
+            // in place. Either way, never block startup over the
+            // migration check.
+        }
+    }
+
+    private static void TryRun(DbConnection conn, string sql)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.ExecuteNonQuery();
+        }
+        catch (SqliteException) { /* duplicate column — already migrated */ }
     }
 
     public static T Get<T>() where T : notnull => Services.GetRequiredService<T>();

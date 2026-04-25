@@ -37,6 +37,19 @@ public class Prompt : BaseEntity
     /// </summary>
     public bool IsAlwaysOn { get; set; }
 
+    /// <summary>
+    /// When IsAlwaysOn is true, prepend this prompt before the dictated
+    /// text. Default true so legacy prompts keep their pre-split semantics.
+    /// </summary>
+    public bool IsPrePrompt { get; set; } = true;
+
+    /// <summary>
+    /// When IsAlwaysOn is true, append this prompt after the dictated text.
+    /// Independent of IsPrePrompt — both can be true so the prompt wraps
+    /// the dictation on both sides.
+    /// </summary>
+    public bool IsPostPrompt { get; set; }
+
     /// <summary>Ordering within the category.</summary>
     public int SortOrder { get; set; }
 

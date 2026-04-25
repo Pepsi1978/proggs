@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Prompt"
-        Width="560" Height="620"
+        Width="560" Height="680"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -98,12 +98,26 @@
                      VerticalScrollBarVisibility="Auto"
                      Margin="0,0,0,10"/>
 
-            <CheckBox Grid.Row="5"
-                      x:Name="AlwaysOnCheckbox"
-                      Foreground="#FFEEEEEE"
-                      Content="Immer mitschicken (Always-On Prefix)"
-                      FontSize="12"
-                      Margin="0,0,0,10"/>
+            <!-- Always-on master toggle + two sub-options (Pre / Post)
+                 stacked vertically. The sub-options are indented so the
+                 hierarchy reads at a glance. -->
+            <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,0,0,10">
+                <CheckBox x:Name="AlwaysOnCheckbox"
+                          Foreground="#FFEEEEEE"
+                          Content="Immer mitschicken (Always-On Prefix)"
+                          FontSize="12"
+                          Margin="0,0,0,4"/>
+                <CheckBox x:Name="PrePromptCheckbox"
+                          Foreground="#FFEEEEEE"
+                          Content="Pre-Prompt (vor dem Diktat)"
+                          FontSize="12"
+                          Margin="22,0,0,2"/>
+                <CheckBox x:Name="PostPromptCheckbox"
+                          Foreground="#FFEEEEEE"
+                          Content="Post-Prompt (nach dem Diktat)"
+                          FontSize="12"
+                          Margin="22,0,0,0"/>
+            </StackPanel>
 
             <!-- Status line for recording / Gemini progress. -->
             <TextBlock Grid.Row="6"

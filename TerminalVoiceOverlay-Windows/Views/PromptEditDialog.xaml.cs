@@ -8,7 +8,12 @@ using TerminalVoiceOverlay.Services;
 
 namespace TerminalVoiceOverlay.Views;
 
-public sealed record PromptEditResult(string ShortLabel, string OriginalText, bool IsAlwaysOn);
+public sealed record PromptEditResult(
+    string ShortLabel,
+    string OriginalText,
+    bool IsAlwaysOn,
+    bool IsPrePrompt,
+    bool IsPostPrompt);
 
 public partial class PromptEditDialog : Window
 {
@@ -46,13 +51,17 @@ public partial class PromptEditDialog : Window
         string title,
         string initialLabel,
         string initialText,
-        bool initialAlwaysOn)
+        bool initialAlwaysOn,
+        bool initialPrePrompt,
+        bool initialPostPrompt)
     {
         InitializeComponent();
         TitleText.Text = title;
         ShortLabelBox.Text = initialLabel;
         OriginalTextBox.Text = initialText;
         AlwaysOnCheckbox.IsChecked = initialAlwaysOn;
+        PrePromptCheckbox.IsChecked = initialPrePrompt;
+        PostPromptCheckbox.IsChecked = initialPostPrompt;
 
         ShortLabelBox.Focus();
         ShortLabelBox.SelectAll();
@@ -128,7 +137,12 @@ public partial class PromptEditDialog : Window
         // were recently revised.
         label = EnsureTimestampSuffix(label);
 
-        Result = new PromptEditResult(label, text ?? string.Empty, AlwaysOnCheckbox.IsChecked == true);
+        Result = new PromptEditResult(
+            label,
+            text ?? string.Empty,
+            AlwaysOnCheckbox.IsChecked == true,
+            PrePromptCheckbox.IsChecked == true,
+            PostPromptCheckbox.IsChecked == true);
         Close();
     }
 
@@ -174,9 +188,13 @@ public partial class PromptEditDialog : Window
     }
 
     public static PromptEditResult? Ask(
-        Window owner, string title, string label, string text, bool alwaysOn)
+        Window owner, string title, string label, string text,
+        bool alwaysOn, bool prePrompt, bool postPrompt)
     {
-        var dlg = new PromptEditDialog(title, label, text, alwaysOn) { Owner = owner };
+        var dlg = new PromptEditDialog(title, label, text, alwaysOn, prePrompt, postPrompt)
+        {
+            Owner = owner
+        };
         dlg.ShowDialog();
         return dlg.Result;
     }

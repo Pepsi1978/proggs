@@ -360,14 +360,19 @@ namespace TerminalVoiceOverlay.Views
                         finalText = transcript;
                     }
 
-                    // Prepend the PromptBoard always-on prefix when the star
-                    // toggle is active. Only for the first paste on a line —
-                    // follow-up dictations are appended to the existing line.
+                    // Wrap the dictation with PromptBoard always-on prompts
+                    // when the star toggle is active. Pre-prompts go before,
+                    // post-prompts after; both are independent so a prompt
+                    // can wrap the dictation on both sides if both flags
+                    // are set. Only on the first paste per line — follow-ups
+                    // are appended to the existing line without wrapping.
                     if (!hasPastedText)
                     {
-                        string aoPrefix = await BuildAlwaysOnPrefixAsync();
-                        if (!string.IsNullOrEmpty(aoPrefix))
-                            finalText = aoPrefix + finalText;
+                        var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                        if (!string.IsNullOrEmpty(preFix))
+                            finalText = preFix + finalText;
+                        if (!string.IsNullOrEmpty(postFix))
+                            finalText = finalText + postFix;
                     }
 
                     // Always append " ; " after the dictated text — inline
@@ -685,28 +690,24 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>Build the PromptBoard always-on prefix when the star
-        /// toggle is active. Returns an empty string when the toggle is
-        /// off, the service is unavailable, or no IsAlwaysOn prompts exist.</summary>
-        private async Task<string> BuildAlwaysOnPrefixAsync()
+        /// <summary>Build the PromptBoard always-on Pre AND Post wrappers
+        /// when the star toggle is active. Returns (empty, empty) when
+        /// the toggle is off, the service is unavailable, or no
+        /// IsAlwaysOn prompts exist.</summary>
+        private async Task<(string Pre, string Post)> BuildAlwaysOnWrappersAsync()
         {
-            if (!alwaysOnActive || _alwaysOnPrefix is null) return string.Empty;
+            if (!alwaysOnActive || _alwaysOnPrefix is null) return (string.Empty, string.Empty);
 
             try
             {
-                string prefix = await _alwaysOnPrefix.BuildAsync();
-                if (string.IsNullOrEmpty(prefix)) return string.Empty;
-                // Append the dictated text directly after the prefix — the
-                // prompt author controls the trailing whitespace/colon. No
-                // separator in between so the prompt and user text read as
-                // a single instruction; the closing " ; " is added by the
-                // caller after the dictated text.
-                return prefix;
+                string pre = await _alwaysOnPrefix.BuildPreAsync();
+                string post = await _alwaysOnPrefix.BuildPostAsync();
+                return (pre ?? string.Empty, post ?? string.Empty);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AlwaysOnPrefix build failed: {ex.Message}");
-                return string.Empty;
+                Console.WriteLine($"AlwaysOn wrappers build failed: {ex.Message}");
+                return (string.Empty, string.Empty);
             }
         }
 
