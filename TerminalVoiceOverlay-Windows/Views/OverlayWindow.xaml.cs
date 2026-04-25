@@ -649,12 +649,14 @@ namespace TerminalVoiceOverlay.Views
         {
             if (_promptPanel is null) return;
             // Dock the panel directly to the LEFT of the pillar with a
-            // 4-pixel seam, matching the pillar's vertical extent. The
-            // VTO typically sits at the right screen edge, so docking to
-            // the left keeps the panel on-screen.
+            // 4-pixel seam. The VTO typically sits at the right screen edge,
+            // so docking to the left keeps the panel on-screen. The panel
+            // keeps its OWN height (528) like the macOS counterpart — never
+            // squashed to the small pillar height, otherwise the prompt list
+            // collapses and the rows appear pushed to the bottom of a tiny
+            // visible strip.
             _promptPanel.Left = Left - _promptPanel.Width - 4;
             _promptPanel.Top = Top;
-            _promptPanel.Height = Height;
         }
 
         private void OnPromptPanelInsert(string text)

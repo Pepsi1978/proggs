@@ -271,6 +271,11 @@ public partial class PromptBoardPanel : Window
 
         // ── Always-On checkbox (clickable; toggles persisted state) ──
         var checkbox = BuildAlwaysOnCheckbox(prompt);
+        // The 3 action buttons (checkbox / ✎ / ✕) absorb their own right-click
+        // events so the row-level right-click handler only fires for the label
+        // area and the row background. Without this guard a right-click on
+        // ✕ or ✎ would also pop the editor on top of the action.
+        checkbox.MouseRightButtonUp += (_, e) => e.Handled = true;
         Grid.SetColumn(checkbox, 0);
         grid.Children.Add(checkbox);
 
@@ -295,6 +300,7 @@ public partial class PromptBoardPanel : Window
             ToolTip = "Bearbeiten",
         };
         editBtn.Click += async (_, _) => await EditPromptAsync(prompt);
+        editBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
         Grid.SetColumn(editBtn, 2);
         grid.Children.Add(editBtn);
 
@@ -306,6 +312,7 @@ public partial class PromptBoardPanel : Window
             ToolTip = "Loeschen",
         };
         deleteBtn.Click += async (_, _) => await DeletePromptAsync(prompt);
+        deleteBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
         Grid.SetColumn(deleteBtn, 3);
         grid.Children.Add(deleteBtn);
 
@@ -322,12 +329,14 @@ public partial class PromptBoardPanel : Window
         };
 
         // ── Whole-row right-click → open editor (same effect as ✎) ──
-        // Right-click is NOT consumed by WPF Buttons by default, so we walk
-        // the visual tree to ignore right-clicks on the row's interactive
-        // children (checkbox / ✎ / ✕).
+        // Right-click is NOT consumed by WPF Buttons by default. Instead of
+        // walking the visual tree (which would also exclude the insert label
+        // button — wrong), the 3 action buttons absorb their own right-click
+        // above. Anything that bubbles up here is a click on the label or
+        // the row background, both of which should open the editor.
         row.MouseRightButtonUp += async (_, e) =>
         {
-            if (IsOriginatedFromButton(e.OriginalSource)) return;
+            if (e.Handled) return;
             e.Handled = true;
             await EditPromptAsync(prompt);
         };
