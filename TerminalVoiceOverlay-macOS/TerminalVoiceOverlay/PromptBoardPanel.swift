@@ -985,12 +985,33 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// Returns the `ExportedAt` timestamp from a backup JSON, or nil if
     /// the field is missing / unparseable. Used to decide whether the
     /// remote backup is newer than the local state.
+    ///
+    /// Cross-platform note: macOS writes ISO-8601 without fractional
+    /// seconds (`2026-04-25T16:23:21Z`), Windows' C# JsonSerializer writes
+    /// it WITH fractional seconds (`2026-04-25T16:23:21.1234567Z`). A
+    /// single `ISO8601DateFormatter` only accepts one of the two forms,
+    /// so we try both. Without this, a Windows-uploaded backup would
+    /// silently fail to restore on macOS — see launch-restore log line
+    /// "no ExportedAt in backup" from 2026-04-25.
     static func backupExportedAt(from json: String) -> Date? {
         guard let data = json.data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let iso = root["ExportedAt"] as? String else { return nil }
-        let f = ISO8601DateFormatter()
-        return f.date(from: iso)
+        let plain = ISO8601DateFormatter()
+        if let d = plain.date(from: iso) { return d }
+        let frac = ISO8601DateFormatter()
+        frac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = frac.date(from: iso) { return d }
+        // Last-ditch: trim fractional seconds and retry the plain parser.
+        // Catches odd shapes like trailing "+00:00" or single-digit fractions
+        // that neither preset accepts.
+        if let dot = iso.firstIndex(of: ".") {
+            let zIdx = iso[dot...].firstIndex(where: { $0 == "Z" || $0 == "+" || $0 == "-" })
+                ?? iso.endIndex
+            let trimmed = String(iso[..<dot]) + String(iso[zIdx...])
+            if let d = plain.date(from: trimmed) { return d }
+        }
+        return nil
     }
 
     private func exportToFile() {
