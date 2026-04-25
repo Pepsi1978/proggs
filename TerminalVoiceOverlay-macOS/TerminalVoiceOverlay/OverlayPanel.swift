@@ -245,6 +245,11 @@ final class OverlayPanel: NSPanel {
         // mismatch the user reported when the values differed by 1%.
         self.contentView?.layer?.backgroundColor =
             NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
+        // Subtle 1-px outline matching the PromptBoard panel so the two
+        // floating windows have the same visual chrome.
+        self.contentView?.layer?.borderColor =
+            NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
+        self.contentView?.layer?.borderWidth = 1
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
         // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
@@ -486,6 +491,14 @@ final class OverlayPanel: NSPanel {
     }
 
     private func savePosition() {
+        savePillarPosition()
+    }
+
+    /// Public so AppDelegate can call it after dragging the pillar via
+    /// the PromptBoard panel (right-click drag inside the panel moves
+    /// both windows together; the pillar's own drag handler isn't the
+    /// one driving that motion, so we expose the save explicitly).
+    func savePillarPosition() {
         let position: [String: Double] = ["x": Double(frame.origin.x), "y": Double(frame.origin.y)]
         UserDefaults.standard.set(position, forKey: OverlayPanel.positionKey)
     }

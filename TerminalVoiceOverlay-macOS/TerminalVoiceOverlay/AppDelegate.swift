@@ -469,6 +469,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
                 TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
             }
+            // Right-click drag on the panel itself moves both floating
+            // windows together: panel slides under the cursor (already
+            // done inside the panel), and we slide the pillar by the
+            // same delta so they stay glued. The pillar saves its own
+            // position so the new spot is restored on next launch.
+            p.onPanelDragged = { [weak self] panelOrigin in
+                guard let self = self else { return }
+                let pillarSize = self.panel.frame.size
+                // Pillar sits to the right of the panel with a 4 px seam
+                // (matches PromptBoardPanel.dock(rightOf:)).
+                let pillarOrigin = NSPoint(
+                    x: panelOrigin.x + p.frame.size.width + 4,
+                    y: panelOrigin.y)
+                self.panel.setFrame(NSRect(origin: pillarOrigin, size: pillarSize),
+                                    display: true)
+                // Persist so the manual position survives an app restart.
+                self.panel.savePillarPosition()
+            }
             promptBoardPanel = p
         }
         guard let p = promptBoardPanel else { return }

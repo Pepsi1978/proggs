@@ -33,6 +33,19 @@ public partial class PromptBoardPanel : Window
 {
     public event Action<string>? PromptInsertRequested;
 
+    /// <summary>
+    /// Fires while the user right-click drags the panel itself. The
+    /// OverlayWindow uses this to slide the pillar by the same delta
+    /// so both floating windows move together as a single unit.
+    /// </summary>
+    public event Action? PanelDragged;
+
+    // ── Right-click panel drag state ──
+    private bool _isDraggingPanel;
+    private System.Windows.Point _panelDragStartCursor;
+    private double _panelDragStartLeft;
+    private double _panelDragStartTop;
+
     private List<Category> _categories = new();
     /// <summary>
     /// Multiple categories can be active simultaneously. Prompts from every
@@ -108,6 +121,55 @@ public partial class PromptBoardPanel : Window
             if (_dragGhost is null) return;
             _dragGhost.UpdateLocation(e.GetPosition(this));
         };
+
+        // Right-click drag on the panel background moves both this
+        // panel AND the pillar (via the PanelDragged event handled in
+        // OverlayWindow). The handlers are wired with PreviewMouseRight*
+        // so they run before child controls — but child controls that
+        // already do something with right-click (e.g. the existing
+        // contextual edit on prompt rows) can still handle their event;
+        // we only arm a drag if no child marked it Handled.
+        PreviewMouseRightButtonDown += OnPanelRightDown;
+        PreviewMouseMove            += OnPanelMouseMove;
+        PreviewMouseRightButtonUp   += OnPanelRightUp;
+    }
+
+    private void OnPanelRightDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Hit-test: if the click is on a prompt row's interactive
+        // surface (the row itself opens the editor on right-click),
+        // let that handler win.
+        var hit = e.OriginalSource as DependencyObject;
+        while (hit is not null && hit != this)
+        {
+            if (hit is Border b && b.Tag is Prompt) return;     // prompt row
+            if (hit is System.Windows.Controls.Button) return;  // any tab/button
+            hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
+        }
+        _isDraggingPanel        = true;
+        _panelDragStartCursor   = PointToScreen(e.GetPosition(this));
+        _panelDragStartLeft     = Left;
+        _panelDragStartTop      = Top;
+        CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void OnPanelMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_isDraggingPanel) return;
+        var cur = PointToScreen(e.GetPosition(this));
+        Left = _panelDragStartLeft + (cur.X - _panelDragStartCursor.X);
+        Top  = _panelDragStartTop  + (cur.Y - _panelDragStartCursor.Y);
+        PanelDragged?.Invoke();
+    }
+
+    private void OnPanelRightUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!_isDraggingPanel) return;
+        _isDraggingPanel = false;
+        ReleaseMouseCapture();
+        PanelDragged?.Invoke();
+        e.Handled = true;
     }
 
     protected override void OnSourceInitialized(EventArgs e)

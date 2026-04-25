@@ -65,9 +65,13 @@
 
     <!-- Panel background: pill shape, translucent dark.
          alpha C7 ≈ 78% matches the PromptBoard panel so the two
-         floating windows share the same translucency level. -->
+         floating windows share the same translucency level.
+         Border colour matches the PromptBoard's #FF3A3A3A (≈grey 58/255)
+         so both windows have the same visual chrome. -->
     <Border CornerRadius="36"
             Background="#C71E1E1E"
+            BorderBrush="#FF3A3A3A"
+            BorderThickness="1"
             Width="72" Height="480">
         <StackPanel VerticalAlignment="Center"
                     HorizontalAlignment="Center"

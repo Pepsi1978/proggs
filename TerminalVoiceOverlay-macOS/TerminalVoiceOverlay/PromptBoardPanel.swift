@@ -38,6 +38,18 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// because NSClickGestureRecognizer with buttonMask=.secondary sometimes
     /// refuses to fire inside a borderless, canBecomeKey=false NSPanel.
     private var rightClickMonitor: Any?
+    /// Global event monitor for right-mouse drag/up — needed so the drag
+    /// keeps tracking even when the cursor leaves our panel's frame.
+    private var globalRightDragMonitor: Any?
+
+    // ── Right-click drag state (drag the panel to move pillar+panel) ──
+    private var isDraggingPanel = false
+    private var dragStartMouseLocation: NSPoint = .zero
+    private var dragStartPanelOrigin: NSPoint = .zero
+    /// Fires on every drag step + drag-end. The owner (AppDelegate)
+    /// uses this to slide the Voice Overlay pillar by the same delta
+    /// so both windows move together as a single unit.
+    var onPanelDragged: ((NSPoint) -> Void)?
 
     /// Debounce timer for auto-backup to Google Drive. Every mutation
     /// (add / edit / delete / toggle) reschedules the timer; the actual
@@ -106,6 +118,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     deinit {
         if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
+        if let m = globalRightDragMonitor { NSEvent.removeMonitor(m) }
         autoBackupTimer?.invalidate()
     }
 
@@ -181,24 +194,27 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// instead of NSClickGestureRecognizer because the gesture variant is
     /// flaky on floating nonactivating panels.
     private func installRightClickMonitor() {
-        rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown]) { [weak self] event in
+        rightClickMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
+        ) { [weak self] event in
             guard let self = self else { return event }
             // Only handle events meant for this panel.
             guard event.window === self else { return event }
-            // Translate click point into each known row's coordinate space.
-            // The event window-coord → root view → row works reliably even
-            // through nested NSStackView / NSScrollView containers.
+
+            // Drag tracking takes priority once a drag is armed — pass
+            // through to the dedicated handler.
+            if event.type == .rightMouseDragged || event.type == .rightMouseUp {
+                self.handlePanelDragEvent(event)
+                return self.isDraggingPanel || event.type == .rightMouseUp ? nil : event
+            }
+
+            // .rightMouseDown — first check if it's on a prompt row.
             let windowPoint = event.locationInWindow
             for (id, row) in self.rowViewsByPromptId {
-                // Skip detached rows (can happen during a re-render that
-                // crosses an event delivery).
                 guard row.window === self else { continue }
                 let rowPoint = row.convert(windowPoint, from: nil)
                 if row.bounds.contains(rowPoint) {
-                    // Don't fire when the right-click is on one of the
-                    // interactive subviews (checkbox / ✎ / ✕) — pick any
-                    // descendant button at that spot; if one is hit, we
-                    // bail and let its own handling (or nothing) run.
+                    // Skip the interactive subviews (checkbox / ✎ / ✕).
                     if let hit = row.hitTest(row.superview?.convert(windowPoint, from: nil) ?? .zero),
                        hit is NSButton {
                         return event
@@ -207,10 +223,49 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     DispatchQueue.main.async { [weak self] in
                         self?.openEditorForPrompt(id: id)
                     }
-                    return nil  // consume the event — no menu, no beep
+                    return nil  // consume the event
                 }
             }
-            return event
+
+            // Not on a row → arm a panel drag. The user can grab the
+            // panel anywhere outside a prompt row (header strip, empty
+            // list area, between tabs) to move the whole overlay.
+            self.isDraggingPanel = true
+            self.dragStartMouseLocation = NSEvent.mouseLocation
+            self.dragStartPanelOrigin = self.frame.origin
+            tvoDebug("[PBPanel] panel-drag armed at origin=\(self.dragStartPanelOrigin)")
+            return nil  // consume so no contextual menu pops
+        }
+
+        // Global monitor: keeps the drag tracking even when the cursor
+        // leaves the panel's frame mid-drag. Without this the panel
+        // would freeze the moment the cursor crossed its own boundary.
+        globalRightDragMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.rightMouseDragged, .rightMouseUp]
+        ) { [weak self] event in
+            self?.handlePanelDragEvent(event)
+        }
+    }
+
+    private func handlePanelDragEvent(_ event: NSEvent) {
+        guard isDraggingPanel else { return }
+        let mouseLocation = NSEvent.mouseLocation
+        switch event.type {
+        case .rightMouseDragged:
+            let dx = mouseLocation.x - dragStartMouseLocation.x
+            let dy = mouseLocation.y - dragStartMouseLocation.y
+            let newOrigin = NSPoint(x: dragStartPanelOrigin.x + dx,
+                                    y: dragStartPanelOrigin.y + dy)
+            setFrameOrigin(newOrigin)
+            // Tell the AppDelegate to drag the pillar by the same delta
+            // so the two floating windows move as one.
+            onPanelDragged?(newOrigin)
+        case .rightMouseUp:
+            isDraggingPanel = false
+            onPanelDragged?(frame.origin)  // final position
+            tvoDebug("[PBPanel] panel-drag end origin=\(self.frame.origin)")
+        default:
+            break
         }
     }
 

@@ -620,6 +620,16 @@ namespace TerminalVoiceOverlay.Views
             {
                 _promptPanel = new PromptBoardPanel();
                 _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
+                // Right-click drag on the panel itself moves both the
+                // panel (handled inside) and this pillar window — slide
+                // the pillar to stay glued to the panel's right edge.
+                _promptPanel.PanelDragged += () =>
+                {
+                    if (_promptPanel is null) return;
+                    Left = _promptPanel.Left + _promptPanel.Width + 4;
+                    Top  = _promptPanel.Top;
+                    _manuallyPositioned = true;
+                };
                 _promptPanel.Closed += (_, _) =>
                 {
                     _promptPanel = null;
