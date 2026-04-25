@@ -7,9 +7,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -55,6 +57,14 @@ public partial class PromptBoardPanel : Window
     private Guid? _dragJustHappenedForRowId;
 
     /// <summary>
+    /// Live drag preview floating under the cursor. Created on drag start,
+    /// updated by Window.DragOver, removed on drag end.
+    /// </summary>
+    private DragGhostAdorner? _dragGhost;
+    private AdornerLayer? _dragGhostLayer;
+    private Border? _dragSourceRow;
+
+    /// <summary>
     /// Persistent record of the last successful Drive backup. macOS uses
     /// UserDefaults; Windows uses a tiny text file alongside the SQLite
     /// database so it survives app restarts and stays out of the DB schema.
@@ -88,6 +98,16 @@ public partial class PromptBoardPanel : Window
         BtnSettings.Click     += async (_, _) => await ShowSettingsAsync();
         BtnBackup.Click       += async (_, _) => await ShowBackupMenuAsync();
         RefreshSyncLabel();
+
+        // Window-wide drop tracking so the floating drag preview updates
+        // its position over the entire panel area — not just over the
+        // category tabs that accept the drop.
+        AllowDrop = true;
+        PreviewDragOver += (_, e) =>
+        {
+            if (_dragGhost is null) return;
+            _dragGhost.UpdateLocation(e.GetPosition(this));
+        };
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -282,6 +302,101 @@ public partial class PromptBoardPanel : Window
     /// <summary>Custom DataObject format for a prompt drag — id as string.</summary>
     private const string PromptDragFormat = "TVO.PromptId";
 
+    /// <summary>
+    /// Renders the prompt's short label as a TextBlock where the trailing
+    /// "(dd.MM.yyyy, HH:mm)" timestamp suffix gets rendered in a smaller,
+    /// dimmed font next to the main 3-word title. The split is done by
+    /// detecting the last opening parenthesis — if there's no parenthesis
+    /// the whole label is shown at the normal size.
+    /// </summary>
+    private static TextBlock BuildLabelContent(string label)
+    {
+        var tb = new TextBlock
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+
+        int parenIdx = label.LastIndexOf(" (", StringComparison.Ordinal);
+        if (parenIdx > 0 && label.EndsWith(")", StringComparison.Ordinal))
+        {
+            var head = label.Substring(0, parenIdx);
+            var tail = label.Substring(parenIdx); // includes the leading space + "(...)"
+            tb.Inlines.Add(new System.Windows.Documents.Run(head)
+            {
+                FontSize = 13,
+            });
+            tb.Inlines.Add(new System.Windows.Documents.Run(tail)
+            {
+                FontSize = 9,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+            });
+        }
+        else
+        {
+            tb.Inlines.Add(new System.Windows.Documents.Run(label) { FontSize = 13 });
+        }
+        return tb;
+    }
+
+    /// <summary>
+    /// Captures a bitmap snapshot of the source row, dims the row in place,
+    /// and attaches the floating <see cref="DragGhostAdorner"/> at the
+    /// current cursor position. Called on the same UI thread that's about
+    /// to enter <c>DoDragDrop</c>.
+    /// </summary>
+    private void BeginDragVisual(Border sourceRow, System.Windows.Point cursor)
+    {
+        try
+        {
+            // Render the row to a bitmap. We Freeze the bitmap so the WPF
+            // render thread doesn't see a half-built image.
+            int w = (int)Math.Ceiling(sourceRow.ActualWidth);
+            int h = (int)Math.Ceiling(sourceRow.ActualHeight);
+            if (w <= 0 || h <= 0) return;
+            var bmp = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            bmp.Render(sourceRow);
+            bmp.Freeze();
+
+            // Adorner layer comes from the panel's content border — first
+            // adornable element above this row.
+            var rootElement = (UIElement?)Content;
+            if (rootElement is null) return;
+            _dragGhostLayer = AdornerLayer.GetAdornerLayer(rootElement);
+            if (_dragGhostLayer is null) return;
+            _dragGhost = new DragGhostAdorner(rootElement, bmp,
+                sourceRow.ActualWidth, sourceRow.ActualHeight);
+            _dragGhost.UpdateLocation(cursor);
+            _dragGhostLayer.Add(_dragGhost);
+
+            // Dim the source row so the user sees clearly that THIS row is
+            // the one being dragged. Restored in EndDragVisual.
+            _dragSourceRow = sourceRow;
+            _dragSourceRow.Opacity = 0.35;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"BeginDragVisual failed: {ex.Message}");
+        }
+    }
+
+    private void EndDragVisual()
+    {
+        try
+        {
+            if (_dragGhost is not null && _dragGhostLayer is not null)
+                _dragGhostLayer.Remove(_dragGhost);
+        }
+        catch { /* best-effort cleanup */ }
+        _dragGhost = null;
+        _dragGhostLayer = null;
+        if (_dragSourceRow is not null)
+        {
+            _dragSourceRow.Opacity = 1.0;
+            _dragSourceRow = null;
+        }
+    }
+
     private ContextMenu BuildCategoryContextMenu(Category cat)
     {
         var menu = new ContextMenu();
@@ -374,7 +489,7 @@ public partial class PromptBoardPanel : Window
         // ── Insert label (clickable button — same as before) ──
         var insertBtn = new Button
         {
-            Content = prompt.ShortLabel,
+            Content = BuildLabelContent(prompt.ShortLabel),
             Style = (Style)FindResource("PromptButton"),
             ToolTip = prompt.EffectiveText().Length > 500
                 ? prompt.EffectiveText().Substring(0, 500) + "..."
@@ -449,14 +564,20 @@ public partial class PromptBoardPanel : Window
 
             _dragArmedRowId = null;
             _dragJustHappenedForRowId = prompt.Id;
+            var sourceRow = (Border)s!;
+            BeginDragVisual(sourceRow, current);
             try
             {
                 var data = new DataObject(PromptDragFormat, prompt.Id.ToString());
-                System.Windows.DragDrop.DoDragDrop((Border)s!, data, System.Windows.DragDropEffects.Move);
+                System.Windows.DragDrop.DoDragDrop(sourceRow, data, System.Windows.DragDropEffects.Move);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"DoDragDrop failed: {ex.Message}");
+            }
+            finally
+            {
+                EndDragVisual();
             }
         };
 
