@@ -538,7 +538,13 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             ? "Immer aktiv — wird bei jedem Prompt dauerhaft eingefuegt. Klicken zum Deaktivieren."
             : "Anhaken, damit dieser Prompt bei jedem Insert dauerhaft mitgeschickt wird."
 
-        let insertBtn = NSButton(title: prompt.shortLabel, target: self, action: #selector(onInsertPrompt(_:)))
+        // Split the stored short label into "Title" + "(Timestamp)" so each
+        // gets its own view with a different size and alignment. Timestamp
+        // sits as a small dim label between the spacer and the icons,
+        // matching the Windows-side 5-column layout.
+        let (titleText, timestampText) = Self.splitLabel(prompt.shortLabel)
+
+        let insertBtn = NSButton(title: titleText, target: self, action: #selector(onInsertPrompt(_:)))
         insertBtn.bezelStyle = .recessed
         insertBtn.setButtonType(.momentaryLight)
         insertBtn.isBordered = false
@@ -546,6 +552,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         insertBtn.alignment = .left
         insertBtn.toolTip = prompt.effectiveText.prefix(500).description
         insertBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+
+        // Timestamp label — small, dim, vertically centered next to icons.
+        // hidden when the label has no timestamp suffix yet (legacy data).
+        let timestampLabel = NSTextField(labelWithString: timestampText)
+        timestampLabel.font = NSFont.systemFont(ofSize: 10)
+        timestampLabel.textColor = NSColor(calibratedWhite: 0.66, alpha: 1)
+        timestampLabel.drawsBackground = false
+        timestampLabel.isBordered = false
+        timestampLabel.isHidden = timestampText.isEmpty
 
         let editBtn = NSButton(title: "✎", target: self, action: #selector(onEditPrompt(_:)))
         editBtn.bezelStyle = .recessed
@@ -561,7 +576,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         deleteBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
         deleteBtn.toolTip = "Loeschen"
 
-        let rowStack = NSStackView(views: [alwaysOnToggle, insertBtn, NSView(), editBtn, deleteBtn])
+        // Layout: [checkbox][insertBtn (huggable)][stretchable spacer][timestamp][edit][delete]
+        let rowStack = NSStackView(views: [alwaysOnToggle, insertBtn, NSView(), timestampLabel, editBtn, deleteBtn])
         rowStack.orientation = .horizontal
         rowStack.alignment = .centerY
         rowStack.spacing = 6
@@ -581,6 +597,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             deleteBtn.widthAnchor.constraint(equalToConstant: 22),
         ])
         return row
+    }
+
+    /// Splits the stored short label into title text + parenthesised
+    /// timestamp suffix, e.g. "Refactor Login (25.04.2026, 16:02)" →
+    /// ("Refactor Login", "(25.04.2026, 16:02)"). Returns the whole label
+    /// as title with empty timestamp when there's no trailing parenthesis.
+    private static func splitLabel(_ label: String) -> (title: String, timestamp: String) {
+        // Find the last " (" that opens a parenthesised suffix and check
+        // the label closes with ")".
+        if label.hasSuffix(")"),
+           let openRange = label.range(of: " (", options: .backwards) {
+            let title = String(label[..<openRange.lowerBound])
+            // Skip the leading space, keep the parens.
+            let timestamp = String(label[label.index(after: openRange.lowerBound)...])
+            return (title, timestamp)
+        }
+        return (label, "")
     }
 
     private func renderEmptyState(_ message: String) {

@@ -433,11 +433,33 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             return
         }
 
+        // Append a creation timestamp once. Existing prompts that already
+        // carry a "(dd.MM.yyyy, HH:mm)" suffix keep theirs — we never
+        // overwrite the original creation time.
+        label = Self.ensureTimestampSuffix(label)
+
         result = PBPromptEditResult(
             shortLabel: label,
             originalText: text,
             isAlwaysOn: alwaysOnCheckbox.state == .on)
         window?.close()    // windowWillClose handles stopModal
+    }
+
+    /// Adds "(dd.MM.yyyy, HH:mm)" to the end of the label if the label
+    /// doesn't already end in a parenthesised note. Idempotent so editing
+    /// a prompt repeatedly never stacks multiple timestamps.
+    private static func ensureTimestampSuffix(_ label: String) -> String {
+        // Tolerant match: any "(...)" at the very end, regardless of whether
+        // it's our timestamp or some other parenthesised note the user
+        // typed. We don't replace it — the user's parenthesis wins.
+        if let range = label.range(of: #"\([^)]*\)\s*$"#, options: .regularExpression) {
+            _ = range  // already has a parenthesised suffix — leave it
+            return label
+        }
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.dateFormat = "dd.MM.yyyy, HH:mm"
+        return label + " (" + fmt.string(from: Date()) + ")"
     }
 
     @objc private func cancel() {
