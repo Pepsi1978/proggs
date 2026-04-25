@@ -372,7 +372,9 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             let isActive = activeCategoryIds.contains(cat.id)
             let catColor = color(for: cat.id)
 
-            let btn = NSButton(title: "", target: self, action: #selector(onSelectCategory(_:)))
+            let btn = PBCategoryTabButton(title: "", target: self, action: #selector(onSelectCategory(_:)))
+            btn.categoryId = cat.id
+            btn.owner = self
             btn.tag = categories.firstIndex(where: { $0.id == cat.id }) ?? 0
             btn.isBordered = false
             btn.wantsLayer = true
@@ -493,7 +495,9 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func buildRow(for prompt: PBPrompt, categoryId: UUID) -> NSView {
-        let row = NSView()
+        let row = PBPromptRowView()
+        row.promptId = prompt.id
+        row.owner = self
         row.wantsLayer = true
         row.layer?.backgroundColor = rowBackground(for: categoryId).cgColor
         row.layer?.cornerRadius = 8
@@ -1075,5 +1079,138 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 }
             }
         }
+    }
+
+    // MARK: - Drag & Drop between categories
+
+    /// Handler invoked by PBCategoryTabButton when a prompt is dropped on it.
+    /// Updates the prompt's categoryId, schedules an auto-backup and
+    /// re-renders the panel so the prompt shows up under its new color.
+    fileprivate func handlePromptDrop(promptId: UUID, onCategory targetCategoryId: UUID) {
+        guard var prompt = currentPrompts.first(where: { $0.id == promptId }) else { return }
+        if prompt.categoryId == targetCategoryId { return }
+        prompt.categoryId = targetCategoryId
+        prompt.updatedAt = Date()
+        do {
+            try PromptBoardStore.shared.updatePrompt(prompt)
+            scheduleAutoBackup()
+        } catch {
+            NSAlert.warn("Verschieben fehlgeschlagen: \(error.localizedDescription)")
+            return
+        }
+        refresh()
+    }
+}
+
+// MARK: - Drag-source row view
+
+/// NSView subclass for prompt rows that can act as a drag source. The
+/// row's mouseDown stores the start point + arms the drag; mouseDragged
+/// triggers a real drag session once the cursor has moved past a small
+/// threshold (so a quick click still inserts the prompt as before).
+fileprivate final class PBPromptRowView: NSView, NSDraggingSource {
+    var promptId: UUID?
+    weak var owner: PromptBoardPanel?
+    private var mouseDownAt: NSPoint = .zero
+    private var dragArmed = false
+
+    /// Pasteboard type used to identify our prompt drags. macOS would
+    /// otherwise also accept stray strings (e.g. selected text) as drops.
+    static let pasteboardType = NSPasteboard.PasteboardType("com.tvo.PromptId")
+
+    func draggingSession(_ session: NSDraggingSession,
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        return .move
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        mouseDownAt = self.convert(event.locationInWindow, from: nil)
+        dragArmed = true
+        // Don't call super — the gesture recognizers attached by buildRow
+        // already drive insert/edit. Calling super.mouseDown on a plain
+        // NSView is a no-op anyway.
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard dragArmed, let promptId = promptId else { return }
+        let cur = self.convert(event.locationInWindow, from: nil)
+        let dx = cur.x - mouseDownAt.x
+        let dy = cur.y - mouseDownAt.y
+        // 6-pixel threshold (squared = 36) — matches the Windows side.
+        if dx * dx + dy * dy < 36 { return }
+        dragArmed = false
+
+        let pb = NSPasteboardItem()
+        pb.setString(promptId.uuidString, forType: PBPromptRowView.pasteboardType)
+        let item = NSDraggingItem(pasteboardWriter: pb)
+
+        // Snapshot of self for the drag image — AppKit would render a
+        // generic icon otherwise. cacheDisplay produces an exact pixel
+        // copy of the row including category tint and timestamp.
+        if let bmp = self.bitmapImageRepForCachingDisplay(in: self.bounds) {
+            self.cacheDisplay(in: self.bounds, to: bmp)
+            let img = NSImage(size: self.bounds.size)
+            img.addRepresentation(bmp)
+            item.setDraggingFrame(self.bounds, contents: img)
+        } else {
+            item.draggingFrame = self.bounds
+        }
+
+        beginDraggingSession(with: [item], event: event, source: self)
+    }
+}
+
+// MARK: - Drop-target category tab
+
+/// NSButton subclass that accepts prompt drags and forwards them to
+/// PromptBoardPanel.handlePromptDrop. Tab is highlighted while a drag
+/// hovers over it — restored to its normal style on exit.
+fileprivate final class PBCategoryTabButton: NSButton {
+    var categoryId: UUID?
+    weak var owner: PromptBoardPanel?
+    private var savedBackground: CGColor?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([PBPromptRowView.pasteboardType])
+    }
+
+    convenience init(title: String, target: AnyObject?, action: Selector) {
+        self.init(frame: .zero)
+        self.title = title
+        self.target = target
+        self.action = action
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard sender.draggingPasteboard.types?.contains(PBPromptRowView.pasteboardType) == true
+        else { return [] }
+        // Brighten the tab to signal it's a valid drop target.
+        if savedBackground == nil { savedBackground = layer?.backgroundColor }
+        if let bg = savedBackground, let nsBg = NSColor(cgColor: bg) {
+            let brighter = nsBg.blended(withFraction: 0.25, of: .white) ?? nsBg
+            layer?.backgroundColor = brighter.cgColor
+        }
+        return .move
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        if let saved = savedBackground { layer?.backgroundColor = saved }
+        savedBackground = nil
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        defer {
+            if let saved = savedBackground { layer?.backgroundColor = saved }
+            savedBackground = nil
+        }
+        guard let str = sender.draggingPasteboard.string(forType: PBPromptRowView.pasteboardType),
+              let promptId = UUID(uuidString: str),
+              let categoryId = self.categoryId,
+              let owner = self.owner else { return false }
+        owner.handlePromptDrop(promptId: promptId, onCategory: categoryId)
+        return true
     }
 }
