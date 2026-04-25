@@ -261,11 +261,12 @@ namespace TerminalVoiceOverlay.Views
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
                 // 2 mm closer to the right edge: 23 - 8 = 15 px.
                 Left = workArea.X + workArea.Width - Width - 15;
-                // User-tuned default offset history: -57 px (1,5 cm up),
-                // +11 px (0,3 cm down), +8 px (2 mm down) → -38 px from
-                // vertical center. The saved-position path above still
-                // wins once the user drags the pillar manually.
-                Top  = workArea.Y + (workArea.Height - Height) / 2 - 38;
+                // Anchor to the top-right corner of the work area instead
+                // of the vertical center — Frank prefers the pillar high
+                // so it doesn't cover terminal output. 20 px breathing
+                // room from the very top edge. The saved-position path
+                // above still wins once the user drags the pillar manually.
+                Top  = workArea.Y + 20;
             }
 
             if (!IsVisible)
@@ -273,12 +274,31 @@ namespace TerminalVoiceOverlay.Views
                 Show();
                 Console.WriteLine("Overlay: visible (terminal active)");
             }
+
+            // Star toggle is on but the panel was hidden during a previous
+            // terminal-deactivation? Bring it back alongside the pillar so
+            // both windows behave as a single unit per user expectation.
+            if (alwaysOnActive && _promptPanel is not null && !_promptPanel.IsVisible)
+            {
+                PositionPromptPanel();
+                _promptPanel.Show();
+            }
         }
 
         private void OnTerminalDeactivated()
         {
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
+
+            // Hide (not Close) the panel so its state — selected category,
+            // edit-in-progress, scroll position — survives until the user
+            // returns to the terminal. Closing would null _promptPanel and
+            // also flip alwaysOnActive off via the Closed handler, losing
+            // the user's intent.
+            if (_promptPanel is not null && _promptPanel.IsVisible)
+            {
+                _promptPanel.Hide();
+            }
 
             if (IsVisible)
             {
