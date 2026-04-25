@@ -218,7 +218,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let root = NSView(frame: contentView!.bounds)
         root.autoresizingMask = [.width, .height]
         root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor(calibratedWhite: 0.11, alpha: 0.97).cgColor
+        // Slightly translucent so the underlying terminal/app text shows
+        // through the panel — alpha 0.78 keeps the dark theme legible
+        // for the prompt rows while letting the user see what's behind.
+        // Match the Windows counterpart's #C71E1E1E.
+        root.layer?.backgroundColor = NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
         root.layer?.cornerRadius = 16
         root.layer?.borderColor = NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
         root.layer?.borderWidth = 1

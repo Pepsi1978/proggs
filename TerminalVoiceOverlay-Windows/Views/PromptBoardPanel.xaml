@@ -127,8 +127,10 @@
         </Style>
     </Window.Resources>
 
+    <!-- Slightly translucent (alpha C7 ≈ 78%) so the underlying terminal
+         text shows through, matching the macOS counterpart's alpha 0.78. -->
     <Border CornerRadius="16"
-            Background="#E61E1E1E"
+            Background="#C71E1E1E"
             BorderBrush="#FF3A3A3A"
             BorderThickness="1">
         <Grid Margin="10,10,10,10">
