@@ -129,38 +129,51 @@ final class GeminiClient {
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        let bodySize = request.httpBody?.count ?? 0
+        let attemptStart = Date()
+        tvoDebug("[Gemini] POST attempt=\(attempt) model=\(self.model) prompt=\(prompt.count)c body=\(bodySize)b")
 
         let task = URLSession.shared.dataTask(with: request) { [self] data, response, error in
+            let elapsed = Date().timeIntervalSince(attemptStart)
             if let error = error {
+                tvoDebug("[Gemini] network error after \(String(format: "%.1f", elapsed))s: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
 
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let bytes = data?.count ?? 0
+            tvoDebug("[Gemini] response status=\(statusCode) bytes=\(bytes) after \(String(format: "%.1f", elapsed))s")
 
             if !(200...299).contains(statusCode) {
                 if self.retryableStatusCodes.contains(statusCode) && attempt < self.maxRetries {
                     let delay = self.delays[attempt]
                     NSLog("Gemini %d - retry %d/%d, waiting %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
+                    tvoDebug("[Gemini] retry \(attempt+1)/\(self.maxRetries) in \(delay)s")
                     DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
                         self.sendRequest(prompt: prompt, attempt: attempt + 1, completion: completion)
                     }
                     return
                 }
                 let responseText = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+                tvoDebug("[Gemini] HTTP \(statusCode) — body[0..400]=\(responseText.prefix(400))")
                 completion(.failure(APIError.httpError(statusCode, responseText)))
                 return
             }
 
             guard let data = data else {
+                tvoDebug("[Gemini] success status but no data")
                 completion(.failure(APIError.noData))
                 return
             }
 
             do {
                 let text = try self.extractText(from: data)
+                tvoDebug("[Gemini] extracted \(text.count) chars of usable text")
                 completion(.success(text))
             } catch {
+                let preview = String(data: data, encoding: .utf8)?.prefix(600) ?? ""
+                tvoDebug("[Gemini] extract failed: \(error.localizedDescription) — body[0..600]=\(preview)")
                 completion(.failure(error))
             }
         }

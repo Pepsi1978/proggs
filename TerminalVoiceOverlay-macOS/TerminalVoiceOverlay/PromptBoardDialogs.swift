@@ -4,6 +4,24 @@ import AppKit
 /// file because each dialog is only a handful of lines in AppKit — no
 /// need for separate XIBs.
 
+// MARK: - Main-thread dispatch that survives modal run loops
+
+/// Runs `work` on the main thread in run-loop mode `.common`, which
+/// includes both `.default` and `.modalPanel`. Plain `DispatchQueue.main.async`
+/// posts to `.default` only — when one of our `NSApp.runModal(for:)` modal
+/// sessions is active (PromptEditDialog, SettingsDialog, etc.) the modal
+/// loop runs in `.modalPanel`, so async blocks queue up but never fire
+/// until the modal returns. That made the Gemini "Verbessere mit Gemini..."
+/// status hang forever even though the network response had already
+/// arrived 4s in. See debug log entry from 2026-04-25 16:55–16:57: the
+/// callback only fired once the user cancelled the dialog (74s later),
+/// at which point `[weak self]` resolved to nil. Using `.common` makes
+/// the callback fire as soon as the network response arrives, regardless
+/// of whether a modal is up.
+private func onMainCommon(_ work: @escaping () -> Void) {
+    RunLoop.main.perform(inModes: [.common], block: work)
+}
+
 // MARK: - Modal presenter (safe against invisible / trapped modal sessions)
 
 /// Bundles the "open a modal dialog safely while the app is background"
@@ -503,7 +521,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
                 return
             }
             groq.transcribe(fileURL: url) { [weak self] result in
-                DispatchQueue.main.async {
+                onMainCommon {
                     guard let self = self else { return }
                     switch result {
                     case .success(let text):
@@ -584,13 +602,18 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     // MARK: - Gemini correction
 
     @objc private func runGemini() {
-        guard !isImproving else { return }
+        guard !isImproving else {
+            tvoDebug("[Dlg] runGemini ignored — already improving")
+            return
+        }
         guard let gemini = VoiceServiceProvider.gemini else {
+            tvoDebug("[Dlg] runGemini: no gemini client configured")
             showStatus("Gemini nicht verfuegbar (kein Gemini-Key in .env).")
             return
         }
         let current = textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !current.isEmpty else {
+            tvoDebug("[Dlg] runGemini: empty text, skip")
             showStatus("Kein Text zum Verbessern.")
             return
         }
@@ -599,12 +622,18 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         geminiButton.isEnabled = false
         micButton.isEnabled = false
         showStatus("Verbessere mit Gemini...")
+        let startedAt = Date()
+        tvoDebug("[Dlg] runGemini: send \(current.count) chars, \(current.components(separatedBy: "\n").count) lines")
         // PromptBoard-Editor nutzt das Prompt-Engineer-Template (rohes
         // Diktat → kopierfertiger Claude-Code-CLI-Prompt). Das Diktat-
         // Cleanup-Template bleibt dem Overlay-Pfad vorbehalten.
         gemini.buildClaudeCodePrompt(current) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
+            onMainCommon {
+                guard let self = self else {
+                    tvoDebug("[Dlg] runGemini: callback fired but self is nil")
+                    return
+                }
+                let elapsed = Date().timeIntervalSince(startedAt)
                 self.isImproving = false
                 self.geminiButton.isEnabled = VoiceServiceProvider.geminiAvailable
                 self.micButton.isEnabled = VoiceServiceProvider.recorderAvailable
@@ -612,6 +641,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
                 switch result {
                 case .success(let improved):
                     let trimmed = improved.trimmingCharacters(in: .whitespacesAndNewlines)
+                    tvoDebug("[Dlg] runGemini: SUCCESS in \(String(format: "%.1f", elapsed))s — \(trimmed.count) chars returned")
                     guard !trimmed.isEmpty else {
                         self.showStatus("Gemini lieferte leere Antwort.")
                         return
@@ -629,6 +659,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
                     // previous auto-title but never a manually edited label.
                     self.autoTitle()
                 case .failure(let err):
+                    tvoDebug("[Dlg] runGemini: FAIL in \(String(format: "%.1f", elapsed))s — \(err.localizedDescription)")
                     self.showStatus("Gemini-Verbesserung fehlgeschlagen: \(err.localizedDescription)")
                 }
             }
@@ -688,7 +719,7 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         """
 
         gemini.correctText(prompt) { [weak self] result in
-            DispatchQueue.main.async {
+            onMainCommon {
                 guard let self = self else { return }
                 switch result {
                 case .success(let raw):
@@ -920,7 +951,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         setButtonTitle(connectButton, "Oeffne Browser...")
 
         GoogleDriveBackupService.shared.connect(clientId: id, clientSecret: secret) { [weak self] result in
-            DispatchQueue.main.async {
+            onMainCommon {
                 guard let self = self else { return }
                 self.connectButton.isEnabled = true
                 self.setButtonTitle(self.connectButton, "Verbinden")
