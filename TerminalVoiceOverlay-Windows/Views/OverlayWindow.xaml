@@ -153,15 +153,6 @@
                 </Viewbox>
             </Button>
 
-            <!-- ü Button (i18n prompt toggle — persistent) -->
-            <Button x:Name="I18nButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnI18n_Click"
-                    ToolTip="Toggle i18n prompt prefix">
-                <TextBlock Text="ü" FontWeight="Bold" FontSize="16" Foreground="White"/>
-            </Button>
-
             <!-- Enter Button (auto-enter toggle) — bottom -->
             <Button x:Name="EnterButton"
                     Style="{StaticResource CircleButton}"

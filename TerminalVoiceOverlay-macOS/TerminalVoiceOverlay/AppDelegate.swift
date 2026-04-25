@@ -53,15 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var geminiEnabled = false
     private var autoEnterEnabled = true
     private var alwaysOnActive = false
-    private var i18nPromptEnabled = false
     private var promptBoardPanel: PromptBoardPanel?
     private var isBtwRecording = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
     private var resetTimer: Timer?
-
-    // i18n prompt prefix (verbatim, persistent toggle)
-    private static let i18nPromptPrefix = "BestJournalAndroid i18n-Pflicht: Alle UI-Texte, die durch die folgende \u{00C4}nderung neu entstehen oder sich \u{00E4}ndern, M\u{00DC}SSEN als String-Ressourcen in app/src/main/res/values/strings.xml angelegt werden. Kein einziger hardcoded deutscher (oder englischer) Text darf direkt im Kotlin/Compose-Code stehen. Stattdessen: stringResource(R.string.mein_key) verwenden. Die String-Keys sollen sprechende englische Namen haben (z.B. settings_export_title, dialog_confirm_delete). Die Werte in strings.xml sind auf Deutsch (das ist die Basissprache). Hier kommt die \u{00C4}nderung: "
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -134,7 +130,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.clearLine()
         }
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
-        panel.onI18nClicked = { [weak self] in self?.toggleI18n() }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
@@ -376,10 +371,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             finalText = "/btw " + finalText
             isBtwRecording = false
         } else {
-            // Prepend i18n prompt if enabled (persistent toggle)
-            if i18nPromptEnabled && !hasPastedText {
-                finalText = AppDelegate.i18nPromptPrefix + finalText
-            }
             // Prepend the PromptBoard always-on prefix when the star
             // toggle is active. Only on the first paste per line;
             // follow-up dictations are appended without prefix.
@@ -482,14 +473,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func hidePromptBoardPanel() {
         promptBoardPanel?.orderOut(nil)
-    }
-
-    // MARK: - i18n Prompt Toggle (persistent)
-
-    private func toggleI18n() {
-        i18nPromptEnabled.toggle()
-        panel.setI18nEnabled(i18nPromptEnabled)
-        NSLog("i18n prompt %@", i18nPromptEnabled ? "ON" : "OFF")
     }
 
     // MARK: - Gemini Toggle

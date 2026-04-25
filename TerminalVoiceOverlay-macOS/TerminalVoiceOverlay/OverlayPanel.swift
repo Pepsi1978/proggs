@@ -20,7 +20,6 @@ private extension NSColor {
     static let ultrathinkOn = NSColor(hex: "#B8860B")     // dark gold background
     static let starGold = NSColor(hex: "#FFD700")          // bright gold star
     static let starMuted = NSColor(hex: "#8B7355")         // muted brown star
-    static let i18nOn = NSColor(hex: "#26A69A")            // teal for i18n toggle
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -144,7 +143,6 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     let copyButton: RoundButton
     let pasteButton: RoundButton
-    let i18nButton: RoundButton
     private var pulseTimer: Timer?
     private var btwPulseTimer: Timer?
 
@@ -165,16 +163,16 @@ final class OverlayPanel: NSPanel {
     var onEnterClicked: (() -> Void)?
     var onCopyClicked: (() -> Void)?
     var onPasteClicked: (() -> Void)?
-    var onI18nClicked: (() -> Void)?
 
     init() {
         let btnSize: CGFloat = 40
         let micSize: CGFloat = 52
         let gap: CGFloat = 8
         let panelWidth: CGFloat = micSize + 20
-        // Height: 8 small buttons + 2 large mic buttons + 9 gaps + padding (16 top + 16 bottom)
-        // = 40*8 + 52*2 + 8*9 + 32 = 320 + 104 + 72 + 32 = 528
-        let panelHeight: CGFloat = btnSize * 8 + micSize * 2 + gap * 9 + 32
+        // Height: 7 small buttons + 2 large mic buttons + 8 gaps + padding (16 top + 16 bottom)
+        // = 40*7 + 52*2 + 8*8 + 32 = 280 + 104 + 64 + 32 = 480
+        // (i18n button removed — PromptBoard's always-on prefix replaces it.)
+        let panelHeight: CGFloat = btnSize * 7 + micSize * 2 + gap * 8 + 32
 
         // Create buttons
         ultrathinkButton = RoundButton(label: "★", color: .toggleOff)
@@ -194,7 +192,6 @@ final class OverlayPanel: NSPanel {
         copyButton.symbolImage = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "Copy")
         pasteButton = RoundButton(label: "", color: .btnPaste)
         pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
-        i18nButton = RoundButton(label: "\u{00FC}", color: .toggleOff)  // ü
 
         // Calculate screen position (right edge, vertically centered)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
@@ -241,8 +238,6 @@ final class OverlayPanel: NSPanel {
         var yPos: CGFloat = 16
         enterButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
         yPos += btnSize + gap
-        i18nButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
         pasteButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
         yPos += btnSize + gap
         copyButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
@@ -267,7 +262,6 @@ final class OverlayPanel: NSPanel {
         self.contentView?.addSubview(xButton)
         self.contentView?.addSubview(copyButton)
         self.contentView?.addSubview(pasteButton)
-        self.contentView?.addSubview(i18nButton)
         self.contentView?.addSubview(enterButton)
 
         ultrathinkButton.onClick = { [weak self] in self?.onUltrathinkClicked?() }
@@ -279,7 +273,6 @@ final class OverlayPanel: NSPanel {
         enterButton.onClick = { [weak self] in self?.onEnterClicked?() }
         copyButton.onClick = { [weak self] in self?.onCopyClicked?() }
         pasteButton.onClick = { [weak self] in self?.onPasteClicked?() }
-        i18nButton.onClick = { [weak self] in self?.onI18nClicked?() }
 
         setupDragMonitors()
     }
@@ -383,12 +376,6 @@ final class OverlayPanel: NSPanel {
             guard let self = self else { return }
             self.ultrathinkButton.buttonColor = enabled ? .ultrathinkOn : .toggleOff
             self.ultrathinkButton.labelColor = enabled ? .starGold : .starMuted
-        }
-    }
-
-    func setI18nEnabled(_ enabled: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            self?.i18nButton.buttonColor = enabled ? .i18nOn : .toggleOff
         }
     }
 
