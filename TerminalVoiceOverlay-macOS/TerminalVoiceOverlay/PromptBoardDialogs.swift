@@ -210,11 +210,30 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private let labelField = NSTextField()
     private let textView = NSTextView()
     private let alwaysOnCheckbox = NSButton(checkboxWithTitle: "Immer mitschicken (Always-On Prefix)", target: nil, action: nil)
+    private let statusLabel = NSTextField(labelWithString: "")
     private var result: PBPromptEditResult?
+
+    // ── Footer buttons (built in init, swapped at runtime) ──
+    private var micButton: NSButton!
+    private var geminiButton: NSButton!
+    private var saveButton: NSButton!           // single "Speichern" before improvement
+    private var saveOriginalButton: NSButton!   // "Original speichern"  — visible after G
+    private var saveImprovedButton: NSButton!   // "Verbessert speichern" — visible after G
+    private var rightButtonContainer: NSStackView!  // holds either saveButton or the dual save stack
+
+    /// Original prompt text BEFORE Gemini improvement, captured the moment the
+    /// user clicks "G". Lets us offer "Original speichern" alongside
+    /// "Verbessert speichern" without losing what was originally typed/dictated.
+    private var originalBeforeImprove: String?
+    private var isImproving = false
+
+    /// Mic pulse: red while recording, amber while transcribing.
+    private var pulseTimer: Timer?
+    private var pulseBright = false
 
     init(title: String, initialLabel: String, initialText: String, initialAlwaysOn: Bool) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 460),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         window.title = title
@@ -256,21 +275,66 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             string: "Immer mitschicken (Always-On Prefix)",
             attributes: [.foregroundColor: PBDarkTheme.textPrimary])
 
-        let ok = PBDarkTheme.makePrimaryButton(title: "Speichern", target: self, action: #selector(save))
-        ok.keyEquivalent = "\r"
+        // ── Footer buttons ──
         let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(self.cancel))
 
-        let buttonRow = NSStackView(views: [cancel, ok])
+        micButton = makeRoundActionButton(symbol: "🎤",
+            tooltip: "Aufnehmen — klicken zum Starten/Stoppen. Ergebnis wird in den Prompt-Text eingefuegt.",
+            action: #selector(toggleRecording))
+        geminiButton = makeRoundActionButton(symbol: "G",
+            tooltip: "Mit Gemini verbessern — der aktuelle Text wird durch eine bereinigte Variante ersetzt. Original bleibt erhalten und kann separat gespeichert werden.",
+            action: #selector(runGemini))
+
+        saveButton = PBDarkTheme.makePrimaryButton(title: "Speichern",
+            target: self, action: #selector(saveCurrent))
+        saveButton.keyEquivalent = "\r"
+
+        saveOriginalButton = PBDarkTheme.makeSecondaryButton(title: "Original speichern",
+            target: self, action: #selector(saveOriginal))
+        saveImprovedButton = PBDarkTheme.makePrimaryButton(title: "Verbessert speichern",
+            target: self, action: #selector(saveImproved))
+        saveImprovedButton.keyEquivalent = "\r"
+
+        // Disable mic / G when their backing services aren't available.
+        micButton.isEnabled = VoiceServiceProvider.recorderAvailable
+        geminiButton.isEnabled = VoiceServiceProvider.geminiAvailable
+
+        rightButtonContainer = NSStackView(views: [saveButton])
+        rightButtonContainer.orientation = .vertical
+        rightButtonContainer.alignment = .trailing
+        rightButtonContainer.spacing = 6
+
+        let centerStack = NSStackView(views: [micButton, geminiButton])
+        centerStack.orientation = .horizontal
+        centerStack.spacing = 8
+        centerStack.alignment = .centerY
+
+        // Footer layout: cancel (left) | mic+G (center) | save (right)
+        // Spacers give the center group its centered position regardless
+        // of how wide the side groups grow.
+        let leftSpacer = NSView()
+        let rightSpacer = NSView()
+        let buttonRow = NSStackView(views: [cancel, leftSpacer, centerStack, rightSpacer, rightButtonContainer])
         buttonRow.orientation = .horizontal
-        buttonRow.spacing = 8
+        buttonRow.spacing = 0
         buttonRow.alignment = .centerY
+        buttonRow.distribution = .fill
+        leftSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        rightSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        leftSpacer.widthAnchor.constraint(equalTo: rightSpacer.widthAnchor).isActive = true
+
+        // Status line for recording / Gemini progress.
+        statusLabel.font = NSFont.systemFont(ofSize: 11)
+        statusLabel.textColor = NSColor(calibratedWhite: 0.6, alpha: 1)
+        statusLabel.lineBreakMode = .byTruncatingTail
+        statusLabel.maximumNumberOfLines = 1
 
         let labelTop = NSTextField(labelWithString: "Kurzbezeichnung:")
         PBDarkTheme.styleLabel(labelTop)
         let textTop = NSTextField(labelWithString: "Prompt-Text:")
         PBDarkTheme.styleLabel(textTop)
 
-        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, buttonRow])
+        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, statusLabel, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
@@ -285,6 +349,8 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             labelField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scroll.heightAnchor.constraint(equalToConstant: 260),
             scroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            buttonRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            statusLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
         // Becoming the window's delegate is critical: without it, closing
         // the window via the red title-bar button does NOT call stopModal,
@@ -296,18 +362,52 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    deinit {
+        pulseTimer?.invalidate()
+    }
+
     // Called when the window closes via any path — red title-bar X, save,
     // cancel, Cmd+W. Guarantees that the modal session actually ends.
     func windowWillClose(_ notification: Notification) {
+        // Defensive: stop any lingering recording so we never leak the mic
+        // if the window is closed mid-recording.
+        if VoiceServiceProvider.recorder?.isRecording == true {
+            _ = VoiceServiceProvider.recorder?.stop()
+        }
+        pulseTimer?.invalidate()
         NSApp.stopModal(withCode: result != nil ? .OK : .cancel)
     }
 
-    @objc private func save() {
-        let label = labelField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty else { return }
+    // MARK: - Save paths
+
+    @objc private func saveCurrent() { commitSave(text: textView.string) }
+    @objc private func saveImproved() { commitSave(text: textView.string) }
+    @objc private func saveOriginal() {
+        // Persist what the user originally typed/dictated, even though the
+        // textbox now shows the Gemini-improved version.
+        commitSave(text: originalBeforeImprove ?? textView.string)
+    }
+
+    private func commitSave(text: String) {
+        var label = labelField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Auto-derive a label from the first few words when the user only
+        // dictated text and never typed a short label themselves. Mirrors
+        // the Windows-side AutoLabelFromText behaviour.
+        if label.isEmpty && !safeText.isEmpty {
+            label = Self.autoLabelFromText(safeText)
+            labelField.stringValue = label
+        }
+        guard !label.isEmpty else {
+            showStatus("Bitte eine Kurzbezeichnung eintragen oder Prompt-Text einsprechen.")
+            window?.makeFirstResponder(labelField)
+            return
+        }
+
         result = PBPromptEditResult(
             shortLabel: label,
-            originalText: textView.string,
+            originalText: text,
             isAlwaysOn: alwaysOnCheckbox.state == .on)
         window?.close()    // windowWillClose handles stopModal
     }
@@ -315,6 +415,214 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     @objc private func cancel() {
         result = nil
         window?.close()    // windowWillClose handles stopModal
+    }
+
+    /// Builds a short label from the first 7 non-empty words of the prompt
+    /// text, hard-capped at 40 characters. Falls back to "Prompt" if the
+    /// text is unusable.
+    private static func autoLabelFromText(_ text: String) -> String {
+        let words = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard !words.isEmpty else { return "Prompt" }
+        var sb = ""
+        for w in words.prefix(7) {
+            if !sb.isEmpty { sb += " " }
+            sb += w
+            if sb.count >= 40 { break }
+        }
+        let trimmed = sb.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!? "))
+        return trimmed.isEmpty ? "Prompt" : trimmed
+    }
+
+    // MARK: - Mic recording
+
+    @objc private func toggleRecording() {
+        guard let recorder = VoiceServiceProvider.recorder,
+              let groq = VoiceServiceProvider.groq else {
+            showStatus("Mic-Aufnahme nicht verfuegbar (kein Groq-Key in .env).")
+            return
+        }
+
+        if recorder.isRecording {
+            // ── Stop & transcribe ──
+            stopPulse()
+            setMicButtonTinted(true)
+            showStatus("Transkribiere...")
+            guard let url = recorder.stop() else {
+                showStatus("Aufnahme leer.")
+                setMicButtonTinted(false)
+                return
+            }
+            groq.transcribe(fileURL: url) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    switch result {
+                    case .success(let text):
+                        self.appendToPromptText(text)
+                        self.showStatus("\(text.count) Zeichen eingefuegt.")
+                    case .failure(let err):
+                        self.showStatus("Transkription fehlgeschlagen: \(err.localizedDescription)")
+                    }
+                    self.setMicButtonTinted(false)
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+            return
+        }
+
+        // ── Start ──
+        do {
+            try recorder.start()
+            startPulse()
+            showStatus("Aufnahme laeuft. Klick erneut auf Mic zum Stoppen.")
+        } catch {
+            showStatus("Aufnahme konnte nicht gestartet werden: \(error.localizedDescription)")
+            setMicButtonTinted(false)
+        }
+    }
+
+    private func appendToPromptText(_ newText: String) {
+        let trimmed = newText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        var current = textView.string
+        if !current.isEmpty,
+           !current.hasSuffix(" "), !current.hasSuffix("\n") {
+            current += " "
+        }
+        textView.string = current + trimmed
+        // Scroll caret to the end so the user sees the new text land.
+        let len = textView.string.count
+        textView.setSelectedRange(NSRange(location: len, length: 0))
+        textView.scrollRangeToVisible(NSRange(location: len, length: 0))
+    }
+
+    private func startPulse() {
+        pulseTimer?.invalidate()
+        pulseBright = false
+        setMicButtonRecording(bright: false)
+        pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.pulseBright.toggle()
+            self.setMicButtonRecording(bright: self.pulseBright)
+        }
+    }
+
+    private func stopPulse() {
+        pulseTimer?.invalidate()
+        pulseTimer = nil
+        pulseBright = false
+    }
+
+    private func setMicButtonRecording(bright: Bool) {
+        let red    = NSColor(calibratedRed: 0.90, green: 0.22, blue: 0.21, alpha: 1)
+        let bright1 = NSColor(calibratedRed: 1.00, green: 0.40, blue: 0.40, alpha: 1)
+        micButton.layer?.backgroundColor = (bright ? bright1 : red).cgColor
+    }
+
+    /// Amber = transcription in progress. Idle = neutral grey.
+    private func setMicButtonTinted(_ transcribing: Bool) {
+        if transcribing {
+            micButton.layer?.backgroundColor = NSColor(calibratedRed: 0.72, green: 0.53, blue: 0.04, alpha: 1).cgColor
+        } else {
+            micButton.layer?.backgroundColor = NSColor(calibratedWhite: 0.24, alpha: 1).cgColor
+        }
+    }
+
+    // MARK: - Gemini correction
+
+    @objc private func runGemini() {
+        guard !isImproving else { return }
+        guard let gemini = VoiceServiceProvider.gemini else {
+            showStatus("Gemini nicht verfuegbar (kein Gemini-Key in .env).")
+            return
+        }
+        let current = textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else {
+            showStatus("Kein Text zum Verbessern.")
+            return
+        }
+
+        isImproving = true
+        geminiButton.isEnabled = false
+        micButton.isEnabled = false
+        showStatus("Verbessere mit Gemini...")
+        gemini.correctText(current) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isImproving = false
+                self.geminiButton.isEnabled = VoiceServiceProvider.geminiAvailable
+                self.micButton.isEnabled = VoiceServiceProvider.recorderAvailable
+
+                switch result {
+                case .success(let improved):
+                    let trimmed = improved.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else {
+                        self.showStatus("Gemini lieferte leere Antwort.")
+                        return
+                    }
+                    // Capture the user's original ONLY on the first improvement
+                    // so multiple back-to-back G clicks don't lose the very
+                    // first text.
+                    if self.originalBeforeImprove == nil {
+                        self.originalBeforeImprove = current
+                    }
+                    self.textView.string = trimmed
+                    self.showImprovedFooter()
+                    self.showStatus("Verbessert (\(trimmed.count) Zeichen). Original im Hintergrund erhalten.")
+                case .failure(let err):
+                    self.showStatus("Gemini-Verbesserung fehlgeschlagen: \(err.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Replaces the single "Speichern" button with a vertical stack
+    /// containing "Verbessert speichern" (primary) and "Original speichern"
+    /// (secondary). Window grows by 22 pt to keep the footer airy.
+    private func showImprovedFooter() {
+        rightButtonContainer.arrangedSubviews.forEach {
+            rightButtonContainer.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        rightButtonContainer.addArrangedSubview(saveImprovedButton)
+        rightButtonContainer.addArrangedSubview(saveOriginalButton)
+        // Make both buttons the same width so they read as a coherent pair.
+        saveOriginalButton.widthAnchor.constraint(
+            equalTo: saveImprovedButton.widthAnchor).isActive = true
+        if let w = window {
+            var f = w.frame
+            f.size.height += 22
+            f.origin.y -= 22 // anchor to top edge so buttons appear closer to mouse
+            w.setFrame(f, display: true, animate: false)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func showStatus(_ text: String) {
+        statusLabel.stringValue = text
+    }
+
+    /// 40x40 circular button with a single glyph, matching the Windows
+    /// PromptEditDialog ActionRound style.
+    private func makeRoundActionButton(symbol: String, tooltip: String, action: Selector) -> NSButton {
+        let btn = NSButton(title: "", target: self, action: action)
+        btn.isBordered = false
+        btn.toolTip = tooltip
+        btn.setButtonType(.momentaryChange)
+        btn.wantsLayer = true
+        btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.24, alpha: 1).cgColor
+        btn.layer?.borderColor = NSColor(calibratedWhite: 0.46, alpha: 1).cgColor
+        btn.layer?.borderWidth = 1
+        btn.layer?.cornerRadius = 20
+        btn.attributedTitle = NSAttributedString(
+            string: symbol,
+            attributes: [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 16, weight: .semibold)
+            ])
+        btn.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        btn.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        return btn
     }
 
     static func ask(parent: NSWindow?, title: String,

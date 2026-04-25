@@ -112,6 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             geminiEnabled = false
         }
 
+        // Share the audio/STT/Gemini stack with secondary surfaces
+        // (e.g. PBPromptEditDialog's mic + G buttons). Single AudioRecorder
+        // instance is critical — only one process can hold the microphone.
+        VoiceServiceProvider.initialize(
+            recorder: audioRecorder,
+            groq: groqClient,
+            gemini: geminiClient)
+
         // Create overlay panel
         panel = OverlayPanel()
         panel.setGeminiEnabled(geminiEnabled)

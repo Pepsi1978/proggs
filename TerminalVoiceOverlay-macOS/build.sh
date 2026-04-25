@@ -30,6 +30,7 @@ SWIFT_FILES=(
     "$SRC_DIR/PromptBoardModels.swift"
     "$SRC_DIR/PromptBoardStore.swift"
     "$SRC_DIR/AlwaysOnPrefixService.swift"
+    "$SRC_DIR/VoiceServiceProvider.swift"
     "$SRC_DIR/PromptBoardDialogs.swift"
     "$SRC_DIR/GoogleDriveBackupService.swift"
     "$SRC_DIR/PromptBoardPanel.swift"
