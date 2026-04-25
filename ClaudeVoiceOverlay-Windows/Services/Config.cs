@@ -60,7 +60,8 @@ namespace ClaudeVoiceOverlay.Services
             {
                 throw new InvalidOperationException(
                     $"{key} nicht gefunden. Bitte .env Datei anlegen.\n" +
-                    "Suchpfade:\n" +
+                    "Suchpfade (in dieser Reihenfolge):\n" +
+                    "  - %USERPROFILE%\\SK\\VoiceOverlays\\.env  (zentrale SK-Quelle)\n" +
                     "  - Neben der .exe\n" +
                     "  - %USERPROFILE%\\.env\n" +
                     "  - %APPDATA%\\ClaudeVoiceOverlay\\.env");
