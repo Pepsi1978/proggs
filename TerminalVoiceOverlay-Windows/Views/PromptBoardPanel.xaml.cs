@@ -556,21 +556,25 @@ public partial class PromptBoardPanel : Window
             PromptInsertRequested?.Invoke(prompt.EffectiveText());
         };
 
-        // ── Drag source: mousedown arms, threshold-move triggers DoDragDrop ──
-        row.MouseLeftButtonDown += (_, e) =>
+        // ── Drag source: PreviewMouseLeftButtonDown arms the drag, PreviewMouseMove
+        // triggers DoDragDrop once the cursor moves past the threshold. We MUST
+        // use the Preview (tunneling) variants here because a child WPF Button
+        // (insert label, ✎, ✕, checkbox) absorbs MouseLeftButtonDown / MouseMove
+        // by marking them Handled — so the bubbling-phase handler on the row
+        // would never fire when the user grabs the row by its title text. ──
+        row.PreviewMouseLeftButtonDown += (_, e) =>
         {
             _dragArmStartPoint = e.GetPosition(this);
             _dragArmedRowId    = prompt.Id;
         };
-        row.MouseMove += (s, e) =>
+        row.PreviewMouseMove += (s, e) =>
         {
             if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
             if (_dragArmedRowId != prompt.Id) return;
             var current = e.GetPosition(this);
-            // Only start a drag once the user has moved far enough that they
-            // clearly meant "drag", not "click to insert". 6 pixels matches
-            // the WPF default SystemParameters.MinimumHorizontal/VerticalDragDistance
-            // ballpark and feels right on a 380-pixel-wide panel.
+            // 6-pixel threshold (squared = 36): less than that is treated as
+            // a click, more than that is a drag. Matches the WPF default
+            // SystemParameters.MinimumHorizontalDragDistance ballpark.
             var dx = current.X - _dragArmStartPoint.X;
             var dy = current.Y - _dragArmStartPoint.Y;
             if (dx * dx + dy * dy < 36) return;
