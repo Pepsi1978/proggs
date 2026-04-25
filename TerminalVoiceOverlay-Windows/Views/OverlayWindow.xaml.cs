@@ -232,6 +232,10 @@ namespace TerminalVoiceOverlay.Views
                     {
                         Left = _dragStartLeft + (movePt.X - _dragStartCursorX) / _dragDpiX;
                         Top  = _dragStartTop  + (movePt.Y - _dragStartCursorY) / _dragDpiY;
+                        // Keep the PromptBoard side panel glued to the
+                        // pillar's left edge during right-click drag.
+                        if (_promptPanel is not null && _promptPanel.IsVisible)
+                            PositionPromptPanel();
                     }
                     break;
 
@@ -256,7 +260,11 @@ namespace TerminalVoiceOverlay.Views
             {
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
                 Left = workArea.X + workArea.Width - Width - 23;
-                Top  = workArea.Y + (workArea.Height - Height) / 2;
+                // User-tuned default offset: 1,5 cm up (-57 px) then
+                // 0,3 cm down (+11 px) → -46 px from vertical center.
+                // The saved-position path above still wins once the
+                // user drags the pillar manually.
+                Top  = workArea.Y + (workArea.Height - Height) / 2 - 46;
             }
 
             if (!IsVisible)

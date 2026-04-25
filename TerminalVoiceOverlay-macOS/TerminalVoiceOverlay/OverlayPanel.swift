@@ -163,6 +163,10 @@ final class OverlayPanel: NSPanel {
     var onEnterClicked: (() -> Void)?
     var onCopyClicked: (() -> Void)?
     var onPasteClicked: (() -> Void)?
+    /// Fired on every right-click drag step so anything docked to this
+    /// panel (the PromptBoard side panel) can keep up. Also fired on
+    /// drag-end so the final position is in sync.
+    var onPillarMoved: (() -> Void)?
 
     init() {
         let btnSize: CGFloat = 40
@@ -193,10 +197,15 @@ final class OverlayPanel: NSPanel {
         pasteButton = RoundButton(label: "", color: .btnPaste)
         pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
 
-        // Calculate screen position (right edge, vertically centered)
+        // Calculate screen position (right edge, vertically near top).
+        // Default Y is 32 px below the top edge — user-tuned position:
+        // 1,5 cm higher than the previous 78 px, then 0,3 cm lower
+        // again, so net offset = -57 + 11 ≈ -46 px → 78-46 = 32 px.
+        // Saved position via dragging still wins below; this is just
+        // the first-launch fallback.
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
         var x = screenFrame.maxX - panelWidth - 30
-        var y = screenFrame.maxY - panelHeight - 78
+        var y = screenFrame.maxY - panelHeight - 32
 
         // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
@@ -228,7 +237,9 @@ final class OverlayPanel: NSPanel {
         self.contentView?.wantsLayer = true
         self.contentView?.layer?.cornerRadius = panelWidth / 2
         self.contentView?.layer?.masksToBounds = true
-        self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
+        // alpha 0.78 matches the PromptBoard panel (#C71E1E1E on Windows)
+        // so the two floating windows share the same translucency level.
+        self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.78).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
         // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
@@ -451,11 +462,16 @@ final class OverlayPanel: NSPanel {
             let dx = mouseLocation.x - dragStartMouseLocation.x
             let dy = mouseLocation.y - dragStartMouseLocation.y
             setFrameOrigin(NSPoint(x: dragStartPanelOrigin.x + dx, y: dragStartPanelOrigin.y + dy))
+            // Re-dock the PromptBoard live during drag so it stays
+            // glued to the pillar instead of being left behind at its
+            // initial position.
+            onPillarMoved?()
             return true
         case .rightMouseUp:
             if isDragging {
                 isDragging = false
                 savePosition()
+                onPillarMoved?()
                 return true
             }
         default:

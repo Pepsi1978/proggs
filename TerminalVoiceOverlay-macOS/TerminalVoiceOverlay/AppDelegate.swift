@@ -130,6 +130,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.clearLine()
         }
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
+        panel.onPillarMoved = { [weak self] in
+            // Keep the PromptBoard side panel docked to the pillar's
+            // left edge as the user right-click drags it around.
+            guard let self = self else { return }
+            self.promptBoardPanel?.dock(rightOf: self.panel)
+        }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
