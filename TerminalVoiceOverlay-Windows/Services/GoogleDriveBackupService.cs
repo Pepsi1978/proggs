@@ -24,36 +24,38 @@ namespace TerminalVoiceOverlay.Services;
 /// Port of the PromptBoard Google Drive backup service. Stores a single
 /// <c>promptboard-backup.json</c> in the hidden <c>appDataFolder</c> so
 /// the file is invisible in normal Drive and scoped to this app's
-/// OAuth client. Refresh token is persisted in AppSettings.
+/// OAuth client. Client ID/Secret/Refresh token are persisted in
+/// $HOME/SK/PromptBoard/.env via <see cref="PromptBoardSecretStore"/>.
 /// </summary>
 public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
 {
     private const string BackupFileName = "promptboard-backup.json";
     private const string AppDataFolderSpace = "appDataFolder";
 
-    private readonly IAppSettingsRepository _settings;
+    private readonly PromptBoardSecretStore _secrets;
     private readonly ILogger<GoogleDriveBackupService> _logger;
     private readonly HttpClient _http = new();
 
     public GoogleDriveBackupService(
-        IAppSettingsRepository settings,
+        PromptBoardSecretStore secrets,
         ILogger<GoogleDriveBackupService> logger)
     {
-        _settings = settings;
+        _secrets = secrets;
         _logger = logger;
     }
 
-    public async Task<bool> IsAuthenticatedAsync(CancellationToken ct = default)
+    public Task<bool> IsAuthenticatedAsync(CancellationToken ct = default)
     {
-        var s = await _settings.GetAsync(ct);
-        return !string.IsNullOrWhiteSpace(s.GoogleClientId)
-            && !string.IsNullOrWhiteSpace(s.GoogleClientSecret)
-            && !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken);
+        var s = _secrets.Load();
+        var ok = !string.IsNullOrWhiteSpace(s.GoogleClientId)
+              && !string.IsNullOrWhiteSpace(s.GoogleClientSecret)
+              && !string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken);
+        return Task.FromResult(ok);
     }
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        var s = await _settings.GetAsync(ct);
+        var s = _secrets.Load();
         var (clientId, clientSecret) = RequireCreds(s);
         var flow = BuildFlow(clientId, clientSecret);
         var receiver = new LocalServerCodeReceiver();
@@ -67,19 +69,25 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
                 "Google hat keinen Refresh-Token zurueckgegeben. Widerrufe die App-Berechtigung bei myaccount.google.com und versuche es erneut.");
         }
 
-        s.GoogleOAuthRefreshToken = credential.Token.RefreshToken;
-        s.GoogleAccountEmail = await FetchEmailAsync(credential.Token.AccessToken, ct);
-        await _settings.UpdateAsync(s, ct);
+        var email = await FetchEmailAsync(credential.Token.AccessToken, ct);
+        _secrets.Save(s with
+        {
+            GoogleOAuthRefreshToken = credential.Token.RefreshToken,
+            GoogleAccountEmail = email,
+        });
 
-        _logger.LogInformation("Google Drive connected for {Email}", s.GoogleAccountEmail);
+        _logger.LogInformation("Google Drive connected for {Email}", email);
     }
 
-    public async Task SignOutAsync(CancellationToken ct = default)
+    public Task SignOutAsync(CancellationToken ct = default)
     {
-        var s = await _settings.GetAsync(ct);
-        s.GoogleOAuthRefreshToken = null;
-        s.GoogleAccountEmail = null;
-        await _settings.UpdateAsync(s, ct);
+        var s = _secrets.Load();
+        _secrets.Save(s with
+        {
+            GoogleOAuthRefreshToken = null,
+            GoogleAccountEmail = null,
+        });
+        return Task.CompletedTask;
     }
 
     public async Task UploadAsync(string json, CancellationToken ct = default)
@@ -138,10 +146,9 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
-    public async Task<string?> GetAccountEmailAsync(CancellationToken ct = default)
+    public Task<string?> GetAccountEmailAsync(CancellationToken ct = default)
     {
-        var s = await _settings.GetAsync(ct);
-        return s.GoogleAccountEmail;
+        return Task.FromResult(_secrets.Load().GoogleAccountEmail);
     }
 
     // ── internals ─────────────────────────────────
@@ -156,7 +163,7 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
 
     private async Task<DriveService> BuildDriveAsync(CancellationToken ct)
     {
-        var s = await _settings.GetAsync(ct);
+        var s = _secrets.Load();
         var (id, secret) = RequireCreds(s);
         if (string.IsNullOrWhiteSpace(s.GoogleOAuthRefreshToken))
             throw new GoogleDriveNotConfiguredException();
@@ -216,7 +223,7 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         }
     }
 
-    private static (string id, string secret) RequireCreds(AppSettings s)
+    private static (string id, string secret) RequireCreds(Secrets s)
     {
         if (string.IsNullOrWhiteSpace(s.GoogleClientId) || string.IsNullOrWhiteSpace(s.GoogleClientSecret))
             throw new GoogleDriveNotConfiguredException();

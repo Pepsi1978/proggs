@@ -975,13 +975,13 @@ public partial class PromptBoardPanel : Window
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
-            // Re-fetch so we keep any refresh-token/email written during Connect.
+            // Google OAuth fields (ClientId, Secret, RefreshToken, AccountEmail)
+            // are persisted by the SettingsDialog directly into the SK file,
+            // so we only mirror the non-secret half back to the DB here.
             var latest = await repo.GetAsync();
             latest.GroqApiKey = result.GroqApiKey;
             latest.GeminiApiKey = result.GeminiApiKey;
             latest.SeparatorTemplate = result.SeparatorTemplate;
-            latest.GoogleClientId = result.GoogleClientId;
-            latest.GoogleClientSecret = result.GoogleClientSecret;
             await repo.UpdateAsync(latest);
         }
         catch (Exception ex)

@@ -57,6 +57,11 @@ public static class PromptBoardHost
             services.AddSingleton<IPromptChainBuilder, PromptChainBuilder>();
             services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();
             services.AddSingleton<IAlwaysOnPrefixService, AlwaysOnPrefixService>();
+
+            // Google OAuth secrets live in $HOME/SK/PromptBoard/.env per the
+            // secrets-in-sk-folder rule. The store is filesystem-backed and
+            // safely cached as a singleton (no DbContext to capture).
+            services.AddSingleton<PromptBoardSecretStore>();
             // GoogleDriveBackupService MUST be transient — a singleton would
             // capture the transient AppSettings repository (and its DbContext)
             // for the lifetime of the process, so freshly-saved Google client
@@ -89,6 +94,54 @@ public static class PromptBoardHost
 
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
+
+            // One-time migration: copy any Google OAuth secrets from the
+            // legacy AppSettings table into the SK file, then null them in
+            // the DB so they don't leak into the Drive backup JSON.
+            // Idempotent: skipped on subsequent runs because the SK file
+            // already holds the values.
+            MigrateGoogleSecretsToSk();
+        }
+    }
+
+    private static void MigrateGoogleSecretsToSk()
+    {
+        try
+        {
+            using var scope = _provider!.CreateScope();
+            var store = scope.ServiceProvider.GetRequiredService<PromptBoardSecretStore>();
+            if (store.HasAnyValue())
+                return; // already migrated — SK file is the source of truth
+
+            var repo = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
+            var dbSettings = repo.GetAsync().GetAwaiter().GetResult();
+            var hasDbSecrets =
+                !string.IsNullOrEmpty(dbSettings.GoogleClientId)
+                || !string.IsNullOrEmpty(dbSettings.GoogleClientSecret)
+                || !string.IsNullOrEmpty(dbSettings.GoogleOAuthRefreshToken);
+            if (!hasDbSecrets) return;
+
+            // Copy DB → SK first. Only null the DB columns once the SK
+            // write succeeded — otherwise a corrupted SK file would
+            // permanently lose the user's OAuth refresh token.
+            store.Save(new Secrets(
+                GoogleClientId:           dbSettings.GoogleClientId,
+                GoogleClientSecret:       dbSettings.GoogleClientSecret,
+                GoogleOAuthRefreshToken:  dbSettings.GoogleOAuthRefreshToken,
+                GoogleAccountEmail:       dbSettings.GoogleAccountEmail));
+
+            dbSettings.GoogleClientId = null;
+            dbSettings.GoogleClientSecret = null;
+            dbSettings.GoogleOAuthRefreshToken = null;
+            dbSettings.GoogleAccountEmail = null;
+            repo.UpdateAsync(dbSettings).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Migration is best-effort; never crash startup over it. If it
+            // fails the user will still see and edit their secrets through
+            // the settings dialog — they just won't move out of the DB
+            // until the next successful pass.
         }
     }
 

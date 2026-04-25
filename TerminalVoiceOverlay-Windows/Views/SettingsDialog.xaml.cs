@@ -13,36 +13,47 @@ namespace TerminalVoiceOverlay.Views;
 public sealed record SettingsEditResult(
     string? GroqApiKey,
     string? GeminiApiKey,
-    string SeparatorTemplate,
-    string? GoogleClientId,
-    string? GoogleClientSecret);
+    string SeparatorTemplate);
 
 public partial class SettingsDialog : Window
 {
     public SettingsEditResult? Result { get; private set; }
     private readonly AppSettings _settingsSnapshot;
+    private readonly PromptBoardSecretStore _secretStore;
 
     public SettingsDialog(AppSettings current)
     {
         InitializeComponent();
         _settingsSnapshot = current;
+        _secretStore = PromptBoardHost.Get<PromptBoardSecretStore>();
 
+        // Non-secret settings stay in the SQLite DB (they sync via Drive backup).
         GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
         GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
         SeparatorBox.Text = current.SeparatorTemplate;
-        GoogleClientIdBox.Text = current.GoogleClientId ?? string.Empty;
-        GoogleClientSecretBox.Text = current.GoogleClientSecret ?? string.Empty;
-        UpdateGoogleStatus(current.GoogleOAuthRefreshToken, current.GoogleAccountEmail);
+
+        // Google OAuth credentials live in $HOME/SK/PromptBoard/.env per
+        // secrets-in-sk-folder.md — they never enter the Drive backup JSON.
+        var secrets = _secretStore.Load();
+        GoogleClientIdBox.Text = secrets.GoogleClientId ?? string.Empty;
+        GoogleClientSecretBox.Text = secrets.GoogleClientSecret ?? string.Empty;
+        UpdateGoogleStatus(secrets.GoogleOAuthRefreshToken, secrets.GoogleAccountEmail);
 
         BtnCancel.Click += (_, _) => { Result = null; Close(); };
         BtnOk.Click += (_, _) =>
         {
+            // Persist Google secrets to the SK file. Caller (PromptBoardPanel)
+            // only handles the non-secret half via SettingsEditResult.
+            _secretStore.Save(_secretStore.Load() with
+            {
+                GoogleClientId = NullIfBlank(GoogleClientIdBox.Text),
+                GoogleClientSecret = NullIfBlank(GoogleClientSecretBox.Text),
+            });
+
             Result = new SettingsEditResult(
                 NullIfBlank(GroqKeyBox.Text),
                 NullIfBlank(GeminiKeyBox.Text),
-                SeparatorBox.Text ?? " ; ",
-                NullIfBlank(GoogleClientIdBox.Text),
-                NullIfBlank(GoogleClientSecretBox.Text));
+                SeparatorBox.Text ?? " ; ");
             Close();
         };
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();
@@ -68,7 +79,6 @@ public partial class SettingsDialog : Window
 
     private async Task ConnectGoogleAsync()
     {
-        // Persist the typed-in client credentials first — the flow needs them.
         var id = NullIfBlank(GoogleClientIdBox.Text);
         var secret = NullIfBlank(GoogleClientSecretBox.Text);
         if (id is null || secret is null)
@@ -80,22 +90,24 @@ public partial class SettingsDialog : Window
 
         try
         {
-            using var scope = PromptBoardHost.Services.CreateScope();
-            var repo = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
-            _settingsSnapshot.GoogleClientId = id;
-            _settingsSnapshot.GoogleClientSecret = secret;
-            await repo.UpdateAsync(_settingsSnapshot);
+            // Persist the typed-in client credentials to the SK file first — the
+            // OAuth flow reads them from there, not from the DB anymore.
+            _secretStore.Save(_secretStore.Load() with
+            {
+                GoogleClientId = id,
+                GoogleClientSecret = secret,
+            });
 
+            using var scope = PromptBoardHost.Services.CreateScope();
             var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
             BtnGoogleConnect.IsEnabled = false;
             BtnGoogleConnect.Content = "Oeffne Browser...";
             await drive.ConnectAsync();
 
-            // Refetch to get the email.
-            var refreshed = await repo.GetAsync();
+            // Refresh status from the SK file — ConnectAsync wrote the
+            // new refresh token + email there.
+            var refreshed = _secretStore.Load();
             UpdateGoogleStatus(refreshed.GoogleOAuthRefreshToken, refreshed.GoogleAccountEmail);
-            _settingsSnapshot.GoogleOAuthRefreshToken = refreshed.GoogleOAuthRefreshToken;
-            _settingsSnapshot.GoogleAccountEmail = refreshed.GoogleAccountEmail;
         }
         catch (Exception ex)
         {
@@ -116,8 +128,6 @@ public partial class SettingsDialog : Window
             using var scope = PromptBoardHost.Services.CreateScope();
             var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
             await drive.SignOutAsync();
-            _settingsSnapshot.GoogleOAuthRefreshToken = null;
-            _settingsSnapshot.GoogleAccountEmail = null;
             UpdateGoogleStatus(null, null);
         }
         catch (Exception ex)
