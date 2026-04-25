@@ -80,7 +80,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     init() {
-        let contentRect = NSRect(x: 0, y: 0, width: 380, height: 528)
+        // Initial height matches the Voice Overlay pillar (480 pt).
+        // dock(rightOf:) re-syncs it on demand so the two windows always
+        // share the same vertical extent — change the pillar height in
+        // OverlayPanel.swift and the panel automatically follows.
+        let contentRect = NSRect(x: 0, y: 0, width: 380, height: 480)
         super.init(
             contentRect: contentRect,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -331,11 +335,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     func dock(rightOf vto: NSWindow) {
         // Dock to the LEFT of the VTO pillar so the panel stays on-screen
-        // when the user pins the pillar to the right edge.
-        let origin = vto.frame.origin
-        let panelSize = frame.size
-        let newOrigin = NSPoint(x: origin.x - panelSize.width - 4, y: origin.y)
-        setFrame(NSRect(origin: newOrigin, size: panelSize), display: true)
+        // when the user pins the pillar to the right edge. Match the
+        // pillar's HEIGHT exactly so the two floating windows visually
+        // line up — the user asked for a uniform vertical extent so the
+        // panel doesn't look stubby next to the bar (or vice-versa).
+        // Width stays at our own value (380) — the pillar is much
+        // narrower so we don't want to inherit that.
+        let pillarFrame = vto.frame
+        let newSize = NSSize(width: frame.size.width, height: pillarFrame.size.height)
+        let newOrigin = NSPoint(x: pillarFrame.origin.x - newSize.width - 4,
+                                y: pillarFrame.origin.y)
+        setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
     }
 
     func refresh() {
