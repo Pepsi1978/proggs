@@ -219,10 +219,14 @@ public partial class PromptBoardPanel : Window
 
             // Drop target: a prompt dragged onto another category tab moves
             // the prompt into that category (CategoryId update + auto-backup).
+            // DragOver fires continuously while the cursor is over the tab —
+            // we MUST re-set e.Effects every time, otherwise WPF resets the
+            // effect to "None" on the next event tick and the drop silently
+            // becomes invalid.
             btn.AllowDrop = true;
-            btn.DragEnter += (_, e) => HighlightDropTarget(btn, catColor, e, true);
+            btn.DragOver  += (_, e) => HighlightDropTarget(btn, catColor, e, true);
             btn.DragLeave += (_, _) => HighlightDropTarget(btn, catColor, null, false);
-            btn.Drop += async (_, e) => await OnPromptDroppedOnCategoryAsync(cat.Id, btn, catColor, e);
+            btn.Drop      += async (_, e) => await OnPromptDroppedOnCategoryAsync(cat.Id, btn, catColor, e);
 
             CategoryTabs.Children.Add(btn);
         }
@@ -303,40 +307,19 @@ public partial class PromptBoardPanel : Window
     private const string PromptDragFormat = "TVO.PromptId";
 
     /// <summary>
-    /// Renders the prompt's short label as a TextBlock where the trailing
-    /// "(dd.MM.yyyy, HH:mm)" timestamp suffix gets rendered in a smaller,
-    /// dimmed font next to the main 3-word title. The split is done by
-    /// detecting the last opening parenthesis — if there's no parenthesis
-    /// the whole label is shown at the normal size.
+    /// Splits the stored short label into title text + parenthesised
+    /// timestamp suffix, e.g. "Refactor Login (25.04.2026, 16:02)" →
+    /// ("Refactor Login", "(25.04.2026, 16:02)"). Returns the whole label
+    /// as title with empty timestamp when there's no trailing parenthesis.
     /// </summary>
-    private static TextBlock BuildLabelContent(string label)
+    private static (string title, string timestamp) SplitLabel(string label)
     {
-        var tb = new TextBlock
-        {
-            VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-        };
-
         int parenIdx = label.LastIndexOf(" (", StringComparison.Ordinal);
         if (parenIdx > 0 && label.EndsWith(")", StringComparison.Ordinal))
         {
-            var head = label.Substring(0, parenIdx);
-            var tail = label.Substring(parenIdx); // includes the leading space + "(...)"
-            tb.Inlines.Add(new System.Windows.Documents.Run(head)
-            {
-                FontSize = 13,
-            });
-            tb.Inlines.Add(new System.Windows.Documents.Run(tail)
-            {
-                FontSize = 9,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
-            });
+            return (label.Substring(0, parenIdx), label.Substring(parenIdx + 1));
         }
-        else
-        {
-            tb.Inlines.Add(new System.Windows.Documents.Run(label) { FontSize = 13 });
-        }
-        return tb;
+        return (label, string.Empty);
     }
 
     /// <summary>
@@ -470,9 +453,16 @@ public partial class PromptBoardPanel : Window
             Cursor = Cursors.Hand,
         };
 
+        // 5-column layout:
+        //   [checkbox] [title (stretch)] [timestamp] [edit] [delete]
+        // Title and timestamp live in separate cells so the timestamp
+        // can sit right next to the action buttons (✎/✕) instead of
+        // hugging the title — and so it gets a proper VerticalAlignment
+        // that lines up with the icons regardless of font metrics.
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
 
@@ -486,18 +476,41 @@ public partial class PromptBoardPanel : Window
         Grid.SetColumn(checkbox, 0);
         grid.Children.Add(checkbox);
 
-        // ── Insert label (clickable button — same as before) ──
+        // Split the stored short label into "Title" + "(Timestamp)" so we
+        // can render them in their own cells with different sizes and
+        // alignments. If there's no parenthesis at the end, the whole
+        // label is treated as title.
+        var (titleText, timestampText) = SplitLabel(prompt.ShortLabel);
+
+        // ── Insert label (clickable button — title only) ──
         var insertBtn = new Button
         {
-            Content = BuildLabelContent(prompt.ShortLabel),
+            Content = titleText,
             Style = (Style)FindResource("PromptButton"),
             ToolTip = prompt.EffectiveText().Length > 500
                 ? prompt.EffectiveText().Substring(0, 500) + "..."
                 : prompt.EffectiveText(),
+            FontSize = 13,
         };
         insertBtn.Click += (_, _) => PromptInsertRequested?.Invoke(prompt.EffectiveText());
         Grid.SetColumn(insertBtn, 1);
         grid.Children.Add(insertBtn);
+
+        // ── Timestamp (small, dim, vertically centered next to icons) ──
+        if (timestampText.Length > 0)
+        {
+            var tsLabel = new TextBlock
+            {
+                Text = timestampText,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 6, 0),
+                IsHitTestVisible = false, // click should fall through to the row
+            };
+            Grid.SetColumn(tsLabel, 2);
+            grid.Children.Add(tsLabel);
+        }
 
         // ── Edit (✎) ──
         var editBtn = new Button
@@ -508,7 +521,7 @@ public partial class PromptBoardPanel : Window
         };
         editBtn.Click += async (_, _) => await EditPromptAsync(prompt);
         editBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
-        Grid.SetColumn(editBtn, 2);
+        Grid.SetColumn(editBtn, 3);
         grid.Children.Add(editBtn);
 
         // ── Delete (✕) ──
@@ -520,7 +533,7 @@ public partial class PromptBoardPanel : Window
         };
         deleteBtn.Click += async (_, _) => await DeletePromptAsync(prompt);
         deleteBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
-        Grid.SetColumn(deleteBtn, 3);
+        Grid.SetColumn(deleteBtn, 4);
         grid.Children.Add(deleteBtn);
 
         row.Child = grid;
