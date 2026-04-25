@@ -141,6 +141,8 @@
 
             <Grid Grid.Row="0" Margin="4,0,0,8">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
@@ -152,17 +154,24 @@
                            FontWeight="Bold"
                            FontSize="13"
                            VerticalAlignment="Center"/>
-                <Button Grid.Column="1"
+                <TextBlock Grid.Column="1"
+                           x:Name="SyncLabel"
+                           Text=""
+                           Foreground="#FF7F7F7F"
+                           FontSize="10"
+                           Margin="6,0,0,0"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="3"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
                         Content="+"
                         ToolTip="Neue Kategorie"/>
-                <Button Grid.Column="2"
+                <Button Grid.Column="4"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
                         Content="&#x1F4BE;"
                         ToolTip="Backup / Wiederherstellen"/>
-                <Button Grid.Column="3"
+                <Button Grid.Column="5"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
                         Content="&#x2699;"

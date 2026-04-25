@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using PromptBoard.Core.Enums;
@@ -20,17 +23,52 @@ using TerminalVoiceOverlay.Services;
 namespace TerminalVoiceOverlay.Views;
 
 /// <summary>
-/// PromptBoard side panel with full editor: add/edit/delete prompts and
-/// categories, settings dialog for API keys, JSON backup/restore. Reads
-/// and writes the shared SQLite database so changes are visible to every
-/// consumer (VTO, standalone PromptBoard.App during the transition).
+/// PromptBoard side panel: 1:1 port of the macOS TerminalVoiceOverlay PromptBoardPanel.swift.
+/// Multi-category selection, per-category row tinting, clickable always-on checkbox,
+/// whole-row click + right-click, auto-backup with debounce, sync badge.
 /// </summary>
 public partial class PromptBoardPanel : Window
 {
     public event Action<string>? PromptInsertRequested;
 
-    private Guid? _activeCategoryId;
     private List<Category> _categories = new();
+    /// <summary>
+    /// Multiple categories can be active simultaneously. Prompts from every
+    /// active category are merged and shown in one combined list, each row
+    /// tinted with its category color.
+    /// </summary>
+    private readonly HashSet<Guid> _activeCategoryIds = new();
+    private List<Prompt> _currentPrompts = new();
+
+    /// <summary>Auto-backup debounce window — many quick edits collapse into one upload.</summary>
+    private static readonly TimeSpan AutoBackupDelay = TimeSpan.FromSeconds(2);
+    private DispatcherTimer? _autoBackupTimer;
+
+    /// <summary>
+    /// Persistent record of the last successful Drive backup. macOS uses
+    /// UserDefaults; Windows uses a tiny text file alongside the SQLite
+    /// database so it survives app restarts and stays out of the DB schema.
+    /// </summary>
+    private static readonly string LastSyncFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "PromptBoard",
+        "last-sync.txt");
+
+    /// <summary>
+    /// Fixed palette: distinct color per category by index. Deterministic so
+    /// colors stay stable across renders and across app restarts.
+    /// </summary>
+    private static readonly Color[] CategoryPalette =
+    {
+        Color.FromRgb(0x4A, 0x8F, 0xFC), // blue
+        Color.FromRgb(0xF2, 0x70, 0x42), // orange
+        Color.FromRgb(0x66, 0xBA, 0x6B), // green
+        Color.FromRgb(0xAB, 0x47, 0xBC), // purple
+        Color.FromRgb(0xF2, 0xA6, 0x26), // amber
+        Color.FromRgb(0x26, 0xB7, 0xD1), // cyan
+        Color.FromRgb(0xED, 0x4D, 0x85), // pink
+        Color.FromRgb(0x78, 0x8F, 0x9C), // blue-grey
+    };
 
     public PromptBoardPanel()
     {
@@ -39,6 +77,7 @@ public partial class PromptBoardPanel : Window
         BtnAddPrompt.Click    += async (_, _) => await AddPromptAsync();
         BtnSettings.Click     += async (_, _) => await ShowSettingsAsync();
         BtnBackup.Click       += async (_, _) => await ShowBackupMenuAsync();
+        RefreshSyncLabel();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -65,66 +104,129 @@ public partial class PromptBoardPanel : Window
             _categories = new List<Category>();
         }
 
+        // Prune stale ids (a category deleted elsewhere) but keep every id the
+        // user still has active.
+        var known = _categories.Select(c => c.Id).ToHashSet();
+        _activeCategoryIds.IntersectWith(known);
+        // First-time / after-delete fallback: activate the first category so
+        // the user isn't greeted with an empty list.
+        if (_activeCategoryIds.Count == 0 && _categories.Count > 0)
+        {
+            _activeCategoryIds.Add(_categories[0].Id);
+        }
+
         RenderCategoryTabs();
 
         if (_categories.Count == 0)
         {
-            _activeCategoryId = null;
-            RenderEmptyState();
+            RenderEmptyState("Noch keine Kategorien. Klick +");
             return;
         }
 
-        if (_activeCategoryId is null || !_categories.Any(c => c.Id == _activeCategoryId))
-        {
-            _activeCategoryId = _categories[0].Id;
-        }
-
-        await LoadPromptsForActiveCategoryAsync();
+        await RenderPromptsAsync();
     }
 
-    // ──────────────── Rendering ────────────────
+    // ──────────────── Color helpers ────────────────
+
+    private Color ColorForCategory(Guid id)
+    {
+        int idx = _categories.FindIndex(c => c.Id == id);
+        if (idx < 0) idx = 0;
+        return CategoryPalette[idx % CategoryPalette.Length];
+    }
+
+    /// <summary>
+    /// Dim but clearly tinted row background — keeps the dark-panel aesthetic
+    /// so white prompt text stays legible, but lets you see each row's
+    /// category at a glance from the tinted bar.
+    /// </summary>
+    private SolidColorBrush RowBackgroundFor(Guid categoryId)
+    {
+        var c = ColorForCategory(categoryId);
+        // Blend ~30% category color over a dark base.
+        byte r = (byte)((c.R * 0.30) + (0x25 * 0.70));
+        byte g = (byte)((c.G * 0.30) + (0x25 * 0.70));
+        byte b = (byte)((c.B * 0.30) + (0x25 * 0.70));
+        return new SolidColorBrush(Color.FromRgb(r, g, b));
+    }
+
+    // ──────────────── Rendering: categories ────────────────
 
     private void RenderCategoryTabs()
     {
         CategoryTabs.Children.Clear();
         foreach (var cat in _categories)
         {
+            bool isActive = _activeCategoryIds.Contains(cat.Id);
+            var catColor = ColorForCategory(cat.Id);
+
             var btn = new Button
             {
                 Content = cat.Name,
                 Tag = cat.Id,
-                Style = (Style)FindResource(
-                    cat.Id == _activeCategoryId ? "CategoryTabActive" : "CategoryTab"),
+                Style = (Style)FindResource("CategoryTab"),
             };
+            // Override the static-style background per category. Active = full
+            // category color, inactive = the static dark grey from the style.
+            if (isActive)
+            {
+                btn.Background = new SolidColorBrush(catColor);
+                btn.FontWeight = FontWeights.Bold;
+            }
+
             btn.Click += async (_, _) =>
             {
-                _activeCategoryId = (Guid)btn.Tag;
+                // Toggle: clicking an active tab turns it off, clicking an
+                // inactive one adds it. Multiple can be active simultaneously.
+                if (_activeCategoryIds.Contains(cat.Id))
+                    _activeCategoryIds.Remove(cat.Id);
+                else
+                    _activeCategoryIds.Add(cat.Id);
                 RenderCategoryTabs();
-                await LoadPromptsForActiveCategoryAsync();
+                await RenderPromptsAsync();
             };
-            btn.MouseRightButtonUp += async (_, _) =>
-            {
-                var target = _categories.FirstOrDefault(c => c.Id == (Guid)btn.Tag);
-                if (target is not null) await ShowCategoryContextAsync(target);
-            };
+            btn.ContextMenu = BuildCategoryContextMenu(cat);
             CategoryTabs.Children.Add(btn);
         }
     }
 
-    private async Task LoadPromptsForActiveCategoryAsync()
+    private ContextMenu BuildCategoryContextMenu(Category cat)
     {
-        if (_activeCategoryId is null)
+        var menu = new ContextMenu();
+        var rename = new MenuItem { Header = "Umbenennen" };
+        rename.Click += async (_, _) => await RenameCategoryAsync(cat);
+        var del = new MenuItem { Header = "Loeschen" };
+        del.Click += async (_, _) => await DeleteCategoryAsync(cat);
+        menu.Items.Add(rename);
+        menu.Items.Add(del);
+        return menu;
+    }
+
+    // ──────────────── Rendering: prompts ────────────────
+
+    private async Task RenderPromptsAsync()
+    {
+        PromptList.Children.Clear();
+
+        if (_activeCategoryIds.Count == 0)
         {
-            RenderEmptyState();
+            _currentPrompts = new List<Prompt>();
+            RenderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.");
             return;
         }
 
-        IReadOnlyList<Prompt> prompts;
+        // Collect prompts from every active category, carrying the category id
+        // along so we can tint each row accordingly.
+        var combined = new List<(Prompt prompt, Guid catId)>();
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-            prompts = await promptRepo.GetByCategoryAsync(_activeCategoryId.Value);
+            foreach (var catId in _activeCategoryIds)
+            {
+                var prompts = await promptRepo.GetByCategoryAsync(catId);
+                foreach (var p in prompts) combined.Add((p, catId));
+            }
         }
         catch (Exception ex)
         {
@@ -133,34 +235,46 @@ public partial class PromptBoardPanel : Window
             return;
         }
 
-        PromptList.Children.Clear();
+        var sorted = combined
+            .OrderBy(t => t.prompt.SortOrder)
+            .ThenBy(t => t.prompt.ShortLabel, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        _currentPrompts = sorted.Select(t => t.prompt).ToList();
 
-        if (prompts.Count == 0)
+        if (sorted.Count == 0)
         {
-            RenderEmptyState("Keine Prompts in dieser Kategorie. Benutze + unten.");
+            RenderEmptyState("Keine Prompts in den aktiven Kategorien.");
             return;
         }
 
-        foreach (var p in prompts.OrderBy(x => x.SortOrder).ThenBy(x => x.ShortLabel))
+        foreach (var (prompt, catId) in sorted)
         {
-            PromptList.Children.Add(BuildPromptRow(p));
+            PromptList.Children.Add(BuildPromptRow(prompt, catId));
         }
     }
 
-    private Border BuildPromptRow(Prompt prompt)
+    private Border BuildPromptRow(Prompt prompt, Guid categoryId)
     {
-        var row = new Border { Style = (Style)FindResource("PromptRow") };
+        var row = new Border
+        {
+            Style = (Style)FindResource("PromptRow"),
+            Background = RowBackgroundFor(categoryId),
+            Tag = prompt.Id,
+            Cursor = Cursors.Hand,
+        };
 
         var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
 
-        var dot = PromptBoardPanelHelpers.BuildAOIndicator(prompt.IsAlwaysOn);
-        Grid.SetColumn(dot, 0);
-        grid.Children.Add(dot);
+        // ── Always-On checkbox (clickable; toggles persisted state) ──
+        var checkbox = BuildAlwaysOnCheckbox(prompt);
+        Grid.SetColumn(checkbox, 0);
+        grid.Children.Add(checkbox);
 
+        // ── Insert label (clickable button — same as before) ──
         var insertBtn = new Button
         {
             Content = prompt.ShortLabel,
@@ -173,9 +287,10 @@ public partial class PromptBoardPanel : Window
         Grid.SetColumn(insertBtn, 1);
         grid.Children.Add(insertBtn);
 
+        // ── Edit (✎) ──
         var editBtn = new Button
         {
-            Content = "✎", // pencil
+            Content = "✎",
             Style = (Style)FindResource("RowIconButton"),
             ToolTip = "Bearbeiten",
         };
@@ -183,9 +298,10 @@ public partial class PromptBoardPanel : Window
         Grid.SetColumn(editBtn, 2);
         grid.Children.Add(editBtn);
 
+        // ── Delete (✕) ──
         var deleteBtn = new Button
         {
-            Content = "✕", // cross
+            Content = "✕",
             Style = (Style)FindResource("RowIconButton"),
             ToolTip = "Loeschen",
         };
@@ -194,7 +310,104 @@ public partial class PromptBoardPanel : Window
         grid.Children.Add(deleteBtn);
 
         row.Child = grid;
+
+        // ── Whole-row click → insert (matching macOS row gesture) ──
+        // WPF Button.Click marks MouseLeftButtonUp as handled when the click
+        // lands on a child Button, so the row-level handler only fires for
+        // background clicks. No manual hit-test guard needed for left-click.
+        row.MouseLeftButtonUp += (_, e) =>
+        {
+            if (e.Handled) return;
+            PromptInsertRequested?.Invoke(prompt.EffectiveText());
+        };
+
+        // ── Whole-row right-click → open editor (same effect as ✎) ──
+        // Right-click is NOT consumed by WPF Buttons by default, so we walk
+        // the visual tree to ignore right-clicks on the row's interactive
+        // children (checkbox / ✎ / ✕).
+        row.MouseRightButtonUp += async (_, e) =>
+        {
+            if (IsOriginatedFromButton(e.OriginalSource)) return;
+            e.Handled = true;
+            await EditPromptAsync(prompt);
+        };
+
         return row;
+    }
+
+    /// <summary>
+    /// Builds a small clickable checkbox-style toggle. Yellow with a check
+    /// when the prompt is always-on, dark when it isn't. Clicking persists
+    /// the change and schedules an auto-backup.
+    /// </summary>
+    private Button BuildAlwaysOnCheckbox(Prompt prompt)
+    {
+        var checkbox = new Button
+        {
+            Width = 18,
+            Height = 18,
+            Content = prompt.IsAlwaysOn ? "✓" : "",
+            Foreground = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x1F)),
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Background = prompt.IsAlwaysOn
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00))
+                : new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D)),
+            BorderBrush = prompt.IsAlwaysOn
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00))
+                : new SolidColorBrush(Color.FromRgb(0x8C, 0x8C, 0x8C)),
+            BorderThickness = new Thickness(1.5),
+            Padding = new Thickness(0),
+            Cursor = Cursors.Hand,
+            ToolTip = prompt.IsAlwaysOn
+                ? "Immer aktiv — wird bei jedem Prompt dauerhaft eingefuegt. Klicken zum Deaktivieren."
+                : "Anhaken, damit dieser Prompt bei jedem Insert dauerhaft mitgeschickt wird.",
+            // Override the default WPF button chrome with a flat rectangle
+            // template so the checkbox is small, square and reads as a checkbox.
+            Template = (ControlTemplate)XamlReader_FlatTemplate(),
+        };
+        checkbox.Click += async (_, _) => await ToggleAlwaysOnAsync(prompt);
+        return checkbox;
+    }
+
+    /// <summary>
+    /// Reusable flat ControlTemplate for the always-on checkbox: just a
+    /// rounded border with a centered content presenter — no WPF default
+    /// chrome, hover highlight, or focus rectangle.
+    /// </summary>
+    private static object XamlReader_FlatTemplate()
+    {
+        const string xaml = @"
+<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+                 TargetType='Button'>
+    <Border Background='{TemplateBinding Background}'
+            BorderBrush='{TemplateBinding BorderBrush}'
+            BorderThickness='{TemplateBinding BorderThickness}'
+            CornerRadius='3'>
+        <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+    </Border>
+</ControlTemplate>";
+        using var sr = new System.IO.StringReader(xaml);
+        using var xr = System.Xml.XmlReader.Create(sr);
+        return System.Windows.Markup.XamlReader.Load(xr);
+    }
+
+    /// <summary>
+    /// Walks up the visual tree from a click's OriginalSource to decide
+    /// whether the click landed on (or inside) an interactive Button child
+    /// of the row. Used to filter row-level right-clicks so the ✎/✕/checkbox
+    /// keep their own behavior.
+    /// </summary>
+    private static bool IsOriginatedFromButton(object? originalSource)
+    {
+        if (originalSource is not DependencyObject node) return false;
+        DependencyObject? d = node;
+        while (d is not null)
+        {
+            if (d is Button) return true;
+            d = VisualTreeHelper.GetParent(d) ?? (d is FrameworkElement fe ? fe.Parent : null);
+        }
+        return false;
     }
 
     private void RenderEmptyState(string message = "Noch keine Kategorien. Benutze + oben.")
@@ -210,7 +423,7 @@ public partial class PromptBoardPanel : Window
         });
     }
 
-    // ──────────────── Editor actions ────────────────
+    // ──────────────── Editor actions: categories ────────────────
 
     private async Task AddCategoryAsync()
     {
@@ -233,7 +446,8 @@ public partial class PromptBoardPanel : Window
                 Type = CategoryType.Standard,
             };
             await repo.AddAsync(cat);
-            _activeCategoryId = cat.Id;
+            _activeCategoryIds.Add(cat.Id);
+            ScheduleAutoBackup();
         }
         catch (Exception ex)
         {
@@ -244,59 +458,54 @@ public partial class PromptBoardPanel : Window
         await RefreshAsync();
     }
 
-    private async Task ShowCategoryContextAsync(Category cat)
+    private async Task RenameCategoryAsync(Category cat)
     {
-        // Simple popup: rename or delete. Using a tiny menu since WPF
-        // ContextMenu + WS_EX_NOACTIVATE can misbehave.
-        var action = TextInputDialog.Ask(
-            this,
-            $"Kategorie '{cat.Name}'",
-            "Tippe R zum Umbenennen, D zum Loeschen, Enter zum Abbrechen:",
-            "");
-        if (string.IsNullOrEmpty(action)) return;
-
-        if (action.Equals("R", StringComparison.OrdinalIgnoreCase))
+        var newName = TextInputDialog.Ask(this, "Kategorie umbenennen", "Neuer Name:", cat.Name);
+        if (string.IsNullOrWhiteSpace(newName) || newName == cat.Name) return;
+        try
         {
-            var newName = TextInputDialog.Ask(this, "Kategorie umbenennen", "Neuer Name:", cat.Name);
-            if (string.IsNullOrWhiteSpace(newName) || newName == cat.Name) return;
-
-            try
-            {
-                using var scope = PromptBoardHost.Services.CreateScope();
-                var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-                cat.Name = newName;
-                await repo.UpdateAsync(cat);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            await RefreshAsync();
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            cat.Name = newName;
+            await repo.UpdateAsync(cat);
+            ScheduleAutoBackup();
         }
-        else if (action.Equals("D", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex)
         {
-            if (!ConfirmDialog.Ask(this, "Kategorie loeschen?",
-                $"Kategorie '{cat.Name}' wird mit allen enthaltenen Prompts geloescht.",
-                "Loeschen")) return;
-
-            try
-            {
-                using var scope = PromptBoardHost.Services.CreateScope();
-                var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-                await repo.DeleteAsync(cat.Id);
-                if (_activeCategoryId == cat.Id) _activeCategoryId = null;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            await RefreshAsync();
+            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        await RefreshAsync();
     }
+
+    private async Task DeleteCategoryAsync(Category cat)
+    {
+        if (!ConfirmDialog.Ask(this, "Kategorie loeschen?",
+            $"Kategorie '{cat.Name}' wird mit allen enthaltenen Prompts geloescht.",
+            "Loeschen")) return;
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            await repo.DeleteAsync(cat.Id);
+            _activeCategoryIds.Remove(cat.Id);
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        await RefreshAsync();
+    }
+
+    // ──────────────── Editor actions: prompts ────────────────
 
     private async Task AddPromptAsync()
     {
-        if (_activeCategoryId is null)
+        // New prompts land in the first active category. Fallback to the first
+        // overall category if nothing is active, refuse if there is none yet.
+        Guid? targetCatId = _activeCategoryIds.FirstOrDefault();
+        if (targetCatId == Guid.Empty) targetCatId = _categories.FirstOrDefault()?.Id;
+        if (targetCatId is null || targetCatId == Guid.Empty)
         {
             MessageBox.Show("Lege zuerst eine Kategorie an.", "PromptBoard",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -313,7 +522,7 @@ public partial class PromptBoardPanel : Window
             var prompt = new Prompt
             {
                 Id = Guid.NewGuid(),
-                CategoryId = _activeCategoryId.Value,
+                CategoryId = targetCatId.Value,
                 ShortLabel = result.ShortLabel,
                 OriginalText = result.OriginalText,
                 IsAlwaysOn = result.IsAlwaysOn,
@@ -321,13 +530,14 @@ public partial class PromptBoardPanel : Window
                 SortOrder = 0,
             };
             await repo.AddAsync(prompt);
+            ScheduleAutoBackup();
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await LoadPromptsForActiveCategoryAsync();
+        await RenderPromptsAsync();
     }
 
     private async Task EditPromptAsync(Prompt prompt)
@@ -345,13 +555,14 @@ public partial class PromptBoardPanel : Window
             prompt.OriginalText = result.OriginalText;
             prompt.IsAlwaysOn = result.IsAlwaysOn;
             await repo.UpdateAsync(prompt);
+            ScheduleAutoBackup();
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await LoadPromptsForActiveCategoryAsync();
+        await RenderPromptsAsync();
     }
 
     private async Task DeletePromptAsync(Prompt prompt)
@@ -365,13 +576,31 @@ public partial class PromptBoardPanel : Window
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
             await repo.DeleteAsync(prompt.Id);
+            ScheduleAutoBackup();
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await LoadPromptsForActiveCategoryAsync();
+        await RenderPromptsAsync();
+    }
+
+    private async Task ToggleAlwaysOnAsync(Prompt prompt)
+    {
+        prompt.IsAlwaysOn = !prompt.IsAlwaysOn;
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            await repo.UpdateAsync(prompt);
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Toggle IsAlwaysOn failed: {ex.Message}");
+        }
+        await RenderPromptsAsync();
     }
 
     // ──────────────── Settings ────────────────
@@ -398,8 +627,7 @@ public partial class PromptBoardPanel : Window
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
-            // Re-fetch so we keep any refresh-token/email that was written
-            // during the dialog (Connect flow).
+            // Re-fetch so we keep any refresh-token/email written during Connect.
             var latest = await repo.GetAsync();
             latest.GroqApiKey = result.GroqApiKey;
             latest.GeminiApiKey = result.GeminiApiKey;
@@ -414,7 +642,107 @@ public partial class PromptBoardPanel : Window
         }
     }
 
-    // ──────────────── Backup / Restore ────────────────
+    // ──────────────── Auto-backup (debounced) ────────────────
+
+    /// <summary>
+    /// Schedules a Drive backup after a short debounce window. Many quick
+    /// edits collapse into one upload. Does nothing if Drive isn't connected.
+    /// Safe to call from any mutation path.
+    /// </summary>
+    private void ScheduleAutoBackup()
+    {
+        if (_autoBackupTimer is null)
+        {
+            _autoBackupTimer = new DispatcherTimer { Interval = AutoBackupDelay };
+            _autoBackupTimer.Tick += async (_, _) =>
+            {
+                _autoBackupTimer!.Stop();
+                await RunAutoBackupIfConnectedAsync();
+            };
+        }
+        _autoBackupTimer.Stop();
+        _autoBackupTimer.Start();
+    }
+
+    /// <summary>
+    /// Silent upload — success and failure only land in the debug log,
+    /// never in a dialog. Manual "G" upload from the backup menu still
+    /// shows a confirmation message.
+    /// </summary>
+    private async Task RunAutoBackupIfConnectedAsync()
+    {
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
+            if (!await drive.IsAuthenticatedAsync())
+            {
+                Console.WriteLine("[PBPanel] auto-backup skipped (Drive not connected)");
+                return;
+            }
+            var json = await BuildBackupJsonAsync();
+            await drive.UploadAsync(json);
+            Console.WriteLine("[PBPanel] auto-backup uploaded");
+            RecordSuccessfulSync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PBPanel] auto-backup failed: {ex.Message}");
+        }
+    }
+
+    // ──────────────── Sync badge persistence ────────────────
+
+    /// <summary>
+    /// Persists "now" as the last successful Drive backup time and refreshes
+    /// the muted sync badge in the header.
+    /// </summary>
+    private void RecordSuccessfulSync()
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
+            File.WriteAllText(LastSyncFilePath,
+                DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PBPanel] write last-sync failed: {ex.Message}");
+        }
+        RefreshSyncLabel();
+    }
+
+    /// <summary>
+    /// Reads the persisted last-sync timestamp and renders it as a short
+    /// muted badge: "· sync 24.04. 22:39". Always shows date+time so freshness
+    /// is obvious right after restart. Empty when no sync has happened yet.
+    /// </summary>
+    private void RefreshSyncLabel()
+    {
+        var d = ReadLastSync();
+        if (d is null) { SyncLabel.Text = ""; return; }
+        var de = new CultureInfo("de-DE");
+        SyncLabel.Text = "· sync " + d.Value.ToLocalTime().ToString("dd.MM. HH:mm", de);
+    }
+
+    private static DateTime? ReadLastSync()
+    {
+        try
+        {
+            if (!File.Exists(LastSyncFilePath)) return null;
+            var text = File.ReadAllText(LastSyncFilePath).Trim();
+            if (DateTime.TryParse(text, CultureInfo.InvariantCulture,
+                                  DateTimeStyles.RoundtripKind, out var dt))
+                return dt;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PBPanel] read last-sync failed: {ex.Message}");
+        }
+        return null;
+    }
+
+    // ──────────────── Backup / Restore (manual) ────────────────
 
     private async Task ShowBackupMenuAsync()
     {
@@ -450,6 +778,7 @@ public partial class PromptBoardPanel : Window
             }
 
             await drive.UploadAsync(json);
+            RecordSuccessfulSync();
             var email = await drive.GetAccountEmailAsync();
             MessageBox.Show($"Backup bei Google Drive gespeichert ({email}).",
                 "PromptBoard", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -489,10 +818,15 @@ public partial class PromptBoardPanel : Window
             }
 
             if (!ConfirmDialog.Ask(this, "Google-Drive-Backup laden",
-                "Lokale Kategorien und Prompts mit gleicher ID werden ueberschrieben. Neue werden angelegt.",
+                "Lokale Eintraege mit gleicher ID werden ueberschrieben. Lokal vorhandene aber nicht im Backup enthaltene Eintraege werden geloescht.",
                 "Einspielen")) return;
 
             await ApplyBackupJsonAsync(json);
+            // Mark the remote ExportedAt as our local sync time so the launch
+            // check doesn't immediately re-restore it next start.
+            var remote = BackupExportedAtUtc(json);
+            if (remote is not null) WriteLastSync(remote.Value);
+            RefreshSyncLabel();
             MessageBox.Show("Google-Drive-Backup eingespielt.",
                 "PromptBoard", MessageBoxButton.OK, MessageBoxImage.Information);
             await RefreshAsync();
@@ -509,7 +843,13 @@ public partial class PromptBoardPanel : Window
         }
     }
 
-    private async Task<string> BuildBackupJsonAsync()
+    // ──────────────── Backup serialization ────────────────
+
+    /// <summary>
+    /// Returns a backup JSON identical in shape to the macOS one. Caller
+    /// owns the lifecycle — we only serialize and return.
+    /// </summary>
+    public static async Task<string> BuildBackupJsonAsync()
     {
         using var scope = PromptBoardHost.Services.CreateScope();
         var catRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
@@ -543,7 +883,14 @@ public partial class PromptBoardPanel : Window
         return JsonSerializer.Serialize(backup, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    private async Task ApplyBackupJsonAsync(string json)
+    /// <summary>
+    /// Applies a backup JSON as the authoritative state of the local store.
+    /// Upserts everything the backup contains AND deletes any local prompt or
+    /// category whose id is NOT in the backup. Without the delete pass a row
+    /// removed on another machine would silently re-appear after restore.
+    /// Static so it can run at app launch before the panel is created.
+    /// </summary>
+    public static async Task ApplyBackupJsonAsync(string json)
     {
         var backup = JsonSerializer.Deserialize<BackupData>(json)
             ?? throw new InvalidOperationException("Backup-Datei konnte nicht gelesen werden.");
@@ -552,10 +899,12 @@ public partial class PromptBoardPanel : Window
         var catRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
         var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
 
+        // Upsert categories from the backup.
         var existingCats = (await catRepo.GetAllAsync()).ToDictionary(c => c.Id);
-
+        var remoteCategoryIds = new HashSet<Guid>();
         foreach (var c in backup.Categories)
         {
+            remoteCategoryIds.Add(c.Id);
             var entity = new Category
             {
                 Id = c.Id, Name = c.Name, SortOrder = c.SortOrder,
@@ -568,15 +917,17 @@ public partial class PromptBoardPanel : Window
                 await catRepo.AddAsync(entity);
         }
 
-        var existingPromptIds = new HashSet<Guid>();
-        foreach (var c in backup.Categories)
+        // Upsert prompts from the backup.
+        var existingPromptIds = new Dictionary<Guid, Prompt>();
+        foreach (var c in await catRepo.GetAllAsync())
         {
             var ps = await promptRepo.GetByCategoryAsync(c.Id);
-            foreach (var p in ps) existingPromptIds.Add(p.Id);
+            foreach (var p in ps) existingPromptIds[p.Id] = p;
         }
-
+        var remotePromptIds = new HashSet<Guid>();
         foreach (var p in backup.Prompts)
         {
+            remotePromptIds.Add(p.Id);
             var entity = new Prompt
             {
                 Id = p.Id, CategoryId = p.CategoryId,
@@ -585,12 +936,65 @@ public partial class PromptBoardPanel : Window
                 ActiveVersion = (PromptVersion)p.ActiveVersion,
                 IsAlwaysOn = p.IsAlwaysOn, SortOrder = p.SortOrder,
             };
-            if (existingPromptIds.Contains(p.Id))
+            if (existingPromptIds.ContainsKey(p.Id))
                 await promptRepo.UpdateAsync(entity);
             else
                 await promptRepo.AddAsync(entity);
         }
+
+        // Delete local rows that aren't in the authoritative backup. Prompts
+        // first because they reference categories.
+        foreach (var (id, _) in existingPromptIds)
+        {
+            if (!remotePromptIds.Contains(id))
+            {
+                try { await promptRepo.DeleteAsync(id); }
+                catch (Exception ex) { Console.WriteLine($"[PBPanel] delete prompt {id} failed: {ex.Message}"); }
+            }
+        }
+        foreach (var c in existingCats.Values)
+        {
+            if (!remoteCategoryIds.Contains(c.Id))
+            {
+                try { await catRepo.DeleteAsync(c.Id); }
+                catch (Exception ex) { Console.WriteLine($"[PBPanel] delete category {c.Id} failed: {ex.Message}"); }
+            }
+        }
     }
+
+    /// <summary>
+    /// Returns the backup's <c>ExportedAt</c> field as UTC, or null if the
+    /// JSON is missing it. Used by the launch-time auto-restore to decide
+    /// whether the remote backup is newer than the local sync mark.
+    /// </summary>
+    public static DateTime? BackupExportedAtUtc(string json)
+    {
+        try
+        {
+            var d = JsonSerializer.Deserialize<BackupData>(json);
+            if (d is null) return null;
+            // ExportedAt is serialized as a UTC ISO string by JsonSerializer,
+            // but if it round-tripped as Local we still treat it as UTC.
+            return DateTime.SpecifyKind(d.ExportedAt, DateTimeKind.Utc);
+        }
+        catch { return null; }
+    }
+
+    public static void WriteLastSync(DateTime utc)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LastSyncFilePath)!);
+            File.WriteAllText(LastSyncFilePath,
+                utc.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PBPanel] write last-sync failed: {ex.Message}");
+        }
+    }
+
+    public static DateTime? ReadLastSyncUtc() => ReadLastSync()?.ToUniversalTime();
 
     private async Task ExportAsync()
     {
@@ -626,7 +1030,7 @@ public partial class PromptBoardPanel : Window
         if (dlg.ShowDialog(this) != true) return;
 
         if (!ConfirmDialog.Ask(this, "Import bestaetigen",
-            "Vorhandene Kategorien und Prompts mit gleicher ID werden ueberschrieben. Neue werden angelegt.",
+            "Vorhandene Eintraege mit gleicher ID werden ueberschrieben. Lokal vorhandene aber nicht im Backup enthaltene Eintraege werden geloescht.",
             "Importieren")) return;
 
         try
@@ -674,18 +1078,4 @@ public partial class PromptBoardPanel : Window
         public bool IsAlwaysOn { get; set; }
         public int SortOrder { get; set; }
     }
-}
-
-internal static class PromptBoardPanelHelpers
-{
-    public static System.Windows.Shapes.Ellipse BuildAOIndicator(bool isAlwaysOn) => new()
-    {
-        Width = 8,
-        Height = 8,
-        VerticalAlignment = VerticalAlignment.Center,
-        HorizontalAlignment = HorizontalAlignment.Center,
-        Fill = isAlwaysOn
-            ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00))
-            : new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3A)),
-    };
 }

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using PromptBoard.Core.Services;
 using TerminalVoiceOverlay.Services;
 using TerminalVoiceOverlay.Views;
 using Application = System.Windows.Application;
@@ -136,6 +138,11 @@ namespace TerminalVoiceOverlay
             {
                 PromptBoardHost.Initialize();
                 Console.WriteLine($"PromptBoard DB: {PromptBoardHost.DbPath}");
+                // Fire-and-forget: pull the latest Drive backup and apply it
+                // if the remote is newer than the last local sync mark. Mirrors
+                // the macOS launch-time auto-restore. Silent on every failure
+                // path so the overlay never blocks on this.
+                _ = Task.Run(CheckForRemoteBackupOnLaunchAsync);
             }
             catch (Exception phEx)
             {
@@ -199,6 +206,58 @@ namespace TerminalVoiceOverlay
 
             _trayIcon.ContextMenuStrip = menu;
             _trayIcon.DoubleClick += (_, _) => _overlayWindow?.Show();
+        }
+
+        /// <summary>
+        /// Pulls the newest Drive backup at launch and applies it if its
+        /// <c>ExportedAt</c> is newer than the local last-sync mark — typical
+        /// case: the user edited prompts on another machine. Silent on every
+        /// failure path (Drive not connected, network off, malformed JSON).
+        /// </summary>
+        private static async Task CheckForRemoteBackupOnLaunchAsync()
+        {
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
+                if (!await drive.IsAuthenticatedAsync())
+                {
+                    Console.WriteLine("[App] launch-restore skipped (Drive not connected)");
+                    return;
+                }
+
+                var json = await drive.DownloadLatestAsync();
+                if (json is null)
+                {
+                    Console.WriteLine("[App] launch-restore: no backup on Drive yet");
+                    return;
+                }
+
+                var remote = PromptBoardPanel.BackupExportedAtUtc(json);
+                if (remote is null)
+                {
+                    Console.WriteLine("[App] launch-restore: no ExportedAt in backup");
+                    return;
+                }
+
+                var local = PromptBoardPanel.ReadLastSyncUtc() ?? DateTime.MinValue.ToUniversalTime();
+                // 2-second grace window so a backup we just uploaded ourselves
+                // doesn't trigger a self-restore race.
+                if (remote.Value > local.AddSeconds(2))
+                {
+                    await PromptBoardPanel.ApplyBackupJsonAsync(json);
+                    PromptBoardPanel.WriteLastSync(remote.Value);
+                    Console.WriteLine($"[App] launch-restore applied remote backup from {remote.Value:o}");
+                }
+                else
+                {
+                    Console.WriteLine($"[App] launch-restore: local up-to-date (remote={remote:o}, local={local:o})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[App] launch-restore failed: {ex.Message}");
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
