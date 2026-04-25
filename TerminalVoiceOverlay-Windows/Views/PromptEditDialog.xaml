@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Prompt"
-        Width="560" Height="560"
+        Width="560" Height="620"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -156,27 +156,33 @@
                         Cursor="Hand"
                         IsDefault="True"/>
 
-                <!-- Two-button save bar — only visible after Gemini produced an improvement. -->
+                <!-- Two-button save stack — only visible after Gemini produced
+                     an improvement. Stacked vertically (not side-by-side) so
+                     "Original speichern" and "Verbessert speichern" both fit
+                     in the dialog width without truncation. -->
                 <StackPanel Grid.Column="2"
                             x:Name="DualSavePanel"
-                            Orientation="Horizontal"
+                            Orientation="Vertical"
                             HorizontalAlignment="Right"
                             Visibility="Collapsed">
+                    <Button x:Name="BtnSaveImproved"
+                            Content="Verbessert speichern"
+                            Background="#FFB8860B"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Padding="14,8"
+                            FontWeight="SemiBold"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,0,0,6"
+                            Cursor="Hand"/>
                     <Button x:Name="BtnSaveOriginal"
                             Content="Original speichern"
                             Background="#FF2D2D2D"
                             Foreground="#FFEEEEEE"
                             BorderBrush="#FF777777"
                             BorderThickness="1"
-                            Padding="10,6"
-                            Margin="0,0,8,0"
-                            Cursor="Hand"/>
-                    <Button x:Name="BtnSaveImproved"
-                            Content="Verbessert speichern"
-                            Background="#FFB8860B"
-                            Foreground="White"
-                            BorderThickness="0"
-                            Padding="10,6"
+                            Padding="14,6"
+                            HorizontalAlignment="Stretch"
                             Cursor="Hand"/>
                 </StackPanel>
             </Grid>
