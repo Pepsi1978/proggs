@@ -259,12 +259,13 @@ namespace TerminalVoiceOverlay.Views
             if (!_manuallyPositioned)
             {
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
-                Left = workArea.X + workArea.Width - Width - 23;
-                // User-tuned default offset: 1,5 cm up (-57 px) then
-                // 0,3 cm down (+11 px) → -46 px from vertical center.
-                // The saved-position path above still wins once the
-                // user drags the pillar manually.
-                Top  = workArea.Y + (workArea.Height - Height) / 2 - 46;
+                // 2 mm closer to the right edge: 23 - 8 = 15 px.
+                Left = workArea.X + workArea.Width - Width - 15;
+                // User-tuned default offset history: -57 px (1,5 cm up),
+                // +11 px (0,3 cm down), +8 px (2 mm down) → -38 px from
+                // vertical center. The saved-position path above still
+                // wins once the user drags the pillar manually.
+                Top  = workArea.Y + (workArea.Height - Height) / 2 - 38;
             }
 
             if (!IsVisible)

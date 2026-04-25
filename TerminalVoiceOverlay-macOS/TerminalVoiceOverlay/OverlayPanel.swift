@@ -198,14 +198,16 @@ final class OverlayPanel: NSPanel {
         pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
 
         // Calculate screen position (right edge, vertically near top).
-        // Default Y is 32 px below the top edge — user-tuned position:
-        // 1,5 cm higher than the previous 78 px, then 0,3 cm lower
-        // again, so net offset = -57 + 11 ≈ -46 px → 78-46 = 32 px.
+        // X offset 22 px from right edge: 30 - 8 ≈ 2 mm closer to the
+        // edge per user request.
+        // Y offset 40 px from top: 32 + 8 ≈ 2 mm lower per user request.
+        // Earlier history: started at 78 px from top, then user moved
+        // it 1,5 cm up (-57), 0,3 cm down (+11), now 2 mm down (+8).
         // Saved position via dragging still wins below; this is just
         // the first-launch fallback.
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        var x = screenFrame.maxX - panelWidth - 30
-        var y = screenFrame.maxY - panelHeight - 32
+        var x = screenFrame.maxX - panelWidth - 22
+        var y = screenFrame.maxY - panelHeight - 40
 
         // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
@@ -237,9 +239,12 @@ final class OverlayPanel: NSPanel {
         self.contentView?.wantsLayer = true
         self.contentView?.layer?.cornerRadius = panelWidth / 2
         self.contentView?.layer?.masksToBounds = true
-        // alpha 0.78 matches the PromptBoard panel (#C71E1E1E on Windows)
-        // so the two floating windows share the same translucency level.
-        self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.78).cgColor
+        // Match the PromptBoard panel exactly: calibratedWhite 0.11 with
+        // alpha 0.78. Using the same colour space (genericGray vs deviceGray)
+        // and the same brightness avoids the optical "pillar looks darker"
+        // mismatch the user reported when the values differed by 1%.
+        self.contentView?.layer?.backgroundColor =
+            NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
         // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
