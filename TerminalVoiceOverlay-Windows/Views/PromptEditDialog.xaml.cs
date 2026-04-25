@@ -120,9 +120,12 @@ public partial class PromptEditDialog : Window
             return;
         }
 
-        // Append a creation timestamp once. Existing prompts that already
-        // carry a "(dd.MM.yyyy, HH:mm)" suffix keep theirs — we never
-        // overwrite the original creation time.
+        // Refresh the timestamp suffix on every save — both for new
+        // prompts and edits of existing ones. The label acts as a
+        // "last modified" indicator, so re-saving a prompt should bump
+        // it. Older behavior kept the original creation timestamp,
+        // which made it impossible to tell at a glance which prompts
+        // were recently revised.
         label = EnsureTimestampSuffix(label);
 
         Result = new PromptEditResult(label, text ?? string.Empty, AlwaysOnCheckbox.IsChecked == true);
@@ -130,20 +133,23 @@ public partial class PromptEditDialog : Window
     }
 
     /// <summary>
-    /// Adds "(dd.MM.yyyy, HH:mm)" to the end of the label if the label
-    /// doesn't already end in a parenthesised timestamp. Idempotent so
-    /// editing a prompt repeatedly never stacks multiple timestamps.
+    /// Sets a fresh "(dd.MM.yyyy, HH:mm)" suffix on the label, replacing
+    /// any previously appended timestamp in our own format. Non-timestamp
+    /// parenthesised notes the user may have typed (e.g. "(WIP)") are
+    /// left in place — only our exact format is stripped so we don't
+    /// trample on user content. Idempotent: calling multiple times only
+    /// ever leaves one timestamp, always the most recent.
     /// </summary>
     private static string EnsureTimestampSuffix(string label)
     {
-        // Tolerant match: any "(...)" at the very end, regardless of whether
-        // it's our timestamp or some other parenthesised note the user
-        // typed. We don't replace it — the user's parenthesis wins.
-        if (System.Text.RegularExpressions.Regex.IsMatch(label, @"\([^)]*\)\s*$"))
-            return label;
+        // Match exactly our own format: " (dd.MM.yyyy, HH:mm)" possibly
+        // followed by trailing whitespace. Only strip if the suffix
+        // matches this shape — anything else is user content.
+        var stripped = System.Text.RegularExpressions.Regex.Replace(
+            label, @"\s*\(\d{2}\.\d{2}\.\d{4},\s*\d{2}:\d{2}\)\s*$", "").TrimEnd();
         var stamp = DateTime.Now.ToString("dd.MM.yyyy, HH:mm",
             System.Globalization.CultureInfo.InvariantCulture);
-        return label + " (" + stamp + ")";
+        return stripped + " (" + stamp + ")";
     }
 
     /// <summary>

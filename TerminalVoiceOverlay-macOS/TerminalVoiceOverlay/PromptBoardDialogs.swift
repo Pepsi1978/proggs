@@ -451,9 +451,12 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             return
         }
 
-        // Append a creation timestamp once. Existing prompts that already
-        // carry a "(dd.MM.yyyy, HH:mm)" suffix keep theirs — we never
-        // overwrite the original creation time.
+        // Refresh the timestamp suffix on every save — both for new
+        // prompts and edits of existing ones. The label is meant as a
+        // "last modified" indicator, so re-saving a prompt should bump
+        // it. Older behavior kept the original creation timestamp,
+        // which made it impossible to tell at a glance which prompts
+        // were recently revised.
         label = Self.ensureTimestampSuffix(label)
 
         result = PBPromptEditResult(
@@ -463,21 +466,26 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         window?.close()    // windowWillClose handles stopModal
     }
 
-    /// Adds "(dd.MM.yyyy, HH:mm)" to the end of the label if the label
-    /// doesn't already end in a parenthesised note. Idempotent so editing
-    /// a prompt repeatedly never stacks multiple timestamps.
+    /// Sets a fresh "(dd.MM.yyyy, HH:mm)" suffix on the label, replacing
+    /// any previously appended timestamp in our own format. Non-timestamp
+    /// parenthesised notes the user may have typed (e.g. "(WIP)") are
+    /// left in place — only our exact format is stripped so we don't
+    /// trample on user content. Idempotent: calling multiple times only
+    /// ever leaves one timestamp, always the most recent.
     private static func ensureTimestampSuffix(_ label: String) -> String {
-        // Tolerant match: any "(...)" at the very end, regardless of whether
-        // it's our timestamp or some other parenthesised note the user
-        // typed. We don't replace it — the user's parenthesis wins.
-        if let range = label.range(of: #"\([^)]*\)\s*$"#, options: .regularExpression) {
-            _ = range  // already has a parenthesised suffix — leave it
-            return label
+        var stripped = label
+        // Match exactly our own format: " (dd.MM.yyyy, HH:mm)" possibly
+        // followed by trailing whitespace. Only strip if the suffix
+        // matches this shape — anything else is user content.
+        let pattern = #"\s*\(\d{2}\.\d{2}\.\d{4},\s*\d{2}:\d{2}\)\s*$"#
+        if let range = stripped.range(of: pattern, options: .regularExpression) {
+            stripped.removeSubrange(range)
         }
+        stripped = stripped.trimmingCharacters(in: .whitespaces)
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.dateFormat = "dd.MM.yyyy, HH:mm"
-        return label + " (" + fmt.string(from: Date()) + ")"
+        return stripped + " (" + fmt.string(from: Date()) + ")"
     }
 
     @objc private func cancel() {
