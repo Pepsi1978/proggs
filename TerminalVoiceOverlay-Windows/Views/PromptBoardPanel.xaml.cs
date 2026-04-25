@@ -44,6 +44,16 @@ public partial class PromptBoardPanel : Window
     private static readonly TimeSpan AutoBackupDelay = TimeSpan.FromSeconds(2);
     private DispatcherTimer? _autoBackupTimer;
 
+    // ── Drag-and-drop arming state ──
+    private System.Windows.Point _dragArmStartPoint;
+    private Guid? _dragArmedRowId;
+    /// <summary>
+    /// Set when DoDragDrop just ran for a given row; the subsequent
+    /// MouseLeftButtonUp on the same row must NOT also insert the prompt.
+    /// Cleared on the very next click.
+    /// </summary>
+    private Guid? _dragJustHappenedForRowId;
+
     /// <summary>
     /// Persistent record of the last successful Drive backup. macOS uses
     /// UserDefaults; Windows uses a tiny text file alongside the SQLite
@@ -186,9 +196,88 @@ public partial class PromptBoardPanel : Window
                 await RenderPromptsAsync();
             };
             btn.ContextMenu = BuildCategoryContextMenu(cat);
+
+            // Drop target: a prompt dragged onto another category tab moves
+            // the prompt into that category (CategoryId update + auto-backup).
+            btn.AllowDrop = true;
+            btn.DragEnter += (_, e) => HighlightDropTarget(btn, catColor, e, true);
+            btn.DragLeave += (_, _) => HighlightDropTarget(btn, catColor, null, false);
+            btn.Drop += async (_, e) => await OnPromptDroppedOnCategoryAsync(cat.Id, btn, catColor, e);
+
             CategoryTabs.Children.Add(btn);
         }
     }
+
+    /// <summary>
+    /// Visual feedback while a prompt drag hovers over a category tab —
+    /// brightens the tab regardless of active state so the user can tell
+    /// where the drop will land. <paramref name="enter"/>=false restores
+    /// the resting style.
+    /// </summary>
+    private void HighlightDropTarget(System.Windows.Controls.Button btn, Color catColor,
+                                     System.Windows.DragEventArgs? e, bool enter)
+    {
+        if (e is not null)
+        {
+            // Only react if the drag actually carries a prompt id — otherwise
+            // (e.g. a stray text drag) leave the tab alone.
+            e.Effects = e.Data.GetDataPresent(PromptDragFormat)
+                ? System.Windows.DragDropEffects.Move
+                : System.Windows.DragDropEffects.None;
+            e.Handled = true;
+        }
+        if (enter)
+        {
+            btn.Background = new SolidColorBrush(Color.FromArgb(0xFF,
+                (byte)Math.Min(255, catColor.R + 40),
+                (byte)Math.Min(255, catColor.G + 40),
+                (byte)Math.Min(255, catColor.B + 40)));
+        }
+        else
+        {
+            // Restore by re-rendering the entire tab row — cheaper than
+            // unwinding the various overrides we may have applied (background,
+            // FontWeight, etc.) and guarantees identical visuals to a fresh
+            // render.
+            RenderCategoryTabs();
+        }
+    }
+
+    private async Task OnPromptDroppedOnCategoryAsync(Guid targetCategoryId,
+        System.Windows.Controls.Button btn, Color catColor, System.Windows.DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(PromptDragFormat)) return;
+        if (e.Data.GetData(PromptDragFormat) is not string idStr ||
+            !Guid.TryParse(idStr, out var promptId)) return;
+
+        var prompt = _currentPrompts.FirstOrDefault(p => p.Id == promptId);
+        if (prompt is null) return;
+        if (prompt.CategoryId == targetCategoryId)
+        {
+            // Same-category drop is a no-op. Just refresh visuals.
+            RenderCategoryTabs();
+            return;
+        }
+
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            prompt.CategoryId = targetCategoryId;
+            await repo.UpdateAsync(prompt);
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Verschieben fehlgeschlagen: {ex.Message}",
+                "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        await RefreshAsync();
+    }
+
+    /// <summary>Custom DataObject format for a prompt drag — id as string.</summary>
+    private const string PromptDragFormat = "TVO.PromptId";
 
     private ContextMenu BuildCategoryContextMenu(Category cat)
     {
@@ -325,7 +414,47 @@ public partial class PromptBoardPanel : Window
         row.MouseLeftButtonUp += (_, e) =>
         {
             if (e.Handled) return;
+            // If a drag was just kicked off, the LeftButtonUp comes after
+            // DoDragDrop has already returned — _dragArmedRowId tracks that
+            // case so we don't ALSO insert the prompt on drop.
+            if (_dragJustHappenedForRowId == prompt.Id)
+            {
+                _dragJustHappenedForRowId = null;
+                return;
+            }
             PromptInsertRequested?.Invoke(prompt.EffectiveText());
+        };
+
+        // ── Drag source: mousedown arms, threshold-move triggers DoDragDrop ──
+        row.MouseLeftButtonDown += (_, e) =>
+        {
+            _dragArmStartPoint = e.GetPosition(this);
+            _dragArmedRowId    = prompt.Id;
+        };
+        row.MouseMove += (s, e) =>
+        {
+            if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+            if (_dragArmedRowId != prompt.Id) return;
+            var current = e.GetPosition(this);
+            // Only start a drag once the user has moved far enough that they
+            // clearly meant "drag", not "click to insert". 6 pixels matches
+            // the WPF default SystemParameters.MinimumHorizontal/VerticalDragDistance
+            // ballpark and feels right on a 380-pixel-wide panel.
+            var dx = current.X - _dragArmStartPoint.X;
+            var dy = current.Y - _dragArmStartPoint.Y;
+            if (dx * dx + dy * dy < 36) return;
+
+            _dragArmedRowId = null;
+            _dragJustHappenedForRowId = prompt.Id;
+            try
+            {
+                var data = new DataObject(PromptDragFormat, prompt.Id.ToString());
+                System.Windows.DragDrop.DoDragDrop((Border)s!, data, System.Windows.DragDropEffects.Move);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DoDragDrop failed: {ex.Message}");
+            }
         };
 
         // ── Whole-row right-click → open editor (same effect as ✎) ──
