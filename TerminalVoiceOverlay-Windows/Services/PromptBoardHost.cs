@@ -57,9 +57,28 @@ public static class PromptBoardHost
             services.AddSingleton<IPromptChainBuilder, PromptChainBuilder>();
             services.AddSingleton<IPastelColorGenerator, PastelColorGenerator>();
             services.AddSingleton<IAlwaysOnPrefixService, AlwaysOnPrefixService>();
-            services.AddSingleton<IGoogleDriveBackupService, GoogleDriveBackupService>();
+            // GoogleDriveBackupService MUST be transient — a singleton would
+            // capture the transient AppSettings repository (and its DbContext)
+            // for the lifetime of the process, so freshly-saved Google client
+            // credentials would never be visible to ConnectAsync(). Tested
+            // 2026-04-25 by Frank: settings dialog stored ID+Secret correctly
+            // but Connect threw GoogleDriveNotConfiguredException because the
+            // singleton-captured DbContext still held the empty original row.
+            services.AddTransient<IGoogleDriveBackupService, GoogleDriveBackupService>();
 
             _provider = services.BuildServiceProvider();
+
+            // Schema bootstrap. Mirrors PromptBoardStore.createSchemaIfNeeded()
+            // on macOS (PromptBoardStore.swift:49). Without this the DB file
+            // gets created empty by SqliteConnection but no tables exist —
+            // every read/write then crashes with "no such table: ...".
+            // EnsureCreated is idempotent: it only creates tables that are
+            // missing, so it's safe to call on every startup.
+            using (var scope = _provider.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+                ctx.Database.EnsureCreated();
+            }
 
             // Idempotent schema migration for older Windows DBs that
             // pre-date the per-prompt Pre/Post split (#1820 macOS, this
@@ -67,6 +86,9 @@ public static class PromptBoardHost
             // TABLE, which we swallow because we just want "the columns
             // exist" — exactly mirrors the macOS approach.
             EnsurePrePostColumns();
+
+            // The AppSettingsRepository self-bootstraps the singleton
+            // row on first GetAsync() call, so no explicit seeding here.
         }
     }
 
