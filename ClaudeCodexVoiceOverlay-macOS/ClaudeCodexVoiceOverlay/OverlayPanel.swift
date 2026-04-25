@@ -223,11 +223,20 @@ final class OverlayPanel: NSPanel {
         self.backgroundColor = .clear
         self.hasShadow = true
 
-        // Round corners – use content view layer for rounded background
+        // Round corners – use content view layer for rounded background.
+        // Translucency + outline mirror the TerminalVoiceOverlay-macOS
+        // sister project (#1817–#1819) so both pillars look identical
+        // side by side when both are open: alpha 0.78 instead of 0.9 so
+        // the desktop / app behind shows through, and a subtle 1-px
+        // grey outline matching the dark theme.
         self.contentView?.wantsLayer = true
         self.contentView?.layer?.cornerRadius = panelWidth / 2
         self.contentView?.layer?.masksToBounds = true
-        self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
+        self.contentView?.layer?.backgroundColor =
+            NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
+        self.contentView?.layer?.borderColor =
+            NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
+        self.contentView?.layer?.borderWidth = 1
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
         // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
