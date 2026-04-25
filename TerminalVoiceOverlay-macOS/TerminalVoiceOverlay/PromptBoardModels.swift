@@ -24,6 +24,14 @@ struct PBPrompt {
     var improvedText: String?
     var activeVersion: Int // 0 = Original, 1 = Improved
     var isAlwaysOn: Bool
+    /// When `isAlwaysOn` is true and the user dictates, this prompt is
+    /// prepended to the transcribed text iff `isPrePrompt` is also true.
+    /// Default for legacy prompts that pre-date the Pre/Post split.
+    var isPrePrompt: Bool
+    /// When `isAlwaysOn` is true, this prompt is APPENDED after the
+    /// transcribed text iff `isPostPrompt` is true. Independent of
+    /// `isPrePrompt` — both can be on (prompt appears front and back).
+    var isPostPrompt: Bool
     var sortOrder: Int
     var promptKind: String // "Prompt" or "AiImprovementPrompt"
     var geminiModel: String?

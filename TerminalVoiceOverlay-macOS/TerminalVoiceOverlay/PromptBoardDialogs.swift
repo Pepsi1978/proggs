@@ -222,12 +222,20 @@ struct PBPromptEditResult {
     let shortLabel: String
     let originalText: String
     let isAlwaysOn: Bool
+    let isPrePrompt: Bool
+    let isPostPrompt: Bool
 }
 
 final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private let labelField = NSTextField()
     private let textView = NSTextView()
     private let alwaysOnCheckbox = NSButton(checkboxWithTitle: "Immer mitschicken (Always-On Prefix)", target: nil, action: nil)
+    /// Sub-option of always-on: prepend this prompt before the dictated
+    /// text. Independent of postPromptCheckbox — both can be on so the
+    /// prompt appears front and back.
+    private let prePromptCheckbox = NSButton(checkboxWithTitle: "Pre-Prompt (vor dem Diktat)", target: nil, action: nil)
+    /// Sub-option of always-on: append this prompt after the dictated text.
+    private let postPromptCheckbox = NSButton(checkboxWithTitle: "Post-Prompt (nach dem Diktat)", target: nil, action: nil)
     private let statusLabel = NSTextField(labelWithString: "")
     private var result: PBPromptEditResult?
 
@@ -260,9 +268,10 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private var suppressLabelChange = false
     private var labelEditObserver: NSObjectProtocol?
 
-    init(title: String, initialLabel: String, initialText: String, initialAlwaysOn: Bool) {
+    init(title: String, initialLabel: String, initialText: String,
+         initialAlwaysOn: Bool, initialPrePrompt: Bool, initialPostPrompt: Bool) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 580),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         window.title = title
@@ -302,6 +311,18 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         alwaysOnCheckbox.contentTintColor = PBDarkTheme.textPrimary
         alwaysOnCheckbox.attributedTitle = NSAttributedString(
             string: "Immer mitschicken (Always-On Prefix)",
+            attributes: [.foregroundColor: PBDarkTheme.textPrimary])
+
+        prePromptCheckbox.state = initialPrePrompt ? .on : .off
+        prePromptCheckbox.contentTintColor = PBDarkTheme.textPrimary
+        prePromptCheckbox.attributedTitle = NSAttributedString(
+            string: "Pre-Prompt (vor dem Diktat)",
+            attributes: [.foregroundColor: PBDarkTheme.textPrimary])
+
+        postPromptCheckbox.state = initialPostPrompt ? .on : .off
+        postPromptCheckbox.contentTintColor = PBDarkTheme.textPrimary
+        postPromptCheckbox.attributedTitle = NSAttributedString(
+            string: "Post-Prompt (nach dem Diktat)",
             attributes: [.foregroundColor: PBDarkTheme.textPrimary])
 
         // ── Footer buttons ──
@@ -363,7 +384,15 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         let textTop = NSTextField(labelWithString: "Prompt-Text:")
         PBDarkTheme.styleLabel(textTop)
 
-        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, statusLabel, buttonRow])
+        // Indented sub-stack for the Pre/Post checkboxes — visually
+        // signals they're sub-options of the always-on toggle above.
+        let subOptionStack = NSStackView(views: [prePromptCheckbox, postPromptCheckbox])
+        subOptionStack.orientation = .vertical
+        subOptionStack.alignment = .leading
+        subOptionStack.spacing = 2
+        subOptionStack.edgeInsets = NSEdgeInsets(top: 0, left: 22, bottom: 0, right: 0)
+
+        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, subOptionStack, statusLabel, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
@@ -462,7 +491,9 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         result = PBPromptEditResult(
             shortLabel: label,
             originalText: text,
-            isAlwaysOn: alwaysOnCheckbox.state == .on)
+            isAlwaysOn: alwaysOnCheckbox.state == .on,
+            isPrePrompt: prePromptCheckbox.state == .on,
+            isPostPrompt: postPromptCheckbox.state == .on)
         window?.close()    // windowWillClose handles stopModal
     }
 
@@ -787,9 +818,12 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     }
 
     static func ask(parent: NSWindow?, title: String,
-                    label: String, text: String, alwaysOn: Bool) -> PBPromptEditResult? {
+                    label: String, text: String, alwaysOn: Bool,
+                    prePrompt: Bool, postPrompt: Bool) -> PBPromptEditResult? {
         let ctrl = PBPromptEditDialog(title: title, initialLabel: label,
-                                      initialText: text, initialAlwaysOn: alwaysOn)
+                                      initialText: text, initialAlwaysOn: alwaysOn,
+                                      initialPrePrompt: prePrompt,
+                                      initialPostPrompt: postPrompt)
         guard let w = ctrl.window else { return nil }
         w.center()
         return PBModalPresenter.runHidingFloatingPanels {

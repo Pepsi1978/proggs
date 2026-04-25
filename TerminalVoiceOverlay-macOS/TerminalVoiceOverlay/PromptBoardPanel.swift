@@ -792,13 +792,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         }
         guard let result = PBPromptEditDialog.ask(parent: self,
                                                   title: "Neuer Prompt",
-                                                  label: "", text: "", alwaysOn: false) else { return }
+                                                  label: "", text: "", alwaysOn: false,
+                                                  prePrompt: true, postPrompt: false) else { return }
         let now = Date()
         let prompt = PBPrompt(id: UUID(), categoryId: catId,
                               shortLabel: result.shortLabel,
                               originalText: result.originalText,
                               improvedText: nil, activeVersion: 0,
                               isAlwaysOn: result.isAlwaysOn,
+                              isPrePrompt: result.isPrePrompt,
+                              isPostPrompt: result.isPostPrompt,
                               sortOrder: 0, promptKind: "Prompt",
                               geminiModel: nil, isActiveForImprovement: false,
                               improvedByAiPromptId: nil,
@@ -875,10 +878,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                                                   title: "Prompt bearbeiten",
                                                   label: prompt.shortLabel,
                                                   text: prompt.originalText,
-                                                  alwaysOn: prompt.isAlwaysOn) else { return }
+                                                  alwaysOn: prompt.isAlwaysOn,
+                                                  prePrompt: prompt.isPrePrompt,
+                                                  postPrompt: prompt.isPostPrompt) else { return }
         prompt.shortLabel = result.shortLabel
         prompt.originalText = result.originalText
         prompt.isAlwaysOn = result.isAlwaysOn
+        prompt.isPrePrompt = result.isPrePrompt
+        prompt.isPostPrompt = result.isPostPrompt
         do {
             try PromptBoardStore.shared.updatePrompt(prompt)
             scheduleAutoBackup()
@@ -975,6 +982,8 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     "OriginalText": p.originalText,
                     "ActiveVersion": p.activeVersion,
                     "IsAlwaysOn": p.isAlwaysOn,
+                    "IsPrePrompt": p.isPrePrompt,
+                    "IsPostPrompt": p.isPostPrompt,
                     "SortOrder": p.sortOrder,
                 ]
                 if let it = p.improvedText { dict["ImprovedText"] = it }
@@ -1033,6 +1042,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 improvedText: p["ImprovedText"] as? String,
                 activeVersion: (p["ActiveVersion"] as? Int) ?? 0,
                 isAlwaysOn: (p["IsAlwaysOn"] as? Bool) ?? false,
+                // Default for older backups that pre-date the Pre/Post split:
+                // missing → IsPrePrompt = true (= legacy "always-on means
+                // prefix" behaviour), IsPostPrompt = false.
+                isPrePrompt: (p["IsPrePrompt"] as? Bool) ?? true,
+                isPostPrompt: (p["IsPostPrompt"] as? Bool) ?? false,
                 sortOrder: (p["SortOrder"] as? Int) ?? 0,
                 promptKind: (p["PromptKind"] as? String) ?? "Prompt",
                 geminiModel: p["GeminiModel"] as? String,

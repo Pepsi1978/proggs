@@ -377,16 +377,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             finalText = "/btw " + finalText
             isBtwRecording = false
         } else {
-            // Prepend the PromptBoard always-on prefix when the star
-            // toggle is active. Only on the first paste per line;
-            // follow-up dictations are appended without prefix.
+            // Wrap the dictated text with PromptBoard always-on prompts
+            // when the star toggle is active. Pre-prompts go in front,
+            // post-prompts go after — both sets are independent and a
+            // single prompt can be on both sides if its both flags are
+            // set. Only on the first paste per line; follow-up dictations
+            // are appended without wrapping.
             if alwaysOnActive && !hasPastedText {
-                let aoPrefix = AlwaysOnPrefixService.build()
-                if !aoPrefix.isEmpty {
-                    // No separator between prefix and user text — the
-                    // prompt author controls the trailing whitespace.
-                    finalText = aoPrefix + finalText
-                }
+                let pre = AlwaysOnPrefixService.buildPre()
+                let post = AlwaysOnPrefixService.buildPost()
+                if !pre.isEmpty { finalText = pre + finalText }
+                if !post.isEmpty { finalText = finalText + post }
             }
             // Always append " ; " — compact inline task separator.
             finalText = finalText + " ; "
