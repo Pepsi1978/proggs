@@ -599,7 +599,10 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         geminiButton.isEnabled = false
         micButton.isEnabled = false
         showStatus("Verbessere mit Gemini...")
-        gemini.correctText(current) { [weak self] result in
+        // PromptBoard-Editor nutzt das Prompt-Engineer-Template (rohes
+        // Diktat → kopierfertiger Claude-Code-CLI-Prompt). Das Diktat-
+        // Cleanup-Template bleibt dem Overlay-Pfad vorbehalten.
+        gemini.buildClaudeCodePrompt(current) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.isImproving = false

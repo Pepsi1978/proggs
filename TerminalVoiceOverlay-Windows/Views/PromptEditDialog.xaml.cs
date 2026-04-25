@@ -311,7 +311,10 @@ public partial class PromptEditDialog : Window
         ShowStatus("Verbessere mit Gemini...");
         try
         {
-            var improved = await gemini.CorrectTextAsync(current);
+            // PromptBoard-Editor nutzt das Prompt-Engineer-Template (rohes
+            // Diktat → kopierfertiger Claude-Code-CLI-Prompt). Das Diktat-
+            // Cleanup-Template bleibt dem Overlay-Pfad vorbehalten.
+            var improved = await gemini.BuildClaudeCodePromptAsync(current);
             if (string.IsNullOrWhiteSpace(improved))
             {
                 ShowStatus("Gemini lieferte leere Antwort.");
