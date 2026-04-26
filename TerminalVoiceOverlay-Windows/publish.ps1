@@ -5,7 +5,11 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Baue TerminalVoiceOverlay..." -ForegroundColor Cyan
 
-dotnet publish -c Release -r win-x64 --self-contained true `
+# Explizit TerminalVoiceOverlay.csproj angeben — seit dem Move der
+# PromptBoard-Subprojekte ins selbe Verzeichnis liegt zusaetzlich eine
+# PromptBoard.slnx hier, und dotnet publish ohne Pfadargument koennte
+# nicht entscheiden welches Target zu bauen ist.
+dotnet publish TerminalVoiceOverlay.csproj -c Release -r win-x64 --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:EnableCompressionInSingleFile=true `
