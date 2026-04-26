@@ -191,6 +191,29 @@ public sealed class PromptHistoryService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Aktualisiert den Volltext eines bestehenden Eintrags und schreibt
+    /// die Historie atomar zurueck. Wird vom PromptBoardPanel aufgerufen
+    /// nachdem der Benutzer einen Eintrag im Editor-Dialog veraendert
+    /// und mit Speichern bestaetigt hat. Titel und Zeitstempel bleiben
+    /// unveraendert — Titel ist KI-generiert, Zeitstempel ist der
+    /// urspruengliche Sortier-Schluessel.
+    /// </summary>
+    public async Task UpdateTextAsync(string entryId, string newText, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(entryId)) return;
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var entries = await LoadUnlockedAsync(ct).ConfigureAwait(false);
+            var match = entries.FirstOrDefault(e => e.Id == entryId);
+            if (match is null) return;
+            match.Text = newText ?? string.Empty;
+            await SaveUnlockedAsync(entries, ct).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Interne Helpers (laufen alle innerhalb des Semaphors)
     // ─────────────────────────────────────────────────────────────────────

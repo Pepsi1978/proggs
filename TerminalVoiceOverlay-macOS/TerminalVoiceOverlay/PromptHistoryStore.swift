@@ -197,6 +197,30 @@ final class PromptHistoryStore {
         }
     }
 
+    /// Aktualisiert den Volltext eines bestehenden Eintrags. Wird vom
+    /// PromptHistoryPanel aufgerufen nachdem der Benutzer einen Eintrag
+    /// im Editor-Sheet veraendert und mit Speichern bestaetigt hat.
+    /// Titel und Zeitstempel bleiben unveraendert — Titel ist KI-generiert,
+    /// Zeitstempel ist der urspruengliche Sortier-Schluessel.
+    func updateText(entryId: String, newText: String, completion: @escaping () -> Void) {
+        guard !entryId.isEmpty else {
+            DispatchQueue.main.async { completion() }
+            return
+        }
+        queue.async { [weak self] in
+            guard let self = self else {
+                DispatchQueue.main.async { completion() }
+                return
+            }
+            var entries = self.loadUnlocked()
+            if let idx = entries.firstIndex(where: { $0.id == entryId }) {
+                entries[idx].text = newText
+                self.saveUnlocked(entries)
+            }
+            DispatchQueue.main.async { completion() }
+        }
+    }
+
     // MARK: - Interne Helpers (laufen alle innerhalb der serial queue)
 
     private func loadUnlocked() -> [PBHistoryEntry] {

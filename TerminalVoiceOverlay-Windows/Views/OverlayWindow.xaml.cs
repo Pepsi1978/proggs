@@ -766,6 +766,9 @@ namespace TerminalVoiceOverlay.Views
                 _promptPanel = new PromptBoardPanel();
                 _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
                 _promptPanel.InputSubmitRequested  += OnInputSubmit;
+                // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag
+                // im Editor-Dialog gespeichert hat — Cloud-Upload anstossen.
+                _promptPanel.HistorySyncRequested  += () => _ = TryUploadHistoryAsync();
                 // Right-click drag on the panel itself moves both the
                 // panel (handled inside) and this pillar window — slide
                 // the pillar to stay glued to the panel's right edge.

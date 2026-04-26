@@ -29,6 +29,15 @@ public partial class PromptHistoryWindow : Window
     public event Action<string>? EntrySelected;
 
     /// <summary>
+    /// Wird beim Rechtsklick auf einen Eintrag ausgeloest. Der Aufrufer
+    /// (PromptBoardPanel) oeffnet daraufhin den Editor-Dialog, persistiert
+    /// die Aenderung via PromptHistoryService.UpdateTextAsync und stoesst
+    /// einen Cloud-Sync an. Rechtsklick auf den Hintergrund verschiebt
+    /// stattdessen die ganze Fenster-Gruppe (siehe GroupDragDelta).
+    /// </summary>
+    public event Action<PromptHistoryEntry>? EntryEditRequested;
+
+    /// <summary>
     /// Wird beim Rechtsklick-Drag fuer jeden Mausschritt ausgeloest. Das
     /// Promptboard verschiebt daraufhin die GANZE Gruppe (Pillar +
     /// Promptboard + Eingabe + Historie) um den gleichen Versatz. Wir
@@ -106,15 +115,27 @@ public partial class PromptHistoryWindow : Window
             Margin = new Thickness(0, 2, 0, 0),
         };
 
-        // Vorschau: erste ~120 Zeichen ohne Zeilenumbrueche
-        string preview = (entry.Text ?? string.Empty).Replace('\n', ' ').Replace('\r', ' ');
-        if (preview.Length > 140) preview = preview[..140] + "…";
+        // Vorschau: bis zu 2 Zeilen, danach mit … abgeschnitten. Wir
+        // glaetten weiterhin Tabs / Zeilenumbrueche zu Leerzeichen damit
+        // ein langer mehrzeiliger Prompt nicht nur die ersten paar Worte
+        // seiner ersten Zeile zeigt — die zwei sichtbaren Zeilen sollen
+        // soviel Inhalt wie moeglich preisgeben.
+        string preview = (entry.Text ?? string.Empty)
+            .Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ');
+        if (preview.Length > 280) preview = preview[..280] + "…";
         var previewText = new TextBlock
         {
             Text = preview,
             Foreground = PreviewColor,
             FontSize = 11,
             Margin = new Thickness(0, 4, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+            // 2 Zeilen Sichtbarkeit: bei FontSize 11 ca. 14.6 px Zeilenhoehe
+            // → 30 px reichen sicher fuer zwei Zeilen, der Rest wird per
+            // TextTrimming mit "…" abgeschnitten. WPF kennt im klassischen
+            // .NET Framework kein MaxLines — MaxHeight + Wrap + Trim ist
+            // der etablierte Workaround dafuer.
+            MaxHeight = 32,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
@@ -131,8 +152,10 @@ public partial class PromptHistoryWindow : Window
             Margin = new Thickness(0, 0, 0, 6),
             Cursor = Cursors.Hand,
             Child = stack,
-            // Tag merkt sich den Text, damit der Click-Handler ihn liefern kann.
-            Tag = entry.Text ?? string.Empty,
+            // Tag merkt sich den vollstaendigen Eintrag, damit Linksklick
+            // den Text liefern und Rechtsklick den Editor mit Titel +
+            // Zeitstempel oeffnen kann.
+            Tag = entry,
         };
 
         // Hover-Effekt: dezenter Helligkeitswechsel.
@@ -142,9 +165,9 @@ public partial class PromptHistoryWindow : Window
         // Linksklick → Eintrag waehlen.
         row.MouseLeftButtonUp += (_, e) =>
         {
-            if (row.Tag is string t && !string.IsNullOrEmpty(t))
+            if (row.Tag is PromptHistoryEntry ent && !string.IsNullOrEmpty(ent.Text))
             {
-                EntrySelected?.Invoke(t);
+                EntrySelected?.Invoke(ent.Text);
             }
             e.Handled = true;
         };
@@ -196,9 +219,34 @@ public partial class PromptHistoryWindow : Window
 
     private void OnRightDragStart(object sender, MouseButtonEventArgs e)
     {
+        // Wenn der Klick eine Historie-Zeile getroffen hat, gehoert er dem
+        // Eintrag — Editor oeffnen, NICHT die Fenster-Gruppe ziehen.
+        if (FindRowEntry(e.OriginalSource) is PromptHistoryEntry entry)
+        {
+            EntryEditRequested?.Invoke(entry);
+            e.Handled = true;
+            return;
+        }
         _isDragging = true;
         _dragStartScreen = PointToScreen(e.GetPosition(this));
         CaptureMouse();
+    }
+
+    /// <summary>
+    /// Laeuft den Visual-Tree vom OriginalSource nach oben bis ein Border
+    /// mit einem PromptHistoryEntry im Tag gefunden wird. So koennen wir
+    /// auch Rechtsklicks auf die TextBlocks innerhalb der Zeile dem
+    /// richtigen Eintrag zuordnen.
+    /// </summary>
+    private static PromptHistoryEntry? FindRowEntry(object originalSource)
+    {
+        DependencyObject? node = originalSource as DependencyObject;
+        while (node is not null)
+        {
+            if (node is Border b && b.Tag is PromptHistoryEntry e) return e;
+            node = VisualTreeHelper.GetParent(node) ?? LogicalTreeHelper.GetParent(node);
+        }
+        return null;
     }
 
     private void OnRightDragMove(object sender, MouseEventArgs e)

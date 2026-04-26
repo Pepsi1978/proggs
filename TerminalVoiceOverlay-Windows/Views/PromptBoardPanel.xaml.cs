@@ -409,6 +409,10 @@ public partial class PromptBoardPanel : Window
                 if (!_inputWindowVisible) OpenInputWindow();
                 _inputWindow?.SetText(text);
             };
+            _historyWindow.EntryEditRequested += async entry =>
+            {
+                await EditHistoryEntryAsync(entry);
+            };
             // Rechtsklick-Drag im Historie-Fenster verschiebt die GANZE Gruppe.
             _historyWindow.GroupDragDelta += OnChildGroupDrag;
             _historyWindow.Closed += (_, _) =>
@@ -465,6 +469,49 @@ public partial class PromptBoardPanel : Window
         catch (Exception ex)
         {
             Console.WriteLine($"ReloadHistoryAsync failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Wird ausgeloest nachdem der Benutzer einen Historie-Eintrag im
+    /// Editor-Dialog veraendert und gespeichert hat. Das OverlayWindow
+    /// abonniert dieses Event und stoesst einen Cloud-Upload der
+    /// kompletten Historie an, damit der bearbeitete Eintrag auch auf der
+    /// Mac-Seite sichtbar wird.
+    /// </summary>
+    public event Action? HistorySyncRequested;
+
+    /// <summary>
+    /// Oeffnet den modalen Editor fuer einen Historie-Eintrag, persistiert
+    /// die Aenderung und meldet das History-Window neu zu rendern. Wird
+    /// vom Rechtsklick auf eine Zeile ausgeloest.
+    /// </summary>
+    private async Task EditHistoryEntryAsync(PromptHistoryEntry entry)
+    {
+        if (entry is null || string.IsNullOrEmpty(entry.Id)) return;
+
+        var dlg = new PromptHistoryEditDialog(entry.Text, entry.Title, entry.Timestamp)
+        {
+            Owner = this,
+        };
+        var result = dlg.ShowDialog();
+        if (result != true) return;
+
+        string newText = dlg.EditedText ?? string.Empty;
+        if (newText == (entry.Text ?? string.Empty)) return;
+
+        try
+        {
+            await _historyService.UpdateTextAsync(entry.Id, newText);
+            await ReloadHistoryAsync();
+            // Cloud-Sync anstossen damit die Aenderung auch auf dem
+            // Mac ankommt — Upload laeuft via OverlayWindow weil dort der
+            // PromptHistoryDriveSync mit Drive-Credentials lebt.
+            HistorySyncRequested?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"EditHistoryEntryAsync failed: {ex.Message}");
         }
     }
 

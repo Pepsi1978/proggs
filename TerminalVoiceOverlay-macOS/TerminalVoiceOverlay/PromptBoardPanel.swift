@@ -918,6 +918,9 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 if !self.inputPanelVisible { self.openInputPanel() }
                 self.inputPanel?.setText(text)
             }
+            p.onEntryEditRequested = { [weak self] entry in
+                self?.editHistoryEntry(entry)
+            }
             // Rechtsklick-Drag in der Historie verschiebt die GANZE Gruppe.
             p.onGroupDragDelta = { [weak self] dx, dy in
                 self?.translateGroup(dx: dx, dy: dy)
@@ -951,6 +954,37 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         PromptHistoryStore.shared.load { entries in
             panel.render(entries)
         }
+    }
+
+    /// Wird gerufen nachdem ein Historie-Eintrag bearbeitet und gespeichert
+    /// wurde. Der AppDelegate setzt diese Closure und stoesst dort den
+    /// Cloud-Upload an, damit der bearbeitete Eintrag auch auf der
+    /// Windows-Seite sichtbar wird.
+    var onHistorySyncRequested: (() -> Void)?
+
+    /// Halt fuer den modalen Editor — sonst wird er sofort wieder
+    /// freigegeben und das Fenster schliesst sich von alleine.
+    private var historyEditController: PromptHistoryEditController?
+
+    /// Oeffnet den modalen Editor fuer einen Historie-Eintrag, persistiert
+    /// die Aenderung und meldet das History-Panel neu zu rendern.
+    fileprivate func editHistoryEntry(_ entry: PBHistoryEntry) {
+        guard !entry.id.isEmpty else { return }
+        let controller = PromptHistoryEditController(entry: entry)
+        historyEditController = controller
+        controller.onResult = { [weak self] newText in
+            guard let self = self else { return }
+            defer { self.historyEditController = nil }
+            guard let updated = newText, updated != entry.text else { return }
+            PromptHistoryStore.shared.updateText(entryId: entry.id, newText: updated) {
+                self.reloadHistory()
+                self.onHistorySyncRequested?()
+            }
+        }
+        controller.showWindow(nil)
+        controller.window?.center()
+        controller.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func updateHistoryButtonVisual() {

@@ -648,6 +648,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             p.onInputSubmit = { [weak self] middleText in
                 self?.handleInputSubmit(middleText)
             }
+            // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag im
+            // Editor-Sheet gespeichert hat — Cloud-Upload anstossen, damit
+            // die Aenderung auch auf der Windows-Seite sichtbar wird.
+            p.onHistorySyncRequested = { [weak self] in
+                self?.uploadHistoryToCloud()
+            }
             // Right-click drag on the panel itself moves both floating
             // windows together: panel slides under the cursor (already
             // done inside the panel), and we slide the pillar by the

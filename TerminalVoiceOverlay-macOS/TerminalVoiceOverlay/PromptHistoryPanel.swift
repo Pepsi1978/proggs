@@ -15,6 +15,13 @@ final class PromptHistoryPanel: NSPanel {
     /// genau wie wenn der Eintrag frisch getippt waere.
     var onEntrySelected: ((String) -> Void)?
 
+    /// Wird beim Rechtsklick auf einen Eintrag ausgeloest. Das
+    /// PromptBoardPanel oeffnet daraufhin den Editor-Sheet, persistiert
+    /// die Aenderung via PromptHistoryStore.updateText und stoesst den
+    /// Cloud-Sync an. Rechtsklick auf den Hintergrund verschiebt
+    /// stattdessen die ganze Fenster-Gruppe (siehe onGroupDragDelta).
+    var onEntryEditRequested: ((PBHistoryEntry) -> Void)?
+
     /// Wird beim Rechtsklick-Drag fuer jeden Mausschritt ausgeloest. Das
     /// Promptboard verschiebt daraufhin die GANZE Gruppe um den gleichen
     /// Versatz. Wir bewegen uns NIE selbst — die Andockung bleibt starr.
@@ -207,13 +214,16 @@ final class PromptHistoryPanel: NSPanel {
     private func buildRow(_ entry: PBHistoryEntry) -> NSView {
         // Hintergrund-Container (NSButton-like aber komplett selbstgebaut,
         // damit Hover-Highlight + Linksklick als simple Aktion funktioniert).
-        let container = ClickableHistoryRow(text: entry.text)
+        let container = ClickableHistoryRow(entry: entry)
         container.translatesAutoresizingMaskIntoConstraints = false
         container.wantsLayer = true
         container.layer?.cornerRadius = 6
         container.layer?.backgroundColor = NSColor(calibratedWhite: 0.14, alpha: 1).cgColor
         container.onClick = { [weak self] text in
             self?.onEntrySelected?(text)
+        }
+        container.onEditRequested = { [weak self] e in
+            self?.onEntryEditRequested?(e)
         }
 
         let title = NSTextField(labelWithString:
@@ -227,12 +237,14 @@ final class PromptHistoryPanel: NSPanel {
         meta.textColor = NSColor(calibratedWhite: 0.60, alpha: 1)
         meta.font = NSFont.systemFont(ofSize: 10)
 
-        // Vorschau: erste ~140 Zeichen ohne Zeilenumbrueche
+        // Vorschau: bis zu ~280 Zeichen ohne Zeilenumbrueche, damit beide
+        // sichtbaren Zeilen mit Inhalt gefuellt werden (1:1 mit Windows).
         var preview = entry.text
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
-        if preview.count > 140 {
-            let cutIdx = preview.index(preview.startIndex, offsetBy: 140)
+            .replacingOccurrences(of: "\t", with: " ")
+        if preview.count > 280 {
+            let cutIdx = preview.index(preview.startIndex, offsetBy: 280)
             preview = String(preview[..<cutIdx]) + "…"
         }
         let prev = NSTextField(labelWithString: preview)
@@ -240,6 +252,8 @@ final class PromptHistoryPanel: NSPanel {
         prev.font = NSFont.systemFont(ofSize: 11)
         prev.lineBreakMode = .byTruncatingTail
         prev.maximumNumberOfLines = 2
+        prev.cell?.wraps = true
+        prev.usesSingleLineMode = false
 
         let inner = NSStackView(views: [title, meta, prev])
         inner.orientation = .vertical
@@ -259,6 +273,23 @@ final class PromptHistoryPanel: NSPanel {
 
     // MARK: - Rechtsklick-Drag
 
+    /// Sucht entlang der View-Hierarchie an der Klick-Position nach einer
+    /// ClickableHistoryRow. Wir konvertieren die globale Mausposition in
+    /// die View-Koordinaten des contentView und nutzen hitTest — so finden
+    /// wir die Zeile auch dann wenn das Event auf einem inneren Label
+    /// landet.
+    fileprivate func findRow(at event: NSEvent) -> ClickableHistoryRow? {
+        guard let cv = self.contentView else { return nil }
+        let pointInWindow = event.locationInWindow
+        let pointInContent = cv.convert(pointInWindow, from: nil)
+        var hit: NSView? = cv.hitTest(pointInContent)
+        while let v = hit {
+            if let row = v as? ClickableHistoryRow { return row }
+            hit = v.superview
+        }
+        return nil
+    }
+
     private func installRightClickDragMonitor() {
         rightDragMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
@@ -266,6 +297,12 @@ final class PromptHistoryPanel: NSPanel {
             guard let self = self, event.window === self else { return event }
             switch event.type {
             case .rightMouseDown:
+                // Wenn der Klick eine Historie-Zeile getroffen hat, gehoert er
+                // dem Eintrag — Editor-Sheet oeffnen, NICHT die Gruppe ziehen.
+                if let row = self.findRow(at: event) {
+                    self.onEntryEditRequested?(row.entry)
+                    return nil
+                }
                 self.isDragging = true
                 self.dragStartMouseLocation = NSEvent.mouseLocation
                 return nil
@@ -294,16 +331,126 @@ final class PromptHistoryPanel: NSPanel {
     }
 }
 
+/// Modaler Editor fuer einen Historie-Eintrag. Wird per Rechtsklick auf
+/// eine Zeile im PromptHistoryPanel geoeffnet. Der Benutzer kann den
+/// gespeicherten Prompt-Text frei aendern und mit Speichern bestaetigen
+/// oder mit Abbrechen verwerfen. Titel und Zeitstempel bleiben unveraendert.
+final class PromptHistoryEditController: NSWindowController {
+
+    /// Wird mit dem neuen Text aufgerufen wenn der Benutzer Speichern
+    /// klickt. Nil-Aufruf bei Abbrechen.
+    var onResult: ((String?) -> Void)?
+
+    private let textView = NSTextView()
+    private let metaLabel = NSTextField(labelWithString: "")
+
+    init(entry: PBHistoryEntry) {
+        let win = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 520),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered, defer: false)
+        win.title = "Historie-Eintrag bearbeiten"
+        win.isReleasedWhenClosed = false
+        super.init(window: win)
+        buildUI(in: win, entry: entry)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func buildUI(in win: NSWindow, entry: PBHistoryEntry) {
+        let root = NSView(frame: win.contentView!.bounds)
+        root.autoresizingMask = [.width, .height]
+        win.contentView = root
+
+        let title = NSTextField(labelWithString: "Historie-Eintrag bearbeiten")
+        title.font = NSFont.boldSystemFont(ofSize: 14)
+        title.textColor = NSColor(calibratedWhite: 0.85, alpha: 1)
+
+        let displayFmt = DateFormatter()
+        displayFmt.locale = Locale(identifier: "de_DE")
+        displayFmt.dateFormat = "dd.MM.yyyy · HH:mm"
+        let safeTitle = entry.title.isEmpty ? "Ohne Titel" : entry.title
+        metaLabel.stringValue = "\(safeTitle)  ·  \(displayFmt.string(from: entry.timestamp))"
+        metaLabel.font = NSFont.systemFont(ofSize: 11)
+        metaLabel.textColor = NSColor(calibratedWhite: 0.55, alpha: 1)
+        metaLabel.lineBreakMode = .byTruncatingTail
+
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+
+        textView.string = entry.text
+        textView.isRichText = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.font = NSFont.systemFont(ofSize: 14)
+        textView.textColor = NSColor.textColor
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        scroll.documentView = textView
+
+        let btnCancel = NSButton(title: "Abbrechen", target: self,
+                                  action: #selector(onCancel))
+        btnCancel.bezelStyle = .rounded
+        btnCancel.keyEquivalent = "\u{1b}" // Esc
+
+        let btnSave = NSButton(title: "Speichern", target: self,
+                                action: #selector(onSave))
+        btnSave.bezelStyle = .rounded
+        btnSave.keyEquivalent = "\r" // Enter (Plain — Multi-Line braucht Cmd+Enter via shortcut)
+
+        let buttonRow = NSStackView(views: [NSView(), btnCancel, btnSave])
+        buttonRow.orientation = .horizontal
+        buttonRow.alignment = .centerY
+        buttonRow.spacing = 8
+        buttonRow.translatesAutoresizingMaskIntoConstraints = false
+
+        let outer = NSStackView(views: [title, metaLabel, scroll, buttonRow])
+        outer.orientation = .vertical
+        outer.alignment = .leading
+        outer.spacing = 8
+        outer.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(outer)
+
+        NSLayoutConstraint.activate([
+            outer.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            outer.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
+            outer.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
+            outer.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
+            scroll.widthAnchor.constraint(equalTo: outer.widthAnchor),
+            scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 360),
+            buttonRow.widthAnchor.constraint(equalTo: outer.widthAnchor),
+        ])
+    }
+
+    @objc private func onCancel() {
+        onResult?(nil)
+        close()
+    }
+
+    @objc private func onSave() {
+        onResult?(textView.string)
+        close()
+    }
+}
+
 /// Klickbare Reihe mit Hover-Highlight. Wir bauen das selbst statt NSButton,
 /// damit der gesamte Container reagiert und der Hover-Effekt nicht von einem
-/// Default-Button-Look ueberschrieben wird.
+/// Default-Button-Look ueberschrieben wird. Haelt den ganzen `entry` damit
+/// Linksklick den Text liefern UND Rechtsklick den Editor mit Titel +
+/// Zeitstempel oeffnen kann.
 final class ClickableHistoryRow: NSView {
     var onClick: ((String) -> Void)?
-    private let text: String
+    var onEditRequested: ((PBHistoryEntry) -> Void)?
+    let entry: PBHistoryEntry
     private var trackingArea: NSTrackingArea?
 
-    init(text: String) {
-        self.text = text
+    init(entry: PBHistoryEntry) {
+        self.entry = entry
         super.init(frame: .zero)
     }
 
@@ -331,7 +478,7 @@ final class ClickableHistoryRow: NSView {
     override func mouseUp(with event: NSEvent) {
         // Linksklick: Eintrag waehlen.
         if event.type == .leftMouseUp {
-            onClick?(text)
+            onClick?(entry.text)
         }
     }
 }
