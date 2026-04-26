@@ -23,9 +23,27 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
   </ItemGroup>
 
+  <!-- PromptBoard.Core und PromptBoard.Data leben jetzt als Subprojekte
+       direkt unter diesem Hauptprojekt. Das WPF-SDK wuerde sonst alle .cs-
+       Files in den Unterverzeichnissen automatisch als Quelle des Haupt-
+       Assemblies aufnehmen — und dieselben Typen kaemen ein zweites Mal
+       ueber die ProjectReferences rein, was zu CS0436-Warnungen und
+       moeglichen Laufzeit-Verwechslungen fuehren wuerde. Wir schliessen
+       die Subprojekt-Verzeichnisse darum explizit aus. -->
   <ItemGroup>
-    <ProjectReference Include="..\PromptBoard\PromptBoard.Core\PromptBoard.Core.csproj" />
-    <ProjectReference Include="..\PromptBoard\PromptBoard.Data\PromptBoard.Data.csproj" />
+    <Compile Remove="PromptBoard.Core\**\*" />
+    <Compile Remove="PromptBoard.Data\**\*" />
+    <Page Remove="PromptBoard.Core\**\*" />
+    <Page Remove="PromptBoard.Data\**\*" />
+    <None Remove="PromptBoard.Core\**\*" />
+    <None Remove="PromptBoard.Data\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Core\**\*" />
+    <EmbeddedResource Remove="PromptBoard.Data\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="PromptBoard.Core\PromptBoard.Core.csproj" />
+    <ProjectReference Include="PromptBoard.Data\PromptBoard.Data.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,14 @@
     <ProjectReference Include="..\PromptBoard.Core\PromptBoard.Core.csproj" />
   </ItemGroup>
 
+  <!-- System.Linq wird in den Repository-Files dieses Projekts explizit
+       per "using System.Linq;" eingebunden. Vorher kam das aus der
+       Directory.Build.props in ~/proggs/PromptBoard/ — die wurde beim
+       Move ins Voice-Overlay-Verzeichnis entfernt, weil sie sonst im
+       WPF-Hauptprojekt System.Drawing-Konflikte ausloeste. Die SDK-
+       Variante <Using Include="System.Linq" /> hat hier nicht gegriffen,
+       deshalb der explizite using-pro-Datei-Pfad. -->
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
