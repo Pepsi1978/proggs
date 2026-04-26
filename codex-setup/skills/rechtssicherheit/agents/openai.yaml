@@ -1,6 +1,6 @@
 interface:
   display_name: "rechtssicherheit"
-  short_description: "Audit German legal wording and compliance risk"
+  short_description: "Audit Android legal texts, app code signals, Play compliance, and release-blocking privacy/security risk"
   default_prompt: "Use $rechtssicherheit for this task."
 
 policy:
