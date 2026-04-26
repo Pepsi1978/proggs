@@ -54,10 +54,13 @@
                            VerticalAlignment="Center"/>
             </Grid>
 
-            <!-- Liste der Historie-Eintraege -->
+            <!-- Liste der Historie-Eintraege. KEIN eigener Hintergrund —
+                 die aeussere Border (#C71E1E1E, 78% opak) scheint durch und
+                 die Historie wirkt damit genauso transparent wie Promtboard
+                 und Eingabefenster. -->
             <Border Grid.Row="1"
                     CornerRadius="8"
-                    Background="#FF1A1A1A"
+                    Background="Transparent"
                     BorderBrush="#FF3A3A3A"
                     BorderThickness="1">
                 <ScrollViewer x:Name="HistoryScroll"

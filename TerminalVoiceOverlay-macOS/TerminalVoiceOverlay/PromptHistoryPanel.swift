@@ -143,7 +143,11 @@ final class PromptHistoryPanel: NSPanel {
         scrollView.documentView = stack
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.wantsLayer = true
-        scrollView.layer?.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1).cgColor
+        // Kein eigener Background — Panel-Huelle (alpha 0.78) scheint durch,
+        // damit die Historie genauso transparent wirkt wie Promtboard und
+        // Eingabefenster. Nur der schmale Border bleibt zur visuellen
+        // Abgrenzung der Liste.
+        scrollView.layer?.backgroundColor = NSColor.clear.cgColor
         scrollView.layer?.cornerRadius = 8
         scrollView.layer?.borderColor = NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
         scrollView.layer?.borderWidth = 1

@@ -46,10 +46,13 @@
                            TextTrimming="CharacterEllipsis"/>
             </Grid>
 
-            <!-- Eingabefeld: mehrzeilig, scrollbar, dunkler Hintergrund -->
+            <!-- Eingabefeld: mehrzeilig, scrollbar. KEIN eigener Hintergrund —
+                 die aeussere Border (#C71E1E1E, 78% opak) scheint durch, so
+                 dass der Eingabebereich exakt so transparent wirkt wie das
+                 Promtboard und die Historie. -->
             <Border Grid.Row="1"
                     CornerRadius="8"
-                    Background="#FF1A1A1A"
+                    Background="Transparent"
                     BorderBrush="#FF3A3A3A"
                     BorderThickness="1">
                 <TextBox x:Name="InputBox"

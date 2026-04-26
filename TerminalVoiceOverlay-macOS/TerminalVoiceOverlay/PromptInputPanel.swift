@@ -155,12 +155,16 @@ final class PromptInputPanel: NSPanel {
         header.distribution = .fill
         header.translatesAutoresizingMaskIntoConstraints = false
 
-        // Das eigentliche Eingabefeld.
+        // Das eigentliche Eingabefeld. Hintergrund ist transparent — die
+        // aeussere Panel-Hülle (calibratedWhite 0.11, alpha 0.78) scheint
+        // durch, so dass der Eingabebereich exakt so transparent wirkt wie
+        // das Promtboard und die Historie.
         textView.isRichText = false
         textView.allowsUndo = true
         textView.font = NSFont.systemFont(ofSize: 13)
         textView.textColor = .white
-        textView.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1)
+        textView.backgroundColor = .clear
+        textView.drawsBackground = false
         textView.insertionPointColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
         textView.textContainerInset = NSSize(width: 8, height: 8)
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -178,7 +182,8 @@ final class PromptInputPanel: NSPanel {
         scrollView.documentView = textView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.wantsLayer = true
-        scrollView.layer?.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1).cgColor
+        // Kein eigener Background — Panel-Huelle scheint durch.
+        scrollView.layer?.backgroundColor = NSColor.clear.cgColor
         scrollView.layer?.cornerRadius = 8
         scrollView.layer?.borderColor = NSColor(calibratedWhite: 0.23, alpha: 1).cgColor
         scrollView.layer?.borderWidth = 1
