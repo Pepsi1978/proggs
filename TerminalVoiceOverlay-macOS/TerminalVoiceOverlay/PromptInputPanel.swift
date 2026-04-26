@@ -159,7 +159,9 @@ final class PromptInputPanel: NSPanel {
         // das Promtboard und die Historie.
         textView.isRichText = false
         textView.allowsUndo = true
-        textView.font = NSFont.systemFont(ofSize: 13)
+        // Doppelte Standard-Eingabe-Schriftgroesse (13 → 26) — der
+        // Eingabe-Text soll deutlich groesser sein als die UI-Labels rundherum.
+        textView.font = NSFont.systemFont(ofSize: 26)
         textView.textColor = .white
         textView.backgroundColor = .clear
         textView.drawsBackground = false

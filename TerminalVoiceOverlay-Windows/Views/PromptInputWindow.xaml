@@ -64,7 +64,7 @@
                          Foreground="White"
                          CaretBrush="#FFFFD700"
                          BorderThickness="0"
-                         FontSize="13"
+                         FontSize="26"
                          Padding="10,8"
                          FontFamily="Segoe UI"/>
             </Border>
