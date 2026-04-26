@@ -40,6 +40,29 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     public event Action? PanelDragged;
 
+    /// <summary>
+    /// Wird ausgeloest, wenn der Benutzer im neuen PromptInputWindow Enter
+    /// drueckt. Der uebergebene Text ist der reine Inhalt der Eingabe-Box —
+    /// das Pre/Mitte/Post-Zusammenbauen passiert im OverlayWindow, das den
+    /// AlwaysOnPrefixService bereits kennt.
+    /// </summary>
+    public event Action<string>? InputSubmitRequested;
+
+    /// <summary>
+    /// Das angedockte Prompt-Eingabefenster. Existiert nur solange der Stern
+    /// aktiv ist — beim Schliessen wird das Window komplett zerstoert, damit
+    /// der naechste Start einen sauberen Zustand bekommt (Inhalt ist nicht
+    /// persistent, Position kehrt zur Standard-Andockposition zurueck).
+    /// </summary>
+    private PromptInputWindow? _inputWindow;
+
+    /// <summary>
+    /// Stern-Zustand. Beim App-Neustart immer false (laut Spec). Wir spiegeln
+    /// das hier, weil der Foreground-Wechsel des Buttons sonst aus dem
+    /// Click-Handler-Code abgeleitet werden muesste.
+    /// </summary>
+    private bool _inputWindowVisible;
+
     // ── Right-click panel drag state ──
     private bool _isDraggingPanel;
     private System.Windows.Point _panelDragStartCursor;
@@ -110,7 +133,12 @@ public partial class PromptBoardPanel : Window
         BtnAddPrompt.Click    += async (_, _) => await AddPromptAsync();
         BtnSettings.Click     += async (_, _) => await ShowSettingsAsync();
         BtnBackup.Click       += async (_, _) => await ShowBackupMenuAsync();
+        BtnInputToggle.Click  += (_, _) => ToggleInputWindow();
+        BtnHistory.Click      += (_, _) => ToggleHistoryWindow();
         RefreshSyncLabel();
+        // Beim Schliessen das Eingabefenster mitnehmen, sonst bleibt ein
+        // verwaistes Fenster ohne Trigger zurueck.
+        Closed += (_, _) => CloseInputWindow();
 
         // Window-wide drop tracking so the floating drag preview updates
         // its position over the entire panel area — not just over the
@@ -161,6 +189,7 @@ public partial class PromptBoardPanel : Window
         Left = _panelDragStartLeft + (cur.X - _panelDragStartCursor.X);
         Top  = _panelDragStartTop  + (cur.Y - _panelDragStartCursor.Y);
         PanelDragged?.Invoke();
+        _inputWindow?.FollowPanelDrag(this);
     }
 
     private void OnPanelRightUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -169,7 +198,117 @@ public partial class PromptBoardPanel : Window
         _isDraggingPanel = false;
         ReleaseMouseCapture();
         PanelDragged?.Invoke();
+        _inputWindow?.FollowPanelDrag(this);
         e.Handled = true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Prompt-Eingabefenster (Stern-Toggle in der Toolbar)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Toggle-Click auf den Stern in der Toolbar. Oeffnet das angedockte
+    /// Eingabefenster bzw. schliesst es wieder. Der Stern wechselt Farbe:
+    /// gold = aktiv, grau = inaktiv. Inhalt der Box wird beim Schliessen
+    /// verworfen — das ist Absicht (laut Spec startet das Fenster bei
+    /// jedem App-Neustart leer und der Stern ist aus).
+    /// </summary>
+    private void ToggleInputWindow()
+    {
+        if (_inputWindowVisible)
+        {
+            CloseInputWindow();
+        }
+        else
+        {
+            OpenInputWindow();
+        }
+    }
+
+    private void OpenInputWindow()
+    {
+        if (_inputWindow is null)
+        {
+            _inputWindow = new PromptInputWindow();
+            _inputWindow.SubmitRequested += text =>
+            {
+                // Submit-Logik kommt in Phase 3 — hier nur den Event nach
+                // aussen reichen (das OverlayWindow baut Pre/Mitte/Post
+                // zusammen und ruft den TerminalController auf).
+                InputSubmitRequested?.Invoke(text);
+                // Eingabefeld nach Senden leeren, Fokus bleibt drin.
+                _inputWindow?.ClearInput();
+            };
+            _inputWindow.Closed += (_, _) =>
+            {
+                _inputWindow = null;
+                _inputWindowVisible = false;
+                UpdateStarVisual();
+            };
+        }
+        _inputWindow.DockTo(this, force: true);
+        _inputWindow.Show();
+        _inputWindowVisible = true;
+        UpdateStarVisual();
+    }
+
+    private void CloseInputWindow()
+    {
+        if (_inputWindow is null)
+        {
+            _inputWindowVisible = false;
+            UpdateStarVisual();
+            return;
+        }
+        var win = _inputWindow;
+        _inputWindow = null;
+        _inputWindowVisible = false;
+        UpdateStarVisual();
+        win.Close();
+    }
+
+    private void UpdateStarVisual()
+    {
+        if (_inputWindowVisible)
+        {
+            BtnInputToggle.Content    = "★"; // ★ gefuellt
+            BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+            BtnInputToggle.ToolTip    = "Prompt-Eingabe ausblenden";
+        }
+        else
+        {
+            BtnInputToggle.Content    = "☆"; // ☆ leer
+            BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0x7F, 0x7F, 0x7F));
+            BtnInputToggle.ToolTip    = "Prompt-Eingabe einblenden";
+        }
+    }
+
+    /// <summary>
+    /// Setzt Text ins Eingabefeld bzw. oeffnet das Fenster zuerst, falls es
+    /// noch nicht da ist. Wird vom Voice-Overlay genutzt, damit gesprochene
+    /// Prompts in das Eingabefenster geroutet werden statt direkt in die
+    /// CLI — so landen auch Voice-Prompts in der Historie (Phase 4).
+    /// </summary>
+    public void RouteVoiceTextToInput(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        if (!_inputWindowVisible) OpenInputWindow();
+        _inputWindow?.SetText(text);
+    }
+
+    /// <summary>True wenn der Stern an ist und das Eingabefenster sichtbar.</summary>
+    public bool IsInputWindowVisible => _inputWindowVisible;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Historie-Fenster (Phase 4 — vorerst Platzhalter)
+    // ─────────────────────────────────────────────────────────────────────
+
+    private void ToggleHistoryWindow()
+    {
+        // TODO Phase 4: Historie-Fenster implementieren. Vorerst nur Log,
+        // damit der Button bereits klickbar ist und die Toolbar-Reihenfolge
+        // schon final feststeht.
+        Console.WriteLine("History toggle clicked — implementation in Phase 4.");
     }
 
     protected override void OnSourceInitialized(EventArgs e)

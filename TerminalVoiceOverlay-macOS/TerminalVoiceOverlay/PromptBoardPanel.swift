@@ -11,6 +11,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     var onInsertText: ((String) -> Void)?
 
+    /// Wird ausgeloest wenn der Benutzer im neuen PromptInputPanel Enter
+    /// drueckt. Der Text ist der reine Inhalt der Eingabe-Box — das
+    /// Pre/Mitte/Post-Zusammenbauen passiert weiter oben (AppDelegate
+    /// kennt schon den AlwaysOnPrefixService und den TerminalController).
+    var onInputSubmit: ((String) -> Void)?
+
+    /// Das angedockte tippbare Eingabefenster. Wird beim Stern-Klick
+    /// erzeugt und beim erneuten Klick (oder beim Schliessen des
+    /// Promptboards) zerstoert. Inhalt ist absichtlich nicht persistent.
+    private var inputPanel: PromptInputPanel?
+
+    /// Stern-Zustand. Beim App-Neustart immer false (laut Spec).
+    private var inputPanelVisible = false
+
+    private var inputToggleButton: NSButton?
+    private var historyToggleButton: NSButton?
+
     private let categoryStack = NSStackView()
     private let promptStack = PBFlippedStackView()
     private let addPromptButton = NSButton(title: "+ Neuer Prompt", target: nil, action: nil)
@@ -260,13 +277,23 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             // Tell the AppDelegate to drag the pillar by the same delta
             // so the two floating windows move as one.
             onPanelDragged?(newOrigin)
+            // Andockpartner mitnehmen — wenn das Eingabefenster offen ist,
+            // soll es mit dem Promptboard verschoben werden.
+            inputPanel?.followBoardDrag(self)
         case .rightMouseUp:
             isDraggingPanel = false
             onPanelDragged?(frame.origin)  // final position
+            inputPanel?.followBoardDrag(self)
             tvoDebug("[PBPanel] panel-drag end origin=\(self.frame.origin)")
         default:
             break
         }
+    }
+
+    override func close() {
+        // Eingabefenster mitnehmen, sonst bleibt ein verwaistes Panel zurueck.
+        closeInputPanel()
+        super.close()
     }
 
     private func buildUI() {
@@ -290,11 +317,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         syncLabel.font = NSFont.systemFont(ofSize: 10)
         refreshSyncLabel()   // show the last known date from UserDefaults
 
+        let historyBtn = makeIconButton(symbol: "📜", tooltip: "Prompt-Historie", action: #selector(onToggleHistory))
+        let inputBtn = makeIconButton(symbol: "☆", tooltip: "Prompt-Eingabe einblenden", action: #selector(onToggleInput))
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
         let backupBtn = makeIconButton(symbol: "⇪", tooltip: "Backup / Wiederherstellen", action: #selector(onBackup))
         let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
+        self.historyToggleButton = historyBtn
+        self.inputToggleButton = inputBtn
 
-        let header = NSStackView(views: [titleLabel, syncLabel, NSView(), addCatBtn, backupBtn, settingsBtn])
+        // Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings]
+        let header = NSStackView(views: [titleLabel, syncLabel, NSView(), historyBtn, inputBtn, addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 6
@@ -728,6 +760,82 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         renderCategoryTabs()
         renderPrompts()
     }
+
+    // MARK: - Prompt-Eingabefenster (Stern-Toggle)
+
+    @objc private func onToggleInput() {
+        if inputPanelVisible {
+            closeInputPanel()
+        } else {
+            openInputPanel()
+        }
+    }
+
+    private func openInputPanel() {
+        if inputPanel == nil {
+            let panel = PromptInputPanel()
+            panel.onSubmit = { [weak self] text in
+                guard let self = self else { return }
+                // Pre/Mitte/Post-Bauen passiert weiter oben — hier nur den
+                // reinen Inhalt nach aussen reichen.
+                self.onInputSubmit?(text)
+                // Eingabe nach Senden leeren, Fokus bleibt drin.
+                self.inputPanel?.clearInput()
+            }
+            inputPanel = panel
+        }
+        inputPanel?.dock(leftOf: self, force: true)
+        inputPanel?.orderFront(nil)
+        inputPanel?.makeKeyAndOrderFront(nil)
+        inputPanelVisible = true
+        updateStarVisual()
+    }
+
+    private func closeInputPanel() {
+        inputPanel?.close()
+        inputPanel = nil
+        inputPanelVisible = false
+        updateStarVisual()
+    }
+
+    private func updateStarVisual() {
+        guard let btn = inputToggleButton else { return }
+        let symbol = inputPanelVisible ? "★" : "☆"
+        let color: NSColor = inputPanelVisible
+            ? NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
+            : NSColor(calibratedWhite: 0.50, alpha: 1)
+        btn.attributedTitle = NSAttributedString(
+            string: symbol,
+            attributes: [
+                .foregroundColor: color,
+                .font: NSFont.systemFont(ofSize: 14, weight: .semibold)
+            ]
+        )
+        btn.toolTip = inputPanelVisible ? "Prompt-Eingabe ausblenden" : "Prompt-Eingabe einblenden"
+    }
+
+    /// Setzt Text ins Eingabefeld bzw. oeffnet das Fenster zuerst, falls
+    /// noetig. Wird vom Voice-Overlay genutzt, damit gesprochene Prompts in
+    /// das Eingabefenster geroutet werden statt direkt in die CLI.
+    func routeVoiceTextToInput(_ text: String) {
+        guard !text.isEmpty else { return }
+        if !inputPanelVisible { openInputPanel() }
+        inputPanel?.setText(text)
+    }
+
+    /// True wenn der Stern an ist und das Eingabefenster sichtbar.
+    var isInputPanelVisible: Bool { inputPanelVisible }
+
+    // MARK: - Historie-Fenster (Phase 4 — vorerst Platzhalter)
+
+    @objc private func onToggleHistory() {
+        // TODO Phase 4: Historie-Fenster implementieren. Vorerst nur Log,
+        // damit der Button schon klickbar ist und die Toolbar-Reihenfolge
+        // bereits final feststeht.
+        tvoDebug("[PBPanel] history toggle clicked — implementation in Phase 4")
+    }
+
+    // MARK: - Originale Aktionen
 
     @objc private func onAddCategory() {
         guard let name = PBTextInput.ask(title: "Neue Kategorie",

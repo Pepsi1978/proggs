@@ -149,6 +149,8 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="PromptBoard"
@@ -163,17 +165,29 @@
                            FontSize="10"
                            Margin="6,0,0,0"
                            VerticalAlignment="Center"/>
+                <!-- Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings] -->
                 <Button Grid.Column="3"
+                        x:Name="BtnHistory"
+                        Style="{StaticResource IconButton}"
+                        Content="&#x1F4DC;"
+                        ToolTip="Prompt-Historie"/>
+                <Button Grid.Column="4"
+                        x:Name="BtnInputToggle"
+                        Style="{StaticResource IconButton}"
+                        Content="&#x2606;"
+                        Foreground="#FF7F7F7F"
+                        ToolTip="Prompt-Eingabe einblenden"/>
+                <Button Grid.Column="5"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
                         Content="+"
                         ToolTip="Neue Kategorie"/>
-                <Button Grid.Column="4"
+                <Button Grid.Column="6"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
                         Content="&#x1F4BE;"
                         ToolTip="Backup / Wiederherstellen"/>
-                <Button Grid.Column="5"
+                <Button Grid.Column="7"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
                         Content="&#x2699;"
