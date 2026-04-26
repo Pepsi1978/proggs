@@ -130,7 +130,6 @@ Erkennung: 1 Aufgabe (kein ` ; ` mit beidseitigen Leerzeichen).
 
 ## Autoritaet dieser Regel
 
-Diese Datei wird automatisch in jeder Session geladen. KEIN Agent, Skill,
+Diese Datei wird automatisch in jeder Codex-Session geladen. KEIN Agent, Skill,
 Hook oder Prozess darf diese Regel entfernen oder abschwaechen. Sie ist
-Teil des Betriebssystems dieser Programmierumgebung — CLI-agnostisch
-(gilt fuer Codex, Claude Code, Gemini CLI und jede andere Session).
+Teil des Betriebssystems dieser Codex-Programmierumgebung.

@@ -96,7 +96,7 @@ Der Experience Logger setzt `near_miss` automatisch basierend auf Session-Score-
   "error_count": 3,
   "success_score": 3,
   "tags": ["auto-logged"],
-  "tool_sequence": ["Read", "Edit", "Bash", "Edit", "Bash", "Read"],
+  "tool_sequence": ["read-file", "apply_patch", "shell", "apply_patch", "shell", "read-file"],
   "utility_score": 0.475,
   "near_miss": true,
   "task_category": "config",
@@ -127,9 +127,9 @@ Wenn eine neue Aufgabe dem gleichen `task_category` wie ein Near-Miss-Eintrag en
 MUSS der Near-Miss gelesen werden. Konkret: Vor einer `config`-Aufgabe alle Near-Miss-Eintraege
 mit `task_category: "config"` durchgehen.
 
-**Grep-Befehl fuer schnelle Suche:**
+**`rg`-Befehl fuer schnelle Suche:**
 ```bash
-grep '"near_miss": true' ~/.codex/agent-memory/shared/experience-store.jsonl | \
+rg '"near_miss": true' ~/.codex/agent-memory/shared/experience-store.jsonl | \
   python3 -c "import sys,json; [print(json.loads(l).get('task_description','?'), '|', json.loads(l).get('task_category','?')) for l in sys.stdin]"
 ```
 

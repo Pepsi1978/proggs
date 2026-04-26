@@ -1,9 +1,8 @@
 # Parallele Sessions — Commit & Push am geteilten main-Branch (KRITISCH)
 
-Diese Regel gilt AUTOMATISCH in JEDER Session, auf ALLEN Plattformen
-(Windows + macOS), unabhaengig davon welches CLI gerade laeuft (Codex,
-Claude Code, Gemini CLI, Terminal). Der Benutzer arbeitet oft mit 4-5
-gleichzeitig offenen Sessions am selben Repo. Alle Sessions pushen auf main.
+Diese Regel gilt AUTOMATISCH in JEDER Codex-Session, auf ALLEN Plattformen
+(Windows + macOS). Der Benutzer kann parallel auch andere CLIs oder Terminals
+am selben Repo offen haben. Alle Sessions pushen auf main.
 Diese Regel stellt sicher, dass trotzdem nichts ueberschrieben wird und nichts
 kaputtgeht.
 
@@ -229,8 +228,7 @@ Parallele Sessions sind OK solange jede Session vor dem Push
 
 ## Geltungsbereich
 
-Diese Regel ist CLI-agnostisch. Sie gilt identisch fuer Codex, Claude Code,
-Gemini CLI und jede andere Session die auf demselben Git-Repo arbeitet.
-Jedes CLI muss sie unabhaengig kennen und befolgen, weil die Sessions nicht
-miteinander kommunizieren koennen — nur der sauber disziplinierte
-Git-Workflow verhindert Kollisionen.
+Diese Regel ist aus Codex-Sicht verbindlich. Andere CLIs oder Terminal-Sessions
+koennen parallel am selben Git-Repo arbeiten; Codex darf aber nicht annehmen,
+dass sie ihren Zustand mitteilen. Nur der sauber disziplinierte Git-Workflow
+verhindert Kollisionen.

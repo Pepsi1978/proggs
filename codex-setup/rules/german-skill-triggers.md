@@ -35,7 +35,7 @@ auf den Skill der aehnlich klingt.
 | "reviewe den PR", "PR Review" | `code-review:code-review` | Analysiert einen **GitHub-PR** mit 5 parallelen Agenten + Scoring (nur Issues ≥80/100 werden als GitHub-Kommentar gepostet) |
 | "prüfe meine Änderungen", "schau dir das an" | `pr-review-toolkit:review-pr` | Prueft **lokale Aenderungen** (kein PR noetig) mit 6 Spezialisten (Kommentare, Tests, stille Fehler, Typen, Code-Qualitaet, Vereinfachung) |
 | "CodeRabbit", "externer Review" | `coderabbit:review` | Ruft den **externen CodeRabbit-Cloud-Dienst** auf — die Analyse macht NICHT Codex sondern CodeRabbit.ai |
-| "zweite Meinung", "was sagt Codex?", "Gemini fragen" | `second-opinion:second-opinion` | Holt Review von einem **anderen LLM** (OpenAI Codex oder Google Gemini CLI) — nicht von Codex |
+| "zweite Meinung", "Gemini fragen", "externes Modell fragen" | `second-opinion:second-opinion` | Holt Review von einem **anderen LLM/CLI** — nicht von der aktiven Codex-Session |
 
 **Entscheidungshilfe**: PR auf GitHub? → `code-review`. Lokale Aenderungen? → `pr-review-toolkit`. Externes Tool? → `coderabbit` oder `second-opinion`.
 
@@ -57,7 +57,7 @@ auf den Skill der aehnlich klingt.
 | "ich will ein Feature bauen", "neue Funktion" | `superpowers:brainstorming` | Erkundet Anforderungen durch Fragen, zeigt 2-3 Ansaetze, schreibt Design-Spec. Ruft DANACH automatisch `writing-plans` auf |
 | "wie sollen wir das machen?", "Ideen sammeln" | `superpowers:brainstorming` | Gleich — immer VOR der Planung, nie ueberspringen |
 | "mach einen Plan", "plane das" | `superpowers:writing-plans` | Erstellt detaillierten Implementierungsplan mit TDD-Schritten (Test zuerst), exakten Dateipfaden, und 2-5min Haeppchen. NUR aufrufen wenn Design-Spec schon existiert |
-| "Architektur planen", "System entwerfen" | `architect` Agent | Tiefes Reasoning ueber Systemarchitektur (Opus), bevor Code geschrieben wird |
+| "Architektur planen", "System entwerfen" | `architect` Agent | Tiefes Reasoning ueber Systemarchitektur, bevor Code geschrieben wird |
 | "Spezifikation schreiben", "Anforderungen klären" | `sdd:brainstorm` | Verfeinert rohe Ideen zu vollstaendigen Designs — aehnlich wie superpowers:brainstorming aber aus dem SDD-Framework |
 
 **Reihenfolge**: Brainstorming → Plan → Implementation. Nie direkt zum Plan springen ohne Brainstorming.
@@ -66,7 +66,7 @@ auf den Skill der aehnlich klingt.
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
-| "schreib Tests für meinen Code", "Testabdeckung erhöhen" | `tdd:write-tests` | Schreibt **nachtraeglich** Tests fuer existierenden Code via Agenten-Schwarm (Haiku bewertet Komplexitaet, Agenten schreiben Tests parallel) |
+| "schreib Tests für meinen Code", "Testabdeckung erhöhen" | `tdd:write-tests` | Schreibt **nachtraeglich** Tests fuer existierenden Code via Agenten-Schwarm (Komplexitaet bewerten, Tests parallel schreiben) |
 | "TDD", "Test zuerst schreiben" | `superpowers:test-driven-development` | Erzwingt **strikte TDD-Disziplin**: erst Test schreiben, sehen wie er fehlschlaegt, dann Code. Kein Produktionscode ohne vorherigen fehlschlagenden Test |
 | "Tests fixen", "kaputte Tests reparieren" | `tdd:fix-tests` | Repariert systematisch fehlschlagende Tests nach Business-Logik-Aenderungen |
 | "Go testen", "Go Tests" | `everything-codex:go-test` | Go-spezifisch: Table-driven Tests, `go test -cover`, 80%+ Coverage |
@@ -115,8 +115,8 @@ auf den Skill der aehnlich klingt.
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
-| "Direktiven recherchieren", "Direktiven-Recherche", "recherchiere die Direktiven", "Direktiven-Forschung", "was gibt es Neues fuer die Direktiven" | `direktiven-recherche` Skill → `direktiven-recherche` Agent | Liest alle 3 Direktiven woertlich, spawnt 5 parallele Researcher (Opus), gleicht gegen Ist-Zustand ab, liefert NUR neue/verbesserbare Vorschlaege. Bericht in `~/Codex/DIREKTIVEN-RECHERCHE-[DATUM].md` |
-| "recherchiere im Internet", "such im Web" | `researcher` Agent (Sonnet, 3-5 parallel spawnen) | Schnelles Web-Lookup ueber WebSearch/WebFetch |
+| "Direktiven recherchieren", "Direktiven-Recherche", "recherchiere die Direktiven", "Direktiven-Forschung", "was gibt es Neues fuer die Direktiven" | `direktiven-recherche` Skill → `direktiven-recherche` Agent | Liest alle 3 Direktiven woertlich, spawnt parallele Researcher, gleicht gegen Ist-Zustand ab, liefert NUR neue/verbesserbare Vorschlaege. Bericht in `C:\Users\barwa\Codex CLI\DIREKTIVEN-RECHERCHE-[DATUM].md` |
+| "recherchiere im Internet", "such im Web" | `researcher` Agent (3-5 parallel spawnen) | Schnelles Web-Lookup ueber die in Codex verfuegbaren Web-Werkzeuge |
 | "tiefe Recherche", "umfassend recherchieren" | `everything-codex:deep-research` | Multi-Source Deep Research mit Firecrawl + Exa, liefert zitierten Bericht |
 | "was sagt die Doku?", "offizielle Dokumentation" | context7 MCP (`resolve-library-id` → `query-docs`) | Laedt aktuelle Dokumentation fuer beliebige Bibliothek |
 | "Doku schreiben", "README aktualisieren" | `docs:update-docs` | Multi-Agent-Workflow der docs/, READMEs, JSDoc, API-Doku aktualisiert |

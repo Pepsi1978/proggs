@@ -142,8 +142,8 @@ bearbeitet werden.
 
 ### Erlaubte Methoden
 
-1. **Edit-Tool** (bevorzugt) — praezise Ersetzungen
-2. **Write-Tool** — komplette Neuschreibung nach Read
+1. **`apply_patch`** (bevorzugt) — praezise Ersetzungen
+2. **Strukturierter Parser/Formatter** — komplette Neuschreibung nur nach gezieltem Lesen
 3. **Python `json`-Modul**:
    ```python
    python3 -c "import json; d=json.load(open('PFAD')); d['key']='value'; json.dump(d, open('PFAD','w'), indent=2)"

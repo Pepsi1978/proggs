@@ -16,7 +16,7 @@ Bei technisch praezisen Aussagen MUSS Codex seine eigene Sicherheit bewerten:
 |-------|-----------|--------|
 | **Gruen** | In diesem Antwortblock gelesen/ausgefuehrt ODER max 5 Turns zurueck | Sicher verwenden |
 | **Gelb** | >5 Turns zurueck (gleiche Session) ODER aus frueherer Session/Training | Im Zweifel nachschlagen |
-| **Rot** | Information ist Vermutung oder Schaetzung | **STOP** — genau 1 Nachschlage-Aufruf (Read/Grep/WebSearch). Danach immer noch unklar? → Explizit als Schaetzung markieren |
+| **Rot** | Information ist Vermutung oder Schaetzung | **STOP** — genau 1 Nachschlage-Aufruf (gezielter Dateiread/`rg`/Web-Recherche). Danach immer noch unklar? → Explizit als Schaetzung markieren |
 
 ### Wann die Ampel PFLICHT ist
 
@@ -66,7 +66,7 @@ Bei technisch praezisen Aussagen MUSS Codex seine eigene Sicherheit bewerten:
 
 ### Die 4 CBR-Phasen
 
-1. **Retrieve**: Bug-Datenbank durchsuchen (Grep nach Symptom/Fehlermeldung)
+1. **Retrieve**: Bug-Datenbank durchsuchen (`rg` nach Symptom/Fehlermeldung)
 2. **Reuse**: Den alten Fix als ersten Loesungsansatz verwenden
 3. **Revise**: Falls nicht 1:1 passend, anpassen
 4. **Retain**: Den NEUEN Fall in die Datenbank eintragen

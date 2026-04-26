@@ -24,8 +24,8 @@ diese Schritte ausgefuehrt werden — BEVOR Code gelesen/geschrieben wird:
 ### Schritt 1: SESSION-RULES.md lesen
 
 ```
-Read: ~/Codex/BestJournalAndroid/SESSION-RULES.md   (Android-Version)
-Read: ~/Codex/BestJournalFrank/SESSION-RULES.md     (Frank-Version)
+Datei lesen: C:\Users\barwa\Codex CLI\BestJournalAndroid\SESSION-RULES.md   (Android-Version)
+Datei lesen: C:\Users\barwa\Codex CLI\BestJournalFrank\SESSION-RULES.md     (Frank-Version)
 ```
 Dort steht: Phase, Version, Build-Befehle, Geraete-IDs, Farben, Firebase-Projekt.
 

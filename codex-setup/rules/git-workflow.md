@@ -14,7 +14,7 @@ git fetch origin
 git rebase origin/main
 ```
 
-**Warum:** Mehrere CLIs (Codex, Codex) arbeiten am selben Repo. Ohne fetch+rebase
+**Warum:** Mehrere parallele Sessions koennen am selben Repo arbeiten. Ohne fetch+rebase
 schlaegt der Push fehl wenn ein anderer Prozess bereits gepusht hat.
 
 **Bei unstaged Changes:** `git stash` → fetch+rebase → `git stash pop` → dann push.
@@ -23,10 +23,10 @@ schlaegt der Push fehl wenn ein anderer Prozess bereits gepusht hat.
 
 ## 2. git add: NUR Repo-Pfade (KRITISCH)
 
-**Regel:** `git add` darf nur Pfade innerhalb von `~/Codex/` verwenden, NIEMALS `~/.codex/`-Pfade.
+**Regel:** `git add` darf nur Repo-Pfade innerhalb von `C:\Users\barwa\Codex CLI\` verwenden, NIEMALS `~/.codex/`-Pfade.
 
 **Verwechslungsgefahr — Zwei .codex/-Verzeichnisse:**
-- `~/.codex/` — liegt IM Repo, darf committed werden
+- `C:\Users\barwa\Codex CLI\.codex\` — falls vorhanden im Repo, darf nur bewusst committed werden
 - `~/.codex/` — Home-Verzeichnis, NICHT im Repo
 
 ---
