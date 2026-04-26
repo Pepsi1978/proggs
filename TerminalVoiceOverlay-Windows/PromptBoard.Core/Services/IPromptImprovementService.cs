@@ -48,7 +48,7 @@ public sealed class PromptImprovementService : IPromptImprovementService
         }
 
         string metaText = active.EffectiveText();
-        string model = string.IsNullOrWhiteSpace(active.GeminiModel) ? "gemini-2.5-flash" : active.GeminiModel;
+        string model = string.IsNullOrWhiteSpace(active.GeminiModel) ? "gemini-3.1-flash-lite-preview" : active.GeminiModel;
 
         _logger.LogInformation(
             "Invoking Gemini improvement with meta-prompt {MetaId} ({MetaLabel}) on model {Model}.",

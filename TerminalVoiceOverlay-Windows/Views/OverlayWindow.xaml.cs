@@ -102,15 +102,14 @@ namespace TerminalVoiceOverlay.Views
                 string? key = settings.GeminiApiKey;
                 if (!string.IsNullOrWhiteSpace(key))
                 {
-                    // gemini-2.5-flash matches what the AI-improvement
-                    // pipeline and the PromptEditDialog "G" button already
-                    // use — same key, same model, same behavior across the
-                    // whole app. ThinkingLevel bleibt leer, weil
-                    // gemini-2.5-flash den Parameter nicht unterstuetzt
-                    // (rejected mit "Thinking level is not supported for
-                    // this model"). Der Client laesst thinkingConfig in
-                    // diesem Fall komplett aus dem Payload.
-                    return new GeminiClient(key, "gemini-2.5-flash", "");
+                    // gemini-3.1-flash-lite-preview ist das Standard-Modell
+                    // der Voice Terminal Overlay App — alle Gemini-Pfade
+                    // (Diktat-Cleanup, Prompt-Improvement, Historie-Titel)
+                    // nutzen dasselbe Modell, damit Verhalten und Latenz
+                    // ueberall vorhersagbar sind. ThinkingLevel bleibt leer:
+                    // das Lite-Modell akzeptiert keinen thinkingConfig-Block,
+                    // der Client laesst ihn dann komplett aus dem Payload.
+                    return new GeminiClient(key, "gemini-3.1-flash-lite-preview", "");
                 }
             }
             catch (Exception ex)
