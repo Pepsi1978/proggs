@@ -316,6 +316,48 @@ public partial class PromptBoardPanel : Window
     /// <summary>True wenn der Stern an ist und das Eingabefenster sichtbar.</summary>
     public bool IsInputWindowVisible => _inputWindowVisible;
 
+    /// <summary>
+    /// Versteckt Eingabe- und Historie-Fenster — wird vom OverlayWindow
+    /// gerufen sobald der Benutzer aus dem Terminal in eine andere App
+    /// wechselt. Wir nutzen <c>Hide()</c>, NICHT <c>Close()</c>: der
+    /// Benutzer-Wunsch (Sichtbarkeits-Flags) bleibt erhalten, beim
+    /// Zurueckwechseln ins Terminal bringen wir die Fenster automatisch
+    /// wieder zurueck. So sind die Floating-Panels nie ueber Chrome,
+    /// VS Code oder anderen App-Fenstern zu sehen.
+    /// </summary>
+    public void HideTransientChildren()
+    {
+        if (_inputWindow is not null && _inputWindow.IsVisible)
+        {
+            _inputWindow.Hide();
+        }
+        if (_historyWindow is not null && _historyWindow.IsVisible)
+        {
+            _historyWindow.Hide();
+        }
+    }
+
+    /// <summary>
+    /// Bringt Eingabe- und Historie-Fenster zurueck, falls der Benutzer
+    /// sie vor dem App-Wechsel offen hatte. Wird nach
+    /// <see cref="HideTransientChildren"/> gerufen sobald das Terminal
+    /// wieder aktiv ist. Position wird neu angedockt — das Promptboard
+    /// kann sich in der Zwischenzeit verschoben haben.
+    /// </summary>
+    public void ShowTransientChildrenIfNeeded()
+    {
+        if (_inputWindowVisible && _inputWindow is not null && !_inputWindow.IsVisible)
+        {
+            _inputWindow.DockTo(this);
+            _inputWindow.Show();
+        }
+        if (_historyWindowVisible && _historyWindow is not null && !_historyWindow.IsVisible)
+        {
+            _historyWindow.DockTo(this);
+            _historyWindow.Show();
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Historie-Fenster (Linksklick auf Eintrag → Text in Eingabefenster)
     // ─────────────────────────────────────────────────────────────────────

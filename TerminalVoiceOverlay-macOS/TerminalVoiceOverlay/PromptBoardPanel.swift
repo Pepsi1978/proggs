@@ -835,6 +835,33 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// True wenn der Stern an ist und das Eingabefenster sichtbar.
     var isInputPanelVisible: Bool { inputPanelVisible }
 
+    /// Versteckt Eingabe- und Historie-Panel — wird vom AppDelegate
+    /// gerufen sobald der Benutzer aus dem Terminal in eine andere App
+    /// wechselt. Wir nutzen `orderOut(nil)` (NICHT close), damit der
+    /// Sichtbarkeitswunsch erhalten bleibt — beim Zurueckwechseln ins
+    /// Terminal kommen die Panels automatisch wieder zurueck. So sind
+    /// die Floating-Panels nie ueber Chrome o.ae. App-Fenstern zu sehen.
+    func hideTransientChildren() {
+        if inputPanelVisible { inputPanel?.orderOut(nil) }
+        if historyPanelVisible { historyPanel?.orderOut(nil) }
+    }
+
+    /// Bringt die Eingabe-/Historie-Panels zurueck, falls der Benutzer
+    /// sie vor dem App-Wechsel offen hatte. Wird nach
+    /// `hideTransientChildren()` gerufen wenn das Terminal wieder aktiv
+    /// ist. Position wird neu angedockt — das Promtboard kann sich in
+    /// der Zwischenzeit verschoben haben.
+    func showTransientChildrenIfNeeded() {
+        if inputPanelVisible, let p = inputPanel, !p.isVisible {
+            p.dock(leftOf: self)
+            p.orderFrontRegardless()
+        }
+        if historyPanelVisible, let p = historyPanel, !p.isVisible {
+            p.dock(leftOf: self)
+            p.orderFrontRegardless()
+        }
+    }
+
     // MARK: - Historie-Fenster (Linksklick auf Eintrag → Text in Eingabe)
 
     @objc private func onToggleHistory() {

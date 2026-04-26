@@ -78,6 +78,28 @@ namespace TerminalVoiceOverlay.Views
         /// schlucken (Sync ist eine Komfort-Funktion, kein Pflichtkanal).
         /// </summary>
         private PromptHistoryDriveSync? _historySync;
+
+        /// <summary>
+        /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
+        /// Promptboard-Datenbank. Praktisch zum Erkennen warum die Historie-
+        /// Titel manchmal nicht von Gemini kommen — wir loggen pro Submit
+        /// einmal mit Fallback-Titel und einmal mit dem AI-Ergebnis.
+        /// </summary>
+        private static void LogToHistoryDebug(string line)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard", "history");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "title-debug.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch { /* Diagnostics must never break the main flow. */ }
+        }
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
@@ -307,6 +329,12 @@ namespace TerminalVoiceOverlay.Views
                 PositionPromptPanel();
                 _promptPanel.Show();
             }
+
+            // Floating children (Prompt-Eingabe + Historie) — der Benutzer
+            // hatte sie evtl. offen als das Terminal die Aktivitaet verlor.
+            // Zurueckholen damit sie genauso wie das Promtboard nur ueber
+            // dem Terminal erscheinen, niemals ueber Chrome o.ae.
+            _promptPanel?.ShowTransientChildrenIfNeeded();
         }
 
         private void OnTerminalDeactivated()
@@ -838,14 +866,20 @@ namespace TerminalVoiceOverlay.Views
                 // geminiEnabled-Toggle (das ist nur fuer Diktat-Korrektur).
                 // Sobald ein Gemini-Client existiert (API-Key vorhanden),
                 // wird der Historie-Titel automatisch von Gemini gebaut.
+                LogToHistoryDebug($"WriteHistoryAsync: gemini={(_geminiClient is null ? "null" : "ok")} fallback=[{fallbackTitle}]");
                 if (_geminiClient is not null)
                 {
                     string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
-                    if (!string.IsNullOrWhiteSpace(aiTitle) && aiTitle != fallbackTitle)
+                    LogToHistoryDebug($"WriteHistoryAsync: ai=[{aiTitle}] same-as-fallback={aiTitle == fallbackTitle}");
+                    // Auch ein gleicher Titel wird geschrieben — sonst
+                    // bleibt im JSON dauerhaft der Eindruck, dass Gemini
+                    // nie aufgerufen wurde, obwohl es genau das Wort fuer
+                    // Wort empfohlen hat.
+                    if (!string.IsNullOrWhiteSpace(aiTitle))
                     {
                         await _historyService.UpdateTitleAsync(entry.Id, aiTitle);
                         // Nochmal re-rendern — der KI-Titel hat den
-                        // Fallback-Titel ueberschrieben.
+                        // Fallback-Titel ueberschrieben (oder ihn bestaetigt).
                         if (_promptPanel is not null)
                         {
                             await Dispatcher.InvokeAsync(async () =>

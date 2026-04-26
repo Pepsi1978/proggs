@@ -144,13 +144,40 @@ Der zu verarbeitende Whisper-Text folgt nun:
             try
             {
                 string raw = await SendWithRetry(titlePrompt + trimmed, 0);
-                return SanitizeTitle(raw, trimmed);
+                string sanitized = SanitizeTitle(raw, trimmed);
+                LogTitle($"OK raw=[{raw.Replace('\n', ' ')}] → [{sanitized}]");
+                return sanitized;
             }
-            catch
+            catch (Exception ex)
             {
-                // Bei jedem Fehler still auf den lokalen Fallback ausweichen.
+                // Bei jedem Fehler still auf den lokalen Fallback ausweichen,
+                // ABER den Fehler in eine Log-Datei schreiben damit der
+                // Benutzer (und ich beim Debuggen) den Grund sehen kann.
+                LogTitle($"FAIL {ex.GetType().Name}: {ex.Message}");
                 return FallbackTitleFromText(trimmed);
             }
+        }
+
+        /// <summary>
+        /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
+        /// Promptboard-Datenbank. Hilft beim Debuggen warum die Historie-
+        /// Titel manchmal nicht von Gemini kommen — Append-only, atomar
+        /// pro Zeile, schluckt selbst alle Fehler still.
+        /// </summary>
+        private static void LogTitle(string line)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard", "history");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "title-debug.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch { /* Diagnostics must never break the main flow. */ }
         }
 
         private static string SanitizeTitle(string raw, string fallbackSource)

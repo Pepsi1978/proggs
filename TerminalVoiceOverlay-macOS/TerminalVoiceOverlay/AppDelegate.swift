@@ -217,6 +217,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     p.dock(rightOf: self.panel)
                     p.level = .floating
                     p.orderFrontRegardless()
+                    // Floating Eingabe/Historie auch zurueckholen — der
+                    // Benutzer hatte sie evtl. offen als das Terminal die
+                    // Aktivitaet verlor. So sind die Panels nie ueber
+                    // Chrome o.ae. zu sehen, sondern nur ueber dem Terminal.
+                    p.showTransientChildrenIfNeeded()
                 }
             }
         }
@@ -226,6 +231,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 tvoDebug("[App] onTerminalDeactivated isRec=\(self.isRecording) isProc=\(self.isProcessing)")
                 if !self.isRecording && !self.isProcessing {
                     self.panel.orderOut(nil)
+                    // Eingabe + Historie zuerst verstecken (sind eigene
+                    // Top-Level-Panels), dann das Promtboard.
+                    self.promptBoardPanel?.hideTransientChildren()
                     self.promptBoardPanel?.orderOut(nil)
                 }
             }
