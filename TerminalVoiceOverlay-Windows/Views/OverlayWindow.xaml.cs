@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using TerminalVoiceOverlay.Models;
 using TerminalVoiceOverlay.NativeMethods;
 using TerminalVoiceOverlay.Services;
@@ -78,6 +79,45 @@ namespace TerminalVoiceOverlay.Views
         /// schlucken (Sync ist eine Komfort-Funktion, kein Pflichtkanal).
         /// </summary>
         private PromptHistoryDriveSync? _historySync;
+
+        /// <summary>
+        /// Liefert den AKTIVEN GeminiClient — der Key kommt bevorzugt aus
+        /// dem PromptBoard-Settings-Dialog (zentrale Quelle der Wahrheit).
+        /// Falls dort kein Key hinterlegt ist, faellt die Methode auf den
+        /// alten .env-Pfad (<see cref="_geminiClient"/>) zurueck. So pflegt
+        /// der Benutzer EINEN Key an EINER Stelle und alle Pfade — Diktat-
+        /// Cleanup, BTW, AI-Improvement, Historie-Titel — ziehen am
+        /// selben Strang. Pro Aufruf wird der PromptBoard-Key frisch
+        /// gelesen, damit eine Aenderung im Settings-Dialog sofort greift
+        /// ohne App-Neustart.
+        /// </summary>
+        private async Task<GeminiClient?> GetActiveGeminiClientAsync()
+        {
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var repo = scope.ServiceProvider
+                    .GetRequiredService<PromptBoard.Core.Repositories.IAppSettingsRepository>();
+                var settings = await repo.GetAsync();
+                string? key = settings.GeminiApiKey;
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    // gemini-2.5-flash matches what the AI-improvement
+                    // pipeline and the PromptEditDialog "G" button already
+                    // use — same key, same model, same behavior across the
+                    // whole app.
+                    return new GeminiClient(key, "gemini-2.5-flash", "low");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogToHistoryDebug($"GetActiveGeminiClientAsync FAIL: {ex.GetType().Name}: {ex.Message}");
+            }
+            // Fallback: der vom Voice-Overlay aus der .env-Datei gebaute
+            // Client. Behaelt das alte Verhalten fuer Benutzer die ihren
+            // Key noch nicht im PromptBoard-Settings-Dialog gepflegt haben.
+            return _geminiClient;
+        }
 
         /// <summary>
         /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
@@ -420,12 +460,13 @@ namespace TerminalVoiceOverlay.Views
                     lastRawTranscript = transcript;
 
                     string finalText;
-                    if (geminiEnabled && _geminiClient != null)
+                    var activeGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
+                    if (activeGemini != null)
                     {
                         Console.WriteLine("Gemini correction...");
                         try
                         {
-                            finalText = await _geminiClient.CorrectTextAsync(transcript);
+                            finalText = await activeGemini.CorrectTextAsync(transcript);
                             Console.WriteLine($"Corrected: {finalText}");
                         }
                         catch (Exception ex)
@@ -550,12 +591,13 @@ namespace TerminalVoiceOverlay.Views
                     Console.WriteLine($"BTW transcript: {transcript}");
 
                     string finalText;
-                    if (geminiEnabled && _geminiClient != null)
+                    var btwGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
+                    if (btwGemini != null)
                     {
                         Console.WriteLine("BTW Gemini correction...");
                         try
                         {
-                            finalText = await _geminiClient.CorrectTextAsync(transcript);
+                            finalText = await btwGemini.CorrectTextAsync(transcript);
                             Console.WriteLine($"BTW corrected: {finalText}");
                         }
                         catch (Exception ex)
@@ -869,14 +911,19 @@ namespace TerminalVoiceOverlay.Views
                 // Eintrag sofort, der Cloud-Push ist Hintergrund-Arbeit.
                 _ = TryUploadHistoryAsync();
 
-                // KI-Titel-Generierung laeuft UNABHAENGIG vom Voice-Overlay-
-                // geminiEnabled-Toggle (das ist nur fuer Diktat-Korrektur).
-                // Sobald ein Gemini-Client existiert (API-Key vorhanden),
-                // wird der Historie-Titel automatisch von Gemini gebaut.
-                LogToHistoryDebug($"WriteHistoryAsync: gemini={(_geminiClient is null ? "null" : "ok")} fallback=[{fallbackTitle}]");
-                if (_geminiClient is not null)
+                // KI-Titel-Generierung nutzt den Gemini-Key aus dem
+                // PromptBoard (gleiche Quelle wie der Edit-Dialog "G"-Button
+                // und der AI-Improvement-Pipeline). So pflegt der Benutzer
+                // genau EINEN Schluessel im Promptboard-Settings-Dialog,
+                // und alle drei Pfade (Cleanup, Improvement, History-Title)
+                // ziehen am selben Strang. Der Voice-Overlay-Key in der
+                // .env-Datei kann unabhaengig davon abgelaufen sein, ohne
+                // dass die Historie davon betroffen ist.
+                var titleClient = await GetActiveGeminiClientAsync();
+                LogToHistoryDebug($"WriteHistoryAsync: titleClient={(titleClient is null ? "null" : "ok")} fallback=[{fallbackTitle}]");
+                if (titleClient is not null)
                 {
-                    string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
+                    string aiTitle = await titleClient.GenerateTitleAsync(middleText);
                     LogToHistoryDebug($"WriteHistoryAsync: ai=[{aiTitle}] same-as-fallback={aiTitle == fallbackTitle}");
                     // Auch ein gleicher Titel wird geschrieben — sonst
                     // bleibt im JSON dauerhaft der Eindruck, dass Gemini

@@ -587,12 +587,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Hintergrund-Arbeit.
             self?.uploadHistoryToCloud()
 
-            // KI-Titel-Generierung laeuft UNABHAENGIG vom Voice-Overlay-
-            // geminiEnabled-Toggle (der ist nur fuer Diktat-Korrektur).
-            // Sobald ein Gemini-Client existiert (API-Key vorhanden), wird
-            // der Historie-Titel automatisch von Gemini gebaut.
-            guard let self = self, let gemini = self.geminiClient else { return }
-            gemini.generateTitle(mid) { [weak self] aiTitle in
+            // KI-Titel-Generierung nutzt den Gemini-Key aus dem Promptboard-
+            // Store (gleiche Quelle wie der Edit-Dialog "G"-Button und die
+            // AI-Improvement-Pipeline). So pflegt der Benutzer genau EINEN
+            // Schluessel im Promptboard-Settings-Dialog, und alle drei
+            // Pfade ziehen am selben Strang. Faellt der .env-Key (Voice-
+            // Overlay) aus, ist die Historie davon nicht betroffen.
+            guard let self = self else { return }
+            guard let pbKey = (try? PromptBoardStore.shared.settings().geminiApiKey)
+                                ?? nil,
+                  !pbKey.isEmpty else {
+                tvoDebug("[App] history title: no Gemini key in PromptBoardStore")
+                return
+            }
+            let titleClient = GeminiClient(apiKey: pbKey)
+            titleClient.generateTitle(mid) { [weak self] aiTitle in
                 let trimmed = aiTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty, trimmed != fallbackTitle else { return }
                 PromptHistoryStore.shared.updateTitle(entryId: entry.id, newTitle: trimmed)
