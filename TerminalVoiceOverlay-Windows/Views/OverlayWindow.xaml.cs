@@ -342,6 +342,13 @@ namespace TerminalVoiceOverlay.Views
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
 
+            // Floating Children (Eingabe + Historie) ZUERST verstecken —
+            // sie sind eigene Top-Level-Windows und werden vom Verstecken
+            // des Promtboards nicht automatisch mitgenommen. Wenn wir das
+            // hier vergessen, bleiben sie ueber Chrome / VS Code / etc.
+            // sichtbar, was Frank explizit nicht will.
+            _promptPanel?.HideTransientChildren();
+
             // Hide (not Close) the panel so its state — selected category,
             // edit-in-progress, scroll position — survives until the user
             // returns to the terminal. Closing would null _promptPanel and
