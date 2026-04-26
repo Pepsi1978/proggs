@@ -1,97 +1,204 @@
 ---
 name: rechtssicherheit
 description: >
-  Prueft Android-Apps auf Abmahnungssicherheit fuer den internationalen Play-Store-Release.
-  Recherchiert parallel aktuelle Pflichtangaben fuer DSGVO/GDPR (EU), CCPA (USA), UK-GDPR,
-  PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea), LGPD (Brasilien),
-  Google Play Data Safety, TMG/DDG-Impressum, Widerrufsbelehrung und AGB.
-  Gleicht Befunde gegen bestehende App-Dokumente (Datenschutzerklaerung, Nutzungsbedingungen,
-  Impressum, Widerrufsbelehrung) und deren Platzierung/Uebersetzung in der App ab.
-  Erstellt/pflegt `~/proggs/rechtssicherheit.md` als Wissensbasis.
+  Prueft Android-Apps vor Release als technische Pruefhilfe (KEINE anwaltliche Beratung)
+  auf Abmahn-, Datenschutz-, Impressums-, Nutzungsbedingungen-, Widerrufs-, Google-Play-
+  Data-Safety- und App-Sicherheitsrisiken. Vollscan der Codestruktur, Manifest-/Permissions-
+  /SDK-/Backup-/Logs-/Secrets-Pruefung, Abgleich Code vs. Rechtstexte vs. Play Console.
+  Recherchiert parallel (5 Researcher) aktuelle Pflichtangaben fuer DSGVO/GDPR (EU),
+  CCPA (USA), UK-GDPR, PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea),
+  LGPD (Brasilien), Google Play Data Safety, DDG-Anbieterkennzeichnung,
+  Widerrufsbelehrung und AGB.
+  Gleicht Befunde gegen bestehende App-Dokumente (Datenschutzerklaerung, Nutzungs-
+  bedingungen, Impressum, Widerrufsbelehrung, Account-/Datenloeschung) und deren
+  Platzierung/Uebersetzung in der App und im Store ab.
+  Erstellt/pflegt `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` als workspace-lokale
+  Wissensbasis (plattformneutral, keine harten Home-Pfade).
   Deutsche Trigger: "starte den Skill Rechtssicherheit", "pruefe [App] auf Rechtssicherheit",
   "Rechtssicherheit fuer [App]", "DSGVO-Check fuer [App]", "ist [App] abmahnungssicher",
-  "Abmahnungscheck [App]", "Play-Store rechtskonform pruefen", "Rechts-Audit [App]".
-  Nutze diesen Skill immer wenn es um Datenschutz-Compliance, Abmahnungsrisiken, Play-Store-Release
-  oder rechtliche Pflichttexte einer App geht — auch wenn der Benutzer den Skill-Namen
-  nicht explizit nennt, aber von Datenschutzerklaerung, Impressum, AGB, Widerruf oder
+  "Abmahnungscheck [App]", "Play-Store rechtskonform pruefen", "Rechts-Audit [App]",
+  "Data-Safety-Check", "Account-Loeschung pruefen", "Widerruf pruefen", "Impressum pruefen".
+  Nutze diesen Skill immer wenn es um Datenschutz-Compliance, Abmahnungsrisiken, Play-
+  Store-Release oder rechtliche Pflichttexte einer App geht — auch wenn der Benutzer den
+  Skill-Namen nicht explizit nennt, aber von Datenschutzerklaerung, Impressum, AGB,
+  Widerruf, Consent, Account-Loeschung, Data Safety, Permissions, SDKs, Tracking oder
   DSGVO-Konformitaet spricht.
 invocation: user
 ---
 
 # Skill: Rechtssicherheit
 
-> **Wichtiger Disclaimer:** Dieser Skill ist eine **technische Pruefhilfe** und ersetzt
-> KEINE anwaltliche Beratung. Er markiert fehlende Pflichtangaben und typische Fallstricke
-> basierend auf oeffentlichen Quellen. Fuer eine verbindliche Rechtspruefung muss immer
-> ein Fachanwalt fuer IT-Recht konsultiert werden. Den Benutzer am Anfang UND am Ende
-> des Berichts darauf hinweisen.
+> **Wichtiger Disclaimer (PFLICHT — am Anfang UND am Ende des Berichts wiederholen):**
+> Dieser Skill ist eine **technische Pruefhilfe** und ersetzt **KEINE anwaltliche Beratung**.
+> Er kann fehlende Pflichtangaben, technische Inkonsistenzen, Play-Policy-Risiken und
+> typische Abmahn-Fallstricke markieren — er gibt **keine Garantie** fuer Rechtssicherheit
+> oder Abmahnungssicherheit. Fuer eine verbindliche Rechtspruefung MUSS vor Release ein
+> **Fachanwalt fuer IT-Recht** konsultiert werden.
+
+---
+
+## Grundsatz: Keine Garantien
+
+**Verbotene Formulierungen:**
+
+- ❌ "Die App ist rechtssicher."
+- ❌ "Die App ist 100% abmahnungssicher."
+- ❌ "Dieser Text reicht rechtlich aus."
+- ❌ "Du kannst jetzt bedenkenlos releasen."
+
+**Erlaubte Formulierungen:**
+
+- ✅ "Technisch wurden keine offensichtlichen Luecken in den geprueften Dateien gefunden."
+- ✅ "Release aus technischer Sicht nur nach anwaltlicher Pruefung empfohlen."
+- ✅ "Release blockieren, bis dieser Punkt korrigiert und juristisch geprueft ist."
+- ✅ "Die folgenden Pflichtangaben fehlen oder sind unvollstaendig: ..."
 
 ---
 
 ## Ziel
 
-Eine Android-App vor dem Play-Store-Release so pruefen, dass sie in den Ziel-Maerkten
-so weit wie technisch ueberpruefbar **abmahnungssicher** ist:
+Eine Android-App vor Release so pruefen, dass sie technisch, dokumentarisch und
+in der Play-Store-Deklaration so weit wie pruefbar abmahnungsresistent ist. Der
+Skill prueft nicht nur Rechtstexte, sondern auch ob die App technisch das tut,
+was Datenschutz, Nutzungsbedingungen, Impressum, Widerrufsbelehrung und Google
+Play Data Safety behaupten.
 
-1. Pflichtangaben vorhanden (Datenschutz, ToS, Impressum, Widerruf)
-2. Platzierung in der App korrekt (Onboarding, Settings, Consent-Screen)
-3. Uebersetzung in alle Play-Store-Sprachen der App
-4. Inhalt aktuell (DSGVO-Stand, CCPA, PIPL, DPDP, etc.)
-5. Google Play Data Safety Declaration stimmt mit App-Verhalten ueberein
+**Pflichtziele:**
+
+1. Pflichtdokumente vorhanden: Datenschutzerklaerung, Nutzungsbedingungen, Impressum/
+   Anbieterkennzeichnung, Widerruf bei kostenpflichtigen digitalen Inhalten,
+   Support/Kontakt, Account-/Datenloeschung wenn Accounts existieren.
+2. Pflichtdokumente enthalten die noetigen Angaben fuer Zielmaerkte und Features.
+3. App verlinkt diese Dokumente korrekt: Store Listing, Onboarding, Consent,
+   Settings, About, Account deletion, Paywall/Checkout.
+4. Google Play Data Safety, Play-Console-Deklarationen, Manifest-Permissions, SDKs,
+   Netzwerkverhalten und Rechtstexte sind konsistent.
+5. Sicherheits- und Datenschutztechnik reduziert rechtliche Risiken: minimale
+   Permissions, keine unnoetige Datenerhebung, sichere Speicherung, Backup-Regeln,
+   TLS, keine Secrets im Repo, keine sensiblen Logs.
+6. Alle relevanten Sprachen/Locales sind abgedeckt oder als Release-Blocker markiert.
+7. Der Bericht trennt klar zwischen "rechtlich verbindlich durch Anwalt klaeren" und
+   "technisch im Repo nachweisbar".
 
 ---
 
-## Ablauf (7 Schritte — strikt in dieser Reihenfolge)
+## Plattformneutrale Pfade (KRITISCH)
 
-### Schritt 1 — App-Namen klaeren
+Die Wissensbasis liegt **workspace-lokal**, nicht in einem persoenlichen Home-Unterordner.
 
-Wenn der Benutzer den App-Namen nicht genannt hat, **einmal kurz fragen** auf Deutsch:
+**Zielpfad (plattformneutral):** `<WORKSPACE_ROOT>/tools/rechtssicherheit.md`
 
-> "Welche App soll ich pruefen? (z.B. BestJournal, EntropyJournal, PenAndPage)"
+`<WORKSPACE_ROOT>` ist das aktuelle Arbeitsverzeichnis bzw. der Repo-Root, in dem
+die zu pruefende App liegt. Beispiele fuer die Aufloesung:
 
-Wenn er die App genannt hat, direkt zu Schritt 2.
+| Plattform | Beispielpfad |
+|-----------|--------------|
+| Windows   | `%USERPROFILE%\proggs\tools\rechtssicherheit.md` |
+| macOS/Linux | `$HOME/proggs/tools/rechtssicherheit.md` |
+| Generisch | `<repo-root>/tools/rechtssicherheit.md` |
 
-### Schritt 2 — Referenz-Datei laden
+**Verboten:** Harte Pfade wie `C:\Users\...`, `/Users/barwa/...` oder Bezuege auf
+private Home-Unterordner als Standard. `~/Codex/`, `~/proggs/` oder andere
+Home-Unterordner duerfen nicht als Default-Arbeitsverzeichnis verwendet werden,
+wenn ein aktueller Workspace/Repo-Root verfuegbar ist.
 
-Pruefe ob `~/proggs/rechtssicherheit.md` existiert.
+**Wenn der Benutzer explizit eine Datei ausserhalb des Workspaces nennt:** Diese
+konkrete Datei darf gelesen/geschrieben werden. Sonst bleibt der Skill im aktuellen
+Workspace.
+
+---
+
+## Aktueller Recherche-Stand
+
+Stand dieser Skill-Version: **2026-04-26**.
+
+Bei jeder echten App-Pruefung aktuelle Quellen erneut pruefen, wenn:
+
+- die letzte Recherche aelter als 30 Tage ist,
+- Google Play Policies betroffen sind,
+- Health, Kinder, Standort, Medien, Kontakte, SMS/Call Logs, Finanzdaten, KI/GenAI,
+  Ads, Analytics, User Generated Content oder Accounts vorkommen,
+- die App in neue Laender/Sprachen ausgerollt wird,
+- der Benutzer "aktuell", "neueste" oder "Release" sagt.
+
+**Pflicht-Quellenklassen:**
+
+- Google Play Developer Policy Center / Play Console Help.
+- Android Developers Privacy & Security Dokumentation.
+- EU-Kommission, GDPR-Text, nationale Gesetzestexte.
+- Deutsche Gesetze: DDG fuer Anbieterkennzeichnung, BGB/EGBGB fuer Widerruf.
+- Aufsichtsbehoerden: EDPB, Datenschutzkonferenz, ICO, FTC/CPPA, OAIC, OPC, relevante
+  asiatische Behoerden.
+- OWASP MASVS/MASTG fuer technische Mobile-Security-Kontrollen.
+
+---
+
+## Ablauf (8 Schritte — strikt in dieser Reihenfolge)
+
+### Schritt 1 — Scope klaeren
+
+Wenn der Benutzer den App-Namen nicht genannt hat, **einmal kurz fragen**:
+
+> Welche App soll ich pruefen? (z.B. BestJournalAndroid, BestJournalFrank, QuizVerse)
+
+Wenn fuer den Audit weitere Infos noetig und nicht aus dem Repo erkennbar sind,
+Fragen **gesammelt** stellen, nicht einzeln:
+
+1. In welchen Laendern/Sprachen soll die App veroeffentlicht werden?
+2. Gibt es In-App-Kaeufe, Abos, Werbung, Affiliate-Links oder externe Zahlungen?
+3. Gibt es Accounts, Cloud-Sync, Backups, Export, Import oder Datenloeschung?
+4. Werden Firebase, Analytics, Crashlytics, Ads, KI-APIs oder andere SDKs genutzt?
+5. Richtet sich die App an Kinder oder kann sie fuer Kinder attraktiv wirken?
+6. Gibt es sensible Daten: Gesundheit, Tagebuch, Standort, Kontakte, Fotos, Audio,
+   Kamera, Kalender, Finanzdaten, Religion, Sexualitaet, biometrische Daten?
+
+Nicht auf Antworten warten, wenn der Repo-Zustand eine konservative Annahme erlaubt.
+Unklare Punkte im Bericht als Annahmen markieren.
+
+### Schritt 2 — Wissensbasis laden
+
+Pruefe ob `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` existiert.
 
 | Zustand | Aktion |
 |---------|--------|
 | **Existiert** | Komplett einlesen. Diese Datei ist die Wissensbasis aus frueheren Sessions und wird am Ende aktualisiert. |
 | **Fehlt** | Nach der Recherche (Schritt 3) wird sie zum ersten Mal angelegt. |
 
-Dem Benutzer kurz melden: *"Lese Referenz-Datei..."* oder *"Lege Referenz-Datei neu an."*
+Dem Benutzer kurz melden: *"Lese Wissensbasis aus tools/rechtssicherheit.md..."*
+oder *"Lege Wissensbasis neu an."*
 
-### Schritt 3 — Internet-Recherche (parallel)
+### Schritt 3 — Internet-Recherche (5 Researcher parallel)
 
-Starte **5 Researcher-Agenten parallel** in EINER Nachricht mit mehreren `Agent`-Tool-Aufrufen.
-Dies ist Pflicht — nie sequentiell. Jeder Researcher: **max 50 Ergebnisse, max 15 Web-Fetches,
-max 10 Minuten Laufzeit, max 2000 Woerter Prompt**.
+**Pflicht: 5 Researcher-Agenten in EINER Nachricht parallel starten** (nicht sequentiell).
+Jeder Researcher: **max 50 Ergebnisse, max 15 Web-Fetches, max 10 Minuten Laufzeit,
+max 2000 Woerter Prompt** (siehe `~/.claude/rules/researcher-robustness.md`).
 
 Dem Benutzer vor dem Start sagen:
-> "Ich starte 5 parallele Researcher fuer DE/EU, US/UK, Asien, Play-Store und Abmahn-Trends.
-> Laufzeit: ~5-8 Minuten."
+> "Ich starte 5 parallele Researcher fuer DE/EU, US/UK, Asien, Play-Store und
+> Abmahn-Trends. Laufzeit: ~5-8 Minuten."
 
-**Researcher-Aufteilung (fix, nicht veraendern):**
+**Researcher-Aufteilung (fix):**
 
 | # | Agent | Fokus | Wichtige Quellen |
 |---|-------|-------|------------------|
-| 1 | `researcher` | **DE/EU** — DSGVO aktueller Stand, TMG/DDG-Impressum, BGH/EuGH-Rechtsprechung, TTDSG/ePrivacy, Widerrufsbelehrung-Muster, AGB-Pflichten | dsgvo-gesetz.de, datenschutz.org, gesetze-im-internet.de, haendlerbund.de, bundesjustizamt.de |
-| 2 | `researcher` | **US/UK/CA/AU** — CCPA/CPRA, UK-GDPR, PIPEDA, Privacy Act, COPPA (wenn Kinder-Feature) | oag.ca.gov, ico.org.uk, priv.gc.ca, oaic.gov.au |
-| 3 | `researcher` | **Asien** — PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea) inklusive Cross-Border-Transfer-Regeln | cac.gov.cn, meity.gov.in, ppc.go.jp, pipc.go.kr |
-| 4 | `researcher` | **Google Play Policies** — Data Safety Form (aktuell), User Data Policy, Permissions, Sensitive Permissions, Families Policy, AI-generated Content | support.google.com/googleplay/android-developer, play.google.com/console |
-| 5 | `researcher` | **Aktuelle Abmahnwellen 2025/2026** — Google Fonts/Analytics-Integration, Cookie-Consent-Urteile, fehlendes Impressum, AI-Act-Pflichten, unvollstaendige Widerrufsbelehrung | it-recht-kanzlei.de, dr-bahr.com, wbs.legal (News-Bereich) |
+| 1 | `researcher` | **DE/EU** — DSGVO aktueller Stand, DDG-Anbieterkennzeichnung, BGH/EuGH-Rechtsprechung, TTDSG/TDDDG/ePrivacy, Widerrufsbelehrung-Muster, AGB-Pflichten | dsgvo-gesetz.de, datenschutz.org, gesetze-im-internet.de, haendlerbund.de, bundesjustizamt.de, edpb.europa.eu |
+| 2 | `researcher` | **US/UK/CA/AU** — CCPA/CPRA, UK-GDPR, PIPEDA, Privacy Act, COPPA (wenn Kinder-Feature) | oag.ca.gov, cppa.ca.gov, ico.org.uk, priv.gc.ca, oaic.gov.au, ftc.gov |
+| 3 | `researcher` | **Asien/LatAm** — PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea), LGPD (Brasilien) inkl. Cross-Border-Transfer-Regeln | cac.gov.cn, meity.gov.in, ppc.go.jp, pipc.go.kr, gov.br/anpd |
+| 4 | `researcher` | **Google Play Policies** — Data Safety Form (aktuell), User Data Policy, Permissions, Sensitive Permissions, Families Policy, AI-generated Content, Deceptive Behavior, Health, Financial Services, Account Deletion | support.google.com/googleplay/android-developer, play.google.com/console/about/policy |
+| 5 | `researcher` | **Aktuelle Abmahnwellen 2025/2026** — Google Fonts/Analytics-Integration, Cookie-Consent-Urteile, fehlendes Impressum, AI-Act-Pflichten, unvollstaendige Widerrufsbelehrung, Data-Safety-Diskrepanzen | it-recht-kanzlei.de, dr-bahr.com, wbs.legal (News), juris.de |
 
-**Prompt-Muster pro Researcher (anpassen pro Fokus):**
+**Prompt-Muster pro Researcher:**
 
 ```
-Recherchiere fuer [FOKUS] die aktuellen (Stand {Monat/Jahr}) rechtlichen Pflichtangaben
-einer Android-App im Google Play Store.
+Recherchiere fuer [FOKUS] die aktuellen (Stand {Monat/Jahr}) rechtlichen
+Pflichtangaben einer Android-App im Google Play Store.
 
 Liefere strukturiert zurueck:
-1. PFLICHTANGABEN-LISTE: Was muss zwingend in Datenschutz/ToS/Impressum/Widerruf stehen?
+1. PFLICHTANGABEN-LISTE: Was muss zwingend in Datenschutz/ToS/Impressum/Widerruf/
+   Account-Deletion stehen?
 2. MUSTER-KLAUSELN: Offizielle oder weit verbreitete Formulierungen mit Quelle.
-3. SPRACHANFORDERUNG: Muessen die Texte in der Landessprache vorliegen oder reicht Englisch?
+3. SPRACHANFORDERUNG: Muessen die Texte in der Landessprache vorliegen oder
+   reicht Englisch?
 4. SANKTIONEN: Bussgelder / Abmahnrisiko bei Verstoss.
 5. AKTUELLE AENDERUNGEN: Was hat sich in den letzten 12 Monaten geaendert?
 6. QUELLEN: Offizielle URLs mit Abrufdatum.
@@ -100,231 +207,582 @@ Limits: max 50 Ergebnisse, max 15 Web-Fetches, max 10 Minuten.
 Bei Netzwerkfehlern: das zurueckgeben was da ist, nicht crashen.
 ```
 
-**Wenn ein Researcher fehlschlaegt:** Sofort dem Benutzer auf Deutsch melden, die anderen
-weiterlaufen lassen, nicht still weitermachen.
+**Wenn ein Researcher fehlschlaegt:** Sofort dem Benutzer auf Deutsch melden, die
+anderen weiterlaufen lassen, nicht still weitermachen.
 
-### Schritt 4 — Ergebnisse konsolidieren
+### Schritt 4 — Pflicht: Vollscan der Codestruktur
 
-Wenn alle 5 Researcher zurueck sind:
+> **Vor jeder Bewertung MUSS die gesamte App durchsucht werden — nicht nur Dateien
+> mit Namen wie `privacy`, `terms` oder `legal`. Rechtlich relevante Hinweise
+> stecken in UI-Texten, ViewModels, Repository-Klassen, SDK-Initialisierung,
+> Build-Konfiguration, Store-Metadaten, Tests, Markdown-Dateien, Scripts und
+> Web-/Backend-Hilfsdateien.**
 
-1. Ergebnisse zusammenfuehren in eine **Pflichtangaben-Matrix** (Markt × Dokumenttyp).
-2. **Sprachmatrix** erstellen: Welche Maerkte verlangen die Landessprache zwingend?
-   (Kurzantwort auf die Benutzer-Frage: "Reichen Deutsch+Englisch?" — die Recherche
-   klaert das. Typische Regel 2026: DE/AT verlangen Deutsch, FR Franzoesisch,
-   China/Korea zwingend Landessprache, UK/US Englisch ausreichend.)
-3. **Abmahn-Hotspots** markieren (Google Fonts, Analytics ohne Consent, fehlende
-   Cookie-Banner, unvollstaendige Widerrufsbelehrung).
+#### 4.0 Datei-Inventur
 
-### Schritt 5 — App-Pruefung
-
-Die genannte App im Repo finden und systematisch pruefen.
-
-**5a. Rechts-Dokumente im Projekt finden:**
-
-```
-Glob: **/res/raw/*privacy*, **/res/raw/*terms*, **/res/raw/*impressum*
-Glob: **/assets/*privacy*, **/assets/*terms*, **/assets/*legal*
-Glob: **/res/values*/strings.xml
-Grep in strings.xml: "datenschutz|privacy|terms|impressum|widerruf|agb"
-Grep in Code (Kotlin/Compose): "ConsentScreen|PrivacyPolicy|TermsOf|Impressum|Widerruf"
+```sh
+rg --files [APP_DIR]
+rg --files [APP_DIR] | rg -i "\.(kt|java|xml|gradle|kts|json|properties|md|html|js|ts|tsx|jsx|yaml|yml|txt|csv)$"
 ```
 
-**5b. Inhalts-Pruefung:** Jedes gefundene Dokument gegen die Pflichtangaben-Matrix
-aus Schritt 4 abgleichen. Fehlende Pflichtangaben als Befund notieren.
+Generated/build Artefakte duerfen ausgeschlossen werden, wenn sie klar
+reproduzierbar sind: `build/`, `.gradle/`, `node_modules/`, `.idea/`, `captures/`.
+**Store-Metadaten, Legal-Assets, Scripts und Configs duerfen NICHT ausgeschlossen
+werden.**
 
-**5c. Platzierungs-Pruefung:** Ueber Grep/Compose-Suche pruefen:
+#### 4.1 Legal-Signal-Suche ueber die gesamte App
+
+```sh
+rg -n -i "privacy|datenschutz|dsgvo|gdpr|ccpa|consent|einwilligung|widerruf|withdraw|terms|nutzungsbedingungen|agb|impressum|anbieter|legal|policy|delete account|account deletion|datenloesch|loesch|support|kontakt|contact|billing|subscription|abo|refund|iap|in-app|admob|ads|advertising|analytics|crashlytics|firebase|sentry|tracking|telemetry|location|standort|camera|kamera|microphone|mikrofon|contacts|kontakte|calendar|kalender|health|gesundheit|journal|diary|tagebuch|ai|ki|openai|anthropic|gemini|children|kids|families|ugc|moderation|webview|cookie|font|google fonts|third party|drittanbieter|export|backup|sync|cloud|encryption|verschluessel|log\\.|timber|token|secret|api[_-]?key|http://" [APP_DIR]
+```
+
+#### 4.2 Treffer klassifizieren
+
+| Klasse | Beispiele | Abgleich gegen |
+|---|---|---|
+| Dokument/Legal-Text | Privacy, Terms, Impressum, Widerruf, Support | Pflichtdokumente, Sprache, Aktualitaet |
+| UI-Link/Navigation | Settings, About, Onboarding, Paywall | Erreichbarkeit, Platzierung, Timing |
+| Datenverarbeitung | Repository, API, Sync, Export, Import | Privacy Policy, Consent, Data Safety |
+| SDK/Third Party | Firebase, Ads, Analytics, Crash, AI APIs | Dritte, Transfer, Data Safety, Consent |
+| Permission/Sensor | Location, Camera, Audio, Media, Contacts | Manifest, Runtime Permission, Prominent Disclosure |
+| Account/Deletion | Login, Signup, Delete, Auth | Loeschweg, Data Safety, Privacy Policy |
+| Monetarisierung | Billing, Subscription, Ads, Paywall | Terms, Widerruf, Preis-/Abo-Info |
+| Sicherheit | Backup, Logs, Secrets, TLS, WebView | Android Security, Datenschutzversprechen |
+| Kinder/Health/AI/UGC | Families, Health, GenAI, Moderation | Spezial-Policies, Disclaimer, Meldesystem |
+
+**Pflicht-Ergebnis:** Fuer jede Treffergruppe ein Abgleich:
+- "in Dokumenten erwaehnt?",
+- "in App verlinkt?",
+- "in Data Safety/Play Console zu deklarieren?",
+- "Consent noetig?",
+- "Release-Blocker?".
+
+**Wenn keine Treffer in einem erwarteten Bereich gefunden werden, explizit notieren**,
+z.B. "Keine Account-Erstellung gefunden" oder "Keine Ads-SDKs gefunden".
+
+### Schritt 5 — Detail-Pruefung
+
+#### 5a. Projekt und Package
+
+```sh
+rg -n "namespace |applicationId|package=" -g "*.gradle*" -g "*.kts" -g "AndroidManifest.xml" [APP_DIR]
+```
+
+Erfassen: App-Name, Package-ID, Variante/Flavor, minSdk, targetSdk, compileSdk,
+Store-Metadaten (`fastlane/metadata`, `play-store-metadata`, README, Website),
+verwendete Sprachen/Locales (`app/src/main/res/values*`).
+
+#### 5b. Manifest, Permissions und Android-Komponenten
+
+```sh
+rg -n "uses-permission|queries|provider|receiver|service|activity|exported|allowBackup|fullBackupContent|dataExtractionRules|networkSecurityConfig|usesCleartextTraffic|debuggable" -g "AndroidManifest.xml" [APP_DIR]
+```
+
+**Besonders kritisch:**
+
+- `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`
+- `READ_CONTACTS`, `READ_CALENDAR`, `READ_PHONE_STATE`, SMS/Call-Log
+- `CAMERA`, `RECORD_AUDIO`
+- `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `MANAGE_EXTERNAL_STORAGE`
+- `POST_NOTIFICATIONS` bei sensiblen Inhalten
+- `QUERY_ALL_PACKAGES`
+- `AD_ID`
+- Health Connect / Gesundheitsdaten
+- Exported Activities/Services/Receivers/Providers
+- `allowBackup`, `fullBackupContent`, `dataExtractionRules`
+- `usesCleartextTraffic` und Network Security Config
+
+**Jede Permission gegen Feature, Rechtstext, Prominent Disclosure, Runtime-Permission-
+Dialog und Data Safety abgleichen.**
+
+#### 5c. SDKs, Dependencies und Datenabfluss
+
+```sh
+rg -n -i "firebase|analytics|crashlytics|admob|ads|facebook|meta|adjust|appsflyer|sentry|amplitude|mixpanel|onesignal|revenuecat|billing|stripe|openai|anthropic|googleapis|okhttp|retrofit|ktor|webview|javascript" [APP_DIR]
+rg -n -i "http://|https://|Authorization|Bearer|apiKey|apikey|secret|token|client_secret" [APP_DIR]
+```
+
+**Pruefen:**
+- Welche SDKs sammeln automatisch Daten?
+- Werden IP-Adresse, Device IDs, Crash Logs, Analytics Events, Advertising ID,
+  Firebase Installation ID oder Push Tokens verarbeitet?
+- Drittlandtransfer ausserhalb EU/EWR?
+- AVV/DPA oder SCC/Transfergrundlage benoetigt?
+- Privacy Policy spezifisch genug fuer jeden SDK-Zweck?
+- Debug-/Test-/Staging-Endpunkte entfernt?
+- Werden Secrets aus zentraler Secrets-Ablage (z.B. `$HOME/SK/`) statt aus dem Repo geladen?
+
+#### 5d. Lokale Speicherung, Logs und Backup
+
+```sh
+rg -n -i "SharedPreferences|DataStore|RoomDatabase|SQLite|File\\(|openFileOutput|cacheDir|externalCacheDir|getExternalFilesDir|Log\\.|Timber|println|printStackTrace|Encrypted|KeyStore|MasterKey" [APP_DIR]
+```
+
+**Pruefen:**
+- Sensitive Daten verschluesselt oder mindestens nicht in Klartext?
+- Tagebuch-, Gesundheits-, Auth-, Token- und Profil-Daten nicht in Backups,
+  Screenshots, Clipboard, Logs oder Crashreports geleakt?
+- Backup-Regeln schliessen sensitive Daten aus oder verlangen Ende-zu-Ende-Schutz?
+- Export/Import bewusst dokumentiert und sicher?
+- Loeschfunktion loescht lokale Daten, Sync-Daten und Backups soweit moeglich?
+
+#### 5e. Rechtstexte und UI-Links
+
+```sh
+rg -n -i "datenschutz|privacy|privacy policy|terms|nutzungsbedingungen|agb|impressum|anbieter|widerruf|refund|deletion|loesch|delete account|support|kontakt|contact" [APP_DIR]
+rg --files [APP_DIR] | rg -i "privacy|terms|impressum|legal|widerruf|refund|delete|deletion|support"
+```
+
+**Platzierungs-Pruefung:**
 
 | Pflicht-Platzierung | Typisches Muster |
 |--------------------|------------------|
 | **Onboarding/Consent-Screen** | `ConsentScreen.kt`, Link zur Datenschutzerklaerung VOR Datenerhebung |
 | **Settings-Screen** | Menupunkte "Datenschutz", "Nutzungsbedingungen", "Impressum" dauerhaft erreichbar |
-| **Ueber-/About-Screen** | Impressum-Link mit Kontaktdaten |
+| **About-Screen** | Impressum-Link mit Kontaktdaten |
 | **Consent-Widerruf** | Benutzer kann Zustimmung nachtraeglich widerrufen (DSGVO Art. 7 Abs. 3) |
+| **Paywall/Checkout** | Widerrufsbelehrung VOR Kaufabschluss |
+| **Account-Deletion** | In-App-Pfad UND Weblink |
 
-**5d. Sprach-Pruefung:** `app/src/main/res/values-XX/strings.xml` auflisten. Welche
-Locales hat die App? Abgleich mit Play-Store-Release-Sprachen. Fehlende Uebersetzungen
-der Rechtstexte als Befund notieren.
+**Sprach-Pruefung:** `app/src/main/res/values-XX/strings.xml` auflisten. Welche
+Locales hat die App? Abgleich mit Play-Store-Release-Sprachen. Fehlende
+Uebersetzungen der Rechtstexte als Befund notieren.
 
-**5e. Google Play Data Safety:** Falls vorhanden, `play-store-metadata/*` oder
-Hinweise auf Data-Safety-Deklaration pruefen. Vergleich mit tatsaechlichen App-Permissions
-(`AndroidManifest.xml`) und verwendeten SDKs (Firebase, Analytics, Ads, Crashlytics).
+#### 5f. Consent und Widerruf
 
-### Schritt 6 — Bericht erstellen
+- Einwilligung VOR nicht notwendiger Datenverarbeitung.
+- Kein vorangekreuztes Consent.
+- Widerruf so einfach wie Zustimmung.
+- Consent-Zwecke getrennt: Analytics, Crashlytics, Ads, personalisierte Ads,
+  Cloud-Sync, Newsletter/Marketing, KI-Verarbeitung.
+- App funktioniert soweit moeglich auch ohne freiwillige Einwilligungen.
+- Alter/Kinderschutz, falls relevant.
+- Prominent Disclosure direkt im Nutzungsfluss (nicht nur in Settings/Privacy Policy).
 
-Befunde strukturiert ausgeben. Schweregrad nach diesem Schema:
+#### 5g. Store Listing und Play Console
 
-| Grad | Bedeutung |
-|------|-----------|
-| 🔴 **KRITISCH** | Sofortige Abmahnungs- oder Bussgeldgefahr. Release blockieren. |
-| 🟠 **HOCH** | Grosse Luecke, muss vor Release gefixt werden. |
-| 🟡 **MITTEL** | Sollte gefixt werden, aber nicht release-blockierend. |
-| 🟢 **NIEDRIG** | Kosmetik / Best Practice. |
-
-**Pflicht-Struktur des Berichts:**
-
-```markdown
-# Rechtssicherheits-Audit: [App-Name]
-Datum: YYYY-MM-DD
-Geprueft gegen: DSGVO, CCPA, UK-GDPR, PIPL, DPDP, APPI, PIPA, LGPD, Google Play Policies
-
-## Disclaimer
-Keine anwaltliche Beratung. Fachanwalt konsultieren vor Release.
-
-## Zusammenfassung
-- Gesamtstatus: [Release-faehig | Nicht release-faehig | Bedingt release-faehig]
-- Kritische Befunde: N
-- Hohe Befunde: N
-- Mittlere Befunde: N
-
-## Befunde nach Schweregrad
-### 🔴 KRITISCH
-1. [Befund] — Quelle: [Datei:Zeile] — Fix: [konkret]
-...
-
-### 🟠 HOCH
-...
-
-## Sprachen-Matrix
-| Markt | Sprache | Pflicht? | Vorhanden? |
-|-------|---------|----------|------------|
-| DE | Deutsch | Ja | ✅/❌ |
-| ...
-
-## Laender-Matrix (Release-Freigabe)
-| Land | DSGVO/Lokal | Rechtstext | Consent | Freigabe |
-|------|-------------|------------|---------|----------|
-| DE | ✅ | ✅ | ✅ | 🟢 FREI |
-| US | ⚠ | ✅ | ❌ | 🟡 BEDINGT |
-| ...
-
-## Google Play Data Safety Check
-- Deklarierte Daten: ...
-- Tatsaechlich gesammelte Daten: ...
-- Diskrepanzen: ...
-
-## TODO-Checkliste (in Reihenfolge abarbeiten)
-- [ ] Kritisch: ...
-- [ ] Hoch: ...
-- [ ] Mittel: ...
-```
-
-### Schritt 7 — Referenz-Datei aktualisieren
-
-`~/proggs/rechtssicherheit.md` updaten (oder neu anlegen).
-
-**Struktur der Referenz-Datei:**
-
-```markdown
-# rechtssicherheit.md — Wissensbasis
-Letzte Recherche: YYYY-MM-DD
-Naechste Pflicht-Pruefung: YYYY-MM-DD (+90 Tage)
-
-## Pflichtangaben-Matrix (Master)
-### Datenschutzerklaerung — EU/DSGVO
-[Liste mit Quelle + Abrufdatum]
-### Datenschutzerklaerung — USA/CCPA
-...
-### Impressum — DE/TMG-DDG
-...
-### Widerrufsbelehrung — EU
-...
-### AGB/Nutzungsbedingungen
-...
-
-## Sprach-Anforderungen pro Markt
-[Matrix]
-
-## Aktuelle Abmahn-Hotspots (Stand YYYY-MM)
-[Liste mit Datum und Quelle]
-
-## Geprueftes Apps-Log
-| Datum | App | Gesamtstatus | Kritisch | Hoch |
-|-------|-----|-------------|----------|------|
-| ... | BestJournal | ... | N | N |
-
-## Muster-Klauseln (Sammlung, mit Quelle)
-### DSGVO — Datenverarbeitung Art. 6 Abs. 1 lit. f
-...
-
-## Quellen-Register
-[URL | Thema | Zuletzt abgerufen]
-```
-
-**Diff-Logik bei Update:**
-- Neue Erkenntnisse gegenueber dem gespeicherten Stand hervorheben (Diff-Abschnitt
-  "**Aenderungen seit letzter Recherche**").
-- Veraltete Eintraege (>90 Tage alt) als "zu verifizieren" markieren.
-- Jede Pflichtangabe mit **Quell-URL + Abrufdatum** hinterlegen (wichtig fuer Nachvollziehbarkeit).
-
-Danach committen und pushen — `rechtssicherheit.md` gehoert ins Repo (`~/proggs/`).
+- Privacy Policy URL in Store Listing oeffentlich erreichbar.
+- App-/Developer-Name in Privacy Policy stimmen mit Store Listing ueberein.
+- Data Safety Form deckt echte Datenerhebung und SDKs ab.
+- Account Deletion Form/Weblink vorhanden, wenn Account-Erstellung vorhanden.
+- Content Rating, Target Audience, Families, Ads, Health, AI, Financial,
+  Data Deletion, App Access, Permissions declarations korrekt.
+- Screenshots/Marketingtexte versprechen nichts Falsches.
+- Abo-/Preisangaben und Trial-Hinweise klar.
 
 ---
 
-## Offene Fragen an den Benutzer (nur wenn noetig)
+## Pflichtdokumente: Inhaltliche Checklisten
 
-Wenn nach der Recherche noch unklar ist, den Benutzer **einmal gebuendelt** fragen
-(nicht mehrfach unterbrechen):
+### Datenschutzerklaerung
 
-1. "Soll die App weltweit veroeffentlicht werden oder nur in bestimmten Laendern?"
-2. "Gibt es ein Gewerbe/Impressum-Pflicht? (Firma/Einzelunternehmer oder privater Hobby-Entwickler?)"
-3. "Werden In-App-Kaeufe oder Abos angeboten? (Widerrufsbelehrung pflicht)"
-4. "Werden Nutzerdaten an Dritte (Firebase, Analytics, Ads) weitergegeben?"
-5. "Gibt es KI-Features? (Dann AI-Act relevant)"
+Pflicht-Inhalte:
 
-Die Antworten in die Referenz-Datei eintragen, damit sie in Folge-Sessions nicht
-erneut gefragt werden muessen.
+- Verantwortlicher (Name/Firma, Adresse, Kontakt, Datenschutzkontakt)
+- App-Name und Package/Store-Bezug
+- Kategorien personenbezogener Daten
+- Zwecke der Verarbeitung
+- Rechtsgrundlagen je Zweck
+- Empfaenger/Dritte/SDKs
+- Drittlandtransfer und Garantien
+- Speicherdauer oder Kriterien
+- Betroffenenrechte: Auskunft, Berichtigung, Loeschung, Einschraenkung,
+  Portabilitaet, Widerspruch, Widerruf, Beschwerderecht
+- Pflicht oder Freiwilligkeit der Bereitstellung
+- Automatisierte Entscheidungen/Profiling, falls vorhanden
+- Kinder/Jugendliche, falls relevant
+- Sicherheitsmassnahmen knapp und realistisch
+- Account- und Datenloeschung
+- Stand/Version/Datum
+
+**Release-Blocker:**
+
+- Allgemeine Generator-Texte ohne App-/SDK-Bezug
+- "Wir sammeln keine Daten", obwohl SDKs/Crashlytics/Analytics/Ads/Cloud laufen
+- Fehlende Drittanbieter
+- Fehlende Rechtsgrundlagen
+- Fehlende Loesch-/Widerrufswege
+- Falscher Verantwortlicher oder falsche App
+
+### Nutzungsbedingungen / AGB
+
+- Anbieter, App-Name, Leistungsbeschreibung
+- Nutzungsregeln und verbotene Nutzung
+- User Generated Content (Rechte, Moderation, Meldung, Entfernung, Sperrung,
+  Beschwerdeweg) falls vorhanden
+- Haftung und Gewaehrleistung ohne unzulaessige Pauschalausschluesse
+- Verfuegbarkeit, Aenderungen, Kuendigung
+- In-App-Kaeufe, Abos, Preise, Laufzeiten, Kuendigung
+- Drittanbieter/Stores/Billing-Hinweise
+- Rechtswahl/Gerichtsstand nur soweit zulaessig gegenueber Verbrauchern
+- Kontakt und Beschwerdeweg
+
+**Release-Blocker:**
+
+- AGB schliessen Verbraucherrechte pauschal aus
+- AGB widersprechen Store Listing, Paywall oder Privacy Policy
+- Kostenpflichtige Features ohne klare Preis-/Abo-/Kuendigungsangaben
+
+### Impressum / Anbieterkennzeichnung
+
+Fuer DE/EU geschaeftsmaessige digitale Dienste:
+
+- Vollstaendiger Name/Firma
+- Ladungsfaehige Anschrift (kein reines Postfach)
+- E-Mail und schnelle elektronische Kontaktmoeglichkeit
+- Vertretungsberechtigte Person bei juristischen Personen
+- Register, Registernummer, USt-ID, Aufsichtsbehoerde oder Berufsangaben falls einschlaegig
+- Leicht erkennbar, unmittelbar erreichbar, staendig verfuegbar
+- **In App dauerhaft erreichbar (Settings/About), nicht nur im Store Listing**
+
+**Release-Blocker:**
+
+- Kein Impressum trotz geschaeftsmaessigem Angebot
+- Nur E-Mail ohne Anschrift
+- Impressum nur in schwer auffindbarem Weblink oder totem Link
+
+### Widerruf / digitale Inhalte / Abos
+
+Bei paid app, IAP, Abo oder externen digitalen Inhalten:
+
+- Widerrufsbelehrung VOR Kaufabschluss erreichbar
+- Muster-Widerrufsformular vorhanden, wenn erforderlich
+- Erloeschen des Widerrufsrechts bei sofortiger digitaler Leistung nur mit
+  ausdruecklicher Zustimmung und Bestaetigung der Kenntnis
+- Abo-Laufzeit, Preis, Testphase, automatische Verlaengerung und Kuendigung
+  klar in Paywall/Store/Terms
+- Google Play Billing Regeln eingehalten
+
+**Release-Blocker:**
+
+- Kostenpflichtige digitale Inhalte ohne Widerrufsinformation
+- "Kein Widerruf" ohne korrekte Zustimmung/Belehrung
+- Paywall widerspricht Terms oder Store Listing
+
+### Account- und Datenloeschung
+
+Wenn Account-Erstellung moeglich:
+
+- In-App-Pfad zur Accountloeschung
+- Weblink fuer Loeschanfrage ohne App-Installation
+- Link funktional, nennt App oder Developer, fuehrt direkt zum Loeschprozess
+- Erklaert, welche Daten geloescht/behalten/anonymisiert werden und warum
+- Data Safety Form beantwortet Data deletion Fragen konsistent
+
+**Release-Blocker:**
+
+- Account-Erstellung ohne Accountloeschung
+- Weblink fuehrt nur zu Support-Homepage ohne klaren Loeschweg
+- Privacy Policy verspricht Loeschung, App bietet sie nicht
+
+---
+
+## Spezielle Android-/Play-Risikomatrix
+
+| Bereich | Typische technische Signale | Zusaetzliche Pflichtpruefung |
+|---|---|---|
+| Analytics/Crashlytics | Firebase, Sentry, Amplitude, Events | Consent, SDK-Daten, Drittlandtransfer, Data Safety |
+| Ads/AdMob | AD_ID, ads SDKs | Ads Policy, Consent, personalisierte Ads, Kinder |
+| Kinder/Families | Target age, kindliche Assets, Games | Families Policy, COPPA/GDPR-K, keine verbotenen IDs |
+| Standort | Fine/Background Location | Core Feature, Prominent Disclosure, Permission Declaration |
+| Fotos/Videos | READ_MEDIA_* | Photo Picker bevorzugen, Broad Access Declaration |
+| Gesundheit | Health Connect, Mood, Fitness, Medical claims | Health Declaration, Datenschutz, kein irrefuehrender Medizinclaim |
+| KI/GenAI | OpenAI/Anthropic/Gemini, image/text generation | AI Content Policy, Reporting, Safety, Datenweitergabe |
+| UGC/Community | Posts, Kommentare, Sharing | Moderation, Melden/Blockieren, Terms, DSA-Risiko |
+| Finanzen | Budget, Payment, Trading, Kredit | Financial Services Policy, Disclaimer, Lizenzen |
+| Tagebuch/Private Daten | Room, local DB, cloud sync | Verschluesselung, Backup, Export, Loeschung, Screenshots |
+| WebView | JavaScript, file access, remote URLs | Mixed content, JS bridge, Tracking/Cookies, externe Inhalte |
+| Push | FCM, notification permissions | Token-Daten, sensitive Notification-Inhalte, Consent |
+
+---
+
+## Schweregrade
+
+| Grad | Bedeutung |
+|------|-----------|
+| 🔴 **BLOCKER** | Release stoppen. Hohe Abmahn-, Bussgeld- oder Play-Enforcement-Gefahr. |
+| 🟠 **HOCH** | Vor Release korrigieren. Wesentliche Pflichtangabe oder technische Inkonsistenz. |
+| 🟡 **MITTEL** | Risiko reduzieren, moeglichst vor Release korrigieren. |
+| 🟢 **NIEDRIG** | Best Practice, Klarheit, Wartbarkeit. |
+| ℹ️ **INFO** | Beobachtung ohne direkten Befund. |
+
+**BLOCKER-Beispiele:**
+
+- Keine Datenschutzerklaerung in App/Store
+- Privacy Policy sagt "keine Daten", aber App nutzt Analytics/Ads/Crash/Cloud
+- Keine Anbieterkennzeichnung bei geschaeftsmaessigem DE/EU-Angebot
+- Account-Erstellung ohne Loeschweg
+- Kinderzielgruppe mit verbotenen IDs/Ads/Tracking
+- Health/Medical Claims ohne korrekte Deklaration und Disclaimer
+- Sensitive Permissions ohne Core-Feature, Disclosure oder Play Declaration
+- Widerrufsbelehrung fehlt bei kostenpflichtigen digitalen Inhalten
+- Store Data Safety widerspricht Code/SDKs
+
+---
+
+## Schritt 6 — Berichtsvorlage
+
+```markdown
+# Rechtssicherheits-Audit: [App]
+Datum: YYYY-MM-DD
+Skill-Stand: 2026-04-26
+
+## Disclaimer
+Technische Pruefhilfe, keine anwaltliche Beratung. Vor Release Fachanwalt fuer
+IT-Recht konsultieren.
+
+## Scope und Annahmen
+- App/Package:
+- Zielmaerkte:
+- Monetarisierung:
+- Accounts:
+- SDKs:
+- Sensible Daten:
+
+## Gesamtstatus
+- Release-Empfehlung: [BLOCKIEREN | BEDINGT | TECHNISCH OK NACH ANWALTSPRUEFUNG]
+- BLOCKER: N
+- HOCH: N
+- MITTEL: N
+- Wichtigste Risiken:
+
+## Befunde
+### 🔴 BLOCKER
+1. [Titel]
+   - Nachweis: [Datei:Zeile oder Quelle]
+   - Risiko: [konkret]
+   - Fix: [konkret]
+   - Quelle: [URL, Abrufdatum]
+
+### 🟠 HOCH
+...
+### 🟡 MITTEL
+...
+### 🟢 NIEDRIG
+...
+
+## Dokumentenmatrix
+| Dokument | In App | Store/Web | Inhalt OK | Sprache OK | Befund |
+|---|---:|---:|---:|---:|---|
+| Datenschutzerklaerung | | | | | |
+| Nutzungsbedingungen | | | | | |
+| Impressum | | | | | |
+| Widerruf | | | | | |
+| Account-/Datenloeschung | | | | | |
+
+## Codestruktur-Vollscan
+| Treffergruppe | Dateien/Beispiele | Rechtliche Relevanz | Abgleich | Status |
+|---|---|---|---|---|
+| SDKs/Dritte | | Datenschutz, Transfer, Data Safety | | |
+| Permissions/Sensoren | | Prominent Disclosure, Consent | | |
+| Account/Sync/Loeschung | | DSGVO, Google Account Deletion | | |
+| Billing/Ads/Abo | | Widerruf, Terms, Ads Policy | | |
+| Security/Backup/Logs | | Datenschutz, Sicherheitsversprechen | | |
+| Health/Kinder/AI/UGC | | Spezial-Policies | | |
+
+## Code-vs-Text-vs-Play-Matrix
+| Daten/Feature | Code/SDK/Permission | Privacy Policy | Data Safety | Consent/UI | Status |
+|---|---|---|---|---|---|
+
+## Android-Sicherheitscheck
+| Kontrolle | Ergebnis | Risiko | Fix |
+|---|---|---|---|
+| Permissions minimal | | | |
+| Backup-Regeln | | | |
+| TLS/Cleartext | | | |
+| Sensitive Logs | | | |
+| Secrets im Repo | | | |
+| Exported Components | | | |
+| WebView sicher | | | |
+
+## Sprach- und Marktfreigabe
+| Markt | App-Locale | Rechtstexte | Pflicht/Empfehlung | Freigabe |
+|---|---|---|---|---|
+
+## Play-Console-Checkliste
+- [ ] Data Safety passt zu Code und SDKs
+- [ ] Privacy Policy URL erreichbar
+- [ ] Account deletion beantwortet und verlinkt
+- [ ] App Access korrekt
+- [ ] Content Rating korrekt
+- [ ] Target Audience/Families korrekt
+- [ ] Ads/Health/AI/Finance/Permissions Declarations korrekt
+
+## Fix-Reihenfolge
+1. BLOCKER zuerst.
+2. HOCH vor Release.
+3. MITTEL vor Rollout in weitere Laender.
+4. NIEDRIG bei naechster Pflege.
+
+## Quellen
+- [URL] - [Thema] - abgerufen am YYYY-MM-DD
+
+## Abschluss-Disclaimer
+Technische Pruefhilfe, keine anwaltliche Beratung. Vor Release Fachanwalt fuer
+IT-Recht konsultieren.
+```
+
+---
+
+## Schritt 7 — Wissensbasis aktualisieren
+
+`<WORKSPACE_ROOT>/tools/rechtssicherheit.md` updaten oder neu anlegen.
+
+**Struktur:**
+
+```markdown
+# rechtssicherheit.md - Wissensbasis
+Letzte Recherche: YYYY-MM-DD
+Naechste Pflicht-Pruefung: YYYY-MM-DD (+30 Tage bei Play Policies, +90 Tage sonst)
+
+## Quellenregister
+| Datum | Quelle | Thema | Relevanz |
+|---|---|---|---|
+
+## Pflichtangaben-Matrix
+### EU/DE - Datenschutz
+### EU/DE - Impressum
+### EU/DE - Widerruf
+### Google Play - Data Safety/User Data
+### Android - Security/Privacy Controls
+### Spezialfaelle - Kinder, Health, AI, Ads, UGC, Finance
+
+## Sprach-Anforderungen pro Markt
+
+## Aktuelle Abmahn-Hotspots (Stand YYYY-MM)
+
+## App-Audit-Log
+| Datum | App | Version | Status | Blocker | Hoch | Commit/Notiz |
+|---|---|---|---|---:|---:|---|
+
+## Wiederverwendbare Befundmuster
+
+## Muster-Klauseln (mit Quelle)
+```
+
+**Diff-Logik:** Neue Erkenntnisse gegenueber dem gespeicherten Stand hervorheben
+("**Aenderungen seit letzter Recherche**"). Veraltete Eintraege (>90 Tage) als
+"zu verifizieren" markieren. Jede Pflichtangabe mit Quell-URL + Abrufdatum.
+
+**Keine Secrets, echten Kundendaten, privaten Adressen oder Token in diese Datei
+schreiben**, ausser der Benutzer verlangt explizit genau diese Ablage.
+
+### Schritt 8 — Commit + Push
+
+`<WORKSPACE_ROOT>/tools/rechtssicherheit.md` committen und pushen — gemaess
+`~/.claude/rules/parallel-sessions-git.md`:
+
+1. Nur eigene Dateien namentlich stagen (NIE `git add -A`)
+2. Commit mit fortlaufender Nummer: `#NNNN - rechtssicherheit audit [App]`
+3. `git fetch origin && git rebase origin/main`
+4. `git status --short` pruefen
+5. `git push`
+
+---
+
+## Typische Fix-Hinweise
+
+Der Skill darf konkrete technische Fixes vorschlagen oder implementieren:
+
+- Settings/About Links zu Datenschutz, Terms, Impressum, Loeschung
+- Consent-Screen vor Analytics/Ads/Cloud/KI
+- Toggles fuer Analytics/Crashlytics/Ads inkl. Widerruf
+- Runtime-Permission-Erklaerungen an Feature-Kontext koppeln
+- Unnoetige Permissions entfernen
+- Android Photo Picker statt breiter Medien-Permissions
+- Backup-Regeln fuer sensitive Daten
+- `usesCleartextTraffic=false` oder Network Security Config bereinigen
+- Sensitive Logs entfernen
+- Secrets in `$HOME/SK/` verlagern und Repo bereinigen
+- Store-/Data-Safety-Checkliste als Markdown erzeugen
+- Rechtstext-Platzhalter oder falsche App-Namen korrigieren
+
+**Der Skill darf KEINE anwaltlich wirkenden endgueltigen Rechtstexte als "fertig"
+verkaufen.** Er darf Entwuerfe, Lueckenlisten, Musterhinweise mit Quellen und
+anwaltliche Pruefpunkte erstellen.
 
 ---
 
 ## Was NIEMALS passieren darf
 
-- ❌ Rechtliche Garantien aussprechen ("die App ist jetzt 100% abmahnungssicher")
-- ❌ Konkrete Rechtstexte generieren die wie eine Anwaltsdienstleistung wirken
-  (max. Muster-Hinweise mit Quelle und Empfehlung "durch Anwalt pruefen lassen")
+- ❌ Rechtliche Garantie geben
+- ❌ App ohne aktuelle Quellenlage als "rechtssicher" freigeben
+- ❌ Nur Datenschutztext lesen und Code/SDKs/Permissions ignorieren
+- ❌ Nur nach Legal-Dateinamen suchen und dabei rechtlich relevante Logik in Code,
+  Ressourcen, Store-Metadaten, Build-Dateien, Scripts oder UI-Flows uebersehen
+- ❌ Einen gefundenen Datenfluss akzeptieren, ohne ihn gegen Privacy Policy,
+  Nutzungsbedingungen, Data Safety, Consent, App-UI und Loesch-/Widerrufswege abzugleichen
+- ❌ Google Play Data Safety ungeprueft uebernehmen
+- ❌ Gebrochene Links, Platzhalter oder falsche App-/Firmennamen uebersehen
+- ❌ Account-Erstellung ohne Loeschpfad akzeptieren
+- ❌ Sensitive Daten in Logs, Backups oder Crashreports ignorieren
+- ❌ Unnoetige Permissions als harmlos einstufen
 - ❌ Sequentielle Researcher statt parallel (kostet 5x so lange)
 - ❌ Researcher ohne Limits (max 50 Ergebnisse / 15 Fetches / 10 Min)
-- ❌ Referenz-Datei nicht updaten am Ende (dann lernt das System nicht dazu)
+- ❌ Wissensbasis nicht updaten am Ende (dann lernt das System nicht dazu)
 - ❌ App-Pruefung ohne vorherige Recherche (dann fehlen Pflichtangaben-Kriterien)
-- ❌ Rechtstexte nur in Deutsch und Englisch belassen ohne Pruefung welche Laender
+- ❌ Rechtstexte nur in Deutsch+Englisch belassen ohne Pruefung welche Laender
   die Landessprache zwingend verlangen
+- ❌ Fremde oder unklare Aenderungen im Repo mitcommitten
+- ❌ Dateien ausserhalb des aktuellen Workspaces bearbeiten, ausser explizit angefordert
+- ❌ `~/Codex/`, `~/proggs/` oder andere Home-Unterordner als Standard-Arbeitsverzeichnis
+  verwenden, wenn ein Workspace/Repo-Root verfuegbar ist
+- ❌ Konkrete Rechtstexte generieren die wie eine Anwaltsdienstleistung wirken
+  (max. Muster-Hinweise mit Quelle und Empfehlung "durch Anwalt pruefen lassen")
 
 ---
 
 ## Beispiel-Dialog
 
-**Benutzer:** "starte den Skill Rechtssicherheit und pruefe BestJournal"
+**Benutzer:** "starte den Skill Rechtssicherheit und pruefe BestJournalAndroid"
 
 **Claude:**
-> Starte Rechtssicherheits-Audit fuer BestJournal.
+> Ich starte ein Rechtssicherheits-Audit fuer BestJournalAndroid.
 >
-> 1. Lade `~/proggs/rechtssicherheit.md` (oder lege sie neu an)...
-> 2. Starte 5 parallele Researcher (DE/EU, US/UK, Asien, Play-Store, Abmahn-Trends).
->    Laufzeit: ~5-8 Minuten.
-> 3. Pruefe danach App-Dokumente in `BestJournalAndroid/` (Datenschutz, ToS, Impressum,
->    Widerruf) und deren Platzierung + Uebersetzungen.
-> 4. Erstelle Befund-Bericht und aktualisiere Referenz-Datei.
+> **Disclaimer:** Das ist eine technische Pruefhilfe und ersetzt keine anwaltliche
+> Beratung. Vor Release ist eine Pruefung durch einen Fachanwalt fuer IT-Recht Pflicht.
 >
-> **Disclaimer:** Technische Pruefhilfe, ersetzt keine anwaltliche Beratung.
+> Ablauf:
+> 1. Lese Wissensbasis aus `tools/rechtssicherheit.md` (oder lege sie neu an).
+> 2. Starte 5 parallele Researcher (DE/EU, US/UK, Asien/LatAm, Play-Store-Policies,
+>    Abmahn-Trends). Laufzeit: ~5-8 Minuten.
+> 3. Vollscan der Codestruktur in `BestJournalAndroid/` (Datei-Inventur + Legal-Signale).
+> 4. Detail-Pruefung: Manifest/Permissions, SDKs, lokale Speicherung, Logs, Backup,
+>    Rechtstexte und deren Platzierung, Consent, Store-Metadaten.
+> 5. Erstelle Befund-Bericht mit Codestruktur-Vollscan-Matrix, Code-vs-Text-vs-Play-Matrix,
+>    Android-Sicherheitscheck und Play-Console-Checkliste.
+> 6. Aktualisiere Wissensbasis und committe.
+>
+> Loslegen?
 
-[Researcher laufen parallel → Konsolidierung → App-Pruefung → Bericht → Referenz-Update → Commit+Push]
+[Researcher laufen parallel → Konsolidierung → Vollscan → Detail-Pruefung →
+Bericht → Wissensbasis-Update → Commit+Push]
 
 ---
 
 ## Zusammenspiel mit anderen Skills
 
-- **`uebersetzung`**: Wenn fehlende Sprachversionen erkannt werden — Vorschlag den
-  Uebersetzungs-Skill zu starten.
+- **`uebersetzung`**: Bei fehlenden Sprachversionen — Vorschlag, den Uebersetzungs-
+  Skill zu starten.
 - **`string-extraktor`**: Wenn Rechtstexte hardcodiert im Code stehen statt in strings.xml.
-- **`superintelligenz` / `selbstbeobachtung`**: Neue Erkenntnisse (z.B. neues
-  Abmahn-Urteil) werden in `rechtssicherheit.md` persistiert — Compound Intelligence Effect.
+- **`superintelligenz` / `selbstbeobachtung`** (Direktiven #1+#2): Neue Erkenntnisse
+  (z.B. neues Abmahn-Urteil, neue Play-Policy) werden in `tools/rechtssicherheit.md`
+  persistiert — Compound Intelligence Effect.
+- **`resilient-bugfixing`** (Direktive #3): Wiederkehrende Befundmuster (z.B. immer
+  fehlendes Impressum) als systematischen Repo-Check vorschlagen.
 
 ---
 
 ## Abschluss-Meldung
 
 Am Ende IMMER:
-1. Bericht ausgeben
-2. `~/proggs/rechtssicherheit.md` commit+push
-3. Disclaimer wiederholen
-4. Intelligenz-Vorschlaege (Direktive #2) falls Muster erkannt (z.B. "alle deine Apps
-   haben denselben Impressum-Fehler — soll ich einen Hook bauen der das checkt?")
+
+1. Bericht ausgeben (Disclaimer am Anfang UND Ende)
+2. Geaenderte Dateien nennen
+3. Ausgefuehrte Checks/Builds nennen
+4. Nicht pruefbare Punkte klar markieren
+5. `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` commit+push
+6. Disclaimer wiederholen
+7. Intelligenz-Vorschlaege (Direktive #2) falls Muster erkannt — z.B. "alle
+   geprueften Apps haben denselben Impressum-Fehler — soll ich einen Hook bauen
+   der das automatisch checkt?"
