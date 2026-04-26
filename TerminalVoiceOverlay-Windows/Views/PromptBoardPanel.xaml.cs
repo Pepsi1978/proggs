@@ -297,7 +297,10 @@ public partial class PromptBoardPanel : Window
         else
         {
             BtnInputToggle.Content    = ""; // FavoriteStar (Outline)
-            BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0x7F, 0x7F, 0x7F));
+            // Weiss wie die anderen Toolbar-Symbole (Plus, Diskette,
+            // Zahnrad, Schriftrolle) — im inaktiven Zustand soll der
+            // Stern visuell gleichberechtigt zu den anderen sein.
+            BtnInputToggle.Foreground = Brushes.White;
             BtnInputToggle.ToolTip    = "Prompt-Eingabe einblenden";
         }
     }

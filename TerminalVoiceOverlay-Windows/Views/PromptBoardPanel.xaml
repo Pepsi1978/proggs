@@ -186,7 +186,6 @@
                         x:Name="BtnInputToggle"
                         Style="{StaticResource IconButton}"
                         Content="&#xE734;"
-                        Foreground="#FF7F7F7F"
                         ToolTip="Prompt-Eingabe einblenden"/>
                 <Button Grid.Column="5"
                         x:Name="BtnAddCategory"

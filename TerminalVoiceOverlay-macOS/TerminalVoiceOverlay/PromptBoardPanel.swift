@@ -824,9 +824,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     private func updateStarVisual() {
         guard let btn = inputToggleButton else { return }
         let symbol = inputPanelVisible ? "★" : "☆"
+        // Weiss im inaktiven Zustand wie die anderen Toolbar-Symbole
+        // (Plus, Diskette, Zahnrad, Schriftrolle) — der Stern soll sich
+        // im Ruhezustand visuell nicht von den uebrigen Buttons abheben.
         let color: NSColor = inputPanelVisible
             ? NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
-            : NSColor(calibratedWhite: 0.50, alpha: 1)
+            : NSColor.white
         btn.attributedTitle = NSAttributedString(
             string: symbol,
             attributes: [
