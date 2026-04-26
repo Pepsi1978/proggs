@@ -370,6 +370,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func insertText(_ text: String, wasBtw: Bool) {
+        // Voice-Routing: Wenn das neue Prompt-Eingabefenster offen ist
+        // (Stern an im Promptboard) und es sich nicht um eine BTW-Diktatur
+        // handelt, wandert das Voice-Transkript ins Eingabefeld statt direkt
+        // in die CLI. Der Benutzer kann es dann editieren und mit Enter
+        // absenden — der Submit-Pfad baut Pre/Mitte/Post zusammen UND legt
+        // den Eintrag in der Historie ab. So landen auch eingesprochene
+        // Prompts in der Historie.
+        if !wasBtw, let board = promptBoardPanel, board.isInputPanelVisible {
+            board.routeVoiceTextToInput(text)
+            isProcessing = false
+            panel.setMicState(.idle)
+            tvoDebug("[App] voice text routed to input panel (\(text.count) chars)")
+            return
+        }
+
         var finalText = text
         if wasBtw {
             // BTW dictations stay simple — no always-on prefix here,
@@ -449,6 +464,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - Prompt Input Submit (tippbares Eingabefenster)
+
+    /// Wird aus dem Prompt-Eingabefenster ausgeloest wenn der Benutzer Enter
+    /// drueckt. Der `middleText` ist die reine Mitte (was der Benutzer
+    /// getippt oder per Voice eingespielt hat). Wir bauen Pre + Mitte + Post
+    /// mit ` ; ` als Trenner zusammen, fuegen alles in die CLI ein und
+    /// respektieren den Auto-Enter-Toggle des Voice-Overlays — so geht der
+    /// Prompt direkt an die KI ab, wenn Auto-Enter an ist.
+    /// Phase 4 wird hier zusaetzlich den Eintrag in die Historie schreiben.
+    private func handleInputSubmit(_ middleText: String) {
+        let mid = middleText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // AlwaysOnPrefixService nur aufrufen wenn der OverlayWindow-Stern
+        // aktiv ist — sonst wuerde er einen leeren String zurueckgeben.
+        let pre = alwaysOnActive ? AlwaysOnPrefixService.buildPre() : ""
+        let post = alwaysOnActive ? AlwaysOnPrefixService.buildPost() : ""
+
+        // Die buildPre/buildPost geben Pre/Post bereits joined zurueck (mit
+        // " ; " als Trenner). Wir verbinden Pre/Mitte/Post mit demselben
+        // Trenner — leere Bloecke werden uebersprungen.
+        var parts: [String] = []
+        if !pre.isEmpty  { parts.append(pre) }
+        if !mid.isEmpty  { parts.append(mid) }
+        if !post.isEmpty { parts.append(post) }
+
+        guard !parts.isEmpty else {
+            tvoDebug("[App] handleInputSubmit: nothing to insert (empty)")
+            return
+        }
+
+        let final = parts.joined(separator: " ; ")
+        TerminalController.pasteText(final, autoEnter: autoEnterEnabled)
+        tvoDebug("[App] input submit: \(final.count) chars (autoEnter=\(autoEnterEnabled))")
+        hasPastedText = !autoEnterEnabled
+
+        // TODO Phase 4: Eintrag in die Historie schreiben (mit
+        // KI-generiertem Titel via GeminiClient).
+    }
+
     // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)
 
     private func toggleUltrathink() {
@@ -469,6 +523,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self, !text.isEmpty else { return }
                 tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
                 TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
+            }
+            p.onInputSubmit = { [weak self] middleText in
+                self?.handleInputSubmit(middleText)
             }
             // Right-click drag on the panel itself moves both floating
             // windows together: panel slides under the cursor (already

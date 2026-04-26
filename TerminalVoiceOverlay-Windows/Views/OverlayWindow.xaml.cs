@@ -259,14 +259,15 @@ namespace TerminalVoiceOverlay.Views
             if (!_manuallyPositioned)
             {
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
-                // 2 mm closer to the right edge: 23 - 8 = 15 px.
-                Left = workArea.X + workArea.Width - Width - 15;
-                // Anchor to the top-right corner of the work area instead
-                // of the vertical center — Frank prefers the pillar high
-                // so it doesn't cover terminal output. 20 px breathing
-                // room from the very top edge. The saved-position path
-                // above still wins once the user drags the pillar manually.
-                Top  = workArea.Y + 20;
+                // Frank's exact spec (2026-04-26):
+                //   • 0,7 cm from the right edge → 7 mm × 3,78 ≈ 27 WPF-px
+                //   • 1,5 cm from the top edge   → 15 mm × 3,78 ≈ 57 WPF-px
+                // WPF pixels are device-independent (96 per inch), so these
+                // millimeter targets stay visually constant across DPI
+                // settings. Saved-position path above still wins once the
+                // user drags the pillar manually.
+                Left = workArea.X + workArea.Width - Width - 27;
+                Top  = workArea.Y + 57;
             }
 
             if (!IsVisible)
@@ -386,29 +387,45 @@ namespace TerminalVoiceOverlay.Views
                     // can wrap the dictation on both sides if both flags
                     // are set. Only on the first paste per line — follow-ups
                     // are appended to the existing line without wrapping.
-                    if (!hasPastedText)
+                    // Wenn das neue Prompt-Eingabefenster offen ist (Stern an
+                    // im Promptboard), wandert das Voice-Transkript dort hinein
+                    // statt direkt in die CLI. Der Benutzer kann den Text dann
+                    // editieren oder Enter druecken — und der Submit-Pfad
+                    // unten baut Pre/Mitte/Post zusammen UND legt den Eintrag
+                    // in der Historie ab. So landen auch eingesprochene Prompts
+                    // in der Historie.
+                    if (_promptPanel?.IsInputWindowVisible == true)
                     {
-                        var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
-                        if (!string.IsNullOrEmpty(preFix))
-                            finalText = preFix + finalText;
-                        if (!string.IsNullOrEmpty(postFix))
-                            finalText = finalText + postFix;
+                        _promptPanel.RouteVoiceTextToInput(finalText);
+                        SetMicState(RecordingState.Success);
+                        Console.WriteLine("Voice text routed to PromptInputWindow.");
                     }
+                    else
+                    {
+                        if (!hasPastedText)
+                        {
+                            var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                            if (!string.IsNullOrEmpty(preFix))
+                                finalText = preFix + finalText;
+                            if (!string.IsNullOrEmpty(postFix))
+                                finalText = finalText + postFix;
+                        }
 
-                    // Always append " ; " after the dictated text — inline
-                    // space + semicolon + space marks every dictation as
-                    // its own task without forcing line breaks in the
-                    // terminal. Applies regardless of auto-enter.
-                    finalText = finalText + " ; ";
+                        // Always append " ; " after the dictated text — inline
+                        // space + semicolon + space marks every dictation as
+                        // its own task without forcing line breaks in the
+                        // terminal. Applies regardless of auto-enter.
+                        finalText = finalText + " ; ";
 
-                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
-                    SetMicState(RecordingState.Success);
-                    Console.WriteLine("Text inserted");
+                        TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                        SetMicState(RecordingState.Success);
+                        Console.WriteLine("Text inserted");
 
-                    // Track paste state
-                    hasPastedText = !autoEnterEnabled;
-                    if (autoEnterEnabled)
-                        hasPastedText = false;
+                        // Track paste state
+                        hasPastedText = !autoEnterEnabled;
+                        if (autoEnterEnabled)
+                            hasPastedText = false;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -645,6 +662,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 _promptPanel = new PromptBoardPanel();
                 _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
+                _promptPanel.InputSubmitRequested  += OnInputSubmit;
                 // Right-click drag on the panel itself moves both the
                 // panel (handled inside) and this pillar window — slide
                 // the pillar to stay glued to the panel's right edge.
@@ -707,6 +725,51 @@ namespace TerminalVoiceOverlay.Views
             catch (Exception ex)
             {
                 Console.WriteLine($"Panel insert failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Wird aus dem Prompt-Eingabefenster ausgeloest wenn der Benutzer
+        /// Enter drueckt. Der uebergebene Text ist die reine Mitte (was der
+        /// Benutzer getippt oder per Voice eingespielt hat). Wir bauen Pre +
+        /// Mitte + Post mit ` ; ` als Trenner zusammen, fuegen alles in die
+        /// CLI ein und respektieren den Auto-Enter-Toggle des Voice-Overlays
+        /// — so geht der Prompt direkt an die KI ab, wenn Auto-Enter an ist.
+        /// Phase 4 wird hier zusaetzlich den Eintrag in die Historie schreiben.
+        /// </summary>
+        private async void OnInputSubmit(string middleText)
+        {
+            try
+            {
+                string mid = (middleText ?? string.Empty).Trim();
+                var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+
+                // PromptChainBuilder.Build joined nur zwischen den Eintraegen
+                // (kein Leading/Trailing-Trenner) — wir koennen Pre/Mitte/Post
+                // also direkt mit " ; " verbinden, leere Bloecke werden
+                // automatisch uebersprungen.
+                var parts = new System.Collections.Generic.List<string>();
+                if (!string.IsNullOrWhiteSpace(preFix))  parts.Add(preFix);
+                if (!string.IsNullOrWhiteSpace(mid))     parts.Add(mid);
+                if (!string.IsNullOrWhiteSpace(postFix)) parts.Add(postFix);
+
+                if (parts.Count == 0)
+                {
+                    Console.WriteLine("OnInputSubmit: nothing to insert (empty).");
+                    return;
+                }
+
+                string final = string.Join(" ; ", parts);
+                TerminalController.PasteText(final, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={autoEnterEnabled}).");
+                hasPastedText = !autoEnterEnabled;
+
+                // TODO Phase 4: Eintrag in die Historie schreiben (mit
+                // KI-generiertem Titel via GeminiClient).
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"OnInputSubmit failed: {ex.Message}");
             }
         }
 
