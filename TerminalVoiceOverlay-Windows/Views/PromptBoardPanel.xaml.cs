@@ -257,6 +257,11 @@ public partial class PromptBoardPanel : Window
 
     private void OpenInputWindow()
     {
+        // Eingabe und Historie schliessen sich gegenseitig aus — beide
+        // docken am gleichen Platz links neben dem Promtboard. Wenn die
+        // Historie offen ist, machen wir sie zu BEVOR die Eingabe sich
+        // einblendet, damit nie beide gleichzeitig dort liegen.
+        if (_historyWindowVisible) CloseHistoryWindow();
         if (_inputWindow is null)
         {
             _inputWindow = new PromptInputWindow();
@@ -414,6 +419,11 @@ public partial class PromptBoardPanel : Window
 
     private async Task OpenHistoryWindowAsync()
     {
+        // Eingabe und Historie schliessen sich gegenseitig aus — beide
+        // docken am gleichen Platz links neben dem Promtboard. Wenn die
+        // Eingabe offen ist, machen wir sie zu BEVOR die Historie sich
+        // einblendet, damit nie beide gleichzeitig dort liegen.
+        if (_inputWindowVisible) CloseInputWindow();
         if (_historyWindow is null)
         {
             _historyWindow = new PromptHistoryWindow();

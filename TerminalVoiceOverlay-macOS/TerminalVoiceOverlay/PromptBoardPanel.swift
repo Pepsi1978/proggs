@@ -813,6 +813,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func openInputPanel() {
+        // Eingabe und Historie schliessen sich gegenseitig aus — beide
+        // docken am gleichen Platz links neben dem Promtboard. Wenn die
+        // Historie offen ist, machen wir sie zu BEVOR die Eingabe sich
+        // einblendet, damit nie beide gleichzeitig dort liegen.
+        if historyPanelVisible { closeHistoryPanel() }
         if inputPanel == nil {
             let panel = PromptInputPanel()
             panel.onSubmit = { [weak self] text in
@@ -930,6 +935,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func openHistoryPanel() {
+        // Eingabe und Historie schliessen sich gegenseitig aus — beide
+        // docken am gleichen Platz links neben dem Promtboard. Wenn die
+        // Eingabe offen ist, machen wir sie zu BEVOR die Historie sich
+        // einblendet, damit nie beide gleichzeitig dort liegen.
+        if inputPanelVisible { closeInputPanel() }
         if historyPanel == nil {
             let p = PromptHistoryPanel()
             p.onEntrySelected = { [weak self] text in
