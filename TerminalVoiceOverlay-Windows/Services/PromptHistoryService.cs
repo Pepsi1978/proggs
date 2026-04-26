@@ -139,6 +139,35 @@ public sealed class PromptHistoryService
     }
 
     /// <summary>
+    /// Ersetzt die gesamte aktive Historie durch eine neue Liste — wird
+    /// vom Cloud-Sync genutzt nachdem die Cloud-Eintraege mit der
+    /// lokalen Liste gemergt wurden. Wendet dieselben Schwellen an wie
+    /// AppendAsync: aelteste Eintraege wandern automatisch ins Archiv,
+    /// sobald die aktive Liste die 100-Marke ueberschreitet.
+    /// </summary>
+    public async Task ReplaceAllAsync(
+        IEnumerable<PromptHistoryEntry> entries, CancellationToken ct = default)
+    {
+        var sorted = entries
+            .Where(e => e is not null)
+            .OrderByDescending(e => e.Timestamp)
+            .ToList();
+
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            while (sorted.Count > MaxActiveEntries)
+            {
+                var oldest = sorted[^1];
+                sorted.RemoveAt(sorted.Count - 1);
+                AppendToArchiveUnlocked(oldest);
+            }
+            await SaveUnlockedAsync(sorted, ct).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
     /// Aktualisiert den Titel eines bestehenden Eintrags und schreibt die
     /// Historie atomar zurueck. Wird vom OverlayWindow aufgerufen sobald
     /// der KI-Titel von Gemini eingetroffen ist — der Eintrag wurde

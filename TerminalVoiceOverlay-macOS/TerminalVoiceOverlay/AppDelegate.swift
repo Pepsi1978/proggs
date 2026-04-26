@@ -91,6 +91,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // paths — the user's workflow is never blocked by this.
         checkForRemoteBackupOnLaunch()
 
+        // Cloud-Merge der Prompt-Historie: einmal beim App-Start
+        // versuchen, neue Eintraege vom anderen Geraet abzuholen.
+        // Fire-and-forget — wenn Drive nicht verbunden ist, schluckt
+        // der Helper still und es wird einfach nichts gemergt.
+        mergeHistoryFromCloudOnLaunch()
+
         if !TerminalController.checkAccessibility() {
             NSLog("Accessibility permission missing")
         }
@@ -506,6 +512,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         writeHistory(middleText: mid)
     }
 
+    // MARK: - Cloud-Sync der Historie (Phase 5)
+
+    /// Holt die Cloud-Historie und mergt sie mit dem lokalen Stand.
+    /// Wird einmal beim App-Start aufgerufen. Neue Cloud-Eintraege
+    /// wandern oben in die Liste, lokale Eintraege bleiben erhalten —
+    /// bei doppelten IDs gewinnt der lokale Stand (kann frischeren
+    /// KI-Titel haben). Fehler werden nur in den Debug-Log geschrieben,
+    /// niemals dem Benutzer angezeigt — Sync ist Komfort, kein Pflichtkanal.
+    private func mergeHistoryFromCloudOnLaunch() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] history cloud merge skipped: drive not connected")
+            return
+        }
+        GoogleDriveBackupService.shared.downloadHistory { [weak self] result in
+            switch result {
+            case .failure(let e):
+                tvoDebug("[App] history cloud download failed: \(e.localizedDescription)")
+            case .success(let cloud):
+                guard let cloudJson = cloud, !cloudJson.isEmpty else {
+                    tvoDebug("[App] no cloud history yet — nothing to merge")
+                    return
+                }
+                PromptHistoryStore.shared.load { local in
+                    let merged = PromptHistoryStore.merge(local: local, cloudJson: cloudJson)
+                    if merged.count == local.count {
+                        tvoDebug("[App] cloud history merge: no new entries")
+                        return
+                    }
+                    PromptHistoryStore.shared.replaceAll(entries: merged) {
+                        tvoDebug("[App] cloud history merged: +\(merged.count - local.count) entries")
+                        // Offene Historie-Ansicht direkt aktualisieren.
+                        self?.promptBoardPanel?.reloadHistory()
+                    }
+                }
+            }
+        }
+    }
+
+    /// Laedt die lokale prompt-history.json zu Drive hoch. Wird nach
+    /// jedem Submit aufgerufen (fire-and-forget). Wenn Drive nicht
+    /// verbunden ist, ist das kein Problem fuer den Tipp-Flow.
+    private func uploadHistoryToCloud() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
+        let json = PromptHistoryStore.shared.rawJsonFromDisk()
+        GoogleDriveBackupService.shared.uploadHistory(json: json) { result in
+            switch result {
+            case .success:
+                tvoDebug("[App] history uploaded to cloud")
+            case .failure(let e):
+                tvoDebug("[App] history upload skipped: \(e.localizedDescription)")
+            }
+        }
+    }
+
     private func writeHistory(middleText: String) {
         let mid = middleText
         let fallbackTitle = GeminiClient.fallbackTitle(from: mid)
@@ -513,6 +573,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Sofortiges Re-Render: das offene Historie-Fenster zeigt den
             // neuen Eintrag direkt, ohne Zu-/Aufklappen.
             self?.promptBoardPanel?.reloadHistory()
+
+            // Cloud-Push der lokalen Historie. Bewusst NACH dem Render —
+            // der Benutzer sieht seinen Eintrag sofort, der Upload ist
+            // Hintergrund-Arbeit.
+            self?.uploadHistoryToCloud()
 
             // Sobald der Eintrag mit dem Fallback-Titel persistiert ist,
             // versuchen wir den feineren Gemini-Titel zu holen — aber nur
@@ -523,9 +588,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let trimmed = aiTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty, trimmed != fallbackTitle else { return }
                 PromptHistoryStore.shared.updateTitle(entryId: entry.id, newTitle: trimmed)
-                // Nochmal rendern damit der KI-Titel sichtbar wird.
+                // Nochmal rendern damit der KI-Titel sichtbar wird —
+                // und Cloud nochmal hochladen damit das andere Geraet
+                // beim naechsten Start den feineren Titel sieht.
                 DispatchQueue.main.async {
                     self?.promptBoardPanel?.reloadHistory()
+                    self?.uploadHistoryToCloud()
                 }
             }
         }

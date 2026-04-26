@@ -115,6 +115,71 @@ final class PromptHistoryStore {
         }
     }
 
+    /// Ersetzt die gesamte aktive Historie durch eine neue Liste — wird
+    /// vom Cloud-Sync genutzt nachdem die Cloud-Eintraege mit der
+    /// lokalen Liste gemergt wurden. Wendet dieselben Schwellen an wie
+    /// `append`: aelteste Eintraege wandern automatisch ins Archiv,
+    /// sobald die aktive Liste die 100-Marke ueberschreitet.
+    func replaceAll(entries: [PBHistoryEntry], completion: @escaping () -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            var sorted = entries
+                .sorted { $0.timestamp > $1.timestamp }
+            while sorted.count > Self.maxActiveEntries {
+                let oldest = sorted.removeLast()
+                self.appendToArchiveUnlocked(oldest)
+            }
+            self.saveUnlocked(sorted)
+            DispatchQueue.main.async { completion() }
+        }
+    }
+
+    /// Liest die rohe JSON-Datei der lokalen Historie (oder leerer String
+    /// wenn nicht vorhanden). Wird fuer den Cloud-Upload genutzt — wir
+    /// laden den Datei-Inhalt 1:1 hoch, ohne ihn nochmal zu serialisieren,
+    /// damit Mac und Windows wirklich die exakt gleichen Bytes
+    /// austauschen.
+    func rawJsonFromDisk() -> String {
+        guard FileManager.default.fileExists(atPath: historyFileURL.path),
+              let s = try? String(contentsOf: historyFileURL, encoding: .utf8)
+        else { return "[]" }
+        return s
+    }
+
+    /// Mergt eine Cloud-Historie-JSON in die lokale Liste: Eintraege per
+    /// ID-Dedup zusammenfuehren. Lokal gewinnt bei Doppel-IDs (kann
+    /// frischen KI-Titel enthalten), unbekannte Cloud-IDs werden
+    /// uebernommen.
+    static func merge(local: [PBHistoryEntry], cloudJson: String) -> [PBHistoryEntry] {
+        // Cloud-JSON entschluesseln. Bei kaputtem JSON: lokale Liste
+        // unveraendert zurueckgeben — Cloud darf den lokalen Stand nie
+        // zerstoeren.
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let str = try decoder.singleValueContainer().decode(String.self)
+            let f1 = ISO8601DateFormatter()
+            f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = f1.date(from: str) { return d }
+            let f2 = ISO8601DateFormatter()
+            f2.formatOptions = [.withInternetDateTime]
+            if let d = f2.date(from: str) { return d }
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "Invalid date: \(str)")
+        }
+        var cloud: [PBHistoryEntry] = []
+        if let data = cloudJson.data(using: .utf8),
+           let parsed = try? decoder.decode([PBHistoryEntry].self, from: data) {
+            cloud = parsed
+        }
+        var byId: [String: PBHistoryEntry] = [:]
+        for e in local where !e.id.isEmpty { byId[e.id] = e }
+        for e in cloud where !e.id.isEmpty {
+            if byId[e.id] == nil { byId[e.id] = e }
+        }
+        return byId.values.sorted { $0.timestamp > $1.timestamp }
+    }
+
     /// Aktualisiert den Titel eines bestehenden Eintrags. Wird vom
     /// AppDelegate aufgerufen sobald der KI-Titel von Gemini eingetroffen
     /// ist — der Eintrag wurde vorher schon mit einem Fallback angelegt.

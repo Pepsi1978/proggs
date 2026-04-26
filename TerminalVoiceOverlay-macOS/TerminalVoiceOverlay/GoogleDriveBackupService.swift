@@ -383,6 +383,139 @@ final class GoogleDriveBackupService {
         NSError(domain: "GoogleDriveBackupService", code: 1,
             userInfo: [NSLocalizedDescriptionKey: message])
     }
+
+    // MARK: - Prompt-Historie (Phase 5)
+    //
+    // Eigene Upload/Download-Methoden fuer prompt-history.json. Logisch
+    // identisch zur regulaeren Backup-Methode oben, aber mit anderem
+    // Dateinamen — wir teilen uns den OAuth-Refresh-Token, schreiben
+    // aber in eine separate Datei im selben appDataFolder. So bleibt
+    // die plattformuebergreifende Spiegelung der Historie unabhaengig
+    // vom Promptboard-Backup.
+
+    private static let historyFileName = "prompt-history.json"
+
+    /// Laedt den Inhalt von prompt-history.json zu Drive hoch und raeumt
+    /// Duplikate weg. Identisches Cleanup-Muster wie der regulaere
+    /// Backup-Pfad oben — in Drive bleibt immer genau eine aktuelle Datei.
+    func uploadHistory(json: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.historyFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        if let keepId = ids.first {
+                            self.replaceFile(id: keepId, token: token, json: json) { replaceResult in
+                                let dups = Array(ids.dropFirst())
+                                if !dups.isEmpty { self.deleteFiles(ids: dups, token: token) }
+                                completion(replaceResult)
+                            }
+                        } else {
+                            self.createFile(name: Self.historyFileName,
+                                            token: token, json: json,
+                                            completion: completion)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Holt den aktuellsten Stand der prompt-history.json aus Drive.
+    /// Liefert nil wenn noch keine Cloud-Historie existiert.
+    func downloadHistory(completion: @escaping (Result<String?, Error>) -> Void) {
+        freshAccessToken { tokenResult in
+            switch tokenResult {
+            case .failure(let e): completion(.failure(e))
+            case .success(let token):
+                self.findAllFileIds(named: Self.historyFileName, token: token) { result in
+                    switch result {
+                    case .failure(let e): completion(.failure(e))
+                    case .success(let ids):
+                        guard let id = ids.first else { completion(.success(nil)); return }
+                        self.downloadContent(id: id, token: token, completion: completion)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Generische Helpers (parametrisierbarer Filename)
+
+    /// Wie `findAllBackupFileIds`, aber mit konfigurierbarem Filename —
+    /// damit derselbe Code-Pfad sowohl die regulaere Backup-Datei als
+    /// auch die History-Datei und (kuenftig) einzelne Archive-Dateien
+    /// auflisten kann.
+    private func findAllFileIds(named fileName: String, token: String,
+                                 completion: @escaping (Result<[String], Error>) -> Void) {
+        var comps = URLComponents(string: "https://www.googleapis.com/drive/v3/files")!
+        comps.queryItems = [
+            URLQueryItem(name: "spaces", value: "appDataFolder"),
+            URLQueryItem(name: "q", value: "name = '\(fileName)' and trashed = false"),
+            URLQueryItem(name: "fields", value: "files(id, modifiedTime)"),
+            URLQueryItem(name: "orderBy", value: "modifiedTime desc"),
+            URLQueryItem(name: "pageSize", value: "100"),
+        ]
+        var req = URLRequest(url: comps.url!)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: req) { data, _, err in
+            if let err = err { completion(.failure(err)); return }
+            guard let data = data,
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let files = dict["files"] as? [[String: Any]] else {
+                completion(.success([])); return
+            }
+            let ids = files.compactMap { $0["id"] as? String }
+            completion(.success(ids))
+        }.resume()
+    }
+
+    private func createFile(name: String, token: String, json: String,
+                            completion: @escaping (Result<Void, Error>) -> Void) {
+        let boundary = "promptboard-\(UUID().uuidString)"
+        var req = URLRequest(url: URL(string: "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")!)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("multipart/related; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        let metadata: [String: Any] = ["name": name, "parents": ["appDataFolder"]]
+        let metaData = try! JSONSerialization.data(withJSONObject: metadata)
+        let metaString = String(data: metaData, encoding: .utf8)!
+
+        var body = Data()
+        body.append("--\(boundary)\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n\(metaString)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\nContent-Type: application/json\r\n\r\n\(json)\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+
+        URLSession.shared.dataTask(with: req) { _, resp, err in
+            if let err = err { completion(.failure(err)); return }
+            if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                completion(.failure(self.errorString("Upload failed: HTTP \(http.statusCode)")))
+                return
+            }
+            completion(.success(()))
+        }.resume()
+    }
+
+    private func replaceFile(id: String, token: String, json: String,
+                             completion: @escaping (Result<Void, Error>) -> Void) {
+        var req = URLRequest(url: URL(string: "https://www.googleapis.com/upload/drive/v3/files/\(id)?uploadType=media")!)
+        req.httpMethod = "PATCH"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = json.data(using: .utf8)
+        URLSession.shared.dataTask(with: req) { _, resp, err in
+            if let err = err { completion(.failure(err)); return }
+            if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                completion(.failure(self.errorString("Upload (replace) failed: HTTP \(http.statusCode)")))
+                return
+            }
+            completion(.success(()))
+        }.resume()
+    }
 }
 
 fileprivate extension Array {

@@ -70,6 +70,14 @@ namespace TerminalVoiceOverlay.Views
         /// der Promptboard-SQLite-Datenbank.
         /// </summary>
         private readonly PromptHistoryService _historyService = new();
+
+        /// <summary>
+        /// Drive-Sync der Historie. Lazy initialisiert — beim ersten Submit
+        /// oder beim Mergen am App-Start. Wenn Drive nicht verbunden ist,
+        /// wirft die erste Operation eine Exception, die wir still
+        /// schlucken (Sync ist eine Komfort-Funktion, kein Pflichtkanal).
+        /// </summary>
+        private PromptHistoryDriveSync? _historySync;
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
@@ -168,6 +176,12 @@ namespace TerminalVoiceOverlay.Views
                 Console.WriteLine($"AlwaysOnPrefixService not available: {ex.Message}");
                 _alwaysOnPrefix = null;
             }
+
+            // Cloud-Merge der Prompt-Historie: einmal beim App-Start
+            // versuchen, neue Eintraege vom anderen Geraet abzuholen. Fire-
+            // and-forget — wenn Drive nicht verbunden ist, schluckt der
+            // Helper die Exception und es wird einfach nichts gemergt.
+            _ = TryMergeHistoryFromCloudAsync();
         }
 
         // ── Hover animation helper ──
@@ -815,6 +829,11 @@ namespace TerminalVoiceOverlay.Views
                     });
                 }
 
+                // Cloud-Sync: prompt-history.json nach Drive hochladen.
+                // Bewusst NACH dem Re-Render — der Benutzer sieht seinen
+                // Eintrag sofort, der Cloud-Push ist Hintergrund-Arbeit.
+                _ = TryUploadHistoryAsync();
+
                 if (geminiEnabled && _geminiClient is not null)
                 {
                     string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
@@ -836,6 +855,85 @@ namespace TerminalVoiceOverlay.Views
             catch (Exception ex)
             {
                 Console.WriteLine($"WriteHistoryAsync failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Laedt die lokale prompt-history.json zu Drive hoch. Wird nach
+        /// jedem Submit aufgerufen (fire-and-forget) und schluckt Fehler
+        /// still — wenn Drive nicht verbunden ist, ist das kein Problem
+        /// fuer den Tipp-Flow. Bei Erfolg sehen Mac und Windows den
+        /// neuesten Eintrag beim naechsten Start.
+        /// </summary>
+        private async Task TryUploadHistoryAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateSync();
+                if (sync is null) return;
+                await sync.UploadHistoryAsync(_historyService.HistoryFilePath);
+                Console.WriteLine("Prompt history uploaded to Drive.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"History upload skipped: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Holt die Cloud-Historie und mergt sie mit dem lokalen Stand.
+        /// Wird einmal beim App-Start aufgerufen (vom App.xaml.cs),
+        /// nicht bei jedem Submit. Neue Cloud-Eintraege wandern oben in
+        /// die Liste, lokale Eintraege bleiben erhalten — bei doppelten
+        /// IDs gewinnt der lokale Stand (kann frischeren KI-Titel haben).
+        /// </summary>
+        public async Task TryMergeHistoryFromCloudAsync()
+        {
+            try
+            {
+                var sync = GetOrCreateSync();
+                if (sync is null) return;
+                string? cloud = await sync.DownloadHistoryAsync();
+                if (cloud is null)
+                {
+                    Console.WriteLine("No cloud history yet — nothing to merge.");
+                    return;
+                }
+                var local = await _historyService.LoadAsync();
+                var merged = PromptHistoryDriveSync.MergeEntries(local, cloud);
+                if (merged.Count == local.Count)
+                {
+                    // Keine neuen Eintraege — nichts schreiben, sonst
+                    // verdraengen wir KI-Titel mit Fallback-Titeln.
+                    Console.WriteLine("Cloud history merge: no new entries.");
+                    return;
+                }
+                await _historyService.ReplaceAllAsync(merged);
+                Console.WriteLine($"Cloud history merged: {merged.Count - local.Count} new entries.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"History cloud merge skipped: {ex.Message}");
+            }
+        }
+
+        private PromptHistoryDriveSync? GetOrCreateSync()
+        {
+            if (_historySync is not null) return _historySync;
+            try
+            {
+                // PromptBoardSecretStore lebt im DI-Container des
+                // PromptBoardHost — wir holen ihn dort raus statt selbst
+                // einen anzulegen, damit beide Wege denselben Pfad zur
+                // .env-Datei nutzen.
+                var store = PromptBoardHost.Get<PromptBoardSecretStore>();
+                _historySync = new PromptHistoryDriveSync(store);
+                return _historySync;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PromptHistoryDriveSync init skipped: {ex.Message}");
+                return null;
             }
         }
 
