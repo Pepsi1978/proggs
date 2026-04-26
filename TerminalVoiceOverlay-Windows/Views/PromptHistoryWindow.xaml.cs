@@ -201,9 +201,16 @@ public partial class PromptHistoryWindow : Window
     public void FollowPanelDrag(Window promptBoard)
     {
         if (promptBoard is null) return;
-        Top  = promptBoard.Top;
-        Left = promptBoard.Left - Width - 4;
-        ClampToWorkArea();
+        // Hoehe NACHZIEHEN: das Promptboard kann seine Hoehe nachtraeglich
+        // aendern (Pillar-Drag → OverlayWindow.PositionPromptPanel setzt
+        // _promptPanel.Height = Pillar.Height). Ohne diesen Sync laeuft
+        // die Historie vertikal aus dem Promtboard heraus.
+        Height = promptBoard.Height;
+        Top    = promptBoard.Top;
+        Left   = promptBoard.Left - Width - 4;
+        // KEIN ClampToWorkArea hier — beim Drag soll die Andockung 1:1
+        // mitziehen, sonst springt die Historie wegen Bildschirm-Grenze
+        // auf eine andere Position als das Promtboard.
     }
 
     private void ClampToWorkArea()

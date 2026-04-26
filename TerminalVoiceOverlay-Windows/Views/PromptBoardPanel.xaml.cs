@@ -172,6 +172,22 @@ public partial class PromptBoardPanel : Window
         PreviewMouseRightButtonDown += OnPanelRightDown;
         PreviewMouseMove            += OnPanelMouseMove;
         PreviewMouseRightButtonUp   += OnPanelRightUp;
+
+        // Andock-Garantie: Egal WER das Promtboard bewegt oder seine Hoehe
+        // aendert (eigenes Drag, OverlayWindow.PositionPromptPanel beim
+        // Pillar-Drag, Star-Toggle, Tab-Wechsel) — die angedockten Kinder
+        // (Eingabe + Historie) muessen IMMER 1:1 mitziehen. Die explizite
+        // FollowPanelDrag in OnPanelMouseMove und OnChildGroupDrag bleibt
+        // bestehen; diese Hooks sind die Sicherheitsschicht fuer alle
+        // anderen Wege wie Position/Groesse veraendert werden.
+        LocationChanged += (_, _) => RefollowChildren();
+        SizeChanged     += (_, _) => RefollowChildren();
+    }
+
+    private void RefollowChildren()
+    {
+        _inputWindow?.FollowPanelDrag(this);
+        _historyWindow?.FollowPanelDrag(this);
     }
 
     private void OnPanelRightDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

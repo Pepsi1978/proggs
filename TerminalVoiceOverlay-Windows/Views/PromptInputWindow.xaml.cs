@@ -119,9 +119,16 @@ public partial class PromptInputWindow : Window
     public void FollowPanelDrag(Window promptBoard)
     {
         if (promptBoard is null) return;
-        Top  = promptBoard.Top;
-        Left = promptBoard.Left - Width - 4;
-        ClampToWorkArea();
+        // Hoehe NACHZIEHEN: das Promptboard kann seine Hoehe nachtraeglich
+        // aendern (Pillar-Drag → OverlayWindow.PositionPromptPanel setzt
+        // _promptPanel.Height = Pillar.Height). Wenn wir die Hoehe nicht
+        // mitziehen, sieht das Eingabe-Fenster vertikal versetzt aus.
+        Height = promptBoard.Height;
+        Top    = promptBoard.Top;
+        Left   = promptBoard.Left - Width - 4;
+        // KEIN ClampToWorkArea hier — beim Drag soll die Andockung 1:1
+        // mitziehen, sonst springt das Kind wegen Bildschirm-Grenze auf
+        // eine andere Position als das Promtboard und reisst die Naht auf.
     }
 
     /// <summary>

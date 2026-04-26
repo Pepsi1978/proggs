@@ -116,13 +116,16 @@ final class PromptInputPanel: NSPanel {
 
     /// Folgt einer Drag-Bewegung des Promptboards. Im Gegensatz zu `dock`
     /// ueberschreibt das auch eine manuelle Position — wenn das Promptboard
-    /// sich bewegt, soll das angedockte Eingabefenster mitwandern.
+    /// sich bewegt oder seine Hoehe aendert, soll das angedockte Fenster
+    /// 1:1 mitwandern. Hoehe wird IMMER nachgezogen damit das Paar nicht
+    /// vertikal auseinanderlaeuft. Kein clampToScreen hier — beim Drag
+    /// soll die Andockung 1:1 bleiben, nicht von Bildschirm-Klamp gestoert.
     func followBoardDrag(_ board: NSWindow) {
         var frame = self.frame
+        frame.size.height = board.frame.height
         frame.origin.x = board.frame.origin.x - frame.size.width - 4
         frame.origin.y = board.frame.origin.y
         setFrame(frame, display: true)
-        clampToScreen()
     }
 
     // MARK: - UI

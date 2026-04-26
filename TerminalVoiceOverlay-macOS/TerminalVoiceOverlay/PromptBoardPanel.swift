@@ -135,12 +135,34 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
         buildUI()
         installRightClickMonitor()
+        installFrameObservers()
     }
 
     deinit {
         if let m = rightClickMonitor { NSEvent.removeMonitor(m) }
         if let m = globalRightDragMonitor { NSEvent.removeMonitor(m) }
         autoBackupTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Andock-Garantie: Egal WER das Promtboard bewegt oder seine Groesse
+    /// aendert (eigenes Drag, AppDelegate.dock(rightOf:) beim Pillar-Drag,
+    /// Star-Toggle, Tab-Wechsel) — die angedockten Kinder (Eingabe +
+    /// Historie) muessen IMMER 1:1 mitziehen. Die expliziten
+    /// followBoardDrag-Aufrufe in mouseDragged etc. bleiben bestehen;
+    /// diese Hooks sind die Sicherheitsschicht fuer alle anderen Wege wie
+    /// Position/Groesse veraendert werden.
+    private func installFrameObservers() {
+        let nc = NotificationCenter.default
+        nc.addObserver(self, selector: #selector(onFrameChanged),
+                       name: NSWindow.didMoveNotification, object: self)
+        nc.addObserver(self, selector: #selector(onFrameChanged),
+                       name: NSWindow.didResizeNotification, object: self)
+    }
+
+    @objc private func onFrameChanged() {
+        inputPanel?.followBoardDrag(self)
+        historyPanel?.followBoardDrag(self)
     }
 
     // MARK: - Auto-backup
