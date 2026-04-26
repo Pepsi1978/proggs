@@ -834,7 +834,11 @@ namespace TerminalVoiceOverlay.Views
                 // Eintrag sofort, der Cloud-Push ist Hintergrund-Arbeit.
                 _ = TryUploadHistoryAsync();
 
-                if (geminiEnabled && _geminiClient is not null)
+                // KI-Titel-Generierung laeuft UNABHAENGIG vom Voice-Overlay-
+                // geminiEnabled-Toggle (das ist nur fuer Diktat-Korrektur).
+                // Sobald ein Gemini-Client existiert (API-Key vorhanden),
+                // wird der Historie-Titel automatisch von Gemini gebaut.
+                if (_geminiClient is not null)
                 {
                     string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
                     if (!string.IsNullOrWhiteSpace(aiTitle) && aiTitle != fallbackTitle)

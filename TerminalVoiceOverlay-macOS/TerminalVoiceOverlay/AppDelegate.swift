@@ -579,11 +579,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Hintergrund-Arbeit.
             self?.uploadHistoryToCloud()
 
-            // Sobald der Eintrag mit dem Fallback-Titel persistiert ist,
-            // versuchen wir den feineren Gemini-Titel zu holen — aber nur
-            // wenn Gemini ueberhaupt aktiv und konfiguriert ist.
-            guard let self = self, self.geminiEnabled,
-                  let gemini = self.geminiClient else { return }
+            // KI-Titel-Generierung laeuft UNABHAENGIG vom Voice-Overlay-
+            // geminiEnabled-Toggle (der ist nur fuer Diktat-Korrektur).
+            // Sobald ein Gemini-Client existiert (API-Key vorhanden), wird
+            // der Historie-Titel automatisch von Gemini gebaut.
+            guard let self = self, let gemini = self.geminiClient else { return }
             gemini.generateTitle(mid) { [weak self] aiTitle in
                 let trimmed = aiTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty, trimmed != fallbackTitle else { return }
