@@ -36,6 +36,7 @@ SWIFT_FILES=(
     "$SRC_DIR/PromptBoardPanel.swift"
     "$SRC_DIR/PromptInputPanel.swift"
     "$SRC_DIR/PromptHistoryStore.swift"
+    "$SRC_DIR/PromptHistoryPanel.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )

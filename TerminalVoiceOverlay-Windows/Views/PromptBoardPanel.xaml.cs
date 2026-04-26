@@ -63,6 +63,18 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private bool _inputWindowVisible;
 
+    /// <summary>Historie-Fenster + dessen Sichtbarkeitsstatus.</summary>
+    private PromptHistoryWindow? _historyWindow;
+    private bool _historyWindowVisible;
+
+    /// <summary>
+    /// Einzige PromptHistoryService-Instanz im Panel — teilt sich denselben
+    /// Pfad wie das OverlayWindow (LocalAppData\PromptBoard\history\), so
+    /// dass jeder Append vom Submit-Pfad sofort durch ein Re-Render hier
+    /// sichtbar wird.
+    /// </summary>
+    private readonly PromptHistoryService _historyService = new();
+
     // ── Right-click panel drag state ──
     private bool _isDraggingPanel;
     private System.Windows.Point _panelDragStartCursor;
@@ -138,7 +150,7 @@ public partial class PromptBoardPanel : Window
         RefreshSyncLabel();
         // Beim Schliessen das Eingabefenster mitnehmen, sonst bleibt ein
         // verwaistes Fenster ohne Trigger zurueck.
-        Closed += (_, _) => CloseInputWindow();
+        Closed += (_, _) => { CloseInputWindow(); CloseHistoryWindow(); };
 
         // Window-wide drop tracking so the floating drag preview updates
         // its position over the entire panel area — not just over the
@@ -300,15 +312,108 @@ public partial class PromptBoardPanel : Window
     public bool IsInputWindowVisible => _inputWindowVisible;
 
     // ─────────────────────────────────────────────────────────────────────
-    // Historie-Fenster (Phase 4 — vorerst Platzhalter)
+    // Historie-Fenster (Linksklick auf Eintrag → Text in Eingabefenster)
     // ─────────────────────────────────────────────────────────────────────
 
-    private void ToggleHistoryWindow()
+    private async void ToggleHistoryWindow()
     {
-        // TODO Phase 4: Historie-Fenster implementieren. Vorerst nur Log,
-        // damit der Button bereits klickbar ist und die Toolbar-Reihenfolge
-        // schon final feststeht.
-        Console.WriteLine("History toggle clicked — implementation in Phase 4.");
+        if (_historyWindowVisible)
+        {
+            CloseHistoryWindow();
+        }
+        else
+        {
+            await OpenHistoryWindowAsync();
+        }
+    }
+
+    private async Task OpenHistoryWindowAsync()
+    {
+        if (_historyWindow is null)
+        {
+            _historyWindow = new PromptHistoryWindow();
+            _historyWindow.EntrySelected += text =>
+            {
+                // Eintrag in das Eingabefenster routen — und das Eingabe-
+                // fenster oeffnen wenn es noch nicht offen ist (sonst
+                // wuerde der Klick ins Leere gehen).
+                if (!_inputWindowVisible) OpenInputWindow();
+                _inputWindow?.SetText(text);
+            };
+            _historyWindow.Closed += (_, _) =>
+            {
+                _historyWindow = null;
+                _historyWindowVisible = false;
+                UpdateHistoryButtonVisual();
+            };
+        }
+
+        // Erstmalige Standard-Position: Mitte des Bildschirms. Wenn der
+        // Benutzer das Fenster spaeter per Rechtsklick verschiebt, behaelt
+        // es seine Position bis zum erneuten Schliessen.
+        if (double.IsNaN(_historyWindow.Left) || _historyWindow.Left == 0)
+        {
+            var area = SystemParameters.WorkArea;
+            _historyWindow.Left = area.Left + (area.Width - _historyWindow.Width) / 2;
+            _historyWindow.Top  = area.Top + (area.Height - _historyWindow.Height) / 2;
+        }
+
+        await ReloadHistoryAsync();
+        _historyWindow.Show();
+        _historyWindowVisible = true;
+        UpdateHistoryButtonVisual();
+    }
+
+    private void CloseHistoryWindow()
+    {
+        if (_historyWindow is null)
+        {
+            _historyWindowVisible = false;
+            UpdateHistoryButtonVisual();
+            return;
+        }
+        var win = _historyWindow;
+        _historyWindow = null;
+        _historyWindowVisible = false;
+        UpdateHistoryButtonVisual();
+        win.Close();
+    }
+
+    /// <summary>
+    /// Liest die aktuelle Historie aus dem Service und uebergibt sie an
+    /// das Fenster. Wird beim Oeffnen aufgerufen sowie public erreichbar
+    /// damit das OverlayWindow nach jedem Submit ein Re-Render anstossen
+    /// kann (sonst sieht der Benutzer seinen frischen Eintrag erst nach
+    /// dem naechsten Oeffnen).
+    /// </summary>
+    public async Task ReloadHistoryAsync()
+    {
+        if (_historyWindow is null) return;
+        try
+        {
+            var entries = await _historyService.LoadAsync();
+            _historyWindow.Render(entries);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ReloadHistoryAsync failed: {ex.Message}");
+        }
+    }
+
+    private void UpdateHistoryButtonVisual()
+    {
+        // Aktiv-Zustand: gelbe Fuellung wie der Stern. Inaktiv: gleiche
+        // gedaempfte Farbe wie die anderen Toolbar-Symbole.
+        if (_historyWindowVisible)
+        {
+            BtnHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+            BtnHistory.ToolTip    = "Prompt-Historie schliessen";
+        }
+        else
+        {
+            BtnHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
+            BtnHistory.ToolTip    = "Prompt-Historie";
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)

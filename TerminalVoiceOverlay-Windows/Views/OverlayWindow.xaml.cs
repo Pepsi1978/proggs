@@ -804,12 +804,32 @@ namespace TerminalVoiceOverlay.Views
                 // Gemini-Titel im Hintergrund nachziehen — wenn der API-Key
                 // fehlt oder Gemini deaktiviert ist, bleibt der Fallback-
                 // Titel einfach stehen. Kein Blocker fuer den Submit-Flow.
+                // Sofortiges Re-Render des offenen Historie-Fensters, damit
+                // der neue Eintrag direkt sichtbar ist — ohne dass der
+                // Benutzer das Fenster zu- und wieder aufklappen muss.
+                if (_promptPanel is not null)
+                {
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        await _promptPanel.ReloadHistoryAsync();
+                    });
+                }
+
                 if (geminiEnabled && _geminiClient is not null)
                 {
                     string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
                     if (!string.IsNullOrWhiteSpace(aiTitle) && aiTitle != fallbackTitle)
                     {
                         await _historyService.UpdateTitleAsync(entry.Id, aiTitle);
+                        // Nochmal re-rendern — der KI-Titel hat den
+                        // Fallback-Titel ueberschrieben.
+                        if (_promptPanel is not null)
+                        {
+                            await Dispatcher.InvokeAsync(async () =>
+                            {
+                                await _promptPanel.ReloadHistoryAsync();
+                            });
+                        }
                     }
                 }
             }

@@ -509,15 +509,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func writeHistory(middleText: String) {
         let mid = middleText
         let fallbackTitle = GeminiClient.fallbackTitle(from: mid)
-        PromptHistoryStore.shared.append(text: mid, title: fallbackTitle) { entry in
+        PromptHistoryStore.shared.append(text: mid, title: fallbackTitle) { [weak self] entry in
+            // Sofortiges Re-Render: das offene Historie-Fenster zeigt den
+            // neuen Eintrag direkt, ohne Zu-/Aufklappen.
+            self?.promptBoardPanel?.reloadHistory()
+
             // Sobald der Eintrag mit dem Fallback-Titel persistiert ist,
             // versuchen wir den feineren Gemini-Titel zu holen — aber nur
             // wenn Gemini ueberhaupt aktiv und konfiguriert ist.
-            guard self.geminiEnabled, let gemini = self.geminiClient else { return }
-            gemini.generateTitle(mid) { aiTitle in
+            guard let self = self, self.geminiEnabled,
+                  let gemini = self.geminiClient else { return }
+            gemini.generateTitle(mid) { [weak self] aiTitle in
                 let trimmed = aiTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty, trimmed != fallbackTitle else { return }
                 PromptHistoryStore.shared.updateTitle(entryId: entry.id, newTitle: trimmed)
+                // Nochmal rendern damit der KI-Titel sichtbar wird.
+                DispatchQueue.main.async {
+                    self?.promptBoardPanel?.reloadHistory()
+                }
             }
         }
     }

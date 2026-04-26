@@ -28,6 +28,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     private var inputToggleButton: NSButton?
     private var historyToggleButton: NSButton?
 
+    /// Historie-Fenster + Sichtbarkeitsstatus.
+    private var historyPanel: PromptHistoryPanel?
+    private var historyPanelVisible = false
+
     private let categoryStack = NSStackView()
     private let promptStack = PBFlippedStackView()
     private let addPromptButton = NSButton(title: "+ Neuer Prompt", target: nil, action: nil)
@@ -291,8 +295,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     override func close() {
-        // Eingabefenster mitnehmen, sonst bleibt ein verwaistes Panel zurueck.
+        // Eingabefenster und Historie mitnehmen, sonst bleiben verwaiste
+        // Panels ohne Trigger zurueck.
         closeInputPanel()
+        closeHistoryPanel()
         super.close()
     }
 
@@ -826,13 +832,67 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// True wenn der Stern an ist und das Eingabefenster sichtbar.
     var isInputPanelVisible: Bool { inputPanelVisible }
 
-    // MARK: - Historie-Fenster (Phase 4 — vorerst Platzhalter)
+    // MARK: - Historie-Fenster (Linksklick auf Eintrag → Text in Eingabe)
 
     @objc private func onToggleHistory() {
-        // TODO Phase 4: Historie-Fenster implementieren. Vorerst nur Log,
-        // damit der Button schon klickbar ist und die Toolbar-Reihenfolge
-        // bereits final feststeht.
-        tvoDebug("[PBPanel] history toggle clicked — implementation in Phase 4")
+        if historyPanelVisible {
+            closeHistoryPanel()
+        } else {
+            openHistoryPanel()
+        }
+    }
+
+    private func openHistoryPanel() {
+        if historyPanel == nil {
+            let p = PromptHistoryPanel()
+            p.onEntrySelected = { [weak self] text in
+                guard let self = self else { return }
+                // Eintrag in das Eingabefenster routen — und das Eingabe-
+                // fenster oeffnen wenn es noch nicht offen ist (sonst
+                // wuerde der Klick ins Leere gehen).
+                if !self.inputPanelVisible { self.openInputPanel() }
+                self.inputPanel?.setText(text)
+            }
+            historyPanel = p
+        }
+        reloadHistory()
+        historyPanel?.orderFront(nil)
+        historyPanel?.makeKeyAndOrderFront(nil)
+        historyPanelVisible = true
+        updateHistoryButtonVisual()
+    }
+
+    private func closeHistoryPanel() {
+        historyPanel?.close()
+        historyPanel = nil
+        historyPanelVisible = false
+        updateHistoryButtonVisual()
+    }
+
+    /// Liest die aktuelle Historie aus dem Store und uebergibt sie ans
+    /// Fenster. Wird beim Oeffnen aufgerufen — und vom AppDelegate nach
+    /// jedem Submit, damit der Benutzer seinen frischen Eintrag sofort
+    /// sieht ohne das Fenster zu/auf-klappen zu muessen.
+    func reloadHistory() {
+        guard let panel = historyPanel else { return }
+        PromptHistoryStore.shared.load { entries in
+            panel.render(entries)
+        }
+    }
+
+    private func updateHistoryButtonVisual() {
+        guard let btn = historyToggleButton else { return }
+        let color: NSColor = historyPanelVisible
+            ? NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
+            : NSColor(calibratedWhite: 0.80, alpha: 1)
+        btn.attributedTitle = NSAttributedString(
+            string: "📜",
+            attributes: [
+                .foregroundColor: color,
+                .font: NSFont.systemFont(ofSize: 14, weight: .semibold)
+            ]
+        )
+        btn.toolTip = historyPanelVisible ? "Prompt-Historie schliessen" : "Prompt-Historie"
     }
 
     // MARK: - Originale Aktionen
