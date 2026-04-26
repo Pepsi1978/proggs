@@ -886,10 +886,10 @@ public partial class PromptBoardPanel : Window
             grid.Children.Add(tsLabel);
         }
 
-        // ── Edit (✎) ──
+        // ── Edit (Fluent E70F = Edit / Pencil) ──
         var editBtn = new Button
         {
-            Content = "✎",
+            Content = "",
             Style = (Style)FindResource("RowIconButton"),
             ToolTip = "Bearbeiten",
         };
@@ -898,10 +898,10 @@ public partial class PromptBoardPanel : Window
         Grid.SetColumn(editBtn, 3);
         grid.Children.Add(editBtn);
 
-        // ── Delete (✕) ──
+        // ── Delete (Fluent E74D = Delete / Trash) ──
         var deleteBtn = new Button
         {
-            Content = "✕",
+            Content = "",
             Style = (Style)FindResource("RowIconButton"),
             ToolTip = "Loeschen",
         };
