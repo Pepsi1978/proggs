@@ -253,6 +253,8 @@ public partial class PromptBoardPanel : Window
                 // Eingabefeld nach Senden leeren, Fokus bleibt drin.
                 _inputWindow?.ClearInput();
             };
+            // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.
+            _inputWindow.GroupDragDelta += OnChildGroupDrag;
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;
@@ -298,6 +300,23 @@ public partial class PromptBoardPanel : Window
             BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0x7F, 0x7F, 0x7F));
             BtnInputToggle.ToolTip    = "Prompt-Eingabe einblenden";
         }
+    }
+
+    /// <summary>
+    /// Reagiert auf einen Rechtsklick-Drag in einem der Kinder (Eingabe
+    /// oder Historie). Verschiebt das Promptboard um den gleichen Versatz
+    /// — durch das anschliessende PanelDragged-Event folgt der Voice-
+    /// Pillar, durch FollowPanelDrag folgen die beiden Kinder. Damit
+    /// bewegt sich die GANZE Gruppe als ein einziges starres Konstrukt,
+    /// egal an welchem Fenster der Benutzer angefasst hat.
+    /// </summary>
+    private void OnChildGroupDrag(double dx, double dy)
+    {
+        Left += dx;
+        Top  += dy;
+        PanelDragged?.Invoke();                      // Voice-Pillar folgt
+        _inputWindow?.FollowPanelDrag(this);         // Eingabe re-dockt
+        _historyWindow?.FollowPanelDrag(this);       // Historie re-dockt
     }
 
     /// <summary>
@@ -387,6 +406,8 @@ public partial class PromptBoardPanel : Window
                 if (!_inputWindowVisible) OpenInputWindow();
                 _inputWindow?.SetText(text);
             };
+            // Rechtsklick-Drag im Historie-Fenster verschiebt die GANZE Gruppe.
+            _historyWindow.GroupDragDelta += OnChildGroupDrag;
             _historyWindow.Closed += (_, _) =>
             {
                 _historyWindow = null;

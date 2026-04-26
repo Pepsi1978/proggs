@@ -791,6 +791,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 // Eingabe nach Senden leeren, Fokus bleibt drin.
                 self.inputPanel?.clearInput()
             }
+            // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.
+            panel.onGroupDragDelta = { [weak self] dx, dy in
+                self?.translateGroup(dx: dx, dy: dy)
+            }
             inputPanel = panel
         }
         inputPanel?.dock(leftOf: self, force: true)
@@ -834,6 +838,24 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     /// True wenn der Stern an ist und das Eingabefenster sichtbar.
     var isInputPanelVisible: Bool { inputPanelVisible }
+
+    /// Verschiebt die GANZE Fenster-Gruppe (Promptboard, Eingabe, Historie
+    /// und durch das onPanelDragged-Callback auch den Voice-Pillar) um den
+    /// gleichen Versatz. Wird aus den Rechtsklick-Drags der Eingabe und
+    /// Historie aufgerufen — egal an welchem Fenster der Benutzer anfasst,
+    /// alle bewegen sich als ein starres Konstrukt.
+    func translateGroup(dx: CGFloat, dy: CGFloat) {
+        var origin = self.frame.origin
+        origin.x += dx
+        origin.y += dy
+        self.setFrameOrigin(origin)
+        // Voice-Pillar folgt ueber den existierenden onPanelDragged-Pfad.
+        onPanelDragged?(origin)
+        // Andockpartner re-positionieren — sie kennen die neue Boardposition
+        // und docken sich exakt 4 pt links davor.
+        inputPanel?.followBoardDrag(self)
+        historyPanel?.followBoardDrag(self)
+    }
 
     /// Versteckt Eingabe- und Historie-Panel — wird vom AppDelegate
     /// gerufen sobald der Benutzer aus dem Terminal in eine andere App
@@ -883,13 +905,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 if !self.inputPanelVisible { self.openInputPanel() }
                 self.inputPanel?.setText(text)
             }
+            // Rechtsklick-Drag in der Historie verschiebt die GANZE Gruppe.
+            p.onGroupDragDelta = { [weak self] dx, dy in
+                self?.translateGroup(dx: dx, dy: dy)
+            }
             historyPanel = p
         }
         // Andocken links am Promtboard — gleiche Position wie das
         // Eingabefenster. Wenn beide gleichzeitig offen sind, liegt die
-        // Historie ueber dem Eingabefenster (Z-Order); der Benutzer kann
-        // sie via Rechtsklick frei verschieben wenn er beide gleichzeitig
-        // sehen will.
+        // Historie ueber dem Eingabefenster (Z-Order).
         historyPanel?.dock(leftOf: self, force: true)
         reloadHistory()
         historyPanel?.orderFront(nil)

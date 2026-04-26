@@ -29,17 +29,16 @@ public partial class PromptHistoryWindow : Window
     public event Action<string>? EntrySelected;
 
     /// <summary>
-    /// Hat der Benutzer das Fenster per Rechtsklick selbst verschoben? Wenn
-    /// ja, folgt das Andocken nicht mehr automatisch — nur ein Drag des
-    /// Promptboards selbst zieht das Historie-Fenster mit.
+    /// Wird beim Rechtsklick-Drag fuer jeden Mausschritt ausgeloest. Das
+    /// Promptboard verschiebt daraufhin die GANZE Gruppe (Pillar +
+    /// Promptboard + Eingabe + Historie) um den gleichen Versatz. Wir
+    /// bewegen uns NIE selbst — die Andockung bleibt dadurch starr.
     /// </summary>
-    private bool _manuallyPositioned;
+    public event Action<double, double>? GroupDragDelta;
 
     // ── Rechtsklick-Drag-State ──
     private bool _isDragging;
-    private Point _dragStartCursor;
-    private double _dragStartLeft;
-    private double _dragStartTop;
+    private Point _dragStartScreen;
 
     private static readonly Brush RowBackground = new SolidColorBrush(Color.FromRgb(0x25, 0x25, 0x25));
     private static readonly Brush RowHover      = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
@@ -158,14 +157,11 @@ public partial class PromptHistoryWindow : Window
     /// <summary>
     /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards
     /// an — Hoehe wird angeglichen, x-Position 4 px links neben dem Board.
-    /// Respektiert <see cref="_manuallyPositioned"/>: hat der Benutzer das
-    /// Fenster selbst verschoben, bleibt diese Position erhalten (es sei
-    /// denn der Aufrufer setzt force=true, was das initiale Oeffnen tut).
+    /// Andockung ist absolut: kein "manuell positioniert"-Konzept mehr.
     /// </summary>
     public void DockTo(Window promptBoard, bool force = false)
     {
         if (promptBoard is null) return;
-        if (_manuallyPositioned && !force) return;
 
         Height = promptBoard.Height;
         Top    = promptBoard.Top;
@@ -201,21 +197,25 @@ public partial class PromptHistoryWindow : Window
     private void OnRightDragStart(object sender, MouseButtonEventArgs e)
     {
         _isDragging = true;
-        _dragStartCursor = e.GetPosition(this);
-        _dragStartLeft = Left;
-        _dragStartTop = Top;
-        // Sobald der Benutzer manuell zieht, soll das Andocken nicht mehr
-        // automatisch ueberschreiben (gleiche Semantik wie InputWindow).
-        _manuallyPositioned = true;
+        _dragStartScreen = PointToScreen(e.GetPosition(this));
         CaptureMouse();
     }
 
     private void OnRightDragMove(object sender, MouseEventArgs e)
     {
         if (!_isDragging) return;
-        var current = e.GetPosition(this);
-        Left = _dragStartLeft + (current.X - _dragStartCursor.X);
-        Top  = _dragStartTop  + (current.Y - _dragStartCursor.Y);
+        // Wir bewegen UNS NICHT direkt — stattdessen melden wir den Mouse-
+        // Delta an das Promptboard, das daraufhin die GANZE Gruppe
+        // (Pillar + Promptboard + Eingabe + Historie) um den gleichen
+        // Versatz verschiebt. Wir selbst werden vom Promptboard ueber
+        // FollowPanelDrag zurueckgezogen — die Andockung bleibt damit
+        // immer exakt bei 4 px Abstand.
+        var cur = PointToScreen(e.GetPosition(this));
+        double dx = cur.X - _dragStartScreen.X;
+        double dy = cur.Y - _dragStartScreen.Y;
+        if (dx == 0 && dy == 0) return;
+        GroupDragDelta?.Invoke(dx, dy);
+        _dragStartScreen = cur;
     }
 
     private void OnRightDragEnd(object sender, MouseButtonEventArgs e)
@@ -223,6 +223,5 @@ public partial class PromptHistoryWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ReleaseMouseCapture();
-        ClampToWorkArea();
     }
 }

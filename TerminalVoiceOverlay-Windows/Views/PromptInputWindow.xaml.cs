@@ -21,18 +21,18 @@ public partial class PromptInputWindow : Window
     public event Action<string>? SubmitRequested;
 
     /// <summary>
-    /// Hat der Benutzer das Fenster per Rechtsklick selbst verschoben? Wenn
-    /// ja, folgen wir dem Promptboard nicht mehr automatisch. Solange das
-    /// Promptboard das Eingabefenster bewegt (z.B. weil das ganze Pillar
-    /// per Drag verschoben wird), bleibt der Wert false.
+    /// Wird beim Rechtsklick-Drag fuer jeden Mausschritt ausgeloest.
+    /// Das Promptboard reagiert darauf und verschiebt die GANZE Gruppe
+    /// (Pillar + Promptboard + Eingabe + Historie) um den gleichen Delta.
+    /// Wir ueberschreiben hier NICHT mehr unsere eigene Position direkt —
+    /// das Promptboard zieht uns als Andockpartner mit, sobald es selbst
+    /// gewandert ist. So bleibt die Andock-Geometrie immer erhalten.
     /// </summary>
-    private bool _manuallyPositioned;
+    public event Action<double, double>? GroupDragDelta;
 
     // ── Rechtsklick-Drag-State ──
     private bool _isDragging;
-    private Point _dragStartCursor;
-    private double _dragStartLeft;
-    private double _dragStartTop;
+    private Point _dragStartScreen;
 
     public PromptInputWindow()
     {
@@ -90,14 +90,14 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
-    /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards an.
-    /// Respektiert <see cref="_manuallyPositioned"/> — wenn der Benutzer
-    /// selbst verschoben hat, wird die Andockung nicht erzwungen.
+    /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards
+    /// an. Wird beim Oeffnen aufgerufen und nach jedem Drag (egal an
+    /// welchem Fenster der Benutzer angefasst hat) — die Andockung ist
+    /// jetzt absolut, kein "manuell positioniert"-Konzept mehr.
     /// </summary>
     public void DockTo(Window promptBoard, bool force = false)
     {
         if (promptBoard is null) return;
-        if (_manuallyPositioned && !force) return;
 
         // Hoehe an Promptboard angleichen, damit die beiden Fenster
         // visuell als zusammengehoeriges Paar erscheinen.
@@ -169,20 +169,28 @@ public partial class PromptInputWindow : Window
         // nur wenn das Klick-Ziel das Window oder der Border ist.
         if (e.OriginalSource is System.Windows.Controls.TextBox) return;
 
-        _isDragging         = true;
-        _dragStartCursor    = e.GetPosition(this);
-        _dragStartLeft      = Left;
-        _dragStartTop       = Top;
-        _manuallyPositioned = true;
+        _isDragging      = true;
+        _dragStartScreen = PointToScreen(e.GetPosition(this));
         CaptureMouse();
     }
 
     private void OnRightDragMove(object sender, MouseEventArgs e)
     {
         if (!_isDragging) return;
-        var current = e.GetPosition(this);
-        Left = _dragStartLeft + (current.X - _dragStartCursor.X);
-        Top  = _dragStartTop  + (current.Y - _dragStartCursor.Y);
+        // Wir bewegen UNS NICHT direkt — stattdessen melden wir den Mouse-
+        // Delta an das Promptboard, das daraufhin die GANZE Gruppe
+        // (Pillar + Promptboard + Eingabe + Historie) um den gleichen
+        // Versatz verschiebt. Wir selbst werden vom Promptboard ueber
+        // FollowPanelDrag zurueckgezogen — die Andockung bleibt damit
+        // immer exakt bei 4 px Abstand.
+        var cur = PointToScreen(e.GetPosition(this));
+        double dx = cur.X - _dragStartScreen.X;
+        double dy = cur.Y - _dragStartScreen.Y;
+        if (dx == 0 && dy == 0) return;
+        GroupDragDelta?.Invoke(dx, dy);
+        // Baseline auf die neue Cursor-Position setzen, sonst summieren
+        // sich die Deltas und das Fenster rast davon.
+        _dragStartScreen = cur;
     }
 
     private void OnRightDragEnd(object sender, MouseButtonEventArgs e)
@@ -190,6 +198,5 @@ public partial class PromptInputWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ReleaseMouseCapture();
-        ClampToWorkArea();
     }
 }

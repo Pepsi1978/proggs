@@ -15,9 +15,10 @@ final class PromptHistoryPanel: NSPanel {
     /// genau wie wenn der Eintrag frisch getippt waere.
     var onEntrySelected: ((String) -> Void)?
 
-    /// Hat der Benutzer das Fenster per Rechtsklick selbst verschoben?
-    /// Wenn ja, ueberschreibt `dock(leftOf:)` die Position nicht mehr.
-    private var manuallyPositioned = false
+    /// Wird beim Rechtsklick-Drag fuer jeden Mausschritt ausgeloest. Das
+    /// Promptboard verschiebt daraufhin die GANZE Gruppe um den gleichen
+    /// Versatz. Wir bewegen uns NIE selbst — die Andockung bleibt starr.
+    var onGroupDragDelta: ((CGFloat, CGFloat) -> Void)?
 
     private let titleLabel = NSTextField(labelWithString: "Prompt-Historie")
     private let hintLabel = NSTextField(labelWithString:
@@ -29,7 +30,6 @@ final class PromptHistoryPanel: NSPanel {
     // ── Rechtsklick-Drag-State ──
     private var isDragging = false
     private var dragStartMouseLocation: NSPoint = .zero
-    private var dragStartOrigin: NSPoint = .zero
     private var rightDragMonitor: Any?
 
     private let displayFormatter: DateFormatter = {
@@ -67,11 +67,8 @@ final class PromptHistoryPanel: NSPanel {
 
     /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards
     /// an — Hoehe wird angeglichen, x-Position 4 pt links neben dem Board.
-    /// Respektiert `manuallyPositioned`: hat der Benutzer das Fenster per
-    /// Rechtsklick selbst verschoben, bleibt diese Position erhalten (es
-    /// sei denn der Aufrufer setzt force=true, was das initiale Oeffnen tut).
+    /// Andockung ist absolut: kein "manuell positioniert"-Konzept mehr.
     func dock(leftOf board: NSWindow, force: Bool = false) {
-        if manuallyPositioned && !force { return }
         var frame = self.frame
         frame.size.height = board.frame.height
         frame.origin.x = board.frame.origin.x - frame.size.width - 4
@@ -270,17 +267,20 @@ final class PromptHistoryPanel: NSPanel {
             switch event.type {
             case .rightMouseDown:
                 self.isDragging = true
-                self.manuallyPositioned = true
                 self.dragStartMouseLocation = NSEvent.mouseLocation
-                self.dragStartOrigin = self.frame.origin
                 return nil
             case .rightMouseDragged:
                 if self.isDragging {
+                    // Wir bewegen UNS NICHT direkt — Promptboard
+                    // verschiebt die GANZE Gruppe um den gleichen Versatz,
+                    // wir werden ueber followBoardDrag zurueckgezogen.
                     let cur = NSEvent.mouseLocation
-                    var origin = self.dragStartOrigin
-                    origin.x += cur.x - self.dragStartMouseLocation.x
-                    origin.y += cur.y - self.dragStartMouseLocation.y
-                    self.setFrameOrigin(origin)
+                    let dx = cur.x - self.dragStartMouseLocation.x
+                    let dy = cur.y - self.dragStartMouseLocation.y
+                    if dx != 0 || dy != 0 {
+                        self.onGroupDragDelta?(dx, dy)
+                        self.dragStartMouseLocation = cur
+                    }
                     return nil
                 }
                 return event
