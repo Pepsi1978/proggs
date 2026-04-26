@@ -1370,6 +1370,19 @@ public partial class PromptBoardPanel : Window
     }
 
     /// <summary>
+    /// Public wrapper fuer den Sync-Timestamp — wird vom OverlayWindow nach
+    /// einem erfolgreichen Historie-Upload aufgerufen, damit der "· sync"-
+    /// Badge im Header auch fuer Historie-Aktivitaet aktuell bleibt. Der
+    /// Promtboard-Auto-Backup feuert nur bei Promtboard-Mutationen — ohne
+    /// diesen Aufruf wuerde der Header-Timestamp Stunden alt bleiben,
+    /// obwohl die Historie laufend gesynct wird.
+    /// </summary>
+    public void MarkSyncedNow()
+    {
+        Dispatcher.Invoke(RecordSuccessfulSync);
+    }
+
+    /// <summary>
     /// Reads the persisted last-sync timestamp and renders it as a short
     /// muted badge: "· sync 24.04. 22:39". Always shows date+time so freshness
     /// is obvious right after restart. Empty when no sync has happened yet.

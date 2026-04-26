@@ -562,14 +562,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// jedem Submit aufgerufen (fire-and-forget). Wenn Drive nicht
     /// verbunden ist, ist das kein Problem fuer den Tipp-Flow.
     private func uploadHistoryToCloud() {
-        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] history upload skipped: drive not connected")
+            return
+        }
         let json = PromptHistoryStore.shared.rawJsonFromDisk()
-        GoogleDriveBackupService.shared.uploadHistory(json: json) { result in
+        GoogleDriveBackupService.shared.uploadHistory(json: json) { [weak self] result in
             switch result {
             case .success:
                 tvoDebug("[App] history uploaded to cloud")
+                // Sync-Badge im Promtboard-Header auch fuer Historie-
+                // Uploads aktualisieren — sonst zeigt das Label nur den
+                // letzten Promtboard-Backup, obwohl die Historie laufend
+                // gesynct wird.
+                self?.promptBoardPanel?.markSyncedNow()
             case .failure(let e):
-                tvoDebug("[App] history upload skipped: \(e.localizedDescription)")
+                tvoDebug("[App] history upload failed: \(e.localizedDescription)")
             }
         }
     }

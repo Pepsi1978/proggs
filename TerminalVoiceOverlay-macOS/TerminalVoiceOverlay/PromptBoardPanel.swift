@@ -191,6 +191,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         refreshSyncLabel()
     }
 
+    /// Public wrapper fuer den Sync-Timestamp — wird vom AppDelegate nach
+    /// einem erfolgreichen Historie-Upload aufgerufen, damit der "· sync"-
+    /// Badge auch fuer Historie-Aktivitaet aktualisiert wird (nicht nur
+    /// bei Promtboard-Backups).
+    func markSyncedNow() {
+        DispatchQueue.main.async { [weak self] in
+            self?.recordSuccessfulSync()
+        }
+    }
+
     /// Reads the persisted last-sync timestamp and renders it as a short
     /// muted badge like "· sync 24.04. 22:39". Always shows date + time so
     /// you can tell at a glance how fresh the last sync is, even right

@@ -965,14 +965,44 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 var sync = GetOrCreateSync();
-                if (sync is null) return;
+                if (sync is null)
+                {
+                    LogHistorySync("SKIP: Drive sync not configured (no PromptBoardSecretStore credentials).");
+                    return;
+                }
                 await sync.UploadHistoryAsync(_historyService.HistoryFilePath);
-                Console.WriteLine("Prompt history uploaded to Drive.");
+                LogHistorySync("OK: prompt-history.json uploaded to Drive.");
+                // Den sichtbaren Sync-Timestamp im Promtboard-Header
+                // aktualisieren — der Label zeigt damit auch
+                // Historie-Sync-Aktivitaet, nicht nur Promtboard-Backup.
+                _promptPanel?.MarkSyncedNow();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"History upload skipped: {ex.Message}");
+                LogHistorySync($"FAIL: {ex.GetType().Name}: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Schreibt eine Diagnose-Zeile in history-sync-debug.log neben der
+        /// PromptBoard-DB. Hilft Bug-Reports schnell aufzuloesen — sehen wir
+        /// auf einen Blick ob Drive verbunden ist, ob die Anfrage durchkommt
+        /// und welche Exception-Klasse ggf. fliegt.
+        /// </summary>
+        private static void LogHistorySync(string line)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard", "history");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "history-sync-debug.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch { /* Diagnostics never break the main flow. */ }
         }
 
         /// <summary>
