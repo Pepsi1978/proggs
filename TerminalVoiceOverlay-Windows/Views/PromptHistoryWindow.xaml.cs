@@ -28,6 +28,13 @@ public partial class PromptHistoryWindow : Window
     /// </summary>
     public event Action<string>? EntrySelected;
 
+    /// <summary>
+    /// Hat der Benutzer das Fenster per Rechtsklick selbst verschoben? Wenn
+    /// ja, folgt das Andocken nicht mehr automatisch — nur ein Drag des
+    /// Promptboards selbst zieht das Historie-Fenster mit.
+    /// </summary>
+    private bool _manuallyPositioned;
+
     // ── Rechtsklick-Drag-State ──
     private bool _isDragging;
     private Point _dragStartCursor;
@@ -146,18 +153,60 @@ public partial class PromptHistoryWindow : Window
         return row;
     }
 
+    // ── Andocken am Promptboard (gleiches Muster wie PromptInputWindow) ──
+
+    /// <summary>
+    /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards
+    /// an — Hoehe wird angeglichen, x-Position 4 px links neben dem Board.
+    /// Respektiert <see cref="_manuallyPositioned"/>: hat der Benutzer das
+    /// Fenster selbst verschoben, bleibt diese Position erhalten (es sei
+    /// denn der Aufrufer setzt force=true, was das initiale Oeffnen tut).
+    /// </summary>
+    public void DockTo(Window promptBoard, bool force = false)
+    {
+        if (promptBoard is null) return;
+        if (_manuallyPositioned && !force) return;
+
+        Height = promptBoard.Height;
+        Top    = promptBoard.Top;
+        Left   = promptBoard.Left - Width - 4;
+        ClampToWorkArea();
+    }
+
+    /// <summary>
+    /// Folgt einer Drag-Bewegung des Promptboards. Wird vom PromptBoardPanel
+    /// bei dessen PanelDragged-Aequivalent aufgerufen — ueberschreibt auch
+    /// eine manuelle Position, weil ein Promtboard-Drag das gesamte
+    /// Fenster-Set als Paar wandern soll.
+    /// </summary>
+    public void FollowPanelDrag(Window promptBoard)
+    {
+        if (promptBoard is null) return;
+        Top  = promptBoard.Top;
+        Left = promptBoard.Left - Width - 4;
+        ClampToWorkArea();
+    }
+
+    private void ClampToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        if (Left < area.Left)              Left = area.Left;
+        if (Top  < area.Top)               Top  = area.Top;
+        if (Left + Width > area.Right)     Left = area.Right - Width;
+        if (Top  + Height > area.Bottom)   Top  = area.Bottom - Height;
+    }
+
     // ── Rechtsklick-Drag ──────────────────────────────────────────────────
 
     private void OnRightDragStart(object sender, MouseButtonEventArgs e)
     {
-        // Drag nur starten wenn der Klick NICHT auf einer scrollbaren
-        // Innenflaeche endet — sonst kann der Benutzer keinen Rechtsklick-
-        // Kontextzielmechanismus nutzen. Hier gibt es keinen, also einfach
-        // den Drag immer starten.
         _isDragging = true;
         _dragStartCursor = e.GetPosition(this);
         _dragStartLeft = Left;
         _dragStartTop = Top;
+        // Sobald der Benutzer manuell zieht, soll das Andocken nicht mehr
+        // automatisch ueberschreiben (gleiche Semantik wie InputWindow).
+        _manuallyPositioned = true;
         CaptureMouse();
     }
 
@@ -174,5 +223,6 @@ public partial class PromptHistoryWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ReleaseMouseCapture();
+        ClampToWorkArea();
     }
 }

@@ -281,13 +281,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             // Tell the AppDelegate to drag the pillar by the same delta
             // so the two floating windows move as one.
             onPanelDragged?(newOrigin)
-            // Andockpartner mitnehmen — wenn das Eingabefenster offen ist,
-            // soll es mit dem Promptboard verschoben werden.
+            // Andockpartner mitnehmen — wenn das Eingabefenster oder die
+            // Historie offen sind, sollen sie mit dem Promptboard
+            // verschoben werden.
             inputPanel?.followBoardDrag(self)
+            historyPanel?.followBoardDrag(self)
         case .rightMouseUp:
             isDraggingPanel = false
             onPanelDragged?(frame.origin)  // final position
             inputPanel?.followBoardDrag(self)
+            historyPanel?.followBoardDrag(self)
             tvoDebug("[PBPanel] panel-drag end origin=\(self.frame.origin)")
         default:
             break
@@ -855,6 +858,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             }
             historyPanel = p
         }
+        // Andocken links am Promtboard — gleiche Position wie das
+        // Eingabefenster. Wenn beide gleichzeitig offen sind, liegt die
+        // Historie ueber dem Eingabefenster (Z-Order); der Benutzer kann
+        // sie via Rechtsklick frei verschieben wenn er beide gleichzeitig
+        // sehen will.
+        historyPanel?.dock(leftOf: self, force: true)
         reloadHistory()
         historyPanel?.orderFront(nil)
         historyPanel?.makeKeyAndOrderFront(nil)

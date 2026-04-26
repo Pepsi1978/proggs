@@ -47,6 +47,14 @@
             <Setter Property="Height" Value="26"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <!-- Einheitliche Icon-Schriftart fuer alle Toolbar-Buttons.
+                 Segoe Fluent Icons (Win11) bzw. Segoe MDL2 Assets (Win10)
+                 haben pro Glyph dieselben vertikalen Metriken — damit
+                 sitzt jedes Symbol exakt mittig in seiner runden Basis.
+                 Vorher mischten wir ASCII (+), Symbole (★ ⚙) und Emojis
+                 (💾 📜) mit drei verschiedenen Glyph-Hoehen, was nie sauber
+                 zentriert war. -->
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
@@ -165,32 +173,35 @@
                            FontSize="10"
                            Margin="6,0,0,0"
                            VerticalAlignment="Center"/>
-                <!-- Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings] -->
+                <!-- Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings].
+                     Glyphen aus Segoe Fluent Icons / MDL2 Assets damit alle
+                     Symbole dieselben vertikalen Metriken haben und mittig
+                     in den runden Basen sitzen. -->
                 <Button Grid.Column="3"
                         x:Name="BtnHistory"
                         Style="{StaticResource IconButton}"
-                        Content="&#x1F4DC;"
+                        Content="&#xE81C;"
                         ToolTip="Prompt-Historie"/>
                 <Button Grid.Column="4"
                         x:Name="BtnInputToggle"
                         Style="{StaticResource IconButton}"
-                        Content="&#x2606;"
+                        Content="&#xE734;"
                         Foreground="#FF7F7F7F"
                         ToolTip="Prompt-Eingabe einblenden"/>
                 <Button Grid.Column="5"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
-                        Content="+"
+                        Content="&#xE710;"
                         ToolTip="Neue Kategorie"/>
                 <Button Grid.Column="6"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
-                        Content="&#x1F4BE;"
+                        Content="&#xE74E;"
                         ToolTip="Backup / Wiederherstellen"/>
                 <Button Grid.Column="7"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
-                        Content="&#x2699;"
+                        Content="&#xE713;"
                         ToolTip="Einstellungen"/>
             </Grid>
 

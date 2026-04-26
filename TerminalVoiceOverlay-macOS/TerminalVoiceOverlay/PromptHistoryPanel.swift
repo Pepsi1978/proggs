@@ -15,6 +15,10 @@ final class PromptHistoryPanel: NSPanel {
     /// genau wie wenn der Eintrag frisch getippt waere.
     var onEntrySelected: ((String) -> Void)?
 
+    /// Hat der Benutzer das Fenster per Rechtsklick selbst verschoben?
+    /// Wenn ja, ueberschreibt `dock(leftOf:)` die Position nicht mehr.
+    private var manuallyPositioned = false
+
     private let titleLabel = NSTextField(labelWithString: "Prompt-Historie")
     private let hintLabel = NSTextField(labelWithString:
         "Klick = in Eingabe einfuegen · Rechtsklick = Fenster verschieben")
@@ -54,16 +58,48 @@ final class PromptHistoryPanel: NSPanel {
 
         buildUI()
         installRightClickDragMonitor()
+        // Initiale Position legt der Caller via dock(leftOf:) fest. Wenn
+        // er das nicht tut, bleibt das Panel an seiner Default-(0,0)-
+        // Position bis zur ersten Andockung.
+    }
 
-        // Erste Position: Bildschirmmitte — der Benutzer kann via
-        // Rechtsklick-Drag selbst woandershin.
-        if let screen = NSScreen.main {
-            let v = screen.visibleFrame
-            var f = self.frame
-            f.origin.x = v.origin.x + (v.size.width - f.size.width) / 2
-            f.origin.y = v.origin.y + (v.size.height - f.size.height) / 2
-            setFrame(f, display: true)
-        }
+    // MARK: - Andocken am Promptboard
+
+    /// Dockt das Fenster an die linke Seite des uebergebenen Promptboards
+    /// an — Hoehe wird angeglichen, x-Position 4 pt links neben dem Board.
+    /// Respektiert `manuallyPositioned`: hat der Benutzer das Fenster per
+    /// Rechtsklick selbst verschoben, bleibt diese Position erhalten (es
+    /// sei denn der Aufrufer setzt force=true, was das initiale Oeffnen tut).
+    func dock(leftOf board: NSWindow, force: Bool = false) {
+        if manuallyPositioned && !force { return }
+        var frame = self.frame
+        frame.size.height = board.frame.height
+        frame.origin.x = board.frame.origin.x - frame.size.width - 4
+        frame.origin.y = board.frame.origin.y
+        setFrame(frame, display: true)
+        clampToScreen()
+    }
+
+    /// Folgt einer Drag-Bewegung des Promptboards. Im Gegensatz zu `dock`
+    /// ueberschreibt das auch eine manuelle Position — wenn das Promptboard
+    /// sich bewegt, soll das angedockte Historie-Fenster mitwandern.
+    func followBoardDrag(_ board: NSWindow) {
+        var frame = self.frame
+        frame.origin.x = board.frame.origin.x - frame.size.width - 4
+        frame.origin.y = board.frame.origin.y
+        setFrame(frame, display: true)
+        clampToScreen()
+    }
+
+    private func clampToScreen() {
+        guard let screen = NSScreen.main else { return }
+        let v = screen.visibleFrame
+        var f = self.frame
+        if f.origin.x < v.origin.x { f.origin.x = v.origin.x }
+        if f.origin.y < v.origin.y { f.origin.y = v.origin.y }
+        if f.maxX > v.maxX { f.origin.x = v.maxX - f.size.width }
+        if f.maxY > v.maxY { f.origin.y = v.maxY - f.size.height }
+        if f != self.frame { setFrame(f, display: true) }
     }
 
     deinit {
@@ -234,6 +270,7 @@ final class PromptHistoryPanel: NSPanel {
             switch event.type {
             case .rightMouseDown:
                 self.isDragging = true
+                self.manuallyPositioned = true
                 self.dragStartMouseLocation = NSEvent.mouseLocation
                 self.dragStartOrigin = self.frame.origin
                 return nil

@@ -202,6 +202,7 @@ public partial class PromptBoardPanel : Window
         Top  = _panelDragStartTop  + (cur.Y - _panelDragStartCursor.Y);
         PanelDragged?.Invoke();
         _inputWindow?.FollowPanelDrag(this);
+        _historyWindow?.FollowPanelDrag(this);
     }
 
     private void OnPanelRightUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -211,6 +212,7 @@ public partial class PromptBoardPanel : Window
         ReleaseMouseCapture();
         PanelDragged?.Invoke();
         _inputWindow?.FollowPanelDrag(this);
+        _historyWindow?.FollowPanelDrag(this);
         e.Handled = true;
     }
 
@@ -281,15 +283,18 @@ public partial class PromptBoardPanel : Window
 
     private void UpdateStarVisual()
     {
+        // Segoe Fluent Icons:  E735 = FavoriteStarFill,  E734 = FavoriteStar.
+        // Beide haben dieselbe Glyph-Mitte → kein vertikaler Versatz beim
+        // Wechsel zwischen aktivem und inaktivem Stern.
         if (_inputWindowVisible)
         {
-            BtnInputToggle.Content    = "★"; // ★ gefuellt
+            BtnInputToggle.Content    = ""; // FavoriteStarFill
             BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
             BtnInputToggle.ToolTip    = "Prompt-Eingabe ausblenden";
         }
         else
         {
-            BtnInputToggle.Content    = "☆"; // ☆ leer
+            BtnInputToggle.Content    = ""; // FavoriteStar (Outline)
             BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0x7F, 0x7F, 0x7F));
             BtnInputToggle.ToolTip    = "Prompt-Eingabe einblenden";
         }
@@ -348,15 +353,12 @@ public partial class PromptBoardPanel : Window
             };
         }
 
-        // Erstmalige Standard-Position: Mitte des Bildschirms. Wenn der
-        // Benutzer das Fenster spaeter per Rechtsklick verschiebt, behaelt
-        // es seine Position bis zum erneuten Schliessen.
-        if (double.IsNaN(_historyWindow.Left) || _historyWindow.Left == 0)
-        {
-            var area = SystemParameters.WorkArea;
-            _historyWindow.Left = area.Left + (area.Width - _historyWindow.Width) / 2;
-            _historyWindow.Top  = area.Top + (area.Height - _historyWindow.Height) / 2;
-        }
+        // Andocken links am Promtboard — gleiche Position wie das
+        // Eingabefenster. Wenn beide gleichzeitig offen sind, liegt die
+        // Historie ueber dem Eingabefenster (Z-Order); der Benutzer kann
+        // sie via Rechtsklick frei verschieben wenn er beide gleichzeitig
+        // sehen will.
+        _historyWindow.DockTo(this, force: true);
 
         await ReloadHistoryAsync();
         _historyWindow.Show();
