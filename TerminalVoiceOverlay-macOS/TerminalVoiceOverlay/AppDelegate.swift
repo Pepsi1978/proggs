@@ -499,8 +499,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tvoDebug("[App] input submit: \(final.count) chars (autoEnter=\(autoEnterEnabled))")
         hasPastedText = !autoEnterEnabled
 
-        // TODO Phase 4: Eintrag in die Historie schreiben (mit
-        // KI-generiertem Titel via GeminiClient).
+        // Historie-Eintrag: Erst sofort mit Fallback-Titel speichern (damit
+        // der Benutzer den Eintrag direkt sieht), dann Gemini-Titel im
+        // Hintergrund nachziehen. Submit darf NICHT auf das KI-Ergebnis
+        // warten — der Tipp-Flow soll fluessig bleiben.
+        writeHistory(middleText: mid)
+    }
+
+    private func writeHistory(middleText: String) {
+        let mid = middleText
+        let fallbackTitle = GeminiClient.fallbackTitle(from: mid)
+        PromptHistoryStore.shared.append(text: mid, title: fallbackTitle) { entry in
+            // Sobald der Eintrag mit dem Fallback-Titel persistiert ist,
+            // versuchen wir den feineren Gemini-Titel zu holen — aber nur
+            // wenn Gemini ueberhaupt aktiv und konfiguriert ist.
+            guard self.geminiEnabled, let gemini = self.geminiClient else { return }
+            gemini.generateTitle(mid) { aiTitle in
+                let trimmed = aiTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty, trimmed != fallbackTitle else { return }
+                PromptHistoryStore.shared.updateTitle(entryId: entry.id, newTitle: trimmed)
+            }
+        }
     }
 
     // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)

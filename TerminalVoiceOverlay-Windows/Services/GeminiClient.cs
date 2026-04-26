@@ -123,6 +123,58 @@ Der zu verarbeitende Whisper-Text folgt nun:
             return await SendWithRetry(ClaudeCodePromptEngineerTemplate + rawWhisperText, 0);
         }
 
+        /// <summary>
+        /// Erzeugt einen kompakten Titel von maximal 4 Woertern auf Deutsch
+        /// fuer einen gegebenen Prompt. Wird fuer die Prompt-Historie
+        /// verwendet, damit der Benutzer die Eintraege auf einen Blick
+        /// wiedererkennen kann. Fallback auf die ersten 4 Woerter des Texts
+        /// wenn die Gemini-Antwort leer oder ungueltig ist — die Historie
+        /// darf nie wegen einer fehlgeschlagenen Titel-Generierung blockieren.
+        /// </summary>
+        public async Task<string> GenerateTitleAsync(string text)
+        {
+            string trimmed = (text ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return string.Empty;
+
+            const string titlePrompt =
+                "Erstelle einen sehr kompakten Titel auf Deutsch fuer den folgenden " +
+                "Prompt. STRENGE REGELN: Maximal 4 Woerter. Keine Anfuehrungszeichen. " +
+                "Kein Punkt am Ende. Keine Aufzaehlungen, kein Praefix wie 'Titel:'. " +
+                "Nur die nackten 1-4 Woerter zurueckgeben.\n\nPROMPT:\n";
+            try
+            {
+                string raw = await SendWithRetry(titlePrompt + trimmed, 0);
+                return SanitizeTitle(raw, trimmed);
+            }
+            catch
+            {
+                // Bei jedem Fehler still auf den lokalen Fallback ausweichen.
+                return FallbackTitleFromText(trimmed);
+            }
+        }
+
+        private static string SanitizeTitle(string raw, string fallbackSource)
+        {
+            string s = (raw ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '‚', '‘');
+            if (s.EndsWith(".")) s = s.Substring(0, s.Length - 1).Trim();
+            // Auf maximal 4 Woerter clampen.
+            var words = s.Split(new[] { ' ', '\t', '\n', '\r' },
+                                StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return FallbackTitleFromText(fallbackSource);
+            if (words.Length > 4) words = words[..4];
+            return string.Join(" ", words);
+        }
+
+        internal static string FallbackTitleFromText(string text)
+        {
+            var words = (text ?? string.Empty)
+                .Split(new[] { ' ', '\t', '\n', '\r' },
+                       StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "Ohne Titel";
+            if (words.Length > 4) words = words[..4];
+            return string.Join(" ", words);
+        }
+
         private async Task<string> SendWithRetry(string prompt, int attempt)
         {
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";

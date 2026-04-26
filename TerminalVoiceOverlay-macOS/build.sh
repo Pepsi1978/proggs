@@ -35,6 +35,7 @@ SWIFT_FILES=(
     "$SRC_DIR/GoogleDriveBackupService.swift"
     "$SRC_DIR/PromptBoardPanel.swift"
     "$SRC_DIR/PromptInputPanel.swift"
+    "$SRC_DIR/PromptHistoryStore.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )

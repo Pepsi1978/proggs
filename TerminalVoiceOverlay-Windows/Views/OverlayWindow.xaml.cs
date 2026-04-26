@@ -61,6 +61,15 @@ namespace TerminalVoiceOverlay.Views
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
+
+        /// <summary>
+        /// Service fuer die Prompt-Historie. Wird lazy beim ersten Submit
+        /// erzeugt — der Konstruktor legt nur die Ordnerstruktur an, kein
+        /// Netzwerk- oder DB-Zugriff. Die Historie ist eine reine JSON-Datei
+        /// in %LocalAppData%\PromptBoard\history\, also unabhaengig von
+        /// der Promptboard-SQLite-Datenbank.
+        /// </summary>
+        private readonly PromptHistoryService _historyService = new();
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
@@ -764,12 +773,49 @@ namespace TerminalVoiceOverlay.Views
                 Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={autoEnterEnabled}).");
                 hasPastedText = !autoEnterEnabled;
 
-                // TODO Phase 4: Eintrag in die Historie schreiben (mit
-                // KI-generiertem Titel via GeminiClient).
+                // Historie-Eintrag asynchron schreiben — Submit darf NICHT
+                // auf Gemini warten, weil sonst der Tipp-Flow ruckelt. Der
+                // Eintrag bekommt vorerst einen Fallback-Titel (erste 4
+                // Woerter), Gemini ueberschreibt ihn sobald der KI-Titel da
+                // ist. So sieht der Benutzer den Eintrag SOFORT in der
+                // Historie und der KI-Titel erscheint nachtraeglich.
+                _ = WriteHistoryAsync(mid);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"OnInputSubmit failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Speichert die Mitte (was der Benutzer getippt oder per Voice
+        /// eingespielt hat) in der Prompt-Historie. Erst sofort mit einem
+        /// Fallback-Titel (erste 4 Woerter), dann holt sich Gemini im
+        /// Hintergrund einen praeziseren Titel und ueberschreibt den
+        /// Eintrag. Der Submit-Pfad blockiert nie auf das KI-Ergebnis.
+        /// </summary>
+        private async Task WriteHistoryAsync(string middleText)
+        {
+            try
+            {
+                string fallbackTitle = GeminiClient.FallbackTitleFromText(middleText);
+                var entry = await _historyService.AppendAsync(middleText, fallbackTitle);
+
+                // Gemini-Titel im Hintergrund nachziehen — wenn der API-Key
+                // fehlt oder Gemini deaktiviert ist, bleibt der Fallback-
+                // Titel einfach stehen. Kein Blocker fuer den Submit-Flow.
+                if (geminiEnabled && _geminiClient is not null)
+                {
+                    string aiTitle = await _geminiClient.GenerateTitleAsync(middleText);
+                    if (!string.IsNullOrWhiteSpace(aiTitle) && aiTitle != fallbackTitle)
+                    {
+                        await _historyService.UpdateTitleAsync(entry.Id, aiTitle);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WriteHistoryAsync failed: {ex.Message}");
             }
         }
 

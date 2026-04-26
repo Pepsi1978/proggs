@@ -109,6 +109,56 @@ final class GeminiClient {
         }
     }
 
+    /// Erzeugt einen kompakten Titel von maximal 4 Woertern auf Deutsch
+    /// fuer einen gegebenen Prompt. Fuer die Prompt-Historie — der Benutzer
+    /// soll Eintraege auf einen Blick wiedererkennen. Fallback auf die
+    /// ersten 4 Woerter des Texts wenn Gemini fehlschlaegt; die Historie
+    /// blockiert NIE wegen einer fehlgeschlagenen Titel-Generierung.
+    func generateTitle(_ text: String, completion: @escaping (String) -> Void) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { completion(""); return }
+
+        let prompt = """
+        Erstelle einen sehr kompakten Titel auf Deutsch fuer den folgenden \
+        Prompt. STRENGE REGELN: Maximal 4 Woerter. Keine Anfuehrungszeichen. \
+        Kein Punkt am Ende. Keine Aufzaehlungen, kein Praefix wie 'Titel:'. \
+        Nur die nackten 1-4 Woerter zurueckgeben.
+
+        PROMPT:
+        \(trimmed)
+        """
+
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            self.sendRequest(prompt: prompt, attempt: 0) { result in
+                switch result {
+                case .success(let raw):
+                    completion(GeminiClient.sanitizeTitle(raw, fallbackSource: trimmed))
+                case .failure:
+                    completion(GeminiClient.fallbackTitle(from: trimmed))
+                }
+            }
+        }
+    }
+
+    static func sanitizeTitle(_ raw: String, fallbackSource: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let strip: Set<Character> = ["\"", "'", "“", "”", "‚", "‘"]
+        s = String(s.filter { !strip.contains($0) })
+        if s.hasSuffix(".") { s.removeLast() }
+        s = s.trimmingCharacters(in: .whitespaces)
+        let words = s.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard !words.isEmpty else { return fallbackTitle(from: fallbackSource) }
+        let limited = Array(words.prefix(4))
+        return limited.joined(separator: " ")
+    }
+
+    static func fallbackTitle(from text: String) -> String {
+        let words = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard !words.isEmpty else { return "Ohne Titel" }
+        let limited = Array(words.prefix(4))
+        return limited.joined(separator: " ")
+    }
+
     private func sendRequest(prompt: String, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
         var urlComponents = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!
         urlComponents.queryItems = [URLQueryItem(name: "key", value: apiKey)]
