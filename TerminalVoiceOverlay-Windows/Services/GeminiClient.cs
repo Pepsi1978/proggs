@@ -202,6 +202,27 @@ Der zu verarbeitende Whisper-Text folgt nun:
             return string.Join(" ", words);
         }
 
+        /// <summary>
+        /// Baut die generationConfig — thinkingConfig wird NUR mitgesendet
+        /// wenn ein ThinkingLevel gesetzt ist. Modelle wie gemini-2.5-flash
+        /// rejecten den Parameter mit "Thinking level is not supported for
+        /// this model" wenn er drin ist; Pro- und Flash-Thinking-Modelle
+        /// brauchen ihn dagegen. Mit einem Dictionary statt anonymem Typ
+        /// koennen wir den Schluessel bedingt weglassen.
+        /// </summary>
+        private System.Collections.Generic.Dictionary<string, object> BuildGenerationConfig()
+        {
+            var cfg = new System.Collections.Generic.Dictionary<string, object>
+            {
+                ["maxOutputTokens"] = 8192,
+            };
+            if (!string.IsNullOrWhiteSpace(_thinkingLevel))
+            {
+                cfg["thinkingConfig"] = new { thinkingLevel = _thinkingLevel };
+            }
+            return cfg;
+        }
+
         private async Task<string> SendWithRetry(string prompt, int attempt)
         {
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
@@ -216,11 +237,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
                         parts = new[] { new { text = prompt } }
                     }
                 },
-                generationConfig = new
-                {
-                    maxOutputTokens = 8192,
-                    thinkingConfig = new { thinkingLevel = _thinkingLevel }
-                }
+                generationConfig = BuildGenerationConfig()
             };
 
             var json = JsonSerializer.Serialize(payload);

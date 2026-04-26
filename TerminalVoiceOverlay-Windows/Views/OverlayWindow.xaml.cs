@@ -105,8 +105,12 @@ namespace TerminalVoiceOverlay.Views
                     // gemini-2.5-flash matches what the AI-improvement
                     // pipeline and the PromptEditDialog "G" button already
                     // use — same key, same model, same behavior across the
-                    // whole app.
-                    return new GeminiClient(key, "gemini-2.5-flash", "low");
+                    // whole app. ThinkingLevel bleibt leer, weil
+                    // gemini-2.5-flash den Parameter nicht unterstuetzt
+                    // (rejected mit "Thinking level is not supported for
+                    // this model"). Der Client laesst thinkingConfig in
+                    // diesem Fall komplett aus dem Payload.
+                    return new GeminiClient(key, "gemini-2.5-flash", "");
                 }
             }
             catch (Exception ex)
