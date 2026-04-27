@@ -204,16 +204,23 @@ public partial class PromptBoardPanel : Window
         {
             if (e.NewValue is bool isVisible && isVisible)
             {
-                // Erstauswahl-Modus aktivieren: Beim Oeffnen werden nur
-                // Always-On-Prompts angezeigt; ihre Kategorien werden in
-                // RefreshAsync (das vom OverlayWindow direkt nach Show()
-                // angestossen wird) automatisch in _activeCategoryIds
-                // eingetragen, damit die Tabs visuell aktiv markiert sind.
+                // Erstauswahl-Modus aktivieren: Beim Sichtbarwerden des Panels
+                // (Sternchen in der Eingabe-Toolbar oder direkter Show-Aufruf)
+                // werden nur Always-On-Prompts angezeigt. Die zugehoerigen
+                // Kategorien werden in RefreshAsync automatisch in
+                // _activeCategoryIds eingetragen, damit die Tabs visuell
+                // als aktiv markiert sind.
                 _alwaysOnFilterMode = true;
                 _activeCategoryIds.Clear();
                 PromptList.Children.Clear();
                 RenderEmptyState("Lade aktive Prompts...");
                 RenderCategoryTabs();
+                // RefreshAsync hier explizit anstossen. Frueher uebernahm das
+                // OverlayWindow das nach Show(); im neuen Solo-Andock-Flow
+                // ruft ApplySoloDockMode(false) jedoch nur _promptPanel.Show()
+                // ohne Refresh auf — _activeCategoryIds bliebe sonst leer und
+                // der Filter-Modus haette nichts anzuzeigen.
+                _ = RefreshAsync();
             }
         };
         // Beim Schliessen das Eingabefenster mitnehmen, sonst bleibt ein
