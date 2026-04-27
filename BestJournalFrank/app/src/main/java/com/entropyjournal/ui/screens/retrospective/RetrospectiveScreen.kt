@@ -5,6 +5,7 @@ import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +82,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -392,39 +394,37 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                     "November",
                                     "Dezember",
                                 )
-                            weekly.forEachIndexed { index, summary ->
-                                if (index > 0) {
-                                    // Use endDate (Sunday) for month grouping so cross-month
-                                    // weeks (e.g. Mar 30 – Apr 5) appear under the later month
-                                    val prevCal =
-                                        Calendar.getInstance().apply {
-                                            timeInMillis = weekly[index - 1].endDate
+                            ContinuousTimelineSection(
+                                entryCount = weekly.size,
+                                lineColor =
+                                    RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
+                                dotColor = RetrospectiveColors.monthDividerColor,
+                            ) {
+                                weekly.forEachIndexed { index, summary ->
+                                    if (index > 0) {
+                                        val prevCal =
+                                            Calendar.getInstance().apply {
+                                                timeInMillis = weekly[index - 1].endDate
+                                            }
+                                        val curCal =
+                                            Calendar.getInstance().apply {
+                                                timeInMillis = summary.endDate
+                                            }
+                                        if (prevCal.get(Calendar.MONTH) !=
+                                            curCal.get(Calendar.MONTH)) {
+                                            val name = monthNames[curCal.get(Calendar.MONTH)]
+                                            val year = curCal.get(Calendar.YEAR)
+                                            MonthDivider(label = "$name $year")
+                                        } else {
+                                            Spacer(modifier = Modifier.height(10.dp))
                                         }
-                                    val curCal =
-                                        Calendar.getInstance().apply {
-                                            timeInMillis = summary.endDate
-                                        }
-                                    if (prevCal.get(Calendar.MONTH) != curCal.get(Calendar.MONTH)) {
-                                        val name = monthNames[curCal.get(Calendar.MONTH)]
-                                        val year = curCal.get(Calendar.YEAR)
-                                        MonthDivider(label = "$name $year")
-                                    } else {
-                                        Spacer(modifier = Modifier.height(10.dp))
                                     }
+                                    SummaryEntryCard(
+                                        summary = summary,
+                                        color = RetrospectiveColors.forWeek(summary.periodIndex),
+                                        onClick = { selectedSummary = summary },
+                                    )
                                 }
-                                val dotBias =
-                                    if (weekly.size <= 1) 0f
-                                    else {
-                                        val pos = 0.1f + index * 0.8f / (weekly.size - 1)
-                                        2f * (pos * weekly.size - index) - 1f
-                                    }
-                                TimelineSummaryEntry(
-                                    summary = summary,
-                                    color = RetrospectiveColors.forWeek(summary.periodIndex),
-                                    isLast = index == weekly.lastIndex,
-                                    onClick = { selectedSummary = summary },
-                                    dotVerticalBias = dotBias,
-                                )
                             }
                         }
                     }
@@ -450,33 +450,35 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 "Noch keine Monatsrückblicke vorhanden.\nWird aus Wochenrückblicken am Monatsende erstellt."
                             )
                         } else {
-                            monthly.forEachIndexed { index, summary ->
-                                if (index > 0) {
-                                    val prevQuarter = (monthly[index - 1].periodIndex - 1) / 3
-                                    val curQuarter = (summary.periodIndex - 1) / 3
-                                    if (prevQuarter != curQuarter) {
-                                        val year =
-                                            Calendar.getInstance()
-                                                .apply { timeInMillis = summary.startDate }
-                                                .get(Calendar.YEAR)
-                                        MonthDivider(label = "${curQuarter + 1}. Quartal $year")
-                                    } else {
-                                        Spacer(modifier = Modifier.height(10.dp))
+                            ContinuousTimelineSection(
+                                entryCount = monthly.size,
+                                lineColor =
+                                    RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
+                                dotColor = RetrospectiveColors.monthDividerColor,
+                            ) {
+                                monthly.forEachIndexed { index, summary ->
+                                    if (index > 0) {
+                                        val prevQuarter =
+                                            (monthly[index - 1].periodIndex - 1) / 3
+                                        val curQuarter = (summary.periodIndex - 1) / 3
+                                        if (prevQuarter != curQuarter) {
+                                            val year =
+                                                Calendar.getInstance()
+                                                    .apply { timeInMillis = summary.startDate }
+                                                    .get(Calendar.YEAR)
+                                            MonthDivider(
+                                                label = "${curQuarter + 1}. Quartal $year"
+                                            )
+                                        } else {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                        }
                                     }
+                                    SummaryEntryCard(
+                                        summary = summary,
+                                        color = RetrospectiveColors.forMonth(summary.periodIndex),
+                                        onClick = { selectedSummary = summary },
+                                    )
                                 }
-                                val dotBias =
-                                    if (monthly.size <= 1) 0f
-                                    else {
-                                        val pos = 0.1f + index * 0.8f / (monthly.size - 1)
-                                        2f * (pos * monthly.size - index) - 1f
-                                    }
-                                TimelineSummaryEntry(
-                                    summary = summary,
-                                    color = RetrospectiveColors.forMonth(summary.periodIndex),
-                                    isLast = index == monthly.lastIndex,
-                                    onClick = { selectedSummary = summary },
-                                    dotVerticalBias = dotBias,
-                                )
                             }
                         }
                     }
@@ -502,20 +504,22 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 "Noch keine Jahresrückblicke vorhanden.\nWird aus Monatsrückblicken am Jahresende erstellt."
                             )
                         } else {
-                            yearly.forEachIndexed { index, summary ->
-                                val dotBias =
-                                    if (yearly.size <= 1) 0f
-                                    else {
-                                        val pos = 0.1f + index * 0.8f / (yearly.size - 1)
-                                        2f * (pos * yearly.size - index) - 1f
+                            ContinuousTimelineSection(
+                                entryCount = yearly.size,
+                                lineColor =
+                                    RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
+                                dotColor = RetrospectiveColors.monthDividerColor,
+                            ) {
+                                yearly.forEachIndexed { index, summary ->
+                                    if (index > 0) {
+                                        Spacer(modifier = Modifier.height(10.dp))
                                     }
-                                TimelineSummaryEntry(
-                                    summary = summary,
-                                    color = RetrospectiveColors.yearColor,
-                                    isLast = index == yearly.lastIndex,
-                                    onClick = { selectedSummary = summary },
-                                    dotVerticalBias = dotBias,
-                                )
+                                    SummaryEntryCard(
+                                        summary = summary,
+                                        color = RetrospectiveColors.yearColor,
+                                        onClick = { selectedSummary = summary },
+                                    )
+                                }
                             }
                         }
                     }
@@ -528,58 +532,65 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
 }
 
 /**
- * Wraps a SummaryEntryCard with a timeline dot + connecting line on the left.
+ * Wickelt eine Liste von Eintragskarten in eine durchgehende Timeline-Rail.
  *
- * Der Punkt wird mit [dotVerticalBias] proportional innerhalb der Zeile
- * positioniert — analog zum Tagebuch (TimelineItem). Mit dotVerticalBias
- * = -1f sitzt der Punkt oben, mit +1f unten, mit 0f mittig.
+ * Die Rail (links, 24dp breit) zeichnet eine durchgehende vertikale Linie von
+ * 10 % bis 90 % der Section-Hoehe und N gleichmaessig verteilte Punkte:
+ *   - N=1: ein Punkt mittig (50 %)
+ *   - N=2: 10 % und 90 %
+ *   - N=3: 10 %, 50 %, 90 %
+ *   - N=4: 10 %, 36,7 %, 63,3 %, 90 %
+ *   - allgemein: pos_i = 10 % + i * 80 % / (N-1)
+ *
+ * Die Karten + Spacer/Divider werden als [content] uebergeben und liegen rechts
+ * neben der Rail in einer Column. Damit ist die Linie nicht mehr unterbrochen,
+ * auch wenn zwischen den Karten Spacer oder MonthDivider stehen.
  */
 @Composable
-private fun TimelineSummaryEntry(
-    summary: RetrospectiveSummaryEntity,
-    color: Color,
-    isLast: Boolean,
-    onClick: () -> Unit,
-    dotVerticalBias: Float = -1f,
+private fun ContinuousTimelineSection(
+    entryCount: Int,
+    lineColor: Color,
+    dotColor: Color,
+    modifier: Modifier = Modifier,
+    railWidth: Dp = 24.dp,
+    dotSize: Dp = 8.dp,
+    lineThickness: Dp = 2.dp,
+    content: @Composable () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
     ) {
-        // Timeline rail: dot (proportional) + vertical connecting line.
-        // Kein top-padding hier — sonst waere der Bias-Bereich oben enger
-        // als unten und der erste Punkt saesse hoeher als der letzte tief
-        // sitzt. Layout 1:1 wie TimelineItem im Tagebuch.
-        Box(
-            modifier = Modifier.width(24.dp).fillMaxHeight(),
-            contentAlignment = Alignment.TopCenter,
+        Canvas(
+            modifier = Modifier.width(railWidth).fillMaxHeight(),
         ) {
-            // Vertical line spans full height (minus end-padding for the last entry)
-            if (!isLast) {
-                Box(
-                    modifier =
-                        Modifier.width(2.dp)
-                            .fillMaxHeight()
-                            .background(
-                                RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f)
-                            )
+            if (entryCount <= 0) return@Canvas
+            val cx = size.width / 2f
+            val topY = size.height * 0.1f
+            val bottomY = size.height * 0.9f
+            val strokePx = lineThickness.toPx()
+            val dotRadiusPx = dotSize.toPx() / 2f
+            if (entryCount > 1) {
+                drawLine(
+                    color = lineColor,
+                    start = Offset(cx, topY),
+                    end = Offset(cx, bottomY),
+                    strokeWidth = strokePx,
                 )
             }
-            // Dot — positioned proportionally within the section so the
-            // chronological progression der Eintraege visuell sichtbar ist
-            Box(
-                modifier = Modifier.fillMaxHeight(),
-                contentAlignment = BiasAlignment(0f, dotVerticalBias),
-            ) {
-                Box(
-                    modifier =
-                        Modifier.size(8.dp)
-                            .clip(CircleShape)
-                            .background(RetrospectiveColors.monthDividerColor)
+            for (i in 0 until entryCount) {
+                val frac =
+                    if (entryCount == 1) 0.5f
+                    else 0.1f + 0.8f * i / (entryCount - 1)
+                drawCircle(
+                    color = dotColor,
+                    radius = dotRadiusPx,
+                    center = Offset(cx, size.height * frac),
                 )
             }
         }
-        // The actual card fills the remaining width
-        SummaryEntryCard(summary = summary, color = color, onClick = onClick)
+        Column(modifier = Modifier.weight(1f)) {
+            content()
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.entropyjournal.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,8 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,45 +61,57 @@ fun TimelineItem(
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // Timeline rail: dot + vertical line
-        Box(
+        // Timeline rail: durchgehende Linie + Punkt per Canvas
+        // - MIDDLE: Linie ueber volle Hoehe → durchgehend zur naechsten/vorherigen Card
+        // - FIRST:  Linie ab Punkt nach unten
+        // - LAST:   Linie von oben bis zum Punkt
+        // - ONLY:   keine Linie
+        Canvas(
             modifier = Modifier
                 .width(24.dp)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.TopCenter
+                .fillMaxHeight()
         ) {
-            // Vertical line
-            if (position != TimelinePosition.ONLY) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .fillMaxHeight()
-                        .padding(
-                            top = if (position == TimelinePosition.FIRST) 6.dp else 0.dp,
-                            bottom = if (position == TimelinePosition.LAST) 6.dp else 0.dp
-                        )
-                        .background(lineColor)
+            val cx = size.width / 2f
+            // dotVerticalBias: -1f = oben, +1f = unten → mappe auf [0, height]
+            val dotY = ((dotVerticalBias + 1f) / 2f) * size.height
+            val strokePx = 2.dp.toPx()
+            val dotRadiusPx = 5.dp.toPx()
+            when (position) {
+                TimelinePosition.ONLY -> Unit
+                TimelinePosition.FIRST -> drawLine(
+                    color = lineColor,
+                    start = Offset(cx, dotY),
+                    end = Offset(cx, size.height),
+                    strokeWidth = strokePx,
+                )
+                TimelinePosition.LAST -> drawLine(
+                    color = lineColor,
+                    start = Offset(cx, 0f),
+                    end = Offset(cx, dotY),
+                    strokeWidth = strokePx,
+                )
+                TimelinePosition.MIDDLE -> drawLine(
+                    color = lineColor,
+                    start = Offset(cx, 0f),
+                    end = Offset(cx, size.height),
+                    strokeWidth = strokePx,
                 )
             }
-            // Dot — positioned proportionally within the section
-            Box(
-                modifier = Modifier.fillMaxHeight(),
-                contentAlignment = BiasAlignment(0f, dotVerticalBias)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(dotColor, CircleShape)
-                )
-            }
+            drawCircle(
+                color = dotColor,
+                radius = dotRadiusPx,
+                center = Offset(cx, dotY),
+            )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Entry card
+        // Entry card — internes vertikales Padding statt aeusserem Spacer,
+        // damit die Linie zwischen Cards durchgehend laeuft.
         GlassCard(
             modifier = Modifier
                 .weight(1f)
+                .padding(vertical = 6.dp)
                 .clickable(onClick = onClick),
             glowColor = dotColor,
             glowIntensity = 0.1f

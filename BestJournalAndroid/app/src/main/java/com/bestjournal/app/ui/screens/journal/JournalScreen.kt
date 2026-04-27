@@ -563,7 +563,10 @@ fun JournalScreen(
                                 },
                                 position = position,
                                 dotVerticalBias = dotBias,
-                                modifier = Modifier.animateItem().padding(vertical = 6.dp),
+                                // Kein aeusserer Vertikal-Padding — der 6dp-Abstand wird im
+                                // TimelineItem auf die GlassCard gelegt, sodass die Timeline-
+                                // Linie zwischen aufeinanderfolgenden Cards durchgehend laeuft.
+                                modifier = Modifier.animateItem(),
                                 searchQuery =
                                     if (uiState.isSearchActive) uiState.searchQuery else "",
                             )
