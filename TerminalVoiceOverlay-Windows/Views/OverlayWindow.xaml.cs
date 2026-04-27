@@ -784,8 +784,11 @@ namespace TerminalVoiceOverlay.Views
 
         /// <summary>Star button — toggles the full PromptBoard integration:
         /// opens/closes the side panel AND enables/disables the always-on
-        /// prefix. The panel docks to the right of the pillar so it looks
-        /// like a single unit.</summary>
+        /// prefix. Default-Einstieg seit Aenderung 2026-04-27: das Promtboard
+        /// wird NICHT mehr direkt gezeigt; nur das Prompt-Eingabefenster
+        /// dockt direkt am Pillar an. Das Promtboard kann der Benutzer bei
+        /// Bedarf ueber den Stern-Toggle in der Eingabe-Toolbar dazu-
+        /// schalten (= ApplySoloDockMode(false)).</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
             alwaysOnActive = !alwaysOnActive;
@@ -794,11 +797,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
-                ShowPromptPanel();
-                // Prompt-Eingabefenster gleich mit oeffnen, damit der
-                // Benutzer nach dem Stern-Klick sofort tippen kann ohne
-                // einen zweiten Klick auf den Stern im Promptboard selbst.
-                _promptPanel?.EnsureInputWindowOpen();
+                ShowPromptInputDockedToOverlay();
             }
             else
             {
@@ -810,49 +809,97 @@ namespace TerminalVoiceOverlay.Views
             Console.WriteLine($"PromptBoard panel {(alwaysOnActive ? "OPEN" : "CLOSED")}");
         }
 
+        /// <summary>
+        /// Erstellt die PromptBoardPanel-Instanz und verdrahtet alle Events,
+        /// macht das Fenster aber NICHT sichtbar. Wird sowohl vom Solo-
+        /// Modus-Einstieg (nur Eingabefenster sichtbar) als auch vom
+        /// klassischen Show genutzt — so bleiben Subscriptions an einer
+        /// Stelle und sicher.
+        /// </summary>
+        private void EnsurePromptPanelInstance()
+        {
+            if (_promptPanel is not null) return;
+
+            _promptPanel = new PromptBoardPanel();
+            _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
+            _promptPanel.InputSubmitRequested  += OnInputSubmit;
+            // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag
+            // im Editor-Dialog gespeichert hat — Cloud-Upload anstossen.
+            _promptPanel.HistorySyncRequested  += () => _ = TryUploadHistoryAsync();
+            // Right-click drag on the panel itself moves both the
+            // panel (handled inside) and this pillar window — slide
+            // the pillar to stay glued to the panel's right edge.
+            _promptPanel.PanelDragged += () =>
+            {
+                if (_promptPanel is null) return;
+                Left = _promptPanel.Left + _promptPanel.Width + 4;
+                Top  = _promptPanel.Top;
+                _manuallyPositioned = true;
+            };
+            // Stern in der Eingabe-Toolbar: Solo-Andock-Modus umschalten.
+            // Im Solo-Modus wird das Promtboard ausgeblendet und das
+            // Eingabefenster dockt direkt an die linke Pillar-Kante.
+            // Beim Zurueckschalten erscheint das Promtboard wieder und
+            // das Eingabefenster rutscht zurueck an dessen linken Rand.
+            _promptPanel.SoloDockToggleRequested += ApplySoloDockMode;
+            _promptPanel.Closed += (_, _) =>
+            {
+                _promptPanel = null;
+                // If the panel was closed by something other than the
+                // star toggle, keep the toggle state in sync.
+                if (alwaysOnActive)
+                {
+                    alwaysOnActive = false;
+                    UltrathinkButton.Background = ToggleOff;
+                    UltrathinkStar.Fill = StarMuted;
+                }
+            };
+        }
+
+        /// <summary>
+        /// Klassischer Show-Pfad: Promtboard sichtbar links neben dem Pillar,
+        /// Eingabefenster (falls offen) links neben dem Promtboard. Wird
+        /// nur noch indirekt benutzt — z.B. wenn der Benutzer im Solo-Modus
+        /// ueber den Stern in der Eingabe-Toolbar zurueck in den Normalmodus
+        /// schaltet (siehe ApplySoloDockMode mit active=false).
+        /// </summary>
         private void ShowPromptPanel()
         {
-            if (_promptPanel is null)
-            {
-                _promptPanel = new PromptBoardPanel();
-                _promptPanel.PromptInsertRequested += OnPromptPanelInsert;
-                _promptPanel.InputSubmitRequested  += OnInputSubmit;
-                // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag
-                // im Editor-Dialog gespeichert hat — Cloud-Upload anstossen.
-                _promptPanel.HistorySyncRequested  += () => _ = TryUploadHistoryAsync();
-                // Right-click drag on the panel itself moves both the
-                // panel (handled inside) and this pillar window — slide
-                // the pillar to stay glued to the panel's right edge.
-                _promptPanel.PanelDragged += () =>
-                {
-                    if (_promptPanel is null) return;
-                    Left = _promptPanel.Left + _promptPanel.Width + 4;
-                    Top  = _promptPanel.Top;
-                    _manuallyPositioned = true;
-                };
-                // Stern in der Eingabe-Toolbar: Solo-Andock-Modus umschalten.
-                // Im Solo-Modus wird das Promtboard ausgeblendet und das
-                // Eingabefenster dockt direkt an die linke Pillar-Kante.
-                // Beim Zurueckschalten erscheint das Promtboard wieder und
-                // das Eingabefenster rutscht zurueck an dessen linken Rand.
-                _promptPanel.SoloDockToggleRequested += ApplySoloDockMode;
-                _promptPanel.Closed += (_, _) =>
-                {
-                    _promptPanel = null;
-                    // If the panel was closed by something other than the
-                    // star toggle, keep the toggle state in sync.
-                    if (alwaysOnActive)
-                    {
-                        alwaysOnActive = false;
-                        UltrathinkButton.Background = ToggleOff;
-                        UltrathinkStar.Fill = StarMuted;
-                    }
-                };
-            }
+            EnsurePromptPanelInstance();
+            if (_promptPanel is null) return;
 
             PositionPromptPanel();
             _promptPanel.Show();
             _ = _promptPanel.RefreshAsync();
+        }
+
+        /// <summary>
+        /// Solo-Modus-Einstieg: erstellt das Promtboard im Hintergrund (ohne
+        /// es sichtbar zu machen), oeffnet das Prompt-Eingabefenster und
+        /// dockt es direkt an die linke Pillar-Kante an. Der Benutzer kann
+        /// das Promtboard danach ueber den Stern-Toggle in der Eingabe-
+        /// Toolbar einblenden — bis dahin nimmt nur die Eingabe Platz weg.
+        /// </summary>
+        private void ShowPromptInputDockedToOverlay()
+        {
+            EnsurePromptPanelInstance();
+            if (_promptPanel is null) return;
+
+            // Daten frisch laden, auch wenn das Panel nicht sichtbar ist —
+            // sonst ist der erste Tab-Klick im spaeter eingeblendeten
+            // Promtboard ohne Inhalt.
+            _ = _promptPanel.RefreshAsync();
+
+            // Eingabefenster oeffnen (es dockt zunaechst ans Promtboard an
+            // — egal, wir ueberschreiben gleich auf Pillar-Andock).
+            _promptPanel.EnsureInputWindowOpen();
+
+            var input = _promptPanel.InputWindow;
+            if (input is null) return;
+
+            _inputSoloDock = true;
+            input.DockToOverlay(this);
+            input.SetSoloDockState(true);
         }
 
         private void HidePromptPanel()

@@ -115,14 +115,14 @@ public partial class PromptHistoryWindow : Window
             Margin = new Thickness(0, 2, 0, 0),
         };
 
-        // Vorschau: bis zu 2 Zeilen, danach mit … abgeschnitten. Wir
-        // glaetten weiterhin Tabs / Zeilenumbrueche zu Leerzeichen damit
-        // ein langer mehrzeiliger Prompt nicht nur die ersten paar Worte
-        // seiner ersten Zeile zeigt — die zwei sichtbaren Zeilen sollen
-        // soviel Inhalt wie moeglich preisgeben.
+        // Vorschau: IMMER 3 Zeilen Platz, danach mit … abgeschnitten. Wir
+        // glaetten Tabs / Zeilenumbrueche zu Leerzeichen damit ein langer
+        // mehrzeiliger Prompt nicht nur die ersten paar Worte seiner ersten
+        // Zeile zeigt — die drei sichtbaren Zeilen sollen soviel Inhalt wie
+        // moeglich preisgeben.
         string preview = (entry.Text ?? string.Empty)
             .Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ');
-        if (preview.Length > 280) preview = preview[..280] + "…";
+        if (preview.Length > 420) preview = preview[..420] + "…";
         var previewText = new TextBlock
         {
             Text = preview,
@@ -130,12 +130,15 @@ public partial class PromptHistoryWindow : Window
             FontSize = 11,
             Margin = new Thickness(0, 4, 0, 0),
             TextWrapping = TextWrapping.Wrap,
-            // 2 Zeilen Sichtbarkeit: bei FontSize 11 ca. 14.6 px Zeilenhoehe
-            // → 30 px reichen sicher fuer zwei Zeilen, der Rest wird per
-            // TextTrimming mit "…" abgeschnitten. WPF kennt im klassischen
-            // .NET Framework kein MaxLines — MaxHeight + Wrap + Trim ist
-            // der etablierte Workaround dafuer.
-            MaxHeight = 32,
+            // 3 Zeilen reservieren: bei FontSize 11 ca. 14.6 px pro Zeile,
+            // 48 px ergeben sicher drei volle Zeilen plus einen Hauch
+            // Atemluft. Min == Max = harte Hoehe damit JEDE Zeile in der
+            // Liste exakt gleich hoch ist (auch bei kurzen Prompts) — der
+            // Benutzer wollte "immer drei Zeilen sichtbar". WPF kennt im
+            // klassischen .NET Framework kein MaxLines — MinHeight +
+            // MaxHeight + Wrap + Trim ist der etablierte Workaround dafuer.
+            MinHeight = 48,
+            MaxHeight = 48,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
