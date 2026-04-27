@@ -168,12 +168,12 @@ public partial class PromptInputWindow : Window
 
     /// <summary>
     /// Fuegt manuell einen Aufgaben-Trenner hinter dem aktuellen Text ein:
-    /// Leerzeile, Semikolon, Leerzeile. So kann der Benutzer mehrere
-    /// eingesprochene Aufgaben optisch sauber voneinander trennen — frueher
-    /// passierte das automatisch zwischen Voice-Inputs, jetzt nur noch
-    /// manuell ueber den ;-Button neben dem G-Button.
+    /// Leerzeichen, Semikolon, Leerzeichen — also genau das gleiche Muster
+    /// das frueher automatisch zwischen Voice-Inputs verwendet wurde
+    /// (" ; "). So kann der Benutzer mehrere Aufgaben in einer Zeile
+    /// trennen ohne dass das Eingabefeld vertikal aufgeblaeht wird.
     /// Bei leerer Box wird nichts eingefuegt (ein Trenner ohne Inhalt davor
-    /// wuerde nur eine leere Zeile am Anfang erzeugen).
+    /// waere sinnlos und wuerde nur fuehrendes Leerzeichen erzeugen).
     /// </summary>
     public void InsertManualSeparator()
     {
@@ -185,10 +185,11 @@ public partial class PromptInputWindow : Window
         }
 
         // existing.TrimEnd() entfernt evtl. bereits vorhandene Whitespace/Newlines
-        // am Ende, damit wir nicht doppelt umbrechen wenn der Benutzer den
-        // Button mehrmals hintereinander drueckt oder direkt nach Shift+Enter.
+        // am Ende, damit wir nicht doppelt Leerzeichen produzieren wenn der
+        // Benutzer den Button mehrmals hintereinander drueckt oder direkt
+        // nach Shift+Enter.
         string trimmed = existing.TrimEnd();
-        string separator = "\n\n;\n\n";
+        string separator = " ; ";
         InputBox.Text = trimmed + separator;
         InputBox.CaretIndex = InputBox.Text.Length;
         InputBox.ScrollToEnd();

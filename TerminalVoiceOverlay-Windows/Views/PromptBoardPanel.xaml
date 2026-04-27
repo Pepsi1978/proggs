@@ -159,6 +159,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="PromptBoard"
@@ -173,42 +174,41 @@
                            FontSize="10"
                            Margin="6,0,0,0"
                            VerticalAlignment="Center"/>
-                <!-- "!" Button neben dem Sync-Label. Klick = alle Always-On
-                     Haekchen aller Prompts ueber alle Kategorien hinweg
-                     entfernen. Background flasht 1 Sekunde gruen als Bestaetigung. -->
-                <Button Grid.Column="2"
-                        x:Name="BtnClearAllChecks"
-                        Style="{StaticResource IconButton}"
-                        Content="!"
-                        FontFamily="Segoe UI"
-                        HorizontalAlignment="Left"
-                        Margin="8,0,0,0"
-                        ToolTip="Alle Häkchen entfernen (Always-On in allen Kategorien)"/>
-                <!-- Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings].
+                <!-- Reihenfolge der Toolbar-Buttons: [!] [Historie] [Stern]
+                     [+] [Backup] [Settings]. Spalte 2 (Width=*) ist eine
+                     leere Lueckenspalte, die alle Toolbar-Buttons nach rechts
+                     druckt. Das "!" sitzt jetzt direkt links neben der
+                     Historie statt allein am linken Rand zu kleben.
                      Glyphen aus Segoe Fluent Icons / MDL2 Assets damit alle
                      Symbole dieselben vertikalen Metriken haben und mittig
                      in den runden Basen sitzen. -->
                 <Button Grid.Column="3"
+                        x:Name="BtnClearAllChecks"
+                        Style="{StaticResource IconButton}"
+                        Content="!"
+                        FontFamily="Segoe UI"
+                        ToolTip="Alle Häkchen entfernen (Always-On in allen Kategorien)"/>
+                <Button Grid.Column="4"
                         x:Name="BtnHistory"
                         Style="{StaticResource IconButton}"
                         Content="&#xE81C;"
                         ToolTip="Prompt-Historie"/>
-                <Button Grid.Column="4"
+                <Button Grid.Column="5"
                         x:Name="BtnInputToggle"
                         Style="{StaticResource IconButton}"
                         Content="&#xE734;"
                         ToolTip="Prompt-Eingabe einblenden"/>
-                <Button Grid.Column="5"
+                <Button Grid.Column="6"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
                         Content="&#xE710;"
                         ToolTip="Neue Kategorie"/>
-                <Button Grid.Column="6"
+                <Button Grid.Column="7"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
                         Content="&#xE74E;"
                         ToolTip="Backup / Wiederherstellen"/>
-                <Button Grid.Column="7"
+                <Button Grid.Column="8"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
                         Content="&#xE713;"
