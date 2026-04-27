@@ -19,3 +19,10 @@ BestJournalAndroid/**/*.jks
 # Screenshots (managed manually for monetization/designer skills)
 BestJournalAndroid/Screenshots/
 BestJournalFrank/Screenshots/
+
+# .NET Build-Artefakte (PDB-Symboldateien werden bei jedem Release-Build neu
+# erzeugt — sollen nicht im Repo liegen).
+**/publish/*.pdb
+
+# Plattformspezifische Lock-Dateien (Cron/Scheduled-Tasks pro Rechner).
+.claude/scheduled_tasks.lock

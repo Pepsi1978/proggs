@@ -104,6 +104,10 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
 ### 2026-04-27 12:53 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 12:57 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-04-27 16:20 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-04-27 17:04 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-04-27 17:51 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-04-27 18:15 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -205,7 +209,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-12 16:52] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
+- **[2026-04-27 17:51] Code-Suche Index:** 12 Dateien, 389 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._

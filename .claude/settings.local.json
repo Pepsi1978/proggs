@@ -24,7 +24,9 @@
       "Bash(cp ~/.claude/settings.json ~/proggs/claude-code-setup/settings-reference.json)",
       "Bash(cp ~/.claude/agents/debugger.md ~/proggs/claude-code-setup/agents/debugger.md)",
       "Bash(cp ~/.claude/agents/quality-gate.md ~/proggs/claude-code-setup/agents/quality-gate.md)",
-      "Bash(cp ~/.claude/agents/ui-polisher.md ~/proggs/claude-code-setup/agents/ui-polisher.md)"
+      "Bash(cp ~/.claude/agents/ui-polisher.md ~/proggs/claude-code-setup/agents/ui-polisher.md)",
+      "Bash(cp \"C:/Users/barwa/.claude/rules/semicolon-task-separator.md\" \"C:/Users/barwa/proggs/claude-code-setup/rules/semicolon-task-separator.md\")",
+      "Read(//c/Users/barwa/.claude/rules/**)"
     ]
   }
 }
