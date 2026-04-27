@@ -1117,16 +1117,16 @@ public partial class PromptBoardPanel : Window
             Cursor = Cursors.Hand,
         };
 
-        // 5-column layout:
-        //   [checkbox] [title (stretch)] [timestamp] [edit] [delete]
-        // Title and timestamp live in separate cells so the timestamp
-        // can sit right next to the action buttons (✎/✕) instead of
-        // hugging the title — and so it gets a proper VerticalAlignment
-        // that lines up with the icons regardless of font metrics.
+        // 6-column layout:
+        //   [checkbox] [title (stretch)] [timestamp] [paste] [edit] [delete]
+        // Klick auf Text/Zeile schaltet das gelbe Haekchen (Always-On) um —
+        // einfuegen geschieht ausschliesslich ueber den Paste-Button neben
+        // dem Stift. Damit ist Toggle vs. Insert eindeutig getrennt.
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
 
@@ -1146,8 +1146,11 @@ public partial class PromptBoardPanel : Window
         // label is treated as title.
         var (titleText, timestampText) = SplitLabel(prompt.ShortLabel);
 
-        // ── Insert label (clickable button — title only) ──
-        var insertBtn = new Button
+        // ── Title button (klick schaltet das gelbe Haekchen um) ──
+        // Vorher: Klick auf den Titel hat den Prompt eingefuegt. Jetzt: Klick
+        // auf den Titel toggelt den Always-On-Status — Einfuegen geht
+        // ausschliesslich ueber den Paste-Button rechts neben dem Stift.
+        var titleBtn = new Button
         {
             Content = titleText,
             Style = (Style)FindResource("PromptButton"),
@@ -1156,9 +1159,9 @@ public partial class PromptBoardPanel : Window
                 : prompt.EffectiveText(),
             FontSize = 13,
         };
-        insertBtn.Click += (_, _) => PromptInsertRequested?.Invoke(prompt.EffectiveText());
-        Grid.SetColumn(insertBtn, 1);
-        grid.Children.Add(insertBtn);
+        titleBtn.Click += async (_, _) => await ToggleAlwaysOnAsync(prompt);
+        Grid.SetColumn(titleBtn, 1);
+        grid.Children.Add(titleBtn);
 
         // ── Timestamp (small, dim, vertically centered next to icons) ──
         if (timestampText.Length > 0)
@@ -1176,6 +1179,21 @@ public partial class PromptBoardPanel : Window
             grid.Children.Add(tsLabel);
         }
 
+        // ── Paste (Fluent E77F = Paste / Einfuegen) ──
+        // Einziger Weg den Prompt in die CLI einzufuegen. Vom Stift getrennt
+        // damit Toggle (Klick auf Text) und Insert (Klick auf Paste) sich
+        // nicht in die Quere kommen.
+        var pasteBtn = new Button
+        {
+            Content = "",
+            Style = (Style)FindResource("RowIconButton"),
+            ToolTip = "In Terminal einfuegen",
+        };
+        pasteBtn.Click += (_, _) => PromptInsertRequested?.Invoke(prompt.EffectiveText());
+        pasteBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
+        Grid.SetColumn(pasteBtn, 3);
+        grid.Children.Add(pasteBtn);
+
         // ── Edit (Fluent E70F = Edit / Pencil) ──
         var editBtn = new Button
         {
@@ -1185,7 +1203,7 @@ public partial class PromptBoardPanel : Window
         };
         editBtn.Click += async (_, _) => await EditPromptAsync(prompt);
         editBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
-        Grid.SetColumn(editBtn, 3);
+        Grid.SetColumn(editBtn, 4);
         grid.Children.Add(editBtn);
 
         // ── Delete (Fluent E74D = Delete / Trash) ──
@@ -1197,27 +1215,30 @@ public partial class PromptBoardPanel : Window
         };
         deleteBtn.Click += async (_, _) => await DeletePromptAsync(prompt);
         deleteBtn.MouseRightButtonUp += (_, e) => e.Handled = true;
-        Grid.SetColumn(deleteBtn, 4);
+        Grid.SetColumn(deleteBtn, 5);
         grid.Children.Add(deleteBtn);
 
         row.Child = grid;
 
-        // ── Whole-row click → insert (matching macOS row gesture) ──
+        // ── Whole-row click → toggle Always-On (gelbes Haekchen) ──
         // WPF Button.Click marks MouseLeftButtonUp as handled when the click
         // lands on a child Button, so the row-level handler only fires for
         // background clicks. No manual hit-test guard needed for left-click.
-        row.MouseLeftButtonUp += (_, e) =>
+        // Klick auf den Hintergrund der Zeile schaltet das gelbe Haekchen um —
+        // genauso wie ein Klick auf den Titel oder die Checkbox selbst.
+        // Einfuegen geht ausschliesslich ueber den Paste-Button.
+        row.MouseLeftButtonUp += async (_, e) =>
         {
             if (e.Handled) return;
             // If a drag was just kicked off, the LeftButtonUp comes after
             // DoDragDrop has already returned — _dragArmedRowId tracks that
-            // case so we don't ALSO insert the prompt on drop.
+            // case so we don't ALSO toggle on drop.
             if (_dragJustHappenedForRowId == prompt.Id)
             {
                 _dragJustHappenedForRowId = null;
                 return;
             }
-            PromptInsertRequested?.Invoke(prompt.EffectiveText());
+            await ToggleAlwaysOnAsync(prompt);
         };
 
         // ── Drag source: PreviewMouseLeftButtonDown arms the drag, PreviewMouseMove
