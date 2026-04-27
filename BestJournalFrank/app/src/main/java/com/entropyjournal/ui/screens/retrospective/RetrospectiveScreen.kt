@@ -414,7 +414,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 }
                                 val dotBias =
                                     if (weekly.size <= 1) 0f
-                                    else -0.8f + 1.6f * index / (weekly.size - 1)
+                                    else {
+                                        val pos = 0.1f + index * 0.8f / (weekly.size - 1)
+                                        2f * (pos * weekly.size - index) - 1f
+                                    }
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forWeek(summary.periodIndex),
@@ -463,7 +466,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 }
                                 val dotBias =
                                     if (monthly.size <= 1) 0f
-                                    else -0.8f + 1.6f * index / (monthly.size - 1)
+                                    else {
+                                        val pos = 0.1f + index * 0.8f / (monthly.size - 1)
+                                        2f * (pos * monthly.size - index) - 1f
+                                    }
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forMonth(summary.periodIndex),
@@ -499,7 +505,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             yearly.forEachIndexed { index, summary ->
                                 val dotBias =
                                     if (yearly.size <= 1) 0f
-                                    else -0.8f + 1.6f * index / (yearly.size - 1)
+                                    else {
+                                        val pos = 0.1f + index * 0.8f / (yearly.size - 1)
+                                        2f * (pos * yearly.size - index) - 1f
+                                    }
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.yearColor,
