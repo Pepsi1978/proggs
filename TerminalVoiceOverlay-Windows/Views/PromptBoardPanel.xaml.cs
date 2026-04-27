@@ -156,6 +156,29 @@ public partial class PromptBoardPanel : Window
         BtnHistory.Click         += (_, _) => ToggleHistoryWindow();
         BtnClearAllChecks.Click  += async (_, _) => await ClearAllAlwaysOnAsync();
         RefreshSyncLabel();
+
+        // Bei jedem Sichtbarwerden des Panels (Stern-Klick im Voice-Overlay)
+        // die aktive Kategorienauswahl resetten, damit der Benutzer immer
+        // mit einer leeren Auswahl startet und bewusst eine Kategorie
+        // anklickt. Das Panel wird beim Schliessen nur ausgeblendet (siehe
+        // OverlayWindow.HidePromptPanel), die Instanz lebt also weiter und
+        // wuerde sonst die letzte Auswahl wiederzeigen.
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is bool isVisible && isVisible)
+            {
+                _activeCategoryIds.Clear();
+                // RefreshAsync wird vom OverlayWindow direkt nach Show()
+                // ohnehin angestossen; wir sorgen hier nur dafuer dass
+                // ein evtl. schon gerenderter Prompt-Stack sofort
+                // verschwindet, falls der Refresh kurz braucht.
+                PromptList.Children.Clear();
+                RenderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.");
+                // Tabs neu rendern, damit kein Tab mehr aktiv-markiert
+                // aussieht obwohl _activeCategoryIds leer ist.
+                RenderCategoryTabs();
+            }
+        };
         // Beim Schliessen das Eingabefenster mitnehmen, sonst bleibt ein
         // verwaistes Fenster ohne Trigger zurueck.
         Closed += (_, _) => { CloseInputWindow(); CloseHistoryWindow(); };
@@ -685,12 +708,14 @@ public partial class PromptBoardPanel : Window
         // user still has active.
         var known = _categories.Select(c => c.Id).ToHashSet();
         _activeCategoryIds.IntersectWith(known);
-        // First-time / after-delete fallback: activate the first category so
-        // the user isn't greeted with an empty list.
-        if (_activeCategoryIds.Count == 0 && _categories.Count > 0)
-        {
-            _activeCategoryIds.Add(_categories[0].Id);
-        }
+        // KEIN Auto-Aktivierungs-Fallback mehr: Frueher wurde beim Refresh
+        // die erste Kategorie automatisch aktiviert wenn keine aktiv war —
+        // dadurch zeigte das Panel beim Oeffnen sofort "Best Journal" oder
+        // welche-auch-immer-die-erste-ist statt einer leeren Auswahl.
+        // Der Benutzer will jeden Aufruf bewusst eine Kategorie waehlen,
+        // also bleibt die Auswahl leer bis er einen Tab anklickt. Das
+        // RenderEmptyState in RenderPromptsAsync zeigt dann den Hinweis
+        // "Keine Kategorie aktiv. Klick oben auf einen Tab.".
 
         RenderCategoryTabs();
 

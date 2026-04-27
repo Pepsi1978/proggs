@@ -82,13 +82,29 @@
                            TextTrimming="CharacterEllipsis"/>
 
                 <!-- Buttonleiste rechts oben.
-                     Reihenfolge: G-Button (Gemini-Verbesserung) | rotes X (Eingabe leeren).
-                     Der G-Button ruft das gleiche Prompt-Engineer-Template auf wie der
-                     G-Button im PromptBoard-Edit-Dialog: aus dem rohen Diktat wird ein
-                     kopierfertiger Claude-Code-CLI-Prompt. -->
+                     Reihenfolge: ; (Aufgaben-Trenner manuell einfuegen) |
+                                  G (Gemini-Verbesserung) |
+                                  rotes X (Eingabe leeren).
+                     Der ;-Button ersetzt die frueher automatische " ; "-
+                     Einfuegung zwischen Voice-Inputs durch eine bewusste
+                     manuelle Aktion (Leerzeile + ; + Leerzeile am Textende).
+                     Der G-Button ruft das gleiche Prompt-Engineer-Template
+                     auf wie der G-Button im PromptBoard-Edit-Dialog: aus dem
+                     rohen Diktat wird ein kopierfertiger Claude-Code-CLI-
+                     Prompt. -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
+                    <Button x:Name="SeparatorButton"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="BtnInsertSeparator_Click"
+                            Margin="0,0,4,0"
+                            ToolTip="Aufgaben-Trenner einfuegen — haengt eine Leerzeile, ein Semikolon und noch eine Leerzeile ans Ende des Textes an.">
+                        <TextBlock Text=";"
+                                   FontWeight="Bold"
+                                   FontSize="16"
+                                   Foreground="#FF7FD0FF"/>
+                    </Button>
                     <Button x:Name="GeminiButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnGemini_Click"

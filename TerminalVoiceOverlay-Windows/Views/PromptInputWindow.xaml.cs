@@ -93,9 +93,12 @@ public partial class PromptInputWindow : Window
     /// <list type="bullet">
     /// <item>Box leer → Text wird gesetzt (frischer Start).</item>
     /// <item>Box nicht leer → bestehender Inhalt bleibt erhalten, der neue
-    /// Voice-Schnipsel wird mit " ; " als Aufgaben-Trenner angehaengt. So
-    /// kann der Benutzer mehrere Aufgaben hintereinander einsprechen ohne
-    /// dass die vorhergehende ueberschrieben wird.</item>
+    /// Voice-Schnipsel wird mit einem einfachen Leerzeichen angehaengt.
+    /// Mehrere Voice-Inputs verschmelzen so zu EINEM Fliesstext — der
+    /// Benutzer kann denselben Gedanken mehrfach einsprechen ohne dass
+    /// automatisch ein Aufgaben-Trenner dazwischen geraet. Wer mehrere
+    /// Aufgaben einsprechen will, fuegt den Trenner manuell ueber den
+    /// ;-Button in der Toolbar ein.</item>
     /// <item>Wenn <paramref name="autoSubmit"/> true ist (Auto-Enter-Toggle
     /// im Voice-Overlay aktiv), wird das Submit-Event direkt ausgeloest —
     /// als haette der Benutzer Enter gedrueckt.</item>
@@ -108,7 +111,7 @@ public partial class PromptInputWindow : Window
         var existing = InputBox.Text ?? string.Empty;
         string combined = string.IsNullOrWhiteSpace(existing)
             ? text
-            : existing.TrimEnd() + " ; " + text;
+            : existing.TrimEnd() + " " + text.TrimStart();
 
         InputBox.Text = combined;
         InputBox.CaretIndex = InputBox.Text.Length;
@@ -136,6 +139,36 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
+    /// Fuegt manuell einen Aufgaben-Trenner hinter dem aktuellen Text ein:
+    /// Leerzeile, Semikolon, Leerzeile. So kann der Benutzer mehrere
+    /// eingesprochene Aufgaben optisch sauber voneinander trennen — frueher
+    /// passierte das automatisch zwischen Voice-Inputs, jetzt nur noch
+    /// manuell ueber den ;-Button neben dem G-Button.
+    /// Bei leerer Box wird nichts eingefuegt (ein Trenner ohne Inhalt davor
+    /// wuerde nur eine leere Zeile am Anfang erzeugen).
+    /// </summary>
+    public void InsertManualSeparator()
+    {
+        var existing = InputBox.Text ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(existing))
+        {
+            InputBox.Focus();
+            return;
+        }
+
+        // existing.TrimEnd() entfernt evtl. bereits vorhandene Whitespace/Newlines
+        // am Ende, damit wir nicht doppelt umbrechen wenn der Benutzer den
+        // Button mehrmals hintereinander drueckt oder direkt nach Shift+Enter.
+        string trimmed = existing.TrimEnd();
+        string separator = "\n\n;\n\n";
+        InputBox.Text = trimmed + separator;
+        InputBox.CaretIndex = InputBox.Text.Length;
+        InputBox.ScrollToEnd();
+        InputBox.Focus();
+        Keyboard.Focus(InputBox);
+    }
+
+    /// <summary>
     /// Wird vom Voice-Overlay aufgerufen wenn der Benutzer auf den orangen
     /// Enter-Button klickt: Falls die Eingabe-Box Text enthaelt, wird das
     /// SubmitRequested-Event ausgeloest (so als haette der Benutzer Enter
@@ -160,6 +193,18 @@ public partial class PromptInputWindow : Window
     private void BtnClearInput_Click(object sender, RoutedEventArgs e)
     {
         ClearInput();
+    }
+
+    /// <summary>
+    /// Click-Handler fuer den neuen Semikolon-Button (links neben dem G-Button).
+    /// Fuegt manuell einen Aufgaben-Trenner ans Ende des Eingabe-Textes ein
+    /// (Leerzeile + Semikolon + Leerzeile). Damit ersetzt der Benutzer das
+    /// frueher automatische " ; " zwischen Voice-Inputs durch eine bewusste
+    /// manuelle Aktion.
+    /// </summary>
+    private void BtnInsertSeparator_Click(object sender, RoutedEventArgs e)
+    {
+        InsertManualSeparator();
     }
 
     /// <summary>
