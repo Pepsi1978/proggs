@@ -159,7 +159,6 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="PromptBoard"
@@ -174,11 +173,14 @@
                            FontSize="10"
                            Margin="6,0,0,0"
                            VerticalAlignment="Center"/>
-                <!-- Reihenfolge der Toolbar-Buttons: [!] [Historie] [Stern]
-                     [+] [Backup] [Settings]. Spalte 2 (Width=*) ist eine
+                <!-- Reihenfolge der Toolbar-Buttons: [!] [Historie] [+]
+                     [Backup] [Settings]. Spalte 2 (Width=*) ist eine
                      leere Lueckenspalte, die alle Toolbar-Buttons nach rechts
-                     druckt. Das "!" sitzt jetzt direkt links neben der
-                     Historie statt allein am linken Rand zu kleben.
+                     druckt. Der frueher hier sitzende Stern (BtnInputToggle)
+                     wurde entfernt — er war redundant: die Eingabe wird
+                     jetzt vom Voice-Overlay-Stern gesteuert, und das
+                     Promtboard selbst kommt nur sichtbar wenn die Eingabe
+                     ihn ueber ihren eigenen Stern dazuholt.
                      Glyphen aus Segoe Fluent Icons / MDL2 Assets damit alle
                      Symbole dieselben vertikalen Metriken haben und mittig
                      in den runden Basen sitzen. -->
@@ -194,21 +196,16 @@
                         Content="&#xE81C;"
                         ToolTip="Prompt-Historie"/>
                 <Button Grid.Column="5"
-                        x:Name="BtnInputToggle"
-                        Style="{StaticResource IconButton}"
-                        Content="&#xE734;"
-                        ToolTip="Prompt-Eingabe einblenden"/>
-                <Button Grid.Column="6"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
                         Content="&#xE710;"
                         ToolTip="Neue Kategorie"/>
-                <Button Grid.Column="7"
+                <Button Grid.Column="6"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
                         Content="&#xE74E;"
                         ToolTip="Backup / Wiederherstellen"/>
-                <Button Grid.Column="8"
+                <Button Grid.Column="7"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
                         Content="&#xE713;"

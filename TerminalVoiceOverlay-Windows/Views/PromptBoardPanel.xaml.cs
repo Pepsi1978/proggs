@@ -301,27 +301,9 @@ public partial class PromptBoardPanel : Window
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Prompt-Eingabefenster (Stern-Toggle in der Toolbar)
+    // Prompt-Eingabefenster (oeffnet via OverlayWindow.BtnUltrathink — der
+    // frueher hier sitzende Stern-Toggle wurde als redundant entfernt)
     // ─────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Toggle-Click auf den Stern in der Toolbar. Oeffnet das angedockte
-    /// Eingabefenster bzw. schliesst es wieder. Der Stern wechselt Farbe:
-    /// gold = aktiv, grau = inaktiv. Inhalt der Box wird beim Schliessen
-    /// verworfen — das ist Absicht (laut Spec startet das Fenster bei
-    /// jedem App-Neustart leer und der Stern ist aus).
-    /// </summary>
-    private void ToggleInputWindow()
-    {
-        if (_inputWindowVisible)
-        {
-            CloseInputWindow();
-        }
-        else
-        {
-            OpenInputWindow();
-        }
-    }
 
     /// <summary>
     /// Stellt sicher dass das Prompt-Eingabefenster geoeffnet ist. Wird vom
@@ -440,7 +422,6 @@ public partial class PromptBoardPanel : Window
             {
                 _inputWindow = null;
                 _inputWindowVisible = false;
-                UpdateStarVisual();
             };
             // Frischen Window-Aufbau: noch nicht abgeschickten Text aus dem
             // letzten Stern-Zyklus zurueckschreiben, damit dem Benutzer beim
@@ -453,7 +434,6 @@ public partial class PromptBoardPanel : Window
         _inputWindow.DockTo(this, force: true);
         _inputWindow.Show();
         _inputWindowVisible = true;
-        UpdateStarVisual();
     }
 
     private void CloseInputWindow()
@@ -461,40 +441,16 @@ public partial class PromptBoardPanel : Window
         if (_inputWindow is null)
         {
             _inputWindowVisible = false;
-            UpdateStarVisual();
             return;
         }
         var win = _inputWindow;
         // Noch nicht abgeschickten Text in den Session-Puffer sichern, BEVOR
-        // das Fenster zerstoert wird. Beim naechsten Stern-Toggle wird der
-        // Text in die InputBox des frischen Fensters zurueckgeschrieben.
+        // das Fenster zerstoert wird. Beim naechsten Oeffnen wird der Text
+        // in die InputBox des frischen Fensters zurueckgeschrieben.
         _persistedInputText = win.GetCurrentText();
         _inputWindow = null;
         _inputWindowVisible = false;
-        UpdateStarVisual();
         win.Close();
-    }
-
-    private void UpdateStarVisual()
-    {
-        // Segoe Fluent Icons:  E735 = FavoriteStarFill,  E734 = FavoriteStar.
-        // Beide haben dieselbe Glyph-Mitte → kein vertikaler Versatz beim
-        // Wechsel zwischen aktivem und inaktivem Stern.
-        if (_inputWindowVisible)
-        {
-            BtnInputToggle.Content    = ""; // FavoriteStarFill
-            BtnInputToggle.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
-            BtnInputToggle.ToolTip    = "Prompt-Eingabe ausblenden";
-        }
-        else
-        {
-            BtnInputToggle.Content    = ""; // FavoriteStar (Outline)
-            // Weiss wie die anderen Toolbar-Symbole (Plus, Diskette,
-            // Zahnrad, Schriftrolle) — im inaktiven Zustand soll der
-            // Stern visuell gleichberechtigt zu den anderen sein.
-            BtnInputToggle.Foreground = Brushes.White;
-            BtnInputToggle.ToolTip    = "Prompt-Eingabe einblenden";
-        }
     }
 
     /// <summary>
