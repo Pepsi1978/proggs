@@ -634,9 +634,24 @@ public partial class PromptBoardPanel : Window
 
     private Color ColorForCategory(Guid id)
     {
-        int idx = _categories.FindIndex(c => c.Id == id);
-        if (idx < 0) idx = 0;
-        return CategoryPalette[idx % CategoryPalette.Length];
+        // PRIMAER: Persistente Farbe aus dem DB-Feld BackgroundColorHex —
+        // bleibt stabil egal wie die Kategorie sortiert wird. Der frueher
+        // verwendete Palette-Index nach Listenposition verschob die Farbe
+        // bei jedem Drag&Drop-Reorder mit, was den Benutzer verwirrte.
+        var cat = _categories.FirstOrDefault(c => c.Id == id);
+        if (cat is not null && !string.IsNullOrWhiteSpace(cat.BackgroundColorHex))
+        {
+            try
+            {
+                var parsed = System.Windows.Media.ColorConverter.ConvertFromString(cat.BackgroundColorHex);
+                if (parsed is Color color) return color;
+            }
+            catch { /* faellt auf den Palette-Fallback durch */ }
+        }
+        // FALLBACK: Falls die Kategorie keine gespeicherte Farbe hat, Index
+        // aus dem Hash der GUID — auch das ist stabil ueber Reorder hinweg.
+        int idx = Math.Abs(id.GetHashCode()) % CategoryPalette.Length;
+        return CategoryPalette[idx];
     }
 
     /// <summary>
@@ -761,9 +776,10 @@ public partial class PromptBoardPanel : Window
 
     /// <summary>
     /// Wird ausgeloest wenn ein Kategorie-Tab auf einen anderen Kategorie-Tab
-    /// gezogen wird. Setzt die SortOrder der Quell-Kategorie auf die Position
-    /// der Ziel-Kategorie und schiebt die anderen Kategorien entsprechend
-    /// nach. Renumber 0, 1, 2, ... damit es lueckenlos bleibt.
+    /// gezogen wird. Tauscht die SortOrder von Quelle und Ziel — also reines
+    /// Swap-Verhalten ohne Insert-Shift. Beispiel: Letzte Kategorie auf erste
+    /// gezogen → die ehemals erste wandert ans Ende, die ehemals letzte nach
+    /// vorne. Eindeutig und ohne Cursor-Position-Interpretation.
     /// </summary>
     private async Task OnCategoryDroppedOnCategoryAsync(Guid targetCategoryId,
         System.Windows.Controls.Button btn, System.Windows.DragEventArgs e)
@@ -783,44 +799,42 @@ public partial class PromptBoardPanel : Window
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
 
-            // Alle Kategorien neu sortieren: Quelle aus der Liste raus,
-            // an Position der Quelle einfuegen.
-            var ordered = _categories
-                .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-                .ToList();
+            var source = _categories.FirstOrDefault(c => c.Id == sourceId);
+            var target = _categories.FirstOrDefault(c => c.Id == targetCategoryId);
+            if (source is null || target is null) return;
 
-            var source = ordered.FirstOrDefault(c => c.Id == sourceId);
-            if (source is null) return;
-            ordered.RemoveAll(c => c.Id == sourceId);
-
-            int targetIdx = ordered.FindIndex(c => c.Id == targetCategoryId);
-            if (targetIdx < 0) targetIdx = ordered.Count;
-
-            // Position oben/unten am Cursor erkennen — bei horizontaler
-            // Tab-Leiste = links/rechts.
-            var pos = e.GetPosition(btn);
-            bool before = pos.X < btn.ActualWidth / 2.0;
-            int insertIdx = before ? targetIdx : targetIdx + 1;
-            if (insertIdx < 0) insertIdx = 0;
-            if (insertIdx > ordered.Count) insertIdx = ordered.Count;
-            ordered.Insert(insertIdx, source);
-
-            // Lueckenlos neu nummerieren und nur die wirklich geaenderten
-            // schreiben — spart DB-Roundtrips.
-            for (int i = 0; i < ordered.Count; i++)
+            // SWAP: SortOrder von Quelle und Ziel tauschen. Wenn beide
+            // versehentlich denselben Wert haben (kann nach Imports passieren),
+            // mit lueckenloser Renumberierung als Fallback aufraeumen.
+            int sourceOrder = source.SortOrder;
+            int targetOrder = target.SortOrder;
+            if (sourceOrder == targetOrder)
             {
-                if (ordered[i].SortOrder != i)
+                var ordered = _categories
+                    .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
+                    .ToList();
+                for (int i = 0; i < ordered.Count; i++)
                 {
-                    ordered[i].SortOrder = i;
-                    await repo.UpdateAsync(ordered[i]);
+                    if (ordered[i].SortOrder != i)
+                    {
+                        ordered[i].SortOrder = i;
+                        await repo.UpdateAsync(ordered[i]);
+                    }
                 }
+                sourceOrder = source.SortOrder;
+                targetOrder = target.SortOrder;
             }
+
+            source.SortOrder = targetOrder;
+            target.SortOrder = sourceOrder;
+            await repo.UpdateAsync(source);
+            await repo.UpdateAsync(target);
 
             ScheduleAutoBackup();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Kategorien neu sortieren fehlgeschlagen: {ex.Message}",
+            MessageBox.Show($"Kategorien tauschen fehlgeschlagen: {ex.Message}",
                 "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
@@ -1035,8 +1049,17 @@ public partial class PromptBoardPanel : Window
             return;
         }
 
+        // Reihenfolge der Anzeige: erst alle Prompts der ersten aktiven
+        // Kategorie (in deren SortOrder), dann der zweiten, dann der dritten.
+        // Sonst wuerden Prompts mit gleicher SortOrder aus verschiedenen
+        // Kategorien gemischt erscheinen — verwirrt den Benutzer.
+        var categoryOrder = _categories
+            .Select((c, idx) => new { c.Id, Idx = idx })
+            .ToDictionary(x => x.Id, x => x.Idx);
+
         var sorted = combined
-            .OrderBy(t => t.prompt.SortOrder)
+            .OrderBy(t => categoryOrder.TryGetValue(t.catId, out var idx) ? idx : int.MaxValue)
+            .ThenBy(t => t.prompt.SortOrder)
             .ThenBy(t => t.prompt.ShortLabel, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         _currentPrompts = sorted.Select(t => t.prompt).ToList();
@@ -1228,7 +1251,7 @@ public partial class PromptBoardPanel : Window
         //    innerhalb derselben Kategorie (reine Sortierung) als auch
         //    kategorieuebergreifend (Move + Sortierung in einem Schritt).
         row.AllowDrop = true;
-        row.DragOver  += (_, e) => OnPromptRowDragOver(row, e);
+        row.DragOver  += (_, e) => OnPromptRowDragOver(row, prompt, e);
         row.DragLeave += (_, _) => HighlightRowDropTarget(row, false, false);
         row.Drop      += async (_, e) => await OnPromptDroppedOnRowAsync(prompt, row, e);
 
@@ -1239,12 +1262,17 @@ public partial class PromptBoardPanel : Window
     /// DragOver-Handler fuer eine Prompt-Zeile. Setzt die Drop-Effekte und
     /// hebt die Zeile mit einer farbigen Linie oben oder unten hervor — je
     /// nachdem ob der Cursor in der oberen oder unteren Haelfte ist.
+    /// Lehnt das Drop ab wenn Quell- und Ziel-Prompt aus verschiedenen
+    /// Kategorien stammen — Reordering funktioniert nur INNERHALB einer
+    /// Kategorie. Cross-Category-Move geht ueber den Kategorie-Tab.
     /// </summary>
-    private void OnPromptRowDragOver(Border row, System.Windows.DragEventArgs e)
+    private void OnPromptRowDragOver(Border row, Prompt targetPrompt, System.Windows.DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(PromptDragFormat))
+        if (!IsSameCategoryDrag(targetPrompt, e))
         {
             e.Effects = System.Windows.DragDropEffects.None;
+            HighlightRowDropTarget(row, false, false);
+            e.Handled = true;
             return;
         }
         e.Effects = System.Windows.DragDropEffects.Move;
@@ -1253,6 +1281,22 @@ public partial class PromptBoardPanel : Window
         var pos = e.GetPosition(row);
         bool above = pos.Y < row.ActualHeight / 2.0;
         HighlightRowDropTarget(row, true, above);
+    }
+
+    /// <summary>
+    /// Prueft ob ein laufender Drag von einer Prompt-Zeile auf das angegebene
+    /// Ziel innerhalb derselben Kategorie stattfindet. Verlangt das richtige
+    /// DataObject-Format UND eine in <see cref="_currentPrompts"/> auffindbare
+    /// Quelle mit gleicher CategoryId wie das Ziel.
+    /// </summary>
+    private bool IsSameCategoryDrag(Prompt targetPrompt, System.Windows.DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(PromptDragFormat)) return false;
+        if (e.Data.GetData(PromptDragFormat) is not string idStr) return false;
+        if (!Guid.TryParse(idStr, out var sourceId)) return false;
+        var source = _currentPrompts.FirstOrDefault(p => p.Id == sourceId);
+        if (source is null) return false;
+        return source.CategoryId == targetPrompt.CategoryId;
     }
 
     /// <summary>
@@ -1291,14 +1335,20 @@ public partial class PromptBoardPanel : Window
             !Guid.TryParse(idStr, out var sourceId)) return;
         if (sourceId == targetPrompt.Id) return; // Drop auf sich selbst — No-Op
 
-        var pos = e.GetPosition(row);
-        bool above = pos.Y < row.ActualHeight / 2.0;
-        var targetCategoryId = targetPrompt.CategoryId;
-
         // Quelle aus den aktuell sichtbaren Prompts holen — der Drag kann
         // nur von einer sichtbaren Zeile gestartet sein.
         var sourcePrompt = _currentPrompts.FirstOrDefault(p => p.Id == sourceId);
         if (sourcePrompt is null) return;
+
+        // Cross-Kategorie-Drops sind hier verboten — Reordering nur INNERHALB
+        // derselben Kategorie. Der Benutzer verschiebt Prompts zwischen
+        // Kategorien indem er sie auf einen Kategorie-Tab zieht (anderer
+        // Drop-Pfad: OnPromptDroppedOnCategoryAsync).
+        if (sourcePrompt.CategoryId != targetPrompt.CategoryId) return;
+
+        var pos = e.GetPosition(row);
+        bool above = pos.Y < row.ActualHeight / 2.0;
+        var targetCategoryId = targetPrompt.CategoryId;
 
         try
         {
@@ -1320,8 +1370,8 @@ public partial class PromptBoardPanel : Window
             if (insertIdx < 0) insertIdx = 0;
             if (insertIdx > prompts.Count) insertIdx = prompts.Count;
 
-            // Bei Cross-Kategorie-Drop die Quelle umhaengen.
-            sourcePrompt.CategoryId = targetCategoryId;
+            // Quelle ist garantiert in derselben Kategorie (oben gecheckt) —
+            // an der neuen Position einfuegen ohne CategoryId-Aenderung.
             prompts.Insert(insertIdx, sourcePrompt);
 
             // Lueckenlos neu nummerieren (0, 1, 2, ...) und alles schreiben.
