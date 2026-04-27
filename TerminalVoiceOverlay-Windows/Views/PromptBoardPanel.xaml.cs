@@ -148,12 +148,13 @@ public partial class PromptBoardPanel : Window
     public PromptBoardPanel()
     {
         InitializeComponent();
-        BtnAddCategory.Click  += async (_, _) => await AddCategoryAsync();
-        BtnAddPrompt.Click    += async (_, _) => await AddPromptAsync();
-        BtnSettings.Click     += async (_, _) => await ShowSettingsAsync();
-        BtnBackup.Click       += async (_, _) => await ShowBackupMenuAsync();
-        BtnInputToggle.Click  += (_, _) => ToggleInputWindow();
-        BtnHistory.Click      += (_, _) => ToggleHistoryWindow();
+        BtnAddCategory.Click     += async (_, _) => await AddCategoryAsync();
+        BtnAddPrompt.Click       += async (_, _) => await AddPromptAsync();
+        BtnSettings.Click        += async (_, _) => await ShowSettingsAsync();
+        BtnBackup.Click          += async (_, _) => await ShowBackupMenuAsync();
+        BtnInputToggle.Click     += (_, _) => ToggleInputWindow();
+        BtnHistory.Click         += (_, _) => ToggleHistoryWindow();
+        BtnClearAllChecks.Click  += async (_, _) => await ClearAllAlwaysOnAsync();
         RefreshSyncLabel();
         // Beim Schliessen das Eingabefenster mitnehmen, sonst bleibt ein
         // verwaistes Fenster ohne Trigger zurueck.
@@ -270,6 +271,58 @@ public partial class PromptBoardPanel : Window
     public void EnsureInputWindowOpen()
     {
         if (!_inputWindowVisible) OpenInputWindow();
+    }
+
+    /// <summary>
+    /// Klick-Handler fuer den "!"-Button neben dem Sync-Label. Entfernt das
+    /// Always-On-Haekchen von ALLEN Prompts in ALLEN Kategorien — nuetzlich
+    /// wenn der Benutzer einen frischen Start braucht und nur noch gezielt
+    /// Haekchen setzen will. Visual-Feedback: der Button wird fuer 1 Sekunde
+    /// gruen, dann wieder normal.
+    /// </summary>
+    private async Task ClearAllAlwaysOnAsync()
+    {
+        // Visuelles Feedback SOFORT setzen, damit der Klick ankommt — auch
+        // wenn die DB-Operation ein paar hundert Millisekunden dauert.
+        var originalBackground = BtnClearAllChecks.Background;
+        BtnClearAllChecks.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+            var categories = await categoryRepo.GetAllAsync();
+            int cleared = 0;
+            foreach (var cat in categories)
+            {
+                var prompts = await promptRepo.GetByCategoryAsync(cat.Id);
+                foreach (var p in prompts)
+                {
+                    if (p.IsAlwaysOn)
+                    {
+                        p.IsAlwaysOn = false;
+                        await promptRepo.UpdateAsync(p);
+                        cleared++;
+                    }
+                }
+            }
+            Console.WriteLine($"ClearAllAlwaysOn: {cleared} prompts entmarkiert.");
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ClearAllAlwaysOn failed: {ex.Message}");
+        }
+
+        // Anzeige aktualisieren — die Haekchen-Visuals der einzelnen Zeilen
+        // muessen den neuen DB-Stand widerspiegeln.
+        await RenderPromptsAsync();
+
+        // Eine Sekunde gruen halten, dann zurueck auf den Original-Hintergrund.
+        await Task.Delay(1000);
+        BtnClearAllChecks.Background = originalBackground;
     }
 
     /// <summary>

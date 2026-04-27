@@ -173,6 +173,17 @@
                            FontSize="10"
                            Margin="6,0,0,0"
                            VerticalAlignment="Center"/>
+                <!-- "!" Button neben dem Sync-Label. Klick = alle Always-On
+                     Haekchen aller Prompts ueber alle Kategorien hinweg
+                     entfernen. Background flasht 1 Sekunde gruen als Bestaetigung. -->
+                <Button Grid.Column="2"
+                        x:Name="BtnClearAllChecks"
+                        Style="{StaticResource IconButton}"
+                        Content="!"
+                        FontFamily="Segoe UI"
+                        HorizontalAlignment="Left"
+                        Margin="8,0,0,0"
+                        ToolTip="Alle Häkchen entfernen (Always-On in allen Kategorien)"/>
                 <!-- Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings].
                      Glyphen aus Segoe Fluent Icons / MDL2 Assets damit alle
                      Symbole dieselben vertikalen Metriken haben und mittig
