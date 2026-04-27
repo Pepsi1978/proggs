@@ -112,6 +112,73 @@ Ich arbeite sie der Reihe nach ab.
 
 ---
 
+## Pre-Prompts und Post-Prompts (Marker-basiert)
+
+Innerhalb einer Multi-Task-Aufzaehlung kann der Benutzer einzelne Bloecke als
+**Pre-Prompt** oder **Post-Prompt** markieren. Diese sind KEINE eigenen Aufgaben,
+sondern Anweisungen die auf alle Aufgaben angewendet werden.
+
+### Marker-Format
+
+| Marker | Bedeutung | Wann anwenden |
+|--------|-----------|---------------|
+| `Pre-Prompt: "<text>"` | Kontext/Setup BEVOR die Aufgaben starten | Als Kontext **vor** der Bearbeitung der ersten Aufgabe |
+| `Post-Prompt: "<text>"` | Constraint/Hinweis WAEHREND der Aufgaben | Als Constraint **waehrend** und **nach** jeder Aufgabe (Antwortgestaltung, Code, Status) |
+
+### Tolerante Erkennung (Voice-Diktat)
+
+Whisper produziert je nach Aussprache verschiedene Schreibweisen — alle werden gleich erkannt:
+
+- `Pre-Prompt:`, `PrePrompt:`, `Pre Prompt:`, `pre-prompt:`, `PRE-PROMPT:`
+- `Post-Prompt:`, `PostPrompt:`, `Post Prompt:`, `post-prompt:`, `POST-PROMPT:`
+
+Anfuehrungszeichen: `"..."`, `„..."` oder `"..."` — alle gueltig.
+
+### Position im Prompt
+
+Empfohlene Konvention (nicht erzwungen): **Pre-Prompts am Anfang, Aufgaben in der Mitte,
+Post-Prompts am Ende**. Beispiel:
+
+```
+Pre-Prompt: "Branch ist feature/foo" ; Aufgabe 1 ; Aufgabe 2 ; Post-Prompt: "kurz halten" ; Post-Prompt: "kein Cross-Platform"
+```
+
+Der Marker zaehlt mehr als die Position — auch wenn ein `Post-Prompt:` mitten zwischen
+Aufgaben auftaucht, wird er als Post-Prompt erkannt, nicht als Aufgabe.
+
+### Mehrere Pre/Post-Prompts in einem Prompt
+
+Voll erlaubt. Mehrere Pre-Prompts werden vor den Aufgaben kombiniert beruecksichtigt,
+mehrere Post-Prompts gelten parallel als Constraints.
+
+### Sichtbar machen beim Multi-Task-Prompt
+
+Wenn der Prompt 1+ Aufgaben UND 1+ Pre/Post-Prompts enthaelt, am Anfang der Antwort
+kurz zeigen wie geparst wurde:
+
+```
+Ich habe N Aufgaben + M Pre-Prompts + K Post-Prompts erkannt:
+1. <Aufgabe 1>
+2. <Aufgabe 2>
+...
+Pre-Prompt: <text>
+Post-Prompt: <text>
+
+Ich arbeite die Aufgaben der Reihe nach ab und beachte die Pre/Post-Prompts.
+```
+
+Das gibt dem Benutzer sofortige Sicherheit dass keine Aufgabe als Hinweis (oder umgekehrt)
+fehlinterpretiert wurde.
+
+### Stiller Modus bei nicht passenden Post-Prompts
+
+Manche Post-Prompts sind plattform- oder kontext-spezifisch (z.B. `i18n-Pflicht (Android-Apps)`
+greift nur bei Android-Aufgaben). Wenn der aktuelle Kontext nicht zur Bedingung passt,
+schlummert der Post-Prompt — er feuert keine ueberfluessigen Hinweise und nennt sich
+nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
+
+---
+
 ## Was NIEMALS passieren darf
 
 - ❌ Ein Multi-Task-Prompt wird als eine einzelne Aufgabe missverstanden
@@ -120,6 +187,9 @@ Ich arbeite sie der Reihe nach ab.
 - ❌ Die Aufgaben-Erkennung wird dem Benutzer nicht mitgeteilt (er sieht nicht ob der Parse korrekt war)
 - ❌ Status-Meldung nur für eine Teilaufgabe am Ende — es MUSS für ALLE eine Rückmeldung geben
 - ❌ Semikola in Code/SQL/URLs fälschlich als Aufgaben-Trenner interpretieren
+- ❌ Einen Block mit `Pre-Prompt:` oder `Post-Prompt:` als eigenstaendige Aufgabe behandeln
+- ❌ Pre/Post-Prompts ignorieren weil sie "nicht direkt zur Aufgabe gehoeren"
+- ❌ Bei einer Klaerungsfrage-Post-Prompt blind raten statt zu fragen
 
 ---
 
