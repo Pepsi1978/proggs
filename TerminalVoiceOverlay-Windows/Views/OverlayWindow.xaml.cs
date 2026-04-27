@@ -58,6 +58,11 @@ namespace TerminalVoiceOverlay.Views
         private bool geminiEnabled          = false; // macOS default
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
+        // Wenn true, presst OnInputSubmit beim naechsten Aufruf Return —
+        // unabhaengig von autoEnterEnabled. Wird vom Enter-Button gesetzt
+        // damit ein Klick darauf den Text aus der Prompt-Eingabe nicht nur
+        // einfuegt, sondern auch sofort an die KI abschickt.
+        private bool _forceReturnOnNextSubmit = false;
         private bool alwaysOnActive         = false;
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
@@ -714,6 +719,23 @@ namespace TerminalVoiceOverlay.Views
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
         private void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
+            // Wenn das Prompt-Eingabefenster Text enthaelt, wird der Klick
+            // als "Send"-Aktion interpretiert: Text einfuegen + Return druecken,
+            // unabhaengig vom Toggle-Zustand. Erst wenn keine Eingabe da ist,
+            // greift die alte Toggle-Logik.
+            if (_promptPanel != null)
+            {
+                _forceReturnOnNextSubmit = true;
+                if (_promptPanel.TrySubmitInputText())
+                {
+                    Console.WriteLine("Enter-Button: Prompt-Eingabe wurde gesendet (force Return).");
+                    return;
+                }
+                // Kein Text vorhanden — Flag wieder zuruecksetzen, sonst
+                // wuerde ein nachfolgender Voice-Submit ungewollt forciert.
+                _forceReturnOnNextSubmit = false;
+            }
+
             if (autoEnterEnabled)
             {
                 // Turn OFF
@@ -748,6 +770,10 @@ namespace TerminalVoiceOverlay.Views
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
                 ShowPromptPanel();
+                // Prompt-Eingabefenster gleich mit oeffnen, damit der
+                // Benutzer nach dem Stern-Klick sofort tippen kann ohne
+                // einen zweiten Klick auf den Stern im Promptboard selbst.
+                _promptPanel?.EnsureInputWindowOpen();
             }
             else
             {
@@ -866,9 +892,13 @@ namespace TerminalVoiceOverlay.Views
                 }
 
                 string final = string.Join(" ; ", parts);
-                TerminalController.PasteText(final, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
-                Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={autoEnterEnabled}).");
-                hasPastedText = !autoEnterEnabled;
+                // Force-Return uebersteuert das autoEnter-Toggle wenn der
+                // Submit aus einem expliziten Enter-Button-Klick kommt.
+                bool effectiveAutoEnter = autoEnterEnabled || _forceReturnOnNextSubmit;
+                _forceReturnOnNextSubmit = false;
+                TerminalController.PasteText(final, _terminalWatcher.ActiveTerminalHwnd, effectiveAutoEnter);
+                Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={effectiveAutoEnter}).");
+                hasPastedText = !effectiveAutoEnter;
 
                 // Historie-Eintrag asynchron schreiben — Submit darf NICHT
                 // auf Gemini warten, weil sonst der Tipp-Flow ruckelt. Der

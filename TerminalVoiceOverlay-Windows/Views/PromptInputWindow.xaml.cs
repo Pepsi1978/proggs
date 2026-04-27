@@ -125,6 +125,22 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
+    /// Wird vom Voice-Overlay aufgerufen wenn der Benutzer auf den orangen
+    /// Enter-Button klickt: Falls die Eingabe-Box Text enthaelt, wird das
+    /// SubmitRequested-Event ausgeloest (so als haette der Benutzer Enter
+    /// in der Box gedrueckt) und true zurueckgegeben. Bei leerer Box passiert
+    /// nichts und es wird false zurueckgegeben — der Aufrufer fuehrt dann
+    /// seine Standard-Logik aus (Toggle).
+    /// </summary>
+    public bool TrySubmitText()
+    {
+        var text = InputBox.Text ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        SubmitRequested?.Invoke(text);
+        return true;
+    }
+
+    /// <summary>
     /// Click-Handler fuer den roten X-Button in der Toolbar oben rechts.
     /// Loescht ausschliesslich den Text in der Eingabe-Box dieses Fensters —
     /// die CLI-Zeile im Terminal bleibt unangetastet (dafuer gibt es das

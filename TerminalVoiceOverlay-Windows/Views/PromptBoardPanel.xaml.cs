@@ -255,6 +255,27 @@ public partial class PromptBoardPanel : Window
         }
     }
 
+    /// <summary>
+    /// Stellt sicher dass das Prompt-Eingabefenster geoeffnet ist. Wird vom
+    /// Voice-Overlay nach einem Stern-Klick aufgerufen, damit Promptboard
+    /// und Eingabe-Fenster zusammen erscheinen statt einzeln.
+    /// </summary>
+    public void EnsureInputWindowOpen()
+    {
+        if (!_inputWindowVisible) OpenInputWindow();
+    }
+
+    /// <summary>
+    /// Versucht den Inhalt der Eingabe-Box als Submit auszuloesen. Liefert
+    /// <c>true</c> wenn Text vorhanden war und gesendet wurde, sonst <c>false</c>.
+    /// Wird vom Voice-Overlay verwendet, damit der orange Enter-Button unten
+    /// in der Pillar-Leiste den Text aus der Prompt-Eingabe abschickt.
+    /// </summary>
+    public bool TrySubmitInputText()
+    {
+        return _inputWindow?.TrySubmitText() ?? false;
+    }
+
     private void OpenInputWindow()
     {
         // Eingabe und Historie schliessen sich gegenseitig aus — beide
