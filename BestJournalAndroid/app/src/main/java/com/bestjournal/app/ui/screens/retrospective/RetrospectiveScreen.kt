@@ -23,8 +23,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -69,6 +71,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -502,11 +505,15 @@ fun RetrospectiveScreen(
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
+                                val dotBias =
+                                    if (weekly.size <= 1) 0f
+                                    else -0.8f + 1.6f * index / (weekly.size - 1)
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forWeek(summary.periodIndex),
                                     isLast = index == weekly.lastIndex && lockedWeeks.isEmpty(),
                                     onClick = { selectedSummary = summary },
+                                    dotVerticalBias = dotBias,
                                 )
                             }
                         }
@@ -584,11 +591,15 @@ fun RetrospectiveScreen(
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
+                                val dotBias =
+                                    if (monthly.size <= 1) 0f
+                                    else -0.8f + 1.6f * index / (monthly.size - 1)
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forMonth(summary.periodIndex),
                                     isLast = index == monthly.lastIndex,
                                     onClick = { selectedSummary = summary },
+                                    dotVerticalBias = dotBias,
                                 )
                             }
                         }
@@ -623,11 +634,15 @@ fun RetrospectiveScreen(
                             EmptyHint(stringResource(R.string.retro_yearly_empty))
                         } else {
                             yearly.forEachIndexed { index, summary ->
+                                val dotBias =
+                                    if (yearly.size <= 1) 0f
+                                    else -0.8f + 1.6f * index / (yearly.size - 1)
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.yearColor,
                                     isLast = index == yearly.lastIndex,
                                     onClick = { selectedSummary = summary },
+                                    dotVerticalBias = dotBias,
                                 )
                             }
                         }
@@ -640,33 +655,51 @@ fun RetrospectiveScreen(
     }
 }
 
-/** Wraps a SummaryEntryCard with a timeline dot + connecting line on the left. */
+/**
+ * Wraps a SummaryEntryCard with a timeline dot + connecting line on the left.
+ *
+ * Der Punkt wird mit [dotVerticalBias] proportional innerhalb der Zeile
+ * positioniert — analog zum Tagebuch ([TimelineItem]). Mit dotVerticalBias
+ * = -1f sitzt der Punkt oben, mit +1f unten, mit 0f mittig.
+ */
 @Composable
 private fun TimelineSummaryEntry(
     summary: RetrospectiveSummaryEntity,
     color: Color,
     isLast: Boolean,
     onClick: () -> Unit,
+    dotVerticalBias: Float = -1f,
 ) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        // Timeline dot + vertical connecting line
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(24.dp).padding(top = 8.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+    ) {
+        // Timeline rail: dot (proportional) + vertical connecting line
+        Box(
+            modifier = Modifier.width(24.dp).fillMaxHeight().padding(top = 8.dp),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            Box(
-                modifier =
-                    Modifier.size(8.dp)
-                        .clip(CircleShape)
-                        .background(RetrospectiveColors.monthDividerColor)
-            )
+            // Vertical line spans full height (minus end-padding for the last entry)
             if (!isLast) {
-                // Connecting line stretches to fill remaining height of the card
                 Box(
                     modifier =
                         Modifier.width(2.dp)
-                            .height(80.dp) // approximate card height; line is visual only
-                            .background(RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f))
+                            .fillMaxHeight()
+                            .background(
+                                RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f)
+                            )
+                )
+            }
+            // Dot — positioned proportionally within the section so the
+            // chronological progression der Eintraege visuell sichtbar ist
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = BiasAlignment(0f, dotVerticalBias),
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(8.dp)
+                            .clip(CircleShape)
+                            .background(RetrospectiveColors.monthDividerColor)
                 )
             }
         }
