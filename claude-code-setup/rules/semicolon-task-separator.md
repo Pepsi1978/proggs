@@ -154,18 +154,33 @@ mehrere Post-Prompts gelten parallel als Constraints.
 ### Sichtbar machen beim Multi-Task-Prompt — PFLICHT-Tabelle
 
 Wenn der Prompt MINDESTENS einen Pre-Prompt ODER Post-Prompt enthaelt, MUSS am
-ALLERERSTEN Punkt der Antwort eine kleine Uebersichts-Tabelle stehen, die alle
+ALLERERSTEN Punkt der Antwort eine Uebersichts-Tabelle stehen, die alle
 erkannten Bloecke nach Typ sortiert auflistet:
 
 ```markdown
 | Typ | Inhalt |
 |-----|--------|
-| Pre-Prompt | <Text 1> |
-| Pre-Prompt | <Text 2> |
-| Aufgabe | <kurze Zusammenfassung der Aufgabe> |
-| Post-Prompt | <Text 1> |
-| Post-Prompt | <Text 2> |
+| Pre-Prompt | <Text 1 — wortwoertlich aus dem Prompt> |
+| Pre-Prompt | <Text 2 — wortwoertlich aus dem Prompt> |
+| Aufgabe | <Text — wortwoertlich aus dem Prompt> |
+| Post-Prompt | <Text 1 — wortwoertlich aus dem Prompt> |
+| Post-Prompt | <Text 2 — wortwoertlich aus dem Prompt> |
 ```
+
+#### WORTWOERTLICH 1:1 — keine Zusammenfassung, kein Umschreiben
+
+Der Inhalt JEDER Zelle MUSS exakt das sein, was der Benutzer im Prompt geschrieben
+oder diktiert hat — wortwoertlich, ohne Kuerzung, ohne "sinngemaess uebernommen",
+ohne eigene Umformulierung, ohne Zusatzkommentare.
+
+Wenn die Aufgabe lang ist, wird sie eben lang dargestellt — die Tabellen-Zelle
+wird groesser, aber der Inhalt bleibt der Original-Wortlaut. Der Benutzer muss
+in der Tabelle EXAKT die Worte wiederfinden, die er gesprochen oder getippt hat.
+
+Anfuehrungszeichen um die Originaltexte sind erlaubt und sogar empfohlen, weil
+sie die Zitat-Natur unterstreichen. Pre/Post-Prompts haben sie ohnehin im
+Markup (z.B. `Post-Prompt: "..."`), Aufgaben werden zur Konsistenz auch in
+Anfuehrungszeichen gesetzt.
 
 #### Reihenfolge in der Tabelle
 
@@ -211,6 +226,9 @@ nicht als "aktiv". Sobald eine passende Aufgabe kommt, greift er wieder.
 - ❌ Einen Block mit `Pre-Prompt:` oder `Post-Prompt:` als eigenstaendige Aufgabe behandeln
 - ❌ Pre/Post-Prompts ignorieren weil sie "nicht direkt zur Aufgabe gehoeren"
 - ❌ Bei einer Klaerungsfrage-Post-Prompt blind raten statt zu fragen
+- ❌ In der Pflicht-Tabelle den Inhalt einer Zelle sinngemaess zusammenfassen oder umschreiben
+- ❌ In der Pflicht-Tabelle Aufgaben nur mit ein paar Stichworten beschreiben statt mit dem Original-Text
+- ❌ In der Pflicht-Tabelle eigene Erklaerungen oder Zusatztexte einfuegen die der Benutzer nicht geschrieben hat
 
 ---
 
