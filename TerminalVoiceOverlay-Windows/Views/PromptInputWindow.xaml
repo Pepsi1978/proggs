@@ -81,11 +81,24 @@
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
 
-                <!-- Buttonleiste rechts oben. Erste Button: rotes X loescht
-                     den Text in der Eingabe-Box (nicht die CLI-Zeile!). -->
+                <!-- Buttonleiste rechts oben.
+                     Reihenfolge: G-Button (Gemini-Verbesserung) | rotes X (Eingabe leeren).
+                     Der G-Button ruft das gleiche Prompt-Engineer-Template auf wie der
+                     G-Button im PromptBoard-Edit-Dialog: aus dem rohen Diktat wird ein
+                     kopierfertiger Claude-Code-CLI-Prompt. -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
+                    <Button x:Name="GeminiButton"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="BtnGemini_Click"
+                            Margin="0,0,4,0"
+                            ToolTip="Mit Gemini verbessern — der aktuelle Eingabe-Text wird durch eine bereinigte Variante ersetzt.">
+                        <TextBlock Text="G"
+                                   FontWeight="Bold"
+                                   FontSize="14"
+                                   Foreground="#FFFFD700"/>
+                    </Button>
                     <Button x:Name="ClearInputButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnClearInput_Click"

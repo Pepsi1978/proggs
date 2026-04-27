@@ -1,6 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using TerminalVoiceOverlay.Services;
 
 namespace TerminalVoiceOverlay.Views;
 
@@ -34,6 +36,11 @@ public partial class PromptInputWindow : Window
     private bool _isDragging;
     private Point _dragStartScreen;
 
+    // ── Gemini-Verbesserung ──
+    // Verhindert dass der Benutzer waehrend einer laufenden Gemini-Anfrage
+    // den Button erneut drueckt und parallele Calls ausloest.
+    private bool _isImproving;
+
     public PromptInputWindow()
     {
         InitializeComponent();
@@ -44,6 +51,10 @@ public partial class PromptInputWindow : Window
         PreviewMouseRightButtonDown += OnRightDragStart;
         PreviewMouseMove            += OnRightDragMove;
         PreviewMouseRightButtonUp   += OnRightDragEnd;
+
+        // G-Button nur aktiv wenn Gemini ueberhaupt konfiguriert ist
+        // (kein GEMINI_API_KEY in .env → grau).
+        GeminiButton.IsEnabled = VoiceServiceProvider.GeminiAvailable;
 
         // Beim Anzeigen Fokus in die Box setzen, damit der Benutzer
         // direkt lostippen kann.
@@ -149,6 +160,70 @@ public partial class PromptInputWindow : Window
     private void BtnClearInput_Click(object sender, RoutedEventArgs e)
     {
         ClearInput();
+    }
+
+    /// <summary>
+    /// Click-Handler fuer den gelben G-Button. Schickt den aktuellen Text der
+    /// Eingabe-Box an Gemini und ersetzt ihn durch eine bereinigte Variante.
+    /// Nutzt das gleiche Prompt-Engineer-Template wie der G-Button im
+    /// PromptBoard-Edit-Dialog (<see cref="PromptEditDialog.RunGeminiAsync"/>):
+    /// rohes Diktat → kopierfertiger Claude-Code-CLI-Prompt.
+    /// Bei leerem Text oder fehlendem Gemini-Key passiert nichts ausser einer
+    /// kurzen Status-Zeile in der Pre/Post-Vorschau unten.
+    /// </summary>
+    private async void BtnGemini_Click(object sender, RoutedEventArgs e)
+    {
+        await RunGeminiAsync();
+    }
+
+    private async Task RunGeminiAsync()
+    {
+        if (_isImproving) return;
+
+        var gemini = VoiceServiceProvider.Gemini;
+        if (gemini is null)
+        {
+            UpdatePreview("Gemini nicht verfuegbar (kein GEMINI_API_KEY in .env).");
+            return;
+        }
+
+        var current = InputBox.Text?.Trim();
+        if (string.IsNullOrEmpty(current))
+        {
+            UpdatePreview("Kein Text zum Verbessern.");
+            return;
+        }
+
+        _isImproving = true;
+        GeminiButton.IsEnabled = false;
+        UpdatePreview("Verbessere mit Gemini…");
+        try
+        {
+            var improved = await gemini.BuildClaudeCodePromptAsync(current);
+            if (string.IsNullOrWhiteSpace(improved))
+            {
+                UpdatePreview("Gemini lieferte leere Antwort.");
+                return;
+            }
+            InputBox.Text = improved;
+            InputBox.CaretIndex = InputBox.Text.Length;
+            InputBox.ScrollToEnd();
+            UpdatePreview($"Verbessert ({improved.Length} Zeichen).");
+            // Fokus zurueck in die Box, damit der Benutzer direkt mit Enter
+            // senden kann ohne erst hineinklicken zu muessen.
+            Activate();
+            InputBox.Focus();
+            Keyboard.Focus(InputBox);
+        }
+        catch (Exception ex)
+        {
+            UpdatePreview($"Gemini-Verbesserung fehlgeschlagen: {ex.Message}");
+        }
+        finally
+        {
+            _isImproving = false;
+            GeminiButton.IsEnabled = VoiceServiceProvider.GeminiAvailable;
+        }
     }
 
     /// <summary>Aktualisiert die kleine Pre/Post-Vorschau unter der Box.</summary>

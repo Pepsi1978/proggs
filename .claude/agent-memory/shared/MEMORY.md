@@ -102,6 +102,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
 ### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
+### 2026-04-27 12:53 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-04-27 12:57 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -273,7 +275,6 @@ _Noch keine Eintraege._
 - **[2026-03-25] Cursor OS-Level Sandboxing** — Status: EVALUIERT | Empfehlung: JA spaeter
   Praeventive Sandbox statt reaktiver Blockierung. Naechste Evolution des safety-gate als Defense-in-Depth Schicht 2.
 
-- **[2026-03-28 14:17] Cross-CLI Delta:** Codex(11), Gemini(5) neue Commits — Bruecke starten fuer Details.
 
 - **[2026-03-31] Invariant Sentinel Pattern (Cursor)** — Status: BESTAETIGT (2026-03-31) | Quelle: cursor.com/blog/security-agents | Empfehlung: JA sofort
   Cursor prueft taeglich alle System-Invarianten gegen eine definierte Liste und meldet Abweichungen sofort. **UMGESETZT**: invariant-check.ps1/.sh Hook bei SessionStart — prueft 5 Invarianten (Stale-OFFEN, bypassPermissions, Hook-Paare, Systemzustand-Alter, CLAUDE.md-Sync).
@@ -331,6 +332,7 @@ _Noch keine Eintraege._
 - **[2026-04-20 10:28] researcher**: SubagentStop-Hook: Echter Input-Context hat 'agent_id' UND 'agent_type' als garantierte Felder. Bestehender subagent-stop-summarizer.ps1 prueft bereits 'subagent_id'/'id'/'agent_id' — muss auf 'agent_id' standardisiert werden (offizieller Feldname laut Doku). memory-watchdog.ps1 und writeback-enforcer.ps1 (beide async) fehlt diese Validierung komplett — sie laufen auch ohne echten Subagent-Kontext durch.
 - **[2026-04-20 10:28] researcher**: R2 Plugin-Recherche April 2026: TOP 3 neue Claude-Code-Plugins: 1) agnix (agent-sh/agnix) — Linter/LSP fuer CLAUDE.md, Hooks, Skills, MCP mit 399 Regeln, IDE-Integration, autofixes; 2) agentsys (agent-sh/agentsys) — 19 Plugins, 47 Agents, 40 Skills, Multi-Platform; 3) macos-toolkit (lu-zhengda/macos-toolkit) — Disk-Cleanup, Netzwerk, Security-Audit fuer macOS. WARNUNG: MemPalace (42k gekaufte Stars, ChromaDB-Wrapper, MCP-stdout-Bug) — NICHT installieren.
 - **[2026-04-21 11:10] researcher**: Rechtsrecherche Maerz-April 2026: 5 aktive Abmahnrisiken fuer Android-Apps: (1) BFSG-Abmahnwelle aktiv seit Feb 2026 (Kanzlei MK Berlin, ~2700 EUR/Fall), (2) BGH 27.03.2025 I ZR 186/17: DSGVO-Verstoesse durch Wettbewerber abmahnbar (Art.12/13/9 als UWG-Marktverhaltensregeln), (3) OLG Jena 02.03.2026 Az.3U31/25: Meta-Tracking ohne Einwilligung = 3000 EUR Schadensersatz, (4) Widerrufsbutton-Pflicht ab 19.06.2026 Paragraph 356a BGB fuer Abo-Apps, (5) Google Play Policy-Update ab 15.04.2026 (Contacts, Location, Health-Data, News-Declaration). BGH-Vorlage Google Fonts an EuGH haengig (BGH VI ZR 258/24, 28.08.2025), kein EuGH-Urteil bisher. KI-Kennzeichnungspflicht ab 02.08.2026 AI Act Art.50. Fuer reine Tagebuch-App ohne Tracking/Abo/Kontakte: Risiko insgesamt niedrig bis mittel.
+- **[2026-04-27 12:28] Cross-CLI Delta:** Codex(3) neue Commits — Bruecke starten fuer Details.
 ---
 
 - **[2026-04-20] KGCompass Repository-Wissensgraph** - Status: UMZUSETZEN | arXiv 2503.21710
