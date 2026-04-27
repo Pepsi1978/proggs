@@ -394,36 +394,38 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                     "November",
                                     "Dezember",
                                 )
-                            ContinuousTimelineSection(
-                                entryCount = weekly.size,
-                                lineColor =
-                                    RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
-                                dotColor = RetrospectiveColors.monthDividerColor,
-                            ) {
-                                weekly.forEachIndexed { index, summary ->
-                                    if (index > 0) {
-                                        val prevCal =
-                                            Calendar.getInstance().apply {
-                                                timeInMillis = weekly[index - 1].endDate
-                                            }
-                                        val curCal =
-                                            Calendar.getInstance().apply {
-                                                timeInMillis = summary.endDate
-                                            }
-                                        if (prevCal.get(Calendar.MONTH) !=
-                                            curCal.get(Calendar.MONTH)) {
-                                            val name = monthNames[curCal.get(Calendar.MONTH)]
-                                            val year = curCal.get(Calendar.YEAR)
-                                            MonthDivider(label = "$name $year")
-                                        } else {
+                            // Wochen werden chronologisch nach (Monat, Jahr) gruppiert.
+                            // Pro Monatsgruppe wird eine eigene ContinuousTimelineSection
+                            // gerendert, sodass die Linie nicht ueber Monatsgrenzen
+                            // hinausgeht.
+                            val weeklyGroups = groupSummariesByMonth(weekly)
+                            weeklyGroups.forEachIndexed { groupIndex, group ->
+                                if (groupIndex > 0) {
+                                    val cal =
+                                        Calendar.getInstance().apply {
+                                            timeInMillis = group.first().endDate
+                                        }
+                                    val name = monthNames[cal.get(Calendar.MONTH)]
+                                    val year = cal.get(Calendar.YEAR)
+                                    MonthDivider(label = "$name $year")
+                                }
+                                ContinuousTimelineSection(
+                                    entryCount = group.size,
+                                    lineColor =
+                                        RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
+                                    dotColor = RetrospectiveColors.monthDividerColor,
+                                ) {
+                                    group.forEachIndexed { index, summary ->
+                                        if (index > 0) {
                                             Spacer(modifier = Modifier.height(10.dp))
                                         }
+                                        SummaryEntryCard(
+                                            summary = summary,
+                                            color =
+                                                RetrospectiveColors.forWeek(summary.periodIndex),
+                                            onClick = { selectedSummary = summary },
+                                        )
                                     }
-                                    SummaryEntryCard(
-                                        summary = summary,
-                                        color = RetrospectiveColors.forWeek(summary.periodIndex),
-                                        onClick = { selectedSummary = summary },
-                                    )
                                 }
                             }
                         }
@@ -450,34 +452,48 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 "Noch keine Monatsrückblicke vorhanden.\nWird aus Wochenrückblicken am Monatsende erstellt."
                             )
                         } else {
-                            ContinuousTimelineSection(
-                                entryCount = monthly.size,
-                                lineColor =
-                                    RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
-                                dotColor = RetrospectiveColors.monthDividerColor,
-                            ) {
-                                monthly.forEachIndexed { index, summary ->
-                                    if (index > 0) {
-                                        val prevQuarter =
-                                            (monthly[index - 1].periodIndex - 1) / 3
-                                        val curQuarter = (summary.periodIndex - 1) / 3
-                                        if (prevQuarter != curQuarter) {
-                                            val year =
-                                                Calendar.getInstance()
-                                                    .apply { timeInMillis = summary.startDate }
-                                                    .get(Calendar.YEAR)
-                                            MonthDivider(
-                                                label = "${curQuarter + 1}. Quartal $year"
-                                            )
-                                        } else {
-                                            Spacer(modifier = Modifier.height(10.dp))
+                            // Monate werden chronologisch nach Jahr gruppiert: Linie laeuft
+                            // von Januar bis Dezember eines Jahres durch — beim Jahres-
+                            // wechsel beginnt eine neue Section. Quartalstrenner bleiben
+                            // als sichtbare Beschriftung INNERHALB der Section, die Linie
+                            // laeuft durch sie hindurch.
+                            val monthlyGroups = groupSummariesByYear(monthly)
+                            monthlyGroups.forEachIndexed { groupIndex, group ->
+                                if (groupIndex > 0) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                                ContinuousTimelineSection(
+                                    entryCount = group.size,
+                                    lineColor =
+                                        RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f),
+                                    dotColor = RetrospectiveColors.monthDividerColor,
+                                ) {
+                                    group.forEachIndexed { index, summary ->
+                                        if (index > 0) {
+                                            val prevQuarter =
+                                                (group[index - 1].periodIndex - 1) / 3
+                                            val curQuarter = (summary.periodIndex - 1) / 3
+                                            if (prevQuarter != curQuarter) {
+                                                val year =
+                                                    Calendar.getInstance()
+                                                        .apply {
+                                                            timeInMillis = summary.startDate
+                                                        }
+                                                        .get(Calendar.YEAR)
+                                                MonthDivider(
+                                                    label = "${curQuarter + 1}. Quartal $year"
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.height(10.dp))
+                                            }
                                         }
+                                        SummaryEntryCard(
+                                            summary = summary,
+                                            color =
+                                                RetrospectiveColors.forMonth(summary.periodIndex),
+                                            onClick = { selectedSummary = summary },
+                                        )
                                     }
-                                    SummaryEntryCard(
-                                        summary = summary,
-                                        color = RetrospectiveColors.forMonth(summary.periodIndex),
-                                        onClick = { selectedSummary = summary },
-                                    )
                                 }
                             }
                         }
@@ -529,6 +545,66 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
             }
         }
     }
+}
+
+/**
+ * Gruppiert eine chronologisch sortierte Liste von Wochen-Summaries konsekutiv
+ * nach (Monat, Jahr). Aufeinanderfolgende Eintraege im selben Monat landen in
+ * derselben Untergruppe — sobald der Monat wechselt, beginnt eine neue Gruppe.
+ * Wir gehen ueber [endDate] (Sonntag der Woche), damit Cross-Month-Wochen
+ * unter dem spaeteren Monat erscheinen.
+ */
+private fun groupSummariesByMonth(
+    items: List<RetrospectiveSummaryEntity>,
+): List<List<RetrospectiveSummaryEntity>> {
+    val result = mutableListOf<MutableList<RetrospectiveSummaryEntity>>()
+    items.forEach { summary ->
+        val cal = Calendar.getInstance().apply { timeInMillis = summary.endDate }
+        val curKey = cal.get(Calendar.MONTH) to cal.get(Calendar.YEAR)
+        val lastEntry = result.lastOrNull()?.lastOrNull()
+        val sameGroup =
+            if (lastEntry == null) false
+            else {
+                val lastCal =
+                    Calendar.getInstance().apply { timeInMillis = lastEntry.endDate }
+                val lastKey = lastCal.get(Calendar.MONTH) to lastCal.get(Calendar.YEAR)
+                lastKey == curKey
+            }
+        if (sameGroup) {
+            result.last().add(summary)
+        } else {
+            result.add(mutableListOf(summary))
+        }
+    }
+    return result
+}
+
+/**
+ * Gruppiert eine chronologisch sortierte Liste von Monats-/Jahres-Summaries
+ * konsekutiv nach Jahr (basierend auf [startDate]).
+ */
+private fun groupSummariesByYear(
+    items: List<RetrospectiveSummaryEntity>,
+): List<List<RetrospectiveSummaryEntity>> {
+    val result = mutableListOf<MutableList<RetrospectiveSummaryEntity>>()
+    items.forEach { summary ->
+        val cal = Calendar.getInstance().apply { timeInMillis = summary.startDate }
+        val curYear = cal.get(Calendar.YEAR)
+        val lastEntry = result.lastOrNull()?.lastOrNull()
+        val sameGroup =
+            if (lastEntry == null) false
+            else {
+                val lastCal =
+                    Calendar.getInstance().apply { timeInMillis = lastEntry.startDate }
+                lastCal.get(Calendar.YEAR) == curYear
+            }
+        if (sameGroup) {
+            result.last().add(summary)
+        } else {
+            result.add(mutableListOf(summary))
+        }
+    }
+    return result
 }
 
 /**
