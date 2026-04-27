@@ -297,6 +297,16 @@ public partial class PromptBoardPanel : Window
             int cleared = 0;
             foreach (var cat in categories)
             {
+                // Kategorie "Allgemein" wird ausgenommen — die Haekchen
+                // dort sollen vom Reset-Button NICHT angefasst werden.
+                // Case-insensitiv und mit Trim, damit kleine Variationen
+                // ("allgemein", " Allgemein ") trotzdem matchen.
+                if (string.Equals(cat.Name?.Trim(), "Allgemein",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 var prompts = await promptRepo.GetByCategoryAsync(cat.Id);
                 foreach (var p in prompts)
                 {
@@ -308,7 +318,7 @@ public partial class PromptBoardPanel : Window
                     }
                 }
             }
-            Console.WriteLine($"ClearAllAlwaysOn: {cleared} prompts entmarkiert.");
+            Console.WriteLine($"ClearAllAlwaysOn: {cleared} prompts entmarkiert (Allgemein uebersprungen).");
             ScheduleAutoBackup();
         }
         catch (Exception ex)
