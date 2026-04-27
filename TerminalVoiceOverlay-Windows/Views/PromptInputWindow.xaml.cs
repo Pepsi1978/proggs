@@ -101,7 +101,15 @@ public partial class PromptInputWindow : Window
 
         InputBox.Text = combined;
         InputBox.CaretIndex = InputBox.Text.Length;
+
+        // Fokus-Garantie: Das Fenster wird mit ShowActivated="False" geoeffnet
+        // (damit der Stern-Toggle den Terminal-Fokus nicht stiehlt). Nach dem
+        // Voice-Insert MUSS das Fenster aber aktiv sein, sonst geht der
+        // naechste Enter-Tastendruck ans Terminal statt an die InputBox und
+        // der Benutzer kann den eingesprochenen Prompt nicht abschicken.
+        Activate();
         InputBox.Focus();
+        Keyboard.Focus(InputBox);
 
         if (autoSubmit)
         {
