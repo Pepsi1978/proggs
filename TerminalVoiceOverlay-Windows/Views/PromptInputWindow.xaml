@@ -12,6 +12,36 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
+        <!-- Stern-Button-Style: 1:1 identisch zum IconButton im PromptBoard.
+             Gleiche 26x26-Basis, gleiche Border (#6A6A6A), gleiche Segoe-
+             Fluent-Icons-Schriftart, damit der Stern hier exakt so aussieht
+             wie sein Pendant in der Toolbar des Promtboards. -->
+        <Style x:Key="BoardIconButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF383838"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="13" BorderBrush="#FF6A6A6A" BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#FF525252"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Toolbar-Button im Stil der CircleButtons aus dem Voice-Overlay,
              aber kompakter (28x28) damit die Leiste nicht zu hoch wird. -->
         <Style x:Key="ToolbarButton" TargetType="Button">
@@ -82,19 +112,26 @@
                            TextTrimming="CharacterEllipsis"/>
 
                 <!-- Buttonleiste rechts oben.
-                     Reihenfolge: ; (Aufgaben-Trenner manuell einfuegen) |
+                     Reihenfolge: Stern (Solo-Andocken ans Voice-Overlay) |
+                                  ; (Aufgaben-Trenner manuell einfuegen) |
                                   G (Gemini-Verbesserung) |
                                   rotes X (Eingabe leeren).
-                     Der ;-Button ersetzt die frueher automatische " ; "-
-                     Einfuegung zwischen Voice-Inputs durch eine bewusste
-                     manuelle Aktion (Leerzeile + ; + Leerzeile am Textende).
-                     Der G-Button ruft das gleiche Prompt-Engineer-Template
-                     auf wie der G-Button im PromptBoard-Edit-Dialog: aus dem
-                     rohen Diktat wird ein kopierfertiger Claude-Code-CLI-
-                     Prompt. -->
+                     Der Stern blendet das Promptboard aus und dockt dieses
+                     Eingabefenster direkt an die schmale Voice-Overlay-Leiste
+                     an. Erneuter Klick holt das Promptboard zurueck und
+                     dieses Fenster rutscht wieder an dessen linken Rand.
+                     Visuell 1:1 wie der Stern in der Promptboard-Toolbar:
+                     Segoe Fluent Icons E734 (Outline, weiss) im Ruhezustand,
+                     E735 (Fill, gold #FFD700) wenn Solo-Andocken aktiv. -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
+                    <Button x:Name="SoloDockStarButton"
+                            Style="{StaticResource BoardIconButton}"
+                            Click="BtnSoloDockStar_Click"
+                            Margin="0,0,4,0"
+                            Content="&#xE734;"
+                            ToolTip="Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein)."/>
                     <Button x:Name="SeparatorButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnInsertSeparator_Click"

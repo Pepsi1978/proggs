@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using TerminalVoiceOverlay.Services;
 
 namespace TerminalVoiceOverlay.Views;
@@ -32,6 +33,17 @@ public partial class PromptInputWindow : Window
     /// </summary>
     public event Action<double, double>? GroupDragDelta;
 
+    /// <summary>
+    /// Feuert beim Klick auf den neuen Stern-Button in der Toolbar oben.
+    /// Das Argument ist der NEUE gewuenschte Solo-Andock-Zustand:
+    /// <c>true</c> = Promptboard ausblenden und dieses Fenster direkt ans
+    /// Voice-Overlay andocken; <c>false</c> = zurueck in den Normalmodus
+    /// (Promptboard sichtbar, dieses Fenster dockt links daran an).
+    /// PromptBoardPanel reicht das Event ans OverlayWindow weiter, das den
+    /// eigentlichen Layout-Wechsel umsetzt.
+    /// </summary>
+    public event Action<bool>? SoloDockToggleRequested;
+
     // ── Rechtsklick-Drag-State ──
     private bool _isDragging;
     private Point _dragStartScreen;
@@ -40,6 +52,14 @@ public partial class PromptInputWindow : Window
     // Verhindert dass der Benutzer waehrend einer laufenden Gemini-Anfrage
     // den Button erneut drueckt und parallele Calls ausloest.
     private bool _isImproving;
+
+    // ── Solo-Andock-Modus ──
+    // True wenn der Benutzer den Stern in dieser Toolbar geklickt hat,
+    // sodass das Promptboard ausgeblendet ist und dieses Fenster direkt
+    // am Voice-Overlay haengt. Wird vom OverlayWindow ueber
+    // SetSoloDockState gesetzt nachdem der Layout-Wechsel passiert ist —
+    // damit Visual und Realitaet synchron bleiben.
+    private bool _isSoloDock;
 
     public PromptInputWindow()
     {
@@ -139,6 +159,14 @@ public partial class PromptInputWindow : Window
     }
 
     /// <summary>
+    /// Liefert den aktuellen Inhalt der Eingabe-Box. Wird vom PromptBoardPanel
+    /// verwendet, um den Text VOR einem Stern-Toggle (das das Fenster zerstoert)
+    /// zwischenzuspeichern, damit der Benutzer beim erneuten Einblenden seinen
+    /// noch nicht abgeschickten Text wiederfindet.
+    /// </summary>
+    public string GetCurrentText() => InputBox.Text ?? string.Empty;
+
+    /// <summary>
     /// Fuegt manuell einen Aufgaben-Trenner hinter dem aktuellen Text ein:
     /// Leerzeile, Semikolon, Leerzeile. So kann der Benutzer mehrere
     /// eingesprochene Aufgaben optisch sauber voneinander trennen — frueher
@@ -205,6 +233,55 @@ public partial class PromptInputWindow : Window
     private void BtnInsertSeparator_Click(object sender, RoutedEventArgs e)
     {
         InsertManualSeparator();
+    }
+
+    /// <summary>
+    /// Click-Handler fuer den Stern ganz links in der Toolbar. Schaltet den
+    /// Solo-Andock-Modus um: aktiv = Promptboard verschwindet und dieses
+    /// Fenster dockt direkt ans Voice-Overlay an, inaktiv = zurueck in den
+    /// Normalmodus. Wir feuern nur das Event — den eigentlichen Layout-
+    /// Wechsel macht das OverlayWindow (das die Geometrien aller Fenster
+    /// kennt). Das Visual des Sterns wird vom OverlayWindow per
+    /// <see cref="SetSoloDockState"/> nachgezogen, sobald der Wechsel
+    /// erfolgreich war.
+    /// </summary>
+    private void BtnSoloDockStar_Click(object sender, RoutedEventArgs e)
+    {
+        bool newState = !_isSoloDock;
+        SoloDockToggleRequested?.Invoke(newState);
+    }
+
+    /// <summary>
+    /// Wird vom OverlayWindow aufgerufen nachdem der Solo-Andock-Layout-
+    /// Wechsel umgesetzt wurde. Synchronisiert intern das Flag und
+    /// aktualisiert das Stern-Visual (gefuellter Gold-Stern wenn aktiv,
+    /// weisser Outline-Stern wenn inaktiv) — 1:1 wie der Stern in der
+    /// Promptboard-Toolbar.
+    /// </summary>
+    public void SetSoloDockState(bool active)
+    {
+        _isSoloDock = active;
+        UpdateSoloStarVisual();
+    }
+
+    private void UpdateSoloStarVisual()
+    {
+        // Segoe Fluent Icons — gleiche Glyphen und Farben wie der Stern
+        // im Promptboard, damit beide Buttons visuell identisch sind:
+        //   E735 = FavoriteStarFill  (gefuellt, gold)
+        //   E734 = FavoriteStar      (Outline, weiss)
+        if (_isSoloDock)
+        {
+            SoloDockStarButton.Content    = "";
+            SoloDockStarButton.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+            SoloDockStarButton.ToolTip    = "Promptboard wieder einblenden (zurueck in den Normalmodus).";
+        }
+        else
+        {
+            SoloDockStarButton.Content    = "";
+            SoloDockStarButton.Foreground = Brushes.White;
+            SoloDockStarButton.ToolTip    = "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein).";
+        }
     }
 
     /// <summary>
@@ -295,6 +372,36 @@ public partial class PromptInputWindow : Window
         Left   = promptBoard.Left - Width - 4;
 
         ClampToWorkArea();
+    }
+
+    /// <summary>
+    /// Dockt das Fenster im Solo-Modus direkt an die linke Kante des
+    /// Voice-Overlays an. Wird vom OverlayWindow aufgerufen wenn der
+    /// Benutzer den Stern in dieser Toolbar geklickt hat — das Promptboard
+    /// ist dann ausgeblendet und dieses Fenster nimmt seinen Platz ein.
+    /// Geometrie-Regeln identisch zu DockTo: Hoehe an Pillar angleichen,
+    /// 4-Pixel-Naht, gleicher Top-Wert.
+    /// </summary>
+    public void DockToOverlay(Window overlay)
+    {
+        if (overlay is null) return;
+        Height = overlay.Height;
+        Top    = overlay.Top;
+        Left   = overlay.Left - Width - 4;
+        ClampToWorkArea();
+    }
+
+    /// <summary>
+    /// Folgt einer Drag-Bewegung des Voice-Overlays im Solo-Modus.
+    /// Identisch zu FollowPanelDrag, nur mit dem Pillar als Anker. Kein
+    /// Clamp damit die Andock-Naht beim Drag nicht aufreisst.
+    /// </summary>
+    public void FollowOverlayDrag(Window overlay)
+    {
+        if (overlay is null) return;
+        Height = overlay.Height;
+        Top    = overlay.Top;
+        Left   = overlay.Left - Width - 4;
     }
 
     /// <summary>

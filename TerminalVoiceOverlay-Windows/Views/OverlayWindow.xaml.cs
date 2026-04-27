@@ -151,6 +151,13 @@ namespace TerminalVoiceOverlay.Views
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
+        // True wenn der Benutzer im Eingabefenster den Stern geklickt hat:
+        // das Promptboard ist dann versteckt und das Eingabefenster nimmt
+        // dessen Andock-Platz links neben dem Pillar ein. Im Drag- und
+        // Reposition-Pfad muessen wir dann die InputWindow-Geometrie statt
+        // der Promtboard-Geometrie aktualisieren.
+        private bool _inputSoloDock;
+
         // ── Right-click drag state ──
         private bool _isDragging;
         private bool _manuallyPositioned;
@@ -325,10 +332,17 @@ namespace TerminalVoiceOverlay.Views
                     {
                         Left = _dragStartLeft + (movePt.X - _dragStartCursorX) / _dragDpiX;
                         Top  = _dragStartTop  + (movePt.Y - _dragStartCursorY) / _dragDpiY;
-                        // Keep the PromptBoard side panel glued to the
-                        // pillar's left edge during right-click drag.
-                        if (_promptPanel is not null && _promptPanel.IsVisible)
+                        // Im Solo-Andock-Modus haengt das Eingabefenster
+                        // direkt am Pillar — wir ziehen es 1:1 mit. Sonst
+                        // bleibt das Promtboard an der linken Pillar-Kante.
+                        if (_inputSoloDock && _promptPanel?.InputWindow is { } iw)
+                        {
+                            iw.FollowOverlayDrag(this);
+                        }
+                        else if (_promptPanel is not null && _promptPanel.IsVisible)
+                        {
                             PositionPromptPanel();
+                        }
                     }
                     break;
 
@@ -372,17 +386,28 @@ namespace TerminalVoiceOverlay.Views
             // Star toggle is on but the panel was hidden during a previous
             // terminal-deactivation? Bring it back alongside the pillar so
             // both windows behave as a single unit per user expectation.
-            if (alwaysOnActive && _promptPanel is not null && !_promptPanel.IsVisible)
+            // ABER: Im Solo-Andock-Modus ist das Promtboard absichtlich
+            // ausgeblendet. Dann nicht das Promtboard reaktivieren, sondern
+            // das Eingabefenster direkt am Pillar wiederherstellen.
+            if (_inputSoloDock && _promptPanel?.InputWindow is { } soloInput)
             {
-                PositionPromptPanel();
-                _promptPanel.Show();
+                if (!soloInput.IsVisible) soloInput.Show();
+                soloInput.DockToOverlay(this);
             }
+            else
+            {
+                if (alwaysOnActive && _promptPanel is not null && !_promptPanel.IsVisible)
+                {
+                    PositionPromptPanel();
+                    _promptPanel.Show();
+                }
 
-            // Floating children (Prompt-Eingabe + Historie) — der Benutzer
-            // hatte sie evtl. offen als das Terminal die Aktivitaet verlor.
-            // Zurueckholen damit sie genauso wie das Promtboard nur ueber
-            // dem Terminal erscheinen, niemals ueber Chrome o.ae.
-            _promptPanel?.ShowTransientChildrenIfNeeded();
+                // Floating children (Prompt-Eingabe + Historie) — der Benutzer
+                // hatte sie evtl. offen als das Terminal die Aktivitaet verlor.
+                // Zurueckholen damit sie genauso wie das Promtboard nur ueber
+                // dem Terminal erscheinen, niemals ueber Chrome o.ae.
+                _promptPanel?.ShowTransientChildrenIfNeeded();
+            }
         }
 
         private void OnTerminalDeactivated()
@@ -805,6 +830,12 @@ namespace TerminalVoiceOverlay.Views
                     Top  = _promptPanel.Top;
                     _manuallyPositioned = true;
                 };
+                // Stern in der Eingabe-Toolbar: Solo-Andock-Modus umschalten.
+                // Im Solo-Modus wird das Promtboard ausgeblendet und das
+                // Eingabefenster dockt direkt an die linke Pillar-Kante.
+                // Beim Zurueckschalten erscheint das Promtboard wieder und
+                // das Eingabefenster rutscht zurueck an dessen linken Rand.
+                _promptPanel.SoloDockToggleRequested += ApplySoloDockMode;
                 _promptPanel.Closed += (_, _) =>
                 {
                     _promptPanel = null;
@@ -827,6 +858,9 @@ namespace TerminalVoiceOverlay.Views
         private void HidePromptPanel()
         {
             if (_promptPanel is null) return;
+            // Solo-Andock-Flag zuruecksetzen — beim naechsten Ultrathink-On
+            // startet das Promtboard wieder im Normalmodus.
+            _inputSoloDock = false;
             var p = _promptPanel;
             _promptPanel = null;
             p.Close();
@@ -844,6 +878,47 @@ namespace TerminalVoiceOverlay.Views
             _promptPanel.Height = Height;
             _promptPanel.Left = Left - _promptPanel.Width - 4;
             _promptPanel.Top = Top;
+        }
+
+        /// <summary>
+        /// Setzt den Solo-Andock-Modus um (Stern-Klick im Eingabefenster).
+        /// <list type="bullet">
+        /// <item>active=true: Promtboard ausblenden und Eingabe direkt
+        /// links an den Pillar andocken (mit 4-Pixel-Naht, Hoehe = Pillar).</item>
+        /// <item>active=false: Promtboard wieder einblenden und re-positionieren;
+        /// das Eingabefenster zieht via PanelDragged-Kette automatisch an
+        /// den linken Rand des Promtboards zurueck.</item>
+        /// </list>
+        /// Das Eingabefenster wird per <see cref="PromptInputWindow.SetSoloDockState"/>
+        /// nachgezogen damit das Stern-Visual den neuen Zustand zeigt.
+        /// </summary>
+        private void ApplySoloDockMode(bool active)
+        {
+            if (_promptPanel is null) return;
+            var input = _promptPanel.InputWindow;
+            if (input is null) return;
+
+            if (active)
+            {
+                // Promtboard ausblenden — wir nutzen Window.Hide, NICHT Close,
+                // damit die Instanz und der ganze State (Kategorien, Prompts,
+                // Subscriptions) erhalten bleiben.
+                _promptPanel.Hide();
+                _inputSoloDock = true;
+                input.DockToOverlay(this);
+            }
+            else
+            {
+                _inputSoloDock = false;
+                _promptPanel.Show();
+                PositionPromptPanel();
+                // Das Eingabefenster folgt dem Promtboard automatisch via
+                // LocationChanged → RefollowChildren in PromptBoardPanel.
+                // Trotzdem explizit redocken damit die Naht sofort sitzt.
+                input.DockTo(_promptPanel);
+            }
+
+            input.SetSoloDockState(active);
         }
 
         private void OnPromptPanelInsert(string text)

@@ -35,6 +35,23 @@ public partial class PromptBoardPanel : Window
     public event Action<string>? PromptInsertRequested;
 
     /// <summary>
+    /// Wird vom Eingabefenster gefeuert wenn der Benutzer dort den Stern-
+    /// Button geklickt hat. Argument: gewuenschter Solo-Andock-Zustand
+    /// (true = Promptboard ausblenden, Eingabe ans Voice-Overlay andocken;
+    /// false = zurueck in den Normalmodus). Das OverlayWindow abonniert
+    /// dieses weitergereichte Event und setzt den Layout-Wechsel um.
+    /// </summary>
+    public event Action<bool>? SoloDockToggleRequested;
+
+    /// <summary>
+    /// Erlaubt dem OverlayWindow Zugriff auf das angedockte Eingabefenster,
+    /// damit es im Solo-Modus dessen Geometrie direkt am Pillar ausrichten
+    /// kann (Hide/Show des Promtboards reicht allein nicht — das Eingabe-
+    /// fenster muss seinen neuen Andock-Partner kennen).
+    /// </summary>
+    public PromptInputWindow? InputWindow => _inputWindow;
+
+    /// <summary>
     /// Fires while the user right-click drags the panel itself. The
     /// OverlayWindow uses this to slide the pillar by the same delta
     /// so both floating windows move together as a single unit.
@@ -56,6 +73,17 @@ public partial class PromptBoardPanel : Window
     /// persistent, Position kehrt zur Standard-Andockposition zurueck).
     /// </summary>
     private PromptInputWindow? _inputWindow;
+
+    /// <summary>
+    /// Persistenter Eingabetext, der einen Stern-Toggle ueberlebt. Wird beim
+    /// Schliessen des Eingabefensters gesetzt und beim erneuten Oeffnen wieder
+    /// in die InputBox geschrieben. <c>static</c>, weil beim Stern-OFF die
+    /// PromptBoardPanel-Instanz selbst zerstoert wird (OverlayWindow ruft
+    /// HidePromptPanel→Close auf) und ein Instance-Field damit nicht
+    /// ueberleben wuerde. Nach App-Neustart ist das Feld wieder leer — der
+    /// Text persistiert nur fuer die Dauer der laufenden Session.
+    /// </summary>
+    private static string _persistedInputText = string.Empty;
 
     /// <summary>
     /// Stern-Zustand. Beim App-Neustart immer false (laut Spec). Wir spiegeln
@@ -387,15 +415,31 @@ public partial class PromptBoardPanel : Window
                 InputSubmitRequested?.Invoke(text);
                 // Eingabefeld nach Senden leeren, Fokus bleibt drin.
                 _inputWindow?.ClearInput();
+                // Nach erfolgreichem Submit auch den persistierten Puffer
+                // leeren — sonst wuerde der bereits gesendete Text beim
+                // naechsten Stern-Toggle in der InputBox wieder erscheinen.
+                _persistedInputText = string.Empty;
             };
             // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.
             _inputWindow.GroupDragDelta += OnChildGroupDrag;
+            // Stern-Klick in der Eingabe-Toolbar: Event 1:1 ans OverlayWindow
+            // weiterreichen — der entscheidet ob das Promtboard versteckt
+            // wird und wo das Eingabefenster anschliessend andockt.
+            _inputWindow.SoloDockToggleRequested += newState =>
+                SoloDockToggleRequested?.Invoke(newState);
             _inputWindow.Closed += (_, _) =>
             {
                 _inputWindow = null;
                 _inputWindowVisible = false;
                 UpdateStarVisual();
             };
+            // Frischen Window-Aufbau: noch nicht abgeschickten Text aus dem
+            // letzten Stern-Zyklus zurueckschreiben, damit dem Benutzer beim
+            // Toggle nichts verloren geht.
+            if (!string.IsNullOrEmpty(_persistedInputText))
+            {
+                _inputWindow.SetText(_persistedInputText);
+            }
         }
         _inputWindow.DockTo(this, force: true);
         _inputWindow.Show();
@@ -412,6 +456,10 @@ public partial class PromptBoardPanel : Window
             return;
         }
         var win = _inputWindow;
+        // Noch nicht abgeschickten Text in den Session-Puffer sichern, BEVOR
+        // das Fenster zerstoert wird. Beim naechsten Stern-Toggle wird der
+        // Text in die InputBox des frischen Fensters zurueckgeschrieben.
+        _persistedInputText = win.GetCurrentText();
         _inputWindow = null;
         _inputWindowVisible = false;
         UpdateStarVisual();
