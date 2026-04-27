@@ -86,6 +86,16 @@ public partial class PromptBoardPanel : Window
     private static string _persistedInputText = string.Empty;
 
     /// <summary>
+    /// Erstauswahl-Modus: Beim Sichtbarwerden des Panels (Stern-Klick) wird dieser
+    /// Flag aktiviert. So lange er gesetzt ist, werden ausschliesslich Prompts mit
+    /// IsAlwaysOn=true (kategorienueberhgreifend) angezeigt — die zugehoerigen
+    /// Kategorie-Tabs sind visuell markiert. Der erste Tab-Klick beendet den Modus
+    /// und schaltet auf das normale Verhalten um (alle Prompts der angeklickten
+    /// Kategorie sichtbar, auch ohne Haekchen).
+    /// </summary>
+    private bool _alwaysOnFilterMode;
+
+    /// <summary>
     /// Stern-Zustand. Beim App-Neustart immer false (laut Spec). Wir spiegeln
     /// das hier, weil der Foreground-Wechsel des Buttons sonst aus dem
     /// Click-Handler-Code abgeleitet werden muesste.
@@ -180,7 +190,6 @@ public partial class PromptBoardPanel : Window
         BtnAddPrompt.Click       += async (_, _) => await AddPromptAsync();
         BtnSettings.Click        += async (_, _) => await ShowSettingsAsync();
         BtnBackup.Click          += async (_, _) => await ShowBackupMenuAsync();
-        BtnInputToggle.Click     += (_, _) => ToggleInputWindow();
         BtnHistory.Click         += (_, _) => ToggleHistoryWindow();
         BtnClearAllChecks.Click  += async (_, _) => await ClearAllAlwaysOnAsync();
         RefreshSyncLabel();
@@ -195,15 +204,15 @@ public partial class PromptBoardPanel : Window
         {
             if (e.NewValue is bool isVisible && isVisible)
             {
+                // Erstauswahl-Modus aktivieren: Beim Oeffnen werden nur
+                // Always-On-Prompts angezeigt; ihre Kategorien werden in
+                // RefreshAsync (das vom OverlayWindow direkt nach Show()
+                // angestossen wird) automatisch in _activeCategoryIds
+                // eingetragen, damit die Tabs visuell aktiv markiert sind.
+                _alwaysOnFilterMode = true;
                 _activeCategoryIds.Clear();
-                // RefreshAsync wird vom OverlayWindow direkt nach Show()
-                // ohnehin angestossen; wir sorgen hier nur dafuer dass
-                // ein evtl. schon gerenderter Prompt-Stack sofort
-                // verschwindet, falls der Refresh kurz braucht.
                 PromptList.Children.Clear();
-                RenderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.");
-                // Tabs neu rendern, damit kein Tab mehr aktiv-markiert
-                // aussieht obwohl _activeCategoryIds leer ist.
+                RenderEmptyState("Lade aktive Prompts...");
                 RenderCategoryTabs();
             }
         };
@@ -756,14 +765,33 @@ public partial class PromptBoardPanel : Window
         // user still has active.
         var known = _categories.Select(c => c.Id).ToHashSet();
         _activeCategoryIds.IntersectWith(known);
-        // KEIN Auto-Aktivierungs-Fallback mehr: Frueher wurde beim Refresh
-        // die erste Kategorie automatisch aktiviert wenn keine aktiv war —
-        // dadurch zeigte das Panel beim Oeffnen sofort "Best Journal" oder
-        // welche-auch-immer-die-erste-ist statt einer leeren Auswahl.
-        // Der Benutzer will jeden Aufruf bewusst eine Kategorie waehlen,
-        // also bleibt die Auswahl leer bis er einen Tab anklickt. Das
-        // RenderEmptyState in RenderPromptsAsync zeigt dann den Hinweis
-        // "Keine Kategorie aktiv. Klick oben auf einen Tab.".
+
+        // Erstauswahl-Modus: alle Kategorien mit mindestens einem Always-On-Prompt
+        // werden in _activeCategoryIds eingetragen, damit ihre Tabs visuell als
+        // aktiv markiert sind. Die eigentliche Anzeige in RenderPromptsAsync
+        // filtert dann nochmal explizit nach IsAlwaysOn — die Tabs hier dienen
+        // also rein der Visualisierung "Diese Kategorien haben aktive Prompts".
+        if (_alwaysOnFilterMode)
+        {
+            try
+            {
+                using var scope = PromptBoardHost.Services.CreateScope();
+                var promptRepo =
+                    scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+                foreach (var cat in _categories)
+                {
+                    var prompts = await promptRepo.GetByCategoryAsync(cat.Id);
+                    if (prompts.Any(p => p.IsAlwaysOn))
+                    {
+                        _activeCategoryIds.Add(cat.Id);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AlwaysOn category scan failed: {ex.Message}");
+            }
+        }
 
         RenderCategoryTabs();
 
@@ -871,12 +899,27 @@ public partial class PromptBoardPanel : Window
                     _categoryDragJustHappenedId = null;
                     return;
                 }
-                // Toggle: clicking an active tab turns it off, clicking an
-                // inactive one adds it. Multiple can be active simultaneously.
-                if (_activeCategoryIds.Contains(cat.Id))
-                    _activeCategoryIds.Remove(cat.Id);
-                else
+                // Erstauswahl-Modus beenden: Sobald der Benutzer bewusst auf
+                // einen Tab klickt, wechseln wir aus dem Filter-Modus in den
+                // normalen Modus. Die im Filter-Modus aktiv markierten Tabs
+                // sind nur Visualisierung — sie werden hier vollstaendig
+                // verworfen, sodass ausschliesslich der angeklickte Tab aktiv
+                // wird (statt zusaetzlich zu den Filter-Tabs).
+                if (_alwaysOnFilterMode)
+                {
+                    _alwaysOnFilterMode = false;
+                    _activeCategoryIds.Clear();
                     _activeCategoryIds.Add(cat.Id);
+                }
+                else
+                {
+                    // Toggle: clicking an active tab turns it off, clicking an
+                    // inactive one adds it. Multiple can be active simultaneously.
+                    if (_activeCategoryIds.Contains(cat.Id))
+                        _activeCategoryIds.Remove(cat.Id);
+                    else
+                        _activeCategoryIds.Add(cat.Id);
+                }
                 RenderCategoryTabs();
                 await RenderPromptsAsync();
             };
@@ -1217,12 +1260,17 @@ public partial class PromptBoardPanel : Window
         if (_activeCategoryIds.Count == 0)
         {
             _currentPrompts = new List<Prompt>();
-            RenderEmptyState("Keine Kategorie aktiv. Klick oben auf einen Tab.");
+            RenderEmptyState(
+                _alwaysOnFilterMode
+                    ? "Keine aktivierten Prompts. Setze ein Haekchen oder klick eine Kategorie."
+                    : "Keine Kategorie aktiv. Klick oben auf einen Tab.");
             return;
         }
 
         // Collect prompts from every active category, carrying the category id
-        // along so we can tint each row accordingly.
+        // along so we can tint each row accordingly. Im Erstauswahl-Modus
+        // werden zusaetzlich alle Prompts ohne Haekchen ausgefiltert, sodass
+        // nur die Always-On-Prompts sichtbar sind.
         var combined = new List<(Prompt prompt, Guid catId)>();
         try
         {
@@ -1231,7 +1279,11 @@ public partial class PromptBoardPanel : Window
             foreach (var catId in _activeCategoryIds)
             {
                 var prompts = await promptRepo.GetByCategoryAsync(catId);
-                foreach (var p in prompts) combined.Add((p, catId));
+                foreach (var p in prompts)
+                {
+                    if (_alwaysOnFilterMode && !p.IsAlwaysOn) continue;
+                    combined.Add((p, catId));
+                }
             }
         }
         catch (Exception ex)
