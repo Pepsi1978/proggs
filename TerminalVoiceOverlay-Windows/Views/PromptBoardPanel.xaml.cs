@@ -138,6 +138,12 @@ public partial class PromptBoardPanel : Window
         Color.FromRgb(0x78, 0x8F, 0x9C), // blue-grey
     };
 
+    /// <summary>Hex-Strings der Palette-Farben — dient als Quick-Lookup ob
+    /// ein BackgroundColorHex bereits eine "echte" Palette-Farbe ist.</summary>
+    private static readonly string[] CategoryPaletteHex = CategoryPalette
+        .Select(c => $"#{c.R:X2}{c.G:X2}{c.B:X2}")
+        .ToArray();
+
     public PromptBoardPanel()
     {
         InitializeComponent();
@@ -601,6 +607,9 @@ public partial class PromptBoardPanel : Window
             _categories = (await categoryRepo.GetAllAsync())
                 .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
                 .ToList();
+            // Einmalige Migration: Jede Kategorie ohne Palette-Hex bekommt
+            // einen zugewiesen, sodass die Farben kuenftig stabil sind.
+            await EnsureCategoryColorsPersistedAsync(categoryRepo);
         }
         catch (Exception ex)
         {
@@ -634,24 +643,46 @@ public partial class PromptBoardPanel : Window
 
     private Color ColorForCategory(Guid id)
     {
-        // PRIMAER: Persistente Farbe aus dem DB-Feld BackgroundColorHex —
-        // bleibt stabil egal wie die Kategorie sortiert wird. Der frueher
-        // verwendete Palette-Index nach Listenposition verschob die Farbe
-        // bei jedem Drag&Drop-Reorder mit, was den Benutzer verwirrte.
+        // Erst pruefen ob die Kategorie einen Palette-Hex aus unserer
+        // CategoryPalette persistiert hat — dann ist die Farbe stabil
+        // pro Kategorie, egal wie sie sortiert ist. Die einmalige Migration
+        // in EnsureCategoryColorsPersistedAsync sorgt dafuer dass alle
+        // Kategorien diesen Eintrag bekommen.
         var cat = _categories.FirstOrDefault(c => c.Id == id);
-        if (cat is not null && !string.IsNullOrWhiteSpace(cat.BackgroundColorHex))
+        if (cat is not null)
         {
-            try
-            {
-                var parsed = System.Windows.Media.ColorConverter.ConvertFromString(cat.BackgroundColorHex);
-                if (parsed is Color color) return color;
-            }
-            catch { /* faellt auf den Palette-Fallback durch */ }
+            int paletteIdx = Array.FindIndex(CategoryPaletteHex,
+                h => string.Equals(h, cat.BackgroundColorHex, StringComparison.OrdinalIgnoreCase));
+            if (paletteIdx >= 0) return CategoryPalette[paletteIdx];
         }
-        // FALLBACK: Falls die Kategorie keine gespeicherte Farbe hat, Index
-        // aus dem Hash der GUID — auch das ist stabil ueber Reorder hinweg.
-        int idx = Math.Abs(id.GetHashCode()) % CategoryPalette.Length;
-        return CategoryPalette[idx];
+        // Fallback (sollte nach Migration nie greifen): Listenposition als
+        // Index — gleiche Logik wie vor dem Bug, damit nichts crashed.
+        int idx = _categories.FindIndex(c => c.Id == id);
+        if (idx < 0) idx = 0;
+        return CategoryPalette[idx % CategoryPalette.Length];
+    }
+
+    /// <summary>
+    /// Migration: Sorgt dafuer dass jede Kategorie eine vivid Palette-Farbe
+    /// in BackgroundColorHex stehen hat. Wird einmal pro Session nach dem
+    /// Laden der Kategorien aufgerufen. Existierende Palette-Eintraege
+    /// werden NICHT angefasst — nur Pastel-Defaults oder leere Felder
+    /// bekommen einen Palette-Hex zugewiesen, basierend auf der aktuellen
+    /// Listenposition (so erinnert die Migration an die alten Farben).
+    /// Nach der Migration sind die Farben stabil ueber Reorder hinweg.
+    /// </summary>
+    private async Task EnsureCategoryColorsPersistedAsync(ICategoryRepository repo)
+    {
+        for (int i = 0; i < _categories.Count; i++)
+        {
+            var cat = _categories[i];
+            bool alreadyPalette = Array.FindIndex(CategoryPaletteHex,
+                h => string.Equals(h, cat.BackgroundColorHex, StringComparison.OrdinalIgnoreCase)) >= 0;
+            if (alreadyPalette) continue;
+
+            cat.BackgroundColorHex = CategoryPaletteHex[i % CategoryPaletteHex.Length];
+            await repo.UpdateAsync(cat);
+        }
     }
 
     /// <summary>
