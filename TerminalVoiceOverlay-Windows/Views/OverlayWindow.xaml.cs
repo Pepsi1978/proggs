@@ -498,9 +498,9 @@ namespace TerminalVoiceOverlay.Views
                     // in der Historie.
                     if (_promptPanel?.IsInputWindowVisible == true)
                     {
-                        _promptPanel.RouteVoiceTextToInput(finalText);
+                        _promptPanel.RouteVoiceTextToInput(finalText, autoEnterEnabled);
                         SetMicState(RecordingState.Success);
-                        Console.WriteLine("Voice text routed to PromptInputWindow.");
+                        Console.WriteLine($"Voice text routed to PromptInputWindow (autoSubmit={autoEnterEnabled}).");
                     }
                     else
                     {

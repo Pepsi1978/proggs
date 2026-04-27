@@ -348,12 +348,18 @@ public partial class PromptBoardPanel : Window
     /// noch nicht da ist. Wird vom Voice-Overlay genutzt, damit gesprochene
     /// Prompts in das Eingabefenster geroutet werden statt direkt in die
     /// CLI — so landen auch Voice-Prompts in der Historie (Phase 4).
+    ///
+    /// Wenn die Box bereits Text enthaelt, wird der neue Voice-Schnipsel
+    /// mit " ; " als Aufgaben-Trenner angehaengt — Mehrfach-Diktat ohne
+    /// Datenverlust. Wenn <paramref name="autoSubmit"/> true ist (Auto-
+    /// Enter-Toggle aktiv), wird der zusammengebaute Text direkt
+    /// abgeschickt — als haette der Benutzer Enter gedrueckt.
     /// </summary>
-    public void RouteVoiceTextToInput(string text)
+    public void RouteVoiceTextToInput(string text, bool autoSubmit)
     {
         if (string.IsNullOrEmpty(text)) return;
         if (!_inputWindowVisible) OpenInputWindow();
-        _inputWindow?.SetText(text);
+        _inputWindow?.AppendVoiceText(text, autoSubmit);
     }
 
     /// <summary>True wenn der Stern an ist und das Eingabefenster sichtbar.</summary>

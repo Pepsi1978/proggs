@@ -76,6 +76,39 @@ public partial class PromptInputWindow : Window
         InputBox.Focus();
     }
 
+    /// <summary>
+    /// Wird vom Voice-Overlay aufgerufen, wenn ein gesprochener Prompt ins
+    /// Eingabefenster geroutet wird. Verhalten:
+    /// <list type="bullet">
+    /// <item>Box leer → Text wird gesetzt (frischer Start).</item>
+    /// <item>Box nicht leer → bestehender Inhalt bleibt erhalten, der neue
+    /// Voice-Schnipsel wird mit " ; " als Aufgaben-Trenner angehaengt. So
+    /// kann der Benutzer mehrere Aufgaben hintereinander einsprechen ohne
+    /// dass die vorhergehende ueberschrieben wird.</item>
+    /// <item>Wenn <paramref name="autoSubmit"/> true ist (Auto-Enter-Toggle
+    /// im Voice-Overlay aktiv), wird das Submit-Event direkt ausgeloest —
+    /// als haette der Benutzer Enter gedrueckt.</item>
+    /// </list>
+    /// </summary>
+    public void AppendVoiceText(string text, bool autoSubmit)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        var existing = InputBox.Text ?? string.Empty;
+        string combined = string.IsNullOrWhiteSpace(existing)
+            ? text
+            : existing.TrimEnd() + " ; " + text;
+
+        InputBox.Text = combined;
+        InputBox.CaretIndex = InputBox.Text.Length;
+        InputBox.Focus();
+
+        if (autoSubmit)
+        {
+            SubmitRequested?.Invoke(combined);
+        }
+    }
+
     /// <summary>Leert die Eingabe-Box und setzt den Fokus zurueck hinein.</summary>
     public void ClearInput()
     {
