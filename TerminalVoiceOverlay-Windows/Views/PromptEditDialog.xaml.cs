@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -47,6 +48,26 @@ public partial class PromptEditDialog : Window
     private DispatcherTimer? _pulseTimer;
     private bool _pulseBright;
 
+    /// <summary>
+    /// Verhindert Endlos-Schleifen wenn ein Checkbox-Handler den anderen
+    /// programmatisch (un)setzt — die Pre/Post-Checkboxen schliessen sich
+    /// gegenseitig aus, der Code muss seine eigenen Setter ignorieren.
+    /// </summary>
+    private bool _suppressCheckboxEvents;
+
+    /// <summary>
+    /// Erkennt einen bereits vorhandenen Wrapper der Form
+    /// <c>Pre-Prompt: "..."</c> oder <c>Post-Prompt: "..."</c> am Anfang
+    /// des Texts und liefert den inneren Text zurueck. Tolerant gegen
+    /// Schreibvarianten (mit/ohne Bindestrich, mit/ohne Leerzeichen,
+    /// Gross/Klein) — der Benutzer diktiert das ueber Whisper und die
+    /// Schreibweise schwankt. Akzeptiert sowohl normale " als auch
+    /// deutsche „...""-Anfuehrungszeichen.
+    /// </summary>
+    private static readonly Regex WrapperRegex = new(
+        @"^\s*(?:Pre[-\s]?Prompt|Post[-\s]?Prompt)\s*:\s*[""„“](?<inner>[\s\S]*?)[""“”]\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public PromptEditDialog(
         string title,
         string initialLabel,
@@ -60,6 +81,16 @@ public partial class PromptEditDialog : Window
         ShortLabelBox.Text = initialLabel;
         OriginalTextBox.Text = initialText;
         AlwaysOnCheckbox.IsChecked = initialAlwaysOn;
+
+        // Handler VOR den initialen IsChecked-Setzern verdrahten, damit der
+        // Wrapper auch beim Laden eines bereits markierten Prompts auto-
+        // matisch konsistent ist (idempotent: wenn Text schon gewrappt,
+        // bleibt er identisch).
+        PrePromptCheckbox.Checked    += PrePromptCheckbox_Checked;
+        PrePromptCheckbox.Unchecked  += PrePromptCheckbox_Unchecked;
+        PostPromptCheckbox.Checked   += PostPromptCheckbox_Checked;
+        PostPromptCheckbox.Unchecked += PostPromptCheckbox_Unchecked;
+
         PrePromptCheckbox.IsChecked = initialPrePrompt;
         PostPromptCheckbox.IsChecked = initialPostPrompt;
 
@@ -455,5 +486,85 @@ public partial class PromptEditDialog : Window
     {
         try { if (File.Exists(path)) File.Delete(path); }
         catch { /* keep the temp file silently if delete fails */ }
+    }
+
+    // ──────────────── Pre/Post-Prompt Wrapper ────────────────
+
+    /// <summary>
+    /// Wenn der Benutzer "Pre-Prompt" ankreuzt, wird der Text im Prompt-Feld
+    /// automatisch in das Format <c>Pre-Prompt: "&lt;text&gt;"</c> umgeschrieben.
+    /// Pre und Post sind gegenseitig ausschliessend — ein gleichzeitig
+    /// gesetztes Post-Haekchen wird automatisch entfernt.
+    /// </summary>
+    private void PrePromptCheckbox_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressCheckboxEvents) return;
+        _suppressCheckboxEvents = true;
+        try
+        {
+            if (PostPromptCheckbox.IsChecked == true)
+                PostPromptCheckbox.IsChecked = false;
+            WrapTextWithLabel("Pre-Prompt");
+        }
+        finally { _suppressCheckboxEvents = false; }
+    }
+
+    /// <summary>
+    /// Beim Entfernen des Pre-Haekchens wird der Wrapper aus dem Text-
+    /// feld zurueckgenommen (wenn er noch da ist) — der Benutzer sieht
+    /// danach den nackten Prompt-Text.
+    /// </summary>
+    private void PrePromptCheckbox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressCheckboxEvents) return;
+        _suppressCheckboxEvents = true;
+        try { UnwrapText(); }
+        finally { _suppressCheckboxEvents = false; }
+    }
+
+    /// <summary>Spiegelbildlich zu <see cref="PrePromptCheckbox_Checked"/> fuer Post-Prompt.</summary>
+    private void PostPromptCheckbox_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressCheckboxEvents) return;
+        _suppressCheckboxEvents = true;
+        try
+        {
+            if (PrePromptCheckbox.IsChecked == true)
+                PrePromptCheckbox.IsChecked = false;
+            WrapTextWithLabel("Post-Prompt");
+        }
+        finally { _suppressCheckboxEvents = false; }
+    }
+
+    private void PostPromptCheckbox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressCheckboxEvents) return;
+        _suppressCheckboxEvents = true;
+        try { UnwrapText(); }
+        finally { _suppressCheckboxEvents = false; }
+    }
+
+    /// <summary>
+    /// Setzt den Wrapper <c>{label}: "&lt;text&gt;"</c> um den aktuellen
+    /// Text. Falls schon ein Wrapper drin ist (auch der andere Typ),
+    /// wird er erst entfernt — danach genau einer.
+    /// </summary>
+    private void WrapTextWithLabel(string label)
+    {
+        var raw = StripExistingWrapper(OriginalTextBox.Text ?? string.Empty);
+        OriginalTextBox.Text = $"{label}: \"{raw}\"";
+    }
+
+    /// <summary>Entfernt einen vorhandenen Pre/Post-Wrapper, sonst No-Op.</summary>
+    private void UnwrapText()
+    {
+        OriginalTextBox.Text = StripExistingWrapper(OriginalTextBox.Text ?? string.Empty);
+    }
+
+    private static string StripExistingWrapper(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+        var match = WrapperRegex.Match(text);
+        return match.Success ? match.Groups["inner"].Value : text;
     }
 }
