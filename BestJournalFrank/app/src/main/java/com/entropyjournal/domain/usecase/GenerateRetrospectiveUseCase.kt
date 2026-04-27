@@ -139,7 +139,7 @@ constructor(
 
         // Phase 1: Collect all weeks that need generation
         val tasks = mutableListOf<WeeklyTask>()
-        for (weeksBack in 1..8) {
+        for (weeksBack in 0..8) {
             val (weekStart, weekEnd) = getWeekRange(weeksBack)
             val deadline =
                 Calendar.getInstance().apply {
@@ -287,7 +287,7 @@ ${summaryText.take(500)}"""
 
         // Phase 1: Collect all months that need generation
         val tasks = mutableListOf<MonthlyTask>()
-        for (monthsBack in 1..3) {
+        for (monthsBack in 0..3) {
             val (monthStart, monthEnd) = getMonthRange(monthsBack)
             val deadline =
                 Calendar.getInstance().apply {
@@ -419,33 +419,47 @@ ${summaryText.take(500)}"""
         val now = Calendar.getInstance()
         val currentYear = now.get(Calendar.YEAR)
 
-        // Check only last year
-        val year = currentYear - 1
-        val yearStart =
-            Calendar.getInstance().apply {
-                set(year, Calendar.JANUARY, 1, 0, 0, 0)
-                set(Calendar.MILLISECOND, 0)
+        // Pruefe sowohl das laufende Jahr (faellig ab 31.12. 15:00 dieses Jahres)
+        // als auch das letzte Jahr — falls dort noch nichts existiert. Voraussetzung
+        // sind mindestens 2 fertige Monatsrueckblicke pro Jahr; ein einzelner Monat
+        // reicht nicht fuer einen aussagekraeftigen Jahresueberblick.
+        var year = -1
+        var yearStart: Calendar = Calendar.getInstance()
+        var yearEnd: Calendar = Calendar.getInstance()
+        var monthlyReviews: List<RetrospectiveSummaryEntity> = emptyList()
+        var picked = false
+        for (candidate in listOf(currentYear, currentYear - 1)) {
+            val cStart =
+                Calendar.getInstance().apply {
+                    set(candidate, Calendar.JANUARY, 1, 0, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+            val cEnd =
+                Calendar.getInstance().apply {
+                    set(candidate, Calendar.DECEMBER, 31, 23, 59, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+            val cDeadline =
+                Calendar.getInstance().apply {
+                    set(candidate, Calendar.DECEMBER, 31, 15, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+            if (cDeadline.timeInMillis > now.timeInMillis) continue
+            if (retroRepo.existsForPeriod("YEARLY", cStart.timeInMillis)) continue
+            val cReviews =
+                retroRepo.getByTypeAndRange("MONTHLY", cStart.timeInMillis, cEnd.timeInMillis)
+            if (cReviews.size < 2) {
+                Log.d("Retro", "Year $candidate: ${cReviews.size} monthly reviews, need >= 2, skipping")
+                continue
             }
-        val yearEnd =
-            Calendar.getInstance().apply {
-                set(year, Calendar.DECEMBER, 31, 23, 59, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-
-        val deadline =
-            Calendar.getInstance().apply {
-                set(year, Calendar.DECEMBER, 31, 15, 0, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-        if (deadline.timeInMillis > now.timeInMillis) return 0
-        if (retroRepo.existsForPeriod("YEARLY", yearStart.timeInMillis)) return 0
-
-        val monthlyReviews =
-            retroRepo.getByTypeAndRange("MONTHLY", yearStart.timeInMillis, yearEnd.timeInMillis)
-        if (monthlyReviews.isEmpty()) {
-            Log.d("Retro", "Year $year: no monthly reviews, skipping")
-            return 0
+            year = candidate
+            yearStart = cStart
+            yearEnd = cEnd
+            monthlyReviews = cReviews
+            picked = true
+            break
         }
+        if (!picked) return 0
 
         Log.d("Retro", "Generating yearly review from ${monthlyReviews.size} monthly reviews...")
 
