@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -978,6 +979,30 @@ public partial class PromptBoardPanel : Window
     }
 
     /// <summary>
+    /// Erkennt ob der Prompt-Text mit dem Wrapper <c>Pre-Prompt: "..."</c>
+    /// oder <c>Post-Prompt: "..."</c> anfaengt und liefert das passende
+    /// Titel-Suffix (" - vor" / " - nach") zurueck — sonst leer.
+    /// Toleriert dieselben Schreibvarianten wie der PromptEditDialog
+    /// (mit/ohne Bindestrich, mit/ohne Leerzeichen, Gross/Klein, deutsche
+    /// und ASCII-Anfuehrungszeichen).
+    /// </summary>
+    private static readonly Regex PrePromptDetectRegex = new(
+        @"^\s*Pre[-\s]?Prompt\s*:\s*[""„“]",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static readonly Regex PostPromptDetectRegex = new(
+        @"^\s*Post[-\s]?Prompt\s*:\s*[""„“]",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static string DetectPrePostSuffix(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        if (PrePromptDetectRegex.IsMatch(text)) return " - vor";
+        if (PostPromptDetectRegex.IsMatch(text)) return " - nach";
+        return string.Empty;
+    }
+
+    /// <summary>
     /// Captures a bitmap snapshot of the source row, dims the row in place,
     /// and attaches the floating <see cref="DragGhostAdorner"/> at the
     /// current cursor position. Called on the same UI thread that's about
@@ -1145,6 +1170,16 @@ public partial class PromptBoardPanel : Window
         // alignments. If there's no parenthesis at the end, the whole
         // label is treated as title.
         var (titleText, timestampText) = SplitLabel(prompt.ShortLabel);
+
+        // Pre/Post-Prompt-Marker hinter dem Titel anzeigen — z.B.
+        // "Branch ist feature/foo - vor" oder "Kurz halten - nach". Erkannt
+        // wird das am Wrapper-Praefix im OriginalText, identisch zur Logik
+        // im PromptEditDialog. Normale Prompts bleiben unveraendert.
+        var prePostSuffix = DetectPrePostSuffix(prompt.OriginalText);
+        if (prePostSuffix.Length > 0)
+        {
+            titleText += prePostSuffix;
+        }
 
         // ── Title button (klick schaltet das gelbe Haekchen um) ──
         // Vorher: Klick auf den Titel hat den Prompt eingefuegt. Jetzt: Klick
