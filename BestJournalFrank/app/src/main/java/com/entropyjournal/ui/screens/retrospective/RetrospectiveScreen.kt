@@ -536,9 +536,12 @@ private fun TimelineSummaryEntry(
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
     ) {
-        // Timeline rail: dot (proportional) + vertical connecting line
+        // Timeline rail: dot (proportional) + vertical connecting line.
+        // Kein top-padding hier — sonst waere der Bias-Bereich oben enger
+        // als unten und der erste Punkt saesse hoeher als der letzte tief
+        // sitzt. Layout 1:1 wie TimelineItem im Tagebuch.
         Box(
-            modifier = Modifier.width(24.dp).fillMaxHeight().padding(top = 8.dp),
+            modifier = Modifier.width(24.dp).fillMaxHeight(),
             contentAlignment = Alignment.TopCenter,
         ) {
             // Vertical line spans full height (minus end-padding for the last entry)
