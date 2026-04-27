@@ -124,6 +124,17 @@ public partial class PromptInputWindow : Window
         InputBox.Focus();
     }
 
+    /// <summary>
+    /// Click-Handler fuer den roten X-Button in der Toolbar oben rechts.
+    /// Loescht ausschliesslich den Text in der Eingabe-Box dieses Fensters —
+    /// die CLI-Zeile im Terminal bleibt unangetastet (dafuer gibt es das
+    /// X im Voice-Overlay).
+    /// </summary>
+    private void BtnClearInput_Click(object sender, RoutedEventArgs e)
+    {
+        ClearInput();
+    }
+
     /// <summary>Aktualisiert die kleine Pre/Post-Vorschau unter der Box.</summary>
     public void UpdatePreview(string preview)
     {

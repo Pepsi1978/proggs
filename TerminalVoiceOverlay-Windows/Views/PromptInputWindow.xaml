@@ -11,6 +11,39 @@
         ShowActivated="False"
         ResizeMode="NoResize">
 
+    <Window.Resources>
+        <!-- Toolbar-Button im Stil der CircleButtons aus dem Voice-Overlay,
+             aber kompakter (28x28) damit die Leiste nicht zu hoch wird. -->
+        <Style x:Key="ToolbarButton" TargetType="Button">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="14"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#FF3D3D3D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <!-- Halbtransparenter Container, gleiche Optik wie PromptBoardPanel,
          damit der Terminal-Text durchschimmert (Alpha C7 = 78%). -->
     <Border CornerRadius="16"
@@ -24,11 +57,14 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Kopfzeile: Titel + Hint -->
+            <!-- Kopfzeile: Titel + Hint + Buttonleiste rechts.
+                 Spalte 2 ist eine StackPanel, damit weitere Buttons spaeter
+                 einfach links neben das X eingefuegt werden koennen. -->
             <Grid Grid.Row="0" Margin="4,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="Prompt-Eingabe"
@@ -41,9 +77,25 @@
                            Text="Enter sendet · Shift+Enter neue Zeile · Rechtsklick zum Verschieben"
                            Foreground="#FF7F7F7F"
                            FontSize="10"
-                           Margin="10,0,0,0"
+                           Margin="10,0,10,0"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
+
+                <!-- Buttonleiste rechts oben. Erste Button: rotes X loescht
+                     den Text in der Eingabe-Box (nicht die CLI-Zeile!). -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button x:Name="ClearInputButton"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="BtnClearInput_Click"
+                            ToolTip="Eingabe-Text loeschen">
+                        <TextBlock Text="X"
+                                   FontWeight="Bold"
+                                   FontSize="14"
+                                   Foreground="#FFFF4444"/>
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!-- Eingabefeld: mehrzeilig, scrollbar. KEIN eigener Hintergrund —
