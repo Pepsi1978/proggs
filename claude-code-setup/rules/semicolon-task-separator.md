@@ -151,24 +151,45 @@ Aufgaben auftaucht, wird er als Post-Prompt erkannt, nicht als Aufgabe.
 Voll erlaubt. Mehrere Pre-Prompts werden vor den Aufgaben kombiniert beruecksichtigt,
 mehrere Post-Prompts gelten parallel als Constraints.
 
-### Sichtbar machen beim Multi-Task-Prompt
+### Sichtbar machen beim Multi-Task-Prompt — PFLICHT-Tabelle
 
-Wenn der Prompt 1+ Aufgaben UND 1+ Pre/Post-Prompts enthaelt, am Anfang der Antwort
-kurz zeigen wie geparst wurde:
+Wenn der Prompt MINDESTENS einen Pre-Prompt ODER Post-Prompt enthaelt, MUSS am
+ALLERERSTEN Punkt der Antwort eine kleine Uebersichts-Tabelle stehen, die alle
+erkannten Bloecke nach Typ sortiert auflistet:
 
+```markdown
+| Typ | Inhalt |
+|-----|--------|
+| Pre-Prompt | <Text 1> |
+| Pre-Prompt | <Text 2> |
+| Aufgabe | <kurze Zusammenfassung der Aufgabe> |
+| Post-Prompt | <Text 1> |
+| Post-Prompt | <Text 2> |
 ```
-Ich habe N Aufgaben + M Pre-Prompts + K Post-Prompts erkannt:
-1. <Aufgabe 1>
-2. <Aufgabe 2>
-...
-Pre-Prompt: <text>
-Post-Prompt: <text>
 
-Ich arbeite die Aufgaben der Reihe nach ab und beachte die Pre/Post-Prompts.
-```
+#### Reihenfolge in der Tabelle
 
-Das gibt dem Benutzer sofortige Sicherheit dass keine Aufgabe als Hinweis (oder umgekehrt)
-fehlinterpretiert wurde.
+ZUERST alle Pre-Prompts, DANN alle Aufgaben, DANN alle Post-Prompts —
+unabhaengig von ihrer tatsaechlichen Position im Original-Prompt. So sieht
+der Benutzer auf einen Blick was der Kontext (Pre), was die eigentliche
+Aufgabe und was die Constraints (Post) sind.
+
+#### Wann die Tabelle ENTFAELLT
+
+Nur wenn der Prompt KEINEN einzigen Pre-Prompt oder Post-Prompt enthaelt
+(also nur reine Aufgabe(n) ohne Marker). Dann waere die Tabelle reine
+Redundanz.
+
+#### Was die Tabelle leistet
+
+- **Sofortige Bestaetigung** dass der Prompt korrekt geparst wurde
+- **Visualisierung** fuer den Benutzer, was Claude als was erkannt hat
+- **Schutz vor Fehlklassifikation** — wenn der Benutzer in der Tabelle sieht
+  dass eine Aufgabe als Post-Prompt eingestuft wurde (oder umgekehrt), kann
+  er sofort korrigieren bevor Code geaendert wird
+
+Die Tabelle erscheint VOR jeder anderen Antwort-Aktivitaet — also vor
+Tool-Calls, Code-Edits, Plaenen oder Erklaerungen.
 
 ### Stiller Modus bei nicht passenden Post-Prompts
 
