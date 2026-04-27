@@ -680,6 +680,14 @@ public partial class PromptBoardPanel : Window
 
             btn.Click += async (_, _) =>
             {
+                // Wenn gerade ein echter Kategorie-Drag ausgefuehrt wurde,
+                // unterdrueck den nachgelagerten Click — sonst wuerde das
+                // Drag-Loslassen die Kategorie ungewollt toggeln.
+                if (_categoryDragJustHappenedId == cat.Id)
+                {
+                    _categoryDragJustHappenedId = null;
+                    return;
+                }
                 // Toggle: clicking an active tab turns it off, clicking an
                 // inactive one adds it. Multiple can be active simultaneously.
                 if (_activeCategoryIds.Contains(cat.Id))
@@ -697,13 +705,126 @@ public partial class PromptBoardPanel : Window
             // we MUST re-set e.Effects every time, otherwise WPF resets the
             // effect to "None" on the next event tick and the drop silently
             // becomes invalid.
+            //
+            // ZUSAETZLICH: Wenn ein anderer Kategorie-Tab auf diesen Tab
+            // gezogen wird, sortieren wir die Kategorien neu — derselbe
+            // Tab ist also Drop-Target fuer ZWEI verschiedene Drag-Typen.
+            // Unterscheidung ueber das DataObject-Format.
             btn.AllowDrop = true;
             btn.DragOver  += (_, e) => HighlightDropTarget(btn, catColor, e, true);
             btn.DragLeave += (_, _) => HighlightDropTarget(btn, catColor, null, false);
-            btn.Drop      += async (_, e) => await OnPromptDroppedOnCategoryAsync(cat.Id, btn, catColor, e);
+            btn.Drop      += async (_, e) =>
+            {
+                if (e.Data.GetDataPresent(CategoryDragFormat))
+                    await OnCategoryDroppedOnCategoryAsync(cat.Id, btn, e);
+                else
+                    await OnPromptDroppedOnCategoryAsync(cat.Id, btn, catColor, e);
+            };
+
+            // Drag source: PreviewMouseLeftButtonDown armiert, PreviewMouseMove
+            // ueber 6-Pixel-Threshold loest DoDragDrop aus. Spiegelbildlich zur
+            // Prompt-Row-Drag-Logik. Wir muessen Preview-Varianten nutzen, weil
+            // der Button selbst Click-Events absorbiert — ohne Tunneling kaeme
+            // der Mausevent nie hier an.
+            var thisCatId = cat.Id;
+            btn.PreviewMouseLeftButtonDown += (_, e) =>
+            {
+                _categoryDragArmStart = e.GetPosition(this);
+                _categoryDragArmedId  = thisCatId;
+            };
+            btn.PreviewMouseMove += (s, e) =>
+            {
+                if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+                if (_categoryDragArmedId != thisCatId) return;
+                var current = e.GetPosition(this);
+                var dx = current.X - _categoryDragArmStart.X;
+                var dy = current.Y - _categoryDragArmStart.Y;
+                if (dx * dx + dy * dy < 36) return; // < 6 px = Klick, sonst Drag
+
+                _categoryDragArmedId = null;
+                _categoryDragJustHappenedId = thisCatId;
+                try
+                {
+                    var data = new DataObject(CategoryDragFormat, thisCatId.ToString());
+                    System.Windows.DragDrop.DoDragDrop((DependencyObject)s!, data,
+                        System.Windows.DragDropEffects.Move);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Category DoDragDrop failed: {ex.Message}");
+                }
+            };
 
             CategoryTabs.Children.Add(btn);
         }
+    }
+
+    /// <summary>
+    /// Wird ausgeloest wenn ein Kategorie-Tab auf einen anderen Kategorie-Tab
+    /// gezogen wird. Setzt die SortOrder der Quell-Kategorie auf die Position
+    /// der Ziel-Kategorie und schiebt die anderen Kategorien entsprechend
+    /// nach. Renumber 0, 1, 2, ... damit es lueckenlos bleibt.
+    /// </summary>
+    private async Task OnCategoryDroppedOnCategoryAsync(Guid targetCategoryId,
+        System.Windows.Controls.Button btn, System.Windows.DragEventArgs e)
+    {
+        // Visuelle Hervorhebung zuruecksetzen — DragLeave triggert nicht
+        // immer beim Drop, also explizit.
+        var catColor = ColorForCategory(targetCategoryId);
+        HighlightDropTarget(btn, catColor, null, false);
+
+        if (!e.Data.GetDataPresent(CategoryDragFormat)) return;
+        if (e.Data.GetData(CategoryDragFormat) is not string idStr ||
+            !Guid.TryParse(idStr, out var sourceId)) return;
+        if (sourceId == targetCategoryId) return; // Drop auf sich selbst
+
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+
+            // Alle Kategorien neu sortieren: Quelle aus der Liste raus,
+            // an Position der Quelle einfuegen.
+            var ordered = _categories
+                .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
+                .ToList();
+
+            var source = ordered.FirstOrDefault(c => c.Id == sourceId);
+            if (source is null) return;
+            ordered.RemoveAll(c => c.Id == sourceId);
+
+            int targetIdx = ordered.FindIndex(c => c.Id == targetCategoryId);
+            if (targetIdx < 0) targetIdx = ordered.Count;
+
+            // Position oben/unten am Cursor erkennen — bei horizontaler
+            // Tab-Leiste = links/rechts.
+            var pos = e.GetPosition(btn);
+            bool before = pos.X < btn.ActualWidth / 2.0;
+            int insertIdx = before ? targetIdx : targetIdx + 1;
+            if (insertIdx < 0) insertIdx = 0;
+            if (insertIdx > ordered.Count) insertIdx = ordered.Count;
+            ordered.Insert(insertIdx, source);
+
+            // Lueckenlos neu nummerieren und nur die wirklich geaenderten
+            // schreiben — spart DB-Roundtrips.
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                if (ordered[i].SortOrder != i)
+                {
+                    ordered[i].SortOrder = i;
+                    await repo.UpdateAsync(ordered[i]);
+                }
+            }
+
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Kategorien neu sortieren fehlgeschlagen: {ex.Message}",
+                "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        await RefreshAsync();
     }
 
     /// <summary>
@@ -717,9 +838,12 @@ public partial class PromptBoardPanel : Window
     {
         if (e is not null)
         {
-            // Only react if the drag actually carries a prompt id — otherwise
-            // (e.g. a stray text drag) leave the tab alone.
-            e.Effects = e.Data.GetDataPresent(PromptDragFormat)
+            // Only react if the drag actually carries a prompt OR a
+            // category id — otherwise (e.g. a stray text drag) leave the
+            // tab alone.
+            bool acceptable = e.Data.GetDataPresent(PromptDragFormat)
+                           || e.Data.GetDataPresent(CategoryDragFormat);
+            e.Effects = acceptable
                 ? System.Windows.DragDropEffects.Move
                 : System.Windows.DragDropEffects.None;
             e.Handled = true;
@@ -779,6 +903,18 @@ public partial class PromptBoardPanel : Window
 
     /// <summary>Custom DataObject format for a prompt drag — id as string.</summary>
     private const string PromptDragFormat = "TVO.PromptId";
+
+    /// <summary>Custom DataObject format fuer einen Kategorie-Drag — Id als String.</summary>
+    private const string CategoryDragFormat = "TVO.CategoryId";
+
+    // ── Kategorie-Drag-Arming ──
+    // Spiegelbildlich zum Prompt-Row-Drag: Mouse-Down armiert, MouseMove
+    // ueber Threshold loest DoDragDrop aus. So bleibt der normale Klick
+    // (Toggle aktiv/inaktiv) erhalten und nur eine echte Bewegung wird
+    // als Reorder-Drag erkannt.
+    private System.Windows.Point _categoryDragArmStart;
+    private Guid? _categoryDragArmedId;
+    private Guid? _categoryDragJustHappenedId;
 
     /// <summary>
     /// Splits the stored short label into title text + parenthesised
@@ -1085,7 +1221,129 @@ public partial class PromptBoardPanel : Window
             await EditPromptAsync(prompt);
         };
 
+        // ── Drop-Target: Drag&Drop einer anderen Prompt-Zeile auf diese
+        //    Zeile setzt die Reihenfolge neu. Position oben/unten am Cursor
+        //    erkannt — Cursor in der oberen Haelfte = "darueber einfuegen",
+        //    untere Haelfte = "darunter einfuegen". Funktioniert sowohl
+        //    innerhalb derselben Kategorie (reine Sortierung) als auch
+        //    kategorieuebergreifend (Move + Sortierung in einem Schritt).
+        row.AllowDrop = true;
+        row.DragOver  += (_, e) => OnPromptRowDragOver(row, e);
+        row.DragLeave += (_, _) => HighlightRowDropTarget(row, false, false);
+        row.Drop      += async (_, e) => await OnPromptDroppedOnRowAsync(prompt, row, e);
+
         return row;
+    }
+
+    /// <summary>
+    /// DragOver-Handler fuer eine Prompt-Zeile. Setzt die Drop-Effekte und
+    /// hebt die Zeile mit einer farbigen Linie oben oder unten hervor — je
+    /// nachdem ob der Cursor in der oberen oder unteren Haelfte ist.
+    /// </summary>
+    private void OnPromptRowDragOver(Border row, System.Windows.DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(PromptDragFormat))
+        {
+            e.Effects = System.Windows.DragDropEffects.None;
+            return;
+        }
+        e.Effects = System.Windows.DragDropEffects.Move;
+        e.Handled = true;
+
+        var pos = e.GetPosition(row);
+        bool above = pos.Y < row.ActualHeight / 2.0;
+        HighlightRowDropTarget(row, true, above);
+    }
+
+    /// <summary>
+    /// Schaltet die Drop-Indikator-Linie an oder aus. Aktiv: goldene Linie
+    /// oben (above=true) oder unten (above=false). Inaktiv: keine Linie.
+    /// Nutzt BorderBrush+BorderThickness direkt am Row-Border — der
+    /// PromptRow-Style setzt diese Properties NICHT, also kein Konflikt.
+    /// </summary>
+    private static void HighlightRowDropTarget(Border row, bool active, bool above)
+    {
+        if (!active)
+        {
+            row.BorderThickness = new Thickness(0);
+            return;
+        }
+        row.BorderBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+        row.BorderThickness = above
+            ? new Thickness(0, 2, 0, 0)
+            : new Thickness(0, 0, 0, 2);
+    }
+
+    /// <summary>
+    /// Drop-Handler fuer eine Prompt-Zeile. Bestimmt die Insert-Position
+    /// (oben/unten zum Target), sortiert die SortOrder aller betroffenen
+    /// Prompts in der Ziel-Kategorie neu und persistiert die Aenderungen.
+    /// Bei kategorieuebergreifendem Drop wird zusaetzlich die CategoryId
+    /// des Quell-Prompts auf die Ziel-Kategorie umgesetzt.
+    /// </summary>
+    private async Task OnPromptDroppedOnRowAsync(Prompt targetPrompt, Border row,
+                                                 System.Windows.DragEventArgs e)
+    {
+        HighlightRowDropTarget(row, false, false);
+
+        if (!e.Data.GetDataPresent(PromptDragFormat)) return;
+        if (e.Data.GetData(PromptDragFormat) is not string idStr ||
+            !Guid.TryParse(idStr, out var sourceId)) return;
+        if (sourceId == targetPrompt.Id) return; // Drop auf sich selbst — No-Op
+
+        var pos = e.GetPosition(row);
+        bool above = pos.Y < row.ActualHeight / 2.0;
+        var targetCategoryId = targetPrompt.CategoryId;
+
+        // Quelle aus den aktuell sichtbaren Prompts holen — der Drag kann
+        // nur von einer sichtbaren Zeile gestartet sein.
+        var sourcePrompt = _currentPrompts.FirstOrDefault(p => p.Id == sourceId);
+        if (sourcePrompt is null) return;
+
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+            // Alle Prompts der Ziel-Kategorie geordnet einsammeln.
+            var prompts = (await repo.GetByCategoryAsync(targetCategoryId))
+                .OrderBy(p => p.SortOrder)
+                .ThenBy(p => p.ShortLabel, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            // Falls die Quelle schon in der Liste war (gleiche Kategorie),
+            // entfernen — sie wird gleich an der neuen Position eingefuegt.
+            prompts.RemoveAll(p => p.Id == sourceId);
+
+            int targetIdx = prompts.FindIndex(p => p.Id == targetPrompt.Id);
+            if (targetIdx < 0) targetIdx = prompts.Count;
+            int insertIdx = above ? targetIdx : targetIdx + 1;
+            if (insertIdx < 0) insertIdx = 0;
+            if (insertIdx > prompts.Count) insertIdx = prompts.Count;
+
+            // Bei Cross-Kategorie-Drop die Quelle umhaengen.
+            sourcePrompt.CategoryId = targetCategoryId;
+            prompts.Insert(insertIdx, sourcePrompt);
+
+            // Lueckenlos neu nummerieren (0, 1, 2, ...) und alles schreiben.
+            for (int i = 0; i < prompts.Count; i++)
+            {
+                if (prompts[i].SortOrder != i ||
+                    (prompts[i].Id == sourceId && prompts[i].CategoryId == targetCategoryId))
+                {
+                    prompts[i].SortOrder = i;
+                    await repo.UpdateAsync(prompts[i]);
+                }
+            }
+
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Verschieben fehlgeschlagen: {ex.Message}",
+                "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        await RefreshAsync();
     }
 
     /// <summary>
