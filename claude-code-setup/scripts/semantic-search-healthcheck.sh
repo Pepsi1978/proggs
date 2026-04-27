@@ -179,11 +179,11 @@ else
     warn "3E: Ollama not reachable (HTTP $HTTP_CODE) — start Ollama first"
 fi
 
-# 3F: nomic-embed-text model loaded?
-if curl -s http://localhost:11434/api/tags 2>/dev/null | grep -q "nomic-embed-text"; then
-    ok "3F: nomic-embed-text model present"
+# 3F: snowflake-arctic-embed2 model loaded?
+if curl -s http://localhost:11434/api/tags 2>/dev/null | grep -q "snowflake-arctic-embed2"; then
+    ok "3F: snowflake-arctic-embed2 model present"
 else
-    fail "3F: nomic-embed-text missing — run: ollama pull nomic-embed-text"
+    fail "3F: snowflake-arctic-embed2 missing — run: ollama pull snowflake-arctic-embed2"
 fi
 
 # ---------------------------------------------------------------------------

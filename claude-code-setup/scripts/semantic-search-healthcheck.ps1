@@ -204,15 +204,15 @@ try {
     $OllamaRunning = $false
 }
 
-# 3F: nomic-embed-text model loaded?
+# 3F: snowflake-arctic-embed2 model loaded?
 if ($OllamaRunning) {
     try {
         $Tags = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -ErrorAction Stop
-        $HasModel = $Tags.models | Where-Object { $_.name -like "*nomic-embed-text*" }
+        $HasModel = $Tags.models | Where-Object { $_.name -like "*snowflake-arctic-embed2*" }
         if ($HasModel) {
-            Write-OK "3F: nomic-embed-text model present"
+            Write-OK "3F: snowflake-arctic-embed2 model present"
         } else {
-            Write-Fail "3F: nomic-embed-text missing — run: ollama pull nomic-embed-text"
+            Write-Fail "3F: snowflake-arctic-embed2 missing — run: ollama pull snowflake-arctic-embed2"
         }
     } catch {
         Write-Warn "3F: Could not check model list — Ollama API error"
