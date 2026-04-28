@@ -454,7 +454,7 @@
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1310,4 +1310,6 @@
     <string name="prompt_clear_confirm_text">నీవు నిజంగా ఈ ఎంట్రీని విసర్జించాలనుకుంటున్నావా?</string>
     <string name="prompt_clear_confirm_title">ఎంట్రీని విసర్జించాలా?</string>
     <string name="prompt_clear_content_desc">ఇన్‌పుట్ తొలగించు</string>
+    <string name="settings_legal_section_header">చట్టపరమైన పత్రాలు</string>
+    <string name="settings_legal_online_label">ఆన్‌లైన్ వెర్షన్ (ఇంటర్నెట్‌తో):</string>
 </resources>

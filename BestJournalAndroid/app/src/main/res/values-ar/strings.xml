@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
@@ -1384,4 +1384,6 @@
     <string name="prompt_record_button_label">تسجيل</string>
     <string name="prompt_send_button_label">إرسال</string>
     <string name="prompt_stop_button_label">إيقاف</string>
+    <string name="settings_legal_section_header">الوثائق القانونية</string>
+    <string name="settings_legal_online_label">النسخة الإلكترونية (تتطلب الإنترنت):</string>
 </resources>

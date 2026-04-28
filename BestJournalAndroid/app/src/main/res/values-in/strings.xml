@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">Dibuka pada %1$s</string>
     <!-- About -->
     <string name="settings_about">Tentang aplikasi</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">Jurnal AI pribadimu</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Keluar?</string>
@@ -1364,4 +1364,6 @@ Apa yang ingin kamu lakukan?</string>
     <string name="prompt_record_button_label">Rekam</string>
     <string name="prompt_send_button_label">Kirim</string>
     <string name="prompt_stop_button_label">Berhenti</string>
+    <string name="settings_legal_section_header">Dokumen Hukum</string>
+    <string name="settings_legal_online_label">Versi online (dengan internet):</string>
 </resources>

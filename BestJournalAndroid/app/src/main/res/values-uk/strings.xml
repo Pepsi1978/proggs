@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">Відкрито: %1$s</string>
     <!-- About -->
     <string name="settings_about">Про застосунок</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Вийти?</string>
@@ -1378,4 +1378,6 @@
     <string name="prompt_record_button_label">Записати</string>
     <string name="prompt_send_button_label">Надіслати</string>
     <string name="prompt_stop_button_label">Стоп</string>
+    <string name="settings_legal_section_header">Юридичні документи</string>
+    <string name="settings_legal_online_label">Онлайн-версія (з інтернетом):</string>
 </resources>

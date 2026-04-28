@@ -238,6 +238,11 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                                             launchSingleTop = true
                                         }
                                     },
+                                    onNavigateToLegal = { route ->
+                                        navController.navigate(route) {
+                                            launchSingleTop = true
+                                        }
+                                    },
                                 )
                         }
                     }

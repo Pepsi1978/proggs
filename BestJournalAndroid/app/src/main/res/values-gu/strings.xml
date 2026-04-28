@@ -464,7 +464,7 @@
     <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
     
     <string name="settings_about">App વિશે</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
     
     <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
@@ -1325,4 +1325,6 @@
     <string name="prompt_record_button_label">રેકોર્ડ</string>
     <string name="prompt_send_button_label">મોકલો</string>
     <string name="prompt_stop_button_label">બંધ કરો</string>
+    <string name="settings_legal_section_header">કાનૂની દસ્તાવેજો</string>
+    <string name="settings_legal_online_label">ઑનલાઇન સંસ્કરણ (ઇન્ટરનેટ સાથે):</string>
 </resources>

@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1387,4 +1387,6 @@
     <string name="prompt_clear_confirm_text">இந்தப் பதிவை நிராகரிக்க விரும்புகிறாயா?</string>
     <string name="prompt_clear_confirm_title">பதிவை நிராகரிக்கவா?</string>
     <string name="prompt_clear_content_desc">உள்ளீட்டை அழி</string>
+    <string name="settings_legal_section_header">சட்ட ஆவணங்கள்</string>
+    <string name="settings_legal_online_label">ஆன்லைன் பதிப்பு (இணையத்துடன்):</string>
 </resources>

@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>
@@ -1374,4 +1374,6 @@ Que veux-tu faire ?</string>
     <string name="prompt_record_button_label">Enregistrer</string>
     <string name="prompt_send_button_label">Envoyer</string>
     <string name="prompt_stop_button_label">Arrêter</string>
+    <string name="settings_legal_section_header">Documents juridiques</string>
+    <string name="settings_legal_online_label">Version en ligne (avec internet) :</string>
 </resources>

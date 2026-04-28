@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s tarihinde açıldı</string>
     <!-- About -->
     <string name="settings_about">Uygulama hakkında</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">Kişisel YZ günlüğün</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Çıkış yapılsın mı?</string>
@@ -1368,4 +1368,6 @@ Ne yapmak istersin?</string>
     <string name="prompt_record_button_label">Kaydet</string>
     <string name="prompt_send_button_label">Gönder</string>
     <string name="prompt_stop_button_label">Durdur</string>
+    <string name="settings_legal_section_header">Yasal Belgeler</string>
+    <string name="settings_legal_online_label">Çevrimiçi sürüm (internet gerekli):</string>
 </resources>

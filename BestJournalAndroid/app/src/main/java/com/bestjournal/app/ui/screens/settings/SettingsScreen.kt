@@ -144,6 +144,7 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onNavigateToPaywall: (String) -> Unit = {},
     onProfileChanged: () -> Unit = {},
+    onNavigateToLegal: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -3793,10 +3794,11 @@ fun SettingsScreen(
                 }
 
                 // 9. Ueber die App
-                GlassCard(
-                    modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Rounded.Info,
@@ -3832,6 +3834,75 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
+                        )
+
+                        // 9b. Rechtliche Dokumente — In-App + Online
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.settings_legal_section_header),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 3 In-App buttons (offline, file:///android_asset/...)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            LegalDocumentRow(
+                                label = stringResource(R.string.legal_title_datenschutz),
+                                onClick = {
+                                    playClick()
+                                    onNavigateToLegal("legal/datenschutz")
+                                },
+                            )
+                            LegalDocumentRow(
+                                label = stringResource(R.string.legal_title_impressum),
+                                onClick = {
+                                    playClick()
+                                    onNavigateToLegal("legal/impressum")
+                                },
+                            )
+                            LegalDocumentRow(
+                                label = stringResource(R.string.legal_title_nutzungsbedingungen),
+                                onClick = {
+                                    playClick()
+                                    onNavigateToLegal("legal/nutzungsbedingungen")
+                                },
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            stringResource(R.string.settings_legal_online_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val onlineUrl = stringResource(R.string.settings_legal_online_url)
+                        Text(
+                            text = onlineUrl,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clickable {
+                                    playClick()
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(onlineUrl),
+                                    )
+                                    intent.flags =
+                                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                    context.startActivity(intent)
+                                }
+                                .padding(vertical = 4.dp),
+                            textAlign = TextAlign.Center,
+                            textDecoration =
+                                androidx.compose.ui.text.style.TextDecoration.Underline,
                         )
                     }
                 }
@@ -4832,6 +4903,39 @@ private fun CustomAnalysesBenefitPoint(text: String) {
             text = text,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LegalDocumentRow(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Description,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "›",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.outline,
         )
     }
 }

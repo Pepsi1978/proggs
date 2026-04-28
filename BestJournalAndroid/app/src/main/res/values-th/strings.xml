@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
     <!-- About -->
     <string name="settings_about">เกี่ยวกับแอป</string>
-    <string name="settings_about_version">Best Journal V0.16.2</string>
+    <string name="settings_about_version">Best Journal V0.16.3</string>
     <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ออกจากระบบ?</string>
@@ -1364,4 +1364,6 @@
     <string name="prompt_record_button_label">บันทึก</string>
     <string name="prompt_send_button_label">ส่ง</string>
     <string name="prompt_stop_button_label">หยุด</string>
+    <string name="settings_legal_section_header">เอกสารทางกฎหมาย</string>
+    <string name="settings_legal_online_label">เวอร์ชันออนไลน์ (ต้องใช้อินเทอร์เน็ต):</string>
 </resources>
