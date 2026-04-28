@@ -160,6 +160,10 @@
     <string name="share_improved_version">潤色版</string>
     <string name="share_photos_videos_label">帶上照片和影片：</string>
     <string name="share_footer">來自 BestJournal 應用的日記條目</string>
+    <string name="share_what_to_share">想分享什麼？</string>
+    <string name="share_journal_entry">日記條目</string>
+    <string name="share_followup_numbered">補充<xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">補充</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

@@ -160,6 +160,10 @@
     <string name="share_improved_version">بہتر شدہ ورژن</string>
     <string name="share_photos_videos_label">تصاویر/ویڈیوز شامل کریں:</string>
     <string name="share_footer">‏BestJournal App سے ڈائری اندراج</string>
+    <string name="share_what_to_share">کیا شیئر کرنا چاہتے ہیں؟</string>
+    <string name="share_journal_entry">ڈائری اندراج</string>
+    <string name="share_followup_numbered">بعد کا اندراج <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">بعد کا اندراج</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

@@ -160,6 +160,10 @@
     <string name="share_improved_version">النسخة المحسّنة</string>
     <string name="share_photos_videos_label">مشاركة الصور ومقاطع الفيديو:</string>
     <string name="share_footer">تسجيل مذكرات من تطبيق BestJournal</string>
+    <string name="share_what_to_share">ماذا تريد أن تشارك؟</string>
+    <string name="share_journal_entry">تسجيل المذكرات</string>
+    <string name="share_followup_numbered">إضافة <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">إضافة</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

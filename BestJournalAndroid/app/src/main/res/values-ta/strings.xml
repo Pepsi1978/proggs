@@ -160,6 +160,10 @@
     <string name="share_improved_version">மேம்படுத்திய பதிப்பு</string>
     <string name="share_photos_videos_label">புகைப்படங்கள்/வீடியோக்கள் பகிர்:</string>
     <string name="share_footer">BestJournal App-இல் இருந்து நாட்குறிப்பு பதிவு</string>
+    <string name="share_what_to_share">எதைப் பகிர விரும்புகிறீர்கள்?</string>
+    <string name="share_journal_entry">நாட்குறிப்பு பதிவு</string>
+    <string name="share_followup_numbered">கூடுதல் குறிப்பு <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">கூடுதல் குறிப்பு</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

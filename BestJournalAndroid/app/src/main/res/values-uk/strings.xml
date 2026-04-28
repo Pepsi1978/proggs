@@ -160,6 +160,10 @@
     <string name="share_improved_version">Покращена версія</string>
     <string name="share_photos_videos_label">Додати фото та відео:</string>
     <string name="share_footer">Запис щоденника з додатка BestJournal</string>
+    <string name="share_what_to_share">Чим хочеш поділитися?</string>
+    <string name="share_journal_entry">Запис щоденника</string>
+    <string name="share_followup_numbered">Доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Доповнення</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

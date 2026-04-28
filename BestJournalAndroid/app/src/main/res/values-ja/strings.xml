@@ -160,6 +160,10 @@
     <string name="share_improved_version">改善版</string>
     <string name="share_photos_videos_label">写真・動画も送る：</string>
     <string name="share_footer">BestJournalアプリの日記</string>
+    <string name="share_what_to_share">何を共有しますか？</string>
+    <string name="share_journal_entry">日記の記録</string>
+    <string name="share_followup_numbered">追記<xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">追記</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

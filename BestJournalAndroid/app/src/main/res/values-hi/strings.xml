@@ -160,6 +160,10 @@
     <string name="share_improved_version">सुधरा वर्शन</string>
     <string name="share_photos_videos_label">फोटो/वीडियो साझा करें:</string>
     <string name="share_footer">BestJournal ऐप से डायरी एंट्री</string>
+    <string name="share_what_to_share">क्या साझा करना चाहते हैं?</string>
+    <string name="share_journal_entry">डायरी एंट्री</string>
+    <string name="share_followup_numbered">फ़ॉलो-अप <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">फ़ॉलो-अप</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

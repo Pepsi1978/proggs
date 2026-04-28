@@ -84,11 +84,11 @@ fun ShareEntryDialog(
                         .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // "Was möchtest du teilen?" section — lets the user drop the
-                // main entry entirely (e.g. share only a Nachtrag), and
-                // individually toggle each Nachtrag.
+                // Section header lets the user drop the main entry entirely
+                // (e.g. share only a follow-up), and individually toggle each
+                // follow-up.
                 Text(
-                    "Was möchtest du teilen?",
+                    stringResource(R.string.share_what_to_share),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -100,7 +100,10 @@ fun ShareEntryDialog(
                         checked = includeEntry,
                         onCheckedChange = { includeEntry = it },
                     )
-                    Text("Tagebucheintrag", color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        stringResource(R.string.share_journal_entry),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
 
                 followUps.forEachIndexed { index, _ ->
@@ -116,7 +119,10 @@ fun ShareEntryDialog(
                             onCheckedChange = { selectedFollowUps[index] = it },
                         )
                         Text(
-                            "Nachtrag ${index + 1}",
+                            stringResource(
+                                R.string.share_followup_numbered,
+                                (index + 1).toString(),
+                            ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -232,7 +238,16 @@ fun buildShareText(
         if (followUps.isNotEmpty()) {
             followUps.forEachIndexed { index, followUp ->
                 append("\n\n")
-                append(if (followUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+                append(
+                    if (followUps.size == 1) {
+                        context.getString(R.string.share_followup_single)
+                    } else {
+                        context.getString(
+                            R.string.share_followup_numbered,
+                            (index + 1).toString(),
+                        )
+                    }
+                )
                 append("\n${followUp.text}")
             }
         }

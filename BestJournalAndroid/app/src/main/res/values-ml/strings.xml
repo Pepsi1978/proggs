@@ -152,6 +152,10 @@
     <string name="share_improved_version">മെച്ചപ്പെട്ട പതിപ്പ്</string>
     <string name="share_photos_videos_label">ഫോട്ടോ/വീഡിയോ ഉൾപ്പെടുത്തണോ:</string>
     <string name="share_footer">BestJournal App-ൽ നിന്നുള്ള ഡയറി എൻട്രി</string>
+    <string name="share_what_to_share">എന്താണ് പങ്കിടേണ്ടത്?</string>
+    <string name="share_journal_entry">ഡയറി എൻട്രി</string>
+    <string name="share_followup_numbered">അനുബന്ധം <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">അനുബന്ധം</string>
 
     <!-- DASHBOARD SCREEN -->
     <string name="dashboard_title">ഡാഷ്ബോർഡ്</string>

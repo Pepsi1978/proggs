@@ -160,6 +160,10 @@
     <string name="share_improved_version">మెరుగుపరచిన వెర్షన్</string>
     <string name="share_photos_videos_label">ఫోటోలు/వీడియోలు షేర్ చేయండి:</string>
     <string name="share_footer">BestJournal ఆప్ నుండి డైరీ నమోదు</string>
+    <string name="share_what_to_share">ఏమి షేర్ చేయాలనుకుంటున్నారు?</string>
+    <string name="share_journal_entry">డైరీ నమోదు</string>
+    <string name="share_followup_numbered">అదనపు నమోదు <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">అదనపు నమోదు</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

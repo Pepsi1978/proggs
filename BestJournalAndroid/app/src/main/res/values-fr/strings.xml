@@ -160,6 +160,10 @@
     <string name="share_improved_version">Version améliorée</string>
     <string name="share_photos_videos_label">Inclure photos/vidéos\u00A0:</string>
     <string name="share_footer">Entrée de journal depuis l\'appli BestJournal</string>
+    <string name="share_what_to_share">Que veux-tu partager ?</string>
+    <string name="share_journal_entry">Entrée de journal</string>
+    <string name="share_followup_numbered">Note de suivi <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Note de suivi</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

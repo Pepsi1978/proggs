@@ -160,6 +160,10 @@
     <string name="share_improved_version">ಸುಧಾರಿತ ಆವೃತ್ತಿ</string>
     <string name="share_photos_videos_label">ಫೋಟೋಗಳು/ವೀಡಿಯೊಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ:</string>
     <string name="share_footer">BestJournal ಆಪ್‌ನಿಂದ ಡೈರಿ ನಮೂದು</string>
+    <string name="share_what_to_share">ಏನನ್ನು ಹಂಚಿಕೊಳ್ಳಬೇಕು?</string>
+    <string name="share_journal_entry">ಡೈರಿ ನಮೂದು</string>
+    <string name="share_followup_numbered">ಹೆಚ್ಚುವರಿ ನಮೂದು <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">ಹೆಚ್ಚುವರಿ ನಮೂದು</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

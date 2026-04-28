@@ -160,6 +160,10 @@
     <string name="share_improved_version">İyileştirilmiş sürüm</string>
     <string name="share_photos_videos_label">Fotoğrafları/videoları da gönder:</string>
     <string name="share_footer">BestJournal uygulamasından günlük girişi</string>
+    <string name="share_what_to_share">Ne paylaşmak istiyorsun?</string>
+    <string name="share_journal_entry">Günlük girişi</string>
+    <string name="share_followup_numbered">Ek not <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Ek not</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

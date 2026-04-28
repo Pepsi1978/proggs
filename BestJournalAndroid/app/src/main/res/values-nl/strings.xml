@@ -160,6 +160,10 @@
     <string name="share_improved_version">Verbeterde versie</string>
     <string name="share_photos_videos_label">Foto\'s/video\'s meesturen:</string>
     <string name="share_footer">Dagboeknotitie uit de BestJournal-app</string>
+    <string name="share_what_to_share">Wat wil je delen?</string>
+    <string name="share_journal_entry">Dagboeknotitie</string>
+    <string name="share_followup_numbered">Aanvulling <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Aanvulling</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

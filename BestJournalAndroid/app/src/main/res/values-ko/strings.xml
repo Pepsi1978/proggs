@@ -160,6 +160,10 @@
     <string name="share_improved_version">다듬은 버전</string>
     <string name="share_photos_videos_label">사진/동영상도 함께:</string>
     <string name="share_footer">BestJournal 앱의 일기 기록</string>
+    <string name="share_what_to_share">무엇을 공유할까요?</string>
+    <string name="share_journal_entry">일기 기록</string>
+    <string name="share_followup_numbered">추가 메모 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">추가 메모</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

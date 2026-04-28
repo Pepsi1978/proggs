@@ -160,6 +160,10 @@
     <string name="share_improved_version">ฉบับปรับปรุง</string>
     <string name="share_photos_videos_label">แชร์ภาพถ่ายและวิดีโอ:</string>
     <string name="share_footer">บันทึกสมุดจากแอป BestJournal</string>
+    <string name="share_what_to_share">อยากแชร์อะไร?</string>
+    <string name="share_journal_entry">บันทึกประจำวัน</string>
+    <string name="share_followup_numbered">ส่วนเพิ่ม <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">ส่วนเพิ่ม</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

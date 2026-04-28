@@ -1,4 +1,4 @@
-<resources xmlns:ns0="http://schemas.android.com/tools" xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" ns0:locale="gu">
+<resources xmlns:ns0="http://schemas.android.com/tools" xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2" ns0:locale="gu">
     
     <string name="app_name" translatable="false">Best Journal</string>
 
@@ -149,6 +149,10 @@
     <string name="share_improved_version">સુધારેલ આવૃત્તિ</string>
     <string name="share_photos_videos_label">ફોટો/વિડિઓ શૅર કરો:</string>
     <string name="share_footer">BestJournal App ની ડાયરી નોંધ</string>
+    <string name="share_what_to_share">શું શૅર કરવું છે?</string>
+    <string name="share_journal_entry">ડાયરી નોંધ</string>
+    <string name="share_followup_numbered">વધારાની નોંધ <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">વધારાની નોંધ</string>
 
     
     <string name="dashboard_title">ડૅશબોર્ડ</string>

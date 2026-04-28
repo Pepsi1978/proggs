@@ -160,6 +160,10 @@
     <string name="share_improved_version">Versi diperbaiki</string>
     <string name="share_photos_videos_label">Sertakan foto/video:</string>
     <string name="share_footer">Entri jurnal dari aplikasi BestJournal</string>
+    <string name="share_what_to_share">Mau bagikan apa?</string>
+    <string name="share_journal_entry">Entri jurnal</string>
+    <string name="share_followup_numbered">Catatan tambahan <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Catatan tambahan</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
