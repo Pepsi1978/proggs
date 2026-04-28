@@ -147,6 +147,63 @@
     <string name="entry_gallery">Gallery</string>
     <string name="entry_delete_title">Delete entry?</string>
     <string name="entry_delete_message">Permanently delete this entry?</string>
+    <string name="entry_journal_entry_title">Journal entry</string>
+    <string name="entry_delete_entry_cd">Delete journal entry</string>
+    <string name="entry_photos_videos_add_title">Add photos/videos</string>
+
+    <!-- Follow-ups -->
+    <string name="follow_up_inline_title">Follow-up <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_delete_cd">Delete follow-up</string>
+    <string name="follow_up_tab_improved">Improved</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_improve_with_ai">Improve with AI</string>
+    <string name="follow_up_card_title">Follow-up</string>
+    <string name="follow_up_premium_hint">from the second follow-up</string>
+    <string name="follow_up_dialog_title">Follow-up</string>
+    <string name="follow_up_transcribing">Transcribing follow-up…</string>
+    <string name="follow_up_speak_prompt">Speak your follow-up.</string>
+    <string name="follow_up_stop_hint">Tap Stop when you\'re done.</string>
+    <string name="follow_up_choose_input_mode">How would you like to add your follow-up?</string>
+    <string name="follow_up_input_write_cd">Write</string>
+    <string name="follow_up_input_write_label">Write</string>
+    <string name="follow_up_input_speak_cd">Speak</string>
+    <string name="follow_up_input_speak_label">Speak</string>
+    <string name="follow_up_dialog_label">Your follow-up:</string>
+    <string name="follow_up_speak_pill_label">Speak</string>
+    <string name="follow_up_text_placeholder">Write your follow-up here…</string>
+    <string name="follow_up_show_original">↩ Show original</string>
+    <string name="follow_up_show_improved">✨ Show improved version</string>
+    <string name="follow_up_improve_text">✨ Improve text</string>
+    <string name="follow_up_improving">AI is improving the follow-up…</string>
+    <string name="follow_up_save_improved">Save improved</string>
+    <string name="follow_up_save">Save</string>
+    <string name="follow_up_cancel">Cancel</string>
+    <string name="follow_up_discard">Discard</string>
+    <string name="follow_up_delete_confirm_title">Delete follow-up <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_delete_confirm_text">Are you sure you want to permanently delete follow-up <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_delete_button">Delete</string>
+    <string name="follow_up_premium_title">Unlimited follow-ups</string>
+    <string name="follow_up_premium_body">With Premium, you can add as many follow-ups to each journal entry as you like.</string>
+    <string name="follow_up_premium_subtext">Every follow-up flows into your dashboard automatically so your analysis always stays complete.</string>
+    <string name="follow_up_premium_subscribe">Start subscription</string>
+    <string name="follow_up_premium_later">Decide later</string>
+
+    <!-- Generic actions / journal state / custom analysis profile / prompt clear -->
+    <string name="action_no">No</string>
+    <string name="action_yes">Yes</string>
+    <string name="journal_improve">Improve text</string>
+    <string name="journal_state_improving">Improving…</string>
+    <string name="journal_state_transcribing">Transcribing…</string>
+    <string name="profile_custom_add">Add custom analysis</string>
+    <string name="profile_custom_remove">Remove custom analysis</string>
+    <string name="profile_custom_rename">Rename</string>
+    <string name="profile_custom_rename_save">Save name</string>
+    <string name="prompt_clear_confirm_text">The custom analysis will be permanently deleted. Are you sure you want to continue?</string>
+    <string name="prompt_clear_confirm_title">Delete text?</string>
+    <string name="prompt_clear_content_desc">Delete text</string>
+    <string name="prompt_recording_with_model">Recording — model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> is transcribing…</string>
+    <string name="prompt_transcription_model_hint">Transcribed with <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 
     <!-- Share dialog -->
     <string name="share_title">Share entry</string>

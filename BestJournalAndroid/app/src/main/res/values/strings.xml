@@ -168,6 +168,12 @@
     <string name="entry_delete_entry_cd">Tagebucheintrag löschen</string>
     <string name="entry_photos_videos_add_title">Fotos/Videos hinzufügen</string>
 
+    <!-- AI-improved suffix marker (per EU AI Act Art. 50(4)). The marker is what
+         we search for in existing text to avoid double-appending; the suffix is
+         what gets appended to the cleaned text. Keep them in sync. -->
+    <string name="ai_improved_suffix_marker">✨ KI-verbessert</string>
+    <string name="ai_improved_suffix">\n\n✨ KI-verbessert</string>
+
     <!-- Follow-ups (Nachtraege) -->
     <string name="follow_up_inline_title">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Nachtrag löschen</string>
