@@ -89,3 +89,20 @@
 -keep class com.bestjournal.app.util.MonthlyReviewReceiver { *; }
 -keep class com.bestjournal.app.util.YearlyReviewReceiver { *; }
 -keep class com.bestjournal.app.util.BootReminderReceiver { *; }
+
+# R8 missing class warnings — Apache HTTP Client transitive dependencies
+# (javax.naming and org.ietf.jgss are not available on Android — these classes
+# are only used by code paths that Android never executes. Suppressing the
+# warnings is the standard fix recommended by AGP itself in missing_rules.txt.)
+-dontwarn javax.naming.InvalidNameException
+-dontwarn javax.naming.NamingException
+-dontwarn javax.naming.directory.Attribute
+-dontwarn javax.naming.directory.Attributes
+-dontwarn javax.naming.ldap.LdapName
+-dontwarn javax.naming.ldap.Rdn
+-dontwarn org.ietf.jgss.GSSContext
+-dontwarn org.ietf.jgss.GSSCredential
+-dontwarn org.ietf.jgss.GSSException
+-dontwarn org.ietf.jgss.GSSManager
+-dontwarn org.ietf.jgss.GSSName
+-dontwarn org.ietf.jgss.Oid
