@@ -48,7 +48,7 @@
     <string name="churn_instead_of">statt </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">✨ Mit KI verbessert</string>
+    <string name="label_improved">✨ KI verbessert</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Aktuell</string>
@@ -181,7 +181,7 @@
     <!-- Follow-ups (Nachtraege) -->
     <string name="follow_up_inline_title">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Nachtrag löschen</string>
-    <string name="follow_up_tab_improved">✨ Mit KI verbessert</string>
+    <string name="follow_up_tab_improved">✨ KI verbessert</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_improve_with_ai">Mit KI nachträglich verbessern</string>
     <string name="follow_up_card_title">Nachtrag</string>

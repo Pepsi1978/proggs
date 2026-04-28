@@ -48,7 +48,7 @@
     <string name="churn_instead_of">ಬದಲಿಗೆ </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">ಮೂಲ</string>
-    <string name="label_improved">ಸುಧಾರಿತ</string>
+    <string name="label_improved">✨ AI ಸುಧಾರಿತ</string>
     <string name="label_photo">ಫೋಟೋ</string>
     <string name="label_video">ವೀಡಿಯೊ</string>
     <string name="label_current">ಪ್ರಸ್ತುತ</string>
@@ -1296,7 +1296,7 @@
     <string name="follow_up_speak_pill_label">ಮಾತನಾಡಿ</string>
     <string name="follow_up_speak_prompt">ಈಗ ಮಾತನಾಡಿ…</string>
     <string name="follow_up_stop_hint">ನಿಲ್ಲಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
-    <string name="follow_up_tab_improved">ಸುಧಾರಿಸಿದ್ದು</string>
+    <string name="follow_up_tab_improved">✨ AI ಸುಧಾರಿತ</string>
     <string name="follow_up_tab_original">ಮೂಲ</string>
     <string name="follow_up_text_placeholder">ಇಲ್ಲಿ ನಿಮ್ಮ ಟಿಪ್ಪಣಿ ಬರೆಯಿರಿ…</string>
     <string name="follow_up_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>

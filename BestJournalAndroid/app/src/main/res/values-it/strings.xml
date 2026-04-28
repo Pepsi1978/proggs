@@ -48,7 +48,7 @@
     <string name="churn_instead_of">invece di </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Originale</string>
-    <string name="label_improved">Migliorato</string>
+    <string name="label_improved">✨ IA Migliorato</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Attuale</string>
@@ -1297,7 +1297,7 @@ Cosa vuoi fare?</string>
     <string name="follow_up_speak_pill_label">Dettare</string>
     <string name="follow_up_speak_prompt">Ditta la tua annotazione.</string>
     <string name="follow_up_stop_hint">Tocca Stop quando hai finito.</string>
-    <string name="follow_up_tab_improved">✨ Migliorato con l\'IA</string>
+    <string name="follow_up_tab_improved">✨ IA Migliorato</string>
     <string name="follow_up_tab_original">Originale</string>
     <string name="follow_up_text_placeholder">Scrivi qui la tua annotazione…</string>
     <string name="follow_up_transcribing">Trascrizione dell\'annotazione in corso…</string>

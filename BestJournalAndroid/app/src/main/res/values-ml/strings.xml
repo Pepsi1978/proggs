@@ -43,7 +43,7 @@
     <string name="churn_instead_of">പകരം </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">ഒറിജിനൽ</string>
-    <string name="label_improved">മെച്ചപ്പെട്ടത്</string>
+    <string name="label_improved">✨ AI മെച്ചപ്പെട്ട</string>
     <string name="label_photo">ഫോട്ടോ</string>
     <string name="label_video">വീഡിയോ</string>
     <string name="label_current">നിലവിലുള്ളത്</string>
@@ -1291,7 +1291,7 @@
     <string name="follow_up_speak_pill_label">സംസാരിക്കൂ</string>
     <string name="follow_up_speak_prompt">ഇപ്പോൾ നിന്റെ തുടർ കുറിപ്പ് പറയൂ.</string>
     <string name="follow_up_stop_hint">നിർത്താൻ ടാപ്പ് ചെയ്യൂ</string>
-    <string name="follow_up_tab_improved">✨ AI ഉപയോഗിച്ച് മെച്ചപ്പെടുത്തിയത്</string>
+    <string name="follow_up_tab_improved">✨ AI മെച്ചപ്പെട്ട</string>
     <string name="follow_up_tab_original">ഒറിജിനൽ</string>
     <string name="follow_up_text_placeholder">നിന്റെ തുടർ കുറിപ്പ് എഴുതൂ…</string>
     <string name="follow_up_transcribing">ട്രാൻസ്‌ക്രൈബ് ചെയ്യുന്നു…</string>

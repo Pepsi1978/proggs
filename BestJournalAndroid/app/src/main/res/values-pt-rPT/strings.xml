@@ -48,7 +48,7 @@
     <string name="churn_instead_of">em vez de </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">Melhorado</string>
+    <string name="label_improved">✨ IA Melhorado</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Vídeo</string>
     <string name="label_current">Atual</string>
@@ -1295,7 +1295,7 @@ O que queres fazer?</string>
     <string name="follow_up_speak_pill_label">Gravar voz</string>
     <string name="follow_up_speak_prompt">Fala o teu complemento.</string>
     <string name="follow_up_stop_hint">Toca em Parar quando terminares.</string>
-    <string name="follow_up_tab_improved">✨ Melhorado com IA</string>
+    <string name="follow_up_tab_improved">✨ IA Melhorado</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_text_placeholder">Escreve o teu complemento aqui…</string>
     <string name="follow_up_transcribing">A transcrever o complemento…</string>

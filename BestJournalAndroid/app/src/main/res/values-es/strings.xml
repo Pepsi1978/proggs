@@ -48,7 +48,7 @@
     <string name="churn_instead_of">en vez de </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">Mejorado</string>
+    <string name="label_improved">✨ IA Mejorado</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Actual</string>
@@ -1260,7 +1260,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="entry_photos_videos_add_title">Agregar fotos/videos</string>
     <string name="follow_up_inline_title">Anotación <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Eliminar anotación</string>
-    <string name="follow_up_tab_improved">Mejorada</string>
+    <string name="follow_up_tab_improved">✨ IA Mejorado</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_improve_with_ai">Mejorar con IA</string>
     <string name="follow_up_card_title">Anotación</string>

@@ -48,7 +48,7 @@
     <string name="churn_instead_of">బదులుగా </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">అసలైనది</string>
-    <string name="label_improved">మెరుగుపరచినది</string>
+    <string name="label_improved">✨ AI మెరుగైన</string>
     <string name="label_photo">ఫోటో</string>
     <string name="label_video">వీడియో</string>
     <string name="label_current">ప్రస్తుతం</string>
@@ -1288,7 +1288,7 @@
     <string name="follow_up_speak_pill_label">మాట్లాడు</string>
     <string name="follow_up_speak_prompt">ఇప్పుడు నీ అనుసరణ గమనికను మాట్లాడు.</string>
     <string name="follow_up_stop_hint">ఆపడానికి నొక్కు</string>
-    <string name="follow_up_tab_improved">✨ AI తో మెరుగుపరచబడింది</string>
+    <string name="follow_up_tab_improved">✨ AI మెరుగైన</string>
     <string name="follow_up_tab_original">అసలు</string>
     <string name="follow_up_text_placeholder">నీ అనుసరణ గమనికను రాయి…</string>
     <string name="follow_up_transcribing">లిప్యంతరీకరిస్తోంది…</string>

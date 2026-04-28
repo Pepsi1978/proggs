@@ -48,7 +48,7 @@
     <string name="churn_instead_of">แทน </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">ต้นฉบับ</string>
-    <string name="label_improved">ปรับปรุงแล้ว</string>
+    <string name="label_improved">✨ AI ปรับปรุง</string>
     <string name="label_photo">ภาพถ่าย</string>
     <string name="label_video">วิดีโอ</string>
     <string name="label_current">ปัจจุบัน</string>
@@ -1291,7 +1291,7 @@
     <string name="follow_up_speak_pill_label">บันทึกเสียง</string>
     <string name="follow_up_speak_prompt">พูดบันทึกเพิ่มเติมของคุณ</string>
     <string name="follow_up_stop_hint">แตะหยุดเมื่อเสร็จแล้ว</string>
-    <string name="follow_up_tab_improved">✨ ปรับปรุงด้วย AI</string>
+    <string name="follow_up_tab_improved">✨ AI ปรับปรุง</string>
     <string name="follow_up_tab_original">ต้นฉบับ</string>
     <string name="follow_up_text_placeholder">เขียนบันทึกเพิ่มเติมของคุณที่นี่…</string>
     <string name="follow_up_transcribing">กำลังแปลงบันทึกเพิ่มเติมเป็นข้อความ…</string>

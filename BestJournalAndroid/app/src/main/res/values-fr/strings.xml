@@ -48,7 +48,7 @@
     <string name="churn_instead_of">au lieu de </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">Amélioré</string>
+    <string name="label_improved">✨ IA Amélioré</string>
     <string name="label_photo">Photo</string>
     <string name="label_video">Vidéo</string>
     <string name="label_current">Actuel</string>
@@ -1264,7 +1264,7 @@ Que veux-tu faire ?</string>
     <string name="entry_photos_videos_add_title">Ajouter des photos/vidéos</string>
     <string name="follow_up_inline_title">Ajout <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Supprimer l\'ajout</string>
-    <string name="follow_up_tab_improved">Amélioré</string>
+    <string name="follow_up_tab_improved">✨ IA Amélioré</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_improve_with_ai">Améliorer avec l\'IA</string>
     <string name="follow_up_card_title">Ajout</string>

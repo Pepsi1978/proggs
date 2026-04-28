@@ -48,7 +48,7 @@
     <string name="churn_instead_of">而不是 </string>
     <string name="label_premium">高階版</string>
     <string name="label_original">原文</string>
-    <string name="label_improved">已潤色</string>
+    <string name="label_improved">✨ AI 優化</string>
     <string name="label_photo">照片</string>
     <string name="label_video">影片</string>
     <string name="label_current">當前</string>
@@ -1293,7 +1293,7 @@
     <string name="follow_up_speak_pill_label">語音輸入</string>
     <string name="follow_up_speak_prompt">請說出你的補充內容。</string>
     <string name="follow_up_stop_hint">完成後請點選停止。</string>
-    <string name="follow_up_tab_improved">✨ AI 已優化</string>
+    <string name="follow_up_tab_improved">✨ AI 優化</string>
     <string name="follow_up_tab_original">原文</string>
     <string name="follow_up_text_placeholder">在此寫下你的補充…</string>
     <string name="follow_up_transcribing">正在轉錄補充內容…</string>

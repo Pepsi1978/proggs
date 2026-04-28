@@ -48,7 +48,7 @@
     <string name="churn_instead_of">in plaats van </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Origineel</string>
-    <string name="label_improved">Verbeterd</string>
+    <string name="label_improved">✨ AI Verbeterd</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Huidig</string>
@@ -1297,7 +1297,7 @@ Wat wil je doen?</string>
     <string name="follow_up_speak_pill_label">Inspreken</string>
     <string name="follow_up_speak_prompt">Spreek je aanvulling in.</string>
     <string name="follow_up_stop_hint">Tik op Stop als je klaar bent.</string>
-    <string name="follow_up_tab_improved">✨ Verbeterd met AI</string>
+    <string name="follow_up_tab_improved">✨ AI Verbeterd</string>
     <string name="follow_up_tab_original">Origineel</string>
     <string name="follow_up_text_placeholder">Schrijf hier je aanvulling…</string>
     <string name="follow_up_transcribing">Aanvulling wordt getranscribeerd…</string>

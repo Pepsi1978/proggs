@@ -48,7 +48,7 @@
     <string name="churn_instead_of">の代わりに </string>
     <string name="label_premium">プレミアム</string>
     <string name="label_original">元の文章</string>
-    <string name="label_improved">改善済み</string>
+    <string name="label_improved">✨ AI 改善</string>
     <string name="label_photo">写真</string>
     <string name="label_video">動画</string>
     <string name="label_current">現在</string>
@@ -1293,7 +1293,7 @@
     <string name="follow_up_speak_pill_label">音声入力</string>
     <string name="follow_up_speak_prompt">追記を声で入力してください。</string>
     <string name="follow_up_stop_hint">完了したらStopをタップしてください。</string>
-    <string name="follow_up_tab_improved">✨ AIで改善済み</string>
+    <string name="follow_up_tab_improved">✨ AI 改善</string>
     <string name="follow_up_tab_original">オリジナル</string>
     <string name="follow_up_text_placeholder">追記をここに書いてください…</string>
     <string name="follow_up_transcribing">追記を文字起こし中…</string>

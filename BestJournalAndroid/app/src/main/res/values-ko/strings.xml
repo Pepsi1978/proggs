@@ -48,7 +48,7 @@
     <string name="churn_instead_of">대신에 </string>
     <string name="label_premium">프리미엄</string>
     <string name="label_original">원문</string>
-    <string name="label_improved">다듬은 글</string>
+    <string name="label_improved">✨ AI 개선</string>
     <string name="label_photo">사진</string>
     <string name="label_video">동영상</string>
     <string name="label_current">현재</string>
@@ -1293,7 +1293,7 @@
     <string name="follow_up_speak_pill_label">음성 입력</string>
     <string name="follow_up_speak_prompt">추가 기록을 말해 주세요.</string>
     <string name="follow_up_stop_hint">완료되면 Stop을 탭해 주세요.</string>
-    <string name="follow_up_tab_improved">✨ AI로 개선됨</string>
+    <string name="follow_up_tab_improved">✨ AI 개선</string>
     <string name="follow_up_tab_original">원본</string>
     <string name="follow_up_text_placeholder">추가 기록을 여기에 써 주세요…</string>
     <string name="follow_up_transcribing">추가 기록을 변환하는 중…</string>

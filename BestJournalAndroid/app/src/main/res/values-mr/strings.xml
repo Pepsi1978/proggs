@@ -48,7 +48,7 @@
     <string name="churn_instead_of">ऐवजी </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">मूळ</string>
-    <string name="label_improved">सुधारित</string>
+    <string name="label_improved">✨ AI सुधारित</string>
     <string name="label_photo">फोटो</string>
     <string name="label_video">व्हिडिओ</string>
     <string name="label_current">सद्य</string>
@@ -1295,7 +1295,7 @@
     <string name="follow_up_speak_pill_label">बोला</string>
     <string name="follow_up_speak_prompt">आता बोला…</string>
     <string name="follow_up_stop_hint">थांबण्यासाठी टॅप करा</string>
-    <string name="follow_up_tab_improved">सुधारित</string>
+    <string name="follow_up_tab_improved">✨ AI सुधारित</string>
     <string name="follow_up_tab_original">मूळ</string>
     <string name="follow_up_text_placeholder">येथे तुमची नोंद लिहा…</string>
     <string name="follow_up_transcribing">ट्रान्सक्राइब होत आहे…</string>

@@ -48,7 +48,7 @@
     <string name="churn_instead_of">zamiast </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Oryginał</string>
-    <string name="label_improved">Poprawiony</string>
+    <string name="label_improved">✨ AI Ulepszone</string>
     <string name="label_photo">Zdjęcie</string>
     <string name="label_video">Wideo</string>
     <string name="label_current">Obecny</string>
@@ -1305,7 +1305,7 @@ Co chcesz zrobić?</string>
     <string name="follow_up_speak_pill_label">Nagraj głosowo</string>
     <string name="follow_up_speak_prompt">Nagraj swoje uzupełnienie głosowo.</string>
     <string name="follow_up_stop_hint">Dotknij Stop, gdy skończysz.</string>
-    <string name="follow_up_tab_improved">✨ Ulepszone przez AI</string>
+    <string name="follow_up_tab_improved">✨ AI Ulepszone</string>
     <string name="follow_up_tab_original">Oryginał</string>
     <string name="follow_up_text_placeholder">Napisz tutaj swoje uzupełnienie…</string>
     <string name="follow_up_transcribing">Transkrypcja uzupełnienia…</string>

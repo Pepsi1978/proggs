@@ -48,7 +48,7 @@
     <string name="churn_instead_of">yerine </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Orijinal</string>
-    <string name="label_improved">İyileştirilmiş</string>
+    <string name="label_improved">✨ YZ Geliştirildi</string>
     <string name="label_photo">Fotoğraf</string>
     <string name="label_video">Video</string>
     <string name="label_current">Güncel</string>
@@ -1295,7 +1295,7 @@ Ne yapmak istersin?</string>
     <string name="follow_up_speak_pill_label">Sesle gir</string>
     <string name="follow_up_speak_prompt">Eklemeyi sesle söyle.</string>
     <string name="follow_up_stop_hint">Bitirince Dur\'a dokun.</string>
-    <string name="follow_up_tab_improved">✨ YZ ile geliştirildi</string>
+    <string name="follow_up_tab_improved">✨ YZ Geliştirildi</string>
     <string name="follow_up_tab_original">Orijinal</string>
     <string name="follow_up_text_placeholder">Eklemeyi buraya yaz…</string>
     <string name="follow_up_transcribing">Ekleme metne dönüştürülüyor…</string>

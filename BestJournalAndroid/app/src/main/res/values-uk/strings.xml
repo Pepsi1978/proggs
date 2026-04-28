@@ -48,7 +48,7 @@
     <string name="churn_instead_of">замість </string>
     <string name="label_premium">Преміум</string>
     <string name="label_original">Оригінал</string>
-    <string name="label_improved">Покращено</string>
+    <string name="label_improved">✨ ШІ Покращено</string>
     <string name="label_photo">Фото</string>
     <string name="label_video">Відео</string>
     <string name="label_current">Поточний</string>
@@ -1305,7 +1305,7 @@
     <string name="follow_up_speak_pill_label">Надиктувати</string>
     <string name="follow_up_speak_prompt">Надиктуй своє доповнення.</string>
     <string name="follow_up_stop_hint">Натисни Стоп, коли закінчиш.</string>
-    <string name="follow_up_tab_improved">✨ Покращено ШІ</string>
+    <string name="follow_up_tab_improved">✨ ШІ Покращено</string>
     <string name="follow_up_tab_original">Оригінал</string>
     <string name="follow_up_text_placeholder">Напиши тут своє доповнення…</string>
     <string name="follow_up_transcribing">Транскрибування доповнення…</string>

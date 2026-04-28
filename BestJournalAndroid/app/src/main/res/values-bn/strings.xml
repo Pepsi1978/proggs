@@ -48,7 +48,7 @@
     <string name="churn_instead_of">এর বদলে </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">আসল</string>
-    <string name="label_improved">উন্নত</string>
+    <string name="label_improved">✨ AI উন্নত</string>
     <string name="label_photo">ছবি</string>
     <string name="label_video">ভিডিও</string>
     <string name="label_current">বর্তমান</string>
@@ -1357,7 +1357,7 @@
     <string name="follow_up_speak_pill_label">বলো</string>
     <string name="follow_up_speak_prompt">এখন তোমার সংযোজন বলো।</string>
     <string name="follow_up_stop_hint">থামাতে ট্যাপ করো</string>
-    <string name="follow_up_tab_improved">✨ এআই দিয়ে উন্নত</string>
+    <string name="follow_up_tab_improved">✨ AI উন্নত</string>
     <string name="follow_up_tab_original">আসল</string>
     <string name="follow_up_text_placeholder">তোমার সংযোজন লেখো…</string>
     <string name="follow_up_transcribing">ট্রান্সক্রাইব হচ্ছে…</string>

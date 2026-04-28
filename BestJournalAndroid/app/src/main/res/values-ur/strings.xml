@@ -48,7 +48,7 @@
     <string name="churn_instead_of">بجائے </string>
     <string name="label_premium">‏Premium</string>
     <string name="label_original">اصل</string>
-    <string name="label_improved">بہتر شدہ</string>
+    <string name="label_improved">✨ AI بہتر</string>
     <string name="label_photo">تصویر</string>
     <string name="label_video">ویڈیو</string>
     <string name="label_current">موجودہ</string>
@@ -1296,7 +1296,7 @@
     <string name="follow_up_speak_pill_label">بول کر لکھیں</string>
     <string name="follow_up_speak_prompt">اپنا اضافی نوٹ بول کر لکھوائیں۔</string>
     <string name="follow_up_stop_hint">فارغ ہونے پر Stop دبائیں۔</string>
-    <string name="follow_up_tab_improved">✨ AI سے بہتر کیا گیا</string>
+    <string name="follow_up_tab_improved">✨ AI بہتر</string>
     <string name="follow_up_tab_original">اصل</string>
     <string name="follow_up_text_placeholder">اپنا اضافی نوٹ یہاں لکھیں…</string>
     <string name="follow_up_transcribing">اضافی نوٹ تحریر میں تبدیل ہو رہا ہے…</string>

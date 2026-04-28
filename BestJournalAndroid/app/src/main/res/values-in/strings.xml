@@ -48,7 +48,7 @@
     <string name="churn_instead_of">bukan </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Asli</string>
-    <string name="label_improved">Diperbaiki</string>
+    <string name="label_improved">✨ AI Diperbaiki</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Saat ini</string>
@@ -1291,7 +1291,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="follow_up_speak_pill_label">Rekam suara</string>
     <string name="follow_up_speak_prompt">Ucapkan catatan tambahanmu.</string>
     <string name="follow_up_stop_hint">Ketuk Berhenti jika sudah selesai.</string>
-    <string name="follow_up_tab_improved">✨ Ditingkatkan dengan AI</string>
+    <string name="follow_up_tab_improved">✨ AI Diperbaiki</string>
     <string name="follow_up_tab_original">Asli</string>
     <string name="follow_up_text_placeholder">Tulis catatan tambahanmu di sini…</string>
     <string name="follow_up_transcribing">Catatan tambahan sedang ditranskripsi…</string>

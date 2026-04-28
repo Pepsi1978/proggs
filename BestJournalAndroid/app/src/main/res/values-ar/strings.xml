@@ -48,7 +48,7 @@
     <string name="churn_instead_of">بدلا من </string>
     <string name="label_premium">المميّز</string>
     <string name="label_original">الأصلي</string>
-    <string name="label_improved">محسّن</string>
+    <string name="label_improved">✨ AI محسَّن</string>
     <string name="label_photo">صورة</string>
     <string name="label_video">فيديو</string>
     <string name="label_current">الحالي</string>
@@ -1311,7 +1311,7 @@
     <string name="follow_up_speak_pill_label">تسجيل صوتي</string>
     <string name="follow_up_speak_prompt">سجّل ملاحظتك اللاحقة بصوتك.</string>
     <string name="follow_up_stop_hint">اضغط إيقاف عند الانتهاء.</string>
-    <string name="follow_up_tab_improved">✨ مُحسَّن بالذكاء الاصطناعي</string>
+    <string name="follow_up_tab_improved">✨ AI محسَّن</string>
     <string name="follow_up_tab_original">الأصل</string>
     <string name="follow_up_text_placeholder">اكتب ملاحظتك اللاحقة هنا…</string>
     <string name="follow_up_transcribing">جارٍ تحويل الملاحظة اللاحقة إلى نص…</string>

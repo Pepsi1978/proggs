@@ -48,7 +48,7 @@
     <string name="churn_instead_of">பதிலாக </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">அசல்</string>
-    <string name="label_improved">மேம்படுத்தப்பட்டது</string>
+    <string name="label_improved">✨ AI மேம்பட்டது</string>
     <string name="label_photo">படம்</string>
     <string name="label_video">வீடியோ</string>
     <string name="label_current">தற்போதைய</string>
@@ -1365,7 +1365,7 @@
     <string name="follow_up_speak_pill_label">பேசு</string>
     <string name="follow_up_speak_prompt">இப்போது உன் கூடுதல் குறிப்பை பேசு.</string>
     <string name="follow_up_stop_hint">நிறுத்த தட்டு</string>
-    <string name="follow_up_tab_improved">✨ AI மூலம் மேம்படுத்தப்பட்டது</string>
+    <string name="follow_up_tab_improved">✨ AI மேம்பட்டது</string>
     <string name="follow_up_tab_original">அசல்</string>
     <string name="follow_up_text_placeholder">உன் கூடுதல் குறிப்பை எழுது…</string>
     <string name="follow_up_transcribing">எழுத்தாக மாற்றுகிறது…</string>
