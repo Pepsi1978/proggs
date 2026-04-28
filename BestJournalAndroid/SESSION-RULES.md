@@ -34,8 +34,8 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 - **Versionierung**: Bei JEDEM Commit versionCode+1 erhoehen in build.gradle.kts UND SettingsScreen.kt
 
 ## Geraete
-- Erstes Handy (Samsung, Windows): `RFCX70KTDFX`
-- Zweites Handy (Samsung, Windows): `R5CW206F0ZM`
+- S23 Ultra (Samsung, Windows): `R5CW206F0ZM`
+- Zweites Samsung-Handy (Windows): `RFCX70KTDFX`
 - Tablet (Windows): `3406105H803E8G`
 - Emulator: `emulator-5554`
 - Samsung (macOS): `R52W800205N`
