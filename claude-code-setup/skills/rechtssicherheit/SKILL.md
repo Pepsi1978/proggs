@@ -564,14 +564,49 @@ verarbeitet zwangslaeufig solche Daten.
 | **A — UK-Vertreter buchen** (z.B. gdprlocal.com, verasafe.com, captaincompliance.com) | Vertrag, Adressuebernahme in DSE | ~£100-300/Jahr laufend | **NICHT empfohlen** |
 | **B — UK aus Distribution ausschliessen** | Play Console → App content → Country availability → United Kingdom abhaken | 0 | **STANDARD-EMPFEHLUNG** |
 
-**Trigger-Bedingungen (alle gleichzeitig):**
+**Trigger-Bedingungen (ALLE drei muessen gleichzeitig zutreffen — sonst kein Befund):**
 
 1. App ist im UK Play Store verfuegbar (oder soll dort verfuegbar gemacht werden)
-2. App-Anbieter sitzt nicht in UK
-3. App verarbeitet personenbezogene Daten von Nutzern (auch nur Crash-Logs,
-   IP-Adressen, Push-Tokens, Account-Daten — also faktisch jede App)
+2. App-Anbieter sitzt nicht in UK (z.B. Deutschland)
+3. App verarbeitet personenbezogene Daten von UK-Nutzern — **PFLICHT-Pruefung im Repo,
+   keine Annahme**. Was als Datenverarbeitung zaehlt:
+   - Crash-Logs/Crashlytics/Sentry (IP-Adresse + Device-IDs)
+   - Analytics (Firebase Analytics, Amplitude, Mixpanel, etc.)
+   - Push-Notifications (FCM Token = personenbezogen)
+   - Account-/Login-System (E-Mail, Username, Auth-Token)
+   - Cloud-Sync, Backup-Server, Server-API-Calls
+   - Werbe-IDs (Advertising ID), Ads SDKs
+   - WebView mit Login/Cookie-Tracking
+   - Datenbank-Backups in Cloud-Speicher
+   - Server-Logs auf Backend (auch IP)
 
-**Pflicht-Handlung des Skills:**
+**WICHTIG — Wenn keine Datenverarbeitung nachgewiesen werden kann:**
+
+Wenn der Skill nach gruendlicher Repo-Pruefung KEINE der oben genannten Datenverarbeitungen
+findet (echte 100%-Offline-App, keine Permissions ausser ggf. STORAGE, kein Backend, keine
+SDKs ausser Build-Tools), dann darf die App in UK bleiben — **es gibt keinen Befund und
+keine Empfehlung zum Ausschluss**. Im Bericht wird notiert:
+
+> "UK-Vertreter-Pflicht (Art. 27) greift hier nicht, weil im Repo keine personenbezogene
+> Datenverarbeitung von UK-Nutzern nachweisbar ist. UK darf in Country Availability bleiben."
+
+**Pflicht-Pruefung im Repo (vor jeder UK-Empfehlung):**
+
+```sh
+# Datenverarbeitung indirekt nachweisen
+rg -n -i "firebase|crashlytics|analytics|sentry|amplitude|mixpanel|fcm|admob|adsense|advertising[-_ ]id|ad_id|ads-sdk" [APP_DIR]
+# Netzwerk-/Backend-Aktivitaet
+rg -n -i "INTERNET|http://|https://|retrofit|okhttp|ktor|api-key|bearer" [APP_DIR]
+# Account-/Login-Indikatoren
+rg -n -i "login|signup|signin|account|firebase[-_ ]auth|google[-_ ]signin" [APP_DIR]
+# Cloud-Sync / Backup
+rg -n -i "drive|dropbox|s3|gcs|cloud[-_ ]sync|backup[-_ ]server|sync[-_ ]server" [APP_DIR]
+```
+
+Wenn EINE dieser Suchen Treffer in produktivem Code ergibt → Datenverarbeitung gegeben →
+Trigger 3 erfuellt → Option B empfehlen.
+
+**Pflicht-Handlung des Skills (NUR wenn alle 3 Trigger erfuellt):**
 
 Wenn alle drei Trigger zutreffen, MUSS der Skill in den Bericht aufnehmen:
 
@@ -634,7 +669,7 @@ Der Skill erstellt fuer jeden geplanten Zielmarkt einen Eintrag in folgender Mat
 | Rechtsraum | Pflichtpruefung | Typische Release-Blocker |
 |---|---|---|
 | **DE/EU** | DSGVO, DDG, TDDDG, BGB/EGBGB, BFSG/EAA, DSA, AI Act | Fehlendes Impressum, fehlende Datenschutzerklaerung in DE, Cookie-/Tracking-Consent fehlt, kein Widerruf bei IAP/Abos, BFSG-Verstoesse |
-| **UK** | UK-GDPR, DPA 2018, PECR, Online Safety Act, **UK-GDPR Art. 27 (UK-Vertreter-Pflicht)** | PECR-Consent fehlt, OSA-Pflichten bei UGC, Privacy Policy ohne UK-Bezug, **kein UK-Vertreter benannt** — Standard-Empfehlung dieses Skills: **UK aus Distribution ausschliessen (Option B)** |
+| **UK** | UK-GDPR, DPA 2018, PECR, Online Safety Act, **UK-GDPR Art. 27 (UK-Vertreter-Pflicht NUR bei Datenverarbeitung von UK-Buergern)** | PECR-Consent fehlt, OSA-Pflichten bei UGC, Privacy Policy ohne UK-Bezug, **kein UK-Vertreter benannt trotz Datenverarbeitung** — Standard-Empfehlung dieses Skills: **UK aus Distribution ausschliessen (Option B)**. Wenn echte Offline-App ohne Datenverarbeitung: UK darf bleiben. |
 | **USA** | CCPA/CPRA, State Privacy Laws, COPPA, FTC Act, Health Breach/HIPAA/FDA | "Do Not Sell"-Pflichten, COPPA bei Kindern, Health-Claims ohne FDA |
 | **Kanada** | PIPEDA, Quebec Law 25 | Quebec-Sprachpflicht, Privacy-Officer-Pflicht, Data-Transfer-Disclosure |
 | **Australien/NZ** | Privacy Act / APPs | Fehlende Privacy Policy mit AU-Bezug, Cross-Border-Disclosure |
