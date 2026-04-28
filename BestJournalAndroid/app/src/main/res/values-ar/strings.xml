@@ -147,6 +147,8 @@
     <string name="entry_cd_share">مشاركة</string>
     <string name="entry_recording_duration">مدة التسجيل: %1$s</string>
     <string name="entry_tts_generating">يرجى الانتظار، جار توليد الصوت…</string>
+    <string name="entry_tts_journal_label">تدوينة المذكرة</string>
+    <string name="entry_tts_followup_label">ملحق %1$s</string>
     <string name="entry_cd_photo_page">صورة %1$d</string>
     <string name="entry_add_photo_video">إضافة صورة أو فيديو</string>
     <string name="entry_camera">الكاميرا</string>

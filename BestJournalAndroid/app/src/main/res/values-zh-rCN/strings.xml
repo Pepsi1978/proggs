@@ -147,6 +147,8 @@
     <string name="entry_cd_share">分享</string>
     <string name="entry_recording_duration">录音时长：%1$s</string>
     <string name="entry_tts_generating">请稍候，声音正在生成…</string>
+    <string name="entry_tts_journal_label">日记条目</string>
+    <string name="entry_tts_followup_label">补充 %1$s</string>
     <string name="entry_cd_photo_page">照片 %1$d</string>
     <string name="entry_add_photo_video">添加照片/视频</string>
     <string name="entry_camera">相机</string>
@@ -1247,4 +1249,68 @@
     <string name="paywall_feature_followups">每篇日记可无限补充</string>
     <string name="settings_premium_feature_followups">无限补充</string>
     <string name="settings_premium_feature_followups_desc">每篇日记想加多少补充就加多少</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">否</string>
+    <string name="action_yes">是</string>
+    <string name="ai_improved_suffix">\n\n✨ AI 已优化</string>
+    <string name="ai_improved_suffix_marker">✨ AI 已优化</string>
+    <string name="entry_delete_entry_cd">删除日记条目</string>
+    <string name="entry_journal_entry_title">日记条目</string>
+    <string name="entry_photos_videos_add_title">添加照片/视频</string>
+    <string name="follow_up_cancel">取消</string>
+    <string name="follow_up_card_title">补充</string>
+    <string name="follow_up_choose_input_mode">你想如何添加补充？</string>
+    <string name="follow_up_delete_button">删除</string>
+    <string name="follow_up_delete_cd">删除补充</string>
+    <string name="follow_up_delete_confirm_text">确定要永久删除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 条补充吗？</string>
+    <string name="follow_up_delete_confirm_title">删除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 条补充？</string>
+    <string name="follow_up_dialog_label">你的补充：</string>
+    <string name="follow_up_dialog_title">补充</string>
+    <string name="follow_up_discard">放弃</string>
+    <string name="follow_up_improve_text">✨ 润色文字</string>
+    <string name="follow_up_improve_with_ai">用 AI 事后润色</string>
+    <string name="follow_up_improving">AI 正在润色补充内容…</string>
+    <string name="follow_up_inline_title">补充 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">语音输入</string>
+    <string name="follow_up_input_speak_label">语音输入</string>
+    <string name="follow_up_input_write_cd">文字输入</string>
+    <string name="follow_up_input_write_label">文字输入</string>
+    <string name="follow_up_premium_body">开通高级版后，你可以为每篇日记添加任意数量的补充。</string>
+    <string name="follow_up_premium_hint">从第二条补充开始</string>
+    <string name="follow_up_premium_later">稍后再说</string>
+    <string name="follow_up_premium_subscribe">开始订阅</string>
+    <string name="follow_up_premium_subtext">每条补充会自动同步到面板，让你的分析始终保持完整。</string>
+    <string name="follow_up_premium_title">无限补充</string>
+    <string name="follow_up_save">保存</string>
+    <string name="follow_up_save_improved">保存优化版</string>
+    <string name="follow_up_show_improved">✨ 查看优化版</string>
+    <string name="follow_up_show_original">↩ 查看原文</string>
+    <string name="follow_up_speak_pill_label">语音输入</string>
+    <string name="follow_up_speak_prompt">请说出你的补充内容。</string>
+    <string name="follow_up_stop_hint">完成后点击停止。</string>
+    <string name="follow_up_tab_improved">✨ AI 已优化</string>
+    <string name="follow_up_tab_original">原文</string>
+    <string name="follow_up_text_placeholder">在此写下你的补充…</string>
+    <string name="follow_up_transcribing">正在转录补充内容…</string>
+    <string name="journal_improve">润色文字</string>
+    <string name="journal_state_improving">优化中…</string>
+    <string name="journal_state_transcribing">转录中…</string>
+    <string name="paywall_consent_dialog_body">完成订阅或购买后，你原则上享有 14 天的撤回权。\n\n为让你立即使用高级功能，我们将在购买后立即开始提供服务。在下方同意即表示你了解并放弃 14 天撤回权。\n\n若不同意，我们将无法立即为你开通高级功能。</string>
+    <string name="paywall_consent_dialog_cancel">取消</string>
+    <string name="paywall_consent_dialog_checkbox">我同意在下单后立即开始提供高级功能。我了解这意味着我放弃 14 天的撤回权。</string>
+    <string name="paywall_consent_dialog_confirm">立即付费订阅</string>
+    <string name="paywall_consent_dialog_title">撤回权告知</string>
+    <string name="profile_custom_add">添加自定义分析</string>
+    <string name="profile_custom_remove">删除自定义分析</string>
+    <string name="profile_custom_rename">重命名</string>
+    <string name="profile_custom_rename_save">保存名称</string>
+    <string name="prompt_clear_confirm_text">此自定义分析将被永久删除。确定要继续吗？</string>
+    <string name="prompt_clear_confirm_title">删除文字？</string>
+    <string name="prompt_clear_content_desc">删除文字</string>
+    <string name="prompt_recording_with_model">录音中 — 模型：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s 转录中…</string>
+    <string name="prompt_transcription_model_hint">已用 %1$s 转录</string>
 </resources>

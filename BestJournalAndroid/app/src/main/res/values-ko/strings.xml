@@ -147,6 +147,8 @@
     <string name="entry_cd_share">공유</string>
     <string name="entry_recording_duration">녹음 길이: %1$s</string>
     <string name="entry_tts_generating">목소리를 만들고 있어요. 잠시만 기다려 주세요…</string>
+    <string name="entry_tts_journal_label">일기 항목</string>
+    <string name="entry_tts_followup_label">추가 기록 %1$s</string>
     <string name="entry_cd_photo_page">사진 %1$d</string>
     <string name="entry_add_photo_video">사진/동영상 추가</string>
     <string name="entry_camera">카메라</string>
@@ -1247,4 +1249,68 @@
     <string name="paywall_feature_followups">모든 일기 항목에 무제한으로 추가 기록</string>
     <string name="settings_premium_feature_followups">무제한 추가 기록</string>
     <string name="settings_premium_feature_followups_desc">항목마다 원하는 만큼 추가 기록할 수 있어요</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">아니요</string>
+    <string name="action_yes">네</string>
+    <string name="ai_improved_suffix">\n\n✨ AI로 개선됨</string>
+    <string name="ai_improved_suffix_marker">✨ AI로 개선됨</string>
+    <string name="entry_delete_entry_cd">일기 항목 삭제</string>
+    <string name="entry_journal_entry_title">일기 항목</string>
+    <string name="entry_photos_videos_add_title">사진/동영상 추가</string>
+    <string name="follow_up_cancel">취소</string>
+    <string name="follow_up_card_title">추가 기록</string>
+    <string name="follow_up_choose_input_mode">추가 기록을 어떻게 입력할까요？</string>
+    <string name="follow_up_delete_button">삭제</string>
+    <string name="follow_up_delete_cd">추가 기록 삭제</string>
+    <string name="follow_up_delete_confirm_text">추가 기록 <xliff:g id="ordinal" example="1">%1$s</xliff:g>을(를) 정말 삭제할까요？이 작업은 되돌릴 수 없어요.</string>
+    <string name="follow_up_delete_confirm_title">추가 기록 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 삭제할까요？</string>
+    <string name="follow_up_dialog_label">추가 기록：</string>
+    <string name="follow_up_dialog_title">추가 기록</string>
+    <string name="follow_up_discard">버리기</string>
+    <string name="follow_up_improve_text">✨ 글 다듬기</string>
+    <string name="follow_up_improve_with_ai">AI로 나중에 다듬기</string>
+    <string name="follow_up_improving">AI가 추가 기록을 다듬고 있어요…</string>
+    <string name="follow_up_inline_title">추가 기록 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">음성 입력</string>
+    <string name="follow_up_input_speak_label">음성 입력</string>
+    <string name="follow_up_input_write_cd">텍스트 입력</string>
+    <string name="follow_up_input_write_label">텍스트 입력</string>
+    <string name="follow_up_premium_body">프리미엄을 구독하면 모든 일기 항목에 추가 기록을 원하는 만큼 추가할 수 있어요.</string>
+    <string name="follow_up_premium_hint">두 번째 추가 기록부터</string>
+    <string name="follow_up_premium_later">나중에 결정하기</string>
+    <string name="follow_up_premium_subscribe">구독 시작하기</string>
+    <string name="follow_up_premium_subtext">모든 추가 기록은 자동으로 대시보드에 반영되어 분석이 항상 완전하게 유지돼요.</string>
+    <string name="follow_up_premium_title">추가 기록 무제한</string>
+    <string name="follow_up_save">저장</string>
+    <string name="follow_up_save_improved">다듬은 버전 저장</string>
+    <string name="follow_up_show_improved">✨ 다듬은 버전 보기</string>
+    <string name="follow_up_show_original">↩ 원본 보기</string>
+    <string name="follow_up_speak_pill_label">음성 입력</string>
+    <string name="follow_up_speak_prompt">추가 기록을 말해 주세요.</string>
+    <string name="follow_up_stop_hint">완료되면 Stop을 탭해 주세요.</string>
+    <string name="follow_up_tab_improved">✨ AI로 개선됨</string>
+    <string name="follow_up_tab_original">원본</string>
+    <string name="follow_up_text_placeholder">추가 기록을 여기에 써 주세요…</string>
+    <string name="follow_up_transcribing">추가 기록을 변환하는 중…</string>
+    <string name="journal_improve">글 다듬기</string>
+    <string name="journal_state_improving">다듬는 중…</string>
+    <string name="journal_state_transcribing">변환하는 중…</string>
+    <string name="paywall_consent_dialog_body">구독 또는 구매 완료 후 원칙적으로 14일간의 철회권이 있어요.\n\n프리미엄 기능을 바로 이용할 수 있도록 구매 즉시 서비스 제공을 시작합니다. 아래에 동의하시면 14일간의 철회권을 포기하게 돼요.\n\n동의하지 않으시면 프리미엄 기능을 즉시 이용하실 수 없어요.</string>
+    <string name="paywall_consent_dialog_cancel">취소</string>
+    <string name="paywall_consent_dialog_checkbox">주문 즉시 프리미엄 기능 제공이 시작됨에 동의합니다. 이로 인해 14일간의 철회권을 잃게 됨을 알고 있어요.</string>
+    <string name="paywall_consent_dialog_confirm">지금 유료 구독하기</string>
+    <string name="paywall_consent_dialog_title">철회권 안내</string>
+    <string name="profile_custom_add">맞춤 분석 추가</string>
+    <string name="profile_custom_remove">맞춤 분석 삭제</string>
+    <string name="profile_custom_rename">이름 변경</string>
+    <string name="profile_custom_rename_save">이름 저장</string>
+    <string name="prompt_clear_confirm_text">이 맞춤 분석은 영구적으로 삭제돼요. 정말 계속할까요？</string>
+    <string name="prompt_clear_confirm_title">텍스트를 삭제할까요？</string>
+    <string name="prompt_clear_content_desc">텍스트 삭제</string>
+    <string name="prompt_recording_with_model">녹음 중 — 모델：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s 변환 중…</string>
+    <string name="prompt_transcription_model_hint">%1$s로 변환됨</string>
 </resources>

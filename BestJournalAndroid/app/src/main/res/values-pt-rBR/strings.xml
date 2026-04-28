@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Compartilhar</string>
     <string name="entry_recording_duration">Duração da gravação: %1$s</string>
     <string name="entry_tts_generating">Aguarde, a voz está sendo gerada…</string>
+    <string name="entry_tts_journal_label">Entrada do diário</string>
+    <string name="entry_tts_followup_label">Anotação %1$s</string>
     <string name="entry_cd_photo_page">Foto %1$d</string>
     <string name="entry_add_photo_video">Adicionar foto/vídeo</string>
     <string name="entry_camera">Câmera</string>

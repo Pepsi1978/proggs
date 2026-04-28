@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Delen</string>
     <string name="entry_recording_duration">Opnameduur: %1$s</string>
     <string name="entry_tts_generating">Wacht even, de stem wordt gegenereerd…</string>
+    <string name="entry_tts_journal_label">Dagboekvermelding</string>
+    <string name="entry_tts_followup_label">Vervolgnotitie %1$s</string>
     <string name="entry_cd_photo_page">Foto %1$d</string>
     <string name="entry_add_photo_video">Foto/video toevoegen</string>
     <string name="entry_camera">Camera</string>
@@ -1251,4 +1253,68 @@ Wat wil je doen?</string>
     <string name="paywall_feature_followups">Onbeperkt aanvullingen bij elke dagboeknotitie</string>
     <string name="settings_premium_feature_followups">Onbeperkt aanvullingen</string>
     <string name="settings_premium_feature_followups_desc">Zoveel aanvullingen per notitie als je wilt</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">Nee</string>
+    <string name="action_yes">Ja</string>
+    <string name="ai_improved_suffix">\n\n✨ Verbeterd met AI</string>
+    <string name="ai_improved_suffix_marker">✨ Verbeterd met AI</string>
+    <string name="entry_delete_entry_cd">Dagboeknotitie verwijderen</string>
+    <string name="entry_journal_entry_title">Dagboeknotitie</string>
+    <string name="entry_photos_videos_add_title">Foto\'s/video\'s toevoegen</string>
+    <string name="follow_up_cancel">Annuleren</string>
+    <string name="follow_up_card_title">Aanvulling</string>
+    <string name="follow_up_choose_input_mode">Hoe wil je je aanvulling toevoegen?</string>
+    <string name="follow_up_delete_button">Verwijderen</string>
+    <string name="follow_up_delete_cd">Aanvulling verwijderen</string>
+    <string name="follow_up_delete_confirm_text">Wil je aanvulling <xliff:g id="ordinal" example="1">%1$s</xliff:g> echt permanent verwijderen?</string>
+    <string name="follow_up_delete_confirm_title">Aanvulling <xliff:g id="ordinal" example="1">%1$s</xliff:g> verwijderen?</string>
+    <string name="follow_up_dialog_label">Jouw aanvulling:</string>
+    <string name="follow_up_dialog_title">Aanvulling</string>
+    <string name="follow_up_discard">Verwerpen</string>
+    <string name="follow_up_improve_text">✨ Tekst verbeteren</string>
+    <string name="follow_up_improve_with_ai">Achteraf verbeteren met AI</string>
+    <string name="follow_up_improving">AI verbetert de aanvulling…</string>
+    <string name="follow_up_inline_title">Aanvulling <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Inspreken</string>
+    <string name="follow_up_input_speak_label">Inspreken</string>
+    <string name="follow_up_input_write_cd">Typen</string>
+    <string name="follow_up_input_write_label">Typen</string>
+    <string name="follow_up_premium_body">Met Premium kun je zoveel aanvullingen toevoegen als je wilt bij elke dagboeknotitie.</string>
+    <string name="follow_up_premium_hint">vanaf de tweede aanvulling</string>
+    <string name="follow_up_premium_later">Later beslissen</string>
+    <string name="follow_up_premium_subscribe">Abonnement starten</string>
+    <string name="follow_up_premium_subtext">Elke aanvulling wordt automatisch meegenomen in het Dashboard, zodat je analyse altijd compleet is.</string>
+    <string name="follow_up_premium_title">Onbeperkt aanvullingen</string>
+    <string name="follow_up_save">Opslaan</string>
+    <string name="follow_up_save_improved">Verbeterde versie opslaan</string>
+    <string name="follow_up_show_improved">✨ Verbeterde versie tonen</string>
+    <string name="follow_up_show_original">↩ Origineel tonen</string>
+    <string name="follow_up_speak_pill_label">Inspreken</string>
+    <string name="follow_up_speak_prompt">Spreek je aanvulling in.</string>
+    <string name="follow_up_stop_hint">Tik op Stop als je klaar bent.</string>
+    <string name="follow_up_tab_improved">✨ Verbeterd met AI</string>
+    <string name="follow_up_tab_original">Origineel</string>
+    <string name="follow_up_text_placeholder">Schrijf hier je aanvulling…</string>
+    <string name="follow_up_transcribing">Aanvulling wordt getranscribeerd…</string>
+    <string name="journal_improve">Tekst verbeteren</string>
+    <string name="journal_state_improving">Wordt verbeterd…</string>
+    <string name="journal_state_transcribing">Wordt getranscribeerd…</string>
+    <string name="paywall_consent_dialog_body">Na het afsluiten van een abonnement of aankoop heb je in principe 14 dagen herroepingsrecht.\n\nZodat je de Premium-functies meteen kunt gebruiken, starten we de levering direct na je aankoop. Met je toestemming hieronder zie je bewust af van je herroepingsrecht van 14 dagen.\n\nZonder deze toestemming kunnen we de Premium-functies niet meteen activeren.</string>
+    <string name="paywall_consent_dialog_cancel">Annuleren</string>
+    <string name="paywall_consent_dialog_checkbox">Ik ga ermee akkoord dat de levering van de Premium-functies direct na bestelling begint. Ik begrijp dat ik hiermee afzie van mijn herroepingsrecht van 14 dagen.</string>
+    <string name="paywall_consent_dialog_confirm">Nu abonneren met betalingsverplichting</string>
+    <string name="paywall_consent_dialog_title">Herroepingsinformatie</string>
+    <string name="profile_custom_add">Aangepaste analyse toevoegen</string>
+    <string name="profile_custom_remove">Aangepaste analyse verwijderen</string>
+    <string name="profile_custom_rename">Hernoemen</string>
+    <string name="profile_custom_rename_save">Naam opslaan</string>
+    <string name="prompt_clear_confirm_text">De aangepaste analyse wordt permanent verwijderd. Wil je echt doorgaan?</string>
+    <string name="prompt_clear_confirm_title">Tekst verwijderen?</string>
+    <string name="prompt_clear_content_desc">Tekst verwijderen</string>
+    <string name="prompt_recording_with_model">Opname bezig — Model: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s transcribeert…</string>
+    <string name="prompt_transcription_model_hint">Getranscribeerd met %1$s</string>
 </resources>

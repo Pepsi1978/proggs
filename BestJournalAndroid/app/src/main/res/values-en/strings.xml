@@ -141,6 +141,8 @@
     <string name="entry_cd_share">Share</string>
     <string name="entry_recording_duration">Recording duration: %1$s</string>
     <string name="entry_tts_generating">Please wait, generating text-to-speech…</string>
+    <string name="entry_tts_journal_label">Journal entry</string>
+    <string name="entry_tts_followup_label">Follow-up %1$s</string>
     <string name="entry_cd_photo_page">Photo %1$d</string>
     <string name="entry_add_photo_video">Add photo/video</string>
     <string name="entry_camera">Camera</string>

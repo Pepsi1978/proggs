@@ -147,6 +147,8 @@
     <string name="entry_cd_share">แชร์</string>
     <string name="entry_recording_duration">ความยาวการบันทึก: %1$s</string>
     <string name="entry_tts_generating">โปรดรอ กำลังสร้างเสียง…</string>
+    <string name="entry_tts_journal_label">บันทึกประจำวัน</string>
+    <string name="entry_tts_followup_label">บันทึกเพิ่มเติม %1$s</string>
     <string name="entry_cd_photo_page">ภาพถ่าย %1$d</string>
     <string name="entry_add_photo_video">เพิ่มภาพถ่าย/วิดีโอ</string>
     <string name="entry_camera">กล้อง</string>

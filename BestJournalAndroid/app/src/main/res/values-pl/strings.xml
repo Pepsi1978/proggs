@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Udostępnij</string>
     <string name="entry_recording_duration">Czas nagrania: %1$s</string>
     <string name="entry_tts_generating">Chwila, głos jest generowany…</string>
+    <string name="entry_tts_journal_label">Wpis do dziennika</string>
+    <string name="entry_tts_followup_label">Uzupełnienie %1$s</string>
     <string name="entry_cd_photo_page">Zdjęcie %1$d</string>
     <string name="entry_add_photo_video">Dodaj zdjęcie/wideo</string>
     <string name="entry_camera">Aparat</string>
@@ -1259,4 +1261,68 @@ Co chcesz zrobić?</string>
     <string name="paywall_feature_followups">Nieograniczone uzupełnienia do każdego wpisu</string>
     <string name="settings_premium_feature_followups">Nieograniczone uzupełnienia</string>
     <string name="settings_premium_feature_followups_desc">Tyle uzupełnień na wpis, ile chcesz</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">Nie</string>
+    <string name="action_yes">Tak</string>
+    <string name="ai_improved_suffix">\n\n✨ Ulepszone przez AI</string>
+    <string name="ai_improved_suffix_marker">✨ Ulepszone przez AI</string>
+    <string name="entry_delete_entry_cd">Usuń wpis w dzienniku</string>
+    <string name="entry_journal_entry_title">Wpis w dzienniku</string>
+    <string name="entry_photos_videos_add_title">Dodaj zdjęcia/filmy</string>
+    <string name="follow_up_cancel">Anuluj</string>
+    <string name="follow_up_card_title">Uzupełnienie</string>
+    <string name="follow_up_choose_input_mode">Jak chcesz dodać uzupełnienie?</string>
+    <string name="follow_up_delete_button">Usuń</string>
+    <string name="follow_up_delete_cd">Usuń uzupełnienie</string>
+    <string name="follow_up_delete_confirm_text">Czy na pewno chcesz trwale usunąć uzupełnienie <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_delete_confirm_title">Usunąć uzupełnienie <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">Twoje uzupełnienie:</string>
+    <string name="follow_up_dialog_title">Uzupełnienie</string>
+    <string name="follow_up_discard">Odrzuć</string>
+    <string name="follow_up_improve_text">✨ Popraw tekst</string>
+    <string name="follow_up_improve_with_ai">Ulepsz później z AI</string>
+    <string name="follow_up_improving">AI ulepsza uzupełnienie…</string>
+    <string name="follow_up_inline_title">Uzupełnienie <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Nagraj głosowo</string>
+    <string name="follow_up_input_speak_label">Nagraj głosowo</string>
+    <string name="follow_up_input_write_cd">Napisz</string>
+    <string name="follow_up_input_write_label">Napisz</string>
+    <string name="follow_up_premium_body">Z Premium możesz dodać tyle uzupełnień, ile chcesz, do każdego wpisu w dzienniku.</string>
+    <string name="follow_up_premium_hint">od drugiego uzupełnienia</string>
+    <string name="follow_up_premium_later">Zdecyduj później</string>
+    <string name="follow_up_premium_subscribe">Subskrybuj</string>
+    <string name="follow_up_premium_subtext">Każde uzupełnienie trafia automatycznie do Panelu, dzięki czemu Twoja analiza jest zawsze kompletna.</string>
+    <string name="follow_up_premium_title">Nieograniczone uzupełnienia</string>
+    <string name="follow_up_save">Zapisz</string>
+    <string name="follow_up_save_improved">Zapisz ulepszoną wersję</string>
+    <string name="follow_up_show_improved">✨ Pokaż ulepszoną wersję</string>
+    <string name="follow_up_show_original">↩ Pokaż oryginał</string>
+    <string name="follow_up_speak_pill_label">Nagraj głosowo</string>
+    <string name="follow_up_speak_prompt">Nagraj swoje uzupełnienie głosowo.</string>
+    <string name="follow_up_stop_hint">Dotknij Stop, gdy skończysz.</string>
+    <string name="follow_up_tab_improved">✨ Ulepszone przez AI</string>
+    <string name="follow_up_tab_original">Oryginał</string>
+    <string name="follow_up_text_placeholder">Napisz tutaj swoje uzupełnienie…</string>
+    <string name="follow_up_transcribing">Transkrypcja uzupełnienia…</string>
+    <string name="journal_improve">Popraw tekst</string>
+    <string name="journal_state_improving">Ulepszanie…</string>
+    <string name="journal_state_transcribing">Transkrypcja…</string>
+    <string name="paywall_consent_dialog_body">Po zawarciu subskrypcji lub dokonaniu zakupu masz co do zasady 14-dniowe prawo do odstąpienia od umowy.\n\nAby umożliwić Ci natychmiastowe korzystanie z funkcji Premium, rozpoczynamy dostawę niezwłocznie po Twoim zakupie. Wyrażając zgodę poniżej, świadomie rezygnujesz z 14-dniowego prawa do odstąpienia od umowy.\n\nBez tej zgody nie możemy natychmiast odblokować funkcji Premium.</string>
+    <string name="paywall_consent_dialog_cancel">Anuluj</string>
+    <string name="paywall_consent_dialog_checkbox">Wyrażam zgodę, aby dostarczanie funkcji Premium rozpoczęło się natychmiast po złożeniu zamówienia. Wiem, że w ten sposób tracę 14-dniowe prawo do odstąpienia od umowy.</string>
+    <string name="paywall_consent_dialog_confirm">Subskrybuj teraz z obowiązkiem zapłaty</string>
+    <string name="paywall_consent_dialog_title">Informacja o prawie do odstąpienia</string>
+    <string name="profile_custom_add">Dodaj indywidualną analizę</string>
+    <string name="profile_custom_remove">Usuń indywidualną analizę</string>
+    <string name="profile_custom_rename">Zmień nazwę</string>
+    <string name="profile_custom_rename_save">Zapisz nazwę</string>
+    <string name="prompt_clear_confirm_text">Indywidualna analiza zostanie trwale usunięta. Czy na pewno chcesz kontynuować?</string>
+    <string name="prompt_clear_confirm_title">Usunąć tekst?</string>
+    <string name="prompt_clear_content_desc">Usuń tekst</string>
+    <string name="prompt_recording_with_model">Nagrywanie — Model: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s transkrybuje…</string>
+    <string name="prompt_transcription_model_hint">Transkrybowane przez %1$s</string>
 </resources>

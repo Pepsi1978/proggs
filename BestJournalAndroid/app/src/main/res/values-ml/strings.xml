@@ -139,6 +139,8 @@
     <string name="entry_cd_share">പങ്കിടുക</string>
     <string name="entry_recording_duration">റെക്കോർഡിംഗ് ദൈർഘ്യം: %1$s</string>
     <string name="entry_tts_generating">കാത്തിരിക്കൂ, Text-to-Speech ഉണ്ടാക്കുന്നു\u2026</string>
+    <string name="entry_tts_journal_label">ഡയറി എൻട്രി</string>
+    <string name="entry_tts_followup_label">അനുബന്ധം %1$s</string>
     <string name="entry_cd_photo_page">ഫോട്ടോ %1$d</string>
     <string name="entry_add_photo_video">ഫോട്ടോ/വീഡിയോ ചേർക്കുക</string>
     <string name="entry_camera">ക്യാമറ</string>

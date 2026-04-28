@@ -147,6 +147,8 @@
     <string name="entry_cd_share">শেয়ার করো</string>
     <string name="entry_recording_duration">রেকর্ডিং সময়কাল: %1$s</string>
     <string name="entry_tts_generating">একটু অপেক্ষা করো, টেক্সট-টু-স্পিচ তৈরি হচ্ছে…</string>
+    <string name="entry_tts_journal_label">ডায়েরি এন্ট্রি</string>
+    <string name="entry_tts_followup_label">অনুবর্তী %1$s</string>
     <string name="entry_cd_photo_page">ছবি %1$d</string>
     <string name="entry_add_photo_video">ছবি/ভিডিও যোগ করো</string>
     <string name="entry_camera">ক্যামেরা</string>

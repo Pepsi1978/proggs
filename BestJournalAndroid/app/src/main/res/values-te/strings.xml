@@ -147,6 +147,8 @@
     <string name="entry_cd_share">షేర్ చేయండి</string>
     <string name="entry_recording_duration">రికార్డింగ్ వ్యవధి: %1$s</string>
     <string name="entry_tts_generating">దయచేసి వేచి ఉండండి, Text-to-Speech సృష్టించబడుతోంది…</string>
+    <string name="entry_tts_journal_label">డైరీ ఎంట్రీ</string>
+    <string name="entry_tts_followup_label">అనుబంధం %1$s</string>
     <string name="entry_cd_photo_page">ఫోటో %1$d</string>
     <string name="entry_add_photo_video">ఫోటో/వీడియో జోడించండి</string>
     <string name="entry_camera">కెమెరా</string>

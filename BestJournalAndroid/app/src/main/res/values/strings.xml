@@ -158,6 +158,10 @@
     <string name="entry_cd_share">Teilen</string>
     <string name="entry_recording_duration">Aufnahmedauer: %1$s</string>
     <string name="entry_tts_generating">Bitte warten, Text-to-Speech wird erzeugt…</string>
+    <!-- TTS spoken label that introduces the journal entry text. Read aloud before the entry body. No trailing punctuation — code adds a comma. -->
+    <string name="entry_tts_journal_label">Tagebucheintrag</string>
+    <!-- TTS spoken label that introduces a follow-up. %1$s = the follow-up number. In German this is a spelled-out word ("eins", "zwei"); other languages use digits. No trailing punctuation — code adds a period. -->
+    <string name="entry_tts_followup_label">Nachtrag %1$s</string>
     <string name="entry_cd_photo_page">Foto %1$d</string>
     <string name="entry_add_photo_video">Foto/Video hinzufügen</string>
     <string name="entry_camera">Kamera</string>

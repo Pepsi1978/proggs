@@ -136,6 +136,8 @@
     <string name="entry_cd_share">શૅર કરો</string>
     <string name="entry_recording_duration">રેકૉર્ડિંગ સમય: %1$s</string>
     <string name="entry_tts_generating">કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\u2026</string>
+    <string name="entry_tts_journal_label">ડાયરી પ્રવેશ</string>
+    <string name="entry_tts_followup_label">પૂરક %1$s</string>
     <string name="entry_cd_photo_page">ફોટો %1$d</string>
     <string name="entry_add_photo_video">ફોટો/વિડિઓ ઉમેરો</string>
     <string name="entry_camera">કૅમેરા</string>

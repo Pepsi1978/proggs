@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Поділитися</string>
     <string name="entry_recording_duration">Тривалість запису: %1$s</string>
     <string name="entry_tts_generating">Зачекайте, голос генерується…</string>
+    <string name="entry_tts_journal_label">Запис у щоденнику</string>
+    <string name="entry_tts_followup_label">Доповнення %1$s</string>
     <string name="entry_cd_photo_page">Фото %1$d</string>
     <string name="entry_add_photo_video">Додати фото або відео</string>
     <string name="entry_camera">Камера</string>

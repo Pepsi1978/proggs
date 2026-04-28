@@ -829,25 +829,46 @@ fun EntryDetailScreen(
                                         edgeTtsGate.run {
                                             isTtsLoading = true
                                             isSpeaking = true
-                                            // TTS reads labels, not timestamps. Comma
-                                            // instead of a period after "Tagebucheintrag"
-                                            // keeps it inside one spoken sentence so
+                                            // TTS labels come from strings.xml so they
+                                            // match the device language. Comma instead
+                                            // of a period after the journal label keeps
+                                            // the phrase inside one spoken sentence so
                                             // Azure multilingual voices (Seraphina,
-                                            // Ava, ...) classify the whole phrase as
-                                            // German via sentence context — isolating
-                                            // the compound word behind a period made
-                                            // them mispronounce it as "Tagebuchchen-
+                                            // Ava, ...) classify the whole phrase via
+                                            // sentence context — isolating the compound
+                                            // word behind a period made them mispronounce
+                                            // German "Tagebucheintrag" as "Tagebuchchen-
                                             // Track" (English detector kicking in on a
                                             // stand-alone token).
                                             val baseText =
                                                 if (isShowingOriginal) entry.rawText
                                                 else entry.displayText
+                                            // German uses spelled-out number words
+                                            // ("eins", "zwei", ...). Other languages get
+                                            // plain digits — Azure-TTS reads "1" as
+                                            // "one"/"uno"/"un" via the voice locale.
+                                            val isGermanLocale =
+                                                context.resources.configuration.locales
+                                                    .get(0)
+                                                    .language == "de"
+                                            val journalLabel =
+                                                context.getString(R.string.entry_tts_journal_label)
                                             val speakText = buildString {
-                                                append("Tagebucheintrag, ")
+                                                append(journalLabel)
+                                                append(", ")
                                                 append(baseText)
                                                 uiState.followUps.forEachIndexed { index, fu ->
-                                                    append("\n\nNachtrag ")
-                                                    append(germanNumberWord(index + 1))
+                                                    val n = index + 1
+                                                    val numberStr =
+                                                        if (isGermanLocale) germanNumberWord(n)
+                                                        else n.toString()
+                                                    append("\n\n")
+                                                    append(
+                                                        context.getString(
+                                                            R.string.entry_tts_followup_label,
+                                                            numberStr,
+                                                        )
+                                                    )
                                                     append(". ")
                                                     val fuText =
                                                         if (fu.isImproved &&

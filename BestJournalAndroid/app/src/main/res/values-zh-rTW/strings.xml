@@ -147,6 +147,8 @@
     <string name="entry_cd_share">分享</string>
     <string name="entry_recording_duration">錄音時長：%1$s</string>
     <string name="entry_tts_generating">請稍候，聲音正在生成…</string>
+    <string name="entry_tts_journal_label">日記項目</string>
+    <string name="entry_tts_followup_label">補充 %1$s</string>
     <string name="entry_cd_photo_page">照片 %1$d</string>
     <string name="entry_add_photo_video">新增照片/影片</string>
     <string name="entry_camera">相機</string>

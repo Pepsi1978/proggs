@@ -147,6 +147,8 @@
     <string name="entry_cd_share">பகிர்</string>
     <string name="entry_recording_duration">பதிவு நேரம்: %1$s</string>
     <string name="entry_tts_generating">காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\u2026</string>
+    <string name="entry_tts_journal_label">நாட்குறிப்பு பதிவு</string>
+    <string name="entry_tts_followup_label">கூடுதல் குறிப்பு %1$s</string>
     <string name="entry_cd_photo_page">படம் %1$d</string>
     <string name="entry_add_photo_video">படம்/வீடியோ சேர்க்கவும்</string>
     <string name="entry_camera">கேமரா</string>

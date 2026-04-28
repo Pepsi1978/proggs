@@ -147,6 +147,8 @@
     <string name="entry_cd_share">共有</string>
     <string name="entry_recording_duration">録音時間：%1$s</string>
     <string name="entry_tts_generating">音声を生成しています。少々お待ちください…</string>
+    <string name="entry_tts_journal_label">日記のエントリー</string>
+    <string name="entry_tts_followup_label">追記 %1$s</string>
     <string name="entry_cd_photo_page">写真%1$d</string>
     <string name="entry_add_photo_video">写真・動画を追加</string>
     <string name="entry_camera">カメラ</string>
@@ -1247,4 +1249,68 @@
     <string name="paywall_feature_followups">すべての日記エントリーに無制限の追記</string>
     <string name="settings_premium_feature_followups">無制限の追記</string>
     <string name="settings_premium_feature_followups_desc">エントリーごとに好きなだけ追記できます</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">いいえ</string>
+    <string name="action_yes">はい</string>
+    <string name="ai_improved_suffix">\n\n✨ AI改善済み</string>
+    <string name="ai_improved_suffix_marker">✨ AI改善済み</string>
+    <string name="entry_delete_entry_cd">日記エントリーを削除</string>
+    <string name="entry_journal_entry_title">日記エントリー</string>
+    <string name="entry_photos_videos_add_title">写真・動画を追加</string>
+    <string name="follow_up_cancel">キャンセル</string>
+    <string name="follow_up_card_title">追記</string>
+    <string name="follow_up_choose_input_mode">追記をどのように追加しますか？</string>
+    <string name="follow_up_delete_button">削除</string>
+    <string name="follow_up_delete_cd">追記を削除</string>
+    <string name="follow_up_delete_confirm_text">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g> を本当に削除しますか？この操作は元に戻せません。</string>
+    <string name="follow_up_delete_confirm_title">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g> を削除しますか？</string>
+    <string name="follow_up_dialog_label">あなたの追記：</string>
+    <string name="follow_up_dialog_title">追記</string>
+    <string name="follow_up_discard">破棄</string>
+    <string name="follow_up_improve_text">✨ 文章を改善</string>
+    <string name="follow_up_improve_with_ai">AIで後から改善する</string>
+    <string name="follow_up_improving">AIが追記を改善しています…</string>
+    <string name="follow_up_inline_title">追記 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">音声入力</string>
+    <string name="follow_up_input_speak_label">音声入力</string>
+    <string name="follow_up_input_write_cd">テキスト入力</string>
+    <string name="follow_up_input_write_label">テキスト入力</string>
+    <string name="follow_up_premium_body">プレミアムに登録すると、すべての日記エントリーに追記を何件でも追加できます。</string>
+    <string name="follow_up_premium_hint">2件目の追記から</string>
+    <string name="follow_up_premium_later">後で決める</string>
+    <string name="follow_up_premium_subscribe">登録する</string>
+    <string name="follow_up_premium_subtext">追記はすべて自動的にダッシュボードに反映されるため、分析が常に最新の状態に保たれます。</string>
+    <string name="follow_up_premium_title">追記無制限</string>
+    <string name="follow_up_save">保存</string>
+    <string name="follow_up_save_improved">改善版を保存</string>
+    <string name="follow_up_show_improved">✨ 改善版を表示</string>
+    <string name="follow_up_show_original">↩ 元の文章を表示</string>
+    <string name="follow_up_speak_pill_label">音声入力</string>
+    <string name="follow_up_speak_prompt">追記を声で入力してください。</string>
+    <string name="follow_up_stop_hint">完了したらStopをタップしてください。</string>
+    <string name="follow_up_tab_improved">✨ AIで改善済み</string>
+    <string name="follow_up_tab_original">オリジナル</string>
+    <string name="follow_up_text_placeholder">追記をここに書いてください…</string>
+    <string name="follow_up_transcribing">追記を文字起こし中…</string>
+    <string name="journal_improve">文章を改善</string>
+    <string name="journal_state_improving">改善中…</string>
+    <string name="journal_state_transcribing">文字起こし中…</string>
+    <string name="paywall_consent_dialog_body">ご購入またはご契約の完了後、原則として14日間のキャンセル権があります。\n\nプレミアム機能をすぐにご利用いただけるよう、ご購入直後からサービスの提供を開始します。下記にご同意いただくことで、14日間のキャンセル権を放棄することになります。\n\nご同意いただけない場合、プレミアム機能を即時にご利用いただくことはできません。</string>
+    <string name="paywall_consent_dialog_cancel">キャンセル</string>
+    <string name="paywall_consent_dialog_checkbox">プレミアム機能のご提供がご注文直後に開始されることに同意します。これにより14日間のキャンセル権を失うことを理解しています。</string>
+    <string name="paywall_consent_dialog_confirm">今すぐ有料登録する</string>
+    <string name="paywall_consent_dialog_title">撤回権の告知</string>
+    <string name="profile_custom_add">カスタム分析を追加</string>
+    <string name="profile_custom_remove">カスタム分析を削除</string>
+    <string name="profile_custom_rename">名前を変更</string>
+    <string name="profile_custom_rename_save">名前を保存</string>
+    <string name="prompt_clear_confirm_text">このカスタム分析は元に戻せない形で削除されます。本当に続けますか？</string>
+    <string name="prompt_clear_confirm_title">テキストを削除しますか？</string>
+    <string name="prompt_clear_content_desc">テキストを削除</string>
+    <string name="prompt_recording_with_model">録音中 — モデル：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s が文字起こし中…</string>
+    <string name="prompt_transcription_model_hint">%1$s で文字起こし済み</string>
 </resources>

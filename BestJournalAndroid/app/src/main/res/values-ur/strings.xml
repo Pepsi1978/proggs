@@ -147,6 +147,8 @@
     <string name="entry_cd_share">شیئر کریں</string>
     <string name="entry_recording_duration">ریکارڈنگ کا دورانیہ: %1$s</string>
     <string name="entry_tts_generating">برائے کرم انتظار کریں، Text-to-Speech بن رہا ہے\u2026</string>
+    <string name="entry_tts_journal_label">ڈائری اندراج</string>
+    <string name="entry_tts_followup_label">اضافہ %1$s</string>
     <string name="entry_cd_photo_page">تصویر %1$d</string>
     <string name="entry_add_photo_video">تصویر/ویڈیو شامل کریں</string>
     <string name="entry_camera">کیمرہ</string>

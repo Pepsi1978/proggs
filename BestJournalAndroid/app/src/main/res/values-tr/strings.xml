@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Paylaş</string>
     <string name="entry_recording_duration">Kayıt süresi: %1$s</string>
     <string name="entry_tts_generating">Bekle, ses oluşturuluyor…</string>
+    <string name="entry_tts_journal_label">Günlük girişi</string>
+    <string name="entry_tts_followup_label">Ek not %1$s</string>
     <string name="entry_cd_photo_page">Fotoğraf %1$d</string>
     <string name="entry_add_photo_video">Fotoğraf/video ekle</string>
     <string name="entry_camera">Kamera</string>
@@ -1251,4 +1253,66 @@ Ne yapmak istersin?</string>
     <string name="paywall_feature_followups">Her günlük girdisine sınırsız ekleme</string>
     <string name="settings_premium_feature_followups">Sınırsız eklemeler</string>
     <string name="settings_premium_feature_followups_desc">Girdi başına istediğin kadar ekleme</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">Hayır</string>
+    <string name="action_yes">Evet</string>
+    <string name="ai_improved_suffix">\n\n✨ YZ ile geliştirildi</string>
+    <string name="ai_improved_suffix_marker">✨ YZ ile geliştirildi</string>
+    <string name="entry_delete_entry_cd">Günlük girdisini sil</string>
+    <string name="entry_journal_entry_title">Günlük girdisi</string>
+    <string name="entry_photos_videos_add_title">Fotoğraf/Video ekle</string>
+    <string name="follow_up_cancel">İptal</string>
+    <string name="follow_up_card_title">Ekleme</string>
+    <string name="follow_up_choose_input_mode">Eklemeyi nasıl yapmak istersin?</string>
+    <string name="follow_up_delete_button">Sil</string>
+    <string name="follow_up_delete_cd">Eklemeyi sil</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="ordinal" example="1">%1$s</xliff:g>. eklemeyi kalıcı olarak silmek istiyor musun?</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="ordinal" example="1">%1$s</xliff:g>. ekleme silinsin mi?</string>
+    <string name="follow_up_dialog_label">Eklemen:</string>
+    <string name="follow_up_dialog_title">Ekleme</string>
+    <string name="follow_up_discard">Vazgeç</string>
+    <string name="follow_up_improve_text">✨ Metni geliştir</string>
+    <string name="follow_up_improve_with_ai">YZ ile sonradan geliştir</string>
+    <string name="follow_up_improving">YZ eklemeyi geliştiriyor…</string>
+    <string name="follow_up_inline_title">Ekleme <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Sesle gir</string>
+    <string name="follow_up_input_speak_label">Sesle gir</string>
+    <string name="follow_up_input_write_cd">Yaz</string>
+    <string name="follow_up_input_write_label">Yaz</string>
+    <string name="follow_up_premium_body">Premium ile her günlük girdisine istediğin kadar ekleme yapabilirsin.</string>
+    <string name="follow_up_premium_hint">ikinci eklemeden itibaren</string>
+    <string name="follow_up_premium_later">Daha sonra karar ver</string>
+    <string name="follow_up_premium_subscribe">Aboneliği başlat</string>
+    <string name="follow_up_premium_subtext">Her ekleme otomatik olarak panele yansır, böylece analizin her zaman eksiksiz kalır.</string>
+    <string name="follow_up_premium_title">Sınırsız ekleme</string>
+    <string name="follow_up_save">Kaydet</string>
+    <string name="follow_up_save_improved">Geliştirilmiş hali kaydet</string>
+    <string name="follow_up_show_improved">✨ Geliştirilmiş sürümü göster</string>
+    <string name="follow_up_show_original">↩ Orijinali göster</string>
+    <string name="follow_up_speak_pill_label">Sesle gir</string>
+    <string name="follow_up_speak_prompt">Eklemeyi sesle söyle.</string>
+    <string name="follow_up_stop_hint">Bitirince Dur\'a dokun.</string>
+    <string name="follow_up_tab_improved">✨ YZ ile geliştirildi</string>
+    <string name="follow_up_tab_original">Orijinal</string>
+    <string name="follow_up_text_placeholder">Eklemeyi buraya yaz…</string>
+    <string name="follow_up_transcribing">Ekleme metne dönüştürülüyor…</string>
+    <string name="journal_improve">Metni geliştir</string>
+    <string name="journal_state_improving">Geliştiriliyor…</string>
+    <string name="journal_state_transcribing">Metne dönüştürülüyor…</string>
+    <string name="paywall_consent_dialog_body">Abonelik veya satın alma işleminin tamamlanmasının ardından prensip olarak 14 günlük cayma hakkına sahipsin.\n\nPremium özelliklerini hemen kullanabilmen için satın alma işleminin hemen ardından sunumu başlatıyoruz. Aşağıdaki onayınla, sonuçlarından haberdar olarak 14 günlük cayma hakkından feragat etmiş olursun.\n\nBu onay olmadan Premium özellikleri hemen etkinleştiremeyiz.</string>
+    <string name="paywall_consent_dialog_cancel">İptal</string>
+    <string name="paywall_consent_dialog_checkbox">Premium özelliklerin sunumunun sipariş hemen ardından başladığını kabul ediyorum. Bu nedenle 14 günlük cayma hakkımı kaybettiğimin farkındayım.</string>
+    <string name="paywall_consent_dialog_confirm">Şimdi ücretli olarak abone ol</string>
+    <string name="paywall_consent_dialog_title">Cayma bildirimi</string>
+    <string name="profile_custom_add">Kişisel analiz ekle</string>
+    <string name="profile_custom_remove">Kişisel analizi kaldır</string>
+    <string name="profile_custom_rename">Yeniden adlandır</string>
+    <string name="profile_custom_rename_save">Adı kaydet</string>
+    <string name="prompt_clear_confirm_text">Kişisel analiz kalıcı olarak silinecek. Devam etmek istiyor musun?</string>
+    <string name="prompt_clear_confirm_title">Metin silinsin mi?</string>
+    <string name="prompt_clear_content_desc">Metni sil</string>
+    <string name="prompt_recording_with_model">Kayıt devam ediyor — Model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> metne dönüştürüyor…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ile metne dönüştürüldü</string>
 </resources>

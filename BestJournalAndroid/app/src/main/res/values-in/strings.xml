@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Bagikan</string>
     <string name="entry_recording_duration">Durasi rekaman: %1$s</string>
     <string name="entry_tts_generating">Harap tunggu, suara sedang dibuat…</string>
+    <string name="entry_tts_journal_label">Entri jurnal</string>
+    <string name="entry_tts_followup_label">Catatan tambahan %1$s</string>
     <string name="entry_cd_photo_page">Foto %1$d</string>
     <string name="entry_add_photo_video">Tambah foto/video</string>
     <string name="entry_camera">Kamera</string>

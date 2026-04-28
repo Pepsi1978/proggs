@@ -147,6 +147,8 @@
     <string name="entry_cd_share">Condividi</string>
     <string name="entry_recording_duration">Durata della registrazione: %1$s</string>
     <string name="entry_tts_generating">Aspetta, la voce si sta generando…</string>
+    <string name="entry_tts_journal_label">Voce di diario</string>
+    <string name="entry_tts_followup_label">Nota di follow-up %1$s</string>
     <string name="entry_cd_photo_page">Foto %1$d</string>
     <string name="entry_add_photo_video">Aggiungi foto/video</string>
     <string name="entry_camera">Fotocamera</string>
@@ -1251,4 +1253,68 @@ Cosa vuoi fare?</string>
     <string name="paywall_feature_followups">Annotazioni illimitate per ogni voce del diario</string>
     <string name="settings_premium_feature_followups">Annotazioni illimitate</string>
     <string name="settings_premium_feature_followups_desc">Quante annotazioni per voce vuoi</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">No</string>
+    <string name="action_yes">Sì</string>
+    <string name="ai_improved_suffix">\n\n✨ Migliorato con l\'IA</string>
+    <string name="ai_improved_suffix_marker">✨ Migliorato con l\'IA</string>
+    <string name="entry_delete_entry_cd">Elimina voce del diario</string>
+    <string name="entry_journal_entry_title">Voce del diario</string>
+    <string name="entry_photos_videos_add_title">Aggiungi foto/video</string>
+    <string name="follow_up_cancel">Annulla</string>
+    <string name="follow_up_card_title">Annotazione</string>
+    <string name="follow_up_choose_input_mode">Come vuoi aggiungere la tua annotazione?</string>
+    <string name="follow_up_delete_button">Elimina</string>
+    <string name="follow_up_delete_cd">Elimina annotazione</string>
+    <string name="follow_up_delete_confirm_text">Vuoi davvero eliminare l\'annotazione <xliff:g id="ordinal" example="1">%1$s</xliff:g> in modo definitivo?</string>
+    <string name="follow_up_delete_confirm_title">Eliminare l\'annotazione <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">La tua annotazione:</string>
+    <string name="follow_up_dialog_title">Annotazione</string>
+    <string name="follow_up_discard">Scarta</string>
+    <string name="follow_up_improve_text">✨ Migliora il testo</string>
+    <string name="follow_up_improve_with_ai">Migliora in seguito con l\'IA</string>
+    <string name="follow_up_improving">L\'IA sta migliorando l\'annotazione…</string>
+    <string name="follow_up_inline_title">Annotazione <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Dettare</string>
+    <string name="follow_up_input_speak_label">Dettare</string>
+    <string name="follow_up_input_write_cd">Scrivere</string>
+    <string name="follow_up_input_write_label">Scrivere</string>
+    <string name="follow_up_premium_body">Con Premium puoi aggiungere tutte le annotazioni che vuoi a ogni voce del diario.</string>
+    <string name="follow_up_premium_hint">dalla seconda annotazione in poi</string>
+    <string name="follow_up_premium_later">Decidi dopo</string>
+    <string name="follow_up_premium_subscribe">Abbonati</string>
+    <string name="follow_up_premium_subtext">Ogni annotazione viene inclusa automaticamente nel Dashboard, così la tua analisi è sempre completa.</string>
+    <string name="follow_up_premium_title">Annotazioni illimitate</string>
+    <string name="follow_up_save">Salva</string>
+    <string name="follow_up_save_improved">Salva versione migliorata</string>
+    <string name="follow_up_show_improved">✨ Mostra versione migliorata</string>
+    <string name="follow_up_show_original">↩ Mostra originale</string>
+    <string name="follow_up_speak_pill_label">Dettare</string>
+    <string name="follow_up_speak_prompt">Ditta la tua annotazione.</string>
+    <string name="follow_up_stop_hint">Tocca Stop quando hai finito.</string>
+    <string name="follow_up_tab_improved">✨ Migliorato con l\'IA</string>
+    <string name="follow_up_tab_original">Originale</string>
+    <string name="follow_up_text_placeholder">Scrivi qui la tua annotazione…</string>
+    <string name="follow_up_transcribing">Trascrizione dell\'annotazione in corso…</string>
+    <string name="journal_improve">Migliora il testo</string>
+    <string name="journal_state_improving">Miglioramento in corso…</string>
+    <string name="journal_state_transcribing">Trascrizione in corso…</string>
+    <string name="paywall_consent_dialog_body">Dopo la conclusione di un abbonamento o di un acquisto hai in linea di principio un diritto di recesso di 14 giorni.\n\nPer consentirti di utilizzare subito le funzioni Premium, iniziamo la fornitura immediatamente dopo il tuo acquisto. Con il tuo consenso rinunci consapevolmente al diritto di recesso di 14 giorni.\n\nSenza questo consenso non possiamo attivare immediatamente le funzioni Premium.</string>
+    <string name="paywall_consent_dialog_cancel">Annulla</string>
+    <string name="paywall_consent_dialog_checkbox">Acconsento che la fornitura delle funzioni Premium inizi subito dopo l\'ordine. Sono consapevole di perdere così il mio diritto di recesso di 14 giorni.</string>
+    <string name="paywall_consent_dialog_confirm">Abbonati ora con obbligo di pagamento</string>
+    <string name="paywall_consent_dialog_title">Informativa sul recesso</string>
+    <string name="profile_custom_add">Aggiungi analisi personalizzata</string>
+    <string name="profile_custom_remove">Rimuovi analisi personalizzata</string>
+    <string name="profile_custom_rename">Rinomina</string>
+    <string name="profile_custom_rename_save">Salva nome</string>
+    <string name="prompt_clear_confirm_text">L\'analisi personalizzata verrà eliminata definitivamente. Vuoi davvero continuare?</string>
+    <string name="prompt_clear_confirm_title">Eliminare il testo?</string>
+    <string name="prompt_clear_content_desc">Elimina testo</string>
+    <string name="prompt_recording_with_model">Registrazione in corso — Modello: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s sta trascrivendo…</string>
+    <string name="prompt_transcription_model_hint">Trascritto con %1$s</string>
 </resources>

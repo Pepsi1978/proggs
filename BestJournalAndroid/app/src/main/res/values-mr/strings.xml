@@ -147,6 +147,8 @@
     <string name="entry_cd_share">शेअर करा</string>
     <string name="entry_recording_duration">रेकॉर्डिंग वेळ: %1$s</string>
     <string name="entry_tts_generating">कृपया थांबा, Text-to-Speech तयार होत आहे\u2026</string>
+    <string name="entry_tts_journal_label">डायरी नोंद</string>
+    <string name="entry_tts_followup_label">अनुपूरक %1$s</string>
     <string name="entry_cd_photo_page">फोटो %1$d</string>
     <string name="entry_add_photo_video">फोटो/व्हिडिओ जोडा</string>
     <string name="entry_camera">कॅमेरा</string>

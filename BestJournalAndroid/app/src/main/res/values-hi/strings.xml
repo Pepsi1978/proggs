@@ -147,6 +147,8 @@
     <string name="entry_cd_share">साझा करें</string>
     <string name="entry_recording_duration">रिकॉर्डिंग की अवधि: %1$s</string>
     <string name="entry_tts_generating">कृपया रुकें, आवाज़ बन रही है…</string>
+    <string name="entry_tts_journal_label">डायरी प्रविष्टि</string>
+    <string name="entry_tts_followup_label">अनुवर्ती %1$s</string>
     <string name="entry_cd_photo_page">फोटो %1$d</string>
     <string name="entry_add_photo_video">फोटो/वीडियो जोड़ें</string>
     <string name="entry_camera">कैमरा</string>
