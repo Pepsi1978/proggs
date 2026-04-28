@@ -1252,4 +1252,57 @@ Que veux-tu faire ?</string>
     <string name="paywall_feature_followups">Compléments illimités pour chaque entrée</string>
     <string name="settings_premium_feature_followups">Compléments illimités</string>
     <string name="settings_premium_feature_followups_desc">Autant de compléments par entrée que tu veux</string>
+    <string name="entry_journal_entry_title">Entrée du journal</string>
+    <string name="entry_delete_entry_cd">Supprimer l\'entrée du journal</string>
+    <string name="entry_photos_videos_add_title">Ajouter des photos/vidéos</string>
+    <string name="follow_up_inline_title">Ajout <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_delete_cd">Supprimer l\'ajout</string>
+    <string name="follow_up_tab_improved">Amélioré</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_improve_with_ai">Améliorer avec l\'IA</string>
+    <string name="follow_up_card_title">Ajout</string>
+    <string name="follow_up_premium_hint">à partir du deuxième ajout</string>
+    <string name="follow_up_dialog_title">Ajout</string>
+    <string name="follow_up_transcribing">Transcription de l\'ajout…</string>
+    <string name="follow_up_speak_prompt">Dicte ton ajout.</string>
+    <string name="follow_up_stop_hint">Appuie sur Stop quand tu as fini.</string>
+    <string name="follow_up_choose_input_mode">Comment veux-tu ajouter ton complément\u202F?</string>
+    <string name="follow_up_input_write_cd">Écrire</string>
+    <string name="follow_up_input_write_label">Écrire</string>
+    <string name="follow_up_input_speak_cd">Dicter</string>
+    <string name="follow_up_input_speak_label">Dicter</string>
+    <string name="follow_up_dialog_label">Ton ajout\u00A0:</string>
+    <string name="follow_up_speak_pill_label">Dicter</string>
+    <string name="follow_up_text_placeholder">Écris ton ajout ici…</string>
+    <string name="follow_up_show_original">↩ Afficher l\'original</string>
+    <string name="follow_up_show_improved">✨ Afficher la version améliorée</string>
+    <string name="follow_up_improve_text">✨ Améliorer le texte</string>
+    <string name="follow_up_improving">L\'IA améliore l\'ajout…</string>
+    <string name="follow_up_save_improved">Enregistrer la version améliorée</string>
+    <string name="follow_up_save">Enregistrer</string>
+    <string name="follow_up_cancel">Annuler</string>
+    <string name="follow_up_discard">Abandonner</string>
+    <string name="follow_up_delete_confirm_title">Supprimer l\'ajout <xliff:g id="ordinal" example="1">%1$s</xliff:g>\u202F?</string>
+    <string name="follow_up_delete_confirm_text">Veux-tu vraiment supprimer définitivement l\'ajout <xliff:g id="ordinal" example="1">%1$s</xliff:g>\u202F?</string>
+    <string name="follow_up_delete_button">Supprimer</string>
+    <string name="follow_up_premium_title">Ajouts illimités</string>
+    <string name="follow_up_premium_body">Avec Premium, tu peux ajouter autant de compléments que tu veux à chaque entrée du journal.</string>
+    <string name="follow_up_premium_subtext">Chaque ajout est intégré automatiquement au tableau de bord pour une analyse toujours complète.</string>
+    <string name="follow_up_premium_subscribe">Lancer l\'abonnement</string>
+    <string name="follow_up_premium_later">Plus tard</string>
+    <string name="action_no">Non</string>
+    <string name="action_yes">Oui</string>
+    <string name="journal_improve">Améliorer le texte</string>
+    <string name="journal_state_improving">Amélioration…</string>
+    <string name="journal_state_transcribing">Transcription…</string>
+    <string name="profile_custom_add">Ajouter une analyse personnalisée</string>
+    <string name="profile_custom_remove">Supprimer l\'analyse personnalisée</string>
+    <string name="profile_custom_rename">Renommer</string>
+    <string name="profile_custom_rename_save">Enregistrer le nom</string>
+    <string name="prompt_clear_confirm_text">L\'analyse personnalisée sera supprimée définitivement. Veux-tu vraiment continuer\u202F?</string>
+    <string name="prompt_clear_confirm_title">Supprimer le texte\u202F?</string>
+    <string name="prompt_clear_content_desc">Supprimer le texte</string>
+    <string name="prompt_recording_with_model">Enregistrement — modèle\u00A0: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> transcrit…</string>
+    <string name="prompt_transcription_model_hint">Transcrit avec <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>
