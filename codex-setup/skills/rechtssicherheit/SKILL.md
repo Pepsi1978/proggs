@@ -143,7 +143,7 @@ Workspace.
 
 ## Aktueller Recherche-Stand
 
-Stand dieser Skill-Version: **2026-04-26**.
+Stand dieser Skill-Version: **2026-04-28**.
 
 Bei jeder echten App-Pruefung aktuelle Quellen erneut pruefen, wenn:
 
@@ -152,17 +152,100 @@ Bei jeder echten App-Pruefung aktuelle Quellen erneut pruefen, wenn:
 - Health, Kinder, Standort, Medien, Kontakte, SMS/Call Logs, Finanzdaten, KI/GenAI,
   Ads, Analytics, User Generated Content oder Accounts vorkommen,
 - die App in neue Laender/Sprachen ausgerollt wird,
+- neue Store-Laender, neue Monetarisierungsmodelle, neue KI-/UGC-/Health-/Kinder-
+  Features oder neue SDKs hinzukommen,
 - der Benutzer "aktuell", "neueste" oder "Release" sagt.
 
 **Pflicht-Quellenklassen:**
 
 - Google Play Developer Policy Center / Play Console Help.
 - Android Developers Privacy & Security Dokumentation.
-- EU-Kommission, GDPR-Text, nationale Gesetzestexte.
-- Deutsche Gesetze: DDG fuer Anbieterkennzeichnung, BGB/EGBGB fuer Widerruf.
-- Aufsichtsbehoerden: EDPB, Datenschutzkonferenz, ICO, FTC/CPPA, OAIC, OPC, relevante
-  asiatische Behoerden.
+- EU-Kommission, GDPR-Text, DSA, AI Act, European Accessibility Act, Data Act,
+  nationale Umsetzungsgesetze.
+- Deutsche Gesetze: DDG fuer Anbieterkennzeichnung, TDDDG/ePrivacy fuer Tracking/
+  Endgeraetezugriff, BGB/EGBGB fuer Widerruf und digitale Produkte, BFSG/BFSGV fuer
+  Barrierefreiheit.
+- Aufsichtsbehoerden: EDPB, Datenschutzkonferenz, ICO, Ofcom, FTC, CPPA/US State AGs,
+  OAIC, OPC/Quebec CAI, ANPD, PPC Japan, PIPC Korea, PDPC Singapore, Information
+  Regulator South Africa, SDAIA, relevante asiatische/lateinamerikanische Behoerden.
 - OWASP MASVS/MASTG fuer technische Mobile-Security-Kontrollen.
+
+**Quellenprioritaet:**
+
+1. Primaerquellen: Gesetzestext, offizielle Regulierer, Google/Android-Policy.
+2. Sekundaerquellen: Fachanwaltliche Kanzlei-Artikel, Fachverbands- oder
+   Regulierer-Erlaeuterungen.
+3. News/Blogs/Foren nur als Hinweis auf aktuelle Risiken, nie als alleinige Grundlage.
+
+Wenn Quellen widersprechen, gilt die strengere oder offiziellere Quelle als
+Release-Gate. Jede Aussage im Bericht bekommt Quelle + Abrufdatum. Ohne aktuelle Quelle
+keine positive Freigabe, sondern "anwaltlich/aktuell zu pruefen".
+
+### Markt- und Rechtsraum-Prioritaet
+
+Audits werden immer in dieser Reihenfolge bewertet:
+
+1. **Deutschland/EU zuerst**: DSGVO, DDG/Impressum, TDDDG/ePrivacy, BGB/EGBGB
+   Widerruf/digitale Produkte, BFSG/EAA Barrierefreiheit, DSA bei UGC/Hosting/
+   Marktplatzfunktionen, AI Act bei KI-Funktionen.
+2. **Englischsprachige Zielmaerkte danach**: UK-GDPR/DPA/PECR/Online Safety Act,
+   USA mit CCPA/CPRA plus relevanten State-Privacy-Laws, COPPA, FTC Act, Health
+   Breach/HIPAA/FDA-Trigger, Kanada PIPEDA/Quebec Law 25, Australien Privacy Act/APPs.
+3. **Internationale Zielmaerkte danach**: China PIPL, Indien DPDP, Japan APPI,
+   Korea PIPA, Brasilien LGPD, Singapore PDPA, Suedafrika POPIA, Saudi PDPL,
+   UAE PDPL und weitere Ziellaender der Store-Verteilung.
+
+**Release-Gate-Regel:** Fuer jeden Zielmarkt muss im Bericht stehen:
+
+- Ist die App in diesem Markt/Store-Land verfuegbar?
+- Gibt es App-Locale, Store-Listing-Locale und Rechtstexte in einer fuer Nutzer
+  verstaendlichen Sprache?
+- Welche lokalen Pflichtangaben, Consent-, Kinder-, Health-, AI-, UGC-, Abo-,
+  Zahlungs- oder Datenuebermittlungsregeln greifen?
+- Was ist technisch nachweisbar, was ist nur juristisch zu klaeren?
+
+Wenn ein Markt nicht bewertet werden kann, wird dieser Markt als **BLOCKER fuer Rollout
+in diesem Markt** markiert, nicht still freigegeben.
+
+### Recherche-Baseline 2026-04-28
+
+Diese Baseline ist kein Ersatz fuer Schritt 3, sondern der aktuelle Mindeststand, gegen
+den jede neue App-Pruefung abgeglichen wird:
+
+- **Google Play User Data/Data Safety:** Privacy Policy ist fuer alle Apps erforderlich;
+  Data Safety muss Code, SDKs und Drittanbieter-Datenfluesse korrekt abbilden.
+  Account-Erstellung triggert In-App-Loeschpfad plus Weblink.
+  Quelle: `https://support.google.com/googleplay/android-developer/answer/10144311`
+  und `https://support.google.com/googleplay/android-developer/answer/10787469`
+- **Google Play Spezial-Policies:** AI-generierte Inhalte brauchen Safety und In-App-
+  Reporting; UGC braucht Terms-Akzeptanz, Reporting/Blocking und Moderation; Photo/
+  Video-Broad-Access, Health, Families, Payments/Subscriptions und sensitive Permissions
+  haben eigene Release-Gates. Quellen u.a.
+  `https://support.google.com/googleplay/android-developer/answer/13985936`,
+  `https://support.google.com/googleplay/android-developer/answer/9876937`,
+  `https://support.google.com/googleplay/android-developer/answer/14115180`,
+  `https://support.google.com/googleplay/android-developer/answer/9900533`
+- **DE/EU:** DDG §5 verlangt Anbieterkennzeichnung fuer geschaeftsmaessige digitale
+  Dienste; TDDDG/ePrivacy ist fuer Endgeraetezugriff/Tracking relevant; BFSG/EAA gilt
+  seit 28.06.2025 fuer bestimmte digitale Verbraucherleistungen/eCommerce; DSA greift
+  bei Vermittlungs-/Hosting-/UGC-/Plattformfunktionen; AI Act bei KI-Systemen und
+  bestimmten Transparenz-/Risikopflichten. Quellen: `gesetze-im-internet.de/ddg`,
+  `gesetze-im-internet.de/ttdsg`, `gesetze-im-internet.de/bfsg`,
+  `eur-lex.europa.eu/eli/reg/2022/2065/oj`,
+  `commission.europa.eu/news/ai-act-enters-force-2024-08-01_en`
+- **Englischsprachige Maerkte:** UK braucht UK-GDPR/PECR und bei UGC/Chat ggf.
+  Online Safety Act; Kalifornien verlangt CCPA/CPRA Notice-at-Collection und mobile
+  App Privacy-Policy-Zugaenglichkeit; USA triggern bei Kindern COPPA und bei Health
+  ggf. FTC Health Breach/HIPAA/FDA; Kanada verlangt meaningful consent nach PIPEDA
+  und Quebec Law 25; Australien verlangt eine mobil brauchbare APP Privacy Policy.
+  Quellen: `ico.org.uk`, `ofcom.org.uk`, `oag.ca.gov/privacy/ccpa`, `ftc.gov`,
+  `priv.gc.ca`, `cai.gouv.qc.ca`, `oaic.gov.au`
+- **Internationale Maerkte:** Indien DPDP Act/Rules 2025 ist operationalisiert;
+  Brasilien LGPD/ANPD regelt Rechte und internationale Transfers; Suedafrika POPIA,
+  Singapore PDPA, Japan APPI, Korea PIPA und Saudi PDPL verlangen eigene Notice-,
+  Consent-, Kontakt-, Rechte-, Kinder-/sensible-Daten- und Transferpruefungen.
+  Quellen: `meity.gov.in`, `pib.gov.in`, `gov.br/anpd`, `inforegulator.org.za`,
+  `pdpc.gov.sg`, `ppc.go.jp`, `pipc.go.kr`, `sdaia.gov.sa`
 
 ---
 
@@ -184,9 +267,14 @@ Fragen **gesammelt** stellen, nicht einzeln:
 5. Richtet sich die App an Kinder oder kann sie fuer Kinder attraktiv wirken?
 6. Gibt es sensible Daten: Gesundheit, Tagebuch, Standort, Kontakte, Fotos, Audio,
    Kamera, Kalender, Finanzdaten, Religion, Sexualitaet, biometrische Daten?
+7. Gibt es User Generated Content, Chat, Kommentare, Sharing, Marktplatz-, Dating-,
+   Community-, Social-, Creator-, Empfehlungs- oder Moderationsfunktionen?
 
 Nicht auf Antworten warten, wenn der Repo-Zustand eine konservative Annahme erlaubt.
 Unklare Punkte im Bericht als Annahmen markieren.
+Wenn Zielmaerkte unbekannt sind: Standardannahme **Deutschland/EU zuerst**, danach
+**UK/USA/Kanada/Australien**, danach globale Datenschutz-Baseline. Alle nicht
+geprueften Ziellaender als "nicht freigegeben" markieren.
 
 ### Schritt 2 — Wissensbasis laden
 
@@ -214,11 +302,11 @@ Dem Benutzer vor dem Start sagen:
 
 | # | Agent | Fokus | Wichtige Quellen |
 |---|-------|-------|------------------|
-| 1 | `researcher` | **DE/EU** — DSGVO aktueller Stand, DDG-Anbieterkennzeichnung, BGH/EuGH-Rechtsprechung, TTDSG/TDDDG/ePrivacy, Widerrufsbelehrung-Muster, AGB-Pflichten | dsgvo-gesetz.de, datenschutz.org, gesetze-im-internet.de, haendlerbund.de, bundesjustizamt.de, edpb.europa.eu |
-| 2 | `researcher` | **US/UK/CA/AU** — CCPA/CPRA, UK-GDPR, PIPEDA, Privacy Act, COPPA (wenn Kinder-Feature) | oag.ca.gov, cppa.ca.gov, ico.org.uk, priv.gc.ca, oaic.gov.au, ftc.gov |
-| 3 | `researcher` | **Asien/LatAm** — PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea), LGPD (Brasilien) inkl. Cross-Border-Transfer-Regeln | cac.gov.cn, meity.gov.in, ppc.go.jp, pipc.go.kr, gov.br/anpd |
-| 4 | `researcher` | **Google Play Policies** — Data Safety Form (aktuell), User Data Policy, Permissions, Sensitive Permissions, Families Policy, AI-generated Content, Deceptive Behavior, Health, Financial Services, Account Deletion | support.google.com/googleplay/android-developer, play.google.com/console/about/policy |
-| 5 | `researcher` | **Aktuelle Abmahnwellen 2025/2026** — Google Fonts/Analytics-Integration, Cookie-Consent-Urteile, fehlendes Impressum, AI-Act-Pflichten, unvollstaendige Widerrufsbelehrung, Data-Safety-Diskrepanzen | it-recht-kanzlei.de, dr-bahr.com, wbs.legal (News), juris.de |
+| 1 | `researcher` | **DE/EU** — DSGVO aktueller Stand, DDG-Anbieterkennzeichnung, TDDDG/ePrivacy, BGB/EGBGB Widerruf/digitale Produkte, BFSG/EAA Barrierefreiheit, DSA bei UGC/Hosting/Marketplace, AI Act bei KI, aktuelle BGH/EuGH-Rechtsprechung | eur-lex.europa.eu, commission.europa.eu, gesetze-im-internet.de, edpb.europa.eu, datenschutzkonferenz-online.de, bundesjustizamt.de |
+| 2 | `researcher` | **US/UK/CA/AU** — CCPA/CPRA, weitere US State Privacy Laws, FTC Act/Dark Patterns, COPPA, Health Breach/HIPAA/FDA-Trigger, UK-GDPR/DPA/PECR/Online Safety Act, PIPEDA/Quebec Law 25, Australia Privacy Act/APPs | oag.ca.gov, cppa.ca.gov, coag.gov, ftc.gov, hhs.gov, fda.gov, ico.org.uk, ofcom.org.uk, priv.gc.ca, cai.gouv.qc.ca, oaic.gov.au |
+| 3 | `researcher` | **International** — PIPL (China), DPDP (Indien), APPI (Japan), PIPA (Korea), LGPD (Brasilien), Singapore PDPA, Suedafrika POPIA, Saudi PDPL/UAE PDPL inkl. Cross-Border-Transfer und Sprachanforderungen | cac.gov.cn, meity.gov.in, ppc.go.jp, pipc.go.kr, gov.br/anpd, pdpc.gov.sg, inforegulator.org.za, sdaia.gov.sa |
+| 4 | `researcher` | **Google Play Policies** — Data Safety Form, User Data Policy, Account Deletion, Permissions/Sensitive APIs, Photo/Video, Health, Families, Ads, Payments/Subscriptions, AI-generated Content, UGC, Deceptive Behavior, Developer verification | support.google.com/googleplay/android-developer, developer.android.com, developers.google.com/android, play.google.com/console/about/policy |
+| 5 | `researcher` | **Aktuelle Enforcement-/Abmahnwellen 2025/2026** — fehlendes Impressum, Cookie/SDK-Consent, Data-Safety-Diskrepanzen, Abo-/Dark-Pattern-Enforcement, KI-/Deepfake-/UGC-Pflichten, Barrierefreiheits-Rollout, Kinder-/Altersregeln | primaer offizielle Enforcement-Seiten, danach Fachkanzleien wie it-recht-kanzlei.de, dr-bahr.com, wbs.legal, juris.de |
 
 **Prompt-Muster pro Researcher:**
 
@@ -234,7 +322,8 @@ Liefere strukturiert zurueck:
    reicht Englisch?
 4. SANKTIONEN: Bussgelder / Abmahnrisiko bei Verstoss.
 5. AKTUELLE AENDERUNGEN: Was hat sich in den letzten 12 Monaten geaendert?
-6. QUELLEN: Offizielle URLs mit Abrufdatum.
+6. RELEASE-GATES: Welche Punkte blockieren Release im Zielmarkt?
+7. QUELLEN: Offizielle URLs mit Abrufdatum.
 
 Limits: max 50 Ergebnisse, max 15 Web-Fetches, max 10 Minuten.
 Bei Netzwerkfehlern: das zurueckgeben was da ist, nicht crashen.
@@ -403,6 +492,73 @@ Uebersetzungen der Rechtstexte als Befund notieren.
 - Screenshots/Marketingtexte versprechen nichts Falsches.
 - Abo-/Preisangaben und Trial-Hinweise klar.
 
+#### 5h. Markt- und Jurisdiktions-Gates
+
+Fuer jeden Zielmarkt eine eigene Gate-Zeile erstellen. **Deutschland/EU immer zuerst**,
+auch wenn die App international erscheinen soll.
+
+| Rechtsraum | Pflichtpruefung | Typische Release-Blocker |
+|---|---|---|
+| DE/EU | DSGVO-Transparenz, Rechtsgrundlagen, AVV/DPA/SCC, DDG-Impressum, TDDDG/ePrivacy, BGB/EGBGB Widerruf, BFSG/EAA, DSA/AI Act falls relevant | kein Impressum, fehlende Rechtsgrundlage, Tracking ohne Consent, kein Widerruf, UGC ohne Moderations-/Meldeweg, KI ohne Transparenz/Safety, nicht barrierefreier eCommerce-Flow |
+| UK | UK-GDPR/DPA, PECR fuer Tracking/Marketing, ICO Children's Code, Online Safety Act bei User-to-User/Search/UGC | keine UK-kompatible Privacy Notice, Cookie/SDK-Tracking ohne PECR-Consent, Kinderangebot ohne Age-Appropriate-Design, UGC/Chat ohne Safety-Prozess |
+| USA | CCPA/CPRA und weitere State Privacy Laws je Schwelle/Zielmarkt, FTC Act gegen unfair/deceptive practices, COPPA unter 13, Health Breach/HIPAA/FDA bei Health/Medical | fehlender Notice-at-Collection, Opt-out/Do-Not-Sell/Share fehlt, manipulative Paywall, Kindertracking, Health-Datenleck, medizinische Claims ohne Pruefung |
+| Kanada | PIPEDA, Quebec Law 25, meaningful consent, Datenschutzkontakt, grenzueberschreitende Verarbeitung | Consent nicht verstaendlich, sensible Daten ohne ausdrueckliche Einwilligung, kein Kontakt/Grievance-Prozess, Quebec nicht bewertet |
+| Australien/Neuseeland | Privacy Act/APPs, mobile-gerechte Privacy Policy, Direktmarketing/Spam, sensible Daten | Policy nicht mobil lesbar, Zweck/Empfaenger/Rechte fehlen, sensibler Datentyp ohne klare Zustimmung |
+| China | PIPL, separate/eindeutige Einwilligung fuer sensible Daten/Transfer, lokale App-/SDK-Regeln, Cross-Border-Mechanismus | keine China-spezifische Notice, kein separater Consent, ungeklaerte Auslandsuebermittlung, Kinder-/sensible Daten ungeprueft |
+| Indien | DPDP Act/Rules, Notice + Consent, Kinder/Verifiable Parental Consent, Grievance-Mechanismus, Datenloeschung | keine klare Notice, kein Beschwerdeweg, Kindertracking/Targeted Ads, keine Loesch-/Korrekturwege |
+| Japan | APPI, Zweckangabe, Drittweitergabe, Auslandsuebermittlung, Anfragen/Beschwerden | Zweck/Empfaenger unklar, Opt-out/Third-Party-Transfer nicht erklaert, kein Kontakt |
+| Korea | PIPA, Datenschutz-Policy, Einwilligung, sensitive/unique identifiers, Drittweitergabe/Auslandstransfer | keine PIPA-spezifische Policy, empfindliche Daten ohne getrennte Einwilligung, Auslandsuebermittlung ungeprueft |
+| Brasilien | LGPD, Rechtsgrundlage, Betroffenenrechte, Datenschutzkontakt, internationale Transfers nach ANPD-Regeln | keine Rechte-/Kontaktangaben, keine Rechtsgrundlage, Transfermechanismus fehlt |
+| Singapore | PDPA, Consent/Notification, Purpose Limitation, Protection, Retention, DPO/Kontakt | kein DPO/Kontakt, Sammlung ohne Zweck, keine Retention/Loeschung |
+| Suedafrika | POPIA, 8 Conditions, Information Officer/Responsible Party, Children/Special PI, Prior Authorisation falls relevant | keine Responsible-Party-Angaben, Kinder-/Special-PI ohne Autorisierung/Grundlage, kein Rechteprozess |
+| Saudi/UAE | PDPL/UAE PDPL, Consent/Notice, Transferregeln, lokale Sprache/Contact je Zielmarkt | keine lokale Notice, ungeklaerte Transfers, keine Betroffenenrechte/Kontaktwege |
+
+**Regel:** Eine globale Datenschutzerklaerung darf lokale Besonderheiten nur abdecken,
+wenn sie konkret genug ist. "GDPR-style" allein reicht nicht als Freigabe fuer alle
+Laender. Nicht bewertete Laender werden im Bericht als nicht freigegeben markiert.
+
+#### 5i. Spezialregulierungen nach Feature
+
+- **UGC/Community/Chat/Sharing:** Google-UGC-Policy, DSA/Online Safety Act, Terms-
+  Akzeptanz vor Upload, Melden/Blockieren, Moderation, Beschwerde-/Appeal-Prozess,
+  Child-Safety, Notice-and-Action, Kontaktstelle.
+- **KI/GenAI:** Google AI-Generated-Content-Policy, User-Reporting in App, Safety-
+  Filter, Deepfake/Manipulated-Media-Regeln, AI Act Transparenz/Risiko-Klassifizierung,
+  Offenlegung von Datenweitergabe an KI-Anbieter, keine medizinischen/finanziellen/
+  rechtlichen Garantien durch KI.
+- **Health/Wellbeing/Medical:** Google Health-Apps-Form, Health Connect/Data Safety,
+  FTC Health Breach/HIPAA/FDA/Medical-Device-Trigger, klare Abgrenzung "keine Diagnose/
+  keine Behandlung" nur wenn sachlich zutreffend, keine irrefuehrenden Heilsversprechen.
+- **Kinder/Jugendliche:** Google Families/Target Audience, COPPA, DSGVO-K, UK
+  Children's Code, DPDP/POPIA-Kinderregeln, keine personalisierte Werbung/Tracking
+  ohne tragfaehige Rechtsgrundlage, kindgerechte Sprache.
+- **Abo/IAP/Paywall:** Google Payments/Subscriptions, Preis, Laufzeit, Trial-Ende,
+  automatische Verlaengerung, Kuendigung, Refund/Widerruf, keine Dark Patterns.
+- **Barrierefreiheit/eCommerce:** BFSG/EAA pruefen, wenn die App digitale
+  Verbraucherleistungen oder eCommerce-Funktionen anbietet; Paywall, Checkout,
+  Rechtstextlinks und Account-Loeschung muessen bedienbar und lesbar sein.
+
+#### 5j. Formulierungspruefung
+
+Alle Rechtstexte, Store-Texte, Paywall-Texte und Consent-Texte auf diese Punkte
+pruefen:
+
+- Keine Garantien: "rechtssicher", "abmahnungssicher", "100% sicher", "medizinisch
+  bewiesen", "garantierter Erfolg" vermeiden.
+- Konkreter App-Bezug: App-Name, Developer/Firma, Package/Store-Kontext,
+  Kontakt, Datenschutzkontakt und ggf. DPO/Information Officer muessen stimmen.
+- Keine Widersprueche: Store Listing, Screenshots, Paywall, In-App-Texte, Privacy
+  Policy, Terms, Data Safety und Code muessen dieselbe Wahrheit sagen.
+- Klare Zwecke statt Sammelbegriffe: "Verbesserung der App" reicht nicht fuer
+  sensible/unerwartete Verarbeitung; Zweck, Datenkategorie, Empfaenger, Rechtsgrundlage
+  und Opt-out/Widerruf nennen.
+- Plain Language: rechtlich praezise, aber fuer Nutzer verstaendlich; bei Kindern/
+  Jugendlichen kindgerechte Zusatzinformationen.
+- Keine versteckten Einschraenkungen: Verbraucherrechte, Widerruf, Kuendigung,
+  Loeschung, Support und Beschwerdewege duerfen nicht pauschal ausgeschlossen werden.
+- Sprache und Locale: Rechtstexte muessen zur Zielgruppe passen. Bei lokalisierten
+  Store Listings/App-Sprachen fehlende Rechtstext-Uebersetzungen als Befund markieren.
+
 ---
 
 ## Pflichtdokumente: Inhaltliche Checklisten
@@ -426,6 +582,10 @@ Pflicht-Inhalte:
 - Kinder/Jugendliche, falls relevant
 - Sicherheitsmassnahmen knapp und realistisch
 - Account- und Datenloeschung
+- Consent- und Widerrufsmechanismus je Zweck
+- Internationale Markt-/Transferhinweise je Zielmarkt
+- Kinder-/Health-/AI-/UGC-/Finanzdaten-Sonderhinweise, falls relevant
+- Beschwerde-/Kontaktweg fuer Datenschutzanfragen
 - Stand/Version/Datum
 
 **Release-Blocker:**
@@ -443,9 +603,13 @@ Pflicht-Inhalte:
 - Nutzungsregeln und verbotene Nutzung
 - User Generated Content (Rechte, Moderation, Meldung, Entfernung, Sperrung,
   Beschwerdeweg) falls vorhanden
+- DSA/Online-Safety-kompatible Kontakt-, Melde-, Moderations- und Appeal-Prozesse,
+  falls Nutzerinhalte, Chat, Kommentare, Profile oder Sharing vorhanden sind
 - Haftung und Gewaehrleistung ohne unzulaessige Pauschalausschluesse
 - Verfuegbarkeit, Aenderungen, Kuendigung
 - In-App-Kaeufe, Abos, Preise, Laufzeiten, Kuendigung
+- Trial-/Intro-Offer-Regeln: Preis nach Trial, Abrechnungsfrequenz, Auto-Renewal,
+  Kuendigung und Refund/Widerruf muessen vor Kauf klar sichtbar sein
 - Drittanbieter/Stores/Billing-Hinweise
 - Rechtswahl/Gerichtsstand nur soweit zulaessig gegenueber Verbrauchern
 - Kontakt und Beschwerdeweg
@@ -455,6 +619,8 @@ Pflicht-Inhalte:
 - AGB schliessen Verbraucherrechte pauschal aus
 - AGB widersprechen Store Listing, Paywall oder Privacy Policy
 - Kostenpflichtige Features ohne klare Preis-/Abo-/Kuendigungsangaben
+- UGC ohne Terms-Akzeptanz, Melde-/Blockierweg oder Moderationsregeln
+- Paywall/Trial mit manipulativer Gestaltung oder verstecktem Kuendigungsweg
 
 ### Impressum / Anbieterkennzeichnung
 
@@ -467,6 +633,8 @@ Fuer DE/EU geschaeftsmaessige digitale Dienste:
 - Register, Registernummer, USt-ID, Aufsichtsbehoerde oder Berufsangaben falls einschlaegig
 - Leicht erkennbar, unmittelbar erreichbar, staendig verfuegbar
 - **In App dauerhaft erreichbar (Settings/About), nicht nur im Store Listing**
+- Bei UGC/DSA-relevanten Diensten: Kontaktstelle und ggf. zusaetzliche DSA-
+  Kontakt-/Beschwerdeinformationen getrennt pruefen
 
 **Release-Blocker:**
 
@@ -485,6 +653,8 @@ Bei paid app, IAP, Abo oder externen digitalen Inhalten:
 - Abo-Laufzeit, Preis, Testphase, automatische Verlaengerung und Kuendigung
   klar in Paywall/Store/Terms
 - Google Play Billing Regeln eingehalten
+- Abo-Verwaltung/Cancellation-Link in Account-/Settings-Bereich erreichbar
+- Keine erzwungenen Umwege, versteckten Schliessen-Buttons oder Dark Patterns
 
 **Release-Blocker:**
 
@@ -507,6 +677,8 @@ Wenn Account-Erstellung moeglich:
 - Account-Erstellung ohne Accountloeschung
 - Weblink fuehrt nur zu Support-Homepage ohne klaren Loeschweg
 - Privacy Policy verspricht Loeschung, App bietet sie nicht
+- Loeschung entfernt nur Account, aber nicht zuordenbare Daten, obwohl die Policy
+  vollstaendige Datenloeschung behauptet
 
 ---
 
@@ -518,14 +690,19 @@ Wenn Account-Erstellung moeglich:
 | Ads/AdMob | AD_ID, ads SDKs | Ads Policy, Consent, personalisierte Ads, Kinder |
 | Kinder/Families | Target age, kindliche Assets, Games | Families Policy, COPPA/GDPR-K, keine verbotenen IDs |
 | Standort | Fine/Background Location | Core Feature, Prominent Disclosure, Permission Declaration |
+| Kontakte | READ_CONTACTS, contact picker, social graph | Core Feature, Contact-Declaration falls gefordert, keine Ad-/Profiling-Nutzung ohne klare Grundlage |
 | Fotos/Videos | READ_MEDIA_* | Photo Picker bevorzugen, Broad Access Declaration |
 | Gesundheit | Health Connect, Mood, Fitness, Medical claims | Health Declaration, Datenschutz, kein irrefuehrender Medizinclaim |
 | KI/GenAI | OpenAI/Anthropic/Gemini, image/text generation | AI Content Policy, Reporting, Safety, Datenweitergabe |
-| UGC/Community | Posts, Kommentare, Sharing | Moderation, Melden/Blockieren, Terms, DSA-Risiko |
+| UGC/Community | Posts, Kommentare, Sharing, Chat, Profile | Moderation, Melden/Blockieren, Terms, DSA/Online-Safety-Risiko |
 | Finanzen | Budget, Payment, Trading, Kredit | Financial Services Policy, Disclaimer, Lizenzen |
+| Abos/IAP | BillingClient, RevenueCat, Paywall | Google Payments/Subscriptions, Preis/Trial/Kuendigung/Widerruf, Dark-Pattern-Check |
 | Tagebuch/Private Daten | Room, local DB, cloud sync | Verschluesselung, Backup, Export, Loeschung, Screenshots |
 | WebView | JavaScript, file access, remote URLs | Mixed content, JS bridge, Tracking/Cookies, externe Inhalte |
 | Push | FCM, notification permissions | Token-Daten, sensitive Notification-Inhalte, Consent |
+| Barrierefreiheit | Paywall, Checkout, Account, Legal Links | BFSG/EAA, WCAG/EN 301 549, TalkBack/Keyboard/Contrast |
+| Automatisierte Entscheidungen | Ranking, Scoring, Profiling, KI-Empfehlungen | Transparenz, Widerspruch/Rechte, AI-Act/GDPR/State-Privacy-Check |
+| Cross-Border Transfer | Cloud/API ausserhalb Zielmarkt | SCC/DPF/Transfer Impact, lokale Transferregeln (PIPL/DPDP/LGPD/PDPL) |
 
 ---
 
@@ -550,6 +727,10 @@ Wenn Account-Erstellung moeglich:
 - Sensitive Permissions ohne Core-Feature, Disclosure oder Play Declaration
 - Widerrufsbelehrung fehlt bei kostenpflichtigen digitalen Inhalten
 - Store Data Safety widerspricht Code/SDKs
+- UGC/Chat/Community ohne Melde-, Blockier- und Moderationsprozess
+- Generative KI ohne In-App-Reporting/Safety gegen verbotene Inhalte
+- Zielmarkt mit lokaler Pflicht (z.B. China/Indien/Brasilien/Suedafrika/Saudi) ohne
+  bewertete Notice, Consent- und Transfergrundlage
 
 ---
 
@@ -558,7 +739,7 @@ Wenn Account-Erstellung moeglich:
 ```markdown
 # Rechtssicherheits-Audit: [App]
 Datum: YYYY-MM-DD
-Skill-Stand: 2026-04-26
+Skill-Stand: 2026-04-28
 
 ## Disclaimer
 Technische Pruefhilfe, keine anwaltliche Beratung. Vor Release Fachanwalt fuer
@@ -632,6 +813,17 @@ IT-Recht konsultieren.
 | Markt | App-Locale | Rechtstexte | Pflicht/Empfehlung | Freigabe |
 |---|---|---|---|---|
 
+## Jurisdiktions-Gates
+| Prioritaet | Rechtsraum | Relevante Regeln | Gilt wegen | Status | Blocker/Fix |
+|---:|---|---|---|---|---|
+| 1 | DE/EU | DSGVO, DDG, TDDDG, BGB/EGBGB, BFSG/EAA, DSA, AI Act | | | |
+| 2 | UK/USA/CA/AU | UK-GDPR/PECR/OSA, CCPA/CPRA/State Laws, COPPA/FTC, PIPEDA/Law25, APPs | | | |
+| 3 | International | PIPL, DPDP, APPI, PIPA, LGPD, PDPA, POPIA, PDPL | | | |
+
+## Formulierungs-Check
+| Text/Screen | Problematische Formulierung | Risiko | Korrektur-Hinweis |
+|---|---|---|---|
+
 ## Play-Console-Checkliste
 - [ ] Data Safety passt zu Code und SDKs
 - [ ] Privacy Policy URL erreichbar
@@ -640,6 +832,8 @@ IT-Recht konsultieren.
 - [ ] Content Rating korrekt
 - [ ] Target Audience/Families korrekt
 - [ ] Ads/Health/AI/Finance/Permissions Declarations korrekt
+- [ ] UGC-/AI-/Health-/Photo-Video-/Contact-/Location-/Accessibility-/Subscription-Sonderregeln geprueft
+- [ ] Zielmaerkte und Rechtstext-Sprachen bewertet
 
 ## Fix-Reihenfolge
 1. BLOCKER zuerst.
@@ -679,6 +873,9 @@ Naechste Pflicht-Pruefung: YYYY-MM-DD (+30 Tage bei Play Policies, +90 Tage sons
 ### Google Play - Data Safety/User Data
 ### Android - Security/Privacy Controls
 ### Spezialfaelle - Kinder, Health, AI, Ads, UGC, Finance
+### DE/EU - DSA, AI Act, BFSG/EAA, TDDDG
+### US/UK/CA/AU - State Privacy, COPPA, FTC, PECR, Online Safety, PIPEDA, APPs
+### International - PIPL, DPDP, APPI, PIPA, LGPD, PDPA, POPIA, PDPL
 
 ## Sprach-Anforderungen pro Markt
 
@@ -723,6 +920,10 @@ Der Skill darf konkrete technische Fixes vorschlagen oder implementieren:
 - Runtime-Permission-Erklaerungen an Feature-Kontext koppeln
 - Unnoetige Permissions entfernen
 - Android Photo Picker statt breiter Medien-Permissions
+- UGC Terms-Akzeptanz, Report-/Blockier-Funktion und Moderationsflow ergaenzen
+- KI-In-App-Reporting, Safety-Filter und AI-/Deepfake-Hinweise ergaenzen
+- Abo-/Trial-/Paywall-Texte klarer formulieren und Cancellation-Link einbauen
+- Barrierefreiheitsprobleme in Legal-/Checkout-/Account-Flows als Release-Blocker behandeln
 - Backup-Regeln fuer sensitive Daten
 - `usesCleartextTraffic=false` oder Network Security Config bereinigen
 - Sensitive Logs entfernen
@@ -756,6 +957,12 @@ anwaltliche Pruefpunkte erstellen.
 - ❌ App-Pruefung ohne vorherige Recherche (dann fehlen Pflichtangaben-Kriterien)
 - ❌ Rechtstexte nur in Deutsch+Englisch belassen ohne Pruefung welche Laender
   die Landessprache zwingend verlangen
+- ❌ DSA, AI Act, BFSG/EAA, TDDDG/ePrivacy, COPPA/State-Privacy, Online Safety,
+  DPDP/PIPL/LGPD/POPIA/PDPL ignorieren, wenn Features oder Zielmaerkte sie triggern
+- ❌ UGC, Chat, Sharing, KI, Health, Kinder, Abo, Ads oder sensible Permissions als
+  "normale App-Funktion" behandeln, ohne Sonderpolicy-Gate
+- ❌ Fehlende Uebersetzungen oder nicht bewertete Store-Laender als still freigegeben
+  behandeln
 - ❌ Fremde oder unklare Aenderungen im Repo mitcommitten
 - ❌ Dateien ausserhalb des aktuellen Workspaces bearbeiten, ausser explizit angefordert
 - ❌ `~/Codex/`, `~/proggs/` oder andere Home-Unterordner als Standard-Arbeitsverzeichnis
@@ -777,8 +984,8 @@ anwaltliche Pruefpunkte erstellen.
 >
 > Ablauf:
 > 1. Lese Wissensbasis aus `tools/rechtssicherheit.md` (oder lege sie neu an).
-> 2. Starte 5 parallele Researcher (DE/EU, US/UK, Asien/LatAm, Play-Store-Policies,
->    Abmahn-Trends). Laufzeit: ~5-8 Minuten.
+> 2. Starte 5 parallele Researcher (DE/EU, US/UK/CA/AU, International,
+>    Play-Store-Policies, Enforcement-/Abmahn-Trends). Laufzeit: ~5-8 Minuten.
 > 3. Vollscan der Codestruktur in `BestJournalAndroid/` (Datei-Inventur + Legal-Signale).
 > 4. Detail-Pruefung: Manifest/Permissions, SDKs, lokale Speicherung, Logs, Backup,
 >    Rechtstexte und deren Platzierung, Consent, Store-Metadaten.
