@@ -1069,6 +1069,8 @@
     <string name="settings_report_ai_no_email">ഇമെയിൽ ആപ്പ് കണ്ടെത്തിയില്ല. ദയവായി റിപ്പോർട്ട് dev.app.support@gmail.com-ലേക്ക് അയയ്ക്കുക.</string>
     <string name="settings_report_ai_subject">Best Journal: അനുചിത AI പ്രതികരണം</string>
     <string name="settings_report_ai_body">നമസ്കാരം,\n\nBest Journal-ൽ ഒരു അനുചിതമോ തെറ്റായതോ ആയ AI പ്രതികരണം റിപ്പോർട്ട് ചെയ്യാൻ ഞാൻ ആഗ്രഹിക്കുന്നു.\n\nപ്രശ്നത്തിന്റെ വിവരണം:\n[ദയവായി പൂരിപ്പിക്കുക]\n\nസന്ദർഭം (ഏത് ഫീച്ചർ, ഏത് ഇൻപുട്ട്):\n[ദയവായി പൂരിപ്പിക്കുക]\n\nനന്ദി.</string>
+    <string name="settings_report_ai_dialog_title">AI പ്രതികരണം റിപ്പോർട്ട് ചെയ്യുക</string>
+    <string name="settings_report_ai_dialog_desc">അനുചിതമോ തെറ്റോ ആയ AI പ്രതികരണം വിവരിക്കുക. നിങ്ങളുടെ റിപ്പോർട്ട് നേരിട്ട് ഞങ്ങളുടെ പിന്തുണാ ടീമിന് അയയ്ക്കും. നിങ്ങൾ Google അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്തിരിക്കണം.</string>
 
     <string name="settings_revoke_title">കരാർ റദ്ദാക്കൽ</string>
     <string name="settings_revoke_subtitle">Premium വാങ്ങൽ</string>
@@ -1188,4 +1190,68 @@
     <string name="paywall_feature_followups">ഓരോ ഡയറി എൻട്രിക്കും പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
     <string name="settings_premium_feature_followups">പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
     <string name="settings_premium_feature_followups_desc">ഓരോ എൻട്രിയിലും ആവശ്യമുള്ളത്ര അധിക കുറിപ്പുകൾ</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="follow_up_tab_label">അധിക കുറിപ്പുകൾ</string>
+    <string name="follow_up_add_button">അധിക കുറിപ്പ് ചേർക്കുക</string>
+    <string name="follow_up_empty_state">ഇതുവരെ അധിക കുറിപ്പുകൾ ഇല്ല.\nആദ്യത്തേത് ചേർക്കാൻ താഴെയുള്ള ബട്ടൺ ടാപ്പ് ചെയ്യുക.</string>
+    <string name="follow_up_recording_hint">റെക്കോർഡ് ചെയ്യാൻ ടാപ്പ് ചെയ്യുക</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> ഇല്ലാതാക്കണോ?</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> സ്ഥിരമായി ഇല്ലാതാക്കും. ഇത് പഴയപടിയാക്കാൻ കഴിയില്ല.</string>
+    <string name="follow_up_delete_confirm_yes">അതെ, ഇല്ലാതാക്കുക</string>
+    <string name="follow_up_delete_confirm_no">വേണ്ട, നിലനിർത്തുക</string>
+    <string name="follow_up_show_original">↩ യഥാർഥ ടെക്സ്റ്റ് കാണിക്കുക</string>
+    <string name="follow_up_show_improved">മെച്ചപ്പെടുത്തിയ പതിപ്പ് കാണിക്കുക</string>
+    <string name="follow_up_inline_title">അധിക കുറിപ്പ് <xliff:g id="number" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_improve_button">മെച്ചപ്പെടുത്തുക</string>
+    <string name="follow_up_improving_state">മെച്ചപ്പെടുത്തുന്നു…</string>
+    <string name="follow_up_improve_error">മെച്ചപ്പെടുത്താൻ കഴിഞ്ഞില്ല. വീണ്ടും ശ്രമിക്കുക.</string>
+    <string name="follow_up_record_new">പുതിയ അധിക കുറിപ്പ് റെക്കോർഡ് ചെയ്യുക</string>
+    <string name="follow_up_recording_state">റെക്കോർഡ് ചെയ്യുന്നു…</string>
+    <string name="follow_up_transcribing_state">ടെക്സ്റ്റാക്കി മാറ്റുന്നു…</string>
+    <string name="follow_up_record_error">റെക്കോർഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല. വീണ്ടും ശ്രമിക്കുക.</string>
+    <string name="follow_up_transcribe_error">ടെക്സ്റ്റാക്കി മാറ്റാൻ കഴിഞ്ഞില്ല. വീണ്ടും ശ്രമിക്കുക.</string>
+
+    <!-- Prompt/recording UI strings -->
+    <string name="prompt_recording_with_model">റെക്കോർഡ് ചെയ്യുന്നു (<xliff:g id="model" example="Whisper">%1$s</xliff:g>)…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ഉപയോഗിച്ച് ടെക്സ്റ്റാക്കി മാറ്റുന്നു…</string>
+    <string name="prompt_transcription_model_hint">മോഡൽ: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_record_button_label">റെക്കോർഡ്</string>
+    <string name="prompt_stop_button_label">നിർത്തുക</string>
+    <string name="prompt_send_button_label">അയക്കുക</string>
+    <string name="prompt_placeholder_text">നിങ്ങളുടെ മനസ്സിലുള്ളത് എഴുതുക…</string>
+    <string name="prompt_improve_button_label">മെച്ചപ്പെടുത്തുക</string>
+    <string name="prompt_char_count_label">%1$d അക്ഷരങ്ങൾ</string>
+
+    <!-- AI retrospective strings -->
+    <string name="ai_retro_title">AI അവലോകനം</string>
+    <string name="ai_retro_generate_button">അവലോകനം സൃഷ്ടിക്കുക</string>
+    <string name="ai_retro_generating_state">അവലോകനം സൃഷ്ടിക്കുന്നു…</string>
+    <string name="ai_retro_error_state">അവലോകനം സൃഷ്ടിക്കാൻ കഴിഞ്ഞില്ല. വീണ്ടും ശ്രമിക്കുക.</string>
+    <string name="ai_retro_empty_state">അവലോകനത്തിന് ആവശ്യമായ എൻട്രികൾ ഇല്ല.</string>
+    <string name="ai_retro_week_label">ഈ ആഴ്ച</string>
+    <string name="ai_retro_month_label">ഈ മാസം</string>
+    <string name="ai_retro_year_label">ഈ വർഷം</string>
+    <string name="ai_retro_copy_button">പകർത്തുക</string>
+    <string name="ai_retro_share_button">പങ്കിടുക</string>
+    <string name="ai_retro_copied_message">ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി</string>
+
+    <!-- Paywall / consent strings -->
+    <string name="paywall_title">പ്രീമിയത്തിലേക്ക് അപ്‌ഗ്രേഡ് ചെയ്യുക</string>
+    <string name="paywall_subtitle">എല്ലാ പ്രീമിയം സൗകര്യങ്ങളും ആസ്വദിക്കുക</string>
+    <string name="paywall_monthly_label">പ്രതിമാസം</string>
+    <string name="paywall_yearly_label">വാർഷികം</string>
+    <string name="paywall_lifetime_label">ജീവിതകാലം</string>
+    <string name="paywall_subscribe_button">സബ്‌സ്‌ക്രൈബ് ചെയ്യുക</string>
+    <string name="paywall_restore_button">വാങ്ങൽ പുനഃസ്ഥാപിക്കുക</string>
+    <string name="paywall_cancel_anytime">എപ്പോൾ വേണമെങ്കിലും റദ്ദാക്കാം</string>
+    <string name="paywall_consent_dialog_title">സൗജന്യ റദ്ദാക്കൽ അവകാശം</string>
+    <string name="paywall_consent_dialog_body">നിങ്ങൾ ഒരു സബ്‌സ്‌ക്രിപ്ഷൻ വാങ്ങുകയാണ്. §355 BGB പ്രകാരം 14 ദിവസത്തിനുള്ളിൽ സൗജന്യമായി റദ്ദാക്കാനുള്ള അവകാശം നിങ്ങൾക്കുണ്ട്. §356 BGB പ്രകാരം ഡിജിറ്റൽ ഉള്ളടക്കത്തിന്റെ കാര്യത്തിൽ നിങ്ങൾ സമ്മതം നൽകുകയാണെങ്കിൽ ഈ അവകാശം നഷ്ടമാകും.</string>
+    <string name="paywall_consent_dialog_checkbox">ഡൗൺലോഡ് ആരംഭിക്കുമ്പോൾ ഡിജിറ്റൽ ഉള്ളടക്കത്തിനുള്ള എന്റെ റദ്ദാക്കൽ അവകാശം നഷ്ടമാകുമെന്ന് ഞാൻ സമ്മതിക്കുന്നു.</string>
+    <string name="paywall_consent_dialog_confirm">സമ്മതിക്കുകയും വാങ്ങുകയും ചെയ്യുക</string>
+    <string name="paywall_consent_dialog_cancel">റദ്ദാക്കുക</string>
+    <string name="paywall_feature_ai_improvement">AI ഉപയോഗിച്ച് ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ</string>
+    <string name="paywall_feature_unlimited_entries">പരിധിയില്ലാത്ത ഡയറി എൻട്രികൾ</string>
+    <string name="paywall_feature_pdf_export">PDF ആയി കയറ്റുമതി ചെയ്യൽ</string>
+    <string name="paywall_feature_drive_backup">Google Drive ബാക്കപ്പ്</string>
 </resources>

@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">No se encontró una aplicación de correo. Envía el reporte a dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: respuesta de IA inapropiada</string>
     <string name="settings_report_ai_body">Hola,\n\nquiero reportar una respuesta de IA inapropiada o incorrecta en Best Journal.\n\nDescripción del problema:\n[Completar]\n\nContexto (qué función, qué entrada):\n[Completar]\n\nGracias.</string>
+    <string name="settings_report_ai_dialog_title">Reportar respuesta de la IA</string>
+    <string name="settings_report_ai_dialog_desc">Describe la respuesta inapropiada o incorrecta de la IA. Tu reporte se envía directamente a nuestro equipo de soporte. Debes haber iniciado sesión con tu cuenta de Google.</string>
 
     <string name="settings_revoke_title">Desistimiento</string>
     <string name="settings_revoke_subtitle">Compra Premium</string>

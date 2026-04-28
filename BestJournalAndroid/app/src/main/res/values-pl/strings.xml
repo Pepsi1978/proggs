@@ -1142,6 +1142,8 @@
     <string name="settings_report_ai_no_email">Nie znaleziono aplikacji pocztowej. Wyślij zgłoszenie na dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: nieodpowiednia odpowiedź AI</string>
     <string name="settings_report_ai_body">Dzień dobry,\n\nchcę zgłosić nieodpowiednią lub błędną odpowiedź AI w Best Journal.\n\nOpis problemu:\n[Do uzupełnienia]\n\nKontekst (która funkcja, które wejście):\n[Do uzupełnienia]\n\nDziękuję.</string>
+    <string name="settings_report_ai_dialog_title">Zgłoś odpowiedź AI</string>
+    <string name="settings_report_ai_dialog_desc">Opisz nieodpowiednią lub błędną odpowiedź AI. Twoje zgłoszenie zostanie wysłane bezpośrednio do naszego zespołu wsparcia. Musisz być zalogowany na swoje konto Google.</string>
 
     <string name="settings_revoke_title">Odstąpienie od umowy</string>
     <string name="settings_revoke_subtitle">Zakup Premium</string>

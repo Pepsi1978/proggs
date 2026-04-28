@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">Nenhum aplicativo de e-mail encontrado. Envie o reporte para dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: resposta de IA inadequada</string>
     <string name="settings_report_ai_body">Olá,\n\nquero reportar uma resposta de IA inadequada ou incorreta no Best Journal.\n\nDescrição do problema:\n[Preencher]\n\nContexto (qual recurso, qual entrada):\n[Preencher]\n\nObrigado.</string>
+    <string name="settings_report_ai_dialog_title">Reportar resposta da IA</string>
+    <string name="settings_report_ai_dialog_desc">Descreva a resposta inadequada ou incorreta da IA. Seu relatório é enviado diretamente para nossa equipe de suporte. Você precisa estar conectado com sua conta do Google.</string>
 
     <string name="settings_revoke_title">Direito de arrependimento</string>
     <string name="settings_revoke_subtitle">Compra Premium</string>
@@ -1253,4 +1255,66 @@ O que você quer fazer?</string>
     <string name="paywall_feature_followups">Complementos ilimitados em cada entrada do diário</string>
     <string name="settings_premium_feature_followups">Complementos ilimitados</string>
     <string name="settings_premium_feature_followups_desc">Quantos complementos por entrada você quiser</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">Não</string>
+    <string name="action_yes">Sim</string>
+    <string name="ai_improved_suffix">\n\n✨ Melhorado com IA</string>
+    <string name="ai_improved_suffix_marker">✨ Melhorado com IA</string>
+    <string name="entry_delete_entry_cd">Excluir entrada do diário</string>
+    <string name="entry_journal_entry_title">Entrada do diário</string>
+    <string name="entry_photos_videos_add_title">Adicionar fotos/vídeos</string>
+    <string name="follow_up_cancel">Cancelar</string>
+    <string name="follow_up_card_title">Complemento</string>
+    <string name="follow_up_choose_input_mode">Como você quer adicionar o complemento?</string>
+    <string name="follow_up_delete_button">Excluir</string>
+    <string name="follow_up_delete_cd">Excluir complemento</string>
+    <string name="follow_up_delete_confirm_text">Tem certeza que quer excluir o complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g> permanentemente?</string>
+    <string name="follow_up_delete_confirm_title">Excluir complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">Seu complemento:</string>
+    <string name="follow_up_dialog_title">Complemento</string>
+    <string name="follow_up_discard">Descartar</string>
+    <string name="follow_up_improve_text">✨ Melhorar texto</string>
+    <string name="follow_up_improve_with_ai">Melhorar depois com IA</string>
+    <string name="follow_up_improving">A IA está melhorando o complemento…</string>
+    <string name="follow_up_inline_title">Complemento <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Gravar voz</string>
+    <string name="follow_up_input_speak_label">Gravar voz</string>
+    <string name="follow_up_input_write_cd">Escrever</string>
+    <string name="follow_up_input_write_label">Escrever</string>
+    <string name="follow_up_premium_body">Com o Premium você pode adicionar quantos complementos quiser a cada entrada do seu diário.</string>
+    <string name="follow_up_premium_hint">a partir do segundo complemento</string>
+    <string name="follow_up_premium_later">Decidir depois</string>
+    <string name="follow_up_premium_subscribe">Iniciar assinatura</string>
+    <string name="follow_up_premium_subtext">Cada complemento é incluído automaticamente no painel para que sua análise fique sempre completa.</string>
+    <string name="follow_up_premium_title">Complementos ilimitados</string>
+    <string name="follow_up_save">Salvar</string>
+    <string name="follow_up_save_improved">Salvar versão melhorada</string>
+    <string name="follow_up_show_improved">✨ Mostrar versão melhorada</string>
+    <string name="follow_up_show_original">↩ Mostrar original</string>
+    <string name="follow_up_speak_pill_label">Gravar voz</string>
+    <string name="follow_up_speak_prompt">Fale seu complemento.</string>
+    <string name="follow_up_stop_hint">Toque em Parar quando terminar.</string>
+    <string name="follow_up_tab_improved">✨ Melhorado com IA</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_text_placeholder">Escreva seu complemento aqui…</string>
+    <string name="follow_up_transcribing">Complemento sendo transcrito…</string>
+    <string name="journal_improve">Melhorar texto</string>
+    <string name="journal_state_improving">Melhorando…</string>
+    <string name="journal_state_transcribing">Transcrevendo…</string>
+    <string name="paywall_consent_dialog_body">Após concluir uma assinatura ou compra, você tem basicamente 14 dias de direito de arrependimento.\n\nPara que você possa usar os recursos Premium imediatamente, começamos a disponibilizá-los logo após a sua compra. Com o seu consentimento abaixo, você renuncia ao direito de arrependimento de 14 dias, ciente das consequências.\n\nSem esse consentimento não podemos liberar os recursos Premium imediatamente.</string>
+    <string name="paywall_consent_dialog_cancel">Cancelar</string>
+    <string name="paywall_consent_dialog_checkbox">Concordo que a disponibilização dos recursos Premium começa imediatamente após o pedido. Estou ciente de que, com isso, perco meu direito de arrependimento de 14 dias.</string>
+    <string name="paywall_consent_dialog_confirm">Assinar com pagamento agora</string>
+    <string name="paywall_consent_dialog_title">Aviso de arrependimento</string>
+    <string name="profile_custom_add">Adicionar análise individual</string>
+    <string name="profile_custom_remove">Remover análise individual</string>
+    <string name="profile_custom_rename">Renomear</string>
+    <string name="profile_custom_rename_save">Salvar nome</string>
+    <string name="prompt_clear_confirm_text">A análise individual será excluída permanentemente. Tem certeza que quer continuar?</string>
+    <string name="prompt_clear_confirm_title">Excluir texto?</string>
+    <string name="prompt_clear_content_desc">Excluir texto</string>
+    <string name="prompt_recording_with_model">Gravação em andamento — Modelo: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> transcrevendo…</string>
+    <string name="prompt_transcription_model_hint">Transcrito com <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>

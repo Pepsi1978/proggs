@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">कोई ईमेल ऐप नहीं मिला। कृपया रिपोर्ट dev.app.support@gmail.com पर भेजें।</string>
     <string name="settings_report_ai_subject">Best Journal: अनुचित AI जवाब</string>
     <string name="settings_report_ai_body">नमस्ते,\n\nमैं Best Journal में एक अनुचित या गलत AI जवाब की रिपोर्ट करना चाहता हूँ।\n\nसमस्या का विवरण:\n[कृपया भरें]\n\nसंदर्भ (कौन-सा फ़ीचर, कौन-सा इनपुट):\n[कृपया भरें]\n\nधन्यवाद।</string>
+    <string name="settings_report_ai_dialog_title">AI प्रतिक्रिया रिपोर्ट करें</string>
+    <string name="settings_report_ai_dialog_desc">अनुचित या गलत AI प्रतिक्रिया का वर्णन करें। आपकी रिपोर्ट सीधे हमारी सहायता टीम को भेजी जाती है। आपको अपने Google खाते से साइन इन होना चाहिए।</string>
 
     <string name="settings_revoke_title">अनुबंध रद्द</string>
     <string name="settings_revoke_subtitle">Premium खरीद</string>
@@ -1253,4 +1255,66 @@
     <string name="paywall_feature_followups">हर डायरी एंट्री के लिए असीमित अतिरिक्त नोट्स</string>
     <string name="settings_premium_feature_followups">असीमित अतिरिक्त नोट्स</string>
     <string name="settings_premium_feature_followups_desc">हर एंट्री में जितने चाहें उतने अतिरिक्त नोट्स</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">नहीं</string>
+    <string name="action_yes">हाँ</string>
+    <string name="ai_improved_suffix"> (AI द्वारा सुधारा गया)</string>
+    <string name="ai_improved_suffix_marker">✨ AI से सुधारा गया</string>
+    <string name="entry_delete_entry_cd">एंट्री हटाएं</string>
+    <string name="entry_journal_entry_title">डायरी एंट्री</string>
+    <string name="entry_photos_videos_add_title">फ़ोटो और वीडियो जोड़ें</string>
+    <string name="follow_up_cancel">रद्द करें</string>
+    <string name="follow_up_card_title">अतिरिक्त नोट</string>
+    <string name="follow_up_choose_input_mode">इनपुट मोड चुनें</string>
+    <string name="follow_up_delete_button">नोट हटाएं</string>
+    <string name="follow_up_delete_cd">नोट हटाएं</string>
+    <string name="follow_up_delete_confirm_text">क्या आप वाकई "<xliff:g id="title" example="मेरा नोट">%1$s</xliff:g>" हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं हो सकती।</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="मेरा नोट">%1$s</xliff:g>" हटाएं?</string>
+    <string name="follow_up_dialog_label">नोट लिखें</string>
+    <string name="follow_up_dialog_title">अतिरिक्त नोट जोड़ें</string>
+    <string name="follow_up_discard">छोड़ें</string>
+    <string name="follow_up_improve_text">टेक्स्ट सुधारें</string>
+    <string name="follow_up_improve_with_ai">AI से सुधारें</string>
+    <string name="follow_up_improving">सुधारा जा रहा है…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. अतिरिक्त नोट</string>
+    <string name="follow_up_input_speak_cd">बोलकर लिखें</string>
+    <string name="follow_up_input_speak_label">बोलें</string>
+    <string name="follow_up_input_write_cd">टाइप करके लिखें</string>
+    <string name="follow_up_input_write_label">टाइप करें</string>
+    <string name="follow_up_premium_body">Premium के साथ हर डायरी एंट्री में असीमित अतिरिक्त नोट्स जोड़ें।</string>
+    <string name="follow_up_premium_hint">और नोट्स चाहिए?</string>
+    <string name="follow_up_premium_later">बाद में</string>
+    <string name="follow_up_premium_subscribe">Premium लें</string>
+    <string name="follow_up_premium_subtext">Premium प्लान के साथ असीमित अतिरिक्त नोट्स अनलॉक करें।</string>
+    <string name="follow_up_premium_title">Premium फ़ीचर</string>
+    <string name="follow_up_save">सहेजें</string>
+    <string name="follow_up_save_improved">सुधरा हुआ सहेजें</string>
+    <string name="follow_up_show_improved">सुधरा हुआ दिखाएं</string>
+    <string name="follow_up_show_original">↩ मूल दिखाएं</string>
+    <string name="follow_up_speak_pill_label">बोलें</string>
+    <string name="follow_up_speak_prompt">अब बोलें…</string>
+    <string name="follow_up_stop_hint">रोकने के लिए टैप करें</string>
+    <string name="follow_up_tab_improved">सुधरा हुआ</string>
+    <string name="follow_up_tab_original">मूल</string>
+    <string name="follow_up_text_placeholder">यहाँ अपना नोट लिखें…</string>
+    <string name="follow_up_transcribing">ट्रांसक्राइब हो रहा है…</string>
+    <string name="journal_improve">सुधारें</string>
+    <string name="journal_state_improving">सुधारा जा रहा है…</string>
+    <string name="journal_state_transcribing">ट्रांसक्राइब हो रहा है…</string>
+    <string name="paywall_consent_dialog_body">आप Best Journal की Premium सेवाएं सक्रिय करने जा रहे हैं। खरीदारी की पुष्टि करने पर, आपसे तुरंत शुल्क लिया जाएगा। सदस्यता अपने आप नवीनीकृत होती रहेगी जब तक आप इसे रद्द नहीं करते। डिजिटल सामग्री डाउनलोड शुरू होते ही वापसी का अधिकार समाप्त हो जाता है।</string>
+    <string name="paywall_consent_dialog_cancel">रद्द करें</string>
+    <string name="paywall_consent_dialog_checkbox">मैं समझता/समझती हूँ कि डाउनलोड शुरू होने के बाद, वापसी का अधिकार समाप्त हो जाता है (§ 356 Abs. 5 BGB के अनुसार)।</string>
+    <string name="paywall_consent_dialog_confirm">सहमत हूँ और खरीदें</string>
+    <string name="paywall_consent_dialog_title">खरीदारी की पुष्टि करें</string>
+    <string name="profile_custom_add">प्रोफ़ाइल जोड़ें</string>
+    <string name="profile_custom_remove">प्रोफ़ाइल हटाएं</string>
+    <string name="profile_custom_rename">प्रोफ़ाइल का नाम बदलें</string>
+    <string name="profile_custom_rename_save">सहेजें</string>
+    <string name="prompt_clear_confirm_text">क्या आप वाकई इस प्रॉम्प्ट को साफ़ करना चाहते हैं?</string>
+    <string name="prompt_clear_confirm_title">प्रॉम्प्ट साफ़ करें?</string>
+    <string name="prompt_clear_content_desc">प्रॉम्प्ट साफ़ करें</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> से रिकॉर्ड हो रहा है…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> से ट्रांसक्राइब हो रहा है…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> का उपयोग करके</string>
 </resources>

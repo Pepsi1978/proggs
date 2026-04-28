@@ -1143,6 +1143,8 @@
     <string name="settings_report_ai_no_email">மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து புகாரை dev.app.support@gmail.com-க்கு அனுப்பவும்.</string>
     <string name="settings_report_ai_subject">Best Journal: தகாத AI பதில்</string>
     <string name="settings_report_ai_body">வணக்கம்,\n\nBest Journal-ல் ஒரு தகாத அல்லது தவறான AI பதிலைப் புகாரளிக்க விரும்புகிறேன்.\n\nபிரச்சனையின் விளக்கம்:\n[தயவுசெய்து நிரப்பவும்]\n\nசூழல் (எந்த அம்சம், எந்த உள்ளீடு):\n[தயவுசெய்து நிரப்பவும்]\n\nநன்றி.</string>
+    <string name="settings_report_ai_dialog_title">AI பதிலைப் புகாரளி</string>
+    <string name="settings_report_ai_dialog_desc">பொருத்தமற்ற அல்லது தவறான AI பதிலை விவரிக்கவும். உங்கள் புகார் நேரடியாக எங்கள் ஆதரவுக் குழுவுக்கு அனுப்பப்படுகிறது. நீங்கள் உங்கள் Google கணக்கில் உள்நுழைந்திருக்க வேண்டும்.</string>
 
     <string name="settings_revoke_title">ஒப்பந்த ரத்து</string>
     <string name="settings_revoke_subtitle">Premium வாங்குதல்</string>
@@ -1262,4 +1264,68 @@
     <string name="paywall_feature_followups">ஒவ்வொரு நாட்குறிப்பிற்கும் வரம்பற்ற கூடுதல் குறிப்புகள்</string>
     <string name="settings_premium_feature_followups">வரம்பற்ற கூடுதல் குறிப்புகள்</string>
     <string name="settings_premium_feature_followups_desc">ஒரு பதிவில் விரும்பும் அளவு கூடுதல் குறிப்புகள்</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="follow_up_tab_label">கூடுதல் குறிப்புகள்</string>
+    <string name="follow_up_add_button">கூடுதல் குறிப்பு சேர்க்கவும்</string>
+    <string name="follow_up_empty_state">இன்னும் கூடுதல் குறிப்புகள் இல்லை.\nமுதலாவதை சேர்க்க கீழே உள்ள பொத்தானை தட்டவும்.</string>
+    <string name="follow_up_recording_hint">பதிவு செய்ய தட்டவும்</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g>ஐ நீக்கவா?</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> நிரந்தரமாக நீக்கப்படும். இதை மீண்டும் செயல்தவிர்க்க இயலாது.</string>
+    <string name="follow_up_delete_confirm_yes">ஆம், நீக்கவும்</string>
+    <string name="follow_up_delete_confirm_no">இல்லை, வையுங்கள்</string>
+    <string name="follow_up_show_original">↩ அசல் உரையைக் காட்டு</string>
+    <string name="follow_up_show_improved">மேம்படுத்தப்பட்ட பதிப்பைக் காட்டு</string>
+    <string name="follow_up_inline_title">கூடுதல் குறிப்பு <xliff:g id="number" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_improve_button">மேம்படுத்து</string>
+    <string name="follow_up_improving_state">மேம்படுத்துகிறோம்…</string>
+    <string name="follow_up_improve_error">மேம்படுத்த இயலவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="follow_up_record_new">புதிய கூடுதல் குறிப்பு பதிவு செய்யவும்</string>
+    <string name="follow_up_recording_state">பதிவு செய்கிறோம்…</string>
+    <string name="follow_up_transcribing_state">உரையாக மாற்றுகிறோம்…</string>
+    <string name="follow_up_record_error">பதிவு செய்ய இயலவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="follow_up_transcribe_error">உரையாக மாற்ற இயலவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+
+    <!-- Prompt/recording UI strings -->
+    <string name="prompt_recording_with_model">பதிவாகிறது (<xliff:g id="model" example="Whisper">%1$s</xliff:g>)…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> மூலம் உரையாக மாற்றுகிறோம்…</string>
+    <string name="prompt_transcription_model_hint">மாதிரி: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_record_button_label">பதிவு செய்</string>
+    <string name="prompt_stop_button_label">நிறுத்து</string>
+    <string name="prompt_send_button_label">அனுப்பு</string>
+    <string name="prompt_placeholder_text">உங்கள் மனதில் உள்ளதை எழுதுங்கள்…</string>
+    <string name="prompt_improve_button_label">மேம்படுத்து</string>
+    <string name="prompt_char_count_label">%1$d எழுத்துகள்</string>
+
+    <!-- AI retrospective strings -->
+    <string name="ai_retro_title">AI மதிப்பாய்வு</string>
+    <string name="ai_retro_generate_button">மதிப்பாய்வு உருவாக்கு</string>
+    <string name="ai_retro_generating_state">மதிப்பாய்வு உருவாக்குகிறோம்…</string>
+    <string name="ai_retro_error_state">மதிப்பாய்வு உருவாக்க இயலவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="ai_retro_empty_state">மதிப்பாய்வுக்கு போதுமான பதிவுகள் இல்லை.</string>
+    <string name="ai_retro_week_label">இந்த வாரம்</string>
+    <string name="ai_retro_month_label">இந்த மாதம்</string>
+    <string name="ai_retro_year_label">இந்த ஆண்டு</string>
+    <string name="ai_retro_copy_button">நகலெடு</string>
+    <string name="ai_retro_share_button">பகிர்</string>
+    <string name="ai_retro_copied_message">இடைப்பகுதிக்கு நகலெடுக்கப்பட்டது</string>
+
+    <!-- Paywall / consent strings -->
+    <string name="paywall_title">பிரீமியத்திற்கு மேம்படுத்தவும்</string>
+    <string name="paywall_subtitle">அனைத்து பிரீமியம் வசதிகளையும் அனுபவிக்கவும்</string>
+    <string name="paywall_monthly_label">மாதாந்திரம்</string>
+    <string name="paywall_yearly_label">ஆண்டுதோறும்</string>
+    <string name="paywall_lifetime_label">வாழ்நாள் முழுவதும்</string>
+    <string name="paywall_subscribe_button">சந்தாவை எடுக்கவும்</string>
+    <string name="paywall_restore_button">வாங்கியதை மீட்டமைக்கவும்</string>
+    <string name="paywall_cancel_anytime">எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்</string>
+    <string name="paywall_consent_dialog_title">இலவச ரத்துசெய்யும் உரிமை</string>
+    <string name="paywall_consent_dialog_body">நீங்கள் ஒரு சந்தாவை வாங்குகிறீர்கள். §355 BGB படி 14 நாட்களுக்குள் இலவசமாக ரத்துசெய்யும் உரிமை உங்களுக்கு உண்டு. §356 BGB படி டிஜிட்டல் உள்ளடக்கத்தின் விஷயத்தில் நீங்கள் சம்மதிக்கும்போது இந்த உரிமை இல்லாமல் போகும்.</string>
+    <string name="paywall_consent_dialog_checkbox">பதிவிறக்கம் தொடங்கியதும் டிஜிட்டல் உள்ளடக்கத்திற்கான என் ரத்துசெய்யும் உரிமை இல்லாமல் போகும் என்று நான் ஒப்புக்கொள்கிறேன்.</string>
+    <string name="paywall_consent_dialog_confirm">ஒப்புக்கொண்டு வாங்கவும்</string>
+    <string name="paywall_consent_dialog_cancel">ரத்துசெய்யவும்</string>
+    <string name="paywall_feature_ai_improvement">AI மூலம் உரையை மேம்படுத்துதல்</string>
+    <string name="paywall_feature_unlimited_entries">வரம்பற்ற நாட்குறிப்பு பதிவுகள்</string>
+    <string name="paywall_feature_pdf_export">PDF ஆக ஏற்றுமதி செய்தல்</string>
+    <string name="paywall_feature_drive_backup">Google Drive காப்புப்பிரதி</string>
 </resources>

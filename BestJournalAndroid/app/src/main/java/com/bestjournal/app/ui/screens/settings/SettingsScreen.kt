@@ -3303,11 +3303,12 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Report AI content (Google Play AI Policy 04/2024) — two-step via dialog.
+                        // Report AI content (Google Play AI Policy 04/2024) — in-app dialog
+                        // matching FeedbackDialog UX. Sends via Gmail API to dev support
+                        // with subject pre-filled. Body is pre-filled from a localized
+                        // template and the user can edit it before sending.
                         var showReportAiDialog by remember { mutableStateOf(false) }
-                        val reportAiSubject = stringResource(R.string.settings_report_ai_subject)
-                        val reportAiBody = stringResource(R.string.settings_report_ai_body)
-                        val reportAiNoEmail = stringResource(R.string.settings_report_ai_no_email)
+                        var reportAiSent by remember { mutableStateOf(false) }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -3316,70 +3317,37 @@ fun SettingsScreen(
                                 onClick = {
                                     doHaptic(HapticFeedbackType.LongPress)
                                     showReportAiDialog = true
+                                    reportAiSent = false
                                 },
                             ) {
                                 Text(stringResource(R.string.settings_report_ai_title))
                             }
                         }
 
+                        if (reportAiSent) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.settings_feedback_sent),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                            androidx.compose.runtime.LaunchedEffect(Unit) {
+                                kotlinx.coroutines.delay(3000)
+                                reportAiSent = false
+                            }
+                        }
+
                         if (showReportAiDialog) {
-                            androidx.compose.material3.AlertDialog(
-                                onDismissRequest = { showReportAiDialog = false },
-                                title = {
-                                    Text(stringResource(R.string.settings_report_ai_confirm_title))
+                            ReportAiDialog(
+                                userEmail = uiState.userProfile?.email,
+                                onDismiss = { showReportAiDialog = false },
+                                onSent = {
+                                    showReportAiDialog = false
+                                    reportAiSent = true
                                 },
-                                text = {
-                                    Text(stringResource(R.string.settings_report_ai_confirm_body))
-                                },
-                                confirmButton = {
-                                    androidx.compose.material3.TextButton(
-                                        onClick = {
-                                            showReportAiDialog = false
-                                            val mailtoUri =
-                                                android.net.Uri.parse(
-                                                    "mailto:dev.app.support@gmail.com" +
-                                                        "?subject=" +
-                                                        android.net.Uri.encode(reportAiSubject) +
-                                                        "&body=" +
-                                                        android.net.Uri.encode(reportAiBody)
-                                                )
-                                            val intent =
-                                                android.content.Intent(
-                                                        android.content.Intent.ACTION_SENDTO,
-                                                        mailtoUri,
-                                                    )
-                                                    .apply {
-                                                        putExtra(
-                                                            android.content.Intent.EXTRA_SUBJECT,
-                                                            reportAiSubject,
-                                                        )
-                                                        putExtra(
-                                                            android.content.Intent.EXTRA_TEXT,
-                                                            reportAiBody,
-                                                        )
-                                                    }
-                                            try {
-                                                context.startActivity(intent)
-                                            } catch (e: android.content.ActivityNotFoundException) {
-                                                android.widget.Toast.makeText(
-                                                        context,
-                                                        reportAiNoEmail,
-                                                        android.widget.Toast.LENGTH_LONG,
-                                                    )
-                                                    .show()
-                                            }
-                                        }
-                                    ) {
-                                        Text(stringResource(R.string.settings_report_ai_confirm))
-                                    }
-                                },
-                                dismissButton = {
-                                    androidx.compose.material3.TextButton(
-                                        onClick = { showReportAiDialog = false }
-                                    ) {
-                                        Text(stringResource(R.string.settings_report_ai_cancel))
-                                    }
-                                },
+                                context = context,
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -4375,6 +4343,146 @@ private fun FeedbackDialog(
                     }
                 },
                 enabled = feedbackText.isNotBlank() && !isSending,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+            ) {
+                Text(stringResource(R.string.action_send))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = { if (!isSending) onDismiss() }) {
+                Text(
+                    stringResource(R.string.action_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun ReportAiDialog(
+    userEmail: String?,
+    onDismiss: () -> Unit,
+    onSent: () -> Unit,
+    context: android.content.Context,
+) {
+    // Pre-fill the textfield with a localized template that the user can edit.
+    val initialBody = stringResource(R.string.settings_report_ai_body)
+    val subjectLine = stringResource(R.string.settings_report_ai_subject)
+    var reportText by remember { mutableStateOf(initialBody) }
+    var isSending by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = { if (!isSending) onDismiss() },
+        containerColor = MaterialTheme.colorScheme.surface,
+        icon = {
+            Icon(
+                Icons.Rounded.Email,
+                null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp),
+            )
+        },
+        title = {
+            Text(
+                stringResource(R.string.settings_report_ai_dialog_title),
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.settings_report_ai_dialog_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TextField(
+                    value = reportText,
+                    onValueChange = { reportText = it },
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                    textStyle =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                    placeholder = {
+                        Text(
+                            stringResource(R.string.settings_feedback_placeholder),
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    },
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                if (isSending) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.settings_feedback_sending),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
+                errorMessage?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = NeonRed)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (reportText.isNotBlank() && !isSending) {
+                        if (userEmail == null) {
+                            errorMessage =
+                                context.getString(R.string.settings_feedback_sign_in_first)
+                            return@Button
+                        }
+                        isSending = true
+                        errorMessage = null
+                        scope.launch {
+                            try {
+                                val error =
+                                    com.bestjournal.app.data.remote.FeedbackSender.send(
+                                        context = context,
+                                        accountEmail = userEmail,
+                                        feedbackText = reportText,
+                                        subject = subjectLine,
+                                    )
+                                if (error == null) {
+                                    onSent()
+                                } else {
+                                    isSending = false
+                                    errorMessage = error
+                                }
+                            } catch (
+                                e: com.bestjournal.app.data.remote.FeedbackNeedConsentException) {
+                                isSending = false
+                                try {
+                                    context.startActivity(e.consentIntent)
+                                } catch (_: Exception) {}
+                                errorMessage =
+                                    context.getString(R.string.settings_feedback_allow_gmail)
+                            }
+                        }
+                    }
+                },
+                enabled = reportText.isNotBlank() && !isSending,
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,

@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">ไม่พบแอปอีเมล โปรดส่งรายงานไปที่ dev.app.support@gmail.com</string>
     <string name="settings_report_ai_subject">Best Journal: คำตอบ AI ที่ไม่เหมาะสม</string>
     <string name="settings_report_ai_body">สวัสดี,\n\nฉันต้องการรายงานคำตอบ AI ที่ไม่เหมาะสมหรือผิดพลาดใน Best Journal\n\nคำอธิบายปัญหา:\n[กรุณากรอก]\n\nบริบท (ฟีเจอร์ใด อินพุตใด):\n[กรุณากรอก]\n\nขอบคุณ</string>
+    <string name="settings_report_ai_dialog_title">รายงานคำตอบ AI</string>
+    <string name="settings_report_ai_dialog_desc">อธิบายคำตอบ AI ที่ไม่เหมาะสมหรือไม่ถูกต้อง รายงานของคุณจะถูกส่งตรงไปยังทีมสนับสนุนของเรา คุณต้องลงชื่อเข้าใช้ด้วยบัญชี Google ของคุณ</string>
 
     <string name="settings_revoke_title">การเพิกถอน</string>
     <string name="settings_revoke_subtitle">การซื้อ Premium</string>
@@ -1249,4 +1251,66 @@
     <string name="paywall_feature_followups">เพิ่มข้อความได้ไม่จำกัดในทุกบันทึก</string>
     <string name="settings_premium_feature_followups">เพิ่มข้อความได้ไม่จำกัด</string>
     <string name="settings_premium_feature_followups_desc">เพิ่มข้อความในแต่ละบันทึกได้ตามที่ต้องการ</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">ไม่</string>
+    <string name="action_yes">ใช่</string>
+    <string name="ai_improved_suffix">\n\n✨ ปรับปรุงด้วย AI</string>
+    <string name="ai_improved_suffix_marker">✨ ปรับปรุงด้วย AI</string>
+    <string name="entry_delete_entry_cd">ลบบันทึกในไดอารี</string>
+    <string name="entry_journal_entry_title">บันทึกในไดอารี</string>
+    <string name="entry_photos_videos_add_title">เพิ่มรูปภาพ/วิดีโอ</string>
+    <string name="follow_up_cancel">ยกเลิก</string>
+    <string name="follow_up_card_title">บันทึกเพิ่มเติม</string>
+    <string name="follow_up_choose_input_mode">คุณต้องการเพิ่มบันทึกเพิ่มเติมอย่างไร?</string>
+    <string name="follow_up_delete_button">ลบ</string>
+    <string name="follow_up_delete_cd">ลบบันทึกเพิ่มเติม</string>
+    <string name="follow_up_delete_confirm_text">ต้องการลบบันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g> อย่างถาวรหรือไม่?</string>
+    <string name="follow_up_delete_confirm_title">ลบบันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">บันทึกเพิ่มเติมของคุณ:</string>
+    <string name="follow_up_dialog_title">บันทึกเพิ่มเติม</string>
+    <string name="follow_up_discard">ยกเลิกการเปลี่ยนแปลง</string>
+    <string name="follow_up_improve_text">✨ ปรับปรุงข้อความ</string>
+    <string name="follow_up_improve_with_ai">ปรับปรุงภายหลังด้วย AI</string>
+    <string name="follow_up_improving">AI กำลังปรับปรุงบันทึกเพิ่มเติม…</string>
+    <string name="follow_up_inline_title">บันทึกเพิ่มเติม <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">บันทึกเสียง</string>
+    <string name="follow_up_input_speak_label">บันทึกเสียง</string>
+    <string name="follow_up_input_write_cd">พิมพ์</string>
+    <string name="follow_up_input_write_label">พิมพ์</string>
+    <string name="follow_up_premium_body">ด้วย Premium คุณสามารถเพิ่มบันทึกเพิ่มเติมได้ไม่จำกัดในทุกบันทึกของไดอารี</string>
+    <string name="follow_up_premium_hint">ตั้งแต่บันทึกเพิ่มเติมที่สองเป็นต้นไป</string>
+    <string name="follow_up_premium_later">ตัดสินใจทีหลัง</string>
+    <string name="follow_up_premium_subscribe">เริ่มสมัครสมาชิก</string>
+    <string name="follow_up_premium_subtext">บันทึกเพิ่มเติมทุกรายการจะถูกรวมในแดชบอร์ดโดยอัตโนมัติ เพื่อให้การวิเคราะห์ของคุณครบถ้วนเสมอ</string>
+    <string name="follow_up_premium_title">บันทึกเพิ่มเติมไม่จำกัด</string>
+    <string name="follow_up_save">บันทึก</string>
+    <string name="follow_up_save_improved">บันทึกเวอร์ชันที่ปรับปรุงแล้ว</string>
+    <string name="follow_up_show_improved">✨ แสดงเวอร์ชันที่ปรับปรุงแล้ว</string>
+    <string name="follow_up_show_original">↩ แสดงต้นฉบับ</string>
+    <string name="follow_up_speak_pill_label">บันทึกเสียง</string>
+    <string name="follow_up_speak_prompt">พูดบันทึกเพิ่มเติมของคุณ</string>
+    <string name="follow_up_stop_hint">แตะหยุดเมื่อเสร็จแล้ว</string>
+    <string name="follow_up_tab_improved">✨ ปรับปรุงด้วย AI</string>
+    <string name="follow_up_tab_original">ต้นฉบับ</string>
+    <string name="follow_up_text_placeholder">เขียนบันทึกเพิ่มเติมของคุณที่นี่…</string>
+    <string name="follow_up_transcribing">กำลังแปลงบันทึกเพิ่มเติมเป็นข้อความ…</string>
+    <string name="journal_improve">ปรับปรุงข้อความ</string>
+    <string name="journal_state_improving">กำลังปรับปรุง…</string>
+    <string name="journal_state_transcribing">กำลังแปลงเป็นข้อความ…</string>
+    <string name="paywall_consent_dialog_body">โดยหลักการแล้วคุณมีสิทธิ์ยกเลิกภายใน 14 วันหลังจากสมัครสมาชิกหรือซื้อสินค้า\n\nเพื่อให้คุณใช้ฟีเจอร์ Premium ได้ทันที เราจะเริ่มให้บริการทันทีหลังจากที่คุณซื้อ โดยการให้ความยินยอมด้านล่าง คุณสละสิทธิ์การยกเลิกภายใน 14 วันโดยรับทราบผลที่ตามมา\n\nหากไม่มีความยินยอมนี้ เราไม่สามารถเปิดใช้ฟีเจอร์ Premium ได้ทันที</string>
+    <string name="paywall_consent_dialog_cancel">ยกเลิก</string>
+    <string name="paywall_consent_dialog_checkbox">ฉันยินยอมให้เริ่มให้บริการฟีเจอร์ Premium ทันทีหลังจากสั่งซื้อ และรับทราบว่าฉันจะสูญเสียสิทธิ์การยกเลิกภายใน 14 วัน</string>
+    <string name="paywall_consent_dialog_confirm">สมัครสมาชิกแบบชำระเงินทันที</string>
+    <string name="paywall_consent_dialog_title">การแจ้งสิทธิ์ยกเลิก</string>
+    <string name="profile_custom_add">เพิ่มการวิเคราะห์ส่วนตัว</string>
+    <string name="profile_custom_remove">ลบการวิเคราะห์ส่วนตัว</string>
+    <string name="profile_custom_rename">เปลี่ยนชื่อ</string>
+    <string name="profile_custom_rename_save">บันทึกชื่อ</string>
+    <string name="prompt_clear_confirm_text">การวิเคราะห์ส่วนตัวจะถูกลบอย่างถาวร ต้องการดำเนินการต่อหรือไม่?</string>
+    <string name="prompt_clear_confirm_title">ลบข้อความ?</string>
+    <string name="prompt_clear_content_desc">ลบข้อความ</string>
+    <string name="prompt_recording_with_model">กำลังบันทึก — โมเดล: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> กำลังแปลงเป็นข้อความ…</string>
+    <string name="prompt_transcription_model_hint">แปลงเป็นข้อความด้วย <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>

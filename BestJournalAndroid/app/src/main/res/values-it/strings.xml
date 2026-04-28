@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">Nessuna app e-mail trovata. Invia la segnalazione a dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: risposta IA inappropriata</string>
     <string name="settings_report_ai_body">Salve,\n\nvorrei segnalare una risposta IA inappropriata o errata in Best Journal.\n\nDescrizione del problema:\n[Da compilare]\n\nContesto (quale funzione, quale input):\n[Da compilare]\n\nGrazie.</string>
+    <string name="settings_report_ai_dialog_title">Segnala risposta dell\'IA</string>
+    <string name="settings_report_ai_dialog_desc">Descrivi la risposta inappropriata o errata dell\'IA. La tua segnalazione viene inviata direttamente al nostro team di assistenza. Devi aver effettuato l\'accesso con il tuo account Google.</string>
 
     <string name="settings_revoke_title">Recesso</string>
     <string name="settings_revoke_subtitle">Acquisto Premium</string>

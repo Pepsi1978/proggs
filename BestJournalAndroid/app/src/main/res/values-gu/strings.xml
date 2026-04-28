@@ -1091,6 +1091,8 @@
     <string name="settings_report_ai_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને જાણ dev.app.support@gmail.com પર મોકલો.</string>
     <string name="settings_report_ai_subject">Best Journal: અયોગ્ય AI જવાબ</string>
     <string name="settings_report_ai_body">નમસ્તે,\n\nહું Best Journal માં એક અયોગ્ય અથવા ખોટા AI જવાબની જાણ કરવા માંગું છું.\n\nસમસ્યાનું વર્ણન:\n[કૃપા કરીને ભરો]\n\nસંદર્ભ (કઈ સુવિધા, કયું ઇનપુટ):\n[કૃપા કરીને ભરો]\n\nઆભાર.</string>
+    <string name="settings_report_ai_dialog_title">AI પ્રતિસાદની જાણ કરો</string>
+    <string name="settings_report_ai_dialog_desc">અયોગ્ય અથવા ખોટા AI પ્રતિસાદનું વર્ણન કરો. તમારો અહેવાલ સીધો અમારી સપોર્ટ ટીમને મોકલવામાં આવે છે. તમે તમારા Google એકાઉન્ટથી સાઇન ઇન કરેલા હોવા જોઈએ.</string>
 
     <string name="settings_revoke_title">કરાર રદ કરો</string>
     <string name="settings_revoke_subtitle">Premium ખરીદી</string>

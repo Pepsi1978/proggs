@@ -1280,6 +1280,8 @@
     <string name="settings_report_ai_no_email">No email app found. Please send the report to dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: Inappropriate AI response</string>
     <string name="settings_report_ai_body">Hello,\n\nI would like to report an inappropriate or incorrect AI response in Best Journal.\n\nDescription of the issue:\n[Please fill in]\n\nContext (which feature, which input):\n[Please fill in]\n\nThank you.</string>
+    <string name="settings_report_ai_dialog_title">Report AI output</string>
+    <string name="settings_report_ai_dialog_desc">Describe the inappropriate or incorrect AI response. Your report is sent directly to our support team. You need to be signed in with your Google account.</string>
 
     <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
     <string name="dev_seed_create_label">Generate 70 test entries</string>

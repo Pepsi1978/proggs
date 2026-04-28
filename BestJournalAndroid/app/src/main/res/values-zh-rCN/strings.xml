@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">未找到邮件应用。请将举报发送到 dev.app.support@gmail.com。</string>
     <string name="settings_report_ai_subject">Best Journal:不当 AI 回复</string>
     <string name="settings_report_ai_body">你好，\n\n我想举报 Best Journal 中的一条不当或错误的 AI 回复。\n\n问题描述：\n[请填写]\n\n情境（哪个功能、哪项输入）:\n[请填写]\n\n谢谢。</string>
+    <string name="settings_report_ai_dialog_title">举报AI回答</string>
+    <string name="settings_report_ai_dialog_desc">描述不当或错误的AI回答。您的举报将直接发送给我们的支持团队。您需要使用Google账户登录。</string>
 
     <string name="settings_revoke_title">撤销合同</string>
     <string name="settings_revoke_subtitle">Premium 购买</string>

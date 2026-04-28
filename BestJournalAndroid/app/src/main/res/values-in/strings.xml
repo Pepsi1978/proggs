@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">Aplikasi email tidak ditemukan. Kirim laporan ke dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: jawaban AI tidak pantas</string>
     <string name="settings_report_ai_body">Halo,\n\nsaya ingin melaporkan jawaban AI yang tidak pantas atau salah di Best Journal.\n\nDeskripsi masalah:\n[Isi]\n\nKonteks (fitur yang mana, input apa):\n[Isi]\n\nTerima kasih.</string>
+    <string name="settings_report_ai_dialog_title">Laporkan respons AI</string>
+    <string name="settings_report_ai_dialog_desc">Jelaskan respons AI yang tidak pantas atau salah. Laporan Anda dikirim langsung ke tim dukungan kami. Anda harus masuk dengan akun Google Anda.</string>
 
     <string name="settings_revoke_title">Pembatalan kontrak</string>
     <string name="settings_revoke_subtitle">Pembelian Premium</string>
@@ -1249,4 +1251,66 @@ Apa yang ingin kamu lakukan?</string>
     <string name="paywall_feature_followups">Tambahan tak terbatas untuk setiap catatan harian</string>
     <string name="settings_premium_feature_followups">Tambahan tak terbatas</string>
     <string name="settings_premium_feature_followups_desc">Sebanyak yang kamu mau di setiap catatan</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">Tidak</string>
+    <string name="action_yes">Ya</string>
+    <string name="ai_improved_suffix">\n\n✨ Ditingkatkan dengan AI</string>
+    <string name="ai_improved_suffix_marker">✨ Ditingkatkan dengan AI</string>
+    <string name="entry_delete_entry_cd">Hapus entri jurnal</string>
+    <string name="entry_journal_entry_title">Entri jurnal</string>
+    <string name="entry_photos_videos_add_title">Tambah foto/video</string>
+    <string name="follow_up_cancel">Batal</string>
+    <string name="follow_up_card_title">Catatan tambahan</string>
+    <string name="follow_up_choose_input_mode">Bagaimana kamu ingin menambahkan catatan tambahan?</string>
+    <string name="follow_up_delete_button">Hapus</string>
+    <string name="follow_up_delete_cd">Hapus catatan tambahan</string>
+    <string name="follow_up_delete_confirm_text">Apakah kamu yakin ingin menghapus catatan tambahan <xliff:g id="ordinal" example="1">%1$s</xliff:g> secara permanen?</string>
+    <string name="follow_up_delete_confirm_title">Hapus catatan tambahan <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">Catatan tambahanmu:</string>
+    <string name="follow_up_dialog_title">Catatan tambahan</string>
+    <string name="follow_up_discard">Buang</string>
+    <string name="follow_up_improve_text">✨ Tingkatkan teks</string>
+    <string name="follow_up_improve_with_ai">Tingkatkan belakangan dengan AI</string>
+    <string name="follow_up_improving">AI sedang meningkatkan catatan tambahan…</string>
+    <string name="follow_up_inline_title">Catatan tambahan <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Rekam suara</string>
+    <string name="follow_up_input_speak_label">Rekam suara</string>
+    <string name="follow_up_input_write_cd">Tulis</string>
+    <string name="follow_up_input_write_label">Tulis</string>
+    <string name="follow_up_premium_body">Dengan Premium kamu bisa menambahkan catatan tambahan sebanyak yang kamu mau untuk setiap entri jurnal.</string>
+    <string name="follow_up_premium_hint">mulai dari catatan tambahan kedua</string>
+    <string name="follow_up_premium_later">Putuskan nanti</string>
+    <string name="follow_up_premium_subscribe">Mulai langganan</string>
+    <string name="follow_up_premium_subtext">Setiap catatan tambahan otomatis masuk ke dasbor agar analisismu selalu lengkap.</string>
+    <string name="follow_up_premium_title">Catatan tambahan tak terbatas</string>
+    <string name="follow_up_save">Simpan</string>
+    <string name="follow_up_save_improved">Simpan versi yang ditingkatkan</string>
+    <string name="follow_up_show_improved">✨ Tampilkan versi yang ditingkatkan</string>
+    <string name="follow_up_show_original">↩ Tampilkan asli</string>
+    <string name="follow_up_speak_pill_label">Rekam suara</string>
+    <string name="follow_up_speak_prompt">Ucapkan catatan tambahanmu.</string>
+    <string name="follow_up_stop_hint">Ketuk Berhenti jika sudah selesai.</string>
+    <string name="follow_up_tab_improved">✨ Ditingkatkan dengan AI</string>
+    <string name="follow_up_tab_original">Asli</string>
+    <string name="follow_up_text_placeholder">Tulis catatan tambahanmu di sini…</string>
+    <string name="follow_up_transcribing">Catatan tambahan sedang ditranskripsi…</string>
+    <string name="journal_improve">Tingkatkan teks</string>
+    <string name="journal_state_improving">Sedang ditingkatkan…</string>
+    <string name="journal_state_transcribing">Sedang ditranskripsi…</string>
+    <string name="paywall_consent_dialog_body">Pada dasarnya kamu memiliki hak pembatalan 14 hari setelah menyelesaikan langganan atau pembelian.\n\nAgar kamu bisa langsung menggunakan fitur Premium, kami mulai menyediakannya segera setelah pembelianmu. Dengan persetujuanmu di bawah ini, kamu melepaskan hak pembatalan 14 hari dengan mengetahui konsekuensinya.\n\nTanpa persetujuan ini kami tidak bisa langsung mengaktifkan fitur Premium.</string>
+    <string name="paywall_consent_dialog_cancel">Batal</string>
+    <string name="paywall_consent_dialog_checkbox">Saya setuju bahwa penyediaan fitur Premium dimulai segera setelah pemesanan. Saya menyadari bahwa dengan ini saya kehilangan hak pembatalan 14 hari.</string>
+    <string name="paywall_consent_dialog_confirm">Berlangganan berbayar sekarang</string>
+    <string name="paywall_consent_dialog_title">Pemberitahuan pembatalan</string>
+    <string name="profile_custom_add">Tambah analisis pribadi</string>
+    <string name="profile_custom_remove">Hapus analisis pribadi</string>
+    <string name="profile_custom_rename">Ubah nama</string>
+    <string name="profile_custom_rename_save">Simpan nama</string>
+    <string name="prompt_clear_confirm_text">Analisis pribadi akan dihapus secara permanen. Apakah kamu yakin ingin melanjutkan?</string>
+    <string name="prompt_clear_confirm_title">Hapus teks?</string>
+    <string name="prompt_clear_content_desc">Hapus teks</string>
+    <string name="prompt_recording_with_model">Perekaman berlangsung — Model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> sedang mentranskrip…</string>
+    <string name="prompt_transcription_model_hint">Ditranskripsi dengan <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>

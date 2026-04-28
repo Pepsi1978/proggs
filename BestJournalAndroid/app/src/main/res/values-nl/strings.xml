@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">Geen e-mailapp gevonden. Stuur de melding naar dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: ongepast AI-antwoord</string>
     <string name="settings_report_ai_body">Hallo,\n\nik wil een ongepast of foutief AI-antwoord in Best Journal melden.\n\nBeschrijving van het probleem:\n[In te vullen]\n\nContext (welke functie, welke invoer):\n[In te vullen]\n\nBedankt.</string>
+    <string name="settings_report_ai_dialog_title">AI-antwoord melden</string>
+    <string name="settings_report_ai_dialog_desc">Beschrijf het ongepaste of onjuiste AI-antwoord. Je melding wordt direct naar ons supportteam gestuurd. Je moet ingelogd zijn met je Google-account.</string>
 
     <string name="settings_revoke_title">Herroeping</string>
     <string name="settings_revoke_subtitle">Premium-aankoop</string>

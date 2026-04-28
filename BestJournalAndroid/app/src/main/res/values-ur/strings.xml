@@ -1135,6 +1135,8 @@
     <string name="settings_report_ai_no_email">ای میل ایپ نہیں ملی۔ براہ کرم رپورٹ dev.app.support@gmail.com کو بھیجیں۔</string>
     <string name="settings_report_ai_subject">Best Journal: نامناسب AI جواب</string>
     <string name="settings_report_ai_body">سلام،\n\nمیں Best Journal میں ایک نامناسب یا غلط AI جواب کی رپورٹ کرنا چاہتا ہوں۔\n\nمسئلے کی تفصیل:\n[براہ کرم بھریں]\n\nسیاق و سباق (کون سی خصوصیت، کون سا ان پٹ):\n[براہ کرم بھریں]\n\nشکریہ۔</string>
+    <string name="settings_report_ai_dialog_title">AI جواب کی رپورٹ کریں</string>
+    <string name="settings_report_ai_dialog_desc">نامناسب یا غلط AI جواب کی وضاحت کریں۔ آپ کی رپورٹ براہ راست ہماری سپورٹ ٹیم کو بھیجی جاتی ہے۔ آپ کا اپنے Google اکاؤنٹ سے سائن ان ہونا ضروری ہے۔</string>
 
     <string name="settings_revoke_title">معاہدے کی منسوخی</string>
     <string name="settings_revoke_subtitle">Premium خریداری</string>
@@ -1254,4 +1256,66 @@
     <string name="paywall_feature_followups">ہر ڈائری اندراج میں لامحدود اضافے</string>
     <string name="settings_premium_feature_followups">لامحدود اضافے</string>
     <string name="settings_premium_feature_followups_desc">فی اندراج جتنے چاہیں اضافے</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">نہیں</string>
+    <string name="action_yes">ہاں</string>
+    <string name="ai_improved_suffix">\n\n✨ AI سے بہتر کیا گیا</string>
+    <string name="ai_improved_suffix_marker">✨ AI سے بہتر کیا گیا</string>
+    <string name="entry_delete_entry_cd">ڈائری اندراج حذف کریں</string>
+    <string name="entry_journal_entry_title">ڈائری اندراج</string>
+    <string name="entry_photos_videos_add_title">تصاویر/ویڈیوز شامل کریں</string>
+    <string name="follow_up_cancel">منسوخ کریں</string>
+    <string name="follow_up_card_title">اضافی نوٹ</string>
+    <string name="follow_up_choose_input_mode">آپ اضافی نوٹ کیسے شامل کرنا چاہتے ہیں؟</string>
+    <string name="follow_up_delete_button">حذف کریں</string>
+    <string name="follow_up_delete_cd">اضافی نوٹ حذف کریں</string>
+    <string name="follow_up_delete_confirm_text">کیا آپ واقعی اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g> کو ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟</string>
+    <string name="follow_up_delete_confirm_title">اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g> حذف کریں؟</string>
+    <string name="follow_up_dialog_label">آپ کا اضافی نوٹ:</string>
+    <string name="follow_up_dialog_title">اضافی نوٹ</string>
+    <string name="follow_up_discard">ضائع کریں</string>
+    <string name="follow_up_improve_text">✨ متن بہتر کریں</string>
+    <string name="follow_up_improve_with_ai">AI سے بعد میں بہتر کریں</string>
+    <string name="follow_up_improving">AI اضافی نوٹ بہتر کر رہا ہے…</string>
+    <string name="follow_up_inline_title">اضافی نوٹ <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">بول کر لکھیں</string>
+    <string name="follow_up_input_speak_label">بول کر لکھیں</string>
+    <string name="follow_up_input_write_cd">لکھیں</string>
+    <string name="follow_up_input_write_label">لکھیں</string>
+    <string name="follow_up_premium_body">Premium کے ساتھ آپ اپنی ہر ڈائری اندراج میں جتنے چاہیں اضافی نوٹ شامل کر سکتے ہیں۔</string>
+    <string name="follow_up_premium_hint">دوسرے اضافی نوٹ سے</string>
+    <string name="follow_up_premium_later">بعد میں فیصلہ کریں</string>
+    <string name="follow_up_premium_subscribe">سبسکرپشن شروع کریں</string>
+    <string name="follow_up_premium_subtext">ہر اضافی نوٹ خودبخود ڈیش بورڈ میں شامل ہو جاتا ہے تاکہ آپ کا تجزیہ ہمیشہ مکمل رہے۔</string>
+    <string name="follow_up_premium_title">لامحدود اضافی نوٹ</string>
+    <string name="follow_up_save">محفوظ کریں</string>
+    <string name="follow_up_save_improved">بہتر کردہ ورژن محفوظ کریں</string>
+    <string name="follow_up_show_improved">✨ بہتر کردہ ورژن دکھائیں</string>
+    <string name="follow_up_show_original">↩ اصل دکھائیں</string>
+    <string name="follow_up_speak_pill_label">بول کر لکھیں</string>
+    <string name="follow_up_speak_prompt">اپنا اضافی نوٹ بول کر لکھوائیں۔</string>
+    <string name="follow_up_stop_hint">فارغ ہونے پر Stop دبائیں۔</string>
+    <string name="follow_up_tab_improved">✨ AI سے بہتر کیا گیا</string>
+    <string name="follow_up_tab_original">اصل</string>
+    <string name="follow_up_text_placeholder">اپنا اضافی نوٹ یہاں لکھیں…</string>
+    <string name="follow_up_transcribing">اضافی نوٹ تحریر میں تبدیل ہو رہا ہے…</string>
+    <string name="journal_improve">متن بہتر کریں</string>
+    <string name="journal_state_improving">بہتر ہو رہا ہے…</string>
+    <string name="journal_state_transcribing">تحریر میں تبدیل ہو رہا ہے…</string>
+    <string name="paywall_consent_dialog_body">سبسکرپشن یا خریداری مکمل ہونے کے بعد آپ کو بنیادی طور پر 14 دن کا واپسی کا حق حاصل ہے۔\n\nتاکہ آپ Premium خصوصیات فوری طور پر استعمال کر سکیں، ہم آپ کی خریداری کے فوری بعد فراہمی شروع کر دیتے ہیں۔ نیچے آپ کی رضامندی سے آپ نتائج سے باخبر ہو کر اپنا 14 دن کا واپسی کا حق ساقط کر دیتے ہیں۔\n\nاس رضامندی کے بغیر ہم Premium خصوصیات فوری طور پر فعال نہیں کر سکتے۔</string>
+    <string name="paywall_consent_dialog_cancel">منسوخ کریں</string>
+    <string name="paywall_consent_dialog_checkbox">میں اس بات پر رضامند ہوں کہ Premium خصوصیات کی فراہمی آرڈر کے فوری بعد شروع ہو جائے۔ مجھے معلوم ہے کہ اس سے میرا 14 دن کا واپسی کا حق ختم ہو جائے گا۔</string>
+    <string name="paywall_consent_dialog_confirm">ابھی ادائیگی کے ساتھ سبسکرائب کریں</string>
+    <string name="paywall_consent_dialog_title">واپسی کی اطلاع</string>
+    <string name="profile_custom_add">ذاتی تجزیہ شامل کریں</string>
+    <string name="profile_custom_remove">ذاتی تجزیہ ہٹائیں</string>
+    <string name="profile_custom_rename">نام تبدیل کریں</string>
+    <string name="profile_custom_rename_save">نام محفوظ کریں</string>
+    <string name="prompt_clear_confirm_text">ذاتی تجزیہ ہمیشہ کے لیے حذف ہو جائے گا۔ کیا آپ واقعی جاری رکھنا چاہتے ہیں؟</string>
+    <string name="prompt_clear_confirm_title">متن حذف کریں؟</string>
+    <string name="prompt_clear_content_desc">متن حذف کریں</string>
+    <string name="prompt_recording_with_model">ریکارڈنگ جاری ہے — ماڈل: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> تحریر میں تبدیل کر رہا ہے…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> سے تحریر میں تبدیل کیا گیا</string>
 </resources>

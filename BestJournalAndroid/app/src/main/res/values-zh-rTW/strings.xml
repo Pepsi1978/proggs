@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">找不到郵件應用程式。請將檢舉寄到 dev.app.support@gmail.com。</string>
     <string name="settings_report_ai_subject">Best Journal:不當 AI 回覆</string>
     <string name="settings_report_ai_body">你好，\n\n我想檢舉 Best Journal 中的一則不當或錯誤的 AI 回覆。\n\n問題描述：\n[請填寫]\n\n情境（哪個功能、哪項輸入）:\n[請填寫]\n\n謝謝。</string>
+    <string name="settings_report_ai_dialog_title">檢舉AI回應</string>
+    <string name="settings_report_ai_dialog_desc">描述不當或錯誤的AI回應。您的檢舉會直接傳送給我們的支援團隊。您必須使用Google帳戶登入。</string>
 
     <string name="settings_revoke_title">解除契約</string>
     <string name="settings_revoke_subtitle">Premium 購買</string>
@@ -1249,4 +1251,68 @@
     <string name="paywall_feature_followups">每篇日記皆可無限補充</string>
     <string name="settings_premium_feature_followups">無限補充</string>
     <string name="settings_premium_feature_followups_desc">每篇日記想加多少補充就加多少</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">否</string>
+    <string name="action_yes">是</string>
+    <string name="ai_improved_suffix">\n\n✨ AI 已優化</string>
+    <string name="ai_improved_suffix_marker">✨ AI 已優化</string>
+    <string name="entry_delete_entry_cd">刪除日記條目</string>
+    <string name="entry_journal_entry_title">日記條目</string>
+    <string name="entry_photos_videos_add_title">新增照片／影片</string>
+    <string name="follow_up_cancel">取消</string>
+    <string name="follow_up_card_title">補充</string>
+    <string name="follow_up_choose_input_mode">你想如何新增補充？</string>
+    <string name="follow_up_delete_button">刪除</string>
+    <string name="follow_up_delete_cd">刪除補充</string>
+    <string name="follow_up_delete_confirm_text">確定要永久刪除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 條補充嗎？</string>
+    <string name="follow_up_delete_confirm_title">刪除第 <xliff:g id="ordinal" example="1">%1$s</xliff:g> 條補充？</string>
+    <string name="follow_up_dialog_label">你的補充：</string>
+    <string name="follow_up_dialog_title">補充</string>
+    <string name="follow_up_discard">放棄</string>
+    <string name="follow_up_improve_text">✨ 潤色文字</string>
+    <string name="follow_up_improve_with_ai">用 AI 事後潤色</string>
+    <string name="follow_up_improving">AI 正在潤色補充內容…</string>
+    <string name="follow_up_inline_title">補充 <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">語音輸入</string>
+    <string name="follow_up_input_speak_label">語音輸入</string>
+    <string name="follow_up_input_write_cd">文字輸入</string>
+    <string name="follow_up_input_write_label">文字輸入</string>
+    <string name="follow_up_premium_body">訂閱進階版後，你可以為每篇日記新增任意數量的補充。</string>
+    <string name="follow_up_premium_hint">從第二條補充開始</string>
+    <string name="follow_up_premium_later">稍後再說</string>
+    <string name="follow_up_premium_subscribe">開始訂閱</string>
+    <string name="follow_up_premium_subtext">每條補充都會自動同步到面板，讓你的分析隨時保持完整。</string>
+    <string name="follow_up_premium_title">無限補充</string>
+    <string name="follow_up_save">儲存</string>
+    <string name="follow_up_save_improved">儲存優化版</string>
+    <string name="follow_up_show_improved">✨ 檢視優化版</string>
+    <string name="follow_up_show_original">↩ 檢視原文</string>
+    <string name="follow_up_speak_pill_label">語音輸入</string>
+    <string name="follow_up_speak_prompt">請說出你的補充內容。</string>
+    <string name="follow_up_stop_hint">完成後請點選停止。</string>
+    <string name="follow_up_tab_improved">✨ AI 已優化</string>
+    <string name="follow_up_tab_original">原文</string>
+    <string name="follow_up_text_placeholder">在此寫下你的補充…</string>
+    <string name="follow_up_transcribing">正在轉錄補充內容…</string>
+    <string name="journal_improve">潤色文字</string>
+    <string name="journal_state_improving">優化中…</string>
+    <string name="journal_state_transcribing">轉錄中…</string>
+    <string name="paywall_consent_dialog_body">完成訂閱或購買後，你原則上享有 14 天的撤回權。\n\n為讓你立即使用進階功能，我們將在購買後立即開始提供服務。在下方同意即表示你了解並放棄 14 天撤回權。\n\n若不同意，我們將無法立即為你開通進階功能。</string>
+    <string name="paywall_consent_dialog_cancel">取消</string>
+    <string name="paywall_consent_dialog_checkbox">我同意在下單後立即開始提供進階功能。我了解這意味著我放棄 14 天的撤回權。</string>
+    <string name="paywall_consent_dialog_confirm">立即付費訂閱</string>
+    <string name="paywall_consent_dialog_title">撤回權告知</string>
+    <string name="profile_custom_add">新增自訂分析</string>
+    <string name="profile_custom_remove">刪除自訂分析</string>
+    <string name="profile_custom_rename">重新命名</string>
+    <string name="profile_custom_rename_save">儲存名稱</string>
+    <string name="prompt_clear_confirm_text">此自訂分析將被永久刪除。確定要繼續嗎？</string>
+    <string name="prompt_clear_confirm_title">刪除文字？</string>
+    <string name="prompt_clear_content_desc">刪除文字</string>
+    <string name="prompt_recording_with_model">錄音中 — 模型：%1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s 轉錄中…</string>
+    <string name="prompt_transcription_model_hint">已用 %1$s 轉錄</string>
 </resources>

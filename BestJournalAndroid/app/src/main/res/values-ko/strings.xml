@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">이메일 앱을 찾을 수 없어요. dev.app.support@gmail.com 로 신고를 보내주세요.</string>
     <string name="settings_report_ai_subject">Best Journal: 부적절한 AI 응답</string>
     <string name="settings_report_ai_body">안녕하세요,\n\nBest Journal에서 부적절하거나 잘못된 AI 응답을 신고하고자 합니다.\n\n문제 설명:\n[작성해 주세요]\n\n상황 (어떤 기능, 어떤 입력):\n[작성해 주세요]\n\n감사합니다.</string>
+    <string name="settings_report_ai_dialog_title">AI 응답 신고</string>
+    <string name="settings_report_ai_dialog_desc">부적절하거나 잘못된 AI 응답을 설명해 주세요. 신고는 지원팀에 직접 전송됩니다. Google 계정으로 로그인되어 있어야 합니다。</string>
 
     <string name="settings_revoke_title">청약 철회</string>
     <string name="settings_revoke_subtitle">Premium 구매</string>

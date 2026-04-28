@@ -1066,6 +1066,8 @@
     <string name="settings_report_ai_no_email">ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి నివేదికను dev.app.support@gmail.com-కి పంపండి.</string>
     <string name="settings_report_ai_subject">Best Journal: అనుచిత AI ప్రతిస్పందన</string>
     <string name="settings_report_ai_body">నమస్కారం,\n\nనేను Best Journal లో ఒక అనుచిత లేదా తప్పు AI ప్రతిస్పందనను నివేదించాలనుకుంటున్నాను.\n\nసమస్య వివరణ:\n[దయచేసి పూరించండి]\n\nసందర్భం (ఏ ఫీచర్, ఏ ఇన్‌పుట్):\n[దయచేసి పూరించండి]\n\nధన్యవాదాలు.</string>
+    <string name="settings_report_ai_dialog_title">AI ప్రతిస్పందనను నివేదించండి</string>
+    <string name="settings_report_ai_dialog_desc">అనుచితమైన లేదా తప్పుడు AI ప్రతిస్పందనను వివరించండి. మీ నివేదిక నేరుగా మా మద్దతు బృందానికి పంపబడుతుంది. మీరు మీ Google ఖాతాతో సైన్ ఇన్ అయి ఉండాలి.</string>
 
     <string name="settings_revoke_title">ఒప్పందం ఉపసంహరణ</string>
     <string name="settings_revoke_subtitle">Premium కొనుగోలు</string>
@@ -1185,4 +1187,68 @@
     <string name="paywall_feature_followups">ప్రతి జర్నల్ ఎంట్రీకి అపరిమిత అదనపు నోట్స్</string>
     <string name="settings_premium_feature_followups">అపరిమిత అదనపు నోట్స్</string>
     <string name="settings_premium_feature_followups_desc">ఒక ఎంట్రీలో ఎన్ని కావాలంటే అన్ని అదనపు నోట్స్</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="follow_up_tab_label">అదనపు నోట్స్</string>
+    <string name="follow_up_add_button">అదనపు నోట్ జోడించండి</string>
+    <string name="follow_up_empty_state">ఇంకా అదనపు నోట్స్ లేవు.\nమొదటిది జోడించడానికి దిగువ బటన్‌ను నొక్కండి.</string>
+    <string name="follow_up_recording_hint">రికార్డ్ చేయడానికి నొక్కండి</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g>ని తొలగించాలా?</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> శాశ్వతంగా తొలగించబడుతుంది. దీన్ని తిరిగి రద్దు చేయలేరు.</string>
+    <string name="follow_up_delete_confirm_yes">అవును, తొలగించండి</string>
+    <string name="follow_up_delete_confirm_no">లేదు, ఉంచండి</string>
+    <string name="follow_up_show_original">↩ అసలు వచనం చూపించు</string>
+    <string name="follow_up_show_improved">మెరుగుపడిన వెర్షన్ చూపించు</string>
+    <string name="follow_up_inline_title">అదనపు నోట్ <xliff:g id="number" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_improve_button">మెరుగుపరచండి</string>
+    <string name="follow_up_improving_state">మెరుగుపరుస్తున్నారు…</string>
+    <string name="follow_up_improve_error">మెరుగుపరచడం సాధ్యం కాలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="follow_up_record_new">కొత్త అదనపు నోట్ రికార్డ్ చేయండి</string>
+    <string name="follow_up_recording_state">రికార్డ్ అవుతోంది…</string>
+    <string name="follow_up_transcribing_state">వచనంగా మారుస్తున్నారు…</string>
+    <string name="follow_up_record_error">రికార్డ్ చేయడం సాధ్యం కాలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="follow_up_transcribe_error">వచనంగా మార్చడం సాధ్యం కాలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+
+    <!-- Prompt/recording UI strings -->
+    <string name="prompt_recording_with_model">రికార్డ్ అవుతోంది (<xliff:g id="model" example="Whisper">%1$s</xliff:g>)…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ద్వారా వచనంగా మారుస్తున్నారు…</string>
+    <string name="prompt_transcription_model_hint">మోడల్: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_record_button_label">రికార్డ్</string>
+    <string name="prompt_stop_button_label">ఆపు</string>
+    <string name="prompt_send_button_label">పంపు</string>
+    <string name="prompt_placeholder_text">మీ మనసులో ఉన్నది రాయండి…</string>
+    <string name="prompt_improve_button_label">మెరుగుపరచండి</string>
+    <string name="prompt_char_count_label">%1$d అక్షరాలు</string>
+
+    <!-- AI retrospective strings -->
+    <string name="ai_retro_title">AI సమీక్ష</string>
+    <string name="ai_retro_generate_button">సమీక్ష రూపొందించు</string>
+    <string name="ai_retro_generating_state">సమీక్ష రూపొందిస్తున్నారు…</string>
+    <string name="ai_retro_error_state">సమీక్ష రూపొందించడం సాధ్యం కాలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+    <string name="ai_retro_empty_state">సమీక్షకు తగినన్ని నమోదులు లేవు.</string>
+    <string name="ai_retro_week_label">ఈ వారం</string>
+    <string name="ai_retro_month_label">ఈ నెల</string>
+    <string name="ai_retro_year_label">ఈ సంవత్సరం</string>
+    <string name="ai_retro_copy_button">కాపీ చేయి</string>
+    <string name="ai_retro_share_button">షేర్ చేయి</string>
+    <string name="ai_retro_copied_message">క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది</string>
+
+    <!-- Paywall / consent strings -->
+    <string name="paywall_title">ప్రీమియమ్‌కు అప్‌గ్రేడ్ చేయండి</string>
+    <string name="paywall_subtitle">అన్ని ప్రీమియమ్ సౌకర్యాలను ఆస్వాదించండి</string>
+    <string name="paywall_monthly_label">నెలవారీ</string>
+    <string name="paywall_yearly_label">వార్షిక</string>
+    <string name="paywall_lifetime_label">జీవితకాలం</string>
+    <string name="paywall_subscribe_button">సభ్యత్వం తీసుకోండి</string>
+    <string name="paywall_restore_button">కొనుగోలు పునరుద్ధరించండి</string>
+    <string name="paywall_cancel_anytime">ఎప్పుడైనా రద్దు చేయవచ్చు</string>
+    <string name="paywall_consent_dialog_title">ఉచిత రద్దు హక్కు</string>
+    <string name="paywall_consent_dialog_body">మీరు ఒక సభ్యత్వాన్ని కొనుగోలు చేస్తున్నారు. §355 BGB ప్రకారం మీకు 14 రోజులలోపు ఉచితంగా రద్దు చేసుకునే హక్కు ఉంది. §356 BGB ప్రకారం డిజిటల్ కంటెంట్ విషయంలో మీరు సమ్మతి ఇస్తే ఈ హక్కు రద్దవుతుంది.</string>
+    <string name="paywall_consent_dialog_checkbox">డౌన్‌లోడ్ ప్రారంభమైన తర్వాత డిజిటల్ కంటెంట్‌కు సంబంధించి నా రద్దు హక్కు రద్దవుతుందని నేను అంగీకరిస్తున్నాను.</string>
+    <string name="paywall_consent_dialog_confirm">అంగీకరించి కొనండి</string>
+    <string name="paywall_consent_dialog_cancel">రద్దు చేయండి</string>
+    <string name="paywall_feature_ai_improvement">AI తో వచనాన్ని మెరుగుపరచడం</string>
+    <string name="paywall_feature_unlimited_entries">అపరిమిత డైరీ నమోదులు</string>
+    <string name="paywall_feature_pdf_export">PDF గా ఎగుమతి చేయడం</string>
+    <string name="paywall_feature_drive_backup">Google Drive బ్యాకప్</string>
 </resources>

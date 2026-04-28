@@ -1135,6 +1135,8 @@
     <string name="settings_report_ai_no_email">ಇಮೇಲ್ ಆ್ಯಪ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ವರದಿಯನ್ನು dev.app.support@gmail.com ಗೆ ಕಳುಹಿಸಿ.</string>
     <string name="settings_report_ai_subject">Best Journal: ಅಸಮರ್ಪಕ AI ಪ್ರತಿಕ್ರಿಯೆ</string>
     <string name="settings_report_ai_body">ನಮಸ್ಕಾರ,\n\nನಾನು Best Journal ನಲ್ಲಿ ಅಸಮರ್ಪಕ ಅಥವಾ ತಪ್ಪಾದ AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವರದಿ ಮಾಡಲು ಬಯಸುತ್ತೇನೆ.\n\nಸಮಸ್ಯೆಯ ವಿವರಣೆ:\n[ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nಸನ್ನಿವೇಶ (ಯಾವ ವೈಶಿಷ್ಟ್ಯ, ಯಾವ ಇನ್‌ಪುಟ್):\n[ದಯವಿಟ್ಟು ಭರ್ತಿ ಮಾಡಿ]\n\nಧನ್ಯವಾದಗಳು.</string>
+    <string name="settings_report_ai_dialog_title">AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವರದಿ ಮಾಡಿ</string>
+    <string name="settings_report_ai_dialog_desc">ಸೂಕ್ತವಲ್ಲದ ಅಥವಾ ತಪ್ಪಾದ AI ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ವಿವರಿಸಿ. ನಿಮ್ಮ ವರದಿಯನ್ನು ನೇರವಾಗಿ ನಮ್ಮ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ. ನೀವು ನಿಮ್ಮ Google ಖಾತೆಯೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಆಗಿರಬೇಕು.</string>
 
     <string name="settings_revoke_title">ಒಪ್ಪಂದ ರದ್ದು</string>
     <string name="settings_revoke_subtitle">Premium ಖರೀದಿ</string>

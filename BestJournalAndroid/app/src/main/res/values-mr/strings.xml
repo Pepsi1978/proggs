@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">कोणतेही ईमेल अॅप सापडले नाही. कृपया अहवाल dev.app.support@gmail.com वर पाठवा.</string>
     <string name="settings_report_ai_subject">Best Journal: अयोग्य AI उत्तर</string>
     <string name="settings_report_ai_body">नमस्कार,\n\nमला Best Journal मधील एक अयोग्य किंवा चुकीचे AI उत्तर कळवायचे आहे.\n\nसमस्येचे वर्णन:\n[कृपया भरा]\n\nसंदर्भ (कोणते वैशिष्ट्य, कोणते इनपुट):\n[कृपया भरा]\n\nधन्यवाद.</string>
+    <string name="settings_report_ai_dialog_title">AI प्रतिसाद नोंदवा</string>
+    <string name="settings_report_ai_dialog_desc">अयोग्य किंवा चुकीच्या AI प्रतिसादाचे वर्णन करा. तुमचा अहवाल थेट आमच्या सपोर्ट टीमला पाठवला जातो. तुम्ही तुमच्या Google खात्याने साइन इन केलेले असले पाहिजे.</string>
 
     <string name="settings_revoke_title">करार रद्दबातल</string>
     <string name="settings_revoke_subtitle">Premium खरेदी</string>
@@ -1253,4 +1255,66 @@
     <string name="paywall_feature_followups">प्रत्येक डायरी नोंदीसाठी अमर्यादित अतिरिक्त नोंदी</string>
     <string name="settings_premium_feature_followups">अमर्यादित अतिरिक्त नोंदी</string>
     <string name="settings_premium_feature_followups_desc">प्रत्येक नोंदीत हव्या तितक्या अतिरिक्त नोंदी</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">नाही</string>
+    <string name="action_yes">हो</string>
+    <string name="ai_improved_suffix"> (AI द्वारे सुधारित)</string>
+    <string name="ai_improved_suffix_marker">✨ AI ने सुधारले</string>
+    <string name="entry_delete_entry_cd">नोंद हटवा</string>
+    <string name="entry_journal_entry_title">डायरी नोंद</string>
+    <string name="entry_photos_videos_add_title">फोटो आणि व्हिडिओ जोडा</string>
+    <string name="follow_up_cancel">रद्द करा</string>
+    <string name="follow_up_card_title">अतिरिक्त नोंद</string>
+    <string name="follow_up_choose_input_mode">इनपुट पद्धत निवडा</string>
+    <string name="follow_up_delete_button">नोंद हटवा</string>
+    <string name="follow_up_delete_cd">नोंद हटवा</string>
+    <string name="follow_up_delete_confirm_text">तुम्हाला खरोखरच "<xliff:g id="title" example="माझी नोंद">%1$s</xliff:g>" हटवायची आहे का? ही क्रिया पूर्ववत होऊ शकत नाही.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="माझी नोंद">%1$s</xliff:g>" हटवायची?</string>
+    <string name="follow_up_dialog_label">नोंद लिहा</string>
+    <string name="follow_up_dialog_title">अतिरिक्त नोंद जोडा</string>
+    <string name="follow_up_discard">सोडून द्या</string>
+    <string name="follow_up_improve_text">मजकूर सुधारा</string>
+    <string name="follow_up_improve_with_ai">AI ने सुधारा</string>
+    <string name="follow_up_improving">सुधारत आहे…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. अतिरिक्त नोंद</string>
+    <string name="follow_up_input_speak_cd">बोलून लिहा</string>
+    <string name="follow_up_input_speak_label">बोला</string>
+    <string name="follow_up_input_write_cd">टाइप करून लिहा</string>
+    <string name="follow_up_input_write_label">टाइप करा</string>
+    <string name="follow_up_premium_body">Premium सह प्रत्येक डायरी नोंदीत अमर्यादित अतिरिक्त नोंदी जोडा.</string>
+    <string name="follow_up_premium_hint">आणखी नोंदी हव्या आहेत?</string>
+    <string name="follow_up_premium_later">नंतर</string>
+    <string name="follow_up_premium_subscribe">Premium घ्या</string>
+    <string name="follow_up_premium_subtext">Premium प्लानसह अमर्यादित अतिरिक्त नोंदी अनलॉक करा.</string>
+    <string name="follow_up_premium_title">Premium वैशिष्ट्य</string>
+    <string name="follow_up_save">जतन करा</string>
+    <string name="follow_up_save_improved">सुधारित जतन करा</string>
+    <string name="follow_up_show_improved">सुधारित दाखवा</string>
+    <string name="follow_up_show_original">↩ मूळ दाखवा</string>
+    <string name="follow_up_speak_pill_label">बोला</string>
+    <string name="follow_up_speak_prompt">आता बोला…</string>
+    <string name="follow_up_stop_hint">थांबण्यासाठी टॅप करा</string>
+    <string name="follow_up_tab_improved">सुधारित</string>
+    <string name="follow_up_tab_original">मूळ</string>
+    <string name="follow_up_text_placeholder">येथे तुमची नोंद लिहा…</string>
+    <string name="follow_up_transcribing">ट्रान्सक्राइब होत आहे…</string>
+    <string name="journal_improve">सुधारा</string>
+    <string name="journal_state_improving">सुधारत आहे…</string>
+    <string name="journal_state_transcribing">ट्रान्सक्राइब होत आहे…</string>
+    <string name="paywall_consent_dialog_body">तुम्ही Best Journal च्या Premium सेवा सक्रिय करणार आहात. खरेदीची पुष्टी केल्यावर, तुम्हाला त्वरित शुल्क आकारले जाईल. सदस्यता रद्द करेपर्यंत आपोआप नूतनीकरण होत राहील. डिजिटल सामग्री डाउनलोड सुरू होताच परतावा हक्क संपतो.</string>
+    <string name="paywall_consent_dialog_cancel">रद्द करा</string>
+    <string name="paywall_consent_dialog_checkbox">मला समजते की डाउनलोड सुरू झाल्यावर, परतावा हक्क संपतो (§ 356 Abs. 5 BGB नुसार).</string>
+    <string name="paywall_consent_dialog_confirm">सहमत आहे आणि खरेदी करा</string>
+    <string name="paywall_consent_dialog_title">खरेदीची पुष्टी करा</string>
+    <string name="profile_custom_add">प्रोफाइल जोडा</string>
+    <string name="profile_custom_remove">प्रोफाइल हटवा</string>
+    <string name="profile_custom_rename">प्रोफाइलचे नाव बदला</string>
+    <string name="profile_custom_rename_save">जतन करा</string>
+    <string name="prompt_clear_confirm_text">तुम्हाला खरोखरच हा प्रॉम्प्ट साफ करायचा आहे का?</string>
+    <string name="prompt_clear_confirm_title">प्रॉम्प्ट साफ करायचा?</string>
+    <string name="prompt_clear_content_desc">प्रॉम्प्ट साफ करा</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ने रेकॉर्ड होत आहे…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ने ट्रान्सक्राइब होत आहे…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> वापरून</string>
 </resources>

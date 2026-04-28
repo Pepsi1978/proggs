@@ -632,6 +632,10 @@
     <string name="settings_report_ai_no_email">Kein E-Mail-Programm gefunden. Bitte sende die Meldung an dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: Unangemessene KI-Antwort</string>
     <string name="settings_report_ai_body">Hallo,\n\nich möchte eine unangemessene oder fehlerhafte KI-Antwort in Best Journal melden.\n\nBeschreibung des Problems:\n[Bitte ausfüllen]\n\nKontext (welche Funktion, welche Eingabe):\n[Bitte ausfüllen]\n\nDanke.</string>
+    <!-- Title of the in-app report dialog (replaces external email flow). -->
+    <string name="settings_report_ai_dialog_title">KI-Antwort melden</string>
+    <!-- Short description shown above the editable report text in the dialog. -->
+    <string name="settings_report_ai_dialog_desc">Beschreibe die unangemessene oder fehlerhafte KI-Antwort. Wir senden deine Meldung direkt an unser Support-Team. Du musst dazu mit deinem Google-Konto angemeldet sein.</string>
     <string name="consent_links_header">Unsere Rechtstexte:</string>
     <string name="consent_accept_all">Einverstanden und loslegen</string>
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>

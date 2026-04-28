@@ -1130,6 +1130,8 @@
     <string name="settings_report_ai_no_email">メールアプリが見つかりません。dev.app.support@gmail.com に報告を送信してください。</string>
     <string name="settings_report_ai_subject">Best Journal:不適切なAI応答</string>
     <string name="settings_report_ai_body">こんにちは、\n\nBest Journalで不適切または誤ったAI応答を報告したいです。\n\n問題の説明：\n[記入してください]\n\nコンテキスト（どの機能、どの入力）:\n[記入してください]\n\nありがとうございます。</string>
+    <string name="settings_report_ai_dialog_title">AI応答を報告</string>
+    <string name="settings_report_ai_dialog_desc">不適切または誤ったAI応答について説明してください。報告は直接サポートチームに送信されます。Googleアカウントでサインインしている必要があります。</string>
 
     <string name="settings_revoke_title">契約解除</string>
     <string name="settings_revoke_subtitle">プレミアム購入</string>

@@ -1142,6 +1142,8 @@
     <string name="settings_report_ai_no_email">Поштовий застосунок не знайдено. Надішліть скаргу на dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: недоречна відповідь ШІ</string>
     <string name="settings_report_ai_body">Доброго дня,\n\nхочу повідомити про недоречну або помилкову відповідь ШІ в Best Journal.\n\nОпис проблеми:\n[Заповнити]\n\nКонтекст (яка функція, який ввід):\n[Заповнити]\n\nДякую.</string>
+    <string name="settings_report_ai_dialog_title">Повідомити про відповідь ШІ</string>
+    <string name="settings_report_ai_dialog_desc">Опишіть неприйнятну або неправильну відповідь ШІ. Ваше повідомлення буде надіслано безпосередньо нашій службі підтримки. Ви повинні бути в обліковому записі Google.</string>
 
     <string name="settings_revoke_title">Відкликання</string>
     <string name="settings_revoke_subtitle">Купівля Premium</string>
@@ -1261,4 +1263,68 @@
     <string name="paywall_feature_followups">Необмежені доповнення до кожного запису щоденника</string>
     <string name="settings_premium_feature_followups">Необмежені доповнення</string>
     <string name="settings_premium_feature_followups_desc">Стільки доповнень на запис, скільки забажаєш</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING KEYS — added 2026-04-28
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">Ні</string>
+    <string name="action_yes">Так</string>
+    <string name="ai_improved_suffix">\n\n✨ Покращено ШІ</string>
+    <string name="ai_improved_suffix_marker">✨ Покращено ШІ</string>
+    <string name="entry_delete_entry_cd">Видалити запис щоденника</string>
+    <string name="entry_journal_entry_title">Запис щоденника</string>
+    <string name="entry_photos_videos_add_title">Додати фото/відео</string>
+    <string name="follow_up_cancel">Скасувати</string>
+    <string name="follow_up_card_title">Доповнення</string>
+    <string name="follow_up_choose_input_mode">Як ти хочеш додати доповнення?</string>
+    <string name="follow_up_delete_button">Видалити</string>
+    <string name="follow_up_delete_cd">Видалити доповнення</string>
+    <string name="follow_up_delete_confirm_text">Справді видалити доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g> назавжди?</string>
+    <string name="follow_up_delete_confirm_title">Видалити доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_dialog_label">Твоє доповнення:</string>
+    <string name="follow_up_dialog_title">Доповнення</string>
+    <string name="follow_up_discard">Відхилити</string>
+    <string name="follow_up_improve_text">✨ Покращити текст</string>
+    <string name="follow_up_improve_with_ai">Покращити пізніше за допомогою ШІ</string>
+    <string name="follow_up_improving">ШІ покращує доповнення…</string>
+    <string name="follow_up_inline_title">Доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">Надиктувати</string>
+    <string name="follow_up_input_speak_label">Надиктувати</string>
+    <string name="follow_up_input_write_cd">Написати</string>
+    <string name="follow_up_input_write_label">Написати</string>
+    <string name="follow_up_premium_body">З Premium ти можеш додавати скільки завгодно доповнень до кожного запису щоденника.</string>
+    <string name="follow_up_premium_hint">починаючи з другого доповнення</string>
+    <string name="follow_up_premium_later">Вирішити пізніше</string>
+    <string name="follow_up_premium_subscribe">Оформити підписку</string>
+    <string name="follow_up_premium_subtext">Кожне доповнення автоматично потрапляє до Панелі, щоб твій аналіз завжди був повним.</string>
+    <string name="follow_up_premium_title">Необмежені доповнення</string>
+    <string name="follow_up_save">Зберегти</string>
+    <string name="follow_up_save_improved">Зберегти покращену версію</string>
+    <string name="follow_up_show_improved">✨ Показати покращену версію</string>
+    <string name="follow_up_show_original">↩ Показати оригінал</string>
+    <string name="follow_up_speak_pill_label">Надиктувати</string>
+    <string name="follow_up_speak_prompt">Надиктуй своє доповнення.</string>
+    <string name="follow_up_stop_hint">Натисни Стоп, коли закінчиш.</string>
+    <string name="follow_up_tab_improved">✨ Покращено ШІ</string>
+    <string name="follow_up_tab_original">Оригінал</string>
+    <string name="follow_up_text_placeholder">Напиши тут своє доповнення…</string>
+    <string name="follow_up_transcribing">Транскрибування доповнення…</string>
+    <string name="journal_improve">Покращити текст</string>
+    <string name="journal_state_improving">Покращення…</string>
+    <string name="journal_state_transcribing">Транскрибування…</string>
+    <string name="paywall_consent_dialog_body">Після оформлення підписки або покупки ти маєш право на відмову протягом 14 днів.\n\nЩоб ти міг одразу користуватися функціями Premium, ми починаємо надання послуги відразу після оплати. Надаючи згоду нижче, ти свідомо відмовляєшся від 14-денного права на відмову.\n\nБез цієї згоди ми не можемо одразу активувати функції Premium.</string>
+    <string name="paywall_consent_dialog_cancel">Скасувати</string>
+    <string name="paywall_consent_dialog_checkbox">Я погоджуюся, що надання функцій Premium розпочнеться одразу після замовлення. Я розумію, що таким чином втрачаю 14-денне право на відмову.</string>
+    <string name="paywall_consent_dialog_confirm">Оформити підписку зараз із зобов\'язанням оплати</string>
+    <string name="paywall_consent_dialog_title">Інформація про право на відмову</string>
+    <string name="profile_custom_add">Додати індивідуальний аналіз</string>
+    <string name="profile_custom_remove">Видалити індивідуальний аналіз</string>
+    <string name="profile_custom_rename">Перейменувати</string>
+    <string name="profile_custom_rename_save">Зберегти назву</string>
+    <string name="prompt_clear_confirm_text">Індивідуальний аналіз буде видалено назавжди. Ти справді хочеш продовжити?</string>
+    <string name="prompt_clear_confirm_title">Видалити текст?</string>
+    <string name="prompt_clear_content_desc">Видалити текст</string>
+    <string name="prompt_recording_with_model">Запис — Модель: %1$s</string>
+    <string name="prompt_transcribing_with_model">%1$s транскрибує…</string>
+    <string name="prompt_transcription_model_hint">Транскрибовано за допомогою %1$s</string>
 </resources>
