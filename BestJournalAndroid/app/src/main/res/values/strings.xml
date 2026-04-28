@@ -168,6 +168,43 @@
     <string name="entry_delete_entry_cd">Tagebucheintrag löschen</string>
     <string name="entry_photos_videos_add_title">Fotos/Videos hinzufügen</string>
 
+    <!-- Follow-ups (Nachtraege) -->
+    <string name="follow_up_inline_title">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_delete_cd">Nachtrag löschen</string>
+    <string name="follow_up_tab_improved">Verbessert</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_improve_with_ai">Mit KI nachträglich verbessern</string>
+    <string name="follow_up_card_title">Nachtrag</string>
+    <string name="follow_up_premium_hint">ab dem zweiten Nachtrag</string>
+    <string name="follow_up_dialog_title">Nachtrag</string>
+    <string name="follow_up_transcribing">Nachtrag wird transkribiert…</string>
+    <string name="follow_up_speak_prompt">Sprich deinen Nachtrag ein.</string>
+    <string name="follow_up_stop_hint">Tippe auf Stop, wenn du fertig bist.</string>
+    <string name="follow_up_choose_input_mode">Wie möchtest du deinen Nachtrag hinzufügen?</string>
+    <string name="follow_up_input_write_cd">Schreiben</string>
+    <string name="follow_up_input_write_label">Schreiben</string>
+    <string name="follow_up_input_speak_cd">Einsprechen</string>
+    <string name="follow_up_input_speak_label">Einsprechen</string>
+    <string name="follow_up_dialog_label">Dein Nachtrag:</string>
+    <string name="follow_up_speak_pill_label">Einsprechen</string>
+    <string name="follow_up_text_placeholder">Schreibe hier deinen Nachtrag…</string>
+    <string name="follow_up_show_original">↩ Original anzeigen</string>
+    <string name="follow_up_show_improved">✨ Verbesserte Version anzeigen</string>
+    <string name="follow_up_improve_text">✨ Text verbessern</string>
+    <string name="follow_up_improving">KI verbessert den Nachtrag…</string>
+    <string name="follow_up_save_improved">Verbessert speichern</string>
+    <string name="follow_up_save">Speichern</string>
+    <string name="follow_up_cancel">Abbrechen</string>
+    <string name="follow_up_discard">Verwerfen</string>
+    <string name="follow_up_delete_confirm_title">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g> löschen?</string>
+    <string name="follow_up_delete_confirm_text">Möchtest du Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g> wirklich unwiderruflich löschen?</string>
+    <string name="follow_up_delete_button">Löschen</string>
+    <string name="follow_up_premium_title">Unbegrenzte Nachträge</string>
+    <string name="follow_up_premium_body">Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.</string>
+    <string name="follow_up_premium_subtext">Jeder Nachtrag fließt automatisch ins Dashboard ein, damit deine Analyse immer vollständig bleibt.</string>
+    <string name="follow_up_premium_subscribe">Abo starten</string>
+    <string name="follow_up_premium_later">Später entscheiden</string>
+
     <!-- Share dialog -->
     <string name="share_title">Eintrag teilen</string>
     <string name="share_which_version">Welche Version teilen?</string>
@@ -980,6 +1017,13 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="paywall_prices_loading">Preise werden geladen…</string>
     <string name="paywall_sub_loading_toast">Abo wird geladen, bitte versuche es gleich nochmal.</string>
+
+    <!-- § 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28) — VOR launchPurchaseFlow -->
+    <string name="paywall_consent_dialog_title">Widerrufsbelehrung</string>
+    <string name="paywall_consent_dialog_body">Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.</string>
+    <string name="paywall_consent_dialog_checkbox">Ich stimme zu, dass die Bereitstellung der Premium-Funktionen sofort nach Bestellung beginnt. Mir ist bekannt, dass ich dadurch mein 14-tägiges Widerrufsrecht verliere.</string>
+    <string name="paywall_consent_dialog_confirm">Jetzt zahlungspflichtig abonnieren</string>
+    <string name="paywall_consent_dialog_cancel">Abbrechen</string>
     <string name="paywall_purchase_loading_toast">Kaufvorgang wird geladen, bitte versuche es gleich nochmal.</string>
     <string name="paywall_today">Heute</string>
     <string name="paywall_full_access">Voller Zugang</string>

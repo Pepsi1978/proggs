@@ -67,7 +67,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryFollowUpEntity
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
@@ -146,7 +148,7 @@ fun FollowUpInlineCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Nachtrag ${germanNumberWord(index + 1)}",
+                        stringResource(R.string.follow_up_inline_title, (index + 1).toString()),
                         style = MaterialTheme.typography.titleSmall,
                         color = NeonAmber,
                     )
@@ -159,7 +161,7 @@ fun FollowUpInlineCard(
                 ) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Nachtrag löschen",
+                        contentDescription = stringResource(R.string.follow_up_delete_cd),
                         tint = NeonRed,
                     )
                 }
@@ -187,7 +189,7 @@ fun FollowUpInlineCard(
                 ) {
                     Tab(selected = selectedTabFu == 0, onClick = { selectedTabFu = 0 }) {
                         Text(
-                            "Verbessert",
+                            stringResource(R.string.follow_up_tab_improved),
                             modifier = Modifier.padding(8.dp),
                             color =
                                 if (selectedTabFu == 0) MaterialTheme.colorScheme.primary
@@ -196,7 +198,7 @@ fun FollowUpInlineCard(
                     }
                     Tab(selected = selectedTabFu == 1, onClick = { selectedTabFu = 1 }) {
                         Text(
-                            "Original",
+                            stringResource(R.string.follow_up_tab_original),
                             modifier = Modifier.padding(8.dp),
                             color =
                                 if (selectedTabFu == 1) MaterialTheme.colorScheme.primary
@@ -263,7 +265,7 @@ fun FollowUpInlineCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Mit KI nachträglich verbessern",
+                        stringResource(R.string.follow_up_improve_with_ai),
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
@@ -297,7 +299,7 @@ fun AddFollowUpCard(onAddClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Nachtrag",
+                        stringResource(R.string.follow_up_card_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -309,7 +311,7 @@ fun AddFollowUpCard(onAddClick: () -> Unit) {
                     },
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text("Hinzufügen", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.entry_add), style = MaterialTheme.typography.labelMedium)
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -322,7 +324,7 @@ fun AddFollowUpCard(onAddClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    "ab dem zweiten Nachtrag",
+                    stringResource(R.string.follow_up_premium_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -415,13 +417,13 @@ fun FollowUpDialog(
                         modifier = Modifier.size(22.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Nachtrag", color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(R.string.follow_up_dialog_title), color = MaterialTheme.colorScheme.onSurface)
                 }
                 if (canDelete && !isRecording && !isTranscribing) {
                     IconButton(onClick = onDeleteClick) {
                         Icon(
                             Icons.Rounded.Delete,
-                            contentDescription = "Nachtrag löschen",
+                            contentDescription = stringResource(R.string.follow_up_delete_cd),
                             tint = MaterialTheme.colorScheme.outline,
                         )
                     }
@@ -441,7 +443,7 @@ fun FollowUpDialog(
                                 strokeWidth = 2.dp,
                             )
                             Text(
-                                "Nachtrag wird transkribiert…",
+                                stringResource(R.string.follow_up_transcribing),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -453,7 +455,7 @@ fun FollowUpDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                "Sprich deinen Nachtrag ein.",
+                                stringResource(R.string.follow_up_speak_prompt),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -488,7 +490,7 @@ fun FollowUpDialog(
                             AnimatedMicButton(isRecording = true, onClick = onRecordClick)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Tippe auf Stop, wenn du fertig bist.",
+                                stringResource(R.string.follow_up_stop_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -496,7 +498,7 @@ fun FollowUpDialog(
                     }
                     !inputModeChosen -> {
                         Text(
-                            "Wie möchtest du deinen Nachtrag hinzufügen?",
+                            stringResource(R.string.follow_up_choose_input_mode),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -509,7 +511,7 @@ fun FollowUpDialog(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 FloatingActionButton(
                                     onClick = { inputModeChosen = true },
-                                    modifier = Modifier.size(56.dp),
+                                    modifier = Modifier.size(72.dp),
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     contentColor = MaterialTheme.colorScheme.onSurface,
                                     shape = CircleShape,
@@ -520,13 +522,13 @@ fun FollowUpDialog(
                                 ) {
                                     Icon(
                                         Icons.Rounded.Edit,
-                                        contentDescription = "Schreiben",
-                                        modifier = Modifier.size(24.dp),
+                                        contentDescription = stringResource(R.string.follow_up_input_write_cd),
+                                        modifier = Modifier.size(28.dp),
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Schreiben",
+                                    stringResource(R.string.follow_up_input_write_label),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -543,7 +545,7 @@ fun FollowUpDialog(
                                 AnimatedMicButton(isRecording = false, onClick = onRecordClick)
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Einsprechen",
+                                    stringResource(R.string.follow_up_input_speak_label),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -557,7 +559,7 @@ fun FollowUpDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "Dein Nachtrag:",
+                                stringResource(R.string.follow_up_dialog_label),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -574,13 +576,13 @@ fun FollowUpDialog(
                                 ) {
                                     Icon(
                                         Icons.Rounded.Mic,
-                                        contentDescription = "Einsprechen",
+                                        contentDescription = stringResource(R.string.follow_up_input_speak_cd),
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        "Einsprechen",
+                                        stringResource(R.string.follow_up_speak_pill_label),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
@@ -618,7 +620,7 @@ fun FollowUpDialog(
                                 ),
                             placeholder = {
                                 Text(
-                                    "Schreibe hier deinen Nachtrag…",
+                                    stringResource(R.string.follow_up_text_placeholder),
                                     color = MaterialTheme.colorScheme.outline,
                                 )
                             },
@@ -634,8 +636,8 @@ fun FollowUpDialog(
                                     ),
                             ) {
                                 Text(
-                                    if (showingImproved) "↩ Original anzeigen"
-                                    else "✨ Verbesserte Version anzeigen"
+                                    if (showingImproved) stringResource(R.string.follow_up_show_original)
+                                    else stringResource(R.string.follow_up_show_improved)
                                 )
                             }
                         }
@@ -651,7 +653,7 @@ fun FollowUpDialog(
                                             MaterialTheme.colorScheme.onSecondaryContainer,
                                     ),
                             ) {
-                                Text("✨ Text verbessern")
+                                Text(stringResource(R.string.follow_up_improve_text))
                             }
                         }
                         if (isImproving) {
@@ -664,7 +666,7 @@ fun FollowUpDialog(
                                     strokeWidth = 2.dp,
                                 )
                                 Text(
-                                    "KI verbessert den Nachtrag…",
+                                    stringResource(R.string.follow_up_improving),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -677,7 +679,7 @@ fun FollowUpDialog(
         confirmButton = {
             if (displayText.isNotBlank() && !isRecording && !isTranscribing) {
                 Button(onClick = onSave) {
-                    Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                    Text(if (showingImproved) stringResource(R.string.follow_up_save_improved) else stringResource(R.string.follow_up_save))
                 }
             }
         },
@@ -685,7 +687,7 @@ fun FollowUpDialog(
             if (!isRecording && !isTranscribing) {
                 OutlinedButton(onClick = onDismiss) {
                     Text(
-                        if (displayText.isBlank()) "Abbrechen" else "Verwerfen",
+                        if (displayText.isBlank()) stringResource(R.string.follow_up_cancel) else stringResource(R.string.follow_up_discard),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -704,13 +706,13 @@ fun FollowUpDeleteConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val title = "Nachtrag ${germanNumberWord(followUpNumber)}"
+    val ordinal = followUpNumber.toString()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("$title löschen?", color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text(stringResource(R.string.follow_up_delete_confirm_title, ordinal), color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Text(
-                "Möchtest du $title wirklich unwiderruflich löschen?",
+                stringResource(R.string.follow_up_delete_confirm_text, ordinal),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         },
@@ -723,12 +725,12 @@ fun FollowUpDeleteConfirmDialog(
                         contentColor = Color.White,
                     ),
             ) {
-                Text("Löschen")
+                Text(stringResource(R.string.follow_up_delete_button))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.follow_up_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
@@ -758,7 +760,7 @@ fun FollowUpPremiumUpsellDialog(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Unbegrenzte Nachträge",
+                    stringResource(R.string.follow_up_premium_title),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -766,13 +768,13 @@ fun FollowUpPremiumUpsellDialog(
         text = {
             Column {
                 Text(
-                    "Mit Premium kannst du zu jedem Tagebucheintrag so viele Nachträge hinzufügen wie du möchtest.",
+                    stringResource(R.string.follow_up_premium_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Jeder Nachtrag fließt automatisch ins Dashboard ein, damit deine Analyse immer vollständig bleibt.",
+                    stringResource(R.string.follow_up_premium_subtext),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -780,13 +782,13 @@ fun FollowUpPremiumUpsellDialog(
         },
         confirmButton = {
             Button(onClick = onStartSubscription) {
-                Text("Abo starten")
+                Text(stringResource(R.string.follow_up_premium_subscribe))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
                 Text(
-                    "Später entscheiden",
+                    stringResource(R.string.follow_up_premium_later),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
