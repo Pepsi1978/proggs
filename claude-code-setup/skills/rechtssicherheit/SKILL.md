@@ -270,7 +270,7 @@ BFSG/EAA Barrierefreiheit, DSA bei UGC/Hosting/Marketplace, AI Act bei KI-Featur
 
 ### 2. Englischsprachige Zielmaerkte
 
-- **UK**: UK-GDPR, DPA 2018, PECR, Online Safety Act
+- **UK**: UK-GDPR, DPA 2018, PECR, Online Safety Act, UK-GDPR Art. 27 (UK-Vertreter-Pflicht bei Datenverarbeitung von UK-Buergern ohne UK-Sitz)
 - **USA**: CCPA/CPRA, weitere State Privacy Laws, COPPA, FTC Act,
   Health Breach Notification, HIPAA, FDA
 - **Kanada**: PIPEDA, Quebec Law 25
@@ -544,6 +544,72 @@ Uebersetzungen der Rechtstexte als Befund notieren.
 - Screenshots/Marketingtexte versprechen nichts Falsches.
 - Abo-/Preisangaben und Trial-Hinweise klar.
 
+#### 5h-UK. UK-Vertreter-Pflicht (UK-GDPR Art. 27) — Standard-Empfehlung: Option B
+
+**Gesetz:** UK-GDPR Art. 27 verlangt einen UK-Vertreter, sobald personenbezogene
+Daten von Personen in UK verarbeitet werden UND das Unternehmen keinen Sitz in
+UK hat. Eine App im UK Play Store mit Sitz ausserhalb UK (z.B. Deutschland)
+verarbeitet zwangslaeufig solche Daten.
+
+**Was ein UK-Vertreter ist:**
+
+- Person/Firma mit Sitz in UK
+- Anlaufstelle fuer ICO und UK-Nutzer (kein Haftungsuebernehmer, "Briefkasten")
+- MUSS in Datenschutzerklaerung mit Name + UK-Adresse + Kontakt-E-Mail genannt werden
+
+**Zwei Optionen — der Skill empfiehlt IMMER Option B:**
+
+| Option | Aufwand | Kosten | Empfehlung dieses Skills |
+|--------|---------|--------|--------------------------|
+| **A — UK-Vertreter buchen** (z.B. gdprlocal.com, verasafe.com, captaincompliance.com) | Vertrag, Adressuebernahme in DSE | ~£100-300/Jahr laufend | **NICHT empfohlen** |
+| **B — UK aus Distribution ausschliessen** | Play Console → App content → Country availability → United Kingdom abhaken | 0 | **STANDARD-EMPFEHLUNG** |
+
+**Trigger-Bedingungen (alle gleichzeitig):**
+
+1. App ist im UK Play Store verfuegbar (oder soll dort verfuegbar gemacht werden)
+2. App-Anbieter sitzt nicht in UK
+3. App verarbeitet personenbezogene Daten von Nutzern (auch nur Crash-Logs,
+   IP-Adressen, Push-Tokens, Account-Daten — also faktisch jede App)
+
+**Pflicht-Handlung des Skills:**
+
+Wenn alle drei Trigger zutreffen, MUSS der Skill in den Bericht aufnehmen:
+
+- Befund-Schweregrad: **🟠 HOCH** (mindestens) bzw. **🔴 BLOCKER** falls die
+  App bereits live in UK ist und kein Vertreter benannt ist
+- Empfehlung: **Option B — UK aus Country Availability entfernen**
+- Konkrete Schritte fuer Play Console (UK abhaken, Release-Notes pruefen)
+- Hinweis fuer Datenschutzerklaerung: Wenn UK ausgeschlossen wird, MUSS sichergestellt
+  sein dass die DSE keine UK-Vertreter-Sektion mehr enthaelt (sonst widersprueche)
+- Hinweis fuer Store-Listing-Sprachen: UK-Englisch (en-GB) als Pflichtsprache faellt weg
+- Hinweis: Auch andere Distribution-Kanaele pruefen (GitHub Releases, F-Droid,
+  Amazon Appstore, Galaxy Store, Sideload-Anleitungen) — UK MUSS dort ebenfalls
+  ausgeschlossen werden, sonst greift Art. 27 trotzdem
+- Wenn der Benutzer ausdruecklich Option A waehlt: Vermerken aber NICHT eigenstaendig
+  Vertreter-Daten in die DSE eintragen (juristische Pruefung noetig)
+
+**Pruefung im Repo:**
+
+```sh
+# Privacy Policy auf "UK Representative" / "UK-Vertreter" pruefen
+rg -n -i "uk[ -]representative|uk[ -]vertreter|article[ ]27|art\\.[ ]27|gdprlocal|verasafe|captaincompliance" [APP_DIR]
+# Country availability / Distribution-Listen
+rg -n -i "country[ -]availability|distribution|target[ -]markets|countries" [APP_DIR] -g "*.md" -g "*.txt" -g "*.yaml" -g "*.yml" -g "fastlane/**"
+```
+
+**Was NIEMALS passieren darf:**
+
+- ❌ App in UK ausliefern, ohne Vertreter UND ohne Ausschluss
+- ❌ Vertreter-Daten erfinden oder Platzhalter einsetzen
+- ❌ Pseudo-Adresse (z.B. die eines Kollegen ohne Vertretungsvereinbarung)
+- ❌ Annahme "App sammelt keine Daten" ohne harte Pruefung — Crash-Logs/IP/Token zaehlen schon
+
+**Empfehlung in der Berichts-Box:**
+
+> UK ist nicht im Country-Availability-Set freigegeben. Wenn UK ausgerollt werden
+> soll, ist Option A (UK-Vertreter buchen) noetig — bis dahin gilt Option B
+> (UK ausgeschlossen) als verbindliche Standard-Loesung dieses Skills.
+
 #### 5h. UGC, KI/GenAI und Moderation
 
 - Bei Chat/Posts/Sharing/Kommentaren: Terms-Akzeptanz, Report-/Blockier-Funktion,
@@ -568,7 +634,7 @@ Der Skill erstellt fuer jeden geplanten Zielmarkt einen Eintrag in folgender Mat
 | Rechtsraum | Pflichtpruefung | Typische Release-Blocker |
 |---|---|---|
 | **DE/EU** | DSGVO, DDG, TDDDG, BGB/EGBGB, BFSG/EAA, DSA, AI Act | Fehlendes Impressum, fehlende Datenschutzerklaerung in DE, Cookie-/Tracking-Consent fehlt, kein Widerruf bei IAP/Abos, BFSG-Verstoesse |
-| **UK** | UK-GDPR, DPA 2018, PECR, Online Safety Act | PECR-Consent fehlt, OSA-Pflichten bei UGC, Privacy Policy ohne UK-Bezug |
+| **UK** | UK-GDPR, DPA 2018, PECR, Online Safety Act, **UK-GDPR Art. 27 (UK-Vertreter-Pflicht)** | PECR-Consent fehlt, OSA-Pflichten bei UGC, Privacy Policy ohne UK-Bezug, **kein UK-Vertreter benannt** — Standard-Empfehlung dieses Skills: **UK aus Distribution ausschliessen (Option B)** |
 | **USA** | CCPA/CPRA, State Privacy Laws, COPPA, FTC Act, Health Breach/HIPAA/FDA | "Do Not Sell"-Pflichten, COPPA bei Kindern, Health-Claims ohne FDA |
 | **Kanada** | PIPEDA, Quebec Law 25 | Quebec-Sprachpflicht, Privacy-Officer-Pflicht, Data-Transfer-Disclosure |
 | **Australien/NZ** | Privacy Act / APPs | Fehlende Privacy Policy mit AU-Bezug, Cross-Border-Disclosure |
@@ -605,6 +671,7 @@ Pro App pruefen, welche Feature-Gates greifen:
 | **Tagebuch/private Daten** | Verschluesselung, Backup-Regeln, Export, Loeschung, Screenshots | DSGVO, Android Privacy |
 | **Barrierefreiheit** | BFSG/EAA, WCAG, EN 301 549 — Checkout, Paywall, Account, Legal Links | EU EAA, BFSG |
 | **Cross-Border-Transfers** | SCC, EU-US DPF, PIPL/DPDP/LGPD/PDPL Transfergrundlage | EDPB, nationale Behoerden |
+| **UK-Vertreter (Art. 27)** | App in UK Store + Sitz ausserhalb UK + personenbezogene Daten → **Standard-Empfehlung Option B (UK ausschliessen)** | UK-GDPR Art. 27, ICO |
 
 ---
 
@@ -1078,6 +1145,7 @@ anwaltliche Pruefpunkte erstellen.
 - ❌ UGC, Chat, KI, Health, Kinder, Abos, Ads oder sensitive Permissions ohne
   Sonderpolicy-Gate behandeln
 - ❌ Nicht bewertete Store-Laender still freigeben
+- ❌ App in UK ausliefern ohne Vertreter (Art. 27) UND ohne UK-Ausschluss (Standard-Empfehlung dieses Skills bei UK-Vertreter-Pflicht ist IMMER Option B = UK ausschliessen)
 - ❌ Fremde oder unklare Aenderungen im Repo mitcommitten
 - ❌ Dateien ausserhalb des aktuellen Workspaces bearbeiten, ausser explizit angefordert
 - ❌ `~/Codex/`, `~/proggs/` oder andere Home-Unterordner als Standard-Arbeitsverzeichnis
