@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1380,5 +1380,5 @@
     <string name="prompt_clear_confirm_title">লেখা বাদ দেবে?</string>
     <string name="prompt_clear_content_desc">ইনপুট মুছো</string>
     <string name="settings_legal_section_header">আইনি নথি</string>
-    <string name="settings_legal_online_label">অনলাইন সংস্করণ (ইন্টারনেট সহ):</string>
+    <string name="settings_legal_online_label">অনলাইন সংস্করণ:</string>
 </resources>

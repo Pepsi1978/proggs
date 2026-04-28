@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">解锁于 %1$s</string>
     <!-- About -->
     <string name="settings_about">关于应用</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">你的个人 AI 日记</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登录吗？</string>
@@ -1367,5 +1367,5 @@
     <string name="prompt_send_button_label">发送</string>
     <string name="prompt_stop_button_label">停止</string>
     <string name="settings_legal_section_header">法律文件</string>
-    <string name="settings_legal_online_label">在线版本（需要联网）：</string>
+    <string name="settings_legal_online_label">在线版本：</string>
 </resources>

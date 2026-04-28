@@ -3849,27 +3849,19 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         // 3 In-App buttons (offline, file:///android_asset/...)
+                        // Order: Datenschutz, Nutzungsbedingungen, Impressum
                         Column(modifier = Modifier.fillMaxWidth()) {
                             LegalDocumentRow(
                                 label = stringResource(R.string.legal_title_datenschutz),
-                                onClick = {
-                                    playClick()
-                                    onNavigateToLegal("legal/datenschutz")
-                                },
-                            )
-                            LegalDocumentRow(
-                                label = stringResource(R.string.legal_title_impressum),
-                                onClick = {
-                                    playClick()
-                                    onNavigateToLegal("legal/impressum")
-                                },
+                                onClick = { onNavigateToLegal("legal/datenschutz") },
                             )
                             LegalDocumentRow(
                                 label = stringResource(R.string.legal_title_nutzungsbedingungen),
-                                onClick = {
-                                    playClick()
-                                    onNavigateToLegal("legal/nutzungsbedingungen")
-                                },
+                                onClick = { onNavigateToLegal("legal/nutzungsbedingungen") },
+                            )
+                            LegalDocumentRow(
+                                label = stringResource(R.string.legal_title_impressum),
+                                onClick = { onNavigateToLegal("legal/impressum") },
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -3881,28 +3873,21 @@ fun SettingsScreen(
                             stringResource(R.string.settings_legal_online_label),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.Start),
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         val onlineUrl = stringResource(R.string.settings_legal_online_url)
-                        Text(
-                            text = onlineUrl,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .clickable {
-                                    playClick()
-                                    val intent = android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse(onlineUrl),
-                                    )
-                                    intent.flags =
-                                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                    context.startActivity(intent)
-                                }
-                                .padding(vertical = 4.dp),
-                            textAlign = TextAlign.Center,
-                            textDecoration =
-                                androidx.compose.ui.text.style.TextDecoration.Underline,
+                        LegalDocumentRow(
+                            label = stringResource(R.string.settings_legal_section_header),
+                            onClick = {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(onlineUrl),
+                                )
+                                intent.flags =
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                context.startActivity(intent)
+                            },
                         )
                     }
                 }

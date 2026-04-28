@@ -547,7 +547,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <string name="settings_about_copyright" translatable="false">© Barwandt Digital Labs</string>
     <!-- Sign-out dialog -->
@@ -1399,7 +1399,7 @@
     <!-- Header for the legal documents section in Settings > About app. Max 30 chars. -->
     <string name="settings_legal_section_header">Rechtliche Dokumente</string>
     <!-- Label above the clickable online URL link. Indicates that internet is required. Max 40 chars. -->
-    <string name="settings_legal_online_label">Online-Version (mit Internet):</string>
+    <string name="settings_legal_online_label">Online-Version:</string>
     <!-- Public URL of the legal documents page on GitHub Pages. Same in every language. -->
     <string name="settings_legal_online_url" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/</string>
 </resources>

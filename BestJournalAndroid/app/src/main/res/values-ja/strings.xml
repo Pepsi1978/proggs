@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s に獲得</string>
     <!-- About -->
     <string name="settings_about">アプリについて</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">あなたのAI日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ログアウトしますか？</string>
@@ -1367,5 +1367,5 @@
     <string name="prompt_send_button_label">送信</string>
     <string name="prompt_stop_button_label">停止</string>
     <string name="settings_legal_section_header">法的文書</string>
-    <string name="settings_legal_online_label">オンライン版（インターネット必要）：</string>
+    <string name="settings_legal_online_label">オンライン版：</string>
 </resources>

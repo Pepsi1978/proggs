@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
@@ -1370,5 +1370,5 @@
     <string name="prompt_send_button_label">بھیجیں</string>
     <string name="prompt_stop_button_label">روکیں</string>
     <string name="settings_legal_section_header">قانونی دستاویزات</string>
-    <string name="settings_legal_online_label">آن لائن ورژن (انٹرنیٹ کے ساتھ):</string>
+    <string name="settings_legal_online_label">آن لائن ورژن:</string>
 </resources>

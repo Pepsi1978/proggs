@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">Desbloqueada em %1$s</string>
     <!-- About -->
     <string name="settings_about">Sobre o app</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">Seu diário pessoal com IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sair da conta?</string>
@@ -1369,5 +1369,5 @@ O que você quer fazer?</string>
     <string name="prompt_send_button_label">Enviar</string>
     <string name="prompt_stop_button_label">Parar</string>
     <string name="settings_legal_section_header">Documentos jurídicos</string>
-    <string name="settings_legal_online_label">Versão online (com internet):</string>
+    <string name="settings_legal_online_label">Versão online:</string>
 </resources>

@@ -479,7 +479,7 @@
     <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
     <!-- About -->
     <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
@@ -1370,5 +1370,5 @@
     <string name="prompt_send_button_label">ಕಳುಹಿಸಿ</string>
     <string name="prompt_stop_button_label">ನಿಲ್ಲಿಸಿ</string>
     <string name="settings_legal_section_header">ಕಾನೂನು ದಾಖಲೆಗಳು</string>
-    <string name="settings_legal_online_label">ಆನ್‌ಲೈನ್ ಆವೃತ್ತಿ (ಇಂಟರ್ನೆಟ್‌ನೊಂದಿಗೆ):</string>
+    <string name="settings_legal_online_label">ಆನ್‌ಲೈನ್ ಆವೃತ್ತಿ:</string>
 </resources>

@@ -521,7 +521,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.16.3</string>
+    <string name="settings_about_version">Best Journal V0.16.4</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -1347,5 +1347,5 @@
     <string name="prompt_send_button_label">Send</string>
     <string name="prompt_stop_button_label">Stop</string>
     <string name="settings_legal_section_header">Legal Documents</string>
-    <string name="settings_legal_online_label">Online version (with internet):</string>
+    <string name="settings_legal_online_label">Online version:</string>
 </resources>
