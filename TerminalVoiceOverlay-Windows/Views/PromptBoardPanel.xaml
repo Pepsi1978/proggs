@@ -166,13 +166,30 @@
                            FontWeight="Bold"
                            FontSize="13"
                            VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1"
-                           x:Name="SyncLabel"
-                           Text=""
-                           Foreground="#FF7F7F7F"
-                           FontSize="10"
-                           Margin="6,0,0,0"
-                           VerticalAlignment="Center"/>
+                <!-- Sync-Bereich: Status-Text + Filter-Button "Nur aktivierte
+                     Prompts" daneben. Der Button wirkt als Schnell-Filter:
+                     Klick blendet alle Prompts ohne Haekchen kurzfristig aus,
+                     so dass der Benutzer nach viel Hin-und-Her sofort sehen
+                     kann welche Prompts aktuell wirklich aktiv sind. Im
+                     aktiven Zustand wird der Button golden — passend zum
+                     gelb-goldenen Haekchen der AlwaysOn-Checkboxen in den
+                     Prompt-Reihen. Erneuter Klick (oder Klick auf einen
+                     Tab) verlaesst den Filter wieder. -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Margin="6,0,0,0"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="SyncLabel"
+                               Text=""
+                               Foreground="#FF7F7F7F"
+                               FontSize="10"
+                               VerticalAlignment="Center"/>
+                    <Button x:Name="BtnFilterActiveOnly"
+                            Style="{StaticResource IconButton}"
+                            Content="&#xE73E;"
+                            Margin="6,0,0,0"
+                            ToolTip="Nur aktivierte Prompts anzeigen — blendet alle Prompts ohne Haekchen aus. Erneuter Klick zeigt wieder alle."/>
+                </StackPanel>
                 <!-- Reihenfolge der Toolbar-Buttons: [!] [Historie] [+]
                      [Backup] [Settings]. Spalte 2 (Width=*) ist eine
                      leere Lueckenspalte, die alle Toolbar-Buttons nach rechts

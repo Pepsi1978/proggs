@@ -192,6 +192,8 @@ public partial class PromptBoardPanel : Window
         BtnBackup.Click          += async (_, _) => await ShowBackupMenuAsync();
         BtnHistory.Click         += (_, _) => ToggleHistoryWindow();
         BtnClearAllChecks.Click  += async (_, _) => await ClearAllAlwaysOnAsync();
+        BtnFilterActiveOnly.Click += async (_, _) => await ToggleAlwaysOnFilterAsync();
+        UpdateFilterButtonVisual();
         RefreshSyncLabel();
 
         // Bei jedem Sichtbarwerden des Panels (Stern-Klick im Voice-Overlay)
@@ -215,6 +217,7 @@ public partial class PromptBoardPanel : Window
                 PromptList.Children.Clear();
                 RenderEmptyState("Lade aktive Prompts...");
                 RenderCategoryTabs();
+                UpdateFilterButtonVisual();
                 // RefreshAsync hier explizit anstossen. Frueher uebernahm das
                 // OverlayWindow das nach Show(); im neuen Solo-Andock-Flow
                 // ruft ApplySoloDockMode(false) jedoch nur _promptPanel.Show()
@@ -382,6 +385,67 @@ public partial class PromptBoardPanel : Window
         // Eine Sekunde gruen halten, dann zurueck auf den Original-Hintergrund.
         await Task.Delay(1000);
         BtnClearAllChecks.Background = originalBackground;
+    }
+
+    /// <summary>
+    /// Click-Handler fuer den Filter-Button neben dem Sync-Bereich. Schaltet
+    /// den Erstauswahl-/AlwaysOn-Filter manuell um:
+    /// - Beim Aktivieren werden alle nicht-aktiven Prompts ausgeblendet, die
+    ///   Tabs aller Kategorien mit aktiven Prompts werden in RefreshAsync
+    ///   automatisch wieder eingetragen (visuelle Markierung).
+    /// - Beim Deaktivieren wird der Standard-Zustand wiederhergestellt: alle
+    ///   Kategorien werden wieder aktiv (Tabs alle gelb), so dass der
+    ///   Benutzer nach einem Filter-Aus wieder den vollen Ueberblick hat.
+    /// Identisch zum Tab-Klick-Pfad existiert fuer den Wechsel auch ein
+    /// einzelner Tab-Klick als Filter-Aus-Weg — beide Pfade rufen
+    /// <see cref="UpdateFilterButtonVisual"/> auf, sodass der Button-Look
+    /// immer dem internen Modus entspricht.
+    /// </summary>
+    private async Task ToggleAlwaysOnFilterAsync()
+    {
+        if (_alwaysOnFilterMode)
+        {
+            // Filter aus: alle Kategorien aktiv, alle Prompts sichtbar.
+            _alwaysOnFilterMode = false;
+            _activeCategoryIds.Clear();
+            foreach (var cat in _categories)
+                _activeCategoryIds.Add(cat.Id);
+        }
+        else
+        {
+            // Filter an: RefreshAsync fuellt _activeCategoryIds neu mit
+            // allen Kategorien die aktive Prompts haben.
+            _alwaysOnFilterMode = true;
+            _activeCategoryIds.Clear();
+        }
+        UpdateFilterButtonVisual();
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Aktualisiert das Aussehen des Filter-Buttons abhaengig vom aktuellen
+    /// <see cref="_alwaysOnFilterMode"/>. Aktiv = goldener Hintergrund mit
+    /// dunklem Glyph (matcht den Look der gelben Haekchen-Checkboxen in den
+    /// Prompt-Reihen). Inaktiv = Standard-Toolbar-Look (dunkler Hintergrund,
+    /// weisser Glyph). Tooltip wechselt entsprechend, damit der Benutzer
+    /// auf einen Blick versteht ob ein Klick den Filter ein- oder ausschaltet.
+    /// Wird ueberall aufgerufen wo <see cref="_alwaysOnFilterMode"/>
+    /// veraendert wird (Toggle, IsVisibleChanged, Tab-Klick, Constructor).
+    /// </summary>
+    private void UpdateFilterButtonVisual()
+    {
+        if (_alwaysOnFilterMode)
+        {
+            BtnFilterActiveOnly.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+            BtnFilterActiveOnly.Foreground = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x1F));
+            BtnFilterActiveOnly.ToolTip = "Filter aktiv — nur Prompts mit Haekchen sind sichtbar. Klick zeigt wieder alle.";
+        }
+        else
+        {
+            BtnFilterActiveOnly.Background = new SolidColorBrush(Color.FromRgb(0x38, 0x38, 0x38));
+            BtnFilterActiveOnly.Foreground = new SolidColorBrush(Colors.White);
+            BtnFilterActiveOnly.ToolTip = "Nur aktivierte Prompts anzeigen — blendet alle Prompts ohne Haekchen aus. Erneuter Klick zeigt wieder alle.";
+        }
     }
 
     /// <summary>
@@ -873,6 +937,7 @@ public partial class PromptBoardPanel : Window
                     _alwaysOnFilterMode = false;
                     _activeCategoryIds.Clear();
                     _activeCategoryIds.Add(cat.Id);
+                    UpdateFilterButtonVisual();
                 }
                 else
                 {
