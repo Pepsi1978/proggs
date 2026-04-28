@@ -165,6 +165,9 @@
     <string name="share_followup_numbered">Acrescento <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">Acrescento</string>
 
+    <string name="error_recording_failed">Falha na gravação: <xliff:g id="reason" example="Microfone indisponível">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Falha na transcrição: <xliff:g id="reason" example="Tempo de espera de rede excedido">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

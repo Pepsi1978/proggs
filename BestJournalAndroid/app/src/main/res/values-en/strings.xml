@@ -216,6 +216,9 @@
     <string name="share_followup_numbered">Follow-up <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">Follow-up</string>
 
+    <string name="error_recording_failed">Recording failed: <xliff:g id="reason" example="Microphone unavailable">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Transcription failed: <xliff:g id="reason" example="Network timeout">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

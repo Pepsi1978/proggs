@@ -108,6 +108,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-27 17:04 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 17:51 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 18:15 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
+### 2026-04-28 14:29 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -209,7 +210,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-27 17:51] Code-Suche Index:** 12 Dateien, 389 Chunks indexiert.
+- **[2026-04-28 14:30] Code-Suche Index:** 47 Dateien, 517 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._

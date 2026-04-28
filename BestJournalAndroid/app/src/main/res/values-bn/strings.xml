@@ -165,6 +165,9 @@
     <string name="share_followup_numbered">পরবর্তী সংযোজন <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">পরবর্তী সংযোজন</string>
 
+    <string name="error_recording_failed">রেকর্ডিং ব্যর্থ হয়েছে: <xliff:g id="reason" example="মাইক্রোফোন অনুপলব্ধ">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ট্রান্সক্রিপশন ব্যর্থ হয়েছে: <xliff:g id="reason" example="নেটওয়ার্ক টাইমআউট">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

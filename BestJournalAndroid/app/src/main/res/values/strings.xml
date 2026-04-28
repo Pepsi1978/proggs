@@ -222,6 +222,11 @@
     <string name="share_followup_numbered">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">Nachtrag</string>
 
+    <!-- Error shown when audio recording for a follow-up fails. %1$s = error message from the system (e.g., "Permission denied"). -->
+    <string name="error_recording_failed">Aufnahme fehlgeschlagen: <xliff:g id="reason" example="Mikrofon nicht verfügbar">%1$s</xliff:g></string>
+    <!-- Error shown when speech-to-text transcription of a follow-up fails. %1$s = error message from the API (e.g., "Network timeout"). -->
+    <string name="error_transcription_failed">Transkription fehlgeschlagen: <xliff:g id="reason" example="Zeitüberschreitung">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

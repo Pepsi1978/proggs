@@ -165,6 +165,9 @@
     <string name="share_followup_numbered">补充<xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">补充</string>
 
+    <string name="error_recording_failed">录音失败：<xliff:g id="reason" example="麦克风不可用">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">转录失败：<xliff:g id="reason" example="网络超时">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

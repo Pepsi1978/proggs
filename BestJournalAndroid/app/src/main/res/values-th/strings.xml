@@ -165,6 +165,9 @@
     <string name="share_followup_numbered">ส่วนเพิ่ม <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">ส่วนเพิ่ม</string>
 
+    <string name="error_recording_failed">การบันทึกล้มเหลว: <xliff:g id="reason" example="ไม่สามารถใช้ไมโครโฟนได้">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">การถอดเสียงล้มเหลว: <xliff:g id="reason" example="หมดเวลาเครือข่าย">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

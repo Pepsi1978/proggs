@@ -157,6 +157,9 @@
     <string name="share_followup_numbered">അനുബന്ധം <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">അനുബന്ധം</string>
 
+    <string name="error_recording_failed">റെക്കോർഡിംഗ് പരാജയപ്പെട്ടു: <xliff:g id="reason" example="മൈക്രോഫോൺ ലഭ്യമല്ല">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ട്രാൻസ്ക്രിപ്ഷൻ പരാജയപ്പെട്ടു: <xliff:g id="reason" example="നെറ്റ്‌വർക്ക് കാലഹരണപ്പെട്ടു">%1$s</xliff:g></string>
+
     <!-- DASHBOARD SCREEN -->
     <string name="dashboard_title">ഡാഷ്ബോർഡ്</string>
     <string name="dashboard_legend">ഐതിഹ്യം</string>

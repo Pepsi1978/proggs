@@ -560,7 +560,10 @@ constructor(
                     it.copy(
                         showFollowUpDialog = true,
                         followUpRecordingState = RecordingState.PREVIEW,
-                        followUpError = "Aufnahme fehlgeschlagen: ${e.message}",
+                        followUpError = context.getString(
+                            R.string.error_recording_failed,
+                            e.message ?: "",
+                        ),
                     )
                 }
             }
@@ -604,7 +607,10 @@ constructor(
                         it.copy(
                             showFollowUpDialog = true,
                             followUpRecordingState = RecordingState.PREVIEW,
-                            followUpError = "Transkription fehlgeschlagen: ${error.message}",
+                            followUpError = context.getString(
+                                R.string.error_transcription_failed,
+                                error.message ?: "",
+                            ),
                         )
                     }
                 }

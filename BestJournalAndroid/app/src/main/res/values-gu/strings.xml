@@ -154,6 +154,9 @@
     <string name="share_followup_numbered">વધારાની નોંધ <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">વધારાની નોંધ</string>
 
+    <string name="error_recording_failed">રેકોર્ડિંગ નિષ્ફળ: <xliff:g id="reason" example="માઇક્રોફોન ઉપલબ્ધ નથી">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">ટ્રાન્સક્રિપ્શન નિષ્ફળ: <xliff:g id="reason" example="નેટવર્ક સમય સમાપ્ત">%1$s</xliff:g></string>
+
     
     <string name="dashboard_title">ડૅશબોર્ડ</string>
     <string name="dashboard_legend">લિજેન્ડ</string>

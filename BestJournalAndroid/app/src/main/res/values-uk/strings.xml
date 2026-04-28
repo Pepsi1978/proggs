@@ -165,6 +165,9 @@
     <string name="share_followup_numbered">Доповнення <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="share_followup_single">Доповнення</string>
 
+    <string name="error_recording_failed">Помилка запису: <xliff:g id="reason" example="Мікрофон недоступний">%1$s</xliff:g></string>
+    <string name="error_transcription_failed">Помилка транскрипції: <xliff:g id="reason" example="Час очікування мережі">%1$s</xliff:g></string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN
          ════════════════════════════════════════════════════════════════════ -->

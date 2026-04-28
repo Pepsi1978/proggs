@@ -191,7 +191,16 @@ object PdfExporter {
                     }
                 pdfFollowUps.forEachIndexed { index, followUp ->
                     append("\n\n")
-                    append(if (pdfFollowUps.size == 1) "Nachtrag" else "Nachtrag ${index + 1}")
+                    append(
+                        if (pdfFollowUps.size == 1) {
+                            context.getString(R.string.share_followup_single)
+                        } else {
+                            context.getString(
+                                R.string.share_followup_numbered,
+                                (index + 1).toString(),
+                            )
+                        }
+                    )
                     append("\n")
                     append(followUp.text)
                 }
