@@ -1115,7 +1115,7 @@
     <string name="settings_analytics_subtitle">Firebase Analytics for crash analysis and product improvement</string>
 
     <!-- Settings → Privacy → Delete account -->
-    <string name="settings_delete_account_title">Delete app data and backup</string>
+    <string name="settings_delete_account_title">Delete account and data</string>
     <string name="settings_delete_account_subtitle">Permanently removes all local data and the Drive backup. Your Google account itself is not affected.</string>
     <string name="settings_delete_account_confirm_title">Delete all app data?</string>
     <string name="settings_delete_account_confirm_body">This action cannot be undone and will delete:\n\n• All local journal entries, photos, videos and audio recordings\n• The app\'s Google Drive backup (only the app\'s data, not your Google account)\n• Your app sign-in\n\nYour Google account itself remains. The app will restart as a fresh installation.</string>

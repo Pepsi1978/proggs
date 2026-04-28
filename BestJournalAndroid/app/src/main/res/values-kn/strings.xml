@@ -1119,7 +1119,7 @@
     <string name="settings_analytics_title">ಅನಾಮಧೇಯ ಅಂಕಿಅಂಶಗಳು</string>
     <string name="settings_analytics_subtitle">ದೋಷ ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಉತ್ಪನ್ನ ಸುಧಾರಣೆಗಾಗಿ Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ಅಪ್ ಡೇಟಾ ಮತ್ತು ಬ್ಯಾಕಪ್ ಅಳಿಸಿ</string>
+    <string name="settings_delete_account_title">ಖಾತೆ ಮತ್ತು ಡೇಟಾ ಅಳಿಸಿ</string>
     <string name="settings_delete_account_subtitle">ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೇಟಾ, Google ಖಾತೆ ಮತ್ತು Drive ಬ್ಯಾಕಪ್ ಅನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುತ್ತದೆ</string>
     <string name="settings_delete_account_confirm_title">ಎಲ್ಲಾ ಅಪ್ ಡೇಟಾವನ್ನು ಅಳಿಸುವುದೇ?</string>
     <string name="settings_delete_account_confirm_body">ಈ ಕ್ರಿಯೆಯನ್ನು ಹಿಂಪಡೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ ಮತ್ತು ಇದನ್ನು ಅಳಿಸುತ್ತದೆ:\n\n• ಎಲ್ಲಾ ಸ್ಥಳೀಯ ಡೈರಿ ಪ್ರವೇಶಗಳು, ಫೋಟೋಗಳು ಮತ್ತು ವೀಡಿಯೊಗಳು\n• ನಿಮ್ಮ Firebase ಖಾತೆ\n• ಆ್ಯಪ್‌ನ Google Drive ಬ್ಯಾಕಪ್\n\nಆ್ಯಪ್ ಹೊಸ ಸ್ಥಾಪನೆಯಂತೆ ಮತ್ತೆ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.</string>
@@ -1256,4 +1256,66 @@
     <string name="paywall_feature_followups">ಪ್ರತಿ ಡೈರಿ ನಮೂದಿಗೆ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
     <string name="settings_premium_feature_followups">ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
     <string name="settings_premium_feature_followups_desc">ಪ್ರತಿ ನಮೂದಿನಲ್ಲಿ ನಿಮಗೆ ಬೇಕಾದಷ್ಟು ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">ಇಲ್ಲ</string>
+    <string name="action_yes">ಹೌದು</string>
+    <string name="ai_improved_suffix"> (AI ಮೂಲಕ ಸುಧಾರಿಸಲಾಗಿದೆ)</string>
+    <string name="ai_improved_suffix_marker">✨ AI ಸುಧಾರಿಸಿದೆ</string>
+    <string name="entry_delete_entry_cd">ನಮೂದು ಅಳಿಸಿ</string>
+    <string name="entry_journal_entry_title">ಡೈರಿ ನಮೂದು</string>
+    <string name="entry_photos_videos_add_title">ಫೋಟೋ ಮತ್ತು ವೀಡಿಯೊ ಸೇರಿಸಿ</string>
+    <string name="follow_up_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="follow_up_card_title">ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ</string>
+    <string name="follow_up_choose_input_mode">ಇನ್‌ಪುಟ್ ಪ್ರಕಾರ ಆಯ್ಕೆ ಮಾಡಿ</string>
+    <string name="follow_up_delete_button">ಟಿಪ್ಪಣಿ ಅಳಿಸಿ</string>
+    <string name="follow_up_delete_cd">ಟಿಪ್ಪಣಿ ಅಳಿಸಿ</string>
+    <string name="follow_up_delete_confirm_text">ನೀವು ನಿಜವಾಗಿಯೂ "<xliff:g id="title" example="ನನ್ನ ಟಿಪ್ಪಣಿ">%1$s</xliff:g>" ಅಳಿಸಲು ಬಯಸುವಿರಾ? ಈ ಕ್ರಿಯೆಯನ್ನು ರದ್ದುಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="ನನ್ನ ಟಿಪ್ಪಣಿ">%1$s</xliff:g>" ಅಳಿಸಬೇಕೇ?</string>
+    <string name="follow_up_dialog_label">ಟಿಪ್ಪಣಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_dialog_title">ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ ಸೇರಿಸಿ</string>
+    <string name="follow_up_discard">ತ್ಯಜಿಸಿ</string>
+    <string name="follow_up_improve_text">ಪಠ್ಯ ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improve_with_ai">AI ಮೂಲಕ ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿ</string>
+    <string name="follow_up_input_speak_cd">ಮಾತನಾಡಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_input_speak_label">ಮಾತನಾಡಿ</string>
+    <string name="follow_up_input_write_cd">ಟೈಪ್ ಮಾಡಿ ಬರೆಯಿರಿ</string>
+    <string name="follow_up_input_write_label">ಟೈಪ್ ಮಾಡಿ</string>
+    <string name="follow_up_premium_body">Premium ನೊಂದಿಗೆ ಪ್ರತಿ ಡೈರಿ ನಮೂದಿನಲ್ಲಿ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಸೇರಿಸಿ.</string>
+    <string name="follow_up_premium_hint">ಹೆಚ್ಚು ಟಿಪ್ಪಣಿಗಳು ಬೇಕೇ?</string>
+    <string name="follow_up_premium_later">ನಂತರ</string>
+    <string name="follow_up_premium_subscribe">Premium ತೆಗೆದುಕೊಳ್ಳಿ</string>
+    <string name="follow_up_premium_subtext">Premium ಯೋಜನೆಯೊಂದಿಗೆ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡಿ.</string>
+    <string name="follow_up_premium_title">Premium ವೈಶಿಷ್ಟ್ಯ</string>
+    <string name="follow_up_save">ಉಳಿಸಿ</string>
+    <string name="follow_up_save_improved">ಸುಧಾರಿಸಿದ್ದನ್ನು ಉಳಿಸಿ</string>
+    <string name="follow_up_show_improved">ಸುಧಾರಿಸಿದ್ದನ್ನು ತೋರಿಸಿ</string>
+    <string name="follow_up_show_original">↩ ಮೂಲ ತೋರಿಸಿ</string>
+    <string name="follow_up_speak_pill_label">ಮಾತನಾಡಿ</string>
+    <string name="follow_up_speak_prompt">ಈಗ ಮಾತನಾಡಿ…</string>
+    <string name="follow_up_stop_hint">ನಿಲ್ಲಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="follow_up_tab_improved">ಸುಧಾರಿಸಿದ್ದು</string>
+    <string name="follow_up_tab_original">ಮೂಲ</string>
+    <string name="follow_up_text_placeholder">ಇಲ್ಲಿ ನಿಮ್ಮ ಟಿಪ್ಪಣಿ ಬರೆಯಿರಿ…</string>
+    <string name="follow_up_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="journal_improve">ಸುಧಾರಿಸಿ</string>
+    <string name="journal_state_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="journal_state_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="paywall_consent_dialog_body">ನೀವು Best Journal ನ Premium ಸೇವೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲು ಹೊರಟಿದ್ದೀರಿ. ಖರೀದಿ ದೃಢೀಕರಿಸಿದ ನಂತರ, ನಿಮ್ಮಿಂದ ತಕ್ಷಣ ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ. ರದ್ದುಮಾಡದ ಹೊರತು ಸದಸ್ಯತ್ವ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತದೆ. ಡಿಜಿಟಲ್ ವಿಷಯ ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದ ನಂತರ ಹಿಂದಿರುಗಿಸುವ ಹಕ್ಕು ಅವಸಾನಗೊಳ್ಳುತ್ತದೆ.</string>
+    <string name="paywall_consent_dialog_cancel">ರದ್ದುಮಾಡಿ</string>
+    <string name="paywall_consent_dialog_checkbox">ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದ ನಂತರ, ಹಿಂದಿರುಗಿಸುವ ಹಕ್ಕು ಅವಸಾನಗೊಳ್ಳುತ್ತದೆ ಎಂದು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ (§ 356 Abs. 5 BGB ಪ್ರಕಾರ).</string>
+    <string name="paywall_consent_dialog_confirm">ಒಪ್ಪಿ ಖರೀದಿಸಿ</string>
+    <string name="paywall_consent_dialog_title">ಖರೀದಿ ದೃಢೀಕರಿಸಿ</string>
+    <string name="profile_custom_add">ಪ್ರೊಫೈಲ್ ಸೇರಿಸಿ</string>
+    <string name="profile_custom_remove">ಪ್ರೊಫೈಲ್ ತೆಗೆದುಹಾಕಿ</string>
+    <string name="profile_custom_rename">ಪ್ರೊಫೈಲ್ ಮರುನಾಮಕರಣ ಮಾಡಿ</string>
+    <string name="profile_custom_rename_save">ಉಳಿಸಿ</string>
+    <string name="prompt_clear_confirm_text">ನೀವು ನಿಜವಾಗಿಯೂ ಈ ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಲು ಬಯಸುವಿರಾ?</string>
+    <string name="prompt_clear_confirm_title">ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಬೇಕೇ?</string>
+    <string name="prompt_clear_content_desc">ಪ್ರಾಂಪ್ಟ್ ತೆರವುಗೊಳಿಸಿ</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಬಳಸಿ</string>
 </resources>

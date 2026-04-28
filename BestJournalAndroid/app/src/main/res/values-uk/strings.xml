@@ -1126,7 +1126,7 @@
     <string name="settings_analytics_title">Анонімна статистика</string>
     <string name="settings_analytics_subtitle">Firebase Analytics для аналізу помилок і покращення продукту</string>
 
-    <string name="settings_delete_account_title">Видалити дані застосунку й резервну копію</string>
+    <string name="settings_delete_account_title">Видалити все</string>
     <string name="settings_delete_account_subtitle">Безповоротно видаляє всі локальні дані, Ваш обліковий запис Google та резервну копію Drive</string>
     <string name="settings_delete_account_confirm_title">Видалити всі дані застосунку?</string>
     <string name="settings_delete_account_confirm_body">Ця дія незворотна і видаляє:\n\n• Усі локальні записи, фото й відео\n• Ваш обліковий запис Firebase\n• Резервну копію застосунку в Google Drive\n\nПісля цього застосунок запуститься як нова інсталяція.</string>

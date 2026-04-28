@@ -1119,7 +1119,7 @@
     <string name="settings_analytics_title">বেনামী পরিসংখ্যান</string>
     <string name="settings_analytics_subtitle">ত্রুটি বিশ্লেষণ ও পণ্য উন্নতির জন্য Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">অ্যাপের ডেটা ও ব্যাকআপ মুছে ফেলো</string>
+    <string name="settings_delete_account_title">অ্যাকাউন্ট ও ডেটা মুছুন</string>
     <string name="settings_delete_account_subtitle">সব স্থানীয় ডেটা, Google অ্যাকাউন্ট এবং Drive ব্যাকআপ স্থায়ীভাবে মুছে ফেলে</string>
     <string name="settings_delete_account_confirm_title">অ্যাপের সব ডেটা মুছে ফেলবে?</string>
     <string name="settings_delete_account_confirm_body">এই ক্রিয়া ফিরিয়ে আনা যাবে না এবং এগুলো মুছে ফেলবে:\n\n• সব স্থানীয় ডায়েরি এন্ট্রি, ছবি ও ভিডিও\n• তোমার Firebase অ্যাকাউন্ট\n• অ্যাপের Google Drive ব্যাকআপ\n\nঅ্যাপ নতুন ইনস্টলেশনের মতো পুনরায় চালু হবে।</string>
@@ -1320,4 +1320,55 @@
     <string name="paywall_feature_unlimited_entries">সীমাহীন ডায়েরি এন্ট্রি</string>
     <string name="paywall_feature_pdf_export">PDF হিসেবে রপ্তানি করা</string>
     <string name="paywall_feature_drive_backup">Google Drive ব্যাকআপ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING STRINGS — BATCH INSERT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">না</string>
+    <string name="action_yes">হ্যাঁ</string>
+    <string name="ai_improved_suffix">\n\n✨ এআই-উন্নত</string>
+    <string name="ai_improved_suffix_marker">✨ এআই-উন্নত</string>
+    <string name="entry_delete_entry_cd">দিনলিপির লেখা মুছো</string>
+    <string name="entry_journal_entry_title">দিনলিপির লেখা</string>
+    <string name="entry_photos_videos_add_title">ছবি/ভিডিও যোগ করো</string>
+    <string name="follow_up_cancel">বাতিল করো</string>
+    <string name="follow_up_card_title">নতুন সংযোজন</string>
+    <string name="follow_up_choose_input_mode">তুমি কীভাবে সংযোজন করতে চাও?</string>
+    <string name="follow_up_delete_button">মুছে ফেলো</string>
+    <string name="follow_up_delete_cd">সংযোজন মুছো</string>
+    <string name="follow_up_dialog_label">তোমার সংযোজন:</string>
+    <string name="follow_up_dialog_title">সংযোজন</string>
+    <string name="follow_up_discard">বাদ দাও</string>
+    <string name="follow_up_improve_text">✨ লেখা উন্নত করো</string>
+    <string name="follow_up_improve_with_ai">এআই দিয়ে পরে উন্নত করো</string>
+    <string name="follow_up_improving">এআই সংযোজন উন্নত করছে…</string>
+    <string name="follow_up_input_speak_cd">বলো</string>
+    <string name="follow_up_input_speak_label">বলো</string>
+    <string name="follow_up_input_write_cd">লেখো</string>
+    <string name="follow_up_input_write_label">লেখো</string>
+    <string name="follow_up_premium_body">Premium দিয়ে তুমি প্রতিটি দিনলিপির লেখায় যত খুশি সংযোজন করতে পারো।</string>
+    <string name="follow_up_premium_hint">দ্বিতীয় সংযোজন থেকে</string>
+    <string name="follow_up_premium_later">পরে ঠিক করবো</string>
+    <string name="follow_up_premium_subscribe">সদস্যতা নাও</string>
+    <string name="follow_up_premium_subtext">প্রতিটি সংযোজন স্বয়ংক্রিয়ভাবে ড্যাশবোর্ডে যোগ হয়, যাতে তোমার বিশ্লেষণ সবসময় সম্পূর্ণ থাকে।</string>
+    <string name="follow_up_premium_title">সীমাহীন সংযোজন</string>
+    <string name="follow_up_save">সংরক্ষণ করো</string>
+    <string name="follow_up_save_improved">উন্নত সংস্করণ সংরক্ষণ করো</string>
+    <string name="follow_up_speak_pill_label">বলো</string>
+    <string name="follow_up_speak_prompt">এখন তোমার সংযোজন বলো।</string>
+    <string name="follow_up_stop_hint">থামাতে ট্যাপ করো</string>
+    <string name="follow_up_tab_improved">✨ এআই দিয়ে উন্নত</string>
+    <string name="follow_up_tab_original">আসল</string>
+    <string name="follow_up_text_placeholder">তোমার সংযোজন লেখো…</string>
+    <string name="follow_up_transcribing">ট্রান্সক্রাইব হচ্ছে…</string>
+    <string name="journal_improve">লেখা উন্নত করো</string>
+    <string name="journal_state_improving">উন্নত হচ্ছে…</string>
+    <string name="journal_state_transcribing">ট্রান্সক্রাইব হচ্ছে…</string>
+    <string name="profile_custom_add">নিজের বিশ্লেষণ যোগ করো</string>
+    <string name="profile_custom_remove">সরিয়ে ফেলো</string>
+    <string name="profile_custom_rename">নাম পরিবর্তন করো</string>
+    <string name="profile_custom_rename_save">নাম পরিবর্তন করো</string>
+    <string name="prompt_clear_confirm_text">তুমি কি সত্যিই এই লেখাটি বাদ দিতে চাও?</string>
+    <string name="prompt_clear_confirm_title">লেখা বাদ দেবে?</string>
+    <string name="prompt_clear_content_desc">ইনপুট মুছো</string>
 </resources>

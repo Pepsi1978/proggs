@@ -1118,7 +1118,7 @@
     <string name="settings_analytics_title">Anonieme statistieken</string>
     <string name="settings_analytics_subtitle">Firebase Analytics voor foutanalyse en productverbetering</string>
 
-    <string name="settings_delete_account_title">App-gegevens en back-up verwijderen</string>
+    <string name="settings_delete_account_title">Account en data wissen</string>
     <string name="settings_delete_account_subtitle">Verwijdert onomkeerbaar alle lokale gegevens, je Google-account en de Drive-back-up</string>
     <string name="settings_delete_account_confirm_title">Alle app-gegevens verwijderen?</string>
     <string name="settings_delete_account_confirm_body">Deze actie is onomkeerbaar en verwijdert:\n\n• Alle lokale dagboekinvoer, foto\'s en video\'s\n• Je Firebase-account\n• De Google Drive-back-up van de app\n\nDe app start daarna opnieuw op als verse installatie.</string>

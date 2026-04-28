@@ -1053,7 +1053,7 @@
     <string name="settings_analytics_title">അജ്ഞാത സ്ഥിതിവിവരക്കണക്കുകൾ</string>
     <string name="settings_analytics_subtitle">പിശക് വിശകലനത്തിനും ഉൽപ്പന്ന മെച്ചപ്പെടുത്തലിനും ഉള്ള Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ആപ്പ് ഡാറ്റയും ബാക്കപ്പും ഇല്ലാതാക്കുക</string>
+    <string name="settings_delete_account_title">എല്ലാം മായ്ക്കുക</string>
     <string name="settings_delete_account_subtitle">എല്ലാ ലോക്കൽ ഡാറ്റ, Google അക്കൗണ്ട്, Drive ബാക്കപ്പ് എന്നിവ ശാശ്വതമായി നീക്കം ചെയ്യുന്നു</string>
     <string name="settings_delete_account_confirm_title">എല്ലാ ആപ്പ് ഡാറ്റയും ഇല്ലാതാക്കണോ?</string>
     <string name="settings_delete_account_confirm_body">ഈ പ്രവർത്തനം തിരിച്ചെടുക്കാൻ കഴിയില്ല, ഇത് നീക്കം ചെയ്യുന്നു:\n\n• എല്ലാ ലോക്കൽ ഡയറി എൻട്രികൾ, ഫോട്ടോകൾ, വീഡിയോകൾ\n• നിങ്ങളുടെ Firebase അക്കൗണ്ട്\n• ആപ്പിന്റെ Google Drive ബാക്കപ്പ്\n\nആപ്പ് പുതിയ ഇൻസ്റ്റാളേഷൻ പോലെ വീണ്ടും ആരംഭിക്കും.</string>
@@ -1254,4 +1254,55 @@
     <string name="paywall_feature_unlimited_entries">പരിധിയില്ലാത്ത ഡയറി എൻട്രികൾ</string>
     <string name="paywall_feature_pdf_export">PDF ആയി കയറ്റുമതി ചെയ്യൽ</string>
     <string name="paywall_feature_drive_backup">Google Drive ബാക്കപ്പ്</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING STRINGS — BATCH INSERT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">വേണ്ട</string>
+    <string name="action_yes">ശരി</string>
+    <string name="ai_improved_suffix">\n\n✨ AI-മെച്ചപ്പെടുത്തിയത്</string>
+    <string name="ai_improved_suffix_marker">✨ AI-മെച്ചപ്പെടുത്തിയത്</string>
+    <string name="entry_delete_entry_cd">ഡയറി എൻട്രി ഇല്ലാതാക്കൂ</string>
+    <string name="entry_journal_entry_title">ഡയറി എൻട്രി</string>
+    <string name="entry_photos_videos_add_title">ഫോട്ടോകൾ/വീഡിയോകൾ ചേർക്കൂ</string>
+    <string name="follow_up_cancel">റദ്ദാക്കൂ</string>
+    <string name="follow_up_card_title">തുടർ കുറിപ്പ്</string>
+    <string name="follow_up_choose_input_mode">നിന്റെ തുടർ കുറിപ്പ് എങ്ങനെ ചേർക്കണം?</string>
+    <string name="follow_up_delete_button">ഇല്ലാതാക്കൂ</string>
+    <string name="follow_up_delete_cd">തുടർ കുറിപ്പ് ഇല്ലാതാക്കൂ</string>
+    <string name="follow_up_dialog_label">നിന്റെ തുടർ കുറിപ്പ്:</string>
+    <string name="follow_up_dialog_title">തുടർ കുറിപ്പ്</string>
+    <string name="follow_up_discard">ഉപേക്ഷിക്കൂ</string>
+    <string name="follow_up_improve_text">✨ വാചകം മെച്ചപ്പെടുത്തൂ</string>
+    <string name="follow_up_improve_with_ai">AI ഉപയോഗിച്ച് പിന്നീട് മെച്ചപ്പെടുത്തൂ</string>
+    <string name="follow_up_improving">AI തുടർ കുറിപ്പ് മെച്ചപ്പെടുത്തുന്നു…</string>
+    <string name="follow_up_input_speak_cd">സംസാരിക്കൂ</string>
+    <string name="follow_up_input_speak_label">സംസാരിക്കൂ</string>
+    <string name="follow_up_input_write_cd">എഴുതൂ</string>
+    <string name="follow_up_input_write_label">എഴുതൂ</string>
+    <string name="follow_up_premium_body">Premium ഉപയോഗിച്ച് ഓരോ ഡയറി എൻട്രിയിലും നിനക്ക് ആവശ്യമുള്ളത്ര തുടർ കുറിപ്പുകൾ ചേർക്കാം.</string>
+    <string name="follow_up_premium_hint">രണ്ടാം കുറിപ്പ് മുതൽ</string>
+    <string name="follow_up_premium_later">പിന്നീട് തീരുമാനിക്കാം</string>
+    <string name="follow_up_premium_subscribe">സബ്‌സ്‌ക്രൈബ് ചെയ്യൂ</string>
+    <string name="follow_up_premium_subtext">ഓരോ കുറിപ്പും ഡാഷ്‌ബോർഡിൽ സ്വയം ചേരും, നിന്റെ വിശകലനം എപ്പോഴും പൂർണ്ണമായിരിക്കും.</string>
+    <string name="follow_up_premium_title">അൺലിമിറ്റഡ് തുടർ കുറിപ്പുകൾ</string>
+    <string name="follow_up_save">സേവ് ചെയ്യൂ</string>
+    <string name="follow_up_save_improved">മെച്ചപ്പെട്ടത് സേവ് ചെയ്യൂ</string>
+    <string name="follow_up_speak_pill_label">സംസാരിക്കൂ</string>
+    <string name="follow_up_speak_prompt">ഇപ്പോൾ നിന്റെ തുടർ കുറിപ്പ് പറയൂ.</string>
+    <string name="follow_up_stop_hint">നിർത്താൻ ടാപ്പ് ചെയ്യൂ</string>
+    <string name="follow_up_tab_improved">✨ AI ഉപയോഗിച്ച് മെച്ചപ്പെടുത്തിയത്</string>
+    <string name="follow_up_tab_original">ഒറിജിനൽ</string>
+    <string name="follow_up_text_placeholder">നിന്റെ തുടർ കുറിപ്പ് എഴുതൂ…</string>
+    <string name="follow_up_transcribing">ട്രാൻസ്‌ക്രൈബ് ചെയ്യുന്നു…</string>
+    <string name="journal_improve">വാചകം മെച്ചപ്പെടുത്തൂ</string>
+    <string name="journal_state_improving">മെച്ചപ്പെടുത്തുന്നു…</string>
+    <string name="journal_state_transcribing">ട്രാൻസ്‌ക്രൈബ് ചെയ്യുന്നു…</string>
+    <string name="profile_custom_add">സ്വന്തം വിശകലനം ചേർക്കൂ</string>
+    <string name="profile_custom_remove">നീക്കൂ</string>
+    <string name="profile_custom_rename">പേരു മാറ്റൂ</string>
+    <string name="profile_custom_rename_save">പേരു മാറ്റൂ</string>
+    <string name="prompt_clear_confirm_text">ഈ എൻട്രി ശരിക്കും ഉപേക്ഷിക്കണോ?</string>
+    <string name="prompt_clear_confirm_title">എൻട്രി ഉപേക്ഷിക്കണോ?</string>
+    <string name="prompt_clear_content_desc">ഇൻപുട്ട് മായ്‌ക്കൂ</string>
 </resources>

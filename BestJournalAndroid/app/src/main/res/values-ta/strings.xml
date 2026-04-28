@@ -1127,7 +1127,7 @@
     <string name="settings_analytics_title">அடையாளமற்ற புள்ளிவிவரங்கள்</string>
     <string name="settings_analytics_subtitle">பிழை பகுப்பாய்வு மற்றும் தயாரிப்பு மேம்பாட்டிற்கான Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ஆப் தரவும் காப்புப்பிரதியும் நீக்கு</string>
+    <string name="settings_delete_account_title">எல்லாம் நீக்கு</string>
     <string name="settings_delete_account_subtitle">அனைத்து உள்ளமை தரவு, Google கணக்கு மற்றும் Drive காப்புப்பிரதியை நிரந்தரமாக நீக்குகிறது</string>
     <string name="settings_delete_account_confirm_title">அனைத்து ஆப் தரவையும் நீக்கவா?</string>
     <string name="settings_delete_account_confirm_body">இந்தச் செயலை மீட்க முடியாது மற்றும் நீக்குவது:\n\n• அனைத்து உள்ளமை நாட்குறிப்புப் பதிவுகள், புகைப்படங்கள் மற்றும் வீடியோக்கள்\n• உங்கள் Firebase கணக்கு\n• பயன்பாட்டின் Google Drive காப்புப்பிரதி\n\nஅதன்பிறகு பயன்பாடு புதிய நிறுவலாக மீண்டும் தொடங்கும்.</string>
@@ -1328,4 +1328,55 @@
     <string name="paywall_feature_unlimited_entries">வரம்பற்ற நாட்குறிப்பு பதிவுகள்</string>
     <string name="paywall_feature_pdf_export">PDF ஆக ஏற்றுமதி செய்தல்</string>
     <string name="paywall_feature_drive_backup">Google Drive காப்புப்பிரதி</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING STRINGS — BATCH INSERT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">இல்லை</string>
+    <string name="action_yes">ஆம்</string>
+    <string name="ai_improved_suffix">\n\n✨ AI-மேம்படுத்தப்பட்டது</string>
+    <string name="ai_improved_suffix_marker">✨ AI-மேம்படுத்தப்பட்டது</string>
+    <string name="entry_delete_entry_cd">டைரி பதிவை நீக்கு</string>
+    <string name="entry_journal_entry_title">டைரி பதிவு</string>
+    <string name="entry_photos_videos_add_title">புகைப்படங்கள்/வீடியோக்களைச் சேர்</string>
+    <string name="follow_up_cancel">ரத்துசெய்</string>
+    <string name="follow_up_card_title">கூடுதல் குறிப்பு</string>
+    <string name="follow_up_choose_input_mode">உன் கூடுதல் குறிப்பை எப்படி சேர்க்க விரும்புகிறாய்?</string>
+    <string name="follow_up_delete_button">நீக்கு</string>
+    <string name="follow_up_delete_cd">கூடுதல் குறிப்பை நீக்கு</string>
+    <string name="follow_up_dialog_label">உன் கூடுதல் குறிப்பு:</string>
+    <string name="follow_up_dialog_title">கூடுதல் குறிப்பு</string>
+    <string name="follow_up_discard">நிராகரி</string>
+    <string name="follow_up_improve_text">✨ உரையை மேம்படுத்து</string>
+    <string name="follow_up_improve_with_ai">AI மூலம் பின்னர் மேம்படுத்து</string>
+    <string name="follow_up_improving">AI கூடுதல் குறிப்பை மேம்படுத்துகிறது…</string>
+    <string name="follow_up_input_speak_cd">பேசு</string>
+    <string name="follow_up_input_speak_label">பேசு</string>
+    <string name="follow_up_input_write_cd">எழுது</string>
+    <string name="follow_up_input_write_label">எழுது</string>
+    <string name="follow_up_premium_body">Premium மூலம் ஒவ்வொரு டைரி பதிவிலும் எத்தனை வேண்டுமானாலும் கூடுதல் குறிப்புகள் சேர்க்கலாம்.</string>
+    <string name="follow_up_premium_hint">இரண்டாவது குறிப்பிலிருந்து</string>
+    <string name="follow_up_premium_later">பின்னர் முடிவெடுக்கிறேன்</string>
+    <string name="follow_up_premium_subscribe">சந்தா எடு</string>
+    <string name="follow_up_premium_subtext">ஒவ்வொரு குறிப்பும் தானாகவே டேஷ்போர்டில் சேரும், உன் பகுப்பாய்வு எப்போதும் முழுமையாக இருக்கும்.</string>
+    <string name="follow_up_premium_title">வரம்பற்ற கூடுதல் குறிப்புகள்</string>
+    <string name="follow_up_save">சேமி</string>
+    <string name="follow_up_save_improved">மேம்படுத்தப்பட்டதை சேமி</string>
+    <string name="follow_up_speak_pill_label">பேசு</string>
+    <string name="follow_up_speak_prompt">இப்போது உன் கூடுதல் குறிப்பை பேசு.</string>
+    <string name="follow_up_stop_hint">நிறுத்த தட்டு</string>
+    <string name="follow_up_tab_improved">✨ AI மூலம் மேம்படுத்தப்பட்டது</string>
+    <string name="follow_up_tab_original">அசல்</string>
+    <string name="follow_up_text_placeholder">உன் கூடுதல் குறிப்பை எழுது…</string>
+    <string name="follow_up_transcribing">எழுத்தாக மாற்றுகிறது…</string>
+    <string name="journal_improve">உரையை மேம்படுத்து</string>
+    <string name="journal_state_improving">மேம்படுத்துகிறது…</string>
+    <string name="journal_state_transcribing">எழுத்தாக மாற்றுகிறது…</string>
+    <string name="profile_custom_add">சொந்த பகுப்பாய்வு சேர்</string>
+    <string name="profile_custom_remove">அகற்று</string>
+    <string name="profile_custom_rename">மறுபெயரிடு</string>
+    <string name="profile_custom_rename_save">மறுபெயரிடு</string>
+    <string name="prompt_clear_confirm_text">இந்தப் பதிவை நிராகரிக்க விரும்புகிறாயா?</string>
+    <string name="prompt_clear_confirm_title">பதிவை நிராகரிக்கவா?</string>
+    <string name="prompt_clear_content_desc">உள்ளீட்டை அழி</string>
 </resources>

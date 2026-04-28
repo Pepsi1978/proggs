@@ -1118,7 +1118,7 @@
     <string name="settings_analytics_title">Estadísticas anónimas</string>
     <string name="settings_analytics_subtitle">Firebase Analytics para análisis de errores y mejora del producto</string>
 
-    <string name="settings_delete_account_title">Eliminar datos de la app y copia de seguridad</string>
+    <string name="settings_delete_account_title">Eliminar cuenta y datos</string>
     <string name="settings_delete_account_subtitle">Elimina de forma irreversible todos los datos locales, tu cuenta de Google y la copia de seguridad en Drive</string>
     <string name="settings_delete_account_confirm_title">¿Eliminar todos los datos de la app?</string>
     <string name="settings_delete_account_confirm_body">Esta acción es irreversible y eliminará:\n\n• Todas las entradas, fotos y videos locales\n• Tu cuenta de Firebase\n• La copia de seguridad de la app en Google Drive\n\nLa aplicación se reiniciará como una instalación nueva.</string>
@@ -1308,4 +1308,15 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="prompt_recording_with_model">Grabando — modelo: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> está transcribiendo…</string>
     <string name="prompt_transcription_model_hint">Transcrito con <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+
+    <!-- AI improvement marker -->
+    <string name="ai_improved_suffix">\n\n(✨ Mejorado con IA)</string>
+    <string name="ai_improved_suffix_marker" translatable="false">(✨</string>
+
+    <!-- Paywall consent dialog (German § 356(5) BGB withdrawal waiver) -->
+    <string name="paywall_consent_dialog_title">Derecho de desistimiento</string>
+    <string name="paywall_consent_dialog_body">Tras completar una suscripción o compra dispones de un derecho de desistimiento de 14 días según el § 355 del Código Civil alemán (BGB).\n\nPara que puedas usar las funciones premium de inmediato, comenzamos a prestarlas justo después de tu compra. Al dar tu consentimiento a continuación, renuncias conscientemente a tu derecho de desistimiento de 14 días (§ 356, apartado 5 BGB).\n\nSin este consentimiento no podemos desbloquear las funciones premium al instante.</string>
+    <string name="paywall_consent_dialog_checkbox">Acepto que las funciones premium me sean prestadas inmediatamente tras la compra. Soy consciente de que con ello renuncio a mi derecho de desistimiento de 14 días.</string>
+    <string name="paywall_consent_dialog_confirm">Suscribirse — pago requerido</string>
+    <string name="paywall_consent_dialog_cancel">Cancelar</string>
 </resources>

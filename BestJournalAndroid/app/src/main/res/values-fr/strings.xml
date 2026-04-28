@@ -1122,7 +1122,7 @@
     <string name="settings_analytics_title">Statistiques anonymes</string>
     <string name="settings_analytics_subtitle">Firebase Analytics pour l\'analyse des erreurs et l\'amélioration du produit</string>
 
-    <string name="settings_delete_account_title">Supprimer les données de l’app et la sauvegarde</string>
+    <string name="settings_delete_account_title">Supprimer compte et données</string>
     <string name="settings_delete_account_subtitle">Supprime définitivement toutes les données locales, ton compte Google et la sauvegarde Drive</string>
     <string name="settings_delete_account_confirm_title">Supprimer toutes les données de l’app ?</string>
     <string name="settings_delete_account_confirm_body">Cette action est irréversible et supprime\u00A0:\n\n• Toutes les entrées, photos et vidéos locales\n• Ton compte Firebase\n• La sauvegarde Google Drive de l\'application\n\nL\'application redémarrera comme une nouvelle installation.</string>
@@ -1312,4 +1312,15 @@ Que veux-tu faire ?</string>
     <string name="prompt_recording_with_model">Enregistrement — modèle\u00A0: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> transcrit…</string>
     <string name="prompt_transcription_model_hint">Transcrit avec <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+
+    <!-- AI improvement marker -->
+    <string name="ai_improved_suffix">\n\n(✨ Amélioré par l\'IA)</string>
+    <string name="ai_improved_suffix_marker" translatable="false">(✨</string>
+
+    <!-- Paywall consent dialog (German § 356(5) BGB withdrawal waiver) -->
+    <string name="paywall_consent_dialog_title">Droit de rétractation</string>
+    <string name="paywall_consent_dialog_body">Après la conclusion d\'un abonnement ou d\'un achat, tu disposes en principe d\'un droit de rétractation de 14 jours en vertu du § 355 du Code civil allemand (BGB).\n\nPour que tu puisses utiliser immédiatement les fonctions Premium, nous commençons à les fournir dès ton achat. En donnant ton consentement ci-dessous, tu renonces en toute connaissance de cause à ton droit de rétractation de 14 jours (§ 356, alinéa 5 BGB).\n\nSans ce consentement, nous ne pouvons pas activer les fonctions Premium immédiatement.</string>
+    <string name="paywall_consent_dialog_checkbox">J\'accepte que les fonctions Premium me soient fournies immédiatement après l\'achat. Je suis conscient(e) qu\'ainsi je renonce à mon droit de rétractation de 14 jours.</string>
+    <string name="paywall_consent_dialog_confirm">S\'abonner — paiement requis</string>
+    <string name="paywall_consent_dialog_cancel">Annuler</string>
 </resources>

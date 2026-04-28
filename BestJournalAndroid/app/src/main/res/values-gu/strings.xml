@@ -1075,7 +1075,7 @@
     <string name="settings_analytics_title">અજ્ઞાત આંકડા</string>
     <string name="settings_analytics_subtitle">ભૂલ વિશ્લેષણ અને ઉત્પાદન સુધારણા માટે Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">એપનો ડેટા અને બેકઅપ કાઢી નાખો</string>
+    <string name="settings_delete_account_title">ખાતું અને ડેટા કાઢી નાખો</string>
     <string name="settings_delete_account_subtitle">બધા સ્થાનિક ડેટા, Google એકાઉન્ટ અને Drive બેકઅપને કાયમી રૂપે કાઢી નાખે છે</string>
     <string name="settings_delete_account_confirm_title">એપનો બધો ડેટા કાઢી નાખવો?</string>
     <string name="settings_delete_account_confirm_body">આ ક્રિયા પાછી મેળવી શકાતી નથી અને આ કાઢી નાખે છે:\n\n• બધી સ્થાનિક ડાયરી એન્ટ્રીઓ, ફોટા અને વીડિયો\n• તમારું Firebase એકાઉન્ટ\n• ઍપનો Google Drive બેકઅપ\n\nઍપ નવા ઇન્સ્ટોલેશન તરીકે ફરીથી શરૂ થશે.</string>
@@ -1212,4 +1212,66 @@
     <string name="paywall_feature_followups">દરેક ડાયરી પ્રવેશ માટે અમર્યાદિત વધારાની નોંધો</string>
     <string name="settings_premium_feature_followups">અમર્યાદિત વધારાની નોંધો</string>
     <string name="settings_premium_feature_followups_desc">દરેક પ્રવેશમાં તમે ઇચ્છો તેટલી વધારાની નોંધો</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="action_no">ના</string>
+    <string name="action_yes">હા</string>
+    <string name="ai_improved_suffix"> (AI દ્વારા સુધારેલ)</string>
+    <string name="ai_improved_suffix_marker">✨ AI એ સુધાર્યું</string>
+    <string name="entry_delete_entry_cd">એન્ટ્રી કાઢી નાખો</string>
+    <string name="entry_journal_entry_title">ડાયરી એન્ટ્રી</string>
+    <string name="entry_photos_videos_add_title">ફોટો અને વીડિયો ઉમેરો</string>
+    <string name="follow_up_cancel">રદ કરો</string>
+    <string name="follow_up_card_title">વધારાની નોંધ</string>
+    <string name="follow_up_choose_input_mode">ઇનપુટ પ્રકાર પસંદ કરો</string>
+    <string name="follow_up_delete_button">નોંધ કાઢી નાખો</string>
+    <string name="follow_up_delete_cd">નોંધ કાઢી નાખો</string>
+    <string name="follow_up_delete_confirm_text">શું તમે ખરેખર "<xliff:g id="title" example="મારી નોંધ">%1$s</xliff:g>" કાઢી નાખવા માંગો છો? આ ક્રિયા પૂર્વવત કરી શકાશે નહીં.</string>
+    <string name="follow_up_delete_confirm_title">"<xliff:g id="title" example="મારી નોંધ">%1$s</xliff:g>" કાઢી નાખવી?</string>
+    <string name="follow_up_dialog_label">નોંધ લખો</string>
+    <string name="follow_up_dialog_title">વધારાની નોંધ ઉમેરો</string>
+    <string name="follow_up_discard">છોડી દો</string>
+    <string name="follow_up_improve_text">ટેક્સ્ટ સુધારો</string>
+    <string name="follow_up_improve_with_ai">AI સાથે સુધારો</string>
+    <string name="follow_up_improving">સુધારી રહ્યું છે…</string>
+    <string name="follow_up_inline_title"><xliff:g id="index" example="1">%1$s</xliff:g>. વધારાની નોંધ</string>
+    <string name="follow_up_input_speak_cd">બોલીને લખો</string>
+    <string name="follow_up_input_speak_label">બોલો</string>
+    <string name="follow_up_input_write_cd">ટાઇપ કરીને લખો</string>
+    <string name="follow_up_input_write_label">ટાઇપ કરો</string>
+    <string name="follow_up_premium_body">Premium સાથે દરેક ડાયરી એન્ટ્રીમાં અમર્યાદ વધારાની નોંધો ઉમેરો.</string>
+    <string name="follow_up_premium_hint">વધુ નોંધો જોઈએ છે?</string>
+    <string name="follow_up_premium_later">પછી</string>
+    <string name="follow_up_premium_subscribe">Premium લો</string>
+    <string name="follow_up_premium_subtext">Premium પ્લાન સાથે અમર્યાદ વધારાની નોંધો અનલૉક કરો.</string>
+    <string name="follow_up_premium_title">Premium સુવિધા</string>
+    <string name="follow_up_save">સાચવો</string>
+    <string name="follow_up_save_improved">સુધારેલ સાચવો</string>
+    <string name="follow_up_show_improved">સુધારેલ બતાવો</string>
+    <string name="follow_up_show_original">↩ મૂળ બતાવો</string>
+    <string name="follow_up_speak_pill_label">બોલો</string>
+    <string name="follow_up_speak_prompt">હવે બોલો…</string>
+    <string name="follow_up_stop_hint">રોકવા માટે ટૅપ કરો</string>
+    <string name="follow_up_tab_improved">સુધારેલ</string>
+    <string name="follow_up_tab_original">મૂળ</string>
+    <string name="follow_up_text_placeholder">અહીં તમારી નોંધ લખો…</string>
+    <string name="follow_up_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="journal_improve">સુધારો</string>
+    <string name="journal_state_improving">સુધારી રહ્યું છે…</string>
+    <string name="journal_state_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="paywall_consent_dialog_body">તમે Best Journal ની Premium સેવાઓ સક્રિય કરવા જઈ રહ્યા છો. ખરીદી કન્ફર્મ કરવા પર, તમારી પાસેથી તરત ચાર્જ લેવામાં આવશે. સભ્યપદ રદ ન ​​કરો ત્યાં સુધી આપોઆપ નવીકરણ થશે. ડિજિટલ સામગ્રી ડાઉનલોડ શરૂ થતાં પરત કરવાનો અધિકાર સમાપ્ત થઈ જાય છે.</string>
+    <string name="paywall_consent_dialog_cancel">રદ કરો</string>
+    <string name="paywall_consent_dialog_checkbox">હું સમજું છું કે ડાઉનલોડ શરૂ થયા પછી, પરત કરવાનો અધિકાર સમાપ્ત થઈ જાય છે (§ 356 Abs. 5 BGB મુજબ).</string>
+    <string name="paywall_consent_dialog_confirm">સંમત છું અને ખરીદો</string>
+    <string name="paywall_consent_dialog_title">ખરીદી કન્ફર્મ કરો</string>
+    <string name="profile_custom_add">પ્રોફાઇલ ઉમેરો</string>
+    <string name="profile_custom_remove">પ્રોફાઇલ દૂર કરો</string>
+    <string name="profile_custom_rename">પ્રોફાઇલ નામ બદલો</string>
+    <string name="profile_custom_rename_save">સાચવો</string>
+    <string name="prompt_clear_confirm_text">શું તમે ખરેખર આ પ્રૉમ્પ્ટ સાફ કરવા માંગો છો?</string>
+    <string name="prompt_clear_confirm_title">પ્રૉમ્પ્ટ સાફ કરવો?</string>
+    <string name="prompt_clear_content_desc">પ્રૉમ્પ્ટ સાફ કરો</string>
+    <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> સાથે રેકોર્ડ થઈ રહ્યું છે…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> સાથે ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
+    <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> નો ઉપયોગ કરીને</string>
 </resources>

@@ -702,7 +702,7 @@
     <string name="settings_privacy_header">Datenschutz</string>
     <string name="settings_analytics_title">Anonyme Statistik</string>
     <string name="settings_analytics_subtitle">Firebase Analytics für Fehleranalyse und Produktverbesserung</string>
-    <string name="settings_delete_account_title">App-Daten und Backup löschen</string>
+    <string name="settings_delete_account_title">Konto und Daten löschen</string>
     <string name="settings_delete_account_subtitle">Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.</string>
     <string name="settings_delete_account_confirm_title">Wirklich alle App-Daten löschen?</string>
     <string name="settings_delete_account_confirm_body">Dieser Vorgang ist unwiderruflich und löscht:\n\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\n• Deine App-Anmeldung\n\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.</string>

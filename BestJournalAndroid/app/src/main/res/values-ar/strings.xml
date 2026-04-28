@@ -1134,7 +1134,7 @@
     <string name="settings_analytics_title">إحصائيات مجهولة</string>
     <string name="settings_analytics_subtitle">Firebase Analytics لتحليل الأخطاء وتحسين المنتج</string>
 
-    <string name="settings_delete_account_title">حذف بيانات التطبيق والنسخة الاحتياطية</string>
+    <string name="settings_delete_account_title">حذف الحساب والبيانات</string>
     <string name="settings_delete_account_subtitle">يحذف بشكل نهائي جميع البيانات المحلية وحسابك في Google والنسخة الاحتياطية في Drive</string>
     <string name="settings_delete_account_confirm_title">حذف جميع بيانات التطبيق؟</string>
     <string name="settings_delete_account_confirm_body">هذا الإجراء لا يمكن التراجع عنه ويحذف:\n\n• جميع إدخالات المذكرات والصور ومقاطع الفيديو المحلية\n• حسابك في Firebase\n• النسخة الاحتياطية للتطبيق في Google Drive\n\nسيعيد التطبيق التشغيل كتثبيت جديد.</string>

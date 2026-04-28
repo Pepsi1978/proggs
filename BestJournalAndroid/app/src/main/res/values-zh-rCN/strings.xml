@@ -1114,7 +1114,7 @@
     <string name="settings_analytics_title">匿名统计</string>
     <string name="settings_analytics_subtitle">用于错误分析和产品改进的 Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">删除应用数据和备份</string>
+    <string name="settings_delete_account_title">删除账号和数据</string>
     <string name="settings_delete_account_subtitle">不可撤销地删除所有本地数据、你的 Google 账户和 Drive 备份</string>
     <string name="settings_delete_account_confirm_title">删除全部应用数据？</string>
     <string name="settings_delete_account_confirm_body">此操作不可撤销，将删除：\n\n• 所有本地日记记录、照片和视频\n• 你的 Firebase 账户\n• 应用的 Google Drive 备份\n\n应用将以全新安装状态重新启动。</string>

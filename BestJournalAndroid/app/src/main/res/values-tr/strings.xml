@@ -1118,7 +1118,7 @@
     <string name="settings_analytics_title">Anonim istatistikler</string>
     <string name="settings_analytics_subtitle">Hata analizi ve ürün iyileştirme için Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">Uygulama verilerini ve yedeği sil</string>
+    <string name="settings_delete_account_title">Hesabı ve verileri sil</string>
     <string name="settings_delete_account_subtitle">Tüm yerel verileri, Google hesabını ve Drive yedeğini geri dönüşü olmadan siler</string>
     <string name="settings_delete_account_confirm_title">Tüm uygulama verileri silinsin mi?</string>
     <string name="settings_delete_account_confirm_body">Bu işlem geri alınamaz ve şunları siler:\n\n• Tüm yerel günlük girişleri, fotoğraflar ve videolar\n• Firebase hesabın\n• Uygulamanın Google Drive yedeği\n\nUygulama, yeni bir kurulum gibi yeniden başlar.</string>

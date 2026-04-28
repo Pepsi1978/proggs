@@ -1114,7 +1114,7 @@
     <string name="settings_analytics_title">匿名統計</string>
     <string name="settings_analytics_subtitle">用於錯誤分析與產品改善的 Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">刪除 App 資料與備份</string>
+    <string name="settings_delete_account_title">刪除帳號與資料</string>
     <string name="settings_delete_account_subtitle">不可復原地刪除所有本機資料、你的 Google 帳戶和 Drive 備份</string>
     <string name="settings_delete_account_confirm_title">刪除所有 App 資料？</string>
     <string name="settings_delete_account_confirm_body">此操作不可復原，會刪除：\n\n• 所有本機日記記錄、照片和影片\n• 你的 Firebase 帳戶\n• 應用程式的 Google Drive 備份\n\n應用程式將以全新安裝狀態重新啟動。</string>

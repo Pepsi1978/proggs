@@ -1114,7 +1114,7 @@
     <string name="settings_analytics_title">익명 통계</string>
     <string name="settings_analytics_subtitle">오류 분석과 제품 개선을 위한 Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">앱 데이터와 백업 삭제</string>
+    <string name="settings_delete_account_title">계정과 데이터 삭제</string>
     <string name="settings_delete_account_subtitle">모든 로컬 데이터, Google 계정, Drive 백업을 되돌릴 수 없이 삭제해요</string>
     <string name="settings_delete_account_confirm_title">모든 앱 데이터를 삭제할까요?</string>
     <string name="settings_delete_account_confirm_body">이 작업은 되돌릴 수 없으며 다음을 삭제해요:\n\n• 모든 로컬 일기 기록, 사진, 동영상\n• Firebase 계정\n• 앱의 Google Drive 백업\n\n앱은 새 설치 상태로 다시 시작해요.</string>

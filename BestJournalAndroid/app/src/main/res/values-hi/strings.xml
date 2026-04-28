@@ -1118,7 +1118,7 @@
     <string name="settings_analytics_title">अनाम आँकड़े</string>
     <string name="settings_analytics_subtitle">त्रुटि विश्लेषण और उत्पाद सुधार के लिए Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">ऐप डेटा और बैकअप डिलीट करें</string>
+    <string name="settings_delete_account_title">खाता और डेटा हटाएं</string>
     <string name="settings_delete_account_subtitle">सभी लोकल डेटा, आपका Google अकाउंट और Drive बैकअप स्थायी रूप से हटा देता है</string>
     <string name="settings_delete_account_confirm_title">क्या ऐप का सारा डेटा डिलीट करें?</string>
     <string name="settings_delete_account_confirm_body">यह क्रिया अपरिवर्तनीय है और ये डिलीट करती है:\n\n• सभी लोकल डायरी एंट्रीज़, फ़ोटो और वीडियो\n• आपका Firebase अकाउंट\n• ऐप का Google Drive बैकअप\n\nऐप नई इंस्टॉलेशन की तरह फिर से शुरू होगा।</string>

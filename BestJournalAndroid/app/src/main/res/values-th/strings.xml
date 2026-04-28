@@ -1114,7 +1114,7 @@
     <string name="settings_analytics_title">สถิติแบบไม่ระบุตัวตน</string>
     <string name="settings_analytics_subtitle">Firebase Analytics สำหรับการวิเคราะห์ข้อผิดพลาดและการปรับปรุงผลิตภัณฑ์</string>
 
-    <string name="settings_delete_account_title">ลบข้อมูลแอปและข้อมูลสำรอง</string>
+    <string name="settings_delete_account_title">ลบบัญชีและข้อมูล</string>
     <string name="settings_delete_account_subtitle">ลบข้อมูลทั้งหมดในเครื่อง บัญชี Google และข้อมูลสำรองใน Drive อย่างถาวร</string>
     <string name="settings_delete_account_confirm_title">ลบข้อมูลแอปทั้งหมดหรือไม่?</string>
     <string name="settings_delete_account_confirm_body">การกระทำนี้ย้อนกลับไม่ได้ และจะลบ:\n\n• บันทึกไดอารี่ ภาพถ่าย และวิดีโอในเครื่องทั้งหมด\n• บัญชี Firebase ของคุณ\n• ข้อมูลสำรองของแอปใน Google Drive\n\nแอปจะเริ่มใหม่เสมือนเป็นการติดตั้งใหม่</string>

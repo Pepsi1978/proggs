@@ -1126,7 +1126,7 @@
     <string name="settings_analytics_title">Anonimowe statystyki</string>
     <string name="settings_analytics_subtitle">Firebase Analytics do analizy błędów i ulepszania produktu</string>
 
-    <string name="settings_delete_account_title">Usuń dane aplikacji i kopię zapasową</string>
+    <string name="settings_delete_account_title">Usuń konto i dane</string>
     <string name="settings_delete_account_subtitle">Nieodwracalnie usuwa wszystkie lokalne dane, Twoje konto Google i kopię zapasową Drive</string>
     <string name="settings_delete_account_confirm_title">Usunąć wszystkie dane aplikacji?</string>
     <string name="settings_delete_account_confirm_body">Ta operacja jest nieodwracalna i usuwa:\n\n• Wszystkie lokalne wpisy, zdjęcia i filmy\n• Twoje konto Firebase\n• Kopię zapasową aplikacji w Google Drive\n\nAplikacja uruchomi się ponownie jako świeża instalacja.</string>

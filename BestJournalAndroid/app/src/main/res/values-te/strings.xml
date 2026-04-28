@@ -1050,7 +1050,7 @@
     <string name="settings_analytics_title">అనామక గణాంకాలు</string>
     <string name="settings_analytics_subtitle">లోప విశ్లేషణ మరియు ఉత్పత్తి మెరుగుదల కోసం Firebase Analytics</string>
 
-    <string name="settings_delete_account_title">యాప్ డేటా మరియు బ్యాకప్ తొలగించండి</string>
+    <string name="settings_delete_account_title">ఖాతా మరియు డేటా తొలగించు</string>
     <string name="settings_delete_account_subtitle">అన్ని స్థానిక డేటా, Google ఖాతా మరియు Drive బ్యాకప్‌ను శాశ్వతంగా తొలగిస్తుంది</string>
     <string name="settings_delete_account_confirm_title">అన్ని యాప్ డేటాను తొలగించాలా?</string>
     <string name="settings_delete_account_confirm_body">ఈ చర్య తిరిగి పొందలేనిది మరియు వీటిని తొలగిస్తుంది:\n\n• అన్ని స్థానిక డైరీ ఎంట్రీలు, ఫోటోలు మరియు వీడియోలు\n• మీ Firebase ఖాతా\n• యాప్ యొక్క Google Drive బ్యాకప్\n\nయాప్ కొత్త ఇన్‌స్టాలేషన్‌గా మళ్లీ ప్రారంభమవుతుంది.</string>
@@ -1251,4 +1251,55 @@
     <string name="paywall_feature_unlimited_entries">అపరిమిత డైరీ నమోదులు</string>
     <string name="paywall_feature_pdf_export">PDF గా ఎగుమతి చేయడం</string>
     <string name="paywall_feature_drive_backup">Google Drive బ్యాకప్</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         MISSING STRINGS — BATCH INSERT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_no">కాదు</string>
+    <string name="action_yes">అవును</string>
+    <string name="ai_improved_suffix">\n\n✨ AI-మెరుగుపరచబడింది</string>
+    <string name="ai_improved_suffix_marker">✨ AI-మెరుగుపరచబడింది</string>
+    <string name="entry_delete_entry_cd">డైరీ ఎంట్రీని తొలగించు</string>
+    <string name="entry_journal_entry_title">డైరీ ఎంట్రీ</string>
+    <string name="entry_photos_videos_add_title">ఫోటోలు/వీడియోలు జోడించు</string>
+    <string name="follow_up_cancel">రద్దు చేయి</string>
+    <string name="follow_up_card_title">అనుసరణ గమనిక</string>
+    <string name="follow_up_choose_input_mode">నీ అనుసరణ గమనికను ఎలా జోడించాలనుకుంటున్నావు?</string>
+    <string name="follow_up_delete_button">తొలగించు</string>
+    <string name="follow_up_delete_cd">అనుసరణ గమనికను తొలగించు</string>
+    <string name="follow_up_dialog_label">నీ అనుసరణ గమనిక:</string>
+    <string name="follow_up_dialog_title">అనుసరణ గమనిక</string>
+    <string name="follow_up_discard">విసర్జించు</string>
+    <string name="follow_up_improve_text">✨ వచనాన్ని మెరుగుపరచు</string>
+    <string name="follow_up_improve_with_ai">తర్వాత AI తో మెరుగుపరచు</string>
+    <string name="follow_up_improving">AI అనుసరణ గమనికను మెరుగుపరుస్తోంది…</string>
+    <string name="follow_up_input_speak_cd">మాట్లాడు</string>
+    <string name="follow_up_input_speak_label">మాట్లాడు</string>
+    <string name="follow_up_input_write_cd">రాయి</string>
+    <string name="follow_up_input_write_label">రాయి</string>
+    <string name="follow_up_premium_body">Premium తో ప్రతి డైరీ ఎంట్రీకి నీకు కావాల్సినన్ని అనుసరణ గమనికలు జోడించవచ్చు.</string>
+    <string name="follow_up_premium_hint">రెండవ గమనిక నుండి</string>
+    <string name="follow_up_premium_later">తర్వాత నిర్ణయిస్తాను</string>
+    <string name="follow_up_premium_subscribe">సభ్యత్వం తీసుకో</string>
+    <string name="follow_up_premium_subtext">ప్రతి గమనిక స్వయంచాలకంగా డ్యాష్‌బోర్డ్‌కు చేరుతుంది, నీ విశ్లేషణ ఎల్లప్పుడూ పూర్తిగా ఉంటుంది.</string>
+    <string name="follow_up_premium_title">అపరిమిత అనుసరణ గమనికలు</string>
+    <string name="follow_up_save">సేవ్ చేయి</string>
+    <string name="follow_up_save_improved">మెరుగైన వెర్షన్ సేవ్ చేయి</string>
+    <string name="follow_up_speak_pill_label">మాట్లాడు</string>
+    <string name="follow_up_speak_prompt">ఇప్పుడు నీ అనుసరణ గమనికను మాట్లాడు.</string>
+    <string name="follow_up_stop_hint">ఆపడానికి నొక్కు</string>
+    <string name="follow_up_tab_improved">✨ AI తో మెరుగుపరచబడింది</string>
+    <string name="follow_up_tab_original">అసలు</string>
+    <string name="follow_up_text_placeholder">నీ అనుసరణ గమనికను రాయి…</string>
+    <string name="follow_up_transcribing">లిప్యంతరీకరిస్తోంది…</string>
+    <string name="journal_improve">వచనాన్ని మెరుగుపరచు</string>
+    <string name="journal_state_improving">మెరుగుపరుస్తోంది…</string>
+    <string name="journal_state_transcribing">లిప్యంతరీకరిస్తోంది…</string>
+    <string name="profile_custom_add">స్వంత విశ్లేషణ జోడించు</string>
+    <string name="profile_custom_remove">తీసివేయి</string>
+    <string name="profile_custom_rename">పేరు మార్చు</string>
+    <string name="profile_custom_rename_save">పేరు మార్చు</string>
+    <string name="prompt_clear_confirm_text">నీవు నిజంగా ఈ ఎంట్రీని విసర్జించాలనుకుంటున్నావా?</string>
+    <string name="prompt_clear_confirm_title">ఎంట్రీని విసర్జించాలా?</string>
+    <string name="prompt_clear_content_desc">ఇన్‌పుట్ తొలగించు</string>
 </resources>
