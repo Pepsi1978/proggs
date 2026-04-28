@@ -82,6 +82,51 @@ Play Data Safety behaupten.
 
 ---
 
+## Trigger und Prüfumfang (KRITISCH)
+
+Nutze diesen Skill immer, wenn es um Datenschutz-Compliance, Abmahnungsrisiken,
+Play-Store-Release oder rechtliche Pflichttexte einer Android-App geht, auch
+wenn der Benutzer den Skill-Namen nicht explizit nennt.
+
+**Deutsche Trigger:**
+
+- "starte den Skill Rechtssicherheit"
+- "prüfe [App] auf Rechtssicherheit"
+- "Rechtssicherheit für [App]"
+- "DSGVO-Check für [App]"
+- "ist [App] abmahnungssicher"
+- "Abmahnungscheck [App]"
+- "Play-Store rechtskonform prüfen"
+- "Rechts-Audit [App]"
+- "Data-Safety-Check"
+- "Account-Löschung prüfen"
+- "Widerruf prüfen"
+- "Impressum prüfen"
+
+**Auch ohne exakten Trigger verwenden bei:**
+
+- Datenschutzerklärung, DSGVO/GDPR, CCPA/CPRA, UK-GDPR, PIPL, DPDP, APPI, PIPA,
+  LGPD oder anderen Datenschutzpflichten.
+- Impressum/Anbieterkennzeichnung, AGB/Nutzungsbedingungen, Widerrufsbelehrung,
+  Consent, Account-/Datenlöschung, Support/Kontakt oder Pflichtlinks in der App.
+- Google Play Data Safety, Play-Console-Deklarationen, Permissions, SDKs,
+  Tracking, Ads, Analytics, Crashlytics, KI-APIs, Backups, Logs oder Secrets.
+
+**Pflicht-Prüfumfang:**
+
+1. App-Code und Manifest gegen Rechtstexte und Play-Console-Angaben abgleichen.
+2. Parallel recherchieren: DSGVO/GDPR, CCPA/CPRA, UK-GDPR, PIPL, DPDP, APPI,
+   PIPA, LGPD, Google Play Data Safety, DDG-Anbieterkennzeichnung,
+   Widerrufsbelehrung und AGB.
+3. Bestehende App-Dokumente prüfen: Datenschutzerklärung, Nutzungsbedingungen,
+   Impressum, Widerrufsbelehrung, Account-/Datenlöschung, Support/Kontakt.
+4. Platzierung und Übersetzung prüfen: Store Listing, Onboarding, Consent,
+   Settings, About, Paywall/Checkout und alle App-Sprachen.
+5. Technische Datenschutz- und Sicherheitsrisiken prüfen: Manifest-Permissions,
+   SDKs, Backup-Regeln, lokale Speicherung, Logs, Secrets, TLS und Data Safety.
+
+---
+
 ## Plattformneutrale Pfade (KRITISCH)
 
 Die Wissensbasis liegt **workspace-lokal**, nicht in einem persoenlichen Home-Unterordner.
