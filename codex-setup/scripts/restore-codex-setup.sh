@@ -15,9 +15,16 @@ copy_directory_children() {
   }
 
   mkdir -p "$target_dir"
-  local count
-  count="$(find "$source_dir" -mindepth 1 -maxdepth 1 | wc -l | tr -d '[:space:]')"
-  cp -R "$source_dir"/. "$target_dir"/
+  local count=0
+  local entry
+  while IFS= read -r -d '' entry; do
+    local name
+    name="$(basename "$entry")"
+    local destination="$target_dir/$name"
+    rm -rf "$destination"
+    cp -R "$entry" "$destination"
+    count=$((count + 1))
+  done < <(find "$source_dir" -mindepth 1 -maxdepth 1 -print0)
   echo "$count"
 }
 

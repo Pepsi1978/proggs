@@ -17,7 +17,18 @@ function Copy-DirectoryChildren {
     New-Item -ItemType Directory -Force -Path $Target | Out-Null
     $count = 0
     Get-ChildItem -Path $Source -Force | ForEach-Object {
-        Copy-Item -Path $_.FullName -Destination (Join-Path $Target $_.Name) -Recurse -Force
+        $destination = Join-Path $Target $_.Name
+        if ($_.PSIsContainer) {
+            if (Test-Path $destination) {
+                Remove-Item -LiteralPath $destination -Recurse -Force
+            }
+            New-Item -ItemType Directory -Force -Path $destination | Out-Null
+            Get-ChildItem -Path $_.FullName -Force | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination $destination -Recurse -Force
+            }
+        } else {
+            Copy-Item -Path $_.FullName -Destination $destination -Force
+        }
         $count++
     }
     return $count
