@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">एंट्री</string>
     <string name="entry_summary">सारांश</string>
-    <string name="entry_stress_label">बोझ: </string>
     <string name="entry_saving">सहेजा जा रहा है…</string>
     <string name="entry_improving">सुधारा जा रहा है…</string>
     <string name="entry_improve_with_ai">बाद में AI से सुधारें</string>

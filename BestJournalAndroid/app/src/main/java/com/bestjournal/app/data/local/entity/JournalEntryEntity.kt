@@ -14,7 +14,6 @@ data class JournalEntryEntity(
     val displayText: String,
     val audioDurationSeconds: Int,
     val moodTag: String?,
-    val entropyScore: Float?,
     val adviceCategoryTags: String?,
     val summary: String? = null,
     val title: String? = null,

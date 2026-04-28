@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">التسجيل</string>
     <string name="entry_summary">الملخّص</string>
-    <string name="entry_stress_label">العبء: </string>
     <string name="entry_saving">جار الحفظ…</string>
     <string name="entry_improving">جار التحسين…</string>
     <string name="entry_improve_with_ai">تحسين لاحقا بالذكاء الاصطناعي</string>

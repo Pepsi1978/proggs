@@ -76,7 +76,6 @@ constructor(
                         displayText = text,
                         audioDurationSeconds = 0,
                         moodTag = mood,
-                        entropyScore = Random.nextFloat(),
                         title = title,
                         isSynced = true, // mark as synced so they won't be uploaded to Drive
                     )

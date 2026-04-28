@@ -122,7 +122,6 @@
     
     <string name="entry_title">નોંધ</string>
     <string name="entry_summary">સારાંશ</string>
-    <string name="entry_stress_label">ભાર: </string>
     <string name="entry_saving">સાચવાઈ રહ્યું છે\u2026</string>
     <string name="entry_improving">સુધારાઈ રહ્યું છે\u2026</string>
     <string name="entry_improve_with_ai">AI વડે પછીથી સુધારો</string>

@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">লেখা</string>
     <string name="entry_summary">সারসংক্ষেপ</string>
-    <string name="entry_stress_label">চাপ: </string>
     <string name="entry_saving">সংরক্ষণ হচ্ছে…</string>
     <string name="entry_improving">উন্নত হচ্ছে…</string>
     <string name="entry_improve_with_ai">পরে এআই দিয়ে উন্নত করো</string>

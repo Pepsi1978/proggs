@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Запис</string>
     <string name="entry_summary">Коротко</string>
-    <string name="entry_stress_label">Навантаження: </string>
     <string name="entry_saving">Збереження…</string>
     <string name="entry_improving">Покращення…</string>
     <string name="entry_improve_with_ai">Покращити пізніше з ШІ</string>

@@ -125,7 +125,6 @@
     <!-- ENTRY DETAIL SCREEN -->
     <string name="entry_title">എൻട്രി</string>
     <string name="entry_summary">സംഗ്രഹം</string>
-    <string name="entry_stress_label">ഭാരം: </string>
     <string name="entry_saving">സേവ് ചെയ്യുന്നു\u2026</string>
     <string name="entry_improving">മെച്ചപ്പെടുത്തുന്നു\u2026</string>
     <string name="entry_improve_with_ai">AI ഉപയോഗിച്ച് പിന്നീട് മെച്ചപ്പെടുത്തുക</string>

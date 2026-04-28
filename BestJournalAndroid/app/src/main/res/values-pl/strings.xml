@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Wpis</string>
     <string name="entry_summary">Podsumowanie</string>
-    <string name="entry_stress_label">Obciążenie: </string>
     <string name="entry_saving">Zapisywanie…</string>
     <string name="entry_improving">Poprawianie…</string>
     <string name="entry_improve_with_ai">Popraw później z SI</string>

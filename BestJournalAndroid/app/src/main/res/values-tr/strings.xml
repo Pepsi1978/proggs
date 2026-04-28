@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Giriş</string>
     <string name="entry_summary">Özet</string>
-    <string name="entry_stress_label">Yük: </string>
     <string name="entry_saving">Kaydediliyor…</string>
     <string name="entry_improving">İyileştiriliyor…</string>
     <string name="entry_improve_with_ai">YZ ile sonradan iyileştir</string>

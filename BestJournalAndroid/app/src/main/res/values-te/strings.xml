@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">నమోదు</string>
     <string name="entry_summary">సారాంశం</string>
-    <string name="entry_stress_label">ఒత్తిడి: </string>
     <string name="entry_saving">సేవ్ అవుతోంది…</string>
     <string name="entry_improving">మెరుగుపరుస్తోంది…</string>
     <string name="entry_improve_with_ai">AI తో తర్వాత మెరుగుపరచండి</string>

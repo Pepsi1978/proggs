@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">பதிவு</string>
     <string name="entry_summary">சுருக்கம்</string>
-    <string name="entry_stress_label">சுமை: </string>
     <string name="entry_saving">சேமிக்கப்படுகிறது\u2026</string>
     <string name="entry_improving">மேம்படுத்தப்படுகிறது\u2026</string>
     <string name="entry_improve_with_ai">KI மூலம் பிறகு மேம்படுத்து</string>

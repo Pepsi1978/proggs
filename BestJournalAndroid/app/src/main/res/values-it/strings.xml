@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Voce</string>
     <string name="entry_summary">Riepilogo</string>
-    <string name="entry_stress_label">Carico: </string>
     <string name="entry_saving">Salvataggio…</string>
     <string name="entry_improving">Miglioramento…</string>
     <string name="entry_improve_with_ai">Migliora dopo con l\'IA</string>

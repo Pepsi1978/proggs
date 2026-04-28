@@ -15,7 +15,7 @@ import com.bestjournal.app.data.local.entity.JournalEntryEntity
 
 @Database(
     entities = [JournalEntryEntity::class, EntryPhotoEntity::class, EntryFollowUpEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -160,6 +160,52 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        // Drop the unused `entropyScore` column. Room/SQLite on minSdk 26 does not
+        // reliably support `ALTER TABLE ... DROP COLUMN`, so we recreate the table
+        // (preserving ids so existing entry_photos / entry_follow_ups foreign keys
+        // remain valid) and rebuild the indices that MIGRATION_9_10 added.
+        private val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """CREATE TABLE journal_entries_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        rawText TEXT NOT NULL,
+                        improvedText TEXT,
+                        isImproved INTEGER NOT NULL,
+                        displayText TEXT NOT NULL,
+                        audioDurationSeconds INTEGER NOT NULL,
+                        moodTag TEXT,
+                        adviceCategoryTags TEXT,
+                        summary TEXT,
+                        title TEXT,
+                        followUpText TEXT,
+                        isSynced INTEGER NOT NULL
+                    )"""
+                    )
+                    db.execSQL(
+                        """INSERT INTO journal_entries_new (
+                            id, timestamp, rawText, improvedText, isImproved,
+                            displayText, audioDurationSeconds, moodTag,
+                            adviceCategoryTags, summary, title, followUpText, isSynced
+                        ) SELECT
+                            id, timestamp, rawText, improvedText, isImproved,
+                            displayText, audioDurationSeconds, moodTag,
+                            adviceCategoryTags, summary, title, followUpText, isSynced
+                        FROM journal_entries"""
+                    )
+                    db.execSQL("DROP TABLE journal_entries")
+                    db.execSQL("ALTER TABLE journal_entries_new RENAME TO journal_entries")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_journal_entries_timestamp ON journal_entries(timestamp)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_journal_entries_isSynced ON journal_entries(isSynced)"
+                    )
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -180,6 +226,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_8_9,
                                 MIGRATION_9_10,
                                 MIGRATION_10_11,
+                                MIGRATION_11_12,
                             )
                             .build()
                     INSTANCE = instance

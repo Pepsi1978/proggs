@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Entrada</string>
     <string name="entry_summary">Resumo</string>
-    <string name="entry_stress_label">Carga: </string>
     <string name="entry_saving">A guardar…</string>
     <string name="entry_improving">A melhorar…</string>
     <string name="entry_improve_with_ai">Melhorar depois com IA</string>

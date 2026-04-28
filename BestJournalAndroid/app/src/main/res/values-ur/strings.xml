@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">اندراج</string>
     <string name="entry_summary">خلاصہ</string>
-    <string name="entry_stress_label">بوجھ: </string>
     <string name="entry_saving">محفوظ ہو رہا ہے\u2026</string>
     <string name="entry_improving">بہتر ہو رہا ہے\u2026</string>
     <string name="entry_improve_with_ai">‏AI سے بعد میں بہتر کریں</string>

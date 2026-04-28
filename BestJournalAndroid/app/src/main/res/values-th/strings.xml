@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">บันทึก</string>
     <string name="entry_summary">สรุป</string>
-    <string name="entry_stress_label">ภาระ: </string>
     <string name="entry_saving">กำลังบันทึก…</string>
     <string name="entry_improving">กำลังปรับปรุง…</string>
     <string name="entry_improve_with_ai">ปรับปรุงภายหลังด้วย AI</string>

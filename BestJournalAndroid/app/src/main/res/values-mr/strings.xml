@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">नोंद</string>
     <string name="entry_summary">सारांश</string>
-    <string name="entry_stress_label">ताण: </string>
     <string name="entry_saving">जतन होत आहे\u2026</string>
     <string name="entry_improving">सुधारत आहे\u2026</string>
     <string name="entry_improve_with_ai">AI सह नंतर सुधारा</string>

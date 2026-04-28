@@ -127,7 +127,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Entry</string>
     <string name="entry_summary">Summary</string>
-    <string name="entry_stress_label">Stress: </string>
     <string name="entry_saving">Saving…</string>
     <string name="entry_improving">Improving…</string>
     <string name="entry_improve_with_ai">Improve with AI</string>

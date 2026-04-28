@@ -122,7 +122,6 @@ import com.bestjournal.app.ui.screens.journal.RecordingState
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
-import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter
 import com.bestjournal.app.ui.components.PrivacyGateHost
@@ -385,35 +384,6 @@ fun EntryDetailScreen(
                                         }
                                     }
                                 }
-                        }
-                    }
-                }
-
-                entry.entropyScore?.let { score ->
-                    GlassCard(
-                        glowColor =
-                            when {
-                                score < 0.33f -> NeonEmerald
-                                score < 0.66f -> NeonAmber
-                                else -> NeonRed
-                            }
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                stringResource(R.string.entry_stress_label),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = String.format("%.0f%%", score * 100),
-                                style = MaterialTheme.typography.titleMedium,
-                                color =
-                                    when {
-                                        score < 0.33f -> NeonEmerald
-                                        score < 0.66f -> NeonAmber
-                                        else -> NeonRed
-                                    },
-                            )
                         }
                     }
                 }

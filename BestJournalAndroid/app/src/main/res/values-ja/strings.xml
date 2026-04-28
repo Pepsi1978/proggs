@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">記録</string>
     <string name="entry_summary">要約</string>
-    <string name="entry_stress_label">負担： </string>
     <string name="entry_saving">保存中…</string>
     <string name="entry_improving">改善中…</string>
     <string name="entry_improve_with_ai">あとからAIで改善</string>

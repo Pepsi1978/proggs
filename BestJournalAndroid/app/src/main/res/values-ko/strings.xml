@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">기록</string>
     <string name="entry_summary">요약</string>
-    <string name="entry_stress_label">부담: </string>
     <string name="entry_saving">저장 중…</string>
     <string name="entry_improving">다듬는 중…</string>
     <string name="entry_improve_with_ai">나중에 AI로 다듬기</string>

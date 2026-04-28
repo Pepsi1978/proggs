@@ -636,7 +636,7 @@ constructor(
             var imported = 0
             val baseCols =
                 "id, timestamp, rawText, improvedText, isImproved, displayText, " +
-                    "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
+                    "audioDurationSeconds, moodTag, adviceCategoryTags, " +
                     "summary, title"
             val selectCols =
                 if (remoteHasFollowUpText) "$baseCols, followUpText, isSynced"
@@ -661,17 +661,15 @@ constructor(
                                     if (!remoteCursor.isNull(7))
                                         put("moodTag", remoteCursor.getString(7))
                                     if (!remoteCursor.isNull(8))
-                                        put("entropyScore", remoteCursor.getFloat(8))
+                                        put("adviceCategoryTags", remoteCursor.getString(8))
                                     if (!remoteCursor.isNull(9))
-                                        put("adviceCategoryTags", remoteCursor.getString(9))
+                                        put("summary", remoteCursor.getString(9))
                                     if (!remoteCursor.isNull(10))
-                                        put("summary", remoteCursor.getString(10))
-                                    if (!remoteCursor.isNull(11))
-                                        put("title", remoteCursor.getString(11))
-                                    if (remoteHasFollowUpText && !remoteCursor.isNull(12)) {
-                                        put("followUpText", remoteCursor.getString(12))
+                                        put("title", remoteCursor.getString(10))
+                                    if (remoteHasFollowUpText && !remoteCursor.isNull(11)) {
+                                        put("followUpText", remoteCursor.getString(11))
                                     }
-                                    val isSyncedIdx = if (remoteHasFollowUpText) 13 else 12
+                                    val isSyncedIdx = if (remoteHasFollowUpText) 12 else 11
                                     put("isSynced", remoteCursor.getInt(isSyncedIdx))
                                 }
                             val insertedId =

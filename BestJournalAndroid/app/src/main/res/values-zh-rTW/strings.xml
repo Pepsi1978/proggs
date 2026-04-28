@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">條目</string>
     <string name="entry_summary">摘要</string>
-    <string name="entry_stress_label">負擔： </string>
     <string name="entry_saving">儲存中…</string>
     <string name="entry_improving">潤色中…</string>
     <string name="entry_improve_with_ai">稍後用 AI 潤色</string>

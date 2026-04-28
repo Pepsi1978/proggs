@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">ನಮೂದು</string>
     <string name="entry_summary">ಸಾರಾಂಶ</string>
-    <string name="entry_stress_label">ಒತ್ತಡ: </string>
     <string name="entry_saving">ಉಳಿಸಲಾಗುತ್ತಿದೆ…</string>
     <string name="entry_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
     <string name="entry_improve_with_ai">AI ನೊಂದಿಗೆ ನಂತರ ಸುಧಾರಿಸಿ</string>

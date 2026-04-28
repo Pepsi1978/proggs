@@ -144,7 +144,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Eintrag</string>
     <string name="entry_summary">Zusammenfassung</string>
-    <string name="entry_stress_label">Belastung: </string>
     <string name="entry_saving">Wird gespeichert…</string>
     <string name="entry_improving">Wird verbessert…</string>
     <string name="entry_improve_with_ai">Mit KI nachträglich verbessern</string>

@@ -133,7 +133,6 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">Notitie</string>
     <string name="entry_summary">Samenvatting</string>
-    <string name="entry_stress_label">Belasting: </string>
     <string name="entry_saving">Bezig met opslaan…</string>
     <string name="entry_improving">Bezig met verbeteren…</string>
     <string name="entry_improve_with_ai">Achteraf verbeteren met AI</string>
