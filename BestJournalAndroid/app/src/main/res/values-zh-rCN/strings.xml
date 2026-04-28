@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">解锁于 %1$s</string>
     <!-- About -->
     <string name="settings_about">关于应用</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">你的个人 AI 日记</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登录吗？</string>
@@ -1228,4 +1228,12 @@
     <string name="settings_ai_tts_subtitle">将文本发送到 Microsoft 美国以进行语音输出</string>
     <string name="settings_drive_backup_title">Google Drive 备份</string>
     <string name="settings_drive_backup_subtitle">将条目加密保存到你的 Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">生成70条测试条目</string>
+    <string name="dev_seed_delete_label">删除70条测试条目</string>
+    <string name="dev_seed_running">正在以您的语言生成70条测试条目…</string>
+    <string name="dev_seed_done">已创建%1$d条测试条目</string>
+    <string name="dev_seed_deleted">已删除%1$d条测试条目</string>
+    <string name="dev_seed_error">错误：%1$s</string>
 </resources>

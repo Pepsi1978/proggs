@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
     <!-- About -->
     <string name="settings_about">เกี่ยวกับแอป</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ออกจากระบบ?</string>
@@ -1228,4 +1228,12 @@
     <string name="settings_ai_tts_subtitle">ส่งข้อความไปยัง Microsoft สหรัฐอเมริกา เพื่อส่งออกเสียง</string>
     <string name="settings_drive_backup_title">การสำรองข้อมูล Google Drive</string>
     <string name="settings_drive_backup_subtitle">บันทึกรายการแบบเข้ารหัสใน Drive ของคุณ</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">สร้างรายการทดสอบ 70 รายการ</string>
+    <string name="dev_seed_delete_label">ลบรายการทดสอบ 70 รายการ</string>
+    <string name="dev_seed_running">กำลังสร้างรายการทดสอบ 70 รายการในภาษาของคุณ…</string>
+    <string name="dev_seed_done">สร้างรายการทดสอบแล้ว %1$d รายการ</string>
+    <string name="dev_seed_deleted">ลบรายการทดสอบแล้ว %1$d รายการ</string>
+    <string name="dev_seed_error">ข้อผิดพลาด: %1$s</string>
 </resources>

@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1241,4 +1241,12 @@
     <string name="settings_ai_tts_subtitle">குரல் வெளியீட்டிற்காக Microsoft USA‌க்கு உரைகளை அனுப்பவும்</string>
     <string name="settings_drive_backup_title">Google Drive காப்புப்பிரதி</string>
     <string name="settings_drive_backup_subtitle">உங்கள் Drive இல் குறியாக்கப்பட்ட உள்ளீடுகளைச் சேமிக்கவும்</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 சோதனை உள்ளீடுகளை உருவாக்கு</string>
+    <string name="dev_seed_delete_label">70 சோதனை உள்ளீடுகளை நீக்கு</string>
+    <string name="dev_seed_running">உங்கள் மொழியில் 70 சோதனை உள்ளீடுகளை உருவாக்குகிறது…</string>
+    <string name="dev_seed_done">%1$d சோதனை உள்ளீடுகள் உருவாக்கப்பட்டன</string>
+    <string name="dev_seed_deleted">%1$d சோதனை உள்ளீடுகள் நீக்கப்பட்டன</string>
+    <string name="dev_seed_error">பிழை: %1$s</string>
 </resources>

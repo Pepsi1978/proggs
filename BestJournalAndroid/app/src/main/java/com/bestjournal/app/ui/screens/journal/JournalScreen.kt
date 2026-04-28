@@ -41,14 +41,17 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
+import com.bestjournal.app.BuildConfig
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -166,6 +169,13 @@ fun JournalScreen(
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.seedToastMessage) {
+        uiState.seedToastMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeSeedToast()
         }
     }
 
@@ -292,6 +302,40 @@ fun JournalScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
+                        if (BuildConfig.DEBUG) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            val seeded = uiState.seedSeededCount > 0
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.toggleTestDataSeed()
+                                },
+                                enabled = !uiState.seedRunning,
+                            ) {
+                                if (uiState.seedRunning) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector =
+                                            if (seeded) Icons.Rounded.DeleteSweep
+                                            else Icons.AutoMirrored.Rounded.PlaylistAdd,
+                                        contentDescription =
+                                            stringResource(
+                                                if (seeded) R.string.dev_seed_delete_label
+                                                else R.string.dev_seed_create_label
+                                            ),
+                                        tint =
+                                            if (seeded) NeonRed
+                                            else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(

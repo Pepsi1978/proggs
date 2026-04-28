@@ -441,7 +441,7 @@
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>
@@ -1167,4 +1167,12 @@
     <string name="settings_ai_tts_subtitle">വോയ്സ് ഔട്ട്പുട്ടിനായി Microsoft USA-ലേക്ക് ടെക്സ്റ്റുകൾ അയയ്ക്കുക</string>
     <string name="settings_drive_backup_title">Google Drive ബാക്കപ്പ്</string>
     <string name="settings_drive_backup_subtitle">നിങ്ങളുടെ Drive-ൽ എൻക്രിപ്റ്റ് ചെയ്ത എൻട്രികൾ സംരക്ഷിക്കുക</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 ടെസ്റ്റ് എൻട്രികൾ സൃഷ്ടിക്കുക</string>
+    <string name="dev_seed_delete_label">70 ടെസ്റ്റ് എൻട്രികൾ ഇല്ലാതാക്കുക</string>
+    <string name="dev_seed_running">നിങ്ങളുടെ ഭാഷയിൽ 70 ടെസ്റ്റ് എൻട്രികൾ സൃഷ്ടിക്കുന്നു…</string>
+    <string name="dev_seed_done">%1$d ടെസ്റ്റ് എൻട്രികൾ സൃഷ്ടിച്ചു</string>
+    <string name="dev_seed_deleted">%1$d ടെസ്റ്റ് എൻട്രികൾ ഇല്ലാതാക്കി</string>
+    <string name="dev_seed_error">പിശക്: %1$s</string>
 </resources>

@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s को अनलॉक</string>
     <!-- About -->
     <string name="settings_about">ऐप के बारे में</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">आपकी व्यक्तिगत AI डायरी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करें?</string>
@@ -1232,4 +1232,12 @@
     <string name="settings_ai_tts_subtitle">वाक् आउटपुट के लिए पाठ Microsoft USA को भेजें</string>
     <string name="settings_drive_backup_title">Google Drive बैकअप</string>
     <string name="settings_drive_backup_subtitle">प्रविष्टियाँ एन्क्रिप्टेड रूप से अपने Drive में सहेजें</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 परीक्षण प्रविष्टियाँ बनाएँ</string>
+    <string name="dev_seed_delete_label">70 परीक्षण प्रविष्टियाँ हटाएँ</string>
+    <string name="dev_seed_running">आपकी भाषा में 70 परीक्षण प्रविष्टियाँ बनाई जा रही हैं…</string>
+    <string name="dev_seed_done">%1$d परीक्षण प्रविष्टियाँ बनाई गईं</string>
+    <string name="dev_seed_deleted">%1$d परीक्षण प्रविष्टियाँ हटाई गईं</string>
+    <string name="dev_seed_error">त्रुटि: %1$s</string>
 </resources>

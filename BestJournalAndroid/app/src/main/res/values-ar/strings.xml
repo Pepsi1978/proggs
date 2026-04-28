@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
@@ -1248,4 +1248,12 @@
     <string name="settings_ai_tts_subtitle">إرسال النصوص إلى Microsoft الولايات المتحدة للإخراج الصوتي</string>
     <string name="settings_drive_backup_title">نسخ احتياطي على Google Drive</string>
     <string name="settings_drive_backup_subtitle">حفظ المدخلات مشفرة على Drive الخاص بك</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">إنشاء 70 إدخالاً اختبارياً</string>
+    <string name="dev_seed_delete_label">حذف 70 إدخالاً اختبارياً</string>
+    <string name="dev_seed_running">جارٍ إنشاء 70 إدخالاً اختبارياً بلغتك…</string>
+    <string name="dev_seed_done">تم إنشاء %1$d إدخال اختباري</string>
+    <string name="dev_seed_deleted">تم حذف %1$d إدخال اختباري</string>
+    <string name="dev_seed_error">خطأ: %1$s</string>
 </resources>

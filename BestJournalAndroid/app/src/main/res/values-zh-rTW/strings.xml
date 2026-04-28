@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">解鎖於 %1$s</string>
     <!-- About -->
     <string name="settings_about">關於應用</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">你的個人 AI 日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登入嗎？</string>
@@ -1228,4 +1228,12 @@
     <string name="settings_ai_tts_subtitle">將文字傳送至 Microsoft 美國以進行語音輸出</string>
     <string name="settings_drive_backup_title">Google 雲端硬碟備份</string>
     <string name="settings_drive_backup_subtitle">將項目加密儲存到你的雲端硬碟</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">產生70筆測試項目</string>
+    <string name="dev_seed_delete_label">刪除70筆測試項目</string>
+    <string name="dev_seed_running">正在以您的語言產生70筆測試項目…</string>
+    <string name="dev_seed_done">已建立%1$d筆測試項目</string>
+    <string name="dev_seed_deleted">已刪除%1$d筆測試項目</string>
+    <string name="dev_seed_error">錯誤：%1$s</string>
 </resources>

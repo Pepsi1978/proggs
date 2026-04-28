@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1233,4 +1233,12 @@
     <string name="settings_ai_tts_subtitle">বাক আউটপুটের জন্য Microsoft USA-এ টেক্সট পাঠান</string>
     <string name="settings_drive_backup_title">Google Drive ব্যাকআপ</string>
     <string name="settings_drive_backup_subtitle">আপনার Drive-এ এনক্রিপ্টেড এন্ট্রি সংরক্ষণ করুন</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70টি পরীক্ষামূলক এন্ট্রি তৈরি করুন</string>
+    <string name="dev_seed_delete_label">70টি পরীক্ষামূলক এন্ট্রি মুছুন</string>
+    <string name="dev_seed_running">আপনার ভাষায় 70টি পরীক্ষামূলক এন্ট্রি তৈরি করা হচ্ছে…</string>
+    <string name="dev_seed_done">%1$dটি পরীক্ষামূলক এন্ট্রি তৈরি হয়েছে</string>
+    <string name="dev_seed_deleted">%1$dটি পরীক্ষামূলক এন্ট্রি মুছে ফেলা হয়েছে</string>
+    <string name="dev_seed_error">ত্রুটি: %1$s</string>
 </resources>

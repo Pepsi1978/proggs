@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s に獲得</string>
     <!-- About -->
     <string name="settings_about">アプリについて</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">あなたのAI日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ログアウトしますか？</string>
@@ -1228,4 +1228,12 @@
     <string name="settings_ai_tts_subtitle">音声出力のためにテキストをMicrosoft米国に送信</string>
     <string name="settings_drive_backup_title">Google Driveバックアップ</string>
     <string name="settings_drive_backup_subtitle">エントリーを暗号化してDriveに保存</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70件のテストエントリを作成</string>
+    <string name="dev_seed_delete_label">70件のテストエントリを削除</string>
+    <string name="dev_seed_running">お使いの言語で70件のテストエントリを作成しています…</string>
+    <string name="dev_seed_done">%1$d件のテストエントリを作成しました</string>
+    <string name="dev_seed_deleted">%1$d件のテストエントリを削除しました</string>
+    <string name="dev_seed_error">エラー：%1$s</string>
 </resources>

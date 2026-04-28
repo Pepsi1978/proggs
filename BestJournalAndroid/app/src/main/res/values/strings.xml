@@ -487,7 +487,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.14.13</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -1270,4 +1270,12 @@
     <string name="paywall_feature_followups">Unbegrenzte Nachträge zu jedem Tagebucheintrag</string>
     <string name="settings_premium_feature_followups">Unbegrenzte Nachträge</string>
     <string name="settings_premium_feature_followups_desc">So viele Nachträge pro Eintrag wie du möchtest</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 Test-Einträge erzeugen</string>
+    <string name="dev_seed_delete_label">70 Test-Einträge löschen</string>
+    <string name="dev_seed_running">Erzeuge 70 Test-Einträge in deiner Sprache…</string>
+    <string name="dev_seed_done">%1$d Test-Einträge erstellt</string>
+    <string name="dev_seed_deleted">%1$d Test-Einträge gelöscht</string>
+    <string name="dev_seed_error">Fehler: %1$s</string>
 </resources>

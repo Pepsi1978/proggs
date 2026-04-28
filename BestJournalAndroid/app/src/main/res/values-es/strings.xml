@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">Desbloqueado el %1$s</string>
     <!-- About -->
     <string name="settings_about">Acerca de la app</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">Tu diario personal con IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">¿Cerrar sesión?</string>
@@ -1232,4 +1232,12 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="settings_ai_tts_subtitle">Enviar textos a Microsoft EE. UU. para síntesis de voz</string>
     <string name="settings_drive_backup_title">Copia de seguridad en Google Drive</string>
     <string name="settings_drive_backup_subtitle">Guardar entradas cifradas en tu Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Generar 70 entradas de prueba</string>
+    <string name="dev_seed_delete_label">Eliminar 70 entradas de prueba</string>
+    <string name="dev_seed_running">Generando 70 entradas de prueba en tu idioma…</string>
+    <string name="dev_seed_done">%1$d entradas de prueba creadas</string>
+    <string name="dev_seed_deleted">%1$d entradas de prueba eliminadas</string>
+    <string name="dev_seed_error">Error: %1$s</string>
 </resources>

@@ -451,7 +451,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -1203,4 +1203,11 @@
     <string name="settings_report_ai_subject">Best Journal: Inappropriate AI response</string>
     <string name="settings_report_ai_body">Hello,\n\nI would like to report an inappropriate or incorrect AI response in Best Journal.\n\nDescription of the issue:\n[Please fill in]\n\nContext (which feature, which input):\n[Please fill in]\n\nThank you.</string>
 
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Generate 70 test entries</string>
+    <string name="dev_seed_delete_label">Delete 70 test entries</string>
+    <string name="dev_seed_running">Generating 70 test entries in your language…</string>
+    <string name="dev_seed_done">%1$d test entries created</string>
+    <string name="dev_seed_deleted">%1$d test entries deleted</string>
+    <string name="dev_seed_error">Error: %1$s</string>
 </resources>

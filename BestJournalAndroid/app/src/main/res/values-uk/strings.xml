@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">Відкрито: %1$s</string>
     <!-- About -->
     <string name="settings_about">Про застосунок</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Вийти?</string>
@@ -1240,4 +1240,12 @@
     <string name="settings_ai_tts_subtitle">Надсилати тексти до Microsoft США для голосового відтворення</string>
     <string name="settings_drive_backup_title">Резервна копія Google Drive</string>
     <string name="settings_drive_backup_subtitle">Зберігати записи зашифрованими у вашому Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Створити 70 тестових записів</string>
+    <string name="dev_seed_delete_label">Видалити 70 тестових записів</string>
+    <string name="dev_seed_running">Створення 70 тестових записів вашою мовою…</string>
+    <string name="dev_seed_done">Створено %1$d тестових записів</string>
+    <string name="dev_seed_deleted">Видалено %1$d тестових записів</string>
+    <string name="dev_seed_error">Помилка: %1$s</string>
 </resources>

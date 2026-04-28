@@ -441,7 +441,7 @@
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1164,4 +1164,12 @@
     <string name="settings_ai_tts_subtitle">వాయిస్ అవుట్‌పుట్ కోసం Microsoft USA‌కు టెక్స్ట్‌లను పంపండి</string>
     <string name="settings_drive_backup_title">Google Drive బ్యాకప్</string>
     <string name="settings_drive_backup_subtitle">మీ Drive‌లో ఎన్క్రిప్ట్ చేసిన ఎంట్రీలను సేవ్ చేయండి</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">70 పరీక్ష ఎంట్రీలను సృష్టించండి</string>
+    <string name="dev_seed_delete_label">70 పరీక్ష ఎంట్రీలను తొలగించండి</string>
+    <string name="dev_seed_running">మీ భాషలో 70 పరీక్ష ఎంట్రీలను సృష్టిస్తోంది…</string>
+    <string name="dev_seed_done">%1$d పరీక్ష ఎంట్రీలు సృష్టించబడ్డాయి</string>
+    <string name="dev_seed_deleted">%1$d పరీక్ష ఎంట్రీలు తొలగించబడ్డాయి</string>
+    <string name="dev_seed_error">లోపం: %1$s</string>
 </resources>

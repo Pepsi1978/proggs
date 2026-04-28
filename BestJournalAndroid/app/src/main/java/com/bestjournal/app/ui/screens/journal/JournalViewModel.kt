@@ -9,6 +9,7 @@ import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.JournalRepository
+import com.bestjournal.app.data.seed.TestDataSeeder
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.ImproveTextUseCase
@@ -72,6 +73,9 @@ data class JournalUiState(
     val showPromptBanner: Boolean = true,
     val activePrompt: String = "",
     val lastSyncTimestamp: Long = 0L,
+    val seedRunning: Boolean = false,
+    val seedSeededCount: Int = 0,
+    val seedToastMessage: String? = null,
 )
 
 enum class SyncStatus {
@@ -104,6 +108,7 @@ constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val achievementTracker: AchievementTracker,
     private val aiRateLimiter: com.bestjournal.app.data.remote.ai.AiRateLimiter,
+    private val testDataSeeder: TestDataSeeder,
 ) : ViewModel() {
 
     // AudioFocus: request exclusive focus during recording to prevent call contamination
@@ -986,5 +991,69 @@ constructor(
                 encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
             }
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEBUG: Test data seeder (toggle button in journal top bar, debug builds only)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    init {
+        _uiState.update { it.copy(seedSeededCount = testDataSeeder.getSeededCount()) }
+    }
+
+    fun toggleTestDataSeed() {
+        if (_uiState.value.seedRunning) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(seedRunning = true, seedToastMessage = null) }
+            val result =
+                if (testDataSeeder.isSeeded()) {
+                    testDataSeeder.deleteSeeded().map { count ->
+                        SeedActionResult.Deleted(count)
+                    }
+                } else {
+                    testDataSeeder.seed().map { count -> SeedActionResult.Seeded(count) }
+                }
+            result.fold(
+                onSuccess = { action ->
+                    val message =
+                        when (action) {
+                            is SeedActionResult.Seeded ->
+                                context.getString(R.string.dev_seed_done, action.count)
+                            is SeedActionResult.Deleted ->
+                                context.getString(R.string.dev_seed_deleted, action.count)
+                        }
+                    _uiState.update {
+                        it.copy(
+                            seedRunning = false,
+                            seedSeededCount = testDataSeeder.getSeededCount(),
+                            seedToastMessage = message,
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    val message =
+                        context.getString(
+                            R.string.dev_seed_error,
+                            err.message ?: err.javaClass.simpleName,
+                        )
+                    _uiState.update {
+                        it.copy(
+                            seedRunning = false,
+                            seedSeededCount = testDataSeeder.getSeededCount(),
+                            seedToastMessage = message,
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun consumeSeedToast() {
+        _uiState.update { it.copy(seedToastMessage = null) }
+    }
+
+    private sealed class SeedActionResult {
+        data class Seeded(val count: Int) : SeedActionResult()
+        data class Deleted(val count: Int) : SeedActionResult()
     }
 }

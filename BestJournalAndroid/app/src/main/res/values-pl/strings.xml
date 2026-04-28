@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">Odblokowano: %1$s</string>
     <!-- About -->
     <string name="settings_about">O aplikacji</string>
-    <string name="settings_about_version">Best Journal V0.14.9</string>
+    <string name="settings_about_version">Best Journal V0.15.0</string>
     <string name="settings_about_desc">Twój osobisty dziennik SI</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Wylogować?</string>
@@ -1240,4 +1240,12 @@ Co chcesz zrobić?</string>
     <string name="settings_ai_tts_subtitle">Wysyłaj teksty do Microsoft USA do syntezy mowy</string>
     <string name="settings_drive_backup_title">Kopia zapasowa Google Drive</string>
     <string name="settings_drive_backup_subtitle">Zapisuj wpisy zaszyfrowane na Twoim Drive</string>
+
+    <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
+    <string name="dev_seed_create_label">Wygeneruj 70 wpisów testowych</string>
+    <string name="dev_seed_delete_label">Usuń 70 wpisów testowych</string>
+    <string name="dev_seed_running">Generowanie 70 wpisów testowych w Twoim języku…</string>
+    <string name="dev_seed_done">Utworzono %1$d wpisów testowych</string>
+    <string name="dev_seed_deleted">Usunięto %1$d wpisów testowych</string>
+    <string name="dev_seed_error">Błąd: %1$s</string>
 </resources>
