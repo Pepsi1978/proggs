@@ -434,6 +434,10 @@
     <string name="settings_feedback_sign_in_first">ആദ്യം Google-ൽ സൈൻ ഇൻ ചെയ്യൂ</string>
     <string name="settings_feedback_allow_gmail">Gmail ആക്സസ് അനുവദിച്ച് വീണ്ടും ശ്രമിക്കൂ.</string>
     <string name="settings_feedback_token_error">ടോക്കൺ പിശക്: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal സംബന്ധിച്ച അഭിപ്രായം</string>
+    <string name="settings_feedback_no_error_body">പിശക് പ്രതികരണം ലഭിച്ചില്ല</string>
+    <string name="settings_feedback_read_error">പിശക് പ്രതികരണം വായിക്കാൻ കഴിഞ്ഞില്ല</string>
+    <string name="settings_feedback_api_error">Gmail പിശക് %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">അജ്ഞാത പിശക്</string>
     <string name="settings_feedback_confirm_subject">Best Journal-ലേക്കുള്ള നിങ്ങളുടെ ഫീഡ്ബാക്ക്</string>
     <string name="settings_feedback_confirm_body">ഈ സന്ദേശം നീ ഡെവലപ്പർക്ക് അയച്ചു.\nഅവൻ നിനക്ക് വ്യക്തിപരമായി മറുപടി നൽകും.\n\n--- നിന്റെ സന്ദേശം ---\n%1$s\n\nനന്ദി,\nDEV.FRANK</string>
@@ -443,13 +447,14 @@
     <string name="drive_consent_needed">Drive ആക്സസ് അനുവദിക്കണം</string>
     <string name="drive_not_signed_in">സൈൻ ഇൻ ചെയ്തിട്ടില്ല</string>
     <string name="drive_no_backup">ബാക്കപ്പ് കണ്ടെത്തിയില്ല</string>
+    <string name="drive_backup_disabled">സ്വകാര്യതാ ക്രമീകരണങ്ങളിൽ Google Drive ബാക്കപ്പ് ഓഫാണ്</string>
     <!-- Achievements -->
     <string name="achievements_title">Achievements</string>
     <string name="achievements_counter">%1$d-ൽ %2$d അൺലോക്ക് ചെയ്തു</string>
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>
@@ -1007,6 +1012,8 @@
     <string name="error_whisper_audio_empty">ഓഡിയോ ഫയൽ ശൂന്യം</string>
     <string name="error_whisper_no_text">ടെക്സ്റ്റ് ഒന്നും തിരിച്ചറിഞ്ഞില്ല</string>
     <string name="error_sync_db_not_found">ഡേറ്റാബേസ് കണ്ടെത്തിയില്ല</string>
+    <string name="error_audio_record_init_failed">മൈക്രോഫോൺ ആരംഭിക്കാനായില്ല</string>
+    <string name="error_json_key_missing">AI പ്രതികരണം അപൂർണ്ണമാണ്: %1$s അല്ലെങ്കിൽ %2$s ഇല്ല</string>
     <string name="error_file_open_failed">പിശക്: ഫയൽ തുറക്കാൻ കഴിഞ്ഞില്ല</string>
     <string name="error_generic">പിശക്: %1$s</string>
 
@@ -1185,6 +1192,7 @@
     <string name="dev_seed_done">%1$d ടെസ്റ്റ് എൻട്രികൾ സൃഷ്ടിച്ചു</string>
     <string name="dev_seed_deleted">%1$d ടെസ്റ്റ് എൻട്രികൾ ഇല്ലാതാക്കി</string>
     <string name="dev_seed_error">പിശക്: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ടെസ്റ്റ് എൻട്രികൾ നൽകിയില്ല</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">ഓരോ ഡയറി എൻട്രിക്കും പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>

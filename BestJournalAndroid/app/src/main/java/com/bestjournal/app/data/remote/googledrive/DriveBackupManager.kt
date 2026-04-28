@@ -4,6 +4,7 @@ import android.accounts.Account
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import com.bestjournal.app.R
 import com.bestjournal.app.util.Constants
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
@@ -29,7 +30,10 @@ import kotlinx.coroutines.withContext
 
 private const val RESUMABLE_THRESHOLD = 5L * 1024 * 1024 // 5 MB
 
-class NeedConsentException(val consentIntent: Intent) : Exception("Drive consent needed")
+class NeedConsentException(
+    val consentIntent: Intent,
+    message: String,
+) : Exception(message)
 
 @Singleton
 class DriveBackupManager
@@ -59,7 +63,7 @@ constructor(
         withContext(Dispatchers.IO) {
             val accountEmail =
                 encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
-                    ?: throw IllegalStateException("Not signed in")
+                    ?: throw IllegalStateException(context.getString(R.string.drive_not_signed_in))
 
             val account = Account(accountEmail, "com.google")
             val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
@@ -112,7 +116,12 @@ constructor(
                 Result.success(Unit)
             } catch (e: UserRecoverableAuthException) {
                 android.util.Log.e("DriveBackup", "Backup needs consent: ${e.message}")
-                Result.failure(NeedConsentException(e.intent ?: Intent()))
+                Result.failure(
+                    NeedConsentException(
+                        e.intent ?: Intent(),
+                        context.getString(R.string.drive_consent_needed),
+                    )
+                )
             } catch (e: Exception) {
                 android.util.Log.e(
                     "DriveBackup",
@@ -287,7 +296,12 @@ constructor(
                 }
                 Result.success(newFiles.size - errorCount)
             } catch (e: UserRecoverableAuthException) {
-                Result.failure(NeedConsentException(e.intent ?: Intent()))
+                Result.failure(
+                    NeedConsentException(
+                        e.intent ?: Intent(),
+                        context.getString(R.string.drive_consent_needed),
+                    )
+                )
             } catch (e: Exception) {
                 android.util.Log.e("DriveBackup", "Batch upload FAILED: ${e.message}", e)
                 Result.failure(e)

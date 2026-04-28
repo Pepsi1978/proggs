@@ -1,9 +1,12 @@
 package com.bestjournal.app.util
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import com.bestjournal.app.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -17,7 +20,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Singleton
-class AudioRecorderHelper @Inject constructor() {
+class AudioRecorderHelper
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
+) {
 
     // AtomicBoolean prevents TOCTOU race: compareAndSet is an atomic check-then-set
     private val isRecording = AtomicBoolean(false)
@@ -51,7 +58,7 @@ class AudioRecorderHelper @Inject constructor() {
             if (recorder.state != AudioRecord.STATE_INITIALIZED) {
                 recorder.release()
                 isRecording.set(false) // reset on early failure
-                throw IllegalStateException("AudioRecord konnte nicht initialisiert werden")
+                throw IllegalStateException(context.getString(R.string.error_audio_record_init_failed))
             }
 
             _durationSeconds.value = 0

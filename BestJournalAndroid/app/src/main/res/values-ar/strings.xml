@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">يرجى تسجيل الدخول بحساب Google أولا</string>
     <string name="settings_feedback_allow_gmail">يرجى السماح بالوصول إلى Gmail والمحاولة مرة أخرى.</string>
     <string name="settings_feedback_token_error">خطأ في الرمز: %1$s</string>
+    <string name="settings_feedback_subject">ملاحظات حول Best Journal</string>
+    <string name="settings_feedback_no_error_body">لم يتم استلام رد الخطأ</string>
+    <string name="settings_feedback_read_error">تعذرت قراءة رد الخطأ</string>
+    <string name="settings_feedback_api_error">خطأ Gmail %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">خطأ غير معروف</string>
     <string name="settings_feedback_confirm_subject">ملاحظاتك إلى Best Journal</string>
     <string name="settings_feedback_confirm_body">لقد أرسلتَ هذه الرسالة إلى المطوّر.\nسيردّ عليك شخصياً.\n\n--- رسالتك ---\n%1$s\n\nتحياتي،\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">يلزم السماح بالوصول إلى Drive\u200E</string>
     <string name="drive_not_signed_in">لم يتم تسجيل الدخول</string>
     <string name="drive_no_backup">لا توجد نسخة احتياطية</string>
+    <string name="drive_backup_disabled">‏تم إيقاف النسخ الاحتياطي على Google Drive في إعدادات الخصوصية</string>
     <!-- Achievements -->
     <string name="achievements_title">الإنجازات</string>
     <string name="achievements_counter">%1$d من %2$d مفتوحة</string>
     <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
@@ -1086,6 +1091,8 @@
     <string name="error_whisper_audio_empty">ملفّ الصوت فارغ</string>
     <string name="error_whisper_no_text">لم يكتشف نصّ</string>
     <string name="error_sync_db_not_found">لم يعثر على قاعدة البيانات</string>
+    <string name="error_audio_record_init_failed">‏تعذر تشغيل الميكروفون</string>
+    <string name="error_json_key_missing">استجابة الذكاء الاصطناعي غير مكتملة: %1$s أو %2$s مفقود</string>
     <string name="error_file_open_failed">خطأ: تعذّر فتح الملفّ</string>
     <string name="error_generic">خطأ: %1$s</string>
 
@@ -1266,6 +1273,7 @@
     <string name="dev_seed_done">تم إنشاء %1$d إدخال اختباري</string>
     <string name="dev_seed_deleted">تم حذف %1$d إدخال اختباري</string>
     <string name="dev_seed_error">خطأ: %1$s</string>
+    <string name="dev_seed_ai_no_entries">لم يُرجع الذكاء الاصطناعي أي إدخالات اختبار</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">إضافات غير محدودة لكل تدوينة في اليوميات</string>
@@ -1333,4 +1341,47 @@
     <string name="prompt_recording_with_model">التسجيل جارٍ — النموذج: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> يحوّل إلى نص…</string>
     <string name="prompt_transcription_model_hint">تم التحويل إلى نص بواسطة <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="ai_retro_copied_message">تم النسخ إلى الحافظة</string>
+    <string name="ai_retro_copy_button">نسخ</string>
+    <string name="ai_retro_empty_state">لا توجد إدخالات كافية للمراجعة.</string>
+    <string name="ai_retro_error_state">تعذر إنشاء المراجعة. حاول مرة أخرى.</string>
+    <string name="ai_retro_generate_button">إنشاء مراجعة</string>
+    <string name="ai_retro_generating_state">جارٍ إنشاء المراجعة…</string>
+    <string name="ai_retro_month_label">هذا الشهر</string>
+    <string name="ai_retro_share_button">مشاركة</string>
+    <string name="ai_retro_title">مراجعة بالذكاء الاصطناعي</string>
+    <string name="ai_retro_week_label">هذا الأسبوع</string>
+    <string name="ai_retro_year_label">هذا العام</string>
+    <string name="follow_up_add_button">إضافة متابعة</string>
+    <string name="follow_up_delete_confirm_no">لا، احتفظ بها</string>
+    <string name="follow_up_delete_confirm_yes">نعم، احذف</string>
+    <string name="follow_up_empty_state">لا توجد متابعات بعد.\nاضغط على الزر أدناه لإضافة الأولى.</string>
+    <string name="follow_up_improve_button">تحسين</string>
+    <string name="follow_up_improve_error">تعذر التحسين. حاول مرة أخرى.</string>
+    <string name="follow_up_improving_state">جارٍ التحسين…</string>
+    <string name="follow_up_record_error">تعذر التسجيل. حاول مرة أخرى.</string>
+    <string name="follow_up_record_new">تسجيل متابعة جديدة</string>
+    <string name="follow_up_recording_hint">اضغط للتسجيل</string>
+    <string name="follow_up_recording_state">جارٍ التسجيل…</string>
+    <string name="follow_up_tab_label">المتابعات</string>
+    <string name="follow_up_transcribe_error">تعذر التفريغ النصي. حاول مرة أخرى.</string>
+    <string name="follow_up_transcribing_state">جارٍ التفريغ النصي…</string>
+    <string name="paywall_cancel_anytime">يمكنك الإلغاء في أي وقت</string>
+    <string name="paywall_feature_ai_improvement">تحسين النص بالذكاء الاصطناعي</string>
+    <string name="paywall_feature_drive_backup">نسخ احتياطي إلى Google Drive</string>
+    <string name="paywall_feature_pdf_export">تصدير PDF</string>
+    <string name="paywall_feature_unlimited_entries">إدخالات يومية غير محدودة</string>
+    <string name="paywall_lifetime_label">مرة واحدة</string>
+    <string name="paywall_monthly_label">شهريًا</string>
+    <string name="paywall_restore_button">استعادة المشتريات</string>
+    <string name="paywall_subscribe_button">اشترك</string>
+    <string name="paywall_subtitle">استمتع بكل مزايا Premium</string>
+    <string name="paywall_title">الترقية إلى Premium</string>
+    <string name="paywall_yearly_label">سنويًا</string>
+    <string name="prompt_char_count_label">%1$d حرفًا</string>
+    <string name="prompt_improve_button_label">تحسين</string>
+    <string name="prompt_placeholder_text">اكتب ما يدور في ذهنك…</string>
+    <string name="prompt_record_button_label">تسجيل</string>
+    <string name="prompt_send_button_label">إرسال</string>
+    <string name="prompt_stop_button_label">إيقاف</string>
 </resources>

@@ -250,7 +250,10 @@ constructor(
                     systemPrompt = getActiveSystemPrompt(),
                 )
             val jsonText =
-                result.getOrNull() ?: return Result.failure(Exception("Keine Antwort von Gemini"))
+                result.getOrNull()
+                    ?: return Result.failure(
+                        Exception(context.getString(R.string.dashboard_gemini_unavailable))
+                    )
 
             val cleanJson =
                 jsonText
@@ -393,7 +396,10 @@ constructor(
         return when {
             has(primaryKey) && !isNull(primaryKey) -> getString(primaryKey)
             has(legacyKey) && !isNull(legacyKey) -> getString(legacyKey)
-            else -> throw org.json.JSONException("Neither '$primaryKey' nor '$legacyKey' found")
+            else ->
+                throw org.json.JSONException(
+                    context.getString(R.string.error_json_key_missing, primaryKey, legacyKey)
+                )
         }
     }
 

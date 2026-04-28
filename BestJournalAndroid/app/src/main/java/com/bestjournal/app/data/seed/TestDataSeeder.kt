@@ -3,6 +3,7 @@ package com.bestjournal.app.data.seed
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.bestjournal.app.R
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
@@ -59,7 +60,7 @@ constructor(
 
             val entries = generateEntriesViaAi(languageName, languageTag)
             if (entries.isEmpty()) {
-                return Result.failure(Exception("AI returned no entries"))
+                return Result.failure(Exception(context.getString(R.string.dev_seed_ai_no_entries)))
             }
 
             val timestamps = generateTimestamps(entries.size)

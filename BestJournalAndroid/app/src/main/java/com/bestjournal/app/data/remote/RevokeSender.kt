@@ -2,13 +2,13 @@ package com.bestjournal.app.data.remote
 
 import android.accounts.Account
 import android.content.Context
+import com.bestjournal.app.R
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
-import com.bestjournal.app.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * M1 — Versand des § 356a BGB Widerrufs via Gmail-API.
@@ -61,7 +61,7 @@ object RevokeSender {
                 subject = subject,
                 body = devBody,
             )
-            sendViaGmailApi(token, devMessage)
+            sendViaGmailApi(context, token, devMessage)
 
             // 2. Eingangsbestaetigung an den Nutzer (§ 356a BGB)
             val userMessage = buildRawEmail(
@@ -70,7 +70,7 @@ object RevokeSender {
                 subject = userSubject,
                 body = userBody,
             )
-            sendViaGmailApi(token, userMessage)
+            sendViaGmailApi(context, token, userMessage)
 
             null
         } catch (e: Exception) {
@@ -97,7 +97,7 @@ object RevokeSender {
             body
     }
 
-    private fun sendViaGmailApi(token: String, rawEmail: String) {
+    private fun sendViaGmailApi(context: Context, token: String, rawEmail: String) {
         val encoded =
             android.util.Base64.encodeToString(
                 rawEmail.toByteArray(Charsets.UTF_8),
@@ -119,14 +119,17 @@ object RevokeSender {
         val body =
             try {
                 if (code in 200..299) conn.inputStream.bufferedReader().readText()
-                else conn.errorStream?.bufferedReader()?.readText() ?: "no body"
+                else {
+                    conn.errorStream?.bufferedReader()?.readText()
+                        ?: context.getString(R.string.settings_feedback_no_error_body)
+                }
             } catch (_: Exception) {
-                "read error"
+                context.getString(R.string.settings_feedback_read_error)
             }
         conn.disconnect()
 
         if (code !in 200..299) {
-            throw RuntimeException("Gmail API $code: $body")
+            throw RuntimeException(context.getString(R.string.settings_feedback_api_error, code, body))
         }
     }
 }

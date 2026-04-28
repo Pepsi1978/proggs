@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Log eerst in met Google</string>
     <string name="settings_feedback_allow_gmail">Geef toegang tot Gmail en probeer opnieuw.</string>
     <string name="settings_feedback_token_error">Tokenfout: %1$s</string>
+    <string name="settings_feedback_subject">Feedback over Best Journal</string>
+    <string name="settings_feedback_no_error_body">Geen foutantwoord ontvangen</string>
+    <string name="settings_feedback_read_error">De foutreactie kon niet worden gelezen</string>
+    <string name="settings_feedback_api_error">Gmail-fout %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Onbekende fout</string>
     <string name="settings_feedback_confirm_subject">Jouw feedback aan Best Journal</string>
     <string name="settings_feedback_confirm_body">Je hebt dit bericht naar de ontwikkelaar gestuurd.\nHij neemt persoonlijk contact met je op.\n\n--- Jouw bericht ---\n%1$s\n\nGroetjes,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Toegang tot Drive moet worden toegestaan</string>
     <string name="drive_not_signed_in">Niet ingelogd</string>
     <string name="drive_no_backup">Geen back-up gevonden</string>
+    <string name="drive_backup_disabled">Google Drive-back-up is uitgeschakeld in de privacy-instellingen</string>
     <!-- Achievements -->
     <string name="achievements_title">Prestaties</string>
     <string name="achievements_counter">%1$d van de %2$d ontgrendeld</string>
     <string name="achievements_unlocked_at">Ontgrendeld op %1$s</string>
     <!-- About -->
     <string name="settings_about">Over de app</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Jouw persoonlijke AI-dagboek</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uitloggen?</string>
@@ -1070,6 +1075,8 @@
     <string name="error_whisper_audio_empty">Het audiobestand is leeg</string>
     <string name="error_whisper_no_text">Geen tekst herkend</string>
     <string name="error_sync_db_not_found">Database niet gevonden</string>
+    <string name="error_audio_record_init_failed">De microfoon kon niet worden gestart</string>
+    <string name="error_json_key_missing">AI-antwoord is onvolledig: %1$s of %2$s ontbreekt</string>
     <string name="error_file_open_failed">Fout: bestand kon niet worden geopend</string>
     <string name="error_generic">Fout: %1$s</string>
 
@@ -1250,6 +1257,7 @@ Wat wil je doen?</string>
     <string name="dev_seed_done">%1$d testvermeldingen aangemaakt</string>
     <string name="dev_seed_deleted">%1$d testvermeldingen verwijderd</string>
     <string name="dev_seed_error">Fout: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI heeft geen testitems teruggegeven</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Onbeperkt aanvullingen bij elke dagboeknotitie</string>
@@ -1319,4 +1327,47 @@ Wat wil je doen?</string>
     <string name="prompt_recording_with_model">Opname bezig — Model: %1$s</string>
     <string name="prompt_transcribing_with_model">%1$s transcribeert…</string>
     <string name="prompt_transcription_model_hint">Getranscribeerd met %1$s</string>
+    <string name="ai_retro_copied_message">Gekopieerd naar klembord</string>
+    <string name="ai_retro_copy_button">Kopiëren</string>
+    <string name="ai_retro_empty_state">Niet genoeg items voor een terugblik.</string>
+    <string name="ai_retro_error_state">De terugblik kon niet worden gemaakt. Probeer het opnieuw.</string>
+    <string name="ai_retro_generate_button">Terugblik maken</string>
+    <string name="ai_retro_generating_state">Terugblik wordt gemaakt…</string>
+    <string name="ai_retro_month_label">Deze maand</string>
+    <string name="ai_retro_share_button">Delen</string>
+    <string name="ai_retro_title">AI-terugblik</string>
+    <string name="ai_retro_week_label">Deze week</string>
+    <string name="ai_retro_year_label">Dit jaar</string>
+    <string name="follow_up_add_button">Follow-up toevoegen</string>
+    <string name="follow_up_delete_confirm_no">Nee, bewaren</string>
+    <string name="follow_up_delete_confirm_yes">Ja, verwijderen</string>
+    <string name="follow_up_empty_state">Nog geen follow-ups.\nTik op de knop hieronder om de eerste toe te voegen.</string>
+    <string name="follow_up_improve_button">Verbeteren</string>
+    <string name="follow_up_improve_error">Kon niet verbeteren. Probeer het opnieuw.</string>
+    <string name="follow_up_improving_state">Verbeteren…</string>
+    <string name="follow_up_record_error">Kon niet opnemen. Probeer het opnieuw.</string>
+    <string name="follow_up_record_new">Nieuwe follow-up opnemen</string>
+    <string name="follow_up_recording_hint">Tik om op te nemen</string>
+    <string name="follow_up_recording_state">Opnemen…</string>
+    <string name="follow_up_tab_label">Follow-ups</string>
+    <string name="follow_up_transcribe_error">Kon niet transcriberen. Probeer het opnieuw.</string>
+    <string name="follow_up_transcribing_state">Transcriberen…</string>
+    <string name="paywall_cancel_anytime">Altijd opzegbaar</string>
+    <string name="paywall_feature_ai_improvement">Tekstverbetering met AI</string>
+    <string name="paywall_feature_drive_backup">Google Drive-back-up</string>
+    <string name="paywall_feature_pdf_export">PDF-export</string>
+    <string name="paywall_feature_unlimited_entries">Onbeperkte dagboekitems</string>
+    <string name="paywall_lifetime_label">Eenmalig</string>
+    <string name="paywall_monthly_label">Maandelijks</string>
+    <string name="paywall_restore_button">Aankopen herstellen</string>
+    <string name="paywall_subscribe_button">Abonneren</string>
+    <string name="paywall_subtitle">Geniet van alle Premium-voordelen</string>
+    <string name="paywall_title">Upgrade naar Premium</string>
+    <string name="paywall_yearly_label">Jaarlijks</string>
+    <string name="prompt_char_count_label">%1$d tekens</string>
+    <string name="prompt_improve_button_label">Verbeteren</string>
+    <string name="prompt_placeholder_text">Schrijf wat er in je omgaat…</string>
+    <string name="prompt_record_button_label">Opnemen</string>
+    <string name="prompt_send_button_label">Verzenden</string>
+    <string name="prompt_stop_button_label">Stop</string>
 </resources>

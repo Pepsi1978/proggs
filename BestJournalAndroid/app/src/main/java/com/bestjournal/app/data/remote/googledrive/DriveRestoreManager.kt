@@ -3,6 +3,7 @@ package com.bestjournal.app.data.remote.googledrive
 import android.accounts.Account
 import android.content.Context
 import android.content.SharedPreferences
+import com.bestjournal.app.R
 import com.bestjournal.app.util.Constants
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
@@ -140,7 +141,9 @@ constructor(
             try {
                 val driveService =
                     getDriveService()
-                        ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
+                        ?: return@withContext Result.failure(
+                            IllegalStateException(context.getString(R.string.drive_not_signed_in))
+                        )
 
                 val files =
                     driveService
@@ -153,7 +156,7 @@ constructor(
 
                 val backupFile =
                     files.files?.firstOrNull()
-                        ?: return@withContext Result.failure(Exception("No backup found"))
+                        ?: return@withContext Result.failure(Exception(context.getString(R.string.drive_no_backup)))
 
                 FileOutputStream(targetFile).use { outputStream ->
                     driveService.files().get(backupFile.id).executeMediaAndDownloadTo(outputStream)
@@ -161,7 +164,12 @@ constructor(
 
                 Result.success(Unit)
             } catch (e: UserRecoverableAuthException) {
-                Result.failure(NeedConsentException(e.intent ?: android.content.Intent()))
+                Result.failure(
+                    NeedConsentException(
+                        e.intent ?: android.content.Intent(),
+                        context.getString(R.string.drive_consent_needed),
+                    )
+                )
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -178,7 +186,7 @@ constructor(
                 val driveService =
                     getDriveService()
                         ?: return@withContext Result.failure(
-                            IllegalStateException("Nicht angemeldet")
+                            IllegalStateException(context.getString(R.string.drive_not_signed_in))
                         )
 
                 val files =
@@ -193,7 +201,7 @@ constructor(
                 val driveFile =
                     files.files?.firstOrNull()
                         ?: return@withContext Result.failure(
-                            Exception("Datei nicht gefunden: $remoteName")
+                            Exception(context.getString(R.string.drive_no_backup))
                         )
 
                 FileOutputStream(targetFile).use { outputStream ->
@@ -201,7 +209,12 @@ constructor(
                 }
                 Result.success(Unit)
             } catch (e: UserRecoverableAuthException) {
-                Result.failure(NeedConsentException(e.intent ?: android.content.Intent()))
+                Result.failure(
+                    NeedConsentException(
+                        e.intent ?: android.content.Intent(),
+                        context.getString(R.string.drive_consent_needed),
+                    )
+                )
             } catch (e: Exception) {
                 Result.failure(e)
             }

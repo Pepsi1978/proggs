@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Silakan masuk dengan Google dulu</string>
     <string name="settings_feedback_allow_gmail">Izinkan akses Gmail lalu coba lagi.</string>
     <string name="settings_feedback_token_error">Kesalahan token: %1$s</string>
+    <string name="settings_feedback_subject">Masukan untuk Best Journal</string>
+    <string name="settings_feedback_no_error_body">Tidak ada respons error yang diterima</string>
+    <string name="settings_feedback_read_error">Respons error tidak dapat dibaca</string>
+    <string name="settings_feedback_api_error">Error Gmail %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Kesalahan tidak diketahui</string>
     <string name="settings_feedback_confirm_subject">Masukanmu untuk Best Journal</string>
     <string name="settings_feedback_confirm_body">Kamu telah mengirim pesan ini ke pengembang.\nDia akan membalasmu secara pribadi.\n\n--- Pesanmu ---\n%1$s\n\nSalam,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Perlu izin akses Drive</string>
     <string name="drive_not_signed_in">Belum masuk</string>
     <string name="drive_no_backup">Cadangan tidak ditemukan</string>
+    <string name="drive_backup_disabled">Cadangan Google Drive dinonaktifkan di pengaturan privasi</string>
     <!-- Achievements -->
     <string name="achievements_title">Pencapaian</string>
     <string name="achievements_counter">%1$d dari %2$d terbuka</string>
     <string name="achievements_unlocked_at">Dibuka pada %1$s</string>
     <!-- About -->
     <string name="settings_about">Tentang aplikasi</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Jurnal AI pribadimu</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Keluar?</string>
@@ -1066,6 +1071,8 @@
     <string name="error_whisper_audio_empty">File audio kosong</string>
     <string name="error_whisper_no_text">Tidak ada teks terdeteksi</string>
     <string name="error_sync_db_not_found">Database tidak ditemukan</string>
+    <string name="error_audio_record_init_failed">Mikrofon tidak dapat dimulai</string>
+    <string name="error_json_key_missing">Respons AI tidak lengkap: %1$s atau %2$s tidak ada</string>
     <string name="error_file_open_failed">Kesalahan: File tidak bisa dibuka</string>
     <string name="error_generic">Kesalahan: %1$s</string>
 
@@ -1246,6 +1253,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="dev_seed_done">%1$d entri uji dibuat</string>
     <string name="dev_seed_deleted">%1$d entri uji dihapus</string>
     <string name="dev_seed_error">Kesalahan: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI tidak mengembalikan entri uji</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Tambahan tak terbatas untuk setiap catatan harian</string>
@@ -1313,4 +1321,47 @@ Apa yang ingin kamu lakukan?</string>
     <string name="prompt_recording_with_model">Perekaman berlangsung — Model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> sedang mentranskrip…</string>
     <string name="prompt_transcription_model_hint">Ditranskripsi dengan <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="ai_retro_copied_message">Disalin ke papan klip</string>
+    <string name="ai_retro_copy_button">Salin</string>
+    <string name="ai_retro_empty_state">Belum cukup entri untuk ulasan.</string>
+    <string name="ai_retro_error_state">Ulasan tidak dapat dibuat. Coba lagi.</string>
+    <string name="ai_retro_generate_button">Buat ulasan</string>
+    <string name="ai_retro_generating_state">Membuat ulasan…</string>
+    <string name="ai_retro_month_label">Bulan ini</string>
+    <string name="ai_retro_share_button">Bagikan</string>
+    <string name="ai_retro_title">Ulasan AI</string>
+    <string name="ai_retro_week_label">Minggu ini</string>
+    <string name="ai_retro_year_label">Tahun ini</string>
+    <string name="follow_up_add_button">Tambahkan tindak lanjut</string>
+    <string name="follow_up_delete_confirm_no">Tidak, simpan</string>
+    <string name="follow_up_delete_confirm_yes">Ya, hapus</string>
+    <string name="follow_up_empty_state">Belum ada tindak lanjut.\nKetuk tombol di bawah untuk menambahkan yang pertama.</string>
+    <string name="follow_up_improve_button">Perbaiki</string>
+    <string name="follow_up_improve_error">Tidak dapat memperbaiki. Coba lagi.</string>
+    <string name="follow_up_improving_state">Memperbaiki…</string>
+    <string name="follow_up_record_error">Tidak dapat merekam. Coba lagi.</string>
+    <string name="follow_up_record_new">Rekam tindak lanjut baru</string>
+    <string name="follow_up_recording_hint">Ketuk untuk merekam</string>
+    <string name="follow_up_recording_state">Merekam…</string>
+    <string name="follow_up_tab_label">Tindak lanjut</string>
+    <string name="follow_up_transcribe_error">Tidak dapat menyalin suara ke teks. Coba lagi.</string>
+    <string name="follow_up_transcribing_state">Menyalin suara ke teks…</string>
+    <string name="paywall_cancel_anytime">Batalkan kapan saja</string>
+    <string name="paywall_feature_ai_improvement">Perbaikan teks dengan AI</string>
+    <string name="paywall_feature_drive_backup">Cadangan Google Drive</string>
+    <string name="paywall_feature_pdf_export">Ekspor PDF</string>
+    <string name="paywall_feature_unlimited_entries">Entri jurnal tanpa batas</string>
+    <string name="paywall_lifetime_label">Sekali bayar</string>
+    <string name="paywall_monthly_label">Bulanan</string>
+    <string name="paywall_restore_button">Pulihkan pembelian</string>
+    <string name="paywall_subscribe_button">Berlangganan</string>
+    <string name="paywall_subtitle">Nikmati semua manfaat Premium</string>
+    <string name="paywall_title">Upgrade ke Premium</string>
+    <string name="paywall_yearly_label">Tahunan</string>
+    <string name="prompt_char_count_label">%1$d karakter</string>
+    <string name="prompt_improve_button_label">Perbaiki</string>
+    <string name="prompt_placeholder_text">Tulis apa yang ada di pikiranmu…</string>
+    <string name="prompt_record_button_label">Rekam</string>
+    <string name="prompt_send_button_label">Kirim</string>
+    <string name="prompt_stop_button_label">Berhenti</string>
 </resources>

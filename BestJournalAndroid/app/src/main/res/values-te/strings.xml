@@ -437,6 +437,10 @@
     <string name="settings_feedback_sign_in_first">దయచేసి ముందుగా Google తో సైన్ ఇన్ చేయండి</string>
     <string name="settings_feedback_allow_gmail">దయచేసి Gmail ప్రవేశాన్ని అనుమతించండి మరియు మళ్లీ ప్రయత్నించండి.</string>
     <string name="settings_feedback_token_error">టోకెన్ దోషం: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal పై అభిప్రాయం</string>
+    <string name="settings_feedback_no_error_body">లోప ప్రతిస్పందన అందలేదు</string>
+    <string name="settings_feedback_read_error">లోప ప్రతిస్పందనను చదవలేకపోయాం</string>
+    <string name="settings_feedback_api_error">Gmail లోపం %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">తెలియని దోషం</string>
     <string name="settings_feedback_confirm_subject">Best Journal కి మీ ఫీడ్‌బ్యాక్</string>
     <string name="settings_feedback_confirm_body">ఈ సందేశాన్ని నువ్వు డెవలపర్‌కి పంపావు.\nఅతను నీకు వ్యక్తిగతంగా బదులిస్తాడు.\n\n--- నీ సందేశం ---\n%1$s\n\nధన్యవాదాలు,\nDEV.FRANK</string>
@@ -445,11 +449,12 @@
     <string name="drive_consent_needed">Drive ప్రవేశం అనుమతించాలి</string>
     <string name="drive_not_signed_in">సైన్ ఇన్ అవ్వలేదు</string>
     <string name="drive_no_backup">ఏ బ్యాకప్ కనుగొనలేదు</string>
+    <string name="drive_backup_disabled">గోప్యతా సెట్టింగ్‌లలో Google Drive బ్యాకప్ ఆఫ్‌లో ఉంది</string>
     <string name="achievements_title">విజయాలు</string>
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1002,6 +1007,8 @@
     <string name="error_whisper_audio_empty">ఆడియో ఫైల్ ఖాళీ</string>
     <string name="error_whisper_no_text">ఏ టెక్స్ట్ గుర్తించలేదు</string>
     <string name="error_sync_db_not_found">డేటాబేస్ కనుగొనలేదు</string>
+    <string name="error_audio_record_init_failed">మైక్రోఫోన్ ప్రారంభించలేకపోయాం</string>
+    <string name="error_json_key_missing">AI స్పందన అసంపూర్తిగా ఉంది: %1$s లేదా %2$s లేదు</string>
     <string name="error_file_open_failed">దోషం: ఫైల్ తెరవబడలేదు</string>
     <string name="error_generic">దోషం: %1$s</string>
 
@@ -1182,6 +1189,7 @@
     <string name="dev_seed_done">%1$d పరీక్ష ఎంట్రీలు సృష్టించబడ్డాయి</string>
     <string name="dev_seed_deleted">%1$d పరీక్ష ఎంట్రీలు తొలగించబడ్డాయి</string>
     <string name="dev_seed_error">లోపం: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI పరీక్ష ఎంట్రీలను తిరిగి ఇవ్వలేదు</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">ప్రతి జర్నల్ ఎంట్రీకి అపరిమిత అదనపు నోట్స్</string>

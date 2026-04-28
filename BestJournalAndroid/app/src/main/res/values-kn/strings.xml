@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">ದಯವಿಟ್ಟು ಮೊದಲು Google ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ</string>
     <string name="settings_feedback_allow_gmail">ದಯವಿಟ್ಟು Gmail ಪ್ರವೇಶ ಅನುಮತಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
     <string name="settings_feedback_token_error">ಟೋಕನ್ ದೋಷ: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal ಕುರಿತು ಪ್ರತಿಕ್ರಿಯೆ</string>
+    <string name="settings_feedback_no_error_body">ಯಾವುದೇ ದೋಷ ಪ್ರತಿಕ್ರಿಯೆ ಬಂದಿಲ್ಲ</string>
+    <string name="settings_feedback_read_error">ದೋಷ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಓದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ</string>
+    <string name="settings_feedback_api_error">Gmail ದೋಷ %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">ಅಪರಿಚಿತ ದೋಷ</string>
     <string name="settings_feedback_confirm_subject">Best Journal ಗೆ ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ</string>
     <string name="settings_feedback_confirm_body">ಈ ಸಂದೇಶವನ್ನು ನೀನು ಡೆವಲಪರ್‌ಗೆ ಕಳುಹಿಸಿದೆ.\nಅವನು ನಿನಗೆ ವೈಯಕ್ತಿಕವಾಗಿ ಉತ್ತರಿಸುತ್ತಾನೆ.\n\n--- ನಿನ್ನ ಸಂದೇಶ ---\n%1$s\n\nಧನ್ಯವಾದಗಳು,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Drive ಪ್ರವೇಶ ಅನುಮತಿಸಬೇಕು</string>
     <string name="drive_not_signed_in">ಸೈನ್ ಇನ್ ಆಗಿಲ್ಲ</string>
     <string name="drive_no_backup">ಯಾವುದೇ ಬ್ಯಾಕಪ್ ಕಂಡುಬಂದಿಲ್ಲ</string>
+    <string name="drive_backup_disabled">ಗೌಪ್ಯತಾ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Google Drive ಬ್ಯಾಕಪ್ ಆಫ್ ಆಗಿದೆ</string>
     <!-- Achievements -->
     <string name="achievements_title">ಸಾಧನೆಗಳು</string>
     <string name="achievements_counter">%2$d ರಲ್ಲಿ %1$d ಅನ್‌ಲಾಕ್</string>
     <string name="achievements_unlocked_at">%1$s ರಂದು ಅನ್‌ಲಾಕ್</string>
     <!-- About -->
     <string name="settings_about">ಆಪ್ ಕುರಿತು</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">ನಿಮ್ಮ ವೈಯಕ್ತಿಕ AI ಡೈರಿ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ಸೈನ್ ಔಟ್?</string>
@@ -1071,6 +1076,8 @@
     <string name="error_whisper_audio_empty">ಆಡಿಯೊ ಫೈಲ್ ಖಾಲಿ</string>
     <string name="error_whisper_no_text">ಯಾವುದೇ ಪಠ್ಯ ಗುರುತಿಸಲಾಗಿಲ್ಲ</string>
     <string name="error_sync_db_not_found">ಡೇಟಾಬೇಸ್ ಸಿಗಲಿಲ್ಲ</string>
+    <string name="error_audio_record_init_failed">ಮೈಕ್ರೋಫೋನ್ ಆರಂಭಿಸಲಾಗಲಿಲ್ಲ</string>
+    <string name="error_json_key_missing">AI ಪ್ರತಿಕ್ರಿಯೆ ಅಪೂರ್ಣವಾಗಿದೆ: %1$s ಅಥವಾ %2$s ಇಲ್ಲ</string>
     <string name="error_file_open_failed">ದೋಷ: ಫೈಲ್ ತೆರೆಯಲಾಗಲಿಲ್ಲ</string>
     <string name="error_generic">ದೋಷ: %1$s</string>
 
@@ -1251,6 +1258,7 @@
     <string name="dev_seed_done">%1$d ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ರಚಿಸಲಾಗಿದೆ</string>
     <string name="dev_seed_deleted">%1$d ಪರೀಕ್ಷಾ ನಮೂದುಗಳನ್ನು ಅಳಿಸಲಾಗಿದೆ</string>
     <string name="dev_seed_error">ದೋಷ: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ಪರೀಕ್ಷಾ ದಾಖಲೆಗಳನ್ನು ಹಿಂತಿರುಗಿಸಲಿಲ್ಲ</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">ಪ್ರತಿ ಡೈರಿ ನಮೂದಿಗೆ ಅನಿಯಮಿತ ಹೆಚ್ಚುವರಿ ಟಿಪ್ಪಣಿಗಳು</string>
@@ -1318,4 +1326,47 @@
     <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ…</string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಜೊತೆ ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
     <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ಬಳಸಿ</string>
+    <string name="ai_retro_copied_message">ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಿದೆ</string>
+    <string name="ai_retro_copy_button">ನಕಲಿಸಿ</string>
+    <string name="ai_retro_empty_state">ಪರಿಶೀಲನೆಗೆ ಸಾಕಷ್ಟು ದಾಖಲೆಗಳಿಲ್ಲ.</string>
+    <string name="ai_retro_error_state">ಪರಿಶೀಲನೆಯನ್ನು ರಚಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="ai_retro_generate_button">ಪರಿಶೀಲನೆ ರಚಿಸಿ</string>
+    <string name="ai_retro_generating_state">ಪರಿಶೀಲನೆ ರಚಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="ai_retro_month_label">ಈ ತಿಂಗಳು</string>
+    <string name="ai_retro_share_button">ಹಂಚಿಕೊಳ್ಳಿ</string>
+    <string name="ai_retro_title">AI ಪರಿಶೀಲನೆ</string>
+    <string name="ai_retro_week_label">ಈ ವಾರ</string>
+    <string name="ai_retro_year_label">ಈ ವರ್ಷ</string>
+    <string name="follow_up_add_button">ಫಾಲೋ-ಅಪ್ ಸೇರಿಸಿ</string>
+    <string name="follow_up_delete_confirm_no">ಇಲ್ಲ, ಉಳಿಸಿ</string>
+    <string name="follow_up_delete_confirm_yes">ಹೌದು, ಅಳಿಸಿ</string>
+    <string name="follow_up_empty_state">ಇನ್ನೂ ಫಾಲೋ-ಅಪ್‌ಗಳಿಲ್ಲ.\nಮೊದಲದನ್ನು ಸೇರಿಸಲು ಕೆಳಗಿನ ಬಟನ್ ಒತ್ತಿ.</string>
+    <string name="follow_up_improve_button">ಸುಧಾರಿಸಿ</string>
+    <string name="follow_up_improve_error">ಸುಧಾರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_improving_state">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_record_error">ರೆಕಾರ್ಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_record_new">ಹೊಸ ಫಾಲೋ-ಅಪ್ ರೆಕಾರ್ಡ್ ಮಾಡಿ</string>
+    <string name="follow_up_recording_hint">ರೆಕಾರ್ಡ್ ಮಾಡಲು ಒತ್ತಿ</string>
+    <string name="follow_up_recording_state">ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ…</string>
+    <string name="follow_up_tab_label">ಫಾಲೋ-ಅಪ್‌ಗಳು</string>
+    <string name="follow_up_transcribe_error">ಲಿಪ್ಯಂತರಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</string>
+    <string name="follow_up_transcribing_state">ಲಿಪ್ಯಂತರಿಸಲಾಗುತ್ತಿದೆ…</string>
+    <string name="paywall_cancel_anytime">ಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದುಮಾಡಿ</string>
+    <string name="paywall_feature_ai_improvement">AI ಮೂಲಕ ಪಠ್ಯ ಸುಧಾರಣೆ</string>
+    <string name="paywall_feature_drive_backup">Google Drive ಬ್ಯಾಕಪ್</string>
+    <string name="paywall_feature_pdf_export">PDF ರಫ್ತು</string>
+    <string name="paywall_feature_unlimited_entries">ಅಸೀಮಿತ ದಿನಚರಿ ದಾಖಲೆಗಳು</string>
+    <string name="paywall_lifetime_label">ಒಮ್ಮೆ</string>
+    <string name="paywall_monthly_label">ಮಾಸಿಕ</string>
+    <string name="paywall_restore_button">ಖರೀದಿಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಿ</string>
+    <string name="paywall_subscribe_button">ಚಂದಾದಾರರಾಗಿ</string>
+    <string name="paywall_subtitle">ಎಲ್ಲ Premium ಲಾಭಗಳನ್ನು ಪಡೆಯಿರಿ</string>
+    <string name="paywall_title">Premium ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ</string>
+    <string name="paywall_yearly_label">ವಾರ್ಷಿಕ</string>
+    <string name="prompt_char_count_label">%1$d ಅಕ್ಷರಗಳು</string>
+    <string name="prompt_improve_button_label">ಸುಧಾರಿಸಿ</string>
+    <string name="prompt_placeholder_text">ನಿಮ್ಮ ಮನಸ್ಸಿನಲ್ಲಿರುವುದನ್ನು ಬರೆಯಿರಿ…</string>
+    <string name="prompt_record_button_label">ರೆಕಾರ್ಡ್</string>
+    <string name="prompt_send_button_label">ಕಳುಹಿಸಿ</string>
+    <string name="prompt_stop_button_label">ನಿಲ್ಲಿಸಿ</string>
 </resources>

@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">कृपया पहले Google से साइन इन करें</string>
     <string name="settings_feedback_allow_gmail">कृपया Gmail एक्सेस दें और फिर कोशिश करें।</string>
     <string name="settings_feedback_token_error">टोकन त्रुटि: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal पर फ़ीडबैक</string>
+    <string name="settings_feedback_no_error_body">कोई त्रुटि उत्तर नहीं मिला</string>
+    <string name="settings_feedback_read_error">त्रुटि उत्तर पढ़ा नहीं जा सका</string>
+    <string name="settings_feedback_api_error">Gmail त्रुटि %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">अज्ञात त्रुटि</string>
     <string name="settings_feedback_confirm_subject">Best Journal के लिए आपका फीडबैक</string>
     <string name="settings_feedback_confirm_body">यह संदेश तुमने डेवलपर को भेजा है।\nवह तुम्हें खुद जवाब देगा।\n\n--- तुम्हारा संदेश ---\n%1$s\n\nधन्यवाद,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Drive एक्सेस की अनुमति चाहिए</string>
     <string name="drive_not_signed_in">साइन-इन नहीं है</string>
     <string name="drive_no_backup">कोई बैकअप नहीं मिला</string>
+    <string name="drive_backup_disabled">Google Drive बैकअप गोपनीयता सेटिंग्स में बंद है</string>
     <!-- Achievements -->
     <string name="achievements_title">उपलब्धियां</string>
     <string name="achievements_counter">%2$d में से %1$d अनलॉक</string>
     <string name="achievements_unlocked_at">%1$s को अनलॉक</string>
     <!-- About -->
     <string name="settings_about">ऐप के बारे में</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">आपकी व्यक्तिगत AI डायरी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करें?</string>
@@ -1070,6 +1075,8 @@
     <string name="error_whisper_audio_empty">ऑडियो फ़ाइल ख़ाली है</string>
     <string name="error_whisper_no_text">कोई टेक्स्ट नहीं मिला</string>
     <string name="error_sync_db_not_found">डेटाबेस नहीं मिला</string>
+    <string name="error_audio_record_init_failed">माइक्रोफ़ोन शुरू नहीं हो सका</string>
+    <string name="error_json_key_missing">AI उत्तर अधूरा है: %1$s या %2$s नहीं है</string>
     <string name="error_file_open_failed">त्रुटि: फ़ाइल नहीं खुली</string>
     <string name="error_generic">त्रुटि: %1$s</string>
 
@@ -1250,6 +1257,7 @@
     <string name="dev_seed_done">%1$d परीक्षण प्रविष्टियाँ बनाई गईं</string>
     <string name="dev_seed_deleted">%1$d परीक्षण प्रविष्टियाँ हटाई गईं</string>
     <string name="dev_seed_error">त्रुटि: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ने कोई टेस्ट प्रविष्टि नहीं लौटाई</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">हर डायरी एंट्री के लिए असीमित अतिरिक्त नोट्स</string>
@@ -1317,4 +1325,47 @@
     <string name="prompt_recording_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> से रिकॉर्ड हो रहा है…</string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> से ट्रांसक्राइब हो रहा है…</string>
     <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> का उपयोग करके</string>
+    <string name="ai_retro_copied_message">क्लिपबोर्ड पर कॉपी किया गया</string>
+    <string name="ai_retro_copy_button">कॉपी करें</string>
+    <string name="ai_retro_empty_state">समीक्षा के लिए पर्याप्त प्रविष्टियाँ नहीं हैं।</string>
+    <string name="ai_retro_error_state">समीक्षा बनाई नहीं जा सकी। फिर से कोशिश करें।</string>
+    <string name="ai_retro_generate_button">समीक्षा बनाएँ</string>
+    <string name="ai_retro_generating_state">समीक्षा बनाई जा रही है…</string>
+    <string name="ai_retro_month_label">यह महीना</string>
+    <string name="ai_retro_share_button">साझा करें</string>
+    <string name="ai_retro_title">AI समीक्षा</string>
+    <string name="ai_retro_week_label">यह सप्ताह</string>
+    <string name="ai_retro_year_label">यह वर्ष</string>
+    <string name="follow_up_add_button">फ़ॉलो-अप जोड़ें</string>
+    <string name="follow_up_delete_confirm_no">नहीं, रहने दें</string>
+    <string name="follow_up_delete_confirm_yes">हाँ, हटाएँ</string>
+    <string name="follow_up_empty_state">अभी कोई फ़ॉलो-अप नहीं है।\nपहला जोड़ने के लिए नीचे दिए बटन पर टैप करें।</string>
+    <string name="follow_up_improve_button">सुधारें</string>
+    <string name="follow_up_improve_error">सुधारा नहीं जा सका। फिर से कोशिश करें।</string>
+    <string name="follow_up_improving_state">सुधारा जा रहा है…</string>
+    <string name="follow_up_record_error">रिकॉर्ड नहीं किया जा सका। फिर से कोशिश करें।</string>
+    <string name="follow_up_record_new">नया फ़ॉलो-अप रिकॉर्ड करें</string>
+    <string name="follow_up_recording_hint">रिकॉर्ड करने के लिए टैप करें</string>
+    <string name="follow_up_recording_state">रिकॉर्ड हो रहा है…</string>
+    <string name="follow_up_tab_label">फ़ॉलो-अप</string>
+    <string name="follow_up_transcribe_error">ट्रांसक्राइब नहीं किया जा सका। फिर से कोशिश करें।</string>
+    <string name="follow_up_transcribing_state">ट्रांसक्राइब किया जा रहा है…</string>
+    <string name="paywall_cancel_anytime">कभी भी रद्द करें</string>
+    <string name="paywall_feature_ai_improvement">AI से टेक्स्ट सुधार</string>
+    <string name="paywall_feature_drive_backup">Google Drive बैकअप</string>
+    <string name="paywall_feature_pdf_export">PDF निर्यात</string>
+    <string name="paywall_feature_unlimited_entries">असीमित डायरी प्रविष्टियाँ</string>
+    <string name="paywall_lifetime_label">एक बार</string>
+    <string name="paywall_monthly_label">मासिक</string>
+    <string name="paywall_restore_button">खरीदारी पुनर्स्थापित करें</string>
+    <string name="paywall_subscribe_button">सदस्यता लें</string>
+    <string name="paywall_subtitle">सभी Premium लाभों का आनंद लें</string>
+    <string name="paywall_title">Premium में अपग्रेड करें</string>
+    <string name="paywall_yearly_label">वार्षिक</string>
+    <string name="prompt_char_count_label">%1$d अक्षर</string>
+    <string name="prompt_improve_button_label">सुधारें</string>
+    <string name="prompt_placeholder_text">अपने मन की बात लिखें…</string>
+    <string name="prompt_record_button_label">रिकॉर्ड</string>
+    <string name="prompt_send_button_label">भेजें</string>
+    <string name="prompt_stop_button_label">रोकें</string>
 </resources>

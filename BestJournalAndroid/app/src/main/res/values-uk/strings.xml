@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Спершу увійдіть через Google</string>
     <string name="settings_feedback_allow_gmail">Дозвольте доступ до Gmail і спробуйте знову.</string>
     <string name="settings_feedback_token_error">Помилка токена: %1$s</string>
+    <string name="settings_feedback_subject">Відгук про Best Journal</string>
+    <string name="settings_feedback_no_error_body">Відповідь про помилку не отримано</string>
+    <string name="settings_feedback_read_error">Не вдалося прочитати відповідь про помилку</string>
+    <string name="settings_feedback_api_error">Помилка Gmail %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Невідома помилка</string>
     <string name="settings_feedback_confirm_subject">Ваш відгук для Best Journal</string>
     <string name="settings_feedback_confirm_body">Ви надіслали це повідомлення розробнику.\nВін відповість вам особисто.\n\n--- Ваше повідомлення ---\n%1$s\n\nУсього найкращого,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Потрібно дозволити доступ до Drive</string>
     <string name="drive_not_signed_in">Вхід не виконано</string>
     <string name="drive_no_backup">Резервну копію не знайдено</string>
+    <string name="drive_backup_disabled">Резервне копіювання Google Drive вимкнено в налаштуваннях приватності</string>
     <!-- Achievements -->
     <string name="achievements_title">Досягнення</string>
     <string name="achievements_counter">Відкрито %1$d з %2$d</string>
     <string name="achievements_unlocked_at">Відкрито: %1$s</string>
     <!-- About -->
     <string name="settings_about">Про застосунок</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Ваш особистий щоденник із ШІ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Вийти?</string>
@@ -1078,6 +1083,8 @@
     <string name="error_whisper_audio_empty">Аудіофайл порожній</string>
     <string name="error_whisper_no_text">Текст не розпізнано</string>
     <string name="error_sync_db_not_found">Базу даних не знайдено</string>
+    <string name="error_audio_record_init_failed">Не вдалося запустити мікрофон</string>
+    <string name="error_json_key_missing">Відповідь ШІ неповна: відсутній %1$s або %2$s</string>
     <string name="error_file_open_failed">Помилка: не вдалося відкрити файл</string>
     <string name="error_generic">Помилка: %1$s</string>
 
@@ -1258,6 +1265,7 @@
     <string name="dev_seed_done">Створено %1$d тестових записів</string>
     <string name="dev_seed_deleted">Видалено %1$d тестових записів</string>
     <string name="dev_seed_error">Помилка: %1$s</string>
+    <string name="dev_seed_ai_no_entries">ШІ не повернув тестових записів</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Необмежені доповнення до кожного запису щоденника</string>
@@ -1327,4 +1335,47 @@
     <string name="prompt_recording_with_model">Запис — Модель: %1$s</string>
     <string name="prompt_transcribing_with_model">%1$s транскрибує…</string>
     <string name="prompt_transcription_model_hint">Транскрибовано за допомогою %1$s</string>
+    <string name="ai_retro_copied_message">Скопійовано в буфер обміну</string>
+    <string name="ai_retro_copy_button">Копіювати</string>
+    <string name="ai_retro_empty_state">Недостатньо записів для огляду.</string>
+    <string name="ai_retro_error_state">Не вдалося створити огляд. Спробуй ще раз.</string>
+    <string name="ai_retro_generate_button">Створити огляд</string>
+    <string name="ai_retro_generating_state">Створення огляду…</string>
+    <string name="ai_retro_month_label">Цей місяць</string>
+    <string name="ai_retro_share_button">Поділитися</string>
+    <string name="ai_retro_title">Огляд ШІ</string>
+    <string name="ai_retro_week_label">Цей тиждень</string>
+    <string name="ai_retro_year_label">Цей рік</string>
+    <string name="follow_up_add_button">Додати продовження</string>
+    <string name="follow_up_delete_confirm_no">Ні, залишити</string>
+    <string name="follow_up_delete_confirm_yes">Так, видалити</string>
+    <string name="follow_up_empty_state">Поки що немає продовжень.\nНатисни кнопку нижче, щоб додати перше.</string>
+    <string name="follow_up_improve_button">Покращити</string>
+    <string name="follow_up_improve_error">Не вдалося покращити. Спробуй ще раз.</string>
+    <string name="follow_up_improving_state">Покращення…</string>
+    <string name="follow_up_record_error">Не вдалося записати. Спробуй ще раз.</string>
+    <string name="follow_up_record_new">Записати нове продовження</string>
+    <string name="follow_up_recording_hint">Натисни, щоб записати</string>
+    <string name="follow_up_recording_state">Запис…</string>
+    <string name="follow_up_tab_label">Продовження</string>
+    <string name="follow_up_transcribe_error">Не вдалося транскрибувати. Спробуй ще раз.</string>
+    <string name="follow_up_transcribing_state">Транскрибування…</string>
+    <string name="paywall_cancel_anytime">Скасувати будь-коли</string>
+    <string name="paywall_feature_ai_improvement">Покращення тексту за допомогою ШІ</string>
+    <string name="paywall_feature_drive_backup">Резервна копія Google Drive</string>
+    <string name="paywall_feature_pdf_export">Експорт PDF</string>
+    <string name="paywall_feature_unlimited_entries">Необмежені записи щоденника</string>
+    <string name="paywall_lifetime_label">Разово</string>
+    <string name="paywall_monthly_label">Щомісяця</string>
+    <string name="paywall_restore_button">Відновити покупки</string>
+    <string name="paywall_subscribe_button">Підписатися</string>
+    <string name="paywall_subtitle">Користуйся всіма перевагами Premium</string>
+    <string name="paywall_title">Перейти на Premium</string>
+    <string name="paywall_yearly_label">Щороку</string>
+    <string name="prompt_char_count_label">%1$d символів</string>
+    <string name="prompt_improve_button_label">Покращити</string>
+    <string name="prompt_placeholder_text">Напиши, що в тебе на думці…</string>
+    <string name="prompt_record_button_label">Записати</string>
+    <string name="prompt_send_button_label">Надіслати</string>
+    <string name="prompt_stop_button_label">Стоп</string>
 </resources>

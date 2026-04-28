@@ -111,6 +111,7 @@ import com.bestjournal.app.ui.components.PrivacyGateState
 import com.bestjournal.app.ui.components.rememberPrivacyGateState
 import com.bestjournal.app.util.EdgeTtsPlayer
 import com.bestjournal.app.util.PrivacyGateHelper
+import com.bestjournal.app.util.DateTimeFormatter as AppDateTimeFormatter
 import com.bestjournal.app.util.rememberHapticAction
 import java.util.Calendar
 
@@ -471,21 +472,6 @@ fun RetrospectiveScreen(
 
                         // Free weekly reviews
                         if (weekly.isNotEmpty()) {
-                            val monthNames =
-                                listOf(
-                                    stringResource(R.string.month_january),
-                                    stringResource(R.string.month_february),
-                                    stringResource(R.string.month_march),
-                                    stringResource(R.string.month_april),
-                                    stringResource(R.string.month_may),
-                                    stringResource(R.string.month_june),
-                                    stringResource(R.string.month_july),
-                                    stringResource(R.string.month_august),
-                                    stringResource(R.string.month_september),
-                                    stringResource(R.string.month_october),
-                                    stringResource(R.string.month_november),
-                                    stringResource(R.string.month_december),
-                                )
                             // Wochen werden chronologisch nach (Monat, Jahr) gruppiert.
                             // Pro Monatsgruppe wird eine eigene ContinuousTimelineSection
                             // gerendert, sodass die Linie nicht ueber Monatsgrenzen
@@ -494,13 +480,9 @@ fun RetrospectiveScreen(
                             val weeklyGroups = groupSummariesByMonth(weekly)
                             weeklyGroups.forEachIndexed { groupIndex, group ->
                                 if (groupIndex > 0) {
-                                    val cal =
-                                        Calendar.getInstance().apply {
-                                            timeInMillis = group.first().endDate
-                                        }
-                                    val name = monthNames[cal.get(Calendar.MONTH)]
-                                    val year = cal.get(Calendar.YEAR)
-                                    MonthDivider(label = "$name $year")
+                                    MonthDivider(
+                                        label = AppDateTimeFormatter.formatMonthYear(group.first().endDate)
+                                    )
                                 }
                                 ContinuousTimelineSection(
                                     entryCount = group.size,
@@ -604,14 +586,8 @@ fun RetrospectiveScreen(
                                                 (group[index - 1].periodIndex - 1) / 3
                                             val curQuarter = (summary.periodIndex - 1) / 3
                                             if (prevQuarter != curQuarter) {
-                                                val year =
-                                                    Calendar.getInstance()
-                                                        .apply {
-                                                            timeInMillis = summary.startDate
-                                                        }
-                                                        .get(Calendar.YEAR)
                                                 MonthDivider(
-                                                    label = "${curQuarter + 1}. Quartal $year"
+                                                    label = AppDateTimeFormatter.formatQuarterYear(summary.startDate)
                                                 )
                                             } else {
                                                 Spacer(modifier = Modifier.height(10.dp))

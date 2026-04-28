@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">先にGoogleでログインしてください</string>
     <string name="settings_feedback_allow_gmail">Gmailへのアクセスを許可して、もう一度お試しください。</string>
     <string name="settings_feedback_token_error">トークンエラー： %1$s</string>
+    <string name="settings_feedback_subject">Best Journalへのフィードバック</string>
+    <string name="settings_feedback_no_error_body">エラー応答を受信できませんでした</string>
+    <string name="settings_feedback_read_error">エラー応答を読み取れませんでした</string>
+    <string name="settings_feedback_api_error">Gmailエラー %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">不明なエラー</string>
     <string name="settings_feedback_confirm_subject">Best Journalへのフィードバック</string>
     <string name="settings_feedback_confirm_body">このメッセージを開発者に送信しました。\n開発者から個別に返信します。\n\n--- あなたのメッセージ ---\n%1$s\n\nよろしくお願いします、\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Driveへのアクセスを許可してください</string>
     <string name="drive_not_signed_in">ログインしていません</string>
     <string name="drive_no_backup">バックアップが見つかりません</string>
+    <string name="drive_backup_disabled">Google Driveバックアップはプライバシー設定で無効になっています</string>
     <!-- Achievements -->
     <string name="achievements_title">達成</string>
     <string name="achievements_counter">%1$d / %2$d 獲得</string>
     <string name="achievements_unlocked_at">%1$s に獲得</string>
     <!-- About -->
     <string name="settings_about">アプリについて</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">あなたのAI日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ログアウトしますか？</string>
@@ -1066,6 +1071,8 @@
     <string name="error_whisper_audio_empty">音声ファイルが空です</string>
     <string name="error_whisper_no_text">テキストを認識できません</string>
     <string name="error_sync_db_not_found">データベースが見つかりません</string>
+    <string name="error_audio_record_init_failed">マイクを開始できませんでした</string>
+    <string name="error_json_key_missing">AI応答が不完全です: %1$s または %2$s がありません</string>
     <string name="error_file_open_failed">エラー： ファイルを開けませんでした</string>
     <string name="error_generic">エラー： %1$s</string>
 
@@ -1246,6 +1253,7 @@
     <string name="dev_seed_done">%1$d件のテストエントリを作成しました</string>
     <string name="dev_seed_deleted">%1$d件のテストエントリを削除しました</string>
     <string name="dev_seed_error">エラー：%1$s</string>
+    <string name="dev_seed_ai_no_entries">AIがテスト用エントリを返しませんでした</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">すべての日記エントリーに無制限の追記</string>
@@ -1315,4 +1323,47 @@
     <string name="prompt_recording_with_model">録音中 — モデル：%1$s</string>
     <string name="prompt_transcribing_with_model">%1$s が文字起こし中…</string>
     <string name="prompt_transcription_model_hint">%1$s で文字起こし済み</string>
+    <string name="ai_retro_copied_message">クリップボードにコピーしました</string>
+    <string name="ai_retro_copy_button">コピー</string>
+    <string name="ai_retro_empty_state">レビューに十分なエントリがありません。</string>
+    <string name="ai_retro_error_state">レビューを作成できませんでした。もう一度お試しください。</string>
+    <string name="ai_retro_generate_button">レビューを作成</string>
+    <string name="ai_retro_generating_state">レビューを作成中…</string>
+    <string name="ai_retro_month_label">今月</string>
+    <string name="ai_retro_share_button">共有</string>
+    <string name="ai_retro_title">AIレビュー</string>
+    <string name="ai_retro_week_label">今週</string>
+    <string name="ai_retro_year_label">今年</string>
+    <string name="follow_up_add_button">フォローアップを追加</string>
+    <string name="follow_up_delete_confirm_no">いいえ、残す</string>
+    <string name="follow_up_delete_confirm_yes">はい、削除</string>
+    <string name="follow_up_empty_state">フォローアップはまだありません。\n下のボタンをタップして最初のものを追加してください。</string>
+    <string name="follow_up_improve_button">改善</string>
+    <string name="follow_up_improve_error">改善できませんでした。もう一度お試しください。</string>
+    <string name="follow_up_improving_state">改善中…</string>
+    <string name="follow_up_record_error">録音できませんでした。もう一度お試しください。</string>
+    <string name="follow_up_record_new">新しいフォローアップを録音</string>
+    <string name="follow_up_recording_hint">タップして録音</string>
+    <string name="follow_up_recording_state">録音中…</string>
+    <string name="follow_up_tab_label">フォローアップ</string>
+    <string name="follow_up_transcribe_error">文字起こしできませんでした。もう一度お試しください。</string>
+    <string name="follow_up_transcribing_state">文字起こし中…</string>
+    <string name="paywall_cancel_anytime">いつでもキャンセル可能</string>
+    <string name="paywall_feature_ai_improvement">AIによる文章改善</string>
+    <string name="paywall_feature_drive_backup">Google Driveバックアップ</string>
+    <string name="paywall_feature_pdf_export">PDFエクスポート</string>
+    <string name="paywall_feature_unlimited_entries">無制限の日記エントリ</string>
+    <string name="paywall_lifetime_label">一回払い</string>
+    <string name="paywall_monthly_label">月額</string>
+    <string name="paywall_restore_button">購入を復元</string>
+    <string name="paywall_subscribe_button">登録</string>
+    <string name="paywall_subtitle">すべてのPremium特典を利用</string>
+    <string name="paywall_title">Premiumにアップグレード</string>
+    <string name="paywall_yearly_label">年額</string>
+    <string name="prompt_char_count_label">%1$d文字</string>
+    <string name="prompt_improve_button_label">改善</string>
+    <string name="prompt_placeholder_text">今考えていることを書いてください…</string>
+    <string name="prompt_record_button_label">録音</string>
+    <string name="prompt_send_button_label">送信</string>
+    <string name="prompt_stop_button_label">停止</string>
 </resources>

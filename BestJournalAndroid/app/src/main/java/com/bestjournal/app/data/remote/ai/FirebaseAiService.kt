@@ -1,18 +1,25 @@
 package com.bestjournal.app.data.remote.ai
 
+import android.content.Context
 import android.util.Log
+import com.bestjournal.app.R
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.content
 import com.google.firebase.ai.type.generationConfig
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FirebaseAiService @Inject constructor() {
+class FirebaseAiService
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
+) {
 
     companion object {
         const val MODEL_FLASH = "gemini-3.1-flash-lite-preview"
@@ -87,7 +94,7 @@ class FirebaseAiService @Inject constructor() {
                     TAG,
                     "generateContent: response.text is null, candidates=${response.candidates?.size}",
                 )
-                Result.failure(Exception("No response text from Gemini"))
+                Result.failure(Exception(context.getString(R.string.dashboard_gemini_unavailable)))
             }
         } catch (e: Exception) {
             Log.e(TAG, "generateContent FAILED: ${e.javaClass.simpleName}: ${e.message}", e)

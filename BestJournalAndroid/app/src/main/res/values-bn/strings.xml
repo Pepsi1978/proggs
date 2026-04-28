@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">অনুগ্রহ করে প্রথমে Google দিয়ে সাইন ইন করো</string>
     <string name="settings_feedback_allow_gmail">অনুগ্রহ করে জিমেইল অ্যাক্সেস অনুমতি দাও আর আবার চেষ্টা করো।</string>
     <string name="settings_feedback_token_error">টোকেন ত্রুটি: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal সম্পর্কে মতামত</string>
+    <string name="settings_feedback_no_error_body">কোনো ত্রুটি প্রতিক্রিয়া পাওয়া যায়নি</string>
+    <string name="settings_feedback_read_error">ত্রুটি প্রতিক্রিয়া পড়া যায়নি</string>
+    <string name="settings_feedback_api_error">Gmail ত্রুটি %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">অজানা ত্রুটি</string>
     <string name="settings_feedback_confirm_subject">Best Journal এ তোমার ফিডব্যাক</string>
     <string name="settings_feedback_confirm_body">এই বার্তাটি তুমি ডেভেলপারকে পাঠিয়েছ।\nসে তোমাকে ব্যক্তিগতভাবে উত্তর দেবে।\n\n--- তোমার বার্তা ---\n%1$s\n\nশুভেচ্ছা,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Drive অ্যাক্সেস অনুমতি দিতে হবে</string>
     <string name="drive_not_signed_in">সাইন ইন করা নেই</string>
     <string name="drive_no_backup">কোনো ব্যাকআপ পাওয়া যায়নি</string>
+    <string name="drive_backup_disabled">গোপনীয়তা সেটিংসে Google Drive ব্যাকআপ বন্ধ আছে</string>
     <!-- Achievements -->
     <string name="achievements_title">অ্যাচিভমেন্ট</string>
     <string name="achievements_counter">%2$d এর মধ্যে %1$d টি আনলক</string>
     <string name="achievements_unlocked_at">%1$s এ আনলক হয়েছে</string>
     <!-- About -->
     <string name="settings_about">অ্যাপ সম্পর্কে</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">তোমার ব্যক্তিগত এআই-দিনলিপি</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">সাইন আউট করবে?</string>
@@ -1072,6 +1077,8 @@
     <string name="error_whisper_audio_empty">অডিও ফাইল খালি</string>
     <string name="error_whisper_no_text">কোনো লেখা চেনা যায়নি</string>
     <string name="error_sync_db_not_found">ডেটাবেস পাওয়া যায়নি</string>
+    <string name="error_audio_record_init_failed">মাইক্রোফোন চালু করা যায়নি</string>
+    <string name="error_json_key_missing">AI প্রতিক্রিয়া অসম্পূর্ণ: %1$s বা %2$s নেই</string>
     <string name="error_file_open_failed">ত্রুটি: ফাইল খোলা যায়নি</string>
     <string name="error_generic">ত্রুটি: %1$s</string>
 
@@ -1251,6 +1258,7 @@
     <string name="dev_seed_done">%1$dটি পরীক্ষামূলক এন্ট্রি তৈরি হয়েছে</string>
     <string name="dev_seed_deleted">%1$dটি পরীক্ষামূলক এন্ট্রি মুছে ফেলা হয়েছে</string>
     <string name="dev_seed_error">ত্রুটি: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI কোনো পরীক্ষামূলক এন্ট্রি ফেরত দেয়নি</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">প্রতিটি ডায়েরি এন্ট্রিতে আনলিমিটেড সংযোজন</string>

@@ -26,7 +26,9 @@ object FirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseAiService(): FirebaseAiService = FirebaseAiService()
+    fun provideFirebaseAiService(
+        @ApplicationContext context: Context
+    ): FirebaseAiService = FirebaseAiService(context)
 
     @Provides
     @Singleton

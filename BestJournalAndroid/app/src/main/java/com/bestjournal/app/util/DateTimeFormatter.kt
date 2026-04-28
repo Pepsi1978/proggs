@@ -40,13 +40,6 @@ object DateTimeFormatter {
             return SimpleDateFormat(pattern, locale)
         }
 
-    private val monthOnlyFormat: SimpleDateFormat
-        get() {
-            val locale = DeviceLocale.locale
-            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMM")
-            return SimpleDateFormat(pattern, locale)
-        }
-
     fun formatFull(timestamp: Long): String {
         return fullFormat.format(Date(timestamp))
     }
@@ -57,6 +50,22 @@ object DateTimeFormatter {
 
     fun formatDate(timestamp: Long): String {
         return dateOnly.format(Date(timestamp))
+    }
+
+    fun formatMonthYear(timestamp: Long): String {
+        val locale = DeviceLocale.locale
+        return monthYearFormat.format(Date(timestamp)).replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(locale) else it.toString()
+        }
+    }
+
+    fun formatQuarterYear(timestamp: Long): String {
+        val locale = DeviceLocale.locale
+        val date =
+            java.time.Instant.ofEpochMilli(timestamp)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("QQQQ yyyy", locale))
     }
 
     fun formatRelative(context: Context, timestamp: Long): String {
@@ -89,7 +98,7 @@ object DateTimeFormatter {
 
     /**
      * Groups timestamps into section labels for the journal timeline.
-     * Hierarchy: Diese Woche > Letzte Woche > Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
+     * Hierarchy: Diese Woche > Letzte Woche > Vor 2/3/4 Wochen > Monat/Jahr.
      * Weeks use ISO convention: Monday = first day, Sunday = last day.
      * Week labels only apply within the current month — once entries cross
      * into a previous month, the month name is shown instead.
@@ -122,13 +131,7 @@ object DateTimeFormatter {
             timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 2)
             timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 3)
             timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 4)
-            entry.get(Calendar.YEAR) == now.get(Calendar.YEAR) -> {
-                monthYearFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
-            }
-            else -> {
-                val month = monthOnlyFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
-                "${entry.get(Calendar.YEAR)} \u2014 $month"
-            }
+            else -> formatMonthYear(timestamp)
         }
     }
 }

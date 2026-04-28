@@ -3,15 +3,15 @@ package com.bestjournal.app.data.remote
 import android.accounts.Account
 import android.content.Context
 import android.content.Intent
+import com.bestjournal.app.R
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.bestjournal.app.R
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class FeedbackNeedConsentException(val consentIntent: Intent) : Exception("Gmail consent needed")
+class FeedbackNeedConsentException(val consentIntent: Intent) : Exception()
 
 object FeedbackSender {
 
@@ -30,9 +30,10 @@ object FeedbackSender {
         context: Context,
         accountEmail: String,
         feedbackText: String,
-        subject: String = "Best Journal Feedback",
+        subject: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         val account = Account(accountEmail, "com.google")
+        val effectiveSubject = subject ?: context.getString(R.string.settings_feedback_subject)
         val token = try {
             GoogleAuthUtil.getToken(context, account, GMAIL_SCOPE)
         } catch (e: UserRecoverableAuthException) {
@@ -46,10 +47,10 @@ object FeedbackSender {
             val devMessage = buildRawEmail(
                 from = accountEmail,
                 to = DEV_EMAIL,
-                subject = subject,
+                subject = effectiveSubject,
                 body = context.getString(R.string.settings_feedback_from, accountEmail) + "\n\n" + feedbackText
             )
-            sendViaGmailApi(token, devMessage)
+            sendViaGmailApi(context, token, devMessage)
 
             // 2. Send confirmation copy to user
             val userMessage = buildRawEmail(
@@ -58,7 +59,7 @@ object FeedbackSender {
                 subject = context.getString(R.string.settings_feedback_confirm_subject),
                 body = context.getString(R.string.settings_feedback_confirm_body, feedbackText)
             )
-            sendViaGmailApi(token, userMessage)
+            sendViaGmailApi(context, token, userMessage)
 
             null // success
         } catch (e: Exception) {
@@ -76,7 +77,7 @@ object FeedbackSender {
                 body
     }
 
-    private fun sendViaGmailApi(token: String, rawEmail: String) {
+    private fun sendViaGmailApi(context: Context, token: String, rawEmail: String) {
         val encoded = android.util.Base64.encodeToString(
             rawEmail.toByteArray(Charsets.UTF_8),
             android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
@@ -94,12 +95,17 @@ object FeedbackSender {
         val code = conn.responseCode
         val body = try {
             if (code in 200..299) conn.inputStream.bufferedReader().readText()
-            else conn.errorStream?.bufferedReader()?.readText() ?: "no body"
-        } catch (_: Exception) { "read error" }
+            else {
+                conn.errorStream?.bufferedReader()?.readText()
+                    ?: context.getString(R.string.settings_feedback_no_error_body)
+            }
+        } catch (_: Exception) {
+            context.getString(R.string.settings_feedback_read_error)
+        }
         conn.disconnect()
 
         if (code !in 200..299) {
-            throw RuntimeException("Gmail API $code: $body")
+            throw RuntimeException(context.getString(R.string.settings_feedback_api_error, code, body))
         }
     }
 }

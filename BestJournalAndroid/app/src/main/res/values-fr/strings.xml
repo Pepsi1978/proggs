@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Connecte-toi d\'abord avec Google</string>
     <string name="settings_feedback_allow_gmail">Autorise l\'accès à Gmail et réessaie.</string>
     <string name="settings_feedback_token_error">Erreur de jeton\u00A0: %1$s</string>
+    <string name="settings_feedback_subject">Retour sur Best Journal</string>
+    <string name="settings_feedback_no_error_body">Aucune réponse d’erreur reçue</string>
+    <string name="settings_feedback_read_error">La réponse d’erreur n’a pas pu être lue</string>
+    <string name="settings_feedback_api_error">Erreur Gmail %1$d : %2$s</string>
     <string name="settings_feedback_unknown_error">Erreur inconnue</string>
     <string name="settings_feedback_confirm_subject">Tes commentaires sur Best Journal</string>
     <string name="settings_feedback_confirm_body">Tu as envoyé ce message au développeur.\nIl te répondra personnellement.\n\n--- Ton message ---\n%1$s\n\nÀ bientôt,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">L\'accès à Drive doit être autorisé</string>
     <string name="drive_not_signed_in">Non connecté</string>
     <string name="drive_no_backup">Aucune sauvegarde trouvée</string>
+    <string name="drive_backup_disabled">La sauvegarde Google Drive est désactivée dans les paramètres de confidentialité</string>
     <!-- Achievements -->
     <string name="achievements_title">Succès</string>
     <string name="achievements_counter">%1$d sur %2$d débloqués</string>
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>
@@ -1074,6 +1079,8 @@
     <string name="error_whisper_audio_empty">Le fichier audio est vide</string>
     <string name="error_whisper_no_text">Aucun texte détecté</string>
     <string name="error_sync_db_not_found">Base de données introuvable</string>
+    <string name="error_audio_record_init_failed">Le microphone n’a pas pu démarrer</string>
+    <string name="error_json_key_missing">Réponse IA incomplète : %1$s ou %2$s manque</string>
     <string name="error_file_open_failed">Erreur\u00A0: impossible d\'ouvrir le fichier</string>
     <string name="error_generic">Erreur\u00A0: %1$s</string>
 
@@ -1254,6 +1261,7 @@ Que veux-tu faire ?</string>
     <string name="dev_seed_done">%1$d entrées de test créées</string>
     <string name="dev_seed_deleted">%1$d entrées de test supprimées</string>
     <string name="dev_seed_error">Erreur : %1$s</string>
+    <string name="dev_seed_ai_no_entries">L’IA n’a renvoyé aucune entrée de test</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Compléments illimités pour chaque entrée</string>
@@ -1323,4 +1331,47 @@ Que veux-tu faire ?</string>
     <string name="paywall_consent_dialog_checkbox">J\'accepte que les fonctions Premium me soient fournies immédiatement après l\'achat. Je suis conscient(e) qu\'ainsi je renonce à mon droit de rétractation de 14 jours.</string>
     <string name="paywall_consent_dialog_confirm">S\'abonner — paiement requis</string>
     <string name="paywall_consent_dialog_cancel">Annuler</string>
+    <string name="ai_retro_copied_message">Copié dans le presse-papiers</string>
+    <string name="ai_retro_copy_button">Copier</string>
+    <string name="ai_retro_empty_state">Pas assez d’entrées pour un bilan.</string>
+    <string name="ai_retro_error_state">Le bilan n’a pas pu être créé. Réessaie.</string>
+    <string name="ai_retro_generate_button">Créer un bilan</string>
+    <string name="ai_retro_generating_state">Création du bilan…</string>
+    <string name="ai_retro_month_label">Ce mois-ci</string>
+    <string name="ai_retro_share_button">Partager</string>
+    <string name="ai_retro_title">Bilan IA</string>
+    <string name="ai_retro_week_label">Cette semaine</string>
+    <string name="ai_retro_year_label">Cette année</string>
+    <string name="follow_up_add_button">Ajouter un suivi</string>
+    <string name="follow_up_delete_confirm_no">Non, garder</string>
+    <string name="follow_up_delete_confirm_yes">Oui, supprimer</string>
+    <string name="follow_up_empty_state">Aucun suivi pour le moment.\nAppuie sur le bouton ci-dessous pour ajouter le premier.</string>
+    <string name="follow_up_improve_button">Améliorer</string>
+    <string name="follow_up_improve_error">Impossible d’améliorer. Réessaie.</string>
+    <string name="follow_up_improving_state">Amélioration…</string>
+    <string name="follow_up_record_error">Impossible d’enregistrer. Réessaie.</string>
+    <string name="follow_up_record_new">Enregistrer un nouveau suivi</string>
+    <string name="follow_up_recording_hint">Appuie pour enregistrer</string>
+    <string name="follow_up_recording_state">Enregistrement…</string>
+    <string name="follow_up_tab_label">Suivis</string>
+    <string name="follow_up_transcribe_error">Impossible de transcrire. Réessaie.</string>
+    <string name="follow_up_transcribing_state">Transcription…</string>
+    <string name="paywall_cancel_anytime">Annulation à tout moment</string>
+    <string name="paywall_feature_ai_improvement">Amélioration de texte par IA</string>
+    <string name="paywall_feature_drive_backup">Sauvegarde Google Drive</string>
+    <string name="paywall_feature_pdf_export">Export PDF</string>
+    <string name="paywall_feature_unlimited_entries">Entrées de journal illimitées</string>
+    <string name="paywall_lifetime_label">Paiement unique</string>
+    <string name="paywall_monthly_label">Mensuel</string>
+    <string name="paywall_restore_button">Restaurer les achats</string>
+    <string name="paywall_subscribe_button">S’abonner</string>
+    <string name="paywall_subtitle">Profite de tous les avantages Premium</string>
+    <string name="paywall_title">Passer à Premium</string>
+    <string name="paywall_yearly_label">Annuel</string>
+    <string name="prompt_char_count_label">%1$d caractères</string>
+    <string name="prompt_improve_button_label">Améliorer</string>
+    <string name="prompt_placeholder_text">Écris ce qui te passe par la tête…</string>
+    <string name="prompt_record_button_label">Enregistrer</string>
+    <string name="prompt_send_button_label">Envoyer</string>
+    <string name="prompt_stop_button_label">Arrêter</string>
 </resources>

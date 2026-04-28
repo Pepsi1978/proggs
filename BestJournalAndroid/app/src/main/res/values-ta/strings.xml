@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">முதலில் Google-ல் உள்நுழையவும்</string>
     <string name="settings_feedback_allow_gmail">Gmail அணுகலை அனுமதித்து மீண்டும் முயற்சிக்கவும்.</string>
     <string name="settings_feedback_token_error">Token பிழை: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal பற்றிய கருத்து</string>
+    <string name="settings_feedback_no_error_body">பிழை பதில் எதுவும் பெறப்படவில்லை</string>
+    <string name="settings_feedback_read_error">பிழை பதிலைப் படிக்க முடியவில்லை</string>
+    <string name="settings_feedback_api_error">Gmail பிழை %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">தெரியாத பிழை</string>
     <string name="settings_feedback_confirm_subject">Best Journal-க்கு உங்கள் கருத்து</string>
     <string name="settings_feedback_confirm_body">இந்தச் செய்தியை நீ டெவலப்பருக்கு அனுப்பினாய்.\nஅவன் உனக்கு தனிப்பட்ட முறையில் பதிலளிப்பான்.\n\n--- உன் செய்தி ---\n%1$s\n\nநன்றி,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Drive அணுகல் அனுமதிக்கப்பட வேண்டும்</string>
     <string name="drive_not_signed_in">உள்நுழையவில்லை</string>
     <string name="drive_no_backup">காப்புப்பிரதி கிடைக்கவில்லை</string>
+    <string name="drive_backup_disabled">தனியுரிமை அமைப்புகளில் Google Drive காப்புப்பிரதி முடக்கப்பட்டுள்ளது</string>
     <!-- Achievements -->
     <string name="achievements_title">சாதனைகள்</string>
     <string name="achievements_counter">%2$d இல் %1$d திறக்கப்பட்டது</string>
     <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
     <!-- About -->
     <string name="settings_about">App பற்றி</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">வெளியேறவா?</string>
@@ -1080,6 +1085,8 @@
     <string name="error_whisper_audio_empty">ஆடியோ கோப்பு காலியாக உள்ளது</string>
     <string name="error_whisper_no_text">உரை எதுவும் அங்கீகரிக்கப்படவில்லை</string>
     <string name="error_sync_db_not_found">தரவுத்தளம் கிடைக்கவில்லை</string>
+    <string name="error_audio_record_init_failed">மைக்ரோஃபோனை தொடங்க முடியவில்லை</string>
+    <string name="error_json_key_missing">AI பதில் முழுமையற்றது: %1$s அல்லது %2$s இல்லை</string>
     <string name="error_file_open_failed">பிழை: கோப்பை திறக்க முடியவில்லை</string>
     <string name="error_generic">பிழை: %1$s</string>
 
@@ -1259,6 +1266,7 @@
     <string name="dev_seed_done">%1$d சோதனை உள்ளீடுகள் உருவாக்கப்பட்டன</string>
     <string name="dev_seed_deleted">%1$d சோதனை உள்ளீடுகள் நீக்கப்பட்டன</string>
     <string name="dev_seed_error">பிழை: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI சோதனை பதிவுகளைத் திருப்பவில்லை</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">ஒவ்வொரு நாட்குறிப்பிற்கும் வரம்பற்ற கூடுதல் குறிப்புகள்</string>

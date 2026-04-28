@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Accedi prima con Google</string>
     <string name="settings_feedback_allow_gmail">Consenti l\'accesso a Gmail e riprova.</string>
     <string name="settings_feedback_token_error">Errore del token: %1$s</string>
+    <string name="settings_feedback_subject">Feedback su Best Journal</string>
+    <string name="settings_feedback_no_error_body">Nessuna risposta di errore ricevuta</string>
+    <string name="settings_feedback_read_error">Impossibile leggere la risposta di errore</string>
+    <string name="settings_feedback_api_error">Errore Gmail %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Errore sconosciuto</string>
     <string name="settings_feedback_confirm_subject">Il tuo feedback a Best Journal</string>
     <string name="settings_feedback_confirm_body">Hai inviato questo messaggio allo sviluppatore.\nTi risponderà personalmente.\n\n--- Il tuo messaggio ---\n%1$s\n\nA presto,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Bisogna consentire l\'accesso a Drive</string>
     <string name="drive_not_signed_in">Non hai eseguito l\'accesso</string>
     <string name="drive_no_backup">Nessun backup trovato</string>
+    <string name="drive_backup_disabled">Il backup su Google Drive è disattivato nelle impostazioni privacy</string>
     <!-- Achievements -->
     <string name="achievements_title">Obiettivi</string>
     <string name="achievements_counter">%1$d di %2$d sbloccati</string>
     <string name="achievements_unlocked_at">Sbloccato il %1$s</string>
     <!-- About -->
     <string name="settings_about">Informazioni sull\'app</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Il tuo diario personale con IA</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Uscire?</string>
@@ -1070,6 +1075,8 @@
     <string name="error_whisper_audio_empty">Il file audio è vuoto</string>
     <string name="error_whisper_no_text">Nessun testo rilevato</string>
     <string name="error_sync_db_not_found">Database non trovato</string>
+    <string name="error_audio_record_init_failed">Impossibile avviare il microfono</string>
+    <string name="error_json_key_missing">Risposta IA incompleta: manca %1$s o %2$s</string>
     <string name="error_file_open_failed">Errore: impossibile aprire il file</string>
     <string name="error_generic">Errore: %1$s</string>
 
@@ -1250,6 +1257,7 @@ Cosa vuoi fare?</string>
     <string name="dev_seed_done">%1$d voci di prova create</string>
     <string name="dev_seed_deleted">%1$d voci di prova eliminate</string>
     <string name="dev_seed_error">Errore: %1$s</string>
+    <string name="dev_seed_ai_no_entries">L’IA non ha restituito voci di test</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Annotazioni illimitate per ogni voce del diario</string>
@@ -1319,4 +1327,47 @@ Cosa vuoi fare?</string>
     <string name="prompt_recording_with_model">Registrazione in corso — Modello: %1$s</string>
     <string name="prompt_transcribing_with_model">%1$s sta trascrivendo…</string>
     <string name="prompt_transcription_model_hint">Trascritto con %1$s</string>
+    <string name="ai_retro_copied_message">Copiato negli appunti</string>
+    <string name="ai_retro_copy_button">Copia</string>
+    <string name="ai_retro_empty_state">Non ci sono abbastanza voci per una retrospettiva.</string>
+    <string name="ai_retro_error_state">Impossibile creare la retrospettiva. Riprova.</string>
+    <string name="ai_retro_generate_button">Crea retrospettiva</string>
+    <string name="ai_retro_generating_state">Creazione retrospettiva…</string>
+    <string name="ai_retro_month_label">Questo mese</string>
+    <string name="ai_retro_share_button">Condividi</string>
+    <string name="ai_retro_title">Retrospettiva IA</string>
+    <string name="ai_retro_week_label">Questa settimana</string>
+    <string name="ai_retro_year_label">Quest’anno</string>
+    <string name="follow_up_add_button">Aggiungi follow-up</string>
+    <string name="follow_up_delete_confirm_no">No, mantieni</string>
+    <string name="follow_up_delete_confirm_yes">Sì, elimina</string>
+    <string name="follow_up_empty_state">Nessun follow-up ancora.\nTocca il pulsante sotto per aggiungere il primo.</string>
+    <string name="follow_up_improve_button">Migliora</string>
+    <string name="follow_up_improve_error">Impossibile migliorare. Riprova.</string>
+    <string name="follow_up_improving_state">Miglioramento…</string>
+    <string name="follow_up_record_error">Impossibile registrare. Riprova.</string>
+    <string name="follow_up_record_new">Registra nuovo follow-up</string>
+    <string name="follow_up_recording_hint">Tocca per registrare</string>
+    <string name="follow_up_recording_state">Registrazione…</string>
+    <string name="follow_up_tab_label">Follow-up</string>
+    <string name="follow_up_transcribe_error">Impossibile trascrivere. Riprova.</string>
+    <string name="follow_up_transcribing_state">Trascrizione…</string>
+    <string name="paywall_cancel_anytime">Annulla quando vuoi</string>
+    <string name="paywall_feature_ai_improvement">Miglioramento testo con IA</string>
+    <string name="paywall_feature_drive_backup">Backup su Google Drive</string>
+    <string name="paywall_feature_pdf_export">Esportazione PDF</string>
+    <string name="paywall_feature_unlimited_entries">Voci di diario illimitate</string>
+    <string name="paywall_lifetime_label">Una tantum</string>
+    <string name="paywall_monthly_label">Mensile</string>
+    <string name="paywall_restore_button">Ripristina acquisti</string>
+    <string name="paywall_subscribe_button">Abbonati</string>
+    <string name="paywall_subtitle">Goditi tutti i vantaggi Premium</string>
+    <string name="paywall_title">Passa a Premium</string>
+    <string name="paywall_yearly_label">Annuale</string>
+    <string name="prompt_char_count_label">%1$d caratteri</string>
+    <string name="prompt_improve_button_label">Migliora</string>
+    <string name="prompt_placeholder_text">Scrivi ciò che hai in mente…</string>
+    <string name="prompt_record_button_label">Registra</string>
+    <string name="prompt_send_button_label">Invia</string>
+    <string name="prompt_stop_button_label">Stop</string>
 </resources>

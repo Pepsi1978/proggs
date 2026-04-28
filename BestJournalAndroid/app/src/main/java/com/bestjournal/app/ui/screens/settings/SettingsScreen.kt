@@ -3828,7 +3828,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "© Barwandt Digital Labs",
+                            stringResource(R.string.settings_about_copyright),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,

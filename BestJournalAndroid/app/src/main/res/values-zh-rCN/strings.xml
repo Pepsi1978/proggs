@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">请先用 Google 登录</string>
     <string name="settings_feedback_allow_gmail">请允许访问 Gmail 后再试。</string>
     <string name="settings_feedback_token_error">令牌错误：%1$s</string>
+    <string name="settings_feedback_subject">Best Journal 反馈</string>
+    <string name="settings_feedback_no_error_body">未收到错误响应</string>
+    <string name="settings_feedback_read_error">无法读取错误响应</string>
+    <string name="settings_feedback_api_error">Gmail 错误 %1$d：%2$s</string>
     <string name="settings_feedback_unknown_error">未知错误</string>
     <string name="settings_feedback_confirm_subject">你对 Best Journal 的反馈</string>
     <string name="settings_feedback_confirm_body">你已将这条消息发送给开发者。\n开发者会亲自回复你。\n\n--- 你的消息 ---\n%1$s\n\n谢谢，\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">需要授权 Drive 访问</string>
     <string name="drive_not_signed_in">未登录</string>
     <string name="drive_no_backup">没有找到备份</string>
+    <string name="drive_backup_disabled">Google Drive 备份已在隐私设置中关闭</string>
     <!-- Achievements -->
     <string name="achievements_title">成就</string>
     <string name="achievements_counter">已解锁 %1$d / %2$d</string>
     <string name="achievements_unlocked_at">解锁于 %1$s</string>
     <!-- About -->
     <string name="settings_about">关于应用</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">你的个人 AI 日记</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登录吗？</string>
@@ -1066,6 +1071,8 @@
     <string name="error_whisper_audio_empty">音频文件为空</string>
     <string name="error_whisper_no_text">未识别到文字</string>
     <string name="error_sync_db_not_found">找不到数据库</string>
+    <string name="error_audio_record_init_failed">无法启动麦克风</string>
+    <string name="error_json_key_missing">AI 响应不完整：缺少 %1$s 或 %2$s</string>
     <string name="error_file_open_failed">错误：打不开文件</string>
     <string name="error_generic">错误：%1$s</string>
 
@@ -1246,6 +1253,7 @@
     <string name="dev_seed_done">已创建%1$d条测试条目</string>
     <string name="dev_seed_deleted">已删除%1$d条测试条目</string>
     <string name="dev_seed_error">错误：%1$s</string>
+    <string name="dev_seed_ai_no_entries">AI 未返回测试条目</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">每篇日记可无限补充</string>
@@ -1315,4 +1323,47 @@
     <string name="prompt_recording_with_model">录音中 — 模型：%1$s</string>
     <string name="prompt_transcribing_with_model">%1$s 转录中…</string>
     <string name="prompt_transcription_model_hint">已用 %1$s 转录</string>
+    <string name="ai_retro_copied_message">已复制到剪贴板</string>
+    <string name="ai_retro_copy_button">复制</string>
+    <string name="ai_retro_empty_state">条目不足，无法生成回顾。</string>
+    <string name="ai_retro_error_state">无法创建回顾。请重试。</string>
+    <string name="ai_retro_generate_button">创建回顾</string>
+    <string name="ai_retro_generating_state">正在创建回顾…</string>
+    <string name="ai_retro_month_label">本月</string>
+    <string name="ai_retro_share_button">分享</string>
+    <string name="ai_retro_title">AI 回顾</string>
+    <string name="ai_retro_week_label">本周</string>
+    <string name="ai_retro_year_label">今年</string>
+    <string name="follow_up_add_button">添加后续</string>
+    <string name="follow_up_delete_confirm_no">不，保留</string>
+    <string name="follow_up_delete_confirm_yes">是，删除</string>
+    <string name="follow_up_empty_state">还没有后续内容。\n点按下方按钮添加第一条。</string>
+    <string name="follow_up_improve_button">优化</string>
+    <string name="follow_up_improve_error">无法优化。请重试。</string>
+    <string name="follow_up_improving_state">正在优化…</string>
+    <string name="follow_up_record_error">无法录音。请重试。</string>
+    <string name="follow_up_record_new">录制新后续</string>
+    <string name="follow_up_recording_hint">点按录音</string>
+    <string name="follow_up_recording_state">正在录音…</string>
+    <string name="follow_up_tab_label">后续</string>
+    <string name="follow_up_transcribe_error">无法转写。请重试。</string>
+    <string name="follow_up_transcribing_state">正在转写…</string>
+    <string name="paywall_cancel_anytime">可随时取消</string>
+    <string name="paywall_feature_ai_improvement">AI 文本优化</string>
+    <string name="paywall_feature_drive_backup">Google Drive 备份</string>
+    <string name="paywall_feature_pdf_export">PDF 导出</string>
+    <string name="paywall_feature_unlimited_entries">无限日记条目</string>
+    <string name="paywall_lifetime_label">一次性</string>
+    <string name="paywall_monthly_label">每月</string>
+    <string name="paywall_restore_button">恢复购买</string>
+    <string name="paywall_subscribe_button">订阅</string>
+    <string name="paywall_subtitle">享受所有 Premium 权益</string>
+    <string name="paywall_title">升级到 Premium</string>
+    <string name="paywall_yearly_label">每年</string>
+    <string name="prompt_char_count_label">%1$d 个字符</string>
+    <string name="prompt_improve_button_label">优化</string>
+    <string name="prompt_placeholder_text">写下你此刻的想法…</string>
+    <string name="prompt_record_button_label">录音</string>
+    <string name="prompt_send_button_label">发送</string>
+    <string name="prompt_stop_button_label">停止</string>
 </resources>

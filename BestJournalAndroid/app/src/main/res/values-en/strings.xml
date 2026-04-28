@@ -501,6 +501,10 @@
     <string name="settings_feedback_sign_in_first">Please sign in with Google first</string>
     <string name="settings_feedback_allow_gmail">Please allow Gmail access and try again.</string>
     <string name="settings_feedback_token_error">Token error: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal feedback</string>
+    <string name="settings_feedback_no_error_body">No error response received</string>
+    <string name="settings_feedback_read_error">The error response could not be read</string>
+    <string name="settings_feedback_api_error">Gmail error %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Unknown error</string>
     <string name="settings_feedback_confirm_subject">Your feedback to Best Journal</string>
     <string name="settings_feedback_confirm_body">You sent this message to the developer.\nThey\'ll get back to you personally.\n\n--- Your message ---\n%1$s\n\nCheers,\nDEV.FRANK</string>
@@ -510,13 +514,14 @@
     <string name="drive_consent_needed">Drive access must be granted</string>
     <string name="drive_not_signed_in">Not signed in</string>
     <string name="drive_no_backup">No backup found</string>
+    <string name="drive_backup_disabled">Google Drive backup is disabled in privacy settings</string>
     <!-- Achievements -->
     <string name="achievements_title">Achievements</string>
     <string name="achievements_counter">%1$d of %2$d unlocked</string>
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -1094,6 +1099,8 @@
     <string name="error_whisper_audio_empty">Audio file is empty</string>
     <string name="error_whisper_no_text">No text recognized</string>
     <string name="error_sync_db_not_found">Database not found</string>
+    <string name="error_audio_record_init_failed">The microphone could not be started</string>
+    <string name="error_json_key_missing">AI response incomplete: %1$s or %2$s is missing</string>
     <string name="error_file_open_failed">Error: Could not open file</string>
     <string name="error_generic">Error: %1$s</string>
 
@@ -1290,9 +1297,53 @@
     <string name="dev_seed_done">%1$d test entries created</string>
     <string name="dev_seed_deleted">%1$d test entries deleted</string>
     <string name="dev_seed_error">Error: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI returned no test entries</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Unlimited follow-ups for every journal entry</string>
     <string name="settings_premium_feature_followups">Unlimited follow-ups</string>
     <string name="settings_premium_feature_followups_desc">As many follow-ups per entry as you want</string>
+    <string name="ai_retro_copied_message">Copied to clipboard</string>
+    <string name="ai_retro_copy_button">Copy</string>
+    <string name="ai_retro_empty_state">Not enough entries for a review.</string>
+    <string name="ai_retro_error_state">The review could not be created. Try again.</string>
+    <string name="ai_retro_generate_button">Create review</string>
+    <string name="ai_retro_generating_state">Creating review…</string>
+    <string name="ai_retro_month_label">This month</string>
+    <string name="ai_retro_share_button">Share</string>
+    <string name="ai_retro_title">AI review</string>
+    <string name="ai_retro_week_label">This week</string>
+    <string name="ai_retro_year_label">This year</string>
+    <string name="follow_up_add_button">Add follow-up</string>
+    <string name="follow_up_delete_confirm_no">No, keep it</string>
+    <string name="follow_up_delete_confirm_yes">Yes, delete</string>
+    <string name="follow_up_empty_state">No follow-ups yet.\nTap the button below to add the first one.</string>
+    <string name="follow_up_improve_button">Improve</string>
+    <string name="follow_up_improve_error">Could not improve it. Try again.</string>
+    <string name="follow_up_improving_state">Improving…</string>
+    <string name="follow_up_record_error">Could not record. Try again.</string>
+    <string name="follow_up_record_new">Record new follow-up</string>
+    <string name="follow_up_recording_hint">Tap to record</string>
+    <string name="follow_up_recording_state">Recording…</string>
+    <string name="follow_up_tab_label">Follow-ups</string>
+    <string name="follow_up_transcribe_error">Could not transcribe it. Try again.</string>
+    <string name="follow_up_transcribing_state">Transcribing…</string>
+    <string name="paywall_cancel_anytime">Cancel anytime</string>
+    <string name="paywall_feature_ai_improvement">AI text improvement</string>
+    <string name="paywall_feature_drive_backup">Google Drive backup</string>
+    <string name="paywall_feature_pdf_export">PDF export</string>
+    <string name="paywall_feature_unlimited_entries">Unlimited journal entries</string>
+    <string name="paywall_lifetime_label">One-time</string>
+    <string name="paywall_monthly_label">Monthly</string>
+    <string name="paywall_restore_button">Restore purchases</string>
+    <string name="paywall_subscribe_button">Subscribe</string>
+    <string name="paywall_subtitle">Enjoy all premium benefits</string>
+    <string name="paywall_title">Upgrade to Premium</string>
+    <string name="paywall_yearly_label">Yearly</string>
+    <string name="prompt_char_count_label">%1$d characters</string>
+    <string name="prompt_improve_button_label">Improve</string>
+    <string name="prompt_placeholder_text">Write what is on your mind…</string>
+    <string name="prompt_record_button_label">Record</string>
+    <string name="prompt_send_button_label">Send</string>
+    <string name="prompt_stop_button_label">Stop</string>
 </resources>

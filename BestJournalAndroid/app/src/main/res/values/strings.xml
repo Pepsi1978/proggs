@@ -527,6 +527,10 @@
     <string name="settings_feedback_sign_in_first">Bitte zuerst mit Google anmelden</string>
     <string name="settings_feedback_allow_gmail">Bitte Gmail-Zugriff erlauben und erneut versuchen.</string>
     <string name="settings_feedback_token_error">Token-Fehler: %1$s</string>
+    <string name="settings_feedback_subject">Feedback zu Best Journal</string>
+    <string name="settings_feedback_no_error_body">Keine Fehlerantwort erhalten</string>
+    <string name="settings_feedback_read_error">Fehlerantwort konnte nicht gelesen werden</string>
+    <string name="settings_feedback_api_error">Gmail-Fehler %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Unbekannter Fehler</string>
     <string name="settings_feedback_confirm_subject">Dein Feedback an Best Journal</string>
     <string name="settings_feedback_confirm_body">Diese Nachricht hast du an den Entwickler geschickt.\nEr wird sich bei dir melden.\n\n--- Deine Nachricht ---\n%1$s\n\nViele Grüße\nDEV.FRANK</string>
@@ -536,14 +540,16 @@
     <string name="drive_consent_needed">Drive-Zugriff muss erlaubt werden</string>
     <string name="drive_not_signed_in">Nicht angemeldet</string>
     <string name="drive_no_backup">Kein Backup gefunden</string>
+    <string name="drive_backup_disabled">Google Drive Backup ist in den Datenschutz-Einstellungen deaktiviert</string>
     <!-- Achievements -->
     <string name="achievements_title">Achievements</string>
     <string name="achievements_counter">%1$d von %2$d freigeschaltet</string>
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
+    <string name="settings_about_copyright" translatable="false">© Barwandt Digital Labs</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
     <string name="settings_sign_out_body">Möchtest du dich wirklich abmelden?</string>
@@ -1320,6 +1326,8 @@
     <string name="error_whisper_audio_empty">Audio-Datei ist leer</string>
     <string name="error_whisper_no_text">Kein Text erkannt</string>
     <string name="error_sync_db_not_found">Datenbank nicht gefunden</string>
+    <string name="error_audio_record_init_failed">Mikrofon konnte nicht gestartet werden</string>
+    <string name="error_json_key_missing">KI-Antwort unvollständig: %1$s oder %2$s fehlt</string>
     <string name="error_file_open_failed">Fehler: Datei konnte nicht geöffnet werden</string>
     <string name="error_generic">Fehler: %1$s</string>
 
@@ -1344,4 +1352,48 @@
     <string name="dev_seed_done">%1$d Test-Einträge erstellt</string>
     <string name="dev_seed_deleted">%1$d Test-Einträge gelöscht</string>
     <string name="dev_seed_error">Fehler: %1$s</string>
+    <string name="dev_seed_ai_no_entries">KI hat keine Test-Einträge zurückgegeben</string>
+    <string name="ai_retro_copied_message">In die Zwischenablage kopiert</string>
+    <string name="ai_retro_copy_button">Kopieren</string>
+    <string name="ai_retro_empty_state">Nicht genug Einträge für einen Rückblick.</string>
+    <string name="ai_retro_error_state">Rückblick konnte nicht erstellt werden. Versuche es erneut.</string>
+    <string name="ai_retro_generate_button">Rückblick erstellen</string>
+    <string name="ai_retro_generating_state">Rückblick wird erstellt…</string>
+    <string name="ai_retro_month_label">Dieser Monat</string>
+    <string name="ai_retro_share_button">Teilen</string>
+    <string name="ai_retro_title">KI-Rückblick</string>
+    <string name="ai_retro_week_label">Diese Woche</string>
+    <string name="ai_retro_year_label">Dieses Jahr</string>
+    <string name="follow_up_add_button">Ergänzung hinzufügen</string>
+    <string name="follow_up_delete_confirm_no">Nein, behalten</string>
+    <string name="follow_up_delete_confirm_yes">Ja, löschen</string>
+    <string name="follow_up_empty_state">Noch keine Ergänzungen.\nTippe unten auf den Button, um die erste hinzuzufügen.</string>
+    <string name="follow_up_improve_button">Verbessern</string>
+    <string name="follow_up_improve_error">Konnte nicht verbessert werden. Versuche es erneut.</string>
+    <string name="follow_up_improving_state">Wird verbessert…</string>
+    <string name="follow_up_record_error">Aufnahme fehlgeschlagen. Versuche es erneut.</string>
+    <string name="follow_up_record_new">Neue Ergänzung aufnehmen</string>
+    <string name="follow_up_recording_hint">Zum Aufnehmen tippen</string>
+    <string name="follow_up_recording_state">Aufnahme läuft…</string>
+    <string name="follow_up_tab_label">Ergänzungen</string>
+    <string name="follow_up_transcribe_error">Konnte nicht transkribiert werden. Versuche es erneut.</string>
+    <string name="follow_up_transcribing_state">Wird transkribiert…</string>
+    <string name="paywall_cancel_anytime">Jederzeit kündbar</string>
+    <string name="paywall_feature_ai_improvement">Textverbesserung mit KI</string>
+    <string name="paywall_feature_drive_backup">Google Drive Backup</string>
+    <string name="paywall_feature_pdf_export">PDF-Export</string>
+    <string name="paywall_feature_unlimited_entries">Unbegrenzte Tagebucheinträge</string>
+    <string name="paywall_lifetime_label">Einmalig</string>
+    <string name="paywall_monthly_label">Monatlich</string>
+    <string name="paywall_restore_button">Käufe wiederherstellen</string>
+    <string name="paywall_subscribe_button">Abonnieren</string>
+    <string name="paywall_subtitle">Nutze alle Premium-Vorteile</string>
+    <string name="paywall_title">Upgrade auf Premium</string>
+    <string name="paywall_yearly_label">Jährlich</string>
+    <string name="prompt_char_count_label">%1$d Zeichen</string>
+    <string name="prompt_improve_button_label">Verbessern</string>
+    <string name="prompt_placeholder_text">Schreib, was dir durch den Kopf geht…</string>
+    <string name="prompt_record_button_label">Aufnehmen</string>
+    <string name="prompt_send_button_label">Senden</string>
+    <string name="prompt_stop_button_label">Stopp</string>
 </resources>

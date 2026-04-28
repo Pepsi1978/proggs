@@ -3,6 +3,7 @@ package com.bestjournal.app.domain.usecase
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.AppDatabase
 import com.bestjournal.app.data.prefs.CustomAnalysesStore
 import com.bestjournal.app.data.remote.googledrive.DriveBackupManager
@@ -23,8 +24,7 @@ import javax.inject.Inject
  * turned off PREF_DRIVE_BACKUP_ENABLED. Restore/merge/download operations
  * are NOT gated — users must be able to retrieve previously uploaded data.
  */
-class DriveBackupDisabledException :
-    Exception("Drive backup is disabled in privacy settings")
+class DriveBackupDisabledException(message: String) : Exception(message)
 
 class SyncWithDriveUseCase
 @Inject
@@ -41,10 +41,12 @@ constructor(
         // Respect the user's Drive-Backup consent toggle — if off, no upload.
         // This mirrors the promise made on the ConsentScreen/Settings-Sheet.
         if (!encryptedPrefs.getBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)) {
-            return Result.failure(DriveBackupDisabledException())
+            return Result.failure(
+                DriveBackupDisabledException(context.getString(R.string.drive_backup_disabled))
+            )
         }
         val dbFile = context.getDatabasePath(dbName)
-        if (!dbFile.exists()) return Result.failure(Exception("Datenbank nicht gefunden"))
+        if (!dbFile.exists()) return Result.failure(Exception(context.getString(R.string.error_sync_db_not_found)))
 
         try {
             val roomDb = database.openHelper.writableDatabase
@@ -60,13 +62,13 @@ constructor(
                 if (busy != 0) {
                     cursor.close()
                     Log.e("SyncDebug", "WAL checkpoint busy — aborting backup to prevent data loss")
-                    return Result.failure(Exception("WAL checkpoint busy"))
+                    return Result.failure(Exception(context.getString(R.string.journal_drive_failed)))
                 }
             }
             cursor.close()
         } catch (e: Exception) {
             Log.e("SyncDebug", "WAL checkpoint failed — aborting backup: ${e.message}")
-            return Result.failure(Exception("WAL checkpoint failed: ${e.message}"))
+            return Result.failure(Exception(context.getString(R.string.journal_drive_failed)))
         }
 
         val entryCount =

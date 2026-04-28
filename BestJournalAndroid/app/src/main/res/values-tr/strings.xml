@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Önce Google ile giriş yap</string>
     <string name="settings_feedback_allow_gmail">Gmail erişimine izin ver ve tekrar dene.</string>
     <string name="settings_feedback_token_error">Belirteç hatası: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal geri bildirimi</string>
+    <string name="settings_feedback_no_error_body">Hata yanıtı alınmadı</string>
+    <string name="settings_feedback_read_error">Hata yanıtı okunamadı</string>
+    <string name="settings_feedback_api_error">Gmail hatası %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Bilinmeyen hata</string>
     <string name="settings_feedback_confirm_subject">Best Journal\'a geri bildirimin</string>
     <string name="settings_feedback_confirm_body">Bu mesajı geliştiriciye sen gönderdin.\nSana kişisel olarak dönüş yapacak.\n\n--- Mesajın ---\n%1$s\n\nSelamlar,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Drive erişimine izin verilmeli</string>
     <string name="drive_not_signed_in">Giriş yapılmadı</string>
     <string name="drive_no_backup">Yedek bulunamadı</string>
+    <string name="drive_backup_disabled">Google Drive yedeği gizlilik ayarlarında devre dışı</string>
     <!-- Achievements -->
     <string name="achievements_title">Başarımlar</string>
     <string name="achievements_counter">%1$d / %2$d açıldı</string>
     <string name="achievements_unlocked_at">%1$s tarihinde açıldı</string>
     <!-- About -->
     <string name="settings_about">Uygulama hakkında</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Kişisel YZ günlüğün</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Çıkış yapılsın mı?</string>
@@ -1070,6 +1075,8 @@
     <string name="error_whisper_audio_empty">Ses dosyası boş</string>
     <string name="error_whisper_no_text">Metin algılanmadı</string>
     <string name="error_sync_db_not_found">Veri tabanı bulunamadı</string>
+    <string name="error_audio_record_init_failed">Mikrofon başlatılamadı</string>
+    <string name="error_json_key_missing">AI yanıtı eksik: %1$s veya %2$s yok</string>
     <string name="error_file_open_failed">Hata: dosya açılamadı</string>
     <string name="error_generic">Hata: %1$s</string>
 
@@ -1250,6 +1257,7 @@ Ne yapmak istersin?</string>
     <string name="dev_seed_done">%1$d test girdisi oluşturuldu</string>
     <string name="dev_seed_deleted">%1$d test girdisi silindi</string>
     <string name="dev_seed_error">Hata: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI test kaydı döndürmedi</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Her günlük girdisine sınırsız ekleme</string>
@@ -1317,4 +1325,47 @@ Ne yapmak istersin?</string>
     <string name="prompt_recording_with_model">Kayıt devam ediyor — Model: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> metne dönüştürüyor…</string>
     <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> ile metne dönüştürüldü</string>
+    <string name="ai_retro_copied_message">Panoya kopyalandı</string>
+    <string name="ai_retro_copy_button">Kopyala</string>
+    <string name="ai_retro_empty_state">İnceleme için yeterli kayıt yok.</string>
+    <string name="ai_retro_error_state">İnceleme oluşturulamadı. Tekrar dene.</string>
+    <string name="ai_retro_generate_button">İnceleme oluştur</string>
+    <string name="ai_retro_generating_state">İnceleme oluşturuluyor…</string>
+    <string name="ai_retro_month_label">Bu ay</string>
+    <string name="ai_retro_share_button">Paylaş</string>
+    <string name="ai_retro_title">AI incelemesi</string>
+    <string name="ai_retro_week_label">Bu hafta</string>
+    <string name="ai_retro_year_label">Bu yıl</string>
+    <string name="follow_up_add_button">Takip ekle</string>
+    <string name="follow_up_delete_confirm_no">Hayır, kalsın</string>
+    <string name="follow_up_delete_confirm_yes">Evet, sil</string>
+    <string name="follow_up_empty_state">Henüz takip yok.\nİlkini eklemek için aşağıdaki düğmeye dokun.</string>
+    <string name="follow_up_improve_button">İyileştir</string>
+    <string name="follow_up_improve_error">İyileştirilemedi. Tekrar dene.</string>
+    <string name="follow_up_improving_state">İyileştiriliyor…</string>
+    <string name="follow_up_record_error">Kaydedilemedi. Tekrar dene.</string>
+    <string name="follow_up_record_new">Yeni takip kaydet</string>
+    <string name="follow_up_recording_hint">Kaydetmek için dokun</string>
+    <string name="follow_up_recording_state">Kaydediliyor…</string>
+    <string name="follow_up_tab_label">Takipler</string>
+    <string name="follow_up_transcribe_error">Yazıya dökülemedi. Tekrar dene.</string>
+    <string name="follow_up_transcribing_state">Yazıya dökülüyor…</string>
+    <string name="paywall_cancel_anytime">İstediğin zaman iptal et</string>
+    <string name="paywall_feature_ai_improvement">AI ile metin iyileştirme</string>
+    <string name="paywall_feature_drive_backup">Google Drive yedeği</string>
+    <string name="paywall_feature_pdf_export">PDF dışa aktarma</string>
+    <string name="paywall_feature_unlimited_entries">Sınırsız günlük kaydı</string>
+    <string name="paywall_lifetime_label">Tek seferlik</string>
+    <string name="paywall_monthly_label">Aylık</string>
+    <string name="paywall_restore_button">Satın alımları geri yükle</string>
+    <string name="paywall_subscribe_button">Abone ol</string>
+    <string name="paywall_subtitle">Tüm Premium avantajlarından yararlan</string>
+    <string name="paywall_title">Premium’a yükselt</string>
+    <string name="paywall_yearly_label">Yıllık</string>
+    <string name="prompt_char_count_label">%1$d karakter</string>
+    <string name="prompt_improve_button_label">İyileştir</string>
+    <string name="prompt_placeholder_text">Aklından geçenleri yaz…</string>
+    <string name="prompt_record_button_label">Kaydet</string>
+    <string name="prompt_send_button_label">Gönder</string>
+    <string name="prompt_stop_button_label">Durdur</string>
 </resources>

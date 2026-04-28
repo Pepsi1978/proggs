@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">โปรดเข้าสู่ระบบด้วย Google ก่อน</string>
     <string name="settings_feedback_allow_gmail">โปรดอนุญาตการเข้าถึง Gmail แล้วลองอีกครั้ง</string>
     <string name="settings_feedback_token_error">ผิดพลาดที่โทเคน: %1$s</string>
+    <string name="settings_feedback_subject">ความคิดเห็นเกี่ยวกับ Best Journal</string>
+    <string name="settings_feedback_no_error_body">ไม่ได้รับการตอบกลับข้อผิดพลาด</string>
+    <string name="settings_feedback_read_error">ไม่สามารถอ่านการตอบกลับข้อผิดพลาดได้</string>
+    <string name="settings_feedback_api_error">ข้อผิดพลาด Gmail %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">ผิดพลาดไม่ทราบสาเหตุ</string>
     <string name="settings_feedback_confirm_subject">ความคิดเห็นถึง Best Journal</string>
     <string name="settings_feedback_confirm_body">คุณส่งข้อความนี้ถึงนักพัฒนาแล้ว\nเขาจะตอบกลับคุณเป็นการส่วนตัว\n\n--- ข้อความของคุณ ---\n%1$s\n\nขอบคุณ\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">ต้องอนุญาตการเข้าถึง Drive</string>
     <string name="drive_not_signed_in">ยังไม่เข้าสู่ระบบ</string>
     <string name="drive_no_backup">ไม่พบข้อมูลสำรอง</string>
+    <string name="drive_backup_disabled">ปิดการสำรองข้อมูล Google Drive ในการตั้งค่าความเป็นส่วนตัวแล้ว</string>
     <!-- Achievements -->
     <string name="achievements_title">ความสำเร็จ</string>
     <string name="achievements_counter">ปลดล็อก %1$d จาก %2$d</string>
     <string name="achievements_unlocked_at">ปลดล็อกเมื่อ %1$s</string>
     <!-- About -->
     <string name="settings_about">เกี่ยวกับแอป</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">สมุดบันทึก AI ส่วนตัวของคุณ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">ออกจากระบบ?</string>
@@ -1066,6 +1071,8 @@
     <string name="error_whisper_audio_empty">ไฟล์เสียงว่าง</string>
     <string name="error_whisper_no_text">ไม่พบข้อความ</string>
     <string name="error_sync_db_not_found">ไม่พบฐานข้อมูล</string>
+    <string name="error_audio_record_init_failed">ไม่สามารถเริ่มไมโครโฟนได้</string>
+    <string name="error_json_key_missing">การตอบกลับของ AI ไม่สมบูรณ์: ไม่มี %1$s หรือ %2$s</string>
     <string name="error_file_open_failed">ผิดพลาด: เปิดไฟล์ไม่ได้</string>
     <string name="error_generic">ผิดพลาด: %1$s</string>
 
@@ -1246,6 +1253,7 @@
     <string name="dev_seed_done">สร้างรายการทดสอบแล้ว %1$d รายการ</string>
     <string name="dev_seed_deleted">ลบรายการทดสอบแล้ว %1$d รายการ</string>
     <string name="dev_seed_error">ข้อผิดพลาด: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI ไม่ได้ส่งรายการทดสอบกลับมา</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">เพิ่มข้อความได้ไม่จำกัดในทุกบันทึก</string>
@@ -1313,4 +1321,47 @@
     <string name="prompt_recording_with_model">กำลังบันทึก — โมเดล: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> กำลังแปลงเป็นข้อความ…</string>
     <string name="prompt_transcription_model_hint">แปลงเป็นข้อความด้วย <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="ai_retro_copied_message">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
+    <string name="ai_retro_copy_button">คัดลอก</string>
+    <string name="ai_retro_empty_state">มีรายการไม่พอสำหรับรีวิว</string>
+    <string name="ai_retro_error_state">สร้างรีวิวไม่ได้ ลองอีกครั้ง</string>
+    <string name="ai_retro_generate_button">สร้างรีวิว</string>
+    <string name="ai_retro_generating_state">กำลังสร้างรีวิว…</string>
+    <string name="ai_retro_month_label">เดือนนี้</string>
+    <string name="ai_retro_share_button">แชร์</string>
+    <string name="ai_retro_title">รีวิว AI</string>
+    <string name="ai_retro_week_label">สัปดาห์นี้</string>
+    <string name="ai_retro_year_label">ปีนี้</string>
+    <string name="follow_up_add_button">เพิ่มบันทึกต่อเนื่อง</string>
+    <string name="follow_up_delete_confirm_no">ไม่ เก็บไว้</string>
+    <string name="follow_up_delete_confirm_yes">ใช่ ลบ</string>
+    <string name="follow_up_empty_state">ยังไม่มีบันทึกต่อเนื่อง\nแตะปุ่มด้านล่างเพื่อเพิ่มรายการแรก</string>
+    <string name="follow_up_improve_button">ปรับปรุง</string>
+    <string name="follow_up_improve_error">ปรับปรุงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_improving_state">กำลังปรับปรุง…</string>
+    <string name="follow_up_record_error">บันทึกเสียงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_record_new">บันทึกบันทึกต่อเนื่องใหม่</string>
+    <string name="follow_up_recording_hint">แตะเพื่อบันทึก</string>
+    <string name="follow_up_recording_state">กำลังบันทึก…</string>
+    <string name="follow_up_tab_label">บันทึกต่อเนื่อง</string>
+    <string name="follow_up_transcribe_error">ถอดเสียงไม่ได้ ลองอีกครั้ง</string>
+    <string name="follow_up_transcribing_state">กำลังถอดเสียง…</string>
+    <string name="paywall_cancel_anytime">ยกเลิกได้ทุกเมื่อ</string>
+    <string name="paywall_feature_ai_improvement">ปรับปรุงข้อความด้วย AI</string>
+    <string name="paywall_feature_drive_backup">สำรองข้อมูล Google Drive</string>
+    <string name="paywall_feature_pdf_export">ส่งออก PDF</string>
+    <string name="paywall_feature_unlimited_entries">รายการไดอารี่ไม่จำกัด</string>
+    <string name="paywall_lifetime_label">ครั้งเดียว</string>
+    <string name="paywall_monthly_label">รายเดือน</string>
+    <string name="paywall_restore_button">กู้คืนการซื้อ</string>
+    <string name="paywall_subscribe_button">สมัครสมาชิก</string>
+    <string name="paywall_subtitle">ใช้ประโยชน์ Premium ทั้งหมด</string>
+    <string name="paywall_title">อัปเกรดเป็น Premium</string>
+    <string name="paywall_yearly_label">รายปี</string>
+    <string name="prompt_char_count_label">%1$d อักขระ</string>
+    <string name="prompt_improve_button_label">ปรับปรุง</string>
+    <string name="prompt_placeholder_text">เขียนสิ่งที่อยู่ในใจ…</string>
+    <string name="prompt_record_button_label">บันทึก</string>
+    <string name="prompt_send_button_label">ส่ง</string>
+    <string name="prompt_stop_button_label">หยุด</string>
 </resources>

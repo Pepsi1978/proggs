@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">Najpierw zaloguj się przez Google</string>
     <string name="settings_feedback_allow_gmail">Zezwól na dostęp do Gmaila i spróbuj ponownie.</string>
     <string name="settings_feedback_token_error">Błąd tokenu: %1$s</string>
+    <string name="settings_feedback_subject">Opinia o Best Journal</string>
+    <string name="settings_feedback_no_error_body">Nie otrzymano odpowiedzi błędu</string>
+    <string name="settings_feedback_read_error">Nie udało się odczytać odpowiedzi błędu</string>
+    <string name="settings_feedback_api_error">Błąd Gmaila %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">Nieznany błąd</string>
     <string name="settings_feedback_confirm_subject">Twoja opinia do Best Journal</string>
     <string name="settings_feedback_confirm_body">Twoja wiadomość trafiła do dewelopera.\nOdpowie Ci osobiście.\n\n--- Twoja wiadomość ---\n%1$s\n\nPozdrawiam,\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">Trzeba zezwolić na dostęp do Drive</string>
     <string name="drive_not_signed_in">Nie zalogowano</string>
     <string name="drive_no_backup">Nie znaleziono kopii zapasowej</string>
+    <string name="drive_backup_disabled">Kopia zapasowa Google Drive jest wyłączona w ustawieniach prywatności</string>
     <!-- Achievements -->
     <string name="achievements_title">Osiągnięcia</string>
     <string name="achievements_counter">Odblokowano %1$d z %2$d</string>
     <string name="achievements_unlocked_at">Odblokowano: %1$s</string>
     <!-- About -->
     <string name="settings_about">O aplikacji</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">Twój osobisty dziennik SI</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Wylogować?</string>
@@ -1078,6 +1083,8 @@
     <string name="error_whisper_audio_empty">Plik audio jest pusty</string>
     <string name="error_whisper_no_text">Nie wykryto tekstu</string>
     <string name="error_sync_db_not_found">Nie znaleziono bazy danych</string>
+    <string name="error_audio_record_init_failed">Nie udało się uruchomić mikrofonu</string>
+    <string name="error_json_key_missing">Odpowiedź AI jest niepełna: brakuje %1$s lub %2$s</string>
     <string name="error_file_open_failed">Błąd: nie udało się otworzyć pliku</string>
     <string name="error_generic">Błąd: %1$s</string>
 
@@ -1258,6 +1265,7 @@ Co chcesz zrobić?</string>
     <string name="dev_seed_done">Utworzono %1$d wpisów testowych</string>
     <string name="dev_seed_deleted">Usunięto %1$d wpisów testowych</string>
     <string name="dev_seed_error">Błąd: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI nie zwróciła wpisów testowych</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">Nieograniczone uzupełnienia do każdego wpisu</string>
@@ -1327,4 +1335,47 @@ Co chcesz zrobić?</string>
     <string name="prompt_recording_with_model">Nagrywanie — Model: %1$s</string>
     <string name="prompt_transcribing_with_model">%1$s transkrybuje…</string>
     <string name="prompt_transcription_model_hint">Transkrybowane przez %1$s</string>
+    <string name="ai_retro_copied_message">Skopiowano do schowka</string>
+    <string name="ai_retro_copy_button">Kopiuj</string>
+    <string name="ai_retro_empty_state">Za mało wpisów na podsumowanie.</string>
+    <string name="ai_retro_error_state">Nie udało się utworzyć podsumowania. Spróbuj ponownie.</string>
+    <string name="ai_retro_generate_button">Utwórz podsumowanie</string>
+    <string name="ai_retro_generating_state">Tworzenie podsumowania…</string>
+    <string name="ai_retro_month_label">Ten miesiąc</string>
+    <string name="ai_retro_share_button">Udostępnij</string>
+    <string name="ai_retro_title">Podsumowanie AI</string>
+    <string name="ai_retro_week_label">Ten tydzień</string>
+    <string name="ai_retro_year_label">Ten rok</string>
+    <string name="follow_up_add_button">Dodaj uzupełnienie</string>
+    <string name="follow_up_delete_confirm_no">Nie, zachowaj</string>
+    <string name="follow_up_delete_confirm_yes">Tak, usuń</string>
+    <string name="follow_up_empty_state">Nie ma jeszcze uzupełnień.\nDotknij przycisku poniżej, aby dodać pierwsze.</string>
+    <string name="follow_up_improve_button">Ulepsz</string>
+    <string name="follow_up_improve_error">Nie udało się ulepszyć. Spróbuj ponownie.</string>
+    <string name="follow_up_improving_state">Ulepszanie…</string>
+    <string name="follow_up_record_error">Nie udało się nagrać. Spróbuj ponownie.</string>
+    <string name="follow_up_record_new">Nagraj nowe uzupełnienie</string>
+    <string name="follow_up_recording_hint">Dotknij, aby nagrać</string>
+    <string name="follow_up_recording_state">Nagrywanie…</string>
+    <string name="follow_up_tab_label">Uzupełnienia</string>
+    <string name="follow_up_transcribe_error">Nie udało się przepisać. Spróbuj ponownie.</string>
+    <string name="follow_up_transcribing_state">Transkrypcja…</string>
+    <string name="paywall_cancel_anytime">Anuluj w dowolnym momencie</string>
+    <string name="paywall_feature_ai_improvement">Ulepszanie tekstu przez AI</string>
+    <string name="paywall_feature_drive_backup">Kopia zapasowa Google Drive</string>
+    <string name="paywall_feature_pdf_export">Eksport PDF</string>
+    <string name="paywall_feature_unlimited_entries">Nielimitowane wpisy w dzienniku</string>
+    <string name="paywall_lifetime_label">Jednorazowo</string>
+    <string name="paywall_monthly_label">Miesięcznie</string>
+    <string name="paywall_restore_button">Przywróć zakupy</string>
+    <string name="paywall_subscribe_button">Subskrybuj</string>
+    <string name="paywall_subtitle">Korzystaj ze wszystkich korzyści Premium</string>
+    <string name="paywall_title">Przejdź na Premium</string>
+    <string name="paywall_yearly_label">Rocznie</string>
+    <string name="prompt_char_count_label">%1$d znaków</string>
+    <string name="prompt_improve_button_label">Ulepsz</string>
+    <string name="prompt_placeholder_text">Napisz, co masz na myśli…</string>
+    <string name="prompt_record_button_label">Nagraj</string>
+    <string name="prompt_send_button_label">Wyślij</string>
+    <string name="prompt_stop_button_label">Stop</string>
 </resources>

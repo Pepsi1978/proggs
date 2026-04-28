@@ -459,6 +459,10 @@
     <string name="settings_feedback_sign_in_first">پہلے Google سے سائن ان کریں</string>
     <string name="settings_feedback_allow_gmail">‏Gmail رسائی کی اجازت دیں اور دوبارہ کوشش کریں۔</string>
     <string name="settings_feedback_token_error">ٹوکن خرابی: %1$s</string>
+    <string name="settings_feedback_subject">Best Journal کے بارے میں رائے</string>
+    <string name="settings_feedback_no_error_body">غلطی کا کوئی جواب موصول نہیں ہوا</string>
+    <string name="settings_feedback_read_error">غلطی کا جواب پڑھا نہیں جا سکا</string>
+    <string name="settings_feedback_api_error">Gmail خرابی %1$d: %2$s</string>
     <string name="settings_feedback_unknown_error">نامعلوم خرابی</string>
     <string name="settings_feedback_confirm_subject">‏Best Journal کو آپ کا فیڈبیک</string>
     <string name="settings_feedback_confirm_body">تم نے یہ پیغام ڈیولپر کو بھیجا ہے۔\nوہ تمہیں ذاتی طور پر جواب دے گا۔\n\n--- تمہارا پیغام ---\n%1$s\n\nشکریہ،\nDEV.FRANK</string>
@@ -468,13 +472,14 @@
     <string name="drive_consent_needed">‏Drive رسائی کی اجازت دینی ہوگی</string>
     <string name="drive_not_signed_in">سائن ان نہیں ہیں</string>
     <string name="drive_no_backup">کوئی بیک اپ نہیں ملا</string>
+    <string name="drive_backup_disabled">رازداری کی ترتیبات میں Google Drive بیک اپ بند ہے</string>
     <!-- Achievements -->
     <string name="achievements_title">اعزازات</string>
     <string name="achievements_counter">%2$d میں سے %1$d حاصل ہوئے</string>
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">Best Journal V0.15.1</string>
+    <string name="settings_about_version">Best Journal V0.16.1</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
@@ -1071,6 +1076,8 @@
     <string name="error_whisper_audio_empty">آڈیو فائل خالی ہے</string>
     <string name="error_whisper_no_text">کوئی متن شناخت نہیں ہوا</string>
     <string name="error_sync_db_not_found">ڈیٹا بیس نہیں ملا</string>
+    <string name="error_audio_record_init_failed">مائیکروفون شروع نہیں ہو سکا</string>
+    <string name="error_json_key_missing">AI جواب نامکمل ہے: %1$s یا %2$s موجود نہیں</string>
     <string name="error_file_open_failed">خرابی: فائل نہیں کھل سکی</string>
     <string name="error_generic">خرابی: %1$s</string>
 
@@ -1251,6 +1258,7 @@
     <string name="dev_seed_done">%1$d ٹیسٹ اندراجات بنائے گئے</string>
     <string name="dev_seed_deleted">%1$d ٹیسٹ اندراجات حذف کیے گئے</string>
     <string name="dev_seed_error">خرابی: %1$s</string>
+    <string name="dev_seed_ai_no_entries">AI نے کوئی ٹیسٹ اندراج واپس نہیں کیا</string>
 
     <!-- Premium feature: unlimited follow-ups per journal entry -->
     <string name="paywall_feature_followups">ہر ڈائری اندراج میں لامحدود اضافے</string>
@@ -1318,4 +1326,47 @@
     <string name="prompt_recording_with_model">ریکارڈنگ جاری ہے — ماڈل: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
     <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> تحریر میں تبدیل کر رہا ہے…</string>
     <string name="prompt_transcription_model_hint"><xliff:g id="model" example="Whisper">%1$s</xliff:g> سے تحریر میں تبدیل کیا گیا</string>
+    <string name="ai_retro_copied_message">کلپ بورڈ میں کاپی ہو گیا</string>
+    <string name="ai_retro_copy_button">کاپی کریں</string>
+    <string name="ai_retro_empty_state">جائزے کے لیے کافی اندراجات نہیں ہیں۔</string>
+    <string name="ai_retro_error_state">جائزہ نہیں بنایا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="ai_retro_generate_button">جائزہ بنائیں</string>
+    <string name="ai_retro_generating_state">جائزہ بنایا جا رہا ہے…</string>
+    <string name="ai_retro_month_label">یہ مہینہ</string>
+    <string name="ai_retro_share_button">شیئر کریں</string>
+    <string name="ai_retro_title">AI جائزہ</string>
+    <string name="ai_retro_week_label">یہ ہفتہ</string>
+    <string name="ai_retro_year_label">یہ سال</string>
+    <string name="follow_up_add_button">فالو اپ شامل کریں</string>
+    <string name="follow_up_delete_confirm_no">نہیں، رکھیں</string>
+    <string name="follow_up_delete_confirm_yes">ہاں، حذف کریں</string>
+    <string name="follow_up_empty_state">ابھی کوئی فالو اپ نہیں ہے۔\nپہلا شامل کرنے کے لیے نیچے بٹن پر ٹیپ کریں۔</string>
+    <string name="follow_up_improve_button">بہتر بنائیں</string>
+    <string name="follow_up_improve_error">بہتر نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_improving_state">بہتر بنایا جا رہا ہے…</string>
+    <string name="follow_up_record_error">ریکارڈ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_record_new">نیا فالو اپ ریکارڈ کریں</string>
+    <string name="follow_up_recording_hint">ریکارڈ کرنے کے لیے ٹیپ کریں</string>
+    <string name="follow_up_recording_state">ریکارڈ ہو رہا ہے…</string>
+    <string name="follow_up_tab_label">فالو اپس</string>
+    <string name="follow_up_transcribe_error">متن میں تبدیل نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔</string>
+    <string name="follow_up_transcribing_state">متن میں تبدیل کیا جا رہا ہے…</string>
+    <string name="paywall_cancel_anytime">کسی بھی وقت منسوخ کریں</string>
+    <string name="paywall_feature_ai_improvement">AI سے متن بہتر بنائیں</string>
+    <string name="paywall_feature_drive_backup">Google Drive بیک اپ</string>
+    <string name="paywall_feature_pdf_export">PDF برآمد</string>
+    <string name="paywall_feature_unlimited_entries">لامحدود ڈائری اندراجات</string>
+    <string name="paywall_lifetime_label">ایک بار</string>
+    <string name="paywall_monthly_label">ماہانہ</string>
+    <string name="paywall_restore_button">خریداری بحال کریں</string>
+    <string name="paywall_subscribe_button">سبسکرائب کریں</string>
+    <string name="paywall_subtitle">تمام Premium فوائد حاصل کریں</string>
+    <string name="paywall_title">Premium پر اپ گریڈ کریں</string>
+    <string name="paywall_yearly_label">سالانہ</string>
+    <string name="prompt_char_count_label">%1$d حروف</string>
+    <string name="prompt_improve_button_label">بہتر بنائیں</string>
+    <string name="prompt_placeholder_text">اپنے ذہن کی بات لکھیں…</string>
+    <string name="prompt_record_button_label">ریکارڈ</string>
+    <string name="prompt_send_button_label">بھیجیں</string>
+    <string name="prompt_stop_button_label">روکیں</string>
 </resources>
