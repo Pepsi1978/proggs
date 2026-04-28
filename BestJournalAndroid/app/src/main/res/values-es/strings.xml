@@ -1248,4 +1248,57 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="paywall_feature_followups">Notas adicionales ilimitadas en cada entrada</string>
     <string name="settings_premium_feature_followups">Notas adicionales ilimitadas</string>
     <string name="settings_premium_feature_followups_desc">Tantas notas adicionales por entrada como quieras</string>
+    <string name="entry_journal_entry_title">Entrada del diario</string>
+    <string name="entry_delete_entry_cd">Eliminar entrada del diario</string>
+    <string name="entry_photos_videos_add_title">Agregar fotos/videos</string>
+    <string name="follow_up_inline_title">Anotación <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_delete_cd">Eliminar anotación</string>
+    <string name="follow_up_tab_improved">Mejorada</string>
+    <string name="follow_up_tab_original">Original</string>
+    <string name="follow_up_improve_with_ai">Mejorar con IA</string>
+    <string name="follow_up_card_title">Anotación</string>
+    <string name="follow_up_premium_hint">a partir de la segunda anotación</string>
+    <string name="follow_up_dialog_title">Anotación</string>
+    <string name="follow_up_transcribing">Transcribiendo anotación…</string>
+    <string name="follow_up_speak_prompt">Dicta tu anotación.</string>
+    <string name="follow_up_stop_hint">Toca Detener cuando termines.</string>
+    <string name="follow_up_choose_input_mode">¿Cómo quieres agregar tu anotación?</string>
+    <string name="follow_up_input_write_cd">Escribir</string>
+    <string name="follow_up_input_write_label">Escribir</string>
+    <string name="follow_up_input_speak_cd">Dictar</string>
+    <string name="follow_up_input_speak_label">Dictar</string>
+    <string name="follow_up_dialog_label">Tu anotación:</string>
+    <string name="follow_up_speak_pill_label">Dictar</string>
+    <string name="follow_up_text_placeholder">Escribe aquí tu anotación…</string>
+    <string name="follow_up_show_original">↩ Mostrar original</string>
+    <string name="follow_up_show_improved">✨ Mostrar versión mejorada</string>
+    <string name="follow_up_improve_text">✨ Mejorar texto</string>
+    <string name="follow_up_improving">La IA está mejorando la anotación…</string>
+    <string name="follow_up_save_improved">Guardar la versión mejorada</string>
+    <string name="follow_up_save">Guardar</string>
+    <string name="follow_up_cancel">Cancelar</string>
+    <string name="follow_up_discard">Descartar</string>
+    <string name="follow_up_delete_confirm_title">¿Eliminar la anotación <xliff:g id="ordinal" example="1">%1$s</xliff:g>?</string>
+    <string name="follow_up_delete_confirm_text">¿Seguro que quieres eliminar la anotación <xliff:g id="ordinal" example="1">%1$s</xliff:g> de forma definitiva?</string>
+    <string name="follow_up_delete_button">Eliminar</string>
+    <string name="follow_up_premium_title">Anotaciones ilimitadas</string>
+    <string name="follow_up_premium_body">Con Premium puedes agregar todas las anotaciones que quieras a cada entrada del diario.</string>
+    <string name="follow_up_premium_subtext">Cada anotación se integra automáticamente al panel para que tu análisis siempre esté completo.</string>
+    <string name="follow_up_premium_subscribe">Iniciar suscripción</string>
+    <string name="follow_up_premium_later">Más tarde</string>
+    <string name="action_no">No</string>
+    <string name="action_yes">Sí</string>
+    <string name="journal_improve">Mejorar texto</string>
+    <string name="journal_state_improving">Mejorando…</string>
+    <string name="journal_state_transcribing">Transcribiendo…</string>
+    <string name="profile_custom_add">Agregar análisis personalizado</string>
+    <string name="profile_custom_remove">Eliminar análisis personalizado</string>
+    <string name="profile_custom_rename">Renombrar</string>
+    <string name="profile_custom_rename_save">Guardar nombre</string>
+    <string name="prompt_clear_confirm_text">El análisis personalizado se eliminará de forma definitiva. ¿Seguro que quieres continuar?</string>
+    <string name="prompt_clear_confirm_title">¿Eliminar texto?</string>
+    <string name="prompt_clear_content_desc">Eliminar texto</string>
+    <string name="prompt_recording_with_model">Grabando — modelo: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> está transcribiendo…</string>
+    <string name="prompt_transcription_model_hint">Transcrito con <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>
