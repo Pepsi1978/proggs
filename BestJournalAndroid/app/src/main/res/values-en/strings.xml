@@ -44,7 +44,7 @@
     <string name="churn_instead_of">instead of </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">Improved</string>
+    <string name="label_improved">✨ Enhanced by AI</string>
     <string name="label_photo">Photo</string>
     <string name="label_video">Video</string>
     <string name="label_current">Current</string>
@@ -154,7 +154,7 @@
     <!-- Follow-ups -->
     <string name="follow_up_inline_title">Follow-up <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Delete follow-up</string>
-    <string name="follow_up_tab_improved">Improved</string>
+    <string name="follow_up_tab_improved">✨ Enhanced by AI</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_improve_with_ai">Improve with AI</string>
     <string name="follow_up_card_title">Follow-up</string>

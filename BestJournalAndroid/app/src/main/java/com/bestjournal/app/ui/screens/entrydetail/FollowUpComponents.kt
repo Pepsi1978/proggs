@@ -71,7 +71,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryFollowUpEntity
-import com.bestjournal.app.ui.components.AiImprovedFooter
 import com.bestjournal.app.ui.components.AiImprovedSuffixHelper
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
@@ -235,28 +234,21 @@ fun FollowUpInlineCard(
                         colors = fuFieldColors,
                     )
                 } else {
+                    // KI-Kennzeichnung erfolgt rein ueber den Follow-up-Tab-Header
+                    // ("✨ Mit KI verbessert") — kein Inline-Label im Text. Alte
+                    // Eintraege mit Plain-Text-Suffix werden vor der Anzeige bereinigt.
                     val ctxFu = androidx.compose.ui.platform.LocalContext.current
                     val rawDisplayValue =
                         if (fuHasImproved) (followUp.improvedText ?: followUp.text)
                         else followUp.rawText
-                    // Wenn Follow-up KI-verbessert ist: Suffix vor Anzeige stripen,
-                    // dezenten Footer drunter rendern, beim Save wieder anhaengen.
-                    val showFuFooter =
-                        fuHasImproved &&
-                            AiImprovedSuffixHelper.containsMarker(ctxFu, rawDisplayValue)
-                    val strippedFu =
+                    val displayedFuValue =
                         if (fuHasImproved) AiImprovedSuffixHelper.strip(ctxFu, rawDisplayValue)
                         else rawDisplayValue
                     TextField(
-                        value = strippedFu,
-                        onValueChange = { newText ->
-                            if (fuHasImproved) {
-                                val toSave =
-                                    AiImprovedSuffixHelper.reattachIfMissing(ctxFu, newText)
-                                onImprovedTextChanged(toSave)
-                            } else {
-                                onRawTextChanged(newText)
-                            }
+                        value = displayedFuValue,
+                        onValueChange = {
+                            if (fuHasImproved) onImprovedTextChanged(it)
+                            else onRawTextChanged(it)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         textStyle =
@@ -265,9 +257,6 @@ fun FollowUpInlineCard(
                             ),
                         colors = fuFieldColors,
                     )
-                    if (showFuFooter) {
-                        AiImprovedFooter()
-                    }
                 }
             }
 

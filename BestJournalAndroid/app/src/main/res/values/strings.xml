@@ -48,7 +48,7 @@
     <string name="churn_instead_of">statt </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
-    <string name="label_improved">Verbessert</string>
+    <string name="label_improved">✨ Mit KI verbessert</string>
     <string name="label_photo">Foto</string>
     <string name="label_video">Video</string>
     <string name="label_current">Aktuell</string>
@@ -177,7 +177,7 @@
     <!-- Follow-ups (Nachtraege) -->
     <string name="follow_up_inline_title">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
     <string name="follow_up_delete_cd">Nachtrag löschen</string>
-    <string name="follow_up_tab_improved">Verbessert</string>
+    <string name="follow_up_tab_improved">✨ Mit KI verbessert</string>
     <string name="follow_up_tab_original">Original</string>
     <string name="follow_up_improve_with_ai">Mit KI nachträglich verbessern</string>
     <string name="follow_up_card_title">Nachtrag</string>
@@ -217,6 +217,10 @@
     <string name="share_improved_version">Verbesserte Version</string>
     <string name="share_photos_videos_label">Fotos/Videos mitteilen:</string>
     <string name="share_footer">Tagebucheintrag von der BestJournal App</string>
+    <string name="share_what_to_share">Was möchtest du teilen?</string>
+    <string name="share_journal_entry">Tagebucheintrag</string>
+    <string name="share_followup_numbered">Nachtrag <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="share_followup_single">Nachtrag</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DASHBOARD SCREEN

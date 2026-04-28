@@ -116,7 +116,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.bestjournal.app.R
-import com.bestjournal.app.ui.components.AiImprovedFooter
 import com.bestjournal.app.ui.components.AiImprovedSuffixHelper
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.highlightMatches
@@ -541,33 +540,19 @@ fun EntryDetailScreen(
                                     colors = textFieldColors,
                                 )
                             } else {
-                                // KI-Suffix wird vor dem TextField-Display entfernt — er
-                                // wird statt dessen als dezenter Footer (kleiner, halb-
-                                // transparent) unter dem Inhalt angezeigt. Beim Save wird
-                                // er ueber updateDisplayText automatisch wieder angehaengt
-                                // damit Export/Teilen rechtssicher bleibt.
+                                // KI-Kennzeichnung erfolgt rein ueber den Tab-Header
+                                // ("✨ Mit KI verbessert") — kein Inline-Label im Text.
+                                // Falls bestehende Eintraege noch einen alten Plain-Text-
+                                // Suffix in der DB haben, wird er hier vor der Anzeige
+                                // weggestripped, damit der Eintrag sauber editierbar ist.
                                 val ctx = LocalContext.current
-                                val rawDisplay = uiState.editedDisplayText
-                                val showAiFooter =
-                                    AiImprovedSuffixHelper.containsMarker(ctx, rawDisplay) ||
-                                        entry.isImproved
-                                val strippedValue =
-                                    AiImprovedSuffixHelper.strip(ctx, rawDisplay)
+                                val displayedValue =
+                                    AiImprovedSuffixHelper.strip(ctx, uiState.editedDisplayText)
                                 TextField(
-                                    value = strippedValue,
-                                    onValueChange = { newText ->
+                                    value = displayedValue,
+                                    onValueChange = {
                                         lastEditTime = System.currentTimeMillis()
-                                        // Suffix immer wieder anhaengen wenn Eintrag KI-
-                                        // verbessert ist — schuetzt vor versehentlichem
-                                        // Loeschen des Labels durch den Nutzer.
-                                        val toSave =
-                                            if (entry.isImproved) {
-                                                AiImprovedSuffixHelper
-                                                    .reattachIfMissing(ctx, newText)
-                                            } else {
-                                                newText
-                                            }
-                                        viewModel.updateDisplayText(toSave)
+                                        viewModel.updateDisplayText(it)
                                     },
                                     modifier =
                                         Modifier.fillMaxWidth()
@@ -584,9 +569,6 @@ fun EntryDetailScreen(
                                     visualTransformation = searchHighlight,
                                     colors = textFieldColors,
                                 )
-                                if (showAiFooter) {
-                                    AiImprovedFooter()
-                                }
                             }
                         }
                         if (uiState.isSaving) {
