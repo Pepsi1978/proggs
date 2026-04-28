@@ -153,6 +153,52 @@ Aufgaben auftaucht, wird er als Post-Prompt erkannt, nicht als Aufgabe.
 Mehrere Pre-Prompts sind erlaubt und werden vor den Aufgaben kombiniert berücksichtigt.
 Mehrere Post-Prompts gelten parallel als Constraints.
 
+### Current-Turn-Isolation für Pre/Post-Prompts (KRITISCH)
+
+Pre-Prompts und Post-Prompts sind **nur für die aktuelle Aufgabe im aktuellen
+Benutzer-Prompt gültig**. Sie gelten ausdrücklich **nicht für die gesamte Session**.
+Sie sind keine dauerhafte Memory, kein Session-Befehl und keine Anweisung für spätere,
+separate Benutzer-Prompts oder Aufgaben.
+
+**Pflichtregeln:**
+
+1. Jeder neue Benutzer-Prompt wird komplett frisch geparst.
+2. Pre-/Post-Prompts aus früheren Benutzer-Prompts oder früheren Aufgaben verfallen,
+   sobald die zugehörige Antwort oder Aufgabe abgeschlossen ist.
+3. Eine frühere Pre-/Post-Prompt-Anweisung darf NIEMALS als Begründung für eine Aktion
+   in einem späteren Prompt verwendet werden.
+4. Wenn alte und aktuelle Anweisungen in Spannung stehen, gewinnt immer der aktuelle
+   Benutzer-Prompt.
+5. Wenn unklar ist, ob eine frühere Anweisung noch gelten soll, genau EINE konkrete
+   Klärungsfrage stellen, statt zu raten.
+
+### Hochrisiko-Seiteneffekte nur bei aktueller ausdrücklicher Anweisung
+
+Aktionen, die laufende Arbeit, diktierte Texte, Terminals, Prozesse, Fenster oder
+parallele Sessions beeinflussen können, sind Hochrisiko-Seiteneffekte. Sie dürfen
+NICHT aus einem alten Pre-/Post-Prompt abgeleitet werden.
+
+**Hochrisiko-Seiteneffekte sind insbesondere:**
+
+- Terminal, Shell, Voice Terminal Overlay oder Terminal Voice Overlay neu starten
+- Prozesse stoppen, killen oder ersetzen
+- Apps schließen oder neu starten
+- Server, Watcher oder Hintergrunddienste beenden
+- Fenster schließen, Terminal-Tabs schließen oder Arbeitsumgebungen wechseln
+- System-, Shell- oder PATH-Änderungen ausführen, die einen Neustart erfordern können
+
+**Erlaubt ist so ein Seiteneffekt nur, wenn mindestens eine Bedingung erfüllt ist:**
+
+1. Der aktuelle Benutzer-Prompt verlangt ihn ausdrücklich.
+2. Die aktuelle Aufgabe ist technisch ohne diesen Seiteneffekt nicht lösbar, und der
+   Grund wurde im aktuellen Kontext verifiziert.
+3. Der Benutzer hat nach einer konkreten Klärungsfrage zugestimmt.
+
+**Voice-Terminal-Schutz:** Das Voice Terminal Overlay und Terminal-Fenster können
+ungesendete diktierte Texte in parallelen Sessions enthalten. Deshalb dürfen sie
+niemals neu gestartet, geschlossen oder ersetzt werden, nur weil ein früherer Prompt
+das verlangt hatte.
+
 ### Sichtbar machen beim Multi-Task-Prompt — PFLICHT-Tabelle
 
 Wenn der Prompt MINDESTENS einen Pre-Prompt ODER Post-Prompt enthält, MUSS am
@@ -221,6 +267,9 @@ passende Aufgabe kommt, greift er wieder.
 - Einen Block mit `Pre-Prompt:` oder `Post-Prompt:` als eigenständige Aufgabe behandeln
 - Pre/Post-Prompts ignorieren, weil sie nicht direkt zur Aufgabe gehören
 - Bei einer Klärungsfrage-Post-Prompt blind raten statt zu fragen
+- Pre-/Post-Prompts aus früheren Benutzer-Prompts in einen neuen Prompt übernehmen
+- Eine App, ein Terminal oder das Voice Terminal Overlay neu starten, weil ein früherer Prompt das verlangt hatte
+- Hochrisiko-Seiteneffekte ausführen, ohne dass der aktuelle Prompt sie ausdrücklich verlangt oder sie aktuell technisch zwingend nötig sind
 - In der Pflichttabelle den Inhalt einer Zelle sinngemäß zusammenfassen oder umschreiben
 - In der Pflichttabelle Aufgaben nur mit Stichworten beschreiben statt mit dem Originaltext
 - In der Pflichttabelle eigene Erklärungen oder Zusatztexte einfügen, die der Benutzer nicht geschrieben hat
