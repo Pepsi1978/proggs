@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using TerminalVoiceOverlay.Services;
 
 namespace TerminalVoiceOverlay.Views;
@@ -234,6 +235,62 @@ public partial class PromptInputWindow : Window
     private void BtnInsertSeparator_Click(object sender, RoutedEventArgs e)
     {
         InsertManualSeparator();
+        FlashSeparatorButton();
+    }
+
+    /// <summary>
+    /// Laesst den Semikolon-Button kurz aufleuchten als visuelle Bestaetigung
+    /// dass der Aufgaben-Trenner gesetzt wurde. Drei parallele Animationen
+    /// ueber jeweils 400ms:
+    /// 1. DropShadow-Opacity geht von 1.0 → 0.0 (Glow-Schein verschwindet)
+    /// 2. DropShadow-BlurRadius geht von 18 → 0 (Glow-Radius schrumpft)
+    /// 3. TextBlock-Foreground geht von Gold (#FFFFE680) → Hellblau (#FF7FD0FF)
+    ///    (das Semikolon-Zeichen blitzt golden auf und verblasst zum Standard).
+    /// Damit sieht der Benutzer einen klaren goldenen Blitz, der genau im Moment
+    /// des Klicks erscheint und schnell wieder verschwindet — ohne den Workflow
+    /// zu unterbrechen.
+    /// </summary>
+    private void FlashSeparatorButton()
+    {
+        var duration = new Duration(TimeSpan.FromMilliseconds(400));
+
+        var opacityAnim = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 0.0,
+            Duration = duration,
+            FillBehavior = FillBehavior.Stop
+        };
+        var blurAnim = new DoubleAnimation
+        {
+            From = 18.0,
+            To = 0.0,
+            Duration = duration,
+            FillBehavior = FillBehavior.Stop
+        };
+        var colorAnim = new ColorAnimation
+        {
+            From = Color.FromRgb(0xFF, 0xE6, 0x80),
+            To   = Color.FromRgb(0x7F, 0xD0, 0xFF),
+            Duration = duration,
+            FillBehavior = FillBehavior.Stop
+        };
+
+        // Sicherstellen dass die Ruhezustaende nach der Animation wieder
+        // gesetzt sind — FillBehavior.Stop laesst die Werte sonst auf
+        // ihrem Endwert haengen, was hier zwar bereits dem Ruhewert
+        // entspricht, aber explizit ist robuster gegen spaetere Aenderungen.
+        SeparatorGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, opacityAnim);
+        SeparatorGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, blurAnim);
+
+        // Foreground-Animation laeuft auf einem SolidColorBrush — der
+        // statische Brush aus der XAML-Definition kann nicht direkt
+        // animiert werden (frozen), also setzen wir vor der Animation
+        // einen frischen, animierbaren Brush und animieren dessen
+        // Color-Property.
+        var animBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x80));
+        SeparatorGlyph.Foreground = animBrush;
+        animBrush.BeginAnimation(SolidColorBrush.ColorProperty, colorAnim);
     }
 
     /// <summary>

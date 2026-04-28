@@ -132,12 +132,30 @@
                             Margin="0,0,4,0"
                             Content="&#xE734;"
                             ToolTip="Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein)."/>
+                    <!-- Semikolon-Button mit Aufleucht-Effekt:
+                         Beim Klick blitzt der Button kurz golden auf und legt
+                         einen Glow-Schein um sich, der innerhalb von ~400ms
+                         wieder verblasst. So sieht der Benutzer SOFORT dass
+                         der Aufgaben-Trenner gesetzt wurde, ohne erst nach
+                         unten in den Text scrollen zu muessen.
+                         Effect-Opacity startet bei 0 (nicht sichtbar im
+                         Ruhezustand), die TextBlock-Foreground bleibt
+                         standardmaessig hellblau wie bisher. Beide werden
+                         beim Klick aus dem Code-Behind animiert. -->
                     <Button x:Name="SeparatorButton"
                             Style="{StaticResource ToolbarButton}"
                             Click="BtnInsertSeparator_Click"
                             Margin="0,0,4,0"
                             ToolTip="Aufgaben-Trenner einfuegen — haengt eine Leerzeile, ein Semikolon und noch eine Leerzeile ans Ende des Textes an.">
-                        <TextBlock Text=";"
+                        <Button.Effect>
+                            <DropShadowEffect x:Name="SeparatorGlow"
+                                              Color="#FFFFE680"
+                                              BlurRadius="0"
+                                              ShadowDepth="0"
+                                              Opacity="0"/>
+                        </Button.Effect>
+                        <TextBlock x:Name="SeparatorGlyph"
+                                   Text=";"
                                    FontWeight="Bold"
                                    FontSize="16"
                                    Foreground="#FF7FD0FF"/>
