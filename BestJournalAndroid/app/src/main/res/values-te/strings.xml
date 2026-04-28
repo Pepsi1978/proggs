@@ -441,7 +441,7 @@
     <string name="achievements_counter">%2$d లో %1$d అన్‌లాక్</string>
     <string name="achievements_unlocked_at">%1$s న అన్‌లాక్</string>
     <string name="settings_about">ఆప్ గురించి</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">మీ వ్యక్తిగత AI డైరీ</string>
     <string name="settings_sign_out_confirm">సైన్ అవుట్?</string>
     <string name="settings_sign_out_body">మీరు నిజంగా సైన్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -1172,4 +1172,9 @@
     <string name="dev_seed_done">%1$d పరీక్ష ఎంట్రీలు సృష్టించబడ్డాయి</string>
     <string name="dev_seed_deleted">%1$d పరీక్ష ఎంట్రీలు తొలగించబడ్డాయి</string>
     <string name="dev_seed_error">లోపం: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">ప్రతి జర్నల్ ఎంట్రీకి అపరిమిత అదనపు నోట్స్</string>
+    <string name="settings_premium_feature_followups">అపరిమిత అదనపు నోట్స్</string>
+    <string name="settings_premium_feature_followups_desc">ఒక ఎంట్రీలో ఎన్ని కావాలంటే అన్ని అదనపు నోట్స్</string>
 </resources>

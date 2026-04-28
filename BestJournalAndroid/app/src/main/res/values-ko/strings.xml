@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">달성: %1$s</string>
     <!-- About -->
     <string name="settings_about">앱 정보</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">당신의 개인 AI 일기</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">로그아웃할까요?</string>
@@ -1236,4 +1236,9 @@
     <string name="dev_seed_done">테스트 항목 %1$d개가 생성됨</string>
     <string name="dev_seed_deleted">테스트 항목 %1$d개가 삭제됨</string>
     <string name="dev_seed_error">오류: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">모든 일기 항목에 무제한으로 추가 기록</string>
+    <string name="settings_premium_feature_followups">무제한 추가 기록</string>
+    <string name="settings_premium_feature_followups_desc">항목마다 원하는 만큼 추가 기록할 수 있어요</string>
 </resources>

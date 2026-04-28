@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
@@ -1256,4 +1256,9 @@
     <string name="dev_seed_done">تم إنشاء %1$d إدخال اختباري</string>
     <string name="dev_seed_deleted">تم حذف %1$d إدخال اختباري</string>
     <string name="dev_seed_error">خطأ: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">إضافات غير محدودة لكل تدوينة في اليوميات</string>
+    <string name="settings_premium_feature_followups">إضافات غير محدودة</string>
+    <string name="settings_premium_feature_followups_desc">أضف إلى كل تدوينة قدر ما تشاء</string>
 </resources>

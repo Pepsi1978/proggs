@@ -451,7 +451,7 @@
     <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
     
     <string name="settings_about">App વિશે</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
     
     <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
@@ -1197,4 +1197,9 @@
     <string name="dev_seed_done">%1$d પરીક્ષણ એન્ટ્રીઓ બનાવી</string>
     <string name="dev_seed_deleted">%1$d પરીક્ષણ એન્ટ્રીઓ કાઢી નાખી</string>
     <string name="dev_seed_error">ભૂલ: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">દરેક ડાયરી પ્રવેશ માટે અમર્યાદિત વધારાની નોંધો</string>
+    <string name="settings_premium_feature_followups">અમર્યાદિત વધારાની નોંધો</string>
+    <string name="settings_premium_feature_followups_desc">દરેક પ્રવેશમાં તમે ઇચ્છો તેટલી વધારાની નોંધો</string>
 </resources>

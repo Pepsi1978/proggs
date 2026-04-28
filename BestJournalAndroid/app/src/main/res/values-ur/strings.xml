@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s کو حاصل ہوا</string>
     <!-- About -->
     <string name="settings_about">ایپ کے بارے میں</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">آپ کی ذاتی AI ڈائری</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">سائن آؤٹ کریں؟</string>
@@ -1241,4 +1241,9 @@
     <string name="dev_seed_done">%1$d ٹیسٹ اندراجات بنائے گئے</string>
     <string name="dev_seed_deleted">%1$d ٹیسٹ اندراجات حذف کیے گئے</string>
     <string name="dev_seed_error">خرابی: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">ہر ڈائری اندراج میں لامحدود اضافے</string>
+    <string name="settings_premium_feature_followups">لامحدود اضافے</string>
+    <string name="settings_premium_feature_followups_desc">فی اندراج جتنے چاہیں اضافے</string>
 </resources>

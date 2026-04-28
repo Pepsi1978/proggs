@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">%1$s को अनलॉक</string>
     <!-- About -->
     <string name="settings_about">ऐप के बारे में</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">आपकी व्यक्तिगत AI डायरी</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">साइन आउट करें?</string>
@@ -1240,4 +1240,9 @@
     <string name="dev_seed_done">%1$d परीक्षण प्रविष्टियाँ बनाई गईं</string>
     <string name="dev_seed_deleted">%1$d परीक्षण प्रविष्टियाँ हटाई गईं</string>
     <string name="dev_seed_error">त्रुटि: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">हर डायरी एंट्री के लिए असीमित अतिरिक्त नोट्स</string>
+    <string name="settings_premium_feature_followups">असीमित अतिरिक्त नोट्स</string>
+    <string name="settings_premium_feature_followups_desc">हर एंट्री में जितने चाहें उतने अतिरिक्त नोट्स</string>
 </resources>

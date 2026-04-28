@@ -441,7 +441,7 @@
     <string name="achievements_unlocked_at">%1$s-ന് അൺലോക്ക് ചെയ്തു</string>
     <!-- About -->
     <string name="settings_about">ആപ്പിനെക്കുറിച്ച്</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">നിങ്ങളുടെ വ്യക്തിഗത AI ഡയറി</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">സൈൻ ഔട്ട് ചെയ്യണോ?</string>
@@ -1175,4 +1175,9 @@
     <string name="dev_seed_done">%1$d ടെസ്റ്റ് എൻട്രികൾ സൃഷ്ടിച്ചു</string>
     <string name="dev_seed_deleted">%1$d ടെസ്റ്റ് എൻട്രികൾ ഇല്ലാതാക്കി</string>
     <string name="dev_seed_error">പിശക്: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">ഓരോ ഡയറി എൻട്രിക്കും പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
+    <string name="settings_premium_feature_followups">പരിധിയില്ലാത്ത അധിക കുറിപ്പുകൾ</string>
+    <string name="settings_premium_feature_followups_desc">ഓരോ എൻട്രിയിലും ആവശ്യമുള്ളത്ര അധിക കുറിപ്പുകൾ</string>
 </resources>

@@ -451,7 +451,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -1210,4 +1210,9 @@
     <string name="dev_seed_done">%1$d test entries created</string>
     <string name="dev_seed_deleted">%1$d test entries deleted</string>
     <string name="dev_seed_error">Error: %1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">Unlimited follow-ups for every journal entry</string>
+    <string name="settings_premium_feature_followups">Unlimited follow-ups</string>
+    <string name="settings_premium_feature_followups_desc">As many follow-ups per entry as you want</string>
 </resources>

@@ -466,7 +466,7 @@
     <string name="achievements_unlocked_at">解鎖於 %1$s</string>
     <!-- About -->
     <string name="settings_about">關於應用</string>
-    <string name="settings_about_version">Best Journal V0.15.0</string>
+    <string name="settings_about_version">Best Journal V0.15.1</string>
     <string name="settings_about_desc">你的個人 AI 日記</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">要退出登入嗎？</string>
@@ -1236,4 +1236,9 @@
     <string name="dev_seed_done">已建立%1$d筆測試項目</string>
     <string name="dev_seed_deleted">已刪除%1$d筆測試項目</string>
     <string name="dev_seed_error">錯誤：%1$s</string>
+
+    <!-- Premium feature: unlimited follow-ups per journal entry -->
+    <string name="paywall_feature_followups">每篇日記皆可無限補充</string>
+    <string name="settings_premium_feature_followups">無限補充</string>
+    <string name="settings_premium_feature_followups_desc">每篇日記想加多少補充就加多少</string>
 </resources>
