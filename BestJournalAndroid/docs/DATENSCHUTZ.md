@@ -538,16 +538,6 @@ Website: https://datenschutz.hessen.de
 EU-/EWR-Nutzer können sich auch an die für ihren Wohnsitz zuständige Aufsichtsbehörde
 wenden.
 
-**Vereinigtes Königreich (UK):**
-
-Information Commissioner's Office (ICO)
-Wycliffe House, Water Lane, Wilmslow, Cheshire SK9 5AF
-Telefon: +44 303 123 1113
-Website: https://ico.org.uk
-
-Nutzer im UK haben nach UK GDPR und Data Protection Act 2018 dieselben
-Betroffenenrechte wie unter der EU-DSGVO.
-
 ---
 
 ## 8a. Internationale Nutzer, zusätzliche Rechte nach lokalem Recht

@@ -220,7 +220,6 @@ Convention on Contracts for the International Sale of Goods.
 consumer protection provisions of the country in which they have their habitual
 residence apply in addition. This includes in particular:
 
-- the **UK Consumer Rights Act 2015** for consumers in the United Kingdom,
 - the **Consumer Protection Acts** and state laws for consumers in the United States,
 - the **Código de Defesa do Consumidor** for consumers in Brazil,
 - the **Australian Consumer Law** (Schedule 2 Competition and Consumer Act 2010) for

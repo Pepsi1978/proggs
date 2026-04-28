@@ -618,26 +618,6 @@ including voiceprints. We want to be transparent:
 If you are an Illinois resident and want to opt out of cloud transcription entirely,
 switch to "Local transcription" in settings (Section 5.1).
 
-### 8a.4 Rights of UK residents (UK GDPR)
-
-Under the UK GDPR and the Data Protection Act 2018, UK users have the same rights as
-EU/EEA users listed above (Section 8). You can also lodge a complaint with the
-Information Commissioner's Office (ICO):
-
-Information Commissioner's Office (ICO)
-Wycliffe House, Water Lane, Wilmslow, Cheshire SK9 5AF, United Kingdom
-Phone: +44 303 123 1113
-Website: https://ico.org.uk
-
-Transfers to the USA are covered by the **UK Extension to the EU-US Data Privacy
-Framework** and by the **International Data Transfer Agreement (IDTA)** where
-applicable (Art. 46 UK GDPR).
-
-Following the UK Data (Use and Access) Act 2025, we maintain a formal complaints
-process: to file a complaint about our data handling, email dev.app.support@gmail.com
-with subject "UK GDPR Complaint". We will acknowledge within 30 days and respond
-within 60 days.
-
 ### 8a.5 Rights of Canadian residents (PIPEDA)
 
 Under the Personal Information Protection and Electronic Documents Act (PIPEDA),

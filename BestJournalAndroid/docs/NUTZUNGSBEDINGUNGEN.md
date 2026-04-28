@@ -210,7 +210,6 @@ UN-Kaufrechts.
 **Zwingendes Verbraucherschutzrecht bleibt unberührt:** Bei Verbrauchern gelten
 ergänzend die zwingenden Verbraucherschutzvorschriften des Landes, in dem sie
 ihren gewöhnlichen Aufenthalt haben. Dies umfasst insbesondere:
-- den **UK Consumer Rights Act 2015** für Verbraucher im Vereinigten Königreich,
 - die **Consumer Protection Acts** und Bundesstaatsgesetze für Verbraucher in den USA,
 - die **Código de Defesa do Consumidor** für Verbraucher in Brasilien,
 - die **Australian Consumer Law** (Schedule 2 Competition and Consumer Act 2010) für

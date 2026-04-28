@@ -749,6 +749,14 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="paywall_prices_loading">Loading prices…</string>
     <string name="paywall_sub_loading_toast">Loading subscription, please try again shortly.</string>
+
+    <!-- § 356(5) German Civil Code immediate-supply waiver dialog (M1 Audit v6, 2026-04-28).
+         Shown before launchPurchaseFlow. Confirmation gates the actual Google Play Billing sheet. -->
+    <string name="paywall_consent_dialog_title">Right of Withdrawal</string>
+    <string name="paywall_consent_dialog_body">After completing a subscription or purchase you have a 14-day right of withdrawal under § 355 of the German Civil Code (BGB).\n\nTo unlock the premium features immediately, we begin providing them right after your purchase. By giving your consent below you knowingly waive your 14-day right of withdrawal (§ 356(5) BGB).\n\nWithout this consent we cannot unlock the premium features instantly.</string>
+    <string name="paywall_consent_dialog_checkbox">I agree that the premium features are provided to me immediately upon purchase. I am aware that this waives my 14-day right of withdrawal.</string>
+    <string name="paywall_consent_dialog_confirm">Subscribe — payment required</string>
+    <string name="paywall_consent_dialog_cancel">Cancel</string>
     <string name="paywall_purchase_loading_toast">Loading purchase, please try again shortly.</string>
     <string name="paywall_today">Today</string>
     <string name="paywall_full_access">Full access</string>
@@ -1097,6 +1105,11 @@
     <!-- AI-generated content badge (H4 — AI Act Art. 50, mandatory from 02.08.2026) -->
     <string name="ai_generated_badge">AI-generated</string>
     <string name="ai_generated_tooltip">This content was created by an AI system (Google Gemini) and may contain errors. Please verify independently.</string>
+
+    <!-- AI-improved inline suffix (EU AI Act Art. 50: mandatory from 02.08.2026; Korea PIPA AI Basic Act: in force).
+         Automatically appended to the end of every Gemini-improved journal entry. -->
+    <string name="ai_improved_suffix">\n\n(✨ Enhanced by AI)</string>
+    <string name="ai_improved_suffix_marker" translatable="false">(✨</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CONSENT SCREEN (pre-onboarding) + legal document titles

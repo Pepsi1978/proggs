@@ -135,7 +135,7 @@ $text
 
             // If result is long enough, accept it
             if (ratio >= TRUNCATION_RATIO) {
-                return Result.success(oneShot)
+                return Result.success(appendAiImprovedSuffix(oneShot))
             }
 
             // Text was truncated — split into chunks and process in parallel
@@ -144,9 +144,30 @@ $text
                 chunks.map { chunk -> async { rewriteChunk(chunk, modelName) } }.map { it.await() }
             }
 
-            Result.success(results.joinToString("\n\n").trim())
+            Result.success(appendAiImprovedSuffix(results.joinToString("\n\n").trim()))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Haengt das KI-Transparenz-Label "(✨ Durch KI verbessert)" ans Ende des Texts.
+     * Erfuellt EU AI Act Art. 50 Abs. 4 (Pflicht ab 02.08.2026): KI-Output muss menschlich
+     * erkennbar gekennzeichnet werden. Lebt am Text statt am UI-Container, damit das
+     * Label auch beim Export/Teilen erhalten bleibt.
+     *
+     * Schutz vor Doppel-Anhaengen: bereits vorhandenes Label wird entfernt und neu angehaengt.
+     */
+    private fun appendAiImprovedSuffix(text: String): String {
+        val marker = context.getString(R.string.ai_improved_suffix_marker)
+        val suffix = context.getString(R.string.ai_improved_suffix)
+        val markerIdx = text.lastIndexOf(marker)
+        val cleaned =
+            if (markerIdx >= 0) {
+                text.substring(0, markerIdx).trimEnd()
+            } else {
+                text.trimEnd()
+            }
+        return cleaned + suffix
     }
 }

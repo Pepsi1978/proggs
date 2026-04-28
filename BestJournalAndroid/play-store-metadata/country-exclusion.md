@@ -29,6 +29,7 @@ Google Play ist in diesen Ländern nicht verfügbar — Apps werden automatisch 
 | **Vietnam** | VN | Impact-Assessment-Dossier beim MPS binnen 60 Tagen, neues PDP-Gesetz ab 01.01.2026 | MPS-Ermittlung |
 | **Saudi-Arabien** | SA | Arabische DSE + SDAIA-PDPL-Konformität, Voice als biometrisch | SDAIA bis 5 Mio. SAR |
 | **Brasilien** | BR | Portugiesische DSE + ANPD-SCCs (seit 23.08.2025 Pflicht, EU-SCCs reichen nicht) | ANPD bis 2% Umsatz |
+| **Vereinigtes Königreich** | GB | UK GDPR Art. 27 Vertreter-Pflicht ohne UK-Sitz (Mood = Art. 9 → keine Ausnahme); Entscheidung Benutzer 28.04.2026: UK ausschliessen statt Vertreter-Service buchen | ICO bis £17,5 Mio. Bussgeld |
 
 ---
 
