@@ -63,6 +63,12 @@ namespace TerminalVoiceOverlay.Views
         // damit ein Klick darauf den Text aus der Prompt-Eingabe nicht nur
         // einfuegt, sondern auch sofort an die KI abschickt.
         private bool _forceReturnOnNextSubmit = false;
+        // Reines UI-Flag: spiegelt wider, ob das Promtboard-Panel geoeffnet
+        // ist (Stern goldgelb). Steuert NICHT die AlwaysOn-Pipeline — die
+        // AlwaysOn-Prompts (IsAlwaysOn=true in der DB) werden bei JEDEM
+        // Voice-Submit angehaengt, unabhaengig davon ob das Panel sichtbar
+        // ist. Frueher koppelte dieses Flag beides; das war der Grund warum
+        // beim ersten Start ohne Sternklick keine Pre/Post-Prompts mitgingen.
         private bool alwaysOnActive         = false;
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
@@ -1217,13 +1223,15 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>Build the PromptBoard always-on Pre AND Post wrappers
-        /// when the star toggle is active. Returns (empty, empty) when
-        /// the toggle is off, the service is unavailable, or no
-        /// IsAlwaysOn prompts exist.</summary>
+        /// <summary>Build the PromptBoard always-on Pre AND Post wrappers.
+        /// Wird bei JEDEM Voice-Submit aufgerufen — unabhaengig davon ob
+        /// das Promtboard-Panel sichtbar ist. Liefert (empty, empty) nur
+        /// wenn der Service nicht verfuegbar ist oder keine IsAlwaysOn-
+        /// Prompts in der DB existieren. Der Stern-Toggle steuert nur die
+        /// Panel-Sichtbarkeit, nicht den Pipeline-Inhalt.</summary>
         private async Task<(string Pre, string Post)> BuildAlwaysOnWrappersAsync()
         {
-            if (!alwaysOnActive || _alwaysOnPrefix is null) return (string.Empty, string.Empty);
+            if (_alwaysOnPrefix is null) return (string.Empty, string.Empty);
 
             try
             {
