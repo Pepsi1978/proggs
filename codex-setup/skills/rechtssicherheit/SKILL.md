@@ -70,6 +70,51 @@ Play Data Safety behaupten.
 
 ---
 
+## Trigger und Pruefumfang (KRITISCH)
+
+Nutze diesen Skill immer, wenn es um Datenschutz-Compliance, Abmahnungsrisiken,
+Play-Store-Release oder rechtliche Pflichttexte einer Android-App geht — auch
+wenn der Benutzer den Skill-Namen nicht explizit nennt.
+
+**Deutsche Trigger:**
+
+- "starte den Skill Rechtssicherheit"
+- "pruefe [App] auf Rechtssicherheit"
+- "Rechtssicherheit fuer [App]"
+- "DSGVO-Check fuer [App]"
+- "ist [App] abmahnungssicher"
+- "Abmahnungscheck [App]"
+- "Play-Store rechtskonform pruefen"
+- "Rechts-Audit [App]"
+- "Data-Safety-Check"
+- "Account-Loeschung pruefen"
+- "Widerruf pruefen"
+- "Impressum pruefen"
+
+**Auch ohne exakten Trigger verwenden bei:**
+
+- Datenschutzerklaerung, DSGVO/GDPR, CCPA/CPRA, UK-GDPR, PIPL, DPDP, APPI,
+  PIPA, LGPD oder anderen Datenschutzpflichten.
+- Impressum/Anbieterkennzeichnung, AGB/Nutzungsbedingungen, Widerrufsbelehrung,
+  Consent, Account-/Datenloeschung, Support/Kontakt oder Pflichtlinks in der App.
+- Google Play Data Safety, Play-Console-Deklarationen, Permissions, SDKs,
+  Tracking, Ads, Analytics, Crashlytics, KI-APIs, Backups, Logs oder Secrets.
+
+**Pflicht-Pruefumfang:**
+
+1. App-Code und Manifest gegen Rechtstexte und Play-Console-Angaben abgleichen.
+2. Parallel recherchieren: DSGVO/GDPR, CCPA/CPRA, UK-GDPR, PIPL, DPDP, APPI,
+   PIPA, LGPD, Google Play Data Safety, DDG-Anbieterkennzeichnung,
+   Widerrufsbelehrung und AGB.
+3. Bestehende App-Dokumente pruefen: Datenschutzerklaerung, Nutzungsbedingungen,
+   Impressum, Widerrufsbelehrung, Account-/Datenloeschung, Support/Kontakt.
+4. Platzierung und Uebersetzung pruefen: Store Listing, Onboarding, Consent,
+   Settings, About, Paywall/Checkout und alle App-Sprachen.
+5. Technische Datenschutz- und Sicherheitsrisiken pruefen: Manifest-Permissions,
+   SDKs, Backup-Regeln, lokale Speicherung, Logs, Secrets, TLS und Data Safety.
+
+---
+
 ## Plattformneutrale Pfade (KRITISCH)
 
 Die Wissensbasis liegt **workspace-lokal**, nicht in einem persoenlichen Home-Unterordner.
