@@ -9,7 +9,7 @@
          NAVIGATION & TABS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="nav_journal">দিনলিপি</string>
-    <string name="nav_retrospective">পিছনে ফিরে দেখা</string>
+    <string name="nav_retrospective">পর্যালোচনা</string>
     <string name="nav_dashboard">ড্যাশবোর্ড</string>
     <string name="nav_settings">সেটিংস</string>
 
@@ -1135,6 +1135,8 @@
     <string name="settings_report_ai_no_email">কোনো ইমেইল অ্যাপ পাওয়া যায়নি। অনুগ্রহ করে রিপোর্ট dev.app.support@gmail.com-এ পাঠাও।</string>
     <string name="settings_report_ai_subject">Best Journal: অনুপযুক্ত AI উত্তর</string>
     <string name="settings_report_ai_body">নমস্কার,\n\nআমি Best Journal-এ একটি অনুপযুক্ত বা ভুল AI উত্তর রিপোর্ট করতে চাই।\n\nসমস্যার বিবরণ:\n[অনুগ্রহ করে পূরণ করো]\n\nপ্রসঙ্গ (কোন ফিচার, কোন ইনপুট):\n[অনুগ্রহ করে পূরণ করো]\n\nধন্যবাদ।</string>
+    <string name="settings_report_ai_dialog_title">AI প্রতিক্রিয়া রিপোর্ট করুন</string>
+    <string name="settings_report_ai_dialog_desc">অনুপযুক্ত বা ভুল AI প্রতিক্রিয়ার বর্ণনা দিন। আপনার রিপোর্ট সরাসরি আমাদের সাপোর্ট টিমে পাঠানো হবে। আপনাকে আপনার Google অ্যাকাউন্ট দিয়ে সাইন ইন করতে হবে।</string>
 
     <string name="settings_revoke_title">চুক্তি প্রত্যাহার</string>
     <string name="settings_revoke_subtitle">Premium ক্রয়</string>
@@ -1254,4 +1256,68 @@
     <string name="paywall_feature_followups">প্রতিটি ডায়েরি এন্ট্রিতে আনলিমিটেড সংযোজন</string>
     <string name="settings_premium_feature_followups">আনলিমিটেড সংযোজন</string>
     <string name="settings_premium_feature_followups_desc">প্রতিটি এন্ট্রিতে যত খুশি সংযোজন</string>
+
+    <!-- Follow-up feature strings -->
+    <string name="follow_up_tab_label">সংযোজন</string>
+    <string name="follow_up_add_button">সংযোজন যোগ করো</string>
+    <string name="follow_up_empty_state">এখনো কোনো সংযোজন নেই।\nনিচের বাটনে ট্যাপ করে প্রথমটি যোগ করো।</string>
+    <string name="follow_up_recording_hint">রেকর্ড করতে ট্যাপ করো</string>
+    <string name="follow_up_delete_confirm_title"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> মুছে ফেলবে?</string>
+    <string name="follow_up_delete_confirm_text"><xliff:g id="title" example="Nachtrag 1">%1$s</xliff:g> মুছে ফেলা হবে। এটি আর ফেরানো যাবে না।</string>
+    <string name="follow_up_delete_confirm_yes">হ্যাঁ, মুছে ফেলো</string>
+    <string name="follow_up_delete_confirm_no">না, রাখো</string>
+    <string name="follow_up_show_original">↩ মূল লেখা দেখাও</string>
+    <string name="follow_up_show_improved">উন্নত সংস্করণ দেখাও</string>
+    <string name="follow_up_inline_title">সংযোজন <xliff:g id="number" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_improve_button">উন্নত করো</string>
+    <string name="follow_up_improving_state">উন্নত করা হচ্ছে…</string>
+    <string name="follow_up_improve_error">উন্নত করা সম্ভব হয়নি। আবার চেষ্টা করো।</string>
+    <string name="follow_up_record_new">নতুন সংযোজন রেকর্ড করো</string>
+    <string name="follow_up_recording_state">রেকর্ড হচ্ছে…</string>
+    <string name="follow_up_transcribing_state">লেখায় রূপান্তর হচ্ছে…</string>
+    <string name="follow_up_record_error">রেকর্ড করা সম্ভব হয়নি। আবার চেষ্টা করো।</string>
+    <string name="follow_up_transcribe_error">লেখায় রূপান্তর সম্ভব হয়নি। আবার চেষ্টা করো।</string>
+
+    <!-- Prompt/recording UI strings -->
+    <string name="prompt_recording_with_model">রেকর্ড হচ্ছে (<xliff:g id="model" example="Whisper">%1$s</xliff:g>)…</string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> দিয়ে লেখায় রূপান্তর হচ্ছে…</string>
+    <string name="prompt_transcription_model_hint">মডেল: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_record_button_label">রেকর্ড</string>
+    <string name="prompt_stop_button_label">থামাও</string>
+    <string name="prompt_send_button_label">পাঠাও</string>
+    <string name="prompt_placeholder_text">তোমার মনের কথা লিখো…</string>
+    <string name="prompt_improve_button_label">উন্নত করো</string>
+    <string name="prompt_char_count_label">%1$d অক্ষর</string>
+
+    <!-- AI retrospective strings -->
+    <string name="ai_retro_title">AI পর্যালোচনা</string>
+    <string name="ai_retro_generate_button">পর্যালোচনা তৈরি করো</string>
+    <string name="ai_retro_generating_state">পর্যালোচনা তৈরি হচ্ছে…</string>
+    <string name="ai_retro_error_state">পর্যালোচনা তৈরি করা সম্ভব হয়নি। আবার চেষ্টা করো।</string>
+    <string name="ai_retro_empty_state">পর্যালোচনার জন্য যথেষ্ট এন্ট্রি নেই।</string>
+    <string name="ai_retro_week_label">এই সপ্তাহ</string>
+    <string name="ai_retro_month_label">এই মাস</string>
+    <string name="ai_retro_year_label">এই বছর</string>
+    <string name="ai_retro_copy_button">কপি করো</string>
+    <string name="ai_retro_share_button">শেয়ার করো</string>
+    <string name="ai_retro_copied_message">ক্লিপবোর্ডে কপি হয়েছে</string>
+
+    <!-- Paywall / consent strings -->
+    <string name="paywall_title">প্রিমিয়ামে আপগ্রেড করো</string>
+    <string name="paywall_subtitle">সমস্ত প্রিমিয়াম সুবিধা উপভোগ করো</string>
+    <string name="paywall_monthly_label">মাসিক</string>
+    <string name="paywall_yearly_label">বার্ষিক</string>
+    <string name="paywall_lifetime_label">একবারেই</string>
+    <string name="paywall_subscribe_button">সদস্যতা নাও</string>
+    <string name="paywall_restore_button">ক্রয় পুনরুদ্ধার করো</string>
+    <string name="paywall_cancel_anytime">যেকোনো সময় বাতিল করো</string>
+    <string name="paywall_consent_dialog_title">বিনামূল্যে বাতিলের অধিকার</string>
+    <string name="paywall_consent_dialog_body">তুমি একটি সাবস্ক্রিপশন কিনছো। §355 BGB অনুযায়ী তোমার 14 দিনের মধ্যে বিনামূল্যে বাতিলের অধিকার আছে। §356 BGB অনুযায়ী ডিজিটাল বিষয়বস্তুর ক্ষেত্রে এই অধিকার বাতিল হয়ে যায় যদি তুমি সম্মতি দাও।</string>
+    <string name="paywall_consent_dialog_checkbox">আমি সম্মত যে ডিজিটাল বিষয়বস্তুর সাথে ডাউনলোড শুরু হলে আমার বাতিলের অধিকার বাতিল হবে।</string>
+    <string name="paywall_consent_dialog_confirm">সম্মত হও এবং কিনো</string>
+    <string name="paywall_consent_dialog_cancel">বাতিল করো</string>
+    <string name="paywall_feature_ai_improvement">AI দিয়ে লেখা উন্নত করা</string>
+    <string name="paywall_feature_unlimited_entries">সীমাহীন ডায়েরি এন্ট্রি</string>
+    <string name="paywall_feature_pdf_export">PDF হিসেবে রপ্তানি করা</string>
+    <string name="paywall_feature_drive_backup">Google Drive ব্যাকআপ</string>
 </resources>

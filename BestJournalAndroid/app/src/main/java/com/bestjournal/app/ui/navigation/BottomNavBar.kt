@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
 import com.bestjournal.app.util.rememberHapticAction
 
 sealed class BottomNavItem(val route: String, @androidx.annotation.StringRes val titleRes: Int, val icon: ImageVector) {
@@ -95,8 +96,13 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
                     )
                 },
                 label = {
+                    // maxLines + Ellipsis is the structural safety net (Poka-Yoke
+                    // level 3): even if a future translation is unexpectedly long,
+                    // the tab stays one line so the icon never jumps up.
                     Text(
                         text = stringResource(item.titleRes),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         color =
                             if (isSelected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.outline,

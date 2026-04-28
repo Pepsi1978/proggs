@@ -9,7 +9,7 @@
          NAVIGATION & TABS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="nav_journal">Günlük</string>
-    <string name="nav_retrospective">Geri bakış</string>
+    <string name="nav_retrospective">Özet</string>
     <string name="nav_dashboard">Panel</string>
     <string name="nav_settings">Ayarlar</string>
 
@@ -1134,6 +1134,8 @@
     <string name="settings_report_ai_no_email">E-posta uygulaması bulunamadı. Bildirimi dev.app.support@gmail.com adresine gönder.</string>
     <string name="settings_report_ai_subject">Best Journal: uygunsuz yapay zekâ yanıtı</string>
     <string name="settings_report_ai_body">Merhaba,\n\nBest Journal\'da uygunsuz veya hatalı bir yapay zekâ yanıtını bildirmek istiyorum.\n\nSorunun açıklaması:\n[Doldurulacak]\n\nBağlam (hangi özellik, hangi giriş):\n[Doldurulacak]\n\nTeşekkürler.</string>
+    <string name="settings_report_ai_dialog_title">Yapay zeka yanıtını bildir</string>
+    <string name="settings_report_ai_dialog_desc">Uygunsuz veya hatalı yapay zeka yanıtını açıklayın. Bildiriminiz doğrudan destek ekibimize gönderilir. Google hesabınızla giriş yapmış olmanız gerekir.</string>
 
     <string name="settings_revoke_title">Cayma hakkı</string>
     <string name="settings_revoke_subtitle">Premium satın alma</string>

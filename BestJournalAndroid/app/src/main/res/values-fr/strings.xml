@@ -10,7 +10,7 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="nav_journal">Journal</string>
     <string name="nav_retrospective">Rétrospective</string>
-    <string name="nav_dashboard">Tableau de bord</string>
+    <string name="nav_dashboard">Aperçu</string>
     <string name="nav_settings">Paramètres</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -1138,6 +1138,8 @@
     <string name="settings_report_ai_no_email">Aucune application de messagerie trouvée. Merci d\'envoyer le signalement à dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal\u00A0: réponse IA inappropriée</string>
     <string name="settings_report_ai_body">Bonjour,\n\nje souhaite signaler une réponse IA inappropriée ou erronée dans Best Journal.\n\nDescription du problème\u00A0:\n[À compléter]\n\nContexte (quelle fonction, quelle saisie)\u00A0:\n[À compléter]\n\nMerci.</string>
+    <string name="settings_report_ai_dialog_title">Signaler une réponse de l\'IA</string>
+    <string name="settings_report_ai_dialog_desc">Décrivez la réponse inappropriée ou incorrecte de l\'IA. Votre signalement sera envoyé directement à notre équipe d\'assistance. Vous devez être connecté avec votre compte Google.</string>
 
     <string name="settings_revoke_title">Rétractation</string>
     <string name="settings_revoke_subtitle">Achat Premium</string>

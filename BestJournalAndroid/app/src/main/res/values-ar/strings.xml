@@ -10,7 +10,7 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="nav_journal">المذكرات</string>
     <string name="nav_retrospective">مراجعة</string>
-    <string name="nav_dashboard">لوحة التحكم</string>
+    <string name="nav_dashboard">اللوحة</string>
     <string name="nav_settings">الإعدادات</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -1150,6 +1150,8 @@
     <string name="settings_report_ai_no_email">لم يتم العثور على تطبيق بريد. يرجى إرسال البلاغ إلى dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: رد ذكاء اصطناعي غير مناسب</string>
     <string name="settings_report_ai_body">مرحبًا،\n\nأرغب في الإبلاغ عن رد ذكاء اصطناعي غير مناسب أو خاطئ في Best Journal.\n\nوصف المشكلة:\n[يُرجى التعبئة]\n\nالسياق (الميزة والإدخال):\n[يُرجى التعبئة]\n\nشكرًا.</string>
+    <string name="settings_report_ai_dialog_title">الإبلاغ عن استجابة الذكاء الاصطناعي</string>
+    <string name="settings_report_ai_dialog_desc">صف استجابة الذكاء الاصطناعي غير الملائمة أو غير الصحيحة. يتم إرسال بلاغك مباشرة إلى فريق الدعم لدينا. يجب أن تكون مسجل الدخول بحساب Google الخاص بك.</string>
 
     <string name="settings_revoke_title">الرجوع عن العقد</string>
     <string name="settings_revoke_subtitle">شراء Premium</string>
@@ -1269,4 +1271,66 @@
     <string name="paywall_feature_followups">إضافات غير محدودة لكل تدوينة في اليوميات</string>
     <string name="settings_premium_feature_followups">إضافات غير محدودة</string>
     <string name="settings_premium_feature_followups_desc">أضف إلى كل تدوينة قدر ما تشاء</string>
+
+    <!-- Follow-up / Nachtrag strings -->
+    <string name="action_no">لا</string>
+    <string name="action_yes">نعم</string>
+    <string name="ai_improved_suffix">\n\n✨ مُحسَّن بالذكاء الاصطناعي</string>
+    <string name="ai_improved_suffix_marker">✨ مُحسَّن بالذكاء الاصطناعي</string>
+    <string name="entry_delete_entry_cd">حذف تدوينة اليوميات</string>
+    <string name="entry_journal_entry_title">تدوينة اليوميات</string>
+    <string name="entry_photos_videos_add_title">إضافة صور/فيديوهات</string>
+    <string name="follow_up_cancel">إلغاء</string>
+    <string name="follow_up_card_title">ملاحظة لاحقة</string>
+    <string name="follow_up_choose_input_mode">كيف تريد إضافة ملاحظتك اللاحقة؟</string>
+    <string name="follow_up_delete_button">حذف</string>
+    <string name="follow_up_delete_cd">حذف الملاحظة اللاحقة</string>
+    <string name="follow_up_delete_confirm_text">هل تريد حذف الملاحظة اللاحقة <xliff:g id="ordinal" example="1">%1$s</xliff:g> نهائياً؟</string>
+    <string name="follow_up_delete_confirm_title">حذف الملاحظة اللاحقة <xliff:g id="ordinal" example="1">%1$s</xliff:g>؟</string>
+    <string name="follow_up_dialog_label">ملاحظتك اللاحقة:</string>
+    <string name="follow_up_dialog_title">ملاحظة لاحقة</string>
+    <string name="follow_up_discard">تجاهل</string>
+    <string name="follow_up_improve_text">✨ تحسين النص</string>
+    <string name="follow_up_improve_with_ai">تحسين لاحق بالذكاء الاصطناعي</string>
+    <string name="follow_up_improving">الذكاء الاصطناعي يحسّن الملاحظة اللاحقة…</string>
+    <string name="follow_up_inline_title">ملاحظة لاحقة <xliff:g id="ordinal" example="1">%1$s</xliff:g></string>
+    <string name="follow_up_input_speak_cd">تسجيل صوتي</string>
+    <string name="follow_up_input_speak_label">تسجيل صوتي</string>
+    <string name="follow_up_input_write_cd">كتابة</string>
+    <string name="follow_up_input_write_label">كتابة</string>
+    <string name="follow_up_premium_body">مع Premium يمكنك إضافة ملاحظات لاحقة بلا حدود لكل تدوينة في يومياتك.</string>
+    <string name="follow_up_premium_hint">ابتداءً من الملاحظة اللاحقة الثانية</string>
+    <string name="follow_up_premium_later">قرر لاحقاً</string>
+    <string name="follow_up_premium_subscribe">بدء الاشتراك</string>
+    <string name="follow_up_premium_subtext">كل ملاحظة لاحقة تُدرج تلقائياً في لوحة التحكم لتبقى تحليلاتك دائماً مكتملة.</string>
+    <string name="follow_up_premium_title">ملاحظات لاحقة غير محدودة</string>
+    <string name="follow_up_save">حفظ</string>
+    <string name="follow_up_save_improved">حفظ النسخة المحسَّنة</string>
+    <string name="follow_up_show_improved">✨ عرض النسخة المحسَّنة</string>
+    <string name="follow_up_show_original">↩ عرض الأصل</string>
+    <string name="follow_up_speak_pill_label">تسجيل صوتي</string>
+    <string name="follow_up_speak_prompt">سجّل ملاحظتك اللاحقة بصوتك.</string>
+    <string name="follow_up_stop_hint">اضغط إيقاف عند الانتهاء.</string>
+    <string name="follow_up_tab_improved">✨ مُحسَّن بالذكاء الاصطناعي</string>
+    <string name="follow_up_tab_original">الأصل</string>
+    <string name="follow_up_text_placeholder">اكتب ملاحظتك اللاحقة هنا…</string>
+    <string name="follow_up_transcribing">جارٍ تحويل الملاحظة اللاحقة إلى نص…</string>
+    <string name="journal_improve">تحسين النص</string>
+    <string name="journal_state_improving">جارٍ التحسين…</string>
+    <string name="journal_state_transcribing">جارٍ التحويل إلى نص…</string>
+    <string name="paywall_consent_dialog_body">يحق لك في الأصل الرجوع عن قرارك خلال 14 يوماً بعد إتمام الاشتراك أو الشراء.\n\nلنتمكن من تفعيل ميزات Premium فوراً، سنبدأ بتقديمها مباشرة بعد شرائك. بموافقتك أدناه، أنت تتنازل عن حقك في الرجوع خلال 14 يوماً مع علمك بالعواقب.\n\nبدون هذه الموافقة لا يمكننا تفعيل ميزات Premium فوراً.</string>
+    <string name="paywall_consent_dialog_cancel">إلغاء</string>
+    <string name="paywall_consent_dialog_checkbox">أوافق على أن يبدأ تقديم ميزات Premium فوراً بعد الطلب. أعلم أنني بذلك أفقد حقي في الرجوع خلال 14 يوماً.</string>
+    <string name="paywall_consent_dialog_confirm">اشترك الآن بشكل مدفوع</string>
+    <string name="paywall_consent_dialog_title">إشعار حق الرجوع</string>
+    <string name="profile_custom_add">إضافة تحليل مخصص</string>
+    <string name="profile_custom_remove">إزالة التحليل المخصص</string>
+    <string name="profile_custom_rename">إعادة التسمية</string>
+    <string name="profile_custom_rename_save">حفظ الاسم</string>
+    <string name="prompt_clear_confirm_text">سيُحذف التحليل المخصص نهائياً. هل تريد المتابعة فعلاً؟</string>
+    <string name="prompt_clear_confirm_title">حذف النص؟</string>
+    <string name="prompt_clear_content_desc">حذف النص</string>
+    <string name="prompt_recording_with_model">التسجيل جارٍ — النموذج: <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
+    <string name="prompt_transcribing_with_model"><xliff:g id="model" example="Whisper">%1$s</xliff:g> يحوّل إلى نص…</string>
+    <string name="prompt_transcription_model_hint">تم التحويل إلى نص بواسطة <xliff:g id="model" example="Whisper">%1$s</xliff:g></string>
 </resources>
