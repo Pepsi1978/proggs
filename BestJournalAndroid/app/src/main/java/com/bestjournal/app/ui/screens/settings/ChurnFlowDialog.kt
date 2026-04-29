@@ -89,6 +89,7 @@ fun ChurnFlowDialog(
     retentionPrice: String?,
     analyticsTracker: AnalyticsTracker,
     context: Context,
+    promoInfo: SettingsViewModel.PromoInfo? = null,
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     var selectedReason by remember { mutableStateOf<String?>(null) }
@@ -134,6 +135,7 @@ fun ChurnFlowDialog(
                             currentPrice = currentPrice,
                             onCancel = onDismiss,
                             onCancelSubscription = { currentStep = 1 },
+                            promoInfo = promoInfo,
                         )
                     1 ->
                         StepReason(
@@ -212,6 +214,7 @@ private fun StepOverview(
     currentPrice: String,
     onCancel: () -> Unit,
     onCancelSubscription: () -> Unit,
+    promoInfo: SettingsViewModel.PromoInfo? = null,
 ) {
     val isYearly = subscriptionType == SubscriptionType.YEARLY
     val planName =
@@ -296,12 +299,50 @@ private fun StepOverview(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val displayedPrice = promoInfo?.currentPrice ?: currentPrice
                 Text(
-                    "$currentPrice $periodLabel",
+                    "$displayedPrice $periodLabel",
                     style =
                         MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+            }
+
+            // Promo notice: e.g. "Rabatt-Aktion: Noch 2 Monate — danach 3,99 € pro Monat"
+            if (promoInfo != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Text(
+                        stringResource(R.string.churn_promo_active_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 12.dp),
+                    )
+                    Text(
+                        if (promoInfo.remainingMonths == 1)
+                            stringResource(
+                                R.string.churn_promo_one_month_remaining,
+                                promoInfo.baseAfterwardsPrice,
+                            )
+                        else
+                            stringResource(
+                                R.string.churn_promo_months_remaining,
+                                promoInfo.remainingMonths,
+                                promoInfo.baseAfterwardsPrice,
+                            ),
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = NeonAmber,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

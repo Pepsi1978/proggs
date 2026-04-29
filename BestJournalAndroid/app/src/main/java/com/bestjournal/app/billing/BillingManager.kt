@@ -297,6 +297,14 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
             isPurchaseInFlight.set(false)
             return
         }
+        // Diagnostic: log all available offers for debugging promo display issues
+        Log.e(TAG, "=== launchPurchaseFlow: isYearly=$isYearly, promoOfferToken=${if (promoOfferToken != null) "PROVIDED" else "null"} ===")
+        productDetails.subscriptionOfferDetails?.forEachIndexed { idx, offer ->
+            val phases = offer.pricingPhases.pricingPhaseList.joinToString("; ") { phase ->
+                "${phase.formattedPrice}/${phase.billingPeriod} (cycles=${phase.billingCycleCount}, recurMode=${phase.recurrenceMode})"
+            }
+            Log.e(TAG, "  [$idx] basePlanId='${offer.basePlanId}' offerId='${offer.offerId}' tokenSuffix='${offer.offerToken.takeLast(8)}' phases=[$phases]")
+        }
         // Use promo token if provided, otherwise find the BARE base plan (no offer attached)
         // so the Google Play sheet shows ONLY the regular recurring price, not intro + recurring
         val mainBasePlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
@@ -310,9 +318,11 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
                     ?.offerToken
                 ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
         if (offerToken == null) {
+            Log.e(TAG, "=== NO OFFER TOKEN FOUND — purchase aborted ===")
             isPurchaseInFlight.set(false)
             return
         }
+        Log.e(TAG, "=== USING offerToken suffix='${offerToken.takeLast(8)}' ===")
         val productDetailsParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)

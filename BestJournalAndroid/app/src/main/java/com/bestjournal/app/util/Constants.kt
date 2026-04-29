@@ -152,6 +152,11 @@ object Constants {
     const val EXIT_INTENT_DISCOUNT_MONTHS = 2
     const val EXIT_INTENT_TRIAL_BONUS_DAYS = 2
     const val PREF_EXIT_INTENT_TRIAL_EXTENDED = "exit_intent_trial_extended"
+    // Tracks promo activation time so the in-app subscription overview can show
+    // the truthful current price (e.g. "2,00 EUR for 2 months, then 3,99 EUR/mo")
+    // instead of always showing the base plan price.
+    const val PREF_PROMO_PURCHASE_TIME = "promo_purchase_time"
+    const val PREF_PROMO_TOTAL_MONTHS = "promo_total_months"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"

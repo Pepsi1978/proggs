@@ -140,6 +140,76 @@ constructor(
         }
     }
 
+    /**
+     * Active promo state for the in-app subscription overview, or null if no active promo.
+     * Returns the discounted current price, the base plan price after promo ends,
+     * and how many monthly cycles of discount remain (rounded up, never below 1).
+     *
+     * The 50%-off-for-2-months exit-intent offer is the only currently tracked promo.
+     */
+    data class PromoInfo(
+        val currentPrice: String,
+        val baseAfterwardsPrice: String,
+        val remainingMonths: Int,
+    )
+
+    fun getActivePromoInfo(): PromoInfo? {
+        // Only monthly subscriptions can be on the exit-intent promo
+        if (billingManager.subscriptionType.value !=
+                com.bestjournal.app.billing.SubscriptionType.MONTHLY) {
+            return null
+        }
+        val purchaseTime =
+            encryptedPrefs.getLong(Constants.PREF_PROMO_PURCHASE_TIME, 0L)
+        val totalMonths =
+            encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+        if (purchaseTime <= 0L || totalMonths <= 0) return null
+
+        val approxMonthMs = 30L * 24L * 60L * 60L * 1000L
+        val elapsedMs = System.currentTimeMillis() - purchaseTime
+        if (elapsedMs < 0L) return null
+        val elapsedMonths = (elapsedMs / approxMonthMs).toInt()
+        val remaining = totalMonths - elapsedMonths
+        if (remaining <= 0) return null
+
+        val basePrice = billingManager.monthlyPrice.value
+            .ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+        val halfPrice = formatHalfPrice(basePrice) ?: return null
+        return PromoInfo(
+            currentPrice = halfPrice,
+            baseAfterwardsPrice = basePrice,
+            remainingMonths = remaining,
+        )
+    }
+
+    private fun formatHalfPrice(originalPrice: String): String? {
+        if (originalPrice.isBlank()) return null
+        val numStr = originalPrice.replace("[^0-9,.]".toRegex(), "")
+        if (numStr.isBlank()) return null
+        val lastComma = numStr.lastIndexOf(',')
+        val lastDot = numStr.lastIndexOf('.')
+        val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
+        val normalized = if (usesCommaDecimal) {
+            numStr.replace(".", "").replace(",", ".")
+        } else {
+            numStr.replace(",", "")
+        }
+        val amount = normalized.toDoubleOrNull() ?: return null
+        val halfAmount = amount * 0.5
+        val hasDecimals = (usesCommaDecimal && lastComma >= 0) ||
+            (!usesCommaDecimal && lastDot >= 0)
+        val formatted = if (hasDecimals) {
+            val f = String.format(java.util.Locale.US, "%.2f", halfAmount)
+            if (usesCommaDecimal) f.replace(".", ",") else f
+        } else {
+            halfAmount.toInt().toString()
+        }
+        return originalPrice.replaceFirst(
+            Regex("[0-9][0-9.,   ]*[0-9]|[0-9]+"),
+            formatted,
+        )
+    }
+
     fun getRetentionPrice(): String? {
         val isYearly =
             billingManager.subscriptionType.value ==

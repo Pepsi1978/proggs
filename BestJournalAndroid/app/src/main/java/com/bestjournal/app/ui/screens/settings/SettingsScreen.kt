@@ -2662,6 +2662,7 @@ fun SettingsScreen(
                                     retentionPrice = viewModel.getRetentionPrice(),
                                     analyticsTracker = viewModel.analyticsTracker,
                                     context = context,
+                                    promoInfo = viewModel.getActivePromoInfo(),
                                 )
                             }
                         } else {

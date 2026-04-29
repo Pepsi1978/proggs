@@ -84,7 +84,11 @@ constructor(
             billingManager.subscriptionState.collect { state ->
                 if (state is SubscriptionState.Subscribed && exitIntentPending) {
                     exitIntentPending = false
-                    prefs.edit().putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true).apply()
+                    prefs.edit()
+                        .putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true)
+                        .putLong(Constants.PREF_PROMO_PURCHASE_TIME, System.currentTimeMillis())
+                        .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, Constants.EXIT_INTENT_DISCOUNT_MONTHS)
+                        .apply()
                 }
             }
         }
