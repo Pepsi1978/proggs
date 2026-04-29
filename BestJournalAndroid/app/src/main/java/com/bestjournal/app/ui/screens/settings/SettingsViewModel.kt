@@ -133,6 +133,9 @@ constructor(
     val subscriptionType = billingManager.subscriptionType
 
     fun getCurrentPrice(): String {
+        // Prefer the truthful price of the actually-active base plan + offer
+        // (covers retention plans and promos). Falls back to the main base plan.
+        billingManager.getActiveBasePlanPrice()?.let { return it }
         return when (billingManager.subscriptionType.value) {
             com.bestjournal.app.billing.SubscriptionType.YEARLY ->
                 billingManager.yearlyPrice.value.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }

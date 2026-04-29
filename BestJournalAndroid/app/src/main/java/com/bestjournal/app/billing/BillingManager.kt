@@ -106,6 +106,9 @@ constructor(
                     // Detect renewals on monthly subscription so promo countdown
                     // stays in sync with Google Play, regardless of test cycles
                     syncPromoRenewal(activePurchase)
+                    // Recover active base plan from Google's stamp if local state is missing
+                    // (covers app re-install or upgrade from pre-v0.18.2 versions)
+                    recoverActiveBasePlanFromStamp(activePurchase)
                 } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
                     // Only set Free if no lifetime purchase was already detected
                     // (prevents race condition between querySubscriptions and queryInAppPurchases)
@@ -158,15 +161,70 @@ constructor(
         }
     }
 
-    /** Clears stale promo state if the subscription is no longer active. */
+    /** Clears stale promo + active-plan state if the subscription is no longer active. */
     private fun clearPromoStateIfNoSubscription() {
-        val total = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-        if (total > 0) {
-            encryptedPrefs.edit()
-                .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-                .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
-                .apply()
-        }
+        encryptedPrefs.edit()
+            .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+            .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
+            .remove(Constants.PREF_ACTIVE_BASE_PLAN_ID)
+            .remove(Constants.PREF_ACTIVE_OFFER_ID)
+            .apply()
+    }
+
+    /**
+     * Records which base plan + offer the user is buying so getActiveBasePlanPrice()
+     * can return the truthful current price (e.g. retention-yearly-75 = 22,49 €/year)
+     * instead of the main base plan default. Falls back silently if no match.
+     */
+    private fun rememberActiveBasePlan(productDetails: ProductDetails, offerToken: String) {
+        val matched =
+            productDetails.subscriptionOfferDetails?.firstOrNull { it.offerToken == offerToken }
+                ?: return
+        encryptedPrefs.edit()
+            .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, matched.basePlanId)
+            .putString(Constants.PREF_ACTIVE_OFFER_ID, matched.offerId ?: "")
+            .apply()
+    }
+
+    /**
+     * Reconstructs the active base plan + offer from Google's obfuscatedAccountId stamp
+     * if local prefs are empty. Format: "bp:<basePlanId>|of:<offerId>". Survives app
+     * re-installs because Google retains the stamp on the subscription record.
+     */
+    private fun recoverActiveBasePlanFromStamp(purchase: Purchase) {
+        val haveLocal = !encryptedPrefs.getString(Constants.PREF_ACTIVE_BASE_PLAN_ID, null).isNullOrEmpty()
+        if (haveLocal) return
+        val stamp = purchase.accountIdentifiers?.obfuscatedAccountId ?: return
+        val match = Regex("^bp:([^|]+)\\|of:(.*)$").matchEntire(stamp) ?: return
+        val basePlan = match.groupValues[1]
+        val offerId = match.groupValues[2]
+        encryptedPrefs.edit()
+            .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, basePlan)
+            .putString(Constants.PREF_ACTIVE_OFFER_ID, offerId)
+            .apply()
+        Log.d(TAG, "Recovered active base plan from stamp: $basePlan / $offerId")
+    }
+
+    /**
+     * Returns the formatted price of the currently active base plan + offer, or null
+     * if no remembered plan or product details are not yet loaded. Used by the in-app
+     * subscription overview so the displayed price always matches what Google charges.
+     */
+    fun getActiveBasePlanPrice(): String? {
+        val basePlan =
+            encryptedPrefs.getString(Constants.PREF_ACTIVE_BASE_PLAN_ID, null) ?: return null
+        val offerId = encryptedPrefs.getString(Constants.PREF_ACTIVE_OFFER_ID, "") ?: ""
+        val productDetails =
+            when (subscriptionType.value) {
+                SubscriptionType.YEARLY -> yearlyProductDetails
+                SubscriptionType.MONTHLY -> monthlyProductDetails
+                else -> null
+            } ?: return null
+        val offer =
+            productDetails.subscriptionOfferDetails?.firstOrNull {
+                it.basePlanId == basePlan && (it.offerId ?: "") == offerId
+            } ?: return null
+        return offer.pricingPhases.pricingPhaseList.lastOrNull()?.formattedPrice
     }
 
     private fun queryInAppPurchases() {
@@ -378,6 +436,16 @@ constructor(
             return
         }
         Log.e(TAG, "=== USING offerToken suffix='${offerToken.takeLast(8)}' ===")
+        // Remember which base plan + offer the user is buying so the Settings
+        // overview can show the correct active price (not just the main plan price)
+        rememberActiveBasePlan(productDetails, offerToken)
+        // Also stamp the chosen base plan into Google's obfuscatedAccountId field so it
+        // survives app re-install: querySubscriptions can recover it from purchase.accountIdentifiers.
+        val matchedOfferForStamp =
+            productDetails.subscriptionOfferDetails?.firstOrNull { it.offerToken == offerToken }
+        val basePlanStamp = matchedOfferForStamp?.let {
+            "bp:${it.basePlanId}|of:${it.offerId ?: ""}".take(64)
+        }
         val productDetailsParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)
@@ -385,6 +453,9 @@ constructor(
                 .build()
         val billingFlowParamsBuilder =
             BillingFlowParams.newBuilder().setProductDetailsParamsList(listOf(productDetailsParams))
+        if (basePlanStamp != null) {
+            billingFlowParamsBuilder.setObfuscatedAccountId(basePlanStamp)
+        }
 
         // If user already has an active subscription, add update params
         // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED

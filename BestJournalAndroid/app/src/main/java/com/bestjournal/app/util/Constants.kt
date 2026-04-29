@@ -162,6 +162,13 @@ object Constants {
     // promo's remaining months can be decremented. Works in both Internal
     // Testing (5-min cycles) and production (30-day cycles).
     const val PREF_PROMO_LAST_PURCHASE_TIME = "promo_last_purchase_time"
+    // Active base plan + offer of the currently held subscription. Used so the
+    // in-app subscription overview shows the truthful price of the plan the
+    // user actually owns (e.g. retention-yearly-75 = 22,49 €/year), not the
+    // main base plan default (29,99 €/year). Updated on every purchase and
+    // cleared when no subscription is active.
+    const val PREF_ACTIVE_BASE_PLAN_ID = "active_base_plan_id"
+    const val PREF_ACTIVE_OFFER_ID = "active_offer_id"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"
