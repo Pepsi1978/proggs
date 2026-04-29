@@ -40,5 +40,8 @@ object FirebaseModule {
 
     @Provides
     @Singleton
-    fun provideBillingManager(analyticsTracker: com.bestjournal.app.util.AnalyticsTracker): BillingManager = BillingManager(analyticsTracker)
+    fun provideBillingManager(
+        analyticsTracker: com.bestjournal.app.util.AnalyticsTracker,
+        encryptedPrefs: SharedPreferences,
+    ): BillingManager = BillingManager(analyticsTracker, encryptedPrefs)
 }

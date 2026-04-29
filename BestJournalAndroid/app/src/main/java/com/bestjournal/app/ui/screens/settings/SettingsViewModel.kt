@@ -159,17 +159,10 @@ constructor(
                 com.bestjournal.app.billing.SubscriptionType.MONTHLY) {
             return null
         }
-        val purchaseTime =
-            encryptedPrefs.getLong(Constants.PREF_PROMO_PURCHASE_TIME, 0L)
-        val totalMonths =
-            encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-        if (purchaseTime <= 0L || totalMonths <= 0) return null
-
-        val approxMonthMs = 30L * 24L * 60L * 60L * 1000L
-        val elapsedMs = System.currentTimeMillis() - purchaseTime
-        if (elapsedMs < 0L) return null
-        val elapsedMonths = (elapsedMs / approxMonthMs).toInt()
-        val remaining = totalMonths - elapsedMonths
+        // BillingManager.syncPromoRenewal() keeps PREF_PROMO_TOTAL_MONTHS in sync
+        // with Google Play's actual subscription state (decremented on each
+        // observed renewal). We just read the current truth here.
+        val remaining = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
         if (remaining <= 0) return null
 
         val basePrice = billingManager.monthlyPrice.value

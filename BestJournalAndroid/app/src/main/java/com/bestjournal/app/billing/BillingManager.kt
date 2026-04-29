@@ -2,6 +2,7 @@ package com.bestjournal.app.billing
 
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import com.android.billingclient.api.*
 import com.bestjournal.app.util.AnalyticsTracker
@@ -14,8 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
-class BillingManager @Inject constructor(private val analyticsTracker: AnalyticsTracker) :
-    PurchasesUpdatedListener {
+class BillingManager
+@Inject
+constructor(
+    private val analyticsTracker: AnalyticsTracker,
+    private val encryptedPrefs: SharedPreferences,
+) : PurchasesUpdatedListener {
 
     companion object {
         private const val TAG = "BillingManager"
@@ -98,10 +103,14 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
                                 SubscriptionType.MONTHLY
                             else -> SubscriptionType.MONTHLY
                         }
+                    // Detect renewals on monthly subscription so promo countdown
+                    // stays in sync with Google Play, regardless of test cycles
+                    syncPromoRenewal(activePurchase)
                 } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
                     // Only set Free if no lifetime purchase was already detected
                     // (prevents race condition between querySubscriptions and queryInAppPurchases)
                     _subscriptionState.value = SubscriptionState.Free
+                    clearPromoStateIfNoSubscription()
                 }
 
                 // K-2 fix: Acknowledge unacknowledged purchases — only set Subscribed AFTER success
@@ -111,6 +120,52 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
                     }
                     .forEach { purchase -> acknowledgePurchase(purchase) }
             }
+        }
+    }
+
+    /**
+     * Compares the current Purchase.purchaseTime with the last observed value.
+     * When Google Play renews the subscription, purchaseTime updates — so each
+     * change is exactly one renewal cycle. Decrements the stored remaining promo
+     * months accordingly. Works identically in 5-min test cycles and 28-31 day
+     * production cycles because we don't compute elapsed time, we react to
+     * Google's authoritative subscription state.
+     */
+    private fun syncPromoRenewal(purchase: Purchase) {
+        if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) return
+        val totalMonths = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+        if (totalMonths <= 0) return
+
+        val currentPt = purchase.purchaseTime
+        val lastPt = encryptedPrefs.getLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, 0L)
+
+        // First sighting after purchase: anchor without decrementing
+        if (lastPt == 0L) {
+            encryptedPrefs.edit()
+                .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
+                .apply()
+            return
+        }
+
+        // Renewal detected — Google bumped the purchaseTime
+        if (currentPt != lastPt) {
+            val newRemaining = (totalMonths - 1).coerceAtLeast(0)
+            encryptedPrefs.edit()
+                .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, newRemaining)
+                .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
+                .apply()
+            Log.d(TAG, "Promo renewal detected: $totalMonths -> $newRemaining months remaining")
+        }
+    }
+
+    /** Clears stale promo state if the subscription is no longer active. */
+    private fun clearPromoStateIfNoSubscription() {
+        val total = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+        if (total > 0) {
+            encryptedPrefs.edit()
+                .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+                .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
+                .apply()
         }
     }
 
@@ -387,6 +442,8 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
                 purchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
                 else -> _subscriptionType.value
             }
+        // Detect promo renewals (or anchor on initial purchase) for monthly subs
+        syncPromoRenewal(purchase)
     }
 
     // K-2 fix: Centralized acknowledge — only sets Subscribed after Google confirms

@@ -157,6 +157,11 @@ object Constants {
     // instead of always showing the base plan price.
     const val PREF_PROMO_PURCHASE_TIME = "promo_purchase_time"
     const val PREF_PROMO_TOTAL_MONTHS = "promo_total_months"
+    // Tracks the last observed purchase.purchaseTime — when it changes on the
+    // monthly subscription, Google has triggered a renewal cycle, so the
+    // promo's remaining months can be decremented. Works in both Internal
+    // Testing (5-min cycles) and production (30-day cycles).
+    const val PREF_PROMO_LAST_PURCHASE_TIME = "promo_last_purchase_time"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"
