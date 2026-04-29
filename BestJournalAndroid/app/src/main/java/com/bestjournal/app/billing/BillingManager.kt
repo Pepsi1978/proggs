@@ -207,19 +207,19 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
     }
 
     /**
-     * Look for a promotional/introductory offer on the monthly plan. First checks for a dedicated
-     * "monthly-50-off-first" base plan, then falls back to looking for offers with multiple pricing
-     * phases (intro + base). Returns the offerToken if found, null otherwise.
+     * Look for the "monthly-50-off-first" promotional offer attached to the monthly base plan.
+     * Matches by offerId (the discount is configured as an Offer on the existing base plan,
+     * not as a separate base plan). Falls back to any offer with more than one pricing phase.
      */
     fun getMonthlyPromoOfferToken(): String? {
         val details = monthlyProductDetails ?: return null
-        // First: look for dedicated 50%-off base plan by ID
-        val promoBasePlan =
+        // First: match by offerId (the discount is an Offer on the monthly base plan)
+        val promoOffer =
             details.subscriptionOfferDetails?.firstOrNull { offer ->
-                offer.basePlanId == "monthly-50-off-first"
+                offer.offerId == "monthly-50-off-first"
             }
-        if (promoBasePlan != null) return promoBasePlan.offerToken
-        // Fallback: look for offers with more than 1 pricing phase (intro + base)
+        if (promoOffer != null) return promoOffer.offerToken
+        // Fallback: any offer with multiple pricing phases (intro + base)
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer -> offer.pricingPhases.pricingPhaseList.size > 1 }
             ?.offerToken
