@@ -67,6 +67,21 @@ namespace ClaudeVoiceOverlay.Views
         private bool _pulseBright    = false;
         private bool _btwPulseBright = false;
 
+        // ── Waveform-Visualizer (Pegel-Anzeige im Mic-Button) ──
+        // 14 Striche, je 2px breit mit 1px Spacing → Gesamtbreite 41px,
+        // zentriert im 48px-Canvas. Buffer haelt die letzten 14 Pegelwerte
+        // (0..1); neue Werte kommen rechts rein, alte fallen links raus —
+        // die Welle "fliesst" optisch nach links.
+        private const int  WaveformBarCount  = 14;
+        private const double WaveformBarWidth   = 2.0;
+        private const double WaveformBarSpacing = 1.0;
+        private const double WaveformCanvasH    = 48.0;
+        private const double WaveformMinH       = 3.0;
+        private const double WaveformMaxH       = 40.0;
+        private readonly float[] _waveformBuffer = new float[WaveformBarCount];
+        private readonly System.Windows.Shapes.Rectangle[] _waveformBars =
+            new System.Windows.Shapes.Rectangle[WaveformBarCount];
+
         // ── Constructor ──
 
         public OverlayWindow(Config config)
@@ -114,6 +129,16 @@ namespace ClaudeVoiceOverlay.Views
             CopyButton.Background  = BtnCopy;         // light blue
             PasteButton.Background = BtnPaste;        // purple
             UltrathinkButton.Background = ToggleOff;   // dark (ultrathink starts disabled)
+
+            // ── Waveform-Striche einmalig im Canvas anlegen ──
+            // 14 weisse Rectangles mit voller Deckkraft auf dem roten
+            // Recording-Hintergrund — klassischer VU-Meter-Look. Sie
+            // werden hier nur erzeugt; die Hoehen-Animation passiert in
+            // OnAudioLevelChanged.
+            BuildWaveformBars();
+
+            // ── Pegel-Listener: speist die Welle waehrend der Aufnahme ──
+            _audioRecorder.LevelChanged += OnAudioLevelChanged;
 
             // ── Hover animations ──
             AttachHover(XButton);
@@ -602,6 +627,9 @@ namespace ClaudeVoiceOverlay.Views
             _pulseTimer.Stop();
             _pulseBright = false;
 
+            // Welle nur waehrend der Recording-Phase sichtbar.
+            SetWaveformVisible(state == RecordingState.Recording);
+
             switch (state)
             {
                 case RecordingState.Idle:
@@ -665,6 +693,96 @@ namespace ClaudeVoiceOverlay.Views
             return brush;
         }
 
+        // ── Waveform-Visualizer ──
+
+        /// <summary>
+        /// Erzeugt die 14 weissen Strich-Rectangles und legt sie im
+        /// WaveformCanvas ab. Wird einmal beim Konstruktor aufgerufen.
+        /// </summary>
+        private void BuildWaveformBars()
+        {
+            if (WaveformCanvas == null) return;
+
+            const double startOffset =
+                (48.0 - (WaveformBarCount * WaveformBarWidth
+                         + (WaveformBarCount - 1) * WaveformBarSpacing)) / 2.0;
+
+            for (int i = 0; i < WaveformBarCount; i++)
+            {
+                var bar = new System.Windows.Shapes.Rectangle
+                {
+                    Width = WaveformBarWidth,
+                    Height = WaveformMinH,
+                    RadiusX = 1.0,
+                    RadiusY = 1.0,
+                    Fill = System.Windows.Media.Brushes.White,
+                };
+                double x = startOffset + i * (WaveformBarWidth + WaveformBarSpacing);
+                System.Windows.Controls.Canvas.SetLeft(bar, x);
+                System.Windows.Controls.Canvas.SetTop(bar, (WaveformCanvasH - WaveformMinH) / 2.0);
+                WaveformCanvas.Children.Add(bar);
+                _waveformBars[i] = bar;
+            }
+        }
+
+        /// <summary>
+        /// Wird vom AudioRecorder pro Buffer (~100ms) aufgerufen. Pegel
+        /// wird leicht verstaerkt (Wurzel + Faktor) damit normale Sprech-
+        /// lautstaerke ausgepraegte Striche ergibt. Buffer rotiert: neuer
+        /// Wert kommt rechts rein, alte fallen links raus.
+        /// </summary>
+        private void OnAudioLevelChanged(float level)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (WaveformCanvas == null || WaveformCanvas.Visibility != Visibility.Visible)
+                    return;
+
+                float boosted = MathF.Min(1f, MathF.Sqrt(level) * 1.6f);
+
+                for (int i = 0; i < WaveformBarCount - 1; i++)
+                    _waveformBuffer[i] = _waveformBuffer[i + 1];
+                _waveformBuffer[WaveformBarCount - 1] = boosted;
+
+                for (int i = 0; i < WaveformBarCount; i++)
+                {
+                    if (_waveformBars[i] == null) continue;
+                    double h = WaveformMinH + _waveformBuffer[i] * (WaveformMaxH - WaveformMinH);
+                    _waveformBars[i].Height = h;
+                    System.Windows.Controls.Canvas.SetTop(
+                        _waveformBars[i], (WaveformCanvasH - h) / 2.0);
+                }
+            }));
+        }
+
+        /// <summary>
+        /// Schaltet zwischen Mikrofon-Emoji (Idle) und Wellenanzeige
+        /// (Recording) um. Beim Wechsel auf "Welle" wird der Buffer
+        /// auf null gesetzt.
+        /// </summary>
+        private void SetWaveformVisible(bool visible)
+        {
+            if (WaveformCanvas == null || MicIcon == null) return;
+            if (visible)
+            {
+                Array.Clear(_waveformBuffer, 0, _waveformBuffer.Length);
+                for (int i = 0; i < WaveformBarCount; i++)
+                {
+                    if (_waveformBars[i] == null) continue;
+                    _waveformBars[i].Height = WaveformMinH;
+                    System.Windows.Controls.Canvas.SetTop(
+                        _waveformBars[i], (WaveformCanvasH - WaveformMinH) / 2.0);
+                }
+                MicIcon.Visibility = Visibility.Collapsed;
+                WaveformCanvas.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                WaveformCanvas.Visibility = Visibility.Collapsed;
+                MicIcon.Visibility = Visibility.Visible;
+            }
+        }
+
         // ── Cleanup ──
 
         protected override void OnClosed(EventArgs e)
@@ -672,6 +790,7 @@ namespace ClaudeVoiceOverlay.Views
             _pulseTimer.Stop();
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
+            _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _appWatcher.Dispose();
             _audioRecorder.Dispose();
             base.OnClosed(e);

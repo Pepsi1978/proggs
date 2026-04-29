@@ -15,6 +15,15 @@ namespace TerminalVoiceOverlay.Services
 
         public bool IsRecording { get; private set; }
 
+        /// <summary>
+        /// Wird waehrend einer laufenden Aufnahme alle ~100ms gefeuert
+        /// (Takt entspricht WaveInEvent.BufferMilliseconds). Der Wert ist
+        /// der Peak-Pegel des aktuellen Buffers, normiert auf 0..1 (Stille
+        /// bis Vollausschlag). Subscribers laufen auf dem NAudio-Thread —
+        /// UI-Updates muessen auf den Dispatcher gehoben werden.
+        /// </summary>
+        public event Action<float>? LevelChanged;
+
         public AudioRecorder(int sampleRate = 16000, int channels = 1)
         {
             _sampleRate = sampleRate;
@@ -42,6 +51,25 @@ namespace TerminalVoiceOverlay.Services
                 {
                     _writer?.Write(e.Buffer, 0, e.BytesRecorded);
                 }
+
+                // Peak-Pegel aus dem 16-bit signed PCM-Buffer berechnen.
+                // Wir scannen alle Samples und behalten den groessten
+                // Absolutwert. Geteilt durch 32768 ergibt einen Wert in
+                // 0..1 — direkt brauchbar als Strich-Hoehe in der UI.
+                // Subscriber laeuft auf dem NAudio-Thread, deswegen darf
+                // der Listener KEINE UI-Calls ohne Dispatcher.Invoke
+                // machen — das Overlay erledigt das selbst.
+                int peak = 0;
+                int sampleCount = e.BytesRecorded / 2;
+                for (int i = 0; i < sampleCount; i++)
+                {
+                    short sample = (short)(e.Buffer[i * 2] | (e.Buffer[i * 2 + 1] << 8));
+                    int abs = sample < 0 ? -sample : sample;
+                    if (abs > peak) peak = abs;
+                }
+                float normalized = peak / 32768f;
+                try { LevelChanged?.Invoke(normalized); }
+                catch { /* Listener-Fehler duerfen die Aufnahme nicht abbrechen. */ }
             };
 
             _waveIn.StartRecording();

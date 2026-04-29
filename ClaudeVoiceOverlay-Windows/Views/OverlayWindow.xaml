@@ -83,12 +83,29 @@
             </Button>
 
             <!-- Mic Button (main mic — rounded square) -->
+            <!-- Inhalt ist ein Grid mit zwei Layern: das vorhandene
+                 Mikrofon-Emoji plus ein WaveformCanvas mit 14 Strichen,
+                 die in OverlayWindow.xaml.cs live aus den Audio-Pegeln
+                 animiert werden. Im Ruhezustand sieht man das Emoji,
+                 beim Aufnehmen schaltet die Sichtbarkeit auf die Welle
+                 um — sofort erkennbar dass das Mikrofon Ton einfaengt. -->
             <Button x:Name="MicButton"
                     Style="{StaticResource MicButton}"
                     Margin="0,8,0,0"
                     Click="BtnMic_Click"
                     ToolTip="Start / stop recording">
-                <TextBlock Text="&#x1F3A4;" FontSize="20" Foreground="White"/>
+                <Grid Width="48" Height="48">
+                    <TextBlock x:Name="MicIcon"
+                               Text="&#x1F3A4;"
+                               FontSize="20"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    <Canvas x:Name="WaveformCanvas"
+                            Width="48" Height="48"
+                            ClipToBounds="True"
+                            Visibility="Collapsed"/>
+                </Grid>
             </Button>
 
             <!-- BTW Button (BTW mic — rounded square, blue tint set in code-behind) -->
