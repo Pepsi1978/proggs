@@ -810,6 +810,9 @@
     <string name="churn_price">വില</string>
     <string name="churn_renewal">പുതുക്കൽ</string>
     <string name="churn_automatic">സ്വയം</string>
+    <string name="churn_promo_active_label">ഡിസ്കൌണ്ട്</string>
+    <string name="churn_promo_one_month_remaining">1 മാസം ബാക്കി — ശേഷം പ്രതിമാസം <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> മാസം ബാക്കി — ശേഷം പ്രതിമാസം <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
     <string name="churn_auto_renew_note">നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ Google Play-ൽ സ്വയം പുതുക്കുന്നു. എപ്പോൾ വേണമെങ്കിലും റദ്ദ് ആകാം.</string>
     <string name="churn_cancel_sub">സബ്സ്ക്രിപ്ഷൻ റദ്ദ് ചെയ്യുക</string>
     <string name="churn_reason_too_expensive">വളരെ ചെലവ് കൂടുതൽ</string>

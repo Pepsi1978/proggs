@@ -859,6 +859,9 @@
     <string name="churn_price">قیمت</string>
     <string name="churn_renewal">تجدید</string>
     <string name="churn_automatic">خودکار</string>
+    <string name="churn_promo_active_label">رعایتی پیشکش</string>
+    <string name="churn_promo_one_month_remaining">1 مہینہ باقی — پھر <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> ماہانہ</string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> مہینے باقی — پھر <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ماہانہ</string>
     <string name="churn_auto_renew_note">آپ کی سبسکرپشن Google Play کے ذریعے خودکار تجدید ہوتی ہے۔ منسوخی کسی بھی وقت ممکن ہے۔</string>
     <string name="churn_cancel_sub">سبسکرپشن منسوخ کریں</string>
     <string name="churn_reason_too_expensive">بہت مہنگا</string>

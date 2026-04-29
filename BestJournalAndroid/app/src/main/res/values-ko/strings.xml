@@ -858,6 +858,9 @@
     <string name="churn_price">가격</string>
     <string name="churn_renewal">갱신</string>
     <string name="churn_automatic">자동</string>
+    <string name="churn_promo_active_label">할인 혜택</string>
+    <string name="churn_promo_one_month_remaining">1개월 남음 — 이후 월 <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g>개월 남음 — 이후 월 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
     <string name="churn_auto_renew_note">구독은 Google Play로 자동 갱신돼요. 언제든 해지할 수 있어요.</string>
     <string name="churn_cancel_sub">구독 해지</string>
     <string name="churn_reason_too_expensive">너무 비싸요</string>

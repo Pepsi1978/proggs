@@ -858,6 +858,9 @@
     <string name="churn_price">किंमत</string>
     <string name="churn_renewal">नूतनीकरण</string>
     <string name="churn_automatic">आपोआप</string>
+    <string name="churn_promo_active_label">सवलत</string>
+    <string name="churn_promo_one_month_remaining">1 महिना बाकी — नंतर दरमहा <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> महिने बाकी — नंतर दरमहा <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
     <string name="churn_auto_renew_note">तुमचे सदस्यत्व Google Play द्वारे आपोआप नूतनीकरण होते. रद्द करणे कधीही शक्य आहे.</string>
     <string name="churn_cancel_sub">सदस्यत्व रद्द करा</string>
     <string name="churn_reason_too_expensive">खूप महाग</string>

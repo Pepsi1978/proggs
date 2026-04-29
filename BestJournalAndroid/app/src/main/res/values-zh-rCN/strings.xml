@@ -858,6 +858,9 @@
     <string name="churn_price">价格</string>
     <string name="churn_renewal">续订</string>
     <string name="churn_automatic">自动</string>
+    <string name="churn_promo_active_label">优惠活动</string>
+    <string name="churn_promo_one_month_remaining">还剩1个月 — 之后每月<xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining">还剩<xliff:g id="months" example="2">%1$d</xliff:g>个月 — 之后每月<xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
     <string name="churn_auto_renew_note">订阅通过 Google Play 自动续订。随时可以取消。</string>
     <string name="churn_cancel_sub">取消订阅</string>
     <string name="churn_reason_too_expensive">太贵</string>

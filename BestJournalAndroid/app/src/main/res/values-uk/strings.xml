@@ -858,6 +858,9 @@
     <string name="churn_price">Ціна</string>
     <string name="churn_renewal">Продовження</string>
     <string name="churn_automatic">Автоматичне</string>
+    <string name="churn_promo_active_label">Знижка</string>
+    <string name="churn_promo_one_month_remaining">Ще 1 місяць — потім <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> на місяць</string>
+    <string name="churn_promo_months_remaining">Ще <xliff:g id="months" example="2">%1$d</xliff:g> міс. — потім <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> на місяць</string>
     <string name="churn_auto_renew_note">Підписка автоматично продовжується через Google Play. Скасування в будь-який момент.</string>
     <string name="churn_cancel_sub">Скасувати підписку</string>
     <string name="churn_reason_too_expensive">Занадто дорого</string>

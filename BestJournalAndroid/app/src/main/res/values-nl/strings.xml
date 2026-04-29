@@ -858,6 +858,9 @@
     <string name="churn_price">Prijs</string>
     <string name="churn_renewal">Verlenging</string>
     <string name="churn_automatic">Automatisch</string>
+    <string name="churn_promo_active_label">Kortingsactie</string>
+    <string name="churn_promo_one_month_remaining">Nog 1 maand — daarna <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> per maand</string>
+    <string name="churn_promo_months_remaining">Nog <xliff:g id="months" example="2">%1$d</xliff:g> maanden — daarna <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> per maand</string>
     <string name="churn_auto_renew_note">Je abonnement wordt automatisch verlengd via Google Play. Op elk moment opzegbaar.</string>
     <string name="churn_cancel_sub">Abonnement opzeggen</string>
     <string name="churn_reason_too_expensive">Te duur</string>

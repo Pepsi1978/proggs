@@ -858,6 +858,9 @@
     <string name="churn_price">Precio</string>
     <string name="churn_renewal">Renovación</string>
     <string name="churn_automatic">Automática</string>
+    <string name="churn_promo_active_label">Oferta de descuento</string>
+    <string name="churn_promo_one_month_remaining">1 mes restante — después <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> al mes</string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> meses restantes — después <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> al mes</string>
     <string name="churn_auto_renew_note">Tu suscripción se renueva automáticamente por Google Play. Puedes cancelarla cuando quieras.</string>
     <string name="churn_cancel_sub">Cancelar suscripción</string>
     <string name="churn_reason_too_expensive">Muy cara</string>

@@ -858,6 +858,9 @@
     <string name="churn_price">Fiyat</string>
     <string name="churn_renewal">Yenileme</string>
     <string name="churn_automatic">Otomatik</string>
+    <string name="churn_promo_active_label">İndirim kampanyası</string>
+    <string name="churn_promo_one_month_remaining">1 ay kaldı — sonra ayda <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g></string>
+    <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> ay kaldı — sonra ayda <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
     <string name="churn_auto_renew_note">Aboneliğin Google Play üzerinden otomatik yenilenir. İstediğin zaman iptal edilebilir.</string>
     <string name="churn_cancel_sub">Aboneliği iptal et</string>
     <string name="churn_reason_too_expensive">Çok pahalı</string>
