@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">당신을 위한 특별한\n제안이 있어요:</string>
     <string name="paywall_exit_discount">%1$d개월 할인</string>
     <string name="paywall_exit_price_comparison">월 %2$s 대신 %1$s</string>
-    <string name="paywall_exit_start_discount">월 요금제를 50\u00A0%% 할인으로 시작</string>
+    <string name="paywall_exit_start_discount">월 요금제를 50\u00A0% 할인으로 시작</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

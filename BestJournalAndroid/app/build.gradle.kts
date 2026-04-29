@@ -75,8 +75,8 @@ android {
         applicationId = "com.bestjournal.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 203
-        versionName = "0.16.4"
+        versionCode = 211
+        versionName = "0.17.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -85,8 +85,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

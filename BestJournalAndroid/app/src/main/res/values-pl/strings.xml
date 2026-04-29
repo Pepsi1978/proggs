@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">Mamy dla Ciebie\nwyjątkową ofertę:</string>
     <string name="paywall_exit_discount">Rabat na %1$d miesięcy</string>
     <string name="paywall_exit_price_comparison">Tylko %1$s zamiast %2$s miesięcznie</string>
-    <string name="paywall_exit_start_discount">Rozpocznij subskrypcję miesięczną z 50%% rabatem</string>
+    <string name="paywall_exit_start_discount">Rozpocznij subskrypcję miesięczną z 50% rabatem</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

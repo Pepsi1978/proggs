@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">เรามีข้อเสนอพิเศษ\nสำหรับคุณ:</string>
     <string name="paywall_exit_discount">ส่วนลด %1$d เดือน</string>
     <string name="paywall_exit_price_comparison">เพียง %1$s แทน %2$s ต่อเดือน</string>
-    <string name="paywall_exit_start_discount">เริ่มรายเดือนด้วยส่วนลด 50\u00A0%%</string>
+    <string name="paywall_exit_start_discount">เริ่มรายเดือนด้วยส่วนลด 50\u00A0%</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

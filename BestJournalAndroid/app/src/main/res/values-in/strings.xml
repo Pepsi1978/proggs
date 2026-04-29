@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">Ada tawaran khusus\nuntuk kamu:</string>
     <string name="paywall_exit_discount">Diskon selama %1$d bulan</string>
     <string name="paywall_exit_price_comparison">Hanya %1$s, bukan %2$s per bulan</string>
-    <string name="paywall_exit_start_discount">Mulai langganan bulanan dengan diskon 50\u00A0%%</string>
+    <string name="paywall_exit_start_discount">Mulai langganan bulanan dengan diskon 50\u00A0%</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

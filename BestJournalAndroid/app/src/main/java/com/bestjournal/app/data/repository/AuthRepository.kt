@@ -6,7 +6,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.util.Constants
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -22,21 +22,25 @@ constructor(
 ) {
     suspend fun signIn(activityContext: Context): Result<UserProfile> {
         return try {
-            android.util.Log.d("AuthRepo", "Starting sign-in...")
-            val googleIdOption =
-                GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(Constants.GOOGLE_WEB_CLIENT_ID)
+            android.util.Log.e("AuthRepo", "=== SIGN-IN START ===")
+            android.util.Log.e("AuthRepo", "Web Client ID: ${Constants.GOOGLE_WEB_CLIENT_ID}")
+            android.util.Log.e("AuthRepo", "Activity Context class: ${activityContext.javaClass.name}")
+
+            val signInOption =
+                GetSignInWithGoogleOption.Builder(Constants.GOOGLE_WEB_CLIENT_ID)
                     .build()
+            android.util.Log.e("AuthRepo", "GetSignInWithGoogleOption built (forces account picker)")
 
-            val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+            val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
+            android.util.Log.e("AuthRepo", "GetCredentialRequest built")
 
-            android.util.Log.d("AuthRepo", "Calling getCredential...")
+            android.util.Log.e("AuthRepo", "Calling credentialManager.getCredential() — this is where hangs typically happen")
             val result = credentialManager.getCredential(activityContext, request)
-            android.util.Log.d("AuthRepo", "Got credential type: ${result.credential.type}")
+            android.util.Log.e("AuthRepo", "getCredential RETURNED — type: ${result.credential.type}")
+
             val credential = result.credential
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-            android.util.Log.d("AuthRepo", "Got Google ID: ${googleIdTokenCredential.id}")
+            android.util.Log.e("AuthRepo", "Got Google ID: ${googleIdTokenCredential.id}")
 
             val profile =
                 UserProfile(
@@ -47,12 +51,12 @@ constructor(
                 )
 
             saveProfile(profile)
-            android.util.Log.d("AuthRepo", "Sign-in SUCCESS: ${profile.email}")
+            android.util.Log.e("AuthRepo", "=== SIGN-IN SUCCESS: ${profile.email} ===")
             Result.success(profile)
         } catch (e: Exception) {
             android.util.Log.e(
                 "AuthRepo",
-                "Sign-in FAILED: ${e.javaClass.simpleName}: ${e.message}",
+                "=== SIGN-IN FAILED: ${e.javaClass.simpleName}: ${e.message} ===",
                 e,
             )
             Result.failure(e)

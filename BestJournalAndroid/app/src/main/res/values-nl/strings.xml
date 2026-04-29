@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">We hebben een bijzondere\naanbieding voor je:</string>
     <string name="paywall_exit_discount">Korting voor %1$d maanden</string>
     <string name="paywall_exit_price_comparison">Slechts %1$s in plaats van %2$s per maand</string>
-    <string name="paywall_exit_start_discount">Maandabonnement starten met 50\u00A0%% korting</string>
+    <string name="paywall_exit_start_discount">Maandabonnement starten met 50\u00A0% korting</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

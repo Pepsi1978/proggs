@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">Sana özel bir\nteklifimiz var:</string>
     <string name="paywall_exit_discount">%1$d ay için indirim</string>
     <string name="paywall_exit_price_comparison">Ayda %2$s yerine sadece %1$s</string>
-    <string name="paywall_exit_start_discount">Aylık aboneliği 50\u00A0%% indirimle başlat</string>
+    <string name="paywall_exit_start_discount">Aylık aboneliği %50 indirimle başlat</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

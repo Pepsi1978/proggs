@@ -125,10 +125,24 @@ fun PaywallScreen(
     // Exit-intent dialog state
     var showExitDialog by remember { mutableStateOf(false) }
 
-    // § 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28).
-    // Vor jedem Kauf-Klick wird hier eine separate Bestaetigung mit Pflicht-Checkbox eingeholt.
-    // pendingPurchase = "yearly" | "monthly" | "lifetime" | null
-    var pendingPurchase by remember { mutableStateOf<String?>(null) }
+    val launchPurchase: (String) -> Unit = { plan ->
+        activity?.let { act ->
+            val launched = when (plan) {
+                "yearly" -> viewModel.launchPurchaseFlow(act, isYearly = true)
+                "monthly" -> viewModel.launchPurchaseFlow(act, isYearly = false)
+                "lifetime" -> viewModel.launchPurchaseFlow(act, isLifetime = true)
+                else -> false
+            }
+            if (!launched) {
+                val toastRes = if (plan == "lifetime") {
+                    R.string.paywall_purchase_loading_toast
+                } else {
+                    R.string.paywall_sub_loading_toast
+                }
+                Toast.makeText(act, context.getString(toastRes), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Calculate half monthly price for exit-intent 50% offer (currency-neutral)
     val halfMonthlyPrice = remember(displayMonthlyPrice) {
@@ -453,8 +467,7 @@ fun PaywallScreen(
                     OutlinedButton(
                         onClick = {
                             viewModel.analyticsTracker.trackYearlyCtaClicked()
-                            // M1: vor Kauf erst Sofort-Verzichts-Dialog anzeigen
-                            pendingPurchase = "yearly"
+                            launchPurchase("yearly")
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -507,8 +520,7 @@ fun PaywallScreen(
                 OutlinedButton(
                     onClick = {
                         viewModel.analyticsTracker.trackMonthlyCtaClicked()
-                        // M1: vor Kauf erst Sofort-Verzichts-Dialog anzeigen
-                        pendingPurchase = "monthly"
+                        launchPurchase("monthly")
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -559,8 +571,7 @@ fun PaywallScreen(
                 Surface(
                     onClick = {
                         viewModel.analyticsTracker.trackLifetimeCtaClicked()
-                        // M1: vor Kauf erst Sofort-Verzichts-Dialog anzeigen
-                        pendingPurchase = "lifetime"
+                        launchPurchase("lifetime")
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -655,74 +666,6 @@ fun PaywallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // ── § 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6) ──
-            // Wird vor jedem Plan-Kauf gezeigt. Pflicht-Checkbox bestaetigt zwei-stufig:
-            // (1) Sofort-Bereitstellung, (2) Kenntnis dass dadurch das 14-tage-Widerrufsrecht erlischt.
-            // Erst nach Aktivierung der Checkbox wird der "Jetzt zahlungspflichtig abonnieren"-Button
-            // klickbar — dieser oeffnet dann das native Google-Play-Billing-Sheet.
-            if (pendingPurchase != null) {
-                var consentChecked by remember(pendingPurchase) { mutableStateOf(false) }
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { pendingPurchase = null },
-                    title = { Text(stringResource(R.string.paywall_consent_dialog_title)) },
-                    text = {
-                        Column {
-                            Text(stringResource(R.string.paywall_consent_dialog_body))
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                verticalAlignment = Alignment.Top,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                androidx.compose.material3.Checkbox(
-                                    checked = consentChecked,
-                                    onCheckedChange = { consentChecked = it },
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.paywall_consent_dialog_checkbox),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier
-                                        .padding(top = 12.dp)
-                                        .clickable { consentChecked = !consentChecked },
-                                )
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            enabled = consentChecked,
-                            onClick = {
-                                val plan = pendingPurchase
-                                pendingPurchase = null
-                                activity?.let { act ->
-                                    val launched = when (plan) {
-                                        "yearly" -> viewModel.launchPurchaseFlow(act, isYearly = true)
-                                        "monthly" -> viewModel.launchPurchaseFlow(act, isYearly = false)
-                                        "lifetime" -> viewModel.launchPurchaseFlow(act, isLifetime = true)
-                                        else -> false
-                                    }
-                                    if (!launched) {
-                                        val toastRes = if (plan == "lifetime") {
-                                            R.string.paywall_purchase_loading_toast
-                                        } else {
-                                            R.string.paywall_sub_loading_toast
-                                        }
-                                        Toast.makeText(act, context.getString(toastRes), Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                        ) {
-                            Text(stringResource(R.string.paywall_consent_dialog_confirm))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { pendingPurchase = null }) {
-                            Text(stringResource(R.string.paywall_consent_dialog_cancel))
-                        }
-                    },
-                )
             }
 
             // ── Exit-intent dialog ──

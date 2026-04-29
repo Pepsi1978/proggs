@@ -790,3 +790,83 @@ endgueltig geklaert.
 
 Das ist der Grund warum TerminalVoiceOverlay und ClaudeVoiceOverlay unterschiedliche
 Tastenkombis brauchen, obwohl sie ~80% Code teilen.
+
+
+## Firebase + SHA-1 + google-services.json: Der vollstaendige Workflow (PFLICHT — KRITISCH)
+
+> Vorfall 2026-04-29: Stundenlange Diagnose von "Sprachaufnahme nutzt lokales Whisper
+> statt Groq" und "Verbessern mit Gemini funktioniert nicht" — weil zwei Folgeschritte
+> nach Hinzufuegen eines neuen SHA-1 in Firebase vergessen wurden.
+
+### Symptome bei diesem Fehlertyp
+
+- **Sign-In funktioniert** (taeuscht: nutzt einen anderen Auth-Pfad)
+- ABER: Logcat zeigt `Firebase Installations failed to get installation auth token for fetch`
+- ABER: Sprachaufnahme nutzt lokales Whisper statt Groq (Code faengt Exception ab und macht stillen Fallback)
+- ABER: Verbessern mit Gemini funktioniert nicht
+- ABER: Cloud Messaging tot
+- ABER: Remote Config liefert leere Strings
+
+Wenn diese Symptome auftreten, hat man den falschen Eindruck dass irgendwas mit der
+App selbst nicht stimmt — dabei ist es ein Cloud-Konfigurations-Problem.
+
+### Der vollstaendige 5-Schritt-Workflow nach JEDEM SHA-1-Hinzufuegen
+
+**Schritt 1 — SHA-1 in Firebase Console hinzufuegen.**
+- Firebase Console → Projekteinstellungen → bei der Android-App → "Fingerabdruck hinzufuegen"
+- Den passenden SHA-1 (z.B. App-Signaturschluessel-Zertifikat aus der Play Console) eintragen
+- Nicht den falschen kopieren! Es gibt zwei in der Play Console:
+  - **App-Signaturschluessel-Zertifikat** = Google's finaler Signing-Key (wird fuer Play-Store-Versionen geprueft)
+  - **Upload-Schluessel-Zertifikat** = lokaler Upload-Key (wird nur beim Hochladen geprueft)
+- Fuer Firebase Installations brauchst du den App-Signaturschluessel-SHA-1
+
+**Schritt 2 — google-services.json neu herunterladen.**
+- Im gleichen Firebase-Console-Bereich wo der SHA-1 hinzugefuegt wurde
+- Bei der Android-App das Download-Icon klicken
+- Datei landet in Downloads-Ordner
+
+**Schritt 3 — google-services.json an die richtige Stelle kopieren.**
+- Bei BestJournal: nach `~/SK/BestJournalAndroid/google-services-release.json` kopieren
+  (der `syncSecretsFromSk`-Gradle-Task kopiert sie bei jedem Build von dort ins Projekt)
+- Bei einfacheren Projekten ohne SK-Folder-Setup: direkt `app/google-services.json` ueberschreiben
+- KEIN direktes Austauschen im Projekt-Ordner wenn der SK-Workflow aktiv ist — wird sonst beim naechsten Build ueberschrieben
+
+**Schritt 4 — API-Schluessel-Einschraenkungen aktualisieren (KRITISCH und oft vergessen!).**
+- Cloud Console → APIs & Services → Credentials → den passenden API-Schluessel oeffnen
+- Bei "Anwendungseinschraenkungen" → "Android-Apps" pruefen ob bereits Android-App-Filter aktiv
+- WENN ja: Den NEUEN SHA-1 zur erlaubten Liste hinzufuegen (Add-Button)
+  - Paketname (z.B. com.bestjournal.app)
+  - Fingerabdruck (SHA-1 mit Doppelpunkten)
+- Speichern, 5 Minuten Propagierungs-Zeit
+- WENN nein (keine Restriction): nichts zu tun, Schritt 4 entfaellt
+
+Dieser Schritt wird gerne uebersehen weil er in einer voellig anderen UI ist (Cloud Console
+statt Firebase Console). Aber: Wenn der API-Schluessel Android-Einschraenkungen hat
+und der neue SHA-1 nicht drin steht, bleiben alle Firebase-Auth-Aufrufe blockiert,
+auch wenn sonst alles richtig konfiguriert ist.
+
+**Schritt 5 — App neu bauen und 5 Minuten warten.**
+- `./gradlew bundleRelease` (oder `assembleDebug` fuer Debug-Builds)
+- AAB hochladen in Play Console
+- 5 Minuten warten bevor man testet (Cloud-Propagierung)
+
+### Warum Sign-In trotzdem funktioniert (Diagnose-Falle)
+
+Sign-In nutzt **Google Play Services** direkt. Die machen die SHA-1-Pruefung
+ueber einen anderen Pfad (Auth-Backend) als Firebase Installations. Daher:
+- Sign-In klappt nach Schritt 1 (SHA-1 in Firebase) sofort
+- ABER alle Firebase-Auth-abhaengigen Services (Remote Config, AI Logic, Cloud Messaging)
+  brauchen ZUSAETZLICH die google-services.json (Schritt 2-3) und API-Schluessel-Einschraenkung (Schritt 4)
+
+Der "Sign-In klappt aber sonst nichts"-Zustand ist deshalb ein klassischer Hinweis
+auf vergessene Schritte 2-4.
+
+### Memory-Trick fuer die Zukunft
+
+Ich denk an die "5 F" — **Firebase, File, Folder, Filter, Fertig:**
+1. **F**irebase: SHA-1 hinzufuegen
+2. **F**ile: google-services.json runterladen
+3. **F**older: An die richtige Stelle kopieren (SK-Folder bei BestJournal, sonst app/)
+4. **F**ilter: API-Schluessel-Einschraenkung erweitern in Cloud Console
+5. **F**ertig: Build, hochladen, 5 Min warten
+

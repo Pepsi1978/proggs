@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">特別なお知らせが\nあります：</string>
     <string name="paywall_exit_discount">%1$dか月の割引</string>
     <string name="paywall_exit_price_comparison">月%2$sが、%1$sに</string>
-    <string name="paywall_exit_start_discount">月額プランを50\u00A0%%オフで開始</string>
+    <string name="paywall_exit_start_discount">月額プランを50\u00A0%オフで開始</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

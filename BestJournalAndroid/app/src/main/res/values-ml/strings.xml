@@ -800,7 +800,7 @@
     <string name="paywall_exit_special_offer">നിങ്ങൾക്ക് ഒരു\nപ്രത്യേക ഓഫർ ഉണ്ട്:</string>
     <string name="paywall_exit_discount">%1$d മാസം ഡിസ്കൌണ്ട്</string>
     <string name="paywall_exit_price_comparison">%2$s-ന് പകരം %1$s/മാസം മാത്രം</string>
-    <string name="paywall_exit_start_discount">50%% ഡിസ്കൌണ്ടോടെ മാസ സബ്സ്ക്രിപ്ഷൻ ആരംഭിക്കൂ</string>
+    <string name="paywall_exit_start_discount">50% ഡിസ്കൌണ്ടോടെ മാസ സബ്സ്ക്രിപ്ഷൻ ആരംഭിക്കൂ</string>
 
     <!-- CHURN FLOW DIALOG -->
     <string name="churn_your_sub">നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ</string>

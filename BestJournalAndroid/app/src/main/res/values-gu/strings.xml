@@ -821,7 +821,7 @@
     <string name="paywall_exit_special_offer">♻\n♻:</string>
     <string name="paywall_exit_discount">♻ %1$d ♻</string>
     <string name="paywall_exit_price_comparison">♻ %1$s ♻ %2$s/♻</string>
-    <string name="paywall_exit_start_discount">50%% ♻</string>
+    <string name="paywall_exit_start_discount">50% ડિસ્કાઉન્ટ સાથે માસિક સબ્સ્ક્રિપ્શન શરૂ કરો</string>
 
     
     <string name="churn_your_sub">♻</string>

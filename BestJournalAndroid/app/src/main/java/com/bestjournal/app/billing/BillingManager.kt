@@ -167,7 +167,7 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
                             it.basePlanId == mainBasePlanId
                         } ?: details.subscriptionOfferDetails?.firstOrNull()
                     val price =
-                        mainOffer?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+                        mainOffer?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
                             ?: ""
                     when (details.productId) {
                         MONTHLY_PRODUCT_ID -> {
@@ -297,10 +297,14 @@ class BillingManager @Inject constructor(private val analyticsTracker: Analytics
             isPurchaseInFlight.set(false)
             return
         }
-        // Use promo token if provided, otherwise find the MAIN base plan's offer token
+        // Use promo token if provided, otherwise find the BARE base plan (no offer attached)
+        // so the Google Play sheet shows ONLY the regular recurring price, not intro + recurring
         val mainBasePlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
         val offerToken =
             promoOfferToken
+                ?: productDetails.subscriptionOfferDetails
+                    ?.firstOrNull { it.basePlanId == mainBasePlanId && it.offerId.isNullOrEmpty() }
+                    ?.offerToken
                 ?: productDetails.subscriptionOfferDetails
                     ?.firstOrNull { it.basePlanId == mainBasePlanId }
                     ?.offerToken

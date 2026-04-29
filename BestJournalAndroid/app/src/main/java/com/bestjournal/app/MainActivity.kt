@@ -211,6 +211,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        billingManager.restorePurchases()
         val biometricEnabled = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
         if (biometricEnabled && isUnlocked.value && backgroundTimestamp > 0) {
             // Lock only if more than 60 seconds have passed in background

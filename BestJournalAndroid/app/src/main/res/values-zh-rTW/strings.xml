@@ -846,7 +846,7 @@
     <string name="paywall_exit_special_offer">給你的\n特別優惠：</string>
     <string name="paywall_exit_discount">%1$d 個月的折扣</string>
     <string name="paywall_exit_price_comparison">每月只需 %1$s,原價 %2$s</string>
-    <string name="paywall_exit_start_discount">以 50\u00A0%% 折扣開始月度訂閱</string>
+    <string name="paywall_exit_start_discount">以 50\u00A0% 折扣開始月度訂閱</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG

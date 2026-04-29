@@ -780,7 +780,7 @@
     <string name="paywall_exit_special_offer">మాకు మీ కోసం\nప్రత్యేక ఆఫర్ ఉంది:</string>
     <string name="paywall_exit_discount">%1$d నెలలకి రాయితీ</string>
     <string name="paywall_exit_price_comparison">నెలకి %2$s బదులు కేవలం %1$s</string>
-    <string name="paywall_exit_start_discount">50%% రాయితీతో నెలవారీ సబ్‌స్క్రిప్షన్ ప్రారంభించండి</string>
+    <string name="paywall_exit_start_discount">50% రాయితీతో నెలవారీ సబ్‌స్క్రిప్షన్ ప్రారంభించండి</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
