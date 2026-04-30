@@ -1126,6 +1126,7 @@
     <string name="churn_per_month">pro Monat</string>
     <string name="churn_reason_features">Nicht die Features die ich brauche</string>
     <string name="churn_reason_other">Anderer Grund</string>
+    <string name="churn_reason_other_placeholder">Bitte sag uns kurz, was los ist…</string>
     <string name="churn_sorry_title">Schade, dass du gehst</string>
     <string name="churn_sorry_body">Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.</string>
     <string name="churn_exclusive_offer">Exklusives Angebot</string>

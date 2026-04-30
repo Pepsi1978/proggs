@@ -900,6 +900,7 @@
     <string name="churn_per_month">per month</string>
     <string name="churn_reason_features">Not the features I need</string>
     <string name="churn_reason_other">Other reason</string>
+    <string name="churn_reason_other_placeholder">Tell us briefly what\'s going on…</string>
     <string name="churn_sorry_title">Sorry to see you go</string>
     <string name="churn_sorry_body">Before you cancel, would you tell us why? This helps us improve the app.</string>
     <string name="churn_exclusive_offer">Exclusive offer</string>

@@ -107,6 +107,11 @@ fun ChurnFlowDialog(
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     var selectedReason by remember { mutableStateOf<String?>(null) }
+    // Loop-11 (Frank, 2026-04-30): free-text reason for "Anderer Grund".
+    // Held at the dialog level so it survives across step transitions
+    // (going back from "Bist du sicher?" to step 1 keeps what the user
+    // already typed).
+    var customReasonText by remember { mutableStateOf("") }
     var offerShownTracked by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { analyticsTracker.trackChurnFlowOpened() }
@@ -153,13 +158,30 @@ fun ChurnFlowDialog(
                             autoRenewing = autoRenewing,
                             expiryTime = expiryTime,
                         )
-                    1 ->
+                    1 -> {
+                        val reasonOtherLabel =
+                            stringResource(R.string.churn_reason_other)
                         StepReason(
                             selectedReason = selectedReason,
                             onReasonSelected = { selectedReason = it },
                             onNext = {
                                 selectedReason?.let { reason ->
-                                    analyticsTracker.trackChurnReasonSelected(reason)
+                                    // Loop-11: when the user picks
+                                    // "Anderer Grund", forward the
+                                    // free-text contents alongside the
+                                    // category so the Firebase analytics
+                                    // event captures the actual cause
+                                    // rather than the literal string
+                                    // "Anderer Grund".
+                                    val trackedReason =
+                                        if (reason == reasonOtherLabel &&
+                                            customReasonText.isNotBlank()
+                                        ) {
+                                            "$reason: ${customReasonText.trim()}"
+                                        } else {
+                                            reason
+                                        }
+                                    analyticsTracker.trackChurnReasonSelected(trackedReason)
                                     // Loop-9: skip the "25 % sparen" step
                                     // when the user is already on the
                                     // retention plan — go straight to
@@ -168,7 +190,10 @@ fun ChurnFlowDialog(
                                 }
                             },
                             onCancel = { currentStep = 0 },
+                            customReasonText = customReasonText,
+                            onCustomReasonChanged = { customReasonText = it },
                         )
+                    }
                     2 ->
                         StepRetentionOffer(
                             selectedReason = selectedReason ?: "",
@@ -494,14 +519,19 @@ private fun StepReason(
     onReasonSelected: (String) -> Unit,
     onNext: () -> Unit,
     onCancel: () -> Unit,
+    customReasonText: String,
+    onCustomReasonChanged: (String) -> Unit,
 ) {
-    val reasons =
-        listOf(
-            stringResource(R.string.churn_reason_too_expensive),
-            stringResource(R.string.churn_reason_unused),
-            stringResource(R.string.churn_reason_features),
-            stringResource(R.string.churn_reason_other),
-        )
+    val reasonTooExpensive = stringResource(R.string.churn_reason_too_expensive)
+    val reasonUnused = stringResource(R.string.churn_reason_unused)
+    val reasonFeatures = stringResource(R.string.churn_reason_features)
+    val reasonOther = stringResource(R.string.churn_reason_other)
+    val reasons = listOf(reasonTooExpensive, reasonUnused, reasonFeatures, reasonOther)
+    // Loop-11 (Frank, 2026-04-30): "Anderer Grund" without a text input
+    // is just a black hole — the analytics dashboard would show 80% of
+    // churn reasons as the literal string "Anderer Grund" with no clue
+    // about the actual cause. Adding a free-text field surfaces it.
+    val isOther = selectedReason == reasonOther
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(28.dp).verticalScroll(rememberScrollState()),
@@ -588,11 +618,36 @@ private fun StepReason(
             }
         }
 
+        // Loop-11: free-text input for "Anderer Grund". Animated visibility
+        // so the layout stays compact when the user picks one of the
+        // pre-defined reasons.
+        if (isOther) {
+            Spacer(modifier = Modifier.height(12.dp))
+            androidx.compose.material3.OutlinedTextField(
+                value = customReasonText,
+                onValueChange = onCustomReasonChanged,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(stringResource(R.string.churn_reason_other_placeholder))
+                },
+                minLines = 2,
+                maxLines = 5,
+                shape = RoundedCornerShape(12.dp),
+            )
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
+
+        // Loop-11: continue is only enabled once the user has provided
+        // enough information — pre-defined reason picks are fine on
+        // their own, "Anderer Grund" needs at least a few characters of
+        // free text so the analytics event has something useful in it.
+        val canContinue =
+            selectedReason != null && (!isOther || customReasonText.trim().length >= 3)
 
         Button(
             onClick = onNext,
-            enabled = selectedReason != null,
+            enabled = canContinue,
             modifier = Modifier.fillMaxWidth(),
             colors =
                 ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
