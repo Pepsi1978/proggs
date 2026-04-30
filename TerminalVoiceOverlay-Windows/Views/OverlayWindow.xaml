@@ -79,7 +79,7 @@
                 <Button x:Name="UltrathinkButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnUltrathink_Click"
-                        ToolTip="PromptBoard Always-On Prefix an/aus">
+                        ToolTip="PromptBoard-Dauerprefix ein oder aus">
                     <Viewbox Width="20" Height="20">
                         <Path x:Name="UltrathinkStar" Fill="#8B7355"
                               Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
@@ -96,7 +96,7 @@
                     <Button x:Name="MicButton"
                             Style="{StaticResource MicButton}"
                             Click="BtnMic_Click"
-                            ToolTip="Start / stop recording">
+                            ToolTip="Aufnahme starten oder stoppen">
                         <Grid Width="48" Height="48">
                             <!-- Dark icon for contrast on yellow background -->
                             <Viewbox x:Name="MicIcon" Width="22" Height="22">
@@ -113,7 +113,7 @@
                             Style="{StaticResource MicButton}"
                             Margin="0,8,0,0"
                             Click="BtnBtw_Click"
-                            ToolTip="BTW voice input">
+                            ToolTip="BTW-Spracheingabe">
                         <!-- Dark text for contrast on yellow background -->
                         <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                     </Button>
@@ -128,7 +128,7 @@
                     <Button x:Name="WButton"
                             Style="{StaticResource CircleButton}"
                             Click="BtnWhisperUndo_Click"
-                            ToolTip="Replace with raw Whisper text">
+                            ToolTip="Mit rohem Whisper-Text ersetzen">
                         <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Button>
 
@@ -136,7 +136,7 @@
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
                             Click="BtnGemini_Click"
-                            ToolTip="Toggle Gemini">
+                            ToolTip="Gemini ein oder aus">
                         <TextBlock Text="G" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Button>
                 </StackPanel>
@@ -149,7 +149,7 @@
                 <Button x:Name="XButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnClear_Click"
-                        ToolTip="Clear line">
+                        ToolTip="Zeile löschen">
                     <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
                 </Button>
             </Border>
@@ -162,7 +162,7 @@
                     <Button x:Name="CopyButton"
                             Style="{StaticResource CircleButton}"
                             Click="BtnCopy_Click"
-                            ToolTip="Copy selected text">
+                            ToolTip="Markierten Text kopieren">
                         <Viewbox Width="18" Height="18">
                             <Path Fill="White" Data="M16,1H4C2.9,1,2,1.9,2,3v14h2V3h12V1z M19,5H8C6.9,5,6,5.9,6,7v14c0,1.1,0.9,2,2,2h11c1.1,0,2-0.9,2-2V7C21,5.9,20.1,5,19,5z M19,21H8V7h11V21z"/>
                         </Viewbox>
@@ -172,7 +172,7 @@
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
                             Click="BtnPaste_Click"
-                            ToolTip="Paste into command line">
+                            ToolTip="In die Kommandozeile einfügen">
                         <Viewbox Width="18" Height="18">
                             <Path Fill="White" Data="M19,2h-4.18C14.4,0.84,13.3,0,12,0S9.6,0.84,9.18,2H5C3.9,2,3,2.9,3,4v16c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V4C21,2.9,20.1,2,19,2z M12,2c0.55,0,1,0.45,1,1s-0.45,1-1,1s-1-0.45-1-1S11.45,2,12,2z M19,20H5V4h2v3h10V4h2V20z"/>
                         </Viewbox>
@@ -198,7 +198,7 @@
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
                             Click="BtnInsertScreenshot_Click"
-                            ToolTip="Letzten Screenshot als Datei einfuegen">
+                            ToolTip="Letzten Screenshot als Datei einfügen">
                         <!-- Segoe MDL2 Assets Attach glyph (E723) — vertical
                              paperclip pre-centred in its glyph cell, so no
                              SVG bounds-box hassle. Native Windows icon font,
@@ -221,7 +221,7 @@
                 <Button x:Name="EnterButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnAutoEnter_Click"
-                        ToolTip="Toggle auto-enter">
+                        ToolTip="Auto-Enter ein oder aus">
                     <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
                 </Button>
             </Border>

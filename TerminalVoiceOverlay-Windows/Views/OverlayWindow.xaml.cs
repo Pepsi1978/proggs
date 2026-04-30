@@ -1519,7 +1519,7 @@ namespace TerminalVoiceOverlay.Views
                 // Insert-Tooltip live aktualisieren: der Benutzer kann mit der
                 // Maus drueberfahren und sieht WELCHE Datei beim Insert eingefuegt
                 // wuerde. So merkt er auf einen Blick wenn der Pfad noch der alte ist.
-                InsertScreenshotButton.ToolTip = $"Letzten Screenshot einfuegen: {filename}";
+                InsertScreenshotButton.ToolTip = $"Letzten Screenshot einfügen: {filename}";
 
                 // Erfolgs-Flash: gruen 1.5 Sekunden, dann zurueck zu teal.
                 ScreenshotButton.Background = BtnSuccess;
