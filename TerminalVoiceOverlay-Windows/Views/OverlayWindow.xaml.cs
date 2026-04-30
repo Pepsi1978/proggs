@@ -184,6 +184,12 @@ namespace TerminalVoiceOverlay.Views
         private readonly DispatcherTimer _pulseTimer;
         private readonly DispatcherTimer _btwPulseTimer;
         private readonly DispatcherTimer _resetTimer;
+        // Verzoegerung beim Verlassen des Terminals: 5 Sekunden warten bevor
+        // das Overlay versteckt wird. Wenn der Benutzer innerhalb dieser Zeit
+        // zurueck zum Terminal wechselt, wird der Timer gestoppt — das Overlay
+        // bleibt sichtbar. Praktisch um z.B. einen Screenshot von einer
+        // anderen App zu machen, ohne das Pillar zu verlieren.
+        private readonly DispatcherTimer _hideDelayTimer;
         private bool _pulseBright    = false;
         private bool _btwPulseBright = false;
 
@@ -242,6 +248,21 @@ namespace TerminalVoiceOverlay.Views
             {
                 _resetTimer.Stop();
                 SetMicState(RecordingState.Idle);
+            };
+
+            // ── Hide-Delay-Timer: 5 s nach Verlassen des Terminals ──
+            // Wechselt der Benutzer zu einer anderen App (z.B. Browser), wird
+            // dieser Timer gestartet. Erst nach 5 Sekunden wird das Overlay
+            // tatsaechlich versteckt — so kann der Benutzer in der Zwischenzeit
+            // noch einen Screenshot machen oder das Pillar nutzen, ohne dass
+            // es sofort verschwindet. Wechselt er innerhalb der 5 Sekunden
+            // zurueck zum Terminal, wird der Timer in OnTerminalActivated
+            // gestoppt — das Overlay bleibt sichtbar.
+            _hideDelayTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _hideDelayTimer.Tick += (_, _) =>
+            {
+                _hideDelayTimer.Stop();
+                HideOverlayNow();
             };
 
             // ── Initial button colours ──
@@ -411,6 +432,12 @@ namespace TerminalVoiceOverlay.Views
 
         private void OnTerminalActivated(IntPtr terminalHwnd)
         {
+            // Wechsel zurueck zum Terminal: laufenden Hide-Delay-Timer
+            // sofort abbrechen, sonst wuerde das Overlay nach Ablauf der
+            // 5 Sekunden trotzdem noch verschwinden — auch wenn der Benutzer
+            // laengst zurueck im Terminal arbeitet.
+            _hideDelayTimer.Stop();
+
             if (!_manuallyPositioned)
             {
                 var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
@@ -463,6 +490,29 @@ namespace TerminalVoiceOverlay.Views
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
 
+            // Statt sofort zu verstecken: 5-Sekunden-Timer starten. Wechselt
+            // der Benutzer in dieser Zeit zurueck zum Terminal, bricht
+            // OnTerminalActivated den Timer ab — das Overlay bleibt sichtbar.
+            // Stop+Start sorgt dafuer dass das Intervall bei mehrfachem
+            // App-Wechsel (z.B. Terminal → Browser → andere App) immer wieder
+            // bei 5 s anfaengt, statt vorher abzulaufen.
+            _hideDelayTimer.Stop();
+            _hideDelayTimer.Start();
+            Console.WriteLine("Overlay: hide delay started (5s)");
+        }
+
+        /// <summary>
+        /// Tatsaechliches Verstecken des Overlays nach Ablauf des Hide-Delay-
+        /// Timers. Wird auch direkt aufgerufen wenn die App aufraeumt. Enthaelt
+        /// die Logik die frueher in OnTerminalDeactivated stand: erst die
+        /// floating Children ausblenden, dann das PromptBoard-Panel, dann das
+        /// Pillar selbst. Ein zwischenzeitlicher Mic-Recording-Start macht
+        /// hier KEINE Ausnahme mehr — die Pruefung steckt bereits oben in
+        /// OnTerminalDeactivated, sodass der Timer gar nicht erst gestartet
+        /// wird wenn gerade aufgenommen wird.
+        /// </summary>
+        private void HideOverlayNow()
+        {
             // Floating Children (Eingabe + Historie) ZUERST verstecken —
             // sie sind eigene Top-Level-Windows und werden vom Verstecken
             // des Promtboards nicht automatisch mitgenommen. Wenn wir das
@@ -484,7 +534,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 _manuallyPositioned = false;
                 Hide();
-                Console.WriteLine("Overlay: hidden (terminal inactive)");
+                Console.WriteLine("Overlay: hidden (terminal inactive, after 5s delay)");
             }
         }
 
@@ -1653,6 +1703,7 @@ namespace TerminalVoiceOverlay.Views
             _pulseTimer.Stop();
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
+            _hideDelayTimer.Stop();
             _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _terminalWatcher.Dispose();
             _audioRecorder.Dispose();
