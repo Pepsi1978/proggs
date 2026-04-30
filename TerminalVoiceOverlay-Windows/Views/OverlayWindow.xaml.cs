@@ -157,6 +157,31 @@ namespace TerminalVoiceOverlay.Views
             }
             catch { /* Diagnostics must never break the main flow. */ }
         }
+
+        /// <summary>
+        /// Schreibt eine Diagnose-Zeile in screenshot.log neben der
+        /// Promptboard-Datenbank. Erfasst JEDE Aktion an Screenshot- und
+        /// InsertScreenshot-Button (Klick, Erfolg, Fehler, Pfad). Im Bug-Fall
+        /// kann man hier nachsehen ob der Klick ankam, ob der Save klappte
+        /// und welcher Pfad gemerkt wurde — direkt einsehbar mit
+        ///   notepad %LOCALAPPDATA%\PromptBoard\screenshot-debug\screenshot.log
+        /// </summary>
+        private static void LogScreenshot(string line)
+        {
+            try
+            {
+                string dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard", "screenshot-debug");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "screenshot.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch { /* Diagnostics must never break the main flow. */ }
+        }
+
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
@@ -1402,11 +1427,30 @@ namespace TerminalVoiceOverlay.Views
         /// (verfuegbar weil UseWindowsForms=true) statt Win+Druck, damit wir
         /// einen deterministischen Dateinamen haben und ohne Race Condition
         /// sofort auf den Pfad zugreifen koennen.
+        ///
+        /// Robustheit (Stand 2026-04-30):
+        ///  • Persistentes Logging in screenshot.log — JEDER Klick wird protokolliert,
+        ///    so dass Bug-Diagnose moeglich ist auch wenn der Benutzer das
+        ///    Verhalten erst spaeter bemerkt.
+        ///  • Verifikation nach dem Save — die Datei MUSS existieren UND >0 Bytes
+        ///    haben, sonst gilt der Schritt als gescheitert.
+        ///  • Filename-Eindeutigkeit ueber Millisekunden-Timestamp. Defensiver
+        ///    GUID-Fallback falls (theoretisch unmoeglich) zwei Klicks in
+        ///    derselben Millisekunde landen.
+        ///  • Erfolg = 1.5 s gruen; Fehler = 3 s rot. Beides deutlich sichtbar.
+        ///  • Insert-Tooltip wird live aktualisiert, so dass der Benutzer beim
+        ///    Hovern sieht WELCHE Datei beim naechsten Insert eingefuegt wird.
         /// </summary>
         private void BtnScreenshot_Click(object sender, RoutedEventArgs e)
         {
-            // Flash: gray for 2 s then back to teal
+            LogScreenshot("ScreenshotButton.Click handler ENTERED");
+
+            // Flash: gray waehrend Capture laeuft; nach Abschluss faerbt
+            // sich der Button gruen (Erfolg) oder rot (Fehler).
             ScreenshotButton.Background = BtnIdle;
+
+            string filename = "";
+            string fullPath = "";
 
             try
             {
@@ -1415,6 +1459,7 @@ namespace TerminalVoiceOverlay.Views
                 // Monitor links vom Hauptmonitor steht — Graphics.CopyFromScreen
                 // akzeptiert das.
                 var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+                LogScreenshot($"VirtualScreen bounds: {bounds.Left},{bounds.Top} {bounds.Width}x{bounds.Height}");
 
                 using var bitmap = new System.Drawing.Bitmap(
                     bounds.Width, bounds.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -1432,32 +1477,65 @@ namespace TerminalVoiceOverlay.Views
                 string shotsDir = System.IO.Path.Combine(picsDir, "Screenshots");
                 System.IO.Directory.CreateDirectory(shotsDir);
 
-                string filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.png";
-                string fullPath = System.IO.Path.Combine(shotsDir, filename);
+                // Eindeutigkeit: yyyy-MM-dd_HH-mm-ss-fff hat Millisekunden-
+                // Praezision — bei Klicks im Sub-Sekunden-Takt entstehen
+                // bereits unterschiedliche Namen. Defensiver GUID-Fallback
+                // fuer den theoretisch unmoeglichen Fall einer Kollision in
+                // derselben Millisekunde (oder wenn die Systemuhr zurueckspringt).
+                filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.png";
+                fullPath = System.IO.Path.Combine(shotsDir, filename);
+                int collisionGuard = 0;
+                while (System.IO.File.Exists(fullPath) && collisionGuard++ < 10)
+                {
+                    string suffix = Guid.NewGuid().ToString("N").Substring(0, 6);
+                    filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}_{suffix}.png";
+                    fullPath = System.IO.Path.Combine(shotsDir, filename);
+                    LogScreenshot($"Filename collision; retry with suffix: {filename}");
+                }
 
                 bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
 
+                // Verifikation: die Datei MUSS jetzt da sein und Bytes haben.
+                // Ohne diesen Check wuerden ein leerer/fehlgeschlagener Save
+                // still durchgehen und _lastScreenshotPath aktualisiert —
+                // beim spaeteren Insert merkt der Benutzer dann nichts vom Fehler.
+                var fi = new System.IO.FileInfo(fullPath);
+                if (!fi.Exists || fi.Length == 0)
+                {
+                    throw new System.IO.IOException(
+                        $"Screenshot wurde nicht oder leer gespeichert: {fullPath} (exists={fi.Exists}, size={(fi.Exists ? fi.Length : -1)})");
+                }
+
                 _lastScreenshotPath = fullPath;
-                Console.WriteLine($"Screenshot saved: {fullPath}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Screenshot failed: {ex.GetType().Name}: {ex.Message}");
-                // Fehlerfeedback per kurzem Rotton
-                ScreenshotButton.Background = BtnX;
+                LogScreenshot($"Screenshot saved OK: {fullPath} ({fi.Length:N0} bytes)");
+
+                // Insert-Tooltip live aktualisieren: der Benutzer kann mit der
+                // Maus drueberfahren und sieht WELCHE Datei beim Insert eingefuegt
+                // wuerde. So merkt er auf einen Blick wenn der Pfad noch der alte ist.
+                InsertScreenshotButton.ToolTip = $"Letzten Screenshot einfuegen: {filename}";
+
+                // Erfolgs-Flash: gruen 1.5 Sekunden, dann zurueck zu teal.
+                ScreenshotButton.Background = BtnSuccess;
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(1500);
                     Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
                 });
-                return;
             }
-
-            _ = Task.Run(async () =>
+            catch (Exception ex)
             {
-                await Task.Delay(2000);
-                Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
-            });
+                LogScreenshot($"Screenshot FAILED: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                Console.WriteLine($"Screenshot failed: {ex.GetType().Name}: {ex.Message}");
+                // Wichtig: _lastScreenshotPath bleibt absichtlich UNVERAENDERT.
+                // Der Benutzer sieht den roten Flash und weiss dass der LETZTE
+                // erfolgreiche Screenshot weiterhin der "merkbare" ist.
+                ScreenshotButton.Background = BtnX;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000); // 3 s — deutlich laenger als Erfolg, damit auffaellig
+                    Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
+                });
+            }
         }
 
         /// <summary>
@@ -1468,20 +1546,36 @@ namespace TerminalVoiceOverlay.Views
         /// Shells (PowerShell, CMD, bash via Git Bash) den Pfad als ein
         /// einziges Argument lesen. Wenn noch kein Screenshot gemacht wurde
         /// oder die Datei zwischenzeitlich geloescht wurde, blinkt der Button
-        /// kurz rot und nichts passiert.
+        /// rot 3 Sekunden lang und nichts passiert.
+        ///
+        /// Robustheit: jeder Klick wird in screenshot.log protokolliert.
+        /// Bei Erfolg blinkt der Button kurz gruen, bei Fehler 3 s rot.
         /// </summary>
         private void BtnInsertScreenshot_Click(object sender, RoutedEventArgs e)
         {
+            LogScreenshot("InsertScreenshotButton.Click handler ENTERED");
+
             string? path = _lastScreenshotPath;
 
-            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+            if (string.IsNullOrEmpty(path))
             {
-                // Kein Screenshot vorhanden — kurzer roter Flash als Feedback.
-                Console.WriteLine("InsertScreenshot: kein Screenshot vorhanden");
+                LogScreenshot("InsertScreenshot ABORTED: _lastScreenshotPath is empty (no screenshot taken yet)");
                 InsertScreenshotButton.Background = BtnX;
                 _ = Task.Run(async () =>
                 {
-                    await Task.Delay(1500);
+                    await Task.Delay(3000);
+                    Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
+                });
+                return;
+            }
+
+            if (!System.IO.File.Exists(path))
+            {
+                LogScreenshot($"InsertScreenshot ABORTED: file not found: {path}");
+                InsertScreenshotButton.Background = BtnX;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
                     Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
                 });
                 return;
@@ -1490,17 +1584,21 @@ namespace TerminalVoiceOverlay.Views
             // Pfad mit Leerzeichen: in Anfuehrungszeichen setzen.
             string toPaste = path.Contains(' ') ? $"\"{path}\"" : path;
 
-            // Flash: gray for 2 s then back to amber
+            LogScreenshot($"InsertScreenshot: pasting '{toPaste}'");
+
+            // Flash: gray waehrend des Pasts, dann gruen kurz, dann amber zurueck.
             InsertScreenshotButton.Background = BtnIdle;
 
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
             TerminalController.PasteText(toPaste, hwnd, autoEnter: false);
 
-            Console.WriteLine($"InsertScreenshot: pasted path '{toPaste}'");
+            LogScreenshot($"InsertScreenshot: PasteText OK for '{toPaste}'");
 
+            // Erfolgs-Flash gruen kurz, dann zurueck zu amber.
+            InsertScreenshotButton.Background = BtnSuccess;
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2000);
+                await Task.Delay(1500);
                 Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
             });
         }
