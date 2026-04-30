@@ -225,12 +225,23 @@ constructor(
         if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
         if (expiry.isNullOrBlank()) return@combine null
         if (priceMicros <= 0L || monthlyPrice.isBlank()) return@combine null
-        // Loop-7 fix #2 (Frank, 2026-04-30): determine "still in promo phase"
-        // by comparing what Google charges next (priceMicros) with the
-        // BillingClient's main base-plan list price (monthlyPriceMicros).
-        // If the next charge is strictly less than the base list price the
-        // user is still benefitting from an intro discount; if they match
-        // the promo is over and we should not show the discount notice.
+        // Loop-9 fix (Frank, 2026-04-30): only show the "Sonderpreis aktiv,
+        // endet am ...  danach 3,99 € pro Monat" notice when the user is
+        // ACTUALLY on the `monthly` base plan in an INTRO phase. If they
+        // accepted the retention offer they are now on the
+        // `retention-monthly-75` base plan with a permanent 2,99 € recurring
+        // price — there is no return to 3,99 € and the dialog must NOT
+        // suggest one. The active base plan id is set by
+        // launchPurchaseFlow's rememberActiveBasePlan() and surfaces here
+        // straight from prefs.
+        val activeBasePlan = encryptedPrefs.getString(
+            Constants.PREF_ACTIVE_BASE_PLAN_ID,
+            "",
+        ) ?: ""
+        val onMainMonthlyPlan = activeBasePlan.isEmpty() || activeBasePlan == "monthly"
+        if (!onMainMonthlyPlan) return@combine null
+        // Phase comparison: only the "main" monthly plan can be in INTRO.
+        // priceMicros < baseMicros => still benefitting from the discount.
         val baseMicros = parsePriceToMicros(monthlyPrice) ?: return@combine null
         if (priceMicros >= baseMicros) return@combine null
         val currentPrice = formatMicrosAsPrice(priceMicros, priceCurrency)
