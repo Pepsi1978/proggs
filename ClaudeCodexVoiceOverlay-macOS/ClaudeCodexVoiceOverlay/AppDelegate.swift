@@ -165,6 +165,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startRecording(btw: Bool) {
+        // KRITISCH: Reset-Timer aus der vorherigen Aufnahme stoppen, sonst
+        // feuert er ggf. mitten in der NEUEN Aufnahme und setzt den Mic-State
+        // auf Idle zurueck — UI sieht aus als waere die Aufnahme aus, der
+        // AudioRecorder laeuft aber weiter (State-Drift bei schnellen
+        // aufeinanderfolgenden Aufnahmen).
+        resetTimer?.invalidate()
         isBtwRecording = btw
         do {
             try audioRecorder.start()

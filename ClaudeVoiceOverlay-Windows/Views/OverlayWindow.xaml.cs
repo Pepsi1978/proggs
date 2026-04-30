@@ -343,6 +343,12 @@ namespace ClaudeVoiceOverlay.Views
             else
             {
                 // ── Start recording ──
+                // KRITISCH: Reset-Timer aus der vorherigen Aufnahme stoppen.
+                // Sonst feuert er ggf. mitten in der NEUEN Aufnahme und setzt
+                // _micState auf Idle zurueck — UI sieht aus als waere die
+                // Aufnahme aus, _audioRecorder laeuft aber weiter (State-Drift
+                // bei schnellen aufeinanderfolgenden Aufnahmen).
+                _resetTimer.Stop();
                 try
                 {
                     _audioRecorder.Start();
