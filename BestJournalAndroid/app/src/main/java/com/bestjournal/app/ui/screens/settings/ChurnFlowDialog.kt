@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -921,6 +922,20 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
         ),
         label = "stayHeartScale",
     )
+    // Loop-7 #2 (Frank, 2026-04-30): the "Doch lieber bleiben" CTA gets
+    // the same gentle breathing scale as the "Premium starten" button on
+    // the paywall — a slow 1.00 ↔ 1.03 pulse, calm enough to feel
+    // inviting rather than nagging. The button itself is now content-
+    // sized (no longer full-width) so the visual weight matches the text.
+    val stayButtonScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "stayButtonScale",
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(28.dp),
@@ -964,23 +979,28 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
 
         Button(
             onClick = onGoBack,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .wrapContentWidth()
+                .scale(stayButtonScale),
             colors =
                 ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(14.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = 28.dp,
+                vertical = 10.dp,
+            ),
         ) {
             Text(
                 stringResource(R.string.churn_stay),
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(vertical = 4.dp),
             )
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Subdued grey link instead of the previous red, so it does not
         // compete visually with the primary "Bleiben"-Button above.
-        TextButton(onClick = onConfirmCancel, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onConfirmCancel, modifier = Modifier.wrapContentWidth()) {
             Text(
                 stringResource(R.string.action_go_google_play),
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
