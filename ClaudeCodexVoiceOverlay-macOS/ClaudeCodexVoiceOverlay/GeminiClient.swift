@@ -11,41 +11,52 @@ final class GeminiClient {
         self.apiKey = apiKey
     }
 
+    /// Pfad zur externen Gemini-Korrektur-Prompt-Datei. Wird bei JEDEM
+    /// correctText-Aufruf neu gelesen — Aenderungen wirken sofort ohne
+    /// App-Neustart. Fehlt die Datei: Fallback auf eingebauten Default-Prompt.
+    private static var geminiPromptFilePath: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("SK/VoiceOverlays/gemini-correction-prompt.txt")
+    }
+
+    private static func loadCorrectionPrompt() -> String? {
+        let url = geminiPromptFilePath
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     func correctText(_ text: String, completion: @escaping (Result<String, Error>) -> Void) {
-        let prompt = """
-        ROLLE:
-        Du bist ein technischer Redakteur, spezialisiert auf die Aufbereitung von Spracheingaben für KI-Coding-Tools. Du verstehst Programmierkonzepte und bewahrst technische Präzision, während du gesprochene Sprache in klare schriftliche Anweisungen umwandelst.
-
-        AUFGABE:
-        Du erhältst einen diktierten Text (Speech-to-Text). Der Sprecher spricht Deutsch, verwendet aber regelmäßig englische Fachbegriffe aus der Programmierung (Funktionsnamen, Frameworks, CLI-Befehle etc.). Die Spracherkennung kann diese englischen Begriffe falsch transkribieren – erkenne und korrigiere solche Fehler anhand des technischen Kontexts. Der Sprecher gibt Programmier-Anweisungen an ein KI-Coding-Tool (z.B. Claude Code). Bereite den Text so auf, dass er als klare, präzise Eingabe funktioniert.
-
-        VORGEHEN:
-        1) Entferne Diktat-Artefakte: Fülllaute ("äh", "ähm"), Stotterer, Wortwiederholungen, sinnlose Fragmente.
-        2) Erkenne und korrigiere falsch transkribierte englische Fachbegriffe (z.B. "use Tate" → "useState", "Fötch" → "fetch").
-        3) Erkenne die Absicht und formuliere den Text als klare Anweisung um. Sätze dürfen umstrukturiert, Wortwahl verbessert und Satzgrenzen neu gesetzt werden. Zusammengehörige Anweisungen als einen Befehl belassen.
-        4) Korrigiere Grammatik, Zeichensetzung und Groß-/Kleinschreibung.
-        5) Bewahre technische Begriffe EXAKT: Dateinamen, Funktionsnamen, Variablen, Programmiersprachen, Frameworks, CLI-Befehle, API-Namen – NICHT übersetzen oder verändern.
-
-        GRENZEN:
-        - Keine neuen Informationen oder Vermutungen hinzufügen.
-        - Intention des Originals vollständig erhalten.
-        - Englische Fachbegriffe und Code-Referenzen NIEMALS eindeutschen.
-        - Sprache: Deutsch (außer technische Begriffe).
-
-        AUSGABEFORMAT:
-        - Ausschließlich den überarbeiteten Text. Keine Kommentare, keine Erklärungen, kein Präfix.
-        - Ausführliche, vollständige Sätze, sodass jede Intention des Sprechers klar und unmissverständlich beim Leser ankommt.
-        - Natürlicher, verständlicher Ton – so wie man einem Kollegen etwas erklärt. Kein Behördendeutsch, keine Geschäftsbrief-Floskeln, keine gestelzte Sprache.
-
-        TEXT_START
-        \(text)
-        TEXT_END
-        """
+        // Externe Korrektur-Prompt-Datei hat Vorrang — Frank kann sie
+        // jederzeit pflegen ohne Rebuild. Fallback: eingebauter Default.
+        let template = Self.loadCorrectionPrompt() ?? GeminiClient.defaultCorrectionTemplate
+        let prompt = template + "\n" + text + "\nTEXT_END"
 
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             self.sendRequest(prompt: prompt, attempt: 0, completion: completion)
         }
     }
+
+    private static let defaultCorrectionTemplate = """
+    ROLLE:
+    Du bist ein technischer Redakteur, spezialisiert auf die Aufbereitung von Spracheingaben für KI-Coding-Tools. Du verstehst Programmierkonzepte und bewahrst technische Präzision, während du gesprochene Sprache in klare schriftliche Anweisungen umwandelst.
+
+    AUFGABE:
+    Du erhältst einen diktierten Text (Speech-to-Text). Der Sprecher spricht Deutsch, verwendet aber regelmäßig englische Fachbegriffe aus der Programmierung. Die Spracherkennung kann diese englischen Begriffe falsch transkribieren – erkenne und korrigiere solche Fehler anhand des technischen Kontexts.
+
+    VORGEHEN:
+    1) Entferne Diktat-Artefakte: Fülllaute, Stotterer, Wortwiederholungen.
+    2) Erkenne und korrigiere falsch transkribierte englische Fachbegriffe.
+    3) Erkenne die Absicht und formuliere den Text als klare Anweisung um.
+    4) Korrigiere Grammatik, Zeichensetzung und Groß-/Kleinschreibung.
+    5) Bewahre technische Begriffe EXAKT.
+
+    AUSGABEFORMAT:
+    Ausschließlich den überarbeiteten Text. Keine Kommentare.
+
+    TEXT_START
+    """
 
     private func sendRequest(prompt: String, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
         var urlComponents = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -52,9 +53,31 @@ TEXT_START
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         }
 
+        /// Pfad zur externen Gemini-Korrektur-Prompt-Datei. Wird bei JEDEM
+        /// CorrectTextAsync-Aufruf neu gelesen — Aenderungen wirken sofort
+        /// ohne App-Neustart. Fehlt die Datei: Fallback auf eingebauten
+        /// PromptTemplate (kein Bruch).
+        private static string GeminiPromptFilePath
+            => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                            "SK", "VoiceOverlays", "gemini-correction-prompt.txt");
+
+        private static string? LoadGeminiCorrectionPrompt()
+        {
+            try
+            {
+                if (!File.Exists(GeminiPromptFilePath)) return null;
+                var text = File.ReadAllText(GeminiPromptFilePath);
+                return string.IsNullOrWhiteSpace(text) ? null : text;
+            }
+            catch { return null; }
+        }
+
         public async Task<string> CorrectTextAsync(string text)
         {
-            return await SendWithRetry(PromptTemplate + text + "\nTEXT_END", 0);
+            // Externe Korrektur-Prompt-Datei hat Vorrang — Frank kann sie
+            // jederzeit pflegen ohne Rebuild. Fallback: eingebauter Template.
+            var template = LoadGeminiCorrectionPrompt() ?? PromptTemplate;
+            return await SendWithRetry(template + text + "\nTEXT_END", 0);
         }
 
         private async Task<string> SendWithRetry(string prompt, int attempt)
