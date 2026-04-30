@@ -37,6 +37,11 @@ struct PBPrompt {
     var geminiModel: String?
     var isActiveForImprovement: Bool
     var improvedByAiPromptId: UUID?
+    /// Optional Cmd+N hotkey (1-9) that pastes this prompt's effective text
+    /// into the active terminal. Nil when no hotkey is assigned. Globally
+    /// unique — assigning a hotkey already in use strips it from the previous
+    /// owner ("last wins"). Mirrors Windows `Prompt.HotkeyNumber`.
+    var hotkeyNumber: Int?
     var createdAt: Date
     var updatedAt: Date
 

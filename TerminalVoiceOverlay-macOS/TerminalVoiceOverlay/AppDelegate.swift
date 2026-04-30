@@ -184,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onInsertScreenshotClicked = { [weak self] in self?.insertLastScreenshot() }
 
         setupStatusItem()
+        setupGlobalHotkeys()
 
         // Debug: log every mouseDown anywhere in the system so we can see
         // whether clicks are even reaching our process. If a click lands on
@@ -900,5 +901,101 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let toPaste = path.contains(" ") ? "\"\(path)\"" : path
         TerminalController.pasteText(toPaste, autoEnter: false)
         self.panel.flashInsertScreenshotButton(success: true)
+    }
+
+    // MARK: - Global Hotkeys (Carbon API)
+
+    /// Registriert alle globalen Tastatur-Hotkeys. Wird einmal in
+    /// `applicationDidFinishLaunching` aufgerufen, NACHDEM Panel und
+    /// Services initialisiert sind. Carbon-API braucht keine Accessibility-
+    /// Permission — die Hotkeys feuern auch wenn die App im Hintergrund ist.
+    /// Bei Kollision mit System-Hotkeys (selten bei Cmd+Shift+R/S/I/E) gibt
+    /// `RegisterEventHotKey` einen Fehlerstatus zurueck den `HotkeyRegistry`
+    /// loggt — die App startet trotzdem.
+    private func setupGlobalHotkeys() {
+        let reg = HotkeyRegistry.shared
+
+        // Voice-Toggle (Cmd+Shift+R) — Pendant zu Windows Alt+F12
+        reg.register(keyCode: TVOHotkey.voiceToggle.keyCode,
+                     modifiers: TVOHotkey.voiceToggle.modifiers) { [weak self] in
+            self?.toggleRecording()
+        }
+
+        // Screenshot (Cmd+Shift+S) — Pendant zu Windows Strg+Alt+P
+        reg.register(keyCode: TVOHotkey.screenshot.keyCode,
+                     modifiers: TVOHotkey.screenshot.modifiers) { [weak self] in
+            self?.takeScreenshot()
+        }
+
+        // Insert-Screenshot (Cmd+Shift+I) — Pendant zu Windows Strg+Alt+I
+        reg.register(keyCode: TVOHotkey.insertScreenshot.keyCode,
+                     modifiers: TVOHotkey.insertScreenshot.modifiers) { [weak self] in
+            self?.insertLastScreenshot()
+        }
+
+        // Finder zum Release-Bundle (Cmd+Shift+E) — Pendant zu Windows Alt+F11
+        reg.register(keyCode: TVOHotkey.openReleaseBundle.keyCode,
+                     modifiers: TVOHotkey.openReleaseBundle.modifiers) { [weak self] in
+            self?.openReleaseBundleFolder()
+        }
+
+        // Prompt-Hotkeys Cmd+1..9 — Pendant zu Windows Strg+1..9
+        for digit in 1...9 {
+            guard let combo = TVOHotkey.promptDigit(digit) else { continue }
+            reg.register(keyCode: combo.keyCode, modifiers: combo.modifiers) { [weak self] in
+                self?.pastePromptByHotkey(digit)
+            }
+        }
+
+        NSLog("[App] Global hotkeys registered (Cmd+Shift+R/S/I/E + Cmd+1..9)")
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        HotkeyRegistry.shared.unregisterAll()
+    }
+
+    /// Holt den Prompt mit `hotkeyNumber == digit` aus der DB und fuegt
+    /// dessen `effectiveText` in das aktive Terminal ein. Wenn kein Prompt
+    /// dem Digit zugewiesen ist, passiert nichts (still — kein Beep, kein
+    /// Alert, weil die Cmd+N-Kombi auch in vielen Apps eigene Bedeutungen
+    /// hat und der User vielleicht gar nicht uns gemeint hat).
+    private func pastePromptByHotkey(_ digit: Int) {
+        do {
+            guard let prompt = try PromptBoardStore.shared.promptByHotkey(digit) else {
+                NSLog("[PromptHotkey] Cmd+%d — no prompt assigned", digit)
+                return
+            }
+            let text = prompt.effectiveText
+            NSLog("[PromptHotkey] Cmd+%d -> '%@' (len=%d)", digit, prompt.shortLabel, text.count)
+            TerminalController.pasteText(text, autoEnter: autoEnterEnabled)
+        } catch {
+            NSLog("[PromptHotkey] DB error: %@", error.localizedDescription)
+        }
+    }
+
+    /// Oeffnet den Release-Bundle-Ordner im Finder. Falls der Ordner noch
+    /// nicht existiert (kein Release-Build gemacht), klettern wir den
+    /// Pfad-Baum hoch bis zum naechsten existierenden Eltern-Verzeichnis.
+    /// Pendant zur Windows-Methode `OpenReleaseBundleFolder`.
+    private func openReleaseBundleFolder() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        var folder = "\(home)/proggs/BestJournalAndroid/app/build/outputs/bundle/release"
+
+        var checked = folder
+        while !checked.isEmpty && !FileManager.default.fileExists(atPath: checked) {
+            let parent = (checked as NSString).deletingLastPathComponent
+            if parent == checked || parent.isEmpty { break }
+            checked = parent
+        }
+
+        guard FileManager.default.fileExists(atPath: checked) else {
+            NSLog("[OpenReleaseBundle] path not found: %@", folder)
+            return
+        }
+        folder = checked
+
+        let url = URL(fileURLWithPath: folder)
+        NSWorkspace.shared.open(url)
+        NSLog("[OpenReleaseBundle] opened: %@", folder)
     }
 }

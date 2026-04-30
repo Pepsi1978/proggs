@@ -37,6 +37,7 @@ SWIFT_FILES=(
     "$SRC_DIR/PromptInputPanel.swift"
     "$SRC_DIR/PromptHistoryStore.swift"
     "$SRC_DIR/PromptHistoryPanel.swift"
+    "$SRC_DIR/HotkeyRegistry.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )
@@ -48,6 +49,7 @@ swiftc \
     -framework AppKit \
     -framework AVFoundation \
     -framework CoreGraphics \
+    -framework Carbon \
     -framework Network \
     -lsqlite3 \
     "${SWIFT_FILES[@]}"
@@ -74,3 +76,16 @@ echo "  open $APP_BUNDLE"
 echo ""
 echo "Oder direkt:"
 echo "  $APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+# Auf den ersten Build mit dem Hotkey-Update SETUP.md im Standardprogramm
+# (typisch eine Markdown-Vorschau wie Marked oder QuickLook) oeffnen, damit
+# Frank die Hotkey-Liste und Permission-Schritte direkt sieht. Der Marker
+# verhindert dass die Datei bei jedem spaeteren Build wieder geoeffnet wird.
+SETUP_MARKER="$HOME/.terminalvoiceoverlay-setup-seen"
+SETUP_DOC="$PROJECT_DIR/SETUP.md"
+if [ ! -f "$SETUP_MARKER" ] && [ -f "$SETUP_DOC" ]; then
+    echo ""
+    echo "=== ERSTER BUILD MIT HOTKEY-UPDATE — SETUP.md wird geoeffnet ==="
+    open "$SETUP_DOC"
+    touch "$SETUP_MARKER"
+fi

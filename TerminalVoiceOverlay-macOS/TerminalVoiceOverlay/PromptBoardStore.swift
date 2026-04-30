@@ -75,6 +75,7 @@ final class PromptBoardStore {
                 GeminiModel TEXT,
                 IsActiveForImprovement INTEGER NOT NULL DEFAULT 0,
                 ImprovedByAiPromptId TEXT,
+                HotkeyNumber INTEGER,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
                 FOREIGN KEY (CategoryId) REFERENCES Categories(Id) ON DELETE CASCADE
@@ -108,6 +109,10 @@ final class PromptBoardStore {
         // when the column already exists if we run inside a try/catch.
         try? exec("ALTER TABLE Prompts ADD COLUMN IsPrePrompt INTEGER NOT NULL DEFAULT 1")
         try? exec("ALTER TABLE Prompts ADD COLUMN IsPostPrompt INTEGER NOT NULL DEFAULT 0")
+        // HotkeyNumber: optional Cmd+1..9 binding fuer einzelne Prompts.
+        // Mirrors Windows-Migration in EF Core. Nullable INTEGER weil viele
+        // Prompts keinen Hotkey haben.
+        try? exec("ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER")
     }
 
     private func ensureAppSettingsRow() throws {
@@ -197,7 +202,7 @@ final class PromptBoardStore {
     /// ALTER TABLE migration, this constant, the bind() in addPrompt /
     /// updatePrompt, AND readPrompt(stmt). Five places, in lockstep.
     private static let promptColumns =
-        "Id,CategoryId,ShortLabel,OriginalText,ImprovedText,ActiveVersion,IsAlwaysOn,IsPrePrompt,IsPostPrompt,SortOrder,PromptKind,GeminiModel,IsActiveForImprovement,ImprovedByAiPromptId,CreatedAt,UpdatedAt"
+        "Id,CategoryId,ShortLabel,OriginalText,ImprovedText,ActiveVersion,IsAlwaysOn,IsPrePrompt,IsPostPrompt,SortOrder,PromptKind,GeminiModel,IsActiveForImprovement,ImprovedByAiPromptId,HotkeyNumber,CreatedAt,UpdatedAt"
 
     func prompts(in categoryId: UUID) throws -> [PBPrompt] {
         var list: [PBPrompt] = []
@@ -219,7 +224,7 @@ final class PromptBoardStore {
     }
 
     func addPrompt(_ p: PBPrompt) throws {
-        let sql = "INSERT INTO Prompts (\(Self.promptColumns)) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        let sql = "INSERT INTO Prompts (\(Self.promptColumns)) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         try prepared(sql) { stmt in
             bindText(stmt, 1, p.id.uuidString)
             bindText(stmt, 2, p.categoryId.uuidString)
@@ -235,13 +240,14 @@ final class PromptBoardStore {
             bindTextOrNull(stmt, 12, p.geminiModel)
             sqlite3_bind_int64(stmt, 13, p.isActiveForImprovement ? 1 : 0)
             bindTextOrNull(stmt, 14, p.improvedByAiPromptId?.uuidString)
-            bindText(stmt, 15, Self.fmt(p.createdAt))
-            bindText(stmt, 16, Self.fmt(p.updatedAt))
+            bindIntOrNull(stmt, 15, p.hotkeyNumber)
+            bindText(stmt, 16, Self.fmt(p.createdAt))
+            bindText(stmt, 17, Self.fmt(p.updatedAt))
         }
     }
 
     func updatePrompt(_ p: PBPrompt) throws {
-        let sql = "UPDATE Prompts SET CategoryId=?, ShortLabel=?, OriginalText=?, ImprovedText=?, ActiveVersion=?, IsAlwaysOn=?, IsPrePrompt=?, IsPostPrompt=?, SortOrder=?, PromptKind=?, GeminiModel=?, IsActiveForImprovement=?, ImprovedByAiPromptId=?, UpdatedAt=? WHERE Id=?"
+        let sql = "UPDATE Prompts SET CategoryId=?, ShortLabel=?, OriginalText=?, ImprovedText=?, ActiveVersion=?, IsAlwaysOn=?, IsPrePrompt=?, IsPostPrompt=?, SortOrder=?, PromptKind=?, GeminiModel=?, IsActiveForImprovement=?, ImprovedByAiPromptId=?, HotkeyNumber=?, UpdatedAt=? WHERE Id=?"
         try prepared(sql) { stmt in
             bindText(stmt, 1, p.categoryId.uuidString)
             bindText(stmt, 2, p.shortLabel)
@@ -256,9 +262,33 @@ final class PromptBoardStore {
             bindTextOrNull(stmt, 11, p.geminiModel)
             sqlite3_bind_int64(stmt, 12, p.isActiveForImprovement ? 1 : 0)
             bindTextOrNull(stmt, 13, p.improvedByAiPromptId?.uuidString)
-            bindText(stmt, 14, Self.fmt(Date()))
-            bindText(stmt, 15, p.id.uuidString)
+            bindIntOrNull(stmt, 14, p.hotkeyNumber)
+            bindText(stmt, 15, Self.fmt(Date()))
+            bindText(stmt, 16, p.id.uuidString)
         }
+    }
+
+    /// Implements the "last wins" rule for prompt hotkey assignments:
+    /// when a prompt is given hotkey N, every OTHER prompt that previously
+    /// owned N gets its hotkey cleared. Mirrors
+    /// `PromptBoardPanel.StripHotkeyFromOthersAsync` on Windows.
+    func stripHotkeyFromOthers(hotkey: Int, exceptId: UUID) throws {
+        try prepared("UPDATE Prompts SET HotkeyNumber=NULL, UpdatedAt=? WHERE HotkeyNumber=? AND Id<>?") { stmt in
+            bindText(stmt, 1, Self.fmt(Date()))
+            sqlite3_bind_int64(stmt, 2, sqlite3_int64(hotkey))
+            bindText(stmt, 3, exceptId.uuidString)
+        }
+    }
+
+    /// Returns the prompt currently bound to Cmd+N (1..9), or nil if none.
+    func promptByHotkey(_ hotkey: Int) throws -> PBPrompt? {
+        var result: PBPrompt?
+        try prepared("SELECT \(Self.promptColumns) FROM Prompts WHERE HotkeyNumber=? LIMIT 1") { stmt in
+            sqlite3_bind_int64(stmt, 1, sqlite3_int64(hotkey))
+        } step: { [weak self] stmt in
+            result = self?.readPrompt(stmt)
+        }
+        return result
     }
 
     func upsertPrompt(_ p: PBPrompt) throws {
@@ -377,6 +407,15 @@ final class PromptBoardStore {
         if let v = value { bindText(stmt, idx, v) } else { sqlite3_bind_null(stmt, idx) }
     }
 
+    private func bindIntOrNull(_ stmt: OpaquePointer, _ idx: Int32, _ value: Int?) {
+        if let v = value { sqlite3_bind_int64(stmt, idx, sqlite3_int64(v)) } else { sqlite3_bind_null(stmt, idx) }
+    }
+
+    private func readOptInt(_ stmt: OpaquePointer, _ idx: Int32) -> Int? {
+        if sqlite3_column_type(stmt, idx) == SQLITE_NULL { return nil }
+        return Int(sqlite3_column_int64(stmt, idx))
+    }
+
     private func readString(_ stmt: OpaquePointer, _ idx: Int32) -> String {
         guard let c = sqlite3_column_text(stmt, idx) else { return "" }
         return String(cString: c)
@@ -416,8 +455,9 @@ final class PromptBoardStore {
             geminiModel: readOptString(stmt, 11),
             isActiveForImprovement: sqlite3_column_int64(stmt, 12) != 0,
             improvedByAiPromptId: (readOptString(stmt, 13)).flatMap(UUID.init(uuidString:)),
-            createdAt: Self.parse(readString(stmt, 14)) ?? Date(),
-            updatedAt: Self.parse(readString(stmt, 15)) ?? Date())
+            hotkeyNumber: readOptInt(stmt, 14),
+            createdAt: Self.parse(readString(stmt, 15)) ?? Date(),
+            updatedAt: Self.parse(readString(stmt, 16)) ?? Date())
     }
 
     private func readSettings(_ stmt: OpaquePointer) -> PBAppSettings {

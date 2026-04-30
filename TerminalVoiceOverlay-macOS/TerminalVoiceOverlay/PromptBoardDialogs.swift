@@ -127,6 +127,15 @@ enum PBDarkTheme {
         field.focusRingType = .none
     }
 
+    /// Dunkles Styling fuer NSPopUpButton (Hotkey-Picker im Edit-Dialog).
+    /// Behaelt die System-Pfeil-Cell aber faerbt Hintergrund und Text passend.
+    static func stylePopup(_ popup: NSPopUpButton) {
+        popup.contentTintColor = textPrimary
+        popup.wantsLayer = true
+        popup.layer?.backgroundColor = fieldBackground.cgColor
+        popup.layer?.cornerRadius = 4
+    }
+
     /// Accent-filled action button (e.g. "Speichern", "Verbinden").
     static func makePrimaryButton(title: String, target: AnyObject?, action: Selector) -> NSButton {
         let btn = NSButton(title: "", target: target, action: action)
@@ -224,6 +233,10 @@ struct PBPromptEditResult {
     let isAlwaysOn: Bool
     let isPrePrompt: Bool
     let isPostPrompt: Bool
+    /// Cmd+1..9 hotkey assignment, or nil for no hotkey.
+    /// Empfaenger (PromptBoardPanel) muss `stripHotkeyFromOthers` aufrufen
+    /// damit globale Eindeutigkeit erhalten bleibt ("last wins").
+    let hotkeyNumber: Int?
 }
 
 final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
@@ -236,6 +249,8 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private let prePromptCheckbox = NSButton(checkboxWithTitle: "Pre-Prompt (vor dem Diktat)", target: nil, action: nil)
     /// Sub-option of always-on: append this prompt after the dictated text.
     private let postPromptCheckbox = NSButton(checkboxWithTitle: "Post-Prompt (nach dem Diktat)", target: nil, action: nil)
+    /// Cmd+1..9 hotkey picker. Index 0 = "Kein Hotkey", Indizes 1..9 = Cmd+1..9.
+    private let hotkeyPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let statusLabel = NSTextField(labelWithString: "")
     private var result: PBPromptEditResult?
 
@@ -269,7 +284,8 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
     private var labelEditObserver: NSObjectProtocol?
 
     init(title: String, initialLabel: String, initialText: String,
-         initialAlwaysOn: Bool, initialPrePrompt: Bool, initialPostPrompt: Bool) {
+         initialAlwaysOn: Bool, initialPrePrompt: Bool, initialPostPrompt: Bool,
+         initialHotkey: Int? = nil) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 540, height: 580),
             styleMask: [.titled, .closable],
@@ -324,6 +340,21 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         postPromptCheckbox.attributedTitle = NSAttributedString(
             string: "Post-Prompt (nach dem Diktat)",
             attributes: [.foregroundColor: PBDarkTheme.textPrimary])
+
+        // ── Hotkey-Picker (Cmd+1..9) ──
+        // Index 0 = "Kein Hotkey", 1..9 = "Cmd+N". Bei Auswahl wird im Save-
+        // Pfad `stripHotkeyFromOthers` aufgerufen, damit ein Hotkey IMMER
+        // global eindeutig ist ("last wins" — andere Prompts verlieren ihn
+        // automatisch). Mirrors Windows PBPromptEditDialog.
+        hotkeyPopup.removeAllItems()
+        hotkeyPopup.addItem(withTitle: "Kein Hotkey")
+        for n in 1...9 { hotkeyPopup.addItem(withTitle: "Cmd+\(n)") }
+        if let hk = initialHotkey, hk >= 1, hk <= 9 {
+            hotkeyPopup.selectItem(at: hk)
+        } else {
+            hotkeyPopup.selectItem(at: 0)
+        }
+        PBDarkTheme.stylePopup(hotkeyPopup)
 
         // ── Footer buttons ──
         let cancel = PBDarkTheme.makeSecondaryButton(title: "Abbrechen", target: self, action: #selector(self.cancel))
@@ -392,7 +423,15 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         subOptionStack.spacing = 2
         subOptionStack.edgeInsets = NSEdgeInsets(top: 0, left: 22, bottom: 0, right: 0)
 
-        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, subOptionStack, statusLabel, buttonRow])
+        // Hotkey-Reihe: Label "Hotkey:" + Popup-Picker.
+        let hotkeyLabel = NSTextField(labelWithString: "Hotkey:")
+        PBDarkTheme.styleLabel(hotkeyLabel)
+        let hotkeyRow = NSStackView(views: [hotkeyLabel, hotkeyPopup])
+        hotkeyRow.orientation = .horizontal
+        hotkeyRow.spacing = 8
+        hotkeyRow.alignment = .centerY
+
+        let stack = NSStackView(views: [labelTop, labelField, textTop, scroll, alwaysOnCheckbox, subOptionStack, hotkeyRow, statusLabel, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 6
@@ -488,12 +527,19 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
         // were recently revised.
         label = Self.ensureTimestampSuffix(label)
 
+        // Hotkey-Auswahl: Index 0 = "Kein", 1..9 = Cmd+N
+        let pickedHotkey: Int? = {
+            let idx = hotkeyPopup.indexOfSelectedItem
+            return (idx >= 1 && idx <= 9) ? idx : nil
+        }()
+
         result = PBPromptEditResult(
             shortLabel: label,
             originalText: text,
             isAlwaysOn: alwaysOnCheckbox.state == .on,
             isPrePrompt: prePromptCheckbox.state == .on,
-            isPostPrompt: postPromptCheckbox.state == .on)
+            isPostPrompt: postPromptCheckbox.state == .on,
+            hotkeyNumber: pickedHotkey)
         window?.close()    // windowWillClose handles stopModal
     }
 
@@ -819,11 +865,13 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     static func ask(parent: NSWindow?, title: String,
                     label: String, text: String, alwaysOn: Bool,
-                    prePrompt: Bool, postPrompt: Bool) -> PBPromptEditResult? {
+                    prePrompt: Bool, postPrompt: Bool,
+                    hotkey: Int? = nil) -> PBPromptEditResult? {
         let ctrl = PBPromptEditDialog(title: title, initialLabel: label,
                                       initialText: text, initialAlwaysOn: alwaysOn,
                                       initialPrePrompt: prePrompt,
-                                      initialPostPrompt: postPrompt)
+                                      initialPostPrompt: postPrompt,
+                                      initialHotkey: hotkey)
         guard let w = ctrl.window else { return nil }
         w.center()
         return PBModalPresenter.runHidingFloatingPanels {

@@ -699,7 +699,17 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         // already handles the "click → insert" path, so we don't lose
         // the insert behavior. Hit-test forwarding (see PBPromptRowView)
         // ensures the title still doesn't swallow drags.
-        let insertLabel = NSTextField(labelWithString: titleText)
+        // Hotkey-Suffix " ⌘N" wird vor den Titel gesetzt wenn ein Hotkey
+        // gebunden ist — kleines visuelles Badge das dem Windows-Pendant
+        // entspricht (dort steht z.B. "1 — Title"). Macht beim Scannen der
+        // Prompt-Liste sofort sichtbar welche Cmd+N-Taste was triggert.
+        let titleWithHotkey: String
+        if let hk = prompt.hotkeyNumber, hk >= 1, hk <= 9 {
+            titleWithHotkey = "⌘\(hk)  \(titleText)"
+        } else {
+            titleWithHotkey = titleText
+        }
+        let insertLabel = NSTextField(labelWithString: titleWithHotkey)
         insertLabel.textColor = .white
         insertLabel.font = NSFont.systemFont(ofSize: 13)
         insertLabel.lineBreakMode = .byTruncatingTail
@@ -1100,9 +1110,11 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         guard let result = PBPromptEditDialog.ask(parent: self,
                                                   title: "Neuer Prompt",
                                                   label: "", text: "", alwaysOn: false,
-                                                  prePrompt: true, postPrompt: false) else { return }
+                                                  prePrompt: true, postPrompt: false,
+                                                  hotkey: nil) else { return }
         let now = Date()
-        let prompt = PBPrompt(id: UUID(), categoryId: catId,
+        let newPromptId = UUID()
+        let prompt = PBPrompt(id: newPromptId, categoryId: catId,
                               shortLabel: result.shortLabel,
                               originalText: result.originalText,
                               improvedText: nil, activeVersion: 0,
@@ -1112,8 +1124,14 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                               sortOrder: 0, promptKind: "Prompt",
                               geminiModel: nil, isActiveForImprovement: false,
                               improvedByAiPromptId: nil,
+                              hotkeyNumber: result.hotkeyNumber,
                               createdAt: now, updatedAt: now)
         do {
+            // "Last wins": wenn der neue Prompt einen Hotkey kriegt, anderen
+            // Prompts diesen Hotkey wegnehmen — global eindeutig.
+            if let hk = result.hotkeyNumber {
+                try PromptBoardStore.shared.stripHotkeyFromOthers(hotkey: hk, exceptId: newPromptId)
+            }
             try PromptBoardStore.shared.addPrompt(prompt)
             scheduleAutoBackup()
         } catch {
@@ -1187,13 +1205,20 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                                                   text: prompt.originalText,
                                                   alwaysOn: prompt.isAlwaysOn,
                                                   prePrompt: prompt.isPrePrompt,
-                                                  postPrompt: prompt.isPostPrompt) else { return }
+                                                  postPrompt: prompt.isPostPrompt,
+                                                  hotkey: prompt.hotkeyNumber) else { return }
         prompt.shortLabel = result.shortLabel
         prompt.originalText = result.originalText
         prompt.isAlwaysOn = result.isAlwaysOn
         prompt.isPrePrompt = result.isPrePrompt
         prompt.isPostPrompt = result.isPostPrompt
+        prompt.hotkeyNumber = result.hotkeyNumber
         do {
+            // "Last wins": wenn der Hotkey geaendert wurde, anderen Prompts
+            // diesen Hotkey wegnehmen — global eindeutig pro Cmd+N.
+            if let hk = result.hotkeyNumber {
+                try PromptBoardStore.shared.stripHotkeyFromOthers(hotkey: hk, exceptId: prompt.id)
+            }
             try PromptBoardStore.shared.updatePrompt(prompt)
             scheduleAutoBackup()
         } catch {
@@ -1294,6 +1319,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                     "SortOrder": p.sortOrder,
                 ]
                 if let it = p.improvedText { dict["ImprovedText"] = it }
+                if let hk = p.hotkeyNumber { dict["HotkeyNumber"] = hk }
                 return dict
             },
         ]
@@ -1359,6 +1385,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
                 geminiModel: p["GeminiModel"] as? String,
                 isActiveForImprovement: (p["IsActiveForImprovement"] as? Bool) ?? false,
                 improvedByAiPromptId: (p["ImprovedByAiPromptId"] as? String).flatMap(UUID.init(uuidString:)),
+                hotkeyNumber: p["HotkeyNumber"] as? Int,
                 createdAt: now, updatedAt: now)
             try PromptBoardStore.shared.upsertPrompt(prompt)
         }
