@@ -31,14 +31,15 @@ namespace TerminalVoiceOverlay.Views
         // Toggles
         private static readonly SolidColorBrush ToggleOn      = Brush("#2E7D32");
         private static readonly SolidColorBrush ToggleOff     = Brush("#2D2D2D");
-        // BTW mic
-        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#1976D2");
-        private static readonly SolidColorBrush BtnBtwRecording = Brush("#0D47A1");
-        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#42A5F5");
+        // BTW mic (pair with main mic in Indigo family — clearly distinct
+        // from the Light Blue family used by Copy/Paste below)
+        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#3949AB");  // Indigo 600
+        private static readonly SolidColorBrush BtnBtwRecording = Brush("#1A237E");  // Indigo 900
+        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#5C6BC0");  // Indigo 400
         // Special
         private static readonly SolidColorBrush BtnX         = Brush("#C62828");
         private static readonly SolidColorBrush BtnXPressed  = Brush("#E53935");
-        private static readonly SolidColorBrush BtnMicIdle   = Brush("#1565C0");
+        private static readonly SolidColorBrush BtnMicIdle   = Brush("#283593");  // Indigo 800
         // Copy/Paste buttons (pair: same blue family so they read as a unit)
         private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
         private static readonly SolidColorBrush BtnPaste     = Brush("#0277BD");  // Light Blue 800
