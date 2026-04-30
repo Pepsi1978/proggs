@@ -98,6 +98,7 @@ firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "fireb
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
 firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
 
 # Billing
 play-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }

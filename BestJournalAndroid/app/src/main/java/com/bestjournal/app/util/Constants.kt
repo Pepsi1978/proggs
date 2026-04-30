@@ -169,6 +169,10 @@ object Constants {
     // cleared when no subscription is active.
     const val PREF_ACTIVE_BASE_PLAN_ID = "active_base_plan_id"
     const val PREF_ACTIVE_OFFER_ID = "active_offer_id"
+    // Last time the Cloud Function getSubscriptionStatus was called for the active
+    // purchase (epoch millis). Used to throttle calls — re-fetched at most every
+    // CLOUD_STATUS_CACHE_MS to keep network traffic low and stay in the free tier.
+    const val PREF_LAST_CLOUD_STATUS_FETCH = "last_cloud_status_fetch"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"

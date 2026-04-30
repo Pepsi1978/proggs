@@ -5,14 +5,19 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.android.billingclient.api.*
+import com.bestjournal.app.data.remote.SubscriptionStatusService
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @Singleton
 class BillingManager
@@ -20,6 +25,7 @@ class BillingManager
 constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val encryptedPrefs: SharedPreferences,
+    private val subscriptionStatusService: SubscriptionStatusService,
 ) : PurchasesUpdatedListener {
 
     companion object {
@@ -30,7 +36,15 @@ constructor(
         // Base plan IDs for the main (non-retention, non-promo) plans
         private const val MONTHLY_BASE_PLAN_ID = "monthly"
         private const val YEARLY_BASE_PLAN_ID = "yearly"
+        // Cloud Function call cache window. The truthful basePlanId/offerId can
+        // only change on renewal or upgrade events, so refreshing once an hour
+        // is plenty even for very active users — keeps free-tier usage minimal.
+        private const val CLOUD_STATUS_CACHE_MS = 60L * 60L * 1000L
     }
+
+    // Single supervisor scope for fire-and-forget background calls (Cloud Function).
+    // SupervisorJob ensures one failing child does not cancel the scope.
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var billingClient: BillingClient? = null
     private val _subscriptionState = MutableStateFlow<SubscriptionState>(SubscriptionState.Free)
@@ -109,6 +123,9 @@ constructor(
                     // Recover active base plan from Google's stamp if local state is missing
                     // (covers app re-install or upgrade from pre-v0.18.2 versions)
                     recoverActiveBasePlanFromStamp(activePurchase)
+                    // Final fallback for legacy purchases without stamp: ask the
+                    // server-side Cloud Function which calls Subscriptions API v2.
+                    maybeRefreshActiveBasePlanFromCloud(activePurchase)
                 } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
                     // Only set Free if no lifetime purchase was already detected
                     // (prevents race condition between querySubscriptions and queryInAppPurchases)
@@ -168,6 +185,7 @@ constructor(
             .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
             .remove(Constants.PREF_ACTIVE_BASE_PLAN_ID)
             .remove(Constants.PREF_ACTIVE_OFFER_ID)
+            .remove(Constants.PREF_LAST_CLOUD_STATUS_FETCH)
             .apply()
     }
 
@@ -203,6 +221,48 @@ constructor(
             .putString(Constants.PREF_ACTIVE_OFFER_ID, offerId)
             .apply()
         Log.d(TAG, "Recovered active base plan from stamp: $basePlan / $offerId")
+    }
+
+    /**
+     * Final fallback when neither local prefs nor the obfuscatedAccountId stamp
+     * carry the active base plan info — typically legacy purchases made before
+     * v0.18.2 or v0.18.4. Asks the Firebase Cloud Function which queries
+     * Google Play Subscriptions API v2 server-side. Throttled to one call per
+     * hour to stay well within the free tier and avoid unnecessary network IO.
+     */
+    private fun maybeRefreshActiveBasePlanFromCloud(purchase: Purchase) {
+        val haveLocal =
+            !encryptedPrefs.getString(Constants.PREF_ACTIVE_BASE_PLAN_ID, null).isNullOrEmpty()
+        if (haveLocal) return
+
+        val now = System.currentTimeMillis()
+        val lastFetch = encryptedPrefs.getLong(Constants.PREF_LAST_CLOUD_STATUS_FETCH, 0L)
+        if (now - lastFetch < CLOUD_STATUS_CACHE_MS) return
+
+        val productId = purchase.products.firstOrNull() ?: return
+        val token = purchase.purchaseToken
+
+        backgroundScope.launch {
+            val result = subscriptionStatusService.fetch(token, productId)
+            if (result?.basePlanId.isNullOrBlank()) {
+                // Mark the attempt so we don't retry within the cache window even
+                // when the call returned null (network error, expired token, etc.).
+                encryptedPrefs.edit()
+                    .putLong(Constants.PREF_LAST_CLOUD_STATUS_FETCH, now)
+                    .apply()
+                return@launch
+            }
+            encryptedPrefs.edit()
+                .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, result.basePlanId)
+                .putString(Constants.PREF_ACTIVE_OFFER_ID, result.offerId ?: "")
+                .putLong(Constants.PREF_LAST_CLOUD_STATUS_FETCH, now)
+                .apply()
+            Log.d(
+                TAG,
+                "Recovered active base plan from Cloud Function: " +
+                    "${result.basePlanId} / ${result.offerId ?: ""}",
+            )
+        }
     }
 
     /**
