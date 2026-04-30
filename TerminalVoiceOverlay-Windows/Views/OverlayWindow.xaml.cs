@@ -1904,13 +1904,23 @@ namespace TerminalVoiceOverlay.Views
             // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
             if (vk == NativeMethods.Win32.VK_SPACE)
             {
-                bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
-                bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool shift = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
+
+                // Akzeptiert Strg+Alt+Space ODER Shift+Alt+Space.
+                // Strg+Alt+Space ist die urspruengliche Variante, hat aber
+                // einen Konflikt: solange Strg gehalten wird, deutet das
+                // Terminal Mausrad-Drehen als Schrift-Zoom (Strg+Wheel).
+                // Deshalb empfehle ich fuer das G-Tasten-Macro die neue
+                // Variante Shift+Alt+Space — beide funktionieren parallel,
+                // sodass bestehende Macros nicht brechen.
+                bool modsOk = alt && (ctrl || shift);
 
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
                 bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
 
-                if (isDown && ctrl && alt)
+                if (isDown && modsOk)
                 {
                     if (_pttToggleMode)
                     {
