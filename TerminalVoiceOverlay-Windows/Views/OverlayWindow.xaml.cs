@@ -37,6 +37,9 @@ namespace TerminalVoiceOverlay.Views
         // Copy/Paste buttons
         private static readonly SolidColorBrush BtnCopy      = Brush("#29B6F6");
         private static readonly SolidColorBrush BtnPaste     = Brush("#AB47BC");
+        // Screenshot + Insert-Screenshot buttons (between Paste and Enter)
+        private static readonly SolidColorBrush BtnScreenshot       = Brush("#26A69A");
+        private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#FFB300");
         // Ultrathink star
         private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#B8860B");
         private static readonly SolidColorBrush StarGold         = Brush("#FFD700");
@@ -157,6 +160,12 @@ namespace TerminalVoiceOverlay.Views
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
+        // Pfad des zuletzt mit dem ScreenshotButton aufgenommenen Bildes.
+        // Wird vom InsertScreenshotButton gelesen — exakt diese eine Datei
+        // wird als Pfad in die CLI eingefuegt, keine andere. Bleibt null
+        // bis der erste Screenshot gemacht wurde.
+        private string? _lastScreenshotPath = null;
+
         // True wenn der Benutzer im Eingabefenster den Stern geklickt hat:
         // das Promptboard ist dann versteckt und das Eingabefenster nimmt
         // dessen Andock-Platz links neben dem Pillar ein. Im Drag- und
@@ -244,6 +253,8 @@ namespace TerminalVoiceOverlay.Views
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             CopyButton.Background  = BtnCopy;        // light blue
             PasteButton.Background = BtnPaste;       // purple
+            ScreenshotButton.Background       = BtnScreenshot;       // teal
+            InsertScreenshotButton.Background = BtnInsertScreenshot; // amber
             UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
 
             // ── Waveform-Striche einmalig im Canvas anlegen ──
@@ -1328,6 +1339,119 @@ namespace TerminalVoiceOverlay.Views
             {
                 await Task.Delay(2000);
                 Dispatcher.Invoke(() => PasteButton.Background = BtnPaste);
+            });
+        }
+
+        /// <summary>
+        /// Screenshot-Button — nimmt einen Vollbild-Screenshot ueber alle
+        /// Monitore auf (virtueller Bildschirm) und speichert ihn als PNG
+        /// im Standard-Windows-Screenshot-Ordner unter Pictures\Screenshots.
+        /// Der absolute Pfad wird in <see cref="_lastScreenshotPath"/>
+        /// gemerkt — exakt diese eine Datei (und keine andere) wird vom
+        /// InsertScreenshotButton wieder eingefuegt. Wir nutzen System.Drawing
+        /// (verfuegbar weil UseWindowsForms=true) statt Win+Druck, damit wir
+        /// einen deterministischen Dateinamen haben und ohne Race Condition
+        /// sofort auf den Pfad zugreifen koennen.
+        /// </summary>
+        private void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+        {
+            // Flash: gray for 2 s then back to teal
+            ScreenshotButton.Background = BtnIdle;
+
+            try
+            {
+                // Virtueller Bildschirm = Bounding-Box ueber alle angeschlossenen
+                // Monitore. Negative Koordinaten sind moeglich wenn ein zweiter
+                // Monitor links vom Hauptmonitor steht — Graphics.CopyFromScreen
+                // akzeptiert das.
+                var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+
+                using var bitmap = new System.Drawing.Bitmap(
+                    bounds.Width, bounds.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (var g = System.Drawing.Graphics.FromImage(bitmap))
+                {
+                    g.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size,
+                        System.Drawing.CopyPixelOperation.SourceCopy);
+                }
+
+                // Zielordner: Pictures\Screenshots — der Windows-Standard fuer
+                // Win+Druck. Wir landen also dort wo der Benutzer Screenshots
+                // erwartet. Falls die Locale "Bildschirmfotos" nutzt, schreiben
+                // wir trotzdem in "Screenshots" — Pfad wird falls noetig erstellt.
+                string picsDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                string shotsDir = System.IO.Path.Combine(picsDir, "Screenshots");
+                System.IO.Directory.CreateDirectory(shotsDir);
+
+                string filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.png";
+                string fullPath = System.IO.Path.Combine(shotsDir, filename);
+
+                bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
+
+                _lastScreenshotPath = fullPath;
+                Console.WriteLine($"Screenshot saved: {fullPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Screenshot failed: {ex.GetType().Name}: {ex.Message}");
+                // Fehlerfeedback per kurzem Rotton
+                ScreenshotButton.Background = BtnX;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1500);
+                    Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
+                });
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
+            });
+        }
+
+        /// <summary>
+        /// Insert-Screenshot-Button — nimmt den absoluten Pfad des zuletzt
+        /// per ScreenshotButton aufgenommenen Bildes und paste ihn als Text
+        /// in die aktive Terminal-Kommandozeile. Wenn der Pfad Leerzeichen
+        /// enthaelt, wird er in doppelte Anfuehrungszeichen gesetzt — damit
+        /// Shells (PowerShell, CMD, bash via Git Bash) den Pfad als ein
+        /// einziges Argument lesen. Wenn noch kein Screenshot gemacht wurde
+        /// oder die Datei zwischenzeitlich geloescht wurde, blinkt der Button
+        /// kurz rot und nichts passiert.
+        /// </summary>
+        private void BtnInsertScreenshot_Click(object sender, RoutedEventArgs e)
+        {
+            string? path = _lastScreenshotPath;
+
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+            {
+                // Kein Screenshot vorhanden — kurzer roter Flash als Feedback.
+                Console.WriteLine("InsertScreenshot: kein Screenshot vorhanden");
+                InsertScreenshotButton.Background = BtnX;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(1500);
+                    Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
+                });
+                return;
+            }
+
+            // Pfad mit Leerzeichen: in Anfuehrungszeichen setzen.
+            string toPaste = path.Contains(' ') ? $"\"{path}\"" : path;
+
+            // Flash: gray for 2 s then back to amber
+            InsertScreenshotButton.Background = BtnIdle;
+
+            var hwnd = _terminalWatcher.ActiveTerminalHwnd;
+            TerminalController.PasteText(toPaste, hwnd, autoEnter: false);
+
+            Console.WriteLine($"InsertScreenshot: pasted path '{toPaste}'");
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
             });
         }
 
