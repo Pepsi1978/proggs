@@ -41,10 +41,13 @@ constructor(
         // When the active subscription's offerId matches this, the promo counter
         // is meaningful; otherwise the counter is stale and gets cleared.
         private const val PROMO_OFFER_ID = "monthly-50-off-first"
-        // Cloud Function call cache window. The truthful basePlanId/offerId can
-        // only change on renewal or upgrade events, so refreshing once an hour
-        // is plenty even for very active users — keeps free-tier usage minimal.
-        private const val CLOUD_STATUS_CACHE_MS = 60L * 60L * 1000L
+        // Cloud Function call cache window. Currently 0 — every refresh hits
+        // the server, which is fine while the user base is small (well below
+        // the Firebase free-tier limit of 2M invocations / month). Re-enable
+        // (e.g. 5 minutes = 5L * 60L * 1000L) when monthly invocations approach
+        // ~1.5M (~70% of free tier) — Firebase will email a warning before that.
+        // Monitoring: console.firebase.google.com/project/bestjurnal-a15b9/functions
+        private const val CLOUD_STATUS_CACHE_MS = 0L
     }
 
     // Single supervisor scope for fire-and-forget background calls (Cloud Function).
