@@ -1904,7 +1904,8 @@ namespace TerminalVoiceOverlay.Views
             // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
             if (vk == NativeMethods.Win32.VK_SPACE
                 || vk == NativeMethods.Win32.VK_M
-                || vk == NativeMethods.Win32.VK_F9)
+                || vk == NativeMethods.Win32.VK_F9
+                || vk == NativeMethods.Win32.VK_F12)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
@@ -1923,8 +1924,13 @@ namespace TerminalVoiceOverlay.Views
                 //      Shift+F9 ist davon frei. Modifier-Regel daher anders:
                 //      bei F9 reicht EIN Modifier (ctrl ODER shift), kein Alt
                 //      noetig — sonst muesste man drei Tasten halten.
+                //   5) Alt+F12 — kuerzeste Kombi, kein Zoom-Konflikt (Alt+Wheel
+                //      zoomt nicht), in CLIs/Browsern keine Standard-Funktion.
+                //      Modifier-Regel: nur Alt — kein Strg, kein Shift noetig.
                 bool modsOk;
-                if (vk == NativeMethods.Win32.VK_F9)
+                if (vk == NativeMethods.Win32.VK_F12)
+                    modsOk = alt;
+                else if (vk == NativeMethods.Win32.VK_F9)
                     modsOk = ctrl || shift;
                 else
                     modsOk = alt && (ctrl || shift);
