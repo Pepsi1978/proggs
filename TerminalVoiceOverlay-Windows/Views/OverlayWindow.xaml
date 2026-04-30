@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TerminalVoiceOverlay"
-        Width="72" Height="586"
+        Width="72" Height="592"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -63,156 +63,164 @@
         </Style>
     </Window.Resources>
 
-    <!-- Panel background: pill shape, translucent dark.
-         alpha C7 ≈ 78% matches the PromptBoard panel so the two
-         floating windows share the same translucency level.
-         Border colour matches the PromptBoard's #FF3A3A3A (≈grey 58/255)
-         so both windows have the same visual chrome. -->
+    <!-- Outer pill: rounded ring only, no fill. Each inner section paints
+         its own opaque background, so the panel is no longer translucent.
+         Border colour matches the PromptBoard's #FF3A3A3A so both windows
+         still share the same visual chrome. -->
     <Border CornerRadius="36"
-            Background="#C71E1E1E"
             BorderBrush="#FF3A3A3A"
             BorderThickness="1"
-            Width="72" Height="586">
-        <StackPanel VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Margin="0,16">
+            Width="72" Height="592">
+        <StackPanel>
 
-            <!-- Star Button: toggles the PromptBoard always-on prefix.
-                 When ON (gold), every voice insert is preceded by every
-                 IsAlwaysOn prompt from the shared PromptBoard database. -->
-            <Button x:Name="UltrathinkButton"
-                    Style="{StaticResource CircleButton}"
-                    Click="BtnUltrathink_Click"
-                    ToolTip="PromptBoard Always-On Prefix an/aus">
-                <Viewbox Width="20" Height="20">
-                    <Path x:Name="UltrathinkStar" Fill="#8B7355"
-                          Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
-                </Viewbox>
-            </Button>
-
-            <!-- Mic Button (main mic — rounded square) -->
-            <!-- Inhalt ist ein Grid mit zwei Layern: das vorhandene
-                 Mikrofon-Icon plus ein WaveformCanvas mit 14 Strichen,
-                 die in OverlayWindow.xaml.cs live aus den Audio-Pegeln
-                 animiert werden. Im Ruhezustand sieht man das Icon, beim
-                 Aufnehmen schaltet die Sichtbarkeit auf die Welle um —
-                 so ist sofort erkennbar, dass das Mikrofon wirklich Ton
-                 einfaengt. -->
-            <Button x:Name="MicButton"
-                    Style="{StaticResource MicButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnMic_Click"
-                    ToolTip="Start / stop recording">
-                <Grid Width="48" Height="48">
-                    <Viewbox x:Name="MicIcon" Width="22" Height="22">
-                        <Path Fill="White" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+            <!-- Section 1: Stern (Premium / Always-On marker, warm amber) -->
+            <Border Background="#FF3A2D17" CornerRadius="35,35,0,0" Padding="0,10,0,6">
+                <Button x:Name="UltrathinkButton"
+                        Style="{StaticResource CircleButton}"
+                        Click="BtnUltrathink_Click"
+                        ToolTip="PromptBoard Always-On Prefix an/aus">
+                    <Viewbox Width="20" Height="20">
+                        <Path x:Name="UltrathinkStar" Fill="#8B7355"
+                              Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
                     </Viewbox>
-                    <Canvas x:Name="WaveformCanvas"
-                            Width="48" Height="48"
-                            ClipToBounds="True"
-                            Visibility="Collapsed"/>
-                </Grid>
-            </Button>
+                </Button>
+            </Border>
 
-            <!-- BTW Button (BTW mic — rounded square, blue tint set in code-behind) -->
-            <Button x:Name="BtwButton"
-                    Style="{StaticResource MicButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnBtw_Click"
-                    ToolTip="BTW voice input">
-                <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="White"/>
-            </Button>
+            <Border Background="#FF3A3A3A" Height="1"/>
 
-            <!-- W Button (Whisper undo) -->
-            <Button x:Name="WButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnWhisperUndo_Click"
-                    ToolTip="Replace with raw Whisper text">
-                <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
-            </Button>
+            <!-- Section 2: Mic + BTW (voice input, cool indigo) -->
+            <Border Background="#FF18283D" Padding="0,6,0,6">
+                <StackPanel>
+                    <!-- Mic Button (main mic — rounded square) -->
+                    <Button x:Name="MicButton"
+                            Style="{StaticResource MicButton}"
+                            Click="BtnMic_Click"
+                            ToolTip="Start / stop recording">
+                        <Grid Width="48" Height="48">
+                            <Viewbox x:Name="MicIcon" Width="22" Height="22">
+                                <Path Fill="White" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+                            </Viewbox>
+                            <Canvas x:Name="WaveformCanvas"
+                                    Width="48" Height="48"
+                                    ClipToBounds="True"
+                                    Visibility="Collapsed"/>
+                        </Grid>
+                    </Button>
 
-            <!-- G Button (Gemini toggle) -->
-            <Button x:Name="GButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnGemini_Click"
-                    ToolTip="Toggle Gemini">
-                <TextBlock Text="G" FontWeight="Bold" FontSize="16" Foreground="White"/>
-            </Button>
+                    <!-- BTW Button (BTW mic — rounded square, blue tint) -->
+                    <Button x:Name="BtwButton"
+                            Style="{StaticResource MicButton}"
+                            Margin="0,8,0,0"
+                            Click="BtnBtw_Click"
+                            ToolTip="BTW voice input">
+                        <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="White"/>
+                    </Button>
+                </StackPanel>
+            </Border>
 
-            <!-- X Button (clear line) -->
-            <Button x:Name="XButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnClear_Click"
-                    ToolTip="Clear line">
-                <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
-            </Button>
+            <Border Background="#FF3A3A3A" Height="1"/>
 
-            <!-- Copy Button (copy selected text) -->
-            <Button x:Name="CopyButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnCopy_Click"
-                    ToolTip="Copy selected text">
-                <Viewbox Width="18" Height="18">
-                    <Path Fill="White" Data="M16,1H4C2.9,1,2,1.9,2,3v14h2V3h12V1z M19,5H8C6.9,5,6,5.9,6,7v14c0,1.1,0.9,2,2,2h11c1.1,0,2-0.9,2-2V7C21,5.9,20.1,5,19,5z M19,21H8V7h11V21z"/>
-                </Viewbox>
-            </Button>
+            <!-- Section 3: W + G (LLM transforms, deep violet) -->
+            <Border Background="#FF2A1A40" Padding="0,6,0,6">
+                <StackPanel>
+                    <!-- W Button (Whisper undo) -->
+                    <Button x:Name="WButton"
+                            Style="{StaticResource CircleButton}"
+                            Click="BtnWhisperUndo_Click"
+                            ToolTip="Replace with raw Whisper text">
+                        <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                    </Button>
 
-            <!-- Paste Button (paste clipboard into command line) -->
-            <Button x:Name="PasteButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnPaste_Click"
-                    ToolTip="Paste into command line">
-                <Viewbox Width="18" Height="18">
-                    <Path Fill="White" Data="M19,2h-4.18C14.4,0.84,13.3,0,12,0S9.6,0.84,9.18,2H5C3.9,2,3,2.9,3,4v16c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V4C21,2.9,20.1,2,19,2z M12,2c0.55,0,1,0.45,1,1s-0.45,1-1,1s-1-0.45-1-1S11.45,2,12,2z M19,20H5V4h2v3h10V4h2V20z"/>
-                </Viewbox>
-            </Button>
+                    <!-- G Button (Gemini toggle) -->
+                    <Button x:Name="GButton"
+                            Style="{StaticResource CircleButton}"
+                            Margin="0,8,0,0"
+                            Click="BtnGemini_Click"
+                            ToolTip="Toggle Gemini">
+                        <TextBlock Text="G" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                    </Button>
+                </StackPanel>
+            </Border>
 
-            <!-- Screenshot Button (capture full screen, save as PNG, remember path).
-                 Sitzt zwischen Paste und Enter, nimmt den gesamten virtuellen
-                 Desktop auf (alle Monitore) und legt die Datei in
-                 %USERPROFILE%\Pictures\Screenshots\ ab. Der Pfad wird im
-                 Code-Behind in _lastScreenshotPath gemerkt, damit der
-                 InsertScreenshotButton darunter genau diese eine Datei
-                 wieder einfuegen kann — keine andere. -->
-            <Button x:Name="ScreenshotButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnScreenshot_Click"
-                    ToolTip="Vollbild-Screenshot machen">
-                <Viewbox Width="18" Height="18">
-                    <Path Fill="White" Data="M9,2 L7.17,4 L4,4 C2.9,4 2,4.9 2,6 L2,18 C2,19.1 2.9,20 4,20 L20,20 C21.1,20 22,19.1 22,18 L22,6 C22,4.9 21.1,4 20,4 L16.83,4 L15,2 Z M12,17 C9.24,17 7,14.76 7,12 C7,9.24 9.24,7 12,7 C14.76,7 17,9.24 17,12 C17,14.76 14.76,17 12,17 Z M12,9 C10.34,9 9,10.34 9,12 C9,13.66 10.34,15 12,15 C13.66,15 15,13.66 15,12 C15,10.34 13.66,9 12,9 Z"/>
-                </Viewbox>
-            </Button>
+            <Border Background="#FF3A3A3A" Height="1"/>
 
-            <!-- InsertScreenshot Button (insert path of last screenshot).
-                 Paste den absoluten Pfad des zuletzt mit dem
-                 ScreenshotButton aufgenommenen Bildes in die CLI —
-                 in Anfuehrungszeichen wenn der Pfad Leerzeichen enthaelt.
-                 Wenn noch kein Screenshot gemacht wurde, blinkt der Button
-                 kurz rot und nichts passiert. -->
-            <Button x:Name="InsertScreenshotButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnInsertScreenshot_Click"
-                    ToolTip="Letzten Screenshot als Datei einfuegen">
-                <Viewbox Width="18" Height="18">
-                    <Path Fill="White" Data="M16.5,6 L16.5,17.5 C16.5,19.71 14.71,21.5 12.5,21.5 C10.29,21.5 8.5,19.71 8.5,17.5 L8.5,5 C8.5,3.62 9.62,2.5 11,2.5 C12.38,2.5 13.5,3.62 13.5,5 L13.5,15.5 C13.5,16.05 13.05,16.5 12.5,16.5 C11.95,16.5 11.5,16.05 11.5,15.5 L11.5,6 L10,6 L10,15.5 C10,16.88 11.12,18 12.5,18 C13.88,18 15,16.88 15,15.5 L15,5 C15,2.79 13.21,1 11,1 C8.79,1 7,2.79 7,5 L7,17.5 C7,20.54 9.46,23 12.5,23 C15.54,23 18,20.54 18,17.5 L18,6 Z"/>
-                </Viewbox>
-            </Button>
+            <!-- Section 4: X (clear line, dark burgundy) -->
+            <Border Background="#FF3D1A1F" Padding="0,6,0,6">
+                <Button x:Name="XButton"
+                        Style="{StaticResource CircleButton}"
+                        Click="BtnClear_Click"
+                        ToolTip="Clear line">
+                    <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                </Button>
+            </Border>
 
-            <!-- Enter Button (auto-enter toggle) — bottom -->
-            <Button x:Name="EnterButton"
-                    Style="{StaticResource CircleButton}"
-                    Margin="0,8,0,0"
-                    Click="BtnAutoEnter_Click"
-                    ToolTip="Toggle auto-enter">
-                <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
-            </Button>
+            <Border Background="#FF3A3A3A" Height="1"/>
+
+            <!-- Section 5: Copy + Paste (clipboard, deep teal) -->
+            <Border Background="#FF153A38" Padding="0,6,0,6">
+                <StackPanel>
+                    <!-- Copy Button -->
+                    <Button x:Name="CopyButton"
+                            Style="{StaticResource CircleButton}"
+                            Click="BtnCopy_Click"
+                            ToolTip="Copy selected text">
+                        <Viewbox Width="18" Height="18">
+                            <Path Fill="White" Data="M16,1H4C2.9,1,2,1.9,2,3v14h2V3h12V1z M19,5H8C6.9,5,6,5.9,6,7v14c0,1.1,0.9,2,2,2h11c1.1,0,2-0.9,2-2V7C21,5.9,20.1,5,19,5z M19,21H8V7h11V21z"/>
+                        </Viewbox>
+                    </Button>
+
+                    <!-- Paste Button -->
+                    <Button x:Name="PasteButton"
+                            Style="{StaticResource CircleButton}"
+                            Margin="0,8,0,0"
+                            Click="BtnPaste_Click"
+                            ToolTip="Paste into command line">
+                        <Viewbox Width="18" Height="18">
+                            <Path Fill="White" Data="M19,2h-4.18C14.4,0.84,13.3,0,12,0S9.6,0.84,9.18,2H5C3.9,2,3,2.9,3,4v16c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V4C21,2.9,20.1,2,19,2z M12,2c0.55,0,1,0.45,1,1s-0.45,1-1,1s-1-0.45-1-1S11.45,2,12,2z M19,20H5V4h2v3h10V4h2V20z"/>
+                        </Viewbox>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF3A3A3A" Height="1"/>
+
+            <!-- Section 6: Screenshot + Insert (capture & file paste, forest green) -->
+            <Border Background="#FF1A3A1A" Padding="0,6,0,6">
+                <StackPanel>
+                    <!-- Screenshot Button -->
+                    <Button x:Name="ScreenshotButton"
+                            Style="{StaticResource CircleButton}"
+                            Click="BtnScreenshot_Click"
+                            ToolTip="Vollbild-Screenshot machen">
+                        <Viewbox Width="18" Height="18">
+                            <Path Fill="White" Data="M9,2 L7.17,4 L4,4 C2.9,4 2,4.9 2,6 L2,18 C2,19.1 2.9,20 4,20 L20,20 C21.1,20 22,19.1 22,18 L22,6 C22,4.9 21.1,4 20,4 L16.83,4 L15,2 Z M12,17 C9.24,17 7,14.76 7,12 C7,9.24 9.24,7 12,7 C14.76,7 17,9.24 17,12 C17,14.76 14.76,17 12,17 Z M12,9 C10.34,9 9,10.34 9,12 C9,13.66 10.34,15 12,15 C13.66,15 15,13.66 15,12 C15,10.34 13.66,9 12,9 Z"/>
+                        </Viewbox>
+                    </Button>
+
+                    <!-- InsertScreenshot Button -->
+                    <Button x:Name="InsertScreenshotButton"
+                            Style="{StaticResource CircleButton}"
+                            Margin="0,8,0,0"
+                            Click="BtnInsertScreenshot_Click"
+                            ToolTip="Letzten Screenshot als Datei einfuegen">
+                        <Viewbox Width="18" Height="18">
+                            <Path Fill="White" Data="M16.5,6 L16.5,17.5 C16.5,19.71 14.71,21.5 12.5,21.5 C10.29,21.5 8.5,19.71 8.5,17.5 L8.5,5 C8.5,3.62 9.62,2.5 11,2.5 C12.38,2.5 13.5,3.62 13.5,5 L13.5,15.5 C13.5,16.05 13.05,16.5 12.5,16.5 C11.95,16.5 11.5,16.05 11.5,15.5 L11.5,6 L10,6 L10,15.5 C10,16.88 11.12,18 12.5,18 C13.88,18 15,16.88 15,15.5 L15,5 C15,2.79 13.21,1 11,1 C8.79,1 7,2.79 7,5 L7,17.5 C7,20.54 9.46,23 12.5,23 C15.54,23 18,20.54 18,17.5 L18,6 Z"/>
+                        </Viewbox>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF3A3A3A" Height="1"/>
+
+            <!-- Section 7: Enter (confirm, neutral anthracite) -->
+            <Border Background="#FF252525" CornerRadius="0,0,35,35" Padding="0,6,0,10">
+                <Button x:Name="EnterButton"
+                        Style="{StaticResource CircleButton}"
+                        Click="BtnAutoEnter_Click"
+                        ToolTip="Toggle auto-enter">
+                    <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
+                </Button>
+            </Border>
 
         </StackPanel>
     </Border>
