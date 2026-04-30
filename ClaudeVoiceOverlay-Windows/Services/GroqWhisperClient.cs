@@ -29,7 +29,7 @@ namespace ClaudeVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
-            return await TranscribeWithRetry(wavFilePath, 0);
+            return await TranscribeWithRetry(wavFilePath, 0, sendPrompt: true);
         }
 
         /// Pfad zur persoenlichen Whisper-Vocabulary-Datei. Wird bei JEDEM
@@ -56,7 +56,7 @@ namespace ClaudeVoiceOverlay.Services
             }
         }
 
-        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt)
+        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt, bool sendPrompt)
         {
             using var content = new MultipartFormDataContent();
 
@@ -70,10 +70,16 @@ namespace ClaudeVoiceOverlay.Services
             // englischen Fachbegriffen die sonst eingedeutscht wuerden
             // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
             // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
-            var vocabPrompt = LoadVocabularyPrompt();
-            if (vocabPrompt != null)
+            // sendPrompt=false beim Fallback-Retry nach Groq-500-Bug, siehe unten.
+            bool promptWasSent = false;
+            if (sendPrompt)
             {
-                content.Add(new StringContent(vocabPrompt), "prompt");
+                var vocabPrompt = LoadVocabularyPrompt();
+                if (vocabPrompt != null)
+                {
+                    content.Add(new StringContent(vocabPrompt), "prompt");
+                    promptWasSent = true;
+                }
             }
 
             // Add file
@@ -99,11 +105,21 @@ namespace ClaudeVoiceOverlay.Services
                 throw new Exception("Leere Antwort von Groq");
             }
 
+            // Bekannter Groq-Bug: bei manchen Audio-Files loest der prompt-Parameter
+            // einen 500-Fehler aus. Workaround: einmal sofort ohne prompt retryen,
+            // bevor die normale Retry-Eskalation greift. Quelle:
+            // https://community.groq.com/t/500-errors-tied-to-prompt-parameter-on-audio-transcriptions/858
+            if (statusCode == 500 && promptWasSent)
+            {
+                Console.WriteLine("Groq 500 mit prompt — fallback ohne prompt (vocab-bug Workaround)");
+                return await TranscribeWithRetry(wavFilePath, attempt, sendPrompt: false);
+            }
+
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
                 Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
-                return await TranscribeWithRetry(wavFilePath, attempt + 1);
+                return await TranscribeWithRetry(wavFilePath, attempt + 1, sendPrompt);
             }
 
             var errorBody = await response.Content.ReadAsStringAsync();

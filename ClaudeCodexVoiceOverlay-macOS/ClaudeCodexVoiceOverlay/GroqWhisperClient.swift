@@ -13,11 +13,11 @@ final class GroqWhisperClient {
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-            self.sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
+            self.sendRequest(fileURL: fileURL, attempt: 0, sendPrompt: true, completion: completion)
         }
     }
 
-    private func sendRequest(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
+    private func sendRequest(fileURL: URL, attempt: Int, sendPrompt: Bool, completion: @escaping (Result<String, Error>) -> Void) {
         guard let audioData = try? Data(contentsOf: fileURL) else {
             completion(.failure(APIError.fileReadError))
             return
@@ -41,8 +41,11 @@ final class GroqWhisperClient {
         // englischen Fachbegriffen die sonst eingedeutscht wuerden
         // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
         // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
-        if let vocabPrompt = Self.loadVocabularyPrompt() {
+        // sendPrompt=false beim Fallback-Retry nach Groq-500-Bug, siehe unten.
+        var promptWasSent = false
+        if sendPrompt, let vocabPrompt = Self.loadVocabularyPrompt() {
             fields.append(("prompt", vocabPrompt))
+            promptWasSent = true
         }
         for (key, value) in fields {
             body.append(Data("--\(boundary)\r\n".utf8))
@@ -73,11 +76,21 @@ final class GroqWhisperClient {
                 return
             }
 
+            // Bekannter Groq-Bug: bei manchen Audio-Files loest der prompt-Parameter
+            // einen 500-Fehler aus. Workaround: einmal sofort ohne prompt retryen,
+            // bevor die normale Retry-Eskalation greift. Quelle:
+            // https://community.groq.com/t/500-errors-tied-to-prompt-parameter-on-audio-transcriptions/858
+            if statusCode == 500 && promptWasSent {
+                NSLog("Groq 500 mit prompt — fallback ohne prompt (vocab-bug Workaround)")
+                self.sendRequest(fileURL: fileURL, attempt: attempt, sendPrompt: false, completion: completion)
+                return
+            }
+
             if self.retryableStatusCodes.contains(statusCode) && attempt < self.maxRetries {
                 let delay = self.delays[attempt]
                 NSLog("Groq %d - retry %d/%d, waiting %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
                 DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
-                    self.sendRequest(fileURL: fileURL, attempt: attempt + 1, completion: completion)
+                    self.sendRequest(fileURL: fileURL, attempt: attempt + 1, sendPrompt: sendPrompt, completion: completion)
                 }
                 return
             }
