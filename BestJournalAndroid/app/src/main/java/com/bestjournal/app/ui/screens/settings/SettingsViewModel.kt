@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -281,6 +282,39 @@ constructor(
 
     /** Reactive expiry timestamp (ISO-8601) for the CURRENTLY active phase. */
     val expiryTimeState: StateFlow<String?> = billingManager.expiryTime
+
+    /**
+     * Loop-9 (Frank, 2026-04-30): true when the user has already accepted
+     * a retention offer and is therefore on the `retention-monthly-75` /
+     * `retention-yearly-75` base plan. The churn flow uses this to skip
+     * the "Sonderpreis 25% sparen" step that would otherwise re-offer
+     * the SAME 2,99 € price the user is already paying ("Sparen Sie 25%
+     * — 2,99 € statt 2,99 €" makes no sense).
+     *
+     * Re-evaluates whenever subscriptionType changes — that is the cheap-
+     * est trigger we already have. Reads the active base plan from prefs
+     * (set by BillingManager.rememberActiveBasePlan after every purchase).
+     */
+    val isOnRetentionPlanState: StateFlow<Boolean> =
+        billingManager.subscriptionType.map { _ ->
+            val activeBasePlan = encryptedPrefs.getString(
+                Constants.PREF_ACTIVE_BASE_PLAN_ID,
+                "",
+            ) ?: ""
+            activeBasePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                activeBasePlan == Constants.RETENTION_OFFER_ID_YEARLY
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = run {
+                val activeBasePlan = encryptedPrefs.getString(
+                    Constants.PREF_ACTIVE_BASE_PLAN_ID,
+                    "",
+                ) ?: ""
+                activeBasePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                    activeBasePlan == Constants.RETENTION_OFFER_ID_YEARLY
+            },
+        )
 
     /** Reactive current price for the active subscription. Re-evaluates when
      *  any of the price sources update — including the server-authoritative

@@ -482,6 +482,20 @@ constructor(
                         .commit()
                 }
                 _expiryTime.value = result.expiryTime
+                // Loop-9 audit fix (Frank, 2026-04-30): rememberActiveBasePlan
+                // writes the chosen base-plan id OPTIMISTICALLY before
+                // launchBillingFlow even fires — if the user cancels in the
+                // Play sheet the prefs would be stuck with a wrong value
+                // (e.g. "retention-monthly-75" while the user is still on
+                // "monthly"). The cloud is the single source of truth, so
+                // overwrite the local optimistic stamp with whatever Google
+                // actually reports for the active subscription.
+                if (!result.basePlanId.isNullOrBlank()) {
+                    encryptedPrefs.edit()
+                        .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, result.basePlanId)
+                        .putString(Constants.PREF_ACTIVE_OFFER_ID, result.offerId ?: "")
+                        .commit()
+                }
                 encryptedPrefs.edit()
                     .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                     .commit()

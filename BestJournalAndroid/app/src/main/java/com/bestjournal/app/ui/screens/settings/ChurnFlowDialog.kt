@@ -98,6 +98,12 @@ fun ChurnFlowDialog(
     promoInfo: SettingsViewModel.PromoInfo? = null,
     autoRenewing: Boolean = true,
     expiryTime: String? = null,
+    // Loop-9 (Frank, 2026-04-30): suppress the "25 % sparen" retention
+    // step when the user has already accepted that very offer in a
+    // previous churn cycle. Re-offering "2,99 € statt 2,99 €" reads as
+    // a bug to the user and takes them back to a screen they have no
+    // sensible action on.
+    isAlreadyOnRetentionPlan: Boolean = false,
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     var selectedReason by remember { mutableStateOf<String?>(null) }
@@ -154,7 +160,11 @@ fun ChurnFlowDialog(
                             onNext = {
                                 selectedReason?.let { reason ->
                                     analyticsTracker.trackChurnReasonSelected(reason)
-                                    currentStep = 2
+                                    // Loop-9: skip the "25 % sparen" step
+                                    // when the user is already on the
+                                    // retention plan — go straight to
+                                    // the final cancel confirmation.
+                                    currentStep = if (isAlreadyOnRetentionPlan) 3 else 2
                                 }
                             },
                             onCancel = { currentStep = 0 },
@@ -176,7 +186,14 @@ fun ChurnFlowDialog(
                                 onSwitchToYearly()
                             },
                             onPauseSubscription = {
-                                analyticsTracker.trackChurnOfferAccepted()
+                                // Loop-9 audit (Frank, 2026-04-30): pause is
+                                // not the same as accepting the retention
+                                // offer — Google Play handles it as a
+                                // payment-suspension on the SAME plan.
+                                // Tracking it as "offer accepted" was a
+                                // straight-up mislabel and skewed the churn
+                                // analytics. Use the dedicated event.
+                                analyticsTracker.trackChurnPaused()
                                 saveChurnOfferAccepted(context)
                                 try {
                                     val intent =
@@ -194,7 +211,21 @@ fun ChurnFlowDialog(
                         )
                     3 ->
                         StepConfirm(
-                            onGoBack = { currentStep = 2 },
+                            // Loop-9: when the user is already on the
+                            // retention plan, "Doch lieber bleiben"
+                            // closes the dialog completely. They have
+                            // no sensible target screen — stepping back
+                            // to the retention offer (2,99 € statt
+                            // 2,99 €) makes no sense, and stepping back
+                            // to the reason picker makes them fight the
+                            // flow they no longer want to be in.
+                            onGoBack = {
+                                if (isAlreadyOnRetentionPlan) {
+                                    onDismiss()
+                                } else {
+                                    currentStep = 2
+                                }
+                            },
                             onConfirmCancel = {
                                 analyticsTracker.trackChurnConfirmed()
                                 try {

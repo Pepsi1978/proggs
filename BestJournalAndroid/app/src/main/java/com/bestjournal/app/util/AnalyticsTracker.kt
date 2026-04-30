@@ -324,6 +324,16 @@ class AnalyticsTracker @Inject constructor(private val firebaseAnalytics: Fireba
         firebaseAnalytics.logEvent("churn_confirmed", null)
     }
 
+    /**
+     * Loop-9 audit (Frank, 2026-04-30): user chose to pause the subscription
+     * rather than cancel or accept the retention price. This is functionally
+     * different from accepting the retention offer and deserves its own
+     * analytics event so the churn dashboard can distinguish the two paths.
+     */
+    fun trackChurnPaused() {
+        firebaseAnalytics.logEvent("churn_paused", null)
+    }
+
     // ── Achievement Events ──────────────────────────────────────────────
 
     fun trackAchievementUnlocked(achievementId: String) {
