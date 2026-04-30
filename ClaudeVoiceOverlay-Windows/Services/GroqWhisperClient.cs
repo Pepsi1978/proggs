@@ -32,6 +32,30 @@ namespace ClaudeVoiceOverlay.Services
             return await TranscribeWithRetry(wavFilePath, 0);
         }
 
+        /// Pfad zur persoenlichen Whisper-Vocabulary-Datei. Wird bei JEDEM
+        /// Transkriptions-Aufruf neu gelesen — Aenderungen wirken sofort
+        /// ohne App-Neustart. Fehlt die Datei: prompt-Field wird einfach
+        /// weggelassen (kein Fehler).
+        private static string VocabularyFilePath
+            => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                            "SK", "VoiceOverlays", "voice-prompt.txt");
+
+        private static string? LoadVocabularyPrompt()
+        {
+            try
+            {
+                if (!File.Exists(VocabularyFilePath)) return null;
+                var text = File.ReadAllText(VocabularyFilePath).Trim();
+                return string.IsNullOrEmpty(text) ? null : text;
+            }
+            catch
+            {
+                // Lese-Fehler darf das Transkribieren NIE blockieren — der
+                // prompt-Parameter ist optional. Im Zweifel ohne weitermachen.
+                return null;
+            }
+        }
+
         private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt)
         {
             using var content = new MultipartFormDataContent();
@@ -41,6 +65,16 @@ namespace ClaudeVoiceOverlay.Services
             content.Add(new StringContent(_language), "language");
             content.Add(new StringContent("text"), "response_format");
             content.Add(new StringContent("0"), "temperature");
+
+            // Whisper-Prompt: persoenlicher Vokabular-Hint, hilft Whisper bei
+            // englischen Fachbegriffen die sonst eingedeutscht wuerden
+            // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
+            // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
+            var vocabPrompt = LoadVocabularyPrompt();
+            if (vocabPrompt != null)
+            {
+                content.Add(new StringContent(vocabPrompt), "prompt");
+            }
 
             // Add file
             var fileBytes = await File.ReadAllBytesAsync(wavFilePath);

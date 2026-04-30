@@ -31,12 +31,19 @@ final class GroqWhisperClient {
         request.timeoutInterval = 180
 
         var body = Data()
-        let fields: [(String, String)] = [
+        var fields: [(String, String)] = [
             ("model", "whisper-large-v3"),
             ("language", "de"),
             ("response_format", "text"),
             ("temperature", "0"),
         ]
+        // Whisper-Prompt: persoenlicher Vokabular-Hint, hilft Whisper bei
+        // englischen Fachbegriffen die sonst eingedeutscht wuerden
+        // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
+        // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
+        if let vocabPrompt = Self.loadVocabularyPrompt() {
+            fields.append(("prompt", vocabPrompt))
+        }
         for (key, value) in fields {
             body.append(Data("--\(boundary)\r\n".utf8))
             body.append(Data("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".utf8))
@@ -91,5 +98,22 @@ final class GroqWhisperClient {
             case .httpError(let code, let msg): return "Groq API Fehler \(code): \(msg)"
             }
         }
+    }
+
+    /// Pfad zur persoenlichen Whisper-Vocabulary-Datei. Wird bei JEDEM
+    /// Transkriptions-Aufruf neu gelesen — Aenderungen wirken sofort
+    /// ohne App-Neustart. Fehlt die Datei: prompt-Field wird einfach
+    /// weggelassen (kein Fehler).
+    private static var vocabularyFilePath: URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent("SK/VoiceOverlays/voice-prompt.txt")
+    }
+
+    private static func loadVocabularyPrompt() -> String? {
+        let url = vocabularyFilePath
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
