@@ -73,6 +73,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.bestjournal.app.R
 import com.bestjournal.app.billing.SubscriptionType
 import com.bestjournal.app.ui.theme.NeonAmber
+import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
@@ -905,22 +906,38 @@ private fun StepRetentionOffer(
 
 @Composable
 private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
+    // Loop-7 (Frank, 2026-04-30): replace the abrupt red warning icon with
+    // a softly pulsing red heart — visually says "stay with us" instead
+    // of "danger ahead". The colour stays a saturated red because that is
+    // the universal love/affection cue; the breathing scale keeps the
+    // moment warm without demanding attention.
+    val infiniteTransition = rememberInfiniteTransition(label = "stayHeart")
+    val heartScale by infiniteTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "stayHeartScale",
+    )
+
     Column(
         modifier = Modifier.fillMaxWidth().padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier =
-                Modifier.size(64.dp)
+                Modifier.size(72.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                Icons.Rounded.Warning,
+                Icons.Rounded.Favorite,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(36.dp),
+                tint = NeonRed,
+                modifier = Modifier.size(40.dp).scale(heartScale),
             )
         }
 
@@ -952,8 +969,6 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
                 ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(14.dp),
         ) {
-            Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 stringResource(R.string.churn_stay),
                 style = MaterialTheme.typography.titleSmall,
@@ -963,10 +978,12 @@ private fun StepConfirm(onGoBack: () -> Unit, onConfirmCancel: () -> Unit) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
+        // Subdued grey link instead of the previous red, so it does not
+        // compete visually with the primary "Bleiben"-Button above.
         TextButton(onClick = onConfirmCancel, modifier = Modifier.fillMaxWidth()) {
             Text(
                 stringResource(R.string.action_go_google_play),
-                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
