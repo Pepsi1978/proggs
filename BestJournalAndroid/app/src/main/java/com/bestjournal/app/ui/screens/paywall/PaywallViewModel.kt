@@ -84,14 +84,13 @@ constructor(
             billingManager.subscriptionState.collect { state ->
                 if (state is SubscriptionState.Subscribed && exitIntentPending) {
                     exitIntentPending = false
+                    // Loop-7: just record that the trial bonus was granted.
+                    // The promo phase itself (price, end date) is read directly
+                    // from Google via the cloud function — no local counter.
                     prefs.edit()
                         .putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true)
                         .putLong(Constants.PREF_PROMO_PURCHASE_TIME, System.currentTimeMillis())
                         .commit()
-                    // Use BillingManager.setPromoTotalMonths so the reactive
-                    // StateFlow stays in sync with the persisted value — without
-                    // this the in-app subscription overview would not refresh.
-                    billingManager.setPromoTotalMonths(Constants.EXIT_INTENT_DISCOUNT_MONTHS)
                 }
             }
         }

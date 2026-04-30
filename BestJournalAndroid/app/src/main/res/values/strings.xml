@@ -1112,6 +1112,9 @@
     <string name="churn_promo_active_label">Rabatt-Aktion</string>
     <string name="churn_promo_one_month_remaining">Noch 1 Monat — danach <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> pro Monat</string>
     <string name="churn_promo_months_remaining">Noch <xliff:g id="months" example="2">%1$d</xliff:g> Monate — danach <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> pro Monat</string>
+    <string name="churn_promo_phase_ends">Endet am <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — danach <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> pro Monat</string>
+    <string name="churn_renews_on">Verlängert sich am <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_cancelled_ends_on">Gekündigt — endet am <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="churn_auto_renew_note">Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.</string>
     <string name="churn_cancel_sub">Abo kündigen</string>
     <string name="churn_reason_too_expensive">Zu teuer</string>

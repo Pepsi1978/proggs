@@ -76,6 +76,10 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun ChurnFlowDialog(
@@ -91,6 +95,7 @@ fun ChurnFlowDialog(
     context: Context,
     promoInfo: SettingsViewModel.PromoInfo? = null,
     autoRenewing: Boolean = true,
+    expiryTime: String? = null,
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     var selectedReason by remember { mutableStateOf<String?>(null) }
@@ -138,6 +143,7 @@ fun ChurnFlowDialog(
                             onCancelSubscription = { currentStep = 1 },
                             promoInfo = promoInfo,
                             autoRenewing = autoRenewing,
+                            expiryTime = expiryTime,
                         )
                     1 ->
                         StepReason(
@@ -218,6 +224,7 @@ private fun StepOverview(
     onCancelSubscription: () -> Unit,
     promoInfo: SettingsViewModel.PromoInfo? = null,
     autoRenewing: Boolean = true,
+    expiryTime: String? = null,
 ) {
     val isYearly = subscriptionType == SubscriptionType.YEARLY
     val planName =
@@ -226,6 +233,14 @@ private fun StepOverview(
     val periodLabel =
         if (isYearly) stringResource(R.string.churn_per_year)
         else stringResource(R.string.churn_per_month)
+    // Loop-7: format the cloud's ISO-8601 expiryTime into a localised date+time
+    // string so the user sees "30.04.2026, 18:13" instead of an opaque code.
+    // Returns null if the timestamp is missing or unparseable so the caller
+    // can hide the row gracefully.
+    val expiryFormatted = remember(expiryTime) { formatExpiryDateTime(expiryTime) }
+    val phaseEndFormatted = remember(promoInfo?.phaseEndDate) {
+        formatExpiryDateTime(promoInfo?.phaseEndDate)
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(28.dp).verticalScroll(rememberScrollState()),
@@ -311,8 +326,11 @@ private fun StepOverview(
                 )
             }
 
-            // Promo notice: e.g. "Rabatt-Aktion: Noch 2 Monate — danach 3,99 € pro Monat"
-            if (promoInfo != null) {
+            // Loop-7: promo notice now reads directly from Google's offerPhase
+            // signal — "Sonderpreis aktiv. Naechster Abrechnungstermin am
+            // [Datum] zu [Sonderpreis], danach [Standardpreis]". No counter,
+            // no guessing — exactly what Google reports right now.
+            if (promoInfo != null && phaseEndFormatted != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 Spacer(modifier = Modifier.height(12.dp))
@@ -328,17 +346,11 @@ private fun StepOverview(
                         modifier = Modifier.padding(end = 12.dp),
                     )
                     Text(
-                        if (promoInfo.remainingMonths == 1)
-                            stringResource(
-                                R.string.churn_promo_one_month_remaining,
-                                promoInfo.baseAfterwardsPrice,
-                            )
-                        else
-                            stringResource(
-                                R.string.churn_promo_months_remaining,
-                                promoInfo.remainingMonths,
-                                promoInfo.baseAfterwardsPrice,
-                            ),
+                        text = stringResource(
+                            R.string.churn_promo_phase_ends,
+                            phaseEndFormatted,
+                            promoInfo.baseAfterwardsPrice,
+                        ),
                         style =
                             MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = NeonAmber,
@@ -355,32 +367,48 @@ private fun StepOverview(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     stringResource(R.string.churn_renewal),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 12.dp),
                 )
                 if (autoRenewing) {
+                    // Loop-7: show the exact next-renewal date when we have it
+                    // ("Verlaengert sich am 30.04.2026, 18:13"). Falls back to
+                    // the plain "Automatisch" label if the cloud has not yet
+                    // delivered the expiryTime.
                     Text(
-                        stringResource(R.string.churn_automatic),
+                        text = if (expiryFormatted != null) {
+                            stringResource(R.string.churn_renews_on, expiryFormatted)
+                        } else {
+                            stringResource(R.string.churn_automatic)
+                        },
                         style =
                             MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
                             ),
                         color = NeonEmerald,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
                     )
                 } else {
-                    // Subscription has been cancelled — still active until
-                    // expiry but won't renew.
+                    // Cancelled — show the exact end-of-service date.
                     Text(
-                        stringResource(R.string.churn_cancelled),
+                        text = if (expiryFormatted != null) {
+                            stringResource(R.string.churn_cancelled_ends_on, expiryFormatted)
+                        } else {
+                            stringResource(R.string.churn_cancelled)
+                        },
                         style =
                             MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
                             ),
                         color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -957,5 +985,36 @@ private fun saveChurnOfferAccepted(context: Context) {
             .apply()
     } catch (_: Exception) {
         // Non-critical: offer acceptance is best-effort
+    }
+}
+
+/**
+ * Loop-7: parse the cloud function's ISO-8601 expiryTime (UTC, e.g.
+ * "2026-04-30T18:13:54.483Z") and format it in the user's local timezone
+ * as "30.04.2026, 18:13". Returns null when the input is missing or
+ * unparseable so the UI can fall back to a plain text label gracefully.
+ */
+private fun formatExpiryDateTime(iso: String?): String? {
+    if (iso.isNullOrBlank()) return null
+    return try {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US)
+        parser.timeZone = TimeZone.getTimeZone("UTC")
+        val date: Date = parser.parse(iso) ?: return null
+        val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
+        formatter.timeZone = TimeZone.getDefault()
+        formatter.format(date)
+    } catch (_: Exception) {
+        // Some payloads may use the second-precision form ("...:54Z") without
+        // milliseconds — try a fallback parser before giving up.
+        try {
+            val fallback = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+            fallback.timeZone = TimeZone.getTimeZone("UTC")
+            val date: Date = fallback.parse(iso) ?: return null
+            val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
+            formatter.timeZone = TimeZone.getDefault()
+            formatter.format(date)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

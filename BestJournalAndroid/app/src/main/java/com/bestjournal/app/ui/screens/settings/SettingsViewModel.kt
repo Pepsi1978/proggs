@@ -185,48 +185,67 @@ constructor(
     }
 
     /**
-     * Active promo state for the in-app subscription overview, or null if no active promo.
-     * Returns the discounted current price, the base plan price after promo ends,
-     * and how many monthly cycles of discount remain (rounded up, never below 1).
+     * Loop-7: live snapshot of the subscription's CURRENT pricing phase, fed
+     * directly by Google's Subscriptions API v2 via the Firebase cloud
+     * function. There is intentionally no counter or local guess — the dialog
+     * renders exactly what Google says right now:
+     *   - currentPrice          actual price being charged in the active phase
+     *   - baseAfterwardsPrice   regular recurring price after the intro phase
+     *   - phaseEndDate          ISO-8601 timestamp when the active phase ends
+     *                            (= next renewal, or end of service if cancelled)
      *
-     * The 50%-off-for-2-months exit-intent offer is the only currently tracked promo.
+     * Only set when offerPhase == "INTRO" — i.e. the user is truly in the
+     * promotional pricing phase. BASE phase shows no extra promo card.
      */
     data class PromoInfo(
         val currentPrice: String,
         val baseAfterwardsPrice: String,
-        val remainingMonths: Int,
+        val phaseEndDate: String,
     )
 
     fun getActivePromoInfo(): PromoInfo? = promoInfoState.value
 
     /**
-     * Reactive promo info — observable from Compose with collectAsStateWithLifecycle.
-     * Combines subscriptionType + monthlyPrice + promoTotalMonths so the UI
-     * automatically re-renders the moment any of those changes.
+     * Reactive promo info — observable from Compose. Re-emits whenever the
+     * cloud function delivers a fresh offerPhase / expiryTime / price for
+     * the active subscription.
      */
     val promoInfoState: StateFlow<PromoInfo?> = combine(
         billingManager.subscriptionType,
         billingManager.monthlyPrice,
-        billingManager.promoTotalMonths,
         billingManager.offerPhase,
-    ) { type, monthlyPrice, remaining, phase ->
+        billingManager.expiryTime,
+        billingManager.serverCurrentPriceMicros,
+        billingManager.serverCurrentPriceCurrency,
+    ) { values: Array<Any?> ->
+        val type = values[0] as com.bestjournal.app.billing.SubscriptionType
+        val monthlyPrice = values[1] as String
+        val phase = values[2] as String?
+        val expiry = values[3] as String?
+        val priceMicros = values[4] as Long
+        val priceCurrency = values[5] as String
         if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
-        if (remaining <= 0) return@combine null
-        // Bug-Fix: when the server tells us the user is in BASE phase, the
-        // promo is over even if the local counter is somehow still positive.
-        if (phase == "BASE") return@combine null
+        // Only a real INTRO phase counts as an active promo. BASE = regular
+        // price, FREE_TRIAL or null = nothing to show.
+        if (phase != "INTRO") return@combine null
+        if (expiry.isNullOrBlank()) return@combine null
         val basePrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
-        val halfPrice = formatHalfPrice(basePrice) ?: return@combine null
+        val currentPrice = formatMicrosAsPrice(priceMicros, priceCurrency)
+            ?: formatHalfPrice(basePrice)
+            ?: return@combine null
         PromoInfo(
-            currentPrice = halfPrice,
+            currentPrice = currentPrice,
             baseAfterwardsPrice = basePrice,
-            remainingMonths = remaining,
+            phaseEndDate = expiry,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = null,
     )
+
+    /** Reactive expiry timestamp (ISO-8601) for the CURRENTLY active phase. */
+    val expiryTimeState: StateFlow<String?> = billingManager.expiryTime
 
     /** Reactive current price for the active subscription. Re-evaluates when
      *  any of the price sources update — including the server-authoritative

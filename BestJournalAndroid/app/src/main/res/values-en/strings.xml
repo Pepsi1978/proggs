@@ -886,6 +886,9 @@
     <string name="churn_promo_active_label">Discount offer</string>
     <string name="churn_promo_one_month_remaining">1 month left — then <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> per month</string>
     <string name="churn_promo_months_remaining"><xliff:g id="months" example="2">%1$d</xliff:g> months left — then <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> per month</string>
+    <string name="churn_promo_phase_ends">Ends on <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — then <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> per month</string>
+    <string name="churn_renews_on">Renews on <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_cancelled_ends_on">Cancelled — ends on <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
     <string name="churn_auto_renew_note">Your subscription renews automatically via Google Play. You can cancel at any time.</string>
     <string name="churn_cancel_sub">Cancel subscription</string>
     <string name="churn_reason_too_expensive">Too expensive</string>

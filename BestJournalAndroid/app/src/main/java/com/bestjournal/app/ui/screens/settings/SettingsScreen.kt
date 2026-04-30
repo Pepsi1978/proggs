@@ -2683,6 +2683,8 @@ fun SettingsScreen(
                                     by viewModel.promoInfoState.collectAsStateWithLifecycle()
                                 val churnAutoRenewing
                                     by viewModel.autoRenewingState.collectAsStateWithLifecycle()
+                                val churnExpiryTime
+                                    by viewModel.expiryTimeState.collectAsStateWithLifecycle()
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
@@ -2702,6 +2704,7 @@ fun SettingsScreen(
                                     context = context,
                                     promoInfo = churnPromoInfo,
                                     autoRenewing = churnAutoRenewing,
+                                    expiryTime = churnExpiryTime,
                                 )
                             }
                         } else {
