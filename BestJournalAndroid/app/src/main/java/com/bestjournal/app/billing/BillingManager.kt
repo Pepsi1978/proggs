@@ -766,6 +766,21 @@ constructor(
                 }
                 when (result) {
                     is com.bestjournal.app.data.remote.FetchResult.NotFound -> {
+                        // Loop-9 fix (Frank, 2026-04-30): if a fresh purchase
+                        // landed via onPurchasesUpdated WHILE this verify
+                        // call was in-flight, the in-memory activePurchaseToken
+                        // already points at the NEW token. The cloud verdict
+                        // for the OLD token (NotFound) is therefore stale —
+                        // do not downgrade. A subsequent refresh will hit the
+                        // cloud with the new token and confirm Subscribed.
+                        if (activePurchaseToken != null && activePurchaseToken != token) {
+                            Log.d(
+                                TAG,
+                                "verifyExpirationWithCloud: stale NotFound for old token " +
+                                    "(new token already active) — ignoring",
+                            )
+                            return@launch
+                        }
                         Log.d(
                             TAG,
                             "verifyExpirationWithCloud: cloud confirms expired — setting Free",
@@ -1130,10 +1145,38 @@ constructor(
         ) {
             for (purchase in purchases) {
                 if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                    // Loop-9 fix (Frank, 2026-04-30): WITHOUT_PRORATION
+                    // retention switches caused a brief "Premium
+                    // freischalten" flash because the OLD purchase token
+                    // was still in PREF_LAST_KNOWN_PURCHASE_TOKEN when a
+                    // parallel ON_RESUME refresh fired finalizePurchase-
+                    // QueryBatch -> verifyExpirationWithCloud. The cloud
+                    // (correctly) reported the OLD token as not-found and
+                    // the app downgraded to Free seconds before the NEW
+                    // token landed in the BillingClient cache.
+                    //
+                    // Fix: optimistically set Subscribed + persist the
+                    // new token RIGHT NOW, before acknowledge. The acknowledge
+                    // callback will set the same fields again (idempotent),
+                    // but more importantly the verify-before-downgrade path
+                    // will now read the NEW token — Google will report
+                    // ACTIVE — and the brief Free flash is gone.
+                    _subscriptionState.value = SubscriptionState.Subscribed
+                    activePurchaseToken = purchase.purchaseToken
+                    encryptedPrefs.edit()
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
+                            purchase.purchaseToken,
+                        )
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                            purchase.products.firstOrNull() ?: "",
+                        )
+                        .commit()
+
                     if (!purchase.isAcknowledged) {
                         acknowledgePurchase(purchase)
                     } else {
-                        _subscriptionState.value = SubscriptionState.Subscribed
                         updateSubscriptionType(purchase)
                     }
                 }
