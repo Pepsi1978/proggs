@@ -1902,19 +1902,22 @@ namespace TerminalVoiceOverlay.Views
             // gedrueckt sind (GetAsyncKeyState liest den aktuellen Tastenzustand).
             // Der Hook-Callback laeuft auf dem niedrig-priorisierten Hook-Thread,
             // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
-            if (vk == NativeMethods.Win32.VK_SPACE)
+            if (vk == NativeMethods.Win32.VK_SPACE || vk == NativeMethods.Win32.VK_M)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool shift = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
 
-                // Akzeptiert Strg+Alt+Space ODER Shift+Alt+Space.
-                // Strg+Alt+Space ist die urspruengliche Variante, hat aber
-                // einen Konflikt: solange Strg gehalten wird, deutet das
-                // Terminal Mausrad-Drehen als Schrift-Zoom (Strg+Wheel).
-                // Deshalb empfehle ich fuer das G-Tasten-Macro die neue
-                // Variante Shift+Alt+Space — beide funktionieren parallel,
-                // sodass bestehende Macros nicht brechen.
+                // Drei akzeptierte Hotkey-Varianten fuer Push-to-Talk:
+                //   1) Strg+Alt+Leertaste — original, aber Strg+Wheel = Zoom
+                //   2) Shift+Alt+Leertaste — kein Zoom, ABER bei wackeligen
+                //      G-HUB-Macros kann das Alt+Space-System-Menue aufgehen
+                //      wenn Shift einen Tick spaeter ankommt als Alt+Space
+                //   3) Shift+Alt+M — bulletproof, kein Windows-Shortcut, kein
+                //      System-Menue, egal in welcher Reihenfolge die Modifier
+                //      kommen. Empfohlene G5-Macro-Belegung.
+                // Alle drei funktionieren parallel — bestehende Macros bleiben
+                // gueltig, neue Macros koennen die robusteste Kombi nutzen.
                 bool modsOk = alt && (ctrl || shift);
 
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
