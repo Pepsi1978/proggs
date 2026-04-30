@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TerminalVoiceOverlay"
-        Width="72" Height="592"
+        Width="72" Height="612"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -71,11 +71,11 @@
     <Border CornerRadius="36"
             BorderBrush="#FF000000"
             BorderThickness="2"
-            Width="72" Height="592">
+            Width="72" Height="612">
         <StackPanel>
 
             <!-- Section 1: Stern (always-on prefix) -->
-            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,10,0,6">
+            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,17,0,6">
                 <Button x:Name="UltrathinkButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnUltrathink_Click"
@@ -206,7 +206,7 @@
             <Border Background="#FF000000" Height="1"/>
 
             <!-- Section 7: Enter (confirm, neutral) -->
-            <Border Background="#FF1A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,10">
+            <Border Background="#FF1A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,17">
                 <Button x:Name="EnterButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnAutoEnter_Click"
