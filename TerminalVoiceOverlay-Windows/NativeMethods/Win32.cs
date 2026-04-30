@@ -110,6 +110,7 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const ushort VK_P       = 0x50; // Hotkey: Ctrl+Alt+P = Screenshot
         public const ushort VK_I       = 0x49; // Hotkey: Ctrl+Alt+I = Insert last screenshot
         public const ushort VK_M       = 0x4D; // Hotkey: Shift+Alt+M = PTT (alternative ohne Leertaste, keine Konflikte mit System-Menue)
+        public const ushort VK_F9      = 0x78; // Hotkey: Strg+F9 oder Shift+F9 = PTT (kurze Kombi, keine Konflikte in CLIs)
 
         // ── Low-Level Keyboard Hook (fuer Push-to-Talk) ──
         // RegisterHotKey kann nur KeyDown — fuer Push-to-Talk brauchen wir

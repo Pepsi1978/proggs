@@ -1902,23 +1902,32 @@ namespace TerminalVoiceOverlay.Views
             // gedrueckt sind (GetAsyncKeyState liest den aktuellen Tastenzustand).
             // Der Hook-Callback laeuft auf dem niedrig-priorisierten Hook-Thread,
             // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
-            if (vk == NativeMethods.Win32.VK_SPACE || vk == NativeMethods.Win32.VK_M)
+            if (vk == NativeMethods.Win32.VK_SPACE
+                || vk == NativeMethods.Win32.VK_M
+                || vk == NativeMethods.Win32.VK_F9)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool shift = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
 
-                // Drei akzeptierte Hotkey-Varianten fuer Push-to-Talk:
+                // Akzeptierte Hotkey-Varianten fuer Push-to-Talk:
                 //   1) Strg+Alt+Leertaste — original, aber Strg+Wheel = Zoom
                 //   2) Shift+Alt+Leertaste — kein Zoom, ABER bei wackeligen
                 //      G-HUB-Macros kann das Alt+Space-System-Menue aufgehen
-                //      wenn Shift einen Tick spaeter ankommt als Alt+Space
                 //   3) Shift+Alt+M — bulletproof, kein Windows-Shortcut, kein
                 //      System-Menue, egal in welcher Reihenfolge die Modifier
-                //      kommen. Empfohlene G5-Macro-Belegung.
-                // Alle drei funktionieren parallel — bestehende Macros bleiben
-                // gueltig, neue Macros koennen die robusteste Kombi nutzen.
-                bool modsOk = alt && (ctrl || shift);
+                //      kommen. Bevorzugte G-Macro-Belegung wenn Modifier-Plus-
+                //      Buchstaben-Schema gewuenscht.
+                //   4) Strg+F9 oder Shift+F9 — sehr kurze Kombi, in CLIs frei.
+                //      Strg+F9 hat den bekannten Strg+Wheel-Zoom-Konflikt;
+                //      Shift+F9 ist davon frei. Modifier-Regel daher anders:
+                //      bei F9 reicht EIN Modifier (ctrl ODER shift), kein Alt
+                //      noetig — sonst muesste man drei Tasten halten.
+                bool modsOk;
+                if (vk == NativeMethods.Win32.VK_F9)
+                    modsOk = ctrl || shift;
+                else
+                    modsOk = alt && (ctrl || shift);
 
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
                 bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
