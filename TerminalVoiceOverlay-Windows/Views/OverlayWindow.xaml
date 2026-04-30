@@ -79,7 +79,7 @@
                 <Button x:Name="UltrathinkButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnUltrathink_Click"
-                        ToolTip="PromptBoard-Dauerprefix ein oder aus">
+                        ToolTip="Promptboard">
                     <Viewbox Width="20" Height="20">
                         <Path x:Name="UltrathinkStar" Fill="#8B7355"
                               Data="M12,1 L15.09,7.26 L22,8.27 L17,13.14 L18.18,20.02 L12,16.77 L5.82,20.02 L7,13.14 L2,8.27 L8.91,7.26 Z"/>
