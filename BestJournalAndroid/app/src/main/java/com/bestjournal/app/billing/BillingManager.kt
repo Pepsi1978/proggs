@@ -1065,21 +1065,28 @@ constructor(
         // If user already has an active subscription, add update params
         // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED.
         //
-        // Loop-7 (Frank, 2026-04-30): both WITHOUT_PRORATION and
-        // WITH_TIME_PRORATION made Google answer "Abo kann nicht geaendert
-        // werden" for the 3,99 € → 2,99 € retention flow. DEFERRED is the
-        // mode Google explicitly recommends for retention offers — the new
-        // plan replaces the old one on the NEXT renewal date, the user
-        // keeps everything they already paid for, and Google does not need
-        // to compute prorated credits at all (which is what the previous
-        // modes were tripping over).
+        // Loop-7 (Frank, 2026-04-30): two false starts produced misleading
+        // results because TWO problems were stacked.
+        //   - WITHOUT_PRORATION + obfuscatedAccountId stamp → responseCode=5
+        //     "Account identifiers don't match the previous subscription."
+        //   - WITH_TIME_PRORATION + obfuscatedAccountId stamp → same.
+        //   - DEFERRED with the stamp removed → responseCode=5
+        //     "Requested replacement mode is not supported for this request."
+        // The stamp issue is fixed in #1937; now we use the documented
+        // default for plan changes that supports both up- and downgrades:
+        // WITH_TIME_PRORATION. Google credits any unused time of the old
+        // plan toward the new one, the change takes effect immediately,
+        // and the user is not charged again until the credited time runs
+        // out — which is exactly what we want for a 3,99 € → 2,99 €
+        // retention switch.
         val oldToken = activePurchaseToken
         if (oldToken != null && _subscriptionState.value is SubscriptionState.Subscribed) {
             billingFlowParamsBuilder.setSubscriptionUpdateParams(
                 BillingFlowParams.SubscriptionUpdateParams.newBuilder()
                     .setOldPurchaseToken(oldToken)
                     .setSubscriptionReplacementMode(
-                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.DEFERRED
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode
+                            .WITH_TIME_PRORATION
                     )
                     .build()
             )
