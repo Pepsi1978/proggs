@@ -1976,9 +1976,13 @@ namespace TerminalVoiceOverlay.Views
                 }
             }
 
-            // Screenshot-Hotkey: Strg+Alt+P — feuert beim DOWN (eine
-            // Aktion pro Druck, nicht pro Auto-Repeat). KeyUp setzt das
-            // Debounce-Flag zurueck damit der naechste Druck wieder feuert.
+            // OneShot-Hotkey: Strg+Alt+P = Screenshot UND sofort einfuegen.
+            // BtnScreenshot_Click laeuft synchron auf dem UI-Thread, danach
+            // ist _lastScreenshotPath aktualisiert (wenn der Save klappte)
+            // und wir koennen direkt BtnInsertScreenshot_Click anhaengen.
+            // Erfolgs-Check ueber Vorher/Nachher-Vergleich von _lastScreenshotPath:
+            // bei Capture-Fehler bleibt der alte Pfad — und wir wuerden sonst
+            // ungewollt den alten Screenshot einfuegen.
             if (vk == NativeMethods.Win32.VK_P)
             {
                 bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
@@ -1989,11 +1993,26 @@ namespace TerminalVoiceOverlay.Views
                 if (isDown && ctrl && alt && !_screenshotKeyDown)
                 {
                     _screenshotKeyDown = true;
-                    Console.WriteLine("Hotkey: Strg+Alt+P — Screenshot");
+                    Console.WriteLine("Hotkey: Strg+Alt+P — Screenshot + Insert (one-shot)");
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        try { BtnScreenshot_Click(this, new RoutedEventArgs()); }
-                        catch (Exception ex) { Console.WriteLine($"Screenshot hotkey error: {ex.Message}"); }
+                        try
+                        {
+                            string? before = _lastScreenshotPath;
+                            BtnScreenshot_Click(this, new RoutedEventArgs());
+                            // Wenn der Pfad sich geaendert hat, war der Save
+                            // erfolgreich — direkt einfuegen. Sonst ueberspringen
+                            // damit kein alter Screenshot versehentlich gepaste wird.
+                            if (!string.IsNullOrEmpty(_lastScreenshotPath) && _lastScreenshotPath != before)
+                            {
+                                BtnInsertScreenshot_Click(this, new RoutedEventArgs());
+                            }
+                            else
+                            {
+                                Console.WriteLine("OneShot: Screenshot fehlgeschlagen, Insert uebersprungen");
+                            }
+                        }
+                        catch (Exception ex) { Console.WriteLine($"OneShot hotkey error: {ex.Message}"); }
                     }));
                     return new IntPtr(1);
                 }
