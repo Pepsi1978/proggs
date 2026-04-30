@@ -1049,14 +1049,23 @@ constructor(
         }
 
         // If user already has an active subscription, add update params
-        // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED
+        // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED.
+        //
+        // Loop-7 fix (Frank, 2026-04-30): WITHOUT_PRORATION rejects cross-grades
+        // where the new plan costs MORE than the currently-active phase
+        // (e.g. user on the 2 € intro promo upgrading to the 2,99 € retention
+        // base plan — Google replied with "Abo kann nicht geaendert werden").
+        // WITH_TIME_PRORATION is the documented mode for plan changes — it
+        // takes effect immediately and credits any unused time of the old
+        // plan toward the new one.
         val oldToken = activePurchaseToken
         if (oldToken != null && _subscriptionState.value is SubscriptionState.Subscribed) {
             billingFlowParamsBuilder.setSubscriptionUpdateParams(
                 BillingFlowParams.SubscriptionUpdateParams.newBuilder()
                     .setOldPurchaseToken(oldToken)
                     .setSubscriptionReplacementMode(
-                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode
+                            .WITH_TIME_PRORATION
                     )
                     .build()
             )
