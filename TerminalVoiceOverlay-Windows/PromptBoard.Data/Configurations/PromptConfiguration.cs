@@ -26,8 +26,13 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
         b.Property(p => p.IsPrePrompt).HasDefaultValue(true);
         b.Property(p => p.IsPostPrompt).HasDefaultValue(false);
         b.Property(p => p.SortOrder);
+        // Optional Strg+N hotkey (1-9). Indexed because the low-level
+        // keyboard hook looks up "which prompt owns Strg+3?" on every
+        // keydown — without the index that's a full table scan.
+        b.Property(p => p.HotkeyNumber);
 
         b.HasIndex(p => p.CategoryId);
         b.HasIndex(p => p.IsAlwaysOn);
+        b.HasIndex(p => p.HotkeyNumber);
     }
 }

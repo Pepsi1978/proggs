@@ -92,6 +92,12 @@ public static class PromptBoardHost
             // exist" — exactly mirrors the macOS approach.
             EnsurePrePostColumns();
 
+            // Strg+1..9 prompt hotkeys (this feature). Same idempotent
+            // ALTER pattern: the column starts NULL on every existing
+            // row so prior installs upgrade silently with all hotkeys
+            // unassigned, exactly as if no one had ever set one.
+            EnsureHotkeyColumn();
+
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
 
@@ -160,6 +166,25 @@ public static class PromptBoardHost
             // create it from the model below with the columns already
             // in place. Either way, never block startup over the
             // migration check.
+        }
+    }
+
+    private static void EnsureHotkeyColumn()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            // Nullable INTEGER. CREATE INDEX IF NOT EXISTS is itself
+            // idempotent so it's safe to run on every startup even
+            // after EnsureCreated has already added the index.
+            TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER NULL");
+            TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyNumber ON Prompts (HotkeyNumber)");
+        }
+        catch
+        {
+            // First-run case: EF-Core EnsureCreated will have created
+            // the column from the model already. Never block startup.
         }
     }
 

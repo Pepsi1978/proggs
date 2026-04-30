@@ -54,6 +54,16 @@ public class Prompt : BaseEntity
     public int SortOrder { get; set; }
 
     /// <summary>
+    /// Optional Strg+N hotkey (1-9) that pastes this prompt into the
+    /// active terminal. Null when no hotkey is assigned. Globally
+    /// unique across all prompts: assigning a number that another
+    /// prompt already owns silently transfers it (last-wins).
+    /// Local-only state — deliberately not part of the Drive backup
+    /// because every machine has its own preferred bindings.
+    /// </summary>
+    public int? HotkeyNumber { get; set; }
+
+    /// <summary>
     /// Which Gemini meta-prompt produced the last ImprovedText. Lets the
     /// user see provenance and re-run against a different meta-prompt.
     /// </summary>

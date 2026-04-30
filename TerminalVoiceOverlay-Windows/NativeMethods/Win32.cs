@@ -39,6 +39,14 @@ namespace TerminalVoiceOverlay.NativeMethods
         [DllImport("user32.dll")]
         public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        // Walking the parent chain — used by the prompt-hotkey hook to
+        // accept both the inner TermControl and its outer host window
+        // as "the active terminal" so Strg+1..9 still fire when a
+        // tabbed terminal puts the focused control a level below the
+        // HWND that the TerminalWatcher captured.
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetParent(IntPtr hWnd);
+
         [DllImport("user32.dll")]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 

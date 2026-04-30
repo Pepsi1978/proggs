@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TerminalVoiceOverlay.Services;
@@ -14,7 +17,8 @@ public sealed record PromptEditResult(
     string OriginalText,
     bool IsAlwaysOn,
     bool IsPrePrompt,
-    bool IsPostPrompt);
+    bool IsPostPrompt,
+    int? HotkeyNumber);
 
 public partial class PromptEditDialog : Window
 {
@@ -68,19 +72,28 @@ public partial class PromptEditDialog : Window
         @"^\s*(?:Pre[-\s]?Prompt|Post[-\s]?Prompt)\s*:\s*[""„“](?<inner>[\s\S]*?)[""“”]\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Tracks the 10 hotkey toggle buttons (index 0 = "Kein", 1..9 = Strg+N).
+    /// Built once in the constructor — kept around so the Save path can
+    /// look up which one is checked without walking the visual tree.
+    /// </summary>
+    private readonly List<ToggleButton> _hotkeyButtons = new();
+
     public PromptEditDialog(
         string title,
         string initialLabel,
         string initialText,
         bool initialAlwaysOn,
         bool initialPrePrompt,
-        bool initialPostPrompt)
+        bool initialPostPrompt,
+        int? initialHotkey)
     {
         InitializeComponent();
         TitleText.Text = title;
         ShortLabelBox.Text = initialLabel;
         OriginalTextBox.Text = initialText;
         AlwaysOnCheckbox.IsChecked = initialAlwaysOn;
+        BuildHotkeyButtons(initialHotkey);
 
         // Handler VOR den initialen IsChecked-Setzern verdrahten, damit der
         // Wrapper auch beim Laden eines bereits markierten Prompts auto-
@@ -173,8 +186,101 @@ public partial class PromptEditDialog : Window
             text ?? string.Empty,
             AlwaysOnCheckbox.IsChecked == true,
             PrePromptCheckbox.IsChecked == true,
-            PostPromptCheckbox.IsChecked == true);
+            PostPromptCheckbox.IsChecked == true,
+            ReadSelectedHotkey());
         Close();
+    }
+
+    /// <summary>
+    /// Builds the row of 10 toggle buttons ("Kein", "Strg+1" .. "Strg+9").
+    /// Exactly one is checked at any moment — clicking another flips the
+    /// previously checked one off via <see cref="OnHotkeyToggled"/>.
+    /// Index 0 is the "Kein" button (= no binding); indices 1..9 carry the
+    /// matching Strg+N number in their <see cref="FrameworkElement.Tag"/>.
+    /// </summary>
+    private void BuildHotkeyButtons(int? initial)
+    {
+        _hotkeyButtons.Clear();
+        HotkeyPanel.Children.Clear();
+
+        // Index 0: "Kein" — represents an unbound hotkey. Stored as Tag=0
+        // so the lookup logic stays uniform (Tag carries the int value
+        // for every button; 0 is the sentinel for "no binding").
+        _hotkeyButtons.Add(MakeHotkeyButton("Kein", 0));
+        for (int n = 1; n <= 9; n++)
+        {
+            _hotkeyButtons.Add(MakeHotkeyButton($"Strg+{n}", n));
+        }
+
+        // Pre-select the initial state. Null or out-of-range falls back to
+        // "Kein" so the dialog never opens with no toggle checked at all.
+        int initialIdx = (initial.HasValue && initial.Value >= 1 && initial.Value <= 9)
+            ? initial.Value
+            : 0;
+        _hotkeyButtons[initialIdx].IsChecked = true;
+
+        foreach (var b in _hotkeyButtons)
+            HotkeyPanel.Children.Add(b);
+    }
+
+    private ToggleButton MakeHotkeyButton(string label, int value)
+    {
+        var btn = new ToggleButton
+        {
+            Content = label,
+            Tag = value,
+            MinWidth = 56,
+            Padding = new Thickness(8, 4, 8, 4),
+            Margin = new Thickness(0, 0, 6, 6),
+            Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xEE, 0xEE, 0xEE)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),
+            BorderThickness = new Thickness(1),
+            FontSize = 12,
+            Cursor = System.Windows.Input.Cursors.Hand,
+        };
+        btn.Checked += OnHotkeyToggled;
+        // Reject manual unchecks so the user can never end up with NO
+        // toggle active. To clear a binding the user clicks "Kein"
+        // instead — that's both the visible affordance and the saved
+        // value (null in the Result record).
+        btn.Click += (s, _) =>
+        {
+            if (s is ToggleButton tb && tb.IsChecked != true)
+                tb.IsChecked = true;
+        };
+        return btn;
+    }
+
+    /// <summary>
+    /// Mutual-exclusion handler: when one toggle becomes checked, every
+    /// other toggle is forced off. We don't use a RadioButton group
+    /// because the visual style we want (filled rectangular pill) reads
+    /// much more cleanly as ToggleButton than as a styled RadioButton.
+    /// </summary>
+    private void OnHotkeyToggled(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton clicked) return;
+        foreach (var b in _hotkeyButtons)
+        {
+            if (!ReferenceEquals(b, clicked) && b.IsChecked == true)
+                b.IsChecked = false;
+        }
+    }
+
+    /// <summary>
+    /// Returns the currently active hotkey number, or null when "Kein"
+    /// (Tag = 0) is selected. Defensive: if nothing is checked at all
+    /// (shouldn't happen, but cheap insurance) we fall back to null.
+    /// </summary>
+    private int? ReadSelectedHotkey()
+    {
+        foreach (var b in _hotkeyButtons)
+        {
+            if (b.IsChecked == true && b.Tag is int n)
+                return n == 0 ? (int?)null : n;
+        }
+        return null;
     }
 
     /// <summary>
@@ -220,9 +326,10 @@ public partial class PromptEditDialog : Window
 
     public static PromptEditResult? Ask(
         Window owner, string title, string label, string text,
-        bool alwaysOn, bool prePrompt, bool postPrompt)
+        bool alwaysOn, bool prePrompt, bool postPrompt, int? hotkey)
     {
-        var dlg = new PromptEditDialog(title, label, text, alwaysOn, prePrompt, postPrompt)
+        var dlg = new PromptEditDialog(
+            title, label, text, alwaysOn, prePrompt, postPrompt, hotkey)
         {
             Owner = owner
         };

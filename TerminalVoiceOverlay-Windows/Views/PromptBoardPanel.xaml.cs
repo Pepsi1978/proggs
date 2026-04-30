@@ -1346,6 +1346,41 @@ public partial class PromptBoardPanel : Window
         {
             PromptList.Children.Add(BuildPromptRow(prompt, catId));
         }
+
+        // Refresh the cross-component hotkey lookup so the low-level
+        // keyboard hook in OverlayWindow sees the current bindings.
+        // Done after every render so adds, edits, deletes and restores
+        // all propagate without any extra plumbing. Only Prompts (not
+        // AiImprovementPrompts) participate — the latter are meta-prompts
+        // not meant to be pasted into a terminal.
+        var hotkeyEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
+        // Walk the FULL set of prompts across ALL categories — not just
+        // the currently visible ones — so a hotkey still fires when the
+        // user has filtered the panel down to a single category.
+        try
+        {
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            foreach (var cat in _categories)
+            {
+                var all = await promptRepo.GetByCategoryAsync(cat.Id);
+                foreach (var p in all)
+                {
+                    if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
+                    {
+                        hotkeyEntries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
+                            n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Lookup table stays at its previous state — better stale than
+            // broken. The user will see the discrepancy on the next render.
+            Console.WriteLine($"HotkeyRegistry rebuild failed: {ex.Message}");
+        }
+        HotkeyRegistry.Replace(hotkeyEntries);
     }
 
     private Border BuildPromptRow(Prompt prompt, Guid categoryId)
@@ -1395,6 +1430,15 @@ public partial class PromptBoardPanel : Window
         if (prePostSuffix.Length > 0)
         {
             titleText += prePostSuffix;
+        }
+
+        // Hotkey-Hinweis. Wir haengen einen schlichten "(Strg+N)" hinter
+        // den Titel — bewusst kein Glow / kein Highlight, damit das
+        // Listing aufgeraeumt bleibt. Frank hatte explizit nach normaler
+        // Schrift in Klammern gefragt.
+        if (prompt.HotkeyNumber is int hk && hk >= 1 && hk <= 9)
+        {
+            titleText += $" (Strg+{hk})";
         }
 
         // ── Title button (klick schaltet das gelbe Haekchen um) ──
@@ -1878,13 +1922,23 @@ public partial class PromptBoardPanel : Window
 
         var result = PromptEditDialog.Ask(
             this, "Neuer Prompt", string.Empty, string.Empty,
-            alwaysOn: false, prePrompt: true, postPrompt: false);
+            alwaysOn: false, prePrompt: true, postPrompt: false, hotkey: null);
         if (result is null) return;
 
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+            // Hotkey-Konflikt: Wenn die gewaehlte Strg+N schon einem anderen
+            // Prompt gehoert, muss DESSEN Hotkey jetzt geloescht werden —
+            // last-wins. Macht's der Benutzer absichtlich, sieht er beim
+            // naechsten Editieren des alten Prompts die Vergabe wieder offen.
+            if (result.HotkeyNumber is int newHk)
+            {
+                await StripHotkeyFromOthersAsync(repo, newHk, exceptId: Guid.Empty);
+            }
+
             var prompt = new Prompt
             {
                 Id = Guid.NewGuid(),
@@ -1894,6 +1948,7 @@ public partial class PromptBoardPanel : Window
                 IsAlwaysOn = result.IsAlwaysOn,
                 IsPrePrompt = result.IsPrePrompt,
                 IsPostPrompt = result.IsPostPrompt,
+                HotkeyNumber = result.HotkeyNumber,
                 ActiveVersion = PromptVersion.Original,
                 SortOrder = 0,
             };
@@ -1913,18 +1968,28 @@ public partial class PromptBoardPanel : Window
         var result = PromptEditDialog.Ask(
             this, "Prompt bearbeiten",
             prompt.ShortLabel, prompt.OriginalText, prompt.IsAlwaysOn,
-            prompt.IsPrePrompt, prompt.IsPostPrompt);
+            prompt.IsPrePrompt, prompt.IsPostPrompt, prompt.HotkeyNumber);
         if (result is null) return;
 
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+            // Konfliktloesung — siehe AddPromptAsync. Eigenen Prompt ausnehmen
+            // damit das wiederholte Speichern desselben Prompts mit demselben
+            // Hotkey nicht erst sich selbst die Nummer wegnimmt.
+            if (result.HotkeyNumber is int newHk && prompt.HotkeyNumber != newHk)
+            {
+                await StripHotkeyFromOthersAsync(repo, newHk, exceptId: prompt.Id);
+            }
+
             prompt.ShortLabel = result.ShortLabel;
             prompt.OriginalText = result.OriginalText;
             prompt.IsAlwaysOn = result.IsAlwaysOn;
             prompt.IsPrePrompt = result.IsPrePrompt;
             prompt.IsPostPrompt = result.IsPostPrompt;
+            prompt.HotkeyNumber = result.HotkeyNumber;
             await repo.UpdateAsync(prompt);
             ScheduleAutoBackup();
         }
@@ -1934,6 +1999,45 @@ public partial class PromptBoardPanel : Window
         }
 
         await RenderPromptsAsync();
+    }
+
+    /// <summary>
+    /// Implements the "last wins" rule for prompt hotkey assignments:
+    /// any prompt other than <paramref name="exceptId"/> that currently
+    /// holds <paramref name="hotkey"/> has its number cleared. Walks all
+    /// categories because hotkeys are global (not per-category) and the
+    /// repository has no direct "find by hotkey" query.
+    ///
+    /// Pass <see cref="Guid.Empty"/> as <paramref name="exceptId"/> when
+    /// adding a brand-new prompt — there's no own row to skip yet.
+    /// </summary>
+    private static async Task StripHotkeyFromOthersAsync(
+        IPromptRepository repo, int hotkey, Guid exceptId)
+    {
+        if (hotkey < 1 || hotkey > 9) return;
+
+        // The set of prompts is small (tens, low hundreds), so loading
+        // them all is cheaper than threading a custom query through the
+        // repository interface that callers rarely need.
+        var allPrompts = new List<Prompt>();
+        // Reuse the same scope's repository — but we need every category,
+        // not just the active ones. Pull the categories first.
+        using (var scope = PromptBoardHost.Services.CreateScope())
+        {
+            var catRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            var cats = await catRepo.GetAllAsync();
+            var localRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            foreach (var c in cats)
+                allPrompts.AddRange(await localRepo.GetByCategoryAsync(c.Id));
+        }
+
+        foreach (var other in allPrompts)
+        {
+            if (other.HotkeyNumber != hotkey) continue;
+            if (other.Id == exceptId) continue;
+            other.HotkeyNumber = null;
+            await repo.UpdateAsync(other);
+        }
     }
 
     private async Task DeletePromptAsync(Prompt prompt)
@@ -2263,6 +2367,7 @@ public partial class PromptBoardPanel : Window
                 IsPrePrompt = p.IsPrePrompt,
                 IsPostPrompt = p.IsPostPrompt,
                 SortOrder = p.SortOrder,
+                HotkeyNumber = p.HotkeyNumber,
             }).ToList(),
             SeparatorTemplate = appSettings.SeparatorTemplate,
         };
@@ -2329,6 +2434,7 @@ public partial class PromptBoardPanel : Window
                 IsPrePrompt = p.IsPrePrompt,
                 IsPostPrompt = p.IsPostPrompt,
                 SortOrder = p.SortOrder,
+                HotkeyNumber = p.HotkeyNumber,
             };
             if (existingPromptIds.ContainsKey(p.Id))
                 await promptRepo.UpdateAsync(entity);
@@ -2478,5 +2584,9 @@ public partial class PromptBoardPanel : Window
         public bool IsPrePrompt { get; set; } = true;
         public bool IsPostPrompt { get; set; } = false;
         public int SortOrder { get; set; }
+        // Strg+N hotkey (1-9), null when unbound. Older backups don't
+        // carry this — JSON deserialization leaves the property at null,
+        // exactly the same state as a freshly created prompt.
+        public int? HotkeyNumber { get; set; }
     }
 }

@@ -2103,7 +2103,119 @@ namespace TerminalVoiceOverlay.Views
                 if (isUp) _insertKeyDown = false;
             }
 
+            // ── Prompt-Hotkeys: Strg+1..Strg+9 ─────────────────────────────
+            //
+            // Pasten den Prompt mit der jeweiligen HotkeyNumber in das aktive
+            // Terminal. Der Hook reagiert NUR wenn:
+            //   1) eine reine Strg-Kombi gehalten wird (kein Alt, Shift, Win),
+            //   2) ein Prompt mit dieser Nummer in der HotkeyRegistry steht,
+            //   3) und ein Terminal-Fenster im Vordergrund ist.
+            // Sonst laeuft die Taste durch — damit Strg+1 in Browser/VS-Code
+            // weiter Tab 1 wechselt. Frank wollte explizit dass die Funktion
+            // nur in der CLI greift.
+            if (vk >= 0x31 && vk <= 0x39 && HotkeyRegistry.HasAny)
+            {
+                bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool shift = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (ctrl && !alt && !shift)
+                {
+                    int hotkeyNumber = (int)(vk - 0x30); // 0x31..0x39 → 1..9
+                    var entry = HotkeyRegistry.Lookup(hotkeyNumber);
+                    if (entry is HotkeyRegistry.Entry e)
+                    {
+                        // Aktives Fenster pruefen — TerminalWatcher haelt den
+                        // letzten erkannten Terminal-HWND. Null/Zero heisst:
+                        // gerade ist KEIN Terminal aktiv → wir lassen die
+                        // Taste durch (Browser-Tabs etc. funktionieren weiter).
+                        IntPtr terminalHwnd = _terminalWatcher.ActiveTerminalHwnd;
+                        IntPtr foreground = NativeMethods.Win32.GetForegroundWindow();
+                        bool terminalIsForeground = terminalHwnd != IntPtr.Zero
+                            && (foreground == terminalHwnd || IsWindowDescendantOf(foreground, terminalHwnd));
+
+                        if (terminalIsForeground)
+                        {
+                            if (isDown && !_promptHotkeyDown[hotkeyNumber])
+                            {
+                                _promptHotkeyDown[hotkeyNumber] = true;
+                                Console.WriteLine($"Hotkey: Strg+{hotkeyNumber} — paste prompt ({e.EffectiveText.Length} chars)");
+                                Dispatcher.BeginInvoke(new Action(() =>
+                                {
+                                    try
+                                    {
+                                        TerminalController.PasteText(
+                                            e.EffectiveText,
+                                            _terminalWatcher.ActiveTerminalHwnd,
+                                            autoEnterEnabled);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"Prompt hotkey paste failed: {ex.Message}");
+                                    }
+                                }));
+                                return new IntPtr(1);
+                            }
+                            if (isDown) return new IntPtr(1); // Auto-Repeat schlucken
+                            if (isUp) _promptHotkeyDown[hotkeyNumber] = false;
+                        }
+                        // else: kein Terminal aktiv — durchlassen, Browser-Tabs
+                        // funktionieren weiterhin wie gewohnt.
+                    }
+                }
+                else if (isUp)
+                {
+                    // Sicherheitsnetz: wenn der User die Modifier mitten in
+                    // einem Down/Up-Zyklus losgelassen hat, Flag zuruecksetzen.
+                    int hotkeyNumber = (int)(vk - 0x30);
+                    if (hotkeyNumber >= 1 && hotkeyNumber <= 9)
+                        _promptHotkeyDown[hotkeyNumber] = false;
+                }
+            }
+
             return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+        }
+
+        /// <summary>
+        /// Indices 1..9 — 0 ist ungenutzt damit der Index direkt der
+        /// Hotkey-Nummer entspricht. Verhindert dass Auto-Repeat-Tasten
+        /// den Paste-Pfad mehrfach ausloesen wenn der Benutzer Strg+N
+        /// laenger gedrueckt haelt.
+        /// </summary>
+        private readonly bool[] _promptHotkeyDown = new bool[10];
+
+        /// <summary>
+        /// Manche Terminal-Apps (Windows Terminal, VS Code Integrated
+        /// Terminal) packen den eigentlichen TermControl in ein Kindfenster.
+        /// Wenn der Benutzer dort tippt liefert GetForegroundWindow das
+        /// AEUSSERE Hauptfenster — der TerminalWatcher hat aber den HWND
+        /// des inneren Controls gemerkt. Dieser Helfer akzeptiert beide
+        /// Richtungen, damit der Hotkey trotzdem feuert.
+        /// </summary>
+        private static bool IsWindowDescendantOf(IntPtr child, IntPtr ancestor)
+        {
+            if (child == IntPtr.Zero || ancestor == IntPtr.Zero) return false;
+            // Vom Kindfenster nach oben: ist eines der Eltern der gemerkte
+            // Terminal-HWND? Maximal ein paar Stufen hoch — Terminal-UIs
+            // verschachteln nicht tief.
+            IntPtr cur = child;
+            for (int i = 0; i < 6 && cur != IntPtr.Zero; i++)
+            {
+                if (cur == ancestor) return true;
+                cur = NativeMethods.Win32.GetParent(cur);
+            }
+            // Andersrum: ist der gemerkte HWND ein Kind des aktuellen
+            // Vordergrundfensters? Hilft wenn der Watcher das aeussere
+            // Fenster gemerkt hat aber das innere fokussiert ist.
+            cur = ancestor;
+            for (int i = 0; i < 6 && cur != IntPtr.Zero; i++)
+            {
+                if (cur == child) return true;
+                cur = NativeMethods.Win32.GetParent(cur);
+            }
+            return false;
         }
 
         // Alt+F11 Hotkey-Aktion: Den Release-Bundle-Ordner im Windows Explorer

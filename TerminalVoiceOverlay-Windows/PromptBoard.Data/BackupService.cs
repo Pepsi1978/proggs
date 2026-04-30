@@ -224,7 +224,8 @@ public sealed class BackupService : IBackupService
             GeminiModel: model,
             IsActiveForImprovement: active,
             CreatedAtUtc: p.CreatedAt,
-            UpdatedAtUtc: p.UpdatedAt);
+            UpdatedAtUtc: p.UpdatedAt,
+            HotkeyNumber: p.HotkeyNumber);
     }
 
     private static Prompt FromDto(PromptDto p)
@@ -260,6 +261,7 @@ public sealed class BackupService : IBackupService
             IsAlwaysOn = p.IsAlwaysOn,
             SortOrder = p.SortOrder,
             ImprovedByAiPromptId = p.ImprovedByAiPromptId,
+            HotkeyNumber = p.HotkeyNumber,
             CreatedAt = p.CreatedAtUtc,
             UpdatedAt = p.UpdatedAtUtc,
         };

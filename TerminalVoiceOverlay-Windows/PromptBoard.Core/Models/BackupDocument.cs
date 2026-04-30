@@ -40,7 +40,12 @@ public sealed record PromptDto(
     string? GeminiModel,
     bool IsActiveForImprovement,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    // Optional Strg+N hotkey (1-9, or null for unbound). Carried in the
+    // backup so a Drive auto-restore on launch doesn't wipe the user's
+    // hotkey assignments. Null when an older backup that pre-dates this
+    // feature is restored — same effect as never having set one.
+    int? HotkeyNumber = null);
 
 /// <summary>How a restore merges the incoming document with the existing data.</summary>
 public enum RestoreMode
