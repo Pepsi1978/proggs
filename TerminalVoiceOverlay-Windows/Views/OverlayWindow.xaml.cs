@@ -31,15 +31,16 @@ namespace TerminalVoiceOverlay.Views
         // Toggles
         private static readonly SolidColorBrush ToggleOn      = Brush("#2E7D32");
         private static readonly SolidColorBrush ToggleOff     = Brush("#2D2D2D");
-        // BTW mic (pair with main mic in Indigo family — clearly distinct
-        // from the Light Blue family used by Copy/Paste below)
-        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#3949AB");  // Indigo 600
-        private static readonly SolidColorBrush BtnBtwRecording = Brush("#1A237E");  // Indigo 900
-        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#5C6BC0");  // Indigo 400
+        // BTW mic (pair with main mic in Yellow family — joins the warm
+        // upper zone with the gold star, distinct from every cool button
+        // below. Dark icon/text required for contrast on yellow.)
+        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#FBC02D");  // Yellow 700
+        private static readonly SolidColorBrush BtnBtwRecording = Brush("#F57F17");  // Yellow 900
+        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#FFEB3B");  // Yellow 500
         // Special
         private static readonly SolidColorBrush BtnX         = Brush("#C62828");
         private static readonly SolidColorBrush BtnXPressed  = Brush("#E53935");
-        private static readonly SolidColorBrush BtnMicIdle   = Brush("#283593");  // Indigo 800
+        private static readonly SolidColorBrush BtnMicIdle   = Brush("#F9A825");  // Yellow 800
         // Copy/Paste buttons (pair: same blue family so they read as a unit)
         private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
         private static readonly SolidColorBrush BtnPaste     = Brush("#0277BD");  // Light Blue 800
@@ -1715,7 +1716,7 @@ namespace TerminalVoiceOverlay.Views
                     Height = WaveformMinH,
                     RadiusX = 1.0,
                     RadiusY = 1.0,
-                    Fill = System.Windows.Media.Brushes.White,
+                    Fill = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),  // Dark for contrast on yellow mic background
                 };
                 double x = startOffset + i * (WaveformBarWidth + WaveformBarSpacing);
                 System.Windows.Controls.Canvas.SetLeft(bar, x);
