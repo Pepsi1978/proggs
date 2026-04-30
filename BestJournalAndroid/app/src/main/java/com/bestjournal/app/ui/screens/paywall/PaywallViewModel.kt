@@ -87,8 +87,11 @@ constructor(
                     prefs.edit()
                         .putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true)
                         .putLong(Constants.PREF_PROMO_PURCHASE_TIME, System.currentTimeMillis())
-                        .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, Constants.EXIT_INTENT_DISCOUNT_MONTHS)
-                        .apply()
+                        .commit()
+                    // Use BillingManager.setPromoTotalMonths so the reactive
+                    // StateFlow stays in sync with the persisted value — without
+                    // this the in-app subscription overview would not refresh.
+                    billingManager.setPromoTotalMonths(Constants.EXIT_INTENT_DISCOUNT_MONTHS)
                 }
             }
         }

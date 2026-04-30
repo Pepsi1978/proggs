@@ -31,7 +31,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -166,27 +169,58 @@ constructor(
         val remainingMonths: Int,
     )
 
-    fun getActivePromoInfo(): PromoInfo? {
-        // Only monthly subscriptions can be on the exit-intent promo
-        if (billingManager.subscriptionType.value !=
-                com.bestjournal.app.billing.SubscriptionType.MONTHLY) {
-            return null
-        }
-        // BillingManager.syncPromoRenewal() keeps PREF_PROMO_TOTAL_MONTHS in sync
-        // with Google Play's actual subscription state (decremented on each
-        // observed renewal). We just read the current truth here.
-        val remaining = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-        if (remaining <= 0) return null
+    fun getActivePromoInfo(): PromoInfo? = promoInfoState.value
 
-        val basePrice = billingManager.monthlyPrice.value
-            .ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
-        val halfPrice = formatHalfPrice(basePrice) ?: return null
-        return PromoInfo(
+    /**
+     * Reactive promo info — observable from Compose with collectAsStateWithLifecycle.
+     * Combines subscriptionType + monthlyPrice + promoTotalMonths so the UI
+     * automatically re-renders the moment any of those changes.
+     */
+    val promoInfoState: StateFlow<PromoInfo?> = combine(
+        billingManager.subscriptionType,
+        billingManager.monthlyPrice,
+        billingManager.promoTotalMonths,
+    ) { type, monthlyPrice, remaining ->
+        if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
+        if (remaining <= 0) return@combine null
+        val basePrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+        val halfPrice = formatHalfPrice(basePrice) ?: return@combine null
+        PromoInfo(
             currentPrice = halfPrice,
             baseAfterwardsPrice = basePrice,
             remainingMonths = remaining,
         )
-    }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000L),
+        initialValue = null,
+    )
+
+    /** Reactive current price for the active subscription. */
+    val currentPriceState: StateFlow<String> = combine(
+        billingManager.subscriptionType,
+        billingManager.monthlyPrice,
+        billingManager.yearlyPrice,
+    ) { _, _, _ ->
+        getCurrentPrice()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000L),
+        initialValue = getCurrentPrice(),
+    )
+
+    /** Reactive retention offer price for the active subscription type. */
+    val retentionPriceState: StateFlow<String?> = combine(
+        billingManager.subscriptionType,
+        billingManager.monthlyPrice,
+        billingManager.yearlyPrice,
+    ) { _, _, _ ->
+        getRetentionPrice()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000L),
+        initialValue = null,
+    )
 
     private fun formatHalfPrice(originalPrice: String): String? {
         if (originalPrice.isBlank()) return null

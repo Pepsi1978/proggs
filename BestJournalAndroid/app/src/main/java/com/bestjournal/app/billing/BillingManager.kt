@@ -14,6 +14,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +37,10 @@ constructor(
         // Base plan IDs for the main (non-retention, non-promo) plans
         private const val MONTHLY_BASE_PLAN_ID = "monthly"
         private const val YEARLY_BASE_PLAN_ID = "yearly"
+        // The single promo offer id that grants the 50%-off-for-N-months discount.
+        // When the active subscription's offerId matches this, the promo counter
+        // is meaningful; otherwise the counter is stale and gets cleared.
+        private const val PROMO_OFFER_ID = "monthly-50-off-first"
         // Cloud Function call cache window. The truthful basePlanId/offerId can
         // only change on renewal or upgrade events, so refreshing once an hour
         // is plenty even for very active users — keeps free-tier usage minimal.
@@ -69,6 +74,26 @@ constructor(
     // Store active purchase token for subscription updates (retention offers)
     @Volatile private var activePurchaseToken: String? = null
 
+    // Marker that the next successful purchase confirmation should initialize
+    // PREF_PROMO_TOTAL_MONTHS. Set by launchPurchaseFlow ONLY when the offer
+    // token belongs to the actual 50%-off-first promo (not retention or main).
+    // AtomicReference avoids the read-modify-write hazard of @Volatile var.
+    private val pendingPromoIntent = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    // Serialises promo-counter writes between syncPromoRenewal (purchaseTime
+    // path) and syncPromoFromCloudExpiry (cloud path) — both can fire from
+    // different threads against the same SharedPreferences keys.
+    private val promoSyncLock = Any()
+
+    // Reactive remaining-promo-months counter. Mirrors PREF_PROMO_TOTAL_MONTHS
+    // but is observable from Compose (collectAsStateWithLifecycle) so the UI
+    // re-renders the moment the promo is decremented or cleared. SettingsViewModel
+    // exposes this via getActivePromoInfo as a StateFlow.
+    private val _promoTotalMonths = MutableStateFlow(
+        encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+    )
+    val promoTotalMonths: StateFlow<Int> = _promoTotalMonths.asStateFlow()
+
     // Guard against duplicate purchase flows triggered by double-tap
     private val isPurchaseInFlight = AtomicBoolean(false)
 
@@ -80,10 +105,16 @@ constructor(
                     "onBillingSetupFinished: responseCode=${billingResult.responseCode}",
                 )
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    querySubscriptions()
+                    // 1. Lifetime check FIRST so subscription queries cannot
+                    //    transiently flip the state to Free before lifetime is
+                    //    detected (race condition fix).
                     queryInAppPurchases()
+                    querySubscriptions()
                     queryProductDetails()
                     queryLifetimeDetails()
+                    // 2. Retry any acknowledgement that failed in a previous
+                    //    session (otherwise Google auto-refunds after 3 days).
+                    retryPendingAcknowledgement()
                 }
             }
 
@@ -93,6 +124,30 @@ constructor(
                 billingClient?.startConnection(this)
             }
         }
+
+    /**
+     * If the previous app session left a pending acknowledgement token
+     * (PREF_PENDING_ACK_TOKEN), retry it now. Required because acknowledge
+     * must happen within 3 days or Google auto-refunds the purchase.
+     */
+    private fun retryPendingAcknowledgement() {
+        val pending = encryptedPrefs.getString(Constants.PREF_PENDING_ACK_TOKEN, null)
+        if (pending.isNullOrBlank()) return
+        Log.d(TAG, "retryPendingAcknowledgement: retrying token=${pending.take(12)}...")
+        val ackParams =
+            AcknowledgePurchaseParams.newBuilder().setPurchaseToken(pending).build()
+        billingClient?.acknowledgePurchase(ackParams) { result ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                Log.d(TAG, "retryPendingAcknowledgement: SUCCESS")
+                encryptedPrefs.edit().remove(Constants.PREF_PENDING_ACK_TOKEN).commit()
+            } else {
+                Log.w(
+                    TAG,
+                    "retryPendingAcknowledgement: still failed responseCode=${result.responseCode}",
+                )
+            }
+        }
+    }
 
     fun initialize(context: Context) {
         billingClient =
@@ -145,10 +200,25 @@ constructor(
                             "tokenPrefix=${p.purchaseToken.take(12)}",
                     )
                 }
-                val activePurchase = purchases.firstOrNull { purchase ->
-                    purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                        purchase.isAcknowledged
-                }
+                // Multiple subscriptions can be active during plan switches (old
+                // monthly + new yearly). Pick the most recent acknowledged purchase
+                // deterministically: yearly preferred over monthly, then by purchaseTime.
+                val activePurchase = purchases
+                    .filter { purchase ->
+                        purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                            purchase.isAcknowledged
+                    }
+                    .sortedWith(
+                        compareByDescending<Purchase> { p ->
+                            when {
+                                p.products.contains(YEARLY_PRODUCT_ID) -> 2
+                                p.products.contains(MONTHLY_PRODUCT_ID) -> 1
+                                else -> 0
+                            }
+                        }
+                            .thenByDescending { it.purchaseTime }
+                    )
+                    .firstOrNull()
                 Log.d(TAG, "querySubscriptions: activePurchase=${activePurchase != null}")
                 if (activePurchase != null) {
                     _subscriptionState.value = SubscriptionState.Subscribed
@@ -161,8 +231,8 @@ constructor(
                                 SubscriptionType.MONTHLY
                             else -> SubscriptionType.MONTHLY
                         }
-                    // Detect renewals on monthly subscription so promo countdown
-                    // stays in sync with Google Play, regardless of test cycles
+                    // Detect renewals via local purchaseTime (legacy fallback) and
+                    // clean up stale promo state on plan switches.
                     syncPromoRenewal(activePurchase)
                     // Recover active base plan from Google's stamp if local state is missing
                     // (covers app re-install or upgrade from pre-v0.18.2 versions)
@@ -170,6 +240,10 @@ constructor(
                     // Final fallback for legacy purchases without stamp: ask the
                     // server-side Cloud Function which calls Subscriptions API v2.
                     maybeRefreshActiveBasePlanFromCloud(activePurchase)
+                    // PRIMARY renewal detection: ask the Cloud Function for the
+                    // current expiryTime (server-authoritative, unlike the
+                    // BillingClient cache which keeps the original purchaseTime).
+                    syncPromoFromCloudExpiry(activePurchase)
                 } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
                     // Only set Free if no lifetime purchase was already detected
                     // (prevents race condition between querySubscriptions and queryInAppPurchases)
@@ -195,18 +269,46 @@ constructor(
      * production cycles because we don't compute elapsed time, we react to
      * Google's authoritative subscription state.
      */
-    private fun syncPromoRenewal(purchase: Purchase) {
+    private fun syncPromoRenewal(purchase: Purchase): Unit = synchronized(promoSyncLock) {
         Log.d(
             TAG,
             "syncPromoRenewal: ENTER products=${purchase.products}, " +
                 "purchaseTime=${purchase.purchaseTime}",
         )
+        // Cleanup-Phase 1: Promo only applies to monthly. If the user has switched
+        // to yearly (or any other product) but the counter is still positive,
+        // clear it so the leftover promo state cannot resurface later.
         if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) {
-            Log.d(TAG, "syncPromoRenewal: SKIP not a monthly subscription")
+            val total = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+            if (total > 0) {
+                Log.d(TAG, "syncPromoRenewal: not monthly, clearing stale promo counter")
+                clearPromoCounter()
+            } else {
+                Log.d(TAG, "syncPromoRenewal: SKIP not a monthly subscription")
+            }
             return
         }
+        // Cleanup-Phase 2: Counter only valid for the actual promo offer. If the
+        // user is on a different offer (regular monthly or retention) but the
+        // counter is still set, we treat that as stale state from a previous
+        // subscription cycle and clear it.
+        val activeOfferId = encryptedPrefs.getString(Constants.PREF_ACTIVE_OFFER_ID, "") ?: ""
         val totalMonths = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-        Log.d(TAG, "syncPromoRenewal: totalMonths=$totalMonths")
+        Log.d(
+            TAG,
+            "syncPromoRenewal: totalMonths=$totalMonths, activeOfferId='$activeOfferId'",
+        )
+        if (totalMonths > 0 &&
+            activeOfferId.isNotBlank() &&
+            activeOfferId != PROMO_OFFER_ID
+        ) {
+            Log.d(
+                TAG,
+                "syncPromoRenewal: active offer is '$activeOfferId' (not promo), clearing counter",
+            )
+            clearPromoCounter()
+            return
+        }
         if (totalMonths <= 0) {
             Log.d(TAG, "syncPromoRenewal: SKIP totalMonths<=0 (no active promo)")
             return
@@ -221,23 +323,131 @@ constructor(
             Log.d(TAG, "syncPromoRenewal: anchor first sighting (no decrement)")
             encryptedPrefs.edit()
                 .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
-                .apply()
+                .commit()
             return
         }
 
-        // Renewal detected — Google bumped the purchaseTime
+        // Renewal detected — Google bumped the purchaseTime (rare with v7 client
+        // for auto-renewals, but kept as fallback for plan switches and other
+        // events where purchaseTime DOES change).
         if (currentPt != lastPt) {
             val newRemaining = (totalMonths - 1).coerceAtLeast(0)
+            // commit() (synchronous) instead of apply() so a process kill in the
+            // next ~100ms cannot lose the decrement.
             encryptedPrefs.edit()
                 .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, newRemaining)
                 .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
-                .apply()
+                .commit()
+            _promoTotalMonths.value = newRemaining
             Log.d(
                 TAG,
-                "syncPromoRenewal: RENEWAL DETECTED $totalMonths -> $newRemaining months remaining",
+                "syncPromoRenewal: RENEWAL DETECTED via purchaseTime " +
+                    "$totalMonths -> $newRemaining months remaining",
             )
         } else {
-            Log.d(TAG, "syncPromoRenewal: no change (currentPt == lastPt)")
+            Log.d(TAG, "syncPromoRenewal: no purchaseTime change")
+        }
+    }
+
+    /**
+     * Clears the promo counter and all related state (synchronously — commit()).
+     * Used when the active subscription is no longer eligible for the promo
+     * (e.g. switched to yearly, switched to retention plan, family-shared).
+     */
+    private fun clearPromoCounter(): Unit = synchronized(promoSyncLock) {
+        encryptedPrefs.edit()
+            .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+            .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
+            .remove(Constants.PREF_LAST_KNOWN_EXPIRY)
+            .commit()
+        _promoTotalMonths.value = 0
+    }
+
+    /**
+     * Authoritative renewal detection via Cloud Function. Calls Google Play
+     * Subscriptions API v2 server-side which returns the CURRENT expiryTime
+     * (not stale like BillingClient.purchase.purchaseTime). Compares against
+     * PREF_LAST_KNOWN_EXPIRY — when it advances, a renewal happened and the
+     * promo counter is decremented.
+     *
+     * Throttled to one call per CLOUD_STATUS_CACHE_MS window so the function
+     * stays in the Firebase free tier even with frequent Settings opens.
+     */
+    private fun syncPromoFromCloudExpiry(purchase: Purchase) {
+        if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) return
+        if (_promoTotalMonths.value <= 0) return
+
+        val now = System.currentTimeMillis()
+        val lastFetch = encryptedPrefs.getLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, 0L)
+        if (now - lastFetch < CLOUD_STATUS_CACHE_MS) {
+            Log.d(TAG, "syncPromoFromCloudExpiry: skipped (within cache window)")
+            return
+        }
+
+        val productId = purchase.products.firstOrNull() ?: return
+        val token = purchase.purchaseToken
+
+        backgroundScope.launch {
+            Log.d(TAG, "syncPromoFromCloudExpiry: calling cloud function")
+            val result = try {
+                kotlinx.coroutines.withTimeout(15_000L) {
+                    subscriptionStatusService.fetch(token, productId)
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.w(TAG, "syncPromoFromCloudExpiry: cloud call timed out")
+                null
+            }
+            // Apply the result under the same lock as syncPromoRenewal so the
+            // two paths cannot race against each other on the same prefs keys.
+            synchronized(promoSyncLock) {
+                if (result?.expiryTime.isNullOrBlank()) {
+                    Log.d(TAG, "syncPromoFromCloudExpiry: no expiryTime returned")
+                    encryptedPrefs.edit()
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                    return@synchronized
+                }
+                val newExpiry = result?.expiryTime
+                val lastExpiry =
+                    encryptedPrefs.getString(Constants.PREF_LAST_KNOWN_EXPIRY, null)
+                Log.d(
+                    TAG,
+                    "syncPromoFromCloudExpiry: newExpiry=$newExpiry, lastExpiry=$lastExpiry",
+                )
+
+                if (lastExpiry.isNullOrBlank()) {
+                    // First sighting via cloud — anchor without decrementing.
+                    encryptedPrefs.edit()
+                        .putString(Constants.PREF_LAST_KNOWN_EXPIRY, newExpiry)
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                    Log.d(TAG, "syncPromoFromCloudExpiry: anchored first sighting")
+                    return@synchronized
+                }
+
+                if (newExpiry == lastExpiry) {
+                    Log.d(TAG, "syncPromoFromCloudExpiry: no expiry change")
+                    encryptedPrefs.edit()
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                    return@synchronized
+                }
+
+                // Renewal detected — expiryTime moved forward
+                val total = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+                val newRemaining = (total - 1).coerceAtLeast(0)
+                encryptedPrefs.edit()
+                    .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, newRemaining)
+                    .putString(Constants.PREF_LAST_KNOWN_EXPIRY, newExpiry)
+                    .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                    .commit()
+                _promoTotalMonths.value = newRemaining
+                Log.d(
+                    TAG,
+                    "syncPromoFromCloudExpiry: RENEWAL DETECTED via cloud " +
+                        "$total -> $newRemaining months remaining",
+                )
+            }
         }
     }
 
@@ -249,7 +459,10 @@ constructor(
             .remove(Constants.PREF_ACTIVE_BASE_PLAN_ID)
             .remove(Constants.PREF_ACTIVE_OFFER_ID)
             .remove(Constants.PREF_LAST_CLOUD_STATUS_FETCH)
-            .apply()
+            .remove(Constants.PREF_LAST_PROMO_CLOUD_FETCH)
+            .remove(Constants.PREF_LAST_KNOWN_EXPIRY)
+            .commit()
+        _promoTotalMonths.value = 0
     }
 
     /**
@@ -347,7 +560,12 @@ constructor(
             productDetails.subscriptionOfferDetails?.firstOrNull {
                 it.basePlanId == basePlan && (it.offerId ?: "") == offerId
             } ?: return null
-        return offer.pricingPhases.pricingPhaseList.lastOrNull()?.formattedPrice
+        // Pricing phases are chronological: index 0 = currently-active phase
+        // (intro/promo), last = regular price after promo ends. Show the
+        // CURRENT phase to the user (what they actually pay right now). For
+        // single-phase offers (regular plan) this is identical to lastOrNull().
+        val phases = offer.pricingPhases.pricingPhaseList
+        return phases.firstOrNull()?.formattedPrice
     }
 
     private fun queryInAppPurchases() {
@@ -507,11 +725,20 @@ constructor(
             Log.d(TAG, "Purchase already in flight — ignoring duplicate tap")
             return
         }
+        // Remember whether this is a promo purchase so onPurchasesUpdated can
+        // initialize PREF_PROMO_TOTAL_MONTHS regardless of which screen launched
+        // the flow (Paywall, ChurnFlowDialog, or anywhere else).
+        // Mark only if the offer is the genuine 50%-off-first promo offer.
+        // Retention offers also pass a non-null promoOfferToken but are NOT
+        // promos — they get their own counter rules (currently none).
+        val truePromoToken = getMonthlyPromoOfferToken()
+        pendingPromoIntent.set(promoOfferToken != null && promoOfferToken == truePromoToken)
 
         if (isLifetime) {
             val details = lifetimeProductDetails
             if (details == null) {
                 isPurchaseInFlight.set(false)
+                pendingPromoIntent.set(false)
                 return
             }
             val productDetailsParams =
@@ -522,24 +749,34 @@ constructor(
                 BillingFlowParams.newBuilder()
                     .setProductDetailsParamsList(listOf(productDetailsParams))
                     .build()
-            val launched = billingClient?.launchBillingFlow(activity, billingFlowParams)
-            // If billingClient was null the SafeCall returned null — onPurchasesUpdated will
-            // never fire, so release the in-flight guard here to avoid a permanent lockout.
-            if (launched == null) isPurchaseInFlight.set(false)
+            val result = billingClient?.launchBillingFlow(activity, billingFlowParams)
+            // If billingClient was null OR the flow failed synchronously, onPurchasesUpdated
+            // never fires, so we must release isPurchaseInFlight here.
+            if (result == null ||
+                result.responseCode != BillingClient.BillingResponseCode.OK
+            ) {
+                Log.w(
+                    TAG,
+                    "launchBillingFlow (lifetime) failed: ${result?.responseCode} ${result?.debugMessage}",
+                )
+                isPurchaseInFlight.set(false)
+                pendingPromoIntent.set(false)
+            }
             return
         }
         val productDetails = if (isYearly) yearlyProductDetails else monthlyProductDetails
         if (productDetails == null) {
             isPurchaseInFlight.set(false)
+            pendingPromoIntent.set(false)
             return
         }
         // Diagnostic: log all available offers for debugging promo display issues
-        Log.e(TAG, "=== launchPurchaseFlow: isYearly=$isYearly, promoOfferToken=${if (promoOfferToken != null) "PROVIDED" else "null"} ===")
+        Log.d(TAG, "=== launchPurchaseFlow: isYearly=$isYearly, promoOfferToken=${if (promoOfferToken != null) "PROVIDED" else "null"} ===")
         productDetails.subscriptionOfferDetails?.forEachIndexed { idx, offer ->
             val phases = offer.pricingPhases.pricingPhaseList.joinToString("; ") { phase ->
                 "${phase.formattedPrice}/${phase.billingPeriod} (cycles=${phase.billingCycleCount}, recurMode=${phase.recurrenceMode})"
             }
-            Log.e(TAG, "  [$idx] basePlanId='${offer.basePlanId}' offerId='${offer.offerId}' tokenSuffix='${offer.offerToken.takeLast(8)}' phases=[$phases]")
+            Log.d(TAG, "  [$idx] basePlanId='${offer.basePlanId}' offerId='${offer.offerId}' tokenSuffix='${offer.offerToken.takeLast(8)}' phases=[$phases]")
         }
         // Use promo token if provided, otherwise find the BARE base plan (no offer attached)
         // so the Google Play sheet shows ONLY the regular recurring price, not intro + recurring
@@ -556,9 +793,10 @@ constructor(
         if (offerToken == null) {
             Log.e(TAG, "=== NO OFFER TOKEN FOUND — purchase aborted ===")
             isPurchaseInFlight.set(false)
+            pendingPromoIntent.set(false)
             return
         }
-        Log.e(TAG, "=== USING offerToken suffix='${offerToken.takeLast(8)}' ===")
+        Log.d(TAG, "=== USING offerToken suffix='${offerToken.takeLast(8)}' ===")
         // Remember which base plan + offer the user is buying so the Settings
         // overview can show the correct active price (not just the main plan price)
         rememberActiveBasePlan(productDetails, offerToken)
@@ -594,10 +832,20 @@ constructor(
             )
         }
 
-        val launched = billingClient?.launchBillingFlow(activity, billingFlowParamsBuilder.build())
-        // Same guard as the lifetime branch: if billingClient is null, onPurchasesUpdated
-        // never fires, so we must release isPurchaseInFlight here.
-        if (launched == null) isPurchaseInFlight.set(false)
+        val result = billingClient?.launchBillingFlow(activity, billingFlowParamsBuilder.build())
+        // Same guard as the lifetime branch: if billingClient is null OR the
+        // flow returned a non-OK response synchronously, onPurchasesUpdated
+        // will never fire, so we must release isPurchaseInFlight here.
+        if (result == null ||
+            result.responseCode != BillingClient.BillingResponseCode.OK
+        ) {
+            Log.w(
+                TAG,
+                "launchBillingFlow (subs) failed: ${result?.responseCode} ${result?.debugMessage}",
+            )
+            isPurchaseInFlight.set(false)
+            pendingPromoIntent.set(false)
+        }
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
@@ -607,8 +855,33 @@ constructor(
         if (
             billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null
         ) {
+            // Read pending intent ONCE before the loop so multiple acknowledged
+            // purchases in the same callback do not eat each other's intent.
+            val isPromoPurchase = pendingPromoIntent.getAndSet(false)
             for (purchase in purchases) {
                 if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                    if (isPromoPurchase &&
+                        purchase.products.contains(MONTHLY_PRODUCT_ID)
+                    ) {
+                        // Bug A fix: initialize the promo counter regardless of
+                        // which screen launched the flow (Paywall, ChurnFlowDialog).
+                        // Uses setPromoTotalMonths so the StateFlow stays in sync.
+                        setPromoTotalMonths(Constants.EXIT_INTENT_DISCOUNT_MONTHS)
+                        encryptedPrefs.edit()
+                            .putLong(
+                                Constants.PREF_PROMO_PURCHASE_TIME,
+                                System.currentTimeMillis(),
+                            )
+                            .remove(Constants.PREF_PROMO_LAST_PURCHASE_TIME)
+                            .remove(Constants.PREF_LAST_KNOWN_EXPIRY)
+                            .commit()
+                        Log.d(
+                            TAG,
+                            "Promo purchase confirmed — counter set to " +
+                                Constants.EXIT_INTENT_DISCOUNT_MONTHS,
+                        )
+                    }
+
                     if (!purchase.isAcknowledged) {
                         acknowledgePurchase(purchase)
                     } else {
@@ -617,6 +890,25 @@ constructor(
                     }
                 }
             }
+        } else {
+            // Non-OK result OR null purchases (cancel, error). Discard any pending
+            // promo intent so a later non-promo purchase does not get the counter.
+            pendingPromoIntent.set(false)
+        }
+    }
+
+    /**
+     * Public setter for PREF_PROMO_TOTAL_MONTHS that ALSO updates the reactive
+     * StateFlow. Use this from anywhere (BillingManager, PaywallViewModel) so
+     * the UI stays in sync. Synchronous commit() so a process kill cannot lose
+     * the value.
+     */
+    fun setPromoTotalMonths(months: Int) {
+        synchronized(promoSyncLock) {
+            encryptedPrefs.edit()
+                .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, months)
+                .commit()
+            _promoTotalMonths.value = months
         }
     }
 
@@ -693,12 +985,25 @@ constructor(
                         2000L * (retryCount + 1),
                     )
             } else {
-                Log.e(TAG, "Acknowledge failed after 3 retries: ${result.debugMessage}")
+                // All 3 retries exhausted. Persist the token (commit, synchronous)
+                // so the next BillingClient connection retries — otherwise Google
+                // auto-refunds after 3 days because the purchase never got
+                // acknowledged. Stops the silent money-loss bug (EC-2).
+                Log.e(
+                    TAG,
+                    "Acknowledge failed after 3 retries — persisting for next session: ${result.debugMessage}",
+                )
+                encryptedPrefs.edit()
+                    .putString(Constants.PREF_PENDING_ACK_TOKEN, purchase.purchaseToken)
+                    .commit()
             }
         }
     }
 
     fun destroy() {
+        // Cancel any in-flight Cloud Function calls so they cannot write to
+        // SharedPreferences after the BillingManager is no longer in use.
+        backgroundScope.cancel()
         billingClient?.endConnection()
         billingClient = null
     }

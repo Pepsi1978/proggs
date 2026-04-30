@@ -2640,6 +2640,11 @@ fun SettingsScreen(
                                 TextButton(
                                     onClick = {
                                         playClick()
+                                        // Force a fresh Google Play query right
+                                        // before showing the dialog so promo
+                                        // counter, current price and plan info
+                                        // reflect Google's latest state.
+                                        viewModel.refreshSubscriptionStatus()
                                         showChurnDialog = true
                                     },
                                     modifier = Modifier.fillMaxWidth(),
@@ -2652,6 +2657,14 @@ fun SettingsScreen(
                             }
                             if (showChurnDialog) {
                                 val activity = context as? android.app.Activity
+                                // Reactive props — re-renders the dialog whenever
+                                // BillingManager updates price, type, promo counter etc.
+                                val churnCurrentPrice
+                                    by viewModel.currentPriceState.collectAsStateWithLifecycle()
+                                val churnRetentionPrice
+                                    by viewModel.retentionPriceState.collectAsStateWithLifecycle()
+                                val churnPromoInfo
+                                    by viewModel.promoInfoState.collectAsStateWithLifecycle()
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
@@ -2665,11 +2678,11 @@ fun SettingsScreen(
                                         activity?.let { viewModel.launchRetentionOffer(it) }
                                     },
                                     subscriptionType = subType,
-                                    currentPrice = viewModel.getCurrentPrice(),
-                                    retentionPrice = viewModel.getRetentionPrice(),
+                                    currentPrice = churnCurrentPrice,
+                                    retentionPrice = churnRetentionPrice,
                                     analyticsTracker = viewModel.analyticsTracker,
                                     context = context,
-                                    promoInfo = viewModel.getActivePromoInfo(),
+                                    promoInfo = churnPromoInfo,
                                 )
                             }
                         } else {

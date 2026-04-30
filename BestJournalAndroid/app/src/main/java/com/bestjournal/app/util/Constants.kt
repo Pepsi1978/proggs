@@ -169,10 +169,23 @@ object Constants {
     // cleared when no subscription is active.
     const val PREF_ACTIVE_BASE_PLAN_ID = "active_base_plan_id"
     const val PREF_ACTIVE_OFFER_ID = "active_offer_id"
-    // Last time the Cloud Function getSubscriptionStatus was called for the active
-    // purchase (epoch millis). Used to throttle calls — re-fetched at most every
-    // CLOUD_STATUS_CACHE_MS to keep network traffic low and stay in the free tier.
-    const val PREF_LAST_CLOUD_STATUS_FETCH = "last_cloud_status_fetch"
+    // Throttle timestamps for the Cloud Function. Two independent keys so that
+    // a base-plan recovery call (one purpose) does not silence a promo-renewal
+    // detection call (different purpose) for the next 60 minutes — both must
+    // be allowed to run on their own cadence.
+    const val PREF_LAST_CLOUD_STATUS_FETCH = "last_cloud_status_fetch" // base-plan recovery
+    const val PREF_LAST_PROMO_CLOUD_FETCH = "last_promo_cloud_fetch"   // promo expiry sync
+    // Last expiryTime observed from the Cloud Function (server-authoritative).
+    // Whenever the Cloud Function returns a NEWER expiryTime than this, we know
+    // Google Play has renewed the subscription. This is the AUTHORITATIVE renewal
+    // signal, because BillingClient.purchase.purchaseTime stays at the original
+    // purchase time even after auto-renewals (confirmed via logcat 2026-04-30).
+    const val PREF_LAST_KNOWN_EXPIRY = "last_known_subscription_expiry"
+    // PurchaseToken whose acknowledgePurchase call has failed all 3 retries.
+    // On the next successful BillingClient connection (next app start), we will
+    // retry the acknowledgement so the user does not get an automatic refund
+    // from Google after 3 days.
+    const val PREF_PENDING_ACK_TOKEN = "pending_ack_token"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"
