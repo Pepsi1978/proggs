@@ -111,6 +111,7 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const ushort VK_I       = 0x49; // Hotkey: Ctrl+Alt+I = Insert last screenshot
         public const ushort VK_M       = 0x4D; // Hotkey: Shift+Alt+M = PTT (alternative ohne Leertaste, keine Konflikte mit System-Menue)
         public const ushort VK_F9      = 0x78; // Hotkey: Strg+F9 oder Shift+F9 = PTT (kurze Kombi, keine Konflikte in CLIs)
+        public const ushort VK_F11     = 0x7A; // Hotkey: Alt+F11 = Explorer am Release-Bundle-Pfad oeffnen
         public const ushort VK_F12     = 0x7B; // Hotkey: Alt+F12 = PTT (Alt+Wheel zoomt nicht, daher kein Zoom-Konflikt)
 
         // ── Low-Level Keyboard Hook (fuer Push-to-Talk) ──
@@ -226,5 +227,21 @@ namespace TerminalVoiceOverlay.NativeMethods
         // ── Minimize / Restore Events ──
         public const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
         public const uint EVENT_SYSTEM_MINIMIZEEND   = 0x0017;
+
+        // ── ShowWindow / SetWindowPos (fuer Alt+F11 Explorer-Shortcut) ──
+        public const int SW_SHOWNORMAL = 1;
+        public const int SW_RESTORE    = 9;
+
+        public const uint SWP_NOZORDER   = 0x0004;
+        public const uint SWP_NOACTIVATE = 0x0010;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+            int X, int Y, int cx, int cy, uint uFlags);
     }
 }

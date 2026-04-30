@@ -219,6 +219,12 @@ namespace TerminalVoiceOverlay.Views
         private DateTime _pttKeyDownAt = DateTime.MinValue;  // Zeitpunkt des letzten DOWN-Events
         private const int PttTapThresholdMs = 500;
 
+        // Alt+F11 Explorer-Shortcut: Auto-Repeat-Schutz, damit pro Tastendruck
+        // nur EIN Explorer-Fenster aufgeht — auch wenn Windows DOWN-Events mehrfach feuert.
+        private bool _altF11Down = false;
+        private const string ReleaseBundleFolder =
+            @"C:\Users\barwa\proggs\BestJournalAndroid\app\build\outputs\bundle\release";
+
         // Debounce-Flags fuer Screenshot-/Insert-Hotkeys: wir wollen nur auf
         // die ERSTE DOWN-Flanke reagieren, nicht auf Tastatur-Auto-Repeat.
         // Werden beim KeyUp wieder zurueckgesetzt damit der naechste Druck
@@ -1897,6 +1903,32 @@ namespace TerminalVoiceOverlay.Views
             var data = Marshal.PtrToStructure<NativeMethods.Win32.KBDLLHOOKSTRUCT>(lParam);
             uint vk = data.vkCode;
 
+            // ── Alt+F11: Explorer am Release-Bundle-Pfad oeffnen ──
+            // Einfacher Shortcut, kein Push-to-Talk. Pro Tastendruck genau
+            // ein Fenster — Auto-Repeat-Schutz via _altF11Down.
+            if (vk == NativeMethods.Win32.VK_F11)
+            {
+                bool altF11 = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU) & 0x8000) != 0;
+                bool isDownF11 = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUpF11   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (isDownF11 && altF11 && !_altF11Down)
+                {
+                    _altF11Down = true;
+                    Console.WriteLine("Alt+F11: open release-bundle folder in explorer (windowed)");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { OpenReleaseBundleFolder(); }
+                        catch (Exception ex) { Console.WriteLine($"Alt+F11 error: {ex.Message}"); }
+                    }));
+                    return new IntPtr(1);
+                }
+                if (isUpF11)
+                {
+                    _altF11Down = false;
+                }
+            }
+
             // Wir reagieren nur auf die Leertaste — Strg/Alt sind reine Modifier.
             // Beim KeyDown der Leertaste pruefen wir ob Strg+Alt zusaetzlich
             // gedrueckt sind (GetAsyncKeyState liest den aktuellen Tastenzustand).
@@ -2072,6 +2104,84 @@ namespace TerminalVoiceOverlay.Views
             }
 
             return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+        }
+
+        // Alt+F11 Hotkey-Aktion: Den Release-Bundle-Ordner im Windows Explorer
+        // oeffnen — als nicht-maximiertes Fenster (ca. 60% Breite x 70% Hoehe,
+        // mittig auf dem aktuellen Monitor). Falls der Ordner noch nicht existiert
+        // (z.B. weil noch nie ein Release-Build lief), oeffnen wir das naechste
+        // existierende Eltern-Verzeichnis statt einen Fehler zu werfen.
+        private void OpenReleaseBundleFolder()
+        {
+            string folder = ReleaseBundleFolder;
+            try
+            {
+                while (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+                {
+                    string? parent = Path.GetDirectoryName(folder);
+                    if (string.IsNullOrEmpty(parent) || parent == folder) break;
+                    folder = parent;
+                }
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+                {
+                    Console.WriteLine($"Alt+F11: Pfad nicht gefunden — {ReleaseBundleFolder}");
+                    return;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{folder}\"",
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Alt+F11 explorer start failed: {ex.Message}");
+                return;
+            }
+
+            // Explorer respektiert weder ProcessWindowStyle noch ein "/n,"-Argument
+            // zuverlaessig. Wir resizen das frische Fenster nach kurzem Delay
+            // manuell — das gibt das gewuenschte "halb offene" Fenster.
+            string targetFolder = folder;
+            Task.Delay(450).ContinueWith(_ =>
+            {
+                try
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        var hwnd = NativeMethods.Win32.GetForegroundWindow();
+                        if (hwnd == IntPtr.Zero) return;
+
+                        NativeMethods.Win32.ShowWindow(hwnd, NativeMethods.Win32.SW_SHOWNORMAL);
+
+                        var monitor = NativeMethods.Win32.MonitorFromWindow(
+                            hwnd, NativeMethods.Win32.MONITOR_DEFAULTTONEAREST);
+                        var mi = new NativeMethods.Win32.MONITORINFO
+                        {
+                            cbSize = Marshal.SizeOf<NativeMethods.Win32.MONITORINFO>()
+                        };
+                        if (!NativeMethods.Win32.GetMonitorInfo(monitor, ref mi)) return;
+
+                        int workW = mi.rcWork.Right - mi.rcWork.Left;
+                        int workH = mi.rcWork.Bottom - mi.rcWork.Top;
+                        int w = (int)(workW * 0.60);
+                        int h = (int)(workH * 0.70);
+                        int x = mi.rcWork.Left + (workW - w) / 2;
+                        int y = mi.rcWork.Top + (workH - h) / 2;
+
+                        NativeMethods.Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, w, h,
+                            NativeMethods.Win32.SWP_NOZORDER | NativeMethods.Win32.SWP_NOACTIVATE);
+
+                        Console.WriteLine($"Alt+F11: explorer geoeffnet bei {targetFolder} ({w}x{h})");
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Alt+F11 resize failed: {ex.Message}");
+                }
+            });
         }
 
         protected override void OnClosed(EventArgs e)
