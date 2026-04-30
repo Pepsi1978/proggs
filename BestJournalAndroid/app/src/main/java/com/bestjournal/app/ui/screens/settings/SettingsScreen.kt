@@ -2683,14 +2683,13 @@ fun SettingsScreen(
                             if (!isLifetime) {
                                 TextButton(
                                     onClick = {
-                                        playClick()
-                                        // Force a fresh Google Play query so
-                                        // promo counter, current price, plan
-                                        // info, autoRenewing all reflect
-                                        // Google's latest state. (LaunchedEffect
-                                        // at screen-open already runs once;
-                                        // this one fires for opens of just the
-                                        // dialog without re-mounting the screen.)
+                                        // Loop-7 (Frank, 2026-04-30): no
+                                        // click beep on "Abo verwalten" —
+                                        // the dialog opens silently. The
+                                        // refresh below pulls the freshest
+                                        // Google state so the dialog
+                                        // renders correct price + auto-
+                                        // renew + expiry from the start.
                                         viewModel.refreshSubscriptionStatus()
                                         showChurnDialog = true
                                     },
