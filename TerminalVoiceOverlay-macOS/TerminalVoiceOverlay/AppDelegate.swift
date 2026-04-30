@@ -542,7 +542,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let final = parts.joined(separator: " ; ")
         TerminalController.pasteText(final, autoEnter: autoEnterEnabled)
-        tvoDebug("[App] input submit: \(final.count) chars (autoEnter=\(autoEnterEnabled))")
+        tvoDebug("[App] input submit: \(final.count) chars (autoEnter=\(self.autoEnterEnabled))")
         hasPastedText = !autoEnterEnabled
 
         // Historie-Eintrag: Erst sofort mit Fallback-Titel speichern (damit
