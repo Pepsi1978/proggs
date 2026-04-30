@@ -90,13 +90,23 @@ exports.getSubscriptionStatus = onCall(
 			const offerId = offerDetails?.offerId ?? null;
 			const offerPhase = null;
 
+			// Loop-7 fix #3 (live-discovered 2026-04-30 with Frank): the
+			// previous code derived autoRenewing from "is the autoRenewingPlan
+			// object present at all". That object stays populated even after
+			// the user cancels in the Play Store — Google only flips
+			// `autoRenewEnabled` to false. Reading that flag directly fixes
+			// the in-app dialog still announcing "Verlängert sich am X" for
+			// hours after a real cancellation.
+			const autoRenewEnabled =
+				lineItem?.autoRenewingPlan?.autoRenewEnabled === true;
+
 			return {
 				subscriptionState: sub.subscriptionState ?? null,
 				basePlanId: offerDetails?.basePlanId ?? null,
 				offerId: offerDetails?.offerId ?? null,
 				productId: lineItem?.productId ?? null,
 				expiryTime: lineItem?.expiryTime ?? null,
-				autoRenewing: lineItem?.autoRenewingPlan != null,
+				autoRenewing: autoRenewEnabled,
 				latestOrderId: latestOrderId,
 				offerPhase: offerPhase,
 				// Authoritative current price (after intro phase if any).

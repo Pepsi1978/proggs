@@ -2626,24 +2626,55 @@ fun SettingsScreen(
                         // collector restarts and emits a stale NONE for 1-2
                         // frames, briefly showing the wrong UI.
                         val subType by viewModel.subscriptionType.collectAsStateWithLifecycle()
+                        // Loop-7 (Frank, 2026-04-30): pull the live cancel /
+                        // expiry state straight from the BillingManager so
+                        // the headline text in the Premium card shows
+                        // "Gekuendigt — laeuft bis 30.04.2026, 21:01" the
+                        // moment Google reports the cancellation, instead of
+                        // a flat "Premium-Abo aktiv" until expiry.
+                        val premiumAutoRenewing
+                            by viewModel.autoRenewingState.collectAsStateWithLifecycle()
+                        val premiumExpiryRaw
+                            by viewModel.expiryTimeState.collectAsStateWithLifecycle()
+                        val premiumExpiryFormatted = remember(premiumExpiryRaw) {
+                            formatPremiumExpiryDateTime(premiumExpiryRaw)
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
                             val isLifetime =
                                 subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
+                            val isCancelled = !isLifetime && !premiumAutoRenewing
                             Text(
                                 text =
-                                    if (isLifetime)
-                                        stringResource(R.string.settings_premium_lifetime)
-                                    else stringResource(R.string.settings_premium_active),
+                                    when {
+                                        isLifetime ->
+                                            stringResource(R.string.settings_premium_lifetime)
+                                        isCancelled && premiumExpiryFormatted != null ->
+                                            stringResource(
+                                                R.string.settings_premium_cancelled_until,
+                                                premiumExpiryFormatted!!,
+                                            )
+                                        isCancelled ->
+                                            stringResource(R.string.settings_premium_cancelled)
+                                        else ->
+                                            stringResource(R.string.settings_premium_active)
+                                    },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text =
-                                    if (isLifetime)
-                                        stringResource(R.string.settings_premium_lifetime_desc)
-                                    else stringResource(R.string.settings_premium_desc),
+                                    when {
+                                        isLifetime ->
+                                            stringResource(R.string.settings_premium_lifetime_desc)
+                                        isCancelled ->
+                                            stringResource(
+                                                R.string.settings_premium_cancelled_desc,
+                                            )
+                                        else ->
+                                            stringResource(R.string.settings_premium_desc)
+                                    },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -4965,5 +4996,35 @@ private fun LegalDocumentRow(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.outline,
         )
+    }
+}
+
+/**
+ * Loop-7 (Frank, 2026-04-30): parse the cloud function's ISO-8601
+ * expiryTime (UTC, e.g. "2026-04-30T19:01:04.944Z") into a localised
+ * "30.04.2026, 21:01" string for the Premium-card headline. Returns
+ * null when the input is missing or unparseable so the caller can
+ * fall back to the plain "Gekuendigt" label.
+ */
+private fun formatPremiumExpiryDateTime(iso: String?): String? {
+    if (iso.isNullOrBlank()) return null
+    return try {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US)
+        parser.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        val date = parser.parse(iso) ?: return null
+        val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
+        formatter.timeZone = java.util.TimeZone.getDefault()
+        formatter.format(date)
+    } catch (_: Exception) {
+        try {
+            val fallback = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+            fallback.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            val date = fallback.parse(iso) ?: return null
+            val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
+            formatter.timeZone = java.util.TimeZone.getDefault()
+            formatter.format(date)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

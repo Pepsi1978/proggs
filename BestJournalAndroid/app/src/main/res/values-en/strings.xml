@@ -454,6 +454,9 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Lifetime access active</string>
     <string name="settings_premium_active">Premium subscription active</string>
+    <string name="settings_premium_cancelled">Premium subscription cancelled</string>
+    <string name="settings_premium_cancelled_until">Premium subscription cancelled — runs until <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled_desc">Premium features remain available until the end of the billing period. You can resume the subscription at any time via Google Play.</string>
     <string name="settings_premium_lifetime_desc">One-time purchase, all features unlocked forever.</string>
     <string name="settings_premium_desc">All features unlocked, unlimited AI, PDF export, and more.</string>
     <string name="settings_manage_subscription">Manage subscription</string>

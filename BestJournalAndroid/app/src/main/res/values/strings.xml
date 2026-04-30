@@ -478,6 +478,9 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Lifetime-Zugang aktiv</string>
     <string name="settings_premium_active">Premium-Abo aktiv</string>
+    <string name="settings_premium_cancelled">Premium-Abo gekündigt</string>
+    <string name="settings_premium_cancelled_until">Premium-Abo gekündigt — läuft noch bis <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled_desc">Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung jederzeit über Google Play rückgängig machen.</string>
     <string name="settings_premium_lifetime_desc">Einmalkauf, alle Features für immer freigeschaltet.</string>
     <string name="settings_premium_desc">Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.</string>
     <string name="settings_manage_subscription">Abo verwalten</string>
