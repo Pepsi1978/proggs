@@ -219,6 +219,13 @@ namespace TerminalVoiceOverlay.Views
         private DateTime _pttKeyDownAt = DateTime.MinValue;  // Zeitpunkt des letzten DOWN-Events
         private const int PttTapThresholdMs = 500;
 
+        // Debounce-Flags fuer Screenshot-/Insert-Hotkeys: wir wollen nur auf
+        // die ERSTE DOWN-Flanke reagieren, nicht auf Tastatur-Auto-Repeat.
+        // Werden beim KeyUp wieder zurueckgesetzt damit der naechste Druck
+        // wieder feuern kann.
+        private bool _screenshotKeyDown = false;
+        private bool _insertKeyDown     = false;
+
         // Pfad des zuletzt mit dem ScreenshotButton aufgenommenen Bildes.
         // Wird vom InsertScreenshotButton gelesen — exakt diese eine Datei
         // wird als Pfad in die CLI eingefuegt, keine andere. Bleibt null
@@ -1967,6 +1974,54 @@ namespace TerminalVoiceOverlay.Views
                         return new IntPtr(1);
                     }
                 }
+            }
+
+            // Screenshot-Hotkey: Strg+Alt+P — feuert beim DOWN (eine
+            // Aktion pro Druck, nicht pro Auto-Repeat). KeyUp setzt das
+            // Debounce-Flag zurueck damit der naechste Druck wieder feuert.
+            if (vk == NativeMethods.Win32.VK_P)
+            {
+                bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (isDown && ctrl && alt && !_screenshotKeyDown)
+                {
+                    _screenshotKeyDown = true;
+                    Console.WriteLine("Hotkey: Strg+Alt+P — Screenshot");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { BtnScreenshot_Click(this, new RoutedEventArgs()); }
+                        catch (Exception ex) { Console.WriteLine($"Screenshot hotkey error: {ex.Message}"); }
+                    }));
+                    return new IntPtr(1);
+                }
+                if (isDown && ctrl && alt) return new IntPtr(1); // Auto-Repeat schlucken
+                if (isUp) _screenshotKeyDown = false;
+            }
+
+            // Insert-Screenshot-Hotkey: Strg+Alt+I
+            if (vk == NativeMethods.Win32.VK_I)
+            {
+                bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (isDown && ctrl && alt && !_insertKeyDown)
+                {
+                    _insertKeyDown = true;
+                    Console.WriteLine("Hotkey: Strg+Alt+I — Insert Screenshot");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { BtnInsertScreenshot_Click(this, new RoutedEventArgs()); }
+                        catch (Exception ex) { Console.WriteLine($"Insert hotkey error: {ex.Message}"); }
+                    }));
+                    return new IntPtr(1);
+                }
+                if (isDown && ctrl && alt) return new IntPtr(1); // Auto-Repeat schlucken
+                if (isUp) _insertKeyDown = false;
             }
 
             return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
