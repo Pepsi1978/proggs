@@ -130,6 +130,16 @@ constructor(
         billingManager.restorePurchases()
     }
 
+    /**
+     * Forces the BillingManager to re-query Google Play so the displayed
+     * subscription state, promo countdown and current price reflect any
+     * renewals or plan changes that happened since the BillingClient first
+     * connected. Called from SettingsScreen on each open.
+     */
+    fun refreshSubscriptionStatus() {
+        billingManager.refreshSubscriptionStatus()
+    }
+
     val subscriptionType = billingManager.subscriptionType
 
     fun getCurrentPrice(): String {

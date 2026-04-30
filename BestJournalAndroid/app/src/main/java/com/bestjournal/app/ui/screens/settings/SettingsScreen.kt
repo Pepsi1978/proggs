@@ -228,6 +228,13 @@ fun SettingsScreen(
         }
     }
 
+    // Re-query Google Play whenever the Settings screen opens so subscription
+    // state, promo countdown and price displays pick up any renewals or plan
+    // changes that happened while the screen was not visible.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.refreshSubscriptionStatus()
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (LocalIsDarkTheme.current) {
             ParticleBackground()

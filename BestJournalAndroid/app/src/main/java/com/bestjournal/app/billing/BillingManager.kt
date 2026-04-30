@@ -97,6 +97,24 @@ constructor(
         billingClient?.startConnection(connectionListener)
     }
 
+    /**
+     * Forces a full re-query against Google Play. Should be called whenever the
+     * UI screen that displays subscription state opens (e.g. SettingsScreen) so
+     * promo renewals, plan changes and price updates are picked up without
+     * needing a full app restart. Cheap to call — no UI side effects.
+     *
+     * If the BillingClient is not yet connected, the call is silently skipped;
+     * the connection listener will run a fresh query as soon as it is ready.
+     */
+    fun refreshSubscriptionStatus() {
+        val client = billingClient ?: return
+        if (!client.isReady) return
+        querySubscriptions()
+        queryInAppPurchases()
+        queryProductDetails()
+        queryLifetimeDetails()
+    }
+
     private fun querySubscriptions() {
         val params =
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
