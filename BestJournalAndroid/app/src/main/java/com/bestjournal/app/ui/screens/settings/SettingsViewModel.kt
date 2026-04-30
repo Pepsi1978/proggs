@@ -217,28 +217,23 @@ constructor(
         billingManager.expiryTime,
         billingManager.serverCurrentPriceMicros,
         billingManager.serverCurrentPriceCurrency,
+        billingManager.activeBasePlanId,
     ) { values: Array<Any?> ->
         val type = values[0] as com.bestjournal.app.billing.SubscriptionType
         val monthlyPrice = values[1] as String
         val expiry = values[2] as String?
         val priceMicros = values[3] as Long
         val priceCurrency = values[4] as String
+        val activeBasePlan = values[5] as String
         if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
         if (expiry.isNullOrBlank()) return@combine null
         if (priceMicros <= 0L || monthlyPrice.isBlank()) return@combine null
-        // Loop-9 fix (Frank, 2026-04-30): only show the "Sonderpreis aktiv,
-        // endet am ...  danach 3,99 € pro Monat" notice when the user is
-        // ACTUALLY on the `monthly` base plan in an INTRO phase. If they
-        // accepted the retention offer they are now on the
-        // `retention-monthly-75` base plan with a permanent 2,99 € recurring
-        // price — there is no return to 3,99 € and the dialog must NOT
-        // suggest one. The active base plan id is set by
-        // launchPurchaseFlow's rememberActiveBasePlan() and surfaces here
-        // straight from prefs.
-        val activeBasePlan = encryptedPrefs.getString(
-            Constants.PREF_ACTIVE_BASE_PLAN_ID,
-            "",
-        ) ?: ""
+        // Loop-10 fix (Frank, 2026-04-30): observe activeBasePlanId as a
+        // proper StateFlow so this combine re-fires the second the cloud
+        // confirms a plan switch. Show the "Sonderpreis aktiv, danach
+        // 3,99 €" notice only when the user is on the main "monthly" plan
+        // (or the very first install where the value is still empty).
+        // Retention plans have a permanent lower price, no return to base.
         val onMainMonthlyPlan = activeBasePlan.isEmpty() || activeBasePlan == "monthly"
         if (!onMainMonthlyPlan) return@combine null
         // Phase comparison: only the "main" monthly plan can be in INTRO.
@@ -284,35 +279,28 @@ constructor(
     val expiryTimeState: StateFlow<String?> = billingManager.expiryTime
 
     /**
-     * Loop-9 (Frank, 2026-04-30): true when the user has already accepted
-     * a retention offer and is therefore on the `retention-monthly-75` /
-     * `retention-yearly-75` base plan. The churn flow uses this to skip
-     * the "Sonderpreis 25% sparen" step that would otherwise re-offer
-     * the SAME 2,99 € price the user is already paying ("Sparen Sie 25%
-     * — 2,99 € statt 2,99 €" makes no sense).
-     *
-     * Re-evaluates whenever subscriptionType changes — that is the cheap-
-     * est trigger we already have. Reads the active base plan from prefs
-     * (set by BillingManager.rememberActiveBasePlan after every purchase).
+     * Loop-10 fix (Frank, 2026-04-30): the previous incarnation of this
+     * flow read PREF_ACTIVE_BASE_PLAN_ID inside a map { } lambda gated on
+     * subscriptionType — but a switch from "monthly" to
+     * "retention-monthly-75" keeps subscriptionType=MONTHLY on both sides
+     * of the change. The lambda never re-fired and the flow stayed stuck
+     * on its initial value. Now we observe BillingManager's
+     * activeBasePlanId StateFlow directly: every code path that writes
+     * PREF_ACTIVE_BASE_PLAN_ID also writes _activeBasePlanId, so this
+     * derived flow updates the second the cloud function (or a fresh
+     * purchase) confirms the new base plan.
      */
     val isOnRetentionPlanState: StateFlow<Boolean> =
-        billingManager.subscriptionType.map { _ ->
-            val activeBasePlan = encryptedPrefs.getString(
-                Constants.PREF_ACTIVE_BASE_PLAN_ID,
-                "",
-            ) ?: ""
-            activeBasePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
-                activeBasePlan == Constants.RETENTION_OFFER_ID_YEARLY
+        billingManager.activeBasePlanId.map { basePlan ->
+            basePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                basePlan == Constants.RETENTION_OFFER_ID_YEARLY
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = run {
-                val activeBasePlan = encryptedPrefs.getString(
-                    Constants.PREF_ACTIVE_BASE_PLAN_ID,
-                    "",
-                ) ?: ""
-                activeBasePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
-                    activeBasePlan == Constants.RETENTION_OFFER_ID_YEARLY
+                val initial = billingManager.activeBasePlanId.value
+                initial == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                    initial == Constants.RETENTION_OFFER_ID_YEARLY
             },
         )
 

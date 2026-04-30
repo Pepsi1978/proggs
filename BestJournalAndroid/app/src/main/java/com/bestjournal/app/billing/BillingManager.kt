@@ -115,6 +115,21 @@ constructor(
     )
     val expiryTime: StateFlow<String?> = _expiryTime.asStateFlow()
 
+    // Loop-10 fix (Frank, 2026-04-30): the previous attempt at exposing
+    // "is the user on a retention plan" derived the answer from
+    // subscriptionType + a one-shot prefs read inside a map { } lambda.
+    // That lambda only re-fires when subscriptionType ITSELF changes, but
+    // a switch from basePlanId="monthly" to basePlanId="retention-monthly-75"
+    // keeps subscriptionType=MONTHLY for both sides of the change, so
+    // isOnRetentionPlanState stayed stuck on its initial value forever.
+    // SharedPreferences are not reactive on their own, so we surface the
+    // active base-plan id as a proper StateFlow that every code path
+    // updating PREF_ACTIVE_BASE_PLAN_ID has to keep in sync.
+    private val _activeBasePlanId = MutableStateFlow(
+        encryptedPrefs.getString(Constants.PREF_ACTIVE_BASE_PLAN_ID, "") ?: ""
+    )
+    val activeBasePlanId: StateFlow<String> = _activeBasePlanId.asStateFlow()
+
     // Guard against duplicate purchase flows triggered by double-tap
     private val isPurchaseInFlight = AtomicBoolean(false)
 
@@ -495,6 +510,7 @@ constructor(
                         .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, result.basePlanId)
                         .putString(Constants.PREF_ACTIVE_OFFER_ID, result.offerId ?: "")
                         .commit()
+                    _activeBasePlanId.value = result.basePlanId
                 }
                 encryptedPrefs.edit()
                     .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
@@ -538,6 +554,7 @@ constructor(
         _expiryTime.value = null
         _serverCurrentPriceMicros.value = 0L
         _serverCurrentPriceCurrency.value = ""
+        _activeBasePlanId.value = ""
     }
 
     /**
@@ -553,6 +570,7 @@ constructor(
             .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, matched.basePlanId)
             .putString(Constants.PREF_ACTIVE_OFFER_ID, matched.offerId ?: "")
             .apply()
+        _activeBasePlanId.value = matched.basePlanId
     }
 
     /**
@@ -571,6 +589,7 @@ constructor(
             .putString(Constants.PREF_ACTIVE_BASE_PLAN_ID, basePlan)
             .putString(Constants.PREF_ACTIVE_OFFER_ID, offerId)
             .apply()
+        _activeBasePlanId.value = basePlan
         Log.d(TAG, "Recovered active base plan from stamp: $basePlan / $offerId")
     }
 
@@ -608,6 +627,7 @@ constructor(
                 .putString(Constants.PREF_ACTIVE_OFFER_ID, result.offerId ?: "")
                 .putLong(Constants.PREF_LAST_CLOUD_STATUS_FETCH, now)
                 .apply()
+            _activeBasePlanId.value = result.basePlanId.orEmpty()
             Log.d(
                 TAG,
                 "Recovered active base plan from Cloud Function: " +
