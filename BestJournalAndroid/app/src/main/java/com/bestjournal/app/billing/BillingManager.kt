@@ -75,6 +75,10 @@ constructor(
     private val connectionListener =
         object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
+                Log.d(
+                    TAG,
+                    "onBillingSetupFinished: responseCode=${billingResult.responseCode}",
+                )
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                     querySubscriptions()
                     queryInAppPurchases()
@@ -107,8 +111,15 @@ constructor(
      * the connection listener will run a fresh query as soon as it is ready.
      */
     fun refreshSubscriptionStatus() {
-        val client = billingClient ?: return
-        if (!client.isReady) return
+        val client = billingClient ?: run {
+            Log.d(TAG, "refreshSubscriptionStatus: billingClient is null, skipping")
+            return
+        }
+        if (!client.isReady) {
+            Log.d(TAG, "refreshSubscriptionStatus: billingClient not ready, skipping")
+            return
+        }
+        Log.d(TAG, "refreshSubscriptionStatus: triggering full re-query")
         querySubscriptions()
         queryInAppPurchases()
         queryProductDetails()
@@ -116,14 +127,29 @@ constructor(
     }
 
     private fun querySubscriptions() {
+        Log.d(TAG, "querySubscriptions: starting query")
         val params =
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
         billingClient?.queryPurchasesAsync(params) { billingResult, purchases ->
+            Log.d(
+                TAG,
+                "querySubscriptions: result=${billingResult.responseCode}, purchases=${purchases.size}",
+            )
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases.forEachIndexed { i, p ->
+                    Log.d(
+                        TAG,
+                        "querySubscriptions: purchase[$i] products=${p.products}, " +
+                            "state=${p.purchaseState}, ack=${p.isAcknowledged}, " +
+                            "purchaseTime=${p.purchaseTime}, " +
+                            "tokenPrefix=${p.purchaseToken.take(12)}",
+                    )
+                }
                 val activePurchase = purchases.firstOrNull { purchase ->
                     purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
                         purchase.isAcknowledged
                 }
+                Log.d(TAG, "querySubscriptions: activePurchase=${activePurchase != null}")
                 if (activePurchase != null) {
                     _subscriptionState.value = SubscriptionState.Subscribed
                     activePurchaseToken = activePurchase.purchaseToken
@@ -170,15 +196,29 @@ constructor(
      * Google's authoritative subscription state.
      */
     private fun syncPromoRenewal(purchase: Purchase) {
-        if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) return
+        Log.d(
+            TAG,
+            "syncPromoRenewal: ENTER products=${purchase.products}, " +
+                "purchaseTime=${purchase.purchaseTime}",
+        )
+        if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) {
+            Log.d(TAG, "syncPromoRenewal: SKIP not a monthly subscription")
+            return
+        }
         val totalMonths = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
-        if (totalMonths <= 0) return
+        Log.d(TAG, "syncPromoRenewal: totalMonths=$totalMonths")
+        if (totalMonths <= 0) {
+            Log.d(TAG, "syncPromoRenewal: SKIP totalMonths<=0 (no active promo)")
+            return
+        }
 
         val currentPt = purchase.purchaseTime
         val lastPt = encryptedPrefs.getLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, 0L)
+        Log.d(TAG, "syncPromoRenewal: currentPt=$currentPt, lastPt=$lastPt")
 
         // First sighting after purchase: anchor without decrementing
         if (lastPt == 0L) {
+            Log.d(TAG, "syncPromoRenewal: anchor first sighting (no decrement)")
             encryptedPrefs.edit()
                 .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
                 .apply()
@@ -192,7 +232,12 @@ constructor(
                 .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, newRemaining)
                 .putLong(Constants.PREF_PROMO_LAST_PURCHASE_TIME, currentPt)
                 .apply()
-            Log.d(TAG, "Promo renewal detected: $totalMonths -> $newRemaining months remaining")
+            Log.d(
+                TAG,
+                "syncPromoRenewal: RENEWAL DETECTED $totalMonths -> $newRemaining months remaining",
+            )
+        } else {
+            Log.d(TAG, "syncPromoRenewal: no change (currentPt == lastPt)")
         }
     }
 
