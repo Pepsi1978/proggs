@@ -2612,9 +2612,14 @@ fun SettingsScreen(
                             // Invisible counterbalance for icon+spacer so text is visually centered
                             Spacer(modifier = Modifier.width(28.dp))
                         }
+                        // Loop-4 fix: collectAsStateWithLifecycle MUST be called
+                        // outside the if-branch so the StateFlow is permanently
+                        // subscribed — otherwise on every isSubscribed flip the
+                        // collector restarts and emits a stale NONE for 1-2
+                        // frames, briefly showing the wrong UI.
+                        val subType by viewModel.subscriptionType.collectAsStateWithLifecycle()
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
-                            val subType by viewModel.subscriptionType.collectAsStateWithLifecycle()
                             val isLifetime =
                                 subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
                             Text(
@@ -2640,10 +2645,13 @@ fun SettingsScreen(
                                 TextButton(
                                     onClick = {
                                         playClick()
-                                        // Force a fresh Google Play query right
-                                        // before showing the dialog so promo
-                                        // counter, current price and plan info
-                                        // reflect Google's latest state.
+                                        // Force a fresh Google Play query so
+                                        // promo counter, current price, plan
+                                        // info, autoRenewing all reflect
+                                        // Google's latest state. (LaunchedEffect
+                                        // at screen-open already runs once;
+                                        // this one fires for opens of just the
+                                        // dialog without re-mounting the screen.)
                                         viewModel.refreshSubscriptionStatus()
                                         showChurnDialog = true
                                     },
@@ -2665,6 +2673,8 @@ fun SettingsScreen(
                                     by viewModel.retentionPriceState.collectAsStateWithLifecycle()
                                 val churnPromoInfo
                                     by viewModel.promoInfoState.collectAsStateWithLifecycle()
+                                val churnAutoRenewing
+                                    by viewModel.autoRenewingState.collectAsStateWithLifecycle()
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
@@ -2683,6 +2693,7 @@ fun SettingsScreen(
                                     analyticsTracker = viewModel.analyticsTracker,
                                     context = context,
                                     promoInfo = churnPromoInfo,
+                                    autoRenewing = churnAutoRenewing,
                                 )
                             }
                         } else {

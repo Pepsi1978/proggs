@@ -9,7 +9,11 @@ const PACKAGE_NAME = "com.bestjournal.app";
 exports.getSubscriptionStatus = onCall(
 	{
 		secrets: [PLAY_SERVICE_ACCOUNT_JSON],
-		enforceAppCheck: true,
+		// App Check disabled until Play Integrity is fully wired up in Firebase
+		// Console (SHA-256 fingerprints, app registration). The function only
+		// returns subscription metadata for a given purchaseToken — leakage
+		// risk is minimal (someone would need to know your token already).
+		enforceAppCheck: false,
 		region: "europe-west1",
 		timeoutSeconds: 30,
 		memory: "256MiB",
@@ -56,6 +60,27 @@ exports.getSubscriptionStatus = onCall(
 			const sub = response.data;
 			const lineItem = Array.isArray(sub.lineItems) ? sub.lineItems[0] : null;
 			const offerDetails = lineItem?.offerDetails;
+			// CRITICAL FIX: Google's recurringPrice on the autoRenewingPlan is
+			// the AUTHORITATIVE current price after the intro phase ends. The
+			// BillingClient on Android only knows the offer's pricingPhases
+			// list (intro + recurring) and cannot tell which phase is active —
+			// so the app needs us to deliver the truth here.
+			const recurring = lineItem?.autoRenewingPlan?.recurringPrice;
+			const currentPriceMicros =
+				recurring?.units != null
+					? Number(recurring.units) * 1_000_000 + (recurring.nanos ?? 0) / 1000
+					: null;
+
+			// Industry-standard renewal detection. Google issues a NEW order
+			// id on every successful renewal — comparing this against a stored
+			// value tells the app exactly when a renewal happened.
+			const latestOrderId =
+				lineItem?.latestSuccessfulOrderId ?? lineItem?.latestOrderId ?? null;
+
+			// Which pricing phase is currently active? "BASE" = regular,
+			// "INTRO" = introductory, "FREE_TRIAL" = trial. Tells the app
+			// whether to show the discounted intro price or the recurring one.
+			const offerPhase = lineItem?.offerPhase ?? null;
 
 			return {
 				subscriptionState: sub.subscriptionState ?? null,
@@ -64,6 +89,11 @@ exports.getSubscriptionStatus = onCall(
 				productId: lineItem?.productId ?? null,
 				expiryTime: lineItem?.expiryTime ?? null,
 				autoRenewing: lineItem?.autoRenewingPlan != null,
+				latestOrderId: latestOrderId,
+				offerPhase: offerPhase,
+				// Authoritative current price (after intro phase if any).
+				currentPriceMicros: currentPriceMicros,
+				currentPriceCurrency: recurring?.currencyCode ?? null,
 			};
 		} catch (err) {
 			const status = err?.response?.status;

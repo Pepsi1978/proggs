@@ -90,6 +90,7 @@ fun ChurnFlowDialog(
     analyticsTracker: AnalyticsTracker,
     context: Context,
     promoInfo: SettingsViewModel.PromoInfo? = null,
+    autoRenewing: Boolean = true,
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     var selectedReason by remember { mutableStateOf<String?>(null) }
@@ -136,6 +137,7 @@ fun ChurnFlowDialog(
                             onCancel = onDismiss,
                             onCancelSubscription = { currentStep = 1 },
                             promoInfo = promoInfo,
+                            autoRenewing = autoRenewing,
                         )
                     1 ->
                         StepReason(
@@ -215,6 +217,7 @@ private fun StepOverview(
     onCancel: () -> Unit,
     onCancelSubscription: () -> Unit,
     promoInfo: SettingsViewModel.PromoInfo? = null,
+    autoRenewing: Boolean = true,
 ) {
     val isYearly = subscriptionType == SubscriptionType.YEARLY
     val planName =
@@ -359,12 +362,27 @@ private fun StepOverview(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    stringResource(R.string.churn_automatic),
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = NeonEmerald,
-                )
+                if (autoRenewing) {
+                    Text(
+                        stringResource(R.string.churn_automatic),
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        color = NeonEmerald,
+                    )
+                } else {
+                    // Subscription has been cancelled — still active until
+                    // expiry but won't renew.
+                    Text(
+                        stringResource(R.string.churn_cancelled),
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
 

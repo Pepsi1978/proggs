@@ -1108,6 +1108,7 @@
     <string name="churn_price">Preis</string>
     <string name="churn_renewal">Verlängerung</string>
     <string name="churn_automatic">Automatisch</string>
+    <string name="churn_cancelled">Gekündigt</string>
     <string name="churn_promo_active_label">Rabatt-Aktion</string>
     <string name="churn_promo_one_month_remaining">Noch 1 Monat — danach <xliff:g id="base_price" example="3,99 €">%1$s</xliff:g> pro Monat</string>
     <string name="churn_promo_months_remaining">Noch <xliff:g id="months" example="2">%1$d</xliff:g> Monate — danach <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> pro Monat</string>

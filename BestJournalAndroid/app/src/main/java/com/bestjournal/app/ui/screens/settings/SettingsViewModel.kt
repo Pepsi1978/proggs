@@ -146,14 +146,42 @@ constructor(
     val subscriptionType = billingManager.subscriptionType
 
     fun getCurrentPrice(): String {
-        // Prefer the truthful price of the actually-active base plan + offer
-        // (covers retention plans and promos). Falls back to the main base plan.
+        // Priority order:
+        // 1. Server-authoritative price from Cloud Function (knows the active
+        //    pricing phase — intro vs. recurring — which BillingClient does not).
+        val serverMicros = billingManager.serverCurrentPriceMicros.value
+        if (serverMicros > 0) {
+            val currency = billingManager.serverCurrentPriceCurrency.value
+            val formatted = formatMicrosAsPrice(serverMicros, currency)
+            if (formatted != null) return formatted
+        }
+        // 2. Local active-base-plan price (for retention/promo offers).
         billingManager.getActiveBasePlanPrice()?.let { return it }
+        // 3. Fallback to the main base plan price.
         return when (billingManager.subscriptionType.value) {
             com.bestjournal.app.billing.SubscriptionType.YEARLY ->
                 billingManager.yearlyPrice.value.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
             else -> billingManager.monthlyPrice.value.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
         }
+    }
+
+    /**
+     * Format micros (e.g. 3_990_000) as a localised price string ("3,99 €").
+     * Returns null if the inputs are invalid so the caller can fall back.
+     */
+    private fun formatMicrosAsPrice(micros: Long, currencyCode: String): String? {
+        if (micros <= 0L) return null
+        val amount = micros / 1_000_000.0
+        val symbol = when (currencyCode.uppercase()) {
+            "EUR" -> " €"
+            "USD" -> " $"
+            "GBP" -> " £"
+            "" -> ""
+            else -> " $currencyCode"
+        }
+        // German formatting (comma decimal separator) — matches BillingClient output.
+        val rounded = String.format(java.util.Locale.GERMANY, "%.2f", amount)
+        return "$rounded$symbol"
     }
 
     /**
@@ -180,9 +208,13 @@ constructor(
         billingManager.subscriptionType,
         billingManager.monthlyPrice,
         billingManager.promoTotalMonths,
-    ) { type, monthlyPrice, remaining ->
+        billingManager.offerPhase,
+    ) { type, monthlyPrice, remaining, phase ->
         if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
         if (remaining <= 0) return@combine null
+        // Bug-Fix: when the server tells us the user is in BASE phase, the
+        // promo is over even if the local counter is somehow still positive.
+        if (phase == "BASE") return@combine null
         val basePrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
         val halfPrice = formatHalfPrice(basePrice) ?: return@combine null
         PromoInfo(
@@ -192,20 +224,26 @@ constructor(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000L),
+        started = SharingStarted.Eagerly,
         initialValue = null,
     )
 
-    /** Reactive current price for the active subscription. */
+    /** Reactive current price for the active subscription. Re-evaluates when
+     *  any of the price sources update — including the server-authoritative
+     *  currentPriceMicros from the Cloud Function (which knows the active
+     *  pricing phase). */
     val currentPriceState: StateFlow<String> = combine(
         billingManager.subscriptionType,
         billingManager.monthlyPrice,
         billingManager.yearlyPrice,
-    ) { _, _, _ ->
+        billingManager.serverCurrentPriceMicros,
+        billingManager.offerPhase,
+    ) { _, _, _, _, _ ->
         getCurrentPrice()
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000L),
+        // Eagerly so the dialog never gets a null/empty initial value.
+        started = SharingStarted.Eagerly,
         initialValue = getCurrentPrice(),
     )
 
@@ -218,9 +256,12 @@ constructor(
         getRetentionPrice()
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000L),
+        started = SharingStarted.Eagerly,
         initialValue = null,
     )
+
+    /** Reactive auto-renewing flag — false after user cancels in Google Play. */
+    val autoRenewingState: StateFlow<Boolean> = billingManager.autoRenewing
 
     private fun formatHalfPrice(originalPrice: String): String? {
         if (originalPrice.isBlank()) return null
@@ -312,7 +353,14 @@ constructor(
     }
 
     init {
-        loadSettings()
+        // Bug-Fix (Loop-4): Read the BillingManager StateFlow's CURRENT value
+        // synchronously so loadSettings() does not start with the stale default
+        // isSubscribed=false. Without this, premium users briefly see the
+        // "Premium kaufen" screen on every Settings open while the collect
+        // below is still warming up.
+        val initialSubscribed =
+            billingManager.subscriptionState.value is SubscriptionState.Subscribed
+        loadSettings(initialSubscribed)
         encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
         // Ensure review alarms are scheduled (default: enabled)
         try {
@@ -364,9 +412,10 @@ constructor(
         encryptedPrefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
     }
 
-    private fun loadSettings() {
+    private fun loadSettings(initialSubscribed: Boolean = false) {
         _uiState.value =
             SettingsUiState(
+                isSubscribed = initialSubscribed,
                 userProfile = signInUseCase.getProfile(),
                 textImprovementDefault =
                     encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false),

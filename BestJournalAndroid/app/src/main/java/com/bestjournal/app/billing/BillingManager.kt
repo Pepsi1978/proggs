@@ -97,8 +97,51 @@ constructor(
     )
     val promoTotalMonths: StateFlow<Int> = _promoTotalMonths.asStateFlow()
 
+    // Server-authoritative current price in micros (from Cloud Function).
+    // 0 means "not yet known". UI must check this before falling back to
+    // BillingClient.pricingPhases (which doesn't know which phase is active).
+    private val _serverCurrentPriceMicros = MutableStateFlow(
+        encryptedPrefs.getLong(Constants.PREF_CURRENT_PRICE_MICROS, 0L)
+    )
+    val serverCurrentPriceMicros: StateFlow<Long> = _serverCurrentPriceMicros.asStateFlow()
+
+    private val _serverCurrentPriceCurrency = MutableStateFlow(
+        encryptedPrefs.getString(Constants.PREF_CURRENT_PRICE_CURRENCY, "") ?: ""
+    )
+    val serverCurrentPriceCurrency: StateFlow<String> =
+        _serverCurrentPriceCurrency.asStateFlow()
+
+    // True if the user has cancelled the subscription (it stays active until
+    // expiryTime but won't auto-renew). UI should show "Abo gekuendigt — laeuft ab am ...".
+    private val _autoRenewing = MutableStateFlow(
+        encryptedPrefs.getBoolean(Constants.PREF_AUTO_RENEWING, true)
+    )
+    val autoRenewing: StateFlow<Boolean> = _autoRenewing.asStateFlow()
+
+    // Currently-active pricing phase from Cloud Function. "BASE" means the
+    // promo is over and recurring price applies; "INTRO" means user is still
+    // in the discounted phase. Null if Cloud Function unavailable.
+    private val _offerPhase = MutableStateFlow(
+        encryptedPrefs.getString(Constants.PREF_OFFER_PHASE, null)
+    )
+    val offerPhase: StateFlow<String?> = _offerPhase.asStateFlow()
+
+    // ISO-8601 expiry time string from Cloud Function. Used to display
+    // "Abo laeuft ab am X" when the user has cancelled.
+    private val _expiryTime = MutableStateFlow<String?>(null)
+    val expiryTime: StateFlow<String?> = _expiryTime.asStateFlow()
+
     // Guard against duplicate purchase flows triggered by double-tap
     private val isPurchaseInFlight = AtomicBoolean(false)
+
+    // Race-condition fix (Loop-4 Bug #1): The Free state may only be set when
+    // BOTH querySubscriptions AND queryInAppPurchases have returned without
+    // finding an active purchase. Otherwise the user briefly sees the
+    // "Premium kaufen" screen while one query is still in flight.
+    private val activeQueryFoundPurchase =
+        java.util.concurrent.atomic.AtomicBoolean(false)
+    private val pendingPurchaseQueries =
+        java.util.concurrent.atomic.AtomicInteger(0)
 
     private val connectionListener =
         object : BillingClientStateListener {
@@ -108,9 +151,11 @@ constructor(
                     "onBillingSetupFinished: responseCode=${billingResult.responseCode}",
                 )
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    // 1. Lifetime check FIRST so subscription queries cannot
-                    //    transiently flip the state to Free before lifetime is
-                    //    detected (race condition fix).
+                    // 1. Reset bookkeeping then run BOTH purchase queries.
+                    //    Free state is only set after BOTH return without any
+                    //    purchase — see querySubscriptions / queryInAppPurchases.
+                    activeQueryFoundPurchase.set(false)
+                    pendingPurchaseQueries.set(2)
                     queryInAppPurchases()
                     querySubscriptions()
                     queryProductDetails()
@@ -178,6 +223,11 @@ constructor(
             return
         }
         Log.d(TAG, "refreshSubscriptionStatus: triggering full re-query")
+        // Reset purchase-detection bookkeeping for this query batch. Only the
+        // last completing query will be allowed to set Free state, and only
+        // when the bookkeeping shows no purchase was found by anyone.
+        activeQueryFoundPurchase.set(false)
+        pendingPurchaseQueries.set(2) // querySubscriptions + queryInAppPurchases
         querySubscriptions()
         queryInAppPurchases()
         queryProductDetails()
@@ -224,6 +274,7 @@ constructor(
                     .firstOrNull()
                 Log.d(TAG, "querySubscriptions: activePurchase=${activePurchase != null}")
                 if (activePurchase != null) {
+                    activeQueryFoundPurchase.set(true)
                     _subscriptionState.value = SubscriptionState.Subscribed
                     activePurchaseToken = activePurchase.purchaseToken
                     _subscriptionType.value =
@@ -234,6 +285,15 @@ constructor(
                                 SubscriptionType.MONTHLY
                             else -> SubscriptionType.MONTHLY
                         }
+                    // Local autoRenewing fallback (server-authoritative value
+                    // comes later via Cloud Function).
+                    _autoRenewing.value = activePurchase.isAutoRenewing
+                    encryptedPrefs.edit()
+                        .putBoolean(
+                            Constants.PREF_AUTO_RENEWING,
+                            activePurchase.isAutoRenewing,
+                        )
+                        .commit()
                     // Detect renewals via local purchaseTime (legacy fallback) and
                     // clean up stale promo state on plan switches.
                     syncPromoRenewal(activePurchase)
@@ -243,16 +303,13 @@ constructor(
                     // Final fallback for legacy purchases without stamp: ask the
                     // server-side Cloud Function which calls Subscriptions API v2.
                     maybeRefreshActiveBasePlanFromCloud(activePurchase)
-                    // PRIMARY renewal detection: ask the Cloud Function for the
-                    // current expiryTime (server-authoritative, unlike the
-                    // BillingClient cache which keeps the original purchaseTime).
+                    // PRIMARY renewal detection + authoritative current price/state.
                     syncPromoFromCloudExpiry(activePurchase)
-                } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
-                    // Only set Free if no lifetime purchase was already detected
-                    // (prevents race condition between querySubscriptions and queryInAppPurchases)
-                    _subscriptionState.value = SubscriptionState.Free
-                    clearPromoStateIfNoSubscription()
                 }
+                // Free is only set in finalizePurchaseQueryBatch() after BOTH
+                // querySubscriptions AND queryInAppPurchases finished without
+                // finding any purchase (race-condition fix).
+                finalizePurchaseQueryBatch()
 
                 // K-2 fix: Acknowledge unacknowledged purchases — only set Subscribed AFTER success
                 purchases
@@ -377,9 +434,9 @@ constructor(
      * stays in the Firebase free tier even with frequent Settings opens.
      */
     private fun syncPromoFromCloudExpiry(purchase: Purchase) {
-        if (!purchase.products.contains(MONTHLY_PRODUCT_ID)) return
-        if (_promoTotalMonths.value <= 0) return
-
+        // Always call the cloud — even when promoTotalMonths==0 — because we
+        // also need autoRenewing, expiryTime, currentPriceMicros, offerPhase
+        // for the UI (cancel state, true price after intro phase).
         val now = System.currentTimeMillis()
         val lastFetch = encryptedPrefs.getLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, 0L)
         if (now - lastFetch < CLOUD_STATUS_CACHE_MS) {
@@ -403,24 +460,96 @@ constructor(
             // Apply the result under the same lock as syncPromoRenewal so the
             // two paths cannot race against each other on the same prefs keys.
             synchronized(promoSyncLock) {
-                if (result?.expiryTime.isNullOrBlank()) {
+                if (result == null) {
+                    Log.d(TAG, "syncPromoFromCloudExpiry: no result")
+                    encryptedPrefs.edit()
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                    return@synchronized
+                }
+
+                // Always update the universal subscription state from the cloud,
+                // regardless of promo state. These are the AUTHORITATIVE values.
+                result.currentPriceMicros?.let { micros ->
+                    encryptedPrefs.edit()
+                        .putLong(Constants.PREF_CURRENT_PRICE_MICROS, micros)
+                        .putString(
+                            Constants.PREF_CURRENT_PRICE_CURRENCY,
+                            result.currentPriceCurrency ?: "",
+                        )
+                        .commit()
+                    _serverCurrentPriceMicros.value = micros
+                    _serverCurrentPriceCurrency.value = result.currentPriceCurrency ?: ""
+                }
+                result.autoRenewing?.let { renewing ->
+                    encryptedPrefs.edit()
+                        .putBoolean(Constants.PREF_AUTO_RENEWING, renewing)
+                        .commit()
+                    _autoRenewing.value = renewing
+                }
+                result.offerPhase?.let { phase ->
+                    encryptedPrefs.edit()
+                        .putString(Constants.PREF_OFFER_PHASE, phase)
+                        .commit()
+                    _offerPhase.value = phase
+                }
+                _expiryTime.value = result.expiryTime
+
+                // CRITICAL FIX (Loop-4 Bug #5): If Google says the user is in
+                // BASE phase (regular recurring price), the promo is OVER —
+                // clear the counter immediately, regardless of how many
+                // renewals were "missed" while the cloud was unreachable.
+                if (result.offerPhase == "BASE" && _promoTotalMonths.value > 0) {
+                    Log.d(
+                        TAG,
+                        "syncPromoFromCloudExpiry: BASE phase detected, " +
+                            "clearing promo counter (was ${_promoTotalMonths.value})",
+                    )
+                    encryptedPrefs.edit()
+                        .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                    _promoTotalMonths.value = 0
+                    return@synchronized
+                }
+
+                if (result.expiryTime.isNullOrBlank()) {
                     Log.d(TAG, "syncPromoFromCloudExpiry: no expiryTime returned")
                     encryptedPrefs.edit()
                         .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                         .commit()
                     return@synchronized
                 }
-                val newExpiry = result?.expiryTime
+
+                // Industry-standard renewal detection via latestOrderId.
+                // A new order id means exactly one renewal happened. Falls
+                // back to expiryTime comparison if latestOrderId is null.
+                val newOrderId = result.latestOrderId
+                val lastOrderId =
+                    encryptedPrefs.getString(Constants.PREF_LAST_ORDER_ID, null)
+                val newExpiry = result.expiryTime
                 val lastExpiry =
                     encryptedPrefs.getString(Constants.PREF_LAST_KNOWN_EXPIRY, null)
                 Log.d(
                     TAG,
-                    "syncPromoFromCloudExpiry: newExpiry=$newExpiry, lastExpiry=$lastExpiry",
+                    "syncPromoFromCloudExpiry: newOrderId=$newOrderId, " +
+                        "lastOrderId=$lastOrderId, newExpiry=$newExpiry, " +
+                        "lastExpiry=$lastExpiry",
                 )
 
-                if (lastExpiry.isNullOrBlank()) {
-                    // First sighting via cloud — anchor without decrementing.
+                val isFirstSighting =
+                    (newOrderId != null && lastOrderId == null) ||
+                        (newOrderId == null && lastExpiry.isNullOrBlank())
+
+                val isRenewal = when {
+                    newOrderId != null && lastOrderId != null ->
+                        newOrderId != lastOrderId
+                    else -> newExpiry != lastExpiry
+                }
+
+                if (isFirstSighting) {
                     encryptedPrefs.edit()
+                        .putString(Constants.PREF_LAST_ORDER_ID, newOrderId ?: "")
                         .putString(Constants.PREF_LAST_KNOWN_EXPIRY, newExpiry)
                         .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                         .commit()
@@ -428,19 +557,20 @@ constructor(
                     return@synchronized
                 }
 
-                if (newExpiry == lastExpiry) {
-                    Log.d(TAG, "syncPromoFromCloudExpiry: no expiry change")
+                if (!isRenewal) {
+                    Log.d(TAG, "syncPromoFromCloudExpiry: no change")
                     encryptedPrefs.edit()
                         .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                         .commit()
                     return@synchronized
                 }
 
-                // Renewal detected — expiryTime moved forward
+                // Renewal detected — orderId or expiryTime moved forward
                 val total = encryptedPrefs.getInt(Constants.PREF_PROMO_TOTAL_MONTHS, 0)
                 val newRemaining = (total - 1).coerceAtLeast(0)
                 encryptedPrefs.edit()
                     .putInt(Constants.PREF_PROMO_TOTAL_MONTHS, newRemaining)
+                    .putString(Constants.PREF_LAST_ORDER_ID, newOrderId ?: "")
                     .putString(Constants.PREF_LAST_KNOWN_EXPIRY, newExpiry)
                     .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                     .commit()
@@ -448,7 +578,8 @@ constructor(
                 Log.d(
                     TAG,
                     "syncPromoFromCloudExpiry: RENEWAL DETECTED via cloud " +
-                        "$total -> $newRemaining months remaining",
+                        "$total -> $newRemaining months remaining " +
+                        "(orderId=${newOrderId?.take(12)})",
                 )
             }
         }
@@ -584,6 +715,7 @@ constructor(
                         purchase.isAcknowledged
                 }
                 if (hasLifetime) {
+                    activeQueryFoundPurchase.set(true)
                     _subscriptionState.value = SubscriptionState.Subscribed
                     _subscriptionType.value = SubscriptionType.LIFETIME
                 }
@@ -593,7 +725,28 @@ constructor(
                     }
                     .forEach { purchase -> acknowledgePurchase(purchase) }
             }
+            // Free state can only be set after BOTH purchase queries are done
+            // (race-condition fix — Loop-4 Bug #1).
+            finalizePurchaseQueryBatch()
         }
+    }
+
+    /**
+     * Called by both querySubscriptions and queryInAppPurchases when their
+     * callbacks complete. Only the LAST one (when pending counter hits 0)
+     * actually decides whether to set Free state — and only if neither query
+     * found an active purchase. This prevents the Premium-screen-flash bug
+     * where querySubscriptions returned first with no subs but the Lifetime
+     * check in queryInAppPurchases was still pending.
+     */
+    private fun finalizePurchaseQueryBatch() {
+        val remaining = pendingPurchaseQueries.decrementAndGet()
+        if (remaining > 0) return
+        if (activeQueryFoundPurchase.get()) return
+        // Both queries done, no purchase found anywhere → genuinely Free.
+        _subscriptionState.value = SubscriptionState.Free
+        _subscriptionType.value = SubscriptionType.NONE
+        clearPromoStateIfNoSubscription()
     }
 
     private fun queryProductDetails() {

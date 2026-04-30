@@ -186,6 +186,17 @@ object Constants {
     // retry the acknowledgement so the user does not get an automatic refund
     // from Google after 3 days.
     const val PREF_PENDING_ACK_TOKEN = "pending_ack_token"
+    // Authoritative current price in micros from the Cloud Function. Used to
+    // override the BillingClient-derived price (which only knows the static
+    // pricing phases list, not which one is active right now).
+    const val PREF_CURRENT_PRICE_MICROS = "current_price_micros"
+    const val PREF_CURRENT_PRICE_CURRENCY = "current_price_currency"
+    // Whether auto-renewing is enabled. False after user cancels in Google Play.
+    const val PREF_AUTO_RENEWING = "auto_renewing"
+    // Industry-standard renewal indicator from Cloud Function.
+    const val PREF_LAST_ORDER_ID = "last_order_id"
+    // Currently-active pricing phase: "BASE", "INTRO", "FREE_TRIAL", or null.
+    const val PREF_OFFER_PHASE = "offer_phase"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"

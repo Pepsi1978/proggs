@@ -18,6 +18,17 @@ data class SubscriptionStatusResult(
     val expiryTime: String?,
     val subscriptionState: String?,
     val autoRenewing: Boolean?,
+    /** Authoritative current recurring price in micros (e.g. 3,990,000 for 3,99 €). */
+    val currentPriceMicros: Long?,
+    val currentPriceCurrency: String?,
+    /** Industry-standard renewal indicator — changes on every successful renewal. */
+    val latestOrderId: String?,
+    /**
+     * Pricing phase the user is currently in: "BASE" (regular recurring),
+     * "INTRO" (introductory price), "FREE_TRIAL", or null. The KEY signal
+     * for the app to know whether the promo is still active.
+     */
+    val offerPhase: String?,
 )
 
 /**
@@ -58,6 +69,10 @@ class SubscriptionStatusService @Inject constructor(
                 expiryTime = map["expiryTime"] as? String,
                 subscriptionState = map["subscriptionState"] as? String,
                 autoRenewing = map["autoRenewing"] as? Boolean,
+                currentPriceMicros = (map["currentPriceMicros"] as? Number)?.toLong(),
+                currentPriceCurrency = map["currentPriceCurrency"] as? String,
+                latestOrderId = map["latestOrderId"] as? String,
+                offerPhase = map["offerPhase"] as? String,
             )
         } catch (e: Exception) {
             Log.w(TAG, "Cloud Function call failed: ${e.message}")
