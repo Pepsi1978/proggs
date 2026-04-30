@@ -219,7 +219,12 @@ namespace TerminalVoiceOverlay.Views
         private bool _pttRecording   = false;  // wir haben aktuell eine Aufnahme via PTT laufen
         private bool _pttToggleMode  = false;  // im Toggle-Modus (durch Tap aktiviert) — wartet auf naechsten Tap zum Stoppen
         private DateTime _pttKeyDownAt = DateTime.MinValue;  // Zeitpunkt des letzten DOWN-Events
-        private const int PttTapThresholdMs = 500;
+        // Tap-Toggle-Modus DEAKTIVIERT (Threshold = 0): G-HUB-Macros (z.B. G5 → Alt+F12)
+        // senden Down+Up in <10ms — das wuerde sonst immer den Toggle-Modus
+        // aktivieren und die Aufnahme nie automatisch stoppen. Mit 0 gilt:
+        // DOWN = Aufnahme starten, UP = Aufnahme stoppen + transkribieren.
+        // Reines Push-to-Talk, kompatibel mit G-Macro-Tasten und echten Tasten.
+        private const int PttTapThresholdMs = 0;
 
         // Alt+F11 Explorer-Shortcut: Auto-Repeat-Schutz, damit pro Tastendruck
         // nur EIN Explorer-Fenster aufgeht — auch wenn Windows DOWN-Events mehrfach feuert.
