@@ -63,18 +63,19 @@
         </Style>
     </Window.Resources>
 
-    <!-- Outer pill: rounded ring only, no fill. Each inner section paints
-         its own opaque background, so the panel is no longer translucent.
-         Border colour matches the PromptBoard's #FF3A3A3A so both windows
-         still share the same visual chrome. -->
+    <!-- Outer pill: pure black 2px ring like a proper Windows app frame.
+         Each section paints its own opaque background; per-section colours
+         are kept VERY dim (variation only in the lower 5 bits of each
+         channel) so the panel reads as one cohesive dark surface and not
+         as a rainbow stripe. The colour signal lives on the buttons. -->
     <Border CornerRadius="36"
-            BorderBrush="#FF3A3A3A"
-            BorderThickness="1"
+            BorderBrush="#FF000000"
+            BorderThickness="2"
             Width="72" Height="592">
         <StackPanel>
 
-            <!-- Section 1: Stern (Premium / Always-On marker, warm amber) -->
-            <Border Background="#FF3A2D17" CornerRadius="35,35,0,0" Padding="0,10,0,6">
+            <!-- Section 1: Stern (always-on prefix) -->
+            <Border Background="#FF1F1B15" CornerRadius="34,34,0,0" Padding="0,10,0,6">
                 <Button x:Name="UltrathinkButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnUltrathink_Click"
@@ -86,12 +87,11 @@
                 </Button>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 2: Mic + BTW (voice input, cool indigo) -->
-            <Border Background="#FF18283D" Padding="0,6,0,6">
+            <!-- Section 2: Mic + BTW (voice input) -->
+            <Border Background="#FF15181F" Padding="0,6,0,6">
                 <StackPanel>
-                    <!-- Mic Button (main mic — rounded square) -->
                     <Button x:Name="MicButton"
                             Style="{StaticResource MicButton}"
                             Click="BtnMic_Click"
@@ -107,7 +107,6 @@
                         </Grid>
                     </Button>
 
-                    <!-- BTW Button (BTW mic — rounded square, blue tint) -->
                     <Button x:Name="BtwButton"
                             Style="{StaticResource MicButton}"
                             Margin="0,8,0,0"
@@ -118,12 +117,11 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 3: W + G (LLM transforms, deep violet) -->
-            <Border Background="#FF2A1A40" Padding="0,6,0,6">
+            <!-- Section 3: W + G (LLM transforms) -->
+            <Border Background="#FF19151F" Padding="0,6,0,6">
                 <StackPanel>
-                    <!-- W Button (Whisper undo) -->
                     <Button x:Name="WButton"
                             Style="{StaticResource CircleButton}"
                             Click="BtnWhisperUndo_Click"
@@ -131,7 +129,6 @@
                         <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Button>
 
-                    <!-- G Button (Gemini toggle) -->
                     <Button x:Name="GButton"
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
@@ -142,10 +139,10 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 4: X (clear line, dark burgundy) -->
-            <Border Background="#FF3D1A1F" Padding="0,6,0,6">
+            <!-- Section 4: X (clear line) -->
+            <Border Background="#FF1F1515" Padding="0,6,0,6">
                 <Button x:Name="XButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnClear_Click"
@@ -154,12 +151,11 @@
                 </Button>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 5: Copy + Paste (clipboard, deep teal) -->
-            <Border Background="#FF153A38" Padding="0,6,0,6">
+            <!-- Section 5: Copy + Paste (clipboard) -->
+            <Border Background="#FF151B1D" Padding="0,6,0,6">
                 <StackPanel>
-                    <!-- Copy Button -->
                     <Button x:Name="CopyButton"
                             Style="{StaticResource CircleButton}"
                             Click="BtnCopy_Click"
@@ -169,7 +165,6 @@
                         </Viewbox>
                     </Button>
 
-                    <!-- Paste Button -->
                     <Button x:Name="PasteButton"
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
@@ -182,12 +177,11 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 6: Screenshot + Insert (capture & file paste, forest green) -->
-            <Border Background="#FF1A3A1A" Padding="0,6,0,6">
+            <!-- Section 6: Screenshot + Insert (capture & file paste) -->
+            <Border Background="#FF151B15" Padding="0,6,0,6">
                 <StackPanel>
-                    <!-- Screenshot Button -->
                     <Button x:Name="ScreenshotButton"
                             Style="{StaticResource CircleButton}"
                             Click="BtnScreenshot_Click"
@@ -197,7 +191,6 @@
                         </Viewbox>
                     </Button>
 
-                    <!-- InsertScreenshot Button -->
                     <Button x:Name="InsertScreenshotButton"
                             Style="{StaticResource CircleButton}"
                             Margin="0,8,0,0"
@@ -210,10 +203,10 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="#FF3A3A3A" Height="1"/>
+            <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 7: Enter (confirm, neutral anthracite) -->
-            <Border Background="#FF252525" CornerRadius="0,0,35,35" Padding="0,6,0,10">
+            <!-- Section 7: Enter (confirm, neutral) -->
+            <Border Background="#FF1A1A1A" CornerRadius="0,0,34,34" Padding="0,6,0,10">
                 <Button x:Name="EnterButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnAutoEnter_Click"

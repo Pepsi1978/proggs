@@ -16,37 +16,42 @@ namespace TerminalVoiceOverlay.Views
 {
     public partial class OverlayWindow : Window
     {
-        // ── Color constants (matches macOS OverlayPanel.swift) ──
+        // ── Color constants ──
+        // Tuned for the dark cohesive overlay panel: shifted from the bright
+        // Material-500/300 palette to Material-700/800 so buttons sit calmly
+        // on the near-black section backgrounds instead of glowing neon.
+        // The macOS OverlayPanel.swift still uses the original brighter set;
+        // when the macOS look gets harmonised it should pull these values.
 
         // Idle/base
         private static readonly SolidColorBrush BtnIdle       = Brush("#2D2D2D");
-        private static readonly SolidColorBrush BtnRecording  = Brush("#E53935");
-        private static readonly SolidColorBrush BtnProcessing = Brush("#FF9800");
-        private static readonly SolidColorBrush BtnSuccess    = Brush("#43A047");
+        private static readonly SolidColorBrush BtnRecording  = Brush("#C62828");
+        private static readonly SolidColorBrush BtnProcessing = Brush("#EF6C00");
+        private static readonly SolidColorBrush BtnSuccess    = Brush("#2E7D32");
         // Toggles
-        private static readonly SolidColorBrush ToggleOn      = Brush("#16a34a");
+        private static readonly SolidColorBrush ToggleOn      = Brush("#2E7D32");
         private static readonly SolidColorBrush ToggleOff     = Brush("#2D2D2D");
         // BTW mic
-        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#64B5F6");
-        private static readonly SolidColorBrush BtnBtwRecording = Brush("#1E88E5");
-        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#90CAF9");
+        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#1976D2");
+        private static readonly SolidColorBrush BtnBtwRecording = Brush("#0D47A1");
+        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#42A5F5");
         // Special
-        private static readonly SolidColorBrush BtnX         = Brush("#E53935");
-        private static readonly SolidColorBrush BtnXPressed  = Brush("#FF6666");
-        private static readonly SolidColorBrush BtnMicIdle   = Brush("#2A5DA8");
+        private static readonly SolidColorBrush BtnX         = Brush("#C62828");
+        private static readonly SolidColorBrush BtnXPressed  = Brush("#E53935");
+        private static readonly SolidColorBrush BtnMicIdle   = Brush("#1565C0");
         // Copy/Paste buttons
-        private static readonly SolidColorBrush BtnCopy      = Brush("#29B6F6");
-        private static readonly SolidColorBrush BtnPaste     = Brush("#AB47BC");
+        private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");
+        private static readonly SolidColorBrush BtnPaste     = Brush("#7B1FA2");
         // Screenshot + Insert-Screenshot buttons (between Paste and Enter)
-        private static readonly SolidColorBrush BtnScreenshot       = Brush("#26A69A");
-        private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#FFB300");
+        private static readonly SolidColorBrush BtnScreenshot       = Brush("#00796B");
+        private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#EF6C00");
         // Ultrathink star
-        private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#B8860B");
-        private static readonly SolidColorBrush StarGold         = Brush("#FFD700");
+        private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#9E7B0E");
+        private static readonly SolidColorBrush StarGold         = Brush("#DAA520");
         private static readonly SolidColorBrush StarMuted        = Brush("#8B7355");
 
         // Pulse colours for main mic
-        private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF6666");
+        private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF5252");
 
         // ── Services ──
         private readonly AudioRecorder     _audioRecorder;
