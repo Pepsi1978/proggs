@@ -9,6 +9,17 @@
 
 ## Was sich geaendert hat
 
+**Stand 2026-04-30 (zweites Update):** Voice-Overlay hat jetzt zwei externe
+Config-Dateien fuer optimale Spracherkennung:
+
+- `~/SK/VoiceOverlays/voice-prompt.txt` — Whisper-Vokabel-Hint (~110 Woerter)
+- `~/SK/VoiceOverlays/gemini-correction-prompt.txt` — Gemini-Korrektur-Prompt
+  (wirkt nur beim G-Button)
+
+`build.sh` installiert beide Templates automatisch beim ersten Build, falls
+sie noch nicht vorhanden sind. Bestehende User-Anpassungen werden NIE
+ueberschrieben.
+
 **Stand 2026-04-30:** Die macOS-Version wurde mit allen Hotkey-Features der
 Windows-Version gleichgezogen. Vorher konnte die App auf macOS nur per
 Maus-Klick bedient werden — jetzt funktionieren globale Tastatur-Hotkeys
