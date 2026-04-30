@@ -1,25 +1,46 @@
 import AppKit
 
 // MARK: - Colors
+// Tuned to match the Windows TerminalVoiceOverlay 1:1 after commits
+// #1914..#1919: Material 700/800 dark-theme tones, yellow Mic family,
+// teal Screenshot/Insert pair, blue Copy/Paste pair, and the 7-section
+// dark panel with black dividers and a black 2px outer ring.
 private extension NSColor {
-    static let btnIdle = NSColor(hex: "#2D2D2D")
-    static let btnRecording = NSColor(hex: "#E53935")
-    static let btnProcessing = NSColor(hex: "#FF9800")
-    static let btnSuccess = NSColor(hex: "#43A047")
-    static let toggleOn = NSColor(hex: "#16a34a")
-    static let toggleOnBright = NSColor(hex: "#22c55e")
-    static let toggleOff = NSColor(hex: "#2D2D2D")
-    static let btnBtwIdle = NSColor(hex: "#64B5F6")
-    static let btnBtwRecording = NSColor(hex: "#1E88E5")
-    static let btnBtwPulse = NSColor(hex: "#90CAF9")
-    static let btnX = NSColor(hex: "#E53935")
-    static let btnXPressed = NSColor(hex: "#FF6666")
-    static let btnMicIdle = NSColor(hex: "#2A5DA8")
-    static let btnCopy = NSColor(red: 0x29/255.0, green: 0xB6/255.0, blue: 0xF6/255.0, alpha: 1) // #29B6F6 sky blue
-    static let btnPaste = NSColor(red: 0xAB/255.0, green: 0x47/255.0, blue: 0xBC/255.0, alpha: 1) // #AB47BC purple
-    static let ultrathinkOn = NSColor(hex: "#B8860B")     // dark gold background
-    static let starGold = NSColor(hex: "#FFD700")          // bright gold star
-    static let starMuted = NSColor(hex: "#8B7355")         // muted brown star
+    // Idle/base
+    static let btnIdle       = NSColor(hex: "#2D2D2D")
+    static let btnRecording  = NSColor(hex: "#C62828")  // Red 700  (was #E53935)
+    static let btnProcessing = NSColor(hex: "#EF6C00")  // Orange 800 (was #FF9800)
+    static let btnSuccess    = NSColor(hex: "#2E7D32")  // Green 700  (was #43A047)
+    // Toggles
+    static let toggleOn       = NSColor(hex: "#2E7D32") // Green 700  (was #16a34a)
+    static let toggleOnBright = NSColor(hex: "#43A047") // brighter green for transient flashes
+    static let toggleOff      = NSColor(hex: "#2D2D2D")
+    // Mic + BTW — Yellow family (warm cluster joining the gold star).
+    // Requires dark labelColor for legibility on yellow surface.
+    static let btnBtwIdle      = NSColor(hex: "#FBC02D") // Yellow 700
+    static let btnBtwRecording = NSColor(hex: "#F57F17") // Yellow 900
+    static let btnBtwPulse     = NSColor(hex: "#FFEB3B") // Yellow 500
+    static let btnMicIdle      = NSColor(hex: "#F9A825") // Yellow 800
+    // Special
+    static let btnX        = NSColor(hex: "#C62828")     // Red 700
+    static let btnXPressed = NSColor(hex: "#E53935")
+    // Copy/Paste — pair in Light Blue family
+    static let btnCopy  = NSColor(hex: "#0288D1")        // Light Blue 700
+    static let btnPaste = NSColor(hex: "#0277BD")        // Light Blue 800
+    // Screenshot/Insert — pair in Teal family (NEW — ports the Windows
+    // ScreenshotButton + InsertScreenshotButton from #1912..#1917).
+    static let btnScreenshot       = NSColor(hex: "#00796B") // Teal 700
+    static let btnInsertScreenshot = NSColor(hex: "#00897B") // Teal 600
+    // Star (always-on prefix)
+    static let ultrathinkOn = NSColor(hex: "#9E7B0E")    // antique gold (was #B8860B)
+    static let starGold     = NSColor(hex: "#DAA520")    // goldenrod    (was #FFD700)
+    static let starMuted    = NSColor(hex: "#8B7355")
+    // Pulse for main mic recording
+    static let btnRecordingBright = NSColor(hex: "#FF5252") // was #FF6666
+
+    // Dark label / icon tint for the yellow Mic/BTW buttons. White on
+    // yellow has ~1.7:1 contrast (illegible); dark gives ~12:1.
+    static let darkLabel = NSColor(hex: "#1A1A1A")
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -143,6 +164,12 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     let copyButton: RoundButton
     let pasteButton: RoundButton
+    /// Capture full screen via /usr/sbin/screencapture, save to
+    /// ~/Pictures/Screenshots/. Wired up in AppDelegate.
+    let screenshotButton: RoundButton
+    /// Paste path of the last captured screenshot into the active terminal.
+    let insertScreenshotButton: RoundButton
+
     private var pulseTimer: Timer?
     private var btwPulseTimer: Timer?
 
@@ -163,6 +190,8 @@ final class OverlayPanel: NSPanel {
     var onEnterClicked: (() -> Void)?
     var onCopyClicked: (() -> Void)?
     var onPasteClicked: (() -> Void)?
+    var onScreenshotClicked: (() -> Void)?
+    var onInsertScreenshotClicked: (() -> Void)?
     /// Fired on every right-click drag step so anything docked to this
     /// panel (the PromptBoard side panel) can keep up. Also fired on
     /// drag-end so the final position is in sync.
@@ -171,38 +200,49 @@ final class OverlayPanel: NSPanel {
     init() {
         let btnSize: CGFloat = 40
         let micSize: CGFloat = 52
-        let gap: CGFloat = 8
-        let panelWidth: CGFloat = micSize + 20
-        // Height: 7 small buttons + 2 large mic buttons + 8 gaps + padding (16 top + 16 bottom)
-        // = 40*7 + 52*2 + 8*8 + 32 = 280 + 104 + 64 + 32 = 480
-        // (i18n button removed — PromptBoard's always-on prefix replaces it.)
-        let panelHeight: CGFloat = btnSize * 7 + micSize * 2 + gap * 8 + 32
+        let panelWidth: CGFloat = 72
+        // Total panel height: 7 sections + 6 dividers + 2*2 outer border.
+        // S1 (Star, 63) + 1 + S2 (Mic+BTW, 124) + 1 + S3 (W+G, 100) + 1
+        // + S4 (X, 52) + 1 + S5 (Copy+Paste, 100) + 1 + S6 (Screenshot+
+        // Insert, 100) + 1 + S7 (Enter, 63) + 4 (border) = 612.
+        let panelHeight: CGFloat = 612
 
         // Create buttons
         ultrathinkButton = RoundButton(label: "★", color: .toggleOff)
         ultrathinkButton.labelFont = .systemFont(ofSize: 20, weight: .bold)
         ultrathinkButton.labelColor = .starMuted
+
         xButton = RoundButton(label: "X", color: .btnX)
+
         btwButton = RoundButton(label: "BTW", color: .btnBtwIdle)
         btwButton.labelFont = .boldSystemFont(ofSize: 11)
+        btwButton.labelColor = .darkLabel       // dark text on yellow
         btwButton.useSquareShape = true
+
         micButton = RoundButton(label: "", color: .btnMicIdle)
         micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
+        micButton.labelColor = .darkLabel       // dark icon tint on yellow
         micButton.useSquareShape = true
+
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
+
         copyButton = RoundButton(label: "", color: .btnCopy)
         copyButton.symbolImage = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "Copy")
+
         pasteButton = RoundButton(label: "", color: .btnPaste)
         pasteButton.symbolImage = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste")
 
+        screenshotButton = RoundButton(label: "", color: .btnScreenshot)
+        screenshotButton.symbolImage = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot")
+
+        insertScreenshotButton = RoundButton(label: "", color: .btnInsertScreenshot)
+        insertScreenshotButton.symbolImage = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Insert screenshot path")
+
         // Calculate screen position (right edge, vertically near top).
-        // X offset 22 px from right edge: 30 - 8 ≈ 2 mm closer to the
-        // edge per user request.
-        // Y offset 40 px from top: 32 + 8 ≈ 2 mm lower per user request.
-        // Earlier history: started at 78 px from top, then user moved
-        // it 1,5 cm up (-57), 0,3 cm down (+11), now 2 mm down (+8).
+        // X offset 22 px from right edge.
+        // Y offset 40 px from top.
         // Saved position via dragging still wins below; this is just
         // the first-launch fallback.
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
@@ -235,46 +275,65 @@ final class OverlayPanel: NSPanel {
         self.backgroundColor = .clear
         self.hasShadow = true
 
-        // Round corners – use content view layer for rounded background
+        // Outer pill: rounded mask + 2 px black ring (matches Windows
+        // #1915). The contentView itself is transparent — the section
+        // sub-views below paint their own opaque backgrounds, so the
+        // panel reads as a coherent dark surface with a clean black
+        // frame instead of a translucent grey pill.
         self.contentView?.wantsLayer = true
-        self.contentView?.layer?.cornerRadius = panelWidth / 2
+        self.contentView?.layer?.cornerRadius = panelWidth / 2  // 36
         self.contentView?.layer?.masksToBounds = true
-        // Match the PromptBoard panel exactly: calibratedWhite 0.11 with
-        // alpha 0.78. Using the same colour space (genericGray vs deviceGray)
-        // and the same brightness avoids the optical "pillar looks darker"
-        // mismatch the user reported when the values differed by 1%.
-        self.contentView?.layer?.backgroundColor =
-            NSColor(calibratedWhite: 0.11, alpha: 0.78).cgColor
-        // Subtle 1-px outline matching the PromptBoard panel so the two
-        // floating windows have the same visual chrome.
-        self.contentView?.layer?.borderColor =
-            NSColor(calibratedWhite: 0.28, alpha: 1).cgColor
-        self.contentView?.layer?.borderWidth = 1
+        self.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
+        self.contentView?.layer?.borderColor = NSColor.black.cgColor
+        self.contentView?.layer?.borderWidth = 2
 
-        // Layout buttons vertically (in AppKit, y=0 is bottom)
-        // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
-        // AppKit order bottom→top: Enter → Paste → Copy → X → G → W → BTW(big) → Mic(big) → ★
-        let smallInset = (panelWidth - btnSize) / 2
-        let micInset = (panelWidth - micSize) / 2
-        var yPos: CGFloat = 16
-        enterButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        pasteButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        copyButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        xButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        gButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        wButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
-        yPos += btnSize + gap
-        btwButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
-        yPos += micSize + gap
-        micButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
-        yPos += micSize + gap
-        ultrathinkButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
+        // ── 7 colour sections + 6 black 1 px dividers ──
+        // y-coordinates use AppKit (origin at panel bottom). The section
+        // identity colours are very dim near-black tints (channel range
+        // 0x14..0x1F) so the panel reads as one cohesive dark surface
+        // and the colour signal lives on the buttons.
+        // Layout — bottom-up so the visual order is, top→bottom:
+        //   ★ → Mic → BTW → W → G → X → Copy → Paste → Screenshot → Insert → Enter
+        addSection(hex: "#1A1A1A", y: 2,   height: 63, width: panelWidth)  // S7 Enter (neutral)
+        addDivider(y: 65, width: panelWidth)
+        addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Screenshot+Insert (cool green)
+        addDivider(y: 166, width: panelWidth)
+        addSection(hex: "#151B1D", y: 167, height: 100, width: panelWidth) // S5 Copy+Paste (cool teal)
+        addDivider(y: 267, width: panelWidth)
+        addSection(hex: "#1F1515", y: 268, height: 52,  width: panelWidth) // S4 X (warm red)
+        addDivider(y: 320, width: panelWidth)
+        addSection(hex: "#19151F", y: 321, height: 100, width: panelWidth) // S3 W+G (cool violet)
+        addDivider(y: 421, width: panelWidth)
+        addSection(hex: "#1F1C15", y: 422, height: 124, width: panelWidth) // S2 Mic+BTW (warm yellow)
+        addDivider(y: 546, width: panelWidth)
+        addSection(hex: "#1F1B15", y: 547, height: 63,  width: panelWidth) // S1 Star (warm amber)
 
+        // ── Position buttons ──
+        // y-coordinates derived from each section's y + WPF-bottom-padding.
+        // Section S1 (y=547) padding "0,17,0,6" -> button y in section 6   -> panel y 553
+        // Section S2 (y=422) padding "0,6,0,6"  -> BTW y 6, Mic y 66       -> panel BTW 428, Mic 488
+        // Section S3 (y=321)                    -> G y 6, W y 54           -> panel G 327,  W 375
+        // Section S4 (y=268)                    -> X y 6                   -> panel X 274
+        // Section S5 (y=167)                    -> Paste y 6, Copy y 54    -> panel Paste 173, Copy 221
+        // Section S6 (y=66)                     -> Insert y 6, Shot y 54   -> panel Insert 72, Screenshot 120
+        // Section S7 (y=2)   padding "0,6,0,17" -> button y in section 17  -> panel y 19
+        let smallInset = (panelWidth - btnSize) / 2  // 16
+        let micInset   = (panelWidth - micSize) / 2  // 10
+
+        ultrathinkButton.frame       = NSRect(x: smallInset, y: 553, width: btnSize, height: btnSize)
+        micButton.frame              = NSRect(x: micInset,   y: 488, width: micSize, height: micSize)
+        btwButton.frame              = NSRect(x: micInset,   y: 428, width: micSize, height: micSize)
+        wButton.frame                = NSRect(x: smallInset, y: 375, width: btnSize, height: btnSize)
+        gButton.frame                = NSRect(x: smallInset, y: 327, width: btnSize, height: btnSize)
+        xButton.frame                = NSRect(x: smallInset, y: 274, width: btnSize, height: btnSize)
+        copyButton.frame             = NSRect(x: smallInset, y: 221, width: btnSize, height: btnSize)
+        pasteButton.frame            = NSRect(x: smallInset, y: 173, width: btnSize, height: btnSize)
+        screenshotButton.frame       = NSRect(x: smallInset, y: 120, width: btnSize, height: btnSize)
+        insertScreenshotButton.frame = NSRect(x: smallInset, y: 72,  width: btnSize, height: btnSize)
+        enterButton.frame            = NSRect(x: smallInset, y: 19,  width: btnSize, height: btnSize)
+
+        // Add buttons after sections so they layer ON TOP of the
+        // section backgrounds (subview Z-order = insertion order).
         self.contentView?.addSubview(ultrathinkButton)
         self.contentView?.addSubview(micButton)
         self.contentView?.addSubview(btwButton)
@@ -283,19 +342,39 @@ final class OverlayPanel: NSPanel {
         self.contentView?.addSubview(xButton)
         self.contentView?.addSubview(copyButton)
         self.contentView?.addSubview(pasteButton)
+        self.contentView?.addSubview(screenshotButton)
+        self.contentView?.addSubview(insertScreenshotButton)
         self.contentView?.addSubview(enterButton)
 
-        ultrathinkButton.onClick = { [weak self] in self?.onUltrathinkClicked?() }
-        xButton.onClick = { [weak self] in self?.onXClicked?() }
-        btwButton.onClick = { [weak self] in self?.onBtwClicked?() }
-        micButton.onClick = { [weak self] in self?.onMicClicked?() }
-        wButton.onClick = { [weak self] in self?.onWClicked?() }
-        gButton.onClick = { [weak self] in self?.onGClicked?() }
-        enterButton.onClick = { [weak self] in self?.onEnterClicked?() }
-        copyButton.onClick = { [weak self] in self?.onCopyClicked?() }
-        pasteButton.onClick = { [weak self] in self?.onPasteClicked?() }
+        ultrathinkButton.onClick       = { [weak self] in self?.onUltrathinkClicked?() }
+        xButton.onClick                = { [weak self] in self?.onXClicked?() }
+        btwButton.onClick              = { [weak self] in self?.onBtwClicked?() }
+        micButton.onClick              = { [weak self] in self?.onMicClicked?() }
+        wButton.onClick                = { [weak self] in self?.onWClicked?() }
+        gButton.onClick                = { [weak self] in self?.onGClicked?() }
+        enterButton.onClick            = { [weak self] in self?.onEnterClicked?() }
+        copyButton.onClick             = { [weak self] in self?.onCopyClicked?() }
+        pasteButton.onClick            = { [weak self] in self?.onPasteClicked?() }
+        screenshotButton.onClick       = { [weak self] in self?.onScreenshotClicked?() }
+        insertScreenshotButton.onClick = { [weak self] in self?.onInsertScreenshotClicked?() }
 
         setupDragMonitors()
+    }
+
+    // MARK: - Section helpers
+
+    private func addSection(hex: String, y: CGFloat, height: CGFloat, width: CGFloat) {
+        let v = NSView(frame: NSRect(x: 0, y: y, width: width, height: height))
+        v.wantsLayer = true
+        v.layer?.backgroundColor = NSColor(hex: hex).cgColor
+        self.contentView?.addSubview(v)
+    }
+
+    private func addDivider(y: CGFloat, width: CGFloat) {
+        let v = NSView(frame: NSRect(x: 0, y: y, width: width, height: 1))
+        v.wantsLayer = true
+        v.layer?.backgroundColor = NSColor.black.cgColor
+        self.contentView?.addSubview(v)
     }
 
     // MARK: - State Updates
@@ -307,18 +386,23 @@ final class OverlayPanel: NSPanel {
             case .idle:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnMicIdle
+                self.micButton.labelColor = .darkLabel   // dark on yellow
             case .recording:
                 self.micButton.buttonColor = .btnRecording
+                self.micButton.labelColor = .white       // white on red
                 self.startPulse()
             case .processing:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnProcessing
+                self.micButton.labelColor = .white
             case .success:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnSuccess
+                self.micButton.labelColor = .white
             case .error:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnRecording
+                self.micButton.labelColor = .white
             }
         }
     }
@@ -330,18 +414,23 @@ final class OverlayPanel: NSPanel {
             case .idle:
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnBtwIdle
+                self.btwButton.labelColor = .darkLabel   // dark on yellow
             case .recording:
                 self.btwButton.buttonColor = .btnRecording
+                self.btwButton.labelColor = .white       // white on red
                 self.startBtwPulse()
             case .processing:
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnProcessing
+                self.btwButton.labelColor = .white
             case .success:
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnSuccess
+                self.btwButton.labelColor = .white
             case .error:
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnRecording
+                self.btwButton.labelColor = .white
             }
         }
     }
@@ -355,8 +444,7 @@ final class OverlayPanel: NSPanel {
 
     /// Matches the Windows Voice Overlay behavior 1:1: every click fires
     /// ClearLine immediately. The button flashes gray for 2s but further
-    /// clicks are NOT blocked during that window — rapid ✕-ing (wie bei
-    /// Windows) funktioniert so ohne Cooldown.
+    /// clicks are NOT blocked during that window.
     func flashXButton() {
         DispatchQueue.main.async { [weak self] in
             self?.xButton.buttonColor = .btnIdle
@@ -386,6 +474,40 @@ final class OverlayPanel: NSPanel {
         }
     }
 
+    /// Flash the Screenshot button green on success / red on failure,
+    /// then fade back to teal. Mirrors the Windows BtnScreenshot_Click
+    /// success/error flash pattern (1.5 s success, 3 s failure).
+    func flashScreenshotButton(success: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.screenshotButton.buttonColor = success ? .btnSuccess : .btnX
+            self.screenshotButton.needsDisplay = true
+            let delay: TimeInterval = success ? 1.5 : 3.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self = self else { return }
+                self.screenshotButton.buttonColor = .btnScreenshot
+                self.screenshotButton.needsDisplay = true
+            }
+        }
+    }
+
+    /// Flash the Insert button green on success / red on failure (e.g.
+    /// no screenshot taken yet, or the file went missing). Mirrors the
+    /// Windows BtnInsertScreenshot_Click flash pattern.
+    func flashInsertScreenshotButton(success: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.insertScreenshotButton.buttonColor = success ? .btnSuccess : .btnX
+            self.insertScreenshotButton.needsDisplay = true
+            let delay: TimeInterval = success ? 1.5 : 3.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self = self else { return }
+                self.insertScreenshotButton.buttonColor = .btnInsertScreenshot
+                self.insertScreenshotButton.needsDisplay = true
+            }
+        }
+    }
+
     func setAutoEnterEnabled(_ enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.enterButton.buttonColor = enabled ? .btnProcessing : .toggleOff
@@ -408,7 +530,7 @@ final class OverlayPanel: NSPanel {
         pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            self.micButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
+            self.micButton.buttonColor = bright ? .btnRecordingBright : .btnRecording
         }
     }
 
@@ -425,7 +547,7 @@ final class OverlayPanel: NSPanel {
         btwPulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            self.btwButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
+            self.btwButton.buttonColor = bright ? .btnRecordingBright : .btnRecording
         }
     }
 

@@ -54,6 +54,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var autoEnterEnabled = true
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
+
+    // Path of the last screenshot captured by the ScreenshotButton.
+    // The InsertScreenshotButton paste this path into the active terminal.
+    // Stays UNCHANGED on a failed capture so the user keeps the last
+    // good path memorised — matches Windows _lastScreenshotPath behaviour.
+    private var lastScreenshotPath: String?
+
+    // 5-second hide-delay timer (matches Windows _hideDelayTimer from
+    // commit #1913). When the user switches away from the terminal we
+    // delay the panel hide by 5 s so they can still grab a screenshot
+    // or use the pillar from another app. If the terminal becomes
+    // active again within those 5 s, the timer is cancelled.
+    private var hideDelayTimer: Timer?
     private var isBtwRecording = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
@@ -167,6 +180,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        panel.onScreenshotClicked = { [weak self] in self?.takeScreenshot() }
+        panel.onInsertScreenshotClicked = { [weak self] in self?.insertLastScreenshot() }
+
         setupStatusItem()
 
         // Debug: log every mouseDown anywhere in the system so we can see
@@ -201,6 +217,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 tvoDebug("[App] onTerminalActivated — panelLevel=\(self.panel.level.rawValue) pbLevel=\(self.promptBoardPanel?.level.rawValue ?? -1) active=\(NSApp.isActive)")
+                // Cancel any pending hide — terminal is back, so the
+                // 5-s grace period is over and the panel stays up.
+                self.hideDelayTimer?.invalidate()
+                self.hideDelayTimer = nil
                 // CRITICAL: use orderFrontRegardless instead of orderFront(nil).
                 // When the terminal becomes active, our own app is *not* active.
                 // AppKit logs in that case: "ordered front from a non-active
@@ -230,11 +250,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
                 tvoDebug("[App] onTerminalDeactivated isRec=\(self.isRecording) isProc=\(self.isProcessing)")
                 if !self.isRecording && !self.isProcessing {
-                    self.panel.orderOut(nil)
-                    // Eingabe + Historie zuerst verstecken (sind eigene
-                    // Top-Level-Panels), dann das Promtboard.
-                    self.promptBoardPanel?.hideTransientChildren()
-                    self.promptBoardPanel?.orderOut(nil)
+                    // 5-second hide-delay (matches Windows #1913). Lets
+                    // the user grab a screenshot of another app or use
+                    // the pillar from a browser without the panel
+                    // disappearing the moment they leave the terminal.
+                    self.hideDelayTimer?.invalidate()
+                    self.hideDelayTimer = Timer.scheduledTimer(
+                        withTimeInterval: 5.0, repeats: false
+                    ) { [weak self] _ in
+                        guard let self = self else { return }
+                        self.hideDelayTimer = nil
+                        // Re-check state — recording may have started
+                        // during the grace window.
+                        guard !self.isRecording && !self.isProcessing else { return }
+                        self.panel.orderOut(nil)
+                        self.promptBoardPanel?.hideTransientChildren()
+                        self.promptBoardPanel?.orderOut(nil)
+                    }
                 }
             }
         }
@@ -771,5 +803,96 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.panel.setMicState(.idle)
             }
         }
+    }
+
+    // MARK: - Screenshot capture / paste (matches Windows #1912 + #1917)
+
+    /// Capture the entire screen via /usr/sbin/screencapture and save the
+    /// resulting PNG to ~/Pictures/Screenshots/. The path is remembered
+    /// in `lastScreenshotPath` for the InsertScreenshotButton to paste.
+    /// `-x` suppresses the shutter sound; the user just hears nothing
+    /// and sees the green flash on success.
+    private func takeScreenshot() {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let shotsDir = homeDir.appendingPathComponent("Pictures/Screenshots")
+        do {
+            try FileManager.default.createDirectory(at: shotsDir, withIntermediateDirectories: true)
+        } catch {
+            NSLog("[Screenshot] could not create %@: %@", shotsDir.path, error.localizedDescription)
+            self.panel.flashScreenshotButton(success: false)
+            return
+        }
+
+        // Filename with millisecond precision so rapid clicks produce
+        // unique names (yyyy-MM-dd_HH-mm-ss-SSS). Defensive UUID suffix
+        // if the same millisecond ever collides.
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss-SSS"
+        var filename = "screenshot_\(formatter.string(from: Date())).png"
+        var fullURL = shotsDir.appendingPathComponent(filename)
+        var collisionGuard = 0
+        while FileManager.default.fileExists(atPath: fullURL.path), collisionGuard < 10 {
+            collisionGuard += 1
+            let suffix = String(UUID().uuidString.prefix(6))
+            filename = "screenshot_\(formatter.string(from: Date()))_\(suffix).png"
+            fullURL = shotsDir.appendingPathComponent(filename)
+        }
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        // -x: no shutter sound. No -i, no -c — capture entire screen
+        // straight to the file path. -t png is implicit by extension.
+        task.arguments = ["-x", fullURL.path]
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+        } catch {
+            NSLog("[Screenshot] launch failed: %@", error.localizedDescription)
+            self.panel.flashScreenshotButton(success: false)
+            return
+        }
+
+        // Verify the file is on disk and non-empty. screencapture exit
+        // code 0 doesn't always guarantee a successful write — a denied
+        // screen-recording permission can produce a 0-byte file.
+        let attrs = try? FileManager.default.attributesOfItem(atPath: fullURL.path)
+        let size = (attrs?[.size] as? NSNumber)?.int64Value ?? 0
+        if task.terminationStatus == 0,
+           FileManager.default.fileExists(atPath: fullURL.path),
+           size > 0 {
+            self.lastScreenshotPath = fullURL.path
+            NSLog("[Screenshot] saved %@ (%lld bytes)", fullURL.path, size)
+            self.panel.flashScreenshotButton(success: true)
+        } else {
+            NSLog("[Screenshot] failed: status=%d, exists=%@, size=%lld",
+                  task.terminationStatus,
+                  FileManager.default.fileExists(atPath: fullURL.path) ? "yes" : "no",
+                  size)
+            // lastScreenshotPath stays UNCHANGED so the previous good
+            // path is still available for Insert. Same as Windows.
+            self.panel.flashScreenshotButton(success: false)
+        }
+    }
+
+    /// Paste the absolute path of the last successful screenshot into
+    /// the active terminal. Quotes the path if it contains spaces so
+    /// shells (zsh, bash, fish) read it as a single argument.
+    private func insertLastScreenshot() {
+        guard let path = self.lastScreenshotPath else {
+            NSLog("[InsertScreenshot] no screenshot taken yet")
+            self.panel.flashInsertScreenshotButton(success: false)
+            return
+        }
+        guard FileManager.default.fileExists(atPath: path) else {
+            NSLog("[InsertScreenshot] file gone: %@", path)
+            self.panel.flashInsertScreenshotButton(success: false)
+            return
+        }
+
+        let toPaste = path.contains(" ") ? "\"\(path)\"" : path
+        TerminalController.pasteText(toPaste, autoEnter: false)
+        self.panel.flashInsertScreenshotButton(success: true)
     }
 }
