@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -192,6 +193,16 @@ namespace TerminalVoiceOverlay.Views
         private PromptBoardPanel? _promptPanel;
         private string? lastRawTranscript   = null;
 
+        // ── Push-to-Talk Hotkey-State ──
+        // Hotkey: Strg+Alt+Leertaste — gedrueckt halten startet die Aufnahme,
+        // Loslassen stoppt + transkribiert. Wir merken uns den Hook-Handle
+        // (zum Deinstallieren in OnClosed) und ein Flag dass die Taste
+        // bereits "gedrueckt" registriert wurde — damit die Tastatur-
+        // Wiederholrate (key-repeat) nicht mehrfach Start ausloest.
+        private IntPtr _pttHookHandle = IntPtr.Zero;
+        private NativeMethods.Win32.LowLevelKeyboardProc? _pttHookProc;
+        private bool _pttKeyDown = false;
+
         // Pfad des zuletzt mit dem ScreenshotButton aufgenommenen Bildes.
         // Wird vom InsertScreenshotButton gelesen — exakt diese eine Datei
         // wird als Pfad in die CLI eingefuegt, keine andere. Bleibt null
@@ -343,6 +354,13 @@ namespace TerminalVoiceOverlay.Views
             _terminalWatcher.TerminalActivated   += OnTerminalActivated;
             _terminalWatcher.TerminalDeactivated += OnTerminalDeactivated;
             _terminalWatcher.Start();
+
+            // ── Push-to-Talk Hotkey installieren ──
+            // Strg+Alt+Leertaste gedrueckt halten → Aufnahme laeuft.
+            // Loslassen → Whisper transkribiert + paste den Text.
+            // Implementiert ueber Low-Level-Keyboard-Hook (WH_KEYBOARD_LL),
+            // weil RegisterHotKey nur KeyDown liefert, nicht KeyUp.
+            InstallPushToTalkHook();
 
             // Resolve the PromptBoard prefix service if the DI host is up.
             // Silent fallback when PromptBoard is unavailable — the star
@@ -1805,12 +1823,120 @@ namespace TerminalVoiceOverlay.Views
 
         // ── Cleanup ──
 
+        // ── Push-to-Talk: Low-Level-Keyboard-Hook ──
+        //
+        // WARUM ein Low-Level-Hook und nicht RegisterHotKey?
+        // RegisterHotKey feuert nur bei KeyDown — fuer Push-to-Talk brauchen
+        // wir aber AUCH KeyUp (Loslassen = Aufnahme stoppen). WH_KEYBOARD_LL
+        // liefert beide Events und blockiert sie systemweit, sodass die
+        // Tastenkombination nicht mehr in den darunterliegenden Apps landet.
+        //
+        // KOMBI: Strg+Alt+Leertaste
+        // - Beim ersten DOWN-Event waehrend Strg+Alt aktiv: Aufnahme starten.
+        // - Bei UP der Leertaste (oder einer der Modifier): Aufnahme stoppen
+        //   und transkribieren.
+        //
+        // Frank kann auf seine Logitech G5-Taste ein Makro legen, das diese
+        // Kombi sendet (Held-while-pressed Mode). Damit wird die G5 zur
+        // physischen Push-to-Talk-Taste.
+        private void InstallPushToTalkHook()
+        {
+            try
+            {
+                _pttHookProc = OnLowLevelKey; // Referenz halten gegen GC
+                IntPtr hMod = NativeMethods.Win32.GetModuleHandle(
+                    System.Reflection.Assembly.GetExecutingAssembly()?.GetName().Name ?? "");
+                if (hMod == IntPtr.Zero)
+                    hMod = NativeMethods.Win32.GetModuleHandle(null!);
+
+                _pttHookHandle = NativeMethods.Win32.SetWindowsHookEx(
+                    NativeMethods.Win32.WH_KEYBOARD_LL, _pttHookProc, hMod, 0);
+
+                if (_pttHookHandle == IntPtr.Zero)
+                    Console.WriteLine("PTT: SetWindowsHookEx failed (Code " +
+                        Marshal.GetLastWin32Error() + ")");
+                else
+                    Console.WriteLine("PTT: Hook installed — Strg+Alt+Leertaste hold-to-talk aktiv");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PTT: Hook install failed: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        private IntPtr OnLowLevelKey(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            // nCode < 0 bedeutet "nicht verarbeiten, einfach weiterleiten"
+            if (nCode < 0)
+                return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+
+            int msg = wParam.ToInt32();
+            var data = Marshal.PtrToStructure<NativeMethods.Win32.KBDLLHOOKSTRUCT>(lParam);
+            uint vk = data.vkCode;
+
+            // Wir reagieren nur auf die Leertaste — Strg/Alt sind reine Modifier.
+            // Beim KeyDown der Leertaste pruefen wir ob Strg+Alt zusaetzlich
+            // gedrueckt sind (GetAsyncKeyState liest den aktuellen Tastenzustand).
+            // Der Hook-Callback laeuft auf dem niedrig-priorisierten Hook-Thread,
+            // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
+            if (vk == NativeMethods.Win32.VK_SPACE)
+            {
+                bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (isDown && ctrl && alt)
+                {
+                    // Erste DOWN-Flanke: Aufnahme starten. Auto-repeat der
+                    // Tastatur wuerde sonst bei jedem Wiederhol-DOWN den
+                    // Mic-Toggle erneut feuern und die Aufnahme abbrechen.
+                    if (!_pttKeyDown)
+                    {
+                        _pttKeyDown = true;
+                        Console.WriteLine("PTT: keydown — start recording");
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try { BtnMic_Click(this, new RoutedEventArgs()); }
+                            catch (Exception ex) { Console.WriteLine($"PTT start error: {ex.Message}"); }
+                        }));
+                    }
+                    // Event blocken — Strg+Alt+Leertaste soll NICHT in der
+                    // darunterliegenden App landen (sonst springt z.B. der
+                    // Cursor in einer Eingabe).
+                    return new IntPtr(1);
+                }
+
+                if (isUp && _pttKeyDown)
+                {
+                    _pttKeyDown = false;
+                    Console.WriteLine("PTT: keyup — stop and transcribe");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { BtnMic_Click(this, new RoutedEventArgs()); }
+                        catch (Exception ex) { Console.WriteLine($"PTT stop error: {ex.Message}"); }
+                    }));
+                    return new IntPtr(1);
+                }
+            }
+
+            return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             _pulseTimer.Stop();
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
             _hideDelayTimer.Stop();
+            // Hook abbauen — sonst bleibt die DLL im Tastatur-Stack haengen
+            // und alle Tastendruecke laufen weiter durch unseren Callback.
+            if (_pttHookHandle != IntPtr.Zero)
+            {
+                NativeMethods.Win32.UnhookWindowsHookEx(_pttHookHandle);
+                _pttHookHandle = IntPtr.Zero;
+            }
             _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _terminalWatcher.Dispose();
             _audioRecorder.Dispose();
