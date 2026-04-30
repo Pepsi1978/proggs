@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -2219,14 +2221,18 @@ namespace TerminalVoiceOverlay.Views
         }
 
         // Alt+F11 Hotkey-Aktion: Den Release-Bundle-Ordner im Windows Explorer
-        // oeffnen. Das Terminal bleibt unangetastet — Explorer.exe kommt von
-        // selbst nach vorn und uebernimmt seine zuletzt verwendete Fenstergroesse.
-        // KEIN Resize/ShowWindow auf GetForegroundWindow() — das wuerde
-        // versehentlich das Terminal verkleinern, weil Explorer.exe verzoegert
-        // startet und der Foreground-Wechsel zwischen Trigger und Resize erfolgt.
-        // Falls der Ordner noch nicht existiert (z.B. weil noch nie ein
-        // Release-Build lief), oeffnen wir das naechste existierende
-        // Eltern-Verzeichnis statt einen Fehler zu werfen.
+        // oeffnen UND in den Vordergrund holen. Das Terminal bleibt in seiner
+        // Groesse und Position. Falls der Ordner noch nicht existiert (z.B.
+        // weil noch nie ein Release-Build lief), oeffnen wir das naechste
+        // existierende Eltern-Verzeichnis.
+        //
+        // Foreground-Stealing: Windows blockiert das Stehlen des Fokus wenn
+        // ein Hintergrund-Prozess (TVO) Explorer startet — das neue Fenster
+        // landet blinkend in der Taskbar. Wir umgehen das mit drei Tricks:
+        //   1) AllowSetForegroundWindow(ASFW_ANY) erlaubt allen Prozessen Fokus
+        //   2) Snapshot der vorhandenen Explorer-Fenster, dann nach 500ms das
+        //      neue Fenster identifizieren (per Class "CabinetWClass")
+        //   3) AttachThreadInput-Trick fuer zuverlaessiges SetForegroundWindow
         private void OpenReleaseBundleFolder()
         {
             string folder = ReleaseBundleFolder;
@@ -2244,6 +2250,11 @@ namespace TerminalVoiceOverlay.Views
                     return;
                 }
 
+                // Snapshot vorhandener Explorer-Fenster (vor Start)
+                var existingHandles = new HashSet<IntPtr>(GetExplorerWindows());
+
+                NativeMethods.Win32.AllowSetForegroundWindow(NativeMethods.Win32.ASFW_ANY);
+
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "explorer.exe",
@@ -2251,10 +2262,96 @@ namespace TerminalVoiceOverlay.Views
                     UseShellExecute = true,
                 });
                 Console.WriteLine($"Alt+F11: explorer geoeffnet bei {folder}");
+
+                // Nach kurzem Delay das neue Fenster suchen und nach vorn holen.
+                Task.Delay(500).ContinueWith(_ =>
+                {
+                    try
+                    {
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            IntPtr target = IntPtr.Zero;
+                            foreach (var hwnd in GetExplorerWindows())
+                            {
+                                if (!existingHandles.Contains(hwnd))
+                                {
+                                    target = hwnd;
+                                    break;
+                                }
+                            }
+                            if (target == IntPtr.Zero)
+                            {
+                                Console.WriteLine("Alt+F11: kein neues Explorer-Fenster gefunden — Fokus-Steal uebersprungen");
+                                return;
+                            }
+                            ForceWindowToForeground(target);
+                            Console.WriteLine($"Alt+F11: explorer-fenster {target} nach vorn geholt");
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Alt+F11 foreground steal failed: {ex.Message}");
+                    }
+                });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Alt+F11 explorer start failed: {ex.Message}");
+            }
+        }
+
+        // Sammelt alle sichtbaren Explorer-Fenster (Class "CabinetWClass" =
+        // moderner File-Explorer, "ExploreWClass" = aelterer dual-pane Modus).
+        private static List<IntPtr> GetExplorerWindows()
+        {
+            var result = new List<IntPtr>();
+            NativeMethods.Win32.EnumWindows((hWnd, _) =>
+            {
+                if (!NativeMethods.Win32.IsWindowVisible(hWnd)) return true;
+                var sb = new StringBuilder(64);
+                NativeMethods.Win32.GetClassName(hWnd, sb, sb.Capacity);
+                var className = sb.ToString();
+                if (className == "CabinetWClass" || className == "ExploreWClass")
+                    result.Add(hWnd);
+                return true;
+            }, IntPtr.Zero);
+            return result;
+        }
+
+        // Standard Win32 "Force Foreground"-Pattern: AttachThreadInput koppelt
+        // Eingabe-Queues von Quell- und Ziel-Thread, waehrend wir das Fenster
+        // nach vorn holen. Ohne diese Kopplung blockiert Windows seit XP das
+        // Stehlen des Fokus durch Hintergrund-Prozesse.
+        private static void ForceWindowToForeground(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return;
+
+            var fg = NativeMethods.Win32.GetForegroundWindow();
+            if (fg == hwnd) return;
+
+            uint currentThread = NativeMethods.Win32.GetCurrentThreadId();
+            uint fgThread     = fg == IntPtr.Zero ? 0u : NativeMethods.Win32.GetWindowThreadProcessId(fg, out _);
+            uint targetThread = NativeMethods.Win32.GetWindowThreadProcessId(hwnd, out _);
+
+            bool attached1 = false, attached2 = false;
+            try
+            {
+                if (fgThread != 0 && fgThread != currentThread)
+                    attached1 = NativeMethods.Win32.AttachThreadInput(currentThread, fgThread, true);
+                if (targetThread != 0 && targetThread != currentThread && targetThread != fgThread)
+                    attached2 = NativeMethods.Win32.AttachThreadInput(currentThread, targetThread, true);
+
+                // Falls minimiert: wiederherstellen, dann nach vorn.
+                if (NativeMethods.Win32.IsIconic(hwnd))
+                    NativeMethods.Win32.ShowWindow(hwnd, NativeMethods.Win32.SW_RESTORE);
+
+                NativeMethods.Win32.BringWindowToTop(hwnd);
+                NativeMethods.Win32.SetForegroundWindow(hwnd);
+            }
+            finally
+            {
+                if (attached1) NativeMethods.Win32.AttachThreadInput(currentThread, fgThread, false);
+                if (attached2) NativeMethods.Win32.AttachThreadInput(currentThread, targetThread, false);
             }
         }
 

@@ -172,6 +172,18 @@ namespace TerminalVoiceOverlay.NativeMethods
         [DllImport("user32.dll")]
         public static extern bool AllowSetForegroundWindow(uint dwProcessId);
 
+        public const uint ASFW_ANY = 0xFFFFFFFF;
+
+        // ── EnumWindows / GetClassName (fuer Alt+F11 Explorer-Fokus) ──
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+
         // ── Thread Input (for robust foreground switching) ──
         [DllImport("user32.dll")]
         public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
