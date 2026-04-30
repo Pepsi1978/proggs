@@ -194,14 +194,30 @@ namespace TerminalVoiceOverlay.Views
         private string? lastRawTranscript   = null;
 
         // ── Push-to-Talk Hotkey-State ──
-        // Hotkey: Strg+Alt+Leertaste — gedrueckt halten startet die Aufnahme,
-        // Loslassen stoppt + transkribiert. Wir merken uns den Hook-Handle
-        // (zum Deinstallieren in OnClosed) und ein Flag dass die Taste
-        // bereits "gedrueckt" registriert wurde — damit die Tastatur-
-        // Wiederholrate (key-repeat) nicht mehrfach Start ausloest.
+        // Hotkey: Strg+Alt+Leertaste. Unterstuetzt zwei Bedien-Modi:
+        //
+        //   1) HOLD (Push-to-Talk): Taste laenger als 500 ms gedrueckt halten
+        //      → Aufnahme laeuft solange gehalten wird, stoppt beim Loslassen.
+        //      Klassische PTT-Bedienung, Daumen am Space, sprechen, loslassen.
+        //
+        //   2) TAP (Toggle): kurzer Tastendruck (< 500 ms zwischen DOWN und UP)
+        //      → Aufnahme startet und LAEUFT WEITER, auch wenn die Taste
+        //      schon losgelassen ist. Naechster kurzer Tap stoppt sie.
+        //      Diese Variante ist wichtig fuer Logitech-G-Tasten, weil das
+        //      G HUB ein G-Macro per Default als kurzes Tap-Event sendet
+        //      und nicht als echtes Halten. Frank kann seine G5-Taste also
+        //      ohne G-HUB-Konfiguration nutzen: tap zum Starten, tap zum Beenden.
+        //
+        // Erkennung erfolgt am UP-Event: war der Druck kuerzer als
+        // PttTapThresholdMs, gehen wir in Toggle-Modus und warten auf den
+        // naechsten Tap. War er laenger, gilt klassisches PTT und Loslassen
+        // stoppt sofort.
         private IntPtr _pttHookHandle = IntPtr.Zero;
         private NativeMethods.Win32.LowLevelKeyboardProc? _pttHookProc;
-        private bool _pttKeyDown = false;
+        private bool _pttRecording   = false;  // wir haben aktuell eine Aufnahme via PTT laufen
+        private bool _pttToggleMode  = false;  // im Toggle-Modus (durch Tap aktiviert) — wartet auf naechsten Tap zum Stoppen
+        private DateTime _pttKeyDownAt = DateTime.MinValue;  // Zeitpunkt des letzten DOWN-Events
+        private const int PttTapThresholdMs = 500;
 
         // Pfad des zuletzt mit dem ScreenshotButton aufgenommenen Bildes.
         // Wird vom InsertScreenshotButton gelesen — exakt diese eine Datei
@@ -1889,12 +1905,28 @@ namespace TerminalVoiceOverlay.Views
 
                 if (isDown && ctrl && alt)
                 {
-                    // Erste DOWN-Flanke: Aufnahme starten. Auto-repeat der
-                    // Tastatur wuerde sonst bei jedem Wiederhol-DOWN den
-                    // Mic-Toggle erneut feuern und die Aufnahme abbrechen.
-                    if (!_pttKeyDown)
+                    if (_pttToggleMode)
                     {
-                        _pttKeyDown = true;
+                        // Wir laufen schon im Toggle-Modus (durch frueheren Tap
+                        // gestartet). Dieser Tap stoppt die Aufnahme.
+                        _pttToggleMode = false;
+                        _pttRecording  = false;
+                        Console.WriteLine("PTT: toggle stop tap — stop and transcribe");
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try { BtnMic_Click(this, new RoutedEventArgs()); }
+                            catch (Exception ex) { Console.WriteLine($"PTT toggle-stop error: {ex.Message}"); }
+                        }));
+                    }
+                    else if (!_pttRecording)
+                    {
+                        // Frische DOWN-Flanke: Aufnahme starten. Wir merken
+                        // uns den Zeitpunkt — beim UP entscheidet die Dauer
+                        // ob HOLD-Modus (laenger als Schwelle) oder TOGGLE
+                        // (kuerzer, also G-Tasten-Macro). Auto-repeat der
+                        // Tastatur landet im else-Zweig (kein zweiter Start).
+                        _pttRecording  = true;
+                        _pttKeyDownAt  = DateTime.UtcNow;
                         Console.WriteLine("PTT: keydown — start recording");
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
@@ -1902,22 +1934,38 @@ namespace TerminalVoiceOverlay.Views
                             catch (Exception ex) { Console.WriteLine($"PTT start error: {ex.Message}"); }
                         }));
                     }
-                    // Event blocken — Strg+Alt+Leertaste soll NICHT in der
-                    // darunterliegenden App landen (sonst springt z.B. der
-                    // Cursor in einer Eingabe).
+                    // else: auto-repeat DOWN waehrend HOLD-Modus — schlucken
                     return new IntPtr(1);
                 }
 
-                if (isUp && _pttKeyDown)
+                if (isUp)
                 {
-                    _pttKeyDown = false;
-                    Console.WriteLine("PTT: keyup — stop and transcribe");
-                    Dispatcher.BeginInvoke(new Action(() =>
+                    // UP: nur reagieren wenn wir tatsaechlich aufnehmen UND
+                    // nicht schon im Toggle-Modus sind (im Toggle-Modus
+                    // ignorieren wir UP — gestoppt wird per naechstem Tap).
+                    if (_pttRecording && !_pttToggleMode)
                     {
-                        try { BtnMic_Click(this, new RoutedEventArgs()); }
-                        catch (Exception ex) { Console.WriteLine($"PTT stop error: {ex.Message}"); }
-                    }));
-                    return new IntPtr(1);
+                        double heldMs = (DateTime.UtcNow - _pttKeyDownAt).TotalMilliseconds;
+                        if (heldMs < PttTapThresholdMs)
+                        {
+                            // Kurzer Tap — Aufnahme weiter laufen lassen,
+                            // Toggle-Modus aktivieren. Der naechste Tap stoppt.
+                            _pttToggleMode = true;
+                            Console.WriteLine($"PTT: short tap ({heldMs:F0} ms) — entering toggle mode, tap again to stop");
+                        }
+                        else
+                        {
+                            // Langer Halt — klassisches PTT, sofort stoppen.
+                            _pttRecording = false;
+                            Console.WriteLine($"PTT: hold release ({heldMs:F0} ms) — stop and transcribe");
+                            Dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                try { BtnMic_Click(this, new RoutedEventArgs()); }
+                                catch (Exception ex) { Console.WriteLine($"PTT stop error: {ex.Message}"); }
+                            }));
+                        }
+                        return new IntPtr(1);
+                    }
                 }
             }
 
