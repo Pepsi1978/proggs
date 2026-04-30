@@ -105,13 +105,15 @@ namespace ClaudeVoiceOverlay.Services
                 throw new Exception("Leere Antwort von Groq");
             }
 
-            // Bekannter Groq-Bug: bei manchen Audio-Files loest der prompt-Parameter
-            // einen 500-Fehler aus. Workaround: einmal sofort ohne prompt retryen,
-            // bevor die normale Retry-Eskalation greift. Quelle:
+            // Bekannter Groq-Bug: der prompt-Parameter loest bei manchen Audio-
+            // Files Fehler-Status aus (im Forum dokumentiert: 400, 500, 502, 504).
+            // Statt jeden Status einzeln zu listen, fallback bei JEDEM Fehler
+            // wenn prompt mitgeschickt wurde — auth-fehler (401/403) sind eh
+            // permanent und kommen direkt am Ende als Exception. Quelle:
             // https://community.groq.com/t/500-errors-tied-to-prompt-parameter-on-audio-transcriptions/858
-            if (statusCode == 500 && promptWasSent)
+            if (promptWasSent && statusCode != 401 && statusCode != 403)
             {
-                Console.WriteLine("Groq 500 mit prompt — fallback ohne prompt (vocab-bug Workaround)");
+                Console.WriteLine($"Groq {statusCode} mit prompt — fallback ohne prompt (vocab-bug Workaround)");
                 return await TranscribeWithRetry(wavFilePath, attempt, sendPrompt: false);
             }
 
