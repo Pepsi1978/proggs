@@ -1044,7 +1044,21 @@ constructor(
                 .build()
         val billingFlowParamsBuilder =
             BillingFlowParams.newBuilder().setProductDetailsParamsList(listOf(productDetailsParams))
-        if (basePlanStamp != null) {
+
+        // Loop-7 (Frank, 2026-04-30): the legacy code reused
+        // obfuscatedAccountId as a "which base-plan did the user pick"
+        // marker. That works on the FIRST purchase but Google rejects
+        // every later subscription update with responseCode=5
+        // "Account identifiers don't match the previous subscription."
+        // because Play treats obfuscatedAccountId as a stable user id —
+        // it must be identical across the entire lifetime of the
+        // subscription. We therefore only stamp the base-plan info on
+        // the FIRST purchase (no oldToken yet) and leave the field
+        // untouched on every retention/plan switch.
+        val isSubscriptionUpdate =
+            activePurchaseToken != null &&
+                _subscriptionState.value is SubscriptionState.Subscribed
+        if (basePlanStamp != null && !isSubscriptionUpdate) {
             billingFlowParamsBuilder.setObfuscatedAccountId(basePlanStamp)
         }
 
