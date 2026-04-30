@@ -234,6 +234,16 @@ namespace TerminalVoiceOverlay.Views
         private const string ReleaseBundleFolder =
             @"C:\Users\barwa\proggs\BestJournalAndroid\app\build\outputs\bundle\release";
 
+        // Alt+F12 Toggle (PRIMAERER PTT-Hotkey, gemappt auf G-HUB G5):
+        // G-HUB unterstuetzt KEIN echtes Press/Release — alle Modi (Tap, Wiederholen
+        // beim Halten, Toggle, Sequenz) senden Tap-Sequenzen. Daher: F12 ist reines
+        // Toggle — 1x druecken startet, 1x druecken stoppt+transkribiert. Cooldown
+        // schluckt Tap-Spam-Bursts (z.B. von "Wiederholen beim Halten") sodass das
+        // System nicht zwischen Start/Stop chaotisch hin- und herwechselt.
+        private DateTime _altF12CooldownUntil = DateTime.MinValue;
+        private bool _altF12KeyDown = false;
+        private const int AltF12CooldownMs = 350;
+
         // Debounce-Flags fuer Screenshot-/Insert-Hotkeys: wir wollen nur auf
         // die ERSTE DOWN-Flanke reagieren, nicht auf Tastatur-Auto-Repeat.
         // Werden beim KeyUp wieder zurueckgesetzt damit der naechste Druck
@@ -1938,6 +1948,42 @@ namespace TerminalVoiceOverlay.Views
                 }
             }
 
+            // ── Alt+F12: REINES TOGGLE fuer Audio-Aufnahme ──
+            // 1x druecken = Aufnahme an. 1x druecken = Aufnahme aus + transkribieren.
+            // Kein PTT-Halten — G-HUB Macros koennen das nicht zuverlaessig.
+            // Cooldown von 350ms gegen Tap-Spam aus G-HUB-Modi wie "Wiederholen
+            // beim Halten" — sonst wuerde der Hook bei wiederholten Tap-Bursts
+            // zwischen Start und Stop oszillieren.
+            if (vk == NativeMethods.Win32.VK_F12)
+            {
+                bool altF12 = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU) & 0x8000) != 0;
+                bool isDownF12 = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUpF12   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (isDownF12 && altF12 && !_altF12KeyDown)
+                {
+                    _altF12KeyDown = true;
+                    if (DateTime.UtcNow < _altF12CooldownUntil)
+                    {
+                        Console.WriteLine("Alt+F12: in cooldown — tap ignoriert");
+                        return new IntPtr(1);
+                    }
+                    _altF12CooldownUntil = DateTime.UtcNow.AddMilliseconds(AltF12CooldownMs);
+                    Console.WriteLine("Alt+F12: toggle recording (BtnMic_Click)");
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try { BtnMic_Click(this, new RoutedEventArgs()); }
+                        catch (Exception ex) { Console.WriteLine($"Alt+F12 toggle error: {ex.Message}"); }
+                    }));
+                    return new IntPtr(1);
+                }
+                if (isUpF12)
+                {
+                    _altF12KeyDown = false;
+                }
+                if (isDownF12 && altF12) return new IntPtr(1); // Auto-Repeat schlucken
+            }
+
             // Wir reagieren nur auf die Leertaste — Strg/Alt sind reine Modifier.
             // Beim KeyDown der Leertaste pruefen wir ob Strg+Alt zusaetzlich
             // gedrueckt sind (GetAsyncKeyState liest den aktuellen Tastenzustand).
@@ -1945,8 +1991,7 @@ namespace TerminalVoiceOverlay.Views
             // alle UI-Aktionen muessen via Dispatcher.BeginInvoke erfolgen.
             if (vk == NativeMethods.Win32.VK_SPACE
                 || vk == NativeMethods.Win32.VK_M
-                || vk == NativeMethods.Win32.VK_F9
-                || vk == NativeMethods.Win32.VK_F12)
+                || vk == NativeMethods.Win32.VK_F9)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
