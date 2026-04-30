@@ -39,12 +39,12 @@ namespace TerminalVoiceOverlay.Views
         private static readonly SolidColorBrush BtnX         = Brush("#C62828");
         private static readonly SolidColorBrush BtnXPressed  = Brush("#E53935");
         private static readonly SolidColorBrush BtnMicIdle   = Brush("#1565C0");
-        // Copy/Paste buttons
-        private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");
-        private static readonly SolidColorBrush BtnPaste     = Brush("#7B1FA2");
-        // Screenshot + Insert-Screenshot buttons (between Paste and Enter)
-        private static readonly SolidColorBrush BtnScreenshot       = Brush("#00796B");
-        private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#EF6C00");
+        // Copy/Paste buttons (pair: same blue family so they read as a unit)
+        private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
+        private static readonly SolidColorBrush BtnPaste     = Brush("#0277BD");  // Light Blue 800
+        // Screenshot + Insert-Screenshot buttons (pair: same teal family)
+        private static readonly SolidColorBrush BtnScreenshot       = Brush("#00796B");  // Teal 700
+        private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#00897B");  // Teal 600
         // Ultrathink star
         private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#9E7B0E");
         private static readonly SolidColorBrush StarGold         = Brush("#DAA520");
