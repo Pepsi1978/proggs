@@ -120,7 +120,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
@@ -228,11 +231,16 @@ fun SettingsScreen(
         }
     }
 
-    // Re-query Google Play whenever the Settings screen opens so subscription
-    // state, promo countdown and price displays pick up any renewals or plan
-    // changes that happened while the screen was not visible.
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        viewModel.refreshSubscriptionStatus()
+    // Loop-5 fix: re-query Google Play whenever the Settings screen becomes
+    // visible AND every time the activity returns to RESUMED — so a Play
+    // Store cancellation made via the external "Abos verwalten" page is
+    // picked up immediately when the user returns to BestJournal, instead
+    // of leaving the dialog frozen on the pre-cancellation state for hours.
+    val settingsLifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(settingsLifecycleOwner) {
+        settingsLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshSubscriptionStatus()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {

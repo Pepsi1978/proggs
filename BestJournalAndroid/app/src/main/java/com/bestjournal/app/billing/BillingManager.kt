@@ -143,6 +143,26 @@ constructor(
     private val pendingPurchaseQueries =
         java.util.concurrent.atomic.AtomicInteger(0)
 
+    // Loop-5 fix: When a queryPurchasesAsync callback comes back with a non-OK
+    // responseCode, BillingClient does NOT carry purchase data — but it also
+    // does not mean the user is unsubscribed. The previous code never invoked
+    // finalizePurchaseQueryBatch in that branch, so the pending counter could
+    // stick at 1 and break the next refresh; AND the same "no purchase found"
+    // path was used for both genuinely empty responses and transient errors.
+    // This flag lets finalizePurchaseQueryBatch keep the previous state in
+    // the error case instead of falsely downgrading to Free.
+    private val anyQueryFailed =
+        java.util.concurrent.atomic.AtomicBoolean(false)
+
+    // Loop-5 fix: When finalizePurchaseQueryBatch decides we are no longer
+    // Subscribed but the previous state WAS Subscribed, it must verify the
+    // expiration with the Cloud Function before downgrading the UI. To avoid
+    // sending three or four parallel verification calls in the same refresh
+    // cycle (one per finalize call, one per dialog open), only one is allowed
+    // at a time.
+    private val verifyExpirationInFlight =
+        java.util.concurrent.atomic.AtomicBoolean(false)
+
     private val connectionListener =
         object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
@@ -155,6 +175,7 @@ constructor(
                     //    Free state is only set after BOTH return without any
                     //    purchase — see querySubscriptions / queryInAppPurchases.
                     activeQueryFoundPurchase.set(false)
+                    anyQueryFailed.set(false)
                     pendingPurchaseQueries.set(2)
                     queryInAppPurchases()
                     querySubscriptions()
@@ -227,6 +248,7 @@ constructor(
         // last completing query will be allowed to set Free state, and only
         // when the bookkeeping shows no purchase was found by anyone.
         activeQueryFoundPurchase.set(false)
+        anyQueryFailed.set(false)
         pendingPurchaseQueries.set(2) // querySubscriptions + queryInAppPurchases
         querySubscriptions()
         queryInAppPurchases()
@@ -285,15 +307,47 @@ constructor(
                                 SubscriptionType.MONTHLY
                             else -> SubscriptionType.MONTHLY
                         }
-                    // Local autoRenewing fallback (server-authoritative value
-                    // comes later via Cloud Function).
-                    _autoRenewing.value = activePurchase.isAutoRenewing
+                    // Loop-5 fix: persist token+productId so finalizePurchaseQueryBatch
+                    // can ask the Cloud Function whether the subscription truly
+                    // expired before downgrading to Free on a transient empty
+                    // BillingClient response.
                     encryptedPrefs.edit()
-                        .putBoolean(
-                            Constants.PREF_AUTO_RENEWING,
-                            activePurchase.isAutoRenewing,
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
+                            activePurchase.purchaseToken,
                         )
-                        .commit()
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                            activePurchase.products.firstOrNull() ?: "",
+                        )
+                        .apply()
+                    // Loop-5 fix: BillingClient.Purchase.isAutoRenewing is cached
+                    // locally and stays "true" for several minutes after the
+                    // user cancels in the Play Store. Once the Cloud Function
+                    // has provided an authoritative value (PREF_AUTO_RENEWING_CLOUD_SEEN),
+                    // we MUST NOT overwrite it with the stale local value or
+                    // the Settings dialog flickers between "gekuendigt" and
+                    // "automatisch" on every refresh.
+                    val cloudSeen = encryptedPrefs.getBoolean(
+                        Constants.PREF_AUTO_RENEWING_CLOUD_SEEN,
+                        false,
+                    )
+                    if (!cloudSeen) {
+                        _autoRenewing.value = activePurchase.isAutoRenewing
+                        encryptedPrefs.edit()
+                            .putBoolean(
+                                Constants.PREF_AUTO_RENEWING,
+                                activePurchase.isAutoRenewing,
+                            )
+                            .commit()
+                    } else {
+                        Log.d(
+                            TAG,
+                            "querySubscriptions: cloud-seen flag set, " +
+                                "keeping autoRenewing=${_autoRenewing.value} " +
+                                "(local would have set ${activePurchase.isAutoRenewing})",
+                        )
+                    }
                     // Detect renewals via local purchaseTime (legacy fallback) and
                     // clean up stale promo state on plan switches.
                     syncPromoRenewal(activePurchase)
@@ -317,6 +371,18 @@ constructor(
                         it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged
                     }
                     .forEach { purchase -> acknowledgePurchase(purchase) }
+            } else {
+                // Loop-5 fix: non-OK response is a transient error, not a
+                // confirmation that the user is unsubscribed. Mark the batch
+                // as failed and STILL run finalizePurchaseQueryBatch so the
+                // pending counter does not get stuck at 1.
+                Log.w(
+                    TAG,
+                    "querySubscriptions: non-OK response code=${billingResult.responseCode}, " +
+                        "msg=${billingResult.debugMessage}",
+                )
+                anyQueryFailed.set(true)
+                finalizePurchaseQueryBatch()
             }
         }
     }
@@ -449,19 +515,46 @@ constructor(
 
         backgroundScope.launch {
             Log.d(TAG, "syncPromoFromCloudExpiry: calling cloud function")
-            val result = try {
+            val fetchResult = try {
                 kotlinx.coroutines.withTimeout(15_000L) {
-                    subscriptionStatusService.fetch(token, productId)
+                    subscriptionStatusService.fetchWithStatus(token, productId)
                 }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 Log.w(TAG, "syncPromoFromCloudExpiry: cloud call timed out")
-                null
+                com.bestjournal.app.data.remote.FetchResult.Error
             }
+
+            // Loop-5 fix: distinguish between "transient error" (keep state)
+            // and "subscription truly expired" (downgrade to Free). The legacy
+            // null-return-value lumped both cases together which left the app
+            // showing "Premium aktiv" for hours after a real expiry.
+            if (fetchResult is com.bestjournal.app.data.remote.FetchResult.NotFound) {
+                synchronized(promoSyncLock) {
+                    Log.d(
+                        TAG,
+                        "syncPromoFromCloudExpiry: cloud confirms expired, downgrading to Free",
+                    )
+                    _subscriptionState.value = SubscriptionState.Free
+                    _subscriptionType.value = SubscriptionType.NONE
+                    activePurchaseToken = null
+                    clearPromoStateIfNoSubscription()
+                    encryptedPrefs.edit()
+                        .remove(Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN)
+                        .remove(Constants.PREF_LAST_KNOWN_PRODUCT_ID)
+                        .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
+                        .commit()
+                }
+                return@launch
+            }
+
+            val result =
+                (fetchResult as? com.bestjournal.app.data.remote.FetchResult.Found)?.data
+
             // Apply the result under the same lock as syncPromoRenewal so the
             // two paths cannot race against each other on the same prefs keys.
             synchronized(promoSyncLock) {
                 if (result == null) {
-                    Log.d(TAG, "syncPromoFromCloudExpiry: no result")
+                    Log.d(TAG, "syncPromoFromCloudExpiry: no result (transient error)")
                     encryptedPrefs.edit()
                         .putLong(Constants.PREF_LAST_PROMO_CLOUD_FETCH, now)
                         .commit()
@@ -482,8 +575,11 @@ constructor(
                     _serverCurrentPriceCurrency.value = result.currentPriceCurrency ?: ""
                 }
                 result.autoRenewing?.let { renewing ->
+                    // Loop-5 fix: mark the cloud value as authoritative so the
+                    // local fallback in querySubscriptions stops overwriting it.
                     encryptedPrefs.edit()
                         .putBoolean(Constants.PREF_AUTO_RENEWING, renewing)
+                        .putBoolean(Constants.PREF_AUTO_RENEWING_CLOUD_SEEN, true)
                         .commit()
                     _autoRenewing.value = renewing
                 }
@@ -595,8 +691,24 @@ constructor(
             .remove(Constants.PREF_LAST_CLOUD_STATUS_FETCH)
             .remove(Constants.PREF_LAST_PROMO_CLOUD_FETCH)
             .remove(Constants.PREF_LAST_KNOWN_EXPIRY)
+            // Loop-5 fix: when the subscription is genuinely gone, reset the
+            // cloud-seen flag and last-known token so a later re-subscription
+            // starts from a clean slate (otherwise stale flags could mask
+            // BillingClient updates the next time the user purchases).
+            .remove(Constants.PREF_AUTO_RENEWING_CLOUD_SEEN)
+            .remove(Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN)
+            .remove(Constants.PREF_LAST_KNOWN_PRODUCT_ID)
+            .remove(Constants.PREF_AUTO_RENEWING)
+            .remove(Constants.PREF_OFFER_PHASE)
+            .remove(Constants.PREF_CURRENT_PRICE_MICROS)
+            .remove(Constants.PREF_CURRENT_PRICE_CURRENCY)
             .commit()
         _promoTotalMonths.value = 0
+        _autoRenewing.value = true
+        _offerPhase.value = null
+        _expiryTime.value = null
+        _serverCurrentPriceMicros.value = 0L
+        _serverCurrentPriceCurrency.value = ""
     }
 
     /**
@@ -724,6 +836,16 @@ constructor(
                         it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged
                     }
                     .forEach { purchase -> acknowledgePurchase(purchase) }
+            } else {
+                // Loop-5 fix: non-OK response means BillingClient could not
+                // tell us anything — keep previous state by recording the
+                // failure flag, but still drain the pending counter.
+                Log.w(
+                    TAG,
+                    "queryInAppPurchases: non-OK response code=${billingResult.responseCode}, " +
+                        "msg=${billingResult.debugMessage}",
+                )
+                anyQueryFailed.set(true)
             }
             // Free state can only be set after BOTH purchase queries are done
             // (race-condition fix — Loop-4 Bug #1).
@@ -738,15 +860,164 @@ constructor(
      * found an active purchase. This prevents the Premium-screen-flash bug
      * where querySubscriptions returned first with no subs but the Lifetime
      * check in queryInAppPurchases was still pending.
+     *
+     * Loop-5 fix: BillingClient.queryPurchasesAsync can briefly return empty
+     * during reconnects or in the few minutes right after a Play Store
+     * cancellation, even though the user is still entitled to Premium until
+     * the expiry date. The previous logic caused the underlying Settings
+     * screen to flash to "Premium freischalten" when the user clicked
+     * "Verwalten" — exactly the symptom Frank reported. We now defer the
+     * downgrade until either:
+     *   - the Cloud Function confirms expiration (FetchResult.NotFound), OR
+     *   - the previous state was already Free (no regression to fix).
+     * Transient errors keep the previous state, eliminating the flicker.
      */
     private fun finalizePurchaseQueryBatch() {
         val remaining = pendingPurchaseQueries.decrementAndGet()
-        if (remaining > 0) return
+        // Loop-5 fix: strict equality so a stale callback from a previous
+        // refresh batch (which made the counter go negative when a second
+        // refresh happened mid-flight) does not run finalize twice and
+        // accidentally downgrade to Free on the second pass.
+        if (remaining != 0) return
         if (activeQueryFoundPurchase.get()) return
-        // Both queries done, no purchase found anywhere → genuinely Free.
+        if (anyQueryFailed.get()) {
+            Log.d(
+                TAG,
+                "finalizePurchaseQueryBatch: at least one query failed — " +
+                    "keeping previous state (state=${_subscriptionState.value})",
+            )
+            return
+        }
+        val previousState = _subscriptionState.value
+        if (previousState is SubscriptionState.Subscribed) {
+            // Both queries succeeded but reported nothing while we were
+            // Subscribed. This is the suspicious case — a real Play Store
+            // cancellation only takes effect at expiryTime, so during the
+            // grace window the BillingClient cache should still report it.
+            // Verify with the Cloud Function before downgrading.
+            val lastToken = encryptedPrefs.getString(
+                Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
+                null,
+            )
+            val lastProduct = encryptedPrefs.getString(
+                Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                null,
+            )
+            if (!lastToken.isNullOrBlank() && !lastProduct.isNullOrBlank()) {
+                Log.d(
+                    TAG,
+                    "finalizePurchaseQueryBatch: was Subscribed but BillingClient " +
+                        "is empty — verifying with Cloud Function before downgrade",
+                )
+                verifyExpirationWithCloud(lastToken, lastProduct)
+                return
+            }
+            // No persisted token. Fall through: this is a fresh install or
+            // the user never had a subscription, so treating empty as Free
+            // is the correct behaviour.
+            Log.d(
+                TAG,
+                "finalizePurchaseQueryBatch: was Subscribed but no persisted " +
+                    "token — assuming legacy state, downgrading to Free",
+            )
+        }
         _subscriptionState.value = SubscriptionState.Free
         _subscriptionType.value = SubscriptionType.NONE
         clearPromoStateIfNoSubscription()
+    }
+
+    /**
+     * Loop-5 fix: when BillingClient claims the user has no purchase but we
+     * were just Subscribed, ask the Cloud Function (which speaks directly to
+     * the Subscriptions API v2) whether the subscription truly expired. We
+     * only downgrade to Free when the Cloud Function explicitly returns
+     * NotFound — anything else (including transient errors) keeps the
+     * previous Subscribed state.
+     */
+    private fun verifyExpirationWithCloud(token: String, productId: String) {
+        if (!verifyExpirationInFlight.compareAndSet(false, true)) {
+            Log.d(TAG, "verifyExpirationWithCloud: already running, skipping")
+            return
+        }
+        backgroundScope.launch {
+            try {
+                val result = try {
+                    kotlinx.coroutines.withTimeout(15_000L) {
+                        subscriptionStatusService.fetchWithStatus(token, productId)
+                    }
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.w(TAG, "verifyExpirationWithCloud: timed out")
+                    com.bestjournal.app.data.remote.FetchResult.Error
+                }
+                when (result) {
+                    is com.bestjournal.app.data.remote.FetchResult.NotFound -> {
+                        Log.d(
+                            TAG,
+                            "verifyExpirationWithCloud: cloud confirms expired — setting Free",
+                        )
+                        _subscriptionState.value = SubscriptionState.Free
+                        _subscriptionType.value = SubscriptionType.NONE
+                        activePurchaseToken = null
+                        clearPromoStateIfNoSubscription()
+                        encryptedPrefs.edit()
+                            .remove(Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN)
+                            .remove(Constants.PREF_LAST_KNOWN_PRODUCT_ID)
+                            .apply()
+                    }
+                    is com.bestjournal.app.data.remote.FetchResult.Found -> {
+                        // Cloud says still active — BillingClient cache was wrong.
+                        // Keep the Subscribed state and apply any fresh fields
+                        // from the cloud response so the UI reflects truth.
+                        Log.d(
+                            TAG,
+                            "verifyExpirationWithCloud: cloud says still active — " +
+                                "keeping Subscribed",
+                        )
+                        val data = result.data
+                        synchronized(promoSyncLock) {
+                            data.autoRenewing?.let { renewing ->
+                                encryptedPrefs.edit()
+                                    .putBoolean(Constants.PREF_AUTO_RENEWING, renewing)
+                                    .putBoolean(
+                                        Constants.PREF_AUTO_RENEWING_CLOUD_SEEN,
+                                        true,
+                                    )
+                                    .commit()
+                                _autoRenewing.value = renewing
+                            }
+                            data.offerPhase?.let { phase ->
+                                encryptedPrefs.edit()
+                                    .putString(Constants.PREF_OFFER_PHASE, phase)
+                                    .commit()
+                                _offerPhase.value = phase
+                            }
+                            data.currentPriceMicros?.let { micros ->
+                                encryptedPrefs.edit()
+                                    .putLong(Constants.PREF_CURRENT_PRICE_MICROS, micros)
+                                    .putString(
+                                        Constants.PREF_CURRENT_PRICE_CURRENCY,
+                                        data.currentPriceCurrency ?: "",
+                                    )
+                                    .commit()
+                                _serverCurrentPriceMicros.value = micros
+                                _serverCurrentPriceCurrency.value =
+                                    data.currentPriceCurrency ?: ""
+                            }
+                            _expiryTime.value = data.expiryTime
+                        }
+                    }
+                    is com.bestjournal.app.data.remote.FetchResult.Error -> {
+                        Log.w(
+                            TAG,
+                            "verifyExpirationWithCloud: cloud unavailable — " +
+                                "keeping previous state",
+                        )
+                    }
+                }
+            } finally {
+                verifyExpirationInFlight.set(false)
+            }
+        }
     }
 
     private fun queryProductDetails() {
@@ -1077,6 +1348,16 @@ constructor(
         } else {
             activePurchaseToken = null
         }
+        // Loop-5 fix: also persist last-known token+productId so the verify-
+        // before-downgrade path in finalizePurchaseQueryBatch can ask the
+        // Cloud Function whether a later "BillingClient empty" is real.
+        encryptedPrefs.edit()
+            .putString(Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN, purchase.purchaseToken)
+            .putString(
+                Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                purchase.products.firstOrNull() ?: "",
+            )
+            .apply()
         _subscriptionType.value =
             when {
                 isLifetime -> SubscriptionType.LIFETIME

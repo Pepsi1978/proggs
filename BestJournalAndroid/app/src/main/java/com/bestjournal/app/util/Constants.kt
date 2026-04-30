@@ -197,6 +197,19 @@ object Constants {
     const val PREF_LAST_ORDER_ID = "last_order_id"
     // Currently-active pricing phase: "BASE", "INTRO", "FREE_TRIAL", or null.
     const val PREF_OFFER_PHASE = "offer_phase"
+    // Loop-5 fix: once the Cloud Function has provided an authoritative
+    // autoRenewing value, BillingClient's local Purchase.isAutoRenewing must
+    // not overwrite it anymore — it can be stale for minutes after the user
+    // cancels in the Play Store, causing the Settings dialog to flicker
+    // between "gekuendigt" and "automatisch".
+    const val PREF_AUTO_RENEWING_CLOUD_SEEN = "auto_renewing_cloud_seen"
+    // Loop-5 fix: persisted purchase token + product id of the most recent
+    // active subscription. Lets us call the Cloud Function to verify whether
+    // a subscription has truly expired BEFORE downgrading the local state to
+    // Free — BillingClient.queryPurchasesAsync can briefly return empty
+    // during reconnects and the few minutes after a Play Store cancellation.
+    const val PREF_LAST_KNOWN_PURCHASE_TOKEN = "last_known_purchase_token"
+    const val PREF_LAST_KNOWN_PRODUCT_ID = "last_known_product_id"
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"
