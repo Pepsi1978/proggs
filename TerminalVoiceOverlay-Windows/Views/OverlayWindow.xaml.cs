@@ -2219,10 +2219,14 @@ namespace TerminalVoiceOverlay.Views
         }
 
         // Alt+F11 Hotkey-Aktion: Den Release-Bundle-Ordner im Windows Explorer
-        // oeffnen — als nicht-maximiertes Fenster (ca. 60% Breite x 70% Hoehe,
-        // mittig auf dem aktuellen Monitor). Falls der Ordner noch nicht existiert
-        // (z.B. weil noch nie ein Release-Build lief), oeffnen wir das naechste
-        // existierende Eltern-Verzeichnis statt einen Fehler zu werfen.
+        // oeffnen. Das Terminal bleibt unangetastet — Explorer.exe kommt von
+        // selbst nach vorn und uebernimmt seine zuletzt verwendete Fenstergroesse.
+        // KEIN Resize/ShowWindow auf GetForegroundWindow() — das wuerde
+        // versehentlich das Terminal verkleinern, weil Explorer.exe verzoegert
+        // startet und der Foreground-Wechsel zwischen Trigger und Resize erfolgt.
+        // Falls der Ordner noch nicht existiert (z.B. weil noch nie ein
+        // Release-Build lief), oeffnen wir das naechste existierende
+        // Eltern-Verzeichnis statt einen Fehler zu werfen.
         private void OpenReleaseBundleFolder()
         {
             string folder = ReleaseBundleFolder;
@@ -2246,54 +2250,12 @@ namespace TerminalVoiceOverlay.Views
                     Arguments = $"\"{folder}\"",
                     UseShellExecute = true,
                 });
+                Console.WriteLine($"Alt+F11: explorer geoeffnet bei {folder}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Alt+F11 explorer start failed: {ex.Message}");
-                return;
             }
-
-            // Explorer respektiert weder ProcessWindowStyle noch ein "/n,"-Argument
-            // zuverlaessig. Wir resizen das frische Fenster nach kurzem Delay
-            // manuell — das gibt das gewuenschte "halb offene" Fenster.
-            string targetFolder = folder;
-            Task.Delay(450).ContinueWith(_ =>
-            {
-                try
-                {
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        var hwnd = NativeMethods.Win32.GetForegroundWindow();
-                        if (hwnd == IntPtr.Zero) return;
-
-                        NativeMethods.Win32.ShowWindow(hwnd, NativeMethods.Win32.SW_SHOWNORMAL);
-
-                        var monitor = NativeMethods.Win32.MonitorFromWindow(
-                            hwnd, NativeMethods.Win32.MONITOR_DEFAULTTONEAREST);
-                        var mi = new NativeMethods.Win32.MONITORINFO
-                        {
-                            cbSize = Marshal.SizeOf<NativeMethods.Win32.MONITORINFO>()
-                        };
-                        if (!NativeMethods.Win32.GetMonitorInfo(monitor, ref mi)) return;
-
-                        int workW = mi.rcWork.Right - mi.rcWork.Left;
-                        int workH = mi.rcWork.Bottom - mi.rcWork.Top;
-                        int w = (int)(workW * 0.60);
-                        int h = (int)(workH * 0.70);
-                        int x = mi.rcWork.Left + (workW - w) / 2;
-                        int y = mi.rcWork.Top + (workH - h) / 2;
-
-                        NativeMethods.Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, w, h,
-                            NativeMethods.Win32.SWP_NOZORDER | NativeMethods.Win32.SWP_NOACTIVATE);
-
-                        Console.WriteLine($"Alt+F11: explorer geoeffnet bei {targetFolder} ({w}x{h})");
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Alt+F11 resize failed: {ex.Message}");
-                }
-            });
         }
 
         protected override void OnClosed(EventArgs e)
