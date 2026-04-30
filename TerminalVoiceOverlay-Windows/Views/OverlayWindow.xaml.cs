@@ -336,6 +336,8 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(EnterButton);
             AttachHover(CopyButton);
             AttachHover(PasteButton);
+            AttachHover(ScreenshotButton);
+            AttachHover(InsertScreenshotButton);
 
             // ── Terminal watcher ──
             _terminalWatcher.TerminalActivated   += OnTerminalActivated;
