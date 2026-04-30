@@ -213,29 +213,31 @@ constructor(
     val promoInfoState: StateFlow<PromoInfo?> = combine(
         billingManager.subscriptionType,
         billingManager.monthlyPrice,
-        billingManager.offerPhase,
         billingManager.expiryTime,
         billingManager.serverCurrentPriceMicros,
         billingManager.serverCurrentPriceCurrency,
     ) { values: Array<Any?> ->
         val type = values[0] as com.bestjournal.app.billing.SubscriptionType
         val monthlyPrice = values[1] as String
-        val phase = values[2] as String?
-        val expiry = values[3] as String?
-        val priceMicros = values[4] as Long
-        val priceCurrency = values[5] as String
+        val expiry = values[2] as String?
+        val priceMicros = values[3] as Long
+        val priceCurrency = values[4] as String
         if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
-        // Only a real INTRO phase counts as an active promo. BASE = regular
-        // price, FREE_TRIAL or null = nothing to show.
-        if (phase != "INTRO") return@combine null
         if (expiry.isNullOrBlank()) return@combine null
-        val basePrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+        if (priceMicros <= 0L || monthlyPrice.isBlank()) return@combine null
+        // Loop-7 fix #2 (Frank, 2026-04-30): determine "still in promo phase"
+        // by comparing what Google charges next (priceMicros) with the
+        // BillingClient's main base-plan list price (monthlyPriceMicros).
+        // If the next charge is strictly less than the base list price the
+        // user is still benefitting from an intro discount; if they match
+        // the promo is over and we should not show the discount notice.
+        val baseMicros = parsePriceToMicros(monthlyPrice) ?: return@combine null
+        if (priceMicros >= baseMicros) return@combine null
         val currentPrice = formatMicrosAsPrice(priceMicros, priceCurrency)
-            ?: formatHalfPrice(basePrice)
             ?: return@combine null
         PromoInfo(
             currentPrice = currentPrice,
-            baseAfterwardsPrice = basePrice,
+            baseAfterwardsPrice = monthlyPrice,
             phaseEndDate = expiry,
         )
     }.stateIn(
@@ -243,6 +245,28 @@ constructor(
         started = SharingStarted.Eagerly,
         initialValue = null,
     )
+
+    /**
+     * Loop-7 helper: parse a localised "3,99 €" / "$3.99" / "3.99 EUR"
+     * formatted price back into micros so promoInfoState can compare it
+     * against the cloud-delivered priceMicros. Returns null when the
+     * input is empty or contains no numeric portion.
+     */
+    private fun parsePriceToMicros(formatted: String): Long? {
+        if (formatted.isBlank()) return null
+        val numStr = formatted.replace("[^0-9,.]".toRegex(), "")
+        if (numStr.isBlank()) return null
+        val lastComma = numStr.lastIndexOf(',')
+        val lastDot = numStr.lastIndexOf('.')
+        val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
+        val normalised = if (usesCommaDecimal) {
+            numStr.replace(".", "").replace(",", ".")
+        } else {
+            numStr.replace(",", "")
+        }
+        val amount = normalised.toDoubleOrNull() ?: return null
+        return (amount * 1_000_000.0).toLong()
+    }
 
     /** Reactive expiry timestamp (ISO-8601) for the CURRENTLY active phase. */
     val expiryTimeState: StateFlow<String?> = billingManager.expiryTime

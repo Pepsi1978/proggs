@@ -75,6 +75,15 @@ constructor(
     val hasPromoOffer: Boolean
         get() = billingManager.getMonthlyPromoOfferToken() != null
 
+    /**
+     * Loop-7 (Frank, 2026-04-30): expose the live subscription state so the
+     * Paywall composable can auto-dismiss the moment Google confirms the
+     * purchase. Without this the user stays on the upsell screen, has to
+     * tap the close button manually, and then sees the offer again before
+     * the Settings screen reflects the new Premium state.
+     */
+    val subscriptionState: StateFlow<SubscriptionState> = billingManager.subscriptionState
+
     // Track whether exit-intent purchase flow was started — trial extension
     // is only granted AFTER Google confirms the purchase, not on flow start.
     private var exitIntentPending = false

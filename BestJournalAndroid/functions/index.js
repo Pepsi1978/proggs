@@ -77,18 +77,18 @@ exports.getSubscriptionStatus = onCall(
 			const latestOrderId =
 				lineItem?.latestSuccessfulOrderId ?? lineItem?.latestOrderId ?? null;
 
-			// Loop-7 fix (live-discovered 2026-04-30): Google's Subscriptions
-			// API v2 does NOT return a top-level `lineItem.offerPhase` field —
-			// the previous code always returned null, so the in-app dialog
-			// could not tell INTRO from BASE phase and the promo notice never
-			// appeared. The truthful signal lives in
-			// `offerDetails.offerId`: when an offer is still active, Google
-			// keeps that id populated; once the user has rolled into the
-			// regular base plan, offerId becomes empty/null.
-			//   - offerId set         → user is in INTRO (an offer is active)
-			//   - offerId empty/null  → user is on BASE (regular recurring price)
+			// Loop-7 fix #2 (live-discovered 2026-04-30 with Frank): Google's
+			// Subscriptions API v2 has neither a `lineItem.offerPhase` field
+			// (the legacy code's wishful guess) nor a reliable signal that
+			// changes when the intro cycles are over — `offerDetails.offerId`
+			// stays populated for the entire lifetime of an offer-based plan,
+			// even after the discount has elapsed. The actual phase therefore
+			// has to be derived in the client by comparing the
+			// recurringPrice we return here with the base-plan list price the
+			// BillingClient already knows. We pass `offerPhase: null` so the
+			// client computes it locally; offerId is forwarded for diagnosis.
 			const offerId = offerDetails?.offerId ?? null;
-			const offerPhase = offerId ? "INTRO" : "BASE";
+			const offerPhase = null;
 
 			return {
 				subscriptionState: sub.subscriptionState ?? null,

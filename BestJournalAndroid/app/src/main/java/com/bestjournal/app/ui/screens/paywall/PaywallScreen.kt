@@ -98,8 +98,19 @@ fun PaywallScreen(
     val yearlyPrice by viewModel.yearlyPrice.collectAsStateWithLifecycle()
     val lifetimePrice by viewModel.lifetimePrice.collectAsStateWithLifecycle()
     val personalizedHeadline by viewModel.personalizedHeadline.collectAsStateWithLifecycle()
+    val subscriptionState by viewModel.subscriptionState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context as? Activity
+
+    // Loop-7 fix (Frank, 2026-04-30): close the paywall automatically as
+    // soon as Google confirms the purchase. The previous behaviour left
+    // the upsell card on screen so the user had to tap the close button
+    // and could even re-enter the offer flow on a freshly purchased plan.
+    androidx.compose.runtime.LaunchedEffect(subscriptionState) {
+        if (subscriptionState is com.bestjournal.app.billing.SubscriptionState.Subscribed) {
+            onDismiss()
+        }
+    }
 
     val benefitsList = listOf(
         stringResource(R.string.paywall_feature_patterns),
