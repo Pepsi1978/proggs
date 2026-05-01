@@ -1795,8 +1795,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
     }
 
     private fun getSelectedModel(): String {
-        return encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL)
-            ?: Constants.DEFAULT_GEMINI_MODEL
+        return Constants.resolveValidModel(encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL))
     }
 
     suspend fun clearDashboard() {

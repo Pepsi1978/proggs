@@ -188,18 +188,25 @@ object Constants {
 
     val GEMINI_FLASH_MODELS =
         listOf(
-            GeminiModel("gemini-3-flash-preview", "Gemini 3 Flash", "\$0.50 / \$3.00"),
+            GeminiModel("gemini-flash-latest", "Gemini 3 Flash", "\$0.50 / \$3.00"),
             GeminiModel(
                 "gemini-3.1-flash-lite-preview",
                 "Gemini 3.1 Flash Lite",
                 "\$0.25 / \$1.50",
             ),
-            GeminiModel("gemini-2.5-flash", "Gemini 2.5 Flash", "\$0.30 / \$2.50"),
             GeminiModel("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", "\$0.10 / \$0.40"),
-            GeminiModel("gemini-2.0-flash", "Gemini 2.0 Flash", "\$0.10 / \$0.40"),
         )
 
     val DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+    /**
+     * Pruefe ob das gespeicherte Modell noch in der aktuellen Modell-Liste ist.
+     * Wenn nicht (z.B. weil ein Modell aus der Liste entfernt wurde), gib das
+     * Default-Modell zurueck. Verhindert dass alte/entfernte Modell-IDs an Gemini
+     * geschickt werden.
+     */
+    fun resolveValidModel(storedId: String?): String =
+        GEMINI_FLASH_MODELS.firstOrNull { it.id == storedId }?.id ?: DEFAULT_GEMINI_MODEL
 
     // Reminder
     const val PREF_REMINDER_ENABLED = "reminder_enabled"

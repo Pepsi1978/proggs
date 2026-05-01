@@ -40,10 +40,7 @@ constructor(
             }
 
             // Nutzt das vom User in den Einstellungen gewaehlte Gemini-Modell.
-            val selectedModel = encryptedPrefs.getString(
-                Constants.PREF_GEMINI_MODEL,
-                Constants.DEFAULT_GEMINI_MODEL,
-            ) ?: Constants.DEFAULT_GEMINI_MODEL
+            val selectedModel = Constants.resolveValidModel(encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL))
 
             val combinedText = buildString {
                 if (!entryTitle.isNullOrBlank()) append(entryTitle).append("\n\n")

@@ -42,8 +42,7 @@ constructor(
      * keine hartcodierten Modelle mehr fuer einzelne Aufgaben.
      */
     private fun selectedModel(): String =
-        encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL)
-            ?: Constants.DEFAULT_GEMINI_MODEL
+        Constants.resolveValidModel(encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL))
 
     // ThreadLocal to ensure thread-safe date formatting during parallel generation
     private val dfLabel: SimpleDateFormat

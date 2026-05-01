@@ -198,11 +198,19 @@ constructor(
                 edgeTtsVoice = encryptedPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, Constants.DEFAULT_EDGE_TTS_VOICE) ?: Constants.DEFAULT_EDGE_TTS_VOICE,
                 googleTtsApiKey = encryptedPrefs.getString(Constants.PREF_GOOGLE_TTS_API_KEY, "") ?: "",
                 googleTtsVoice = encryptedPrefs.getString(Constants.PREF_GOOGLE_TTS_VOICE, Constants.DEFAULT_GOOGLE_TTS_VOICE) ?: Constants.DEFAULT_GOOGLE_TTS_VOICE,
-                selectedModel =
-                    encryptedPrefs.getString(
+                selectedModel = run {
+                    val stored = encryptedPrefs.getString(
                         Constants.PREF_GEMINI_MODEL,
                         Constants.DEFAULT_GEMINI_MODEL,
-                    ) ?: Constants.DEFAULT_GEMINI_MODEL,
+                    )
+                    val valid = Constants.resolveValidModel(stored)
+                    // Falls das gespeicherte Modell nicht mehr in der Liste ist,
+                    // sofort migrieren — sonst schicken die UseCases weiter den alten Namen.
+                    if (stored != valid) {
+                        encryptedPrefs.edit().putString(Constants.PREF_GEMINI_MODEL, valid).apply()
+                    }
+                    valid
+                },
                 textImprovementDefault =
                     encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false),
                 maxRecordingDuration =

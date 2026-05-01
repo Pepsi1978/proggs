@@ -77,10 +77,7 @@ $text
         try {
             val combinedText = buildCombinedText(entryId, displayText)
             val model =
-                encryptedPrefs.getString(
-                    Constants.PREF_GEMINI_MODEL,
-                    Constants.DEFAULT_GEMINI_MODEL,
-                ) ?: Constants.DEFAULT_GEMINI_MODEL
+                Constants.resolveValidModel(encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL))
             val request =
                 GeminiRequestBuilder.build(
                     userText = buildPrompt(combinedText),

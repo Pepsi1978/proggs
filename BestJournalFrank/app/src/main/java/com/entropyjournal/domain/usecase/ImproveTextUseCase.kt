@@ -197,8 +197,7 @@ $text
             .trim()
 
     private fun getSelectedModel(): String {
-        return encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL)
-            ?: Constants.DEFAULT_GEMINI_MODEL
+        return Constants.resolveValidModel(encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL))
     }
 
     private fun getApiKey(): String {
