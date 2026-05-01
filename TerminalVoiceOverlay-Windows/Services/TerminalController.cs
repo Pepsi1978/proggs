@@ -72,6 +72,27 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
+        /// Loescht den GESAMTEN Eingabe-Buffer — auch bei mehrzeiliger Eingabe
+        /// (z.B. Claude Code CLI mit Shift+Enter-Zeilen). Drueckt Ctrl+U mehrmals
+        /// hintereinander mit kleinen Pausen, bis garantiert nichts mehr in der
+        /// Eingabezeile steht. Ctrl+U ist ein harmloser No-Op wenn der Buffer
+        /// leer ist, also kein Risiko bei zu vielen Wiederholungen.
+        ///
+        /// Wird beim Profil-Wechsel im Voice-Overlay verwendet, damit der zuletzt
+        /// eingefuegte Prompt restlos verschwindet, bevor die neue Korrektur
+        /// reingepastet wird.
+        /// </summary>
+        public static void ClearAllInput(IntPtr terminalHwnd)
+        {
+            BringToForeground(terminalHwnd);
+            for (int i = 0; i < 5; i++)
+            {
+                SendKeyCombo(Win32.VK_CONTROL, VK_U);
+                Thread.Sleep(50);
+            }
+        }
+
+        /// <summary>
         /// Copies the currently selected text in the terminal via Ctrl+C.
         /// Windows Terminal detects selection and copies instead of sending SIGINT.
         /// </summary>

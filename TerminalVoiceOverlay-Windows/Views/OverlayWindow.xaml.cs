@@ -352,10 +352,18 @@ namespace TerminalVoiceOverlay.Views
             };
 
             // ── Reset timer: 3 s back to idle after success/error ──
+            // Defensiver Check gegen Race Condition: Wenn der Tick bereits in
+            // der Dispatcher-Queue liegt und der Benutzer sehr schnell eine neue
+            // Aufnahme startet, wuerde der Tick die laufende Recording-Anzeige
+            // ueberschreiben (Symptom: Mic-Button wird mitten in der Aufnahme
+            // gelb statt rot, Welle verschwindet). DispatcherTimer.Stop() kann
+            // bereits geplante Ticks nicht zuverlaessig zuruecknehmen — daher
+            // hier ein Guard: wenn aktuell Recording laeuft, NICHT auf Idle.
             _resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             _resetTimer.Tick += (_, _) =>
             {
                 _resetTimer.Stop();
+                if (_micState == RecordingState.Recording) return;
                 SetMicState(RecordingState.Idle);
             };
 
@@ -1012,32 +1020,38 @@ namespace TerminalVoiceOverlay.Views
         private async void BtnProfile3_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(3);
 
         /// <summary>
-        /// Wechselt das aktive Profil und korrigiert — falls der zuletzt
-        /// gediktierte Whisper-Text noch im Eingabefeld steht — diesen Text
-        /// nachtraeglich durch das neue Profil. So kann der Sprecher merken
-        /// "das Programmier-Profil hat das verschlimmbessert" und mit einem
-        /// Klick auf 1 oder 3 den Roh-Text durch eine andere Brille schicken.
+        /// Wechselt das aktive Profil und schickt — falls der zuletzt von
+        /// Whisper transkribierte Roh-Text noch frisch im Cache liegt — diesen
+        /// Text nachtraeglich durch das neue Profil. Die alte Eingabezeile wird
+        /// dabei vollstaendig geloescht (auch mehrzeilig per ClearAllInput),
+        /// danach wird der frisch korrigierte Text reingepastet.
         ///
-        /// Re-Correct laeuft NUR wenn alle Bedingungen erfuellt sind:
-        /// - Roh-Whisper-Text liegt im Cache (lastCorrectableRaw)
+        /// Re-Correct laeuft wenn:
+        /// - Roh-Whisper-Text liegt im Cache (_lastCorrectableRaw)
         /// - Cache ist juenger als ReCorrectMaxAge (Standard: 2 Minuten)
-        /// - Text steht noch im Eingabefeld (hasPastedText) und wurde NICHT
-        ///   per Auto-Enter abgeschickt
         /// - Profilwechsel liegt vor (Klick auf gleiches Profil = no-op)
         /// - Gemini ist aktiviert (sonst gibt es nichts zu korrigieren)
+        /// - Aufnahme laeuft NICHT gerade (sonst stoeren wir die laufende
+        ///   Recording-UI und das Audio-Pipeline)
+        ///
+        /// Bewusst KEIN hasPastedText-Check mehr: der war an autoEnter
+        /// gekoppelt und hat Re-Correct unter Default-Settings stillgelegt.
+        /// Bewusst KEINE Aenderung am Mic-State: das wuerde die Aufnahme-
+        /// Anzeige (Welle, rot, pulsieren) ueberschreiben. Stattdessen wird
+        /// das geklickte Profil-Tile selbst kurz orange als visueller
+        /// Indikator, dass Re-Correct laeuft.
         /// </summary>
         private async Task SwitchProfileAsync(int newProfile)
         {
             int oldProfile = _activeProfile;
             SetActiveProfile(newProfile);
 
-            // Bedingungen fuer Re-Correct pruefen — bei Misserfolg einfach
-            // still den Profilwechsel akzeptieren und beim naechsten Diktat
-            // wirken lassen.
+            // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts —
+            // der Re-Correct wuerde die laufende Aufnahme-UI ueberschreiben.
+            if (_micState == RecordingState.Recording) return;
             if (newProfile == oldProfile) return;
             if (!geminiEnabled) return;
             if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
-            if (!hasPastedText) return;
             if (DateTime.UtcNow - _lastCorrectableAt > ReCorrectMaxAge)
             {
                 _lastCorrectableRaw = null;
@@ -1045,13 +1059,24 @@ namespace TerminalVoiceOverlay.Views
             }
 
             var rawText = _lastCorrectableRaw;
+            var clickedTile = newProfile switch
+            {
+                1 => Profile1Button,
+                2 => Profile2Button,
+                3 => Profile3Button,
+                _ => null
+            };
+
             try
             {
                 var gemini = await GetActiveGeminiClientAsync();
                 if (gemini == null) return;
 
                 Console.WriteLine($"Re-Correct: profile {oldProfile} -> {newProfile}");
-                SetMicState(RecordingState.Processing);
+                // Visueller Indikator: das geklickte Tile waehrend der Re-
+                // Correct-Phase orange faerben (Processing-Look). Nach Erfolg
+                // setzen wir es zurueck auf den aktiven goldgelben Look.
+                if (clickedTile != null) clickedTile.Background = BtnProcessing;
 
                 string corrected = await gemini.CorrectTextAsync(rawText, newProfile);
 
@@ -1062,21 +1087,27 @@ namespace TerminalVoiceOverlay.Views
                 if (!string.IsNullOrEmpty(postFix)) corrected = corrected + postFix;
                 corrected = corrected + " ; ";
 
-                // Eingabezeile loeschen und neu einfuegen
-                TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
-                await Task.Delay(80);
-                TerminalController.PasteText(corrected, _terminalWatcher.ActiveTerminalHwnd);
+                // Eingabezeile vollstaendig loeschen (mehrzeilig sicher) und
+                // dann den neu korrigierten Text reinpaten. Kein autoEnter —
+                // der Sprecher entscheidet selbst wann er das Ergebnis schickt.
+                var hwnd = _terminalWatcher.ActiveTerminalHwnd;
+                TerminalController.ClearAllInput(hwnd);
+                await Task.Delay(120);
+                TerminalController.PasteText(corrected, hwnd);
 
                 hasPastedText = true;
-                SetMicState(RecordingState.Success);
-                ScheduleReset();
-                Console.WriteLine($"Re-Correct ok: {corrected}");
+                Console.WriteLine($"Re-Correct ok ({corrected.Length} chars)");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Re-Correct error: {ex.Message}");
-                SetMicState(RecordingState.Error);
-                ScheduleReset();
+            }
+            finally
+            {
+                // Tile zurueck auf aktiven Look (goldgelb) — egal ob Erfolg
+                // oder Fehler. Nutzt SetActiveProfile damit Foreground-Farbe
+                // (Schrift) konsistent zum Background bleibt.
+                if (clickedTile != null) SetActiveProfile(_activeProfile);
             }
         }
 
