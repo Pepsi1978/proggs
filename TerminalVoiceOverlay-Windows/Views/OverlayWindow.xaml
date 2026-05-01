@@ -293,8 +293,10 @@
                             Grid.Column="0"
                             Style="{StaticResource CircleButton}"
                             HorizontalAlignment="Center"
-                            Click="BtnClear_Click"
-                            ToolTip="Zeile löschen">
+                            PreviewMouseLeftButtonDown="XButton_PreviewMouseLeftButtonDown"
+                            PreviewMouseLeftButtonUp="XButton_PreviewMouseLeftButtonUp"
+                            MouseLeave="XButton_MouseLeave"
+                            ToolTip="Zeile löschen — gedrückt halten löscht alle Zeilen hintereinander">
                         <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Button>
 

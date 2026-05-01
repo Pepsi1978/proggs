@@ -730,22 +730,79 @@ namespace TerminalVoiceOverlay.Views
 
         // ── Button handlers ──
 
-        /// <summary>X button — clear current terminal line.</summary>
-        private async void BtnClear_Click(object sender, RoutedEventArgs e)
+        // Press-and-hold-Repeat fuer den X-Button:
+        // - kurzer Klick: eine Zeile loeschen
+        // - gedrueckt halten: nach 400 ms beginnt Wiederhol-Modus, alle 150 ms eine weitere Zeile
+        // - Maus loslassen oder vom Button wegbewegen: Repeat stoppt
+        private System.Windows.Threading.DispatcherTimer? _xRepeatTimer;
+        private bool _xClearInFlight;       // verhindert ueberlappende ClearLine-Calls
+        private bool _xResetScheduled;      // verhindert mehrfaches Faerbe-Reset
+
+        /// <summary>Loescht eine einzelne Zeile, ohne Ueberlappung mit laufendem Aufruf.</summary>
+        private void TriggerSingleClear()
         {
+            if (_xClearInFlight) return;
+            _xClearInFlight = true;
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
             hasPastedText = false;
+            _ = Task.Run(() =>
+            {
+                try { TerminalController.ClearLine(hwnd); }
+                finally { _xClearInFlight = false; }
+            });
+        }
 
-            // Flash X button: gray for 2 s then back to red
+        private void XButton_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Visuelles Feedback: X faerbt sich grau (idle) waehrend der Aktion
             XButton.Background = BtnIdle;
+            _xResetScheduled = false;
 
-            // Run ClearLine on background thread (Thread.Sleep blocks UI thread)
-            await Task.Run(() => TerminalController.ClearLine(hwnd));
+            // Sofort die erste Zeile loeschen
+            TriggerSingleClear();
 
+            // Repeat-Timer: 400 ms initial-delay, danach alle 150 ms
+            _xRepeatTimer?.Stop();
+            _xRepeatTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400),
+            };
+            _xRepeatTimer.Tick += (_, _) =>
+            {
+                // Nach erstem Tick auf das schnellere Wiederhol-Intervall umstellen
+                _xRepeatTimer!.Interval = TimeSpan.FromMilliseconds(150);
+                TriggerSingleClear();
+            };
+            _xRepeatTimer.Start();
+        }
+
+        private void XButton_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            StopXRepeat();
+        }
+
+        private void XButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            // Auch wenn der Cursor den Button verlaesst, das Repeat sauber stoppen
+            StopXRepeat();
+        }
+
+        private void StopXRepeat()
+        {
+            _xRepeatTimer?.Stop();
+            _xRepeatTimer = null;
+
+            // Nach kurzer Verzoegerung visueller Reset auf Rot
+            if (_xResetScheduled) return;
+            _xResetScheduled = true;
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2000);
-                Dispatcher.Invoke(() => XButton.Background = BtnX);
+                await Task.Delay(500);
+                Dispatcher.Invoke(() =>
+                {
+                    XButton.Background = BtnX;
+                    _xResetScheduled = false;
+                });
             });
         }
 
