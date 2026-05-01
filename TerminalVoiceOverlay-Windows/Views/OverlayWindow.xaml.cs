@@ -744,6 +744,12 @@ namespace TerminalVoiceOverlay.Views
             XButton.Background = BtnIdle;
             _xResetScheduled = false;
 
+            // Mouse-Capture: garantiert dass MouseUp am Button ankommt, auch wenn der
+            // Cursor waehrend des Druecks aus dem Button rausrutscht. Ohne Capture
+            // kann der Loop schon nach einer Zeile abbrechen, wenn die Maus sich
+            // minimal bewegt und WPF den Hover-State verliert.
+            XButton.CaptureMouse();
+
             // Vorherige Schleife sauber abbrechen, falls noch eine laeuft
             _xRepeatCts?.Cancel();
             _xRepeatCts = new System.Threading.CancellationTokenSource();
@@ -751,7 +757,7 @@ namespace TerminalVoiceOverlay.Views
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
             hasPastedText = false;
 
-            // Background-Loop: sequentiell ClearLine + 10ms warten, solange gedrueckt
+            // Background-Loop: sequentiell ClearLine + 10ms warten, solange Token aktiv ist
             _ = Task.Run(async () =>
             {
                 try
@@ -766,18 +772,21 @@ namespace TerminalVoiceOverlay.Views
                 catch (TaskCanceledException) { /* erwartet beim Loslassen */ }
                 catch (OperationCanceledException) { /* erwartet beim Loslassen */ }
             });
+
+            // Verhindert dass der Button selbst auf das Event reagiert (kein Doppel-Click)
+            e.Handled = true;
         }
 
         private void XButton_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            if (XButton.IsMouseCaptured) XButton.ReleaseMouseCapture();
             StopXRepeat();
+            e.Handled = true;
         }
 
-        private void XButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-        {
-            // Auch wenn der Cursor den Button verlaesst, das Repeat sauber stoppen
-            StopXRepeat();
-        }
+        // MouseLeave-Handler bewusst NICHT vorhanden — solange die linke Maustaste
+        // gedrueckt ist, soll der Loop weiterlaufen, auch wenn der Cursor den Button
+        // verlaesst. Erst MouseUp stoppt die Schleife.
 
         private void StopXRepeat()
         {
