@@ -68,7 +68,7 @@ namespace TerminalVoiceOverlay.Views
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
         private bool isBtwRecording         = false;
-        private bool geminiEnabled          = false; // macOS default
+        private bool geminiEnabled          = true;  // G-button on by default (falls back to false if no Gemini key)
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
         // Wenn true, presst OnInputSubmit beim naechsten Aufruf Return —
@@ -357,11 +357,13 @@ namespace TerminalVoiceOverlay.Views
             };
 
             // ── Initial button colours ──
+            // G-button is on by default — falls back to Whisper-raw if no Gemini API key.
+            if (_geminiClient == null) geminiEnabled = false;
             XButton.Background    = BtnX;           // red
-            WButton.Background    = ToggleOn;        // green  (Whisper-raw active, Gemini off)
+            WButton.Background    = geminiEnabled ? ToggleOff : ToggleOn;  // green when Gemini off (Whisper-raw)
             MicButton.Background  = BtnMicIdle;      // dark blue
             BtwButton.Background  = BtnBtwIdle;      // light blue
-            GButton.Background    = ToggleOff;       // dark   (Gemini starts disabled)
+            GButton.Background    = geminiEnabled ? ToggleOn : ToggleOff;  // green when Gemini on
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             CopyButton.Background  = BtnCopy;        // light blue
             PasteButton.Background = BtnPaste;       // purple

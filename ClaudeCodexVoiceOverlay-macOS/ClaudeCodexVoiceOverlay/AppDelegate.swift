@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = false
+    private var geminiEnabled = true  // G-button on by default; falls back to false if no Gemini key
     private var autoEnterEnabled = true
     private var ultrathinkEnabled = false
     private var isBtwRecording = false

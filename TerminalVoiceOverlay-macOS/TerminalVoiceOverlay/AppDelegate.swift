@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = false
+    private var geminiEnabled = true  // G-button on by default; falls back to false if no Gemini key
     private var autoEnterEnabled = true
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
