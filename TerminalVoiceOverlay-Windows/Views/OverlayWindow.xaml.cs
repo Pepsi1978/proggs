@@ -1070,6 +1070,16 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private const double TooltipMargin = 8.0;
         private const double EstimatedTooltipHeight = 28.0;
+        private const int TooltipHoverDelayMs = 250;
+
+        // Eigener Hover-Timer fuer Tooltips. WPF-Standard wartet auf Maus-
+        // Stillstand bevor das erste Tooltip kommt — bei Mausbewegung im
+        // Button-Bereich erscheint nichts. Mit eigenem Timer erscheint das
+        // Tooltip deterministisch nach 250ms nach MouseEnter, unabhaengig
+        // davon ob die Maus stillsteht oder weiterbewegt wird.
+        private DispatcherTimer? _tooltipHoverTimer;
+        private System.Windows.Controls.ToolTip? _pendingTooltip;
+        private System.Windows.FrameworkElement? _pendingTooltipTarget;
 
         /// <summary>
         /// Wandelt alle String-ToolTips der 21 Buttons in echte ToolTip-
@@ -1092,6 +1102,15 @@ namespace TerminalVoiceOverlay.Views
                 Profile7Button, Profile8Button, Profile9Button, Profile10Button
             };
 
+            // Einen einzigen Hover-Timer fuer das gesamte Window — es kann
+            // immer nur ein Tooltip gleichzeitig sichtbar sein, also reicht
+            // ein Timer plus zwei Felder fuer die naechste anstehende Anzeige.
+            _tooltipHoverTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(TooltipHoverDelayMs)
+            };
+            _tooltipHoverTimer.Tick += OnTooltipHoverTimerTick;
+
             foreach (var btn in allButtons)
             {
                 if (btn.ToolTip is string s)
@@ -1100,7 +1119,69 @@ namespace TerminalVoiceOverlay.Views
                     var ownerButton = btn; // Closure-Capture
                     tip.Opened += (_, _) => PositionTooltip(tip, ownerButton);
                     btn.ToolTip = tip;
+
+                    // WPF-Auto-Show abschalten — wir steuern die Sichtbarkeit
+                    // selbst via MouseEnter/Leave + Timer. Damit umgehen wir
+                    // die System-Mouse-Hover-Time, die einen Maus-Stillstand
+                    // verlangt. Mit eigenem Timer kommt das Tooltip auch wenn
+                    // die Maus im Button-Bereich weiter bewegt wird.
+                    System.Windows.Controls.ToolTipService.SetIsEnabled(btn, false);
+
+                    btn.MouseEnter += (_, _) => StartTooltipShow(ownerButton, tip);
+                    btn.MouseLeave += (_, _) => CancelTooltipShow(tip);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Plant das Anzeigen eines Tooltips nach TooltipHoverDelayMs ms.
+        /// Wird bei jedem MouseEnter aufgerufen. Falls bereits ein Timer
+        /// laeuft (Maus von einem Button zum naechsten), wird er gestoppt
+        /// und neu gestartet.
+        /// </summary>
+        private void StartTooltipShow(System.Windows.FrameworkElement target,
+                                      System.Windows.Controls.ToolTip tip)
+        {
+            _tooltipHoverTimer?.Stop();
+            _pendingTooltip = tip;
+            _pendingTooltipTarget = target;
+            _tooltipHoverTimer?.Start();
+        }
+
+        /// <summary>
+        /// Bricht den Hover-Timer ab und schliesst den Tooltip falls er
+        /// gerade offen ist. Wird bei jedem MouseLeave aufgerufen.
+        /// </summary>
+        private void CancelTooltipShow(System.Windows.Controls.ToolTip tip)
+        {
+            _tooltipHoverTimer?.Stop();
+            if (tip.IsOpen) tip.IsOpen = false;
+            if (ReferenceEquals(_pendingTooltip, tip))
+            {
+                _pendingTooltip = null;
+                _pendingTooltipTarget = null;
+            }
+        }
+
+        /// <summary>
+        /// Tick-Handler nach Ablauf der Hover-Zeit: oeffnet den anstehenden
+        /// Tooltip. PlacementTarget wird auf den Button gesetzt damit die
+        /// Position-Berechnung im Opened-Handler die Button-Position kennt.
+        /// </summary>
+        private void OnTooltipHoverTimerTick(object? sender, EventArgs e)
+        {
+            _tooltipHoverTimer?.Stop();
+            if (_pendingTooltip == null || _pendingTooltipTarget == null) return;
+
+            try
+            {
+                _pendingTooltip.PlacementTarget = _pendingTooltipTarget;
+                _pendingTooltip.Placement = System.Windows.Controls.Primitives.PlacementMode.Left;
+                _pendingTooltip.IsOpen = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Tooltip open error: {ex.Message}");
             }
         }
 

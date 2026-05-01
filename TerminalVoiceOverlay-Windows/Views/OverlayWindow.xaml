@@ -242,7 +242,7 @@
                         <Button x:Name="WButton"
                                 Style="{StaticResource CircleButton}"
                                 Click="BtnWhisperUndo_Click"
-                                ToolTip="Mit rohem Whisper-Text ersetzen">
+                                ToolTip="Whisper">
                             <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
                         </Button>
 
