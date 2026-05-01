@@ -29,8 +29,6 @@ constructor(
     companion object {
         private const val TEMPERATURE = 0.2f
         private const val MAX_OUTPUT_TOKENS = 50
-        // Fuer Klassifikation immer das billigste/schnellste Modell — nicht das vom User gewaehlte.
-        private const val CLASSIFIER_MODEL = "gemini-2.5-flash-lite"
         private const val MAX_INPUT_CHARS = 2000  // Eintrags-Text bei Bedarf truncen
     }
 
@@ -40,6 +38,12 @@ constructor(
             if (apiKey.isBlank()) {
                 return Result.success(null) // kein Key → still failen, Fallback uebernimmt
             }
+
+            // Nutzt das vom User in den Einstellungen gewaehlte Gemini-Modell.
+            val selectedModel = encryptedPrefs.getString(
+                Constants.PREF_GEMINI_MODEL,
+                Constants.DEFAULT_GEMINI_MODEL,
+            ) ?: Constants.DEFAULT_GEMINI_MODEL
 
             val combinedText = buildString {
                 if (!entryTitle.isNullOrBlank()) append(entryTitle).append("\n\n")
@@ -55,7 +59,7 @@ constructor(
                 maxOutputTokens = MAX_OUTPUT_TOKENS,
             )
             val response = geminiApi.generateContent(
-                model = CLASSIFIER_MODEL,
+                model = selectedModel,
                 apiKey = apiKey,
                 request = request,
             )
