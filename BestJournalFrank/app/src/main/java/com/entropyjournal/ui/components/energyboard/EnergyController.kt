@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -14,51 +16,37 @@ import kotlin.random.Random
 
 /**
  * Halt-Zustand und Frame-Loop fuer das Energy Board.
- * - Animiertes [phaseNanos] wird im Canvas-Lambda gelesen, NICHT in der Composition.
- * - Funken und Quer-Blitze leben in SnapshotStateLists — Add/Remove triggert nur Repaint.
- * - V2: kein Touch-Tracking mehr — der Overlay greift keine Touch-Events ab, damit die
- *   LazyColumn frei scrollen kann.
  */
 class EnergyController {
     val phaseNanos = mutableLongStateOf(0L)
-
-    /** Aktive Funken — direkt aus drawBehind/Canvas lesen, nicht in Composition. */
     val sparks = mutableStateListOf<Spark>()
-
-    /** Aktive Quer-Blitze (Mini-Lichtboegen die seitlich ausschiessen). */
     val arcs = mutableStateListOf<Arc>()
+    val lichtenbergs = mutableStateListOf<Lichtenberg>()
 
-    /** Y-Position des fokussierten Punkts (Mitte des sichtbaren Bereichs, wird vom Overlay gesetzt). */
+    /** Y-Position des fokussierten Punkts (Mitte des sichtbaren Bereichs). */
     val focusY = mutableStateOf<Float?>(null)
 
-    /** Spawn-Punkte: alle sichtbaren Eintraege auf der Schiene. Wird vom Overlay pro Frame gesetzt. */
+    /** Spawn-Punkte: alle sichtbaren Eintraege auf der Schiene. */
     val spawnPoints = mutableStateOf<List<Float>>(emptyList())
 
-    /** Mitte der Linie horizontal — wird vom Overlay gesetzt. */
+    /** Bounds der aktuell aktiven Karte (vom Overlay gesetzt). */
+    val activeCardBounds = mutableStateOf<Rect?>(null)
+
+    /** Mitte der Linie horizontal. */
     val railX = mutableStateOf(0f)
 
     private var lastSparkSpawnMs = 0L
     private var lastArcSpawnMs = 0L
+    private var lastLichtenbergMs = 0L
 
-    /**
-     * Wird vom Frame-Loop aufgerufen — spawnt neue Funken/Quer-Blitze und entfernt abgelaufene.
-     * Spawn-Punkte sind alle sichtbaren Eintragspunkte; der Fokus-Punkt bekommt deutlich
-     * mehr Funken als die anderen.
-     */
     fun tick(frameTimeMs: Long) {
         val points = spawnPoints.value
-        if (points.isEmpty()) {
-            // Trotzdem alte Particles altern lassen
-            cullExpired(frameTimeMs)
-            return
-        }
-
         val rx = railX.value
         val focus = focusY.value
+        val cardBounds = activeCardBounds.value
 
-        // Funken-Spawn — schnell und an mehreren Punkten
-        if (frameTimeMs - lastSparkSpawnMs > EnergyTheme.SPARK_SPAWN_INTERVAL_MS) {
-            // Aus dem Fokus-Punkt 2-3 Funken auf einmal, aus jedem anderen Punkt mit 25% Wahrscheinlichkeit einen
+        // Funken
+        if (points.isNotEmpty() && frameTimeMs - lastSparkSpawnMs > EnergyTheme.SPARK_SPAWN_INTERVAL_MS) {
             focus?.let { fy ->
                 if (sparks.size < EnergyTheme.MAX_SPARKS) {
                     repeat(2 + Random.nextInt(2)) {
@@ -78,12 +66,22 @@ class EnergyController {
             lastSparkSpawnMs = frameTimeMs
         }
 
-        // Quer-Blitze: seltener, aber visuell sehr deutlich
-        if (frameTimeMs - lastArcSpawnMs > EnergyTheme.ARC_SPAWN_INTERVAL_MS) {
-            val sourceY = if (focus != null && Random.nextFloat() < 0.6f) focus
-            else points.random()
+        // Quer-Blitze: jetzt gezielt zur aktiven Karte hin gerichtet
+        if (frameTimeMs - lastArcSpawnMs > EnergyTheme.ARC_SPAWN_INTERVAL_MS && cardBounds != null) {
+            val sourceY = focus ?: cardBounds.center.y
+            arcs.add(makeArcTowardsCard(rx, sourceY, cardBounds, frameTimeMs))
+            lastArcSpawnMs = frameTimeMs
+        } else if (frameTimeMs - lastArcSpawnMs > EnergyTheme.ARC_SPAWN_INTERVAL_MS && points.isNotEmpty()) {
+            val sourceY = focus ?: points.random()
             arcs.add(makeArc(rx, sourceY, frameTimeMs))
             lastArcSpawnMs = frameTimeMs
+        }
+
+        // Lichtenberg-Cluster um die aktive Karte
+        if (cardBounds != null && frameTimeMs - lastLichtenbergMs > EnergyTheme.LICHTENBERG_SPAWN_INTERVAL_MS) {
+            val cluster = makeLichtenbergCluster(rx, focus ?: cardBounds.center.y, cardBounds, frameTimeMs)
+            lichtenbergs.addAll(cluster)
+            lastLichtenbergMs = frameTimeMs
         }
 
         cullExpired(frameTimeMs)
@@ -100,11 +98,16 @@ class EnergyController {
             val a = ai.next()
             if (frameTimeMs - a.bornAtMs > EnergyTheme.ARC_LIFETIME_MS) ai.remove()
         }
+        val li = lichtenbergs.iterator()
+        while (li.hasNext()) {
+            val l = li.next()
+            if (frameTimeMs - l.bornAtMs > EnergyTheme.LICHTENBERG_LIFETIME_MS) li.remove()
+        }
     }
 
     private fun makeSpark(rx: Float, y: Float, frameTimeMs: Long, intense: Boolean): Spark {
         val dir = if (Random.nextBoolean()) 1f else -1f
-        val angle = Random.nextFloat() * 0.8f + 0.1f  // 0.1..0.9 rad
+        val angle = Random.nextFloat() * 0.8f + 0.1f
         val baseSpeed = if (intense) 2.4f else 1.4f
         val speed = Random.nextFloat() * baseSpeed + 1.2f
         return Spark(
@@ -118,10 +121,7 @@ class EnergyController {
         )
     }
 
-    /**
-     * Erzeugt einen Quer-Blitz: gezackte Linie, die seitlich von der Schiene ausschiesst,
-     * 80-160px lang, mit 4-6 Knickpunkten.
-     */
+    /** Random-Quer-Blitz (wenn keine Karte aktiv). */
     private fun makeArc(rx: Float, y: Float, frameTimeMs: Long): Arc {
         val dir = if (Random.nextBoolean()) 1f else -1f
         val totalLen = 80f + Random.nextFloat() * 80f
@@ -140,11 +140,62 @@ class EnergyController {
         }
         return Arc(points = points, bornAtMs = frameTimeMs)
     }
+
+    /**
+     * Quer-Blitz der zur aktiven Karte gerichtet ist — zielt auf einen zufaelligen Punkt
+     * innerhalb der Card-Bounds. Damit zucken die Blitze nicht ins Leere sondern wirken
+     * wie sie die Karte mit Energie aufladen.
+     */
+    private fun makeArcTowardsCard(rx: Float, sourceY: Float, cardBounds: Rect, frameTimeMs: Long): Arc {
+        val targetX = cardBounds.left + Random.nextFloat() * cardBounds.width
+        val targetY = cardBounds.top + Random.nextFloat() * cardBounds.height
+        val segments = 4 + Random.nextInt(3)
+        val points = ArrayList<Pair<Float, Float>>(segments + 1)
+        points.add(rx to sourceY)
+        for (i in 1..segments) {
+            val progress = i.toFloat() / segments
+            val baseX = rx + (targetX - rx) * progress
+            val baseY = sourceY + (targetY - sourceY) * progress
+            val jitter = (1f - progress).pow(1.2f) * 18f  // Jitter nimmt zum Ziel hin ab
+            val jx = (Random.nextFloat() * 2f - 1f) * jitter
+            val jy = (Random.nextFloat() * 2f - 1f) * jitter
+            points.add((baseX + jx) to (baseY + jy))
+        }
+        return Arc(points = points, bornAtMs = frameTimeMs)
+    }
+
+    /**
+     * Erzeugt einen Cluster aus mehreren Lichtenberg-Pfaden die von der Stromlinie
+     * zu zufaelligen Punkten am Rand der Karte verzweigen. Jeder Pfad ist via
+     * Midpoint-Displacement fraktal aufgebaut.
+     */
+    private fun makeLichtenbergCluster(
+        rx: Float,
+        sourceY: Float,
+        cardBounds: Rect,
+        frameTimeMs: Long,
+    ): List<Lichtenberg> {
+        val n = (EnergyTheme.LICHTENBERG_BRANCHES_MIN..EnergyTheme.LICHTENBERG_BRANCHES_MAX).random()
+        val result = ArrayList<Lichtenberg>(n)
+        repeat(n) {
+            // Ziel: ein zufaelliger Punkt im Bereich der Karte (auch leicht ausserhalb fuer Halo-Effekt)
+            val padX = cardBounds.width * 0.05f
+            val padY = cardBounds.height * 0.1f
+            val tx = cardBounds.left - padX + Random.nextFloat() * (cardBounds.width + 2 * padX)
+            val ty = cardBounds.top - padY + Random.nextFloat() * (cardBounds.height + 2 * padY)
+            val path = generateLichtenbergPath(
+                Offset(rx, sourceY),
+                Offset(tx, ty),
+                EnergyTheme.LICHTENBERG_DEPTH,
+                EnergyTheme.LICHTENBERG_DISPLACE_PX,
+            )
+            result.add(Lichtenberg(points = path, bornAtMs = frameTimeMs))
+        }
+        return result
+    }
 }
 
-/**
- * Funken — bewegt sich ballistisch von startX/startY weg.
- */
+/** Funken — bewegt sich ballistisch von startX/startY weg. */
 data class Spark(
     val startX: Float,
     val startY: Float,
@@ -155,14 +206,42 @@ data class Spark(
     val len: Float,
 )
 
-/**
- * Quer-Blitz — gezackte Linie aus mehreren Punkten, kurz lebend.
- * points enthaelt Stuetz-Koordinaten (x, y) — direkt verbinden gibt einen Zackenblitz.
- */
+/** Quer-Blitz — gezackte Linie aus mehreren Punkten, kurz lebend. */
 data class Arc(
     val points: List<Pair<Float, Float>>,
     val bornAtMs: Long,
 )
+
+/** Lichtenberg-Pfad — fraktal verzweigte Mini-Lightning-Bolt. */
+data class Lichtenberg(
+    val points: List<Offset>,
+    val bornAtMs: Long,
+)
+
+/**
+ * Generiert einen fraktalen Pfad zwischen start und end via Midpoint-Displacement.
+ * depth = Rekursionstiefe (Anzahl der Verdoppelungen), displace = max. Versatz pro Mittelpunkt.
+ */
+fun generateLichtenbergPath(start: Offset, end: Offset, depth: Int, displace: Float): List<Offset> {
+    var points = mutableListOf(start, end)
+    var disp = displace
+    repeat(depth) {
+        val newPoints = mutableListOf<Offset>()
+        for (i in 0 until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            newPoints.add(p1)
+            val mid = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
+            val ox = (Random.nextFloat() * 2f - 1f) * disp
+            val oy = (Random.nextFloat() * 2f - 1f) * disp
+            newPoints.add(Offset(mid.x + ox, mid.y + oy))
+        }
+        newPoints.add(points.last())
+        points = newPoints
+        disp *= 0.55f  // Subdivisionen werden glatter
+    }
+    return points
+}
 
 /**
  * Erzeugt einen [EnergyController] und startet den Frame-Loop.
@@ -181,9 +260,7 @@ fun rememberEnergyController(): EnergyController {
     return controller
 }
 
-/**
- * Atem-Pulse mit drei ueberlagerten Sinuswellen. Liefert 0f..1f.
- */
+/** Atem-Pulse mit drei ueberlagerten Sinuswellen. Liefert 0f..1f. */
 fun organicPulse(timeSec: Float): Float {
     val w1 = sin(timeSec * 0.7f)
     val w2 = sin(timeSec * 1.618f) * 0.3f
@@ -198,10 +275,7 @@ fun focusGlow(distancePx: Float, sigma: Float = EnergyTheme.FOCUS_FALLOFF_PX / 2
     return kotlin.math.exp(-(n * n)).coerceIn(0f, 1f)
 }
 
-/**
- * Pseudo-Random-Knister-Wert basierend auf Zeit + Position. Liefert 0.6f..1.0f, deterministisch
- * (gleiches t,y → gleicher Wert), aber chaotisch genug fuer Flackern.
- */
+/** Pseudo-Random-Knister-Wert, deterministisch pro Zeit+Position. */
 fun crackleNoise(timeSec: Float, y: Float): Float {
     val a = sin(timeSec * 12.34f + y * 0.07f)
     val b = sin(timeSec * 23.71f + y * 0.13f)
