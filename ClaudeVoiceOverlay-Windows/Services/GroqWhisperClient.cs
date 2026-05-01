@@ -29,58 +29,20 @@ namespace ClaudeVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
-            return await TranscribeWithRetry(wavFilePath, 0, sendPrompt: true);
+            return await TranscribeWithRetry(wavFilePath, 0);
         }
 
-        /// Pfad zur persoenlichen Whisper-Vocabulary-Datei. Wird bei JEDEM
-        /// Transkriptions-Aufruf neu gelesen — Aenderungen wirken sofort
-        /// ohne App-Neustart. Fehlt die Datei: prompt-Field wird einfach
-        /// weggelassen (kein Fehler).
-        private static string VocabularyFilePath
-            => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "SK", "VoiceOverlays", "voice-prompt.txt");
-
-        private static string? LoadVocabularyPrompt()
-        {
-            try
-            {
-                if (!File.Exists(VocabularyFilePath)) return null;
-                var text = File.ReadAllText(VocabularyFilePath).Trim();
-                return string.IsNullOrEmpty(text) ? null : text;
-            }
-            catch
-            {
-                // Lese-Fehler darf das Transkribieren NIE blockieren — der
-                // prompt-Parameter ist optional. Im Zweifel ohne weitermachen.
-                return null;
-            }
-        }
-
-        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt, bool sendPrompt)
+        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt)
         {
             using var content = new MultipartFormDataContent();
 
-            // Add fields
+            // Add fields. Kein prompt-Parameter mehr — der Original-Whisper-Output
+            // wird unveraendert weitergegeben (z. B. an Gemini), wo themenspezifische
+            // Profile die Nachbearbeitung uebernehmen.
             content.Add(new StringContent(_model), "model");
             content.Add(new StringContent(_language), "language");
             content.Add(new StringContent("text"), "response_format");
             content.Add(new StringContent("0"), "temperature");
-
-            // Whisper-Prompt: persoenlicher Vokabular-Hint, hilft Whisper bei
-            // englischen Fachbegriffen die sonst eingedeutscht wuerden
-            // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
-            // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
-            // sendPrompt=false beim Fallback-Retry nach Groq-500-Bug, siehe unten.
-            bool promptWasSent = false;
-            if (sendPrompt)
-            {
-                var vocabPrompt = LoadVocabularyPrompt();
-                if (vocabPrompt != null)
-                {
-                    content.Add(new StringContent(vocabPrompt), "prompt");
-                    promptWasSent = true;
-                }
-            }
 
             // Add file
             var fileBytes = await File.ReadAllBytesAsync(wavFilePath);
@@ -105,23 +67,11 @@ namespace ClaudeVoiceOverlay.Services
                 throw new Exception("Leere Antwort von Groq");
             }
 
-            // Bekannter Groq-Bug: der prompt-Parameter loest bei manchen Audio-
-            // Files Fehler-Status aus (im Forum dokumentiert: 400, 500, 502, 504).
-            // Statt jeden Status einzeln zu listen, fallback bei JEDEM Fehler
-            // wenn prompt mitgeschickt wurde — auth-fehler (401/403) sind eh
-            // permanent und kommen direkt am Ende als Exception. Quelle:
-            // https://community.groq.com/t/500-errors-tied-to-prompt-parameter-on-audio-transcriptions/858
-            if (promptWasSent && statusCode != 401 && statusCode != 403)
-            {
-                Console.WriteLine($"Groq {statusCode} mit prompt — fallback ohne prompt (vocab-bug Workaround)");
-                return await TranscribeWithRetry(wavFilePath, attempt, sendPrompt: false);
-            }
-
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
                 Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
-                return await TranscribeWithRetry(wavFilePath, attempt + 1, sendPrompt);
+                return await TranscribeWithRetry(wavFilePath, attempt + 1);
             }
 
             var errorBody = await response.Content.ReadAsStringAsync();

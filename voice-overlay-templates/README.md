@@ -1,32 +1,40 @@
 # Voice Overlay Templates
 
-Diese beiden Dateien sind Templates fuer die Voice-Overlay-Apps
+Diese Datei ist ein Template fuer die Voice-Overlay-Apps
 (`TerminalVoiceOverlay-Windows`, `ClaudeVoiceOverlay-Windows`,
 `TerminalVoiceOverlay-macOS`, `ClaudeCodexVoiceOverlay-macOS`).
 
-## Was die Dateien tun
+## Was die Datei tut
 
 | Datei | Zweck |
 |-------|-------|
-| `voice-prompt.txt` | Whisper-Vokabel-Hint (max 224 Tokens). Wird beim Transkribieren als `prompt`-Parameter an Groq mitgeschickt — Whisper biast dadurch englische Programmier-Begriffe richtig zu transkribieren. |
-| `gemini-correction-prompt.txt` | Gemini-System-Prompt fuer den G-Button. Wenn der Benutzer "G" druckt, geht der Whisper-Output durch Gemini mit diesem Prompt — Gemini korrigiert Whisper-Phonetik-Fehler (z.B. "Cloud Code" → "Claude Code"). |
+| `gemini-correction-prompt.txt` | Gemini-System-Prompt fuer den G-Button. Wenn der Benutzer "G" druckt, geht der Whisper-Output durch Gemini mit diesem Prompt — Gemini korrigiert Whisper-Phonetik-Fehler (z.B. "Cloud Code" → "Claude Code"). Hier sollen kuenftig themenspezifische Profile gepflegt werden, nicht nur Programmier-Begriffe. |
 
-## Wo die Live-Dateien liegen
+## Wo die Live-Datei liegt
 
-NICHT hier im Repo (das sind nur Templates). Die echten, aktiven Dateien
-liegen ausserhalb des Repos im SK-Ordner:
+NICHT hier im Repo (das ist nur ein Template). Die echte, aktive Datei
+liegt ausserhalb des Repos im SK-Ordner:
 
-- `~/SK/VoiceOverlays/voice-prompt.txt`
 - `~/SK/VoiceOverlays/gemini-correction-prompt.txt`
 
-Auf einem frischen Rechner werden sie beim ersten `bash build.sh`
+Auf einem frischen Rechner wird sie beim ersten `bash build.sh`
 (macOS) automatisch dorthin kopiert. Auf Windows muss der Benutzer
 sie einmalig per Hand anlegen oder vom anderen Rechner kopieren.
+
+## Hinweis zu voice-prompt.txt (entfernt am 2026-05-01)
+
+Die frueher hier liegende `voice-prompt.txt` (Whisper-Vokabel-Hint) wird
+nicht mehr verwendet. Whisper bekommt das Audio ohne `prompt`-Parameter,
+damit der Original-Whisper-Output unverfaelscht weitergegeben werden kann.
+Themenspezifische Sprach-/Stilprofile passieren ab jetzt erst in der
+Gemini-Stufe (siehe `gemini-correction-prompt.txt`). Eine eventuell schon
+existierende Datei in `~/SK/VoiceOverlays/voice-prompt.txt` darf liegen
+bleiben — sie wird einfach nicht mehr gelesen.
 
 ## Anpassen
 
 Anpassen passiert in der Live-Datei in `~/SK/VoiceOverlays/`, NICHT hier.
-Die Templates im Repo dienen nur als Fallback fuer frische Installationen.
+Das Template im Repo dient nur als Fallback fuer frische Installationen.
 
 Wenn du den Default fuer ALLE zukuenftigen frischen Installationen aendern
-willst, aktualisiere zusaetzlich die Templates hier. Dann committen.
+willst, aktualisiere zusaetzlich das Template hier. Dann committen.

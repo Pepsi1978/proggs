@@ -13,11 +13,11 @@ final class GroqWhisperClient {
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-            self.sendRequest(fileURL: fileURL, attempt: 0, sendPrompt: true, completion: completion)
+            self.sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
         }
     }
 
-    private func sendRequest(fileURL: URL, attempt: Int, sendPrompt: Bool, completion: @escaping (Result<String, Error>) -> Void) {
+    private func sendRequest(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
         guard let audioData = try? Data(contentsOf: fileURL) else {
             completion(.failure(APIError.fileReadError))
             return
@@ -31,22 +31,15 @@ final class GroqWhisperClient {
         request.timeoutInterval = 180
 
         var body = Data()
-        var fields: [(String, String)] = [
+        // Kein prompt-Parameter mehr — der Original-Whisper-Output wird unveraendert
+        // weitergegeben (z. B. an Gemini), wo themenspezifische Profile die
+        // Nachbearbeitung uebernehmen.
+        let fields: [(String, String)] = [
             ("model", "whisper-large-v3-turbo"),
             ("language", "de"),
             ("response_format", "text"),
             ("temperature", "0")
         ]
-        // Whisper-Prompt: persoenlicher Vokabular-Hint, hilft Whisper bei
-        // englischen Fachbegriffen die sonst eingedeutscht wuerden
-        // (commit→Kommit, push→Pusch, branch→Braensch, etc.). Datei wird
-        // bei JEDEM Aufruf neu gelesen — Aenderungen wirken sofort.
-        // sendPrompt=false beim Fallback-Retry nach Groq-500-Bug, siehe unten.
-        var promptWasSent = false
-        if sendPrompt, let vocabPrompt = Self.loadVocabularyPrompt() {
-            fields.append(("prompt", vocabPrompt))
-            promptWasSent = true
-        }
         for (key, value) in fields {
             body.append(Data("--\(boundary)\r\n".utf8))
             body.append(Data("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".utf8))
@@ -76,23 +69,11 @@ final class GroqWhisperClient {
                 return
             }
 
-            // Bekannter Groq-Bug: der prompt-Parameter loest bei manchen Audio-
-            // Files Fehler-Status aus (im Forum dokumentiert: 400, 500, 502, 504).
-            // Statt jeden Status einzeln zu listen, fallback bei JEDEM Fehler
-            // wenn prompt mitgeschickt wurde — auth-fehler (401/403) sind eh
-            // permanent und kommen direkt am Ende als Exception. Quelle:
-            // https://community.groq.com/t/500-errors-tied-to-prompt-parameter-on-audio-transcriptions/858
-            if promptWasSent && statusCode != 401 && statusCode != 403 {
-                NSLog("Groq %d mit prompt — fallback ohne prompt (vocab-bug Workaround)", statusCode)
-                self.sendRequest(fileURL: fileURL, attempt: attempt, sendPrompt: false, completion: completion)
-                return
-            }
-
             if self.retryableStatusCodes.contains(statusCode) && attempt < self.maxRetries {
                 let delay = self.delays[attempt]
                 NSLog("Groq %d - retry %d/%d, waiting %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
                 DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
-                    self.sendRequest(fileURL: fileURL, attempt: attempt + 1, sendPrompt: sendPrompt, completion: completion)
+                    self.sendRequest(fileURL: fileURL, attempt: attempt + 1, completion: completion)
                 }
                 return
             }
@@ -115,20 +96,4 @@ final class GroqWhisperClient {
         }
     }
 
-    /// Pfad zur persoenlichen Whisper-Vocabulary-Datei. Wird bei JEDEM
-    /// Transkriptions-Aufruf neu gelesen — Aenderungen wirken sofort
-    /// ohne App-Neustart. Fehlt die Datei: prompt-Field wird einfach
-    /// weggelassen (kein Fehler).
-    private static var vocabularyFilePath: URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent("SK/VoiceOverlays/voice-prompt.txt")
-    }
-
-    private static func loadVocabularyPrompt() -> String? {
-        let url = vocabularyFilePath
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
 }

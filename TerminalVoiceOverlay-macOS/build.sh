@@ -7,14 +7,16 @@ BUILD_DIR="$PROJECT_DIR/build"
 APP_NAME="TerminalVoiceOverlay"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
-# Voice-Overlay-Config-Dateien in $HOME/SK/VoiceOverlays/ installieren falls
+# Voice-Overlay-Config-Datei in $HOME/SK/VoiceOverlays/ installieren falls
 # noch nicht vorhanden. Idempotent — vorhandene User-Anpassungen werden NIE
 # ueberschrieben. Das macht "git pull && bash build.sh" zu einem one-shot
 # Setup auf einer frischen Mac-Installation.
+# Hinweis: voice-prompt.txt wird nicht mehr installiert. Whisper bekommt das
+# Audio ohne Prompt-Hint; themenspezifische Profile passieren in Gemini.
 SK_VOICE_DIR="$HOME/SK/VoiceOverlays"
 TEMPLATE_DIR="$PROJECT_DIR/../voice-overlay-templates"
 mkdir -p "$SK_VOICE_DIR"
-for f in voice-prompt.txt gemini-correction-prompt.txt; do
+for f in gemini-correction-prompt.txt; do
     if [ ! -f "$SK_VOICE_DIR/$f" ] && [ -f "$TEMPLATE_DIR/$f" ]; then
         cp "$TEMPLATE_DIR/$f" "$SK_VOICE_DIR/$f"
         echo "Installed: $SK_VOICE_DIR/$f"

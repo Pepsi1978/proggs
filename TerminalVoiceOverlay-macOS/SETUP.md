@@ -9,16 +9,20 @@
 
 ## Was sich geaendert hat
 
-**Stand 2026-04-30 (zweites Update):** Voice-Overlay hat jetzt zwei externe
-Config-Dateien fuer optimale Spracherkennung:
+**Stand 2026-05-01:** Whisper bekommt kein Vokabel-Prompt mehr — der
+Original-Whisper-Output geht direkt weiter (an Gemini, falls aktiv). Damit
+greift jeder themenspezifische Sprachstil sauber, nicht nur Programmier-
+Begriffe. Themenspezifische Profile werden kuenftig in Gemini abgebildet.
 
-- `~/SK/VoiceOverlays/voice-prompt.txt` — Whisper-Vokabel-Hint (~110 Woerter)
+Es bleibt eine Config-Datei fuer Gemini:
+
 - `~/SK/VoiceOverlays/gemini-correction-prompt.txt` — Gemini-Korrektur-Prompt
   (wirkt nur beim G-Button)
 
-`build.sh` installiert beide Templates automatisch beim ersten Build, falls
-sie noch nicht vorhanden sind. Bestehende User-Anpassungen werden NIE
-ueberschrieben.
+`build.sh` installiert dieses Template automatisch beim ersten Build, falls
+es noch nicht vorhanden ist. Bestehende User-Anpassungen werden NIE
+ueberschrieben. Eine eventuell vorhandene `~/SK/VoiceOverlays/voice-prompt.txt`
+darf liegen bleiben — sie wird einfach nicht mehr gelesen.
 
 **Stand 2026-04-30:** Die macOS-Version wurde mit allen Hotkey-Features der
 Windows-Version gleichgezogen. Vorher konnte die App auf macOS nur per
