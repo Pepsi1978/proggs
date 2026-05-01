@@ -398,10 +398,19 @@ namespace TerminalVoiceOverlay.Views
             UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
 
             // ── Profil-Tiles initial setzen ──
-            // Default = 2 (Programmierung), das entspricht dem bisherigen
-            // Verhalten ohne Profile. Der Benutzer kann jederzeit auf 1 oder
-            // 3 wechseln; die Backend-Verkabelung folgt im naechsten Schritt.
+            // Default = 1 (Standard) fuer alltaegliche Texte. Backend-
+            // Verkabelung pro Profil ist aktiv via SK-Dateien.
             SetActiveProfile(_activeProfile);
+
+            // ── Tooltip-Positionierung global ankern ──
+            // Standard-WPF-Verhalten setzt den Tooltip relativ zum Button.
+            // Bei den rechten Profil-Tiles waere er dadurch mitten ueber
+            // dem Mic. Stattdessen positionieren wir per ToolTipOpening
+            // jeden Tooltip dynamisch: rechte Tooltip-Kante immer 8 Pixel
+            // links vom Window, vertikal mittig zum gehoverten Button.
+            AddHandler(System.Windows.Controls.ToolTipService.ToolTipOpeningEvent,
+                new System.Windows.RoutedEventHandler(OnAnyToolTipOpening),
+                handledEventsToo: true);
 
             // ── Waveform-Striche einmalig im Canvas anlegen ──
             // 14 weisse Rectangles mit voller Deckkraft auf dem roten
@@ -1032,6 +1041,55 @@ namespace TerminalVoiceOverlay.Views
             {
                 tb.Foreground = active ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
             }
+        }
+
+        /// <summary>
+        /// Globaler ToolTipOpening-Handler: positioniert jeden Tooltip so,
+        /// dass seine rechte Kante immer den gleichen Abstand zur linken
+        /// Window-Kante hat (TooltipMargin Pixel) und seine vertikale Mitte
+        /// zur Mitte des aktuell gehoverten Buttons passt.
+        ///
+        /// Default-WPF-Verhalten mit Placement="Left" haengt den Tooltip an
+        /// die linke Kante des Buttons — bei den rechten Profil-Tiles laege
+        /// der Tooltip dadurch quer ueber dem Overlay (genau dort wo die
+        /// Maus den Mic verdeckt). Mit dynamischer Positionierung steht der
+        /// Tooltip immer ausserhalb des Overlays an der gleichen x-Position,
+        /// egal ob du ueber Mic, Profil-Tile oder Enter-Knopf hoverst.
+        /// </summary>
+        private const double TooltipMargin = 8.0;
+        private const double EstimatedTooltipHeight = 28.0;
+
+        private void OnAnyToolTipOpening(object sender, System.Windows.RoutedEventArgs e)
+        {
+            if (e.OriginalSource is not System.Windows.FrameworkElement target) return;
+            if (target.ToolTip is not System.Windows.Controls.ToolTip tooltip) return;
+
+            // Button-Position relativ zum Window ermitteln. windowOrigin.X
+            // ist die x-Koordinate der linken Button-Kante im Window-Raster.
+            System.Windows.Point windowOrigin;
+            try
+            {
+                windowOrigin = target.TranslatePoint(new System.Windows.Point(0, 0), this);
+            }
+            catch
+            {
+                return; // Falls der Button noch nicht im Visual Tree liegt
+            }
+
+            // Horizontal: Default-Placement="Left" platziert die rechte
+            // Tooltip-Kante an die linke Button-Kante (also bei windowOrigin.X).
+            // Wir wollen die rechte Tooltip-Kante bei -TooltipMargin (also
+            // 8 Pixel links vom Window). Offset = (-TooltipMargin) - windowOrigin.X.
+            tooltip.HorizontalOffset = -TooltipMargin - windowOrigin.X;
+
+            // Vertikal: Default setzt Tooltip-Top = Button-Top. Wir wollen
+            // Tooltip-Mitte = Button-Mitte. Tooltip-Hoehe ist beim Opening
+            // noch nicht final gerendert — wir schaetzen 28 Pixel (passt fuer
+            // einzeilige Tooltips mit unserem Padding 6+text+6).
+            double tooltipHeight = tooltip.ActualHeight > 0
+                ? tooltip.ActualHeight
+                : EstimatedTooltipHeight;
+            tooltip.VerticalOffset = (target.ActualHeight - tooltipHeight) / 2.0;
         }
 
         private async void BtnProfile1_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(1);

@@ -201,7 +201,7 @@
                         <Button x:Name="Profile1Button"
                                 Style="{StaticResource ProfileButton}"
                                 Click="BtnProfile1_Click"
-                                ToolTip="Profil 1: Standard (alltaegliche Texte und Ideen)">
+                                ToolTip="Standard">
                             <TextBlock Text="1" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
 
@@ -209,7 +209,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile2_Click"
-                                ToolTip="Profil 2: Programmierung (Code-Begriffe, CLI, Frameworks)">
+                                ToolTip="Programmierung">
                             <TextBlock Text="2" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
 
@@ -217,7 +217,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile3_Click"
-                                ToolTip="Profil 3: Meta-Intelligenz (strukturiertes Denken)">
+                                ToolTip="Meta-Intelligenz">
                             <TextBlock Text="3" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
                     </StackPanel>
