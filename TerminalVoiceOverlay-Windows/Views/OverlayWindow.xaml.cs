@@ -1243,18 +1243,30 @@ namespace TerminalVoiceOverlay.Views
         // Aktiviert das Profil ohne den Cache durch Gemini zu schicken. Die
         // letzte Whisper-Nachricht bleibt unangetastet im Zwischenspeicher
         // und kann jederzeit spaeter per Linksklick durch dieses (oder ein
-        // anderes) Profil korrigiert werden. Damit kann Frank Profile in
-        // Ruhe wechseln ohne Re-Correct-Risiko.
-        private void BtnProfile1_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(1);
-        private void BtnProfile2_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(2);
-        private void BtnProfile3_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(3);
-        private void BtnProfile4_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(4);
-        private void BtnProfile5_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(5);
-        private void BtnProfile6_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(6);
-        private void BtnProfile7_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(7);
-        private void BtnProfile8_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(8);
-        private void BtnProfile9_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(9);
-        private void BtnProfile10_RightClick(object sender, MouseButtonEventArgs e) => SwitchProfileWithoutReCorrect(10);
+        // anderes) Profil korrigiert werden.
+        //
+        // Implementierung via PreviewMouseDown ist die robusteste Variante:
+        // das Event feuert in der Tunneling-Phase, BEVOR der Button-interne
+        // Handler die Chance bekommt etwas zu konsumieren. Wir filtern auf
+        // ChangedButton == Right und markieren das Event als Handled, damit
+        // der Button nicht zusaetzlich noch ein Click-Event ausloest.
+        private void BtnProfile1_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(1, e);
+        private void BtnProfile2_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(2, e);
+        private void BtnProfile3_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(3, e);
+        private void BtnProfile4_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(4, e);
+        private void BtnProfile5_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(5, e);
+        private void BtnProfile6_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(6, e);
+        private void BtnProfile7_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(7, e);
+        private void BtnProfile8_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(8, e);
+        private void BtnProfile9_PreviewMouseDown(object sender, MouseButtonEventArgs e)  => HandleProfileRightClick(9, e);
+        private void BtnProfile10_PreviewMouseDown(object sender, MouseButtonEventArgs e) => HandleProfileRightClick(10, e);
+
+        private void HandleProfileRightClick(int profile, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Right) return;
+            SwitchProfileWithoutReCorrect(profile);
+            e.Handled = true;
+        }
 
         /// <summary>
         /// RECHTSKLICK-Variante: aktiviert Gemini falls aus, setzt das aktive
