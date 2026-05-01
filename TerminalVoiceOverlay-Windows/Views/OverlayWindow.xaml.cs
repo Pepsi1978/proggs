@@ -976,8 +976,9 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>G button — toggle Gemini on/off.
-        /// G=on → GButton green, WButton dark.
-        /// G=off → GButton dark, WButton green (Whisper-raw active).</summary>
+        /// G=on → GButton green, WButton dark, aktives Profil leuchtet goldgelb.
+        /// G=off → GButton dark, WButton green (Whisper-raw active), ALLE Profil-
+        /// Tiles werden dunkel weil ohne Gemini kein Profil wirken kann.</summary>
         private void BtnGemini_Click(object sender, RoutedEventArgs e)
         {
             if (_geminiClient == null) return;
@@ -993,6 +994,10 @@ namespace TerminalVoiceOverlay.Views
                 GButton.Background = ToggleOff;
                 WButton.Background = ToggleOn;
             }
+
+            // Profil-Tiles synchron zum G-Status updaten: bei G=off werden
+            // alle dunkel, bei G=on leuchtet das gespeicherte aktive Profil.
+            SetActiveProfile(_activeProfile);
 
             Console.WriteLine($"Gemini {(geminiEnabled ? "ON" : "OFF")}");
         }
@@ -1020,22 +1025,26 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>
         /// Setzt das aktive Gemini-Korrektur-Profil (1-10) und aktualisiert
         /// die zehn Profil-Tiles farblich. Aktiv = goldgelb (BtnMicIdle),
-        /// inaktiv = dunkel (ToggleOff). Das Profil ist mutually exclusive:
-        /// genau eins leuchtet. Foreground der Schrift bleibt durch die
-        /// Background-Wahl gut lesbar (dunkle Schrift auf gelb, weisse
-        /// Schrift auf dunkel).
+        /// inaktiv = dunkel (ToggleOff).
+        ///
+        /// Wichtige Regel: Wenn Gemini ausgeschaltet ist (geminiEnabled=false,
+        /// W-Toggle aktiv), wird KEIN Tile goldgelb — alle Profile sind dunkel.
+        /// Erst wenn Gemini wieder an ist, leuchtet das gespeicherte aktive
+        /// Profil. So ist auf einen Blick klar: sobald W (Whisper-Raw) aktiv
+        /// ist, hat kein Profil Wirkung.
         /// </summary>
         private void SetActiveProfile(int profile)
         {
             _activeProfile = profile;
             var buttons = ProfileButtons;
+            bool showActiveTile = geminiEnabled;
             for (int i = 0; i < buttons.Length; i++)
             {
-                bool isActive = (i + 1) == profile;
+                bool isActive = showActiveTile && (i + 1) == profile;
                 buttons[i].Background = isActive ? BtnMicIdle : ToggleOff;
                 UpdateProfileButtonForeground(buttons[i], isActive);
             }
-            Console.WriteLine($"Profile {profile} aktiv");
+            Console.WriteLine($"Profile {profile} aktiv (gemini={geminiEnabled})");
         }
 
         private static void UpdateProfileButtonForeground(System.Windows.Controls.Button button, bool active)
@@ -1171,6 +1180,19 @@ namespace TerminalVoiceOverlay.Views
         private async Task SwitchProfileAsync(int newProfile)
         {
             int oldProfile = _activeProfile;
+
+            // Auto-Aktivierung: Klick auf ein Profil-Tile zeigt klare Absicht,
+            // dass der Benutzer Gemini-Korrektur will. Falls G gerade aus war
+            // (W-Modus), schalten wir Gemini automatisch ein und aktualisieren
+            // beide Toggle-Buttons. So muss der Benutzer nicht zweimal klicken.
+            if (!geminiEnabled && _geminiClient != null)
+            {
+                geminiEnabled = true;
+                GButton.Background = ToggleOn;
+                WButton.Background = ToggleOff;
+                Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Klick");
+            }
+
             SetActiveProfile(newProfile);
 
             // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts —
