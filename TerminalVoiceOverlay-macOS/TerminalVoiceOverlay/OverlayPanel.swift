@@ -372,8 +372,17 @@ final class OverlayPanel: NSPanel {
     var onPasteClicked: (() -> Void)?
     var onScreenshotClicked: (() -> Void)?
     var onInsertScreenshotClicked: (() -> Void)?
-    /// Klick auf eines der zehn Profil-Tiles. Index 1...10.
+    /// Linksklick auf eines der zehn Profil-Tiles. Index 1...10.
+    /// Der AppDelegate fuehrt damit den Re-Correct mit der letzten
+    /// Whisper-Nachricht durch.
     var onProfileClicked: ((Int) -> Void)?
+    /// Rechtsklick auf eines der zehn Profil-Tiles. Index 1...10.
+    /// Setzt nur das Profil ohne Re-Correct — der Whisper-Cache bleibt
+    /// unangetastet, kann spaeter per Linksklick noch genutzt werden.
+    /// Hit-Test laeuft im rightMouseDown-Handler unten, BEVOR die Drag-
+    /// Logik greift, damit Right-Clicks auf Tiles nicht versehentlich
+    /// das Pillar verschieben.
+    var onProfileRightClicked: ((Int) -> Void)?
     var onPillarMoved: (() -> Void)?
 
     init() {
@@ -861,6 +870,17 @@ final class OverlayPanel: NSPanel {
         case .rightMouseDown:
             let clickedWindowNumber = NSWindow.windowNumber(at: mouseLocation, belowWindowWithWindowNumber: 0)
             if frame.contains(mouseLocation) && clickedWindowNumber == self.windowNumber {
+                // Hit-Test auf Profil-Tiles: liegt der Klick auf einem Tile,
+                // wird er als Right-Click auf das Profil interpretiert (nur
+                // Profil-Wechsel ohne Re-Correct) — NICHT als Drag-Start.
+                let panelPoint = NSPoint(
+                    x: mouseLocation.x - frame.origin.x,
+                    y: mouseLocation.y - frame.origin.y
+                )
+                for (idx, tile) in profileButtons.enumerated() where tile.frame.contains(panelPoint) {
+                    onProfileRightClicked?(idx + 1)
+                    return true
+                }
                 isDragging = true
                 dragStartMouseLocation = mouseLocation
                 dragStartPanelOrigin = frame.origin

@@ -76,16 +76,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // 1 = Standard, 2 = Programmierung, 3 = Meta-Intelligenz,
     // 4-10 = numerische Slots (frei belegbar). Default = 1.
     private var activeProfile: Int = 1
-    // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel. Erlaubt es, beim
-    // Profil-Wechsel den zuletzt diktierten Text durch ein anderes Profil
-    // zu schicken (max. 2 Minuten alt).
+    // Letzte Whisper-Roh-Transkription. Bleibt unbegrenzt im Cache,
+    // wird nur durch eine NEUE Aufnahme ueberschrieben — kein Zeitlimit.
+    // Frank steuert das Verhalten ueber Maustaste:
+    //  • Linksklick auf Profil-Tile → Re-Correct (Cache durch Profil
+    //    schicken, Eingabe ersetzen, ggf. Auto-Submit)
+    //  • Rechtsklick auf Profil-Tile → nur Profil wechseln, Cache bleibt
+    //    unangetastet, naechste Aufnahme nutzt das neue Profil
     private var lastCorrectableRaw: String?
-    private var lastCorrectableAt: Date?
-    // 10 Sekunden Fenster fuer Re-Correct: kurz genug damit Profil-Wechsel
-    // ohne Aufnahme NICHT die letzte Frage nochmal schickt, aber lang genug
-    // damit Frank auf einen kurzen "Moment, doch lieber Profil X"-Impuls
-    // reagieren kann.
-    private static let reCorrectMaxAge: TimeInterval = 10
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -199,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onScreenshotClicked = { [weak self] in self?.takeScreenshot() }
         panel.onInsertScreenshotClicked = { [weak self] in self?.insertLastScreenshot() }
         panel.onProfileClicked = { [weak self] profile in self?.switchProfile(profile) }
+        panel.onProfileRightClicked = { [weak self] profile in self?.switchProfileWithoutReCorrect(profile) }
 
         setupStatusItem()
         setupGlobalHotkeys()
@@ -409,12 +408,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         #endif
                         self.lastRawTranscript = transcript
                         // Re-Correct-Cache fuer Profile-Wechsel: Roh-Whisper-
-                        // Text + Zeitstempel merken. Erlaubt Frank, im Nach-
-                        // hinein durch Klick auf ein anderes Profil-Tile den
-                        // gleichen Text durch einen anderen Gemini-Prompt zu
-                        // schicken (max. 2 Minuten gueltig).
+                        // Text merken — bleibt im Cache bis eine neue
+                        // Aufnahme ihn ueberschreibt. Linksklick auf ein
+                        // Profil-Tile schickt diesen Text durch das gewaehlte
+                        // Profil; Rechtsklick laesst den Cache unangetastet.
                         self.lastCorrectableRaw = transcript
-                        self.lastCorrectableAt = Date()
                         self.handleTranscript(transcript, wasBtw: wasBtw)
                     case .failure(let error):
                         NSLog("Transcription error: %@", error.localizedDescription)
@@ -787,15 +785,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts.
         if isRecording { return }
+        // Gleiches Profil = no-op — AUSSER Gemini wurde gerade auto-aktiviert.
         if !didAutoEnableGemini && newProfile == oldProfile { return }
         guard geminiEnabled, let gemini = geminiClient else { return }
         guard let rawText = lastCorrectableRaw, !rawText.isEmpty else { return }
-        guard let cachedAt = lastCorrectableAt,
-              Date().timeIntervalSince(cachedAt) <= AppDelegate.reCorrectMaxAge else {
-            lastCorrectableRaw = nil
-            lastCorrectableAt = nil
-            return
-        }
 
         // Visueller Indikator: das geklickte Tile waehrend des Re-Correct
         // orange faerben.
@@ -835,6 +828,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.panel.flashProfileTile(newProfile, processing: false)
             }
         }
+    }
+
+    /// Rechtsklick auf ein Profil-Tile: aktiviert Gemini falls aus, setzt
+    /// das aktive Profil — fuehrt aber KEINEN Re-Correct durch. Der Whisper-
+    /// Cache bleibt unveraendert und kann spaeter per Linksklick auf irgend-
+    /// ein Profil-Tile noch durchgeschickt werden.
+    private func switchProfileWithoutReCorrect(_ newProfile: Int) {
+        if !geminiEnabled, geminiClient != nil {
+            geminiEnabled = true
+            panel.setGeminiEnabled(geminiEnabled)
+            tvoDebug("[App] Gemini auto-eingeschaltet durch Profil-Rechtsklick")
+        }
+        activeProfile = newProfile
+        panel.setActiveProfile(newProfile)
+        tvoDebug("[App] Profil \(newProfile) aktiv (Rechtsklick — kein Re-Correct)")
     }
 
     // MARK: - Auto-Enter Toggle & Manual Enter

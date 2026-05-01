@@ -98,13 +98,14 @@ namespace TerminalVoiceOverlay.Views
         // die neue Korrektur ersetzt. Nullen wir nach jeder erfolgreichen
         // Re-Korrektur sowie nach jedem unabhaengigen Klick (Enter, Clear,
         // neue Aufnahme).
+        // Letzte Whisper-Roh-Transkription. Bleibt im Cache solange die App
+        // laeuft, wird nur durch eine NEUE Aufnahme ueberschrieben — kein
+        // Zeitlimit. Frank steuert das Verhalten ueber Maustaste:
+        //  • Linksklick auf Profil-Tile → Re-Correct (Cache durch Profil
+        //    schicken, Eingabe ersetzen, ggf. Auto-Submit)
+        //  • Rechtsklick auf Profil-Tile → nur Profil wechseln, Cache bleibt
+        //    unangetastet, naechste Aufnahme nutzt das neue Profil
         private string? _lastCorrectableRaw = null;
-        private DateTime _lastCorrectableAt = DateTime.MinValue;
-        // 10 Sekunden Fenster fuer Re-Correct: kurz genug damit Profil-
-        // Wechsel ohne Aufnahme NICHT die letzte Frage nochmal schickt,
-        // aber lang genug damit Frank auf einen kurzen "Moment, eigentlich
-        // doch lieber mit Profil X"-Impuls reagieren kann.
-        private static readonly TimeSpan ReCorrectMaxAge = TimeSpan.FromSeconds(10);
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
@@ -743,7 +744,6 @@ namespace TerminalVoiceOverlay.Views
                     // damit der Benutzer per Profil-Klick im Nachhinein eine
                     // andere Korrektur-Brille aufsetzen kann.
                     _lastCorrectableRaw = transcript;
-                    _lastCorrectableAt = DateTime.UtcNow;
 
                     string finalText;
                     var activeGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
@@ -883,7 +883,6 @@ namespace TerminalVoiceOverlay.Views
                     Console.WriteLine($"BTW transcript: {transcript}");
                     // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
                     _lastCorrectableRaw = transcript;
-                    _lastCorrectableAt = DateTime.UtcNow;
 
                     string finalText;
                     var btwGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
@@ -1240,36 +1239,70 @@ namespace TerminalVoiceOverlay.Views
         private async void BtnProfile9_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(9);
         private async void BtnProfile10_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(10);
 
+        // ── RECHTSKLICK auf Profil-Tile ──
+        // Aktiviert das Profil ohne den Cache durch Gemini zu schicken. Die
+        // letzte Whisper-Nachricht bleibt unangetastet im Zwischenspeicher
+        // und kann jederzeit spaeter per Linksklick durch dieses (oder ein
+        // anderes) Profil korrigiert werden. Damit kann Frank Profile in
+        // Ruhe wechseln ohne Re-Correct-Risiko.
+        private void BtnProfile1_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(1);
+        private void BtnProfile2_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(2);
+        private void BtnProfile3_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(3);
+        private void BtnProfile4_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(4);
+        private void BtnProfile5_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(5);
+        private void BtnProfile6_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(6);
+        private void BtnProfile7_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(7);
+        private void BtnProfile8_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(8);
+        private void BtnProfile9_RightClick(object sender, MouseButtonEventArgs e)  => SwitchProfileWithoutReCorrect(9);
+        private void BtnProfile10_RightClick(object sender, MouseButtonEventArgs e) => SwitchProfileWithoutReCorrect(10);
+
         /// <summary>
-        /// Wechselt das aktive Profil und schickt — falls der zuletzt von
-        /// Whisper transkribierte Roh-Text noch frisch im Cache liegt — diesen
-        /// Text nachtraeglich durch das neue Profil. Die alte Eingabezeile wird
-        /// dabei vollstaendig geloescht (auch mehrzeilig per ClearAllInput),
-        /// danach wird der frisch korrigierte Text reingepastet.
+        /// RECHTSKLICK-Variante: aktiviert Gemini falls aus, setzt das aktive
+        /// Profil — fuehrt aber KEINEN Re-Correct durch. Der Whisper-Cache
+        /// bleibt unveraendert und kann spaeter per Linksklick auf irgendein
+        /// Profil-Tile noch durchgeschickt werden.
+        /// </summary>
+        private void SwitchProfileWithoutReCorrect(int newProfile)
+        {
+            if (!geminiEnabled && _geminiClient != null)
+            {
+                geminiEnabled = true;
+                GButton.Background = ToggleOn;
+                WButton.Background = ToggleOff;
+                Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Rechtsklick");
+            }
+            SetActiveProfile(newProfile);
+            Console.WriteLine($"Profil {newProfile} aktiv (Rechtsklick — kein Re-Correct)");
+        }
+
+        /// <summary>
+        /// LINKSKLICK auf Profil-Tile: aktiviert das Profil UND schickt — falls
+        /// der zuletzt transkribierte Whisper-Text noch im Cache liegt — diesen
+        /// Text durch das neue Profil. Die alte Eingabezeile wird dabei voll-
+        /// staendig geloescht (auch mehrzeilig per ClearAllInput), danach wird
+        /// der frisch korrigierte Text reingepastet, mit Auto-Submit wenn der
+        /// Enter-Toggle aktiv ist.
         ///
         /// Re-Correct laeuft wenn:
         /// - Roh-Whisper-Text liegt im Cache (_lastCorrectableRaw)
-        /// - Cache ist juenger als ReCorrectMaxAge (Standard: 2 Minuten)
-        /// - Profilwechsel liegt vor (Klick auf gleiches Profil = no-op)
         /// - Gemini ist aktiviert (sonst gibt es nichts zu korrigieren)
-        /// - Aufnahme laeuft NICHT gerade (sonst stoeren wir die laufende
-        ///   Recording-UI und das Audio-Pipeline)
+        /// - Aufnahme laeuft NICHT gerade (sonst stoeren wir die laufende UI)
         ///
-        /// Bewusst KEIN hasPastedText-Check mehr: der war an autoEnter
-        /// gekoppelt und hat Re-Correct unter Default-Settings stillgelegt.
+        /// Kein Zeitlimit mehr: der Cache bleibt erhalten bis eine neue
+        /// Aufnahme ihn ueberschreibt. Wer das Profil ohne Re-Correct setzen
+        /// will, nutzt den Rechtsklick (SwitchProfileWithoutReCorrect).
+        ///
         /// Bewusst KEINE Aenderung am Mic-State: das wuerde die Aufnahme-
-        /// Anzeige (Welle, rot, pulsieren) ueberschreiben. Stattdessen wird
-        /// das geklickte Profil-Tile selbst kurz orange als visueller
-        /// Indikator, dass Re-Correct laeuft.
+        /// Anzeige ueberschreiben. Stattdessen wird das geklickte Profil-Tile
+        /// kurz orange als visueller Indikator, dass Re-Correct laeuft.
         /// </summary>
         private async Task SwitchProfileAsync(int newProfile)
         {
             int oldProfile = _activeProfile;
 
-            // Auto-Aktivierung: Klick auf ein Profil-Tile zeigt klare Absicht,
-            // dass der Benutzer Gemini-Korrektur will. Falls G gerade aus war
-            // (W-Modus, Default seit Whisper-First), schalten wir Gemini
-            // automatisch ein und aktualisieren beide Toggle-Buttons.
+            // Auto-Aktivierung: Linksklick zeigt klare Absicht, Gemini-
+            // Korrektur zu wollen. Falls G gerade aus war (W-Modus, Default
+            // seit Whisper-First), schalten wir Gemini automatisch ein.
             bool didAutoEnableGemini = false;
             if (!geminiEnabled && _geminiClient != null)
             {
@@ -1282,21 +1315,14 @@ namespace TerminalVoiceOverlay.Views
 
             SetActiveProfile(newProfile);
 
-            // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts —
-            // der Re-Correct wuerde die laufende Aufnahme-UI ueberschreiben.
+            // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts.
             if (_micState == RecordingState.Recording) return;
             // Gleiches Profil = no-op — AUSSER Gemini wurde gerade auto-
             // aktiviert. Dann ist es der Erst-Klick im Whisper-Mode und der
-            // Re-Correct soll trotzdem laufen, damit Frank die letzte
-            // Whisper-Nachricht doch noch durch Profil 1/2/3 schicken kann.
+            // Re-Correct soll trotzdem laufen.
             if (!didAutoEnableGemini && newProfile == oldProfile) return;
             if (!geminiEnabled) return;
             if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
-            if (DateTime.UtcNow - _lastCorrectableAt > ReCorrectMaxAge)
-            {
-                _lastCorrectableRaw = null;
-                return;
-            }
 
             var rawText = _lastCorrectableRaw;
             // Geklicktes Profile-Tile aus dem Array holen (Index = profile - 1).
