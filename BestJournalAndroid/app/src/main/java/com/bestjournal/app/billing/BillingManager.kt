@@ -239,7 +239,23 @@ constructor(
             return
         }
         if (!client.isReady) {
-            Log.d(TAG, "refreshSubscriptionStatus: billingClient not ready, skipping")
+            // Loop-11 fix (Frank, 2026-05-01): silently skipping here meant
+            // that if the BillingClient had disconnected (e.g. long
+            // background, OS service restart), the user could open Settings
+            // forever and the cached "Premium aktiv" / "Lebenszeit" tile
+            // would never refresh. For LIFETIME there is no "Abo verwalten"
+            // button to manually trigger a re-query either, so the user was
+            // stuck. Now we restart the connection — onBillingSetupFinished
+            // runs a full re-query batch as soon as it succeeds.
+            Log.d(
+                TAG,
+                "refreshSubscriptionStatus: billingClient not ready, restarting connection",
+            )
+            try {
+                client.startConnection(connectionListener)
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "refreshSubscriptionStatus: startConnection failed: ${e.message}")
+            }
             return
         }
         Log.d(TAG, "refreshSubscriptionStatus: triggering full re-query")
@@ -739,39 +755,61 @@ constructor(
         }
         val previousState = _subscriptionState.value
         if (previousState is SubscriptionState.Subscribed) {
-            // Both queries succeeded but reported nothing while we were
-            // Subscribed. This is the suspicious case — a real Play Store
-            // cancellation only takes effect at expiryTime, so during the
-            // grace window the BillingClient cache should still report it.
-            // Verify with the Cloud Function before downgrading.
-            val lastToken = encryptedPrefs.getString(
-                Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
-                null,
-            )
-            val lastProduct = encryptedPrefs.getString(
-                Constants.PREF_LAST_KNOWN_PRODUCT_ID,
-                null,
-            )
-            if (!lastToken.isNullOrBlank() && !lastProduct.isNullOrBlank()) {
+            // Loop-11 fix (Frank, 2026-05-01): LIFETIME purchases are INAPP,
+            // not subscriptions — the Cloud Function (which queries the
+            // Subscriptions API v2) cannot verify them. queryInAppPurchases
+            // succeeded with an empty result, so we can trust BillingClient
+            // here and downgrade directly. Without this branch the call
+            // below would either hit Cloud with a stale SUB token (giving
+            // NotFound and a correct downgrade by accident) or, if no token
+            // was persisted, fall through anyway — both paths worked but
+            // were confusing. Make the LIFETIME case explicit and skip the
+            // unnecessary cloud roundtrip.
+            val previousType = _subscriptionType.value
+            if (previousType == SubscriptionType.LIFETIME) {
                 Log.d(
                     TAG,
-                    "finalizePurchaseQueryBatch: was Subscribed but BillingClient " +
-                        "is empty — verifying with Cloud Function before downgrade",
+                    "finalizePurchaseQueryBatch: was LIFETIME but no INAPP purchase " +
+                        "found — downgrading directly (Cloud Function cannot verify INAPP)",
                 )
-                verifyExpirationWithCloud(lastToken, lastProduct)
-                return
+                // Fall through to the Free state setter below.
+            } else {
+                // Both queries succeeded but reported nothing while we were
+                // Subscribed (subscription case). This is the suspicious case
+                // — a real Play Store cancellation only takes effect at
+                // expiryTime, so during the grace window the BillingClient
+                // cache should still report it. Verify with the Cloud
+                // Function before downgrading.
+                val lastToken = encryptedPrefs.getString(
+                    Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
+                    null,
+                )
+                val lastProduct = encryptedPrefs.getString(
+                    Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                    null,
+                )
+                if (!lastToken.isNullOrBlank() && !lastProduct.isNullOrBlank()) {
+                    Log.d(
+                        TAG,
+                        "finalizePurchaseQueryBatch: was Subscribed but BillingClient " +
+                            "is empty — verifying with Cloud Function before downgrade",
+                    )
+                    verifyExpirationWithCloud(lastToken, lastProduct)
+                    return
+                }
+                // No persisted token. Fall through: this is a fresh install or
+                // the user never had a subscription, so treating empty as Free
+                // is the correct behaviour.
+                Log.d(
+                    TAG,
+                    "finalizePurchaseQueryBatch: was Subscribed but no persisted " +
+                        "token — assuming legacy state, downgrading to Free",
+                )
             }
-            // No persisted token. Fall through: this is a fresh install or
-            // the user never had a subscription, so treating empty as Free
-            // is the correct behaviour.
-            Log.d(
-                TAG,
-                "finalizePurchaseQueryBatch: was Subscribed but no persisted " +
-                    "token — assuming legacy state, downgrading to Free",
-            )
         }
         _subscriptionState.value = SubscriptionState.Free
         _subscriptionType.value = SubscriptionType.NONE
+        activePurchaseToken = null
         clearPromoStateIfNoSubscription()
     }
 
