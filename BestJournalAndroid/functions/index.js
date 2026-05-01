@@ -5,6 +5,7 @@ const { google } = require("googleapis");
 const PLAY_SERVICE_ACCOUNT_JSON = defineSecret("PLAY_SERVICE_ACCOUNT_JSON");
 
 const PACKAGE_NAME = "com.bestjournal.app";
+const LIFETIME_PRODUCT_ID = "bestjournal_lifetime";
 
 exports.getSubscriptionStatus = onCall(
 	{
@@ -50,6 +51,73 @@ exports.getSubscriptionStatus = onCall(
 		});
 
 		const androidpublisher = google.androidpublisher({ version: "v3", auth });
+
+		// Loop-12 fix (Frank, 2026-05-01): the Lifetime in-app product is
+		// queried via the Products API, not the Subscriptions API. The
+		// previous code only spoke to subscriptionsv2.get, so a Lifetime
+		// refund/revocation could not be detected server-side and the
+		// app's BillingClient cache kept the user marked as Subscribed.
+		if (productId === LIFETIME_PRODUCT_ID) {
+			try {
+				const response = await androidpublisher.purchases.products.get({
+					packageName: PACKAGE_NAME,
+					productId: productId,
+					token: purchaseToken,
+				});
+				const product = response.data;
+				// purchaseState: 0 = PURCHASED, 1 = CANCELLED, 2 = PENDING.
+				// A revoked/refunded Lifetime returns purchaseState=1 or
+				// 404. Both must downgrade the app to Free.
+				if (product.purchaseState !== 0) {
+					console.log(
+						`Lifetime purchaseState=${product.purchaseState} (not PURCHASED) ` +
+							`— treating as NotFound`,
+					);
+					throw new HttpsError(
+						"not-found",
+						"Lifetime purchase no longer active",
+					);
+				}
+				return {
+					subscriptionState: "LIFETIME_ACTIVE",
+					basePlanId: null,
+					offerId: null,
+					productId: productId,
+					expiryTime: null, // Lifetime never expires.
+					autoRenewing: false, // Lifetime is one-time, never renews.
+					latestOrderId: product.orderId ?? null,
+					offerPhase: null,
+					currentPriceMicros: null,
+					currentPriceCurrency: null,
+				};
+			} catch (err) {
+				if (err instanceof HttpsError) throw err;
+				const status = err?.response?.status;
+				const message = err?.response?.data?.error?.message || err.message;
+				console.error(
+					`Products API error (status=${status}):`,
+					message,
+					"purchaseToken=",
+					purchaseToken.substring(0, 12) + "...",
+				);
+				if (status === 404 || status === 410) {
+					throw new HttpsError(
+						"not-found",
+						"Lifetime purchase not found or refunded",
+					);
+				}
+				if (status === 401 || status === 403) {
+					throw new HttpsError(
+						"permission-denied",
+						"Service account lacks permission to read product purchase",
+					);
+				}
+				throw new HttpsError(
+					"internal",
+					`Failed to fetch lifetime purchase: ${message}`,
+				);
+			}
+		}
 
 		try {
 			const response = await androidpublisher.purchases.subscriptionsv2.get({

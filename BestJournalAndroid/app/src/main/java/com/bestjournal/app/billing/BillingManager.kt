@@ -686,15 +686,35 @@ constructor(
                 .build()
         billingClient?.queryPurchasesAsync(params) { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val hasLifetime = purchases.any { purchase ->
+                val lifetimePurchase = purchases.firstOrNull { purchase ->
                     purchase.products.contains(LIFETIME_PRODUCT_ID) &&
                         purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
                         purchase.isAcknowledged
                 }
+                val hasLifetime = lifetimePurchase != null
                 if (hasLifetime) {
                     activeQueryFoundPurchase.set(true)
                     _subscriptionState.value = SubscriptionState.Subscribed
                     _subscriptionType.value = SubscriptionType.LIFETIME
+                    // Loop-12 fix (Frank, 2026-05-01): persist the Lifetime
+                    // token so verifyLifetimeWithCloud() can ask the Cloud
+                    // Function — which speaks to Products API — whether the
+                    // purchase is still PURCHASED or has been revoked /
+                    // refunded. BillingClient's local cache cannot tell us.
+                    encryptedPrefs.edit()
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN,
+                            lifetimePurchase!!.purchaseToken,
+                        )
+                        .putString(
+                            Constants.PREF_LAST_KNOWN_PRODUCT_ID,
+                            LIFETIME_PRODUCT_ID,
+                        )
+                        .apply()
+                    // Server-side verification kicks off in the background.
+                    // If the cloud reports NotFound, the user is downgraded
+                    // to Free immediately; transient errors keep the state.
+                    verifyLifetimeWithCloud(lifetimePurchase.purchaseToken)
                 }
                 purchases
                     .filter {
@@ -913,6 +933,66 @@ constructor(
                             TAG,
                             "verifyExpirationWithCloud: cloud unavailable — " +
                                 "keeping previous state",
+                        )
+                    }
+                }
+            } finally {
+                verifyExpirationInFlight.set(false)
+            }
+        }
+    }
+
+    /**
+     * Loop-12 fix (Frank, 2026-05-01): asks the Cloud Function whether the
+     * Lifetime purchase backing [token] is still PURCHASED. The BillingClient
+     * cache can claim the user owns Lifetime for hours after a refund /
+     * revocation — only the Products API tells the truth.
+     *
+     * If the Cloud Function returns NotFound, the in-memory state is set to
+     * Free immediately. Transient errors keep the previous state to avoid
+     * downgrading on a flaky network.
+     */
+    private fun verifyLifetimeWithCloud(token: String) {
+        if (!verifyExpirationInFlight.compareAndSet(false, true)) {
+            Log.d(TAG, "verifyLifetimeWithCloud: already running, skipping")
+            return
+        }
+        backgroundScope.launch {
+            try {
+                val result = try {
+                    kotlinx.coroutines.withTimeout(15_000L) {
+                        subscriptionStatusService.fetchWithStatus(token, LIFETIME_PRODUCT_ID)
+                    }
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.w(TAG, "verifyLifetimeWithCloud: timed out")
+                    com.bestjournal.app.data.remote.FetchResult.Error
+                }
+                when (result) {
+                    is com.bestjournal.app.data.remote.FetchResult.NotFound -> {
+                        Log.d(
+                            TAG,
+                            "verifyLifetimeWithCloud: cloud confirms Lifetime revoked / " +
+                                "refunded — setting Free",
+                        )
+                        _subscriptionState.value = SubscriptionState.Free
+                        _subscriptionType.value = SubscriptionType.NONE
+                        activePurchaseToken = null
+                        clearPromoStateIfNoSubscription()
+                        encryptedPrefs.edit()
+                            .remove(Constants.PREF_LAST_KNOWN_PURCHASE_TOKEN)
+                            .remove(Constants.PREF_LAST_KNOWN_PRODUCT_ID)
+                            .apply()
+                    }
+                    is com.bestjournal.app.data.remote.FetchResult.Found -> {
+                        Log.d(
+                            TAG,
+                            "verifyLifetimeWithCloud: cloud confirms Lifetime still active",
+                        )
+                    }
+                    is com.bestjournal.app.data.remote.FetchResult.Error -> {
+                        Log.w(
+                            TAG,
+                            "verifyLifetimeWithCloud: cloud unavailable — keeping previous state",
                         )
                     }
                 }
