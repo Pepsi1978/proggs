@@ -18,6 +18,11 @@ object EntryIconResolver {
     )
 
     private val rules: List<IconRule> = listOf(
+        // === Wasser / Hydrierung — ZUERST weil "morgen", "heute" etc. sonst die Tageszeit-Regeln triggern ===
+        IconRule(listOf("hydrierung", "hydratation", "wasser trinken", "1.5 liter", "2 liter wasser", "viel trinken", "trinkmenge"), "glass_water"),
+        IconRule(listOf("wasser", "getrunken", "schlucke", "durst"), "droplet"),
+        IconRule(listOf("schwitzen", "geschwitzt", "schweiss", "nasse haare"), "droplets"),
+
         // === Tageszeit / Wetter ===
         IconRule(listOf("sonnenaufgang", "frueher morgen"), "sunrise"),
         IconRule(listOf("sonnenuntergang", "abenddaemmerung", "abenddämmerung"), "sunset"),

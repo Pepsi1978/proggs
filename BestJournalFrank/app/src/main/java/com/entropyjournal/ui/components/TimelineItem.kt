@@ -56,15 +56,10 @@ fun TimelineItem(
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = MaterialTheme.colorScheme.primary
 
-    // Symbol auf Basis des Eintrags-Textes per Stichwort-Mapping ermitteln.
-    // Spaeter (V0.17.0) wird das ueber Gemini praeziser bestimmt.
-    val combinedText = remember(entry.title, entry.displayText) {
-        buildString {
-            entry.title?.let { append(it).append(' ') }
-            append(entry.displayText)
-        }
-    }
-    val iconKey = remember(combinedText) { EntryIconResolver.resolveKey(combinedText) }
+    // Symbol via KI-Klassifikator + Stichwort-Fallback. Sofort wird das Stichwort-
+    // Mapping angezeigt, im Hintergrund laeuft ein Gemini-Call und ersetzt das Icon
+    // sobald die KI-Antwort da ist (mit Cache, also nur einmal pro Eintrag).
+    val iconKey = rememberEntryIconKey(entry)
 
     Row(
         modifier = modifier

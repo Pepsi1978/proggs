@@ -18,11 +18,11 @@ import com.entropyjournal.ui.theme.LocalIsDarkTheme
 
 /**
  * Kreisfoermiges Symbol-Badge fuer die Timeline-Schiene.
- * Bekommt einen Lucide-Icon-Key (siehe [LucideIconPool]) und zeigt das passende
- * Symbol mit Tag/Nacht-Farbpalette an. Der Kreis hat einen subtilen Rand-Glow
- * und einen weichen radialen Hintergrund-Verlauf.
+ * Bekommt einen Lucide-Icon-Key (siehe [LucideIconPool]) und nutzt die im Pool
+ * hinterlegten Tag/Nacht-Farben des jeweiligen Symbols. So bekommt jedes Symbol
+ * seine eigene thematische Farbe (Sonne gelb, Wasser blau, Familie pink usw.).
  *
- * @param iconKey Schluessel aus [LucideIconPool] (z.B. "sun", "mountain")
+ * @param iconKey Schluessel aus [LucideIconPool] (z.B. "sun", "glass_water")
  * @param size Aussendurchmesser des Kreises (Standard 36dp)
  */
 @Composable
@@ -32,13 +32,19 @@ fun CircleIconBadge(
     size: Dp = 36.dp,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val icon = LucideIconPool.get(iconKey)
+    val entry = LucideIconPool.get(iconKey)
+    val icon = entry?.icon ?: LucideIconPool.getIcon(LucideIconPool.fallbackKey)
 
-    // Tag/Nacht-Farbpaletten — passend zum Frank-Theme
-    val borderColor = if (isDark) Color(0xFF00B0D4) else Color(0xFF006B7A)
-    val fillStart = if (isDark) Color(0xFF0D2A33) else Color(0xFFE3F4F7)
-    val fillEnd = if (isDark) Color(0xFF062028) else Color(0xFFD1ECF1)
-    val iconTint = if (isDark) Color(0xFFB3E5FC) else Color(0xFF006B7A)
+    val baseTint = if (entry != null) {
+        if (isDark) entry.tintDark else entry.tintLight
+    } else {
+        if (isDark) Color(0xFF80DEEA) else Color(0xFF006064)
+    }
+
+    // Dezenter Hintergrund-Verlauf passend zum Tint, mit dunklem/hellem Mix
+    val fillStart = if (isDark) baseTint.copy(alpha = 0.18f) else baseTint.copy(alpha = 0.10f)
+    val fillEnd = if (isDark) Color(0xFF062028) else Color(0xFFF7F7F7)
+    val borderColor = baseTint.copy(alpha = if (isDark) 0.85f else 0.55f)
 
     Box(
         modifier = modifier
@@ -51,7 +57,7 @@ fun CircleIconBadge(
             )
             .border(
                 width = 1.5.dp,
-                color = borderColor.copy(alpha = if (isDark) 0.85f else 0.55f),
+                color = borderColor,
                 shape = CircleShape,
             ),
         contentAlignment = Alignment.Center,
@@ -59,7 +65,7 @@ fun CircleIconBadge(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = iconTint,
+            tint = baseTint,
             modifier = Modifier.size(size * 0.55f),
         )
     }
