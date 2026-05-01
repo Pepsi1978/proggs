@@ -532,6 +532,16 @@ namespace TerminalVoiceOverlay.Views
                     return (IntPtr)Win32.MA_NOACTIVATE;
 
                 case Win32.WM_RBUTTONDOWN:
+                    // Hit-Test: liegt der Rechtsklick auf einem Profile-Tile?
+                    // Dann KEIN Pillar-Drag — stattdessen das Profil ohne
+                    // Re-Correct aktivieren. Sonst bleibt der bestehende
+                    // Drag-Pfad erhalten (Rechte Maustaste auf Hintergrund-
+                    // flaeche oder anderen Buttons verschiebt das Pillar).
+                    if (TryHandleRightClickOnProfileTile())
+                    {
+                        handled = true;
+                        return IntPtr.Zero;
+                    }
                     if (Win32.GetCursorPos(out var startPt))
                     {
                         _isDragging = true;
@@ -1266,6 +1276,53 @@ namespace TerminalVoiceOverlay.Views
             if (e.ChangedButton != MouseButton.Right) return;
             SwitchProfileWithoutReCorrect(profile);
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// WM_RBUTTONDOWN-Hit-Test: prueft ob der aktuelle Mauszeiger auf
+        /// einem der zehn Profile-Tiles liegt. Wenn ja: ProfileN aktivieren
+        /// ohne Re-Correct (Rechtsklick-Semantik) und true zurueckgeben,
+        /// damit der Aufrufer den Drag-Pfad ueberspringt.
+        ///
+        /// Hintergrund: Der Window-Level WndProc-Hook faengt ALLE Right-
+        /// Mouse-Down-Events auf Win32-Ebene ab — dadurch erreichen sie nie
+        /// WPFs Event-Routing und keine PreviewMouseDown-Handler an einzelnen
+        /// Buttons koennen feuern. Der Hit-Test hier ersetzt die WPF-
+        /// Routing-Schicht fuer den Spezialfall der Profile-Tiles.
+        /// </summary>
+        private bool TryHandleRightClickOnProfileTile()
+        {
+            if (!Win32.GetCursorPos(out var screenPt)) return false;
+            System.Windows.Point relativePos;
+            try
+            {
+                relativePos = PointFromScreen(new System.Windows.Point(screenPt.X, screenPt.Y));
+            }
+            catch
+            {
+                return false;
+            }
+
+            var hit = System.Windows.Media.VisualTreeHelper.HitTest(this, relativePos);
+            if (hit?.VisualHit == null) return false;
+
+            DependencyObject? current = hit.VisualHit;
+            while (current != null)
+            {
+                if (current is System.Windows.Controls.Button btn && !string.IsNullOrEmpty(btn.Name))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(
+                        btn.Name, @"^Profile(\d+)Button$");
+                    if (match.Success &&
+                        int.TryParse(match.Groups[1].Value, out int profileNum))
+                    {
+                        SwitchProfileWithoutReCorrect(profileNum);
+                        return true;
+                    }
+                }
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            return false;
         }
 
         /// <summary>
