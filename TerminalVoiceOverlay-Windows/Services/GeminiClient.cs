@@ -108,30 +108,58 @@ Der zu verarbeitende Whisper-Text folgt nun:
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         }
 
-        /// Pfad zur externen Gemini-Korrektur-Prompt-Datei. Wird bei JEDEM
+        /// Basis-Verzeichnis fuer alle Gemini-Korrektur-Prompts. Wird bei JEDEM
         /// CorrectTextAsync-Aufruf neu gelesen — Aenderungen wirken sofort
-        /// ohne App-Neustart. Fehlt die Datei: Fallback auf eingebauten
-        /// PromptTemplate (kein Bruch).
-        private static string GeminiPromptFilePath
+        /// ohne App-Neustart.
+        private static string GeminiPromptDir
             => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "SK", "VoiceOverlays", "gemini-correction-prompt.txt");
+                            "SK", "VoiceOverlays");
 
-        private static string? LoadGeminiCorrectionPrompt()
+        /// <summary>
+        /// Mappt eine Profil-Nummer (1/2/3) auf den Dateinamen der zugehoerigen
+        /// Prompt-Datei. Falls die profilspezifische Datei fehlt, faellt der
+        /// Aufrufer auf die alte Sammeldatei zurueck (Backward Compat) und am
+        /// Ende auf den eingebauten PromptTemplate-Konstanten.
+        /// </summary>
+        private static string ProfilePromptFileName(int profile) => profile switch
+        {
+            1 => "gemini-correction-prompt-standard.txt",
+            2 => "gemini-correction-prompt-programmierung.txt",
+            3 => "gemini-correction-prompt-meta.txt",
+            _ => "gemini-correction-prompt-standard.txt"
+        };
+
+        private static string? LoadGeminiCorrectionPrompt(int profile)
         {
             try
             {
-                if (!File.Exists(GeminiPromptFilePath)) return null;
-                var text = File.ReadAllText(GeminiPromptFilePath);
-                return string.IsNullOrWhiteSpace(text) ? null : text;
+                // 1) Profil-spezifische Datei
+                var profilePath = Path.Combine(GeminiPromptDir, ProfilePromptFileName(profile));
+                if (File.Exists(profilePath))
+                {
+                    var text = File.ReadAllText(profilePath);
+                    if (!string.IsNullOrWhiteSpace(text)) return text;
+                }
+
+                // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
+                var legacyPath = Path.Combine(GeminiPromptDir, "gemini-correction-prompt.txt");
+                if (File.Exists(legacyPath))
+                {
+                    var text = File.ReadAllText(legacyPath);
+                    if (!string.IsNullOrWhiteSpace(text)) return text;
+                }
+
+                return null;
             }
             catch { return null; }
         }
 
-        public async Task<string> CorrectTextAsync(string text)
+        public async Task<string> CorrectTextAsync(string text, int profile = 1)
         {
-            // Externe Korrektur-Prompt-Datei hat Vorrang — Frank kann sie
-            // jederzeit pflegen ohne Rebuild. Fallback: eingebauter Template.
-            var template = LoadGeminiCorrectionPrompt() ?? PromptTemplate;
+            // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank
+            // kann sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-
+            // Sammeldatei, dann eingebauter Template.
+            var template = LoadGeminiCorrectionPrompt(profile) ?? PromptTemplate;
             return await SendWithRetry(template + text + "\nTEXT_END", 0);
         }
 

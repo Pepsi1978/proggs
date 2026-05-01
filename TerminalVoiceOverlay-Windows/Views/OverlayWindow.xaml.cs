@@ -85,13 +85,22 @@ namespace TerminalVoiceOverlay.Views
         private bool alwaysOnActive         = false;
 
         // Aktives Gemini-Korrektur-Profil. 1 = Standard (alltaegliche Texte
-        // und Ideen), 2 = Programmierung (existierender PromptTemplate / SK-
-        // Datei), 3 = Meta-Intelligenz (strukturiertes Denken). Default = 2,
-        // weil das aktuelle Verhalten dem Programmier-Prompt entspricht und
-        // damit niemand bestehende Workflows verliert. Backend-Verkabelung
-        // (Prompt-Auswahl in GeminiClient) folgt im naechsten Schritt — fuer
-        // jetzt nur visueller Toggle.
-        private int _activeProfile = 2;
+        // und Ideen), 2 = Programmierung (Code-Begriffe, CLI, Frameworks),
+        // 3 = Meta-Intelligenz (strukturiertes Denken). Default = 1, weil das
+        // alltaegliche Profil der haeufigste Anwendungsfall ist; spezifische
+        // Profile schaltet der Benutzer aktiv ein.
+        private int _activeProfile = 1;
+
+        // Letzte Re-Correct-Sicherheits-Nutzlast. Solange der Sprecher den
+        // eingefuegten Text nicht ueberschrieben oder abgeschickt hat, kann
+        // er per Profil-Klick den Roh-Whisper-Text durch ein anderes Gemini-
+        // Profil schicken — die alte Eingabezeile wird geloescht und durch
+        // die neue Korrektur ersetzt. Nullen wir nach jeder erfolgreichen
+        // Re-Korrektur sowie nach jedem unabhaengigen Klick (Enter, Clear,
+        // neue Aufnahme).
+        private string? _lastCorrectableRaw = null;
+        private DateTime _lastCorrectableAt = DateTime.MinValue;
+        private static readonly TimeSpan ReCorrectMaxAge = TimeSpan.FromMinutes(2);
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
@@ -706,15 +715,20 @@ namespace TerminalVoiceOverlay.Views
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
                     Console.WriteLine($"Transcript: {transcript}");
                     lastRawTranscript = transcript;
+                    // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
+                    // damit der Benutzer per Profil-Klick im Nachhinein eine
+                    // andere Korrektur-Brille aufsetzen kann.
+                    _lastCorrectableRaw = transcript;
+                    _lastCorrectableAt = DateTime.UtcNow;
 
                     string finalText;
                     var activeGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
                     if (activeGemini != null)
                     {
-                        Console.WriteLine("Gemini correction...");
+                        Console.WriteLine($"Gemini correction (profile {_activeProfile})...");
                         try
                         {
-                            finalText = await activeGemini.CorrectTextAsync(transcript);
+                            finalText = await activeGemini.CorrectTextAsync(transcript, _activeProfile);
                             Console.WriteLine($"Corrected: {finalText}");
                         }
                         catch (Exception ex)
@@ -843,15 +857,18 @@ namespace TerminalVoiceOverlay.Views
                 {
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
                     Console.WriteLine($"BTW transcript: {transcript}");
+                    // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
+                    _lastCorrectableRaw = transcript;
+                    _lastCorrectableAt = DateTime.UtcNow;
 
                     string finalText;
                     var btwGemini = geminiEnabled ? await GetActiveGeminiClientAsync() : null;
                     if (btwGemini != null)
                     {
-                        Console.WriteLine("BTW Gemini correction...");
+                        Console.WriteLine($"BTW Gemini correction (profile {_activeProfile})...");
                         try
                         {
-                            finalText = await btwGemini.CorrectTextAsync(transcript);
+                            finalText = await btwGemini.CorrectTextAsync(transcript, _activeProfile);
                             Console.WriteLine($"BTW corrected: {finalText}");
                         }
                         catch (Exception ex)
@@ -990,9 +1007,78 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        private void BtnProfile1_Click(object sender, RoutedEventArgs e) => SetActiveProfile(1);
-        private void BtnProfile2_Click(object sender, RoutedEventArgs e) => SetActiveProfile(2);
-        private void BtnProfile3_Click(object sender, RoutedEventArgs e) => SetActiveProfile(3);
+        private async void BtnProfile1_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(1);
+        private async void BtnProfile2_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(2);
+        private async void BtnProfile3_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(3);
+
+        /// <summary>
+        /// Wechselt das aktive Profil und korrigiert — falls der zuletzt
+        /// gediktierte Whisper-Text noch im Eingabefeld steht — diesen Text
+        /// nachtraeglich durch das neue Profil. So kann der Sprecher merken
+        /// "das Programmier-Profil hat das verschlimmbessert" und mit einem
+        /// Klick auf 1 oder 3 den Roh-Text durch eine andere Brille schicken.
+        ///
+        /// Re-Correct laeuft NUR wenn alle Bedingungen erfuellt sind:
+        /// - Roh-Whisper-Text liegt im Cache (lastCorrectableRaw)
+        /// - Cache ist juenger als ReCorrectMaxAge (Standard: 2 Minuten)
+        /// - Text steht noch im Eingabefeld (hasPastedText) und wurde NICHT
+        ///   per Auto-Enter abgeschickt
+        /// - Profilwechsel liegt vor (Klick auf gleiches Profil = no-op)
+        /// - Gemini ist aktiviert (sonst gibt es nichts zu korrigieren)
+        /// </summary>
+        private async Task SwitchProfileAsync(int newProfile)
+        {
+            int oldProfile = _activeProfile;
+            SetActiveProfile(newProfile);
+
+            // Bedingungen fuer Re-Correct pruefen — bei Misserfolg einfach
+            // still den Profilwechsel akzeptieren und beim naechsten Diktat
+            // wirken lassen.
+            if (newProfile == oldProfile) return;
+            if (!geminiEnabled) return;
+            if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
+            if (!hasPastedText) return;
+            if (DateTime.UtcNow - _lastCorrectableAt > ReCorrectMaxAge)
+            {
+                _lastCorrectableRaw = null;
+                return;
+            }
+
+            var rawText = _lastCorrectableRaw;
+            try
+            {
+                var gemini = await GetActiveGeminiClientAsync();
+                if (gemini == null) return;
+
+                Console.WriteLine($"Re-Correct: profile {oldProfile} -> {newProfile}");
+                SetMicState(RecordingState.Processing);
+
+                string corrected = await gemini.CorrectTextAsync(rawText, newProfile);
+
+                // Wrappers (Pre/Post-Prompts) wieder anwenden, falls aktiv —
+                // sonst geht der always-on-Kontext beim Re-Correct verloren.
+                var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
+                if (!string.IsNullOrEmpty(preFix)) corrected = preFix + corrected;
+                if (!string.IsNullOrEmpty(postFix)) corrected = corrected + postFix;
+                corrected = corrected + " ; ";
+
+                // Eingabezeile loeschen und neu einfuegen
+                TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
+                await Task.Delay(80);
+                TerminalController.PasteText(corrected, _terminalWatcher.ActiveTerminalHwnd);
+
+                hasPastedText = true;
+                SetMicState(RecordingState.Success);
+                ScheduleReset();
+                Console.WriteLine($"Re-Correct ok: {corrected}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Re-Correct error: {ex.Message}");
+                SetMicState(RecordingState.Error);
+                ScheduleReset();
+            }
+        }
 
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.
