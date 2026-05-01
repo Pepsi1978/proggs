@@ -3078,37 +3078,44 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = {
-                                    playClick()
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    showExportDialog = true
-                                },
-                                enabled = !uiState.isExporting,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
                             ) {
-                                if (uiState.isExporting) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp,
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.settings_exporting))
-                                } else {
-                                    Icon(
-                                        Icons.Rounded.PictureAsPdf,
-                                        null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        stringResource(R.string.settings_export_entries_photos_pdf)
-                                    )
+                                Button(
+                                    onClick = {
+                                        playClick()
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        showExportDialog = true
+                                    },
+                                    enabled = !uiState.isExporting,
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                ) {
+                                    if (uiState.isExporting) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp,
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.settings_exporting))
+                                    } else {
+                                        Icon(
+                                            Icons.Rounded.PictureAsPdf,
+                                            null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            stringResource(
+                                                R.string.settings_export_entries_photos_pdf
+                                            )
+                                        )
+                                    }
                                 }
                             }
                         } else {
