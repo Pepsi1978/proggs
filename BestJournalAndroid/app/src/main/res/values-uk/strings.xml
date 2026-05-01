@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Створюйте записи щоденника,\nпотім ШІ проаналізує вашу тему.</string>
     <string name="dashboard_create_entries_default">Створюйте записи щоденника,\nпотім ШІ проаналізує ваші закономірності.</string>
     <string name="dashboard_like_analysis">Подобається аналіз?</string>
-    <string name="dashboard_premium_upsell_body">З Преміум ви отримуєте безлімітні аналізи з 5 різних точок зору.</string>
+    <string name="dashboard_premium_upsell_body">З Premium ти отримуєш щедрі аналізи з будь-якої кількості профілів.</string>
     <string name="dashboard_learn_more">Дізнатися більше</string>
     <string name="dashboard_feature_analyses">Аналізи</string>
     <string name="dashboard_all_observations">Усі спостереження</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Кілька власних профілів</string>
     <string name="profiles_premium_desc">Із Premium ти створюєш стільки власних профілів аналізу, скільки хочеш. Наприклад, один для спорту, один для роботи, один для сім’ї. Кожен профіль аналізує твої записи щоденника зі своїм фокусом.</string>
-    <string name="profiles_benefit_many">Створюй необмежену кількість власних профілів</string>
+    <string name="profiles_benefit_many">Створюй будь-яку кількість індивідуальних профілів</string>
     <string name="profiles_benefit_switch">Перемикайся між фокусами будь-коли</string>
     <string name="profiles_benefit_named">Давай кожному профілю свою назву</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Преміум</string>
     <string name="settings_premium_lifetime">Довічний доступ активний</string>
     <string name="settings_premium_active">Підписка Преміум активна</string>
-    <string name="settings_premium_lifetime_desc">Один платіж, усі функції назавжди.</string>
-    <string name="settings_premium_desc">Усі функції відкриті, безлімітний ШІ, експорт у PDF і більше.</string>
+    <string name="settings_premium_lifetime_desc">Одноразова покупка, усі функції розблоковано назавжди.</string>
+    <string name="settings_premium_desc">Усі функції розблоковано, ШІ щодня, експорт PDF та інше.</string>
     <string name="settings_manage_subscription">Керувати підпискою</string>
     <string name="settings_export">Експорт</string>
     <string name="settings_export_pdf_desc">Експортуйте всі записи та фото як PDF-документ.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Безлімітне покращення тексту ШІ</string>
+    <string name="settings_premium_feature_improve">Щоденне покращення тексту ШІ</string>
     <string name="settings_premium_feature_improve_desc">Кожен запис стає виразнішим</string>
-    <string name="settings_premium_feature_dashboard">Безлімітний аналіз панелі</string>
+    <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
     <string name="settings_premium_feature_dashboard_desc">Ваша панель росте разом із вами</string>
     <string name="settings_premium_feature_5_perspectives">5 перспектив ШІ</string>
     <string name="settings_premium_feature_5_perspectives_desc">Від ясності до самопізнання</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">Панель показує зв\'язки, що в буднях вислизають.</string>
     <string name="onboarding_how_step5_title">Підсумки тижня, місяця і року</string>
     <string name="onboarding_how_step5_desc">Автоматичні підсумки показують, як ви розвиваєтеся з часом.</string>
-    <string name="onboarding_premium_feature_improve">Безлімітне покращення тексту ШІ, кожен запис стає яснішим і виразнішим</string>
+    <string name="onboarding_premium_feature_improve">Щоденне покращення тексту ШІ, кожен запис стає чіткішим і виразнішим</string>
     <string name="onboarding_premium_feature_dashboard">Автоматичне оновлення панелі при кожному новому записі</string>
     <string name="onboarding_premium_feature_retro">Підсумки тижня, місяця і року показують ваш розвиток</string>
     <string name="onboarding_premium_feature_patterns">Розпізнавання особистих закономірностей, ШІ знаходить приховані закономірності думок і почуттів</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
     <string name="paywall_yearly_savings">Заощадьте %1$d\u00A0%% порівняно з місячною, скасування будь-коли</string>
     <string name="paywall_lifetime_title">Разова покупка</string>
-    <string name="paywall_lifetime_desc">Платите один раз, користуєтеся всім назавжди</string>
+    <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
     <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
     <string name="paywall_free_note">Додаток працює і без підписки,</string>
     <string name="paywall_cd_close">Закрити</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Зрозумійте приховані закономірності свого мислення</string>
-    <string name="paywall_feature_improve">Безлімітне покращення тексту ШІ для кожного запису</string>
+    <string name="paywall_feature_improve">Щоденне покращення тексту ШІ для кожного запису</string>
     <string name="paywall_feature_dashboard">Автоматичне оновлення панелі після кожного запису</string>
     <string name="paywall_feature_retro">Підсумки тижня, місяця і року з ШІ</string>
     <string name="paywall_feature_pdf">Експорт записів з фото у PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Відкрийте добре в кожному дні</string>
     <string name="paywall_headline_growth_sub">Ваш особистий простір вдячності й зростання</string>
     <string name="paywall_headline_thoughts">Нехай думки пливуть</string>
-    <string name="paywall_headline_thoughts_sub">Ваш творчий супутник без меж</string>
+    <string name="paywall_headline_thoughts_sub">Твій творчий супутник у повсякденні</string>
     <string name="paywall_headline_default">Відкривайте себе\nЩодня трохи більше</string>
-    <string name="paywall_headline_default_sub">Ваш особистий ШІ-супутник без меж</string>
+    <string name="paywall_headline_default_sub">Твій особистий ШІ-супутник у повсякденні</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Зачекайте мить!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">Перед скасуванням поділіться причиною? Це допомагає нам покращувати додаток.</string>
     <string name="churn_exclusive_offer">Ексклюзивна пропозиція</string>
     <string name="churn_offer_subtitle">Тільки для вас, адже ви важливі</string>
-    <string name="churn_offer_feature_ai">Безлімітні аналізи ШІ</string>
+    <string name="churn_offer_feature_ai">Щоденні аналізи ШІ</string>
     <string name="churn_offer_feature_perspectives">Усі 5 точок зору</string>
     <string name="churn_offer_feature_voice">Преміум-розпізнавання мови</string>
     <string name="churn_offer_auto_renew">Автоматично продовжується, скасування будь-коли</string>
@@ -1367,7 +1367,6 @@
     <string name="paywall_feature_ai_improvement">Покращення тексту за допомогою ШІ</string>
     <string name="paywall_feature_drive_backup">Резервна копія Google Drive</string>
     <string name="paywall_feature_pdf_export">Експорт PDF</string>
-    <string name="paywall_feature_unlimited_entries">Необмежені записи щоденника</string>
     <string name="paywall_lifetime_label">Разово</string>
     <string name="paywall_monthly_label">Щомісяця</string>
     <string name="paywall_restore_button">Відновити покупки</string>

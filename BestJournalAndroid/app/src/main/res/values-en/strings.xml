@@ -238,7 +238,7 @@
     <string name="dashboard_create_entries_custom">Create journal entries,\nthen the AI will analyze your focus.</string>
     <string name="dashboard_create_entries_default">Create journal entries,\nthen the AI will analyze your patterns.</string>
     <string name="dashboard_like_analysis">Like the analysis?</string>
-    <string name="dashboard_premium_upsell_body">With Premium you get unlimited analyses from 5 different perspectives.</string>
+    <string name="dashboard_premium_upsell_body">With Premium, you get generous analyses from any number of profiles.</string>
     <string name="dashboard_learn_more">Learn more</string>
     <string name="dashboard_feature_analyses">Analyses</string>
     <string name="dashboard_all_observations">All Observations</string>
@@ -382,7 +382,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Multiple custom profiles</string>
     <string name="profiles_premium_desc">With Premium you can create as many custom analysis profiles as you want. For example one for sports, one for your work, one for your family. Each profile analyzes your journal entries with its own focus.</string>
-    <string name="profiles_benefit_many">Create unlimited custom profiles</string>
+    <string name="profiles_benefit_many">Create as many custom profiles as you want</string>
     <string name="profiles_benefit_switch">Switch between your focuses anytime</string>
     <string name="profiles_benefit_named">Give each profile its own name</string>
 
@@ -457,16 +457,16 @@
     <string name="settings_premium_cancelled">Premium subscription cancelled</string>
     <string name="settings_premium_cancelled_until">Premium subscription cancelled — runs until <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled_desc">Premium features remain available until the end of the billing period. You can resume the subscription at any time via Google Play.</string>
-    <string name="settings_premium_lifetime_desc">One-time purchase, all features unlocked forever.</string>
-    <string name="settings_premium_desc">All features unlocked, unlimited AI, PDF export, and more.</string>
+    <string name="settings_premium_lifetime_desc">One-time purchase, all features unlocked permanently.</string>
+    <string name="settings_premium_desc">All features unlocked, AI every day, PDF export and more.</string>
     <string name="settings_manage_subscription">Manage subscription</string>
     <string name="settings_export">Export</string>
     <string name="settings_export_pdf_desc">Export all journal entries and photos as a PDF document.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Unlimited AI text improvement</string>
+    <string name="settings_premium_feature_improve">Daily AI text improvement</string>
     <string name="settings_premium_feature_improve_desc">Every entry becomes more expressive</string>
-    <string name="settings_premium_feature_dashboard">Unlimited dashboard analyses</string>
+    <string name="settings_premium_feature_dashboard">Daily dashboard analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with you</string>
     <string name="settings_premium_feature_5_perspectives">5 AI perspectives</string>
     <string name="settings_premium_feature_5_perspectives_desc">From clarity to self-discovery</string>
@@ -800,7 +800,7 @@
     <string name="onboarding_how_step4_desc">The dashboard shows you connections that stay hidden in everyday life.</string>
     <string name="onboarding_how_step5_title">Weekly, monthly, and yearly reviews</string>
     <string name="onboarding_how_step5_desc">Automatic reviews show you how you evolve over time.</string>
-    <string name="onboarding_premium_feature_improve">Unlimited AI text improvement — every entry becomes clearer and more expressive</string>
+    <string name="onboarding_premium_feature_improve">AI text improvement daily, every entry becomes clearer and more expressive</string>
     <string name="onboarding_premium_feature_dashboard">Automatic dashboard updates with every new entry</string>
     <string name="onboarding_premium_feature_retro">Weekly, monthly, and yearly reviews show your growth</string>
     <string name="onboarding_premium_feature_patterns">Recognize personal patterns — the AI finds hidden thought and feeling patterns</string>
@@ -843,14 +843,14 @@
     <string name="paywall_monthly_plan">Monthly, %1$s per month</string>
     <string name="paywall_yearly_savings">Save %1$d%% compared to monthly, cancel anytime</string>
     <string name="paywall_lifetime_title">One-time purchase</string>
-    <string name="paywall_lifetime_desc">Pay once, use everything forever</string>
+    <string name="paywall_lifetime_desc">Pay once, use everything permanently</string>
     <string name="paywall_lifetime_note">No subscription, no renewal</string>
     <string name="paywall_free_note">The app also works without a subscription,</string>
     <string name="paywall_cd_close">Close</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Understand hidden patterns in your thinking</string>
-    <string name="paywall_feature_improve">Unlimited AI text improvement for every entry</string>
+    <string name="paywall_feature_improve">AI text improvement daily for every entry</string>
     <string name="paywall_feature_dashboard">Automatic dashboard updates after every entry</string>
     <string name="paywall_feature_retro">Weekly, monthly, and yearly AI reviews</string>
     <string name="paywall_feature_pdf">Export journal entries with photos as PDF</string>
@@ -865,9 +865,9 @@
     <string name="paywall_headline_growth">Discover the good in every day</string>
     <string name="paywall_headline_growth_sub">Your personal space for gratitude and growth</string>
     <string name="paywall_headline_thoughts">Let your thoughts flow</string>
-    <string name="paywall_headline_thoughts_sub">Your creative companion without limits</string>
+    <string name="paywall_headline_thoughts_sub">Your creative companion for everyday life</string>
     <string name="paywall_headline_default">Discover yourself\nA little more every day</string>
-    <string name="paywall_headline_default_sub">Your personal AI companion without limits</string>
+    <string name="paywall_headline_default_sub">Your personal AI companion for everyday life</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Wait a moment!</string>
@@ -905,7 +905,7 @@
     <string name="churn_sorry_body">Before you cancel, would you tell us why? This helps us improve the app.</string>
     <string name="churn_exclusive_offer">Exclusive offer</string>
     <string name="churn_offer_subtitle">Just for you, because you matter to us</string>
-    <string name="churn_offer_feature_ai">Unlimited AI analyses</string>
+    <string name="churn_offer_feature_ai">Daily AI analyses</string>
     <string name="churn_offer_feature_perspectives">All 5 perspectives</string>
     <string name="churn_offer_feature_voice">Premium voice recognition</string>
     <string name="churn_offer_auto_renew">Renews automatically, cancel anytime</string>
@@ -1342,7 +1342,6 @@
     <string name="paywall_feature_ai_improvement">AI text improvement</string>
     <string name="paywall_feature_drive_backup">Google Drive backup</string>
     <string name="paywall_feature_pdf_export">PDF export</string>
-    <string name="paywall_feature_unlimited_entries">Unlimited journal entries</string>
     <string name="paywall_lifetime_label">One-time</string>
     <string name="paywall_monthly_label">Monthly</string>
     <string name="paywall_restore_button">Restore purchases</string>

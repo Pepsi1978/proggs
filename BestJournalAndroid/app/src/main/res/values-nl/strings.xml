@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Maak dagboeknotities,\ndaarna analyseert de AI je focus.</string>
     <string name="dashboard_create_entries_default">Maak dagboeknotities,\ndaarna analyseert de AI je patronen.</string>
     <string name="dashboard_like_analysis">Vind je de analyse goed?</string>
-    <string name="dashboard_premium_upsell_body">Met Premium krijg je onbeperkte analyses vanuit 5 verschillende perspectieven.</string>
+    <string name="dashboard_premium_upsell_body">Met Premium krijg je royale analyses uit zoveel profielen als je wilt.</string>
     <string name="dashboard_learn_more">Meer weten</string>
     <string name="dashboard_feature_analyses">Analyses</string>
     <string name="dashboard_all_observations">Alle observaties</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Meerdere persoonlijke profielen</string>
     <string name="profiles_premium_desc">Met Premium maak je zoveel persoonlijke analyseprofielen aan als je wilt. Bijvoorbeeld een voor sport, een voor je werk, een voor je gezin. Elk profiel analyseert je dagboeknotities met zijn eigen focus.</string>
-    <string name="profiles_benefit_many">Onbeperkt persoonlijke profielen aanmaken</string>
+    <string name="profiles_benefit_many">Maak zoveel aangepaste profielen aan als je wilt</string>
     <string name="profiles_benefit_switch">Op elk moment tussen je focussen wisselen</string>
     <string name="profiles_benefit_named">Elk profiel een eigen naam geven</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Levenslange toegang actief</string>
     <string name="settings_premium_active">Premium-abonnement actief</string>
-    <string name="settings_premium_lifetime_desc">Eenmalige aankoop, alle functies voor altijd.</string>
-    <string name="settings_premium_desc">Alle functies ontgrendeld, onbeperkte AI, pdf-export en meer.</string>
+    <string name="settings_premium_lifetime_desc">Eenmalige aankoop, alle functies permanent ontgrendeld.</string>
+    <string name="settings_premium_desc">Alle functies ontgrendeld, AI elke dag, PDF-export en meer.</string>
     <string name="settings_manage_subscription">Abonnement beheren</string>
     <string name="settings_export">Exporteren</string>
     <string name="settings_export_pdf_desc">Exporteer al je dagboeknotities en foto\'s als pdf-document.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Onbeperkte AI-tekstverbetering</string>
+    <string name="settings_premium_feature_improve">Dagelijkse AI-tekstverbetering</string>
     <string name="settings_premium_feature_improve_desc">Elke notitie wordt expressiever</string>
-    <string name="settings_premium_feature_dashboard">Onbeperkte dashboardanalyses</string>
+    <string name="settings_premium_feature_dashboard">Dagelijkse dashboard-analyses</string>
     <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit met je mee</string>
     <string name="settings_premium_feature_5_perspectives">5 AI-perspectieven</string>
     <string name="settings_premium_feature_5_perspectives_desc">Van helderheid tot zelfkennis</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">Het dashboard toont je verbanden die je in de drukte ontgaan.</string>
     <string name="onboarding_how_step5_title">Week-, maand- en jaarterugblik</string>
     <string name="onboarding_how_step5_desc">Automatische terugblikken laten zien hoe je je door de tijd ontwikkelt.</string>
-    <string name="onboarding_premium_feature_improve">Onbeperkte AI-tekstverbetering, elke notitie wordt helderder en expressiever</string>
+    <string name="onboarding_premium_feature_improve">AI-tekstverbetering dagelijks, elke notitie wordt duidelijker en expressiever</string>
     <string name="onboarding_premium_feature_dashboard">Automatische dashboard-updates bij elke nieuwe notitie</string>
     <string name="onboarding_premium_feature_retro">Week-, maand- en jaarterugblikken laten je ontwikkeling zien</string>
     <string name="onboarding_premium_feature_patterns">Persoonlijke patronen herkennen, de AI vindt verborgen denk- en gevoelspatronen</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Maandabonnement, %1$s per maand</string>
     <string name="paywall_yearly_savings">Bespaar %1$d\u00A0%% ten opzichte van maandelijks, op elk moment opzegbaar</string>
     <string name="paywall_lifetime_title">Eenmalige aankoop</string>
-    <string name="paywall_lifetime_desc">Eén keer betalen, alles voor altijd gebruiken</string>
+    <string name="paywall_lifetime_desc">Eenmaal betalen, alles permanent gebruiken</string>
     <string name="paywall_lifetime_note">Geen abonnement, geen verlenging</string>
     <string name="paywall_free_note">De app werkt ook zonder abonnement,</string>
     <string name="paywall_cd_close">Sluiten</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Begrijp verborgen patronen in je denken</string>
-    <string name="paywall_feature_improve">Onbeperkte AI-tekstverbetering voor elke notitie</string>
+    <string name="paywall_feature_improve">AI-tekstverbetering dagelijks voor elke notitie</string>
     <string name="paywall_feature_dashboard">Automatische dashboard-updates na elke notitie</string>
     <string name="paywall_feature_retro">Week-, maand- en jaarterugblikken met AI</string>
     <string name="paywall_feature_pdf">Exporteer je notities met foto\'s als pdf</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Ontdek het goede in elke dag</string>
     <string name="paywall_headline_growth_sub">Je persoonlijke ruimte voor dankbaarheid en groei</string>
     <string name="paywall_headline_thoughts">Laat je gedachten stromen</string>
-    <string name="paywall_headline_thoughts_sub">Je creatieve metgezel zonder grenzen</string>
+    <string name="paywall_headline_thoughts_sub">Je creatieve metgezel voor elke dag</string>
     <string name="paywall_headline_default">Ontdek jezelf\nElke dag een stukje meer</string>
-    <string name="paywall_headline_default_sub">Je persoonlijke AI-metgezel zonder grenzen</string>
+    <string name="paywall_headline_default_sub">Je persoonlijke AI-metgezel voor elke dag</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Wacht even!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">Voor je opzegt, mag je ons vertellen waarom? Dat helpt ons de app te verbeteren.</string>
     <string name="churn_exclusive_offer">Exclusieve aanbieding</string>
     <string name="churn_offer_subtitle">Alleen voor jou, omdat jij belangrijk bent</string>
-    <string name="churn_offer_feature_ai">Onbeperkte AI-analyses</string>
+    <string name="churn_offer_feature_ai">Dagelijkse AI-analyses</string>
     <string name="churn_offer_feature_perspectives">Alle 5 perspectieven</string>
     <string name="churn_offer_feature_voice">Premium-spraakherkenning</string>
     <string name="churn_offer_auto_renew">Wordt automatisch verlengd, op elk moment opzegbaar</string>
@@ -1359,7 +1359,6 @@ Wat wil je doen?</string>
     <string name="paywall_feature_ai_improvement">Tekstverbetering met AI</string>
     <string name="paywall_feature_drive_backup">Google Drive-back-up</string>
     <string name="paywall_feature_pdf_export">PDF-export</string>
-    <string name="paywall_feature_unlimited_entries">Onbeperkte dagboekitems</string>
     <string name="paywall_lifetime_label">Eenmalig</string>
     <string name="paywall_monthly_label">Maandelijks</string>
     <string name="paywall_restore_button">Aankopen herstellen</string>

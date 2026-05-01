@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">দিনলিপির লেখা তৈরি করো,\nতারপর এআই তোমার ফোকাস বিশ্লেষণ করবে।</string>
     <string name="dashboard_create_entries_default">দিনলিপির লেখা তৈরি করো,\nতারপর এআই তোমার প্যাটার্ন বিশ্লেষণ করবে।</string>
     <string name="dashboard_like_analysis">বিশ্লেষণ ভালো লাগছে?</string>
-    <string name="dashboard_premium_upsell_body">Premium দিয়ে তুমি 5টি ভিন্ন দৃষ্টিকোণ থেকে অসীম বিশ্লেষণ পাবে।</string>
+    <string name="dashboard_premium_upsell_body">Premium-এর সাথে তুমি যত খুশি প্রোফাইল থেকে প্রচুর বিশ্লেষণ পাবে।</string>
     <string name="dashboard_learn_more">আরো জানো</string>
     <string name="dashboard_feature_analyses">বিশ্লেষণ</string>
     <string name="dashboard_all_observations">সব পর্যবেক্ষণ</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">একাধিক কাস্টম প্রোফাইল</string>
     <string name="profiles_premium_desc">Premium দিয়ে তুমি যত খুশি কাস্টম বিশ্লেষণ প্রোফাইল তৈরি করতে পারো। যেমন একটি খেলার জন্য, একটি কাজের জন্য, একটি পরিবারের জন্য। প্রতিটি প্রোফাইল তোমার ডায়েরি এন্ট্রিকে তার নিজস্ব ফোকাসে বিশ্লেষণ করে।</string>
-    <string name="profiles_benefit_many">অসীম কাস্টম প্রোফাইল তৈরি করো</string>
+    <string name="profiles_benefit_many">যত খুশি কাস্টম প্রোফাইল তৈরি করো</string>
     <string name="profiles_benefit_switch">যেকোনো সময় ফোকাসের মধ্যে পাল্টাও</string>
     <string name="profiles_benefit_named">প্রতিটি প্রোফাইলকে নিজস্ব নাম দাও</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Lifetime অ্যাক্সেস সক্রিয়</string>
     <string name="settings_premium_active">Premium সাবস্ক্রিপশন সক্রিয়</string>
-    <string name="settings_premium_lifetime_desc">একবার কিনে নাও, সব ফিচার চিরকালের জন্য আনলক।</string>
-    <string name="settings_premium_desc">সব ফিচার আনলক, অসীম এআই, পিডিএফ এক্সপোর্ট আর আরো অনেক কিছু।</string>
+    <string name="settings_premium_lifetime_desc">একবার কিনলে সব ফিচার স্থায়ীভাবে আনলক।</string>
+    <string name="settings_premium_desc">সব ফিচার আনলক, প্রতিদিন AI, PDF এক্সপোর্ট এবং আরও।</string>
     <string name="settings_manage_subscription">সাবস্ক্রিপশন ব্যবস্থাপনা করো</string>
     <string name="settings_export">এক্সপোর্ট করো</string>
     <string name="settings_export_pdf_desc">সব দিনলিপির লেখা আর ছবি পিডিএফ নথি হিসেবে এক্সপোর্ট করো।</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">অসীম এআই-লেখা উন্নতি</string>
+    <string name="settings_premium_feature_improve">প্রতিদিন AI টেক্সট উন্নতি</string>
     <string name="settings_premium_feature_improve_desc">প্রতিটি লেখা আরো অভিব্যক্তিপূর্ণ হয়</string>
-    <string name="settings_premium_feature_dashboard">অসীম ড্যাশবোর্ড বিশ্লেষণ</string>
+    <string name="settings_premium_feature_dashboard">প্রতিদিন ড্যাশবোর্ড বিশ্লেষণ</string>
     <string name="settings_premium_feature_dashboard_desc">তোমার ড্যাশবোর্ড তোমার সাথে বেড়ে উঠে</string>
     <string name="settings_premium_feature_5_perspectives">5টি এআই-দৃষ্টিকোণ</string>
     <string name="settings_premium_feature_5_perspectives_desc">স্পষ্টতা থেকে আত্ম-উপলব্ধি পর্যন্ত</string>
@@ -781,7 +781,7 @@
     <string name="onboarding_how_step4_desc">ড্যাশবোর্ড তোমাকে এমন সম্পর্ক দেখায় যা দৈনন্দিন জীবনে তোমার কাছে লুকানো থাকে।</string>
     <string name="onboarding_how_step5_title">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="onboarding_how_step5_desc">স্বয়ংক্রিয় পর্যালোচনা দেখায় তুমি সময়ের সাথে কীভাবে বিকাশ করো।</string>
-    <string name="onboarding_premium_feature_improve">অসীম এআই-লেখা উন্নতি, প্রতিটি লেখা আরো স্পষ্ট আর অভিব্যক্তিপূর্ণ হয়</string>
+    <string name="onboarding_premium_feature_improve">প্রতিদিন AI টেক্সট উন্নতি, প্রতিটি এন্ট্রি আরও স্পষ্ট ও অভিব্যক্তিপূর্ণ হয়</string>
     <string name="onboarding_premium_feature_dashboard">প্রতিটি নতুন লেখায় স্বয়ংক্রিয় ড্যাশবোর্ড হালনাগাদ</string>
     <string name="onboarding_premium_feature_retro">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা তোমার বিকাশ দেখায়</string>
     <string name="onboarding_premium_feature_patterns">ব্যক্তিগত প্যাটার্ন চিনতে পারো, এআই লুকানো চিন্তা ও অনুভূতির প্যাটার্ন খুঁজে পায়</string>
@@ -816,14 +816,14 @@
     <string name="paywall_monthly_plan">মাসিক সাবস্ক্রিপশন, মাসে %1$s</string>
     <string name="paywall_yearly_savings">মাসিক সাবস্ক্রিপশনের তুলনায় %1$d%% সাশ্রয় করো, যেকোনো সময় বাতিলযোগ্য</string>
     <string name="paywall_lifetime_title">একবার কেনাকাটা</string>
-    <string name="paywall_lifetime_desc">একবার পে করো, চিরকাল সব ব্যবহার করো</string>
+    <string name="paywall_lifetime_desc">একবার পরিশোধ করো, সব কিছু স্থায়ীভাবে ব্যবহার করো</string>
     <string name="paywall_lifetime_note">কোনো সাবস্ক্রিপশন নয়, কোনো পুনর্নবীকরণ নয়</string>
     <string name="paywall_free_note">অ্যাপ সাবস্ক্রিপশন ছাড়াও কাজ করে,</string>
     <string name="paywall_cd_close">বন্ধ করো</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">তোমার চিন্তায় লুকানো প্যাটার্ন বুঝো</string>
-    <string name="paywall_feature_improve">প্রতিটি লেখার জন্য অসীম এআই-লেখা উন্নতি</string>
+    <string name="paywall_feature_improve">প্রতিটি এন্ট্রির জন্য প্রতিদিন AI টেক্সট উন্নতি</string>
     <string name="paywall_feature_dashboard">প্রতিটি লেখার পর স্বয়ংক্রিয় ড্যাশবোর্ড হালনাগাদ</string>
     <string name="paywall_feature_retro">এআই দিয়ে সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="paywall_feature_pdf">দিনলিপির লেখা ছবি সহ পিডিএফ হিসেবে এক্সপোর্ট করো</string>
@@ -838,9 +838,9 @@
     <string name="paywall_headline_growth">প্রতিটি দিনে ভালো আবিষ্কার করো</string>
     <string name="paywall_headline_growth_sub">কৃতজ্ঞতা আর বৃদ্ধির জন্য তোমার ব্যক্তিগত জায়গা</string>
     <string name="paywall_headline_thoughts">তোমার চিন্তাকে বইতে দাও</string>
-    <string name="paywall_headline_thoughts_sub">সীমা ছাড়া তোমার সৃজনশীল সঙ্গী</string>
+    <string name="paywall_headline_thoughts_sub">তোমার দৈনন্দিন সৃজনশীল সঙ্গী</string>
     <string name="paywall_headline_default">নিজেকে আবিষ্কার করো\nপ্রতিদিন একটু বেশি</string>
-    <string name="paywall_headline_default_sub">সীমা ছাড়া তোমার ব্যক্তিগত এআই-সঙ্গী</string>
+    <string name="paywall_headline_default_sub">তোমার দৈনন্দিন জীবনের ব্যক্তিগত AI সঙ্গী</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">একটু অপেক্ষা করো!</string>
@@ -874,7 +874,7 @@
     <string name="churn_sorry_body">বাতিল করার আগে, আমাদের বলবে কেন? এটি আমাদের অ্যাপ উন্নত করতে সাহায্য করে।</string>
     <string name="churn_exclusive_offer">বিশেষ অফার</string>
     <string name="churn_offer_subtitle">শুধু তোমার জন্য, কারণ তুমি আমাদের কাছে গুরুত্বপূর্ণ</string>
-    <string name="churn_offer_feature_ai">অসীম এআই-বিশ্লেষণ</string>
+    <string name="churn_offer_feature_ai">প্রতিদিন AI বিশ্লেষণ</string>
     <string name="churn_offer_feature_perspectives">5টি দৃষ্টিকোণের সবগুলি</string>
     <string name="churn_offer_feature_voice">Premium-ভয়েস রিকগনিশন</string>
     <string name="churn_offer_auto_renew">স্বয়ংক্রিয়ভাবে নবীকরণ হয়, যেকোনো সময় বাতিলযোগ্য</string>
@@ -1328,7 +1328,6 @@
     <string name="paywall_consent_dialog_confirm">সম্মত হও এবং কিনো</string>
     <string name="paywall_consent_dialog_cancel">বাতিল করো</string>
     <string name="paywall_feature_ai_improvement">AI দিয়ে লেখা উন্নত করা</string>
-    <string name="paywall_feature_unlimited_entries">সীমাহীন ডায়েরি এন্ট্রি</string>
     <string name="paywall_feature_pdf_export">PDF হিসেবে রপ্তানি করা</string>
     <string name="paywall_feature_drive_backup">Google Drive ব্যাকআপ</string>
 

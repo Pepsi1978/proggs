@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Buat entri,\nlalu AI menganalisis fokusmu.</string>
     <string name="dashboard_create_entries_default">Buat entri,\nlalu AI menganalisis polamu.</string>
     <string name="dashboard_like_analysis">Suka dengan analisis ini?</string>
-    <string name="dashboard_premium_upsell_body">Dengan Premium kamu mendapat analisis tanpa batas dari 5 sudut pandang.</string>
+    <string name="dashboard_premium_upsell_body">Dengan Premium, kamu mendapatkan banyak analisis dari sebanyak profil yang kamu mau.</string>
     <string name="dashboard_learn_more">Pelajari lebih lanjut</string>
     <string name="dashboard_feature_analyses">Analisis</string>
     <string name="dashboard_all_observations">Semua pengamatan</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Beberapa profil khusus</string>
     <string name="profiles_premium_desc">Dengan Premium kamu bisa membuat profil analisis khusus sebanyak yang kamu mau. Misalnya satu untuk olahraga, satu untuk pekerjaan, satu untuk keluarga. Setiap profil menganalisis entri jurnalmu dengan fokusnya sendiri.</string>
-    <string name="profiles_benefit_many">Buat profil khusus tanpa batas</string>
+    <string name="profiles_benefit_many">Buat profil khusus sebanyak yang kamu mau</string>
     <string name="profiles_benefit_switch">Ganti fokus kapan saja</string>
     <string name="profiles_benefit_named">Beri nama sendiri untuk tiap profil</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Akses seumur hidup aktif</string>
     <string name="settings_premium_active">Langganan Premium aktif</string>
-    <string name="settings_premium_lifetime_desc">Bayar sekali, semua fitur selamanya.</string>
-    <string name="settings_premium_desc">Semua fitur terbuka, AI tanpa batas, ekspor PDF, dan banyak lagi.</string>
+    <string name="settings_premium_lifetime_desc">Beli sekali, semua fitur terbuka secara permanen.</string>
+    <string name="settings_premium_desc">Semua fitur terbuka, AI setiap hari, ekspor PDF dan lainnya.</string>
     <string name="settings_manage_subscription">Kelola langganan</string>
     <string name="settings_export">Ekspor</string>
     <string name="settings_export_pdf_desc">Ekspor semua entri dan foto sebagai dokumen PDF.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Perbaikan teks AI tanpa batas</string>
+    <string name="settings_premium_feature_improve">Peningkatan teks AI harian</string>
     <string name="settings_premium_feature_improve_desc">Setiap entri lebih ekspresif</string>
-    <string name="settings_premium_feature_dashboard">Analisis dasbor tanpa batas</string>
+    <string name="settings_premium_feature_dashboard">Analisis dashboard harian</string>
     <string name="settings_premium_feature_dashboard_desc">Dasbormu tumbuh bersamamu</string>
     <string name="settings_premium_feature_5_perspectives">5 sudut pandang AI</string>
     <string name="settings_premium_feature_5_perspectives_desc">Dari kejernihan hingga pengenalan diri</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">Dasbor menunjukkan keterkaitan yang tersembunyi di keseharian.</string>
     <string name="onboarding_how_step5_title">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="onboarding_how_step5_desc">Tinjauan otomatis menunjukkan bagaimana kamu berkembang seiring waktu.</string>
-    <string name="onboarding_premium_feature_improve">Perbaikan teks AI tanpa batas, setiap entri jadi lebih jernih dan ekspresif</string>
+    <string name="onboarding_premium_feature_improve">Peningkatan teks AI harian, setiap entri menjadi lebih jelas dan ekspresif</string>
     <string name="onboarding_premium_feature_dashboard">Pembaruan otomatis dasbor setiap entri baru</string>
     <string name="onboarding_premium_feature_retro">Tinjauan mingguan, bulanan, dan tahunan menunjukkan perkembanganmu</string>
     <string name="onboarding_premium_feature_patterns">Mengenali pola pribadi, AI menemukan pola pikir dan rasa tersembunyi</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Langganan bulanan %1$s per bulan</string>
     <string name="paywall_yearly_savings">Hemat %1$d\u00A0%% dibanding bulanan, bisa dibatalkan kapan saja</string>
     <string name="paywall_lifetime_title">Beli sekali</string>
-    <string name="paywall_lifetime_desc">Bayar sekali, pakai semua selamanya</string>
+    <string name="paywall_lifetime_desc">Bayar sekali, pakai semua secara permanen</string>
     <string name="paywall_lifetime_note">Tanpa langganan, tanpa perpanjangan</string>
     <string name="paywall_free_note">Aplikasi tetap bisa dipakai tanpa langganan,</string>
     <string name="paywall_cd_close">Tutup</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Pahami pola tersembunyi di pikiranmu</string>
-    <string name="paywall_feature_improve">Perbaikan teks AI tanpa batas untuk setiap entri</string>
+    <string name="paywall_feature_improve">Peningkatan teks AI harian untuk setiap entri</string>
     <string name="paywall_feature_dashboard">Pembaruan dasbor otomatis setelah setiap entri</string>
     <string name="paywall_feature_retro">Tinjauan mingguan, bulanan, dan tahunan dengan AI</string>
     <string name="paywall_feature_pdf">Ekspor entri bergambar sebagai PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Temukan hal baik di setiap hari</string>
     <string name="paywall_headline_growth_sub">Ruang pribadimu untuk syukur dan pertumbuhan</string>
     <string name="paywall_headline_thoughts">Biarkan pikiranmu mengalir</string>
-    <string name="paywall_headline_thoughts_sub">Teman kreatif tanpa batas</string>
+    <string name="paywall_headline_thoughts_sub">Teman kreatifmu di keseharian</string>
     <string name="paywall_headline_default">Temukan dirimu\nsedikit demi sedikit setiap hari</string>
-    <string name="paywall_headline_default_sub">Teman AI pribadi tanpa batas</string>
+    <string name="paywall_headline_default_sub">Teman AI pribadimu di keseharian</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Tunggu sebentar!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">Sebelum membatalkan, mau beri tahu alasannya? Itu membantu kami memperbaiki aplikasi.</string>
     <string name="churn_exclusive_offer">Penawaran eksklusif</string>
     <string name="churn_offer_subtitle">Hanya untukmu, karena kamu penting</string>
-    <string name="churn_offer_feature_ai">Analisis AI tanpa batas</string>
+    <string name="churn_offer_feature_ai">Analisis AI harian</string>
     <string name="churn_offer_feature_perspectives">Semua 5 sudut pandang</string>
     <string name="churn_offer_feature_voice">Pengenalan suara Premium</string>
     <string name="churn_offer_auto_renew">Diperpanjang otomatis, bisa dibatalkan kapan saja</string>
@@ -1353,7 +1353,6 @@ Apa yang ingin kamu lakukan?</string>
     <string name="paywall_feature_ai_improvement">Perbaikan teks dengan AI</string>
     <string name="paywall_feature_drive_backup">Cadangan Google Drive</string>
     <string name="paywall_feature_pdf_export">Ekspor PDF</string>
-    <string name="paywall_feature_unlimited_entries">Entri jurnal tanpa batas</string>
     <string name="paywall_lifetime_label">Sekali bayar</string>
     <string name="paywall_monthly_label">Bulanan</string>
     <string name="paywall_restore_button">Pulihkan pembelian</string>

@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">أنشئ تسجيلات،\nثم يحلّل الذكاء الاصطناعي محورك.</string>
     <string name="dashboard_create_entries_default">أنشئ تسجيلات،\nثم يحلّل الذكاء الاصطناعي أنماطك.</string>
     <string name="dashboard_like_analysis">هل أعجبك التحليل؟</string>
-    <string name="dashboard_premium_upsell_body">مع المميّز تحصل على تحليلات لا محدودة من 5 زوايا مختلفة.</string>
+    <string name="dashboard_premium_upsell_body">مع Premium، تحصل على تحليلات وفيرة من أي عدد من الملفات الشخصية.</string>
     <string name="dashboard_learn_more">اعرف المزيد</string>
     <string name="dashboard_feature_analyses">التحليلات</string>
     <string name="dashboard_all_observations">كل الملاحظات</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">عدة ملفات شخصية مخصّصة</string>
     <string name="profiles_premium_desc">مع Premium تُنشئ ما تشاء من ملفات التحليل الشخصية. مثلًا واحد للرياضة، واحد لعملك، واحد لعائلتك. يحلّل كل ملف مدخلات يومياتك بتركيزه الخاص.</string>
-    <string name="profiles_benefit_many">أنشئ عددًا غير محدود من الملفات الشخصية</string>
+    <string name="profiles_benefit_many">أنشئ أي عدد تريده من الملفات الشخصية المخصصة</string>
     <string name="profiles_benefit_switch">انتقل بين محاور تركيزك في أي وقت</string>
     <string name="profiles_benefit_named">امنح كل ملف اسمه الخاص</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">المميّز</string>
     <string name="settings_premium_lifetime">وصول مدى الحياة مفعّل</string>
     <string name="settings_premium_active">اشتراك المميّز نشط</string>
-    <string name="settings_premium_lifetime_desc">دفعة واحدة، كل الميزات مفتوحة إلى الأبد.</string>
-    <string name="settings_premium_desc">جميع الميزات مفتوحة، ذكاء اصطناعي بلا حدود، تصدير PDF والمزيد.</string>
+    <string name="settings_premium_lifetime_desc">شراء لمرة واحدة، جميع الميزات مفتوحة بشكل دائم.</string>
+    <string name="settings_premium_desc">جميع الميزات مفتوحة، الذكاء الاصطناعي كل يوم، تصدير PDF والمزيد.</string>
     <string name="settings_manage_subscription">إدارة الاشتراك</string>
     <string name="settings_export">تصدير</string>
     <string name="settings_export_pdf_desc">صدّر جميع التسجيلات والصور بصيغة PDF.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">تحسين نصّي بالذكاء الاصطناعي بلا حدود</string>
+    <string name="settings_premium_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا</string>
     <string name="settings_premium_feature_improve_desc">كل تسجيل يصبح أكثر تعبيرا</string>
-    <string name="settings_premium_feature_dashboard">تحليلات لوحة تحكم لا محدودة</string>
+    <string name="settings_premium_feature_dashboard">تحليلات لوحة التحكم اليومية</string>
     <string name="settings_premium_feature_dashboard_desc">لوحة تحكمك تنمو معك</string>
     <string name="settings_premium_feature_5_perspectives">5 زوايا ذكاء اصطناعي</string>
     <string name="settings_premium_feature_5_perspectives_desc">من الوضوح إلى معرفة الذات</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">تظهر لك لوحة التحكم روابط لا تنتبه لها في الحياة اليومية.</string>
     <string name="onboarding_how_step5_title">مراجعات أسبوعية وشهرية وسنوية</string>
     <string name="onboarding_how_step5_desc">مراجعات تلقائية تظهر كيف تتطوّر عبر الزمن.</string>
-    <string name="onboarding_premium_feature_improve">تحسين نصّي بلا حدود بالذكاء الاصطناعي، كلّ تسجيل أوضح وأعمق تعبيرا</string>
+    <string name="onboarding_premium_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا، كل إدخال يصبح أوضح وأكثر تعبيرًا</string>
     <string name="onboarding_premium_feature_dashboard">تحديث تلقائي للوحة التحكم عند كلّ تسجيل جديد</string>
     <string name="onboarding_premium_feature_retro">مراجعات أسبوعية وشهرية وسنوية تظهر تطوّرك</string>
     <string name="onboarding_premium_feature_patterns">اكتشاف أنماط شخصية، الذكاء الاصطناعي يجد أنماط تفكير ومشاعر خفيّة</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
     <string name="paywall_yearly_savings">وفّر %1$d\u00A0%% مقارنة بالشهري، إلغاء في أيّ وقت</string>
     <string name="paywall_lifetime_title">دفعة واحدة</string>
-    <string name="paywall_lifetime_desc">ادفع مرّة، استخدم كلّ شيء إلى الأبد</string>
+    <string name="paywall_lifetime_desc">ادفع مرة واحدة، استخدم كل شيء بشكل دائم</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
     <string name="paywall_free_note">التطبيق يعمل بدون اشتراك أيضا،</string>
     <string name="paywall_cd_close">إغلاق</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">افهم الأنماط الخفيّة في تفكيرك</string>
-    <string name="paywall_feature_improve">تحسين نصّي بلا حدود لكلّ تسجيل</string>
+    <string name="paywall_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا لكل إدخال</string>
     <string name="paywall_feature_dashboard">تحديث تلقائي للوحة التحكم بعد كلّ تسجيل</string>
     <string name="paywall_feature_retro">مراجعات أسبوعية وشهرية وسنوية بالذكاء الاصطناعي</string>
     <string name="paywall_feature_pdf">تصدير التسجيلات مع الصور كـPDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">اكتشف الجميل في كلّ يوم</string>
     <string name="paywall_headline_growth_sub">فضاؤك الشخصي للامتنان والنموّ</string>
     <string name="paywall_headline_thoughts">دع أفكارك تتدفّق</string>
-    <string name="paywall_headline_thoughts_sub">رفيقك الإبداعي بلا حدود</string>
+    <string name="paywall_headline_thoughts_sub">رفيقك الإبداعي في الحياة اليومية</string>
     <string name="paywall_headline_default">اكتشف نفسك\nقليلا كلّ يوم</string>
-    <string name="paywall_headline_default_sub">رفيقك الذكي الشخصي بلا حدود</string>
+    <string name="paywall_headline_default_sub">رفيقك الشخصي بالذكاء الاصطناعي في الحياة اليومية</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">لحظة!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">قبل الإلغاء، هل تخبرنا بالسبب؟ هذا يساعدنا على تحسين التطبيق.</string>
     <string name="churn_exclusive_offer">عرض حصري</string>
     <string name="churn_offer_subtitle">لك أنت، لأنّك مهمّ لنا</string>
-    <string name="churn_offer_feature_ai">تحليلات ذكاء اصطناعي بلا حدود</string>
+    <string name="churn_offer_feature_ai">تحليلات الذكاء الاصطناعي اليومية</string>
     <string name="churn_offer_feature_perspectives">كلّ الزوايا الخمس</string>
     <string name="churn_offer_feature_voice">تعرّف صوتي مميّز</string>
     <string name="churn_offer_auto_renew">يتجدّد تلقائيا، يمكن الإلغاء في أيّ وقت</string>
@@ -1373,7 +1373,6 @@
     <string name="paywall_feature_ai_improvement">تحسين النص بالذكاء الاصطناعي</string>
     <string name="paywall_feature_drive_backup">نسخ احتياطي إلى Google Drive</string>
     <string name="paywall_feature_pdf_export">تصدير PDF</string>
-    <string name="paywall_feature_unlimited_entries">إدخالات يومية غير محدودة</string>
     <string name="paywall_lifetime_label">مرة واحدة</string>
     <string name="paywall_monthly_label">شهريًا</string>
     <string name="paywall_restore_button">استعادة المشتريات</string>

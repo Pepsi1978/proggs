@@ -249,7 +249,7 @@
     <string name="dashboard_create_entries_custom">Erstelle Tagebucheinträge,\ndann analysiert die KI deinen Fokus.</string>
     <string name="dashboard_create_entries_default">Erstelle Tagebucheinträge,\ndann analysiert die KI deine Muster.</string>
     <string name="dashboard_like_analysis">Gefällt dir die Analyse?</string>
-    <string name="dashboard_premium_upsell_body">Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.</string>
+    <string name="dashboard_premium_upsell_body">Mit Premium bekommst du großzügige Analysen aus beliebig vielen Profilen.</string>
     <string name="dashboard_learn_more">Mehr erfahren</string>
     <string name="dashboard_feature_analyses">Analysen</string>
     <string name="dashboard_all_observations">Alle Beobachtungen</string>
@@ -402,7 +402,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Mehrere individuelle Profile</string>
     <string name="profiles_premium_desc">Mit Premium legst du so viele individuelle Analyse-Profile an, wie du willst. Zum Beispiel eins für Sport, eins für deine Arbeit, eins für deine Familie. Jedes Profil analysiert deine Tagebucheinträge mit seinem eigenen Fokus.</string>
-    <string name="profiles_benefit_many">Unendlich viele individuelle Profile anlegen</string>
+    <string name="profiles_benefit_many">Beliebig viele individuelle Profile anlegen</string>
     <string name="profiles_benefit_switch">Jederzeit zwischen deinen Fokussen wechseln</string>
     <string name="profiles_benefit_named">Jedem Profil einen eigenen Namen geben</string>
 
@@ -481,16 +481,16 @@
     <string name="settings_premium_cancelled">Premium-Abo gekündigt</string>
     <string name="settings_premium_cancelled_until">Premium-Abo gekündigt — läuft noch bis <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
     <string name="settings_premium_cancelled_desc">Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung jederzeit über Google Play rückgängig machen.</string>
-    <string name="settings_premium_lifetime_desc">Einmalkauf, alle Features für immer freigeschaltet.</string>
-    <string name="settings_premium_desc">Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.</string>
+    <string name="settings_premium_lifetime_desc">Einmalkauf, alle Features dauerhaft freigeschaltet.</string>
+    <string name="settings_premium_desc">Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.</string>
     <string name="settings_manage_subscription">Abo verwalten</string>
     <string name="settings_export">Exportieren</string>
     <string name="settings_export_pdf_desc">Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Unbegrenzte KI-Textverbesserung</string>
+    <string name="settings_premium_feature_improve">Tägliche KI-Textverbesserung</string>
     <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
-    <string name="settings_premium_feature_dashboard">Unbegrenzte Dashboard-Analysen</string>
+    <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
     <string name="settings_premium_feature_5_perspectives">5 KI-Perspektiven</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
@@ -1026,7 +1026,7 @@
     <string name="onboarding_how_step4_desc">Das Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.</string>
     <string name="onboarding_how_step5_title">Wochen-, Monats- und Jahresrückblick</string>
     <string name="onboarding_how_step5_desc">Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.</string>
-    <string name="onboarding_premium_feature_improve">Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksstärker</string>
+    <string name="onboarding_premium_feature_improve">KI-Textverbesserung täglich, jeder Eintrag wird klarer und ausdrucksstärker</string>
     <string name="onboarding_premium_feature_dashboard">Automatische Dashboard-Updates bei jedem neuen Eintrag</string>
     <string name="onboarding_premium_feature_retro">Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung</string>
     <string name="onboarding_premium_feature_patterns">Persönliche Muster erkennen, die KI findet verborgene Denk- und Gefühlsmuster</string>
@@ -1068,14 +1068,14 @@
     <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
     <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar</string>
     <string name="paywall_lifetime_title">Einmalkauf</string>
-    <string name="paywall_lifetime_desc">Einmal zahlen, alles für immer nutzen</string>
+    <string name="paywall_lifetime_desc">Einmal zahlen, alles dauerhaft nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
     <string name="paywall_free_note">Die App funktioniert auch ohne Abo,</string>
     <string name="paywall_cd_close">Schließen</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
-    <string name="paywall_feature_improve">Unbegrenzte KI-Textverbesserung für jeden Eintrag</string>
+    <string name="paywall_feature_improve">KI-Textverbesserung täglich für jeden Eintrag</string>
     <string name="paywall_feature_dashboard">Automatische Dashboard-Updates nach jedem Eintrag</string>
     <string name="paywall_feature_retro">Wochen-, Monats- und Jahresrückblicke mit KI</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
@@ -1090,9 +1090,9 @@
     <string name="paywall_headline_growth">Entdecke das Gute in jedem Tag</string>
     <string name="paywall_headline_growth_sub">Dein persönlicher Raum für Dankbarkeit und Wachstum</string>
     <string name="paywall_headline_thoughts">Lass deine Gedanken fließen</string>
-    <string name="paywall_headline_thoughts_sub">Dein kreativer Begleiter ohne Grenzen</string>
+    <string name="paywall_headline_thoughts_sub">Dein kreativer Begleiter im Alltag</string>
     <string name="paywall_headline_default">Entdecke dich selbst\nJeden Tag ein Stück mehr</string>
-    <string name="paywall_headline_default_sub">Dein persönlicher KI-Begleiter ohne Grenzen</string>
+    <string name="paywall_headline_default_sub">Dein persönlicher KI-Begleiter im Alltag</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Warte kurz!</string>
@@ -1131,7 +1131,7 @@
     <string name="churn_sorry_body">Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.</string>
     <string name="churn_exclusive_offer">Exklusives Angebot</string>
     <string name="churn_offer_subtitle">Nur für dich, weil du uns wichtig bist</string>
-    <string name="churn_offer_feature_ai">Unbegrenzte KI-Analysen</string>
+    <string name="churn_offer_feature_ai">Tägliche KI-Analysen</string>
     <string name="churn_offer_feature_perspectives">Alle 5 Perspektiven</string>
     <string name="churn_offer_feature_voice">Premium-Spracherkennung</string>
     <string name="churn_offer_auto_renew">Verlängert sich automatisch, jederzeit kündbar</string>
@@ -1393,7 +1393,6 @@
     <string name="paywall_feature_ai_improvement">Textverbesserung mit KI</string>
     <string name="paywall_feature_drive_backup">Google Drive Backup</string>
     <string name="paywall_feature_pdf_export">PDF-Export</string>
-    <string name="paywall_feature_unlimited_entries">Unbegrenzte Tagebucheinträge</string>
     <string name="paywall_lifetime_label">Einmalig</string>
     <string name="paywall_monthly_label">Monatlich</string>
     <string name="paywall_restore_button">Käufe wiederherstellen</string>

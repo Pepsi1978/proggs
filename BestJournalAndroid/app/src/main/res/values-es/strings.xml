@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Crea entradas de diario,\nluego la IA analizará tu enfoque.</string>
     <string name="dashboard_create_entries_default">Crea entradas de diario,\nluego la IA analizará tus patrones.</string>
     <string name="dashboard_like_analysis">¿Te gusta el análisis?</string>
-    <string name="dashboard_premium_upsell_body">Con Premium obtienes análisis ilimitados desde 5 perspectivas distintas.</string>
+    <string name="dashboard_premium_upsell_body">Con Premium recibes análisis generosos de la cantidad de perfiles que quieras.</string>
     <string name="dashboard_learn_more">Saber más</string>
     <string name="dashboard_feature_analyses">Análisis</string>
     <string name="dashboard_all_observations">Todas las observaciones</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Varios perfiles personalizados</string>
     <string name="profiles_premium_desc">Con Premium creas todos los perfiles de análisis personalizados que quieras. Por ejemplo uno para deporte, uno para tu trabajo, uno para tu familia. Cada perfil analiza tus entradas de diario con su propio enfoque.</string>
-    <string name="profiles_benefit_many">Crear perfiles personalizados ilimitados</string>
+    <string name="profiles_benefit_many">Crea tantos perfiles personalizados como quieras</string>
     <string name="profiles_benefit_switch">Cambiar entre tus enfoques en cualquier momento</string>
     <string name="profiles_benefit_named">Dar a cada perfil su propio nombre</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Acceso de por vida activo</string>
     <string name="settings_premium_active">Suscripción Premium activa</string>
-    <string name="settings_premium_lifetime_desc">Un solo pago, todas las funciones para siempre.</string>
-    <string name="settings_premium_desc">Todas las funciones desbloqueadas, IA ilimitada, exportación PDF y más.</string>
+    <string name="settings_premium_lifetime_desc">Compra única, todas las funciones desbloqueadas de forma permanente.</string>
+    <string name="settings_premium_desc">Todas las funciones desbloqueadas, IA cada día, exportación PDF y más.</string>
     <string name="settings_manage_subscription">Gestionar suscripción</string>
     <string name="settings_export">Exportar</string>
     <string name="settings_export_pdf_desc">Exporta todas tus entradas de diario y fotos como documento PDF.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Mejora de texto con IA ilimitada</string>
+    <string name="settings_premium_feature_improve">Mejora de texto IA diaria</string>
     <string name="settings_premium_feature_improve_desc">Cada entrada se vuelve más expresiva</string>
-    <string name="settings_premium_feature_dashboard">Análisis de panel ilimitados</string>
+    <string name="settings_premium_feature_dashboard">Análisis diarios del panel</string>
     <string name="settings_premium_feature_dashboard_desc">Tu panel crece contigo</string>
     <string name="settings_premium_feature_5_perspectives">5 perspectivas de IA</string>
     <string name="settings_premium_feature_5_perspectives_desc">De la claridad al autoconocimiento</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">El panel te muestra conexiones que se te escapan en el día a día.</string>
     <string name="onboarding_how_step5_title">Retrospectiva semanal, mensual y anual</string>
     <string name="onboarding_how_step5_desc">Retrospectivas automáticas te muestran cómo evolucionas con el tiempo.</string>
-    <string name="onboarding_premium_feature_improve">Mejora de texto con IA ilimitada, cada entrada se vuelve más clara y expresiva</string>
+    <string name="onboarding_premium_feature_improve">Mejora de texto IA diaria, cada entrada se vuelve más clara y expresiva</string>
     <string name="onboarding_premium_feature_dashboard">Actualizaciones automáticas del panel con cada nueva entrada</string>
     <string name="onboarding_premium_feature_retro">Retrospectivas semanales, mensuales y anuales muestran tu evolución</string>
     <string name="onboarding_premium_feature_patterns">Detección de patrones personales, la IA encuentra patrones ocultos de pensamiento y emoción</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Suscripción mensual, %1$s al mes</string>
     <string name="paywall_yearly_savings">Ahorra %1$d\u00A0%% frente a la mensual, cancelable en cualquier momento</string>
     <string name="paywall_lifetime_title">Compra única</string>
-    <string name="paywall_lifetime_desc">Pagas una vez, usas todo para siempre</string>
+    <string name="paywall_lifetime_desc">Paga una vez, usa todo de forma permanente</string>
     <string name="paywall_lifetime_note">Sin suscripción, sin renovación</string>
     <string name="paywall_free_note">La app también funciona sin suscripción,</string>
     <string name="paywall_cd_close">Cerrar</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Entiende patrones ocultos en tu forma de pensar</string>
-    <string name="paywall_feature_improve">Mejora de texto con IA ilimitada para cada entrada</string>
+    <string name="paywall_feature_improve">Mejora de texto IA diaria para cada entrada</string>
     <string name="paywall_feature_dashboard">Actualizaciones automáticas del panel tras cada entrada</string>
     <string name="paywall_feature_retro">Retrospectivas semanal, mensual y anual con IA</string>
     <string name="paywall_feature_pdf">Exporta tus entradas con fotos en PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Descubre lo bueno de cada día</string>
     <string name="paywall_headline_growth_sub">Tu espacio personal de gratitud y crecimiento</string>
     <string name="paywall_headline_thoughts">Deja fluir tus pensamientos</string>
-    <string name="paywall_headline_thoughts_sub">Tu compañero creativo sin límites</string>
+    <string name="paywall_headline_thoughts_sub">Tu compañero creativo en el día a día</string>
     <string name="paywall_headline_default">Descúbrete a ti mismo\nUn poco más cada día</string>
-    <string name="paywall_headline_default_sub">Tu compañero personal de IA sin límites</string>
+    <string name="paywall_headline_default_sub">Tu compañero IA personal en el día a día</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">¡Espera un momento!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">Antes de cancelar, ¿nos cuentas por qué? Nos ayuda a mejorar la app.</string>
     <string name="churn_exclusive_offer">Oferta exclusiva</string>
     <string name="churn_offer_subtitle">Solo para ti, porque nos importas</string>
-    <string name="churn_offer_feature_ai">Análisis de IA ilimitados</string>
+    <string name="churn_offer_feature_ai">Análisis IA diarios</string>
     <string name="churn_offer_feature_perspectives">Las 5 perspectivas</string>
     <string name="churn_offer_feature_voice">Reconocimiento de voz Premium</string>
     <string name="churn_offer_auto_renew">Se renueva automáticamente, cancelable en cualquier momento</string>
@@ -1359,7 +1359,6 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="paywall_feature_ai_improvement">Mejora de texto con IA</string>
     <string name="paywall_feature_drive_backup">Copia de seguridad en Google Drive</string>
     <string name="paywall_feature_pdf_export">Exportar PDF</string>
-    <string name="paywall_feature_unlimited_entries">Entradas de diario ilimitadas</string>
     <string name="paywall_lifetime_label">Pago único</string>
     <string name="paywall_monthly_label">Mensual</string>
     <string name="paywall_restore_button">Restaurar compras</string>

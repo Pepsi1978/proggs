@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Günlük girişleri oluştur,\nYZ odağını analiz eder.</string>
     <string name="dashboard_create_entries_default">Günlük girişleri oluştur,\nYZ örüntülerini analiz eder.</string>
     <string name="dashboard_like_analysis">Analizi beğendin mi?</string>
-    <string name="dashboard_premium_upsell_body">Premium ile 5 farklı bakış açısından sınırsız analiz alırsın.</string>
+    <string name="dashboard_premium_upsell_body">Premium ile istediğin kadar profilden geniş kapsamlı analizler alırsın.</string>
     <string name="dashboard_learn_more">Daha fazla bilgi</string>
     <string name="dashboard_feature_analyses">Analizler</string>
     <string name="dashboard_all_observations">Tüm gözlemler</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Birden fazla özel profil</string>
     <string name="profiles_premium_desc">Premium ile istediğin kadar özel analiz profili oluşturabilirsin. Örneğin biri spor için, biri işin için, biri ailen için. Her profil günlük kayıtlarını kendi odağıyla analiz eder.</string>
-    <string name="profiles_benefit_many">Sınırsız özel profil oluştur</string>
+    <string name="profiles_benefit_many">İstediğin kadar özel profil oluştur</string>
     <string name="profiles_benefit_switch">Odakların arasında istediğin zaman geçiş yap</string>
     <string name="profiles_benefit_named">Her profile kendi adını ver</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Ömür boyu erişim etkin</string>
     <string name="settings_premium_active">Premium aboneliği etkin</string>
-    <string name="settings_premium_lifetime_desc">Tek ödeme, tüm özellikler sonsuza dek.</string>
-    <string name="settings_premium_desc">Tüm özellikler açık, sınırsız YZ, PDF dışa aktarımı ve daha fazlası.</string>
+    <string name="settings_premium_lifetime_desc">Tek seferlik ödeme, tüm özellikler kalıcı olarak açık.</string>
+    <string name="settings_premium_desc">Tüm özellikler açık, her gün YZ, PDF dışa aktarma ve daha fazlası.</string>
     <string name="settings_manage_subscription">Aboneliği yönet</string>
     <string name="settings_export">Dışa aktar</string>
     <string name="settings_export_pdf_desc">Tüm günlük girişlerini ve fotoğraflarını PDF belgesi olarak dışa aktar.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Sınırsız YZ metin iyileştirme</string>
+    <string name="settings_premium_feature_improve">Günlük YZ metin iyileştirme</string>
     <string name="settings_premium_feature_improve_desc">Her giriş daha anlamlı olur</string>
-    <string name="settings_premium_feature_dashboard">Sınırsız panel analizi</string>
+    <string name="settings_premium_feature_dashboard">Günlük gösterge paneli analizleri</string>
     <string name="settings_premium_feature_dashboard_desc">Panelin seninle büyür</string>
     <string name="settings_premium_feature_5_perspectives">5 YZ bakış açısı</string>
     <string name="settings_premium_feature_5_perspectives_desc">Netlikten öz farkındalığa</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">Panel sana günlük telaşta gizli kalan bağlantıları gösterir.</string>
     <string name="onboarding_how_step5_title">Haftalık, aylık ve yıllık geri bakış</string>
     <string name="onboarding_how_step5_desc">Otomatik geri bakışlar zaman içinde nasıl geliştiğini gösterir.</string>
-    <string name="onboarding_premium_feature_improve">Sınırsız YZ metin iyileştirme, her giriş daha net ve anlamlı</string>
+    <string name="onboarding_premium_feature_improve">Günlük YZ metin iyileştirme, her giriş daha net ve etkileyici olur</string>
     <string name="onboarding_premium_feature_dashboard">Her yeni girişte otomatik panel güncellemeleri</string>
     <string name="onboarding_premium_feature_retro">Haftalık, aylık ve yıllık geri bakışlar gelişimini gösterir</string>
     <string name="onboarding_premium_feature_patterns">Kişisel örüntü tanıma, YZ gizli düşünce ve duygu örüntülerini bulur</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Aylık abonelik, ayda %1$s</string>
     <string name="paywall_yearly_savings">Aylığa göre %1$d\u00A0%% tasarruf et, istediğin zaman iptal</string>
     <string name="paywall_lifetime_title">Tek seferlik satın alma</string>
-    <string name="paywall_lifetime_desc">Bir kez öde, hepsini sonsuza dek kullan</string>
+    <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
     <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
     <string name="paywall_free_note">Uygulama aboneliksiz de çalışır,</string>
     <string name="paywall_cd_close">Kapat</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Düşüncendeki gizli örüntüleri anla</string>
-    <string name="paywall_feature_improve">Her giriş için sınırsız YZ metin iyileştirme</string>
+    <string name="paywall_feature_improve">Her giriş için günlük YZ metin iyileştirme</string>
     <string name="paywall_feature_dashboard">Her girişten sonra otomatik panel güncellemeleri</string>
     <string name="paywall_feature_retro">YZ ile haftalık, aylık ve yıllık geri bakışlar</string>
     <string name="paywall_feature_pdf">Girişlerini fotoğraflarla PDF\'ye aktar</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Her günde iyiyi keşfet</string>
     <string name="paywall_headline_growth_sub">Şükran ve büyümenin kişisel alanın</string>
     <string name="paywall_headline_thoughts">Düşüncelerinin akmasına izin ver</string>
-    <string name="paywall_headline_thoughts_sub">Sınırları olmayan yaratıcı yoldaşın</string>
+    <string name="paywall_headline_thoughts_sub">Günlük yaşamında yaratıcı yol arkadaşın</string>
     <string name="paywall_headline_default">Kendini keşfet\nHer gün biraz daha</string>
-    <string name="paywall_headline_default_sub">Sınırları olmayan kişisel YZ yoldaşın</string>
+    <string name="paywall_headline_default_sub">Günlük yaşamında kişisel YZ yol arkadaşın</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Bir dakika bekle!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">İptal etmeden önce nedenini söyler misin? Uygulamayı geliştirmemize yardım eder.</string>
     <string name="churn_exclusive_offer">Özel teklif</string>
     <string name="churn_offer_subtitle">Sadece sana, çünkü sen önemlisin</string>
-    <string name="churn_offer_feature_ai">Sınırsız YZ analizleri</string>
+    <string name="churn_offer_feature_ai">Günlük YZ analizleri</string>
     <string name="churn_offer_feature_perspectives">5 bakış açısının tamamı</string>
     <string name="churn_offer_feature_voice">Premium ses tanıma</string>
     <string name="churn_offer_auto_renew">Otomatik yenilenir, istediğin zaman iptal</string>
@@ -1357,7 +1357,6 @@ Ne yapmak istersin?</string>
     <string name="paywall_feature_ai_improvement">AI ile metin iyileştirme</string>
     <string name="paywall_feature_drive_backup">Google Drive yedeği</string>
     <string name="paywall_feature_pdf_export">PDF dışa aktarma</string>
-    <string name="paywall_feature_unlimited_entries">Sınırsız günlük kaydı</string>
     <string name="paywall_lifetime_label">Tek seferlik</string>
     <string name="paywall_monthly_label">Aylık</string>
     <string name="paywall_restore_button">Satın alımları geri yükle</string>

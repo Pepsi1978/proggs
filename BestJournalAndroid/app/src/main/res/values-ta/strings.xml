@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">நாட்குறிப்பு பதிவுகளை உருவாக்குங்கள்,\nபிறகு KI உங்கள் கவனத்தை பகுப்பாய்வு செய்யும்.</string>
     <string name="dashboard_create_entries_default">நாட்குறிப்பு பதிவுகளை உருவாக்குங்கள்,\nபிறகு KI உங்கள் வடிவங்களை பகுப்பாய்வு செய்யும்.</string>
     <string name="dashboard_like_analysis">பகுப்பாய்வு பிடித்திருக்கிறதா?</string>
-    <string name="dashboard_premium_upsell_body">Premium மூலம் 5 வெவ்வேறு கோணங்களில் வரம்பற்ற பகுப்பாய்வுகள் பெறலாம்.</string>
+    <string name="dashboard_premium_upsell_body">Premium மூலம் நீ விரும்பும் அளவு சுயவிவரங்களிலிருந்து உதாரமான பகுப்பாய்வுகளைப் பெறுவாய்.</string>
     <string name="dashboard_learn_more">மேலும் அறிக</string>
     <string name="dashboard_feature_analyses">பகுப்பாய்வுகள்</string>
     <string name="dashboard_all_observations">அனைத்து கவனிப்புகளும்</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">பல தனிப்பட்ட சுயவிவரங்கள்</string>
     <string name="profiles_premium_desc">Premium மூலம் நீ விரும்பும் அளவுக்கு தனிப்பட்ட பகுப்பாய்வு சுயவிவரங்களை உருவாக்கலாம். உதாரணமாக ஒன்று விளையாட்டிற்கு, ஒன்று வேலைக்கு, ஒன்று குடும்பத்திற்கு. ஒவ்வொரு சுயவிவரமும் உனது நாட்குறிப்பை அதன் சொந்த கவனத்துடன் பகுப்பாய்வு செய்கிறது.</string>
-    <string name="profiles_benefit_many">வரம்பற்ற தனிப்பட்ட சுயவிவரங்களை உருவாக்கு</string>
+    <string name="profiles_benefit_many">நீ விரும்பும் அளவு தனிப்பயன் சுயவிவரங்களை உருவாக்கு</string>
     <string name="profiles_benefit_switch">எப்போது வேண்டுமானாலும் கவனத்தை மாற்று</string>
     <string name="profiles_benefit_named">ஒவ்வொரு சுயவிவரத்திற்கும் சொந்த பெயர் கொடு</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">வாழ்நாள் அணுகல் செயலில்</string>
     <string name="settings_premium_active">Premium சந்தா செயலில்</string>
-    <string name="settings_premium_lifetime_desc">ஒரு முறை வாங்கல், அனைத்து அம்சங்களும் எப்போதும் திறக்கப்படும்.</string>
-    <string name="settings_premium_desc">அனைத்து அம்சங்களும் திறக்கப்பட்டன, வரம்பற்ற KI, PDF ஏற்றுமதி மற்றும் பல.</string>
+    <string name="settings_premium_lifetime_desc">ஒரே வாங்கல், அனைத்து அம்சங்களும் நிரந்தரமாக திறக்கப்பட்டுள்ளன.</string>
+    <string name="settings_premium_desc">அனைத்து அம்சங்களும் திறக்கப்பட்டன, தினமும் AI, PDF ஏற்றுமதி மேலும் பலவும்.</string>
     <string name="settings_manage_subscription">சந்தாவை நிர்வகி</string>
     <string name="settings_export">ஏற்றுமதி</string>
     <string name="settings_export_pdf_desc">அனைத்து நாட்குறிப்பு பதிவுகளையும் புகைப்படங்களையும் PDF ஆவணமாக ஏற்றுமதி செய்யுங்கள்.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">வரம்பற்ற KI உரை மேம்பாடு</string>
+    <string name="settings_premium_feature_improve">தினசரி AI உரை மேம்பாடு</string>
     <string name="settings_premium_feature_improve_desc">ஒவ்வொரு பதிவும் மிகவும் வலிமையாகிறது</string>
-    <string name="settings_premium_feature_dashboard">வரம்பற்ற டாஷ்போர்டு பகுப்பாய்வுகள்</string>
+    <string name="settings_premium_feature_dashboard">தினசரி டாஷ்போர்டு பகுப்பாய்வுகள்</string>
     <string name="settings_premium_feature_dashboard_desc">உங்கள் டாஷ்போர்டு உங்களுடன் வளர்கிறது</string>
     <string name="settings_premium_feature_5_perspectives">5 KI கோணங்கள்</string>
     <string name="settings_premium_feature_5_perspectives_desc">தெளிவிலிருந்து சுய அறிவு வரை</string>
@@ -790,7 +790,7 @@
     <string name="onboarding_how_step4_desc">டாஷ்போர்டு அன்றாட வாழ்வில் உங்களுக்கு மறைந்திருக்கும் தொடர்புகளை காட்டுகிறது.</string>
     <string name="onboarding_how_step5_title">வார, மாத மற்றும் ஆண்டு மீள்பார்வை</string>
     <string name="onboarding_how_step5_desc">தானியங்கி மீள்பார்வைகள் காலப்போக்கில் நீங்கள் எப்படி வளர்கிறீர்கள் என்பதை காட்டுகின்றன.</string>
-    <string name="onboarding_premium_feature_improve">வரம்பற்ற KI உரை மேம்பாடு, ஒவ்வொரு பதிவும் தெளிவாகவும் வலிமையாகவும் ஆகும்</string>
+    <string name="onboarding_premium_feature_improve">தினசரி AI உரை மேம்பாடு, ஒவ்வொரு உள்ளீடும் தெளிவாகவும் உணர்ச்சிப்பூர்வமாகவும் மாறுகிறது</string>
     <string name="onboarding_premium_feature_dashboard">ஒவ்வொரு புதிய பதிவிலும் தானியங்கி டாஷ்போர்டு புதுப்பிப்புகள்</string>
     <string name="onboarding_premium_feature_retro">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள் உங்கள் வளர்ச்சியை காட்டுகின்றன</string>
     <string name="onboarding_premium_feature_patterns">தனிப்பட்ட வடிவங்களை அறிதல், KI மறைந்த சிந்தனை மற்றும் உணர்வு வடிவங்களை கண்டறிகிறது</string>
@@ -825,14 +825,14 @@
     <string name="paywall_monthly_plan">மாத சந்தா, மாதத்திற்கு %1$s</string>
     <string name="paywall_yearly_savings">மாத சந்தாவுடன் ஒப்பிட்டு %1$d%% சேமிக்கவும், எப்போதும் ரத்து செய்யலாம்</string>
     <string name="paywall_lifetime_title">ஒரு முறை வாங்கல்</string>
-    <string name="paywall_lifetime_desc">ஒரு முறை செலுத்துங்கள், எப்போதும் பயன்படுத்துங்கள்</string>
+    <string name="paywall_lifetime_desc">ஒருமுறை பணம் செலுத்தி, அனைத்தையும் நிரந்தரமாக பயன்படுத்து</string>
     <string name="paywall_lifetime_note">சந்தா இல்லை, புதுப்பிப்பு இல்லை</string>
     <string name="paywall_free_note">App சந்தா இல்லாமலும் செயல்படும்,</string>
     <string name="paywall_cd_close">மூடு</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">உங்கள் சிந்தனையில் மறைந்த வடிவங்களை புரிந்துகொள்ளுங்கள்</string>
-    <string name="paywall_feature_improve">ஒவ்வொரு பதிவிற்கும் வரம்பற்ற KI உரை மேம்பாடு</string>
+    <string name="paywall_feature_improve">ஒவ்வொரு உள்ளீட்டிற்கும் தினசரி AI உரை மேம்பாடு</string>
     <string name="paywall_feature_dashboard">ஒவ்வொரு பதிவிற்கும் பிறகு தானியங்கி டாஷ்போர்டு புதுப்பிப்புகள்</string>
     <string name="paywall_feature_retro">KI மூலம் வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
     <string name="paywall_feature_pdf">புகைப்படங்களுடன் நாட்குறிப்பு பதிவுகளை PDF ஆக ஏற்றுமதி செய்யுங்கள்</string>
@@ -847,9 +847,9 @@
     <string name="paywall_headline_growth">ஒவ்வொரு நாளிலும் நல்லதை கண்டுபிடியுங்கள்</string>
     <string name="paywall_headline_growth_sub">நன்றி மற்றும் வளர்ச்சிக்கான உங்கள் தனிப்பட்ட இடம்</string>
     <string name="paywall_headline_thoughts">உங்கள் எண்ணங்களை சுதந்திரமாக விடுங்கள்</string>
-    <string name="paywall_headline_thoughts_sub">வரம்பின்றி உங்கள் படைப்பாற்றல் துணை</string>
+    <string name="paywall_headline_thoughts_sub">உனது அன்றாட வாழ்க்கையில் படைப்பாற்றல் துணை</string>
     <string name="paywall_headline_default">உங்களை நீங்களே கண்டுபிடியுங்கள்\nஒவ்வொரு நாளும் கொஞ்சம் கொஞ்சமாக</string>
-    <string name="paywall_headline_default_sub">வரம்பின்றி உங்கள் தனிப்பட்ட KI துணை</string>
+    <string name="paywall_headline_default_sub">உனது அன்றாட வாழ்க்கையில் தனிப்பட்ட AI துணை</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">ஒரு நிமிடம்!</string>
@@ -883,7 +883,7 @@
     <string name="churn_sorry_body">ரத்து செய்வதற்கு முன்பு, ஏன் என்று சொல்ல முடியுமா? App-ஐ மேம்படுத்த இது உதவும்.</string>
     <string name="churn_exclusive_offer">பிரத்யேக வாய்ப்பு</string>
     <string name="churn_offer_subtitle">உங்களுக்காக மட்டும், நீங்கள் எங்களுக்கு முக்கியம்</string>
-    <string name="churn_offer_feature_ai">வரம்பற்ற KI பகுப்பாய்வுகள்</string>
+    <string name="churn_offer_feature_ai">தினசரி AI பகுப்பாய்வுகள்</string>
     <string name="churn_offer_feature_perspectives">அனைத்து 5 கோணங்களும்</string>
     <string name="churn_offer_feature_voice">Premium குரல் அங்கீகாரம்</string>
     <string name="churn_offer_auto_renew">தானாக புதுப்பிக்கப்படும், எப்போதும் ரத்து செய்யலாம்</string>
@@ -1336,7 +1336,6 @@
     <string name="paywall_consent_dialog_confirm">ஒப்புக்கொண்டு வாங்கவும்</string>
     <string name="paywall_consent_dialog_cancel">ரத்துசெய்யவும்</string>
     <string name="paywall_feature_ai_improvement">AI மூலம் உரையை மேம்படுத்துதல்</string>
-    <string name="paywall_feature_unlimited_entries">வரம்பற்ற நாட்குறிப்பு பதிவுகள்</string>
     <string name="paywall_feature_pdf_export">PDF ஆக ஏற்றுமதி செய்தல்</string>
     <string name="paywall_feature_drive_backup">Google Drive காப்புப்பிரதி</string>
 

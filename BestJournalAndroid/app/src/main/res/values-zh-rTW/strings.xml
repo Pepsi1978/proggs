@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">寫幾條日記，\nAI 會分析你的焦點。</string>
     <string name="dashboard_create_entries_default">寫幾條日記，\nAI 會分析你的規律。</string>
     <string name="dashboard_like_analysis">喜歡這份分析嗎？</string>
-    <string name="dashboard_premium_upsell_body">有高階版，你能從 5 個角度無限次分析。</string>
+    <string name="dashboard_premium_upsell_body">使用 Premium，你可以從任意數量的檔案中獲得豐富的分析。</string>
     <string name="dashboard_learn_more">瞭解更多</string>
     <string name="dashboard_feature_analyses">分析</string>
     <string name="dashboard_all_observations">所有觀察</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">多個自訂檔案</string>
     <string name="profiles_premium_desc">用 Premium 你可以建立任意多個自訂分析檔案。例如一個用於運動，一個用於工作，一個用於家庭。每個檔案都以自己的重點來分析你的日記。</string>
-    <string name="profiles_benefit_many">建立無限個自訂檔案</string>
+    <string name="profiles_benefit_many">隨意建立任意數量的自訂檔案</string>
     <string name="profiles_benefit_switch">隨時在你的重點之間切換</string>
     <string name="profiles_benefit_named">為每個檔案取自己的名字</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">高階版</string>
     <string name="settings_premium_lifetime">終身訪問已啟用</string>
     <string name="settings_premium_active">高階版訂閱中</string>
-    <string name="settings_premium_lifetime_desc">一次付費，所有功能永久可用。</string>
-    <string name="settings_premium_desc">全部功能解鎖，AI 不限次，支援 PDF 匯出等等。</string>
+    <string name="settings_premium_lifetime_desc">一次性購買，所有功能持續解鎖。</string>
+    <string name="settings_premium_desc">解鎖所有功能，每天 AI、PDF 匯出等。</string>
     <string name="settings_manage_subscription">管理訂閱</string>
     <string name="settings_export">匯出</string>
     <string name="settings_export_pdf_desc">把所有日記條目和照片匯出為 PDF 文件。</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">AI 文字潤色不限次</string>
+    <string name="settings_premium_feature_improve">每日 AI 文字改善</string>
     <string name="settings_premium_feature_improve_desc">每條都更有表現力</string>
-    <string name="settings_premium_feature_dashboard">面板分析不限次</string>
+    <string name="settings_premium_feature_dashboard">每日儀表板分析</string>
     <string name="settings_premium_feature_dashboard_desc">你的面板與你一同成長</string>
     <string name="settings_premium_feature_5_perspectives">5 種 AI 視角</string>
     <string name="settings_premium_feature_5_perspectives_desc">從清晰到自我認識</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">面板向你展示日常裡沒留意到的關聯。</string>
     <string name="onboarding_how_step5_title">每週、每月、每年的回顧</string>
     <string name="onboarding_how_step5_desc">自動的回顧讓你看見自己如何隨時間變化。</string>
-    <string name="onboarding_premium_feature_improve">AI 文字潤色不限次，每條都更清晰、更有表現力</string>
+    <string name="onboarding_premium_feature_improve">每日 AI 文字改善，每條紀錄都更清晰、更有表現力。</string>
     <string name="onboarding_premium_feature_dashboard">每次新增條目，面板自動重新整理</string>
     <string name="onboarding_premium_feature_retro">每週、每月、每年回顧呈現你的變化</string>
     <string name="onboarding_premium_feature_patterns">識別個人規律，AI 找出隱藏的思維與情感規律</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">月度訂閱，每月 %1$s</string>
     <string name="paywall_yearly_savings">比月度訂閱省 %1$d\u00A0%%,隨時可取消</string>
     <string name="paywall_lifetime_title">一次付清</string>
-    <string name="paywall_lifetime_desc">一次付款，全部永久使用</string>
+    <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">沒有訂閱，沒有續費</string>
     <string name="paywall_free_note">應用沒有訂閱也能用，</string>
     <string name="paywall_cd_close">關閉</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">看懂思考裡隱藏的規律</string>
-    <string name="paywall_feature_improve">每條條目都可以用 AI 不限次潤色</string>
+    <string name="paywall_feature_improve">每條紀錄每天都有 AI 文字改善</string>
     <string name="paywall_feature_dashboard">每次新增條目，面板自動重新整理</string>
     <string name="paywall_feature_retro">AI 生成每週、每月、每年的回顧</string>
     <string name="paywall_feature_pdf">把帶照片的條目匯出為 PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">發現每一天裡的好</string>
     <string name="paywall_headline_growth_sub">屬於你的感恩與成長空間</string>
     <string name="paywall_headline_thoughts">讓思緒自由流動</string>
-    <string name="paywall_headline_thoughts_sub">沒有邊界的創意夥伴</string>
+    <string name="paywall_headline_thoughts_sub">你日常生活中的創意夥伴</string>
     <string name="paywall_headline_default">認識自己\n每天多一點點</string>
-    <string name="paywall_headline_default_sub">沒有邊界、屬於你的 AI 夥伴</string>
+    <string name="paywall_headline_default_sub">你日常生活中的專屬 AI 夥伴</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">等一下！</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">取消前能告訴我們原因嗎？這能幫我們把應用做得更好。</string>
     <string name="churn_exclusive_offer">專屬優惠</string>
     <string name="churn_offer_subtitle">只給你，因為你重要</string>
-    <string name="churn_offer_feature_ai">AI 分析不限次</string>
+    <string name="churn_offer_feature_ai">每日 AI 分析</string>
     <string name="churn_offer_feature_perspectives">5 種視角全部</string>
     <string name="churn_offer_feature_voice">高階版語音識別</string>
     <string name="churn_offer_auto_renew">自動續訂，隨時可取消</string>
@@ -1355,7 +1355,6 @@
     <string name="paywall_feature_ai_improvement">AI 文字改善</string>
     <string name="paywall_feature_drive_backup">Google Drive 備份</string>
     <string name="paywall_feature_pdf_export">PDF 匯出</string>
-    <string name="paywall_feature_unlimited_entries">無限制日記項目</string>
     <string name="paywall_lifetime_label">一次性</string>
     <string name="paywall_monthly_label">每月</string>
     <string name="paywall_restore_button">恢復購買</string>

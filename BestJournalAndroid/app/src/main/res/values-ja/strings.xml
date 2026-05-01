@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">記録を作成してください。\nAIがあなたのフォーカスを分析します。</string>
     <string name="dashboard_create_entries_default">記録を作成してください。\nAIがあなたのパターンを分析します。</string>
     <string name="dashboard_like_analysis">分析は気に入りましたか？</string>
-    <string name="dashboard_premium_upsell_body">プレミアムなら5つの視点から無制限で分析できます。</string>
+    <string name="dashboard_premium_upsell_body">Premiumなら、好きなだけプロフィールから豊富な分析が得られます。</string>
     <string name="dashboard_learn_more">もっと見る</string>
     <string name="dashboard_feature_analyses">分析</string>
     <string name="dashboard_all_observations">すべての観察</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">複数のカスタムプロフィール</string>
     <string name="profiles_premium_desc">Premiumなら、好きなだけカスタム分析プロフィールを作れます。例えばスポーツ用、仕事用、家族用など。それぞれのプロフィールが独自の視点で日記を分析します。</string>
-    <string name="profiles_benefit_many">カスタムプロフィールを無制限に作成</string>
+    <string name="profiles_benefit_many">好きなだけカスタムプロフィールを作成</string>
     <string name="profiles_benefit_switch">いつでもフォーカスを切り替え</string>
     <string name="profiles_benefit_named">プロフィールごとに好きな名前を設定</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">プレミアム</string>
     <string name="settings_premium_lifetime">永久アクセス有効</string>
     <string name="settings_premium_active">プレミアム契約中</string>
-    <string name="settings_premium_lifetime_desc">1回の支払いで、すべての機能をずっと使えます。</string>
-    <string name="settings_premium_desc">すべての機能が使えます。AI無制限、PDF出力、その他。</string>
+    <string name="settings_premium_lifetime_desc">一括購入で、すべての機能を継続的に利用可能。</string>
+    <string name="settings_premium_desc">すべての機能が利用可能、毎日AI、PDFエクスポートなど。</string>
     <string name="settings_manage_subscription">サブスクを管理</string>
     <string name="settings_export">書き出し</string>
     <string name="settings_export_pdf_desc">すべての記録と写真をPDFとして書き出します。</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">AIによる無制限の文章改善</string>
+    <string name="settings_premium_feature_improve">毎日のAIテキスト改善</string>
     <string name="settings_premium_feature_improve_desc">どの記録もより表現豊かに</string>
-    <string name="settings_premium_feature_dashboard">ダッシュボード分析が無制限</string>
+    <string name="settings_premium_feature_dashboard">毎日のダッシュボード分析</string>
     <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたと共に成長</string>
     <string name="settings_premium_feature_5_perspectives">5つのAI視点</string>
     <string name="settings_premium_feature_5_perspectives_desc">明晰さから自己認識まで</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">ダッシュボードが、日々気づきにくいつながりを見せます。</string>
     <string name="onboarding_how_step5_title">週・月・年の振り返り</string>
     <string name="onboarding_how_step5_desc">自動の振り返りが、時間の中でのあなたの歩みを見せます。</string>
-    <string name="onboarding_premium_feature_improve">AIによる無制限の文章改善。どの記録もより明快で力強く</string>
+    <string name="onboarding_premium_feature_improve">毎日のAIテキスト改善で、すべての記録がより明確で表現豊かに。</string>
     <string name="onboarding_premium_feature_dashboard">新しい記録ごとにダッシュボードを自動更新</string>
     <string name="onboarding_premium_feature_retro">週・月・年の振り返りがあなたの歩みを示します</string>
     <string name="onboarding_premium_feature_patterns">個人のパターン認識。AIが隠れた思考と感情のパターンを見つけます</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">月額プラン、月%1$s</string>
     <string name="paywall_yearly_savings">月額プランに比べて%1$d\u00A0%%お得。いつでも解約可能</string>
     <string name="paywall_lifetime_title">買い切り</string>
-    <string name="paywall_lifetime_desc">1回の支払いで、ずっと使えます</string>
+    <string name="paywall_lifetime_desc">一度の支払いですべてを継続的に利用</string>
     <string name="paywall_lifetime_note">サブスクなし、更新なし</string>
     <string name="paywall_free_note">アプリはサブスクなしでも使えます。</string>
     <string name="paywall_cd_close">閉じる</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">考え方の見えないパターンを理解</string>
-    <string name="paywall_feature_improve">すべての記録に無制限のAI文章改善</string>
+    <string name="paywall_feature_improve">毎日のAIテキスト改善をすべての記録に</string>
     <string name="paywall_feature_dashboard">記録ごとにダッシュボードを自動更新</string>
     <string name="paywall_feature_retro">AIによる週・月・年の振り返り</string>
     <string name="paywall_feature_pdf">記録と写真をPDFで書き出し</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">毎日の中の良いものを見つけて</string>
     <string name="paywall_headline_growth_sub">感謝と成長のための、あなただけの場</string>
     <string name="paywall_headline_thoughts">思いを自由に流して</string>
-    <string name="paywall_headline_thoughts_sub">限りのない創造の相棒</string>
+    <string name="paywall_headline_thoughts_sub">毎日に寄り添うクリエイティブなパートナー</string>
     <string name="paywall_headline_default">自分を見つけよう\n毎日少しずつ</string>
-    <string name="paywall_headline_default_sub">限りのない、あなただけのAIの相棒</string>
+    <string name="paywall_headline_default_sub">毎日に寄り添う、あなただけのAIパートナー</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">少しだけ待って！</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">解約の前に、理由を教えてもらえますか？ アプリを良くするのに役立ちます。</string>
     <string name="churn_exclusive_offer">特別なご提案</string>
     <string name="churn_offer_subtitle">大切なあなたのために</string>
-    <string name="churn_offer_feature_ai">無制限のAI分析</string>
+    <string name="churn_offer_feature_ai">毎日のAI分析</string>
     <string name="churn_offer_feature_perspectives">5つの視点すべて</string>
     <string name="churn_offer_feature_voice">プレミアム音声認識</string>
     <string name="churn_offer_auto_renew">自動更新、いつでも解約可能</string>
@@ -1355,7 +1355,6 @@
     <string name="paywall_feature_ai_improvement">AIによる文章改善</string>
     <string name="paywall_feature_drive_backup">Google Driveバックアップ</string>
     <string name="paywall_feature_pdf_export">PDFエクスポート</string>
-    <string name="paywall_feature_unlimited_entries">無制限の日記エントリ</string>
     <string name="paywall_lifetime_label">一回払い</string>
     <string name="paywall_monthly_label">月額</string>
     <string name="paywall_restore_button">購入を復元</string>

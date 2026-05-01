@@ -187,7 +187,7 @@
     <string name="dashboard_create_entries_custom">డైరీ నమోదులు సృష్టించండి,\nఆ తర్వాత AI మీ ఫోకస్‌ని విశ్లేషిస్తుంది.</string>
     <string name="dashboard_create_entries_default">డైరీ నమోదులు సృష్టించండి,\nఆ తర్వాత AI మీ పర్యాయక్రమాలను విశ్లేషిస్తుంది.</string>
     <string name="dashboard_like_analysis">విశ్లేషణ నచ్చిందా?</string>
-    <string name="dashboard_premium_upsell_body">Premium తో మీరు 5 విభిన్న దృక్కోణాల నుండి అపరిమిత విశ్లేషణలను పొందుతారు.</string>
+    <string name="dashboard_premium_upsell_body">Premium తో నీవు కావలసినన్ని ప్రొఫైల్స్ నుండి ఉదారంగా విశ్లేషణలు పొందుతావు.</string>
     <string name="dashboard_learn_more">మరింత తెలుసుకోండి</string>
     <string name="dashboard_feature_analyses">విశ్లేషణలు</string>
     <string name="dashboard_all_observations">అన్ని పరిశీలనలు</string>
@@ -320,7 +320,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">బహుళ అనుకూల ప్రొఫైల్స్</string>
     <string name="profiles_premium_desc">Premium తో నువ్వు ఎన్ని అనుకూల విశ్లేషణ ప్రొఫైల్స్ కావాలంటే అన్ని సృష్టించవచ్చు. ఉదాహరణకు ఒకటి క్రీడకు, ఒకటి పనికి, ఒకటి కుటుంబానికి. ప్రతి ప్రొఫైల్ నీ డైరీ ఎంట్రీలను దాని స్వంత దృష్టితో విశ్లేషిస్తుంది.</string>
-    <string name="profiles_benefit_many">అపరిమిత అనుకూల ప్రొఫైల్స్ సృష్టించు</string>
+    <string name="profiles_benefit_many">కావలసినన్ని అనుకూల ప్రొఫైల్‌లు సృష్టించు</string>
     <string name="profiles_benefit_switch">ఎప్పుడైనా ఫోకస్ మధ్య మారు</string>
     <string name="profiles_benefit_named">ప్రతి ప్రొఫైల్‌కు దాని స్వంత పేరు ఇవ్వు</string>
 
@@ -392,16 +392,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">జీవితకాల ప్రవేశం సక్రియం</string>
     <string name="settings_premium_active">Premium సబ్‌స్క్రిప్షన్ సక్రియం</string>
-    <string name="settings_premium_lifetime_desc">ఒకసారి కొనుగోలు, అన్ని ఫీచర్లు శాశ్వతంగా అన్‌లాక్.</string>
-    <string name="settings_premium_desc">అన్ని ఫీచర్లు అన్‌లాక్, అపరిమిత AI, PDF ఎగుమతి మరియు మరిన్ని.</string>
+    <string name="settings_premium_lifetime_desc">ఒక్క కొనుగోలు, అన్ని ఫీచర్లు శాశ్వతంగా అన్‌లాక్.</string>
+    <string name="settings_premium_desc">అన్ని ఫీచర్లు అన్‌లాక్, ప్రతిరోజూ AI, PDF ఎగుమతి మరియు ఇంకా చాలా.</string>
     <string name="settings_manage_subscription">సబ్‌స్క్రిప్షన్ నిర్వహించండి</string>
     <string name="settings_export">ఎగుమతి చేయండి</string>
     <string name="settings_export_pdf_desc">అన్ని డైరీ నమోదులు మరియు ఫోటోలను PDF డాక్యుమెంట్‌గా ఎగుమతి చేయండి.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">అపరిమిత AI టెక్స్ట్ మెరుగుదల</string>
+    <string name="settings_premium_feature_improve">ప్రతిరోజూ AI టెక్స్ట్ మెరుగుదల</string>
     <string name="settings_premium_feature_improve_desc">ప్రతి నమోదు మరింత వ్యక్తీకరణాత్మకంగా మారుతుంది</string>
-    <string name="settings_premium_feature_dashboard">అపరిమిత డ్యాష్‌బోర్డ్ విశ్లేషణలు</string>
+    <string name="settings_premium_feature_dashboard">ప్రతిరోజూ డాష్‌బోర్డ్ విశ్లేషణలు</string>
     <string name="settings_premium_feature_dashboard_desc">మీ డ్యాష్‌బోర్డ్ మీతో ఎదుగుతుంది</string>
     <string name="settings_premium_feature_5_perspectives">5 AI దృక్కోణాలు</string>
     <string name="settings_premium_feature_5_perspectives_desc">స్పష్టత నుండి స్వీయ-అవగాహన వరకు</string>
@@ -717,7 +717,7 @@
     <string name="onboarding_how_step4_desc">డ్యాష్‌బోర్డ్ రోజువారీ జీవితంలో మీకు గుప్తంగా ఉన్న కనెక్షన్లను చూపిస్తుంది.</string>
     <string name="onboarding_how_step5_title">వారపు, నెలవారీ మరియు వార్షిక అవలోకనం</string>
     <string name="onboarding_how_step5_desc">స్వయంచాలక అవలోకనాలు సమయంతో మీరు ఎలా అభివృద్ధి చెందుతారో చూపిస్తాయి.</string>
-    <string name="onboarding_premium_feature_improve">అపరిమిత AI టెక్స్ట్ మెరుగుదల, ప్రతి నమోదు స్పష్టంగా మరియు వ్యక్తీకరణాత్మకంగా మారుతుంది</string>
+    <string name="onboarding_premium_feature_improve">ప్రతిరోజూ AI టెక్స్ట్ మెరుగుదల, ప్రతి ఎంట్రీ స్పష్టంగా మరియు భావవ్యక్తీకరణగా మారుతుంది</string>
     <string name="onboarding_premium_feature_dashboard">ప్రతి కొత్త నమోదుకి స్వయంచాలక డ్యాష్‌బోర్డ్ అప్‌డేట్‌లు</string>
     <string name="onboarding_premium_feature_retro">వారపు, నెలవారీ మరియు వార్షిక అవలోకనాలు మీ అభివృద్ధిని చూపిస్తాయి</string>
     <string name="onboarding_premium_feature_patterns">వ్యక్తిగత పర్యాయక్రమాలను గుర్తించండి, AI గుప్త ఆలోచన మరియు భావాల పర్యాయక్రమాలను కనుగొంటుంది</string>
@@ -752,13 +752,13 @@
     <string name="paywall_monthly_plan">నెలవారీ సబ్‌స్క్రిప్షన్, నెలకి %1$s</string>
     <string name="paywall_yearly_savings">నెలవారీ సబ్‌స్క్రిప్షన్‌తో పోలిస్తే %1$d%% ఆదా చేయండి, ఎప్పుడైనా రద్దు చేయవచ్చు</string>
     <string name="paywall_lifetime_title">ఒకసారి కొనుగోలు</string>
-    <string name="paywall_lifetime_desc">ఒకసారి చెల్లించండి, అన్నీ శాశ్వతంగా ఉపయోగించండి</string>
+    <string name="paywall_lifetime_desc">ఒకసారి చెల్లించు, అన్నీ శాశ్వతంగా ఉపయోగించు</string>
     <string name="paywall_lifetime_note">సబ్‌స్క్రిప్షన్ లేదు, పొడిగింపు లేదు</string>
     <string name="paywall_free_note">ఆప్ సబ్‌స్క్రిప్షన్ లేకుండా కూడా పని చేస్తుంది,</string>
     <string name="paywall_cd_close">మూసివేయండి</string>
 
     <string name="paywall_feature_patterns">మీ ఆలోచనలో గుప్త పర్యాయక్రమాలను అర్థం చేసుకోండి</string>
-    <string name="paywall_feature_improve">ప్రతి నమోదుకి అపరిమిత AI టెక్స్ట్ మెరుగుదల</string>
+    <string name="paywall_feature_improve">ప్రతి ఎంట్రీకి ప్రతిరోజూ AI టెక్స్ట్ మెరుగుదల</string>
     <string name="paywall_feature_dashboard">ప్రతి నమోదు తర్వాత స్వయంచాలక డ్యాష్‌బోర్డ్ అప్‌డేట్‌లు</string>
     <string name="paywall_feature_retro">AI తో వారపు, నెలవారీ మరియు వార్షిక అవలోకనాలు</string>
     <string name="paywall_feature_pdf">ఫోటోలతో డైరీ నమోదులను PDF గా ఎగుమతి చేయండి</string>
@@ -772,9 +772,9 @@
     <string name="paywall_headline_growth">ప్రతి రోజులో మంచిది కనుగొనండి</string>
     <string name="paywall_headline_growth_sub">కృతజ్ఞత మరియు ఎదుగుదల కోసం మీ వ్యక్తిగత స్థలం</string>
     <string name="paywall_headline_thoughts">మీ ఆలోచనలను ప్రవహించనివ్వండి</string>
-    <string name="paywall_headline_thoughts_sub">పరిమితులు లేని మీ సృజనాత్మక సహచరుడు</string>
+    <string name="paywall_headline_thoughts_sub">నీ రోజువారీ జీవితంలో సృజనాత్మక తోడు</string>
     <string name="paywall_headline_default">మిమ్మల్ని కనుగొనండి\nప్రతి రోజు కొంచెం ఎక్కువ</string>
-    <string name="paywall_headline_default_sub">పరిమితులు లేని మీ వ్యక్తిగత AI సహచరుడు</string>
+    <string name="paywall_headline_default_sub">నీ రోజువారీ జీవితంలో వ్యక్తిగత AI తోడు</string>
 
     <string name="paywall_exit_wait">కొద్దిగా ఆగండి!</string>
     <string name="paywall_exit_special_offer">మాకు మీ కోసం\nప్రత్యేక ఆఫర్ ఉంది:</string>
@@ -807,7 +807,7 @@
     <string name="churn_sorry_body">రద్దు చేసే ముందు, ఎందుకో మాకు చెబుతారా? ఆప్‌ని మెరుగుపరచడానికి ఇది మాకు సహాయపడుతుంది.</string>
     <string name="churn_exclusive_offer">ప్రత్యేక ఆఫర్</string>
     <string name="churn_offer_subtitle">మీరు మాకు ముఖ్యం కాబట్టి మీ కోసం మాత్రమే</string>
-    <string name="churn_offer_feature_ai">అపరిమిత AI విశ్లేషణలు</string>
+    <string name="churn_offer_feature_ai">ప్రతిరోజూ AI విశ్లేషణలు</string>
     <string name="churn_offer_feature_perspectives">అన్ని 5 దృక్కోణాలు</string>
     <string name="churn_offer_feature_voice">Premium వాయిస్ గుర్తింపు</string>
     <string name="churn_offer_auto_renew">స్వయంచాలకంగా పునరుద్ధరిస్తుంది, ఎప్పుడైనా రద్దు చేయవచ్చు</string>
@@ -1259,7 +1259,6 @@
     <string name="paywall_consent_dialog_confirm">అంగీకరించి కొనండి</string>
     <string name="paywall_consent_dialog_cancel">రద్దు చేయండి</string>
     <string name="paywall_feature_ai_improvement">AI తో వచనాన్ని మెరుగుపరచడం</string>
-    <string name="paywall_feature_unlimited_entries">అపరిమిత డైరీ నమోదులు</string>
     <string name="paywall_feature_pdf_export">PDF గా ఎగుమతి చేయడం</string>
     <string name="paywall_feature_drive_backup">Google Drive బ్యాకప్</string>
 

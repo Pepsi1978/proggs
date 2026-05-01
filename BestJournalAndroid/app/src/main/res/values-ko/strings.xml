@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">기록을 만들어 주세요.\n그럼 AI가 주제를 분석해요.</string>
     <string name="dashboard_create_entries_default">기록을 만들어 주세요.\n그럼 AI가 흐름을 분석해요.</string>
     <string name="dashboard_like_analysis">분석이 마음에 드나요?</string>
-    <string name="dashboard_premium_upsell_body">프리미엄이면 5가지 관점에서 무제한으로 분석할 수 있어요.</string>
+    <string name="dashboard_premium_upsell_body">Premium으로 원하는 만큼의 프로필에서 풍부한 분석을 받을 수 있어.</string>
     <string name="dashboard_learn_more">자세히 보기</string>
     <string name="dashboard_feature_analyses">분석</string>
     <string name="dashboard_all_observations">모든 관찰</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">여러 맞춤 프로필</string>
     <string name="profiles_premium_desc">Premium으로 원하는 만큼 맞춤 분석 프로필을 만들 수 있어요. 예를 들어 운동용, 일용, 가족용 등. 각 프로필이 자기만의 관점으로 일기를 분석해요.</string>
-    <string name="profiles_benefit_many">무제한 맞춤 프로필 만들기</string>
+    <string name="profiles_benefit_many">원하는 만큼 맞춤 프로필 만들기</string>
     <string name="profiles_benefit_switch">언제든 관점 전환하기</string>
     <string name="profiles_benefit_named">각 프로필에 원하는 이름 붙이기</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">프리미엄</string>
     <string name="settings_premium_lifetime">평생 이용 활성</string>
     <string name="settings_premium_active">프리미엄 구독 중</string>
-    <string name="settings_premium_lifetime_desc">한 번 결제로 모든 기능을 영원히.</string>
-    <string name="settings_premium_desc">모든 기능 열림, 무제한 AI, PDF 내보내기 외.</string>
+    <string name="settings_premium_lifetime_desc">한 번 구매로 모든 기능이 지속적으로 잠금 해제.</string>
+    <string name="settings_premium_desc">모든 기능 잠금 해제, 매일 AI, PDF 내보내기 외 다양한 기능.</string>
     <string name="settings_manage_subscription">구독 관리</string>
     <string name="settings_export">내보내기</string>
     <string name="settings_export_pdf_desc">모든 기록과 사진을 PDF로 내보내요.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">AI로 무제한 글 다듬기</string>
+    <string name="settings_premium_feature_improve">매일 AI 텍스트 개선</string>
     <string name="settings_premium_feature_improve_desc">모든 기록이 더 또렷해져요</string>
-    <string name="settings_premium_feature_dashboard">무제한 대시보드 분석</string>
+    <string name="settings_premium_feature_dashboard">매일 대시보드 분석</string>
     <string name="settings_premium_feature_dashboard_desc">대시보드가 당신과 함께 자라요</string>
     <string name="settings_premium_feature_5_perspectives">AI 5가지 관점</string>
     <string name="settings_premium_feature_5_perspectives_desc">명료함부터 자기 이해까지</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">대시보드가 일상에서 놓치기 쉬운 연결을 보여 줘요.</string>
     <string name="onboarding_how_step5_title">주간·월간·연간 돌아보기</string>
     <string name="onboarding_how_step5_desc">자동 돌아보기가 시간에 따라 자라는 모습을 보여 줘요.</string>
-    <string name="onboarding_premium_feature_improve">AI로 무제한 글 다듬기. 모든 기록이 더 또렷하고 표현이 풍부해져요</string>
+    <string name="onboarding_premium_feature_improve">매일 AI 텍스트 개선으로 모든 기록이 더 명확하고 풍부하게 표현됩니다.</string>
     <string name="onboarding_premium_feature_dashboard">새 기록마다 대시보드가 자동으로 새로 고쳐져요</string>
     <string name="onboarding_premium_feature_retro">주간·월간·연간 돌아보기가 성장을 보여 줘요</string>
     <string name="onboarding_premium_feature_patterns">개인의 흐름을 읽어요. AI가 숨은 생각과 감정의 흐름을 찾아요</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">월 요금제, 월 %1$s</string>
     <string name="paywall_yearly_savings">월 요금제보다 %1$d\u00A0%% 절약, 언제든 해지 가능</string>
     <string name="paywall_lifetime_title">한 번 결제</string>
-    <string name="paywall_lifetime_desc">한 번 결제로 모두 영원히 이용</string>
+    <string name="paywall_lifetime_desc">한 번 결제로 모든 기능을 계속 사용</string>
     <string name="paywall_lifetime_note">구독 없음, 갱신 없음</string>
     <string name="paywall_free_note">앱은 구독 없이도 사용할 수 있어요.</string>
     <string name="paywall_cd_close">닫기</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">생각 속 숨은 흐름을 이해해요</string>
-    <string name="paywall_feature_improve">모든 기록을 AI로 무제한 다듬기</string>
+    <string name="paywall_feature_improve">모든 기록에 대해 매일 AI 텍스트 개선</string>
     <string name="paywall_feature_dashboard">기록마다 대시보드를 자동으로 새로 고침</string>
     <string name="paywall_feature_retro">AI가 만드는 주간·월간·연간 돌아보기</string>
     <string name="paywall_feature_pdf">사진과 함께 기록을 PDF로 내보내기</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">하루의 좋은 것을 발견해요</string>
     <string name="paywall_headline_growth_sub">감사와 성장을 위한 나만의 공간</string>
     <string name="paywall_headline_thoughts">생각이 흐르게 두어요</string>
-    <string name="paywall_headline_thoughts_sub">경계 없는 창의의 동반자</string>
+    <string name="paywall_headline_thoughts_sub">일상에서 함께하는 창의적인 동반자</string>
     <string name="paywall_headline_default">자신을 발견해요\n매일 조금씩 더</string>
-    <string name="paywall_headline_default_sub">경계 없는 나만의 AI 동반자</string>
+    <string name="paywall_headline_default_sub">일상에서 함께하는 나만의 AI 동반자</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">잠깐만요!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">해지 전에 이유를 알려 주실 수 있을까요? 앱을 더 좋게 만드는 데 도움이 돼요.</string>
     <string name="churn_exclusive_offer">특별 제안</string>
     <string name="churn_offer_subtitle">소중한 분께 드려요</string>
-    <string name="churn_offer_feature_ai">무제한 AI 분석</string>
+    <string name="churn_offer_feature_ai">매일 AI 분석</string>
     <string name="churn_offer_feature_perspectives">5가지 관점 모두</string>
     <string name="churn_offer_feature_voice">프리미엄 음성 인식</string>
     <string name="churn_offer_auto_renew">자동 갱신, 언제든 해지</string>
@@ -1355,7 +1355,6 @@
     <string name="paywall_feature_ai_improvement">AI 텍스트 개선</string>
     <string name="paywall_feature_drive_backup">Google Drive 백업</string>
     <string name="paywall_feature_pdf_export">PDF 내보내기</string>
-    <string name="paywall_feature_unlimited_entries">무제한 일기 항목</string>
     <string name="paywall_lifetime_label">일회성</string>
     <string name="paywall_monthly_label">월간</string>
     <string name="paywall_restore_button">구매 복원</string>

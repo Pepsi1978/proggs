@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">สร้างบันทึก\nแล้ว AI จะวิเคราะห์จุดโฟกัสของคุณ</string>
     <string name="dashboard_create_entries_default">สร้างบันทึก\nแล้ว AI จะวิเคราะห์แพตเทิร์นของคุณ</string>
     <string name="dashboard_like_analysis">ชอบการวิเคราะห์นี้ไหม?</string>
-    <string name="dashboard_premium_upsell_body">ด้วย Premium คุณได้การวิเคราะห์ไม่จำกัดจาก 5 มุมมอง</string>
+    <string name="dashboard_premium_upsell_body">ด้วย Premium คุณจะได้รับการวิเคราะห์มากมายจากจำนวนโปรไฟล์เท่าไหร่ก็ได้</string>
     <string name="dashboard_learn_more">อ่านเพิ่มเติม</string>
     <string name="dashboard_feature_analyses">การวิเคราะห์</string>
     <string name="dashboard_all_observations">การสังเกตทั้งหมด</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">หลายโปรไฟล์ที่กำหนดเอง</string>
     <string name="profiles_premium_desc">ด้วย Premium คุณสร้างโปรไฟล์วิเคราะห์ที่กำหนดเองได้มากเท่าที่ต้องการ เช่น หนึ่งสำหรับกีฬา หนึ่งสำหรับงาน หนึ่งสำหรับครอบครัว แต่ละโปรไฟล์จะวิเคราะห์บันทึกของคุณในมุมของตัวเอง</string>
-    <string name="profiles_benefit_many">สร้างโปรไฟล์ที่กำหนดเองได้ไม่จำกัด</string>
+    <string name="profiles_benefit_many">สร้างโปรไฟล์ส่วนตัวได้มากเท่าที่คุณต้องการ</string>
     <string name="profiles_benefit_switch">สลับระหว่างมุมวิเคราะห์ได้ทุกเมื่อ</string>
     <string name="profiles_benefit_named">ตั้งชื่อเฉพาะให้แต่ละโปรไฟล์</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">สิทธิ์ตลอดชีพเปิดใช้งานแล้ว</string>
     <string name="settings_premium_active">สมัคร Premium อยู่</string>
-    <string name="settings_premium_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกฟีเจอร์ตลอดไป</string>
-    <string name="settings_premium_desc">ปลดล็อกทุกฟีเจอร์ AI ไม่จำกัด ส่งออก PDF และอื่น ๆ</string>
+    <string name="settings_premium_lifetime_desc">ซื้อครั้งเดียว ปลดล็อกทุกฟีเจอร์อย่างถาวร</string>
+    <string name="settings_premium_desc">ปลดล็อกทุกฟีเจอร์ AI ทุกวัน ส่งออก PDF และอื่นๆ</string>
     <string name="settings_manage_subscription">จัดการการสมัคร</string>
     <string name="settings_export">ส่งออก</string>
     <string name="settings_export_pdf_desc">ส่งออกบันทึกและภาพทั้งหมดเป็น PDF</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">ปรับปรุงข้อความ AI ไม่จำกัด</string>
+    <string name="settings_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน</string>
     <string name="settings_premium_feature_improve_desc">บันทึกทุกชิ้นสื่อสารได้ดีขึ้น</string>
-    <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดไม่จำกัด</string>
+    <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดทุกวัน</string>
     <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดเติบโตไปกับคุณ</string>
     <string name="settings_premium_feature_5_perspectives">5 มุมมอง AI</string>
     <string name="settings_premium_feature_5_perspectives_desc">ตั้งแต่ความชัดเจนถึงการรู้จักตนเอง</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">แดชบอร์ดแสดงความเชื่อมโยงที่ไม่เห็นในวันประจำ</string>
     <string name="onboarding_how_step5_title">ทบทวนรายสัปดาห์ รายเดือน รายปี</string>
     <string name="onboarding_how_step5_desc">การทบทวนอัตโนมัติแสดงการพัฒนาของคุณตามเวลา</string>
-    <string name="onboarding_premium_feature_improve">ปรับปรุงข้อความ AI ไม่จำกัด บันทึกแต่ละชิ้นชัดเจนและสื่อสารมากขึ้น</string>
+    <string name="onboarding_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน รายการทุกครั้งจะชัดเจนและสื่อความหมายได้ดียิ่งขึ้น</string>
     <string name="onboarding_premium_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติทุกบันทึกใหม่</string>
     <string name="onboarding_premium_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี แสดงการเติบโต</string>
     <string name="onboarding_premium_feature_patterns">รู้จักแพตเทิร์นส่วนตัว AI หาแพตเทิร์นความคิดและความรู้สึกที่ซ่อน</string>
@@ -822,7 +822,7 @@
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">เข้าใจแพตเทิร์นที่ซ่อนในความคิด</string>
-    <string name="paywall_feature_improve">ปรับปรุง AI ไม่จำกัดสำหรับทุกบันทึก</string>
+    <string name="paywall_feature_improve">ปรับปรุงข้อความ AI ทุกวันสำหรับทุกรายการ</string>
     <string name="paywall_feature_dashboard">อัปเดตแดชบอร์ดอัตโนมัติหลังทุกบันทึก</string>
     <string name="paywall_feature_retro">ทบทวนรายสัปดาห์ เดือน ปี ด้วย AI</string>
     <string name="paywall_feature_pdf">ส่งออกบันทึกพร้อมภาพเป็น PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">ค้นพบสิ่งดีทุกวัน</string>
     <string name="paywall_headline_growth_sub">พื้นที่ส่วนตัวของความขอบคุณและการเติบโต</string>
     <string name="paywall_headline_thoughts">ปล่อยให้ความคิดไหล</string>
-    <string name="paywall_headline_thoughts_sub">เพื่อนคู่คิดสร้างสรรค์ไร้ขีดจำกัด</string>
+    <string name="paywall_headline_thoughts_sub">เพื่อนร่วมทางสร้างสรรค์ในชีวิตประจำวันของคุณ</string>
     <string name="paywall_headline_default">ค้นพบตนเอง\nทีละนิดทุกวัน</string>
-    <string name="paywall_headline_default_sub">เพื่อน AI ส่วนตัวไร้ขีดจำกัด</string>
+    <string name="paywall_headline_default_sub">เพื่อนร่วมทาง AI ส่วนตัวในชีวิตประจำวันของคุณ</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">สักครู่!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">ก่อนยกเลิก บอกเหตุผลได้ไหม? ช่วยให้เราปรับปรุงแอป</string>
     <string name="churn_exclusive_offer">ข้อเสนอเฉพาะ</string>
     <string name="churn_offer_subtitle">สำหรับคุณเท่านั้น เพราะคุณสำคัญ</string>
-    <string name="churn_offer_feature_ai">การวิเคราะห์ AI ไม่จำกัด</string>
+    <string name="churn_offer_feature_ai">การวิเคราะห์ AI ทุกวัน</string>
     <string name="churn_offer_feature_perspectives">ครบทั้ง 5 มุมมอง</string>
     <string name="churn_offer_feature_voice">การรู้จำเสียง Premium</string>
     <string name="churn_offer_auto_renew">ต่ออายุอัตโนมัติ ยกเลิกได้ทุกเมื่อ</string>
@@ -1353,7 +1353,6 @@
     <string name="paywall_feature_ai_improvement">ปรับปรุงข้อความด้วย AI</string>
     <string name="paywall_feature_drive_backup">สำรองข้อมูล Google Drive</string>
     <string name="paywall_feature_pdf_export">ส่งออก PDF</string>
-    <string name="paywall_feature_unlimited_entries">รายการไดอารี่ไม่จำกัด</string>
     <string name="paywall_lifetime_label">ครั้งเดียว</string>
     <string name="paywall_monthly_label">รายเดือน</string>
     <string name="paywall_restore_button">กู้คืนการซื้อ</string>

@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Dodawaj wpisy do dziennika,\npotem SI przeanalizuje Twój temat.</string>
     <string name="dashboard_create_entries_default">Dodawaj wpisy do dziennika,\npotem SI przeanalizuje Twoje wzorce.</string>
     <string name="dashboard_like_analysis">Podoba Ci się analiza?</string>
-    <string name="dashboard_premium_upsell_body">Z Premium masz nieograniczone analizy z 5 różnych perspektyw.</string>
+    <string name="dashboard_premium_upsell_body">Dzięki Premium otrzymujesz hojne analizy z dowolnej liczby profili.</string>
     <string name="dashboard_learn_more">Dowiedz się więcej</string>
     <string name="dashboard_feature_analyses">Analizy</string>
     <string name="dashboard_all_observations">Wszystkie spostrzeżenia</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Wiele własnych profili</string>
     <string name="profiles_premium_desc">Dzięki Premium tworzysz tyle własnych profili analizy, ile chcesz. Na przykład jeden do sportu, jeden do pracy, jeden dla rodziny. Każdy profil analizuje twoje wpisy w dzienniku z własnym focusem.</string>
-    <string name="profiles_benefit_many">Twórz nieograniczoną liczbę własnych profili</string>
+    <string name="profiles_benefit_many">Twórz dowolną liczbę indywidualnych profili</string>
     <string name="profiles_benefit_switch">Przełączaj się między focusami w każdej chwili</string>
     <string name="profiles_benefit_named">Nadaj każdemu profilowi własną nazwę</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Dostęp dożywotni aktywny</string>
     <string name="settings_premium_active">Subskrypcja Premium aktywna</string>
-    <string name="settings_premium_lifetime_desc">Jedna płatność, wszystkie funkcje na zawsze.</string>
-    <string name="settings_premium_desc">Wszystkie funkcje odblokowane, nieograniczona SI, eksport PDF i więcej.</string>
+    <string name="settings_premium_lifetime_desc">Jednorazowy zakup, wszystkie funkcje odblokowane na stałe.</string>
+    <string name="settings_premium_desc">Wszystkie funkcje odblokowane, AI codziennie, eksport PDF i więcej.</string>
     <string name="settings_manage_subscription">Zarządzaj subskrypcją</string>
     <string name="settings_export">Eksportuj</string>
     <string name="settings_export_pdf_desc">Eksportuj wszystkie wpisy i zdjęcia jako dokument PDF.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Nieograniczona poprawa tekstu przez SI</string>
+    <string name="settings_premium_feature_improve">Codzienna poprawa tekstu AI</string>
     <string name="settings_premium_feature_improve_desc">Każdy wpis zyskuje wyrazistość</string>
-    <string name="settings_premium_feature_dashboard">Nieograniczone analizy panelu</string>
+    <string name="settings_premium_feature_dashboard">Codzienne analizy panelu</string>
     <string name="settings_premium_feature_dashboard_desc">Panel rośnie razem z Tobą</string>
     <string name="settings_premium_feature_5_perspectives">5 perspektyw SI</string>
     <string name="settings_premium_feature_5_perspectives_desc">Od jasności do samowiedzy</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">Panel pokazuje powiązania, które w biegu dnia umykają.</string>
     <string name="onboarding_how_step5_title">Podsumowanie tygodnia, miesiąca i roku</string>
     <string name="onboarding_how_step5_desc">Automatyczne podsumowania pokazują, jak rozwijasz się w czasie.</string>
-    <string name="onboarding_premium_feature_improve">Nieograniczona poprawa tekstu przez SI, każdy wpis staje się jaśniejszy i bogatszy</string>
+    <string name="onboarding_premium_feature_improve">Codzienna poprawa tekstu AI, każdy wpis staje się jaśniejszy i bardziej wyrazisty</string>
     <string name="onboarding_premium_feature_dashboard">Automatyczne odświeżanie panelu przy każdym nowym wpisie</string>
     <string name="onboarding_premium_feature_retro">Podsumowania tygodniowe, miesięczne i roczne pokazują Twój rozwój</string>
     <string name="onboarding_premium_feature_patterns">Rozpoznawanie osobistych wzorców, SI znajduje ukryte wzorce myślenia i emocji</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">Subskrypcja miesięczna, %1$s miesięcznie</string>
     <string name="paywall_yearly_savings">Oszczędź %1$d%% w porównaniu z miesięczną, anulujesz w każdej chwili</string>
     <string name="paywall_lifetime_title">Zakup jednorazowy</string>
-    <string name="paywall_lifetime_desc">Płacisz raz, korzystasz na zawsze</string>
+    <string name="paywall_lifetime_desc">Zapłać raz, korzystaj na stałe</string>
     <string name="paywall_lifetime_note">Bez subskrypcji, bez odnowień</string>
     <string name="paywall_free_note">Aplikacja działa też bez subskrypcji,</string>
     <string name="paywall_cd_close">Zamknij</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Zrozum ukryte wzorce w swoim myśleniu</string>
-    <string name="paywall_feature_improve">Nieograniczona poprawa tekstu przez SI dla każdego wpisu</string>
+    <string name="paywall_feature_improve">Codzienna poprawa tekstu AI dla każdego wpisu</string>
     <string name="paywall_feature_dashboard">Automatyczne odświeżanie panelu po każdym wpisie</string>
     <string name="paywall_feature_retro">Podsumowania tygodniowe, miesięczne i roczne z SI</string>
     <string name="paywall_feature_pdf">Eksportuj wpisy ze zdjęciami jako PDF</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">Odkryj dobre w każdym dniu</string>
     <string name="paywall_headline_growth_sub">Twoja osobista przestrzeń wdzięczności i rozwoju</string>
     <string name="paywall_headline_thoughts">Pozwól myślom płynąć</string>
-    <string name="paywall_headline_thoughts_sub">Twój kreatywny towarzysz bez granic</string>
+    <string name="paywall_headline_thoughts_sub">Twój kreatywny towarzysz w codzienności</string>
     <string name="paywall_headline_default">Odkrywaj siebie\nKażdego dnia trochę więcej</string>
-    <string name="paywall_headline_default_sub">Twój osobisty towarzysz SI bez granic</string>
+    <string name="paywall_headline_default_sub">Twój osobisty towarzysz AI w codzienności</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Zaczekaj chwilę!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">Zanim anulujesz, powiesz nam dlaczego? Pomaga nam to ulepszać aplikację.</string>
     <string name="churn_exclusive_offer">Oferta specjalna</string>
     <string name="churn_offer_subtitle">Tylko dla Ciebie, bo jesteś ważny</string>
-    <string name="churn_offer_feature_ai">Nieograniczone analizy SI</string>
+    <string name="churn_offer_feature_ai">Codzienne analizy AI</string>
     <string name="churn_offer_feature_perspectives">Wszystkie 5 perspektyw</string>
     <string name="churn_offer_feature_voice">Rozpoznawanie mowy Premium</string>
     <string name="churn_offer_auto_renew">Odnawia się automatycznie, anulujesz w każdej chwili</string>
@@ -1367,7 +1367,6 @@ Co chcesz zrobić?</string>
     <string name="paywall_feature_ai_improvement">Ulepszanie tekstu przez AI</string>
     <string name="paywall_feature_drive_backup">Kopia zapasowa Google Drive</string>
     <string name="paywall_feature_pdf_export">Eksport PDF</string>
-    <string name="paywall_feature_unlimited_entries">Nielimitowane wpisy w dzienniku</string>
     <string name="paywall_lifetime_label">Jednorazowo</string>
     <string name="paywall_monthly_label">Miesięcznie</string>
     <string name="paywall_restore_button">Przywróć zakupy</string>

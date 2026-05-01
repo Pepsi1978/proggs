@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">Crée des entrées de journal,\npuis l\'IA analysera ton centre d\'intérêt.</string>
     <string name="dashboard_create_entries_default">Crée des entrées de journal,\npuis l\'IA analysera tes schémas.</string>
     <string name="dashboard_like_analysis">L\'analyse te plaît\u202F?</string>
-    <string name="dashboard_premium_upsell_body">Avec Premium, tu bénéficies d\'analyses illimitées sous 5 perspectives différentes.</string>
+    <string name="dashboard_premium_upsell_body">Avec Premium, tu reçois des analyses généreuses depuis autant de profils que tu veux.</string>
     <string name="dashboard_learn_more">En savoir plus</string>
     <string name="dashboard_feature_analyses">Analyses</string>
     <string name="dashboard_all_observations">Toutes les observations</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">Plusieurs profils personnalisés</string>
     <string name="profiles_premium_desc">Avec Premium, tu crées autant de profils d’analyse personnalisés que tu veux. Par exemple un pour le sport, un pour ton travail, un pour ta famille. Chaque profil analyse tes entrées de journal avec son propre focus.</string>
-    <string name="profiles_benefit_many">Créer un nombre illimité de profils personnalisés</string>
+    <string name="profiles_benefit_many">Crée autant de profils personnalisés que tu veux</string>
     <string name="profiles_benefit_switch">Passer entre tes focus à tout moment</string>
     <string name="profiles_benefit_named">Donner un nom propre à chaque profil</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Accès à vie actif</string>
     <string name="settings_premium_active">Abonnement Premium actif</string>
-    <string name="settings_premium_lifetime_desc">Un seul paiement, toutes les fonctionnalités à vie.</string>
-    <string name="settings_premium_desc">Toutes les fonctionnalités débloquées, IA illimitée, export PDF et plus encore.</string>
+    <string name="settings_premium_lifetime_desc">Achat unique, toutes les fonctionnalités débloquées en permanence.</string>
+    <string name="settings_premium_desc">Toutes les fonctionnalités débloquées, IA chaque jour, export PDF et plus.</string>
     <string name="settings_manage_subscription">Gérer l\'abonnement</string>
     <string name="settings_export">Exporter</string>
     <string name="settings_export_pdf_desc">Exporte toutes tes entrées et photos au format PDF.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">Amélioration de texte IA illimitée</string>
+    <string name="settings_premium_feature_improve">Amélioration de texte par IA quotidienne</string>
     <string name="settings_premium_feature_improve_desc">Chaque entrée devient plus expressive</string>
-    <string name="settings_premium_feature_dashboard">Analyses de tableau de bord illimitées</string>
+    <string name="settings_premium_feature_dashboard">Analyses du tableau de bord quotidiennes</string>
     <string name="settings_premium_feature_dashboard_desc">Ton tableau de bord grandit avec toi</string>
     <string name="settings_premium_feature_5_perspectives">5 perspectives IA</string>
     <string name="settings_premium_feature_5_perspectives_desc">De la clarté à la connaissance de soi</string>
@@ -784,7 +784,7 @@
     <string name="onboarding_how_step4_desc">Le tableau de bord te montre des liens qui t\'échappent au quotidien.</string>
     <string name="onboarding_how_step5_title">Rétrospectives hebdo, mensuelles et annuelles</string>
     <string name="onboarding_how_step5_desc">Des rétrospectives automatiques te montrent ton évolution dans le temps.</string>
-    <string name="onboarding_premium_feature_improve">Amélioration de texte IA illimitée, chaque entrée devient plus claire et expressive</string>
+    <string name="onboarding_premium_feature_improve">Amélioration de texte par IA chaque jour, chaque entrée devient plus claire et expressive</string>
     <string name="onboarding_premium_feature_dashboard">Actualisations automatiques du tableau de bord à chaque nouvelle entrée</string>
     <string name="onboarding_premium_feature_retro">Les rétrospectives hebdo, mensuelles et annuelles montrent ton évolution</string>
     <string name="onboarding_premium_feature_patterns">Détection de schémas personnels, l\'IA trouve les schémas cachés de pensée et d\'émotion</string>
@@ -819,14 +819,14 @@
     <string name="paywall_monthly_plan">Abonnement mensuel, %1$s par mois</string>
     <string name="paywall_yearly_savings">Économise %1$d\u202F%% par rapport au mensuel, résiliable à tout moment</string>
     <string name="paywall_lifetime_title">Achat unique</string>
-    <string name="paywall_lifetime_desc">Paye une fois, utilise tout à vie</string>
+    <string name="paywall_lifetime_desc">Paye une fois, utilise tout en permanence</string>
     <string name="paywall_lifetime_note">Pas d\'abonnement, pas de reconduction</string>
     <string name="paywall_free_note">L\'appli fonctionne aussi sans abonnement,</string>
     <string name="paywall_cd_close">Fermer</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Comprends les schémas cachés de ta pensée</string>
-    <string name="paywall_feature_improve">Amélioration IA illimitée pour chaque entrée</string>
+    <string name="paywall_feature_improve">Amélioration de texte par IA chaque jour pour chaque entrée</string>
     <string name="paywall_feature_dashboard">Actualisations automatiques du tableau de bord après chaque entrée</string>
     <string name="paywall_feature_retro">Rétrospectives hebdo, mensuelles et annuelles avec IA</string>
     <string name="paywall_feature_pdf">Exporte tes entrées avec photos en PDF</string>
@@ -841,9 +841,9 @@
     <string name="paywall_headline_growth">Découvre le bon dans chaque journée</string>
     <string name="paywall_headline_growth_sub">Ton espace personnel de gratitude et de croissance</string>
     <string name="paywall_headline_thoughts">Laisse couler tes pensées</string>
-    <string name="paywall_headline_thoughts_sub">Ton compagnon créatif sans limites</string>
+    <string name="paywall_headline_thoughts_sub">Ton compagnon créatif au quotidien</string>
     <string name="paywall_headline_default">Découvre qui tu es\nUn peu plus chaque jour</string>
-    <string name="paywall_headline_default_sub">Ton compagnon IA personnel sans limites</string>
+    <string name="paywall_headline_default_sub">Ton compagnon IA personnel au quotidien</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">Attends un instant\u202F!</string>
@@ -877,7 +877,7 @@
     <string name="churn_sorry_body">Avant de résilier, tu veux bien nous dire pourquoi\u202F? Ça nous aide à améliorer l\'appli.</string>
     <string name="churn_exclusive_offer">Offre exclusive</string>
     <string name="churn_offer_subtitle">Rien que pour toi, parce que tu comptes</string>
-    <string name="churn_offer_feature_ai">Analyses IA illimitées</string>
+    <string name="churn_offer_feature_ai">Analyses IA quotidiennes</string>
     <string name="churn_offer_feature_perspectives">Les 5 perspectives</string>
     <string name="churn_offer_feature_voice">Reconnaissance vocale premium</string>
     <string name="churn_offer_auto_renew">Se renouvelle automatiquement, résiliable à tout moment</string>
@@ -1363,7 +1363,6 @@ Que veux-tu faire ?</string>
     <string name="paywall_feature_ai_improvement">Amélioration de texte par IA</string>
     <string name="paywall_feature_drive_backup">Sauvegarde Google Drive</string>
     <string name="paywall_feature_pdf_export">Export PDF</string>
-    <string name="paywall_feature_unlimited_entries">Entrées de journal illimitées</string>
     <string name="paywall_lifetime_label">Paiement unique</string>
     <string name="paywall_monthly_label">Mensuel</string>
     <string name="paywall_restore_button">Restaurer les achats</string>

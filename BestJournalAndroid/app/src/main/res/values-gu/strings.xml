@@ -175,7 +175,7 @@
     <string name="dashboard_create_entries_custom">ડાયરી નોંધો બનાવો,\nપછી AI તમારા ફોકસનું વિશ્લેષણ કરશે.</string>
     <string name="dashboard_create_entries_default">ડાયરી નોંધો બનાવો,\nપછી AI તમારા પૅટર્નનું વિશ્લેષણ કરશે.</string>
     <string name="dashboard_like_analysis">શું વિશ્લેષણ ગમ્યું?</string>
-    <string name="dashboard_premium_upsell_body">Premium સાથે 5 અલગ-અલગ દ્રષ્ટિકોણથી અમર્યાદ વિશ્લેષણ મળે છે.</string>
+    <string name="dashboard_premium_upsell_body">Premium સાથે તને જોઈએ તેટલા પ્રોફાઇલમાંથી ઉદાર વિશ્લેષણો મળે છે.</string>
     <string name="dashboard_learn_more">વધુ જાણો</string>
     <string name="dashboard_feature_analyses">વિશ્લેષણો</string>
     <string name="dashboard_all_observations">બધા અવલોકનો</string>
@@ -321,7 +321,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">બહુવિધ કસ્ટમ પ્રોફાઇલ</string>
     <string name="profiles_premium_desc">Premium સાથે તું તારે જેટલી જોઈએ એટલી કસ્ટમ વિશ્લેષણ પ્રોફાઇલ બનાવી શકે છે. જેમ કે એક રમત માટે, એક કામ માટે, એક પરિવાર માટે. દરેક પ્રોફાઇલ તારી ડાયરી એન્ટ્રીનું પોતાના ફોકસથી વિશ્લેષણ કરે છે.</string>
-    <string name="profiles_benefit_many">અમર્યાદિત કસ્ટમ પ્રોફાઇલ બનાવ</string>
+    <string name="profiles_benefit_many">જોઈએ તેટલા કસ્ટમ પ્રોફાઇલ બનાવ</string>
     <string name="profiles_benefit_switch">કોઈપણ સમયે ફોકસ વચ્ચે બદલ</string>
     <string name="profiles_benefit_named">દરેક પ્રોફાઇલને પોતાનું નામ આપ</string>
 
@@ -395,16 +395,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Lifetime ઍક્સેસ ચાલુ</string>
     <string name="settings_premium_active">Premium સબ્સ્ક્રિપ્શન ચાલુ</string>
-    <string name="settings_premium_lifetime_desc">એક વાર ચૂકવો, બધા ફીચર હંમેશ માટે.</string>
-    <string name="settings_premium_desc">બધા ફીચર ચાલુ, અમર્યાદ AI, PDF Export અને વધુ.</string>
+    <string name="settings_premium_lifetime_desc">એક વખતની ખરીદી, બધી સુવિધાઓ કાયમ માટે અનલૉક.</string>
+    <string name="settings_premium_desc">બધી સુવિધાઓ અનલૉક, રોજ AI, PDF નિકાસ અને વધુ.</string>
     <string name="settings_manage_subscription">સબ્સ્ક્રિપ્શન manage કરો</string>
     <string name="settings_export">Export</string>
     <string name="settings_export_pdf_desc">બધી ડાયરી નોંધો અને ફોટો PDF document તરીકે export.</string>
 
     
-    <string name="settings_premium_feature_improve">અમર્યાદ AI ટેક્સ્ટ સુધારણા</string>
+    <string name="settings_premium_feature_improve">દૈનિક AI લખાણ સુધારણા</string>
     <string name="settings_premium_feature_improve_desc">દરેક નોંધ વધુ અભિવ્યક્ત બને</string>
-    <string name="settings_premium_feature_dashboard">અમર્યાદ ડૅશબોર્ડ વિશ્લેષણ</string>
+    <string name="settings_premium_feature_dashboard">દૈનિક ડેશબોર્ડ વિશ્લેષણો</string>
     <string name="settings_premium_feature_dashboard_desc">ડૅશબોર્ડ તમારી સાથે વધે</string>
     <string name="settings_premium_feature_5_perspectives">5 AI દ્રષ્ટિકોણ</string>
     <string name="settings_premium_feature_5_perspectives_desc">સ્પષ્ટતાથી આત્મ-જ્ઞાન સુધી</string>
@@ -757,7 +757,7 @@
     <string name="onboarding_how_step4_desc">♻</string>
     <string name="onboarding_how_step5_title">♻</string>
     <string name="onboarding_how_step5_desc">♻</string>
-    <string name="onboarding_premium_feature_improve">♻</string>
+    <string name="onboarding_premium_feature_improve">દૈનિક AI લખાણ સુધારણા, દરેક પ્રવેશ વધુ સ્પષ્ટ અને અભિવ્યક્તિપૂર્ણ બને છે</string>
     <string name="onboarding_premium_feature_dashboard">♻</string>
     <string name="onboarding_premium_feature_retro">♻</string>
     <string name="onboarding_premium_feature_patterns">♻</string>
@@ -790,14 +790,14 @@
     <string name="paywall_monthly_plan">♻, %1$s/♻</string>
     <string name="paywall_yearly_savings">♻ %1$d%% ♻</string>
     <string name="paywall_lifetime_title">♻</string>
-    <string name="paywall_lifetime_desc">♻</string>
+    <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
     <string name="paywall_lifetime_note">♻</string>
     <string name="paywall_free_note">♻,</string>
     <string name="paywall_cd_close">♻</string>
 
     
     <string name="paywall_feature_patterns">♻</string>
-    <string name="paywall_feature_improve">♻</string>
+    <string name="paywall_feature_improve">દરેક પ્રવેશ માટે દૈનિક AI લખાણ સુધારણા</string>
     <string name="paywall_feature_dashboard">♻</string>
     <string name="paywall_feature_retro">♻</string>
     <string name="paywall_feature_pdf">PDF ♻</string>
@@ -812,9 +812,9 @@
     <string name="paywall_headline_growth">♻</string>
     <string name="paywall_headline_growth_sub">♻</string>
     <string name="paywall_headline_thoughts">♻</string>
-    <string name="paywall_headline_thoughts_sub">♻</string>
+    <string name="paywall_headline_thoughts_sub">તારો રોજિંદા જીવનનો સર્જનાત્મક સાથી</string>
     <string name="paywall_headline_default">♻\n♻</string>
-    <string name="paywall_headline_default_sub">AI ♻</string>
+    <string name="paywall_headline_default_sub">તારો રોજિંદા જીવનનો વ્યક્તિગત AI સાથી</string>
 
     
     <string name="paywall_exit_wait">♻!</string>
@@ -846,7 +846,7 @@
     <string name="churn_sorry_body">♻</string>
     <string name="churn_exclusive_offer">♻</string>
     <string name="churn_offer_subtitle">♻</string>
-    <string name="churn_offer_feature_ai">AI ♻</string>
+    <string name="churn_offer_feature_ai">દૈનિક AI વિશ્લેષણ</string>
     <string name="churn_offer_feature_perspectives">5 ♻</string>
     <string name="churn_offer_feature_voice">Premium ♻</string>
     <string name="churn_offer_auto_renew">♻</string>
@@ -1314,7 +1314,6 @@
     <string name="paywall_feature_ai_improvement">AI સાથે લખાણ સુધારો</string>
     <string name="paywall_feature_drive_backup">Google Drive બેકઅપ</string>
     <string name="paywall_feature_pdf_export">PDF નિકાસ</string>
-    <string name="paywall_feature_unlimited_entries">અસીમિત ડાયરી એન્ટ્રીઓ</string>
     <string name="paywall_lifetime_label">એકવાર</string>
     <string name="paywall_monthly_label">માસિક</string>
     <string name="paywall_restore_button">ખરીદીઓ પુનઃસ્થાપિત કરો</string>

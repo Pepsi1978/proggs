@@ -188,7 +188,7 @@
     <string name="dashboard_create_entries_custom">दैनंदिनी नोंदी तयार करा,\nमग AI तुमचा फोकस विश्लेषण करेल.</string>
     <string name="dashboard_create_entries_default">दैनंदिनी नोंदी तयार करा,\nमग AI तुमचे नमुने विश्लेषण करेल.</string>
     <string name="dashboard_like_analysis">विश्लेषण आवडले का?</string>
-    <string name="dashboard_premium_upsell_body">Premium सह तुम्हाला 5 वेगवेगळ्या दृष्टिकोनातून असीमित विश्लेषण मिळते.</string>
+    <string name="dashboard_premium_upsell_body">Premium सह तुला हव्या तितक्या प्रोफाईलमधून भरपूर विश्लेषणे मिळतात.</string>
     <string name="dashboard_learn_more">अधिक जाणून घ्या</string>
     <string name="dashboard_feature_analyses">विश्लेषणे</string>
     <string name="dashboard_all_observations">सर्व निरीक्षणे</string>
@@ -334,7 +334,7 @@
     <!-- Premium upsell sheet shown when a free user tries to add a 3rd custom analysis -->
     <string name="profiles_premium_title">अनेक सानुकूल प्रोफाइल</string>
     <string name="profiles_premium_desc">Premium सह तू हव्या तितक्या सानुकूल विश्लेषण प्रोफाइल बनवू शकतोस. उदाहरणार्थ एक खेळासाठी, एक कामासाठी, एक कुटुंबासाठी. प्रत्येक प्रोफाइल तुझ्या डायरी नोंदींचे स्वतःच्या फोकसने विश्लेषण करते.</string>
-    <string name="profiles_benefit_many">अमर्यादित सानुकूल प्रोफाइल बनव</string>
+    <string name="profiles_benefit_many">हव्या तितक्या वैयक्तिक प्रोफाईल तयार कर</string>
     <string name="profiles_benefit_switch">कधीही फोकसमध्ये बदल कर</string>
     <string name="profiles_benefit_named">प्रत्येक प्रोफाइलला स्वतःचे नाव दे</string>
 
@@ -410,16 +410,16 @@
     <string name="settings_premium_section">Premium</string>
     <string name="settings_premium_lifetime">Lifetime प्रवेश सक्रिय</string>
     <string name="settings_premium_active">Premium सदस्यत्व सक्रिय</string>
-    <string name="settings_premium_lifetime_desc">एकवेळ खरेदी, सर्व वैशिष्ट्ये कायमची अनलॉक.</string>
-    <string name="settings_premium_desc">सर्व वैशिष्ट्ये अनलॉक, असीमित AI, PDF निर्यात आणि बरेच काही.</string>
+    <string name="settings_premium_lifetime_desc">एकदा खरेदी, सर्व वैशिष्ट्ये कायमस्वरूपी अनलॉक.</string>
+    <string name="settings_premium_desc">सर्व वैशिष्ट्ये अनलॉक, दररोज AI, PDF निर्यात आणि बरेच काही.</string>
     <string name="settings_manage_subscription">सदस्यत्व व्यवस्थापित करा</string>
     <string name="settings_export">निर्यात करा</string>
     <string name="settings_export_pdf_desc">सर्व दैनंदिनी नोंदी आणि फोटो PDF दस्तऐवज म्हणून निर्यात करा.</string>
 
     <!-- Premium feature list (settings) -->
-    <string name="settings_premium_feature_improve">असीमित AI मजकूर सुधारणे</string>
+    <string name="settings_premium_feature_improve">दररोज AI मजकूर सुधारणा</string>
     <string name="settings_premium_feature_improve_desc">प्रत्येक नोंद अधिक प्रभावशाली होते</string>
-    <string name="settings_premium_feature_dashboard">असीमित डॅशबोर्ड विश्लेषणे</string>
+    <string name="settings_premium_feature_dashboard">दररोज डॅशबोर्ड विश्लेषण</string>
     <string name="settings_premium_feature_dashboard_desc">तुमचा डॅशबोर्ड तुमच्यासोबत वाढतो</string>
     <string name="settings_premium_feature_5_perspectives">5 AI दृष्टिकोन</string>
     <string name="settings_premium_feature_5_perspectives_desc">स्पष्टतेपासून आत्म-ज्ञानापर्यंत</string>
@@ -780,7 +780,7 @@
     <string name="onboarding_how_step4_desc">डॅशबोर्ड तुम्हाला असे संबंध दाखवतो जे दैनंदिन जीवनात लपलेले असतात.</string>
     <string name="onboarding_how_step5_title">साप्ताहिक, मासिक आणि वार्षिक आढावा</string>
     <string name="onboarding_how_step5_desc">स्वयंचलित आढावे तुम्हाला दाखवतात की तुम्ही कालांतराने कसे विकसित होत आहात.</string>
-    <string name="onboarding_premium_feature_improve">असीमित AI मजकूर सुधारणे, प्रत्येक नोंद अधिक स्पष्ट आणि प्रभावशाली होते</string>
+    <string name="onboarding_premium_feature_improve">दररोज AI मजकूर सुधारणा, प्रत्येक नोंद अधिक स्पष्ट आणि अभिव्यक्त बनते</string>
     <string name="onboarding_premium_feature_dashboard">प्रत्येक नवीन नोंदीवर आपोआप डॅशबोर्ड अद्यतने</string>
     <string name="onboarding_premium_feature_retro">साप्ताहिक, मासिक आणि वार्षिक आढावे तुमचा विकास दाखवतात</string>
     <string name="onboarding_premium_feature_patterns">वैयक्तिक नमुने ओळखा, AI लपलेले विचार आणि भावनांचे नमुने शोधतो</string>
@@ -815,14 +815,14 @@
     <string name="paywall_monthly_plan">मासिक सदस्यत्व, %1$s प्रति महिना</string>
     <string name="paywall_yearly_savings">मासिक सदस्यत्वाच्या तुलनेत %1$d%% बचत, कधीही रद्द करता येते</string>
     <string name="paywall_lifetime_title">एकवेळ खरेदी</string>
-    <string name="paywall_lifetime_desc">एकदा द्या, सर्वकाही कायमचे वापरा</string>
+    <string name="paywall_lifetime_desc">एकदा पैसे भर, सर्वकाही कायमस्वरूपी वापर</string>
     <string name="paywall_lifetime_note">कोणतेही सदस्यत्व नाही, कोणती नूतनीकरण नाही</string>
     <string name="paywall_free_note">App सदस्यत्वाशिवाय सुद्धा काम करते,</string>
     <string name="paywall_cd_close">बंद करा</string>
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">तुमच्या विचारातील लपलेले नमुने समजून घ्या</string>
-    <string name="paywall_feature_improve">प्रत्येक नोंदीसाठी असीमित AI मजकूर सुधारणे</string>
+    <string name="paywall_feature_improve">प्रत्येक नोंदीसाठी दररोज AI मजकूर सुधारणा</string>
     <string name="paywall_feature_dashboard">प्रत्येक नोंदीनंतर आपोआप डॅशबोर्ड अद्यतने</string>
     <string name="paywall_feature_retro">AI सह साप्ताहिक, मासिक आणि वार्षिक आढावे</string>
     <string name="paywall_feature_pdf">फोटोसह दैनंदिनी नोंदी PDF म्हणून निर्यात करा</string>
@@ -837,9 +837,9 @@
     <string name="paywall_headline_growth">प्रत्येक दिवसातील चांगले शोधा</string>
     <string name="paywall_headline_growth_sub">कृतज्ञता आणि वाढीसाठी तुमची वैयक्तिक जागा</string>
     <string name="paywall_headline_thoughts">तुमचे विचार वाहू द्या</string>
-    <string name="paywall_headline_thoughts_sub">मर्यादांशिवाय तुमचा सृजनशील साथीदार</string>
+    <string name="paywall_headline_thoughts_sub">तुझा रोजच्या आयुष्यातला सर्जनशील सोबती</string>
     <string name="paywall_headline_default">स्वतःला शोधा\nप्रत्येक दिवशी थोडे अधिक</string>
-    <string name="paywall_headline_default_sub">मर्यादांशिवाय तुमचा वैयक्तिक AI साथीदार</string>
+    <string name="paywall_headline_default_sub">तुझा रोजच्या आयुष्यातला वैयक्तिक AI सोबती</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">थांबा!</string>
@@ -873,7 +873,7 @@
     <string name="churn_sorry_body">रद्द करण्यापूर्वी, तुम्ही आम्हाला का सांगाल? हे आम्हाला App सुधारण्यास मदत करते.</string>
     <string name="churn_exclusive_offer">विशेष ऑफर</string>
     <string name="churn_offer_subtitle">फक्त तुमच्यासाठी, कारण तुम्ही आमच्यासाठी महत्त्वाचे आहात</string>
-    <string name="churn_offer_feature_ai">असीमित AI विश्लेषणे</string>
+    <string name="churn_offer_feature_ai">दररोज AI विश्लेषण</string>
     <string name="churn_offer_feature_perspectives">सर्व 5 दृष्टिकोन</string>
     <string name="churn_offer_feature_voice">Premium वाक् ओळख</string>
     <string name="churn_offer_auto_renew">आपोआप नूतनीकरण होते, कधीही रद्द करता येते</string>
@@ -1357,7 +1357,6 @@
     <string name="paywall_feature_ai_improvement">AI सह मजकूर सुधारणा</string>
     <string name="paywall_feature_drive_backup">Google Drive बॅकअप</string>
     <string name="paywall_feature_pdf_export">PDF निर्यात</string>
-    <string name="paywall_feature_unlimited_entries">अमर्यादित डायरी नोंदी</string>
     <string name="paywall_lifetime_label">एकदाच</string>
     <string name="paywall_monthly_label">मासिक</string>
     <string name="paywall_restore_button">खरेदी पुनर्संचयित करा</string>
