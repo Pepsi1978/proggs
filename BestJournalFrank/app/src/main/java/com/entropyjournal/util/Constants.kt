@@ -218,6 +218,7 @@ object Constants {
 
     // Daily Writing Prompt
     const val PREF_PROMPT_DISMISSED_DATE = "prompt_dismissed_date"
+    const val PREF_DAILY_PROMPT_ENABLED = "daily_prompt_enabled"
 
     /**
      * Anti-em-dash rule appended to every AI prompt so generated text reads

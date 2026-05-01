@@ -43,8 +43,7 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Email
-import androidx.compose.material.icons.rounded.Feedback
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -2875,9 +2874,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // 6. Feedback
-                var showFeedbackDialog by remember { mutableStateOf(false) }
-                var feedbackSent by remember { mutableStateOf(false) }
+                // 6. Extras
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Row(
@@ -2886,78 +2883,48 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
-                                Icons.Rounded.Email,
+                                Icons.Rounded.Lightbulb,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Feedback",
+                                "Extras",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             // Invisible counterbalance for icon+spacer so text is visually centered
                             Spacer(modifier = Modifier.width(28.dp))
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Anregungen, W\u00fcnsche, Verbesserungsvorschl\u00e4ge, Bugs melden \uD83D\uDC1E",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Button(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    showFeedbackDialog = true
-                                    feedbackSent = false
-                                },
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                            ) {
-                                Icon(Icons.Rounded.Feedback, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Feedback senden")
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Schreibimpuls des Tages",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Zeigt jeden Tag eine kleine Frage als Inspiration zum Schreiben",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
-                        }
-                        if (feedbackSent) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "Senden erfolgreich",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Switch(
+                                checked = uiState.dailyPromptEnabled,
+                                onCheckedChange = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.updateDailyPromptEnabled(it)
+                                },
                             )
                         }
                     }
-                }
-
-                if (feedbackSent) {
-                    androidx.compose.runtime.LaunchedEffect(Unit) {
-                        kotlinx.coroutines.delay(3000)
-                        feedbackSent = false
-                    }
-                }
-
-                if (showFeedbackDialog) {
-                    FeedbackDialog(
-                        userEmail = uiState.userProfile?.email,
-                        onDismiss = { showFeedbackDialog = false },
-                        onSent = {
-                            showFeedbackDialog = false
-                            feedbackSent = true
-                        },
-                        context = context,
-                    )
                 }
 
                 // 7. Ueber die App
@@ -2989,7 +2956,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.10.9",
+                            "Entropy Journal V0.11.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -3388,138 +3355,6 @@ private fun SettingsSunMoonIcon(isDark: Boolean, isActive: Boolean = true) {
             )
         }
     }
-}
-
-@Composable
-private fun FeedbackDialog(
-    userEmail: String?,
-    onDismiss: () -> Unit,
-    onSent: () -> Unit,
-    context: android.content.Context,
-) {
-    var feedbackText by remember { mutableStateOf("") }
-    var isSending by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-
-    AlertDialog(
-        onDismissRequest = { if (!isSending) onDismiss() },
-        containerColor = MaterialTheme.colorScheme.surface,
-        icon = {
-            Icon(
-                Icons.Rounded.Email,
-                null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp),
-            )
-        },
-        title = {
-            Text(
-                "Feedback senden",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    "Deine Nachricht an die Entwickler \u2014 wir lesen alles und antworten pers\u00f6nlich!",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                TextField(
-                    value = feedbackText,
-                    onValueChange = { feedbackText = it },
-                    modifier = Modifier.fillMaxWidth().height(180.dp),
-                    textStyle =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                    placeholder = {
-                        Text(
-                            "Schreib uns dein Feedback...",
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    },
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                if (isSending) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Wird gesendet...",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
-                errorMessage?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(it, style = MaterialTheme.typography.labelMedium, color = NeonRed)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (feedbackText.isNotBlank() && !isSending) {
-                        if (userEmail == null) {
-                            errorMessage = "Bitte zuerst mit Google anmelden"
-                            return@Button
-                        }
-                        isSending = true
-                        errorMessage = null
-                        scope.launch {
-                            try {
-                                val error =
-                                    com.entropyjournal.data.remote.FeedbackSender.send(
-                                        context = context,
-                                        accountEmail = userEmail,
-                                        feedbackText = feedbackText,
-                                    )
-                                if (error == null) {
-                                    onSent()
-                                } else {
-                                    isSending = false
-                                    errorMessage = error
-                                }
-                            } catch (
-                                e: com.entropyjournal.data.remote.FeedbackNeedConsentException) {
-                                // Gmail permission needed � show consent screen
-                                isSending = false
-                                try {
-                                    context.startActivity(e.consentIntent)
-                                } catch (_: Exception) {}
-                                errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."
-                            }
-                        }
-                    }
-                },
-                enabled = feedbackText.isNotBlank() && !isSending,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            ) {
-                Text("Senden")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = { if (!isSending) onDismiss() }) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-    )
 }
 
 private fun weekDayName(calendarDay: Int): String =

@@ -137,12 +137,17 @@ constructor(
                 "",
             )
         val isPromptDismissed = promptDismissedDate == java.time.LocalDate.now().toString()
+        val isPromptEnabled =
+            encryptedPrefs.getBoolean(
+                com.entropyjournal.util.Constants.PREF_DAILY_PROMPT_ENABLED,
+                true,
+            )
         _uiState.value =
             _uiState.value.copy(
                 dailyPromptText = todaysPrompt.text,
                 dailyPromptCategory = todaysPrompt.category.displayName,
                 dailyPromptId = todaysPrompt.id,
-                showPromptBanner = !isPromptDismissed,
+                showPromptBanner = isPromptEnabled && !isPromptDismissed,
             )
 
         // Backfill summaries for existing entries that don't have one yet

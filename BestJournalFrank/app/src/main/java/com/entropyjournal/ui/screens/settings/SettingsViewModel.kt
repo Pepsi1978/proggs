@@ -65,6 +65,7 @@ data class SettingsUiState(
     val userTimezone: String = "",
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
+    val dailyPromptEnabled: Boolean = true,
     // Voice-input state for the Custom Prompt dialog (Individuelle Analyse).
     val promptRecState: PromptRecState = PromptRecState.IDLE,
     // One-shot events consumed by the dialog (dialog owns the text field).
@@ -230,7 +231,14 @@ constructor(
                 monthlyReviewEnabled = reminderManager.isMonthlyReviewEnabled(),
                 yearlyReviewEnabled = reminderManager.isYearlyReviewEnabled(),
                 userTimezone = encryptedPrefs.getString(Constants.PREF_USER_TIMEZONE, "") ?: "",
+                dailyPromptEnabled =
+                    encryptedPrefs.getBoolean(Constants.PREF_DAILY_PROMPT_ENABLED, true),
             )
+    }
+
+    fun updateDailyPromptEnabled(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_DAILY_PROMPT_ENABLED, enabled).apply()
+        _uiState.value = _uiState.value.copy(dailyPromptEnabled = enabled)
     }
 
     fun updateDarkTheme(enabled: Boolean) {
