@@ -379,7 +379,7 @@
                                 Style="{StaticResource CircleButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnInsertScreenshot_Click"
-                                ToolTip="Letzten Screenshot einfügen">
+                                ToolTip="Screenshots einfügen">
                             <!-- Segoe MDL2 Assets Attach glyph (E723) — vertical
                                  paperclip pre-centred in its glyph cell, so no
                                  SVG bounds-box hassle. Native Windows icon font,
@@ -420,7 +420,7 @@
                 <Button x:Name="EnterButton"
                         Style="{StaticResource CircleButton}"
                         Click="BtnAutoEnter_Click"
-                        ToolTip="Auto-Enter ein oder aus">
+                        ToolTip="Auto-Enter">
                     <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
                 </Button>
             </Border>
