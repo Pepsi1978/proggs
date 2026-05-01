@@ -28,8 +28,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 115
-        versionName = "0.15.0"
+        versionCode = 116
+        versionName = "0.16.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -144,6 +144,9 @@ dependencies {
 
     // Animation
     implementation(libs.lottie.compose)
+
+    // Lucide Icons
+    implementation(libs.lucide.icons)
 
     // Coroutines
     implementation(libs.coroutines.core)

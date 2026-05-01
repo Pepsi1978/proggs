@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.graphics.Color
@@ -54,51 +56,45 @@ fun TimelineItem(
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = MaterialTheme.colorScheme.primary
 
+    // Symbol auf Basis des Eintrags-Textes per Stichwort-Mapping ermitteln.
+    // Spaeter (V0.17.0) wird das ueber Gemini praeziser bestimmt.
+    val combinedText = remember(entry.title, entry.displayText) {
+        buildString {
+            entry.title?.let { append(it).append(' ') }
+            append(entry.displayText)
+        }
+    }
+    val iconKey = remember(combinedText) { EntryIconResolver.resolveKey(combinedText) }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // Timeline rail: durchgehende Linie + Punkt per Canvas
-        // - MIDDLE: Linie ueber volle Hoehe → durchgehend zur naechsten/vorherigen Card
-        // - FIRST:  Linie ab Punkt nach unten
-        // - LAST:   Linie von oben bis zum Punkt
-        // - ONLY:   keine Linie
-        Canvas(
+        // Timeline rail: 52dp breit, durchgehende Linie + Lucide-Icon-Badge zentriert auf der Linie.
+        // ONLY = keine Linie (einziger Eintrag in seiner Sektion), sonst durchgehende Linie.
+        Box(
             modifier = Modifier
-                .width(24.dp)
-                .fillMaxHeight()
+                .width(52.dp)
+                .fillMaxHeight(),
+            contentAlignment = Alignment.Center,
         ) {
-            val cx = size.width / 2f
-            // dotVerticalBias: -1f = oben, +1f = unten → mappe auf [0, height]
-            val dotY = ((dotVerticalBias + 1f) / 2f) * size.height
-            val strokePx = 2.dp.toPx()
-            val dotRadiusPx = 5.dp.toPx()
-            when (position) {
-                TimelinePosition.ONLY -> Unit
-                TimelinePosition.FIRST -> drawLine(
-                    color = lineColor,
-                    start = Offset(cx, dotY),
-                    end = Offset(cx, size.height),
-                    strokeWidth = strokePx,
-                )
-                TimelinePosition.LAST -> drawLine(
-                    color = lineColor,
-                    start = Offset(cx, 0f),
-                    end = Offset(cx, dotY),
-                    strokeWidth = strokePx,
-                )
-                TimelinePosition.MIDDLE -> drawLine(
+            Canvas(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (position == TimelinePosition.ONLY) return@Canvas
+                val cx = size.width / 2f
+                val strokePx = 2.dp.toPx()
+                drawLine(
                     color = lineColor,
                     start = Offset(cx, 0f),
                     end = Offset(cx, size.height),
                     strokeWidth = strokePx,
                 )
             }
-            drawCircle(
-                color = dotColor,
-                radius = dotRadiusPx,
-                center = Offset(cx, dotY),
+            CircleIconBadge(
+                iconKey = iconKey,
+                size = 36.dp,
             )
         }
 
