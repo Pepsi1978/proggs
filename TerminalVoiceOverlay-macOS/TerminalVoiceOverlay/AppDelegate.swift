@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = true  // G-button on by default; falls back to false if no Gemini key
+    private var geminiEnabled = false // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
     private var autoEnterEnabled = true
     private var alwaysOnActive = false
     private var promptBoardPanel: PromptBoardPanel?
@@ -81,7 +81,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // zu schicken (max. 2 Minuten alt).
     private var lastCorrectableRaw: String?
     private var lastCorrectableAt: Date?
-    private static let reCorrectMaxAge: TimeInterval = 120  // 2 Minuten
+    // 10 Sekunden Fenster fuer Re-Correct: kurz genug damit Profil-Wechsel
+    // ohne Aufnahme NICHT die letzte Frage nochmal schickt, aber lang genug
+    // damit Frank auf einen kurzen "Moment, doch lieber Profil X"-Impuls
+    // reagieren kann.
+    private static let reCorrectMaxAge: TimeInterval = 10
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -813,12 +817,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     finalText += " ; "
 
                     // Eingabezeile vollstaendig loeschen, neuen Text paten.
+                    // AutoEnter wird respektiert: ist der Enter-Toggle aktiv,
+                    // wird die Frage direkt abgeschickt — sonst nur in die
+                    // Befehlszeile kopiert.
+                    let shouldAutoEnter = self.autoEnterEnabled
                     DispatchQueue.global(qos: .userInitiated).async {
                         TerminalController.clearAllInput()
                         usleep(120_000)
-                        TerminalController.pasteText(finalText)
+                        TerminalController.pasteText(finalText, autoEnter: shouldAutoEnter)
                     }
-                    self.hasPastedText = true
+                    self.hasPastedText = !shouldAutoEnter
                     tvoDebug("[App] Re-Correct ok (\(finalText.count) chars, profile \(newProfile))")
                 case .failure(let error):
                     tvoDebug("[App] Re-Correct error: \(error.localizedDescription)")

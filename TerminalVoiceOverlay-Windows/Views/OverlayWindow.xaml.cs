@@ -68,7 +68,7 @@ namespace TerminalVoiceOverlay.Views
         private RecordingState _micState    = RecordingState.Idle;
         private bool _isProcessing          = false;
         private bool isBtwRecording         = false;
-        private bool geminiEnabled          = true;  // G-button on by default (falls back to false if no Gemini key)
+        private bool geminiEnabled          = false; // Default = Whisper-Mode (W aktiv, G dunkel). Erstes Profil-Klick schaltet Gemini automatisch ein.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
         // Wenn true, presst OnInputSubmit beim naechsten Aufruf Return —
@@ -100,7 +100,11 @@ namespace TerminalVoiceOverlay.Views
         // neue Aufnahme).
         private string? _lastCorrectableRaw = null;
         private DateTime _lastCorrectableAt = DateTime.MinValue;
-        private static readonly TimeSpan ReCorrectMaxAge = TimeSpan.FromMinutes(2);
+        // 10 Sekunden Fenster fuer Re-Correct: kurz genug damit Profil-
+        // Wechsel ohne Aufnahme NICHT die letzte Frage nochmal schickt,
+        // aber lang genug damit Frank auf einen kurzen "Moment, eigentlich
+        // doch lieber mit Profil X"-Impuls reagieren kann.
+        private static readonly TimeSpan ReCorrectMaxAge = TimeSpan.FromSeconds(10);
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
@@ -1264,11 +1268,13 @@ namespace TerminalVoiceOverlay.Views
 
             // Auto-Aktivierung: Klick auf ein Profil-Tile zeigt klare Absicht,
             // dass der Benutzer Gemini-Korrektur will. Falls G gerade aus war
-            // (W-Modus), schalten wir Gemini automatisch ein und aktualisieren
-            // beide Toggle-Buttons. So muss der Benutzer nicht zweimal klicken.
+            // (W-Modus, Default seit Whisper-First), schalten wir Gemini
+            // automatisch ein und aktualisieren beide Toggle-Buttons.
+            bool didAutoEnableGemini = false;
             if (!geminiEnabled && _geminiClient != null)
             {
                 geminiEnabled = true;
+                didAutoEnableGemini = true;
                 GButton.Background = ToggleOn;
                 WButton.Background = ToggleOff;
                 Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Klick");
@@ -1279,7 +1285,11 @@ namespace TerminalVoiceOverlay.Views
             // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts —
             // der Re-Correct wuerde die laufende Aufnahme-UI ueberschreiben.
             if (_micState == RecordingState.Recording) return;
-            if (newProfile == oldProfile) return;
+            // Gleiches Profil = no-op — AUSSER Gemini wurde gerade auto-
+            // aktiviert. Dann ist es der Erst-Klick im Whisper-Mode und der
+            // Re-Correct soll trotzdem laufen, damit Frank die letzte
+            // Whisper-Nachricht doch noch durch Profil 1/2/3 schicken kann.
+            if (!didAutoEnableGemini && newProfile == oldProfile) return;
             if (!geminiEnabled) return;
             if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
             if (DateTime.UtcNow - _lastCorrectableAt > ReCorrectMaxAge)
@@ -1317,12 +1327,13 @@ namespace TerminalVoiceOverlay.Views
                 corrected = corrected + " ; ";
 
                 // Eingabezeile vollstaendig loeschen (mehrzeilig sicher) und
-                // dann den neu korrigierten Text reinpaten. Kein autoEnter —
-                // der Sprecher entscheidet selbst wann er das Ergebnis schickt.
+                // dann den neu korrigierten Text reinpaten. AutoEnter wird
+                // respektiert: ist der Enter-Toggle aktiv, wird die Frage
+                // direkt abgeschickt — sonst nur in die Befehlszeile kopiert.
                 var hwnd = _terminalWatcher.ActiveTerminalHwnd;
                 TerminalController.ClearAllInput(hwnd);
                 await Task.Delay(120);
-                TerminalController.PasteText(corrected, hwnd);
+                TerminalController.PasteText(corrected, hwnd, autoEnterEnabled);
 
                 hasPastedText = true;
                 Console.WriteLine($"Re-Correct ok ({corrected.Length} chars)");
