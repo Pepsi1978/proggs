@@ -289,6 +289,13 @@ namespace TerminalVoiceOverlay.Views
 
         // ── Right-click drag state ──
         private bool _isDragging;
+        // Click-vs-Drag-Erkennung beim Rechtsklick auf Profile-Tiles. 0 = kein
+        // Tile getroffen oder Drag laeuft schon. >0 = Profil-Index, der bei
+        // RBUTTONUP als Klick gilt — solange die Maus weniger als
+        // DragThresholdPx bewegt wurde. Sonst wird er auf 0 zurueckgesetzt
+        // und das Pillar verschoben sich wie gehabt.
+        private int _pendingProfileTileClick;
+        private const int DragThresholdPx = 4;
         private bool _manuallyPositioned;
         private int _dragStartCursorX, _dragStartCursorY;
         private double _dragStartLeft, _dragStartTop;
@@ -532,16 +539,12 @@ namespace TerminalVoiceOverlay.Views
                     return (IntPtr)Win32.MA_NOACTIVATE;
 
                 case Win32.WM_RBUTTONDOWN:
-                    // Hit-Test: liegt der Rechtsklick auf einem Profile-Tile?
-                    // Dann KEIN Pillar-Drag — stattdessen das Profil ohne
-                    // Re-Correct aktivieren. Sonst bleibt der bestehende
-                    // Drag-Pfad erhalten (Rechte Maustaste auf Hintergrund-
-                    // flaeche oder anderen Buttons verschiebt das Pillar).
-                    if (TryHandleRightClickOnProfileTile())
-                    {
-                        handled = true;
-                        return IntPtr.Zero;
-                    }
+                    // Drag-Setup wie immer, ABER zusaetzlich Hit-Test auf
+                    // Profile-Tiles: liegt der Klick auf einem Tile, wird
+                    // _pendingProfileTileClick gesetzt. Bei kurzem Klick
+                    // (kein Drag bis zum Up) feuert Profil-Wechsel; bei
+                    // grosserer Bewegung wird der Pending verworfen und
+                    // normales Pillar-Drag uebernimmt.
                     if (Win32.GetCursorPos(out var startPt))
                     {
                         _isDragging = true;
@@ -553,6 +556,7 @@ namespace TerminalVoiceOverlay.Views
                         _dragDpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
                         _dragDpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
                         Win32.SetCapture(hwnd);
+                        _pendingProfileTileClick = HitTestProfileTile();
                     }
                     handled = true;
                     break;
@@ -560,6 +564,20 @@ namespace TerminalVoiceOverlay.Views
                 case Win32.WM_MOUSEMOVE:
                     if (_isDragging && Win32.GetCursorPos(out var movePt))
                     {
+                        // Pending Profile-Tile-Click? Erst pruefen ob Maus
+                        // mehr als die Drag-Schwelle bewegt wurde — solange
+                        // sie es nicht ist, Pillar in Ruhe lassen.
+                        if (_pendingProfileTileClick > 0)
+                        {
+                            int dx = Math.Abs(movePt.X - _dragStartCursorX);
+                            int dy = Math.Abs(movePt.Y - _dragStartCursorY);
+                            if (dx < DragThresholdPx && dy < DragThresholdPx)
+                            {
+                                break;
+                            }
+                            // Drag-Schwelle ueberschritten — ab jetzt echtes Drag
+                            _pendingProfileTileClick = 0;
+                        }
                         Left = _dragStartLeft + (movePt.X - _dragStartCursorX) / _dragDpiX;
                         Top  = _dragStartTop  + (movePt.Y - _dragStartCursorY) / _dragDpiY;
                         // Im Solo-Andock-Modus haengt das Eingabefenster
@@ -580,8 +598,19 @@ namespace TerminalVoiceOverlay.Views
                     if (_isDragging)
                     {
                         _isDragging = false;
-                        _manuallyPositioned = true;
                         Win32.ReleaseCapture();
+                        if (_pendingProfileTileClick > 0)
+                        {
+                            // War ein kurzer Klick auf ein Profile-Tile —
+                            // kein Drag, also Profil ohne Re-Correct aktivieren.
+                            int p = _pendingProfileTileClick;
+                            _pendingProfileTileClick = 0;
+                            SwitchProfileWithoutReCorrect(p);
+                        }
+                        else
+                        {
+                            _manuallyPositioned = true;
+                        }
                         handled = true;
                     }
                     break;
@@ -1279,10 +1308,11 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
-        /// WM_RBUTTONDOWN-Hit-Test: prueft ob der aktuelle Mauszeiger auf
-        /// einem der zehn Profile-Tiles liegt. Wenn ja: ProfileN aktivieren
-        /// ohne Re-Correct (Rechtsklick-Semantik) und true zurueckgeben,
-        /// damit der Aufrufer den Drag-Pfad ueberspringt.
+        /// Hit-Test fuer den Mauszeiger auf Profile-Tiles. Gibt die Profil-
+        /// Nummer (1-10) zurueck wenn der Cursor gerade auf einem Tile liegt,
+        /// sonst 0. Wird beim Rechtsklick-Down im WndProc gerufen, um zwischen
+        /// "kurzer Klick auf Tile" (Profil-Wechsel) und "Drag auf Hintergrund"
+        /// (Pillar verschieben) zu unterscheiden.
         ///
         /// Hintergrund: Der Window-Level WndProc-Hook faengt ALLE Right-
         /// Mouse-Down-Events auf Win32-Ebene ab — dadurch erreichen sie nie
@@ -1290,9 +1320,9 @@ namespace TerminalVoiceOverlay.Views
         /// Buttons koennen feuern. Der Hit-Test hier ersetzt die WPF-
         /// Routing-Schicht fuer den Spezialfall der Profile-Tiles.
         /// </summary>
-        private bool TryHandleRightClickOnProfileTile()
+        private int HitTestProfileTile()
         {
-            if (!Win32.GetCursorPos(out var screenPt)) return false;
+            if (!Win32.GetCursorPos(out var screenPt)) return 0;
             System.Windows.Point relativePos;
             try
             {
@@ -1300,11 +1330,11 @@ namespace TerminalVoiceOverlay.Views
             }
             catch
             {
-                return false;
+                return 0;
             }
 
             var hit = System.Windows.Media.VisualTreeHelper.HitTest(this, relativePos);
-            if (hit?.VisualHit == null) return false;
+            if (hit?.VisualHit == null) return 0;
 
             DependencyObject? current = hit.VisualHit;
             while (current != null)
@@ -1316,13 +1346,12 @@ namespace TerminalVoiceOverlay.Views
                     if (match.Success &&
                         int.TryParse(match.Groups[1].Value, out int profileNum))
                     {
-                        SwitchProfileWithoutReCorrect(profileNum);
-                        return true;
+                        return profileNum;
                     }
                 }
                 current = System.Windows.Media.VisualTreeHelper.GetParent(current);
             }
-            return false;
+            return 0;
         }
 
         /// <summary>
