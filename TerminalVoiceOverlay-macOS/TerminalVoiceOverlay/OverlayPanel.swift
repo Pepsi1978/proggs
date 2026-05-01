@@ -363,6 +363,11 @@ final class OverlayPanel: NSPanel {
 
     var onUltrathinkClicked: (() -> Void)?
     var onXClicked: (() -> Void)?
+    /// Press-and-hold-Callbacks fuer den X-Button: bei Maus-Druck startet onXMouseDown,
+    /// bei Loslassen onXMouseUp. Wird von AppDelegate genutzt um in 10ms-Intervallen
+    /// Zeilen zu loeschen solange die linke Maustaste gedrueckt ist.
+    var onXMouseDown: (() -> Void)?
+    var onXMouseUp: (() -> Void)?
     var onBtwClicked: (() -> Void)?
     var onMicClicked: (() -> Void)?
     var onWClicked: (() -> Void)?
@@ -555,7 +560,12 @@ final class OverlayPanel: NSPanel {
         for tile in profileButtons { self.contentView?.addSubview(tile) }
 
         ultrathinkButton.onClick       = { [weak self] in self?.onUltrathinkClicked?() }
-        xButton.onClick                = { [weak self] in self?.onXClicked?() }
+        // Press-and-hold-Logik: onMouseDown startet die Loesch-Schleife, onMouseUp stoppt sie.
+        // Wenn onMouseDown gesetzt ist, ruft RoundButton intern KEIN onClick mehr auf — die
+        // ganze Logik laeuft ueber onXMouseDown/onXMouseUp im AppDelegate. onXClicked bleibt
+        // als Property fuer Backward-Compat erhalten, wird aber nicht mehr getriggert.
+        xButton.onMouseDown            = { [weak self] in self?.onXMouseDown?() }
+        xButton.onMouseUp              = { [weak self] in self?.onXMouseUp?() }
         btwButton.onClick              = { [weak self] in self?.onBtwClicked?() }
         micButton.onClick              = { [weak self] in self?.onMicClicked?() }
         wButton.onClick                = { [weak self] in self?.onWClicked?() }

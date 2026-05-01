@@ -61,6 +61,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // good path memorised — matches Windows _lastScreenshotPath behaviour.
     private var lastScreenshotPath: String?
 
+    /// Timer fuer X-Button Press-and-Hold: solange linke Maustaste gedrueckt,
+    /// wird alle 10 ms eine Zeile geloescht. Bei mouseUp wird der Timer invalidiert.
+    private var xRepeatTimer: Timer?
+
     // 5-second hide-delay timer (matches Windows _hideDelayTimer from
     // commit #1913). When the user switches away from the terminal we
     // delay the panel hide by 5 s so they can still grab a screenshot
@@ -154,13 +158,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setAutoEnterEnabled(autoEnterEnabled)
         panel.setActiveProfile(activeProfile)
 
-        panel.onXClicked = { [weak self] in
+        // X-Button: kurzer Klick loescht eine Zeile, gedrueckt halten loescht alle Zeilen
+        // hintereinander im 10ms-Takt. Spiegelt das Windows-Voice-Overlay-Verhalten 1:1.
+        panel.onXMouseDown = { [weak self] in
             guard let self = self else { return }
-            tvoDebug("[App] onXClicked panelLevel=\(self.panel.level.rawValue) active=\(NSApp.isActive)")
-            // No cooldown — rapid ✕-ing fires ClearLine every time,
-            // matching the Windows Voice Overlay behavior.
+            tvoDebug("[App] onXMouseDown — Press-and-Hold-Loop start")
             self.panel.flashXButton()
+            // Sofort die erste Zeile loeschen (vor dem Timer-Start)
             self.clearLine()
+            // Timer fuer Repeat: alle 10 ms eine weitere Zeile
+            self.xRepeatTimer?.invalidate()
+            self.xRepeatTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
+                self?.clearLine()
+            }
+        }
+        panel.onXMouseUp = { [weak self] in
+            tvoDebug("[App] onXMouseUp — Press-and-Hold-Loop stop")
+            self?.xRepeatTimer?.invalidate()
+            self?.xRepeatTimer = nil
         }
         panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
         panel.onPillarMoved = { [weak self] in
