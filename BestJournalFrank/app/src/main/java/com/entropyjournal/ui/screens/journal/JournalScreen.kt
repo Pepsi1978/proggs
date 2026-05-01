@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -96,9 +95,6 @@ import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
 import com.entropyjournal.ui.components.TimelinePosition
-import com.entropyjournal.ui.components.energyboard.EnergyOverlay
-import com.entropyjournal.ui.components.energyboard.rememberEnergyController
-import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
@@ -378,13 +374,8 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     )
                 }
 
-                val lazyListState = rememberLazyListState()
-                val energyController = rememberEnergyController()
-                val isDarkTheme = LocalIsDarkTheme.current
-                Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = lazyListState,
+                    modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     // Daily writing prompt banner — always visible, no animation
@@ -455,12 +446,6 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 
                     // Bottom padding for buttons
                     item { Spacer(modifier = Modifier.height(80.dp)) }
-                }
-                EnergyOverlay(
-                    listState = lazyListState,
-                    controller = energyController,
-                    isDarkTheme = isDarkTheme,
-                )
                 }
             }
         }
