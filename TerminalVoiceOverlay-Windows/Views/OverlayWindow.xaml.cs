@@ -1070,7 +1070,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private const double TooltipMargin = 8.0;
         private const double EstimatedTooltipHeight = 28.0;
-        private const int TooltipHoverDelayMs = 250;
+        private const int TooltipHoverDelayMs = 100;
 
         // Eigener Hover-Timer fuer Tooltips. WPF-Standard wartet auf Maus-
         // Stillstand bevor das erste Tooltip kommt — bei Mausbewegung im
