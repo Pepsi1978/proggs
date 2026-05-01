@@ -79,13 +79,28 @@ fun TimelineItem(
             ) {
                 if (position == TimelinePosition.ONLY) return@Canvas
                 val cx = size.width / 2f
+                val midY = size.height / 2f
+                // Halber Badge-Radius + kleine Luft, damit die Linie sauber am Badge endet
+                val gap = 18.dp.toPx() + 2.dp.toPx()
                 val strokePx = 2.dp.toPx()
-                drawLine(
-                    color = lineColor,
-                    start = Offset(cx, 0f),
-                    end = Offset(cx, size.height),
-                    strokeWidth = strokePx,
-                )
+                // Linie von oben bis Badge-Oberkante
+                if (midY - gap > 0f) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, 0f),
+                        end = Offset(cx, midY - gap),
+                        strokeWidth = strokePx,
+                    )
+                }
+                // Linie von Badge-Unterkante bis unten
+                if (midY + gap < size.height) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(cx, midY + gap),
+                        end = Offset(cx, size.height),
+                        strokeWidth = strokePx,
+                    )
+                }
             }
             CircleIconBadge(
                 iconKey = iconKey,

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,20 +42,18 @@ fun CircleIconBadge(
         if (isDark) Color(0xFF80DEEA) else Color(0xFF006064)
     }
 
-    // Dezenter Hintergrund-Verlauf passend zum Tint, mit dunklem/hellem Mix
-    val fillStart = if (isDark) baseTint.copy(alpha = 0.18f) else baseTint.copy(alpha = 0.10f)
-    val fillEnd = if (isDark) Color(0xFF062028) else Color(0xFFF7F7F7)
+    // Deckender Hintergrund — App-Background, damit die Timeline-Linie nicht durchschimmert.
+    // Darueber ein dezenter Tint-Wash, der dem Badge die Kategorie-Farbe gibt.
+    val solidBackground = MaterialTheme.colorScheme.background
+    val washColor = if (isDark) baseTint.copy(alpha = 0.22f) else baseTint.copy(alpha = 0.14f)
     val borderColor = baseTint.copy(alpha = if (isDark) 0.85f else 0.55f)
 
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(
-                brush = Brush.radialGradient(
-                    colors = listOf(fillStart, fillEnd),
-                )
-            )
+            .background(solidBackground)            // Schicht 1: deckender App-Hintergrund
+            .background(washColor)                  // Schicht 2: kategoriespezifischer Wash
             .border(
                 width = 1.5.dp,
                 color = borderColor,
