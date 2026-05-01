@@ -80,11 +80,16 @@ fun TimelineItem(
                 if (position == TimelinePosition.ONLY) return@Canvas
                 val cx = size.width / 2f
                 val midY = size.height / 2f
-                // Halber Badge-Radius + kleine Luft, damit die Linie sauber am Badge endet
                 val gap = 18.dp.toPx() + 2.dp.toPx()
                 val strokePx = 2.dp.toPx()
-                // Linie von oben bis Badge-Oberkante
-                if (midY - gap > 0f) {
+
+                // FIRST: keine Linie ueber dem Badge — Bereich beginnt mit dem Symbol
+                // LAST: keine Linie unter dem Badge — Bereich endet mit dem Symbol
+                // MIDDLE: Linie auf beiden Seiten (durchgehend zur Nachbar-Card)
+                val drawAbove = position == TimelinePosition.MIDDLE || position == TimelinePosition.LAST
+                val drawBelow = position == TimelinePosition.MIDDLE || position == TimelinePosition.FIRST
+
+                if (drawAbove && midY - gap > 0f) {
                     drawLine(
                         color = lineColor,
                         start = Offset(cx, 0f),
@@ -92,8 +97,7 @@ fun TimelineItem(
                         strokeWidth = strokePx,
                     )
                 }
-                // Linie von Badge-Unterkante bis unten
-                if (midY + gap < size.height) {
+                if (drawBelow && midY + gap < size.height) {
                     drawLine(
                         color = lineColor,
                         start = Offset(cx, midY + gap),
