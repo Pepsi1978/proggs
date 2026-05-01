@@ -405,12 +405,15 @@ namespace TerminalVoiceOverlay.Views
             // ── Tooltip-Positionierung global ankern ──
             // Standard-WPF-Verhalten setzt den Tooltip relativ zum Button.
             // Bei den rechten Profil-Tiles waere er dadurch mitten ueber
-            // dem Mic. Stattdessen positionieren wir per ToolTipOpening
-            // jeden Tooltip dynamisch: rechte Tooltip-Kante immer 8 Pixel
+            // dem Mic. Stattdessen wickeln wir jeden String-ToolTip in ein
+            // ToolTip-Objekt und haengen einen Opened-Handler dran, der die
+            // Position dynamisch setzt: rechte Tooltip-Kante immer 8 Pixel
             // links vom Window, vertikal mittig zum gehoverten Button.
-            AddHandler(System.Windows.Controls.ToolTipService.ToolTipOpeningEvent,
-                new System.Windows.RoutedEventHandler(OnAnyToolTipOpening),
-                handledEventsToo: true);
+            //
+            // String-ToolTips werden von WPF erst beim Anzeigen in ToolTip-
+            // Objekte umgewandelt — zu spaet fuer ToolTipOpening. Pre-
+            // wickeln loest das.
+            WrapStringTooltips();
 
             // ── Waveform-Striche einmalig im Canvas anlegen ──
             // 14 weisse Rectangles mit voller Deckkraft auf dem roten
@@ -1059,13 +1062,54 @@ namespace TerminalVoiceOverlay.Views
         private const double TooltipMargin = 8.0;
         private const double EstimatedTooltipHeight = 28.0;
 
-        private void OnAnyToolTipOpening(object sender, System.Windows.RoutedEventArgs e)
+        /// <summary>
+        /// Wandelt alle String-ToolTips der 21 Buttons in echte ToolTip-
+        /// Objekte um und haengt jeweils einen Opened-Handler dran, der
+        /// die Position dynamisch setzt. Wird einmalig im Constructor nach
+        /// InitializeComponent aufgerufen. Der WPF-Implicit-Style auf
+        /// TargetType="ToolTip" greift weiterhin (dunkler Hintergrund,
+        /// abgerundete Ecken), weil Implicit-Styles auf jede ToolTip-
+        /// Instanz im Visual-Tree wirken.
+        /// </summary>
+        private void WrapStringTooltips()
         {
-            if (e.OriginalSource is not System.Windows.FrameworkElement target) return;
-            if (target.ToolTip is not System.Windows.Controls.ToolTip tooltip) return;
+            var allButtons = new System.Windows.Controls.Button[]
+            {
+                MicButton, BtwButton, WButton, GButton, XButton,
+                CopyButton, PasteButton, ScreenshotButton, InsertScreenshotButton,
+                UltrathinkButton, EnterButton,
+                Profile1Button, Profile2Button, Profile3Button,
+                Profile4Button, Profile5Button, Profile6Button,
+                Profile7Button, Profile8Button, Profile9Button, Profile10Button
+            };
 
-            // Button-Position relativ zum Window ermitteln. windowOrigin.X
-            // ist die x-Koordinate der linken Button-Kante im Window-Raster.
+            foreach (var btn in allButtons)
+            {
+                if (btn.ToolTip is string s)
+                {
+                    var tip = new System.Windows.Controls.ToolTip { Content = s };
+                    var ownerButton = btn; // Closure-Capture
+                    tip.Opened += (_, _) => PositionTooltip(tip, ownerButton);
+                    btn.ToolTip = tip;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Setzt HorizontalOffset und VerticalOffset eines bereits geoeffneten
+        /// ToolTips so, dass:
+        /// - die rechte Tooltip-Kante immer TooltipMargin Pixel links vom
+        ///   Window-Aussenrand sitzt (gleicher Abstand egal welcher Button)
+        /// - die vertikale Tooltip-Mitte mit der Mitte des Buttons zusammenfaellt
+        ///
+        /// Wird im Opened-Handler aufgerufen — zu diesem Zeitpunkt ist
+        /// tooltip.ActualHeight bereits gemessen und der HorizontalOffset
+        /// wirkt sofort sichtbar (das Popup wird bei Property-Change
+        /// neu positioniert).
+        /// </summary>
+        private void PositionTooltip(System.Windows.Controls.ToolTip tooltip,
+                                     System.Windows.FrameworkElement target)
+        {
             System.Windows.Point windowOrigin;
             try
             {
@@ -1073,19 +1117,18 @@ namespace TerminalVoiceOverlay.Views
             }
             catch
             {
-                return; // Falls der Button noch nicht im Visual Tree liegt
+                return;
             }
 
-            // Horizontal: Default-Placement="Left" platziert die rechte
-            // Tooltip-Kante an die linke Button-Kante (also bei windowOrigin.X).
-            // Wir wollen die rechte Tooltip-Kante bei -TooltipMargin (also
-            // 8 Pixel links vom Window). Offset = (-TooltipMargin) - windowOrigin.X.
+            // Horizontal: Default Placement=Left → Tooltip-rechte-Kante an
+            // Button-linke-Kante (= windowOrigin.X). Wir wollen Tooltip-rechte-
+            // Kante bei -TooltipMargin (Pixel links vom Window). Offset =
+            // (-TooltipMargin) - windowOrigin.X.
             tooltip.HorizontalOffset = -TooltipMargin - windowOrigin.X;
 
-            // Vertikal: Default setzt Tooltip-Top = Button-Top. Wir wollen
-            // Tooltip-Mitte = Button-Mitte. Tooltip-Hoehe ist beim Opening
-            // noch nicht final gerendert — wir schaetzen 28 Pixel (passt fuer
-            // einzeilige Tooltips mit unserem Padding 6+text+6).
+            // Vertikal: Default = Tooltip-Top am Button-Top. Wir wollen
+            // Tooltip-Mitte = Button-Mitte. Im Opened-Event ist ActualHeight
+            // bereits final, also nutzen wir den echten Wert.
             double tooltipHeight = tooltip.ActualHeight > 0
                 ? tooltip.ActualHeight
                 : EstimatedTooltipHeight;
