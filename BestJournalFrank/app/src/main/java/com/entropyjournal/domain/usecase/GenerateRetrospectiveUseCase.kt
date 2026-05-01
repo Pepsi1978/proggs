@@ -32,11 +32,18 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
 ) {
     companion object {
-        private const val MODEL_FLASH = "gemini-2.5-flash"
-        private const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
         /** Max concurrent AI API calls to avoid rate limiting */
         private const val MAX_PARALLEL = 3
     }
+
+    /**
+     * Liefert das vom Benutzer in den Einstellungen gewaehlte Gemini-Modell.
+     * ALLE KI-Aufrufe in diesem UseCase nutzen ausschliesslich dieses Modell —
+     * keine hartcodierten Modelle mehr fuer einzelne Aufgaben.
+     */
+    private fun selectedModel(): String =
+        encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL)
+            ?: Constants.DEFAULT_GEMINI_MODEL
 
     // ThreadLocal to ensure thread-safe date formatting during parallel generation
     private val dfLabel: SimpleDateFormat
@@ -212,7 +219,7 @@ constructor(
             val result =
                 generateContent(
                     prompt = prompt,
-                    modelName = MODEL_FLASH,
+                    modelName = selectedModel(),
                     temperature = 0.7f,
                     maxOutputTokens = 8192,
                 )
@@ -235,7 +242,7 @@ ${summaryText.take(500)}"""
             val titleResult =
                 generateContent(
                     prompt = titlePrompt,
-                    modelName = MODEL_FLASH_LITE,
+                    modelName = selectedModel(),
                     temperature = 0.6f,
                     maxOutputTokens = 50,
                 )
@@ -368,7 +375,7 @@ ${summaryText.take(500)}"""
             val result =
                 generateContent(
                     prompt = prompt,
-                    modelName = MODEL_FLASH,
+                    modelName = selectedModel(),
                     temperature = 0.7f,
                     maxOutputTokens = 8192,
                 )
@@ -391,7 +398,7 @@ ${summaryText.take(500)}"""
             val titleResult =
                 generateContent(
                     prompt = titlePrompt,
-                    modelName = MODEL_FLASH_LITE,
+                    modelName = selectedModel(),
                     temperature = 0.6f,
                     maxOutputTokens = 50,
                 )
@@ -477,7 +484,7 @@ ${summaryText.take(500)}"""
         val result =
             generateContent(
                 prompt = prompt,
-                modelName = MODEL_FLASH,
+                modelName = selectedModel(),
                 temperature = 0.7f,
                 maxOutputTokens = 16384,
             )
@@ -500,7 +507,7 @@ ${summaryText.take(500)}"""
         val titleResult =
             generateContent(
                 prompt = titlePrompt,
-                modelName = MODEL_FLASH_LITE,
+                modelName = selectedModel(),
                 temperature = 0.6f,
                 maxOutputTokens = 50,
             )

@@ -13,8 +13,8 @@ import javax.inject.Inject
  * Bekommt den Eintragstext + den Pool aller verfuegbaren Symbole mit deutschen
  * Beschreibungen und gibt das am besten passende Symbol als iconKey zurueck.
  *
- * Nutzt das billigste Gemini-Modell (gemini-2.5-flash-lite) mit niedriger
- * Temperatur fuer deterministische Klassifikation.
+ * Nutzt das vom Benutzer in den Einstellungen gewaehlte Gemini-Modell mit niedriger
+ * Temperatur fuer deterministische Klassifikation. Kein hartcodiertes Modell.
  *
  * Fehlerverhalten: gibt null zurueck wenn API-Key fehlt, Internet weg, oder
  * Antwort kein gueltiger iconKey ist. Der Aufrufer faellt dann auf das

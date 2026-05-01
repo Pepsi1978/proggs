@@ -1845,29 +1845,15 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
                     systemPrompt = getActiveSystemPrompt(),
                 )
 
-            // Try selected model first, fallback to gemini-2.5-flash-lite on HTTP 400
-            val response =
-                try {
-                    geminiApi.generateContent(
-                        model = selectedModel,
-                        apiKey = apiKey,
-                        request = request,
-                    )
-                } catch (e: retrofit2.HttpException) {
-                    if (e.code() == 400 && selectedModel != Constants.DEFAULT_GEMINI_MODEL) {
-                        Log.w(
-                            "GeminiDebug",
-                            "Model $selectedModel returned 400, falling back to ${Constants.DEFAULT_GEMINI_MODEL}",
-                        )
-                        geminiApi.generateContent(
-                            model = Constants.DEFAULT_GEMINI_MODEL,
-                            apiKey = apiKey,
-                            request = request,
-                        )
-                    } else {
-                        throw e
-                    }
-                }
+            // Nutzt ausschliesslich das vom Benutzer gewaehlte Modell — kein Fallback,
+            // damit "Schalter sagt was die KI macht" zu 100% gilt. Falls das gewaehlte
+            // Modell HTTP 400 liefert, sieht der Benutzer einen Fehler und kann ein
+            // anderes Modell waehlen.
+            val response = geminiApi.generateContent(
+                model = selectedModel,
+                apiKey = apiKey,
+                request = request,
+            )
             val jsonText =
                 response.extractText()
                     ?: return Result.failure(Exception("Keine Antwort von Gemini"))
