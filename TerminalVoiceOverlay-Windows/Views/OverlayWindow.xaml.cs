@@ -84,6 +84,15 @@ namespace TerminalVoiceOverlay.Views
         // beim ersten Start ohne Sternklick keine Pre/Post-Prompts mitgingen.
         private bool alwaysOnActive         = false;
 
+        // Aktives Gemini-Korrektur-Profil. 1 = Standard (alltaegliche Texte
+        // und Ideen), 2 = Programmierung (existierender PromptTemplate / SK-
+        // Datei), 3 = Meta-Intelligenz (strukturiertes Denken). Default = 2,
+        // weil das aktuelle Verhalten dem Programmier-Prompt entspricht und
+        // damit niemand bestehende Workflows verliert. Backend-Verkabelung
+        // (Prompt-Auswahl in GeminiClient) folgt im naechsten Schritt — fuer
+        // jetzt nur visueller Toggle.
+        private int _activeProfile = 2;
+
         // PromptBoard integration: on-demand prefix lookup + side panel.
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
 
@@ -370,6 +379,12 @@ namespace TerminalVoiceOverlay.Views
             ScreenshotButton.Background       = BtnScreenshot;       // teal
             InsertScreenshotButton.Background = BtnInsertScreenshot; // amber
             UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
+
+            // ── Profil-Tiles initial setzen ──
+            // Default = 2 (Programmierung), das entspricht dem bisherigen
+            // Verhalten ohne Profile. Der Benutzer kann jederzeit auf 1 oder
+            // 3 wechseln; die Backend-Verkabelung folgt im naechsten Schritt.
+            SetActiveProfile(_activeProfile);
 
             // ── Waveform-Striche einmalig im Canvas anlegen ──
             // 14 weisse Rectangles mit voller Deckkraft auf dem roten
@@ -944,6 +959,40 @@ namespace TerminalVoiceOverlay.Views
 
             Console.WriteLine($"Gemini {(geminiEnabled ? "ON" : "OFF")}");
         }
+
+        /// <summary>
+        /// Setzt das aktive Gemini-Korrektur-Profil (1/2/3) und aktualisiert
+        /// die drei Profil-Tiles farblich. Aktiv = goldgelb (BtnMicIdle),
+        /// inaktiv = dunkel (ToggleOff). Das Profil ist mutually exclusive:
+        /// genau einer leuchtet.
+        /// </summary>
+        private void SetActiveProfile(int profile)
+        {
+            _activeProfile = profile;
+            Profile1Button.Background = profile == 1 ? BtnMicIdle : ToggleOff;
+            Profile2Button.Background = profile == 2 ? BtnMicIdle : ToggleOff;
+            Profile3Button.Background = profile == 3 ? BtnMicIdle : ToggleOff;
+
+            // Foreground der TextBlocks: bei aktivem Tile dunkel (Kontrast auf
+            // gelb), bei inaktiv weiss (Kontrast auf dunkel).
+            UpdateProfileButtonForeground(Profile1Button, profile == 1);
+            UpdateProfileButtonForeground(Profile2Button, profile == 2);
+            UpdateProfileButtonForeground(Profile3Button, profile == 3);
+
+            Console.WriteLine($"Profile {profile} aktiv");
+        }
+
+        private static void UpdateProfileButtonForeground(System.Windows.Controls.Button button, bool active)
+        {
+            if (button.Content is System.Windows.Controls.TextBlock tb)
+            {
+                tb.Foreground = active ? System.Windows.Media.Brushes.Black : System.Windows.Media.Brushes.White;
+            }
+        }
+
+        private void BtnProfile1_Click(object sender, RoutedEventArgs e) => SetActiveProfile(1);
+        private void BtnProfile2_Click(object sender, RoutedEventArgs e) => SetActiveProfile(2);
+        private void BtnProfile3_Click(object sender, RoutedEventArgs e) => SetActiveProfile(3);
 
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TerminalVoiceOverlay"
-        Width="72" Height="612"
+        Width="96" Height="612"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -61,6 +61,34 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Profile button style: 24x32 numbered tile, CornerRadius=6.
+             Sits to the right of the mic stack. Three profiles toggle the
+             Gemini correction style (1=Standard, 2=Programmierung, 3=Meta). -->
+        <Style x:Key="ProfileButton" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Outer pill: pure black 2px ring like a proper Windows app frame.
@@ -71,7 +99,7 @@
     <Border CornerRadius="36"
             BorderBrush="#FF000000"
             BorderThickness="2"
-            Width="72" Height="612">
+            Width="96" Height="612">
         <StackPanel>
 
             <!-- Section 1: Stern (always-on prefix) -->
@@ -89,35 +117,73 @@
 
             <Border Background="#FF000000" Height="1"/>
 
-            <!-- Section 2: Mic + BTW (voice input, warm yellow whisper to
-                 match the yellow button family) -->
+            <!-- Section 2: Mic + BTW + Profile-Spalte (voice input, warm
+                 yellow whisper to match the yellow button family). Layout:
+                 Grid mit zwei Spalten — links die zwei MicButtons (52px),
+                 rechts die drei Profile-Tiles (24px). Hoehe-symmetrisch:
+                 Mic-Stack = 52+8+52 = 112px, Profile-Stack = 32+8+32+8+32
+                 = 112px. -->
             <Border Background="#FF1F1C15" Padding="0,6,0,6">
-                <StackPanel>
-                    <Button x:Name="MicButton"
-                            Style="{StaticResource MicButton}"
-                            Click="BtnMic_Click"
-                            ToolTip="Aufnahme starten oder stoppen">
-                        <Grid Width="48" Height="48">
-                            <!-- Dark icon for contrast on yellow background -->
-                            <Viewbox x:Name="MicIcon" Width="22" Height="22">
-                                <Path Fill="#FF1A1A1A" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
-                            </Viewbox>
-                            <Canvas x:Name="WaveformCanvas"
-                                    Width="48" Height="48"
-                                    ClipToBounds="True"
-                                    Visibility="Collapsed"/>
-                        </Grid>
-                    </Button>
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <Button x:Name="BtwButton"
-                            Style="{StaticResource MicButton}"
-                            Margin="0,8,0,0"
-                            Click="BtnBtw_Click"
-                            ToolTip="BTW-Spracheingabe">
-                        <!-- Dark text for contrast on yellow background -->
-                        <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
-                    </Button>
-                </StackPanel>
+                    <!-- Linke Spalte: die beiden Mics -->
+                    <StackPanel Grid.Column="0">
+                        <Button x:Name="MicButton"
+                                Style="{StaticResource MicButton}"
+                                Click="BtnMic_Click"
+                                ToolTip="Aufnahme starten oder stoppen">
+                            <Grid Width="48" Height="48">
+                                <!-- Dark icon for contrast on yellow background -->
+                                <Viewbox x:Name="MicIcon" Width="22" Height="22">
+                                    <Path Fill="#FF1A1A1A" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
+                                </Viewbox>
+                                <Canvas x:Name="WaveformCanvas"
+                                        Width="48" Height="48"
+                                        ClipToBounds="True"
+                                        Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+
+                        <Button x:Name="BtwButton"
+                                Style="{StaticResource MicButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnBtw_Click"
+                                ToolTip="BTW-Spracheingabe">
+                            <!-- Dark text for contrast on yellow background -->
+                            <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Rechte Spalte: drei Profile-Tiles, mutually exclusive -->
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <Button x:Name="Profile1Button"
+                                Style="{StaticResource ProfileButton}"
+                                Click="BtnProfile1_Click"
+                                ToolTip="Profil 1: Standard (alltaegliche Texte und Ideen)">
+                            <TextBlock Text="1" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile2Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile2_Click"
+                                ToolTip="Profil 2: Programmierung (Code-Begriffe, CLI, Frameworks)">
+                            <TextBlock Text="2" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+
+                        <Button x:Name="Profile3Button"
+                                Style="{StaticResource ProfileButton}"
+                                Margin="0,8,0,0"
+                                Click="BtnProfile3_Click"
+                                ToolTip="Profil 3: Meta-Intelligenz (strukturiertes Denken)">
+                            <TextBlock Text="3" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <Border Background="#FF000000" Height="1"/>
