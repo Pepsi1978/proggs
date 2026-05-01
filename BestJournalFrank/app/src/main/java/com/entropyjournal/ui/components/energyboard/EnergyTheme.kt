@@ -3,39 +3,46 @@ package com.entropyjournal.ui.components.energyboard
 import androidx.compose.ui.graphics.Color
 
 /**
- * Cyber-Amber Farbpalette fuer das Energy Board.
- * Kern fast weiss (Schwarzkoerperstrahlungs-Approximation),
- * Halo Bernstein/Amber, passt zum Dark-Theme-Orange #D36B00.
+ * Arctic-Lightning Farbpalette — kaltes, blaues elektrisches Hochspannungs-Look.
+ * Kern fast weiss (Schwarzkoerperstrahlungs-Approximation echter elektrischer Boegen),
+ * Halo Neon-Cyan, Aussensaum tiefes Elektrik-Blau, Violett als Akzent fuer Sub-Verzweigungen.
  */
 object EnergyTheme {
-    // Kern der Stromlinie und Funken — fast weiss mit warmem Stich
-    val Core = Color(0xFFFFF5E0)
+    // Kern aller hellen Strukturen — Eis-Weiss mit minimalem Blau-Stich
+    val Core = Color(0xFFEAF7FF)
 
-    // Erste Glow-Schicht (sichtbarste Farbe)
-    val GlowInner = Color(0xFFFFB300)
+    // Erste Glow-Schicht — Neon-Cyan (sichtbarste Elektrizitaets-Farbe)
+    val GlowInner = Color(0xFF00E5FF)
 
-    // Zweite Glow-Schicht (mittlere Reichweite)
-    val GlowMid = Color(0xFFD36B00)
+    // Zweite Glow-Schicht — Elektrik-Blau (mittlere Reichweite)
+    val GlowMid = Color(0xFF0288D1)
 
-    // Aussere Halo (sehr weicher Schein)
-    val GlowOuter = Color(0x40FF8C00)
+    // Aussere Halo — tiefes Nachtblau, sehr weicher Schein
+    val GlowOuter = Color(0x55003B7A)
 
-    // Farbe der wandernden Energie-Pakete (heller Spot auf der Linie)
-    val PacketPeak = Color(0xFFFFD700)
+    // Spitze des wandernden Energie-Pakets — heller als Cyan, fast weiss
+    val PacketPeak = Color(0xFFB3F0FF)
 
-    // Light-Mode-Variante (gedaempfter — Hintergrund ist weiss/hell)
-    val CoreLight = Color(0xFFFFA000)
-    val GlowInnerLight = Color(0xFFFF8F00)
-    val GlowMidLight = Color(0xFFE65100)
-    val GlowOuterLight = Color(0x30E65100)
-    val PacketPeakLight = Color(0xFFFFB300)
+    // Akzent fuer Verzweigungen / Quer-Blitze (Violett-Hauch wie echte Plasma-Boegen)
+    val Accent = Color(0xFF7C4DFF)
 
-    // Konstanten fuer Animation
-    const val PACKET_DURATION_MS = 2400L      // Wie lange braucht ein Energie-Paket vom Anfang bis Ende
-    const val PULSE_PERIOD_MS = 4000f         // Atemrhythmus der Punkte (4s Periode = ~0.25Hz)
-    const val MAX_SPARKS = 30                 // Maximum gleichzeitig aktiver Funken
-    const val SPARK_LIFETIME_MS_MIN = 200L
-    const val SPARK_LIFETIME_MS_MAX = 450L
-    const val SPARK_SPAWN_INTERVAL_MS = 90L   // Wie oft am Fokuspunkt ein Funken entsteht
-    const val FOCUS_FALLOFF_PX = 320f         // Reichweite des Fokus-Glows um den fokussierten Punkt
+    // Light-Mode-Variante (gedaempfter — Hintergrund hell, sonst zu unsichtbar)
+    val CoreLight = Color(0xFF0277BD)
+    val GlowInnerLight = Color(0xFF0288D1)
+    val GlowMidLight = Color(0xFF01579B)
+    val GlowOuterLight = Color(0x4001579B)
+    val PacketPeakLight = Color(0xFF039BE5)
+    val AccentLight = Color(0xFF512DA8)
+
+    // Animation-Konstanten — V2 deutlich aggressiver fuer "richtigen Strom"
+    const val PACKET_DURATION_MS = 1100L      // Schnelleres Wandern (war 2400)
+    const val MAX_SPARKS = 80                 // Deutlich mehr (war 30)
+    const val SPARK_LIFETIME_MS_MIN = 180L
+    const val SPARK_LIFETIME_MS_MAX = 380L
+    const val SPARK_SPAWN_INTERVAL_MS = 35L   // Viel schneller (war 90)
+    const val FOCUS_FALLOFF_PX = 320f
+    const val ARC_LIFETIME_MS = 220L          // Quer-Blitze: kurze gezackte Mini-Bogen
+    const val ARC_SPAWN_INTERVAL_MS = 220L    // Wie oft ein Quer-Blitz entsteht
+    const val LINE_JITTER_PX = 6f             // Wie stark die Hauptlinie zickzackt
+    const val LINE_SEGMENT_COUNT = 24         // In wieviele Segmente die Linie unterteilt wird
 }

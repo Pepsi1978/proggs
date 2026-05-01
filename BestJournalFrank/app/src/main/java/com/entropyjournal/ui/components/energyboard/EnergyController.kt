@@ -7,7 +7,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.geometry.Offset
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -16,71 +15,135 @@ import kotlin.random.Random
 /**
  * Halt-Zustand und Frame-Loop fuer das Energy Board.
  * - Animiertes [phaseNanos] wird im Canvas-Lambda gelesen, NICHT in der Composition.
- * - Funken liegen in einer SnapshotStateList — Add/Remove triggert nur Canvas-Repaint.
- * - Fokus-Position wird von aussen gesetzt (Touch oder Scroll-Mitte).
+ * - Funken und Quer-Blitze leben in SnapshotStateLists — Add/Remove triggert nur Repaint.
+ * - V2: kein Touch-Tracking mehr — der Overlay greift keine Touch-Events ab, damit die
+ *   LazyColumn frei scrollen kann.
  */
 class EnergyController {
     val phaseNanos = mutableLongStateOf(0L)
 
-    /** Funken-Liste — direkt aus drawBehind/Canvas lesen, nicht in Composition. */
+    /** Aktive Funken — direkt aus drawBehind/Canvas lesen, nicht in Composition. */
     val sparks = mutableStateListOf<Spark>()
 
-    /** Y-Position des aktuell fokussierten Punkts (in Canvas-Koordinaten). null = kein Fokus. */
+    /** Aktive Quer-Blitze (Mini-Lichtboegen die seitlich ausschiessen). */
+    val arcs = mutableStateListOf<Arc>()
+
+    /** Y-Position des fokussierten Punkts (Mitte des sichtbaren Bereichs, wird vom Overlay gesetzt). */
     val focusY = mutableStateOf<Float?>(null)
 
-    /** Touch-Position (null wenn nicht beruehrt). */
-    val touchPos = mutableStateOf<Offset?>(null)
+    /** Spawn-Punkte: alle sichtbaren Eintraege auf der Schiene. Wird vom Overlay pro Frame gesetzt. */
+    val spawnPoints = mutableStateOf<List<Float>>(emptyList())
+
+    /** Mitte der Linie horizontal — wird vom Overlay gesetzt. */
+    val railX = mutableStateOf(0f)
 
     private var lastSparkSpawnMs = 0L
+    private var lastArcSpawnMs = 0L
 
     /**
-     * Wird vom Frame-Loop aufgerufen — spawnt neue Funken am Fokuspunkt
-     * und entfernt abgelaufene Funken.
+     * Wird vom Frame-Loop aufgerufen — spawnt neue Funken/Quer-Blitze und entfernt abgelaufene.
+     * Spawn-Punkte sind alle sichtbaren Eintragspunkte; der Fokus-Punkt bekommt deutlich
+     * mehr Funken als die anderen.
      */
-    fun tick(frameTimeMs: Long, canvasWidth: Float) {
-        // Spawn-Quelle: Touch hat Vorrang vor Fokus
-        val spawnY = touchPos.value?.y ?: focusY.value ?: return
-        val spawnX = canvasWidth / 2f
+    fun tick(frameTimeMs: Long) {
+        val points = spawnPoints.value
+        if (points.isEmpty()) {
+            // Trotzdem alte Particles altern lassen
+            cullExpired(frameTimeMs)
+            return
+        }
 
+        val rx = railX.value
+        val focus = focusY.value
+
+        // Funken-Spawn — schnell und an mehreren Punkten
         if (frameTimeMs - lastSparkSpawnMs > EnergyTheme.SPARK_SPAWN_INTERVAL_MS) {
-            if (sparks.size < EnergyTheme.MAX_SPARKS) {
-                sparks.add(makeSpark(spawnX, spawnY, frameTimeMs))
+            // Aus dem Fokus-Punkt 2-3 Funken auf einmal, aus jedem anderen Punkt mit 25% Wahrscheinlichkeit einen
+            focus?.let { fy ->
+                if (sparks.size < EnergyTheme.MAX_SPARKS) {
+                    repeat(2 + Random.nextInt(2)) {
+                        if (sparks.size < EnergyTheme.MAX_SPARKS) {
+                            sparks.add(makeSpark(rx, fy, frameTimeMs, intense = true))
+                        }
+                    }
+                }
+            }
+            points.forEach { y ->
+                if (focus == null || (y - focus).let { d -> d * d > 200f * 200f }) {
+                    if (Random.nextFloat() < 0.45f && sparks.size < EnergyTheme.MAX_SPARKS) {
+                        sparks.add(makeSpark(rx, y, frameTimeMs, intense = false))
+                    }
+                }
             }
             lastSparkSpawnMs = frameTimeMs
         }
 
-        // Touch-Burst: bei aktivem Touch zusaetzliche Funken im selben Frame
-        if (touchPos.value != null && Random.nextFloat() < 0.4f && sparks.size < EnergyTheme.MAX_SPARKS) {
-            sparks.add(makeSpark(spawnX, spawnY, frameTimeMs))
+        // Quer-Blitze: seltener, aber visuell sehr deutlich
+        if (frameTimeMs - lastArcSpawnMs > EnergyTheme.ARC_SPAWN_INTERVAL_MS) {
+            val sourceY = if (focus != null && Random.nextFloat() < 0.6f) focus
+            else points.random()
+            arcs.add(makeArc(rx, sourceY, frameTimeMs))
+            lastArcSpawnMs = frameTimeMs
         }
 
-        // Tote Funken entfernen
-        val iter = sparks.iterator()
-        while (iter.hasNext()) {
-            val s = iter.next()
-            if (frameTimeMs - s.bornAtMs > s.lifetimeMs) iter.remove()
+        cullExpired(frameTimeMs)
+    }
+
+    private fun cullExpired(frameTimeMs: Long) {
+        val it = sparks.iterator()
+        while (it.hasNext()) {
+            val s = it.next()
+            if (frameTimeMs - s.bornAtMs > s.lifetimeMs) it.remove()
+        }
+        val ai = arcs.iterator()
+        while (ai.hasNext()) {
+            val a = ai.next()
+            if (frameTimeMs - a.bornAtMs > EnergyTheme.ARC_LIFETIME_MS) ai.remove()
         }
     }
 
-    private fun makeSpark(spawnX: Float, spawnY: Float, frameTimeMs: Long): Spark {
+    private fun makeSpark(rx: Float, y: Float, frameTimeMs: Long, intense: Boolean): Spark {
         val dir = if (Random.nextBoolean()) 1f else -1f
-        val angle = Random.nextFloat() * 0.6f + 0.2f  // 0.2..0.8 rad — leicht schraeg
-        val speed = Random.nextFloat() * 2.2f + 1.0f  // 1.0..3.2 px/frame
+        val angle = Random.nextFloat() * 0.8f + 0.1f  // 0.1..0.9 rad
+        val baseSpeed = if (intense) 2.4f else 1.4f
+        val speed = Random.nextFloat() * baseSpeed + 1.2f
         return Spark(
-            startX = spawnX,
-            startY = spawnY,
+            startX = rx,
+            startY = y,
             velX = dir * cos(angle) * speed,
-            velY = -sin(angle) * speed * 0.6f - Random.nextFloat() * 1.5f,
+            velY = (Random.nextFloat() * 2f - 1f) * speed * 0.5f,
             bornAtMs = frameTimeMs,
             lifetimeMs = (EnergyTheme.SPARK_LIFETIME_MS_MIN..EnergyTheme.SPARK_LIFETIME_MS_MAX).random(),
-            len = Random.nextFloat() * 6f + 4f,
+            len = if (intense) Random.nextFloat() * 8f + 6f else Random.nextFloat() * 5f + 3f,
         )
+    }
+
+    /**
+     * Erzeugt einen Quer-Blitz: gezackte Linie, die seitlich von der Schiene ausschiesst,
+     * 80-160px lang, mit 4-6 Knickpunkten.
+     */
+    private fun makeArc(rx: Float, y: Float, frameTimeMs: Long): Arc {
+        val dir = if (Random.nextBoolean()) 1f else -1f
+        val totalLen = 80f + Random.nextFloat() * 80f
+        val segments = 4 + Random.nextInt(3)
+        val points = ArrayList<Pair<Float, Float>>(segments + 1)
+        points.add(rx to y)
+        var x = rx
+        var cy = y
+        for (i in 1..segments) {
+            val progress = i.toFloat() / segments
+            val targetX = rx + dir * totalLen * progress
+            val jitter = (Random.nextFloat() * 18f - 9f)
+            x = targetX + (Random.nextFloat() * 12f - 6f)
+            cy = y + jitter * progress
+            points.add(x to cy)
+        }
+        return Arc(points = points, bornAtMs = frameTimeMs)
     }
 }
 
 /**
- * Einfacher Funken — keine Compose-State-Felder drin, nur Daten.
- * Bewegt sich ballistisch von startX/startY weg.
+ * Funken — bewegt sich ballistisch von startX/startY weg.
  */
 data class Spark(
     val startX: Float,
@@ -93,8 +156,16 @@ data class Spark(
 )
 
 /**
+ * Quer-Blitz — gezackte Linie aus mehreren Punkten, kurz lebend.
+ * points enthaelt Stuetz-Koordinaten (x, y) — direkt verbinden gibt einen Zackenblitz.
+ */
+data class Arc(
+    val points: List<Pair<Float, Float>>,
+    val bornAtMs: Long,
+)
+
+/**
  * Erzeugt einen [EnergyController] und startet den Frame-Loop.
- * Frame-Loop laeuft nur einmal (LaunchedEffect(Unit)).
  */
 @Composable
 fun rememberEnergyController(): EnergyController {
@@ -103,9 +174,7 @@ fun rememberEnergyController(): EnergyController {
         while (true) {
             withFrameNanos { nanos ->
                 controller.phaseNanos.longValue = nanos
-                // Tick mit Millisekunden — canvasWidth wird in Canvas-Lambda gesetzt,
-                // hier reicht 0f als Default. Spawn-Logik liest spawnY zuerst.
-                controller.tick(nanos / 1_000_000L, 0f)
+                controller.tick(nanos / 1_000_000L)
             }
         }
     }
@@ -113,8 +182,7 @@ fun rememberEnergyController(): EnergyController {
 }
 
 /**
- * Atem-Pulse mit drei ueberlagerten Sinuswellen (irrationale Frequenzverhaeltnisse via
- * goldenem Schnitt). Liefert 0f..1f, organisch wirkend.
+ * Atem-Pulse mit drei ueberlagerten Sinuswellen. Liefert 0f..1f.
  */
 fun organicPulse(timeSec: Float): Float {
     val w1 = sin(timeSec * 0.7f)
@@ -124,11 +192,19 @@ fun organicPulse(timeSec: Float): Float {
     return raw.coerceIn(0f, 1f).pow(0.7f)
 }
 
-/**
- * Glockenkurven-Falloff um den Fokus-Punkt — je weiter weg, desto schwaecher der Glow.
- * Sigma ist [EnergyTheme.FOCUS_FALLOFF_PX] / 2.
- */
+/** Glockenkurven-Falloff um den Fokus-Punkt. */
 fun focusGlow(distancePx: Float, sigma: Float = EnergyTheme.FOCUS_FALLOFF_PX / 2f): Float {
     val n = distancePx / sigma
     return kotlin.math.exp(-(n * n)).coerceIn(0f, 1f)
+}
+
+/**
+ * Pseudo-Random-Knister-Wert basierend auf Zeit + Position. Liefert 0.6f..1.0f, deterministisch
+ * (gleiches t,y → gleicher Wert), aber chaotisch genug fuer Flackern.
+ */
+fun crackleNoise(timeSec: Float, y: Float): Float {
+    val a = sin(timeSec * 12.34f + y * 0.07f)
+    val b = sin(timeSec * 23.71f + y * 0.13f)
+    val c = sin(timeSec * 41.0f + y * 0.21f)
+    return 0.7f + 0.15f * (a + b * 0.6f + c * 0.4f) / 2f
 }
