@@ -72,6 +72,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastRawTranscript: String?
     private var resetTimer: Timer?
 
+    // ── Profile-Korrektur (Windows-Port #1957..#1964) ──
+    // 1 = Standard, 2 = Programmierung, 3 = Meta-Intelligenz,
+    // 4-10 = numerische Slots (frei belegbar). Default = 1.
+    private var activeProfile: Int = 1
+    // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel. Erlaubt es, beim
+    // Profil-Wechsel den zuletzt diktierten Text durch ein anderes Profil
+    // zu schicken (max. 2 Minuten alt).
+    private var lastCorrectableRaw: String?
+    private var lastCorrectableAt: Date?
+    private static let reCorrectMaxAge: TimeInterval = 120  // 2 Minuten
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
             config = try Config.load()
@@ -139,6 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel = OverlayPanel()
         panel.setGeminiEnabled(geminiEnabled)
         panel.setAutoEnterEnabled(autoEnterEnabled)
+        panel.setActiveProfile(activeProfile)
 
         panel.onXClicked = { [weak self] in
             guard let self = self else { return }
@@ -182,6 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.onScreenshotClicked = { [weak self] in self?.takeScreenshot() }
         panel.onInsertScreenshotClicked = { [weak self] in self?.insertLastScreenshot() }
+        panel.onProfileClicked = { [weak self] profile in self?.switchProfile(profile) }
 
         setupStatusItem()
         setupGlobalHotkeys()
@@ -391,6 +404,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         NSLog("Transcript: %@", transcript)
                         #endif
                         self.lastRawTranscript = transcript
+                        // Re-Correct-Cache fuer Profile-Wechsel: Roh-Whisper-
+                        // Text + Zeitstempel merken. Erlaubt Frank, im Nach-
+                        // hinein durch Klick auf ein anderes Profil-Tile den
+                        // gleichen Text durch einen anderen Gemini-Prompt zu
+                        // schicken (max. 2 Minuten gueltig).
+                        self.lastCorrectableRaw = transcript
+                        self.lastCorrectableAt = Date()
                         self.handleTranscript(transcript, wasBtw: wasBtw)
                     case .failure(let error):
                         NSLog("Transcription error: %@", error.localizedDescription)
@@ -404,7 +424,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleTranscript(_ transcript: String, wasBtw: Bool) {
         if geminiEnabled, let geminiClient = geminiClient {
-            geminiClient.correctText(transcript) { [weak self] result in
+            geminiClient.correctText(transcript, profile: activeProfile) { [weak self] result in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     switch result {
@@ -729,6 +749,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard config.geminiAvailable else { return }
         geminiEnabled.toggle()
         panel.setGeminiEnabled(geminiEnabled)
+        // setGeminiEnabled triggert intern auch refreshProfileTiles —
+        // bei G=off werden alle Profile-Kästchen dunkel, bei G=on leuchtet
+        // das gespeicherte aktive Profil wieder goldgelb.
+    }
+
+    /// Wechselt das aktive Korrektur-Profil. Schaltet Gemini auto-ein wenn
+    /// es gerade aus war (klare Absicht durch Profil-Klick). Wenn der
+    /// zuletzt gediktierte Whisper-Text noch frisch im Cache liegt
+    /// (max. 2 Minuten), wird er per Re-Correct durch das neue Profil
+    /// geschickt: alte Eingabezeile via clearAllInput leeren, neue
+    /// Korrektur einfuegen.
+    ///
+    /// Wichtige Regel: NICHT aktiv wenn gerade aufgenommen wird — das wuerde
+    /// die Aufnahme-Anzeige stoeren. Der Mic-State wird waehrend des Re-
+    /// Correct NICHT veraendert; stattdessen wird das geklickte Tile kurz
+    /// orange als visueller Indikator (analog Windows #1956).
+    private func switchProfile(_ newProfile: Int) {
+        let oldProfile = activeProfile
+
+        // Auto-Aktivierung: Klick auf ein Profil-Tile zeigt klare Absicht,
+        // Gemini-Korrektur zu wollen. Falls G aus war, schalten wir es ein.
+        var didAutoEnableGemini = false
+        if !geminiEnabled, geminiClient != nil {
+            geminiEnabled = true
+            didAutoEnableGemini = true
+            panel.setGeminiEnabled(geminiEnabled)
+            tvoDebug("[App] Gemini auto-eingeschaltet durch Profil-Klick")
+        }
+
+        activeProfile = newProfile
+        panel.setActiveProfile(newProfile)
+
+        // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts.
+        if isRecording { return }
+        if !didAutoEnableGemini && newProfile == oldProfile { return }
+        guard geminiEnabled, let gemini = geminiClient else { return }
+        guard let rawText = lastCorrectableRaw, !rawText.isEmpty else { return }
+        guard let cachedAt = lastCorrectableAt,
+              Date().timeIntervalSince(cachedAt) <= AppDelegate.reCorrectMaxAge else {
+            lastCorrectableRaw = nil
+            lastCorrectableAt = nil
+            return
+        }
+
+        // Visueller Indikator: das geklickte Tile waehrend des Re-Correct
+        // orange faerben.
+        panel.flashProfileTile(newProfile, processing: true)
+
+        gemini.correctText(rawText, profile: newProfile) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success(let corrected):
+                    var finalText = corrected
+                    // Always-On-Wrappers wieder anwenden falls aktiv.
+                    if self.alwaysOnActive {
+                        let pre = AlwaysOnPrefixService.buildPre()
+                        let post = AlwaysOnPrefixService.buildPost()
+                        if !pre.isEmpty { finalText = pre + finalText }
+                        if !post.isEmpty { finalText = finalText + post }
+                    }
+                    finalText += " ; "
+
+                    // Eingabezeile vollstaendig loeschen, neuen Text paten.
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        TerminalController.clearAllInput()
+                        usleep(120_000)
+                        TerminalController.pasteText(finalText)
+                    }
+                    self.hasPastedText = true
+                    tvoDebug("[App] Re-Correct ok (\(finalText.count) chars, profile \(newProfile))")
+                case .failure(let error):
+                    tvoDebug("[App] Re-Correct error: \(error.localizedDescription)")
+                }
+                // Tile zurueck auf Standard-Look.
+                self.panel.flashProfileTile(newProfile, processing: false)
+            }
+        }
     }
 
     // MARK: - Auto-Enter Toggle & Manual Enter
@@ -804,10 +902,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func scheduleReset(wasBtw: Bool = false) {
         resetTimer?.invalidate()
         resetTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            // Defensiver Check gegen Race Condition (Windows #1956): wenn
+            // gerade neu aufgenommen wird, Mic-Anzeige NICHT auf Idle
+            // ueberschreiben. Sonst sieht der Benutzer mitten in der Aufnahme
+            // ploetzlich das gelbe Idle-Mikrofon und denkt, er habe vergessen
+            // zu druecken.
+            if self.isRecording { return }
             if wasBtw {
-                self?.panel.setBtwMicState(.idle)
+                self.panel.setBtwMicState(.idle)
             } else {
-                self?.panel.setMicState(.idle)
+                self.panel.setMicState(.idle)
             }
         }
     }

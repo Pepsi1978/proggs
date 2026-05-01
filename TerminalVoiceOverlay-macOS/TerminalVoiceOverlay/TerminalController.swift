@@ -31,6 +31,26 @@ final class TerminalController {
         }
     }
 
+    /// Loescht den GESAMTEN Eingabe-Buffer — auch bei mehrzeiligem Input
+    /// (z.B. Claude Code CLI mit Shift+Enter-Zeilen). Drueckt Ctrl+U fuenfmal
+    /// hintereinander mit 50 ms Pause, bis garantiert nichts mehr in der
+    /// Eingabezeile steht. Ctrl+U ist ein harmloser No-Op wenn der Buffer
+    /// leer ist, also kein Risiko bei zu vielen Wiederholungen.
+    ///
+    /// Wird beim Profil-Wechsel im Voice-Overlay verwendet, damit der zuletzt
+    /// eingefuegte Prompt restlos verschwindet, bevor die neue Korrektur
+    /// reingepastet wird.
+    static func clearAllInput() {
+        sendQueue.async {
+            activateTerminal()
+            usleep(150_000)
+            for _ in 0..<5 {
+                sendKeyCombo(keyCode: 0x20, flags: .maskControl)
+                usleep(50_000)
+            }
+        }
+    }
+
     /// Pastes text via clipboard + Cmd+V, optionally sends Enter afterwards.
     /// Saves and restores the previous clipboard content.
     /// All blocking work (activateTerminal, usleep, CGEvent.post) runs on the

@@ -11,26 +11,58 @@ final class GeminiClient {
         self.apiKey = apiKey
     }
 
-    /// Pfad zur externen Gemini-Korrektur-Prompt-Datei. Wird bei JEDEM
+    /// Basis-Verzeichnis fuer alle Gemini-Korrektur-Prompts. Wird bei JEDEM
     /// correctText-Aufruf neu gelesen — Aenderungen wirken sofort ohne
-    /// App-Neustart. Fehlt die Datei: Fallback auf eingebauten Default-Prompt.
-    private static var geminiPromptFilePath: URL {
+    /// App-Neustart.
+    private static var geminiPromptDir: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("SK/VoiceOverlays/gemini-correction-prompt.txt")
+            .appendingPathComponent("SK/VoiceOverlays")
     }
 
-    private static func loadCorrectionPrompt() -> String? {
-        let url = geminiPromptFilePath
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+    /// Mappt eine Profil-Nummer auf den Dateinamen der zugehoerigen
+    /// Prompt-Datei. Profile 1-3 haben semantische Namen (Standard,
+    /// Programmierung, Meta), Profile 4-10 haben numerische Slots, die
+    /// der Benutzer spaeter mit eigenen Prompt-Dateien fuellen kann.
+    /// Falls die profilspezifische Datei fehlt, faellt der Aufrufer auf
+    /// die alte Sammeldatei zurueck (Backward Compat) und am Ende auf
+    /// den eingebauten defaultCorrectionTemplate.
+    private static func profilePromptFileName(_ profile: Int) -> String {
+        switch profile {
+        case 1: return "gemini-correction-prompt-standard.txt"
+        case 2: return "gemini-correction-prompt-programmierung.txt"
+        case 3: return "gemini-correction-prompt-meta.txt"
+        case 4...10: return String(format: "gemini-correction-prompt-%02d.txt", profile)
+        default: return "gemini-correction-prompt-standard.txt"
+        }
     }
 
-    func correctText(_ text: String, completion: @escaping (Result<String, Error>) -> Void) {
-        // Externe Korrektur-Prompt-Datei hat Vorrang — Frank kann sie
-        // jederzeit pflegen ohne Rebuild. Fallback: eingebauter Default.
-        let template = Self.loadCorrectionPrompt() ?? GeminiClient.defaultCorrectionTemplate
+    private static func loadCorrectionPrompt(profile: Int) -> String? {
+        // 1) Profil-spezifische Datei
+        let profileURL = geminiPromptDir.appendingPathComponent(profilePromptFileName(profile))
+        if FileManager.default.fileExists(atPath: profileURL.path),
+           let text = try? String(contentsOf: profileURL, encoding: .utf8) {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+
+        // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
+        let legacyURL = geminiPromptDir.appendingPathComponent("gemini-correction-prompt.txt")
+        if FileManager.default.fileExists(atPath: legacyURL.path),
+           let text = try? String(contentsOf: legacyURL, encoding: .utf8) {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+
+        return nil
+    }
+
+    func correctText(_ text: String, profile: Int = 1,
+                     completion: @escaping (Result<String, Error>) -> Void) {
+        // Profil-spezifische Korrektur-Prompt-Datei hat Vorrang — Frank kann
+        // sie jederzeit pflegen ohne Rebuild. Fallbacks: Legacy-Sammeldatei,
+        // dann eingebauter Default-Template.
+        let template = Self.loadCorrectionPrompt(profile: profile)
+            ?? GeminiClient.defaultCorrectionTemplate
         let prompt = template + "\n" + text + "\nTEXT_END"
 
         DispatchQueue.global(qos: .userInitiated).async { [self] in

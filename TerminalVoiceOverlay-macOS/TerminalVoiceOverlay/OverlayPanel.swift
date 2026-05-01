@@ -2,44 +2,45 @@ import AppKit
 
 // MARK: - Colors
 // Tuned to match the Windows TerminalVoiceOverlay 1:1 after commits
-// #1914..#1919: Material 700/800 dark-theme tones, yellow Mic family,
-// teal Screenshot/Insert pair, blue Copy/Paste pair, and the 7-section
-// dark panel with black dividers and a black 2px outer ring.
+// #1953..#1964: Material 700/800 dark-theme tones, yellow Mic family,
+// teal Screenshot/Insert pair, blue Copy/Paste pair, profile tiles in
+// goldenrod (active) / dark (inactive), and the 7-section dark panel
+// with black dividers and a black 2px outer ring.
 private extension NSColor {
     // Idle/base
     static let btnIdle       = NSColor(hex: "#2D2D2D")
-    static let btnRecording  = NSColor(hex: "#C62828")  // Red 700  (was #E53935)
-    static let btnProcessing = NSColor(hex: "#EF6C00")  // Orange 800 (was #FF9800)
-    static let btnSuccess    = NSColor(hex: "#2E7D32")  // Green 700  (was #43A047)
+    static let btnRecording  = NSColor(hex: "#C62828")
+    static let btnProcessing = NSColor(hex: "#EF6C00")
+    static let btnSuccess    = NSColor(hex: "#2E7D32")
     // Toggles
-    static let toggleOn       = NSColor(hex: "#2E7D32") // Green 700  (was #16a34a)
-    static let toggleOnBright = NSColor(hex: "#43A047") // brighter green for transient flashes
+    static let toggleOn       = NSColor(hex: "#2E7D32")
+    static let toggleOnBright = NSColor(hex: "#43A047")
     static let toggleOff      = NSColor(hex: "#2D2D2D")
-    // Mic + BTW — Yellow family (warm cluster joining the gold star).
-    // Requires dark labelColor for legibility on yellow surface.
-    static let btnBtwIdle      = NSColor(hex: "#FBC02D") // Yellow 700
-    static let btnBtwRecording = NSColor(hex: "#F57F17") // Yellow 900
-    static let btnBtwPulse     = NSColor(hex: "#FFEB3B") // Yellow 500
-    static let btnMicIdle      = NSColor(hex: "#F9A825") // Yellow 800
+    // Mic + BTW — Yellow family
+    static let btnBtwIdle      = NSColor(hex: "#FBC02D")
+    static let btnBtwRecording = NSColor(hex: "#F57F17")
+    static let btnBtwPulse     = NSColor(hex: "#FFEB3B")
+    static let btnMicIdle      = NSColor(hex: "#F9A825")
     // Special
-    static let btnX        = NSColor(hex: "#C62828")     // Red 700
+    static let btnX        = NSColor(hex: "#C62828")
     static let btnXPressed = NSColor(hex: "#E53935")
-    // Copy/Paste — pair in Light Blue family
-    static let btnCopy  = NSColor(hex: "#0288D1")        // Light Blue 700
-    static let btnPaste = NSColor(hex: "#0277BD")        // Light Blue 800
-    // Screenshot/Insert — pair in Teal family (NEW — ports the Windows
-    // ScreenshotButton + InsertScreenshotButton from #1912..#1917).
-    static let btnScreenshot       = NSColor(hex: "#00796B") // Teal 700
-    static let btnInsertScreenshot = NSColor(hex: "#00897B") // Teal 600
-    // Star (always-on prefix)
-    static let ultrathinkOn = NSColor(hex: "#9E7B0E")    // antique gold (was #B8860B)
-    static let starGold     = NSColor(hex: "#DAA520")    // goldenrod    (was #FFD700)
+    // Copy/Paste
+    static let btnCopy  = NSColor(hex: "#0288D1")
+    static let btnPaste = NSColor(hex: "#0277BD")
+    // Screenshot/Insert
+    static let btnScreenshot       = NSColor(hex: "#00796B")
+    static let btnInsertScreenshot = NSColor(hex: "#00897B")
+    // Star
+    static let ultrathinkOn = NSColor(hex: "#9E7B0E")
+    static let starGold     = NSColor(hex: "#DAA520")
     static let starMuted    = NSColor(hex: "#8B7355")
     // Pulse for main mic recording
-    static let btnRecordingBright = NSColor(hex: "#FF5252") // was #FF6666
+    static let btnRecordingBright = NSColor(hex: "#FF5252")
+    // Tooltip
+    static let tooltipBackground = NSColor(hex: "#1A1A1A")
+    static let tooltipBorder     = NSColor(hex: "#3A3A3A")
 
-    // Dark label / icon tint for the yellow Mic/BTW buttons. White on
-    // yellow has ~1.7:1 contrast (illegible); dark gives ~12:1.
+    // Dark label / icon tint for the yellow Mic/BTW + active profile tiles.
     static let darkLabel = NSColor(hex: "#1A1A1A")
 
     convenience init(hex: String) {
@@ -57,21 +58,30 @@ private extension NSColor {
 
 // MARK: - RoundButton
 class RoundButton: NSView {
-    let diameter: CGFloat = 40
+    var buttonWidth: CGFloat = 40
+    var buttonHeight: CGFloat = 40
+    var cornerRadius: CGFloat = 0          // 0 = round (oval), >0 = squarish with rounding
     var buttonColor: NSColor = .btnIdle { didSet { needsDisplay = true } }
     var label: String = "" { didSet { needsDisplay = true } }
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
     var labelColor: NSColor = .white { didSet { needsDisplay = true } }
     var symbolImage: NSImage?
-    var useSquareShape: Bool = false
+    var useSquareShape: Bool = false       // legacy flag — retained for compat
     var onClick: (() -> Void)?
     var onMouseDown: (() -> Void)?
     var onMouseUp: (() -> Void)?
+    /// Optional callbacks, used by the TooltipManager. Kept distinct from
+    /// the existing hover-scale animation so tooltips can be wired in
+    /// without breaking the animation behaviour.
+    var onMouseEnteredHook: (() -> Void)?
+    var onMouseExitedHook: (() -> Void)?
 
-    init(label: String, color: NSColor) {
+    init(label: String, color: NSColor, width: CGFloat = 40, height: CGFloat = 40) {
         self.label = label
         self.buttonColor = color
-        super.init(frame: NSRect(x: 0, y: 0, width: diameter, height: diameter))
+        self.buttonWidth = width
+        self.buttonHeight = height
+        super.init(frame: NSRect(x: 0, y: 0, width: width, height: height))
         wantsLayer = true
     }
 
@@ -85,9 +95,14 @@ class RoundButton: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let inset = bounds.insetBy(dx: 1, dy: 1)
-        let path = useSquareShape
-            ? NSBezierPath(roundedRect: inset, xRadius: 6, yRadius: 6)
-            : NSBezierPath(ovalIn: inset)
+        let path: NSBezierPath
+        if cornerRadius > 0 {
+            path = NSBezierPath(roundedRect: inset, xRadius: cornerRadius, yRadius: cornerRadius)
+        } else if useSquareShape {
+            path = NSBezierPath(roundedRect: inset, xRadius: 6, yRadius: 6)
+        } else {
+            path = NSBezierPath(ovalIn: inset)
+        }
         buttonColor.setFill()
         path.fill()
 
@@ -130,10 +145,12 @@ class RoundButton: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         animateScale(1.15)
+        onMouseEnteredHook?()
     }
 
     override func mouseExited(with event: NSEvent) {
         animateScale(1.0)
+        onMouseExitedHook?()
     }
 
     private func animateScale(_ scale: CGFloat) {
@@ -153,6 +170,162 @@ class RoundButton: NSView {
     }
 }
 
+// MARK: - TooltipPanel
+/// Eigenes Tooltip-Fenster. NSView.toolTip waere nicht ausreichend — es
+/// erlaubt keine freie Position oder eigenes Styling. Stattdessen ein
+/// borderless NSPanel mit dunklem Hintergrund, abgerundeten Ecken und
+/// weisser Schrift, das per TooltipManager an der korrekten Stelle
+/// (links vom Pillar, mittig zum Button) eingeblendet wird.
+final class TooltipPanel: NSPanel {
+    private let label: NSTextField
+    private static let horizontalPadding: CGFloat = 10
+    private static let verticalPadding: CGFloat   = 6
+
+    init() {
+        let lbl = NSTextField(labelWithString: "")
+        lbl.font = .systemFont(ofSize: 12, weight: .regular)
+        lbl.textColor = .white
+        lbl.backgroundColor = .clear
+        lbl.isBordered = false
+        lbl.isEditable = false
+        lbl.isSelectable = false
+        lbl.alignment = .center
+        self.label = lbl
+
+        super.init(
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 28),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+
+        self.level = .statusBar
+        self.isFloatingPanel = true
+        self.becomesKeyOnlyIfNeeded = true
+        self.hidesOnDeactivate = false
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        self.isOpaque = false
+        self.backgroundColor = .clear
+        self.hasShadow = true
+        self.ignoresMouseEvents = true
+
+        let cv = NSView()
+        cv.wantsLayer = true
+        cv.layer?.backgroundColor = NSColor.tooltipBackground.cgColor
+        cv.layer?.cornerRadius = 8
+        cv.layer?.borderWidth = 1
+        cv.layer?.borderColor = NSColor.tooltipBorder.cgColor
+        cv.layer?.masksToBounds = true
+        self.contentView = cv
+
+        cv.addSubview(label)
+    }
+
+    /// Setzt den Text und positioniert das Panel so, dass die rechte Kante
+    /// 8 Pixel links vom uebergebenen overlayFrame.minX sitzt und die
+    /// vertikale Mitte mit centeredOnY zusammenfaellt. Wird von TooltipManager
+    /// aufgerufen wenn ein Hover-Timer abgelaufen ist.
+    func showText(_ text: String, leftOf overlayFrame: NSRect, centeredOnY: CGFloat,
+                  margin: CGFloat = 8) {
+        label.stringValue = text
+
+        // Zielgroesse aus Text + Padding berechnen
+        let textSize = label.fittingSize
+        let panelWidth  = ceil(textSize.width  + Self.horizontalPadding * 2)
+        let panelHeight = ceil(textSize.height + Self.verticalPadding   * 2)
+
+        let x = overlayFrame.minX - margin - panelWidth
+        let y = centeredOnY - panelHeight / 2
+
+        self.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight),
+                      display: false)
+        // Label im Content zentrieren
+        label.frame = NSRect(
+            x: Self.horizontalPadding,
+            y: Self.verticalPadding,
+            width: panelWidth - Self.horizontalPadding * 2,
+            height: panelHeight - Self.verticalPadding * 2
+        )
+
+        if !self.isVisible { self.orderFrontRegardless() }
+    }
+
+    func hide() {
+        if self.isVisible { self.orderOut(nil) }
+    }
+
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
+// MARK: - TooltipManager
+/// Verwaltet einen einzigen TooltipPanel fuer das gesamte Overlay. Pro
+/// Button werden mouseEntered/mouseExited-Hooks registriert, ein 100ms
+/// Hover-Timer entscheidet ueber das Anzeigen. So bleibt der Code zentral
+/// und die Latenz deterministisch — anders als WPF wartet AppKit nicht
+/// auf Maus-Stillstand, der Timer feuert auch bei Mausbewegung.
+final class TooltipManager {
+    static let hoverDelay: TimeInterval = 0.100   // 100 ms wie Windows
+
+    private weak var ownerPanel: NSPanel?
+    private let tooltipPanel = TooltipPanel()
+    private var entries: [(view: RoundButton, text: String)] = []
+    private var pendingTimer: Timer?
+    private var pendingButton: RoundButton?
+    private var pendingText: String?
+
+    init(ownerPanel: NSPanel) {
+        self.ownerPanel = ownerPanel
+    }
+
+    /// Registriert einen Tooltip fuer einen Button. mouseEntered/mouseExited-
+    /// Hooks werden gesetzt, alte Hooks werden ueberschrieben.
+    func register(_ button: RoundButton, text: String) {
+        entries.append((button, text))
+        button.onMouseEnteredHook = { [weak self, weak button] in
+            guard let self = self, let button = button else { return }
+            self.startHover(on: button, text: text)
+        }
+        button.onMouseExitedHook = { [weak self] in
+            self?.cancelHover()
+        }
+    }
+
+    private func startHover(on button: RoundButton, text: String) {
+        cancelHover()
+        pendingButton = button
+        pendingText = text
+        pendingTimer = Timer.scheduledTimer(withTimeInterval: TooltipManager.hoverDelay,
+                                            repeats: false) { [weak self] _ in
+            self?.fire()
+        }
+    }
+
+    private func cancelHover() {
+        pendingTimer?.invalidate()
+        pendingTimer = nil
+        tooltipPanel.hide()
+        pendingButton = nil
+        pendingText = nil
+    }
+
+    private func fire() {
+        guard let button = pendingButton,
+              let text = pendingText,
+              let owner = ownerPanel else { return }
+
+        // Button-Frame relativ zum Screen ermitteln
+        let buttonFrameInPanel = button.convert(button.bounds, to: nil)  // panel coords
+        // Panel-coords → screen-coords
+        let panelOrigin = owner.frame.origin
+        let buttonScreenY = panelOrigin.y + buttonFrameInPanel.midY
+
+        tooltipPanel.showText(text,
+                              leftOf: owner.frame,
+                              centeredOnY: buttonScreenY)
+    }
+}
+
 // MARK: - OverlayPanel
 final class OverlayPanel: NSPanel {
     let ultrathinkButton: RoundButton
@@ -164,14 +337,21 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     let copyButton: RoundButton
     let pasteButton: RoundButton
-    /// Capture full screen via /usr/sbin/screencapture, save to
-    /// ~/Pictures/Screenshots/. Wired up in AppDelegate.
     let screenshotButton: RoundButton
-    /// Paste path of the last captured screenshot into the active terminal.
     let insertScreenshotButton: RoundButton
+
+    /// Profile tiles 1-10. Index 0 = Profil 1.
+    let profileButtons: [RoundButton]
 
     private var pulseTimer: Timer?
     private var btwPulseTimer: Timer?
+    private var tooltipManager: TooltipManager?
+
+    /// Internal record of which profile is "active". Becomes visible
+    /// (goldenrod) only when geminiOn=true. When geminiOn=false all tiles
+    /// are dim — just like Windows commit #1961.
+    private var activeProfile: Int = 1
+    private var geminiOn: Bool = true
 
     // Right-click drag state
     private var isDragging = false
@@ -192,36 +372,50 @@ final class OverlayPanel: NSPanel {
     var onPasteClicked: (() -> Void)?
     var onScreenshotClicked: (() -> Void)?
     var onInsertScreenshotClicked: (() -> Void)?
-    /// Fired on every right-click drag step so anything docked to this
-    /// panel (the PromptBoard side panel) can keep up. Also fired on
-    /// drag-end so the final position is in sync.
+    /// Klick auf eines der zehn Profil-Tiles. Index 1...10.
+    var onProfileClicked: ((Int) -> Void)?
     var onPillarMoved: (() -> Void)?
 
     init() {
         let btnSize: CGFloat = 40
         let micSize: CGFloat = 52
-        let panelWidth: CGFloat = 72
-        // Total panel height: 7 sections + 6 dividers + 2*2 outer border.
-        // S1 (Star, 63) + 1 + S2 (Mic+BTW, 124) + 1 + S3 (W+G, 100) + 1
-        // + S4 (X, 52) + 1 + S5 (Copy+Paste, 100) + 1 + S6 (Screenshot+
-        // Insert, 100) + 1 + S7 (Enter, 63) + 4 (border) = 612.
+        let profileWidth: CGFloat = 24
+        let profileHeight: CGFloat = 32
+        let panelWidth: CGFloat = 96       // war 72 — jetzt mit Profile-Spalte rechts
+        // Total panel height bleibt 612 px:
+        // S1 (63) + 1 + S2 (124) + 1 + S3 (100) + 1 + S4 (52) + 1
+        // + S5 (100) + 1 + S6 (100) + 1 + S7 (63) = 608 + 4 (border) = 612
         let panelHeight: CGFloat = 612
 
-        // Create buttons
+        // x-Achse Layout (alles in panel-coords, origin links):
+        //   Mic-Spalte: x=7..59  (52 px)  → Mic-Mitte = 33
+        //   Spacer:     x=59..65 (6 px)
+        //   Profile:    x=65..89 (24 px)  → Profile-Mitte = 77
+        //   Aussenrand: 7 px links + 7 px rechts
+        // Action-Buttons (40 px) zentriert in der Mic-Spalte → x=13..53,
+        // Mitte = 33 (gleiche Achse wie Mic).
+        // Stern und Enter bleiben mittig im Window → x=28..68, Mitte = 48.
+        let micColumnX: CGFloat = 7
+        let micColumnW: CGFloat = 52
+        let actionButtonX: CGFloat = micColumnX + (micColumnW - btnSize) / 2  // 13
+        let centeredButtonX: CGFloat = (panelWidth - btnSize) / 2             // 28
+        let profileX: CGFloat = micColumnX + micColumnW + 6                   // 65
+
+        // Buttons erstellen
         ultrathinkButton = RoundButton(label: "★", color: .toggleOff)
         ultrathinkButton.labelFont = .systemFont(ofSize: 20, weight: .bold)
         ultrathinkButton.labelColor = .starMuted
 
         xButton = RoundButton(label: "X", color: .btnX)
 
-        btwButton = RoundButton(label: "BTW", color: .btnBtwIdle)
+        btwButton = RoundButton(label: "BTW", color: .btnBtwIdle, width: micSize, height: micSize)
         btwButton.labelFont = .boldSystemFont(ofSize: 11)
-        btwButton.labelColor = .darkLabel       // dark text on yellow
+        btwButton.labelColor = .darkLabel
         btwButton.useSquareShape = true
 
-        micButton = RoundButton(label: "", color: .btnMicIdle)
+        micButton = RoundButton(label: "", color: .btnMicIdle, width: micSize, height: micSize)
         micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
-        micButton.labelColor = .darkLabel       // dark icon tint on yellow
+        micButton.labelColor = .darkLabel
         micButton.useSquareShape = true
 
         wButton = RoundButton(label: "W", color: .btnIdle)
@@ -240,16 +434,24 @@ final class OverlayPanel: NSPanel {
         insertScreenshotButton = RoundButton(label: "", color: .btnInsertScreenshot)
         insertScreenshotButton.symbolImage = NSImage(systemSymbolName: "paperclip", accessibilityDescription: "Insert screenshot path")
 
-        // Calculate screen position (right edge, vertically near top).
-        // X offset 22 px from right edge.
-        // Y offset 40 px from top.
-        // Saved position via dragging still wins below; this is just
-        // the first-launch fallback.
+        // Profile-Tiles 1...10. Alle 24x32 mit cornerRadius 6.
+        var tiles: [RoundButton] = []
+        for n in 1...10 {
+            let label = "\(n)"
+            let tile = RoundButton(label: label, color: .toggleOff,
+                                   width: profileWidth, height: profileHeight)
+            tile.labelFont = .boldSystemFont(ofSize: n == 10 ? 11 : 13)
+            tile.labelColor = .white
+            tile.cornerRadius = 6
+            tiles.append(tile)
+        }
+        self.profileButtons = tiles
+
+        // Position auf dem Bildschirm (rechte Kante, nahe oben)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
         var x = screenFrame.maxX - panelWidth - 22
         var y = screenFrame.maxY - panelHeight - 40
 
-        // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
            let savedX = savedPosition["x"] as? Double,
            let savedY = savedPosition["y"] as? Double {
@@ -275,76 +477,73 @@ final class OverlayPanel: NSPanel {
         self.backgroundColor = .clear
         self.hasShadow = true
 
-        // Outer pill: rounded mask + 2 px black ring (matches Windows
-        // #1915). The contentView itself is transparent — the section
-        // sub-views below paint their own opaque backgrounds, so the
-        // panel reads as a coherent dark surface with a clean black
-        // frame instead of a translucent grey pill.
+        // Outer pill: rounded mask + 2 px black ring (matches Windows #1957).
+        // CornerRadius=36 wie Windows (panelWidth/2 ist 48; Windows benutzt
+        // 36 als visuelle Konstante — wir ziehen das ebenfalls fest).
         self.contentView?.wantsLayer = true
-        self.contentView?.layer?.cornerRadius = panelWidth / 2  // 36
+        self.contentView?.layer?.cornerRadius = 36
         self.contentView?.layer?.masksToBounds = true
         self.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         self.contentView?.layer?.borderColor = NSColor.black.cgColor
         self.contentView?.layer?.borderWidth = 2
 
         // ── 7 colour sections + 6 black 1 px dividers ──
-        // y-coordinates use AppKit (origin at panel bottom). The section
-        // identity colours are very dim near-black tints (channel range
-        // 0x14..0x1F) so the panel reads as one cohesive dark surface
-        // and the colour signal lives on the buttons.
-        // Layout — bottom-up so the visual order is, top→bottom:
-        //   ★ → Mic → BTW → W → G → X → Copy → Paste → Screenshot → Insert → Enter
-        addSection(hex: "#1A1A1A", y: 2,   height: 63, width: panelWidth)  // S7 Enter (neutral)
+        // y-coordinates use AppKit (origin at panel bottom). Layout — bottom-up:
+        addSection(hex: "#1A1A1A", y: 2,   height: 63, width: panelWidth)  // S7 Enter
         addDivider(y: 65, width: panelWidth)
-        addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Screenshot+Insert (cool green)
+        addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Screenshot+Insert
         addDivider(y: 166, width: panelWidth)
-        addSection(hex: "#151B1D", y: 167, height: 100, width: panelWidth) // S5 Copy+Paste (cool teal)
+        addSection(hex: "#151B1D", y: 167, height: 100, width: panelWidth) // S5 Copy+Paste
         addDivider(y: 267, width: panelWidth)
-        addSection(hex: "#1F1515", y: 268, height: 52,  width: panelWidth) // S4 X (warm red)
+        addSection(hex: "#1F1515", y: 268, height: 52,  width: panelWidth) // S4 X
         addDivider(y: 320, width: panelWidth)
-        addSection(hex: "#19151F", y: 321, height: 100, width: panelWidth) // S3 W+G (cool violet)
+        addSection(hex: "#19151F", y: 321, height: 100, width: panelWidth) // S3 W+G
         addDivider(y: 421, width: panelWidth)
-        addSection(hex: "#1F1C15", y: 422, height: 124, width: panelWidth) // S2 Mic+BTW (warm yellow)
+        addSection(hex: "#1F1C15", y: 422, height: 124, width: panelWidth) // S2 Mic+BTW
         addDivider(y: 546, width: panelWidth)
-        addSection(hex: "#1F1B15", y: 547, height: 63,  width: panelWidth) // S1 Star (warm amber)
+        addSection(hex: "#1F1B15", y: 547, height: 63,  width: panelWidth) // S1 Star
 
-        // ── Position buttons ──
-        // y-coordinates derived from each section's y + WPF-bottom-padding.
-        // Section S1 (y=547) padding "0,17,0,6" -> button y in section 6   -> panel y 553
-        // Section S2 (y=422) padding "0,6,0,6"  -> BTW y 6, Mic y 66       -> panel BTW 428, Mic 488
-        // Section S3 (y=321)                    -> G y 6, W y 54           -> panel G 327,  W 375
-        // Section S4 (y=268)                    -> X y 6                   -> panel X 274
-        // Section S5 (y=167)                    -> Paste y 6, Copy y 54    -> panel Paste 173, Copy 221
-        // Section S6 (y=66)                     -> Insert y 6, Shot y 54   -> panel Insert 72, Screenshot 120
-        // Section S7 (y=2)   padding "0,6,0,17" -> button y in section 17  -> panel y 19
-        let smallInset = (panelWidth - btnSize) / 2  // 16
-        let micInset   = (panelWidth - micSize) / 2  // 10
+        // ── Position der Action-Buttons (Mic-Achse links) ──
+        // Stern (S1) und Enter (S7) bleiben zentriert, alle anderen rutschen
+        // auf die Mic-Achse links.
+        ultrathinkButton.frame       = NSRect(x: centeredButtonX, y: 553, width: btnSize, height: btnSize)
+        micButton.frame              = NSRect(x: micColumnX,      y: 488, width: micSize, height: micSize)
+        btwButton.frame              = NSRect(x: micColumnX,      y: 428, width: micSize, height: micSize)
+        wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
+        gButton.frame                = NSRect(x: actionButtonX,   y: 327, width: btnSize, height: btnSize)
+        xButton.frame                = NSRect(x: actionButtonX,   y: 274, width: btnSize, height: btnSize)
+        copyButton.frame             = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
+        pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
+        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
+        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
+        enterButton.frame            = NSRect(x: centeredButtonX, y: 19,  width: btnSize, height: btnSize)
 
-        ultrathinkButton.frame       = NSRect(x: smallInset, y: 553, width: btnSize, height: btnSize)
-        micButton.frame              = NSRect(x: micInset,   y: 488, width: micSize, height: micSize)
-        btwButton.frame              = NSRect(x: micInset,   y: 428, width: micSize, height: micSize)
-        wButton.frame                = NSRect(x: smallInset, y: 375, width: btnSize, height: btnSize)
-        gButton.frame                = NSRect(x: smallInset, y: 327, width: btnSize, height: btnSize)
-        xButton.frame                = NSRect(x: smallInset, y: 274, width: btnSize, height: btnSize)
-        copyButton.frame             = NSRect(x: smallInset, y: 221, width: btnSize, height: btnSize)
-        pasteButton.frame            = NSRect(x: smallInset, y: 173, width: btnSize, height: btnSize)
-        screenshotButton.frame       = NSRect(x: smallInset, y: 120, width: btnSize, height: btnSize)
-        insertScreenshotButton.frame = NSRect(x: smallInset, y: 72,  width: btnSize, height: btnSize)
-        enterButton.frame            = NSRect(x: smallInset, y: 19,  width: btnSize, height: btnSize)
+        // ── Position der Profile-Tiles (rechte Spalte) ──
+        // Verteilung passt 1:1 zur Windows-Variante (#1957):
+        //   S2 (Mic+BTW): Profil 1, 2, 3
+        //   S3 (W+G):     Profil 4, 5
+        //   S4 (X):       Profil 6
+        //   S5 (Copy+P):  Profil 7, 8
+        //   S6 (Shot+In): Profil 9, 10
+        // Tile-Hoehe 32 px, Spacing 8 px, ergeben Stack-Hoehen die gut
+        // in die jeweilige Sektion passen und vertikal mittig zentriert
+        // sind (gleiche Optik wie Windows).
+        let placements: [(profileIndex: Int, y: CGFloat)] = computeProfilePositions()
+        for (idx, y) in placements {
+            let tile = profileButtons[idx - 1]
+            tile.frame = NSRect(x: profileX, y: y, width: profileWidth, height: profileHeight)
+        }
 
-        // Add buttons after sections so they layer ON TOP of the
-        // section backgrounds (subview Z-order = insertion order).
-        self.contentView?.addSubview(ultrathinkButton)
-        self.contentView?.addSubview(micButton)
-        self.contentView?.addSubview(btwButton)
-        self.contentView?.addSubview(wButton)
-        self.contentView?.addSubview(gButton)
-        self.contentView?.addSubview(xButton)
-        self.contentView?.addSubview(copyButton)
-        self.contentView?.addSubview(pasteButton)
-        self.contentView?.addSubview(screenshotButton)
-        self.contentView?.addSubview(insertScreenshotButton)
-        self.contentView?.addSubview(enterButton)
+        // Buttons als Subviews hinzufuegen (Z-Order = Insertion-Order)
+        let allButtons: [NSView] = [
+            ultrathinkButton, micButton, btwButton,
+            wButton, gButton, xButton,
+            copyButton, pasteButton,
+            screenshotButton, insertScreenshotButton,
+            enterButton
+        ]
+        for btn in allButtons { self.contentView?.addSubview(btn) }
+        for tile in profileButtons { self.contentView?.addSubview(tile) }
 
         ultrathinkButton.onClick       = { [weak self] in self?.onUltrathinkClicked?() }
         xButton.onClick                = { [weak self] in self?.onXClicked?() }
@@ -357,8 +556,29 @@ final class OverlayPanel: NSPanel {
         pasteButton.onClick            = { [weak self] in self?.onPasteClicked?() }
         screenshotButton.onClick       = { [weak self] in self?.onScreenshotClicked?() }
         insertScreenshotButton.onClick = { [weak self] in self?.onInsertScreenshotClicked?() }
+        for n in 1...10 {
+            profileButtons[n - 1].onClick = { [weak self] in self?.onProfileClicked?(n) }
+        }
 
+        setupTooltips()
         setupDragMonitors()
+    }
+
+    // Berechnet die y-Koordinaten der 10 Profile-Tiles in panel-coords.
+    private func computeProfilePositions() -> [(profileIndex: Int, y: CGFloat)] {
+        // Sektion Heights / y-Origin (panel-coords, bottom-up):
+        // S2 (Mic+BTW): y=422, h=124  → Tile-Stack 32+8+32+8+32 = 112 → centered: padding 6 oben+unten → y=428,468,508
+        // S3 (W+G):     y=321, h=100  → Stack 32+8+32 = 72 → centered: padding 14 → y=335,375
+        // S4 (X):       y=268, h=52   → Stack 32 → centered: padding 10 → y=278
+        // S5 (Copy+P):  y=167, h=100  → Stack 72 → y=181,221
+        // S6 (Shot+In): y=66,  h=100  → Stack 72 → y=80,120
+        return [
+            (1, 508), (2, 468), (3, 428),    // S2 Mic+BTW (von oben nach unten)
+            (4, 375), (5, 335),               // S3 W+G
+            (6, 278),                          // S4 X
+            (7, 221), (8, 181),                // S5 Copy+P
+            (9, 120), (10, 80)                 // S6 Shot+Insert
+        ]
     }
 
     // MARK: - Section helpers
@@ -377,6 +597,35 @@ final class OverlayPanel: NSPanel {
         self.contentView?.addSubview(v)
     }
 
+    // MARK: - Tooltips
+
+    /// Registriert alle Tooltip-Texte (gleiche kurze Texte wie Windows
+    /// #1960, #1962, #1964). Profile 1-3 haben semantische Namen, 4-10
+    /// "frei belegbar" bis Frank sie inhaltlich fuellt.
+    private func setupTooltips() {
+        let mgr = TooltipManager(ownerPanel: self)
+        self.tooltipManager = mgr
+
+        mgr.register(ultrathinkButton, text: "Promptboard")
+        mgr.register(micButton,        text: "Aufnahme")
+        mgr.register(btwButton,        text: "Zwischenfrage")
+        mgr.register(wButton,          text: "Whisper")
+        mgr.register(gButton,          text: "Gemini")
+        mgr.register(xButton,          text: "Zeile löschen")
+        mgr.register(copyButton,       text: "Text kopieren")
+        mgr.register(pasteButton,      text: "Text einfügen")
+        mgr.register(screenshotButton, text: "Screenshot")
+        mgr.register(insertScreenshotButton, text: "Screenshots einfügen")
+        mgr.register(enterButton,      text: "Auto-Enter")
+
+        mgr.register(profileButtons[0], text: "Standard")
+        mgr.register(profileButtons[1], text: "Programmierung")
+        mgr.register(profileButtons[2], text: "Meta-Intelligenz")
+        for n in 4...10 {
+            mgr.register(profileButtons[n - 1], text: "Profil \(n) (frei belegbar)")
+        }
+    }
+
     // MARK: - State Updates
 
     func setMicState(_ state: MicState) {
@@ -386,10 +635,10 @@ final class OverlayPanel: NSPanel {
             case .idle:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnMicIdle
-                self.micButton.labelColor = .darkLabel   // dark on yellow
+                self.micButton.labelColor = .darkLabel
             case .recording:
                 self.micButton.buttonColor = .btnRecording
-                self.micButton.labelColor = .white       // white on red
+                self.micButton.labelColor = .white
                 self.startPulse()
             case .processing:
                 self.stopPulse()
@@ -414,10 +663,10 @@ final class OverlayPanel: NSPanel {
             case .idle:
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnBtwIdle
-                self.btwButton.labelColor = .darkLabel   // dark on yellow
+                self.btwButton.labelColor = .darkLabel
             case .recording:
                 self.btwButton.buttonColor = .btnRecording
-                self.btwButton.labelColor = .white       // white on red
+                self.btwButton.labelColor = .white
                 self.startBtwPulse()
             case .processing:
                 self.stopBtwPulse()
@@ -437,8 +686,31 @@ final class OverlayPanel: NSPanel {
 
     func setGeminiEnabled(_ enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
-            self?.gButton.buttonColor = enabled ? .toggleOn : .toggleOff
-            self?.wButton.buttonColor = enabled ? .toggleOff : .toggleOn
+            guard let self = self else { return }
+            self.gButton.buttonColor = enabled ? .toggleOn : .toggleOff
+            self.wButton.buttonColor = enabled ? .toggleOff : .toggleOn
+            self.geminiOn = enabled
+            self.refreshProfileTiles()
+        }
+    }
+
+    /// Setzt das aktive Gemini-Korrektur-Profil (1...10) und aktualisiert
+    /// die Profile-Tiles. Wenn Gemini aus ist, bleiben ALLE Tiles dunkel —
+    /// erst beim Wieder-Aktivieren leuchtet das gespeicherte Profil.
+    func setActiveProfile(_ profile: Int) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.activeProfile = profile
+            self.refreshProfileTiles()
+        }
+    }
+
+    private func refreshProfileTiles() {
+        let showActive = geminiOn
+        for (idx, tile) in profileButtons.enumerated() {
+            let isActive = showActive && (idx + 1) == activeProfile
+            tile.buttonColor = isActive ? .btnMicIdle : .toggleOff
+            tile.labelColor = isActive ? .darkLabel : .white
         }
     }
 
@@ -474,9 +746,6 @@ final class OverlayPanel: NSPanel {
         }
     }
 
-    /// Flash the Screenshot button green on success / red on failure,
-    /// then fade back to teal. Mirrors the Windows BtnScreenshot_Click
-    /// success/error flash pattern (1.5 s success, 3 s failure).
     func flashScreenshotButton(success: Bool) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -491,9 +760,6 @@ final class OverlayPanel: NSPanel {
         }
     }
 
-    /// Flash the Insert button green on success / red on failure (e.g.
-    /// no screenshot taken yet, or the file went missing). Mirrors the
-    /// Windows BtnInsertScreenshot_Click flash pattern.
     func flashInsertScreenshotButton(success: Bool) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -504,6 +770,21 @@ final class OverlayPanel: NSPanel {
                 guard let self = self else { return }
                 self.insertScreenshotButton.buttonColor = .btnInsertScreenshot
                 self.insertScreenshotButton.needsDisplay = true
+            }
+        }
+    }
+
+    /// Visueller Indikator waehrend Re-Correct: das geklickte Tile wird
+    /// kurz orange (Processing). Danach wieder zurueck auf goldgelb/dunkel.
+    func flashProfileTile(_ profile: Int, processing: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  profile >= 1, profile <= self.profileButtons.count else { return }
+            let tile = self.profileButtons[profile - 1]
+            if processing {
+                tile.buttonColor = .btnProcessing
+            } else {
+                self.refreshProfileTiles()
             }
         }
     }
@@ -539,8 +820,6 @@ final class OverlayPanel: NSPanel {
         pulseTimer = nil
     }
 
-    // MARK: - BTW Pulse Animation
-
     private func startBtwPulse() {
         stopBtwPulse()
         var bright = false
@@ -559,14 +838,12 @@ final class OverlayPanel: NSPanel {
     // MARK: - Right-click drag to reposition
 
     private func setupDragMonitors() {
-        // Global monitor: catches right-mouse events even when another app is frontmost
         globalRightMouseMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
         ) { [weak self] event in
             self?.handleDragEvent(event)
         }
 
-        // Local monitor: catches right-mouse events when our app is frontmost
         localRightMouseMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
         ) { [weak self] event in
@@ -594,9 +871,6 @@ final class OverlayPanel: NSPanel {
             let dx = mouseLocation.x - dragStartMouseLocation.x
             let dy = mouseLocation.y - dragStartMouseLocation.y
             setFrameOrigin(NSPoint(x: dragStartPanelOrigin.x + dx, y: dragStartPanelOrigin.y + dy))
-            // Re-dock the PromptBoard live during drag so it stays
-            // glued to the pillar instead of being left behind at its
-            // initial position.
             onPillarMoved?()
             return true
         case .rightMouseUp:
@@ -616,10 +890,6 @@ final class OverlayPanel: NSPanel {
         savePillarPosition()
     }
 
-    /// Public so AppDelegate can call it after dragging the pillar via
-    /// the PromptBoard panel (right-click drag inside the panel moves
-    /// both windows together; the pillar's own drag handler isn't the
-    /// one driving that motion, so we expose the save explicitly).
     func savePillarPosition() {
         let position: [String: Double] = ["x": Double(frame.origin.x), "y": Double(frame.origin.y)]
         UserDefaults.standard.set(position, forKey: OverlayPanel.positionKey)
@@ -630,7 +900,6 @@ final class OverlayPanel: NSPanel {
         if let monitor = localRightMouseMonitor { NSEvent.removeMonitor(monitor) }
     }
 
-    // MARK: - Prevent panel from becoming key
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
