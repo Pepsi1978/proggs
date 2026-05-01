@@ -986,24 +986,43 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Setzt das aktive Gemini-Korrektur-Profil (1/2/3) und aktualisiert
-        /// die drei Profil-Tiles farblich. Aktiv = goldgelb (BtnMicIdle),
+        /// Liefert alle Profile-Buttons als Array (Index 0 = Profil 1).
+        /// Lazy initialisiert beim ersten Zugriff, weil x:Name-Felder erst
+        /// nach InitializeComponent verfuegbar sind.
+        /// </summary>
+        private System.Windows.Controls.Button[]? _profileButtonsCache;
+        private System.Windows.Controls.Button[] ProfileButtons
+        {
+            get
+            {
+                _profileButtonsCache ??= new[]
+                {
+                    Profile1Button, Profile2Button, Profile3Button,
+                    Profile4Button, Profile5Button, Profile6Button,
+                    Profile7Button, Profile8Button, Profile9Button, Profile10Button
+                };
+                return _profileButtonsCache;
+            }
+        }
+
+        /// <summary>
+        /// Setzt das aktive Gemini-Korrektur-Profil (1-10) und aktualisiert
+        /// die zehn Profil-Tiles farblich. Aktiv = goldgelb (BtnMicIdle),
         /// inaktiv = dunkel (ToggleOff). Das Profil ist mutually exclusive:
-        /// genau einer leuchtet.
+        /// genau eins leuchtet. Foreground der Schrift bleibt durch die
+        /// Background-Wahl gut lesbar (dunkle Schrift auf gelb, weisse
+        /// Schrift auf dunkel).
         /// </summary>
         private void SetActiveProfile(int profile)
         {
             _activeProfile = profile;
-            Profile1Button.Background = profile == 1 ? BtnMicIdle : ToggleOff;
-            Profile2Button.Background = profile == 2 ? BtnMicIdle : ToggleOff;
-            Profile3Button.Background = profile == 3 ? BtnMicIdle : ToggleOff;
-
-            // Foreground der TextBlocks: bei aktivem Tile dunkel (Kontrast auf
-            // gelb), bei inaktiv weiss (Kontrast auf dunkel).
-            UpdateProfileButtonForeground(Profile1Button, profile == 1);
-            UpdateProfileButtonForeground(Profile2Button, profile == 2);
-            UpdateProfileButtonForeground(Profile3Button, profile == 3);
-
+            var buttons = ProfileButtons;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                bool isActive = (i + 1) == profile;
+                buttons[i].Background = isActive ? BtnMicIdle : ToggleOff;
+                UpdateProfileButtonForeground(buttons[i], isActive);
+            }
             Console.WriteLine($"Profile {profile} aktiv");
         }
 
@@ -1018,6 +1037,13 @@ namespace TerminalVoiceOverlay.Views
         private async void BtnProfile1_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(1);
         private async void BtnProfile2_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(2);
         private async void BtnProfile3_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(3);
+        private async void BtnProfile4_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(4);
+        private async void BtnProfile5_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(5);
+        private async void BtnProfile6_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(6);
+        private async void BtnProfile7_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(7);
+        private async void BtnProfile8_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(8);
+        private async void BtnProfile9_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(9);
+        private async void BtnProfile10_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(10);
 
         /// <summary>
         /// Wechselt das aktive Profil und schickt — falls der zuletzt von
@@ -1059,13 +1085,12 @@ namespace TerminalVoiceOverlay.Views
             }
 
             var rawText = _lastCorrectableRaw;
-            var clickedTile = newProfile switch
-            {
-                1 => Profile1Button,
-                2 => Profile2Button,
-                3 => Profile3Button,
-                _ => null
-            };
+            // Geklicktes Profile-Tile aus dem Array holen (Index = profile - 1).
+            // Profile 1-10 erlaubt, alles andere wird ignoriert.
+            var buttons = ProfileButtons;
+            var clickedTile = (newProfile >= 1 && newProfile <= buttons.Length)
+                ? buttons[newProfile - 1]
+                : null;
 
             try
             {

@@ -116,16 +116,20 @@ Der zu verarbeitende Whisper-Text folgt nun:
                             "SK", "VoiceOverlays");
 
         /// <summary>
-        /// Mappt eine Profil-Nummer (1/2/3) auf den Dateinamen der zugehoerigen
-        /// Prompt-Datei. Falls die profilspezifische Datei fehlt, faellt der
-        /// Aufrufer auf die alte Sammeldatei zurueck (Backward Compat) und am
-        /// Ende auf den eingebauten PromptTemplate-Konstanten.
+        /// Mappt eine Profil-Nummer auf den Dateinamen der zugehoerigen
+        /// Prompt-Datei. Profile 1-3 haben semantische Namen (Standard,
+        /// Programmierung, Meta), Profile 4-10 haben numerische Slots, die
+        /// der Benutzer spaeter mit eigenen Prompt-Dateien fuellen kann.
+        /// Falls die profilspezifische Datei fehlt, faellt der Aufrufer auf
+        /// die alte Sammeldatei zurueck (Backward Compat) und am Ende auf
+        /// den eingebauten PromptTemplate-Konstanten.
         /// </summary>
         private static string ProfilePromptFileName(int profile) => profile switch
         {
             1 => "gemini-correction-prompt-standard.txt",
             2 => "gemini-correction-prompt-programmierung.txt",
             3 => "gemini-correction-prompt-meta.txt",
+            >= 4 and <= 10 => $"gemini-correction-prompt-{profile:D2}.txt",
             _ => "gemini-correction-prompt-standard.txt"
         };
 
