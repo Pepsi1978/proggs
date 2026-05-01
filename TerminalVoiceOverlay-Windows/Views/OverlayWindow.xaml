@@ -202,7 +202,7 @@
                         <Button x:Name="Profile1Button"
                                 Style="{StaticResource ProfileButton}"
                                 Click="BtnProfile1_Click"
-                                MouseRightButtonUp="BtnProfile1_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile1_RightClick"
                                 ToolTip="Standard">
                             <TextBlock Text="1" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -211,7 +211,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile2_Click"
-                                MouseRightButtonUp="BtnProfile2_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile2_RightClick"
                                 ToolTip="Programmierung">
                             <TextBlock Text="2" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -220,7 +220,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile3_Click"
-                                MouseRightButtonUp="BtnProfile3_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile3_RightClick"
                                 ToolTip="Meta-Intelligenz">
                             <TextBlock Text="3" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -262,7 +262,7 @@
                         <Button x:Name="Profile4Button"
                                 Style="{StaticResource ProfileButton}"
                                 Click="BtnProfile4_Click"
-                                MouseRightButtonUp="BtnProfile4_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile4_RightClick"
                                 ToolTip="Profil 4 (frei belegbar)">
                             <TextBlock Text="4" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -271,7 +271,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile5_Click"
-                                MouseRightButtonUp="BtnProfile5_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile5_RightClick"
                                 ToolTip="Profil 5 (frei belegbar)">
                             <TextBlock Text="5" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -304,7 +304,7 @@
                             VerticalAlignment="Center"
                             Margin="6,0,0,0"
                             Click="BtnProfile6_Click"
-                            MouseRightButtonUp="BtnProfile6_RightClick"
+                            PreviewMouseRightButtonUp="BtnProfile6_RightClick"
                             ToolTip="Profil 6 (frei belegbar)">
                         <TextBlock Text="6" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                     </Button>
@@ -346,7 +346,7 @@
                         <Button x:Name="Profile7Button"
                                 Style="{StaticResource ProfileButton}"
                                 Click="BtnProfile7_Click"
-                                MouseRightButtonUp="BtnProfile7_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile7_RightClick"
                                 ToolTip="Profil 7 (frei belegbar)">
                             <TextBlock Text="7" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -355,7 +355,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile8_Click"
-                                MouseRightButtonUp="BtnProfile8_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile8_RightClick"
                                 ToolTip="Profil 8 (frei belegbar)">
                             <TextBlock Text="8" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -406,7 +406,7 @@
                         <Button x:Name="Profile9Button"
                                 Style="{StaticResource ProfileButton}"
                                 Click="BtnProfile9_Click"
-                                MouseRightButtonUp="BtnProfile9_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile9_RightClick"
                                 ToolTip="Profil 9 (frei belegbar)">
                             <TextBlock Text="9" FontWeight="Bold" FontSize="13" Foreground="#FF1A1A1A"/>
                         </Button>
@@ -415,7 +415,7 @@
                                 Style="{StaticResource ProfileButton}"
                                 Margin="0,8,0,0"
                                 Click="BtnProfile10_Click"
-                                MouseRightButtonUp="BtnProfile10_RightClick"
+                                PreviewMouseRightButtonUp="BtnProfile10_RightClick"
                                 ToolTip="Profil 10 (frei belegbar)">
                             <TextBlock Text="10" FontWeight="Bold" FontSize="11" Foreground="#FF1A1A1A"/>
                         </Button>
