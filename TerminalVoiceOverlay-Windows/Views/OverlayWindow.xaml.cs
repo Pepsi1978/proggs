@@ -730,27 +730,13 @@ namespace TerminalVoiceOverlay.Views
 
         // ── Button handlers ──
 
-        // Press-and-hold-Repeat fuer den X-Button:
-        // - kurzer Klick: eine Zeile loeschen
-        // - gedrueckt halten: nach 400 ms beginnt Wiederhol-Modus, alle 150 ms eine weitere Zeile
-        // - Maus loslassen oder vom Button wegbewegen: Repeat stoppt
-        private System.Windows.Threading.DispatcherTimer? _xRepeatTimer;
-        private bool _xClearInFlight;       // verhindert ueberlappende ClearLine-Calls
+        // Press-and-hold-Loop fuer den X-Button:
+        // - solange linke Maustaste gedrueckt: alle 10 ms eine Zeile loeschen
+        // - sequentielle Schleife (nicht Timer) damit ClearLine sauber zu Ende laeuft
+        //   bevor das naechste 10ms-Delay startet — keine Ueberlappung moeglich
+        // - Loslassen oder vom Button wegbewegen: Schleife stoppt sofort via CancellationToken
+        private System.Threading.CancellationTokenSource? _xRepeatCts;
         private bool _xResetScheduled;      // verhindert mehrfaches Faerbe-Reset
-
-        /// <summary>Loescht eine einzelne Zeile, ohne Ueberlappung mit laufendem Aufruf.</summary>
-        private void TriggerSingleClear()
-        {
-            if (_xClearInFlight) return;
-            _xClearInFlight = true;
-            var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-            hasPastedText = false;
-            _ = Task.Run(() =>
-            {
-                try { TerminalController.ClearLine(hwnd); }
-                finally { _xClearInFlight = false; }
-            });
-        }
 
         private void XButton_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
@@ -758,22 +744,28 @@ namespace TerminalVoiceOverlay.Views
             XButton.Background = BtnIdle;
             _xResetScheduled = false;
 
-            // Sofort die erste Zeile loeschen
-            TriggerSingleClear();
+            // Vorherige Schleife sauber abbrechen, falls noch eine laeuft
+            _xRepeatCts?.Cancel();
+            _xRepeatCts = new System.Threading.CancellationTokenSource();
+            var token = _xRepeatCts.Token;
+            var hwnd = _terminalWatcher.ActiveTerminalHwnd;
+            hasPastedText = false;
 
-            // Repeat-Timer: 400 ms initial-delay, danach alle 150 ms
-            _xRepeatTimer?.Stop();
-            _xRepeatTimer = new System.Windows.Threading.DispatcherTimer
+            // Background-Loop: sequentiell ClearLine + 10ms warten, solange gedrueckt
+            _ = Task.Run(async () =>
             {
-                Interval = TimeSpan.FromMilliseconds(400),
-            };
-            _xRepeatTimer.Tick += (_, _) =>
-            {
-                // Nach erstem Tick auf das schnellere Wiederhol-Intervall umstellen
-                _xRepeatTimer!.Interval = TimeSpan.FromMilliseconds(150);
-                TriggerSingleClear();
-            };
-            _xRepeatTimer.Start();
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        TerminalController.ClearLine(hwnd);
+                        if (token.IsCancellationRequested) break;
+                        await Task.Delay(10, token).ConfigureAwait(false);
+                    }
+                }
+                catch (TaskCanceledException) { /* erwartet beim Loslassen */ }
+                catch (OperationCanceledException) { /* erwartet beim Loslassen */ }
+            });
         }
 
         private void XButton_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -789,8 +781,8 @@ namespace TerminalVoiceOverlay.Views
 
         private void StopXRepeat()
         {
-            _xRepeatTimer?.Stop();
-            _xRepeatTimer = null;
+            _xRepeatCts?.Cancel();
+            _xRepeatCts = null;
 
             // Nach kurzer Verzoegerung visueller Reset auf Rot
             if (_xResetScheduled) return;
