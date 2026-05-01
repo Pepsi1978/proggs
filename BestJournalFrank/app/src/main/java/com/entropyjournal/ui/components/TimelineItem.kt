@@ -59,48 +59,15 @@ fun TimelineItem(
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // Timeline rail: durchgehende Linie + Punkt per Canvas
-        // - MIDDLE: Linie ueber volle Hoehe → durchgehend zur naechsten/vorherigen Card
-        // - FIRST:  Linie ab Punkt nach unten
-        // - LAST:   Linie von oben bis zum Punkt
-        // - ONLY:   keine Linie
-        Canvas(
+        // Timeline rail: leerer Platzhalter — der Stromfluss + die Punkte werden vom
+        // EnergyOverlay-Composable ueber der LazyColumn gezeichnet, nicht hier.
+        // dotVerticalBias bleibt als Parameter erhalten fuer Rueckwaertskompatibilitaet,
+        // wird aber nicht mehr verwendet.
+        Spacer(
             modifier = Modifier
                 .width(24.dp)
                 .fillMaxHeight()
-        ) {
-            val cx = size.width / 2f
-            // dotVerticalBias: -1f = oben, +1f = unten → mappe auf [0, height]
-            val dotY = ((dotVerticalBias + 1f) / 2f) * size.height
-            val strokePx = 2.dp.toPx()
-            val dotRadiusPx = 5.dp.toPx()
-            when (position) {
-                TimelinePosition.ONLY -> Unit
-                TimelinePosition.FIRST -> drawLine(
-                    color = lineColor,
-                    start = Offset(cx, dotY),
-                    end = Offset(cx, size.height),
-                    strokeWidth = strokePx,
-                )
-                TimelinePosition.LAST -> drawLine(
-                    color = lineColor,
-                    start = Offset(cx, 0f),
-                    end = Offset(cx, dotY),
-                    strokeWidth = strokePx,
-                )
-                TimelinePosition.MIDDLE -> drawLine(
-                    color = lineColor,
-                    start = Offset(cx, 0f),
-                    end = Offset(cx, size.height),
-                    strokeWidth = strokePx,
-                )
-            }
-            drawCircle(
-                color = dotColor,
-                radius = dotRadiusPx,
-                center = Offset(cx, dotY),
-            )
-        }
+        )
 
         Spacer(modifier = Modifier.width(8.dp))
 
