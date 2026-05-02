@@ -1633,14 +1633,21 @@ fun SettingsScreen(
                                 .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                 .apply()
                             viewModel.notifyProfileChanged()
-                            showScenarioInfoIndex = index
+                            // For custom profiles, remember which entry is being
+                            // edited so the prompt dialog (opened later, after
+                            // the explanation has been confirmed) targets the
+                            // right id even if the list changes underneath.
                             if (index >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                                 editingCustomId =
                                     customList
                                         .getOrNull(index - Constants.FIRST_CUSTOM_SCENARIO_INDEX)
                                         ?.id
-                                showCustomPromptDialog = true
                             }
+                            // Always show the explanation dialog first. For custom
+                            // profiles, the prompt dialog opens only after the user
+                            // taps "Verstanden" in the explanation — see the
+                            // confirmButton below.
+                            showScenarioInfoIndex = index
                             onProfileChanged()
                         }
 
@@ -1892,7 +1899,20 @@ fun SettingsScreen(
                                     )
                                 },
                                 confirmButton = {
-                                    TextButton(onClick = { showScenarioInfoIndex = -1 }) {
+                                    TextButton(
+                                        onClick = {
+                                            val wasCustom =
+                                                showScenarioInfoIndex >=
+                                                    Constants.FIRST_CUSTOM_SCENARIO_INDEX
+                                            showScenarioInfoIndex = -1
+                                            // For custom profiles, only NOW open the
+                                            // prompt-input dialog — after the user has
+                                            // read and confirmed the explanation.
+                                            if (wasCustom) {
+                                                showCustomPromptDialog = true
+                                            }
+                                        }
+                                    ) {
                                         Text(
                                             stringResource(R.string.action_understood),
                                             color = infoAccent,
@@ -2055,6 +2075,17 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(0.95f),
                                 properties = DialogProperties(usePlatformDefaultWidth = false),
                                 containerColor = MaterialTheme.colorScheme.surface,
+                                // Same icon + accent the custom profile uses on the
+                                // selectable list and in the explanation dialog —
+                                // mirrors the onboarding card visual identity.
+                                icon = {
+                                    Icon(
+                                        Icons.Rounded.Science,
+                                        null,
+                                        tint = CustomPalette.primary,
+                                        modifier = Modifier.size(36.dp),
+                                    )
+                                },
                                 title = {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -2069,10 +2100,9 @@ fun SettingsScreen(
                                                     Modifier.weight(1f).focusRequester(titleFocus),
                                                 textStyle =
                                                     MaterialTheme.typography.titleLarge.copy(
-                                                        color = MaterialTheme.colorScheme.onSurface
+                                                        color = CustomPalette.primary
                                                     ),
-                                                cursorBrush =
-                                                    SolidColor(MaterialTheme.colorScheme.primary),
+                                                cursorBrush = SolidColor(CustomPalette.primary),
                                             )
                                             LaunchedEffect(activeEntryId) {
                                                 titleFocus.requestFocus()
@@ -2115,6 +2145,7 @@ fun SettingsScreen(
                                             Text(
                                                 titleText,
                                                 style = MaterialTheme.typography.titleLarge,
+                                                color = CustomPalette.primary,
                                                 modifier = Modifier.weight(1f),
                                             )
                                             if (activeEntryId != null) {
@@ -2131,7 +2162,7 @@ fun SettingsScreen(
                                                             stringResource(
                                                                 R.string.profile_custom_rename
                                                             ),
-                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        tint = CustomPalette.primary,
                                                         modifier = Modifier.size(20.dp),
                                                     )
                                                 }
