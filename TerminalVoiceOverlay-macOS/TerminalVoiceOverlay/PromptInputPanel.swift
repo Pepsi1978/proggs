@@ -482,21 +482,27 @@ final class PromptInputPanel: NSPanel {
 
 /// NSTextView-Subklasse, die Enter (ohne Shift) als Submit interpretiert
 /// und an einen Callback weiterreicht. Shift+Enter und Option+Enter machen
+///
+/// Implementiert ueber doCommand(by:) statt keyDown(with:): NSTextView
+/// uebersetzt Tastenanschlaege intern via interpretKeyEvents in Selectoren
+/// (Enter -> insertNewline:, Shift+Enter -> insertNewlineIgnoringFieldEditor:,
+/// Tab -> insertTab: usw.). Eine keyDown-Override ist fragil, weil
+/// NSTextView seinen Default-Pfad trotzdem startet und der Event nicht sauber
+/// "consumed" wird — Folge: Beep und kein Submit. doCommand(by:) ist der
+/// kanonische Hook fuer genau diesen Fall.
 /// weiterhin einen Zeilenumbruch — wir fangen NUR die nackte Return-Taste ab.
 final class SubmitTextView: NSTextView {
 
     var onSubmit: ((String) -> Void)?
 
-    override func keyDown(with event: NSEvent) {
-        let keyCode = event.keyCode
-        // 36 = Return, 76 = Numpad Enter
-        if keyCode == 36 || keyCode == 76 {
-            let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if !mods.contains(.shift) && !mods.contains(.option) && !mods.contains(.control) {
-                onSubmit?(self.string)
-                return
-            }
+    override func doCommand(by selector: Selector) {
+        // insertNewline: → nacktes Return/Enter ohne Modifier
+        // insertNewlineIgnoringFieldEditor: → Shift+Enter / Option+Enter
+        //   (= echter Zeilenumbruch, NICHT abfangen)
+        if selector == #selector(NSResponder.insertNewline(_:)) {
+            onSubmit?(self.string)
+            return
         }
-        super.keyDown(with: event)
+        super.doCommand(by: selector)
     }
 }
