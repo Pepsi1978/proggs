@@ -494,7 +494,7 @@
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
     <string name="settings_premium_feature_5_perspectives">4 KI-Profile</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
-    <string name="settings_premium_feature_reviews">Alle Wochen-, Monats- und Jahresrückblicke mit KI</string>
+    <string name="settings_premium_feature_reviews">Alle Rückblicke mit KI</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
     <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
     <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
@@ -1075,9 +1075,9 @@
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
-    <string name="paywall_feature_improve">KI-Textverbesserung täglich für deine Einträge</string>
+    <string name="paywall_feature_improve">KI-Textverbesserung für deine Einträge</string>
     <string name="paywall_feature_dashboard">Tägliche Dashboard-Updates nach deinen Einträgen</string>
-    <string name="paywall_feature_retro">Wochen-, Monats- und Jahresrückblicke mit KI</string>
+    <string name="paywall_feature_retro">Alle Rückblicke mit KI</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
     <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
     <string name="paywall_feature_profiles">Unbegrenzte individuelle Analyse-Profile</string>
