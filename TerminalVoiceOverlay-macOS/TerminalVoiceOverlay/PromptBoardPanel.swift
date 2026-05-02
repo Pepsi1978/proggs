@@ -892,10 +892,18 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             let panel = PromptInputPanel()
             panel.onSubmit = { [weak self] text in
                 guard let self = self else { return }
+                // KRITISCH: Floating Panels behalten Key-Status auch wenn
+                // eine andere App active wird. Wenn wir hier nicht resignKey
+                // aufrufen, geht das gleich folgende Cmd+V (aus pasteText)
+                // ans Key-Window = unser PromptInputPanel statt ans Terminal —
+                // ergibt einen System-Beep weil ein gerade geleertes TextView
+                // mit Cmd+V nicht sinnvoll umgehen kann.
+                self.inputPanel?.resignKey()
                 // Pre/Mitte/Post-Bauen passiert weiter oben — hier nur den
                 // reinen Inhalt nach aussen reichen.
                 self.onInputSubmit?(text)
-                // Eingabe nach Senden leeren, Fokus bleibt drin.
+                // Eingabe leeren (clearInput zieht den Fokus NICHT mehr
+                // automatisch zurueck ins Panel — das wuerde mit pasteText racen).
                 self.inputPanel?.clearInput()
             }
             // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.

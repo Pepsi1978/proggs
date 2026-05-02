@@ -109,12 +109,17 @@ final class PromptInputPanel: NSPanel {
         makeKeyAndFocusInput()
     }
 
-    /// Leert das Eingabefeld und setzt den Fokus zurueck hinein — wird nach
-    /// jedem Senden aufgerufen, damit der naechste Prompt direkt getippt
-    /// werden kann ohne dass das Fenster sich schliesst.
+    /// Leert das Eingabefeld nach dem Senden. Setzt KEINEN Fokus mehr — das
+    /// wuerde unser Floating-Panel direkt nach onSubmit wieder nach vorne
+    /// holen und mit pasteText racen (Voice-Overlay klaut sich zurueck zum
+    /// Front-Window, Terminal verliert seinen frischen Activate-Status, und
+    /// das Cmd+V landet dann u.U. in unserem Panel statt im Terminal — was
+    /// einen System-Beep ausloest weil ein leeres TextView Cmd+V nicht
+    /// sinnvoll handhabt).
     func clearInput() {
         textView.string = ""
-        makeKeyAndFocusInput()
+        // Bewusst KEIN makeKeyAndFocusInput() hier. Wenn der Benutzer den
+        // naechsten Prompt tippen will, klickt er einmal ins Eingabefeld.
     }
 
     /// Aktualisiert die kleine Pre/Post-Vorschau unter dem Eingabefeld.
