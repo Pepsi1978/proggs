@@ -159,8 +159,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setActiveProfile(activeProfile)
 
         // X-Button: kurzer Klick loescht eine Zeile, gedrueckt halten loescht alle Zeilen
-        // hintereinander im 120ms-Takt — gut kontrollierbare Geschwindigkeit
-        // beim Halten (~8 Loeschungen pro Sekunde).
+        // hintereinander im 100ms-Takt — gut kontrollierbare Geschwindigkeit
+        // beim Halten (~10 Loeschungen pro Sekunde).
         //
         // KRITISCH — zwei Stoerquellen, die zusammen das "Loop-laeuft-ewig"-Problem
         // verursacht haben:
@@ -189,12 +189,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // wartet 150 ms + sendet Ctrl+U. Danach ist Terminal aktiv und
             // wir koennen direkt nachfeuern.
             self.clearLine()
-            // Repeat-Timer: alle 120 ms direkt Ctrl+U senden, OHNE Queue-Umweg.
+            // Repeat-Timer: alle 100 ms direkt Ctrl+U senden, OHNE Queue-Umweg.
             // Vor jedem Tick pruefen wir ob die linke Maustaste noch gedrueckt
             // ist — wenn nicht, sofort stoppen. Kein Backlog moeglich weil
             // sendKeyCombo synchron innerhalb von Mikrosekunden zurueckkehrt.
             self.xRepeatTimer?.invalidate()
-            self.xRepeatTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { [weak self] _ in
+            self.xRepeatTimer = Timer.scheduledTimer(withTimeInterval: 0.10, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
                 let leftButtonPressed = (NSEvent.pressedMouseButtons & 1) != 0
                 if !leftButtonPressed {
