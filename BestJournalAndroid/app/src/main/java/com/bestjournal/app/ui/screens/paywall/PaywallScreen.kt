@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.bestjournal.app.ui.components.AiLimitsDisclaimerRow
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
@@ -285,6 +286,14 @@ fun PaywallScreen(
                             }
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                AnimatedVisibility(
+                    visible = visibleBenefits >= benefitsList.size,
+                    enter = fadeIn(tween(300)),
+                ) {
+                    AiLimitsDisclaimerRow()
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

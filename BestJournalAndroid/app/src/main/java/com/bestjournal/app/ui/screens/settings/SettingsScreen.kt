@@ -125,6 +125,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.bestjournal.app.R
+import com.bestjournal.app.ui.components.AiLimitsDisclaimerRow
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.ParticleBackground
@@ -2774,6 +2775,13 @@ fun SettingsScreen(
                                         ),
                                     ),
                                     Triple(
+                                        Icons.Rounded.Category,
+                                        stringResource(R.string.settings_premium_feature_profiles),
+                                        stringResource(
+                                            R.string.settings_premium_feature_profiles_desc
+                                        ),
+                                    ),
+                                    Triple(
                                         Icons.Rounded.AutoAwesome,
                                         stringResource(R.string.settings_premium_feature_reviews),
                                         stringResource(
@@ -2796,13 +2804,6 @@ fun SettingsScreen(
                                         Icons.Rounded.MusicNote,
                                         stringResource(R.string.settings_premium_feature_voice),
                                         stringResource(R.string.settings_premium_feature_voice_desc),
-                                    ),
-                                    Triple(
-                                        Icons.Rounded.Category,
-                                        stringResource(R.string.settings_premium_feature_profiles),
-                                        stringResource(
-                                            R.string.settings_premium_feature_profiles_desc
-                                        ),
                                     ),
                                     Triple(
                                         Icons.Rounded.EditNote,
@@ -2855,6 +2856,8 @@ fun SettingsScreen(
                                 if (idx < featureItems.lastIndex)
                                     Spacer(modifier = Modifier.height(8.dp))
                             }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            AiLimitsDisclaimerRow()
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Breathing animation on the Premium CTA

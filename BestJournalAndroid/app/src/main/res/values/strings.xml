@@ -492,9 +492,9 @@
     <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
-    <string name="settings_premium_feature_5_perspectives">5 KI-Perspektiven</string>
+    <string name="settings_premium_feature_5_perspectives">4 KI-Profile</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
-    <string name="settings_premium_feature_reviews">Wochen-, Monats- und Jahresrückblicke</string>
+    <string name="settings_premium_feature_reviews">Alle Wochen-, Monats- und Jahresrückblicke mit KI</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
     <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
     <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
@@ -1075,8 +1075,8 @@
 
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
-    <string name="paywall_feature_improve">KI-Textverbesserung täglich für jeden Eintrag</string>
-    <string name="paywall_feature_dashboard">Automatische Dashboard-Updates nach jedem Eintrag</string>
+    <string name="paywall_feature_improve">KI-Textverbesserung täglich für deine Einträge</string>
+    <string name="paywall_feature_dashboard">Tägliche Dashboard-Updates nach deinen Einträgen</string>
     <string name="paywall_feature_retro">Wochen-, Monats- und Jahresrückblicke mit KI</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
     <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
@@ -1146,10 +1146,17 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Dein Wochenlimit ist erreicht</string>
-    <string name="ai_limit_body">Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\nMit dem Premium-Abo: bis zu 150 pro Tag, in voller Qualität.</string>
+    <string name="ai_limit_body">Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\nMit dem Premium-Abo: bis zu 150 pro Tag.</string>
     <string name="ai_limit_monthly">Monatsabo, %1$s/Monat</string>
     <string name="ai_limit_yearly">Jahresabo, %1$s/Jahr (spare 37%%)</string>
     <string name="ai_limit_no_thanks">Nein danke, weiter ohne KI</string>
+
+    <!-- AI Limits disclaimer + explanation dialog (Paywall + Settings Premium-Bereich) -->
+    <string name="ai_limits_disclaimer">Großzügiges KI-Tageskontingent für intensive Nutzung.</string>
+    <string name="ai_limits_dialog_title">Wie funktioniert das KI-Tageskontingent?</string>
+    <string name="ai_limits_dialog_body" formatted="false">MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• Bis zu 150 Dashboard-Analysen pro KI-Profil (bei 4 Profilen also bis zu 600 pro Tag)\n• Bis zu 150 Text-Verbesserungen\n\nWie das im Detail abläuft:\n• Anfragen 1 bis 30: in höchster KI-Qualität\n• Anfragen 31 bis 100: in schneller Standard-Qualität\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\n• Anfragen 101 bis 150: schnelle Standard-Qualität\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\n\nAußerdem gilt für alle Nutzer:\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\n\nWann werden die Kontingente zurückgesetzt?\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\n\n──────────\n\nOHNE ABO\n\n• 5 Dashboard-Analysen pro Woche\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\n\n──────────\n\nÜber 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.</string>
+    <string name="ai_limits_dialog_close">Verstanden</string>
+
     <string name="ai_banner_title">Dein Tagebuch wird von KI unterstützt</string>
     <string name="ai_banner_body">• Diktierte Texte werden automatisch verbessert\n• Zusammenfassungen für jeden Eintrag\n• Intelligente Lebensratschläge aus deinen Mustern\n• Alles in deiner kostenlosen Testphase enthalten</string>
     <string name="cd_mic_start">Aufnahme starten</string>
