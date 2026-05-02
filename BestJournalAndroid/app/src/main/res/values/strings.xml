@@ -1011,7 +1011,7 @@
     <string name="onboarding_welcome">Willkommen bei\nBest Journal</string>
     <string name="onboarding_subtitle">Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung</string>
     <string name="onboarding_feature_speech">Sprich oder schreib, die KI versteht beides</string>
-    <string name="onboarding_feature_secure">Deine Daten bleiben bei dir, verschlüsselt und sicher</string>
+    <string name="onboarding_feature_secure">Deine Daten sind lokal gespeichert, KI-Anfragen sind verschlüsselt</string>
     <string name="onboarding_goals_title">Was möchtest du mit dem\nKI-Tagebuch erreichen?</string>
     <string name="onboarding_goal_stress">Stress abbauen</string>
     <string name="onboarding_goal_clarity">Klarheit finden</string>
@@ -1020,10 +1020,10 @@
     <string name="onboarding_how_step1_title">Sprich oder tippe deinen Eintrag</string>
     <string name="onboarding_how_step1_desc">Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du möchtest.</string>
     <string name="onboarding_how_step2_title">Die KI verbessert und analysiert</string>
-    <string name="onboarding_how_step2_desc">Dein Text wird automatisch verfeinert und aus verschiedenen Perspektiven analysiert.</string>
-    <string name="onboarding_how_step3_desc">Halte besondere Momente fest, die KI berücksichtigt sie in der Analyse.</string>
+    <string name="onboarding_how_step2_desc">Dein Text wird auf Wunsch verfeinert und aus verschiedenen Perspektiven analysiert.</string>
+    <string name="onboarding_how_step3_desc">Halte besondere Momente fest, lebendige Erinnerungen für später.</string>
     <string name="onboarding_how_step4_title">Entdecke Muster und Einsichten</string>
-    <string name="onboarding_how_step4_desc">Das Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.</string>
+    <string name="onboarding_how_step4_desc">Das KI-Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.</string>
     <string name="onboarding_how_step5_title">Wochen-, Monats- und Jahresrückblick</string>
     <string name="onboarding_how_step5_desc">Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.</string>
     <string name="onboarding_premium_feature_improve">KI-Textverbesserung täglich, jeder Eintrag wird klarer und ausdrucksstärker</string>
@@ -1035,13 +1035,13 @@
     <string name="onboarding_free_after_trial">Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.</string>
     <string name="onboarding_start_free">Kostenlos starten</string>
     <string name="onboarding_without_premium">Ohne Premium fortfahren</string>
-    <string name="onboarding_feature_profiles">5 intelligente Analyse-Profile für verschiedene Perspektiven</string>
+    <string name="onboarding_feature_profiles">4 intelligente Analyse-Profile für verschiedene Perspektiven</string>
     <string name="onboarding_goals_select">Wähle ein oder mehrere Ziele</string>
-    <string name="onboarding_how_step3_title">Füge Fotos hinzu</string>
+    <string name="onboarding_how_step3_title">Füge Fotos und Videos hinzu</string>
     <string name="onboarding_how_title">So einfach geht es</string>
     <string name="onboarding_perspectives_title">5 Perspektiven auf\ndein Leben</string>
     <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
-    <string name="onboarding_premium_profiles">5 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
+    <string name="onboarding_premium_profiles">4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
     <string name="onboarding_try_premium">8 Tage Premium testen</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
