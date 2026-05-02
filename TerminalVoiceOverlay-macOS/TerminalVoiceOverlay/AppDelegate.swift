@@ -160,20 +160,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // X-Button: kurzer Klick loescht eine Zeile, gedrueckt halten loescht alle Zeilen
         // hintereinander im 10ms-Takt. Spiegelt das Windows-Voice-Overlay-Verhalten 1:1.
+        //
+        // KRITISCH — Mouse-Release-Detection auf macOS:
+        // Wir koennen uns NICHT auf onXMouseUp verlassen. Wenn clearLine() per
+        // activateTerminal() die Terminal-App in den Vordergrund holt, verliert
+        // unser nonactivatingPanel den Mouse-Tracking-Stream und mouseUp(with:)
+        // kommt nie mehr im RoundButton an — der Loop wuerde endlos laufen
+        // und jede neue CLI-Eingabe sofort wieder loeschen.
+        //
+        // NSEvent.addGlobalMonitorForEvents wuerde das System-weit abfangen,
+        // braucht aber Input-Monitoring-Permission die wir nicht garantiert haben.
+        //
+        // Loesung: NSEvent.pressedMouseButtons ist eine globale System-API ohne
+        // Permission-Anforderung und unabhaengig von der App-Aktivierung. Bei
+        // jedem Timer-Tick pruefen wir ob die linke Maustaste (Bit 0) noch
+        // gedrueckt ist. Wenn nicht → Loop sofort stoppen. Polling alle 10 ms
+        // ist hier voellig okay weil der Repeat ohnehin in dieser Frequenz laeuft.
         panel.onXMouseDown = { [weak self] in
             guard let self = self else { return }
             tvoDebug("[App] onXMouseDown — Press-and-Hold-Loop start")
             self.panel.flashXButton()
             // Sofort die erste Zeile loeschen (vor dem Timer-Start)
             self.clearLine()
-            // Timer fuer Repeat: alle 10 ms eine weitere Zeile
+            // Timer fuer Repeat: alle 10 ms eine weitere Zeile, aber NUR
+            // solange die linke Maustaste tatsaechlich noch gedrueckt ist.
             self.xRepeatTimer?.invalidate()
             self.xRepeatTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
-                self?.clearLine()
+                guard let self = self else { return }
+                let leftButtonPressed = (NSEvent.pressedMouseButtons & 1) != 0
+                if !leftButtonPressed {
+                    tvoDebug("[App] xRepeatTimer — linke Maustaste losgelassen, Loop stop")
+                    self.xRepeatTimer?.invalidate()
+                    self.xRepeatTimer = nil
+                    return
+                }
+                self.clearLine()
             }
         }
         panel.onXMouseUp = { [weak self] in
-            tvoDebug("[App] onXMouseUp — Press-and-Hold-Loop stop")
+            // Backup-Pfad fuer den Fall dass der native mouseUp doch ankommt
+            // (z.B. Click ohne Loslassen waehrend Terminal noch nicht aktiviert wurde).
+            tvoDebug("[App] onXMouseUp — native mouseUp, Loop stop")
             self?.xRepeatTimer?.invalidate()
             self?.xRepeatTimer = nil
         }
