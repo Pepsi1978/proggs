@@ -1068,7 +1068,7 @@
     <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
     <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar</string>
     <string name="paywall_lifetime_title">Einmalkauf</string>
-    <string name="paywall_lifetime_desc">Einmal zahlen, alles dauerhaft nutzen</string>
+    <string name="paywall_lifetime_desc">Einmal zahlen, alles nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
     <string name="paywall_free_note">Die App funktioniert auch ohne Abo,</string>
     <string name="paywall_cd_close">Schließen</string>
