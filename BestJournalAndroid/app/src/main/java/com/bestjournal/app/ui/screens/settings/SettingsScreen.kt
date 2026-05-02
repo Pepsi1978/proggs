@@ -10,6 +10,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,25 +23,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Feedback
@@ -48,7 +46,6 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -57,6 +54,7 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tune
@@ -71,14 +69,13 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -905,7 +902,9 @@ fun SettingsScreen(
 
                         // ── Stimmen (TTS) ──
                         var ttsEnabled by remember {
-                            mutableStateOf(soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false))
+                            mutableStateOf(
+                                soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
+                            )
                         }
 
                         // Keep the Sounds switch in sync with external changes to
@@ -915,14 +914,13 @@ fun SettingsScreen(
                         // stuck at the value loaded at initial composition.
                         androidx.compose.runtime.DisposableEffect(soundsPrefs) {
                             val listener =
-                                android.content.SharedPreferences.OnSharedPreferenceChangeListener {
-                                    prefs,
-                                    key ->
-                                    if (key == Constants.PREF_TTS_ENABLED) {
-                                        ttsEnabled =
-                                            prefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
+                                android.content.SharedPreferences
+                                    .OnSharedPreferenceChangeListener { prefs, key ->
+                                        if (key == Constants.PREF_TTS_ENABLED) {
+                                            ttsEnabled =
+                                                prefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
+                                        }
                                     }
-                                }
                             soundsPrefs.registerOnSharedPreferenceChangeListener(listener)
                             onDispose {
                                 soundsPrefs.unregisterOnSharedPreferenceChangeListener(listener)
@@ -1617,8 +1615,10 @@ fun SettingsScreen(
                         val scenarioNames =
                             fixedScenarioNames +
                                 customList.map {
-                                    com.bestjournal.app.data.prefs.CustomAnalysesStore
-                                        .displayName(it, defaultCustomName)
+                                    com.bestjournal.app.data.prefs.CustomAnalysesStore.displayName(
+                                        it,
+                                        defaultCustomName,
+                                    )
                                 }
 
                         fun selectScenario(index: Int) {
@@ -1644,11 +1644,30 @@ fun SettingsScreen(
 
                         scenarioNames.forEachIndexed { index, name ->
                             val isCustom = index >= Constants.FIRST_CUSTOM_SCENARIO_INDEX
-                            val localCustomIndex =
-                                index - Constants.FIRST_CUSTOM_SCENARIO_INDEX
+                            val localCustomIndex = index - Constants.FIRST_CUSTOM_SCENARIO_INDEX
                             val customEntry =
                                 if (isCustom) customList.getOrNull(localCustomIndex) else null
                             val canDelete = isCustom && localCustomIndex > 0
+                            // Onboarding-Profile: icon + accent color per profile (1:1 from
+                            // OnboardingScreen.kt). All custom profiles share the Custom
+                            // palette, identical to how the onboarding card represents the
+                            // single "Custom" entry there.
+                            val profileAccent =
+                                when (index) {
+                                    0 -> SummaryPalette.accent
+                                    1 -> WarmCopper
+                                    2 -> InsightPalette.primary
+                                    3 -> GoalPalette.primary
+                                    else -> CustomPalette.primary
+                                }
+                            val profileIcon =
+                                when (index) {
+                                    0 -> Icons.Rounded.AutoStories
+                                    1 -> Icons.Rounded.Whatshot
+                                    2 -> Icons.Rounded.SelfImprovement
+                                    3 -> Icons.Rounded.RocketLaunch
+                                    else -> Icons.Rounded.Science
+                                }
                             Row(
                                 modifier =
                                     Modifier.fillMaxWidth()
@@ -1657,22 +1676,45 @@ fun SettingsScreen(
                                         .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                // Coloured accent bar — same dimensions as in OnboardingScreen
+                                Box(
+                                    modifier =
+                                        Modifier.width(4.dp)
+                                            .height(44.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(profileAccent)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                // Profile icon in a soft circular badge in the same accent
+                                // colour — mirrors the onboarding card layout.
+                                Box(
+                                    modifier =
+                                        Modifier.size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(profileAccent.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = profileIcon,
+                                        contentDescription = null,
+                                        tint = profileAccent,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
                                 RadioButton(
                                     selected = currentScenario == index,
                                     onClick = { selectScenario(index) },
                                     colors =
-                                        RadioButtonDefaults.colors(
-                                            selectedColor = MaterialTheme.colorScheme.primary
-                                        ),
+                                        RadioButtonDefaults.colors(selectedColor = profileAccent),
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         name,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color =
-                                            if (currentScenario == index)
-                                                MaterialTheme.colorScheme.primary
+                                            if (currentScenario == index) profileAccent
                                             else MaterialTheme.colorScheme.onSurface,
                                     )
                                     when (index) {
@@ -1720,16 +1762,12 @@ fun SettingsScreen(
                                             if (limitReached) {
                                                 showProfilesPremiumSheet = true
                                             } else {
-                                                com.bestjournal.app.data.prefs
-                                                    .CustomAnalysesStore
+                                                com.bestjournal.app.data.prefs.CustomAnalysesStore
                                                     .add(scenarioPrefs, defaultCustomName)
                                                 customList =
                                                     com.bestjournal.app.data.prefs
                                                         .CustomAnalysesStore
-                                                        .load(
-                                                            scenarioPrefs,
-                                                            defaultCustomName,
-                                                        )
+                                                        .load(scenarioPrefs, defaultCustomName)
                                                 viewModel.backupCustomAnalysesToDrive()
                                             }
                                         },
@@ -1755,10 +1793,7 @@ fun SettingsScreen(
                                                     customList =
                                                         com.bestjournal.app.data.prefs
                                                             .CustomAnalysesStore
-                                                            .load(
-                                                                scenarioPrefs,
-                                                                defaultCustomName,
-                                                            )
+                                                            .load(scenarioPrefs, defaultCustomName)
                                                     val total =
                                                         fixedScenarioNames.size + customList.size
                                                     if (currentScenario >= total) {
@@ -1786,9 +1821,7 @@ fun SettingsScreen(
                                             Icon(
                                                 imageVector = Icons.Rounded.Remove,
                                                 contentDescription =
-                                                    stringResource(
-                                                        R.string.profile_custom_remove
-                                                    ),
+                                                    stringResource(R.string.profile_custom_remove),
                                                 tint = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.size(20.dp),
                                             )
@@ -1890,15 +1923,15 @@ fun SettingsScreen(
                             // show the current locale's default, not the frozen literal.
                             val savedName =
                                 activeEntry?.let {
-                                    com.bestjournal.app.data.prefs.CustomAnalysesStore
-                                        .displayName(it, defaultCustomName)
+                                    com.bestjournal.app.data.prefs.CustomAnalysesStore.displayName(
+                                        it,
+                                        defaultCustomName,
+                                    )
                                 } ?: defaultCustomName
                             var promptText by
                                 remember(activeEntryId) { mutableStateOf(savedPrompt) }
-                            var titleText by
-                                remember(activeEntryId) { mutableStateOf(savedName) }
-                            var titleEditing by
-                                remember(activeEntryId) { mutableStateOf(false) }
+                            var titleText by remember(activeEntryId) { mutableStateOf(savedName) }
+                            var titleEditing by remember(activeEntryId) { mutableStateOf(false) }
                             val titleFocus = remember(activeEntryId) { FocusRequester() }
                             val focusRequester = remember { FocusRequester() }
 
@@ -1958,20 +1991,15 @@ fun SettingsScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     title = {
                                         Text(
-                                            stringResource(
-                                                R.string.prompt_clear_confirm_title
-                                            ),
+                                            stringResource(R.string.prompt_clear_confirm_title),
                                             style = MaterialTheme.typography.titleMedium,
                                         )
                                     },
                                     text = {
                                         Text(
-                                            stringResource(
-                                                R.string.prompt_clear_confirm_text
-                                            ),
+                                            stringResource(R.string.prompt_clear_confirm_text),
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color =
-                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     },
                                     confirmButton = {
@@ -1995,8 +2023,7 @@ fun SettingsScreen(
                                         TextButton(onClick = { showClearConfirm = false }) {
                                             Text(
                                                 stringResource(R.string.action_no),
-                                                color =
-                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     },
@@ -2011,8 +2038,7 @@ fun SettingsScreen(
                                     titleEditing = false
                                 },
                                 modifier = Modifier.fillMaxWidth(0.95f),
-                                properties =
-                                    DialogProperties(usePlatformDefaultWidth = false),
+                                properties = DialogProperties(usePlatformDefaultWidth = false),
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
                                     Row(
@@ -2025,17 +2051,13 @@ fun SettingsScreen(
                                                 onValueChange = { titleText = it },
                                                 singleLine = true,
                                                 modifier =
-                                                    Modifier.weight(1f)
-                                                        .focusRequester(titleFocus),
+                                                    Modifier.weight(1f).focusRequester(titleFocus),
                                                 textStyle =
                                                     MaterialTheme.typography.titleLarge.copy(
-                                                        color =
-                                                            MaterialTheme.colorScheme.onSurface
+                                                        color = MaterialTheme.colorScheme.onSurface
                                                     ),
                                                 cursorBrush =
-                                                    SolidColor(
-                                                        MaterialTheme.colorScheme.primary
-                                                    ),
+                                                    SolidColor(MaterialTheme.colorScheme.primary),
                                             )
                                             LaunchedEffect(activeEntryId) {
                                                 titleFocus.requestFocus()
@@ -2054,15 +2076,11 @@ fun SettingsScreen(
                                                     customList =
                                                         com.bestjournal.app.data.prefs
                                                             .CustomAnalysesStore
-                                                            .load(
-                                                                scenarioPrefs,
-                                                                defaultCustomName,
-                                                            )
+                                                            .load(scenarioPrefs, defaultCustomName)
                                                     titleText =
                                                         customList
                                                             .firstOrNull { it.id == activeEntryId }
-                                                            ?.name
-                                                            ?: titleText
+                                                            ?.name ?: titleText
                                                     titleEditing = false
                                                     viewModel.backupCustomAnalysesToDrive()
                                                 },
@@ -2098,8 +2116,7 @@ fun SettingsScreen(
                                                             stringResource(
                                                                 R.string.profile_custom_rename
                                                             ),
-                                                        tint =
-                                                            MaterialTheme.colorScheme.primary,
+                                                        tint = MaterialTheme.colorScheme.primary,
                                                         modifier = Modifier.size(20.dp),
                                                     )
                                                 }
@@ -2129,8 +2146,7 @@ fun SettingsScreen(
                                                     )
                                         ) {
                                             val promptScroll =
-                                                androidx.compose.foundation
-                                                    .rememberScrollState()
+                                                androidx.compose.foundation.rememberScrollState()
                                             BasicTextField(
                                                 value = promptText,
                                                 onValueChange = { promptText = it },
@@ -2146,13 +2162,10 @@ fun SettingsScreen(
                                                         .focusRequester(focusRequester),
                                                 textStyle =
                                                     MaterialTheme.typography.bodyMedium.copy(
-                                                        color =
-                                                            MaterialTheme.colorScheme.onSurface
+                                                        color = MaterialTheme.colorScheme.onSurface
                                                     ),
                                                 cursorBrush =
-                                                    SolidColor(
-                                                        MaterialTheme.colorScheme.primary
-                                                    ),
+                                                    SolidColor(MaterialTheme.colorScheme.primary),
                                                 decorationBox = { innerTextField ->
                                                     if (promptText.isEmpty()) {
                                                         val isDark = LocalIsDarkTheme.current
@@ -2162,8 +2175,7 @@ fun SettingsScreen(
                                                                     .settings_custom_prompt_placeholder
                                                             ),
                                                             style =
-                                                                MaterialTheme.typography
-                                                                    .bodyMedium,
+                                                                MaterialTheme.typography.bodyMedium,
                                                             color =
                                                                 MaterialTheme.colorScheme
                                                                     .onSurfaceVariant
@@ -2222,7 +2234,8 @@ fun SettingsScreen(
                                                         onClick = { focusRequester.requestFocus() },
                                                         modifier = Modifier.size(64.dp),
                                                         containerColor =
-                                                            MaterialTheme.colorScheme.surfaceVariant,
+                                                            MaterialTheme.colorScheme
+                                                                .surfaceVariant,
                                                         contentColor =
                                                             MaterialTheme.colorScheme.onSurface,
                                                         shape = CircleShape,
@@ -2294,9 +2307,7 @@ fun SettingsScreen(
                                                         R.string.journal_state_transcribing
                                                     )
                                                 PromptRecState.IMPROVING ->
-                                                    stringResource(
-                                                        R.string.journal_state_improving
-                                                    )
+                                                    stringResource(R.string.journal_state_improving)
                                                 else -> null
                                             }
                                         if (stateLabel != null) {
@@ -2320,8 +2331,10 @@ fun SettingsScreen(
                                                         MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
-                                        } else if (uiState.promptTranscriptionModel != null &&
-                                            uiState.promptRecState == PromptRecState.IDLE) {
+                                        } else if (
+                                            uiState.promptTranscriptionModel != null &&
+                                                uiState.promptRecState == PromptRecState.IDLE
+                                        ) {
                                             // Persistent hint after transcription completed
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Text(
@@ -2330,8 +2343,7 @@ fun SettingsScreen(
                                                     uiState.promptTranscriptionModel ?: "",
                                                 ),
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color =
-                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 textAlign = TextAlign.Center,
                                                 modifier = Modifier.fillMaxWidth(),
                                             )
@@ -2360,8 +2372,7 @@ fun SettingsScreen(
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     Text(
                                                         stringResource(R.string.journal_improve),
-                                                        style =
-                                                            MaterialTheme.typography.labelMedium,
+                                                        style = MaterialTheme.typography.labelMedium,
                                                     )
                                                 }
                                             }
@@ -2379,7 +2390,9 @@ fun SettingsScreen(
                                                         useImproved = false
                                                     },
                                                     label = {
-                                                        Text(stringResource(R.string.label_original))
+                                                        Text(
+                                                            stringResource(R.string.label_original)
+                                                        )
                                                     },
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
@@ -2390,7 +2403,9 @@ fun SettingsScreen(
                                                         useImproved = true
                                                     },
                                                     label = {
-                                                        Text(stringResource(R.string.label_improved))
+                                                        Text(
+                                                            stringResource(R.string.label_improved)
+                                                        )
                                                     },
                                                 )
                                             }
@@ -2428,8 +2443,7 @@ fun SettingsScreen(
                                                         .firstOrNull { it.id == activeEntryId }
                                                         ?.prompt
                                                         .orEmpty()
-                                                com.bestjournal.app.data.prefs
-                                                    .CustomAnalysesStore
+                                                com.bestjournal.app.data.prefs.CustomAnalysesStore
                                                     .setPrompt(
                                                         scenarioPrefs,
                                                         activeEntryId,
@@ -2439,8 +2453,7 @@ fun SettingsScreen(
                                                     com.bestjournal.app.data.prefs
                                                         .CustomAnalysesStore
                                                         .load(scenarioPrefs, defaultCustomName)
-                                                val promptChanged =
-                                                    promptText != previousPrompt
+                                                val promptChanged = promptText != previousPrompt
                                                 // Refresh the local save timestamp on EVERY Save,
                                                 // even if nothing changed, so both devices agree
                                                 // that this was the last authoritative save and
@@ -2633,13 +2646,14 @@ fun SettingsScreen(
                         // "Gekuendigt — laeuft bis 30.04.2026, 21:01" the
                         // moment Google reports the cancellation, instead of
                         // a flat "Premium-Abo aktiv" until expiry.
-                        val premiumAutoRenewing
-                            by viewModel.autoRenewingState.collectAsStateWithLifecycle()
-                        val premiumExpiryRaw
-                            by viewModel.expiryTimeState.collectAsStateWithLifecycle()
-                        val premiumExpiryFormatted = remember(premiumExpiryRaw) {
-                            formatPremiumExpiryDateTime(premiumExpiryRaw)
-                        }
+                        val premiumAutoRenewing by
+                            viewModel.autoRenewingState.collectAsStateWithLifecycle()
+                        val premiumExpiryRaw by
+                            viewModel.expiryTimeState.collectAsStateWithLifecycle()
+                        val premiumExpiryFormatted =
+                            remember(premiumExpiryRaw) {
+                                formatPremiumExpiryDateTime(premiumExpiryRaw)
+                            }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
                             val isLifetime =
@@ -2657,8 +2671,7 @@ fun SettingsScreen(
                                             )
                                         isCancelled ->
                                             stringResource(R.string.settings_premium_cancelled)
-                                        else ->
-                                            stringResource(R.string.settings_premium_active)
+                                        else -> stringResource(R.string.settings_premium_active)
                                     },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -2670,11 +2683,8 @@ fun SettingsScreen(
                                         isLifetime ->
                                             stringResource(R.string.settings_premium_lifetime_desc)
                                         isCancelled ->
-                                            stringResource(
-                                                R.string.settings_premium_cancelled_desc,
-                                            )
-                                        else ->
-                                            stringResource(R.string.settings_premium_desc)
+                                            stringResource(R.string.settings_premium_cancelled_desc)
+                                        else -> stringResource(R.string.settings_premium_desc)
                                     },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2706,18 +2716,18 @@ fun SettingsScreen(
                                 val activity = context as? android.app.Activity
                                 // Reactive props — re-renders the dialog whenever
                                 // BillingManager updates price, type, promo counter etc.
-                                val churnCurrentPrice
-                                    by viewModel.currentPriceState.collectAsStateWithLifecycle()
-                                val churnRetentionPrice
-                                    by viewModel.retentionPriceState.collectAsStateWithLifecycle()
-                                val churnPromoInfo
-                                    by viewModel.promoInfoState.collectAsStateWithLifecycle()
-                                val churnAutoRenewing
-                                    by viewModel.autoRenewingState.collectAsStateWithLifecycle()
-                                val churnExpiryTime
-                                    by viewModel.expiryTimeState.collectAsStateWithLifecycle()
-                                val churnIsOnRetention
-                                    by viewModel.isOnRetentionPlanState.collectAsStateWithLifecycle()
+                                val churnCurrentPrice by
+                                    viewModel.currentPriceState.collectAsStateWithLifecycle()
+                                val churnRetentionPrice by
+                                    viewModel.retentionPriceState.collectAsStateWithLifecycle()
+                                val churnPromoInfo by
+                                    viewModel.promoInfoState.collectAsStateWithLifecycle()
+                                val churnAutoRenewing by
+                                    viewModel.autoRenewingState.collectAsStateWithLifecycle()
+                                val churnExpiryTime by
+                                    viewModel.expiryTimeState.collectAsStateWithLifecycle()
+                                val churnIsOnRetention by
+                                    viewModel.isOnRetentionPlanState.collectAsStateWithLifecycle()
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
@@ -2807,9 +2817,7 @@ fun SettingsScreen(
                                     ),
                                     Triple(
                                         Icons.Rounded.EditNote,
-                                        stringResource(
-                                            R.string.settings_premium_feature_followups
-                                        ),
+                                        stringResource(R.string.settings_premium_feature_followups),
                                         stringResource(
                                             R.string.settings_premium_feature_followups_desc
                                         ),
@@ -3253,9 +3261,7 @@ fun SettingsScreen(
                     com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
                 }
                 var analyticsEnabled by remember {
-                    mutableStateOf(
-                        privacyPrefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
-                    )
+                    mutableStateOf(privacyPrefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false))
                 }
                 var driveBackupEnabled by remember {
                     mutableStateOf(
@@ -3335,10 +3341,12 @@ fun SettingsScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                ),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor =
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
                             ) {
                                 Icon(
                                     androidx.compose.material.icons.Icons.Rounded.Tune,
@@ -3405,7 +3413,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     showReportAiDialog = true
                                     reportAiSent = false
-                                },
+                                }
                             ) {
                                 Text(stringResource(R.string.settings_report_ai_title))
                             }
@@ -3448,7 +3456,8 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // M1 — § 356a BGB Widerrufsbutton (ab 19.06.2026): zweistufig + direkter Versand via Gmail-API.
+                        // M1 — § 356a BGB Widerrufsbutton (ab 19.06.2026): zweistufig + direkter
+                        // Versand via Gmail-API.
                         var showRevokeDialog by remember { mutableStateOf(false) }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -3487,7 +3496,7 @@ fun SettingsScreen(
                                 },
                                 colors =
                                     ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.primary
                                     ),
                             ) {
                                 Icon(
@@ -3536,41 +3545,52 @@ fun SettingsScreen(
                                         onClick = {
                                             val email = revokeUserEmail
                                             if (email.isNullOrBlank()) {
-                                                revokeError = context.getString(R.string.settings_revoke_no_account)
+                                                revokeError =
+                                                    context.getString(
+                                                        R.string.settings_revoke_no_account
+                                                    )
                                                 showRevokeDialog = false
                                                 return@TextButton
                                             }
                                             isRevokeSending = true
                                             revokeScope.launch {
-                                                val timestamp = java.text.SimpleDateFormat(
-                                                    "yyyy-MM-dd HH:mm:ss z",
-                                                    java.util.Locale.getDefault(),
-                                                ).format(java.util.Date())
-                                                val body = context.getString(
-                                                    R.string.settings_revoke_email_body,
-                                                    email,
-                                                    timestamp,
-                                                )
-                                                val confirmSubject = context.getString(
-                                                    R.string.settings_revoke_confirm_subject,
-                                                )
-                                                val confirmBody = context.getString(
-                                                    R.string.settings_revoke_confirm_user_body,
-                                                    timestamp,
-                                                )
-                                                val subject = context.getString(
-                                                    R.string.settings_revoke_email_subject,
-                                                )
+                                                val timestamp =
+                                                    java.text
+                                                        .SimpleDateFormat(
+                                                            "yyyy-MM-dd HH:mm:ss z",
+                                                            java.util.Locale.getDefault(),
+                                                        )
+                                                        .format(java.util.Date())
+                                                val body =
+                                                    context.getString(
+                                                        R.string.settings_revoke_email_body,
+                                                        email,
+                                                        timestamp,
+                                                    )
+                                                val confirmSubject =
+                                                    context.getString(
+                                                        R.string.settings_revoke_confirm_subject
+                                                    )
+                                                val confirmBody =
+                                                    context.getString(
+                                                        R.string.settings_revoke_confirm_user_body,
+                                                        timestamp,
+                                                    )
+                                                val subject =
+                                                    context.getString(
+                                                        R.string.settings_revoke_email_subject
+                                                    )
                                                 try {
                                                     val error =
-                                                        com.bestjournal.app.data.remote.RevokeSender.send(
-                                                            context = context,
-                                                            accountEmail = email,
-                                                            subject = subject,
-                                                            devBody = body,
-                                                            userSubject = confirmSubject,
-                                                            userBody = confirmBody,
-                                                        )
+                                                        com.bestjournal.app.data.remote.RevokeSender
+                                                            .send(
+                                                                context = context,
+                                                                accountEmail = email,
+                                                                subject = subject,
+                                                                devBody = body,
+                                                                userSubject = confirmSubject,
+                                                                userBody = confirmBody,
+                                                            )
                                                     isRevokeSending = false
                                                     showRevokeDialog = false
                                                     if (error == null) {
@@ -3579,19 +3599,20 @@ fun SettingsScreen(
                                                         revokeError = error
                                                     }
                                                 } catch (
-                                                    e: com.bestjournal.app.data.remote.FeedbackNeedConsentException
-                                                ) {
+                                                    e:
+                                                        com.bestjournal.app.data.remote.FeedbackNeedConsentException) {
                                                     isRevokeSending = false
                                                     showRevokeDialog = false
                                                     try {
                                                         context.startActivity(e.consentIntent)
                                                     } catch (_: Exception) {}
-                                                    revokeError = context.getString(
-                                                        R.string.settings_feedback_allow_gmail,
-                                                    )
+                                                    revokeError =
+                                                        context.getString(
+                                                            R.string.settings_feedback_allow_gmail
+                                                        )
                                                 }
                                             }
-                                        }
+                                        },
                                     ) {
                                         Text(stringResource(R.string.settings_revoke_confirm))
                                     }
@@ -3611,11 +3632,15 @@ fun SettingsScreen(
                         if (revokeSuccessShown) {
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = { revokeSuccessShown = false },
-                                title = { Text(stringResource(R.string.settings_revoke_success_title)) },
-                                text = { Text(stringResource(R.string.settings_revoke_success_body)) },
+                                title = {
+                                    Text(stringResource(R.string.settings_revoke_success_title))
+                                },
+                                text = {
+                                    Text(stringResource(R.string.settings_revoke_success_body))
+                                },
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(
-                                        onClick = { revokeSuccessShown = false },
+                                        onClick = { revokeSuccessShown = false }
                                     ) {
                                         Text(stringResource(R.string.settings_revoke_success_close))
                                     }
@@ -3625,19 +3650,25 @@ fun SettingsScreen(
 
                         // Error dialog — Fallback auf mailto wenn Gmail-API fehlschlaegt
                         revokeError?.let { err ->
-                            val revokeSubjectFallback = stringResource(R.string.settings_revoke_email_subject)
-                            val revokeBodyFallback = stringResource(
-                                R.string.settings_revoke_email_body,
-                                revokeUserEmail ?: "",
-                                java.text.SimpleDateFormat(
-                                    "yyyy-MM-dd HH:mm:ss z",
-                                    java.util.Locale.getDefault(),
-                                ).format(java.util.Date()),
-                            )
+                            val revokeSubjectFallback =
+                                stringResource(R.string.settings_revoke_email_subject)
+                            val revokeBodyFallback =
+                                stringResource(
+                                    R.string.settings_revoke_email_body,
+                                    revokeUserEmail ?: "",
+                                    java.text
+                                        .SimpleDateFormat(
+                                            "yyyy-MM-dd HH:mm:ss z",
+                                            java.util.Locale.getDefault(),
+                                        )
+                                        .format(java.util.Date()),
+                                )
                             val revokeNoEmail = stringResource(R.string.settings_revoke_no_email)
                             androidx.compose.material3.AlertDialog(
                                 onDismissRequest = { revokeError = null },
-                                title = { Text(stringResource(R.string.settings_revoke_error_title)) },
+                                title = {
+                                    Text(stringResource(R.string.settings_revoke_error_title))
+                                },
                                 text = {
                                     Text(stringResource(R.string.settings_revoke_error_body, err))
                                 },
@@ -3645,34 +3676,43 @@ fun SettingsScreen(
                                     androidx.compose.material3.TextButton(
                                         onClick = {
                                             revokeError = null
-                                            val mailtoUri = android.net.Uri.parse(
-                                                "mailto:dev.app.support@gmail.com" +
-                                                    "?subject=" +
-                                                    android.net.Uri.encode(revokeSubjectFallback) +
-                                                    "&body=" +
-                                                    android.net.Uri.encode(revokeBodyFallback)
-                                            )
-                                            val intent = android.content.Intent(
-                                                android.content.Intent.ACTION_SENDTO,
-                                                mailtoUri,
-                                            )
+                                            val mailtoUri =
+                                                android.net.Uri.parse(
+                                                    "mailto:dev.app.support@gmail.com" +
+                                                        "?subject=" +
+                                                        android.net.Uri.encode(
+                                                            revokeSubjectFallback
+                                                        ) +
+                                                        "&body=" +
+                                                        android.net.Uri.encode(revokeBodyFallback)
+                                                )
+                                            val intent =
+                                                android.content.Intent(
+                                                    android.content.Intent.ACTION_SENDTO,
+                                                    mailtoUri,
+                                                )
                                             try {
                                                 context.startActivity(intent)
                                             } catch (_: android.content.ActivityNotFoundException) {
                                                 android.widget.Toast.makeText(
-                                                    context,
-                                                    revokeNoEmail,
-                                                    android.widget.Toast.LENGTH_LONG,
-                                                ).show()
+                                                        context,
+                                                        revokeNoEmail,
+                                                        android.widget.Toast.LENGTH_LONG,
+                                                    )
+                                                    .show()
                                             }
-                                        },
+                                        }
                                     ) {
-                                        Text(stringResource(R.string.settings_revoke_error_email_fallback))
+                                        Text(
+                                            stringResource(
+                                                R.string.settings_revoke_error_email_fallback
+                                            )
+                                        )
                                     }
                                 },
                                 dismissButton = {
                                     androidx.compose.material3.TextButton(
-                                        onClick = { revokeError = null },
+                                        onClick = { revokeError = null }
                                     ) {
                                         Text(stringResource(R.string.action_close))
                                     }
@@ -3682,7 +3722,7 @@ fun SettingsScreen(
 
                         if (showCrisisDialog) {
                             com.bestjournal.app.ui.components.CrisisHelpDialog(
-                                onDismiss = { showCrisisDialog = false },
+                                onDismiss = { showCrisisDialog = false }
                             )
                         }
                     }
@@ -3691,14 +3731,15 @@ fun SettingsScreen(
                 // Layered-consent: Privacy Preferences Sheet
                 com.bestjournal.app.ui.components.PrivacyPreferencesSheet(
                     visible = showPrivacySheet,
-                    initial = com.bestjournal.app.ui.components.PrivacyPreferences(
-                        analytics = analyticsEnabled,
-                        groq = groqConsented,
-                        gemini = geminiConsented,
-                        tts = ttsConsented,
-                        driveBackup = driveBackupEnabled,
-                        doNotSell = privacyPrefs.getBoolean(Constants.PREF_DO_NOT_SELL, false),
-                    ),
+                    initial =
+                        com.bestjournal.app.ui.components.PrivacyPreferences(
+                            analytics = analyticsEnabled,
+                            groq = groqConsented,
+                            gemini = geminiConsented,
+                            tts = ttsConsented,
+                            driveBackup = driveBackupEnabled,
+                            doNotSell = privacyPrefs.getBoolean(Constants.PREF_DO_NOT_SELL, false),
+                        ),
                     onDismiss = { showPrivacySheet = false },
                     onSave = { prefs ->
                         analyticsEnabled = prefs.analytics
@@ -3711,10 +3752,7 @@ fun SettingsScreen(
                             .putBoolean(Constants.PREF_ANALYTICS_ENABLED, prefs.analytics)
                             .putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, prefs.driveBackup)
                             .putBoolean(Constants.PREF_DO_NOT_SELL, prefs.doNotSell)
-                            .putLong(
-                                Constants.PREF_CONSENT_TIMESTAMP,
-                                System.currentTimeMillis(),
-                            )
+                            .putLong(Constants.PREF_CONSENT_TIMESTAMP, System.currentTimeMillis())
                             .apply()
                         com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
                             .setAnalyticsCollectionEnabled(prefs.analytics)
@@ -3745,13 +3783,14 @@ fun SettingsScreen(
                                 .edit()
                                 .putBoolean(Constants.PREF_TTS_ENABLED, prefs.tts)
                                 .apply()
-                            if (prefs.tts &&
-                                encPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, null)
-                                    .isNullOrBlank()
+                            if (
+                                prefs.tts &&
+                                    encPrefs
+                                        .getString(Constants.PREF_EDGE_TTS_VOICE, null)
+                                        .isNullOrBlank()
                             ) {
                                 val defaultVoice =
-                                    com.bestjournal.app.util.TtsVoiceRegistry
-                                        .getLocaleVoices()
+                                    com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
                                         .defaultVoiceId
                                 encPrefs
                                     .edit()
@@ -3762,11 +3801,12 @@ fun SettingsScreen(
                             // Silent fallback — user can still flip the Sounds switch later.
                         }
                     },
-                    showDoNotSell = run {
-                        val loc =
-                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-                        loc.language == "en" && loc.country == "US"
-                    },
+                    showDoNotSell =
+                        run {
+                            val loc =
+                                androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+                            loc.language == "en" && loc.country == "US"
+                        },
                 )
 
                 if (showDeleteDialog) {
@@ -3814,9 +3854,7 @@ fun SettingsScreen(
                                     strokeWidth = 2.dp,
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    stringResource(R.string.settings_delete_account_in_progress)
-                                )
+                                Text(stringResource(R.string.settings_delete_account_in_progress))
                             }
                         },
                         confirmButton = {},
@@ -3829,11 +3867,7 @@ fun SettingsScreen(
                     androidx.compose.material3.AlertDialog(
                         onDismissRequest = { viewModel.dismissDeleteAccountError() },
                         title = {
-                            Text(
-                                stringResource(
-                                    R.string.settings_delete_account_drive_error_title
-                                )
-                            )
+                            Text(stringResource(R.string.settings_delete_account_drive_error_title))
                         },
                         text = {
                             Text(
@@ -3854,10 +3888,7 @@ fun SettingsScreen(
                             Column {
                                 androidx.compose.material3.TextButton(
                                     onClick = {
-                                        viewModel.deleteAccount(
-                                            context,
-                                            forceLocalDelete = true,
-                                        )
+                                        viewModel.deleteAccount(context, forceLocalDelete = true)
                                     }
                                 ) {
                                     Text(
@@ -3870,9 +3901,7 @@ fun SettingsScreen(
                                 androidx.compose.material3.TextButton(
                                     onClick = { viewModel.dismissDeleteAccountError() }
                                 ) {
-                                    Text(
-                                        stringResource(R.string.settings_delete_account_abort)
-                                    )
+                                    Text(stringResource(R.string.settings_delete_account_abort))
                                 }
                             }
                         },
@@ -3925,7 +3954,7 @@ fun SettingsScreen(
                         // 9b. Rechtliche Dokumente — In-App + Online
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -3952,7 +3981,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
@@ -3966,12 +3995,12 @@ fun SettingsScreen(
                         LegalDocumentRow(
                             label = stringResource(R.string.settings_legal_section_header),
                             onClick = {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(onlineUrl),
-                                )
-                                intent.flags =
-                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                val intent =
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(onlineUrl),
+                                    )
+                                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                                 context.startActivity(intent)
                             },
                         )
@@ -4858,19 +4887,16 @@ private fun WeeklyReviewPickerDialog(
 // Old ChurnRetentionDialog removed — replaced by 3-step ChurnFlowDialog
 
 /**
- * Premium upsell sheet shown when a free user tries to add a third custom
- * analysis profile. Mirrors the layout of ReviewPremiumSheet (monthly-review
- * paywall) so the visual language is consistent across the app.
+ * Premium upsell sheet shown when a free user tries to add a third custom analysis profile. Mirrors
+ * the layout of ReviewPremiumSheet (monthly-review paywall) so the visual language is consistent
+ * across the app.
  *
- * The sheet does not subscribe the user directly — it routes to the full
- * PaywallScreen on "Abo starten" so the normal billing flow runs.
+ * The sheet does not subscribe the user directly — it routes to the full PaywallScreen on "Abo
+ * starten" so the normal billing flow runs.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun CustomAnalysesPremiumSheet(
-    onSubscribe: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun CustomAnalysesPremiumSheet(onSubscribe: () -> Unit, onDismiss: () -> Unit) {
     val sheetState =
         androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -4938,9 +4964,7 @@ private fun CustomAnalysesPremiumSheet(
                     },
                 shape = RoundedCornerShape(16.dp),
                 colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 Text(
                     stringResource(R.string.retro_start_sub),
@@ -4979,15 +5003,12 @@ private fun CustomAnalysesBenefitPoint(text: String) {
 }
 
 @Composable
-private fun LegalDocumentRow(
-    label: String,
-    onClick: () -> Unit,
-) {
+private fun LegalDocumentRow(label: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 10.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -5012,11 +5033,10 @@ private fun LegalDocumentRow(
 }
 
 /**
- * Loop-7 (Frank, 2026-04-30): parse the cloud function's ISO-8601
- * expiryTime (UTC, e.g. "2026-04-30T19:01:04.944Z") into a localised
- * "30.04.2026, 21:01" string for the Premium-card headline. Returns
- * null when the input is missing or unparseable so the caller can
- * fall back to the plain "Gekuendigt" label.
+ * Loop-7 (Frank, 2026-04-30): parse the cloud function's ISO-8601 expiryTime (UTC, e.g.
+ * "2026-04-30T19:01:04.944Z") into a localised "30.04.2026, 21:01" string for the Premium-card
+ * headline. Returns null when the input is missing or unparseable so the caller can fall back to
+ * the plain "Gekuendigt" label.
  */
 private fun formatPremiumExpiryDateTime(iso: String?): String? {
     if (iso.isNullOrBlank()) return null
