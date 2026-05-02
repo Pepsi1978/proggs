@@ -702,62 +702,152 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)
 
+    /// Pillar-Stern-Klick (Windows-Pendant: BtnUltrathink_Click).
+    /// Default seit der Architektur-Aenderung: Es wird NUR die Prompt-Eingabe
+    /// direkt am Pillar geoeffnet — das PromptBoard bleibt versteckt.
+    /// Der Benutzer kann das Board ueber den Solo-Dock-Stern in der
+    /// Eingabe-Toolbar bei Bedarf dazuschalten.
     private func toggleUltrathink() {
         alwaysOnActive.toggle()
         panel.setUltrathinkEnabled(alwaysOnActive)
         if alwaysOnActive {
-            showPromptBoardPanel()
+            showPromptInputDockedToOverlay()
         } else {
-            hidePromptBoardPanel()
+            hidePromptStack()
         }
         NSLog("PromptBoard panel %@", alwaysOnActive ? "OPEN" : "CLOSED")
     }
 
-    private func showPromptBoardPanel() {
-        if promptBoardPanel == nil {
-            let p = PromptBoardPanel()
-            p.onInsertText = { [weak self] text in
-                guard let self = self, !text.isEmpty else { return }
-                tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
-                TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
-            }
-            p.onInputSubmit = { [weak self] middleText in
-                self?.handleInputSubmit(middleText)
-            }
-            // Wird gefeuert nachdem der Benutzer einen Historie-Eintrag im
-            // Editor-Sheet gespeichert hat — Cloud-Upload anstossen, damit
-            // die Aenderung auch auf der Windows-Seite sichtbar wird.
-            p.onHistorySyncRequested = { [weak self] in
-                self?.uploadHistoryToCloud()
-            }
-            // Right-click drag on the panel itself moves both floating
-            // windows together: panel slides under the cursor (already
-            // done inside the panel), and we slide the pillar by the
-            // same delta so they stay glued. The pillar saves its own
-            // position so the new spot is restored on next launch.
-            p.onPanelDragged = { [weak self] panelOrigin in
-                guard let self = self else { return }
-                let pillarSize = self.panel.frame.size
-                // Pillar sits to the right of the panel with a 4 px seam
-                // (matches PromptBoardPanel.dock(rightOf:)).
-                let pillarOrigin = NSPoint(
-                    x: panelOrigin.x + p.frame.size.width + 4,
-                    y: panelOrigin.y)
-                self.panel.setFrame(NSRect(origin: pillarOrigin, size: pillarSize),
-                                    display: true)
-                // Persist so the manual position survives an app restart.
-                self.panel.savePillarPosition()
-            }
-            promptBoardPanel = p
-        }
-        guard let p = promptBoardPanel else { return }
-        p.dock(rightOf: panel)
-        p.orderFrontRegardless()
-        p.refresh()
+    /// True wenn die Prompt-Eingabe direkt am Pillar haengt (PromptBoard
+    /// ist dann versteckt). Wird nur durch den Solo-Dock-Stern in der
+    /// Eingabe-Toolbar umgeschaltet, NICHT durch den Pillar-Stern.
+    private var inputSoloDock: Bool = true
+
+    /// Startup-Default: Pillar-Stern oeffnet die Eingabe direkt am Pillar.
+    /// Das PromptBoard wird intern instanziiert (fuer Daten/Logik), aber
+    /// nicht sichtbar. Der Solo-Dock-Stern in der Eingabe-Toolbar holt es
+    /// bei Bedarf nach vorne.
+    private func showPromptInputDockedToOverlay() {
+        ensurePromptBoardInstance()
+        guard let board = promptBoardPanel else { return }
+        // Daten frisch laden, damit beim Einblenden des Boards via
+        // Solo-Dock-Stern keine leere Liste zu sehen ist.
+        board.refresh()
+        // Eingabe oeffnen — das Board ruft openInputPanelExternally(),
+        // welche das InputPanel via interner dock(leftOf:) ans Board
+        // andockt. Wir ueberschreiben das gleich auf Pillar-Andock.
+        board.openInputPanelExternally()
+        // Solo-Dock-Toggle und Gemini-Callback verdrahten BEVOR wir die
+        // Andockung anpassen — sonst koennten Klicks ins Leere laufen.
+        wireInputPanelCallbacks()
+        guard let input = board.currentInputPanel else { return }
+        inputSoloDock = true
+        input.dockToOverlay(self.panel)
+        input.setSoloDockState(true)
+        // Fokus ins Eingabefeld damit der Benutzer SOFORT tippen kann
+        // ohne erst klicken zu muessen — fixt den Beep-Bug, weil das
+        // Eingabe-Fenster jetzt firstResponder ist.
+        input.makeKeyAndOrderFront(nil)
     }
 
-    private func hidePromptBoardPanel() {
+    /// Schliesst sowohl Eingabe als auch Board (z.B. wenn der Pillar-Stern
+    /// erneut geklickt wird = Ultrathink off).
+    private func hidePromptStack() {
+        promptBoardPanel?.closeInputPanelExternally()
         promptBoardPanel?.orderOut(nil)
+    }
+
+    /// Solo-Dock-Stern in der PromptInput-Toolbar wurde geklickt.
+    /// `active=true`: PromptBoard ausblenden, Eingabe ans Pillar andocken.
+    /// `active=false`: PromptBoard rechts neben Pillar zeigen, Eingabe rueckt
+    /// an dessen linken Rand (Standard-Zweier-Layout).
+    private func applySoloDockMode(_ active: Bool) {
+        guard let board = promptBoardPanel,
+              let input = board.currentInputPanel else { return }
+        inputSoloDock = active
+        if active {
+            board.orderOut(nil)
+            input.dockToOverlay(self.panel)
+            input.setSoloDockState(true)
+        } else {
+            board.dock(rightOf: self.panel)
+            board.orderFrontRegardless()
+            board.refresh()
+            // Eingabe rueckt an den linken Rand des Boards via interner
+            // dock(leftOf:) — diese Methode existiert schon im PromptInputPanel.
+            input.dock(leftOf: board, force: true)
+            input.setSoloDockState(false)
+        }
+        input.makeKeyAndOrderFront(nil)
+    }
+
+    /// Erstellt die PromptBoardPanel-Instanz inkl. aller Callbacks, macht es
+    /// aber NICHT sichtbar. Wird sowohl vom Solo-Dock-Einstieg (nur Eingabe)
+    /// als auch von applySoloDockMode(false) genutzt — alle Subscriptions
+    /// liegen damit an einer Stelle. Pendant zu Windows EnsurePromptPanelInstance.
+    private func ensurePromptBoardInstance() {
+        if promptBoardPanel != nil { return }
+        let p = PromptBoardPanel()
+        p.onInsertText = { [weak self] text in
+            guard let self = self, !text.isEmpty else { return }
+            tvoDebug("[App] onInsertText textLen=\(text.count) autoEnter=\(self.autoEnterEnabled)")
+            TerminalController.pasteText(text, autoEnter: self.autoEnterEnabled)
+        }
+        p.onInputSubmit = { [weak self] middleText in
+            self?.handleInputSubmit(middleText)
+        }
+        p.onHistorySyncRequested = { [weak self] in
+            self?.uploadHistoryToCloud()
+        }
+        // Rechtsklick-Drag aufs Board verschiebt die ganze Gruppe — wenn
+        // das Board sichtbar ist, zieht der Pillar mit; im Solo-Dock-Modus
+        // ist das Board orderOut'd, also kommt dieser Pfad gar nicht zum
+        // Tragen. Logik bleibt unveraendert.
+        p.onPanelDragged = { [weak self] panelOrigin in
+            guard let self = self else { return }
+            let pillarSize = self.panel.frame.size
+            let pillarOrigin = NSPoint(
+                x: panelOrigin.x + p.frame.size.width + 4,
+                y: panelOrigin.y)
+            self.panel.setFrame(NSRect(origin: pillarOrigin, size: pillarSize),
+                                display: true)
+            self.panel.savePillarPosition()
+        }
+        promptBoardPanel = p
+    }
+
+    /// Wird aufgerufen NACHDEM die InputPanel-Instanz im Board erzeugt
+    /// wurde — wir verdrahten Solo-Dock-Toggle und Gemini-Verbesserung.
+    /// Diese Verdrahtung muss bei jedem Re-Open passieren weil das Board
+    /// das InputPanel intern verwirft (closeInputPanel() setzt es auf nil).
+    private func wireInputPanelCallbacks() {
+        guard let input = promptBoardPanel?.currentInputPanel else { return }
+        input.onSoloDockToggle = { [weak self] newState in
+            self?.applySoloDockMode(newState)
+        }
+        input.onGeminiImprove = { [weak self] currentText, completion in
+            self?.geminiImproveText(currentText, completion: completion)
+        }
+    }
+
+    /// Fuer den G-Button in der Eingabe-Toolbar: ruft Gemini mit dem
+    /// aktuellen Text auf und liefert die korrigierte Variante zurueck.
+    /// Bei Fehlern liefern wir nil — die Eingabe bleibt dann unveraendert.
+    private func geminiImproveText(_ text: String,
+                                   completion: @escaping (String?) -> Void) {
+        guard let gemini = geminiClient else {
+            completion(nil)
+            return
+        }
+        gemini.correctText(text, profile: activeProfile) { result in
+            switch result {
+            case .success(let corrected):
+                completion(corrected)
+            case .failure(let err):
+                tvoDebug("[App] Gemini improve failed: \(err.localizedDescription)")
+                completion(nil)
+            }
+        }
     }
 
     // MARK: - Gemini Toggle

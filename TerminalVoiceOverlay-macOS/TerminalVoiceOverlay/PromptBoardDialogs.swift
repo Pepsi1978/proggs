@@ -533,14 +533,51 @@ final class PBPromptEditDialog: NSWindowController, NSWindowDelegate {
             return (idx >= 1 && idx <= 9) ? idx : nil
         }()
 
+        // Pre/Post-Auto-Wrap (Windows-Pendant #1858): wenn die Pre-/Post-
+        // Checkbox aktiv ist und der Text noch nicht im Wrap-Format steckt,
+        // automatisch in 'Pre-Prompt: "..."' bzw 'Post-Prompt: "..."' einbetten.
+        // So muss der Benutzer das nicht selbst tippen — beim erneuten Edit
+        // wird's idempotent erkannt und nicht doppelt gewrappt.
+        let isPre = prePromptCheckbox.state == .on
+        let isPost = postPromptCheckbox.state == .on
+        let wrappedText = Self.applyPrePostWrap(text: text, isPre: isPre, isPost: isPost)
+
         result = PBPromptEditResult(
             shortLabel: label,
-            originalText: text,
+            originalText: wrappedText,
             isAlwaysOn: alwaysOnCheckbox.state == .on,
-            isPrePrompt: prePromptCheckbox.state == .on,
-            isPostPrompt: postPromptCheckbox.state == .on,
+            isPrePrompt: isPre,
+            isPostPrompt: isPost,
             hotkeyNumber: pickedHotkey)
         window?.close()    // windowWillClose handles stopModal
+    }
+
+    /// Pre/Post-Auto-Wrap: idempotent. Wenn isPre=true und der Text noch nicht
+    /// mit 'Pre-Prompt: "' beginnt, wird er gewrappt. Analog fuer Post. Wenn
+    /// die Checkbox AUS ist und der Text gewrappt ist, wird der Wrap entfernt
+    /// (= Round-Trip-fest). Beide Flags gleichzeitig: Pre umschliesst aussen,
+    /// Post innen — das spielt aber praktisch keine Rolle weil normalerweise
+    /// nur eines aktiv ist.
+    private static func applyPrePostWrap(text: String, isPre: Bool, isPost: Bool) -> String {
+        var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Existierende Wraps abbauen (idempotent)
+        if let unwrapped = unwrap(t, prefix: "Pre-Prompt: \"", suffix: "\"") { t = unwrapped }
+        if let unwrapped = unwrap(t, prefix: "Post-Prompt: \"", suffix: "\"") { t = unwrapped }
+
+        // Neu wrappen wenn Flag gesetzt
+        if isPost { t = "Post-Prompt: \"\(t)\"" }
+        if isPre  { t = "Pre-Prompt: \"\(t)\""  }
+        return t
+    }
+
+    private static func unwrap(_ s: String, prefix: String, suffix: String) -> String? {
+        guard s.hasPrefix(prefix), s.hasSuffix(suffix), s.count >= prefix.count + suffix.count else {
+            return nil
+        }
+        let start = s.index(s.startIndex, offsetBy: prefix.count)
+        let end = s.index(s.endIndex, offsetBy: -suffix.count)
+        return String(s[start..<end])
     }
 
     /// Sets a fresh "(dd.MM.yyyy, HH:mm)" suffix on the label, replacing

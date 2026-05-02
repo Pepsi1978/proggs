@@ -27,6 +27,12 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     private var inputToggleButton: NSButton?
     private var historyToggleButton: NSButton?
+    private var filterActiveButton: NSButton?
+    private var clearAllChecksButton: NSButton?
+
+    /// Wenn true, werden in renderPrompts() nur Prompts mit isAlwaysOn=true
+    /// angezeigt (Windows-Pendant: _filterActiveOnly).
+    private var filterActiveOnly: Bool = false
 
     /// Historie-Fenster + Sichtbarkeitsstatus.
     private var historyPanel: PromptHistoryPanel?
@@ -117,7 +123,9 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         // dock(rightOf:) re-syncs it on demand so the two windows always
         // share the same vertical extent — change the pillar height in
         // OverlayPanel.swift and the panel automatically follows.
-        let contentRect = NSRect(x: 0, y: 0, width: 380, height: 480)
+        // Breite: 532 px (1:1 mit Windows-PromptBoardPanel.xaml — Commit #1868
+        // hat das Panel von 380 auf 532 verbreitert fuer mehr Platz pro Reihe).
+        let contentRect = NSRect(x: 0, y: 0, width: 532, height: 480)
         super.init(
             contentRect: contentRect,
             styleMask: [.borderless, .nonactivatingPanel],
@@ -358,21 +366,40 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         syncLabel.font = NSFont.systemFont(ofSize: 10)
         refreshSyncLabel()   // show the last known date from UserDefaults
 
+        // Filter-Button "nur aktivierte Prompts" — sitzt direkt rechts neben
+        // dem SyncLabel. Klick blendet alle Prompts ohne Always-On-Haekchen
+        // aus, erneuter Klick zeigt wieder alle. Im aktiven Filter-Zustand
+        // wird der Button golden — passend zum gelb-goldenen Haekchen der
+        // Always-On-Checkboxen (Windows-Pendant: BtnFilterActiveOnly #1880).
+        let filterBtn = makeIconButton(symbol: "✓", tooltip: "Nur aktivierte Prompts anzeigen — blendet alle Prompts ohne Haekchen aus. Erneuter Klick zeigt wieder alle.", action: #selector(onToggleFilterActive))
+        self.filterActiveButton = filterBtn
+
+        // !-Button "Alle Haekchen entfernen" — entfernt Always-On in allen
+        // Kategorien (ausser "Allgemein", siehe Windows #1868). Klick zeigt
+        // gruenes Aufblitzen als visuelle Bestaetigung (Windows #1867).
+        let clearChecksBtn = makeIconButton(symbol: "!", tooltip: "Alle Haekchen entfernen (Always-On in allen Kategorien)", action: #selector(onClearAllChecks))
+        self.clearAllChecksButton = clearChecksBtn
+
         let historyBtn = makeIconButton(symbol: "📜", tooltip: "Prompt-Historie", action: #selector(onToggleHistory))
-        let inputBtn = makeIconButton(symbol: "☆", tooltip: "Prompt-Eingabe einblenden", action: #selector(onToggleInput))
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
         let backupBtn = makeIconButton(symbol: "⇪", tooltip: "Backup / Wiederherstellen", action: #selector(onBackup))
         let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
         self.historyToggleButton = historyBtn
-        self.inputToggleButton = inputBtn
 
-        // Reihenfolge: [Historie] [Stern] [+] [Backup] [Settings]
-        let header = NSStackView(views: [titleLabel, syncLabel, NSView(), historyBtn, inputBtn, addCatBtn, backupBtn, settingsBtn])
+        // Reihenfolge (Windows-Parity #1877: kein Stern mehr im PromptBoard-Header
+        // — Stern ist jetzt im Pillar und in der PromptInput-Toolbar):
+        // [Title] [Sync+Filter] <flex spacer> [!] [Historie] [+] [Backup] [Settings]
+        let syncBlock = NSStackView(views: [syncLabel, filterBtn])
+        syncBlock.orientation = .horizontal
+        syncBlock.spacing = 6
+        syncBlock.alignment = .centerY
+
+        let header = NSStackView(views: [titleLabel, syncBlock, NSView(), clearChecksBtn, historyBtn, addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 6
         header.distribution = .fill
-        // Index 2 is the stretchable spacer NSView() between the sync label
+        // Index 2 is the stretchable spacer NSView() between the sync block
         // and the header's right-side icon buttons.
         (header.arrangedSubviews[2]).setContentHuggingPriority(.defaultLow, for: .horizontal)
 
@@ -609,10 +636,13 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             }
         }
 
-        let sorted = combined.sorted(by: { lhs, rhs in
+        let sortedAll = combined.sorted(by: { lhs, rhs in
             if lhs.0.sortOrder != rhs.0.sortOrder { return lhs.0.sortOrder < rhs.0.sortOrder }
             return lhs.0.shortLabel.localizedCaseInsensitiveCompare(rhs.0.shortLabel) == .orderedAscending
         })
+        // Filter "Nur aktivierte Prompts": wenn eingeschaltet, nur Eintraege
+        // mit isAlwaysOn=true durchlassen. Sonst alle (Windows-Pendant: BtnFilterActiveOnly).
+        let sorted = filterActiveOnly ? sortedAll.filter { $0.0.isAlwaysOn } : sortedAll
         currentPrompts = sorted.map { $0.0 }
 
         if sorted.isEmpty {
@@ -703,11 +733,19 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         // gebunden ist — kleines visuelles Badge das dem Windows-Pendant
         // entspricht (dort steht z.B. "1 — Title"). Macht beim Scannen der
         // Prompt-Liste sofort sichtbar welche Cmd+N-Taste was triggert.
+        // Pre/Post-Suffix " - vor"/" - nach" wird an den Titel angehaengt damit
+        // beim Scannen der Liste sofort sichtbar ist welche Prompts vor und
+        // welche nach dem eigentlichen Eingabe-Text eingefuegt werden
+        // (Windows-Pendant #1867).
+        var titleWithFlags = titleText
+        if prompt.isPrePrompt { titleWithFlags += " - vor" }
+        if prompt.isPostPrompt { titleWithFlags += " - nach" }
+
         let titleWithHotkey: String
         if let hk = prompt.hotkeyNumber, hk >= 1, hk <= 9 {
-            titleWithHotkey = "⌘\(hk)  \(titleText)"
+            titleWithHotkey = "⌘\(hk)  \(titleWithFlags)"
         } else {
-            titleWithHotkey = titleText
+            titleWithHotkey = titleWithFlags
         }
         let insertLabel = NSTextField(labelWithString: titleWithHotkey)
         insertLabel.textColor = .white
@@ -746,8 +784,19 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         deleteBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
         deleteBtn.toolTip = "Loeschen"
 
-        // Layout: [checkbox][insertLabel (huggable)][stretchable spacer][timestamp][edit][delete]
-        let rowStack = NSStackView(views: [alwaysOnToggle, insertLabel, NSView(), timestampLabel, editBtn, deleteBtn])
+        // Insert-Button (▶) — Windows-Pendant #1866 (E77F). Klick fuegt den
+        // Prompt direkt ins Terminal ein. Vorher hatte die ganze Reihe diese
+        // Aufgabe; seit #1866 toggelt der Row-Click Always-On und es gibt
+        // einen dedizierten Insert-Button.
+        let insertBtn = NSButton(title: "▶", target: self, action: #selector(onInsertPromptClick(_:)))
+        insertBtn.bezelStyle = .recessed
+        insertBtn.isBordered = false
+        insertBtn.contentTintColor = NSColor(calibratedRed: 0.50, green: 0.81, blue: 1.0, alpha: 1)
+        insertBtn.identifier = NSUserInterfaceItemIdentifier(prompt.id.uuidString)
+        insertBtn.toolTip = "In Terminal einfuegen"
+
+        // Layout: [checkbox][insertLabel][spacer][timestamp][insert][edit][delete]
+        let rowStack = NSStackView(views: [alwaysOnToggle, insertLabel, NSView(), timestampLabel, insertBtn, editBtn, deleteBtn])
         rowStack.orientation = .horizontal
         rowStack.alignment = .centerY
         rowStack.spacing = 6
@@ -763,6 +812,7 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             row.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
             alwaysOnToggle.widthAnchor.constraint(equalToConstant: 18),
             alwaysOnToggle.heightAnchor.constraint(equalToConstant: 18),
+            insertBtn.widthAnchor.constraint(equalToConstant: 22),
             editBtn.widthAnchor.constraint(equalToConstant: 22),
             deleteBtn.widthAnchor.constraint(equalToConstant: 22),
         ])
@@ -821,6 +871,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             openInputPanel()
         }
     }
+
+    /// Liefert das aktuelle InputPanel falls offen — AppDelegate braucht das
+    /// fuer Solo-Dock-Logik (am Pillar andocken statt am Board).
+    var currentInputPanel: PromptInputPanel? { inputPanel }
+
+    /// Public Wrapper damit AppDelegate das Eingabefenster oeffnen kann
+    /// ohne dass der Benutzer auf den Stern im Header klicken muss
+    /// (Stern wurde mit Windows-Parity #1877 aus dem Header entfernt).
+    func openInputPanelExternally() { openInputPanel() }
+    func closeInputPanelExternally() { closeInputPanel() }
 
     private func openInputPanel() {
         // Eingabe und Historie schliessen sich gegenseitig aus — beide
@@ -1044,6 +1104,59 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         btn.toolTip = historyPanelVisible ? "Prompt-Historie schliessen" : "Prompt-Historie"
     }
 
+    // MARK: - Filter "Nur aktivierte Prompts" + "Alle Haekchen entfernen"
+
+    /// Toggle des Filter-Modus: Nur Prompts mit Always-On=true sichtbar.
+    /// Aktiver Filter -> goldener Button, sonst Standard-Hintergrund. Beim
+    /// Klick auf einen Tab wird der Filter automatisch wieder aufgehoben
+    /// damit die Anzeige nicht "hängt" wenn der Benutzer Kategorien wechselt.
+    @objc private func onToggleFilterActive() {
+        filterActiveOnly.toggle()
+        updateFilterButtonVisual()
+        renderPrompts()
+    }
+
+    private func updateFilterButtonVisual() {
+        guard let btn = filterActiveButton else { return }
+        if filterActiveOnly {
+            btn.layer?.backgroundColor = NSColor(calibratedRed: 0.72, green: 0.53, blue: 0.04, alpha: 1).cgColor
+        } else {
+            btn.layer?.backgroundColor = NSColor(calibratedWhite: 0.22, alpha: 1).cgColor
+        }
+    }
+
+    /// Entfernt Always-On in allen Prompts ausser denen aus der "Allgemein"-
+    /// Kategorie (Windows #1868). Visuell: gruener Flash auf dem Button als
+    /// Bestaetigung. Loest danach refresh aus.
+    @objc private func onClearAllChecks() {
+        do {
+            for cat in categories {
+                if cat.name.lowercased() == "allgemein" { continue }
+                let prompts = try PromptBoardStore.shared.prompts(in: cat.id)
+                for var p in prompts where p.isAlwaysOn {
+                    p.isAlwaysOn = false
+                    p.updatedAt = Date()
+                    try PromptBoardStore.shared.updatePrompt(p)
+                }
+            }
+            flashClearButton()
+            scheduleAutoBackup()
+            refresh()
+        } catch {
+            NSLog("clearAllChecks failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func flashClearButton() {
+        guard let btn = clearAllChecksButton else { return }
+        let flash = CABasicAnimation(keyPath: "backgroundColor")
+        flash.fromValue = NSColor(calibratedRed: 0.20, green: 0.80, blue: 0.20, alpha: 1).cgColor
+        flash.toValue = NSColor(calibratedWhite: 0.22, alpha: 1).cgColor
+        flash.duration = 0.5
+        flash.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        btn.layer?.add(flash, forKey: "flash")
+    }
+
     // MARK: - Originale Aktionen
 
     @objc private func onAddCategory() {
@@ -1147,9 +1260,37 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
 
     /// Fired when the user clicks the row background (outside checkbox / edit /
     /// delete). Inserts the prompt exactly as the label-button would.
+    /// Row-Click toggelt jetzt Always-On (Windows-Pendant #1866). Vorher
+    /// fuegte er den Prompt direkt ein — diese Aufgabe hat jetzt der
+    /// dedizierte ▶-Insert-Button. Vorteil: Always-On laesst sich mit
+    /// einem Klick auf die ganze Reihe schalten, ohne die kleine
+    /// 18x18-Checkbox punktgenau treffen zu muessen.
     @objc private func onRowClick(_ sender: NSClickGestureRecognizer) {
         tvoDebug("[PBPanel] onRowClick id=\(sender.view?.identifier?.rawValue ?? "nil") panelLevel=\(self.level.rawValue)")
-        insertPromptByIdString(sender.view?.identifier?.rawValue)
+        toggleAlwaysOnByIdString(sender.view?.identifier?.rawValue)
+    }
+
+    /// Click-Handler fuer den dedizierten ▶-Insert-Button (Windows #1866).
+    @objc private func onInsertPromptClick(_ sender: NSButton) {
+        tvoDebug("[PBPanel] onInsertPromptClick id=\(sender.identifier?.rawValue ?? "nil")")
+        insertPromptByIdString(sender.identifier?.rawValue)
+    }
+
+    /// Hilfsmethode: Toggelt den Always-On-Status eines Prompts anhand
+    /// seiner UUID-String-Identitaet (kommt aus dem Row-View-Identifier).
+    private func toggleAlwaysOnByIdString(_ idStr: String?) {
+        guard let idStr = idStr,
+              let id = UUID(uuidString: idStr),
+              var prompt = currentPrompts.first(where: { $0.id == id }) else { return }
+        prompt.isAlwaysOn.toggle()
+        prompt.updatedAt = Date()
+        do {
+            try PromptBoardStore.shared.updatePrompt(prompt)
+            scheduleAutoBackup()
+            renderPrompts()
+        } catch {
+            NSLog("toggleAlwaysOnByIdString failed: \(error.localizedDescription)")
+        }
     }
 
     /// Fired when the user RIGHT-clicks the row. Opens the prompt editor —
