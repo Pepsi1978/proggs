@@ -76,6 +76,22 @@ class RoundButton: NSView {
     var onMouseEnteredHook: (() -> Void)?
     var onMouseExitedHook: (() -> Void)?
 
+    /// Globale + lokale NSEvent-Monitore fuer Press-and-Hold-Buttons (X-Button).
+    /// Hintergrund: Wenn onMouseDown z.B. Ctrl+U an die Terminal-App schickt,
+    /// holt activateTerminal() die Terminal-App in den Vordergrund. Damit
+    /// verliert das nonactivatingPanel den Mouse-Tracking-Stream und
+    /// `mouseUp(with:)` wird NIE mehr im RoundButton aufgerufen — der
+    /// Repeat-Timer im AppDelegate laeuft endlos weiter und loescht jede
+    /// neue Eingabe sofort. Loesung: Beim ersten mouseDown registrieren
+    /// wir zwei NSEvent-Monitore (lokal fuer Events innerhalb unserer App,
+    /// global fuer Events in fremden Apps). Sobald irgendwo systemweit
+    /// die linke Maustaste losgelassen wird, feuern wir onMouseUp und
+    /// raeumen die Monitore wieder ab.
+    /// Das ist das macOS-Aequivalent zu WPF's Mouse.Capture (siehe
+    /// Bug-Case Commit 8064d71c — gleiches Problem auf Windows).
+    private var globalMouseUpMonitor: Any?
+    private var localMouseUpMonitor: Any?
+
     init(label: String, color: NSColor, width: CGFloat = 40, height: CGFloat = 40) {
         self.label = label
         self.buttonColor = color
@@ -134,13 +150,53 @@ class RoundButton: NSView {
     override func mouseDown(with event: NSEvent) {
         if onMouseDown != nil {
             onMouseDown?()
+            startGlobalMouseUpTracking()
         } else {
             onClick?()
         }
     }
 
     override func mouseUp(with event: NSEvent) {
-        onMouseUp?()
+        // Native mouseUp kommt nur an wenn unser Panel den Tracking-Stream
+        // behalten hat. Wir behandeln das aber idempotent ueber stopGlobalMouseUpTracking.
+        stopGlobalMouseUpTracking(fireCallback: true)
+    }
+
+    /// Registriert globale + lokale NSEvent-Monitore die mouseUp auch dann
+    /// abfangen, wenn die Terminal-App (oder eine andere App) gerade den
+    /// Fokus geklaut hat. Wird von Press-and-Hold-Buttons genutzt.
+    private func startGlobalMouseUpTracking() {
+        // Falls schon Monitore aktiv sind (doppelter mouseDown ohne mouseUp),
+        // erst sauber abraeumen — onMouseUp NICHT feuern, der erste Druck
+        // war noch aktiv.
+        stopGlobalMouseUpTracking(fireCallback: false)
+
+        globalMouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] _ in
+            // Global-Monitor laeuft auf Main-Thread, kein Dispatch noetig.
+            self?.stopGlobalMouseUpTracking(fireCallback: true)
+        }
+        localMouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] event in
+            self?.stopGlobalMouseUpTracking(fireCallback: true)
+            return event
+        }
+    }
+
+    /// Raeumt die Monitore ab und feuert optional onMouseUp. Idempotent —
+    /// kann gefahrlos mehrfach aufgerufen werden.
+    private func stopGlobalMouseUpTracking(fireCallback: Bool) {
+        let hadMonitor = (globalMouseUpMonitor != nil) || (localMouseUpMonitor != nil)
+        if let m = globalMouseUpMonitor {
+            NSEvent.removeMonitor(m)
+            globalMouseUpMonitor = nil
+        }
+        if let m = localMouseUpMonitor {
+            NSEvent.removeMonitor(m)
+            localMouseUpMonitor = nil
+        }
+        // Nur einmal feuern, und nur wenn vorher tatsaechlich ein Tracking lief.
+        if fireCallback && hadMonitor {
+            onMouseUp?()
+        }
     }
 
     override func mouseEntered(with event: NSEvent) {
