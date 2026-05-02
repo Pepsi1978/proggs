@@ -391,7 +391,7 @@
     <string name="profile_goals_long">Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n• Welche Ziele du hast (auch versteckte)\n• Wie weit du bei jedem Ziel bist\n• Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest.</string>
     <string name="profile_custom_long">Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n• „Finde alle Erwähnungen von Sport"\n• „Analysiere meine Stimmungsschwankungen"\n• „Zeige mir, wann ich am produktivsten bin"\n\nVolle Kontrolle für alle, die genau wissen, was sie suchen.</string>
     <string name="profile_custom_prompt">Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?</string>
-    <string name="profile_select_hint">Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.</string>
+    <string name="profile_select_hint">Wähle ein Profil aus!</string>
 
     <!-- Multi-Custom-Analysis buttons (settings screen) -->
     <string name="profile_custom_add">Individuelle Analyse hinzufügen</string>
@@ -550,7 +550,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.20.27</string>
+    <string name="settings_about_version">Best Journal V0.20.28</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <string name="settings_about_copyright" translatable="false">© Barwandt Digital Labs</string>
     <!-- Sign-out dialog -->
