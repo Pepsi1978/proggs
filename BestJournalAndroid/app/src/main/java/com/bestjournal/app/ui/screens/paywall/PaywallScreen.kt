@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreditCard
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -72,6 +71,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AiLimitsDisclaimerRow
+import com.bestjournal.app.ui.components.AiLimitsInfoIcon
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
@@ -632,13 +632,10 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
                 // ── Free tier note (two lines for readability) ──
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
+                        AiLimitsInfoIcon(
+                            iconSize = 14.dp,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = stringResource(R.string.paywall_free_note),
                             style = MaterialTheme.typography.labelSmall,
