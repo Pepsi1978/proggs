@@ -492,9 +492,9 @@
     <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
-    <string name="settings_premium_feature_5_perspectives">4 KI-Profile</string>
+    <string name="settings_premium_feature_5_perspectives">4 besondere KI-Profile</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
-    <string name="settings_premium_feature_reviews">Alle Rückblicke mit KI</string>
+    <string name="settings_premium_feature_reviews">Alle Rückblicke ausführlich mit KI erstellt</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
     <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
     <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
@@ -502,7 +502,7 @@
     <string name="settings_premium_feature_pdf_desc">Alle Tagebucheinträge mit Bilder als Dokument</string>
     <string name="settings_premium_feature_voice">Präzisere Spracherkennung</string>
     <string name="settings_premium_feature_voice_desc">Höhere Qualität für deine Spracheinträge</string>
-    <string name="settings_premium_feature_profiles">Unbegrenzte individuelle Profile</string>
+    <string name="settings_premium_feature_profiles">Unbegrenzte individuelle KI-Profile</string>
     <string name="settings_premium_feature_profiles_desc">Mehrere Analyse-Schwerpunkte nebeneinander</string>
     <string name="settings_unlock_premium">Premium freischalten</string>
     <!-- Export dialog -->
@@ -1080,7 +1080,7 @@
     <string name="paywall_feature_retro">Alle Rückblicke KI generiert</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
     <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
-    <string name="paywall_feature_profiles">Unbegrenzte individuelle Analyse-Profile</string>
+    <string name="paywall_feature_profiles">Unbegrenzte individuelle KI-Profile</string>
 
     <!-- Paywall personalized headlines -->
     <string name="paywall_headline_stress">Finde deine innere Ruhe</string>
