@@ -355,10 +355,10 @@ final class PromptInputPanel: NSPanel {
     }
 
     @objc private func onInsertSeparatorClick() {
-        // Trenner anhaengen: 2 Newlines + ; + 2 Newlines (Pendant zu Windows
-        // " ; " Trenner — hier mit Newline-Wrapping fuer bessere Sichtbarkeit
-        // im Multi-Line-Eingabefeld).
-        let suffix = "\n\n ; \n\n"
+        // Trenner anhaengen: exakt 1 Space + Semikolon + 1 Space — 1:1 wie
+        // im Windows-Voice-Overlay. KEINE Newlines drumherum (vorherige
+        // Variante "\n\n ; \n\n" hat Leerzeilen erzeugt).
+        let suffix = " ; "
         let nsText = textView.string as NSString
         let merged = nsText.appending(suffix)
         textView.string = merged
