@@ -56,18 +56,19 @@ final class TerminalController {
     /// All blocking work (activateTerminal, usleep, CGEvent.post) runs on the
     /// serial send queue so the caller's thread (usually main) returns instantly.
     static func pasteText(_ text: String, autoEnter: Bool = false) {
-        #if DEBUG
-        NSLog("pasteText: '%@'", text)
-        #endif
+        tvoDebug("[Term] pasteText start textLen=\(text.count) autoEnter=\(autoEnter) lastActiveTerminal=\(lastActiveTerminalBundleID ?? "<nil>")")
         sendQueue.async {
             let pasteboard = NSPasteboard.general
             let previousContents = pasteboard.string(forType: .string)
 
             pasteboard.clearContents()
             pasteboard.setString(text, forType: .string)
+            tvoDebug("[Term] pasteText pasteboard set, calling activateTerminal")
 
             activateTerminal()
             usleep(150_000)
+            let frontApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "<unknown>"
+            tvoDebug("[Term] pasteText post-activate frontApp=\(frontApp), sending Cmd+V")
             sendKeyCombo(keyCode: 0x09, flags: .maskCommand) // Cmd+V
             if autoEnter {
                 usleep(300_000)
@@ -113,21 +114,37 @@ final class TerminalController {
         }
     }
 
-    /// Brings the last active terminal app to the front so CGEvent reaches it
+    /// Brings the last active terminal app to the front so CGEvent reaches it.
+    /// Wenn keine Terminal-App in der Liste gefunden wird, faellt es auf die
+    /// front-most non-self App zurueck — das verhindert dass Cmd+V an unsere
+    /// eigene App geht (was zu System-Beeps fuehrt weil wir kein Cmd+V handhaben).
     static func activateTerminal() {
         // Prefer the terminal that was last in focus
         let targetBundleID = lastActiveTerminalBundleID
         if let bundleID = targetBundleID,
            let app = NSWorkspace.shared.runningApplications
             .first(where: { $0.bundleIdentifier == bundleID }) {
+            tvoDebug("[Term] activateTerminal -> last active: \(bundleID)")
             app.activate()
             return
         }
-        // Fallback: pick any running target app
+        // Fallback 1: pick any running target app from the known list
         if let app = NSWorkspace.shared.runningApplications
             .first(where: { AppWatcher.isTargetApp($0.bundleIdentifier) }) {
+            tvoDebug("[Term] activateTerminal -> known-list fallback: \(app.bundleIdentifier ?? "?")")
             app.activate()
+            return
         }
+        // Fallback 2: front-most app, sofern nicht wir selbst sind. Besser
+        // als gar nichts zu tun (sonst landet Cmd+V im Voice-Overlay → Beep).
+        let myBundleID = Bundle.main.bundleIdentifier
+        if let frontApp = NSWorkspace.shared.frontmostApplication,
+           frontApp.bundleIdentifier != myBundleID {
+            tvoDebug("[Term] activateTerminal -> frontmost-fallback: \(frontApp.bundleIdentifier ?? "?")")
+            frontApp.activate()
+            return
+        }
+        tvoDebug("[Term] activateTerminal -> KEIN Ziel gefunden! Cmd+V wuerde an uns selbst gehen → Beep")
     }
 
     static func sendKeyCombo(keyCode: CGKeyCode, flags: CGEventFlags) {

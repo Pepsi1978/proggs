@@ -1,9 +1,27 @@
 import AppKit
 
 final class AppWatcher {
+    /// Liste aller Terminal-Apps die wir als "Ziel" fuer Voice/Prompt-Input
+    /// erkennen. Wenn die front-most App KEINE davon ist, wird beim
+    /// activateTerminal-Fallback eine willkuerliche aus dem Hintergrund
+    /// nach vorne geholt — was zu Beeps fuehrt weil Cmd+V dann an der
+    /// falschen Stelle landet (oft am Voice-Overlay selbst, das kein
+    /// Cmd+V-Handler hat → NSBeep).
+    /// Erweiterung 2026-05-02: Warp + andere moderne Terminals + Editoren
+    /// mit eingebautem Terminal (VS Code, Cursor) hinzugefuegt.
     static let targetBundleIDs: Set<String> = [
         "com.apple.Terminal",
         "com.googlecode.iterm2",
+        "dev.warp.Warp-Stable",
+        "co.zeit.hyper",
+        "io.alacritty",
+        "net.kovidgoyal.kitty",
+        "com.github.wez.wezterm",
+        "com.mitchellh.ghostty",
+        "com.tabby",
+        "com.microsoft.VSCode",
+        "com.todesktop.230313mzl4w4u92",     // Cursor
+        "com.googlecode.iterm2-nightly",
     ]
 
     private(set) var lastActiveTerminalBundleID: String?
