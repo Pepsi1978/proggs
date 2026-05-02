@@ -920,8 +920,10 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     }
 
     private func closeInputPanel() {
-        inputPanel?.close()
-        inputPanel = nil
+        // Nur ausblenden, NICHT zerstoeren — sonst geht der eingetippte Text
+        // verloren wenn der Pillar-Stern erneut geklickt wird. Das Panel-Objekt
+        // bleibt im Speicher, beim Wieder-Oeffnen ist der Text wieder da.
+        inputPanel?.orderOut(nil)
         inputPanelVisible = false
         updateStarVisual()
     }
