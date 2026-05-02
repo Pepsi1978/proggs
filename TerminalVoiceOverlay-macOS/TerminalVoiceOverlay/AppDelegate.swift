@@ -161,29 +161,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // X-Button: kurzer Klick loescht eine Zeile, gedrueckt halten loescht alle Zeilen
         // hintereinander im 10ms-Takt. Spiegelt das Windows-Voice-Overlay-Verhalten 1:1.
         //
-        // KRITISCH — Mouse-Release-Detection auf macOS:
-        // Wir koennen uns NICHT auf onXMouseUp verlassen. Wenn clearLine() per
-        // activateTerminal() die Terminal-App in den Vordergrund holt, verliert
-        // unser nonactivatingPanel den Mouse-Tracking-Stream und mouseUp(with:)
-        // kommt nie mehr im RoundButton an — der Loop wuerde endlos laufen
-        // und jede neue CLI-Eingabe sofort wieder loeschen.
+        // KRITISCH — zwei Stoerquellen, die zusammen das "Loop-laeuft-ewig"-Problem
+        // verursacht haben:
         //
-        // NSEvent.addGlobalMonitorForEvents wuerde das System-weit abfangen,
-        // braucht aber Input-Monitoring-Permission die wir nicht garantiert haben.
+        // 1. Mouse-Release-Detection: onXMouseUp kommt NICHT zuverlaessig an.
+        //    Wenn clearLine() per activateTerminal() die Terminal-App in den
+        //    Vordergrund holt, verliert unser nonactivatingPanel den
+        //    Mouse-Tracking-Stream. Loesung: pro Timer-Tick mit
+        //    NSEvent.pressedMouseButtons pollen — funktioniert systemweit
+        //    ohne spezielle Permission.
         //
-        // Loesung: NSEvent.pressedMouseButtons ist eine globale System-API ohne
-        // Permission-Anforderung und unabhaengig von der App-Aktivierung. Bei
-        // jedem Timer-Tick pruefen wir ob die linke Maustaste (Bit 0) noch
-        // gedrueckt ist. Wenn nicht → Loop sofort stoppen. Polling alle 10 ms
-        // ist hier voellig okay weil der Repeat ohnehin in dieser Frequenz laeuft.
+        // 2. sendQueue-Backlog: Der vorherige Code hat im 10-ms-Takt
+        //    TerminalController.clearLine() aufgerufen. Das hat jeden Auftrag
+        //    in die SERIELLE sendQueue geschoben (mit 150 ms usleep pro Item).
+        //    Bei 100 Submits/sec aber nur 6-7 Verarbeitungen/sec stauen sich
+        //    massive Backlogs auf — die werden NACH dem Loslassen noch
+        //    SEKUNDEN lang abgearbeitet und loeschen jede neue Eingabe.
+        //    Loesung: Im Timer-Tick direkt sendKeyCombo aufrufen, OHNE den
+        //    sendQueue-Umweg. Die Initial-Aktivierung uebernimmt einmalig
+        //    der erste clearLine()-Aufruf vor dem Timer-Start.
         panel.onXMouseDown = { [weak self] in
             guard let self = self else { return }
             tvoDebug("[App] onXMouseDown — Press-and-Hold-Loop start")
             self.panel.flashXButton()
-            // Sofort die erste Zeile loeschen (vor dem Timer-Start)
+            // Erstes Loeschen mit voller Maschinerie: aktiviert Terminal +
+            // wartet 150 ms + sendet Ctrl+U. Danach ist Terminal aktiv und
+            // wir koennen direkt nachfeuern.
             self.clearLine()
-            // Timer fuer Repeat: alle 10 ms eine weitere Zeile, aber NUR
-            // solange die linke Maustaste tatsaechlich noch gedrueckt ist.
+            // Repeat-Timer: alle 10 ms direkt Ctrl+U senden, OHNE Queue-Umweg.
+            // Vor jedem Tick pruefen wir ob die linke Maustaste noch gedrueckt
+            // ist — wenn nicht, sofort stoppen. Kein Backlog moeglich weil
+            // sendKeyCombo synchron innerhalb von Mikrosekunden zurueckkehrt.
             self.xRepeatTimer?.invalidate()
             self.xRepeatTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
@@ -194,12 +202,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.xRepeatTimer = nil
                     return
                 }
-                self.clearLine()
+                // Direkter Aufruf ohne sendQueue, ohne usleep, ohne erneute
+                // Activation. 0x20 = 'u', .maskControl = Ctrl-Modifier.
+                TerminalController.sendKeyCombo(keyCode: 0x20, flags: .maskControl)
             }
         }
         panel.onXMouseUp = { [weak self] in
             // Backup-Pfad fuer den Fall dass der native mouseUp doch ankommt
-            // (z.B. Click ohne Loslassen waehrend Terminal noch nicht aktiviert wurde).
+            // (z.B. Click-und-sofort-Loslassen bevor das Terminal aktiviert ist).
             tvoDebug("[App] onXMouseUp — native mouseUp, Loop stop")
             self?.xRepeatTimer?.invalidate()
             self?.xRepeatTimer = nil
