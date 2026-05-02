@@ -470,7 +470,11 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = stringResource(R.string.paywall_from_per_day, dailyPrice),
+                                text =
+                                    stringResource(
+                                        R.string.paywall_from_per_day,
+                                        displayYearlyPrice,
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -479,7 +483,7 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
                                 text =
                                     stringResource(
                                         R.string.paywall_instead_per_month,
-                                        displayMonthlyPrice,
+                                        savingsPercent,
                                     ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -524,15 +528,6 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = stringResource(R.string.paywall_yearly_savings, savingsPercent),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 

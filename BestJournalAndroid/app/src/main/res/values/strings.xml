@@ -40,8 +40,8 @@
     <string name="journal_ai_improving">KI verbessert Text — bitte warten</string>
     <string name="journal_later">Später</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">Ab %1$s pro Tag</string>
-    <string name="paywall_instead_per_month">statt %1$s pro Monat</string>
+    <string name="paywall_from_per_day">Jahresabo, %1$s pro Jahr</string>
+    <string name="paywall_instead_per_month">Spare %1$d%% gegenüber dem Monatsabo</string>
     <string name="paywall_or">oder</string>
     <string name="paywall_with_limited">mit eingeschränkten Limits.</string>
     <!-- Churn missed string -->
@@ -1076,8 +1076,8 @@
     <!-- Paywall features -->
     <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
     <string name="paywall_feature_improve">KI-Textverbesserung für deine Einträge</string>
-    <string name="paywall_feature_dashboard">Tägliche Dashboard-Updates nach deinen Einträgen</string>
-    <string name="paywall_feature_retro">Alle Rückblicke mit KI</string>
+    <string name="paywall_feature_dashboard">KI-Dashboard-Updates nach neuen Einträgen</string>
+    <string name="paywall_feature_retro">Alle Rückblicke KI generiert</string>
     <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
     <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
     <string name="paywall_feature_profiles">Unbegrenzte individuelle Analyse-Profile</string>
