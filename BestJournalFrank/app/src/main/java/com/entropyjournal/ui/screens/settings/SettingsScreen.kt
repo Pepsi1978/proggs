@@ -1972,13 +1972,24 @@ fun SettingsScreen(
 
                         if (showScenarioInfoIndex >= 0) {
                             val infoTitle = scenarioNames[showScenarioInfoIndex]
+                            // Match the per-profile accent + icon used on the
+                            // selectable profile cards above (1:1 from BestJournalAndroid).
+                            // All custom profiles share the Custom palette + Science icon.
                             val infoIcon =
                                 when (showScenarioInfoIndex) {
-                                    0 -> Icons.Rounded.Info
-                                    1 -> Icons.Rounded.Dashboard
-                                    2 -> Icons.Rounded.Person
-                                    3 -> Icons.Rounded.Fingerprint
-                                    else -> Icons.Rounded.Tune
+                                    0 -> Icons.Rounded.AutoStories
+                                    1 -> Icons.Rounded.Whatshot
+                                    2 -> Icons.Rounded.SelfImprovement
+                                    3 -> Icons.Rounded.RocketLaunch
+                                    else -> Icons.Rounded.Science
+                                }
+                            val infoAccent =
+                                when (showScenarioInfoIndex) {
+                                    0 -> SummaryPalette.accent
+                                    1 -> WarmCopper
+                                    2 -> InsightPalette.primary
+                                    3 -> GoalPalette.primary
+                                    else -> CustomPalette.primary
                                 }
                             val infoText =
                                 when (showScenarioInfoIndex) {
@@ -2000,7 +2011,7 @@ fun SettingsScreen(
                                     Icon(
                                         infoIcon,
                                         null,
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = infoAccent,
                                         modifier = Modifier.size(36.dp),
                                     )
                                 },
@@ -2008,6 +2019,7 @@ fun SettingsScreen(
                                     Text(
                                         infoTitle,
                                         style = MaterialTheme.typography.titleLarge,
+                                        color = infoAccent,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                         modifier = Modifier.fillMaxWidth(),
                                     )
@@ -2024,7 +2036,7 @@ fun SettingsScreen(
                                     TextButton(onClick = { showScenarioInfoIndex = -1 }) {
                                         Text(
                                             "Verstanden",
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = infoAccent,
                                         )
                                     }
                                 },
@@ -2999,7 +3011,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.17.7",
+                            "Entropy Journal V0.17.8",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
