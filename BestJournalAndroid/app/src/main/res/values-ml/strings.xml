@@ -1055,7 +1055,7 @@
     <string name="privacy_gate_gemini_cancel">റദ്ദാക്കുക</string>
 
     <string name="privacy_gate_tts_title">ടെക്സ്റ്റ് Microsoft-ലേക്ക് അയയ്ക്കണോ?</string>
-    <string name="privacy_gate_tts_body">വായിച്ചു കേൾപ്പിക്കാനായി ടെക്സ്റ്റ് എൻക്രിപ്റ്റ് ചെയ്ത് Microsoft Bing Speech (USA)-ലേക്ക് അയച്ച് ഓഡിയോ ആയി തിരികെ ലഭിക്കുന്നു. നിയമപരമായ അടിസ്ഥാനം: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nബദൽ: Android-ന്റെ ബിൽറ്റ്-ഇൻ ഓഫ്‌ലൈൻ TTS ഉപയോഗിക്കുക.</string>
+    <string name="privacy_gate_tts_body">വായിച്ചു കേൾപ്പിക്കാനായി ടെക്സ്റ്റ് എൻക്രിപ്റ്റ് ചെയ്ത് Microsoft Bing Speech (USA)-ലേക്ക് അയച്ച് ഓഡിയോ ആയി തിരികെ ലഭിക്കുന്നു. നിയമപരമായ അടിസ്ഥാനം: EU-US Data Privacy Framework + Standard Contractual Clauses.</string>
     <string name="privacy_gate_tts_accept">സമ്മതിച്ച് വായിക്കുക</string>
     <string name="privacy_gate_tts_cancel">റദ്ദാക്കുക</string>
 
@@ -1165,7 +1165,7 @@
     <string name="consent_toggle_gemini_title">AI പ്രതിഫലനങ്ങൾ (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ഡാഷ്‌ബോർഡ് AI, സംഗ്രഹങ്ങൾ, അവലോകനങ്ങൾ, ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ. ടെക്സ്റ്റ് ഭാഗങ്ങൾ Google Gemini (USA)-ലേക്ക് അയയ്ക്കുന്നു. നിങ്ങളുടെ എൻട്രികൾ പരിശീലനത്തിനായി ഉപയോഗിക്കില്ല.</string>
     <string name="consent_toggle_tts_title">ഉറക്കെ വായിക്കൽ (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">സ്വാഭാവിക ശബ്ദത്തിൽ എൻട്രികൾ വായിക്കുന്നു. ടെക്സ്റ്റ് Microsoft (USA)-ലേക്ക് അയയ്ക്കുന്നു. ബദൽ: ഓഫ്‌ലൈൻ സിസ്റ്റം TTS.</string>
+    <string name="consent_toggle_tts_body">സ്വാഭാവിക ശബ്ദത്തിൽ എൻട്രികൾ വായിക്കുന്നു. ടെക്സ്റ്റ് Microsoft (USA)-ലേക്ക് അയയ്ക്കുന്നു.</string>
     <string name="consent_toggle_drive_title">Google Drive ബാക്കപ്പ്</string>
     <string name="consent_toggle_drive_body">എൻട്രികൾ എൻക്രിപ്റ്റ് ചെയ്ത് നിങ്ങളുടെ സ്വന്തം Google Drive-ൽ സംരക്ഷിക്കുന്നു. നിങ്ങൾ പൂർണ്ണ നിയന്ത്രണം നിലനിർത്തുന്നു — ഫയൽ നിങ്ങളുടെ അക്കൗണ്ടിലാണ്, ഞങ്ങളുടെ അടുത്തല്ല.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

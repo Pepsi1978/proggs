@@ -1052,7 +1052,7 @@
     <string name="privacy_gate_gemini_cancel">రద్దు</string>
 
     <string name="privacy_gate_tts_title">Microsoft-కి టెక్స్ట్ పంపాలా?</string>
-    <string name="privacy_gate_tts_body">చదివి వినిపించడానికి టెక్స్ట్ ఎన్‌క్రిప్ట్ చేయబడి Microsoft Bing Speech-కి (USA) పంపబడి ఆడియోగా తిరిగి ఇవ్వబడుతుంది. చట్టపరమైన ఆధారం: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nప్రత్యామ్నాయం: Android యొక్క అంతర్నిర్మిత ఆఫ్‌లైన్ TTS ఉపయోగించండి.</string>
+    <string name="privacy_gate_tts_body">చదివి వినిపించడానికి టెక్స్ట్ ఎన్‌క్రిప్ట్ చేయబడి Microsoft Bing Speech-కి (USA) పంపబడి ఆడియోగా తిరిగి ఇవ్వబడుతుంది. చట్టపరమైన ఆధారం: EU-US Data Privacy Framework + Standard Contractual Clauses.</string>
     <string name="privacy_gate_tts_accept">అంగీకరించి చదవండి</string>
     <string name="privacy_gate_tts_cancel">రద్దు</string>
 
@@ -1162,7 +1162,7 @@
     <string name="consent_toggle_gemini_title">AI ప్రతిబింబాలు (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">డాష్‌బోర్డ్ AI, సారాంశాలు, రెట్రోస్పెక్టివ్‌లు మరియు టెక్స్ట్ మెరుగుదల. టెక్స్ట్ భాగాలను Google Gemini (USA)‌కు పంపుతుంది. మీ ఎంట్రీలు శిక్షణ కోసం ఉపయోగించబడవు.</string>
     <string name="consent_toggle_tts_title">పెద్దగా చదవడం (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">సహజ స్వరంతో ఎంట్రీలను చదువుతుంది. టెక్స్ట్‌ను Microsoft (USA)‌కు పంపుతుంది. ప్రత్యామ్నాయం: ఆఫ్‌లైన్ సిస్టమ్ TTS.</string>
+    <string name="consent_toggle_tts_body">సహజ స్వరంతో ఎంట్రీలను చదువుతుంది. టెక్స్ట్‌ను Microsoft (USA)‌కు పంపుతుంది.</string>
     <string name="consent_toggle_drive_title">Google Drive బ్యాకప్</string>
     <string name="consent_toggle_drive_body">ఎంట్రీలను మీ స్వంత Google Drive‌లో ఎన్క్రిప్ట్ చేసి సేవ్ చేస్తుంది. మీరు పూర్తి నియంత్రణను కలిగి ఉంటారు — ఫైల్ మీ ఖాతాలో ఉంటుంది, మా వద్ద కాదు.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

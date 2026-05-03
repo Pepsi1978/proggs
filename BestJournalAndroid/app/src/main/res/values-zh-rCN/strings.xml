@@ -1116,7 +1116,7 @@
     <string name="privacy_gate_gemini_cancel">取消</string>
 
     <string name="privacy_gate_tts_title">将文本发送到 Microsoft?</string>
-    <string name="privacy_gate_tts_body">为进行朗读，文本会加密发送到 Microsoft Bing Speech(美国),并作为音频返回。法律依据：EU-US Data Privacy Framework + 标准合同条款。\n\n替代方案：使用 Android 自带的离线 TTS。</string>
+    <string name="privacy_gate_tts_body">为进行朗读，文本会加密发送到 Microsoft Bing Speech(美国),并作为音频返回。法律依据：EU-US Data Privacy Framework + 标准合同条款。</string>
     <string name="privacy_gate_tts_accept">同意并朗读</string>
     <string name="privacy_gate_tts_cancel">取消</string>
 
@@ -1226,7 +1226,7 @@
     <string name="consent_toggle_gemini_title">AI 反思(Google Gemini)</string>
     <string name="consent_toggle_gemini_body">仪表板 AI、摘要、回顾和文本优化。将文本片段发送到 Google Gemini(美国)。你的条目不会用于训练。</string>
     <string name="consent_toggle_tts_title">朗读(Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">以自然声音朗读条目。将文本发送到 Microsoft(美国)。替代方：离线系统 TTS。</string>
+    <string name="consent_toggle_tts_body">以自然声音朗读条目。将文本发送到 Microsoft(美国)。</string>
     <string name="consent_toggle_drive_title">Google Drive 备份</string>
     <string name="consent_toggle_drive_body">将条目加密保存到你自己的 Google Drive。你保留完全控制权 — 文件在你的账户，不在我们这里。</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

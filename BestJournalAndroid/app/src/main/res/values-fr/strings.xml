@@ -1124,7 +1124,7 @@
     <string name="privacy_gate_gemini_cancel">Annuler</string>
 
     <string name="privacy_gate_tts_title">Envoyer le texte à Microsoft\u202F?</string>
-    <string name="privacy_gate_tts_body">Pour la lecture à voix haute, le texte à lire est envoyé chiffré à Microsoft Bing Speech (États-Unis) et renvoyé sous forme audio. Base juridique\u00A0: cadre EU-US Data Privacy Framework + clauses contractuelles types.\n\nAlternative\u00A0: utilise la synthèse vocale hors ligne native d\'Android.</string>
+    <string name="privacy_gate_tts_body">Pour la lecture à voix haute, le texte à lire est envoyé chiffré à Microsoft Bing Speech (États-Unis) et renvoyé sous forme audio. Base juridique\u00A0: cadre EU-US Data Privacy Framework + clauses contractuelles types.</string>
     <string name="privacy_gate_tts_accept">Accepter et lire</string>
     <string name="privacy_gate_tts_cancel">Annuler</string>
 
@@ -1234,7 +1234,7 @@ Que veux-tu faire ?</string>
     <string name="consent_toggle_gemini_title">Réflexions IA (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">IA du tableau de bord, résumés, rétrospectives et amélioration de texte. Envoie des extraits de texte à Google Gemini (USA). Tes entrées ne sont PAS utilisées pour l’entraînement.</string>
     <string name="consent_toggle_tts_title">Lecture vocale (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Lit les entrées avec une voix naturelle. Envoie le texte à Microsoft (USA). Alternative : TTS système hors ligne.</string>
+    <string name="consent_toggle_tts_body">Lit les entrées avec une voix naturelle. Envoie le texte à Microsoft (USA).</string>
     <string name="consent_toggle_drive_title">Sauvegarde Google Drive</string>
     <string name="consent_toggle_drive_body">Sauvegarde les entrées chiffrées dans ton propre Google Drive. Tu gardes le contrôle total — le fichier est dans ton compte, pas chez nous.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

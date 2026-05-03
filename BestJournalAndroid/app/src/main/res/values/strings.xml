@@ -627,7 +627,8 @@
     <string name="privacy_gate_gemini_cancel">Später</string>
 
     <string name="privacy_gate_tts_title">Premium-Stimmen aktivieren</string>
-    <string name="privacy_gate_tts_body">Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\n\n✓ Kein KI-Training mit deinen Texten\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nAlternative: Android-Offline-Stimmen in den Einstellungen.</string>
+    <string name="privacy_gate_tts_body">Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\n\n✓ Kein KI-Training mit deinen Texten\n✓ Verschlüsselt nach EU-US Data Privacy Framework</string>
+
     <string name="privacy_gate_tts_accept">Aktivieren</string>
     <string name="privacy_gate_tts_cancel">Später</string>
 
@@ -673,7 +674,7 @@
     <string name="consent_toggle_gemini_title">KI-Reflexionen (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Dashboard-KI, Zusammenfassungen, Rückblicke und Textverbesserung. Sendet Textausschnitte an Google Gemini (USA). Deine Einträge werden NICHT zum Training verwendet.</string>
     <string name="consent_toggle_tts_title">Vorlesen (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA). Alternative: System-TTS offline.</string>
+    <string name="consent_toggle_tts_body">Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA).</string>
     <string name="consent_toggle_drive_title">Google Drive Backup</string>
     <string name="consent_toggle_drive_body">Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.</string>
     <string name="consent_toggle_do_not_sell_title">Datenschutz-Wahlrechte (Kalifornien)</string>

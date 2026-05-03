@@ -1238,7 +1238,7 @@
     <string name="consent_toggle_gemini_title">Роздуми від ШІ (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ШІ панелі, підсумки, огляди та покращення тексту. Надсилає фрагменти тексту до Google Gemini (США). Ваші записи НЕ використовуються для навчання.</string>
     <string name="consent_toggle_tts_title">Читання вголос (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Читає записи природним голосом. Надсилає текст до Microsoft (США). Альтернатива: системний TTS офлайн.</string>
+    <string name="consent_toggle_tts_body">Читає записи природним голосом. Надсилає текст до Microsoft (США).</string>
     <string name="consent_toggle_drive_title">Резервна копія Google Drive</string>
     <string name="consent_toggle_drive_body">Зберігає записи зашифрованими у вашому власному Google Drive. Ви зберігаєте повний контроль — файл знаходиться у вашому обліковому записі, не в нас.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

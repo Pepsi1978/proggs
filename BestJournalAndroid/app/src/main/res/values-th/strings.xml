@@ -1116,7 +1116,7 @@
     <string name="privacy_gate_gemini_cancel">ยกเลิก</string>
 
     <string name="privacy_gate_tts_title">ส่งข้อความไปยัง Microsoft หรือไม่</string>
-    <string name="privacy_gate_tts_body">สำหรับการอ่านออกเสียง ข้อความจะถูกส่งแบบเข้ารหัสไปยัง Microsoft Bing Speech (สหรัฐอเมริกา) และส่งกลับเป็นเสียง ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน\n\nทางเลือก: ใช้ TTS ออฟไลน์ในตัวของ Android</string>
+    <string name="privacy_gate_tts_body">สำหรับการอ่านออกเสียง ข้อความจะถูกส่งแบบเข้ารหัสไปยัง Microsoft Bing Speech (สหรัฐอเมริกา) และส่งกลับเป็นเสียง ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน</string>
     <string name="privacy_gate_tts_accept">ยอมรับและอ่าน</string>
     <string name="privacy_gate_tts_cancel">ยกเลิก</string>
 
@@ -1226,7 +1226,7 @@
     <string name="consent_toggle_gemini_title">การสะท้อนความคิด AI (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">AI แดชบอร์ด สรุป การย้อนดู และการปรับปรุงข้อความ ส่งข้อความบางส่วนไปยัง Google Gemini (สหรัฐอเมริกา) รายการของคุณจะไม่ถูกใช้สำหรับการฝึก</string>
     <string name="consent_toggle_tts_title">อ่านออกเสียง (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา) ทางเลือก: TTS ระบบออฟไลน์</string>
+    <string name="consent_toggle_tts_body">อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา)</string>
     <string name="consent_toggle_drive_title">การสำรองข้อมูล Google Drive</string>
     <string name="consent_toggle_drive_body">บันทึกรายการแบบเข้ารหัสใน Google Drive ของคุณเอง คุณรักษาการควบคุมเต็มรูปแบบ — ไฟล์อยู่ในบัญชีของคุณ ไม่ใช่ที่เรา</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

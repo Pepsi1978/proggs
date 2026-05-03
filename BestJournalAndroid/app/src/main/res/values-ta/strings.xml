@@ -1129,7 +1129,7 @@
     <string name="privacy_gate_gemini_cancel">ரத்து</string>
 
     <string name="privacy_gate_tts_title">Microsoft-க்கு உரையை அனுப்பவா?</string>
-    <string name="privacy_gate_tts_body">வாசித்துக் காட்ட, உரை குறியாக்கப்பட்டு Microsoft Bing Speech-க்கு (USA) அனுப்பப்பட்டு ஆடியோவாகத் திரும்பி வரும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nமாற்று: Android-ன் உள்ளமைந்த ஆஃப்லைன் TTS-ஐப் பயன்படுத்துங்கள்.</string>
+    <string name="privacy_gate_tts_body">வாசித்துக் காட்ட, உரை குறியாக்கப்பட்டு Microsoft Bing Speech-க்கு (USA) அனுப்பப்பட்டு ஆடியோவாகத் திரும்பி வரும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses.</string>
     <string name="privacy_gate_tts_accept">ஒப்புக்கொண்டு வாசி</string>
     <string name="privacy_gate_tts_cancel">ரத்து</string>
 
@@ -1239,7 +1239,7 @@
     <string name="consent_toggle_gemini_title">AI பிரதிபலிப்பு (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">டாஷ்போர்டு AI, சுருக்கங்கள், மறுபரிசீலனைகள் மற்றும் உரை மேம்படுத்தல். உரை பகுதிகளை Google Gemini (USA)‌க்கு அனுப்புகிறது. உங்கள் உள்ளீடுகள் பயிற்சிக்கு பயன்படுத்தப்படுவதில்லை.</string>
     <string name="consent_toggle_tts_title">உரக்க வாசிப்பு (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">இயற்கையான குரலில் உள்ளீடுகளைப் படிக்கிறது. உரையை Microsoft (USA)‌க்கு அனுப்புகிறது. மாற்று: ஆஃப்லைன் சிஸ்டம் TTS.</string>
+    <string name="consent_toggle_tts_body">இயற்கையான குரலில் உள்ளீடுகளைப் படிக்கிறது. உரையை Microsoft (USA)‌க்கு அனுப்புகிறது.</string>
     <string name="consent_toggle_drive_title">Google Drive காப்புப்பிரதி</string>
     <string name="consent_toggle_drive_body">உள்ளீடுகளை குறியாக்கம் செய்து உங்கள் சொந்த Google Drive இல் சேமிக்கிறது. நீங்கள் முழு கட்டுப்பாட்டை வைத்திருக்கிறீர்கள் — கோப்பு உங்கள் கணக்கில் உள்ளது, எங்களிடம் இல்லை.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

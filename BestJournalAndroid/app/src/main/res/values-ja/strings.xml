@@ -1116,7 +1116,7 @@
     <string name="privacy_gate_gemini_cancel">キャンセル</string>
 
     <string name="privacy_gate_tts_title">テキストをMicrosoftに送信しますか？</string>
-    <string name="privacy_gate_tts_body">読み上げのため、テキストは暗号化されてMicrosoft Bing Speech(米国)に送信され、音声として返されます。法的根拠：EU-US Data Privacy Framework + 標準契約条項。\n\n代替案：Android標準のオフライン読み上げを使用してください。</string>
+    <string name="privacy_gate_tts_body">読み上げのため、テキストは暗号化されてMicrosoft Bing Speech(米国)に送信され、音声として返されます。法的根拠：EU-US Data Privacy Framework + 標準契約条項。</string>
     <string name="privacy_gate_tts_accept">同意して読み上げ</string>
     <string name="privacy_gate_tts_cancel">キャンセル</string>
 
@@ -1226,7 +1226,7 @@
     <string name="consent_toggle_gemini_title">AI振り返り（Google Gemini）</string>
     <string name="consent_toggle_gemini_body">ダッシュボードAI、要約、振り返り、テキスト改善を行います。テキストの抜粋をGoogle Gemini（米国）に送信します。あなたのエントリーは学習には使用されません。</string>
     <string name="consent_toggle_tts_title">読み上げ（Microsoft Edge TTS）</string>
-    <string name="consent_toggle_tts_body">自然な音声でエントリーを読み上げます。テキストをMicrosoft（米国）に送信します。代替：オフラインのシステムTTS。</string>
+    <string name="consent_toggle_tts_body">自然な音声でエントリーを読み上げます。テキストをMicrosoft（米国）に送信します。</string>
     <string name="consent_toggle_drive_title">Google Driveバックアップ</string>
     <string name="consent_toggle_drive_body">エントリーを暗号化してあなた自身のGoogle Driveに保存します。あなたが完全に管理できます — ファイルはあなたのアカウントにあり、私たちの元にはありません。</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

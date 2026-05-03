@@ -1116,7 +1116,7 @@
     <string name="privacy_gate_gemini_cancel">취소</string>
 
     <string name="privacy_gate_tts_title">텍스트를 Microsoft에 보낼까요?</string>
-    <string name="privacy_gate_tts_body">읽어주기를 위해 텍스트가 암호화되어 Microsoft Bing Speech(미국)로 전송되고 오디오로 반환돼요. 법적 근거: EU-US Data Privacy Framework + 표준 계약 조항.\n\n대안: Android 기본 오프라인 TTS를 사용하세요.</string>
+    <string name="privacy_gate_tts_body">읽어주기를 위해 텍스트가 암호화되어 Microsoft Bing Speech(미국)로 전송되고 오디오로 반환돼요. 법적 근거: EU-US Data Privacy Framework + 표준 계약 조항.</string>
     <string name="privacy_gate_tts_accept">동의하고 읽어주기</string>
     <string name="privacy_gate_tts_cancel">취소</string>
 
@@ -1226,7 +1226,7 @@
     <string name="consent_toggle_gemini_title">AI 성찰 (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">대시보드 AI, 요약, 회고 및 텍스트 개선. 텍스트 일부를 Google Gemini (미국)에 전송합니다. 귀하의 항목은 학습에 사용되지 않습니다.</string>
     <string name="consent_toggle_tts_title">소리내어 읽기 (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">자연스러운 음성으로 항목을 읽어줍니다. 텍스트를 Microsoft (미국)에 전송합니다. 대안: 오프라인 시스템 TTS.</string>
+    <string name="consent_toggle_tts_body">자연스러운 음성으로 항목을 읽어줍니다. 텍스트를 Microsoft (미국)에 전송합니다.</string>
     <string name="consent_toggle_drive_title">Google 드라이브 백업</string>
     <string name="consent_toggle_drive_body">항목을 암호화하여 귀하의 Google 드라이브에 저장합니다. 완전한 제어권을 유지합니다 — 파일은 귀하의 계정에 있으며, 저희에게 있지 않습니다.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

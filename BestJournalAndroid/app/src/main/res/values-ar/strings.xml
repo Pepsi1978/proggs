@@ -1136,7 +1136,7 @@
     <string name="privacy_gate_gemini_cancel">إلغاء</string>
 
     <string name="privacy_gate_tts_title">إرسال النص إلى Microsoft؟</string>
-    <string name="privacy_gate_tts_body">للقراءة بصوت عالٍ، يُرسل النص مشفرًا إلى Microsoft Bing Speech (الولايات المتحدة) ويعود كملف صوتي. الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية.\n\nبديل: استخدم أداة تحويل النص إلى كلام المحلية المدمجة في Android.</string>
+    <string name="privacy_gate_tts_body">للقراءة بصوت عالٍ، يُرسل النص مشفرًا إلى Microsoft Bing Speech (الولايات المتحدة) ويعود كملف صوتي. الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية.</string>
     <string name="privacy_gate_tts_accept">الموافقة والقراءة</string>
     <string name="privacy_gate_tts_cancel">إلغاء</string>
 
@@ -1246,7 +1246,7 @@
     <string name="consent_toggle_gemini_title">تأملات الذكاء الاصطناعي (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ذكاء اصطناعي للوحة المعلومات، الملخصات، المراجعات وتحسين النص. يرسل مقتطفات نصية إلى Google Gemini (الولايات المتحدة). لا تُستخدم مدخلاتك للتدريب.</string>
     <string name="consent_toggle_tts_title">القراءة بصوت عالٍ (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">يقرأ المدخلات بصوت طبيعي. يرسل النص إلى Microsoft (الولايات المتحدة). البديل: TTS النظام دون اتصال.</string>
+    <string name="consent_toggle_tts_body">يقرأ المدخلات بصوت طبيعي. يرسل النص إلى Microsoft (الولايات المتحدة). ال</string>
     <string name="consent_toggle_drive_title">نسخ احتياطي على Google Drive</string>
     <string name="consent_toggle_drive_body">يحفظ المدخلات مشفرة في Google Drive الخاص بك. تحتفظ بالتحكم الكامل — يوجد الملف في حسابك، وليس لدينا.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

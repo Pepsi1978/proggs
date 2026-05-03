@@ -1121,7 +1121,7 @@
     <string name="privacy_gate_gemini_cancel">বাতিল</string>
 
     <string name="privacy_gate_tts_title">Microsoft-এ টেক্সট পাঠাবে?</string>
-    <string name="privacy_gate_tts_body">পাঠ করে শোনানোর জন্য টেক্সট এনক্রিপ্টেড অবস্থায় Microsoft Bing Speech-এ (USA) পাঠানো হয় এবং অডিও হিসেবে ফিরে আসে। আইনি ভিত্তি: EU-US Data Privacy Framework + Standard Contractual Clauses।\n\nবিকল্প: Android-এর অন্তর্নির্মিত অফলাইন TTS ব্যবহার করো।</string>
+    <string name="privacy_gate_tts_body">পাঠ করে শোনানোর জন্য টেক্সট এনক্রিপ্টেড অবস্থায় Microsoft Bing Speech-এ (USA) পাঠানো হয় এবং অডিও হিসেবে ফিরে আসে। আইনি ভিত্তি: EU-US Data Privacy Framework + Standard Contractual Clauses।</string>
     <string name="privacy_gate_tts_accept">সম্মত হয়ে পড়ে শোনাও</string>
     <string name="privacy_gate_tts_cancel">বাতিল</string>
 
@@ -1231,7 +1231,7 @@
     <string name="consent_toggle_gemini_title">AI প্রতিফলন (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ড্যাশবোর্ড AI, সারাংশ, পর্যালোচনা এবং টেক্সট উন্নতি। টেক্সট অংশ Google Gemini (USA)-এ পাঠায়। আপনার এন্ট্রিগুলি প্রশিক্ষণের জন্য ব্যবহৃত হয় না।</string>
     <string name="consent_toggle_tts_title">জোরে পড়া (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">প্রাকৃতিক কণ্ঠে এন্ট্রি পড়ে। টেক্সট Microsoft (USA)-এ পাঠায়। বিকল্প: অফলাইন সিস্টেম TTS।</string>
+    <string name="consent_toggle_tts_body">প্রাকৃতিক কণ্ঠে এন্ট্রি পড়ে। টেক্সট Microsoft (USA)-এ পাঠায়।</string>
     <string name="consent_toggle_drive_title">Google Drive ব্যাকআপ</string>
     <string name="consent_toggle_drive_body">আপনার নিজস্ব Google Drive-এ এনক্রিপ্টেড এন্ট্রি সংরক্ষণ করে। আপনি সম্পূর্ণ নিয়ন্ত্রণ বজায় রাখেন — ফাইলটি আপনার অ্যাকাউন্টে থাকে, আমাদের কাছে নয়।</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

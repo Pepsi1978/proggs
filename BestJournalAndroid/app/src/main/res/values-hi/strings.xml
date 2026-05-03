@@ -1120,7 +1120,7 @@
     <string name="privacy_gate_gemini_cancel">रद्द करें</string>
 
     <string name="privacy_gate_tts_title">टेक्स्ट Microsoft को भेजें?</string>
-    <string name="privacy_gate_tts_body">पढ़कर सुनाने के लिए टेक्स्ट एन्क्रिप्टेड रूप में Microsoft Bing Speech (USA) को भेजा जाता है और ऑडियो के रूप में वापस आता है। कानूनी आधार: EU-US Data Privacy Framework + Standard Contractual Clauses।\n\nविकल्प: Android का बिल्ट-इन ऑफ़लाइन TTS उपयोग करें।</string>
+    <string name="privacy_gate_tts_body">पढ़कर सुनाने के लिए टेक्स्ट एन्क्रिप्टेड रूप में Microsoft Bing Speech (USA) को भेजा जाता है और ऑडियो के रूप में वापस आता है। कानूनी आधार: EU-US Data Privacy Framework + Standard Contractual Clauses।</string>
     <string name="privacy_gate_tts_accept">सहमत हूँ, पढ़कर सुनाएँ</string>
     <string name="privacy_gate_tts_cancel">रद्द करें</string>
 
@@ -1230,7 +1230,7 @@
     <string name="consent_toggle_gemini_title">AI चिंतन (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">डैशबोर्ड AI, सारांश, समीक्षाएँ और पाठ सुधार। पाठ के अंश Google Gemini (USA) को भेजता है। आपकी प्रविष्टियाँ प्रशिक्षण के लिए उपयोग नहीं की जातीं।</string>
     <string name="consent_toggle_tts_title">ज़ोर से पढ़ना (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">प्रविष्टियाँ प्राकृतिक आवाज़ में पढ़ता है। पाठ Microsoft (USA) को भेजता है। विकल्प: ऑफ़लाइन सिस्टम TTS।</string>
+    <string name="consent_toggle_tts_body">प्रविष्टियाँ प्राकृतिक आवाज़ में पढ़ता है। पाठ Microsoft (USA) को भेजता है।</string>
     <string name="consent_toggle_drive_title">Google Drive बैकअप</string>
     <string name="consent_toggle_drive_body">प्रविष्टियों को एन्क्रिप्टेड रूप से आपके अपने Google Drive में सहेजता है। आप पूर्ण नियंत्रण रखते हैं — फ़ाइल आपके खाते में है, हमारे पास नहीं।</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

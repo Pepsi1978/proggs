@@ -1120,7 +1120,7 @@
     <string name="privacy_gate_gemini_cancel">İptal</string>
 
     <string name="privacy_gate_tts_title">Metin Microsoft\'a gönderilsin mi?</string>
-    <string name="privacy_gate_tts_body">Sesli okuma için metin şifrelenmiş olarak Microsoft Bing Speech\'e (ABD) gönderilir ve ses olarak geri döner. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri.\n\nAlternatif: Android\'in yerleşik çevrimdışı sesli okuma özelliğini kullan.</string>
+    <string name="privacy_gate_tts_body">Sesli okuma için metin şifrelenmiş olarak Microsoft Bing Speech\'e (ABD) gönderilir ve ses olarak geri döner. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri.</string>
     <string name="privacy_gate_tts_accept">Kabul et ve oku</string>
     <string name="privacy_gate_tts_cancel">İptal</string>
 
@@ -1230,7 +1230,7 @@ Ne yapmak istersin?</string>
     <string name="consent_toggle_gemini_title">YZ yansımaları (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Panel YZ’si, özetler, geri dönüşler ve metin iyileştirme. Metin parçalarını Google Gemini’ye (ABD) gönderir. Girdilerin eğitim için KULLANILMAZ.</string>
     <string name="consent_toggle_tts_title">Sesli okuma (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Girdileri doğal sesle okur. Metni Microsoft’a (ABD) gönderir. Alternatif: çevrimdışı sistem TTS.</string>
+    <string name="consent_toggle_tts_body">Girdileri doğal sesle okur. Metni Microsoft’a (ABD) gönderir.</string>
     <string name="consent_toggle_drive_title">Google Drive yedekleme</string>
     <string name="consent_toggle_drive_body">Girdileri kendi Google Drive’ına şifreli olarak kaydeder. Tam kontrol sende — dosya senin hesabında, bizde değil.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

@@ -1121,7 +1121,7 @@
     <string name="privacy_gate_gemini_cancel">منسوخ</string>
 
     <string name="privacy_gate_tts_title">متن Microsoft کو بھیجیں؟</string>
-    <string name="privacy_gate_tts_body">پڑھ کر سنانے کے لیے متن خفیہ کر کے Microsoft Bing Speech (امریکہ) کو بھیجا جاتا ہے اور آڈیو کے طور پر واپس آتا ہے۔ قانونی بنیاد: EU-US Data Privacy Framework + Standard Contractual Clauses۔\n\nمتبادل: Android کی بلٹ-ان آف لائن TTS استعمال کریں۔</string>
+    <string name="privacy_gate_tts_body">پڑھ کر سنانے کے لیے متن خفیہ کر کے Microsoft Bing Speech (امریکہ) کو بھیجا جاتا ہے اور آڈیو کے طور پر واپس آتا ہے۔ قانونی بنیاد: EU-US Data Privacy Framework + Standard Contractual Clauses۔</string>
     <string name="privacy_gate_tts_accept">اتفاق اور پڑھیں</string>
     <string name="privacy_gate_tts_cancel">منسوخ</string>
 
@@ -1231,7 +1231,7 @@
     <string name="consent_toggle_gemini_title">AI عکس (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ڈیش بورڈ AI، خلاصے، جائزے اور متن کی بہتری۔ متن کے ٹکڑے Google Gemini (USA) کو بھیجتا ہے۔ آپ کے اندراجات تربیت کے لیے استعمال نہیں ہوتے۔</string>
     <string name="consent_toggle_tts_title">بلند آواز سے پڑھنا (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">قدرتی آواز میں اندراجات پڑھتا ہے۔ متن کو Microsoft (USA) کو بھیجتا ہے۔ متبادل: آف لائن سسٹم TTS۔</string>
+    <string name="consent_toggle_tts_body">قدرتی آواز میں اندراجات پڑھتا ہے۔ متن کو Microsoft (USA) کو بھیجتا ہے۔</string>
     <string name="consent_toggle_drive_title">Google Drive بیک اپ</string>
     <string name="consent_toggle_drive_body">اندراجات کو خفیہ کردہ شکل میں آپ کے اپنے Google Drive میں محفوظ کرتا ہے۔ آپ مکمل کنٹرول برقرار رکھتے ہیں — فائل آپ کے اکاؤنٹ میں ہے، ہمارے پاس نہیں۔</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

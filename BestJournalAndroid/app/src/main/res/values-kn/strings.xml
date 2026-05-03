@@ -1121,7 +1121,7 @@
     <string name="privacy_gate_gemini_cancel">ರದ್ದುಮಾಡಿ</string>
 
     <string name="privacy_gate_tts_title">Microsoft ಗೆ ಪಠ್ಯ ಕಳುಹಿಸುವುದೇ?</string>
-    <string name="privacy_gate_tts_body">ಓದಿಸಲು ಪಠ್ಯವನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ Microsoft Bing Speech (USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಆಡಿಯೊ ಆಗಿ ಹಿಂತಿರುಗುತ್ತದೆ. ಕಾನೂನು ಆಧಾರ: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nಪರ್ಯಾಯ: Android ನ ಅಂತರ್ನಿರ್ಮಿತ ಆಫ್‌ಲೈನ್ TTS ಬಳಸಿ.</string>
+    <string name="privacy_gate_tts_body">ಓದಿಸಲು ಪಠ್ಯವನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಆಗಿ Microsoft Bing Speech (USA) ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಆಡಿಯೊ ಆಗಿ ಹಿಂತಿರುಗುತ್ತದೆ. ಕಾನೂನು ಆಧಾರ: EU-US Data Privacy Framework + Standard Contractual Clauses.</string>
     <string name="privacy_gate_tts_accept">ಒಪ್ಪಿ ಓದಿರಿ</string>
     <string name="privacy_gate_tts_cancel">ರದ್ದುಮಾಡಿ</string>
 
@@ -1231,7 +1231,7 @@
     <string name="consent_toggle_gemini_title">AI ಪ್ರತಿಬಿಂಬಗಳು (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ AI, ಸಾರಾಂಶಗಳು, ವಿಮರ್ಶೆಗಳು ಮತ್ತು ಪಠ್ಯ ಸುಧಾರಣೆ. ಪಠ್ಯದ ತುಣುಕುಗಳನ್ನು Google Gemini (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ. ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ತರಬೇತಿಗಾಗಿ ಬಳಸುವುದಿಲ್ಲ.</string>
     <string name="consent_toggle_tts_title">ಗಟ್ಟಿಯಾಗಿ ಓದುವುದು (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">ನೈಸರ್ಗಿಕ ಧ್ವನಿಯಲ್ಲಿ ನಮೂದುಗಳನ್ನು ಓದುತ್ತದೆ. ಪಠ್ಯವನ್ನು Microsoft (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ. ಪರ್ಯಾಯ: ಆಫ್‌ಲೈನ್ ಸಿಸ್ಟಮ್ TTS.</string>
+    <string name="consent_toggle_tts_body">ನೈಸರ್ಗಿಕ ಧ್ವನಿಯಲ್ಲಿ ನಮೂದುಗಳನ್ನು ಓದುತ್ತದೆ. ಪಠ್ಯವನ್ನು Microsoft (USA) ಗೆ ಕಳುಹಿಸುತ್ತದೆ.</string>
     <string name="consent_toggle_drive_title">Google Drive ಬ್ಯಾಕಪ್</string>
     <string name="consent_toggle_drive_body">ನಮೂದುಗಳನ್ನು ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿ ನಿಮ್ಮ ಸ್ವಂತ Google Drive ನಲ್ಲಿ ಉಳಿಸುತ್ತದೆ. ನೀವು ಸಂಪೂರ್ಣ ನಿಯಂತ್ರಣವನ್ನು ಉಳಿಸಿಕೊಳ್ಳುತ್ತೀರಿ — ಫೈಲ್ ನಿಮ್ಮ ಖಾತೆಯಲ್ಲಿದೆ, ನಮ್ಮ ಬಳಿ ಇಲ್ಲ.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

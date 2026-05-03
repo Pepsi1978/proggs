@@ -1120,7 +1120,7 @@
     <string name="privacy_gate_gemini_cancel">Annuleren</string>
 
     <string name="privacy_gate_tts_title">Tekst naar Microsoft sturen?</string>
-    <string name="privacy_gate_tts_body">Voor voorlezen wordt de tekst versleuteld naar Microsoft Bing Speech (VS) verzonden en als audio teruggegeven. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen.\n\nAlternatief: gebruik de ingebouwde offline-TTS van Android.</string>
+    <string name="privacy_gate_tts_body">Voor voorlezen wordt de tekst versleuteld naar Microsoft Bing Speech (VS) verzonden en als audio teruggegeven. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen.</string>
     <string name="privacy_gate_tts_accept">Akkoord en voorlezen</string>
     <string name="privacy_gate_tts_cancel">Annuleren</string>
 
@@ -1230,7 +1230,7 @@ Wat wil je doen?</string>
     <string name="consent_toggle_gemini_title">AI-reflecties (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Dashboard-AI, samenvattingen, terugblikken en tekstverbetering. Stuurt tekstfragmenten naar Google Gemini (VS). Je notities worden NIET gebruikt voor training.</string>
     <string name="consent_toggle_tts_title">Voorlezen (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Leest notities voor met een natuurlijke stem. Stuurt de tekst naar Microsoft (VS). Alternatief: systeem-TTS offline.</string>
+    <string name="consent_toggle_tts_body">Leest notities voor met een natuurlijke stem. Stuurt de tekst naar Microsoft (VS).</string>
     <string name="consent_toggle_drive_title">Google Drive back-up</string>
     <string name="consent_toggle_drive_body">Slaat notities versleuteld op in je eigen Google Drive. Jij behoudt de volledige controle — het bestand staat in jouw account, niet bij ons.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

@@ -1116,7 +1116,7 @@
     <string name="privacy_gate_gemini_cancel">Batal</string>
 
     <string name="privacy_gate_tts_title">Kirim teks ke Microsoft?</string>
-    <string name="privacy_gate_tts_body">Untuk pembacaan suara, teks dikirim terenkripsi ke Microsoft Bing Speech (AS) dan dikembalikan sebagai audio. Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar.\n\nAlternatif: gunakan TTS offline bawaan Android.</string>
+    <string name="privacy_gate_tts_body">Untuk pembacaan suara, teks dikirim terenkripsi ke Microsoft Bing Speech (AS) dan dikembalikan sebagai audio. Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar.</string>
     <string name="privacy_gate_tts_accept">Setuju dan bacakan</string>
     <string name="privacy_gate_tts_cancel">Batal</string>
 
@@ -1226,7 +1226,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="consent_toggle_gemini_title">Refleksi AI (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">AI dasbor, ringkasan, tinjauan, dan peningkatan teks. Mengirim potongan teks ke Google Gemini (AS). Entrimu TIDAK digunakan untuk pelatihan.</string>
     <string name="consent_toggle_tts_title">Baca keras (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Membaca entri dengan suara alami. Mengirim teks ke Microsoft (AS). Alternatif: TTS sistem offline.</string>
+    <string name="consent_toggle_tts_body">Membaca entri dengan suara alami. Mengirim teks ke Microsoft (AS).</string>
     <string name="consent_toggle_drive_title">Cadangan Google Drive</string>
     <string name="consent_toggle_drive_body">Menyimpan entri terenkripsi di Google Drive milikmu sendiri. Kamu tetap memegang kendali penuh — file berada di akunmu, bukan di tempat kami.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

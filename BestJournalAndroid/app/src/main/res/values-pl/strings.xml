@@ -1128,7 +1128,7 @@
     <string name="privacy_gate_gemini_cancel">Anuluj</string>
 
     <string name="privacy_gate_tts_title">Wysłać tekst do Microsoftu?</string>
-    <string name="privacy_gate_tts_body">Do odczytu na głos tekst jest wysyłany zaszyfrowany do Microsoft Bing Speech (USA) i zwracany jako audio. Podstawa prawna: EU-US Data Privacy Framework + standardowe klauzule umowne.\n\nAlternatywa: użyj systemowej syntezy mowy offline z Androida.</string>
+    <string name="privacy_gate_tts_body">Do odczytu na głos tekst jest wysyłany zaszyfrowany do Microsoft Bing Speech (USA) i zwracany jako audio. Podstawa prawna: EU-US Data Privacy Framework + standardowe klauzule umowne.</string>
     <string name="privacy_gate_tts_accept">Zgadzam się i czytaj</string>
     <string name="privacy_gate_tts_cancel">Anuluj</string>
 
@@ -1238,7 +1238,7 @@ Co chcesz zrobić?</string>
     <string name="consent_toggle_gemini_title">Refleksje AI (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">AI w panelu, podsumowania, przeglądy i ulepszanie tekstu. Wysyła fragmenty tekstu do Google Gemini (USA). Twoje wpisy NIE są używane do trenowania.</string>
     <string name="consent_toggle_tts_title">Czytanie na głos (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Czyta wpisy naturalnym głosem. Wysyła tekst do Microsoft (USA). Alternatywa: systemowe TTS offline.</string>
+    <string name="consent_toggle_tts_body">Czyta wpisy naturalnym głosem. Wysyła tekst do Microsoft (USA).</string>
     <string name="consent_toggle_drive_title">Kopia zapasowa Google Drive</string>
     <string name="consent_toggle_drive_body">Zapisuje wpisy zaszyfrowane w Twoim własnym Google Drive. Zachowujesz pełną kontrolę — plik jest na Twoim koncie, nie u nas.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

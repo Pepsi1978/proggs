@@ -1233,7 +1233,7 @@
     <string name="consent_toggle_gemini_title">AI reflections (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Dashboard AI, summaries, reviews and text improvement. Sends text snippets to Google Gemini (USA). Your entries are NOT used for training.</string>
     <string name="consent_toggle_tts_title">Read-aloud (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Reads entries with a natural voice. Sends the text to Microsoft (USA). Alternative: offline system TTS.</string>
+    <string name="consent_toggle_tts_body">Reads entries with a natural voice. Sends the text to Microsoft (USA).</string>
     <string name="consent_toggle_drive_title">Google Drive backup</string>
     <string name="consent_toggle_drive_body">Saves entries encrypted to your own Google Drive. You retain full control — the file lives in your account, not with us.</string>
     <string name="consent_toggle_do_not_sell_title">Your California Privacy Choices</string>
@@ -1283,7 +1283,7 @@
     <string name="privacy_gate_gemini_cancel">Later</string>
 
     <string name="privacy_gate_tts_title">Enable premium voices</string>
-    <string name="privacy_gate_tts_body">Premium voices sound more natural and pleasant when reading aloud. Your text is sent encrypted to Microsoft and returned as audio.\n\n✓ Never used to train AI models\n✓ Encrypted under EU-US Data Privacy Framework\n\nAlternative: Android offline voices in Settings.</string>
+    <string name="privacy_gate_tts_body">Premium voices sound more natural and pleasant when reading aloud. Your text is sent encrypted to Microsoft and returned as audio.\n\n✓ Never used to train AI models\n✓ Encrypted under EU-US Data Privacy Framework</string>
     <string name="privacy_gate_tts_accept">Enable</string>
     <string name="privacy_gate_tts_cancel">Later</string>
 

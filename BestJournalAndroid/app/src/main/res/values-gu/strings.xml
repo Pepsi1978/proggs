@@ -1187,7 +1187,7 @@
     <string name="consent_toggle_gemini_title">AI પ્રતિબિંબ (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">ડેશબોર્ડ AI, સારાંશ, સમીક્ષાઓ અને ટેક્સ્ટ સુધારણા. ટેક્સ્ટ ટુકડાઓ Google Gemini (USA) ને મોકલે છે. તમારી એન્ટ્રીઓ તાલીમ માટે ઉપયોગમાં લેવાતી નથી.</string>
     <string name="consent_toggle_tts_title">મોટેથી વાંચન (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">કુદરતી અવાજમાં એન્ટ્રીઓ વાંચે છે. ટેક્સ્ટને Microsoft (USA) ને મોકલે છે. વૈકલ્પિક: ઑફલાઇન સિસ્ટમ TTS.</string>
+    <string name="consent_toggle_tts_body">કુદરતી અવાજમાં એન્ટ્રીઓ વાંચે છે. ટેક્સ્ટને Microsoft (USA) ને મોકલે છે.</string>
     <string name="consent_toggle_drive_title">Google Drive બેકઅપ</string>
     <string name="consent_toggle_drive_body">એન્ટ્રીઓને એન્ક્રિપ્ટેડ રીતે તમારા પોતાના Google Drive માં સાચવે છે. તમે સંપૂર્ણ નિયંત્રણ જાળવી રાખો છો — ફાઇલ તમારા ખાતામાં છે, અમારી પાસે નથી.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>

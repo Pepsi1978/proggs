@@ -1120,7 +1120,7 @@
     <string name="privacy_gate_gemini_cancel">Cancelar</string>
 
     <string name="privacy_gate_tts_title">Enviar o texto à Microsoft?</string>
-    <string name="privacy_gate_tts_body">Para a leitura em voz alta, o texto é enviado cifrado à Microsoft Bing Speech (EUA) e devolvido como áudio. Base jurídica: EU-US Data Privacy Framework + cláusulas contratuais-tipo.\n\nAlternativa: usa a síntese de voz offline nativa do Android.</string>
+    <string name="privacy_gate_tts_body">Para a leitura em voz alta, o texto é enviado cifrado à Microsoft Bing Speech (EUA) e devolvido como áudio. Base jurídica: EU-US Data Privacy Framework + cláusulas contratuais-tipo.</string>
     <string name="privacy_gate_tts_accept">Aceitar e ler</string>
     <string name="privacy_gate_tts_cancel">Cancelar</string>
 
@@ -1230,7 +1230,7 @@ O que queres fazer?</string>
     <string name="consent_toggle_gemini_title">Reflexões com IA (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">IA do painel, resumos, retrospetivas e melhoria de texto. Envia excertos de texto para o Google Gemini (EUA). As tuas entradas NÃO são utilizadas para treino.</string>
     <string name="consent_toggle_tts_title">Leitura em voz alta (Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">Lê as entradas com voz natural. Envia o texto para a Microsoft (EUA). Alternativa: TTS do sistema offline.</string>
+    <string name="consent_toggle_tts_body">Lê as entradas com voz natural. Envia o texto para a Microsoft (EUA).</string>
     <string name="consent_toggle_drive_title">Cópia de segurança no Google Drive</string>
     <string name="consent_toggle_drive_body">Guarda as entradas encriptadas no teu próprio Google Drive. Mantens o controlo total — o ficheiro fica na tua conta, não connosco.</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
