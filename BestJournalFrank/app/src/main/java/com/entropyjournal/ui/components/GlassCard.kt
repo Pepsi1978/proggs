@@ -21,13 +21,19 @@ fun GlassCard(
     content: @Composable () -> Unit
 ) {
     val isDark = LocalIsDarkTheme.current
+    // Card-Hintergrund kommt aus MaterialTheme.colorScheme — damit nimmt jede
+    // GlassCard die aktuelle Profilfarbe (Hauch in surface / surfaceContainer) an.
+    val cardSurface = MaterialTheme.colorScheme.surface
+    val cardSurfaceBottom = MaterialTheme.colorScheme.surfaceContainer
     Box(
         modifier = modifier
             .glassCard(
                 glowColor = glowColor,
                 glowIntensity = glowIntensity,
                 cornerRadius = cornerRadius,
-                isDark = isDark
+                isDark = isDark,
+                surfaceColor = cardSurface,
+                surfaceColorBottom = cardSurfaceBottom,
             )
             .padding(contentPadding)
     ) {

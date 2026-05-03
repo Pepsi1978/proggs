@@ -52,6 +52,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -93,41 +94,51 @@ import com.entropyjournal.util.TtsManager
 import java.util.Calendar
 
 object RetrospectiveColors {
-    // Dark: #181818 (CardSurface), Light: White — matches journal entry backgrounds
-    private val cardDark = Color(0xFF181818)
-    private val cardLight = Color.White
+    // Theme-aware: Card-Hintergrund kommt aus MaterialTheme.colorScheme.surface,
+    // dadurch tragen die Karten denselben Profil-Hauch wie der Rest der App
+    // (siehe profileColorScheme in Theme.kt).
+    private val cardDark: Color
+        @Composable get() = MaterialTheme.colorScheme.surface
+
+    private val cardLight: Color
+        @Composable get() = MaterialTheme.colorScheme.surface
 
     val weekColors: List<Color>
-        @Composable get() = List(4) { if (LocalIsDarkTheme.current) cardDark else cardLight }
+        @Composable get() {
+            val c = if (LocalIsDarkTheme.current) cardDark else cardLight
+            return List(4) { c }
+        }
 
     val monthDividerColor: Color
         @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
-                Color(0xFF3D5A80) // Muted dark blue for dark mode
-            } else {
-                Color(0xFF1976D2) // Standard blue — matches system accent
-            }
+        get() = MaterialTheme.colorScheme.primary
 
     // --- Theme-aware UI colors for the retrospective start page ---
+    // Header-Gradient bekommt jetzt die Profil-Akzentfarbe oben und blendet
+    // dezent in den App-Hintergrund unten — dadurch faerbt sich der Rueckblick
+    // bei jedem Profil-Wechsel mit um.
     val headerGradient: List<Color>
         @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
+        get() {
+            val accent = MaterialTheme.colorScheme.primary
+            val surface = MaterialTheme.colorScheme.surface
+            val background = MaterialTheme.colorScheme.background
+            return if (LocalIsDarkTheme.current) {
                 listOf(
-                    Color(0xFF1A2744),  // Deep navy blue top
-                    Color(0xFF152238),  // Darker navy mid-upper
-                    Color(0xFF0D1929),  // Near-black blue mid-lower
-                    cardDark,           // CardSurface bottom
+                    accent.copy(alpha = 0.35f).compositeOver(background),
+                    accent.copy(alpha = 0.22f).compositeOver(background),
+                    accent.copy(alpha = 0.10f).compositeOver(background),
+                    surface,
                 )
             } else {
                 listOf(
-                    Color(0xFFBBDEFB),  // Light blue top (Material Blue 100)
-                    Color(0xFFE3F2FD),  // Very light blue mid-upper (Blue 50)
-                    Color(0xFFF5F8FF),  // Near-white blue mid-lower
-                    Color.White,         // White bottom
+                    accent.copy(alpha = 0.25f).compositeOver(Color.White),
+                    accent.copy(alpha = 0.15f).compositeOver(Color.White),
+                    accent.copy(alpha = 0.06f).compositeOver(Color.White),
+                    surface,
                 )
             }
+        }
 
     val categoryCardColor: Color
         @Composable get() = if (LocalIsDarkTheme.current) cardDark else cardLight
@@ -135,23 +146,21 @@ object RetrospectiveColors {
     val categoryIconCircle: Color
         @Composable
         get() =
-            if (LocalIsDarkTheme.current) {
-                Color(0xFF1A2744) // Deep navy (matches header gradient)
-            } else {
-                Color(0xFFBBDEFB) // Light blue — matches header gradient
-            }
+            MaterialTheme.colorScheme.primary
+                .copy(alpha = if (LocalIsDarkTheme.current) 0.18f else 0.14f)
+                .compositeOver(MaterialTheme.colorScheme.surface)
 
     val categoryButtonGradient: List<Color>
         @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
-                listOf(Color(0xFF1A2744), Color(0xFF181818)) // Deep navy → dark
+        get() {
+            val accent = MaterialTheme.colorScheme.primary
+            val surface = MaterialTheme.colorScheme.surface
+            return if (LocalIsDarkTheme.current) {
+                listOf(accent.copy(alpha = 0.22f).compositeOver(surface), surface)
             } else {
-                listOf(
-                    Color(0xFFE3F2FD),
-                    Color.White,
-                ) // Light blue → white (matches header theme)
+                listOf(accent.copy(alpha = 0.12f).compositeOver(Color.White), Color.White)
             }
+        }
 
     val monthColors: List<Color>
         @Composable get() = List(12) { if (LocalIsDarkTheme.current) cardDark else cardLight }

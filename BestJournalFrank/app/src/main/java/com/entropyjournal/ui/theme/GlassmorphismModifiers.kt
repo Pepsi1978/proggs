@@ -15,12 +15,17 @@ fun Modifier.glassCard(
     glowColor: Color = NeonCyan,
     glowIntensity: Float = 0.15f,
     cornerRadius: Dp = 20.dp,
-    isDark: Boolean = true
+    isDark: Boolean = true,
+    // Card-Hintergrund — Profilfarbe schlaegt durch wenn der GlassCard-Composable
+    // MaterialTheme.colorScheme.surface uebergibt. Default bleibt das alte
+    // hardcodierte Schema fuer Aufrufer die den Modifier direkt nutzen.
+    surfaceColor: Color = if (isDark) CardSurface else Color.White,
+    surfaceColorBottom: Color = if (isDark) surfaceColor else Color(0xFFFAFAFC),
 ): Modifier = if (isDark) {
     // Dark mode: solid card color, no gradient, no border — Spotify style
     this
         .clip(RoundedCornerShape(cornerRadius))
-        .background(CardSurface)
+        .background(surfaceColor)
 } else {
     this
         .shadow(
@@ -30,7 +35,7 @@ fun Modifier.glassCard(
             spotColor = Color.Black.copy(alpha = 0.04f)
         )
         .clip(RoundedCornerShape(cornerRadius))
-        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFC))))
+        .background(Brush.verticalGradient(listOf(surfaceColor, surfaceColorBottom)))
         .border(
             width = 1.dp,
             brush = Brush.linearGradient(listOf(Color(0x18000000), Color.Transparent)),
@@ -42,12 +47,14 @@ fun Modifier.glassCardElevated(
     glowColor: Color = NeonCyan,
     glowIntensity: Float = 0.25f,
     cornerRadius: Dp = 20.dp,
-    isDark: Boolean = true
+    isDark: Boolean = true,
+    surfaceColor: Color = if (isDark) CardElevated else Color.White,
+    surfaceColorBottom: Color = if (isDark) surfaceColor else Color(0xFFF8F8FC),
 ): Modifier = if (isDark) {
     // Dark mode: slightly brighter solid card, no gradient, no border
     this
         .clip(RoundedCornerShape(cornerRadius))
-        .background(CardElevated)
+        .background(surfaceColor)
 } else {
     this
         .shadow(
@@ -57,7 +64,7 @@ fun Modifier.glassCardElevated(
             spotColor = Color.Black.copy(alpha = 0.06f)
         )
         .clip(RoundedCornerShape(cornerRadius))
-        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF8F8FC))))
+        .background(Brush.verticalGradient(listOf(surfaceColor, surfaceColorBottom)))
         .border(
             width = 1.dp,
             brush = Brush.linearGradient(listOf(Color(0x20000000), Color.Transparent, Color(0x08000000))),
