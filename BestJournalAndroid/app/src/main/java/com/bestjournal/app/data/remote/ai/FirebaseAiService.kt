@@ -15,15 +15,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FirebaseAiService
-@Inject
-constructor(
-    @ApplicationContext private val context: Context,
-) {
+class FirebaseAiService @Inject constructor(@ApplicationContext private val context: Context) {
 
     companion object {
         const val MODEL_FLASH = "gemini-3.1-flash-lite-preview"
         const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
+        // Auto-fallback target whenever MODEL_FLASH (a -preview model) fails.
+        // "-latest" aliases always resolve to the most recent generally-available
+        // flash-lite model — chosen as a safe net against preview deprecation,
+        // model rename, or temporary unavailability of the preview channel.
+        const val MODEL_FLASH_FALLBACK = "gemini-flash-lite-latest"
         private const val TAG = "FirebaseAiService"
     }
 
@@ -65,6 +66,38 @@ constructor(
         maxOutputTokens: Int? = null,
         systemPrompt: String? = null,
     ): Result<String> {
+        // Primary attempt with the requested model.
+        val primaryResult =
+            generateContentSingle(prompt, modelName, temperature, maxOutputTokens, systemPrompt)
+
+        // Auto-fallback only for MODEL_FLASH (the -preview channel that can be
+        // deprecated, renamed, or temporarily unavailable). Other models are
+        // returned as-is so we don't loop or silently downgrade explicit choices.
+        if (primaryResult.isSuccess || modelName != MODEL_FLASH) return primaryResult
+
+        Log.w(
+            TAG,
+            "Primary model $modelName failed " +
+                "(${primaryResult.exceptionOrNull()?.javaClass?.simpleName}: " +
+                "${primaryResult.exceptionOrNull()?.message}) — " +
+                "retrying with fallback $MODEL_FLASH_FALLBACK",
+        )
+        return generateContentSingle(
+            prompt,
+            MODEL_FLASH_FALLBACK,
+            temperature,
+            maxOutputTokens,
+            systemPrompt,
+        )
+    }
+
+    private suspend fun generateContentSingle(
+        prompt: String,
+        modelName: String,
+        temperature: Float,
+        maxOutputTokens: Int?,
+        systemPrompt: String?,
+    ): Result<String> {
         return try {
             Log.d(
                 TAG,
@@ -74,7 +107,7 @@ constructor(
             val model = createModel(modelName, temperature, maxOutputTokens, systemPrompt)
             val response = model.generateContent(prompt)
             val elapsed = System.currentTimeMillis() - t0
-            Log.d(TAG, "generateContent returned after ${elapsed}ms")
+            Log.d(TAG, "generateContent returned after ${elapsed}ms (model=$modelName)")
             val text =
                 try {
                     response.text
@@ -87,7 +120,10 @@ constructor(
                         ?.joinToString("") { it.text }
                 }
             if (text != null) {
-                Log.d(TAG, "generateContent success: ${text.length} chars returned")
+                Log.d(
+                    TAG,
+                    "generateContent success: ${text.length} chars returned (model=$modelName)",
+                )
                 Result.success(text)
             } else {
                 Log.w(
