@@ -1784,10 +1784,9 @@ fun SettingsScreen(
                             doHaptic(HapticFeedbackType.LongPress)
                             previousScenario = currentScenario
                             currentScenario = index
-                            scenarioPrefs
-                                .edit()
-                                .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
-                                .apply()
+                            // Compose-State-Update faerbt die ganze App live um (alle Screens,
+                            // alle Menus, alle Sub-Menus reagieren auf MaterialTheme.colorScheme).
+                            com.entropyjournal.ui.theme.ProfileTheme.update(context, index)
                             showScenarioInfoIndex = index
                             if (index >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
                                 editingCustomId =
@@ -2044,10 +2043,11 @@ fun SettingsScreen(
                                     TextButton(onClick = {
                                         showScenarioInfoIndex = -1
                                         currentScenario = previousScenario
-                                        scenarioPrefs
-                                            .edit()
-                                            .putInt(Constants.PREF_DASHBOARD_SCENARIO, previousScenario)
-                                            .apply()
+                                        // Auch beim Abbrechen die App-Farbe zurueckdrehen.
+                                        com.entropyjournal.ui.theme.ProfileTheme.update(
+                                            context,
+                                            previousScenario,
+                                        )
                                         onProfileChanged()
                                     }) {
                                         Text(
@@ -3011,7 +3011,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.17.8",
+                            "Entropy Journal V0.18.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

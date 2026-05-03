@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.entropyjournal.ui.navigation.AppNavGraph
 import com.entropyjournal.ui.theme.EntropyJournalTheme
+import com.entropyjournal.ui.theme.ProfileTheme
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.SunCalculator
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,6 +50,10 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Profil-Akzentfarbe vor dem ersten Compose-Frame laden, damit die App
+        // sofort in der gewaehlten Profilfarbe startet (kein Color-Flicker).
+        ProfileTheme.loadFromPrefs(this)
 
         // Restore unlock state across configuration changes (e.g. screen rotation)
         if (savedInstanceState != null) {
@@ -145,7 +150,10 @@ class MainActivity : FragmentActivity() {
                     else -> 2
                 }
 
-            EntropyJournalTheme(darkTheme = isDark) {
+            EntropyJournalTheme(
+                darkTheme = isDark,
+                profileIndex = ProfileTheme.currentProfileIndex.intValue,
+            ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
                 } else {
