@@ -36,6 +36,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
@@ -52,11 +53,15 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Visibility
@@ -120,8 +125,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.CircleShape
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
+import com.entropyjournal.ui.theme.CustomPalette
+import com.entropyjournal.ui.theme.GoalPalette
+import com.entropyjournal.ui.theme.InsightPalette
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonRed
+import com.entropyjournal.ui.theme.SummaryPalette
+import com.entropyjournal.ui.theme.WarmCopper
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
 import kotlinx.coroutines.launch
@@ -1724,14 +1734,6 @@ fun SettingsScreen(
                             // Invisible counterbalance for icon+spacer so text is visually centered
                             Spacer(modifier = Modifier.width(28.dp))
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "W\u00e4hle ein Profil aus. Tippe auf ein Profil f\u00fcr eine genauere Erkl\u00e4rung.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
                         Spacer(modifier = Modifier.height(12.dp))
 
                         val fixedScenarioNames =
@@ -1804,6 +1806,24 @@ fun SettingsScreen(
                             val customEntry =
                                 if (isCustom) customList.getOrNull(localCustomIndex) else null
                             val canDelete = isCustom && localCustomIndex > 0
+                            // Onboarding-Profile: icon + accent color per profile (1:1 from
+                            // BestJournalAndroid). All custom profiles share the Custom palette.
+                            val profileAccent =
+                                when (index) {
+                                    0 -> SummaryPalette.accent
+                                    1 -> WarmCopper
+                                    2 -> InsightPalette.primary
+                                    3 -> GoalPalette.primary
+                                    else -> CustomPalette.primary
+                                }
+                            val profileIcon =
+                                when (index) {
+                                    0 -> Icons.Rounded.AutoStories
+                                    1 -> Icons.Rounded.Whatshot
+                                    2 -> Icons.Rounded.SelfImprovement
+                                    3 -> Icons.Rounded.RocketLaunch
+                                    else -> Icons.Rounded.Science
+                                }
                             Row(
                                 modifier =
                                     Modifier.fillMaxWidth()
@@ -1812,22 +1832,45 @@ fun SettingsScreen(
                                         .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                // Coloured accent bar — same dimensions as in OnboardingScreen
+                                Box(
+                                    modifier =
+                                        Modifier.width(4.dp)
+                                            .height(44.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(profileAccent)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                // Profile icon in a soft circular badge in the same accent
+                                // colour — mirrors the onboarding card layout.
+                                Box(
+                                    modifier =
+                                        Modifier.size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(profileAccent.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = profileIcon,
+                                        contentDescription = null,
+                                        tint = profileAccent,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
                                 RadioButton(
                                     selected = currentScenario == index,
                                     onClick = { selectScenario(index) },
                                     colors =
-                                        RadioButtonDefaults.colors(
-                                            selectedColor = MaterialTheme.colorScheme.primary
-                                        ),
+                                        RadioButtonDefaults.colors(selectedColor = profileAccent),
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         name,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color =
-                                            if (currentScenario == index)
-                                                MaterialTheme.colorScheme.primary
+                                            if (currentScenario == index) profileAccent
                                             else MaterialTheme.colorScheme.onSurface,
                                     )
                                     when (index) {
@@ -2956,7 +2999,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.17.6",
+                            "Entropy Journal V0.17.7",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
