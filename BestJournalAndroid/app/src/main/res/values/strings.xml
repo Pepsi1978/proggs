@@ -425,7 +425,7 @@
     <string name="settings_not_signed_in">Nicht angemeldet</string>
     <string name="settings_entries_loaded_on_sign_in">Gesicherte Einträge werden beim Anmelden geladen</string>
     <string name="settings_sign_in_google">Mit Google anmelden</string>
-    <string name="settings_appearance">Aussehen</string>
+    <string name="settings_appearance">Erscheinungsbild</string>
     <string name="settings_themes_manager">Themes Manager</string>
     <string name="settings_dark_mode">Dunkelmodus</string>
     <string name="settings_dark_active">Aktiv</string>
