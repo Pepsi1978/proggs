@@ -446,7 +446,7 @@
     <string name="settings_tts_off">Vorlesen ist ausgeschaltet</string>
     <string name="settings_voice_select">Stimme auswählen</string>
     <string name="settings_voice_choose">Stimme wählen</string>
-    <string name="settings_reminder_section">Erinnerung / Rückblick</string>
+    <string name="settings_reminder_section">Erinnerungen</string>
     <string name="settings_daily_reminder">Tägliche Erinnerung</string>
     <string name="settings_reminder_time" formatted="false">Uhrzeit: %02d:%02d Uhr</string>
     <string name="settings_reminder_desc">Erinnert dich ans Tagebuchschreiben</string>
