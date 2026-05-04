@@ -8,16 +8,20 @@ plugins {
 
 // SK — Secret Keys Zentrale (cross-platform: $HOME/SK/BestJournalFrank/).
 // Der Debug-Keystore liegt dort und wird beim Build an den erwarteten Pfad kopiert.
-val skBasePath: String = File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalFrank").absolutePath
+val skBasePath: String =
+    File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalFrank").absolutePath
 val debugKeystorePath: String = File(skBasePath).resolve("debug-shared.keystore").absolutePath
-val localDebugKeystorePath: String = rootProject.layout.projectDirectory.file("debug-shared.keystore").asFile.absolutePath
+val localDebugKeystorePath: String =
+    rootProject.layout.projectDirectory.file("debug-shared.keystore").asFile.absolutePath
 
-val syncSecretsFromSk = tasks.register<Copy>("syncSecretsFromSk") {
-    doNotTrackState("Copies external secrets from SK into the ignored working tree.")
-    from(debugKeystorePath)
-    into(File(localDebugKeystorePath).parentFile)
-    rename { "debug-shared.keystore" }
-}
+val syncSecretsFromSk =
+    tasks.register<Copy>("syncSecretsFromSk") {
+        doNotTrackState("Copies external secrets from SK into the ignored working tree.")
+        from(debugKeystorePath)
+        into(File(localDebugKeystorePath).parentFile)
+        rename { "debug-shared.keystore" }
+    }
+
 tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFromSk) }
 
 android {
@@ -28,8 +32,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 127
-        versionName = "0.18.1"
+        versionCode = 128
+        versionName = "0.18.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
