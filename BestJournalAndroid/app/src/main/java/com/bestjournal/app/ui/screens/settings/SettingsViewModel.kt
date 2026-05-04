@@ -47,6 +47,7 @@ data class SettingsUiState(
     val isDarkTheme: Boolean = false,
     val followSystem: Boolean = false,
     val followSun: Boolean = false,
+    val selectedThemeKey: String = "neutral",
     val biometricLock: Boolean = false,
     val lastSyncTimestamp: Long? = null,
     val backupPhotos: Boolean = false,
@@ -135,10 +136,9 @@ constructor(
     }
 
     /**
-     * Forces the BillingManager to re-query Google Play so the displayed
-     * subscription state, promo countdown and current price reflect any
-     * renewals or plan changes that happened since the BillingClient first
-     * connected. Called from SettingsScreen on each open.
+     * Forces the BillingManager to re-query Google Play so the displayed subscription state, promo
+     * countdown and current price reflect any renewals or plan changes that happened since the
+     * BillingClient first connected. Called from SettingsScreen on each open.
      */
     fun refreshSubscriptionStatus() {
         billingManager.refreshSubscriptionStatus()
@@ -157,7 +157,9 @@ constructor(
             if (formatted != null) return formatted
         }
         // 2. Local active-base-plan price (for retention/promo offers).
-        billingManager.getActiveBasePlanPrice()?.let { return it }
+        billingManager.getActiveBasePlanPrice()?.let {
+            return it
+        }
         // 3. Fallback to the main base plan price.
         return when (billingManager.subscriptionType.value) {
             com.bestjournal.app.billing.SubscriptionType.YEARLY ->
@@ -167,36 +169,36 @@ constructor(
     }
 
     /**
-     * Format micros (e.g. 3_990_000) as a localised price string ("3,99 €").
-     * Returns null if the inputs are invalid so the caller can fall back.
+     * Format micros (e.g. 3_990_000) as a localised price string ("3,99 €"). Returns null if the
+     * inputs are invalid so the caller can fall back.
      */
     private fun formatMicrosAsPrice(micros: Long, currencyCode: String): String? {
         if (micros <= 0L) return null
         val amount = micros / 1_000_000.0
-        val symbol = when (currencyCode.uppercase()) {
-            "EUR" -> " €"
-            "USD" -> " $"
-            "GBP" -> " £"
-            "" -> ""
-            else -> " $currencyCode"
-        }
+        val symbol =
+            when (currencyCode.uppercase()) {
+                "EUR" -> " €"
+                "USD" -> " $"
+                "GBP" -> " £"
+                "" -> ""
+                else -> " $currencyCode"
+            }
         // German formatting (comma decimal separator) — matches BillingClient output.
         val rounded = String.format(java.util.Locale.GERMANY, "%.2f", amount)
         return "$rounded$symbol"
     }
 
     /**
-     * Loop-7: live snapshot of the subscription's CURRENT pricing phase, fed
-     * directly by Google's Subscriptions API v2 via the Firebase cloud
-     * function. There is intentionally no counter or local guess — the dialog
-     * renders exactly what Google says right now:
-     *   - currentPrice          actual price being charged in the active phase
-     *   - baseAfterwardsPrice   regular recurring price after the intro phase
-     *   - phaseEndDate          ISO-8601 timestamp when the active phase ends
-     *                            (= next renewal, or end of service if cancelled)
+     * Loop-7: live snapshot of the subscription's CURRENT pricing phase, fed directly by Google's
+     * Subscriptions API v2 via the Firebase cloud function. There is intentionally no counter or
+     * local guess — the dialog renders exactly what Google says right now:
+     * - currentPrice actual price being charged in the active phase
+     * - baseAfterwardsPrice regular recurring price after the intro phase
+     * - phaseEndDate ISO-8601 timestamp when the active phase ends (= next renewal, or end of
+     *   service if cancelled)
      *
-     * Only set when offerPhase == "INTRO" — i.e. the user is truly in the
-     * promotional pricing phase. BASE phase shows no extra promo card.
+     * Only set when offerPhase == "INTRO" — i.e. the user is truly in the promotional pricing
+     * phase. BASE phase shows no extra promo card.
      */
     data class PromoInfo(
         val currentPrice: String,
@@ -207,57 +209,54 @@ constructor(
     fun getActivePromoInfo(): PromoInfo? = promoInfoState.value
 
     /**
-     * Reactive promo info — observable from Compose. Re-emits whenever the
-     * cloud function delivers a fresh offerPhase / expiryTime / price for
-     * the active subscription.
+     * Reactive promo info — observable from Compose. Re-emits whenever the cloud function delivers
+     * a fresh offerPhase / expiryTime / price for the active subscription.
      */
-    val promoInfoState: StateFlow<PromoInfo?> = combine(
-        billingManager.subscriptionType,
-        billingManager.monthlyPrice,
-        billingManager.expiryTime,
-        billingManager.serverCurrentPriceMicros,
-        billingManager.serverCurrentPriceCurrency,
-        billingManager.activeBasePlanId,
-    ) { values: Array<Any?> ->
-        val type = values[0] as com.bestjournal.app.billing.SubscriptionType
-        val monthlyPrice = values[1] as String
-        val expiry = values[2] as String?
-        val priceMicros = values[3] as Long
-        val priceCurrency = values[4] as String
-        val activeBasePlan = values[5] as String
-        if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY) return@combine null
-        if (expiry.isNullOrBlank()) return@combine null
-        if (priceMicros <= 0L || monthlyPrice.isBlank()) return@combine null
-        // Loop-10 fix (Frank, 2026-04-30): observe activeBasePlanId as a
-        // proper StateFlow so this combine re-fires the second the cloud
-        // confirms a plan switch. Show the "Sonderpreis aktiv, danach
-        // 3,99 €" notice only when the user is on the main "monthly" plan
-        // (or the very first install where the value is still empty).
-        // Retention plans have a permanent lower price, no return to base.
-        val onMainMonthlyPlan = activeBasePlan.isEmpty() || activeBasePlan == "monthly"
-        if (!onMainMonthlyPlan) return@combine null
-        // Phase comparison: only the "main" monthly plan can be in INTRO.
-        // priceMicros < baseMicros => still benefitting from the discount.
-        val baseMicros = parsePriceToMicros(monthlyPrice) ?: return@combine null
-        if (priceMicros >= baseMicros) return@combine null
-        val currentPrice = formatMicrosAsPrice(priceMicros, priceCurrency)
-            ?: return@combine null
-        PromoInfo(
-            currentPrice = currentPrice,
-            baseAfterwardsPrice = monthlyPrice,
-            phaseEndDate = expiry,
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = null,
-    )
+    val promoInfoState: StateFlow<PromoInfo?> =
+        combine(
+                billingManager.subscriptionType,
+                billingManager.monthlyPrice,
+                billingManager.expiryTime,
+                billingManager.serverCurrentPriceMicros,
+                billingManager.serverCurrentPriceCurrency,
+                billingManager.activeBasePlanId,
+            ) { values: Array<Any?> ->
+                val type = values[0] as com.bestjournal.app.billing.SubscriptionType
+                val monthlyPrice = values[1] as String
+                val expiry = values[2] as String?
+                val priceMicros = values[3] as Long
+                val priceCurrency = values[4] as String
+                val activeBasePlan = values[5] as String
+                if (type != com.bestjournal.app.billing.SubscriptionType.MONTHLY)
+                    return@combine null
+                if (expiry.isNullOrBlank()) return@combine null
+                if (priceMicros <= 0L || monthlyPrice.isBlank()) return@combine null
+                // Loop-10 fix (Frank, 2026-04-30): observe activeBasePlanId as a
+                // proper StateFlow so this combine re-fires the second the cloud
+                // confirms a plan switch. Show the "Sonderpreis aktiv, danach
+                // 3,99 €" notice only when the user is on the main "monthly" plan
+                // (or the very first install where the value is still empty).
+                // Retention plans have a permanent lower price, no return to base.
+                val onMainMonthlyPlan = activeBasePlan.isEmpty() || activeBasePlan == "monthly"
+                if (!onMainMonthlyPlan) return@combine null
+                // Phase comparison: only the "main" monthly plan can be in INTRO.
+                // priceMicros < baseMicros => still benefitting from the discount.
+                val baseMicros = parsePriceToMicros(monthlyPrice) ?: return@combine null
+                if (priceMicros >= baseMicros) return@combine null
+                val currentPrice =
+                    formatMicrosAsPrice(priceMicros, priceCurrency) ?: return@combine null
+                PromoInfo(
+                    currentPrice = currentPrice,
+                    baseAfterwardsPrice = monthlyPrice,
+                    phaseEndDate = expiry,
+                )
+            }
+            .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = null)
 
     /**
-     * Loop-7 helper: parse a localised "3,99 €" / "$3.99" / "3.99 EUR"
-     * formatted price back into micros so promoInfoState can compare it
-     * against the cloud-delivered priceMicros. Returns null when the
-     * input is empty or contains no numeric portion.
+     * Loop-7 helper: parse a localised "3,99 €" / "$3.99" / "3.99 EUR" formatted price back into
+     * micros so promoInfoState can compare it against the cloud-delivered priceMicros. Returns null
+     * when the input is empty or contains no numeric portion.
      */
     private fun parsePriceToMicros(formatted: String): Long? {
         if (formatted.isBlank()) return null
@@ -266,11 +265,12 @@ constructor(
         val lastComma = numStr.lastIndexOf(',')
         val lastDot = numStr.lastIndexOf('.')
         val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
-        val normalised = if (usesCommaDecimal) {
-            numStr.replace(".", "").replace(",", ".")
-        } else {
-            numStr.replace(",", "")
-        }
+        val normalised =
+            if (usesCommaDecimal) {
+                numStr.replace(".", "").replace(",", ".")
+            } else {
+                numStr.replace(",", "")
+            }
         val amount = normalised.toDoubleOrNull() ?: return null
         return (amount * 1_000_000.0).toLong()
     }
@@ -279,62 +279,63 @@ constructor(
     val expiryTimeState: StateFlow<String?> = billingManager.expiryTime
 
     /**
-     * Loop-10 fix (Frank, 2026-04-30): the previous incarnation of this
-     * flow read PREF_ACTIVE_BASE_PLAN_ID inside a map { } lambda gated on
-     * subscriptionType — but a switch from "monthly" to
-     * "retention-monthly-75" keeps subscriptionType=MONTHLY on both sides
-     * of the change. The lambda never re-fired and the flow stayed stuck
-     * on its initial value. Now we observe BillingManager's
-     * activeBasePlanId StateFlow directly: every code path that writes
-     * PREF_ACTIVE_BASE_PLAN_ID also writes _activeBasePlanId, so this
-     * derived flow updates the second the cloud function (or a fresh
-     * purchase) confirms the new base plan.
+     * Loop-10 fix (Frank, 2026-04-30): the previous incarnation of this flow read
+     * PREF_ACTIVE_BASE_PLAN_ID inside a map { } lambda gated on subscriptionType — but a switch
+     * from "monthly" to "retention-monthly-75" keeps subscriptionType=MONTHLY on both sides of the
+     * change. The lambda never re-fired and the flow stayed stuck on its initial value. Now we
+     * observe BillingManager's activeBasePlanId StateFlow directly: every code path that writes
+     * PREF_ACTIVE_BASE_PLAN_ID also writes _activeBasePlanId, so this derived flow updates the
+     * second the cloud function (or a fresh purchase) confirms the new base plan.
      */
     val isOnRetentionPlanState: StateFlow<Boolean> =
-        billingManager.activeBasePlanId.map { basePlan ->
-            basePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
-                basePlan == Constants.RETENTION_OFFER_ID_YEARLY
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = run {
-                val initial = billingManager.activeBasePlanId.value
-                initial == Constants.RETENTION_OFFER_ID_MONTHLY ||
-                    initial == Constants.RETENTION_OFFER_ID_YEARLY
-            },
-        )
+        billingManager.activeBasePlanId
+            .map { basePlan ->
+                basePlan == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                    basePlan == Constants.RETENTION_OFFER_ID_YEARLY
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue =
+                    run {
+                        val initial = billingManager.activeBasePlanId.value
+                        initial == Constants.RETENTION_OFFER_ID_MONTHLY ||
+                            initial == Constants.RETENTION_OFFER_ID_YEARLY
+                    },
+            )
 
-    /** Reactive current price for the active subscription. Re-evaluates when
-     *  any of the price sources update — including the server-authoritative
-     *  currentPriceMicros from the Cloud Function (which knows the active
-     *  pricing phase). */
-    val currentPriceState: StateFlow<String> = combine(
-        billingManager.subscriptionType,
-        billingManager.monthlyPrice,
-        billingManager.yearlyPrice,
-        billingManager.serverCurrentPriceMicros,
-        billingManager.offerPhase,
-    ) { _, _, _, _, _ ->
-        getCurrentPrice()
-    }.stateIn(
-        scope = viewModelScope,
-        // Eagerly so the dialog never gets a null/empty initial value.
-        started = SharingStarted.Eagerly,
-        initialValue = getCurrentPrice(),
-    )
+    /**
+     * Reactive current price for the active subscription. Re-evaluates when any of the price
+     * sources update — including the server-authoritative currentPriceMicros from the Cloud
+     * Function (which knows the active pricing phase).
+     */
+    val currentPriceState: StateFlow<String> =
+        combine(
+                billingManager.subscriptionType,
+                billingManager.monthlyPrice,
+                billingManager.yearlyPrice,
+                billingManager.serverCurrentPriceMicros,
+                billingManager.offerPhase,
+            ) { _, _, _, _, _ ->
+                getCurrentPrice()
+            }
+            .stateIn(
+                scope = viewModelScope,
+                // Eagerly so the dialog never gets a null/empty initial value.
+                started = SharingStarted.Eagerly,
+                initialValue = getCurrentPrice(),
+            )
 
     /** Reactive retention offer price for the active subscription type. */
-    val retentionPriceState: StateFlow<String?> = combine(
-        billingManager.subscriptionType,
-        billingManager.monthlyPrice,
-        billingManager.yearlyPrice,
-    ) { _, _, _ ->
-        getRetentionPrice()
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = null,
-    )
+    val retentionPriceState: StateFlow<String?> =
+        combine(
+                billingManager.subscriptionType,
+                billingManager.monthlyPrice,
+                billingManager.yearlyPrice,
+            ) { _, _, _ ->
+                getRetentionPrice()
+            }
+            .stateIn(scope = viewModelScope, started = SharingStarted.Eagerly, initialValue = null)
 
     /** Reactive auto-renewing flag — false after user cancels in Google Play. */
     val autoRenewingState: StateFlow<Boolean> = billingManager.autoRenewing
@@ -346,25 +347,24 @@ constructor(
         val lastComma = numStr.lastIndexOf(',')
         val lastDot = numStr.lastIndexOf('.')
         val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
-        val normalized = if (usesCommaDecimal) {
-            numStr.replace(".", "").replace(",", ".")
-        } else {
-            numStr.replace(",", "")
-        }
+        val normalized =
+            if (usesCommaDecimal) {
+                numStr.replace(".", "").replace(",", ".")
+            } else {
+                numStr.replace(",", "")
+            }
         val amount = normalized.toDoubleOrNull() ?: return null
         val halfAmount = amount * 0.5
-        val hasDecimals = (usesCommaDecimal && lastComma >= 0) ||
-            (!usesCommaDecimal && lastDot >= 0)
-        val formatted = if (hasDecimals) {
-            val f = String.format(java.util.Locale.US, "%.2f", halfAmount)
-            if (usesCommaDecimal) f.replace(".", ",") else f
-        } else {
-            halfAmount.toInt().toString()
-        }
-        return originalPrice.replaceFirst(
-            Regex("[0-9][0-9.,   ]*[0-9]|[0-9]+"),
-            formatted,
-        )
+        val hasDecimals =
+            (usesCommaDecimal && lastComma >= 0) || (!usesCommaDecimal && lastDot >= 0)
+        val formatted =
+            if (hasDecimals) {
+                val f = String.format(java.util.Locale.US, "%.2f", halfAmount)
+                if (usesCommaDecimal) f.replace(".", ",") else f
+            } else {
+                halfAmount.toInt().toString()
+            }
+        return originalPrice.replaceFirst(Regex("[0-9][0-9.,   ]*[0-9]|[0-9]+"), formatted)
     }
 
     fun getRetentionPrice(): String? {
@@ -406,7 +406,8 @@ constructor(
         when (key) {
             Constants.PREF_DARK_THEME,
             Constants.PREF_THEME_FOLLOW_SYSTEM,
-            Constants.PREF_THEME_FOLLOW_SUN -> {
+            Constants.PREF_THEME_FOLLOW_SUN,
+            Constants.PREF_APP_THEME -> {
                 _uiState.value =
                     _uiState.value.copy(
                         isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
@@ -414,6 +415,9 @@ constructor(
                             encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                         followSun =
                             encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
+                        selectedThemeKey =
+                            encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
+                                ?: "neutral",
                     )
             }
             Constants.PREF_LAST_SYNC_TIMESTAMP -> {
@@ -502,6 +506,8 @@ constructor(
                 isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
                 followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                 followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
+                selectedThemeKey =
+                    encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral") ?: "neutral",
                 biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
                 backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, true),
                 backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, true),
@@ -542,6 +548,11 @@ constructor(
             .apply()
         _uiState.value =
             _uiState.value.copy(followSystem = enabled, isDarkTheme = false, followSun = false)
+    }
+
+    fun updateSelectedTheme(themeKey: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_APP_THEME, themeKey).apply()
+        _uiState.value = _uiState.value.copy(selectedThemeKey = themeKey)
     }
 
     fun updateFollowSun(enabled: Boolean) {
@@ -823,10 +834,9 @@ constructor(
 
                         // Always include Nachtraege in the PDF — they are part
                         // of the entry content, not an optional extra like photos.
-                        val followUpsPerEntry =
-                            entries.associate { entry ->
-                                entry.id to entryFollowUpDao.getForEntryOnce(entry.id)
-                            }
+                        val followUpsPerEntry = entries.associate { entry ->
+                            entry.id to entryFollowUpDao.getForEntryOnce(entry.id)
+                        }
 
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                             PdfExporter.export(
@@ -879,36 +889,39 @@ constructor(
     }
 
     /**
-     * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO / CCPA Right to Delete.
-     * Removes:
-     *  - Drive appDataFolder backup (verified empty afterwards — see [DriveBackupManager.deleteAllAppData])
-     *  - App sign-in state (cached Google ID profile in encrypted preferences — not the Google account itself)
-     *  - Local on-device photos and videos (filesDir/photos)
-     *  - Cached audio recordings and temp DB snapshots from cacheDir — these can contain journal content
-     *  - Everything signOut() also removes: local Room DBs, encrypted prefs, reminder alarms
+     * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO / CCPA Right to
+     * Delete. Removes:
+     * - Drive appDataFolder backup (verified empty afterwards — see
+     *   [DriveBackupManager.deleteAllAppData])
+     * - App sign-in state (cached Google ID profile in encrypted preferences — not the Google
+     *   account itself)
+     * - Local on-device photos and videos (filesDir/photos)
+     * - Cached audio recordings and temp DB snapshots from cacheDir — these can contain journal
+     *   content
+     * - Everything signOut() also removes: local Room DBs, encrypted prefs, reminder alarms
      *
      * Bombensicher-Semantik:
-     *  - Drive deletion is verified and runs FIRST. On hard failure (timeout/network/verify mismatch),
-     *    we STOP and expose the error via [SettingsUiState.deleteAccountDriveError] so the UI can
-     *    show an honest dialog instead of pretending deletion succeeded.
-     *  - The user can then retry or explicitly choose "delete locally anyway" via [forceLocalDelete].
-     *  - Restarts the app process only when local deletion completes.
+     * - Drive deletion is verified and runs FIRST. On hard failure (timeout/network/verify
+     *   mismatch), we STOP and expose the error via [SettingsUiState.deleteAccountDriveError] so
+     *   the UI can show an honest dialog instead of pretending deletion succeeded.
+     * - The user can then retry or explicitly choose "delete locally anyway" via
+     *   [forceLocalDelete].
+     * - Restarts the app process only when local deletion completes.
      */
     fun deleteAccount(context: android.content.Context, forceLocalDelete: Boolean = false) {
         viewModelScope.launch {
             _uiState.value =
-                _uiState.value.copy(
-                    deleteAccountInProgress = true,
-                    deleteAccountDriveError = null,
-                )
+                _uiState.value.copy(deleteAccountInProgress = true, deleteAccountDriveError = null)
 
             // 1) Drive appDataFolder — verified delete. Runs FIRST because signOut() clears the
             //    Google account email needed to authenticate the Drive API.
             if (!forceLocalDelete) {
                 val driveResult = driveBackupManager.deleteAllAppData()
-                if (driveResult is com.bestjournal.app.data.remote.googledrive.DriveBackupManager
-                        .DeleteAllResult
-                        .Failed) {
+                if (
+                    driveResult
+                        is
+                        com.bestjournal.app.data.remote.googledrive.DriveBackupManager.DeleteAllResult.Failed
+                ) {
                     android.util.Log.w(
                         "DeleteAccount",
                         "Drive deletion failed: ${driveResult.reason} — stopping for user confirmation",
@@ -920,10 +933,7 @@ constructor(
                         )
                     return@launch
                 }
-                android.util.Log.d(
-                    "DeleteAccount",
-                    "Drive appDataFolder cleanup OK: $driveResult",
-                )
+                android.util.Log.d("DeleteAccount", "Drive appDataFolder cleanup OK: $driveResult")
             } else {
                 android.util.Log.w(
                     "DeleteAccount",
@@ -1024,71 +1034,67 @@ constructor(
                 promptPendingImprovement = null,
             )
 
-        promptRecordingJob =
-            viewModelScope.launch {
-                // Beep sound before recording
-                val soundsEnabled = encryptedPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)
-                val beepMs = 150
-                if (soundsEnabled)
-                    try {
-                        val sampleRate = 44100
-                        val beepSamples = sampleRate * beepMs / 1000
-                        val samples = ShortArray(beepSamples)
-                        val freq = 880.0
-                        val fadeLen = beepSamples / 8
-                        for (i in 0 until beepSamples) {
-                            val t = i.toDouble() / sampleRate
-                            val envelope =
-                                when {
-                                    i < fadeLen -> i.toDouble() / fadeLen
-                                    i > beepSamples - fadeLen ->
-                                        (beepSamples - i).toDouble() / fadeLen
-                                    else -> 1.0
-                                }
-                            samples[i] =
-                                (Short.MAX_VALUE *
-                                        0.5 *
-                                        envelope *
-                                        kotlin.math.sin(2 * Math.PI * freq * t))
-                                    .toInt()
-                                    .toShort()
-                        }
-                        val track =
-                            android.media.AudioTrack(
-                                android.media.AudioAttributes.Builder()
-                                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                                    .setContentType(
-                                        android.media.AudioAttributes.CONTENT_TYPE_MUSIC
-                                    )
-                                    .build(),
-                                android.media.AudioFormat.Builder()
-                                    .setSampleRate(sampleRate)
-                                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
-                                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
-                                    .build(),
-                                beepSamples * 2,
-                                android.media.AudioTrack.MODE_STATIC,
-                                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
-                            )
-                        track.write(samples, 0, beepSamples)
-                        track.play()
-                        delay(beepMs.toLong() + 100)
-                        track.release()
-                    } catch (_: Exception) {
-                        /* Tone is optional */
-                    }
-
+        promptRecordingJob = viewModelScope.launch {
+            // Beep sound before recording
+            val soundsEnabled = encryptedPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)
+            val beepMs = 150
+            if (soundsEnabled)
                 try {
-                    recordAudioUseCase.startRecording(audioFile)
-                } catch (e: Exception) {
-                    _uiState.value =
-                        _uiState.value.copy(
-                            promptRecState = PromptRecState.IDLE,
-                            promptError =
-                                context.getString(R.string.journal_recording_error, e.message ?: ""),
+                    val sampleRate = 44100
+                    val beepSamples = sampleRate * beepMs / 1000
+                    val samples = ShortArray(beepSamples)
+                    val freq = 880.0
+                    val fadeLen = beepSamples / 8
+                    for (i in 0 until beepSamples) {
+                        val t = i.toDouble() / sampleRate
+                        val envelope =
+                            when {
+                                i < fadeLen -> i.toDouble() / fadeLen
+                                i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
+                                else -> 1.0
+                            }
+                        samples[i] =
+                            (Short.MAX_VALUE *
+                                    0.5 *
+                                    envelope *
+                                    kotlin.math.sin(2 * Math.PI * freq * t))
+                                .toInt()
+                                .toShort()
+                    }
+                    val track =
+                        android.media.AudioTrack(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build(),
+                            android.media.AudioFormat.Builder()
+                                .setSampleRate(sampleRate)
+                                .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                                .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                                .build(),
+                            beepSamples * 2,
+                            android.media.AudioTrack.MODE_STATIC,
+                            android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
                         )
+                    track.write(samples, 0, beepSamples)
+                    track.play()
+                    delay(beepMs.toLong() + 100)
+                    track.release()
+                } catch (_: Exception) {
+                    /* Tone is optional */
                 }
+
+            try {
+                recordAudioUseCase.startRecording(audioFile)
+            } catch (e: Exception) {
+                _uiState.value =
+                    _uiState.value.copy(
+                        promptRecState = PromptRecState.IDLE,
+                        promptError =
+                            context.getString(R.string.journal_recording_error, e.message ?: ""),
+                    )
             }
+        }
 
         // Auto-stop after max duration
         viewModelScope.launch {
@@ -1172,9 +1178,9 @@ constructor(
     }
 
     /**
-     * Uploads the full list of custom analyses (names + prompts) to Drive.
-     * Called after any add/remove/rename/prompt-save in the Individuelle-Analyse
-     * settings so all devices see the same list.
+     * Uploads the full list of custom analyses (names + prompts) to Drive. Called after any
+     * add/remove/rename/prompt-save in the Individuelle-Analyse settings so all devices see the
+     * same list.
      */
     fun backupCustomAnalysesToDrive() {
         viewModelScope.launch {
@@ -1190,8 +1196,8 @@ constructor(
     }
 
     /**
-     * Legacy entry point — prefer [backupCustomAnalysesToDrive] which uploads
-     * the full list. Kept so any remaining callers continue to work.
+     * Legacy entry point — prefer [backupCustomAnalysesToDrive] which uploads the full list. Kept
+     * so any remaining callers continue to work.
      */
     fun backupCustomPromptToDrive(promptText: String) {
         viewModelScope.launch {

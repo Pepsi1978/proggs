@@ -2,7 +2,6 @@ package com.bestjournal.app
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import com.bestjournal.app.R
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -87,6 +86,13 @@ class MainActivity : FragmentActivity() {
             val manualDark = remember {
                 mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false))
             }
+            val selectedAppTheme = remember {
+                mutableStateOf(
+                    com.bestjournal.app.ui.theme.AppTheme.fromKey(
+                        encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
+                    )
+                )
+            }
             val sunDark = remember {
                 mutableStateOf(
                     try {
@@ -121,6 +127,11 @@ class MainActivity : FragmentActivity() {
                                     sunDark.value = SunCalculator.isDarkNow(lat, lon)
                             } catch (_: Exception) {}
                         }
+                        Constants.PREF_APP_THEME ->
+                            selectedAppTheme.value =
+                                com.bestjournal.app.ui.theme.AppTheme.fromKey(
+                                    encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
+                                )
                     }
                 }
                 encryptedPrefs.registerOnSharedPreferenceChangeListener(encListener)
@@ -162,7 +173,7 @@ class MainActivity : FragmentActivity() {
                     else -> 2
                 }
 
-            BestJournalTheme(darkTheme = isDark) {
+            BestJournalTheme(darkTheme = isDark, appTheme = selectedAppTheme.value) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
                 } else {

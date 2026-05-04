@@ -595,115 +595,93 @@ fun SettingsScreen(
                                     ),
                             )
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        val locationLauncher =
-                            rememberLauncherForActivityResult(
-                                ActivityResultContracts.RequestPermission()
-                            ) { granted ->
-                                if (granted) {
-                                    try {
-                                        val lm =
-                                            context.getSystemService(
-                                                android.content.Context.LOCATION_SERVICE
-                                            ) as android.location.LocationManager
-                                        @Suppress("MissingPermission")
-                                        val loc =
-                                            lm.getLastKnownLocation(
-                                                android.location.LocationManager.NETWORK_PROVIDER
-                                            )
-                                                ?: lm.getLastKnownLocation(
-                                                    android.location.LocationManager.GPS_PROVIDER
-                                                )
-                                        if (loc != null) {
-                                            viewModel.saveLocation(loc.latitude, loc.longitude)
-                                            viewModel.updateFollowSun(true)
-                                        }
-                                    } catch (e: Exception) {
-                                        android.util.Log.w(
-                                            "SettingsScreen",
-                                            "Failed to save location for Follow Sun",
-                                            e,
-                                        )
-                                    }
-                                }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        // Trenner innerhalb der Bubble — separiert Hell/Dunkel-Modus von der
+                        // Theme-Auswahl darunter.
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            thickness = 1.dp,
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Theme-Auswahl — aktuell nur "Neutral", weitere Themes werden spaeter
+                        // als Enum-Eintrage in AppTheme hinzugefuegt.
+                        Text(
+                            stringResource(R.string.settings_theme),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        var themeExpanded by remember { mutableStateOf(false) }
+                        val currentTheme =
+                            com.bestjournal.app.ui.theme.AppTheme.fromKey(uiState.selectedThemeKey)
+                        val themeDisplayName =
+                            when (currentTheme) {
+                                com.bestjournal.app.ui.theme.AppTheme.Neutral ->
+                                    stringResource(R.string.theme_neutral)
                             }
-                        // Sonnenauf-/untergang � Sun | Moon based on actual time
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+
+                        ExposedDropdownMenuBox(
+                            expanded = themeExpanded,
+                            onExpandedChange = { themeExpanded = it },
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                SettingsSunMoonIcon(
-                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current,
-                                    isActive = uiState.followSun,
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        stringResource(R.string.settings_sunrise_sunset),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                            TextField(
+                                value = themeDisplayName,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowDown,
+                                        stringResource(R.string.settings_theme),
                                     )
-                                    Text(
-                                        stringResource(R.string.settings_sunrise_sunset_desc),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                colors =
+                                    TextFieldDefaults.colors(
+                                        focusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            ExposedDropdownMenu(
+                                expanded = themeExpanded,
+                                onDismissRequest = { themeExpanded = false },
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ) {
+                                com.bestjournal.app.ui.theme.AppTheme.entries.forEach { theme ->
+                                    val label =
+                                        when (theme) {
+                                            com.bestjournal.app.ui.theme.AppTheme.Neutral ->
+                                                stringResource(R.string.theme_neutral)
+                                        }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                label,
+                                                color =
+                                                    if (theme == currentTheme)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        },
+                                        onClick = {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            viewModel.updateSelectedTheme(theme.storageKey)
+                                            themeExpanded = false
+                                        },
                                     )
                                 }
                             }
-                            Switch(
-                                checked = uiState.followSun,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    if (enabled) {
-                                        val hasPerm =
-                                            androidx.core.content.ContextCompat.checkSelfPermission(
-                                                context,
-                                                android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                                            ) ==
-                                                android.content.pm.PackageManager.PERMISSION_GRANTED
-                                        if (hasPerm) {
-                                            try {
-                                                val lm =
-                                                    context.getSystemService(
-                                                        android.content.Context.LOCATION_SERVICE
-                                                    ) as android.location.LocationManager
-                                                @Suppress("MissingPermission")
-                                                val loc =
-                                                    lm.getLastKnownLocation(
-                                                        android.location.LocationManager
-                                                            .NETWORK_PROVIDER
-                                                    )
-                                                        ?: lm.getLastKnownLocation(
-                                                            android.location.LocationManager
-                                                                .GPS_PROVIDER
-                                                        )
-                                                if (loc != null) {
-                                                    viewModel.saveLocation(
-                                                        loc.latitude,
-                                                        loc.longitude,
-                                                    )
-                                                }
-                                            } catch (_: Exception) {}
-                                            viewModel.updateFollowSun(true)
-                                        } else {
-                                            locationLauncher.launch(
-                                                android.Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        }
-                                    } else {
-                                        viewModel.updateFollowSun(false)
-                                    }
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
                         }
                     }
                 }

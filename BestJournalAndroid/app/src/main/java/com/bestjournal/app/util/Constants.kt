@@ -34,6 +34,7 @@ object Constants {
     const val PREF_DARK_THEME = "dark_theme"
     const val PREF_THEME_FOLLOW_SYSTEM = "theme_follow_system"
     const val PREF_THEME_FOLLOW_SUN = "theme_follow_sun"
+    const val PREF_APP_THEME = "app_theme"
     const val PREF_LATITUDE = "location_latitude"
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
@@ -64,10 +65,10 @@ object Constants {
     const val DASHBOARD_SCENARIO_COUNT = 5
 
     /**
-     * JSON list of named custom analyses. Replaces the single-string PREF_CUSTOM_PROMPT.
-     * Format: [{"id":"uuid","name":"...","prompt":"..."}, ...]
-     * Migration from PREF_CUSTOM_PROMPT happens lazily in CustomAnalysesStore.load().
-     * Szenario-Index 4..N-1 refers to the custom entry at (scenario - 4) in this list.
+     * JSON list of named custom analyses. Replaces the single-string PREF_CUSTOM_PROMPT. Format:
+     * [{"id":"uuid","name":"...","prompt":"..."}, ...] Migration from PREF_CUSTOM_PROMPT happens
+     * lazily in CustomAnalysesStore.load(). Szenario-Index 4..N-1 refers to the custom entry at
+     * (scenario - 4) in this list.
      */
     const val PREF_CUSTOM_ANALYSES_JSON = "custom_analyses_json"
 
@@ -174,7 +175,7 @@ object Constants {
     // detection call (different purpose) for the next 60 minutes — both must
     // be allowed to run on their own cadence.
     const val PREF_LAST_CLOUD_STATUS_FETCH = "last_cloud_status_fetch" // base-plan recovery
-    const val PREF_LAST_PROMO_CLOUD_FETCH = "last_promo_cloud_fetch"   // promo expiry sync
+    const val PREF_LAST_PROMO_CLOUD_FETCH = "last_promo_cloud_fetch" // promo expiry sync
     // Last expiryTime observed from the Cloud Function (server-authoritative).
     // Whenever the Cloud Function returns a NEWER expiryTime than this, we know
     // Google Play has renewed the subscription. This is the AUTHORITATIVE renewal
