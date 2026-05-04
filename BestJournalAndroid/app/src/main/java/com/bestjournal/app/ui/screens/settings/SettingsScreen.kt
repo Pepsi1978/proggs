@@ -49,7 +49,6 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -485,7 +484,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // 2. Erscheinungsbild
+                // 2. Themes Manager
                 GlassCard {
                     Column {
                         Row(
@@ -494,7 +493,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
-                                Icons.Rounded.Palette,
+                                Icons.Rounded.ColorLens,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
