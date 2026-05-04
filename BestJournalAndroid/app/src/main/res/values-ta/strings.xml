@@ -1391,4 +1391,12 @@
     <string name="prompt_clear_content_desc">உள்ளீட்டை அழி</string>
     <string name="settings_legal_section_header">சட்ட ஆவணங்கள்</string>
     <string name="settings_legal_online_label">ஆன்லைன் பதிப்பு:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">vor %1$d Monat</item>
+        <item quantity="other">vor %1$d Monaten</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
 </resources>

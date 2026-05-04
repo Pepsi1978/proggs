@@ -41,12 +41,8 @@ object DateTimeFormatter {
                 val hours = TimeUnit.MILLISECONDS.toHours(diff)
                 "vor $hours ${if (hours == 1L) "Stunde" else "Stunden"}"
             }
-            days < 7L -> "vor $days ${if (days == 1L) "Tag" else "Tagen"}"
-            days < 30L -> {
-                val weeks = days / 7L
-                "vor $weeks ${if (weeks == 1L) "Woche" else "Wochen"}"
-            }
-            days < 365L -> {
+            days < 365L -> "vor $days ${if (days == 1L) "Tag" else "Tagen"}"
+            days < 1825L -> {
                 val months = days / 30L
                 "vor $months ${if (months == 1L) "Monat" else "Monaten"}"
             }

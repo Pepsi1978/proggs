@@ -1373,4 +1373,12 @@
     <string name="prompt_stop_button_label">ನಿಲ್ಲಿಸಿ</string>
     <string name="settings_legal_section_header">ಕಾನೂನು ದಾಖಲೆಗಳು</string>
     <string name="settings_legal_online_label">ಆನ್‌ಲೈನ್ ಆವೃತ್ತಿ:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">vor %1$d Monat</item>
+        <item quantity="other">vor %1$d Monaten</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
 </resources>

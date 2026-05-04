@@ -92,18 +92,14 @@ object DateTimeFormatter {
                     hours.toInt(),
                 )
             }
-            days < 7L -> {
+            days < 365L -> {
                 context.resources.getQuantityString(
                     R.plurals.datetime_days_ago,
                     days.toInt(),
                     days.toInt(),
                 )
             }
-            days < 30L -> {
-                val weeks = (days / 7L).toInt()
-                context.resources.getQuantityString(R.plurals.datetime_weeks_relative, weeks, weeks)
-            }
-            days < 365L -> {
+            days < 1825L -> {
                 val months = (days / 30L).toInt()
                 context.resources.getQuantityString(
                     R.plurals.datetime_months_relative,

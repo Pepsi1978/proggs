@@ -1329,4 +1329,12 @@
     <string name="prompt_stop_button_label">બંધ કરો</string>
     <string name="settings_legal_section_header">કાનૂની દસ્તાવેજો</string>
     <string name="settings_legal_online_label">ઑનલાઇન સંસ્કરણ:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">vor %1$d Monat</item>
+        <item quantity="other">vor %1$d Monaten</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
 </resources>

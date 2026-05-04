@@ -1317,4 +1317,12 @@
     <string name="prompt_clear_content_desc">ഇൻപുട്ട് മായ്‌ക്കൂ</string>
     <string name="settings_legal_section_header">നിയമപരമായ രേഖകൾ</string>
     <string name="settings_legal_online_label">ഓൺലൈൻ പതിപ്പ്:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">vor %1$d Monat</item>
+        <item quantity="other">vor %1$d Monaten</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
 </resources>

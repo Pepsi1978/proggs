@@ -1208,10 +1208,6 @@
         <item quantity="one">vor %1$d Tag</item>
         <item quantity="other">vor %1$d Tagen</item>
     </plurals>
-    <plurals name="datetime_weeks_relative">
-        <item quantity="one">vor %1$d Woche</item>
-        <item quantity="other">vor %1$d Wochen</item>
-    </plurals>
     <plurals name="datetime_months_relative">
         <item quantity="one">vor %1$d Monat</item>
         <item quantity="other">vor %1$d Monaten</item>

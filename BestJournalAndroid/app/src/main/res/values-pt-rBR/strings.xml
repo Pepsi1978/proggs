@@ -1372,4 +1372,12 @@ O que você quer fazer?</string>
     <string name="prompt_stop_button_label">Parar</string>
     <string name="settings_legal_section_header">Documentos jurídicos</string>
     <string name="settings_legal_online_label">Versão online:</string>
+    <plurals name="datetime_months_relative">
+        <item quantity="one">vor %1$d Monat</item>
+        <item quantity="other">vor %1$d Monaten</item>
+    </plurals>
+    <plurals name="datetime_years_relative">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
 </resources>
