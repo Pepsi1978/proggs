@@ -29,6 +29,7 @@ object DateTimeFormatter {
     fun formatRelative(timestamp: Long): String {
         val now = System.currentTimeMillis()
         val diff = now - timestamp
+        val days = TimeUnit.MILLISECONDS.toDays(diff)
 
         return when {
             diff < TimeUnit.MINUTES.toMillis(1) -> "gerade eben"
@@ -40,11 +41,19 @@ object DateTimeFormatter {
                 val hours = TimeUnit.MILLISECONDS.toHours(diff)
                 "vor $hours ${if (hours == 1L) "Stunde" else "Stunden"}"
             }
-            diff < TimeUnit.DAYS.toMillis(7) -> {
-                val days = TimeUnit.MILLISECONDS.toDays(diff)
-                "vor $days ${if (days == 1L) "Tag" else "Tagen"}"
+            days < 7L -> "vor $days ${if (days == 1L) "Tag" else "Tagen"}"
+            days < 30L -> {
+                val weeks = days / 7L
+                "vor $weeks ${if (weeks == 1L) "Woche" else "Wochen"}"
             }
-            else -> formatDate(timestamp)
+            days < 365L -> {
+                val months = days / 30L
+                "vor $months ${if (months == 1L) "Monat" else "Monaten"}"
+            }
+            else -> {
+                val years = days / 365L
+                "vor $years ${if (years == 1L) "Jahr" else "Jahren"}"
+            }
         }
     }
 
@@ -55,33 +64,41 @@ object DateTimeFormatter {
     }
 
     /**
-     * Groups timestamps into section labels for the journal timeline.
-     * Hierarchy: Diese Woche > Letzte Woche > Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
-     * Weeks use ISO convention: Monday = first day, Sunday = last day.
-     * Week labels only apply within the current month — once entries cross
-     * into a previous month, the month name is shown instead.
+     * Groups timestamps into section labels for the journal timeline. Hierarchy: Diese Woche >
+     * Letzte Woche > Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname. Weeks use ISO convention:
+     * Monday = first day, Sunday = last day. Week labels only apply within the current month — once
+     * entries cross into a previous month, the month name is shown instead.
      */
     fun getSectionLabel(timestamp: Long): String {
         val now = Calendar.getInstance()
         val entry = Calendar.getInstance().apply { timeInMillis = timestamp }
 
-        val todayStart = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }
+        val todayStart =
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
 
         // Monday of current ISO week (Mon=first day, Sun=last day)
         val dow = todayStart.get(Calendar.DAY_OF_WEEK)
         val daysSinceMonday = if (dow == Calendar.SUNDAY) 6 else dow - Calendar.MONDAY
-        val thisWeekMonday = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -daysSinceMonday) }
-        val lastWeekMonday = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -7) }
-        val twoWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -14) }
-        val threeWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -21) }
-        val fourWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
+        val thisWeekMonday =
+            (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -daysSinceMonday) }
+        val lastWeekMonday =
+            (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -7) }
+        val twoWeeksAgo =
+            (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -14) }
+        val threeWeeksAgo =
+            (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -21) }
+        val fourWeeksAgo =
+            (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
 
         // Week labels only apply within the current month
-        val sameMonth = entry.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
-            entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+        val sameMonth =
+            entry.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
+                entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)
 
         return when {
             timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
@@ -93,7 +110,8 @@ object DateTimeFormatter {
                 monthYearFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
             }
             else -> {
-                val month = monthOnlyFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+                val month =
+                    monthOnlyFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
                 "${entry.get(Calendar.YEAR)} \u2014 $month"
             }
         }
