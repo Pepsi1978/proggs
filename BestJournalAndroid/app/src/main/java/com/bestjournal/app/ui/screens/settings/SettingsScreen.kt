@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
@@ -485,7 +484,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // 2. Themes Manager
+                // 2. Erscheinungsbild
                 GlassCard {
                     Column {
                         Row(
@@ -494,14 +493,14 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
-                                Icons.Rounded.Brush,
+                                Icons.Rounded.Palette,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                stringResource(R.string.settings_themes_manager),
+                                stringResource(R.string.settings_appearance),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -604,13 +603,23 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Theme-Auswahl — aktuell nur "Neutral", weitere Themes werden spaeter
-                        // als Enum-Eintrage in AppTheme hinzugefuegt.
-                        Text(
-                            stringResource(R.string.settings_theme),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        // Themes Manager — Dropdown, aktuell zwei Optionen (Neutral / Profilfarbe);
+                        // weitere Themes werden spaeter als Enum-Eintraege in AppTheme
+                        // hinzugefuegt.
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Palette,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.settings_themes_manager),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
 
                         var themeExpanded by remember { mutableStateOf(false) }
