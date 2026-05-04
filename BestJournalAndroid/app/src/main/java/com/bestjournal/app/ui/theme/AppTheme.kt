@@ -10,8 +10,8 @@ package com.bestjournal.app.ui.theme
  * Die ColorScheme-Auswahl liegt in [Theme.kt] (when-Block in BestJournalTheme).
  */
 enum class AppTheme(val storageKey: String) {
-    Neutral("neutral"),
     Profile("profile"),
+    Neutral("neutral"),
     Solarized("solarized"),
     Dracula("dracula"),
     OneDark("one_dark"),
