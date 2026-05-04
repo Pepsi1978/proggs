@@ -201,7 +201,10 @@ fun profileColorScheme(accent: Color, isDark: Boolean): ColorScheme {
 @Composable
 fun BestJournalTheme(
     darkTheme: Boolean = true,
-    dynamicColor: Boolean = false,
+    // Default = true to match the ORIGINAL pre-themes-manager behavior: on Android 12+ the app
+    // picked up the user's wallpaper-based Material You colors. The Profile theme bypasses this
+    // intentionally so the dashboard accent color always wins.
+    dynamicColor: Boolean = true,
     appTheme: AppTheme = AppTheme.Neutral,
     profileIndex: Int = 0,
     content: @Composable () -> Unit,
@@ -209,11 +212,13 @@ fun BestJournalTheme(
     val context = LocalContext.current
     val colorScheme =
         when {
+            // Profile theme wins over dynamicColor — its whole purpose is to drive the look from
+            // the active dashboard profile.
+            appTheme == AppTheme.Profile ->
+                profileColorScheme(profileAccent(profileIndex), darkTheme)
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
-            appTheme == AppTheme.Profile ->
-                profileColorScheme(profileAccent(profileIndex), darkTheme)
             darkTheme -> NeutralDarkScheme
             else -> NeutralLightScheme
         }
