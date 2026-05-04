@@ -749,6 +749,117 @@ fun SettingsScreen(
                                     ),
                             )
                         }
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Themes Manager — Dropdown 1:1 von BestJournalAndroid. Profilfarbe ist
+                        // Default (Frank-Verhalten), die fuenf Klassiker-Themes folgen ihren
+                        // offiziellen Light/Dark Specs, Neutral nutzt Frank's Cosmos-Default.
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            thickness = 1.dp,
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Palette,
+                                null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Themes Manager",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        var themeExpanded by remember { mutableStateOf(false) }
+                        val currentTheme = com.entropyjournal.ui.theme.ProfileTheme.currentAppTheme.value
+                        val themeDisplayName =
+                            when (currentTheme) {
+                                com.entropyjournal.ui.theme.AppTheme.Profile ->
+                                    "Profilfarbe — Farbe des Dashboard-Profils"
+                                com.entropyjournal.ui.theme.AppTheme.Neutral -> "Neutral"
+                                com.entropyjournal.ui.theme.AppTheme.Solarized -> "Sonnenwende"
+                                com.entropyjournal.ui.theme.AppTheme.Dracula -> "Mitternacht"
+                                com.entropyjournal.ui.theme.AppTheme.OneDark -> "Atelier"
+                                com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
+                                com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
+                            }
+
+                        ExposedDropdownMenuBox(
+                            expanded = themeExpanded,
+                            onExpandedChange = { themeExpanded = it },
+                        ) {
+                            TextField(
+                                value = themeDisplayName,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Rounded.KeyboardArrowDown,
+                                        "Theme",
+                                    )
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                colors =
+                                    TextFieldDefaults.colors(
+                                        focusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            ExposedDropdownMenu(
+                                expanded = themeExpanded,
+                                onDismissRequest = { themeExpanded = false },
+                                containerColor = MaterialTheme.colorScheme.surface,
+                            ) {
+                                com.entropyjournal.ui.theme.AppTheme.entries.forEach { theme ->
+                                    val label =
+                                        when (theme) {
+                                            com.entropyjournal.ui.theme.AppTheme.Profile ->
+                                                "Profilfarbe — Farbe des Dashboard-Profils"
+                                            com.entropyjournal.ui.theme.AppTheme.Neutral -> "Neutral"
+                                            com.entropyjournal.ui.theme.AppTheme.Solarized -> "Sonnenwende"
+                                            com.entropyjournal.ui.theme.AppTheme.Dracula -> "Mitternacht"
+                                            com.entropyjournal.ui.theme.AppTheme.OneDark -> "Atelier"
+                                            com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
+                                            com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
+                                        }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                label,
+                                                color =
+                                                    if (theme == currentTheme)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        },
+                                        onClick = {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            com.entropyjournal.ui.theme.ProfileTheme.updateTheme(
+                                                context,
+                                                theme,
+                                            )
+                                            themeExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

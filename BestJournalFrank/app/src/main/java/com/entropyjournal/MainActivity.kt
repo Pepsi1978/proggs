@@ -153,6 +153,7 @@ class MainActivity : FragmentActivity() {
             EntropyJournalTheme(
                 darkTheme = isDark,
                 profileIndex = ProfileTheme.currentProfileIndex.intValue,
+                appTheme = ProfileTheme.currentAppTheme.value,
             ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
