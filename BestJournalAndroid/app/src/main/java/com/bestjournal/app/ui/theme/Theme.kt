@@ -211,16 +211,25 @@ fun BestJournalTheme(
 ) {
     val context = LocalContext.current
     val colorScheme =
-        when {
+        when (appTheme) {
             // Profile theme wins over dynamicColor — its whole purpose is to drive the look from
             // the active dashboard profile.
-            appTheme == AppTheme.Profile ->
-                profileColorScheme(profileAccent(profileIndex), darkTheme)
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            AppTheme.Profile -> profileColorScheme(profileAccent(profileIndex), darkTheme)
+            AppTheme.Solarized -> if (darkTheme) SolarizedDarkScheme else SolarizedLightScheme
+            AppTheme.Dracula -> if (darkTheme) DraculaDarkScheme else DraculaLightScheme
+            AppTheme.OneDark -> if (darkTheme) OneDarkScheme else OneLightScheme
+            AppTheme.Nord -> if (darkTheme) NordDarkScheme else NordLightScheme
+            AppTheme.Gruvbox -> if (darkTheme) GruvboxDarkScheme else GruvboxLightScheme
+            AppTheme.Neutral -> {
+                if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (darkTheme) dynamicDarkColorScheme(context)
+                    else dynamicLightColorScheme(context)
+                } else if (darkTheme) {
+                    NeutralDarkScheme
+                } else {
+                    NeutralLightScheme
+                }
             }
-            darkTheme -> NeutralDarkScheme
-            else -> NeutralLightScheme
         }
 
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {

@@ -1,19 +1,22 @@
 package com.bestjournal.app.ui.theme
 
 /**
- * Named app themes available in the Settings → Erscheinungsbild dropdown.
+ * Named app themes available in the Settings → Erscheinungsbild → Themes Manager dropdown.
  *
- * - [Neutral]: Static color scheme (the original WarmDarkScheme + LightColorScheme). Profile
- *   selection has no effect on the look.
- * - [Profile]: Color scheme is derived from the currently selected dashboard profile (Teal / Copper
- *   / Violet / Emerald / Amber). Switching profile re-tints the whole app.
+ * Hell- und Dunkel-Variante kommen aus dem aktuellen Material3 ColorScheme — der Hell/Dunkel-
+ * Switch oben in der Bubble entscheidet welche Variante gerade gilt. Themes 3-7 sind bekannte
+ * Editor-Themes (Solarized, Dracula, One Dark, Nord, Gruvbox), 1:1 mit den offiziellen Specs.
  *
- * The actual ColorScheme construction lives in [Theme.kt] — this enum is just a tag so
- * persistence + UI can refer to it.
+ * Die ColorScheme-Auswahl liegt in [Theme.kt] (when-Block in BestJournalTheme).
  */
 enum class AppTheme(val storageKey: String) {
     Neutral("neutral"),
-    Profile("profile");
+    Profile("profile"),
+    Solarized("solarized"),
+    Dracula("dracula"),
+    OneDark("one_dark"),
+    Nord("nord"),
+    Gruvbox("gruvbox");
 
     companion object {
         fun fromKey(key: String?): AppTheme =

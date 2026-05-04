@@ -632,6 +632,16 @@ fun SettingsScreen(
                                     stringResource(R.string.theme_neutral)
                                 com.bestjournal.app.ui.theme.AppTheme.Profile ->
                                     stringResource(R.string.theme_profile)
+                                com.bestjournal.app.ui.theme.AppTheme.Solarized ->
+                                    stringResource(R.string.theme_solarized)
+                                com.bestjournal.app.ui.theme.AppTheme.Dracula ->
+                                    stringResource(R.string.theme_dracula)
+                                com.bestjournal.app.ui.theme.AppTheme.OneDark ->
+                                    stringResource(R.string.theme_one_dark)
+                                com.bestjournal.app.ui.theme.AppTheme.Nord ->
+                                    stringResource(R.string.theme_nord)
+                                com.bestjournal.app.ui.theme.AppTheme.Gruvbox ->
+                                    stringResource(R.string.theme_gruvbox)
                             }
 
                         ExposedDropdownMenuBox(
@@ -677,6 +687,16 @@ fun SettingsScreen(
                                                 stringResource(R.string.theme_neutral)
                                             com.bestjournal.app.ui.theme.AppTheme.Profile ->
                                                 stringResource(R.string.theme_profile)
+                                            com.bestjournal.app.ui.theme.AppTheme.Solarized ->
+                                                stringResource(R.string.theme_solarized)
+                                            com.bestjournal.app.ui.theme.AppTheme.Dracula ->
+                                                stringResource(R.string.theme_dracula)
+                                            com.bestjournal.app.ui.theme.AppTheme.OneDark ->
+                                                stringResource(R.string.theme_one_dark)
+                                            com.bestjournal.app.ui.theme.AppTheme.Nord ->
+                                                stringResource(R.string.theme_nord)
+                                            com.bestjournal.app.ui.theme.AppTheme.Gruvbox ->
+                                                stringResource(R.string.theme_gruvbox)
                                         }
                                     DropdownMenuItem(
                                         text = {
