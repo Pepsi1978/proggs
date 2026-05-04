@@ -12,15 +12,12 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -80,6 +79,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -102,55 +102,64 @@ import com.bestjournal.app.R
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.ui.components.ParticleBackground
-import com.bestjournal.app.ui.components.SunMoonToggle
-import com.bestjournal.app.ui.components.TwinklingStars
-import com.bestjournal.app.ui.theme.FeatureAccentOrange
-import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.components.PrivacyGateHost
 import com.bestjournal.app.ui.components.PrivacyGateState
+import com.bestjournal.app.ui.components.SunMoonToggle
+import com.bestjournal.app.ui.components.TwinklingStars
 import com.bestjournal.app.ui.components.rememberPrivacyGateState
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.util.DateTimeFormatter as AppDateTimeFormatter
 import com.bestjournal.app.util.EdgeTtsPlayer
 import com.bestjournal.app.util.PrivacyGateHelper
-import com.bestjournal.app.util.DateTimeFormatter as AppDateTimeFormatter
 import com.bestjournal.app.util.rememberHapticAction
 import java.util.Calendar
 
 object RetrospectiveColors {
-    // Dark: #181818 (CardSurface), Light: White — matches journal entry backgrounds
-    private val cardDark = Color(0xFF181818)
-    private val cardLight = Color.White
+    // Theme-aware: Card-Hintergrund kommt aus MaterialTheme.colorScheme.surface,
+    // dadurch tragen die Karten denselben Profil-Hauch wie der Rest der App
+    // (siehe profileColorScheme in Theme.kt). 1:1 aus BestJournalFrank.
+    private val cardDark: Color
+        @Composable get() = MaterialTheme.colorScheme.surface
+
+    private val cardLight: Color
+        @Composable get() = MaterialTheme.colorScheme.surface
 
     val weekColors: List<Color>
-        @Composable get() = List(4) { if (LocalIsDarkTheme.current) cardDark else cardLight }
+        @Composable
+        get() {
+            val c = if (LocalIsDarkTheme.current) cardDark else cardLight
+            return List(4) { c }
+        }
 
     val monthDividerColor: Color
-        @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
-                Color(0xFF3D5A80) // Muted dark blue for dark mode
-            } else {
-                Color(0xFF1976D2) // Standard blue — matches system accent
-            }
+        @Composable get() = MaterialTheme.colorScheme.primary
 
-    // --- Theme-aware UI colors for the retrospective start page ---
+    // Header-Gradient bekommt die Profil-Akzentfarbe oben und blendet dezent in
+    // den App-Hintergrund unten — dadurch faerbt sich der Rueckblick bei jedem
+    // Profil-Wechsel mit um.
     val headerGradient: List<Color>
         @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
+        get() {
+            val accent = MaterialTheme.colorScheme.primary
+            val surface = MaterialTheme.colorScheme.surface
+            val background = MaterialTheme.colorScheme.background
+            return if (LocalIsDarkTheme.current) {
                 listOf(
-                    Color(0xFF1A2744), // Deep navy blue top
-                    Color(0xFF152238), // Darker navy mid-upper
-                    Color(0xFF0D1929), // Near-black blue mid-lower
-                    cardDark, // CardSurface bottom
+                    accent.copy(alpha = 0.35f).compositeOver(background),
+                    accent.copy(alpha = 0.22f).compositeOver(background),
+                    accent.copy(alpha = 0.10f).compositeOver(background),
+                    surface,
                 )
             } else {
                 listOf(
-                    Color(0xFFBBDEFB), // Light blue top (Material Blue 100)
-                    Color(0xFFE3F2FD), // Very light blue mid-upper (Blue 50)
-                    Color(0xFFF5F8FF), // Near-white blue mid-lower
-                    Color.White, // White bottom
+                    accent.copy(alpha = 0.25f).compositeOver(Color.White),
+                    accent.copy(alpha = 0.15f).compositeOver(Color.White),
+                    accent.copy(alpha = 0.06f).compositeOver(Color.White),
+                    surface,
                 )
             }
+        }
 
     val categoryCardColor: Color
         @Composable get() = if (LocalIsDarkTheme.current) cardDark else cardLight
@@ -158,20 +167,21 @@ object RetrospectiveColors {
     val categoryIconCircle: Color
         @Composable
         get() =
-            if (LocalIsDarkTheme.current) {
-                Color(0xFF1A2744) // Deep navy (matches header gradient)
-            } else {
-                Color(0xFFBBDEFB) // Light blue — matches header gradient
-            }
+            MaterialTheme.colorScheme.primary
+                .copy(alpha = if (LocalIsDarkTheme.current) 0.18f else 0.14f)
+                .compositeOver(MaterialTheme.colorScheme.surface)
 
     val categoryButtonGradient: List<Color>
         @Composable
-        get() =
-            if (LocalIsDarkTheme.current) {
-                listOf(Color(0xFF1A2744), Color(0xFF181818)) // Deep navy → dark
+        get() {
+            val accent = MaterialTheme.colorScheme.primary
+            val surface = MaterialTheme.colorScheme.surface
+            return if (LocalIsDarkTheme.current) {
+                listOf(accent.copy(alpha = 0.22f).compositeOver(surface), surface)
             } else {
-                listOf(Color(0xFFE3F2FD), Color.White) // Light blue → white (matches header theme)
+                listOf(accent.copy(alpha = 0.12f).compositeOver(Color.White), Color.White)
             }
+        }
 
     val monthColors: List<Color>
         @Composable get() = List(12) { if (LocalIsDarkTheme.current) cardDark else cardLight }
@@ -293,7 +303,8 @@ fun RetrospectiveScreen(
                     }
                 }
                 // Last-updated timestamp (same format + string resource as Dashboard)
-                val lastUpdated = remember(weekly, monthly, yearly) { viewModel.getLastUpdatedText() }
+                val lastUpdated =
+                    remember(weekly, monthly, yearly) { viewModel.getLastUpdatedText() }
                 if (lastUpdated != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -309,7 +320,7 @@ fun RetrospectiveScreen(
                         // from the edge; longer translations grow leftwards while the trailing
                         // edge stays fixed.
                         com.bestjournal.app.ui.components.AiGeneratedBadgeInline(
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = 8.dp)
                         )
                     }
                 }
@@ -481,7 +492,10 @@ fun RetrospectiveScreen(
                             weeklyGroups.forEachIndexed { groupIndex, group ->
                                 if (groupIndex > 0) {
                                     MonthDivider(
-                                        label = AppDateTimeFormatter.formatMonthYear(group.first().endDate)
+                                        label =
+                                            AppDateTimeFormatter.formatMonthYear(
+                                                group.first().endDate
+                                            )
                                     )
                                 }
                                 ContinuousTimelineSection(
@@ -582,12 +596,14 @@ fun RetrospectiveScreen(
                                 ) {
                                     group.forEachIndexed { index, summary ->
                                         if (index > 0) {
-                                            val prevQuarter =
-                                                (group[index - 1].periodIndex - 1) / 3
+                                            val prevQuarter = (group[index - 1].periodIndex - 1) / 3
                                             val curQuarter = (summary.periodIndex - 1) / 3
                                             if (prevQuarter != curQuarter) {
                                                 MonthDivider(
-                                                    label = AppDateTimeFormatter.formatQuarterYear(summary.startDate)
+                                                    label =
+                                                        AppDateTimeFormatter.formatQuarterYear(
+                                                            summary.startDate
+                                                        )
                                                 )
                                             } else {
                                                 Spacer(modifier = Modifier.height(10.dp))
@@ -661,14 +677,13 @@ fun RetrospectiveScreen(
 }
 
 /**
- * Gruppiert eine chronologisch sortierte Liste von Wochen-Summaries konsekutiv
- * nach (Monat, Jahr). Aufeinanderfolgende Eintraege im selben Monat landen in
- * derselben Untergruppe — sobald der Monat wechselt, beginnt eine neue Gruppe.
- * Wir gehen ueber [endDate] (Sonntag der Woche), damit Cross-Month-Wochen
- * (z.B. 30. Maerz – 5. April) unter dem spaeteren Monat erscheinen.
+ * Gruppiert eine chronologisch sortierte Liste von Wochen-Summaries konsekutiv nach (Monat, Jahr).
+ * Aufeinanderfolgende Eintraege im selben Monat landen in derselben Untergruppe — sobald der Monat
+ * wechselt, beginnt eine neue Gruppe. Wir gehen ueber [endDate] (Sonntag der Woche), damit
+ * Cross-Month-Wochen (z.B. 30. Maerz – 5. April) unter dem spaeteren Monat erscheinen.
  */
 private fun groupSummariesByMonth(
-    items: List<RetrospectiveSummaryEntity>,
+    items: List<RetrospectiveSummaryEntity>
 ): List<List<RetrospectiveSummaryEntity>> {
     val result = mutableListOf<MutableList<RetrospectiveSummaryEntity>>()
     items.forEach { summary ->
@@ -678,8 +693,7 @@ private fun groupSummariesByMonth(
         val sameGroup =
             if (lastEntry == null) false
             else {
-                val lastCal =
-                    Calendar.getInstance().apply { timeInMillis = lastEntry.endDate }
+                val lastCal = Calendar.getInstance().apply { timeInMillis = lastEntry.endDate }
                 val lastKey = lastCal.get(Calendar.MONTH) to lastCal.get(Calendar.YEAR)
                 lastKey == curKey
             }
@@ -693,12 +707,12 @@ private fun groupSummariesByMonth(
 }
 
 /**
- * Gruppiert eine chronologisch sortierte Liste von Monats-/Jahres-Summaries
- * konsekutiv nach Jahr (basierend auf [startDate]). Aufeinanderfolgende
- * Eintraege im selben Jahr landen in derselben Untergruppe.
+ * Gruppiert eine chronologisch sortierte Liste von Monats-/Jahres-Summaries konsekutiv nach Jahr
+ * (basierend auf [startDate]). Aufeinanderfolgende Eintraege im selben Jahr landen in derselben
+ * Untergruppe.
  */
 private fun groupSummariesByYear(
-    items: List<RetrospectiveSummaryEntity>,
+    items: List<RetrospectiveSummaryEntity>
 ): List<List<RetrospectiveSummaryEntity>> {
     val result = mutableListOf<MutableList<RetrospectiveSummaryEntity>>()
     items.forEach { summary ->
@@ -708,8 +722,7 @@ private fun groupSummariesByYear(
         val sameGroup =
             if (lastEntry == null) false
             else {
-                val lastCal =
-                    Calendar.getInstance().apply { timeInMillis = lastEntry.startDate }
+                val lastCal = Calendar.getInstance().apply { timeInMillis = lastEntry.startDate }
                 lastCal.get(Calendar.YEAR) == curYear
             }
         if (sameGroup) {
@@ -724,17 +737,17 @@ private fun groupSummariesByYear(
 /**
  * Wickelt eine Liste von Eintragskarten in eine durchgehende Timeline-Rail.
  *
- * Die Rail (links, 24dp breit) zeichnet eine durchgehende vertikale Linie von
- * 10 % bis 90 % der Section-Hoehe und N gleichmaessig verteilte Punkte:
- *   - N=1: ein Punkt mittig (50 %)
- *   - N=2: 10 % und 90 %
- *   - N=3: 10 %, 50 %, 90 %
- *   - N=4: 10 %, 36,7 %, 63,3 %, 90 %
- *   - allgemein: pos_i = 10 % + i * 80 % / (N-1)
+ * Die Rail (links, 24dp breit) zeichnet eine durchgehende vertikale Linie von 10 % bis 90 % der
+ * Section-Hoehe und N gleichmaessig verteilte Punkte:
+ * - N=1: ein Punkt mittig (50 %)
+ * - N=2: 10 % und 90 %
+ * - N=3: 10 %, 50 %, 90 %
+ * - N=4: 10 %, 36,7 %, 63,3 %, 90 %
+ * - allgemein: pos_i = 10 % + i * 80 % / (N-1)
  *
- * Die Karten + Spacer/Divider werden als [content] uebergeben und liegen rechts
- * neben der Rail in einer Column. Damit ist die Linie nicht mehr unterbrochen,
- * auch wenn zwischen den Karten Spacer oder MonthDivider stehen.
+ * Die Karten + Spacer/Divider werden als [content] uebergeben und liegen rechts neben der Rail in
+ * einer Column. Damit ist die Linie nicht mehr unterbrochen, auch wenn zwischen den Karten Spacer
+ * oder MonthDivider stehen.
  */
 @Composable
 private fun ContinuousTimelineSection(
@@ -747,12 +760,8 @@ private fun ContinuousTimelineSection(
     lineThickness: Dp = 2.dp,
     content: @Composable () -> Unit,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
-    ) {
-        Canvas(
-            modifier = Modifier.width(railWidth).fillMaxHeight(),
-        ) {
+    Row(modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Canvas(modifier = Modifier.width(railWidth).fillMaxHeight()) {
             if (entryCount <= 0) return@Canvas
             val cx = size.width / 2f
             val topY = size.height * 0.1f
@@ -768,9 +777,7 @@ private fun ContinuousTimelineSection(
                 )
             }
             for (i in 0 until entryCount) {
-                val frac =
-                    if (entryCount == 1) 0.5f
-                    else 0.1f + 0.8f * i / (entryCount - 1)
+                val frac = if (entryCount == 1) 0.5f else 0.1f + 0.8f * i / (entryCount - 1)
                 drawCircle(
                     color = dotColor,
                     radius = dotRadiusPx,
@@ -778,9 +785,7 @@ private fun ContinuousTimelineSection(
                 )
             }
         }
-        Column(modifier = Modifier.weight(1f)) {
-            content()
-        }
+        Column(modifier = Modifier.weight(1f)) { content() }
     }
 }
 
@@ -1071,7 +1076,7 @@ private fun SummaryDetailDialog(
                 ) {
                     // H4 — In-App KI-Kennzeichnung (AI Act Art. 50, Pflicht ab 02.08.2026)
                     com.bestjournal.app.ui.components.AiGeneratedBadge(
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
 
                     // Bullet point summary card
@@ -1193,7 +1198,8 @@ private fun SummaryDetailDialog(
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // Performance: LazyRow with stable keys — only visible photos are composed and load their bitmaps
+                        // Performance: LazyRow with stable keys — only visible photos are composed
+                        // and load their bitmaps
                         LazyRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
