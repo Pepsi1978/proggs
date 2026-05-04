@@ -16,7 +16,7 @@ $tempExe = Join-Path $tempDir $exeName
 
 # Step 1: Build into temporary directory
 Write-Host "1/4 Baue neue Version..." -ForegroundColor Cyan
-dotnet publish -c Release -r win-x64 --self-contained true `
+dotnet publish "$PSScriptRoot\TerminalVoiceOverlay.csproj" -c Release -r win-x64 --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:EnableCompressionInSingleFile=true `
