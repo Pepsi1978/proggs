@@ -434,7 +434,7 @@
     <string name="settings_automatic">Automatisch</string>
     <string name="settings_sunrise_sunset">Sonnenauf-/untergang</string>
     <string name="settings_sunrise_sunset_desc">Dunkel bei Nacht, hell bei Tag</string>
-    <string name="settings_sounds_haptics_section">Töne / Haptik</string>
+    <string name="settings_sounds_haptics_section">Töne</string>
     <string name="settings_app_sounds">App-Töne</string>
     <string name="settings_sounds_on">Töne sind eingeschaltet</string>
     <string name="settings_sounds_off">Töne sind ausgeschaltet</string>
