@@ -7,19 +7,32 @@ plugins {
 }
 
 // SK — Secret Keys Zentrale (cross-platform: $HOME/SK/BestJournalFrank/).
-// Der Debug-Keystore liegt dort und wird beim Build an den erwarteten Pfad kopiert.
-val skBasePath: String =
-    File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalFrank").absolutePath
-val debugKeystorePath: String = File(skBasePath).resolve("debug-shared.keystore").absolutePath
-val localDebugKeystorePath: String =
-    rootProject.layout.projectDirectory.file("debug-shared.keystore").asFile.absolutePath
+// Alle Secrets (debug-shared.keystore) liegen dort und werden beim Build kopiert.
+val skBase: File = File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalFrank")
+
+val syncCopies: List<Pair<File, File>> =
+    listOf(
+        skBase.resolve("debug-shared.keystore") to rootProject.file("debug-shared.keystore"),
+    )
 
 val syncSecretsFromSk =
-    tasks.register<Copy>("syncSecretsFromSk") {
-        doNotTrackState("Copies external secrets from SK into the ignored working tree.")
-        from(debugKeystorePath)
-        into(File(localDebugKeystorePath).parentFile)
-        rename { "debug-shared.keystore" }
+    tasks.register("syncSecretsFromSk") {
+        val sk = skBase
+        val copies = syncCopies
+        doLast {
+            if (!sk.isDirectory) {
+                throw GradleException(
+                    "SK-Ordner fehlt: ${sk.absolutePath}\n" +
+                        "Erwartete Inhalte: debug-shared.keystore\n" +
+                        "Siehe ~/SK/README.md fuer Details."
+                )
+            }
+            copies.forEach { (src, dst) ->
+                if (!src.exists()) throw GradleException("SK-Datei fehlt: ${src.absolutePath}")
+                dst.parentFile.mkdirs()
+                src.copyTo(dst, overwrite = true)
+            }
+        }
     }
 
 tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFromSk) }
