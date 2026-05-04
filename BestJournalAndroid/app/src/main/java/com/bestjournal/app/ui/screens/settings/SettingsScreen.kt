@@ -493,7 +493,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
-                                Icons.Rounded.ColorLens,
+                                Icons.Rounded.Brush,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
