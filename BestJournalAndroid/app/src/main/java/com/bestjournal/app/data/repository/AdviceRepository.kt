@@ -317,7 +317,7 @@ constructor(
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         val scanLabel = if (scenario == 3) "AUF ZIELE DURCHSUCHEN" else "ANALYSIEREN"
         sb.appendLine(
-            "=== ALLE $entryCount TAGEBUCHEINTR\u00c4GE (JEDEN EINZELNEN $scanLabel!) ==="
+            "=== ALLE $entryCount TAGEBUCHEINTRÄGE (JEDEN EINZELNEN $scanLabel!) ==="
         )
         sb.appendLine(allEntriesText)
         sb.appendLine()

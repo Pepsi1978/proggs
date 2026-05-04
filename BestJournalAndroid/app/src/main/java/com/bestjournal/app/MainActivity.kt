@@ -303,7 +303,7 @@ class MainActivity : FragmentActivity() {
 
         val promptInfo =
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Best Journal")
+                .setTitle(getString(R.string.app_name))
                 .setSubtitle(getString(R.string.biometric_subtitle))
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or

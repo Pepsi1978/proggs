@@ -66,10 +66,10 @@ object TtsVoiceRegistry {
     fun genderLabel(localeCode: String, gender: Gender): String {
         val lang = if (localeCode.length >= 2) localeCode.substring(0, 2) else "en"
         return when (lang) {
-            "de" -> if (gender == Gender.FEMALE) "weiblich" else "m\u00e4nnlich"
+            "de" -> if (gender == Gender.FEMALE) "weiblich" else "männlich"
             "en" -> if (gender == Gender.FEMALE) "female" else "male"
             "es" -> if (gender == Gender.FEMALE) "femenina" else "masculino"
-            "fr" -> if (gender == Gender.FEMALE) "f\u00e9minine" else "masculin"
+            "fr" -> if (gender == Gender.FEMALE) "féminine" else "masculin"
             "it" -> if (gender == Gender.FEMALE) "femminile" else "maschile"
             "pt" -> if (gender == Gender.FEMALE) "feminina" else "masculino"
             "nl" -> if (gender == Gender.FEMALE) "vrouwelijk" else "mannelijk"
@@ -107,10 +107,10 @@ object TtsVoiceRegistry {
     fun qualityLabel(localeCode: String): String {
         val lang = if (localeCode.length >= 2) localeCode.substring(0, 2) else "en"
         return when (lang) {
-            "de" -> "sehr nat\u00fcrlich"
+            "de" -> "sehr natürlich"
             "en" -> "very natural"
             "es" -> "muy natural"
-            "fr" -> "tr\u00e8s naturelle"
+            "fr" -> "très naturelle"
             "it" -> "molto naturale"
             "pt" -> "muito natural"
             "nl" -> "zeer natuurlijk"
@@ -302,7 +302,7 @@ object TtsVoiceRegistry {
                     "fr-FR-VivienneMultilingualNeural",
                     listOf(
                         ml("fr-FR-VivienneMultilingualNeural", "Vivienne", F),
-                        ml("fr-FR-RemyMultilingualNeural", "R\u00e9my", M),
+                        ml("fr-FR-RemyMultilingualNeural", "Rémy", M),
                         st("fr-FR-DeniseNeural", "Denise", F),
                         st("fr-FR-HenriNeural", "Henri", M),
                     ),
