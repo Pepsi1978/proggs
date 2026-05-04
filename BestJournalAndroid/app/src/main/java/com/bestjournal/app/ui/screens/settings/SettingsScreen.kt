@@ -1609,9 +1609,11 @@ fun SettingsScreen(
                             doHaptic(HapticFeedbackType.LongPress)
                             previousScenario = currentScenario
                             currentScenario = index
+                            // ProfileTheme.update() schreibt das Pref UND aktualisiert den
+                            // Compose-State sofort — die App-Farbe greift in derselben Frame.
+                            com.bestjournal.app.ui.theme.ProfileTheme.update(context, index)
                             scenarioPrefs
                                 .edit()
-                                .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
                                 .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                 .apply()
                             viewModel.notifyProfileChanged()

@@ -54,6 +54,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         billingManager.initialize(this)
+        // Profile-State aus Prefs in den Compose-State laden BEVOR setContent recomposed.
+        com.bestjournal.app.ui.theme.ProfileTheme.loadFromPrefs(this)
         enableEdgeToEdge()
 
         // Track if opened from daily reminder notification
@@ -93,9 +95,9 @@ class MainActivity : FragmentActivity() {
                     )
                 )
             }
-            val profileIndex = remember {
-                mutableStateOf(encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0))
-            }
+            // Profile-Index kommt aus dem ProfileTheme-Singleton (1:1 wie BestJournalFrank).
+            // SettingsScreen ruft ProfileTheme.update(context, index) auf — der Compose-State
+            // aendert sich SOFORT und triggert die Recomposition der Theme-Composable.
             val sunDark = remember {
                 mutableStateOf(
                     try {
@@ -136,7 +138,10 @@ class MainActivity : FragmentActivity() {
                                     encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
                                 )
                         Constants.PREF_DASHBOARD_SCENARIO ->
-                            profileIndex.value =
+                            // Fallback fuer den Fall dass das Pref von ausserhalb der App
+                            // veraendert wird (z.B. Drive-Restore). Normaler Profil-Wechsel
+                            // im Settings-Screen geht direkt ueber ProfileTheme.update().
+                            com.bestjournal.app.ui.theme.ProfileTheme.currentProfileIndex.intValue =
                                 encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                     }
                 }
@@ -182,7 +187,8 @@ class MainActivity : FragmentActivity() {
             BestJournalTheme(
                 darkTheme = isDark,
                 appTheme = selectedAppTheme.value,
-                profileIndex = profileIndex.value,
+                profileIndex =
+                    com.bestjournal.app.ui.theme.ProfileTheme.currentProfileIndex.intValue,
             ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
