@@ -93,6 +93,9 @@ class MainActivity : FragmentActivity() {
                     )
                 )
             }
+            val profileIndex = remember {
+                mutableStateOf(encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0))
+            }
             val sunDark = remember {
                 mutableStateOf(
                     try {
@@ -132,6 +135,9 @@ class MainActivity : FragmentActivity() {
                                 com.bestjournal.app.ui.theme.AppTheme.fromKey(
                                     encryptedPrefs.getString(Constants.PREF_APP_THEME, "neutral")
                                 )
+                        Constants.PREF_DASHBOARD_SCENARIO ->
+                            profileIndex.value =
+                                encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                     }
                 }
                 encryptedPrefs.registerOnSharedPreferenceChangeListener(encListener)
@@ -173,7 +179,11 @@ class MainActivity : FragmentActivity() {
                     else -> 2
                 }
 
-            BestJournalTheme(darkTheme = isDark, appTheme = selectedAppTheme.value) {
+            BestJournalTheme(
+                darkTheme = isDark,
+                appTheme = selectedAppTheme.value,
+                profileIndex = profileIndex.value,
+            ) {
                 if (isUnlocked.value) {
                     AppNavGraph(initialTab = initialTab)
                 } else {

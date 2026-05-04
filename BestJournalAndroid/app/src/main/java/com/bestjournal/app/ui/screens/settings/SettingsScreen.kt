@@ -620,6 +620,8 @@ fun SettingsScreen(
                             when (currentTheme) {
                                 com.bestjournal.app.ui.theme.AppTheme.Neutral ->
                                     stringResource(R.string.theme_neutral)
+                                com.bestjournal.app.ui.theme.AppTheme.Profile ->
+                                    stringResource(R.string.theme_profile)
                             }
 
                         ExposedDropdownMenuBox(
@@ -663,6 +665,8 @@ fun SettingsScreen(
                                         when (theme) {
                                             com.bestjournal.app.ui.theme.AppTheme.Neutral ->
                                                 stringResource(R.string.theme_neutral)
+                                            com.bestjournal.app.ui.theme.AppTheme.Profile ->
+                                                stringResource(R.string.theme_profile)
                                         }
                                     DropdownMenuItem(
                                         text = {
