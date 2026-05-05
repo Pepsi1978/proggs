@@ -1,34 +1,37 @@
 #!/usr/bin/env bash
-# statusline.sh — Effort, path, git, context, rate-limits, version, tokens, agent, commit, todos, cpu/ram, model, time
+# statusline.sh — Schoene Statusline mit Icons + Fortschrittsbalken
+# Reihenfolge: Modell | Ordner | 5h-Balken | 7d-Balken | Context-Balken | Commit | Zeit
 
 input=$(cat)
 
-# Effort level aus settings.json (nicht im JSON)
+# Effort aus settings.json
 settings="$HOME/.claude/settings.json"
 effort="?"
 if [ -f "$settings" ]; then
     effort=$(jq -r '.effortLevel // "?"' "$settings" 2>/dev/null)
 fi
+effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
 
 # JSON-Felder parsen
 model=$(echo "$input" | jq -r '.model.display_name // "?"')
-remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty' | sed "s|$HOME|~|g")
-version=$(echo "$input" | jq -r '.version // empty')
-tokens_in=$(echo "$input" | jq -r '.context_window.total_input_tokens // empty')
-tokens_out=$(echo "$input" | jq -r '.context_window.total_output_tokens // empty')
-agent_name=$(echo "$input" | jq -r '.agent.name // empty')
-
-# Rate limits (nur Claude Max, erst nach erstem API-Call vorhanden)
-five_h_used=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+ctx_remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
+five_h_used=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
 five_h_resets=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
-week_used=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+week_used=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage // empty')
 
-# Prozent auf Integer runden
+# Prozent runden
 [ -n "$five_h_used" ] && five_h_used=$(printf "%.0f" "$five_h_used" 2>/dev/null)
-[ -n "$week_used" ]   && week_used=$(printf "%.0f" "$week_used" 2>/dev/null)
+[ -n "$week_used" ]   && week_used=$(printf "%.0f"   "$week_used"   2>/dev/null)
+[ -n "$ctx_remaining" ] && ctx_remaining=$(printf "%.0f" "$ctx_remaining" 2>/dev/null)
 
-# 5h Reset-Countdown (z.B. "47m" oder "1h23m")
+# Context-VERBRAUCH (= 100 - remaining)
+ctx_used=""
+if [ -n "$ctx_remaining" ]; then
+    ctx_used=$((100 - ctx_remaining))
+fi
+
+# 5h Reset-Countdown
 five_h_countdown=""
 if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     now=$(date +%s)
@@ -45,118 +48,121 @@ if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     fi
 fi
 
-# Git: Branch, Dirty-Flag, letzter Commit
-branch=""
-status=""
-last_commit=""
-work_dir=$(echo "$input" | jq -r '.workspace.current_dir // empty')
-if [ -n "$work_dir" ]; then
-    cd "$work_dir" 2>/dev/null
-    branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-    if [ -n "$branch" ]; then
-        [ -n "$(git status --porcelain 2>/dev/null | head -1)" ] && status="*"
-        last_commit=$(git log --oneline -1 2>/dev/null | cut -c1-40 | sed 's/ /:/' | cut -c1-38)
-    fi
-fi
-
-# TODOs: schnelles Grep in Kotlin-Quellen
-todos=""
-if [ -n "$work_dir" ] && [ -d "$work_dir/app/src" ]; then
-    todos=$(grep -rl "TODO\|FIXME" "$work_dir/app/src" --include="*.kt" 2>/dev/null | wc -l | tr -d ' ')
-fi
-
 # Uhrzeit
 time=$(date +%H:%M)
 
-# Farben (ANSI 24-bit)
-E='\033[38;2;255;215;0m'     # Gold   — Effort
-B='\033[38;2;30;102;245m'    # Blau   — Pfad
-G='\033[38;2;64;160;43m'     # Gruen  — Git-Branch
-Y='\033[38;2;223;142;29m'    # Amber  — Dirty, Zeit, TODOs
-M='\033[38;2;136;57;239m'    # Lila   — Context
-RL='\033[38;2;0;200;150m'    # Teal   — Rate normal (<70%)
-RW='\033[38;2;255;140;0m'    # Orange — Rate Warnung (70-89%)
-RC='\033[38;2;220;50;50m'    # Rot    — Rate kritisch (>=90%)
-T='\033[38;2;76;79;105m'     # Grau   — Modell, Version, Commit
-C='\033[38;2;100;180;255m'   # Cyan   — Token-Zaehler
-A='\033[38;2;255;100;200m'   # Pink   — Aktiver Agent
+# --- Farben (ANSI 24-bit) ---
+B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
+P='\033[38;2;30;144;255m'    # Blau         — Ordner
+GREEN='\033[38;2;64;200;90m' # Gruen        — < 50%
+YELLOW='\033[38;2;255;190;40m' # Gelb       — 50-79%
+RED='\033[38;2;240;70;70m'   # Rot          — >= 80%
+M='\033[38;2;180;130;255m'   # Lila         — Context
+T='\033[38;2;130;135;160m'   # Grau         — Commit, Modell-Name
+TIMECOL='\033[38;2;220;180;100m' # Amber    — Uhrzeit
+DIM='\033[38;2;90;95;115m'   # Dunkelgrau   — Trennzeichen
 R='\033[0m'                  # Reset
+BOLD='\033[1m'
 
-# Rate-Limit-Farbe
-rate_color() {
+# Farbe nach Prozent (gruen <50, gelb 50-79, rot >=80)
+pct_color() {
     local pct=$1
     if [ -z "$pct" ] || ! [[ "$pct" =~ ^[0-9]+$ ]]; then
-        echo -n "$RL"
-    elif [ "$pct" -ge 90 ]; then
-        echo -n "$RC"
-    elif [ "$pct" -ge 70 ]; then
-        echo -n "$RW"
+        echo -n "$T"
+    elif [ "$pct" -ge 80 ]; then
+        echo -n "$RED"
+    elif [ "$pct" -ge 50 ]; then
+        echo -n "$YELLOW"
     else
-        echo -n "$RL"
+        echo -n "$GREEN"
     fi
 }
 
-# Tokens als "123K" formatieren
-fmt_tokens() {
-    local n=$1
-    if [ -z "$n" ] || ! [[ "$n" =~ ^[0-9]+$ ]] || [ "$n" -eq 0 ] 2>/dev/null; then
-        echo -n "0"
-        return
+# Track-Farbe fuer leere Balken-Segmente (sehr dunkles Grau, hoher Kontrast)
+TRACK='\033[38;2;55;58;75m'
+
+# Fortschrittsbalken mit Unicode-Vollbloecken (10 Segmente, hoher Kontrast)
+# Gefuellter Teil: █ in Limit-Farbe — leerer Teil: ░ in TRACK-Grau
+make_bar() {
+    local pct=$1
+    local col=$2
+    if [ -z "$pct" ] || ! [[ "$pct" =~ ^[0-9]+$ ]]; then
+        pct=0
     fi
-    if [ "$n" -ge 1000 ]; then
-        echo -n "$((n / 1000))K"
-    else
-        echo -n "${n}"
-    fi
+    [ "$pct" -gt 100 ] && pct=100
+    local filled=$((pct / 10))
+    local empty=$((10 - filled))
+    local fpart=""
+    local epart=""
+    local i=0
+    while [ "$i" -lt "$filled" ]; do fpart="${fpart}█"; i=$((i+1)); done
+    i=0
+    while [ "$i" -lt "$empty" ];  do epart="${epart}░"; i=$((i+1)); done
+    printf "${col}${fpart}${TRACK}${epart}${R}"
 }
 
-effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
+# Trennzeichen
+SEP="${DIM} │ ${R}"
 
-# --- Ausgabe aufbauen ---
+# Icons (Nerd-Font; Fallback auf Emoji wenn nicht gerendert)
+# Wenn keine Nerd Font: emoji greift
+ICON_MODEL="🤖"
+ICON_EFFORT="⚡"
+ICON_DIR="📁"
+ICON_5H="⏱"
+ICON_7D="📅"
+ICON_CTX="🧠"
+ICON_TIME="🕐"
 
-printf "${E}[${effort_upper}]${R}"
-[ -n "$cwd" ]       && printf " ${B}${cwd}${R}"
-[ -n "$branch" ]    && printf " ${G}${branch}${Y}${status}${R}"
-[ -n "$remaining" ] && printf " ${M}ctx:${remaining}%%${R}"
+# Effort-Farbe nach Level
+case "$effort" in
+    high)   EFFORT_COL='\033[38;2;255;180;30m' ;;   # Gold
+    medium) EFFORT_COL='\033[38;2;100;180;255m' ;;  # Cyan
+    low)    EFFORT_COL='\033[38;2;130;135;160m' ;;  # Grau
+    *)      EFFORT_COL='\033[38;2;130;135;160m' ;;
+esac
 
-# Aktiver Agent (nur wenn einer laeuft)
-[ -n "$agent_name" ] && printf " ${A}[${agent_name}]${R}"
+# --- Ausgabe ---
 
-# 5h Rate-Limit
+# 1. Modell
+printf "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+
+# 2. Effort
+printf "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
+
+# 3. Ordner
+[ -n "$cwd" ] && printf "${SEP}${P}${ICON_DIR} ${cwd}${R}"
+
+# 3. 5h-Limit mit Balken
+EMPTY_BAR="${TRACK}░░░░░░░░░░${R}"
 if [ -n "$five_h_used" ]; then
-    col=$(rate_color "$five_h_used")
+    col=$(pct_color "$five_h_used")
+    bar=$(make_bar "$five_h_used" "$col")
     if [ -n "$five_h_countdown" ]; then
-        printf " ${col}5h:${five_h_used}%%(${five_h_countdown})${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R} ${DIM}(${five_h_countdown})${R}"
     else
-        printf " ${col}5h:${five_h_used}%%${R}"
+        printf "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%%${R}"
     fi
+else
+    printf "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# 7d Rate-Limit
+# 4. 7d-Limit mit Balken
 if [ -n "$week_used" ]; then
-    col=$(rate_color "$week_used")
-    printf " ${col}7d:${week_used}%%${R}"
+    col=$(pct_color "$week_used")
+    bar=$(make_bar "$week_used" "$col")
+    printf "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%%${R}"
+else
+    printf "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 fi
 
-# Token-Zaehler (Input/Output)
-if [ -n "$tokens_in" ] || [ -n "$tokens_out" ]; then
-    t_in=$(fmt_tokens "$tokens_in")
-    t_out=$(fmt_tokens "$tokens_out")
-    printf " ${C}tok:${t_in}/${t_out}${R}"
+# 5. Context-Verbrauch mit Balken
+if [ -n "$ctx_used" ]; then
+    col=$(pct_color "$ctx_used")
+    bar=$(make_bar "$ctx_used" "$col")
+    printf "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%%${R}"
 fi
 
-# Offene TODOs (nur wenn >0)
-if [ -n "$todos" ] && [ "$todos" -gt 0 ] 2>/dev/null; then
-    printf " ${Y}TODO:${todos}${R}"
-fi
-
-# Letzter Commit
-[ -n "$last_commit" ] && printf " ${T}${last_commit}${R}"
-
-# Modell + Claude Code Version
-printf " ${T}${model}${R}"
-[ -n "$version" ] && printf " ${T}v${version}${R}"
-
-# Uhrzeit
-printf " ${Y}${time}${R}"
+# 6. Uhrzeit
+printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 echo

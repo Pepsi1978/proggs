@@ -1,56 +1,58 @@
-# statusline.ps1 — Effort, path, git, context, rate-limits, version, tokens, agent, commit, todos, model, time
-# Cross-Platform-Pendant zu statusline.sh (volle Feature-Parity)
+# statusline.ps1 — Schoene Statusline mit Icons + Fortschrittsbalken
+# Reihenfolge: Modell | Effort | Ordner | 5h-Balken | 7d-Balken | Context-Balken | Zeit
+# Cross-Platform-Pendant zu statusline.sh
 $ErrorActionPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# JSON-Input einlesen
 $input_raw = [Console]::In.ReadToEnd()
 $obj = $null
 if ($input_raw) {
     try { $obj = $input_raw | ConvertFrom-Json } catch { $obj = $null }
 }
 
-# Effort-Level aus settings.json lesen
+# Effort aus settings.json
 $effort = '?'
 try {
     $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
     $settings = Get-Content -Raw -Encoding UTF8 -Path $settingsPath | ConvertFrom-Json
     if ($settings.effortLevel) { $effort = $settings.effortLevel }
 } catch { }
+$effort_upper = $effort.ToUpper()
 
-# JSON-Felder extrahieren
+# Felder
 $model = '?'
-$remaining = ''
 $cwd = ''
-$version = ''
-$tokens_in = ''
-$tokens_out = ''
-$agent_name = ''
-$five_h_used = ''
+$ctx_remaining = $null
+$five_h_used = $null
 $five_h_resets = 0
-$week_used = ''
-$work_dir = ''
+$week_used = $null
 
 if ($obj) {
     if ($obj.model.display_name) { $model = $obj.model.display_name }
-    if ($obj.context_window.remaining_percentage -ne $null) { $remaining = $obj.context_window.remaining_percentage }
     if ($obj.workspace.current_dir) {
         $cwd = $obj.workspace.current_dir
-        $work_dir = $cwd
         $homeDir = $env:USERPROFILE
         if ($homeDir -and $cwd.StartsWith($homeDir)) {
             $cwd = ('~' + $cwd.Substring($homeDir.Length)) -replace '\\', '/'
         }
     }
-    if ($obj.version) { $version = $obj.version }
-    if ($obj.context_window.total_input_tokens) { $tokens_in = $obj.context_window.total_input_tokens }
-    if ($obj.context_window.total_output_tokens) { $tokens_out = $obj.context_window.total_output_tokens }
-    if ($obj.agent.name) { $agent_name = $obj.agent.name }
-    if ($obj.rate_limits.five_hour.used_percentage -ne $null) { $five_h_used = [int][Math]::Round($obj.rate_limits.five_hour.used_percentage) }
-    if ($obj.rate_limits.five_hour.resets_at) { $five_h_resets = [long]$obj.rate_limits.five_hour.resets_at }
-    if ($obj.rate_limits.seven_day.used_percentage -ne $null) { $week_used = [int][Math]::Round($obj.rate_limits.seven_day.used_percentage) }
+    if ($obj.context_window.remaining_percentage -ne $null) {
+        $ctx_remaining = [int][Math]::Round($obj.context_window.remaining_percentage)
+    }
+    if ($obj.rate_limits.five_hour.used_percentage -ne $null) {
+        $five_h_used = [int][Math]::Round($obj.rate_limits.five_hour.used_percentage)
+    }
+    if ($obj.rate_limits.five_hour.resets_at) {
+        $five_h_resets = [long]$obj.rate_limits.five_hour.resets_at
+    }
+    if ($obj.rate_limits.seven_day.used_percentage -ne $null) {
+        $week_used = [int][Math]::Round($obj.rate_limits.seven_day.used_percentage)
+    }
 }
 
-# 5h Reset-Countdown
+$ctx_used = $null
+if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
+
 $five_h_countdown = ''
 if ($five_h_resets -gt 0) {
     $now = [int][double]::Parse((Get-Date -UFormat %s))
@@ -58,8 +60,7 @@ if ($five_h_resets -gt 0) {
     if ($diff -gt 0) {
         $mins = [int]($diff / 60)
         if ($mins -ge 60) {
-            $h = [int]($mins / 60)
-            $m = $mins % 60
+            $h = [int]($mins / 60); $m = $mins % 60
             $five_h_countdown = "${h}h${m}m"
         } else {
             $five_h_countdown = "${mins}m"
@@ -67,101 +68,96 @@ if ($five_h_resets -gt 0) {
     }
 }
 
-# Git: Branch + Dirty + letzter Commit
-$branch = ''
-$gstatus = ''
-$last_commit = ''
-if ($work_dir -and (Test-Path $work_dir)) {
-    Push-Location $work_dir
-    try {
-        $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
-        if ($branch) {
-            $dirty = git status --porcelain 2>$null | Select-Object -First 1
-            if ($dirty) { $gstatus = '*' }
-            $lc = git log --oneline -1 2>$null
-            if ($lc) {
-                if ($lc.Length -gt 40) { $lc = $lc.Substring(0, 40) }
-                $last_commit = $lc -replace ' ', ':'
-                if ($last_commit.Length -gt 38) { $last_commit = $last_commit.Substring(0, 38) }
-            }
-        }
-    } catch { }
-    Pop-Location
-}
-
-# TODOs in Kotlin-Quellen
-$todos = 0
-if ($work_dir -and (Test-Path (Join-Path $work_dir 'app\src'))) {
-    try {
-        $todos = (Get-ChildItem -Path (Join-Path $work_dir 'app\src') -Filter *.kt -Recurse -File 2>$null |
-            Select-String -Pattern 'TODO|FIXME' -List 2>$null | Measure-Object).Count
-    } catch { $todos = 0 }
-}
-
-# Uhrzeit
 $time = Get-Date -Format 'HH:mm'
 
 # Farben (ANSI 24-bit)
 $ESC = [char]27
-$E  = "$ESC[38;2;255;215;0m"   # Gold   — Effort
-$B  = "$ESC[38;2;30;102;245m"  # Blau   — Pfad
-$G  = "$ESC[38;2;64;160;43m"   # Gruen  — Git-Branch
-$Y  = "$ESC[38;2;223;142;29m"  # Amber  — Dirty, Zeit, TODOs
-$M  = "$ESC[38;2;136;57;239m"  # Lila   — Context
-$RL = "$ESC[38;2;0;200;150m"   # Teal   — Rate normal
-$RW = "$ESC[38;2;255;140;0m"   # Orange — Rate warning
-$RC = "$ESC[38;2;220;50;50m"   # Rot    — Rate kritisch
-$T  = "$ESC[38;2;76;79;105m"   # Grau   — Modell, Version, Commit
-$C  = "$ESC[38;2;100;180;255m" # Cyan   — Tokens
-$A  = "$ESC[38;2;255;100;200m" # Pink   — Aktiver Agent
-$R  = "$ESC[0m"                # Reset
+$B      = "$ESC[38;2;100;180;255m"
+$P      = "$ESC[38;2;30;144;255m"
+$GREEN  = "$ESC[38;2;64;200;90m"
+$YELLOW = "$ESC[38;2;255;190;40m"
+$RED    = "$ESC[38;2;240;70;70m"
+$T      = "$ESC[38;2;130;135;160m"
+$TIMECOL= "$ESC[38;2;220;180;100m"
+$DIM    = "$ESC[38;2;90;95;115m"
+$TRACK  = "$ESC[38;2;55;58;75m"
+$BOLD   = "$ESC[1m"
+$R      = "$ESC[0m"
 
-function Get-RateColor($pct) {
-    if (($null -eq $pct) -or ($pct -isnot [int])) { return $RL }
-    if ($pct -ge 90) { return $RC }
-    if ($pct -ge 70) { return $RW }
-    return $RL
+# Effort-Farbe
+$EFFORT_COL = switch ($effort) {
+    'high'   { "$ESC[38;2;255;180;30m" }
+    'medium' { "$ESC[38;2;100;180;255m" }
+    'low'    { "$ESC[38;2;130;135;160m" }
+    default  { "$ESC[38;2;130;135;160m" }
 }
 
-function Format-Tokens($n) {
-    if (-not $n) { return '0' }
-    $v = [int]$n
-    if ($v -ge 1000) { return "$([int]($v / 1000))K" }
-    return "$v"
+function Get-PctColor($pct) {
+    if ($pct -eq $null) { return $T }
+    if ($pct -ge 80) { return $RED }
+    if ($pct -ge 50) { return $YELLOW }
+    return $GREEN
 }
 
-$effort_upper = $effort.ToUpper()
+function Get-Bar($pct, $col) {
+    if ($pct -eq $null) { $pct = 0 }
+    if ($pct -gt 100) { $pct = 100 }
+    if ($pct -lt 0) { $pct = 0 }
+    $filled = [int]($pct / 10)
+    $empty = 10 - $filled
+    return "${col}" + ('█' * $filled) + "${TRACK}" + ('░' * $empty) + "${R}"
+}
 
-# Ausgabe aufbauen
-$out = "${E}[${effort_upper}]${R}"
-if ($cwd)       { $out += " ${B}${cwd}${R}" }
-if ($branch)    { $out += " ${G}${branch}${Y}${gstatus}${R}" }
-if ($remaining -ne '') { $out += " ${M}ctx:${remaining}%${R}" }
-if ($agent_name) { $out += " ${A}[${agent_name}]${R}" }
+$SEP = "${DIM} | ${R}"
+$EMPTY_BAR = "${TRACK}" + ('░' * 10) + "${R}"
 
-if ($five_h_used -ne '') {
-    $col = Get-RateColor $five_h_used
+# Icons
+$ICON_MODEL  = '🤖'
+$ICON_EFFORT = '⚡'
+$ICON_DIR    = '📁'
+$ICON_5H     = '⏱'
+$ICON_7D     = '📅'
+$ICON_CTX    = '🧠'
+$ICON_TIME   = '🕐'
+
+# Ausgabe
+$out = "${B}${ICON_MODEL} ${BOLD}${model}${R}"
+$out += "${SEP}${EFFORT_COL}${ICON_EFFORT} ${effort_upper}${R}"
+
+if ($cwd) {
+    $out += "${SEP}${P}${ICON_DIR} ${cwd}${R}"
+}
+
+# 5h
+if ($five_h_used -ne $null) {
+    $col = Get-PctColor $five_h_used
+    $bar = Get-Bar $five_h_used $col
     if ($five_h_countdown) {
-        $out += " ${col}5h:${five_h_used}%(${five_h_countdown})${R}"
+        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R} ${DIM}(${five_h_countdown})${R}"
     } else {
-        $out += " ${col}5h:${five_h_used}%${R}"
+        $out += "${SEP}${col}${ICON_5H} 5h${R} ${bar} ${col}${five_h_used}%${R}"
     }
-}
-if ($week_used -ne '') {
-    $col = Get-RateColor $week_used
-    $out += " ${col}7d:${week_used}%${R}"
+} else {
+    $out += "${SEP}${DIM}${ICON_5H} 5h${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-if ($tokens_in -or $tokens_out) {
-    $ti = Format-Tokens $tokens_in
-    $to = Format-Tokens $tokens_out
-    $out += " ${C}tok:${ti}/${to}${R}"
+# 7d
+if ($week_used -ne $null) {
+    $col = Get-PctColor $week_used
+    $bar = Get-Bar $week_used $col
+    $out += "${SEP}${col}${ICON_7D} 7d${R} ${bar} ${col}${week_used}%${R}"
+} else {
+    $out += "${SEP}${DIM}${ICON_7D} 7d${R} ${EMPTY_BAR} ${DIM}--${R}"
 }
 
-if ($todos -gt 0) { $out += " ${Y}TODO:${todos}${R}" }
-if ($last_commit) { $out += " ${T}${last_commit}${R}" }
-$out += " ${T}${model}${R}"
-if ($version) { $out += " ${T}v${version}${R}" }
-$out += " ${Y}${time}${R}"
+# Context
+if ($ctx_used -ne $null) {
+    $col = Get-PctColor $ctx_used
+    $bar = Get-Bar $ctx_used $col
+    $out += "${SEP}${col}${ICON_CTX} ctx${R} ${bar} ${col}${ctx_used}%${R}"
+}
+
+# Uhrzeit
+$out += "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 
 [Console]::Out.Write($out)
