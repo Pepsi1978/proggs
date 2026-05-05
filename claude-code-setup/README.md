@@ -32,6 +32,20 @@ Copy-Item ~/proggs/claude-code-setup/settings-reference.json ~/.claude/settings.
 cp ~/proggs/claude-code-setup/settings.json ~/.claude/settings.json
 ```
 
+## Statusline (plattformuebergreifend)
+
+Die Statusline zeigt unten in jeder Claude-Code-Session: `🤖 Modell | ⚡ Effort | 📁 Ordner | ⏱ 5h-Limit | 📅 7d-Limit | 🧠 Context | 🕐 Zeit` — mit farbigen Fortschrittsbalken (gruen <50%, gelb 50-79%, rot ab 80%).
+
+**Wo:**
+- Bash-Variante: `claude-code-setup/hooks/statusline.sh` — fuer macOS, Linux und Windows-Git-Bash
+- PowerShell-Variante: `claude-code-setup/hooks/statusline.ps1` — Windows-natives Pendant
+
+**Aktivierung:** Erfolgt automatisch durch `setup-windows.ps1` bzw. `setup-macos.sh`. Beide Skripte deployen die Statusline-Hooks nach `~/.claude/hooks/`. Der Eintrag `statusLine.command = "bash ~/.claude/hooks/statusline.sh"` steht bereits in `settings.json` und `settings-reference.json`.
+
+**Voraussetzung auf macOS:** `jq` muss installiert sein (`brew install jq`). Auf Windows wird `jq` durch das Setup-Skript gesetzt.
+
+**Wenn die Icons als Boxen erscheinen:** Das Terminal braucht Emoji-/Nerd-Font-Unterstuetzung. Empfohlen: Windows Terminal mit "Cascadia Code" oder iTerm2/Terminal.app mit Nerd-Font-Variante.
+
 ## Verzeichnisstruktur
 
 | Verzeichnis | Inhalt | Dateien |
