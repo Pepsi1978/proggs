@@ -9,6 +9,8 @@ import de.frank.entropyreducer.BuildConfig
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
+import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
+import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -92,4 +94,34 @@ object NetworkModule {
     @Provides @Singleton
     fun provideGoogleTtsApi(@Named("googleTts") retrofit: Retrofit): GoogleTtsApi =
         retrofit.create(GoogleTtsApi::class.java)
+
+    /* ----- Stufe 2: Google Calendar + Whoop ----- */
+
+    @Provides
+    @Singleton
+    @Named("googleCalendar")
+    fun provideGoogleCalendarRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://www.googleapis.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides
+    @Singleton
+    @Named("whoop")
+    fun provideWhoopRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api.prod.whoop.com/developer/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideGoogleCalendarApi(@Named("googleCalendar") retrofit: Retrofit): GoogleCalendarApi =
+        retrofit.create(GoogleCalendarApi::class.java)
+
+    @Provides @Singleton
+    fun provideWhoopApi(@Named("whoop") retrofit: Retrofit): WhoopApi =
+        retrofit.create(WhoopApi::class.java)
 }

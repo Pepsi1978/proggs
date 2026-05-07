@@ -72,6 +72,19 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_GOOGLE_REFRESH, null)
         set(value) { prefs.edit().putString(KEY_GOOGLE_REFRESH, value).apply() }
 
+    var googleTokenExpiryEpochSec: Long
+        get() = prefs.getLong(KEY_GOOGLE_EXPIRY, 0L)
+        set(value) { prefs.edit().putLong(KEY_GOOGLE_EXPIRY, value).apply() }
+
+    /** AppAuth speichert den serialisierten AuthState als JSON-Blob. */
+    var googleAuthStateJson: String?
+        get() = prefs.getString(KEY_GOOGLE_AUTH_STATE, null)
+        set(value) { prefs.edit().putString(KEY_GOOGLE_AUTH_STATE, value).apply() }
+
+    var whoopAuthStateJson: String?
+        get() = prefs.getString(KEY_WHOOP_AUTH_STATE, null)
+        set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).apply() }
+
     /** Account-Mailadresse fuer Drive-Backup. Wird beim Sign-In gesetzt. */
     var driveAccountEmail: String?
         get() = prefs.getString(KEY_DRIVE_ACCOUNT, null)
@@ -103,6 +116,9 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_WHOOP_EXPIRY = "whoop_expiry"
         private const val KEY_GOOGLE_ACCESS = "google_access_token"
         private const val KEY_GOOGLE_REFRESH = "google_refresh_token"
+        private const val KEY_GOOGLE_EXPIRY = "google_expiry"
+        private const val KEY_GOOGLE_AUTH_STATE = "google_auth_state_json"
+        private const val KEY_WHOOP_AUTH_STATE = "whoop_auth_state_json"
         private const val KEY_DRIVE_ACCOUNT = "drive_account_email"
         private const val KEY_DRIVE_ENABLED = "drive_backup_enabled"
         private const val KEY_DRIVE_LAST_BACKUP = "drive_last_backup_ms"

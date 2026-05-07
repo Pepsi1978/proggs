@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.presentation.settings.api
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +17,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.HourglassBottom
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -37,6 +41,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.settings.ApiKeysViewModel
@@ -45,8 +50,13 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 @Composable
-fun ApiKeysScreen(onBack: () -> Unit, vm: ApiKeysViewModel = hiltViewModel()) {
+fun ApiKeysScreen(
+    onBack: () -> Unit,
+    vm: ApiKeysViewModel = hiltViewModel(),
+    oauthVm: OAuthViewModel = hiltViewModel(),
+) {
     val state by vm.state.collectAsState()
+    val oauthState by oauthVm.state.collectAsState()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "API-Schluessel",
@@ -104,32 +114,8 @@ fun ApiKeysScreen(onBack: () -> Unit, vm: ApiKeysViewModel = hiltViewModel()) {
                     status = state.ttsStatus,
                 )
             }
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text("Whoop OAuth", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Verbinde deinen Whoop-Account, um Schlaf-, Erholungs- und Belastungsdaten zu synchronisieren. Wird in Stufe 2 freigeschaltet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = cosmos.textSecondary,
-                        )
-                    }
-                }
-            }
-            item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text("Google Calendar OAuth", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Verbinde deinen Google-Kalender. Wird in Stufe 2 freigeschaltet — die App liest die Schichtcodes als Ganztagestermine.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = cosmos.textSecondary,
-                        )
-                    }
-                }
-            }
+            item { WhoopOAuthCard(oauthVm, oauthState) }
+            item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
                     text = "Deine API-Schluessel werden mit AES-256-GCM auf deinem Geraet verschluesselt.",
@@ -221,5 +207,163 @@ private fun ConnectionLabel(label: String, color: Color, icon: androidx.compose.
         Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.size(6.dp))
         Text(label, style = MaterialTheme.typography.bodySmall, color = color)
+    }
+}
+
+@Composable
+private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
+    val cosmos = LocalCosmos.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        result.data?.let { data -> vm.onWhoopAuthResult(data) }
+    }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Whoop OAuth",
+                style = MaterialTheme.typography.titleMedium,
+                color = CosmosColors.AccentSecondary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Verbinde deinen Whoop-Account fuer Recovery, HRV und Schlafdaten. " +
+                    "Registriere dein Developer-App in app.whoop.com mit folgender Redirect-URI:",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                state.whoopRedirectUri,
+                style = MaterialTheme.typography.bodySmall,
+                color = CosmosColors.AccentPrimary,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.whoopClientId,
+                onValueChange = vm::setWhoopClientId,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Client ID", color = cosmos.textSecondary) },
+                singleLine = true,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.whoopClientSecret,
+                onValueChange = vm::setWhoopClientSecret,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Client Secret", color = cosmos.textSecondary) },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = vm::saveWhoopCredentials,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Speichern") }
+                if (state.whoopConnected) {
+                    Button(
+                        onClick = vm::disconnectWhoop,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                    ) {
+                        Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Trennen")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            vm.buildWhoopAuthIntent()?.let { launcher.launch(it) }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentSecondary),
+                    ) {
+                        Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Verbinden")
+                    }
+                }
+            }
+            if (state.whoopConnected) {
+                Spacer(Modifier.height(8.dp))
+                ConnectionLabel("Verbunden", CosmosColors.Success, Icons.Outlined.CheckCircle)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
+    val cosmos = LocalCosmos.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        result.data?.let { data -> vm.onGoogleAuthResult(data, state.googleClientId) }
+    }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Google Calendar OAuth",
+                style = MaterialTheme.typography.titleMedium,
+                color = CosmosColors.AccentPrimary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Verbinde deinen Google-Kalender — die App liest die Schichtcodes als " +
+                    "Ganztagestermine. Trage die OAuth-Client-ID aus der Cloud Console ein " +
+                    "und stelle die folgende Redirect-URI dort bereit:",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                OAuthService.GOOGLE_REDIRECT_URI,
+                style = MaterialTheme.typography.bodySmall,
+                color = CosmosColors.AccentPrimary,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.googleClientId,
+                onValueChange = vm::setGoogleClientId,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Google OAuth Client ID", color = cosmos.textSecondary) },
+                singleLine = true,
+            )
+            Spacer(Modifier.height(12.dp))
+            if (state.googleCalendarConnected) {
+                Button(
+                    onClick = vm::disconnectGoogleCalendar,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                ) {
+                    Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Trennen")
+                }
+            } else {
+                Button(
+                    onClick = {
+                        vm.buildGoogleAuthIntent(state.googleClientId)?.let { launcher.launch(it) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentPrimary),
+                ) {
+                    Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Mit Google Calendar verbinden")
+                }
+            }
+            if (state.googleCalendarConnected) {
+                Spacer(Modifier.height(8.dp))
+                ConnectionLabel("Verbunden — Schichtcodes werden alle 24h gesynct", CosmosColors.Success, Icons.Outlined.CheckCircle)
+            }
+            state.message?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(msg, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
+            }
+        }
     }
 }

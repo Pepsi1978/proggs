@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,6 +34,13 @@ class AppSettings @Inject constructor(
     val ttsVoiceFlow: Flow<String> = ds.data.map { it[KEY_TTS_VOICE] ?: "" }
     val profileTextFlow: Flow<String> = ds.data.map { it[KEY_PROFILE_TEXT] ?: "" }
 
+    /** Letzter erfolgreicher Whoop-Sync (Epoch-Millisekunden). 0L = noch nie gesynct. */
+    val lastWhoopSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_WHOOP_SYNC] ?: 0L }
+    /** Letzter erfolgreicher Calendar-Sync (Epoch-Millisekunden). */
+    val lastCalendarSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CALENDAR_SYNC] ?: 0L }
+    /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
+    val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
+
     /**
      * Theme-Modus als Flow. Default: SYSTEM (folgt der Hell-/Dunkel-Einstellung
      * des Geraets). Manueller Override via Toggle in der Top-Bar.
@@ -52,6 +60,10 @@ class AppSettings @Inject constructor(
     suspend fun setProfileText(value: String) = ds.edit { it[KEY_PROFILE_TEXT] = value }
     suspend fun setThemeMode(value: ThemeMode) = ds.edit { it[KEY_THEME_MODE] = value.name }
 
+    suspend fun setLastWhoopSync(value: Long) = ds.edit { it[KEY_LAST_WHOOP_SYNC] = value }
+    suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
+    suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -59,6 +71,9 @@ class AppSettings @Inject constructor(
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
+        private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
+        private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         const val DEFAULT_GEMINI = "gemini-2.5-flash"

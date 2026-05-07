@@ -8,10 +8,15 @@ import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.repository.KiQuestionRepository
+import de.frank.entropyreducer.domain.kiquestion.KiQuestion
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.status.StatusBreakdown
+import de.frank.entropyreducer.domain.status.StatusObserver
+import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
@@ -30,11 +35,13 @@ data class TasksUiState(
     val entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>> = emptyMap(),
     val activeCategories: Set<EntropyCategory> = emptySet(),
     val statusPercent: Int = 50,
+    val statusBreakdown: StatusBreakdown? = null,
     val openCount: Int = 0,
     val micState: MicState = MicState.IDLE,
     val processingMessage: String? = null,
     val errorMessage: String? = null,
     val recentlyCreatedId: String? = null,
+    val kiQuestion: KiQuestion? = null,
 )
 
 private data class UiOnlyState(
@@ -51,6 +58,9 @@ class TasksViewModel @Inject constructor(
     private val recorder: AudioRecorder,
     private val transcribe: TranscribeAudioUseCase,
     private val process: ProcessEntryUseCase,
+    private val statusObserver: StatusObserver,
+    private val kiQuestions: KiQuestionRepository,
+    @Suppress("unused") private val bucketingUseCase: CalculateBucketsUseCase,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -60,31 +70,27 @@ class TasksViewModel @Inject constructor(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
-    ) { list, cats, ui ->
+        statusObserver.observe(),
+        kiQuestions.currentQuestion,
+    ) { list, cats, ui, breakdown, question ->
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         val grouped = filtered.groupBy { it.timeBucket }
         val openCount = list.count { it.status == EntryStatus.OFFEN }
-        // Status-Bar-Score (Spec §4.1): Anteil der reduzierten Last am Gesamt-Potenzial.
-        // REDUZIERT zaehlt NICHT zur aktuellen Entropie-Last — nur OFFEN + IN_ARBEIT.
-        // ARCHIVIERT ist hier ohnehin schon ausgefiltert (siehe DAO).
-        val openSeverity = list
-            .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-            .sumOf { it.severity }
-        val totalSeverity = list.sumOf { it.severity }.coerceAtLeast(1)
-        // 100% = alle Eintraege reduziert oder keine Eintraege vorhanden.
-        // 0% = nichts reduziert, alles offen mit voller Schwere.
-        val reductionPct = (100 - (openSeverity * 100 / totalSeverity)).coerceIn(0, 100)
         TasksUiState(
             entriesByBucket = grouped,
             activeCategories = cats,
-            statusPercent = reductionPct,
+            statusPercent = breakdown.total,
+            statusBreakdown = breakdown,
             openCount = openCount,
             micState = ui.micState,
             processingMessage = ui.processingMessage,
             errorMessage = ui.errorMessage,
             recentlyCreatedId = ui.recentlyCreatedId,
+            kiQuestion = question,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
+
+    fun snoozeKiQuestion() = viewModelScope.launch { kiQuestions.snoozeFor24Hours() }
 
     fun toggleCategory(cat: EntropyCategory) {
         val current = activeCategoriesFlow.value.toMutableSet()

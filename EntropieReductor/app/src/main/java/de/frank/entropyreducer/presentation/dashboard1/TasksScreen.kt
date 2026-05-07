@@ -124,7 +124,7 @@ fun TasksScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                StatusBar(percent = state.statusPercent)
+                StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
                 Spacer(Modifier.height(8.dp))
 
                 state.processingMessage?.let {
@@ -142,6 +142,17 @@ fun TasksScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    state.kiQuestion?.let { q ->
+                        item {
+                            de.frank.entropyreducer.presentation.components.KiQuestionCard(
+                                question = q,
+                                onMicAnswer = {
+                                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
+                                },
+                                onSnooze = vm::snoozeKiQuestion,
+                            )
+                        }
+                    }
                     item {
                         CategoryFilterRow(
                             active = state.activeCategories,

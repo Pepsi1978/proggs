@@ -135,3 +135,61 @@ Debug-Build ist nicht minified, Release-Build hat `isMinifyEnabled = true` + `is
 
 **Spec §2:** „M4A/AAC, mono, 16 kHz".
 **Umsetzung:** Genau so. Groq Whisper akzeptiert M4A, Datei wird sofort nach erfolgreicher Transkription gelöscht. Wenn ich das später auf OGG umstellen wollen sollte (kleinere Dateien), wäre das 1 Zeile Änderung in `AudioRecorder`.
+
+## 22. AppAuth fuer Whoop UND Google Calendar (Stufe 2)
+
+**Spec §15.4 + §15.5:** "OAuth-Flow analog zu Whoop, mit Google-Sign-In".
+**Entschieden:** Beide Endpunkte ueber AppAuth (OpenID-Foundation-Library). Google-Sign-In aus Stufe 1 bleibt ausschliesslich fuer Drive-Backup, Calendar nutzt einen separaten AppAuth-Flow mit dem `calendar.readonly`-Scope.
+**Begruendung:**
+- AppAuth liefert echte Refresh-Tokens fuer Background-Sync — Google-Sign-In ist nur fuer kurzlebige Access-Tokens praktisch.
+- Whoop ist nicht Google — AppAuth ist die einzige sinnvolle Option.
+- Ein Persistenz-Pfad (`AuthState.jsonSerializeString` in EncryptedSharedPreferences) deckt beide Endpunkte ab.
+- Frank kann zwei verschiedene Google-Konten verwenden (Drive vs. Calendar) wenn er will.
+
+## 23. Schichtcode-Parser als deterministischer Domain-Code
+
+**Spec §15.5:** Regex-basiert, "Tag 1-4" + optionaler X/F-Marker, "Nacht 1-4", "U/Urlaub".
+**Umsetzung:** Pure-Kotlin-Object `ShiftCodeParser` mit zwei Regexes. Inklusive 18 Unit-Tests die alle Spec-Beispiele plus Edge-Cases (Whitespace, Lowercase, Tag5 = unbekannt) abdecken.
+**Begruendung:** Deterministische Logik gehoert in die Domain, nicht ins Repository. Tests koennen ohne Hilt + Room laufen.
+
+## 24. CalendarRepository: leere Tage werden mit UNBEKANNT initialisiert
+
+**Spec §15.5:** Nicht explizit gefordert.
+**Entschieden:** Vor dem Auswerten der Events legen wir alle Tage im Sync-Fenster (-30 bis +30) als UNBEKANNT an. Erst danach ueberschreiben echte Schicht-Events sie. Tage ohne Schichteintrag bleiben UNBEKANNT mit Default-Schlaffenster 22:00-06:00.
+**Begruendung:** Damit hat der CalculateBucketsUseCase und der StatusObserver immer einen CalendarDay zur Verfuegung — auch fuer Wochen ohne Schichtdienst-Events. Vermeidet Null-Pruefungen ueberall im Code.
+
+## 25. Whoop-Pagination mit Exponential-Backoff bei 429
+
+**Spec §15.4:** "Mit Retry-Logik und Exponential Backoff bei 429".
+**Umsetzung:** Generischer `paged()`-Helper im WhoopRepository. Bei HTTP 429 wird mit 1s, 2s, 4s gewartet (max 3 Retries). Andere Fehler werfen sofort.
+**Begruendung:** Spezifikation 1:1 erfuellt. Whoop's Rate-Limit von ~100 Req/Min wird mit dem 30-Tage-Sync (typisch 30-90 Records pro Endpoint) selten erreicht — der Backoff ist Defensive-Coding.
+
+## 26. BiomarkerSnapshot-ID = "cycle-{whoop_cycle_id}"
+
+**Spec §5.1:** `BiomarkerSnapshot.id: String` — Format nicht festgelegt.
+**Entschieden:** ID ist `"cycle-${whoopCycle.id}"`, was bei Re-Sync exakt denselben Eintrag ueberschreibt (UPSERT auf Primary Key).
+**Begruendung:** Idempotente Sync-Operation — kein Duplikate-Problem bei mehrfachem Sync, keine Ueberschneidungen mit zukuenftigen Snapshots aus anderen Quellen (z.B. Manual-Logging).
+
+## 27. CalculateStatusUseCase: Re-Skalierung wenn Whoop fehlt
+
+**Spec §4.1:** 40/35/25-Gewichtung.
+**Entschieden:** Wenn `BiomarkerSnapshot == null`, faellt die 40-%-Komponente weg, und die verbleibenden Komponenten werden mit 60/40-Gewichtung re-skaliert (Aufgaben 60, Kontext 40).
+**Begruendung:** Der Status-Balken sieht sonst bei Stufe-1-Nutzern (kein Whoop verbunden) immer kaputt-niedrig aus. Re-Skalierung ist die saubere Loesung — das `breakdown.biomarkerScore == null` zeigt im Detail-Sheet "Whoop nicht verbunden" an.
+
+## 28. KiQuestion-Cache als DataStore (nicht Room)
+
+**Spec §10.4:** Nicht festgelegt wo die aktuelle Frage liegt.
+**Entschieden:** Eigener Preferences-DataStore "ki_question_state" mit den Feldern triggerKey, text, rationale, related_ids und dismissed_until_ms.
+**Begruendung:** Nur eine Frage zur Zeit — kein Tabellen-Design noetig. DataStore ist 50 Zeilen einfacher als ein Room-DAO. Die Frage-Historie ist nicht relevant; nur die aktuelle.
+
+## 29. ShiftAwareNotifier: Stufe-2-MVP verwirft im Schlaf statt zu verzoegern
+
+**Spec §16.4:** "Notification verzoegern bis zum Wachzeitpunkt + 15 Min".
+**Entschieden:** In Stufe 2 (MVP) verwerfen wir Notifications die im Schlaffenster auftreten, statt sie zu verzoegern. Stufe 4 baut die WorkManager-Verzoegerung mit Deep-Link auf einen DelayedNotificationWorker auf.
+**Begruendung:** WorkManager-setInitialDelay mit Notification-Payload braucht einen separaten Worker, der die Notification dann postet — das ist in Stufe 2 zu viel Infrastruktur. MVP-Verhalten "im Schlaf nicht stoeren" reicht voellig fuer den ersten Beta-Test.
+
+## 30. KiQuestionWorker — periodisch alle 30 Minuten
+
+**Spec §10.4:** "alle 30 Min."
+**Umsetzung:** PeriodicWorkRequest mit 30 Min Intervall. Bei jedem Lauf wird der Generator gestartet, der die fuenf Trigger sequentiell prueft. Bei Treffer wird die Frage in den Cache geschrieben und eine schichtbewusste Notification ausgeloest (nur wenn neuer triggerKey).
+**Begruendung:** WorkManager-Periodic-Tasks haben minimal 15min, also ist 30min sicher. Die UI beobachtet den Repository-Flow und zeigt die Frage sofort beim Cache-Update.

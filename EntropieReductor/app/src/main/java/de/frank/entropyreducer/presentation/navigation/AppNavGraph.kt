@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard.ComingSoonScreen
+import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.settings.SettingsHomeScreen
 import de.frank.entropyreducer.presentation.settings.api.ApiKeysScreen
 import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
@@ -50,12 +51,9 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             )
         }
         composable(Routes.BIOMARKER) {
-            ComingSoonScreen(
-                title = "Biomarker",
-                hint = "Die Whoop-Anbindung mit Recovery-Ring und HRV-Verlauf kommt in Stufe 2.",
-                currentTab = Routes.BIOMARKER,
-                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+            BiomarkerHostScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
+                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
             )
         }
 

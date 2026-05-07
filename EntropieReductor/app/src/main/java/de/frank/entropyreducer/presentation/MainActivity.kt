@@ -14,6 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
@@ -21,6 +22,7 @@ import de.frank.entropyreducer.data.settings.ThemeMode
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
+import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -133,6 +135,8 @@ class StartupViewModel @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val syncEntries: SyncEntriesUseCase,
     private val coordinator: SyncCoordinator,
+    private val scheduler: BackgroundScheduler,
+    private val oauth: OAuthService,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
@@ -144,6 +148,17 @@ class StartupViewModel @Inject constructor(
                     // die ggf. waehrend Offline-Phase entstanden, hochgeladen werden.
                     coordinator.requestSync()
                 }
+                // Stufe 2: Hintergrund-Sync-Plaene aufsetzen — auch wenn keine Tokens
+                // existieren. Die Worker laufen leer, machen aber kein Schaden.
+                scheduler.ensureNightlyJobs()
+                scheduler.ensureKiQuestionJob()
+                if (oauth.loadGoogleAuthState().isAuthorized) {
+                    scheduler.runCalendarSyncNow()
+                }
+                if (oauth.loadWhoopAuthState().isAuthorized) {
+                    scheduler.runWhoopSyncNow()
+                }
+                scheduler.runKiQuestionCheckNow()
             }
         }
     }
