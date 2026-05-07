@@ -102,16 +102,23 @@ class ExperimentCalendarViewModel @Inject constructor(
         val current = selectedFlow.value ?: return
         viewModelScope.launch {
             val now = System.currentTimeMillis()
+            // Bei Aktivierung MUSS biomarkerBeforeId gesetzt werden (Spec §14.3 —
+            // "Biomarker-Vergleich anzeigen" zeigt vor- vs. nach-Snapshot). Ohne
+            // diesen Snapshot kann ConfidenceCalculator keinen Biomarker-Bonus
+            // berechnen. Bei direktem Sprung von VORGESCHLAGEN nach ABGESCHLOSSEN
+            // wird before als Fallback ebenfalls aus dem aktuellen Snapshot gezogen.
+            val latestBio = biomarkerDao.getLatest().first()?.id
             val updated = when (status) {
                 HypothesisStatus.AKTIV -> current.copy(
                     status = status,
                     actualStartDate = current.actualStartDate ?: now,
+                    biomarkerBeforeId = current.biomarkerBeforeId ?: latestBio,
                 )
                 HypothesisStatus.ABGEBROCHEN, HypothesisStatus.ABGESCHLOSSEN -> current.copy(
                     status = status,
                     actualEndDate = now,
-                    biomarkerAfterId = current.biomarkerAfterId
-                        ?: biomarkerDao.getLatest().first()?.id,
+                    biomarkerBeforeId = current.biomarkerBeforeId ?: latestBio,
+                    biomarkerAfterId = current.biomarkerAfterId ?: latestBio,
                 )
                 HypothesisStatus.VORGESCHLAGEN -> current.copy(status = status)
             }
@@ -124,12 +131,17 @@ class ExperimentCalendarViewModel @Inject constructor(
         val current = selectedFlow.value ?: return
         viewModelScope.launch {
             val now = System.currentTimeMillis()
+            val latestBio = biomarkerDao.getLatest().first()?.id
+            // Outcome-Setzen impliziert ABGESCHLOSSEN — sicherstellen dass before+after
+            // gesetzt sind, damit ConfidenceCalculator (Spec §16.6) den Biomarker-Bonus
+            // (HRV, Recovery) korrekt berechnen kann.
             val updated = current.copy(
                 outcome = outcome,
                 actualEndDate = current.actualEndDate ?: now,
                 status = if (current.status != HypothesisStatus.ABGESCHLOSSEN)
                     HypothesisStatus.ABGESCHLOSSEN else current.status,
-                biomarkerAfterId = current.biomarkerAfterId ?: biomarkerDao.getLatest().first()?.id,
+                biomarkerBeforeId = current.biomarkerBeforeId ?: latestBio,
+                biomarkerAfterId = current.biomarkerAfterId ?: latestBio,
             )
             hypotheses.update(updated)
             selectedFlow.value = updated

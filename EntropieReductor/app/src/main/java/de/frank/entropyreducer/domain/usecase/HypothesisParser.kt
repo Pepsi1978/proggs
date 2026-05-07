@@ -64,21 +64,38 @@ class HypothesisParser @Inject constructor() {
     }
 
     companion object {
-        // [HYPOTHESE] ... [/HYPOTHESE]  — DOTALL: Inhalt darf Zeilenumbrueche haben.
-        private val HYPO_REGEX =
-            Regex("""\[HYPOTHESE]\s*(.*?)\s*\[/HYPOTHESE]""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-        private val MEMORY_REGEX =
-            Regex("""\[MEMORY-VORSCHLAG]:\s*(.+?)(?=\n|$)""", RegexOption.IGNORE_CASE)
+        // [HYPOTHESE] ... [/HYPOTHESE]  — DOTALL fuer Mehrzeiligkeit.
+        // Toleriert optionale Markdown-Bold-Sterne und optionale Whitespaces vor der
+        // schliessenden Klammer (Gemini-Output ist nicht 100% formattreu, siehe
+        // arsturn.com/blog/common-gemini-2-5-pro-coding-mistakes — LLMs wechseln zwischen
+        // Plain-Text und Markdown-Bold zwischen Runs).
+        private val HYPO_REGEX = Regex(
+            """\*{0,2}\[\s*HYPOTHESE\s*]\*{0,2}\s*(.*?)\s*\*{0,2}\[/\s*HYPOTHESE\s*]\*{0,2}""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
+        private val MEMORY_REGEX = Regex(
+            """\*{0,2}\[\s*MEMORY-VORSCHLAG\s*]\*{0,2}\s*:\s*\*{0,2}\s*(.+?)(?=\n|$)""",
+            RegexOption.IGNORE_CASE,
+        )
 
         // Felder innerhalb des Hypothesen-Blocks. Bis zur naechsten Feld-Bezeichnung
-        // oder Block-Ende greifen — daher ein Lookahead auf das naechste Label.
-        private val FIELD_TITEL =
-            Regex("""Titel:\s*(.+?)(?=\n\s*(Beschreibung|Begr[uü]ndung|Geplante\s+Dauer):|\z)""", RegexOption.DOT_MATCHES_ALL)
-        private val FIELD_BESCHREIBUNG =
-            Regex("""Beschreibung:\s*(.+?)(?=\n\s*(Titel|Begr[uü]ndung|Geplante\s+Dauer):|\z)""", RegexOption.DOT_MATCHES_ALL)
-        private val FIELD_BEGR =
-            Regex("""Begr[uü]ndung:\s*(.+?)(?=\n\s*(Titel|Beschreibung|Geplante\s+Dauer):|\z)""", RegexOption.DOT_MATCHES_ALL)
-        private val FIELD_DAUER =
-            Regex("""Geplante\s+Dauer:\s*([^\n]+)""", RegexOption.IGNORE_CASE)
+        // oder Block-Ende greifen. Toleriert Markdown-Bold (`**Titel:**`),
+        // case-insensitive Labels, optionale Leerzeichen.
+        private val FIELD_TITEL = Regex(
+            """\*{0,2}\s*Titel\s*\*{0,2}\s*:\s*\*{0,2}\s*(.+?)(?=\n\s*\*{0,2}\s*(Beschreibung|Begr[uü]ndung|Geplante\s+Dauer)\s*\*{0,2}\s*:|\z)""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
+        private val FIELD_BESCHREIBUNG = Regex(
+            """\*{0,2}\s*Beschreibung\s*\*{0,2}\s*:\s*\*{0,2}\s*(.+?)(?=\n\s*\*{0,2}\s*(Titel|Begr[uü]ndung|Geplante\s+Dauer)\s*\*{0,2}\s*:|\z)""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
+        private val FIELD_BEGR = Regex(
+            """\*{0,2}\s*Begr[uü]ndung\s*\*{0,2}\s*:\s*\*{0,2}\s*(.+?)(?=\n\s*\*{0,2}\s*(Titel|Beschreibung|Geplante\s+Dauer)\s*\*{0,2}\s*:|\z)""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
+        private val FIELD_DAUER = Regex(
+            """\*{0,2}\s*Geplante\s+Dauer\s*\*{0,2}\s*:\s*\*{0,2}\s*([^\n]+)""",
+            RegexOption.IGNORE_CASE,
+        )
     }
 }

@@ -46,6 +46,7 @@ class ScientistViewModel @Inject constructor(
     private val chat: ScientistChatUseCase,
     private val recorder: AudioRecorder,
     private val transcribe: TranscribeAudioUseCase,
+    private val biomarkerDao: de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao,
 ) : AndroidViewModel(application) {
 
     private val currentSessionFlow = MutableStateFlow<String?>(null)
@@ -197,16 +198,23 @@ class ScientistViewModel @Inject constructor(
         uiOnlyFlow.value = uiOnlyFlow.value.copy(errorMessage = null)
     }
 
-    /** Markiert eine vorgeschlagene Hypothese als AKTIV mit den gewaehlten Daten. */
+    /** Markiert eine vorgeschlagene Hypothese als AKTIV mit den gewaehlten Daten.
+     *
+     *  Setzt biomarkerBeforeId aus dem aktuellsten Snapshot, sofern noch nicht
+     *  vorhanden — der ConfidenceCalculator (§16.6) braucht den Vor-Snapshot fuer
+     *  die HRV/Recovery-Delta-Berechnung beim spaeteren Insight-Update.
+     */
     fun startHypothesis(hypothesis: HypothesisEntity, plannedStartMs: Long) {
         viewModelScope.launch {
             val durationMs = hypothesis.plannedEndDate - hypothesis.plannedStartDate
+            val beforeId = hypothesis.biomarkerBeforeId ?: biomarkerDao.getLatest().first()?.id
             hypotheses.update(
                 hypothesis.copy(
                     status = de.frank.entropyreducer.domain.model.HypothesisStatus.AKTIV,
                     plannedStartDate = plannedStartMs,
                     plannedEndDate = plannedStartMs + durationMs.coerceAtLeast(24L * 60 * 60 * 1000),
                     actualStartDate = plannedStartMs,
+                    biomarkerBeforeId = beforeId,
                 ),
             )
         }

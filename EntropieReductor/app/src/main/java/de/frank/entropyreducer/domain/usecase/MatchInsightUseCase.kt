@@ -51,8 +51,13 @@ class MatchInsightUseCase @Inject constructor(
         // 1. Match versuchen
         val match = if (forceCreateNew) null else findMatch(completed)
 
-        // 2. Sammle alle abgeschlossenen Hypothesen, die zum Insight gehoeren.
-        val targetInsight = match ?: run {
+        // 2. Insight bestimmen — bei Match die Hypothesen-ID an sourceHypothesisIds anhaengen,
+        //    damit kuenftige Confidence-Berechnungen die volle Match-Historie sehen.
+        //    Vorher: bei wiederholten Matches wurden frueher gemerkte Hypothesen verloren,
+        //    weil sourceHypothesisIds nie aktualisiert wurde — Confidence verfaelschte sich.
+        val targetInsight = match?.let {
+            it.copy(sourceHypothesisIds = (it.sourceHypothesisIds + completed.id).distinct())
+        } ?: run {
             // Kein Match: bei ERFOLGREICH einen neuen anlegen, sonst nichts tun.
             if (completed.outcome != HypothesisOutcome.ERFOLGREICH && !forceCreateNew) return null
             createNewInsight(completed)
