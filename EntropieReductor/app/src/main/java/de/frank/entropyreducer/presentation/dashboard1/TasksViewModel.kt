@@ -48,6 +48,9 @@ data class TasksUiState(
      *  resolvedAt absteigend. Werden separat unter den aktiven Bucket-Sektionen
      *  als ausgegrauter Block angezeigt. */
     val resolvedEntries: List<EntropyEntryEntity> = emptyList(),
+    /** Proaktiver Forscher: Eintrag fuer den gerade nach der Loesungsmethode
+     *  gefragt wird. null = kein Dialog sichtbar (Frank-Wunsch 2026-05-08). */
+    val pendingMethodFor: EntropyEntryEntity? = null,
 )
 
 private data class UiOnlyState(
@@ -72,14 +75,15 @@ class TasksViewModel @Inject constructor(
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
     private val uiOnlyFlow = MutableStateFlow(UiOnlyState())
     private val detailEntryIdFlow = MutableStateFlow<String?>(null)
+    private val pendingMethodForFlow = MutableStateFlow<EntropyEntryEntity?>(null)
 
     val state: StateFlow<TasksUiState> = combine(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
         combine(statusObserver.observe(), kiQuestions.currentQuestion) { b, q -> b to q },
-        detailEntryIdFlow,
-    ) { list, cats, ui, (breakdown, question), detailId ->
+        combine(detailEntryIdFlow, pendingMethodForFlow) { d, p -> d to p },
+    ) { list, cats, ui, (breakdown, question), (detailId, pendingMethod) ->
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung
         val activeList = filtered.filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
@@ -104,6 +108,7 @@ class TasksViewModel @Inject constructor(
             kiQuestion = question,
             detailEntry = detail,
             resolvedEntries = resolvedList,
+            pendingMethodFor = pendingMethod,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
 
@@ -124,13 +129,18 @@ class TasksViewModel @Inject constructor(
         viewModelScope.launch {
             val entry = entries.get(id) ?: return@launch
             val now = System.currentTimeMillis()
-            entries.update(
-                entry.copy(
-                    status = status,
-                    resolvedAt = if (status == EntryStatus.REDUZIERT || status == EntryStatus.ARCHIVIERT) now else null,
-                    updatedAt = now,
-                ),
+            val updated = entry.copy(
+                status = status,
+                resolvedAt = if (status == EntryStatus.REDUZIERT || status == EntryStatus.ARCHIVIERT) now else null,
+                updatedAt = now,
             )
+            entries.update(updated)
+            // Proaktiver Forscher (Frank-Wunsch 2026-05-08): wenn der Eintrag
+            // gerade auf REDUZIERT geht, fragen wir wie er geloest wurde —
+            // damit das InsightBoard "bestaetigte Methoden" lernen kann.
+            if (status == EntryStatus.REDUZIERT && entry.status != EntryStatus.REDUZIERT) {
+                pendingMethodForFlow.value = updated
+            }
         }
     }
 
@@ -145,14 +155,52 @@ class TasksViewModel @Inject constructor(
         viewModelScope.launch {
             val entry = entries.get(entryId) ?: return@launch
             val now = System.currentTimeMillis()
+            val updated = entry.copy(
+                status = EntryStatus.REDUZIERT,
+                resolvedAt = now,
+                updatedAt = now,
+            )
+            entries.update(updated)
+            // Proaktiver Forscher: nach dem Haken-Tap fragen wie geloest.
+            // Nur ausloesen wenn der Eintrag VORHER nicht schon REDUZIERT war
+            // (Doppel-Tap auf Haken sollte keinen zweiten Dialog triggern).
+            if (entry.status != EntryStatus.REDUZIERT) {
+                pendingMethodForFlow.value = updated
+            }
+        }
+    }
+
+    /**
+     * Speichert die vom Forscher abgefragte Loesungsmethode in den ai_notes des
+     * Eintrags. Format: 'Methode: <text>' an den vorhandenen aiNotes angehaengt.
+     * Damit kann die KI im Briefing/Review/Insight-Board diese Methode
+     * wiederfinden und als "bestaetigte Methode" einordnen.
+     */
+    fun submitMethod(notes: String) {
+        val current = pendingMethodForFlow.value ?: return
+        if (notes.isBlank()) {
+            pendingMethodForFlow.value = null
+            return
+        }
+        viewModelScope.launch {
+            val existing = current.aiNotes?.takeIf { it.isNotBlank() }
+            val combined = if (existing == null) {
+                "Methode: ${notes.trim()}"
+            } else {
+                "$existing\n\nMethode: ${notes.trim()}"
+            }
             entries.update(
-                entry.copy(
-                    status = EntryStatus.REDUZIERT,
-                    resolvedAt = now,
-                    updatedAt = now,
+                current.copy(
+                    aiNotes = combined,
+                    updatedAt = System.currentTimeMillis(),
                 ),
             )
+            pendingMethodForFlow.value = null
         }
+    }
+
+    fun dismissMethodPrompt() {
+        pendingMethodForFlow.value = null
     }
 
     /**

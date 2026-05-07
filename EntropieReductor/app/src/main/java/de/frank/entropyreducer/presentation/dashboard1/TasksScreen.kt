@@ -255,6 +255,87 @@ fun TasksScreen(
             onDelete = { vm.deleteEntry(entry.id) },
         )
     }
+
+    // Proaktiver Forscher: nach dem Erledigen eines Eintrags fragt die App
+    // direkt wie der Eintrag geloest wurde. Das Insight-Board lernt daraus
+    // (Frank-Wunsch 2026-05-08).
+    state.pendingMethodFor?.let { entry ->
+        MethodPromptDialog(
+            entry = entry,
+            onSubmit = { notes -> vm.submitMethod(notes) },
+            onDismiss = { vm.dismissMethodPrompt() },
+        )
+    }
+}
+
+@Composable
+private fun MethodPromptDialog(
+    entry: EntropyEntryEntity,
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val notesState = remember(entry.id) { androidx.compose.runtime.mutableStateOf("") }
+    var notes = notesState.value
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        title = {
+            Column {
+                Text(
+                    text = "Wie hast du das geloest?",
+                    color = cosmos.textPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "\"${entry.title}\"",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Der Forscher merkt sich deine Methode und kann sie spaeter " +
+                        "als bestaetigte Vorgehensweise im Insight-Board hinterlegen. " +
+                        "Optional — kannst du auch ueberspringen.",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notesState.value = it },
+                    placeholder = { Text("z.B. Frueh schlafen + 20min Spaziergang", color = cosmos.textSecondary) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = cosmos.textPrimary,
+                        unfocusedTextColor = cosmos.textPrimary,
+                        focusedBorderColor = CosmosColors.AccentPrimary,
+                        unfocusedBorderColor = cosmos.glassBorder,
+                    ),
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onSubmit(notes); notesState.value = "" },
+                enabled = notes.isNotBlank(),
+            ) {
+                Text("Speichern", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Ueberspringen", color = cosmos.textSecondary)
+            }
+        },
+    )
 }
 
 /**

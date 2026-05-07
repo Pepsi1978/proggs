@@ -22,6 +22,11 @@ data class BiomarkerUiState(
      *  history30Days bleibt als 30-Tage-Slice fuer die Mini-Card-Deltas. */
     val history: List<BiomarkerSnapshotEntity> = emptyList(),
     val history30Days: List<BiomarkerSnapshotEntity> = emptyList(),
+    /** Aktuell ausgewaehlter Tag (Frank-Wunsch 2026-05-08: zwischen Heute / gestern /
+     *  vorgestern wechseln). Default = Heute. Der Snapshot fuer diesen Tag wird in
+     *  selectedSnapshot gehalten und in den Mini-Cards + Recovery-Ring angezeigt. */
+    val selectedDate: java.time.LocalDate = java.time.LocalDate.now(),
+    val selectedSnapshot: BiomarkerSnapshotEntity? = null,
     val isRefreshing: Boolean = false,
     val message: String? = null,
     val statusBreakdown: StatusBreakdown? = null,
@@ -36,6 +41,7 @@ class BiomarkerViewModel @Inject constructor(
 
     private val _refreshing = MutableStateFlow(false)
     private val _message = MutableStateFlow<String?>(null)
+    private val _selectedDate = MutableStateFlow(java.time.LocalDate.now())
 
     private val now = System.currentTimeMillis()
     private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
@@ -45,16 +51,39 @@ class BiomarkerViewModel @Inject constructor(
         repo.observeAll(),
         repo.observeRange(thirtyDaysAgo, now),
         combine(_refreshing, _message, statusObserver.observe()) { r, m, b -> Triple(r, m, b) },
-    ) { latest, all, last30, status ->
+        _selectedDate,
+    ) { latest, all, last30, status, selDate ->
+        // Snapshot fuer den gewaehlten Tag finden — wenn kein Snapshot fuer das
+        // exakte Datum existiert, wird der naechste juengere Snapshot vor dem
+        // gewaehlten Tag genommen (Whoop syncs typischerweise einmal pro Tag).
+        val selStartMs = selDate.atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
+        val selEndMs = selStartMs + 24L * 60 * 60 * 1000
+        val selSnap = all.lastOrNull { it.capturedAt in selStartMs until selEndMs }
+            ?: if (selDate == java.time.LocalDate.now()) latest else null
         BiomarkerUiState(
             latest = latest,
             history = all,
             history30Days = last30,
+            selectedDate = selDate,
+            selectedSnapshot = selSnap,
             isRefreshing = status.first,
             message = status.second,
             statusBreakdown = status.third,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
+
+    fun selectDate(date: java.time.LocalDate) {
+        _selectedDate.value = date
+    }
+
+    fun goToToday() {
+        _selectedDate.value = java.time.LocalDate.now()
+    }
+
+    fun shiftDay(delta: Int) {
+        _selectedDate.value = _selectedDate.value.plusDays(delta.toLong())
+    }
 
     fun refreshNow() {
         scheduler.runWhoopSyncNow()

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -100,6 +102,7 @@ fun BiomarkerHostScreen(
                     breakdown = state.statusBreakdown,
                 )
             }
+            item { DateSelectorBar(state, vm) }
             item { GesamterholungCard(state) }
             item { KeyValueGrid(state, onOpenMetricDetail) }
 
@@ -224,7 +227,10 @@ fun BiomarkerHostScreen(
 
 @Composable
 private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
-    val latest = state.latest
+    // Mini-Cards zeigen jetzt den AUSGEWAEHLTEN Tag (Frank-Wunsch 2026-05-08:
+    // zwischen Heute / gestern / vorgestern wechseln). Fallback auf latest
+    // wenn fuer den ausgewaehlten Tag kein Snapshot existiert.
+    val latest = state.selectedSnapshot ?: state.latest
     val history = state.history30Days
     // 30-Tage-Mittel pro Metrik (ohne den heutigen Wert) — Basis fuer Trend-Pfeil + Delta.
     val avgHrv = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
@@ -342,6 +348,71 @@ private fun MetricMiniCard(
             }
             Spacer(Modifier.height(2.dp))
             Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+/**
+ * Tag-Selektor-Bar (Frank-Wunsch 2026-05-08): Pfeil-links / Datum / Pfeil-rechts
+ * + "Heute"-Button wenn der ausgewaehlte Tag nicht heute ist. Erlaubt Frank
+ * zwischen Heute / gestern / vorgestern / beliebigem Tag zu wechseln.
+ */
+@Composable
+private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
+    val cosmos = LocalCosmos.current
+    val today = java.time.LocalDate.now()
+    val selDate = state.selectedDate
+    val label = when (selDate) {
+        today -> "Heute"
+        today.minusDays(1) -> "Gestern"
+        today.minusDays(2) -> "Vorgestern"
+        else -> selDate.format(
+            java.time.format.DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", java.util.Locale.GERMANY),
+        )
+    }
+    val isToday = selDate == today
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { vm.shiftDay(-1) }) {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronLeft,
+                    contentDescription = "Vortag",
+                    tint = cosmos.textPrimary,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = label,
+                    color = cosmos.textPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (state.selectedSnapshot == null && !isToday) {
+                    Text(
+                        text = "Kein Whoop-Datensatz an diesem Tag",
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+            IconButton(
+                onClick = { vm.shiftDay(1) },
+                enabled = !isToday,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = "Folgetag",
+                    tint = if (isToday) cosmos.textSecondary.copy(alpha = 0.4f) else cosmos.textPrimary,
+                )
+            }
+            if (!isToday) {
+                androidx.compose.material3.TextButton(onClick = vm::goToToday) {
+                    Text("Heute", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
     }
 }
@@ -467,7 +538,8 @@ private fun pearson(pairs: List<Pair<Double, Double>>): Double {
 @Composable
 private fun GesamterholungCard(state: BiomarkerUiState) {
     val cosmos = LocalCosmos.current
-    val score = state.latest?.recoveryScore
+    // Recovery vom AUSGEWAEHLTEN Tag, sonst latest.
+    val score = (state.selectedSnapshot ?: state.latest)?.recoveryScore
     val statusLabel = when {
         score == null -> "Noch keine Daten"
         score >= 75 -> "Dein Koerper ist im Hoch."
