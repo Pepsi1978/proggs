@@ -171,6 +171,10 @@ dependencies {
     // WorkManager (Hintergrund-Sync)
     implementation(libs.work.runtime)
 
+    // Stufe 4: Home-Screen-Widget (Glance)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // Vico Charts (Stufe 2-4)
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)

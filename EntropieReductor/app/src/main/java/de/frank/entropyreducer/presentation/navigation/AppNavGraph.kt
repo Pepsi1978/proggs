@@ -84,5 +84,10 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         composable(Routes.SETTINGS_MEMORY) { MemoryScreen(onBack = { nav.popBackStack(); Unit }) }
         composable(Routes.SETTINGS_CODEX) { CodexScreen(onBack = { nav.popBackStack(); Unit }) }
         composable(Routes.SETTINGS_EXPORT) { ExportScreen(onBack = { nav.popBackStack(); Unit }) }
+        composable(Routes.SETTINGS_TRIGGERS) {
+            de.frank.entropyreducer.presentation.settings.triggers.KiTriggersScreen(
+                onBack = { nav.popBackStack(); Unit },
+            )
+        }
     }
 }

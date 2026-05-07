@@ -40,8 +40,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
 
-            <!-- Share-Sheet-Integration (Stufe 4) -->
+        <!-- Share-Sheet-Empfaenger (Stufe 4 §17) — transparent, ohne UI -->
+        <activity
+            android:name=".presentation.share.ShareReceiverActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -61,6 +69,19 @@
                 <data android:scheme="${appAuthRedirectScheme}" />
             </intent-filter>
         </activity>
+
+        <!-- Stufe 4: Home-Screen-Widget (Glance) -->
+        <receiver
+            android:name=".presentation.widget.EntropyReducerWidgetReceiver"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/entropy_reducer_widget_info" />
+        </receiver>
 
         <!-- Foreground Service fuer Audio-Aufnahme -->
         <service

@@ -142,6 +142,9 @@ fun TasksScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    item {
+                        de.frank.entropyreducer.presentation.briefing.BriefingPanel()
+                    }
                     state.kiQuestion?.let { q ->
                         item {
                             de.frank.entropyreducer.presentation.components.KiQuestionCard(

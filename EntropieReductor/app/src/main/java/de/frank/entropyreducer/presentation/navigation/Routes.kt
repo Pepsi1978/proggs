@@ -22,4 +22,5 @@ object Routes {
     const val SETTINGS_MEMORY = "settings/memory"
     const val SETTINGS_CODEX = "settings/codex"
     const val SETTINGS_EXPORT = "settings/export"
+    const val SETTINGS_TRIGGERS = "settings/triggers"
 }

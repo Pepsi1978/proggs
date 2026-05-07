@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -152,6 +153,13 @@ private val sections = listOf(
         title = "Genie-Codex",
         subtitle = "Lege Verhaltensregeln, Werte und Antwortstil fuer das Genie fest.",
         route = Routes.SETTINGS_CODEX,
+    ),
+    SectionDef(
+        icon = Icons.Outlined.Bolt,
+        accent = CosmosColors.AccentPrimary,
+        title = "KI-Trigger",
+        subtitle = "Beobachte und genehmige automatische Trigger, die das Genie aus deinen Daten ableitet.",
+        route = Routes.SETTINGS_TRIGGERS,
     ),
     SectionDef(
         icon = Icons.Outlined.IosShare,
