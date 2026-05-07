@@ -308,67 +308,40 @@ val GruvboxLightScheme: ColorScheme =
         surfaceTint = Color(0xFFB57614),
     )
 
-// Cosmos — "Neon Cosmos" 1:1 von ~/proggs/EntropieReductor portiert
-// Dark: dunkles Galaxy-Blau (#0A0E1A) mit Cyan-Primary (#22D3EE) + Violett-Secondary (#A78BFA)
-// Light: Off-White (#F5F7FB) mit dezenter Galaxy-Andeutung, gleiche Akzent-Farben
+// Cosmos — "Neon Cosmos" 1:1 von ~/proggs/EntropieReductor portiert.
+// Felder sind EXAKT die gleichen wie in EntropieReductor's Theme.kt — keine
+// zusaetzlichen Material3-Defaults ueberschreiben, damit Material3's intelligente
+// Defaults greifen koennen.
 val CosmosDarkScheme: ColorScheme =
     darkColorScheme(
-        primary = ERAccentPrimary, // Cyan #22D3EE
+        primary = ERAccentPrimary,
         onPrimary = ERBgDark,
-        primaryContainer = ERBgDarkAccent,
-        onPrimaryContainer = ERAccentPrimary,
-        secondary = ERAccentSecondary, // Violett #A78BFA
+        secondary = ERAccentSecondary,
         onSecondary = ERBgDark,
-        secondaryContainer = ERBgDarkAccent,
-        onSecondaryContainer = ERAccentSecondary,
-        tertiary = ERSuccess, // Mintgruen
-        onTertiary = ERBgDark,
-        tertiaryContainer = ERBgDarkAccent,
-        onTertiaryContainer = ERSuccess,
-        error = ERCritical, // Korallrot
-        onError = ERTextPrimaryDark,
-        errorContainer = Color(0xFF3B1010),
-        onErrorContainer = ERCritical,
+        tertiary = ERSuccess,
         background = ERBgDark,
         onBackground = ERTextPrimaryDark,
         surface = ERBgDarkMid,
         onSurface = ERTextPrimaryDark,
         surfaceVariant = ERBgDarkAccent,
         onSurfaceVariant = ERTextSecondaryDark,
-        outline = ERTextSecondaryDark,
-        outlineVariant = ERGlassDarkBorder,
-        inverseSurface = ERTextPrimaryDark,
-        inverseOnSurface = ERBgDark,
-        surfaceTint = ERAccentPrimary,
+        error = ERCritical,
+        onError = ERTextPrimaryDark,
     )
 
 val CosmosLightScheme: ColorScheme =
     lightColorScheme(
-        primary = ERAccentPrimary, // Cyan #22D3EE (gleich in beiden Modi)
+        primary = ERAccentPrimary,
         onPrimary = ERBgDark,
-        primaryContainer = ERBgLightAccent,
-        onPrimaryContainer = ERTextPrimaryLight,
-        secondary = ERAccentSecondary, // Violett
+        secondary = ERAccentSecondary,
         onSecondary = ERBgDark,
-        secondaryContainer = ERBgLightAccent,
-        onSecondaryContainer = ERTextPrimaryLight,
         tertiary = ERSuccess,
-        onTertiary = ERBgDark,
-        tertiaryContainer = ERBgLightAccent,
-        onTertiaryContainer = ERTextPrimaryLight,
-        error = ERCritical,
-        onError = ERTextPrimaryDark,
-        errorContainer = Color(0xFFFFCDD2),
-        onErrorContainer = ERCritical,
         background = ERBgLight,
         onBackground = ERTextPrimaryLight,
         surface = ERBgLight,
         onSurface = ERTextPrimaryLight,
         surfaceVariant = ERBgLightAccent,
         onSurfaceVariant = ERTextSecondaryLight,
-        outline = ERTextSecondaryLight,
-        outlineVariant = ERGlassLightBorder,
-        inverseSurface = ERTextPrimaryLight,
-        inverseOnSurface = ERBgLight,
-        surfaceTint = ERAccentPrimary,
+        error = ERCritical,
+        onError = ERTextPrimaryDark,
     )

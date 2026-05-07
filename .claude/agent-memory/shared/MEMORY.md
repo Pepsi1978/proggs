@@ -109,6 +109,22 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-27 17:51 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 18:15 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ### 2026-04-28 14:29 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 12:22 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 13:58 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 14:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high) — Status: AUTO-GEFIXT
+### 2026-05-07 14:48 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 14:52 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 15:04 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 15:04 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high) — Status: AUTO-GEFIXT
+### 2026-05-07 16:45 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-07 17:15 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-07 17:15 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 17:26 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 18:58 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-07 20:13 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 20:13 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
+### 2026-05-07 21:41 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
+### 2026-05-07 22:16 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -210,7 +226,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-28 14:30] Code-Suche Index:** 47 Dateien, 517 Chunks indexiert.
+- **[2026-05-07 21:41] Code-Suche Index:** 31 Dateien, 163 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._

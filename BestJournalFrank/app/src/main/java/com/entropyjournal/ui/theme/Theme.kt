@@ -1,13 +1,23 @@
 package com.entropyjournal.ui.theme
 
+import android.app.Activity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
@@ -218,12 +228,60 @@ fun EntropyJournalTheme(
             AppTheme.Neutral -> if (darkTheme) NeutralDarkScheme else NeutralLightScheme
         }
 
+    // Cosmos-Theme: 1:1 wie EntropieReductor — radialer (Dark) bzw. vertikaler (Light)
+    // Background-Brush als Box-Wrapper, plus transparente StatusBar/NavBar.
+    val isCosmos = appTheme == AppTheme.Cosmos
+    if (isCosmos) {
+        val view = LocalView.current
+        if (!view.isInEditMode) {
+            SideEffect {
+                val window = (view.context as? Activity)?.window
+                if (window != null) {
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                    WindowCompat.getInsetsController(window, view).apply {
+                        isAppearanceLightStatusBars = !darkTheme
+                        isAppearanceLightNavigationBars = !darkTheme
+                    }
+                }
+            }
+        }
+    }
+
+    val cosmosBrush: Brush? =
+        if (isCosmos) {
+            if (darkTheme) {
+                Brush.radialGradient(
+                    0f to ERBgDarkMid,
+                    0.6f to ERBgDark,
+                    1f to ERBgDark,
+                    center = Offset.Unspecified,
+                    radius = 1500f,
+                )
+            } else {
+                Brush.verticalGradient(
+                    0f to ERBgLight,
+                    1f to ERBgLightMid,
+                )
+            }
+        } else {
+            null
+        }
+
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
             shapes = AppShapes,
-            content = content,
+            content = {
+                if (cosmosBrush != null) {
+                    Box(modifier = Modifier.fillMaxSize().background(cosmosBrush)) {
+                        content()
+                    }
+                } else {
+                    content()
+                }
+            },
         )
     }
 }
