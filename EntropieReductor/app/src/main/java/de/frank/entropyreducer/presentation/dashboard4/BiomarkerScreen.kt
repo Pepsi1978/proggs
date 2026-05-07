@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Refresh
@@ -96,11 +97,7 @@ fun BiomarkerHostScreen(
                     breakdown = state.statusBreakdown,
                 )
             }
-            item {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    RecoveryRing(score = state.latest?.recoveryScore)
-                }
-            }
+            item { GesamterholungCard(state) }
             item { KeyValueGrid(state) }
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -211,6 +208,54 @@ private fun KeyCard(modifier: Modifier = Modifier, label: String, value: String)
             Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
             Spacer(Modifier.height(2.dp))
             Text(value, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = cosmos.textPrimary)
+        }
+    }
+}
+
+/**
+ * Gesamterholung-Card im Soll-Design (Bild 15/25).
+ * Layout: links Title + Status-Sub-Text + Erlaeuterung; rechts grosser Recovery-Ring.
+ */
+@Composable
+private fun GesamterholungCard(state: BiomarkerUiState) {
+    val cosmos = LocalCosmos.current
+    val score = state.latest?.recoveryScore
+    val statusLabel = when {
+        score == null -> "Noch keine Daten"
+        score >= 75 -> "Dein Koerper ist im Hoch."
+        score >= 50 -> "Dein Koerper ist im Gleichgewicht."
+        score >= 25 -> "Dein Koerper braucht heute Schonung."
+        else -> "Dein Koerper ist erschoepft."
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Gesamterholung",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    statusLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Erholung basiert auf mehreren Biomarkern und Trends.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
+            Box(
+                modifier = Modifier.width(120.dp).height(120.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                RecoveryRing(score = score)
+            }
         }
     }
 }
