@@ -30,6 +30,7 @@ import javax.inject.Inject
 
 /** Zoom-Stufen fuer den Trend-Chart (Spec §11.1.4). */
 enum class TrendRange(val days: Int, val label: String) {
+    SEVEN(7, "7 T"),
     THIRTY(30, "30 T"),
     NINETY(90, "90 T"),
     YEAR(365, "365 T"),
@@ -61,7 +62,7 @@ class AnalysisViewModel @Inject constructor(
     private val generateAnalysis: GenerateAnalysisUseCase,
 ) : ViewModel() {
 
-    private val rangeFlow = MutableStateFlow(TrendRange.THIRTY)
+    private val rangeFlow = MutableStateFlow(TrendRange.SEVEN)
     private val analysisFlow = MutableStateFlow<Pair<String, Long>>("" to 0L)
     private val uiFlow = MutableStateFlow(UiOnly())
 
