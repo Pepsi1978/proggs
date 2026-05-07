@@ -171,16 +171,30 @@ fun BiomarkerHostScreen(
 @Composable
 private fun KeyValueGrid(state: BiomarkerUiState) {
     val latest = state.latest
+    val history = state.history30Days
+    // 30-Tage-Mittel pro Metrik (ohne den heutigen Wert) — Basis fuer Trend-Pfeil + Delta.
+    val avgHrv = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
+    val avgRhr = history.mapNotNull { it.restingHeartRate }.takeIf { it.isNotEmpty() }?.average()
+    val avgSleep = history.mapNotNull { it.sleepTotalMinutes }.takeIf { it.isNotEmpty() }?.average()
+    val avgSleepPerf = history.mapNotNull { it.sleepPerformance }.takeIf { it.isNotEmpty() }?.average()
+
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        KeyCard(
+        MetricMiniCard(
             modifier = Modifier.weight(1f),
             label = "HRV",
             value = latest?.hrvMs?.let { "${"%.0f".format(it)} ms" } ?: "—",
+            delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
+            deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
+            footnote = "vs. 30-Tage-Mittel",
         )
-        KeyCard(
+        MetricMiniCard(
             modifier = Modifier.weight(1f),
-            label = "RHR",
-            value = latest?.restingHeartRate?.let { "$it" } ?: "—",
+            label = "Herzfrequenz",
+            value = latest?.restingHeartRate?.let { "$it bpm" } ?: "—",
+            delta = formatDelta(latest?.restingHeartRate?.toDouble(), avgRhr, "bpm"),
+            // Bei RHR ist NIEDRIGER besser — Pfeil-Logik invertiert.
+            deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
+            footnote = "vs. 30-Tage-Mittel",
         )
     }
     Spacer(Modifier.height(8.dp))
@@ -189,25 +203,69 @@ private fun KeyValueGrid(state: BiomarkerUiState) {
         val sleepLabel = if (sleepMin == 0) {
             "—"
         } else {
-            "${sleepMin / 60}h${(sleepMin % 60).toString().padStart(2, '0')}"
+            "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
         }
-        KeyCard(modifier = Modifier.weight(1f), label = "Schlaf", value = sleepLabel)
-        KeyCard(
+        MetricMiniCard(
             modifier = Modifier.weight(1f),
-            label = "Sleep-Perf.",
+            label = "Schlaf",
+            value = sleepLabel,
+            delta = formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
+            deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
+            footnote = "vs. 30-Tage-Mittel",
+        )
+        MetricMiniCard(
+            modifier = Modifier.weight(1f),
+            label = "Performance",
             value = latest?.sleepPerformance?.let { "$it %" } ?: "—",
+            delta = formatDelta(latest?.sleepPerformance?.toDouble(), avgSleepPerf, "%"),
+            deltaPositive = (latest?.sleepPerformance?.toDouble() ?: 0.0) > (avgSleepPerf ?: 0.0),
+            footnote = "vs. 30-Tage-Mittel",
         )
     }
 }
 
+/**
+ * Formatiert die Differenz zwischen aktuellem Wert und 30-Tage-Mittel als
+ * "+X" / "-X" inkl. Einheit. Bei null-Werten leerer String.
+ */
+private fun formatDelta(current: Double?, avg: Double?, unit: String, asMinutes: Boolean = false): String {
+    if (current == null || avg == null) return ""
+    val diff = current - avg
+    val sign = if (diff >= 0) "+" else ""
+    return if (asMinutes) {
+        val minutes = kotlin.math.abs(diff).toInt()
+        val h = minutes / 60
+        val m = minutes % 60
+        val signActual = if (diff >= 0) "+" else "-"
+        if (h > 0) "$signActual${h} h ${m.toString().padStart(2, '0')} $unit"
+        else "$signActual${m} $unit"
+    } else {
+        "$sign${"%.0f".format(diff)} $unit"
+    }
+}
+
 @Composable
-private fun KeyCard(modifier: Modifier = Modifier, label: String, value: String) {
+private fun MetricMiniCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    delta: String,
+    deltaPositive: Boolean,
+    footnote: String,
+) {
     val cosmos = LocalCosmos.current
+    val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
     GlassCard(modifier = modifier) {
         Column {
             Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
             Spacer(Modifier.height(2.dp))
             Text(value, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = cosmos.textPrimary)
+            if (delta.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(delta, color = deltaColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
