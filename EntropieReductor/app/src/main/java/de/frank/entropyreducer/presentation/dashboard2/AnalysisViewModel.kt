@@ -13,11 +13,13 @@ import de.frank.entropyreducer.domain.model.ShiftCode
 import de.frank.entropyreducer.domain.status.StatusBreakdown
 import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.domain.usecase.GenerateAnalysisUseCase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -63,14 +65,28 @@ class AnalysisViewModel @Inject constructor(
 
     private data class UiOnly(val isLoading: Boolean = false, val error: String? = null)
 
+    /**
+     * Kalender-Tage als eigener reaktiver Flow — wechselt automatisch wenn der
+     * Range-Zoom (30/90/365 Tage) geaendert wird. Vorher wurde calendarDao.getRange
+     * via .first() in jedem combine-Tick neu subscribt + droppt → DB-Roundtrip pro
+     * UI-Update. Mit flatMapLatest ist es genau eine aktive Subscription pro
+     * Range-Auswahl, und Kalender-Aenderungen propagieren live in den Trend-Chart.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val calendarFlow = rangeFlow.flatMapLatest { range ->
+        val today = LocalDate.now()
+        val from = today.minusDays(range.days.toLong() - 1)
+        calendarDao.getRange(from.toString(), today.plusDays(1).toString())
+    }
+
     val state: StateFlow<AnalysisUiState> = combine(
         entries.getActive(),
         rangeFlow,
         statusObserver.observe(),
         analysisFlow,
-        uiFlow,
-    ) { active, range, breakdown, (md, mdAt), ui ->
-        val (series, shifts) = computeTrend(active, range)
+        combine(uiFlow, calendarFlow) { ui, calendar -> ui to calendar },
+    ) { active, range, breakdown, (md, mdAt), (ui, calendarDays) ->
+        val (series, shifts) = computeTrendFromSnapshot(active, range, calendarDays)
         val open = active.count { it.status == EntryStatus.OFFEN }
         val totalLoad = active.sumOf { it.severity }.coerceIn(0, 1000)
         val dominant = active.groupingBy { it.category }.eachCount()
@@ -130,20 +146,23 @@ class AnalysisViewModel @Inject constructor(
         uiFlow.value = uiFlow.value.copy(error = null)
     }
 
-    private suspend fun computeTrend(
+    /**
+     * Reine Synchron-Berechnung aus bereits aufgeloesten Snapshots — keine Flow-
+     * Subscriptions, kein DB-Roundtrip. Aufgerufen aus combine() mit den frischen
+     * Werten der Source-Flows.
+     */
+    private fun computeTrendFromSnapshot(
         active: List<EntropyEntryEntity>,
         range: TrendRange,
+        calendar: List<de.frank.entropyreducer.data.local.entities.CalendarDayEntity>,
     ): Pair<Map<EntropyCategory, List<Double>>, List<ShiftCode>> {
         val today = LocalDate.now()
         val from = today.minusDays(range.days.toLong() - 1)
         val days = (0 until range.days).map { from.plusDays(it.toLong()) }
 
-        // 1. Schichtcodes pro Tag
-        val calendar = calendarDao.getRange(from.toString(), today.plusDays(1).toString()).first()
         val shiftByDate = calendar.associate { it.date to it.shiftCode }
         val shifts = days.map { shiftByDate[it.toString()] ?: ShiftCode.UNBEKANNT }
 
-        // 2. Entropy-Last je Kategorie und Tag — Severity-Summe der an dem Tag erstellten Eintraege
         val byCategory = mutableMapOf<EntropyCategory, MutableList<Double>>()
         EntropyCategory.values().forEach { byCategory[it] = MutableList(range.days) { 0.0 } }
 
@@ -155,7 +174,6 @@ class AnalysisViewModel @Inject constructor(
             }
         }
 
-        // 3. Nur Kategorien mit Daten zurueckgeben (rest weg, damit der Chart nicht gleich aussieht)
         val nonEmpty = byCategory
             .filterValues { values -> values.any { it > 0.0 } }
             .mapValues { it.value.toList() }
