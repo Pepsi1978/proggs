@@ -35,7 +35,10 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import de.frank.entropyreducer.presentation.components.charts.HrvLineChart
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.RecoveryRing
@@ -155,16 +158,41 @@ fun BiomarkerHostScreen(
                 )
             }
             item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                // Schlafstadien-Card ist klickbar — fuehrt zur Liste aller Schlaf-Werte
+                // im Detail-Screen. Frank-Wunsch 2026-05-08: "wenn ich auf Schlaf druecke
+                // soll was passieren". Wir oeffnen das SLEEP_TOTAL Detail mit allen
+                // Werten + 4 weitere Tap-Tipps fuer REM/Deep/Light/Awake-Detail-Screens.
+                GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) }) {
                     Column {
-                        Text("Schlafstadien gestern Nacht", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Schlafstadien gestern Nacht",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = cosmos.textPrimary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "Details ▸",
+                                color = CosmosColors.AccentSecondary,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                         Spacer(Modifier.height(12.dp))
                         SleepStagesBar(
-                            remMinutes = state.latest?.sleepRemMinutes,
-                            deepMinutes = state.latest?.sleepDeepMinutes,
-                            lightMinutes = state.latest?.sleepLightMinutes,
-                            awakeMinutes = state.latest?.sleepAwakeMinutes,
+                            remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
+                            deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                            lightMinutes = (state.selectedSnapshot ?: state.latest)?.sleepLightMinutes,
+                            awakeMinutes = (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
                         )
+                        Spacer(Modifier.height(8.dp))
+                        // Mini-Schnellzugriff auf 4 Sleep-Stage-Detail-Screens
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SleepStageChip("REM", CosmosColors.AccentSecondary) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
+                            SleepStageChip("Tief", CosmosColors.AccentPrimary) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
+                            SleepStageChip("Leicht", CosmosColors.Warning) { onOpenMetricDetail(MetricKey.SLEEP_LIGHT) }
+                            SleepStageChip("Wach", CosmosColors.Critical) { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) }
+                        }
                     }
                 }
             }
@@ -349,6 +377,28 @@ private fun MetricMiniCard(
             Spacer(Modifier.height(2.dp))
             Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
         }
+    }
+}
+
+/**
+ * Klein-Pille fuer Sleep-Stage-Schnellzugriff im Schlaf-Card. Tap navigiert zum
+ * jeweiligen Stage-Detail-Screen mit allen Werten als Liste + Verlaufschart.
+ */
+@Composable
+private fun SleepStageChip(label: String, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(accent.copy(alpha = 0.18f))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = label,
+            color = accent,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

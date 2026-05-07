@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -380,13 +383,15 @@ private fun ChatInputBar(
     canSend: Boolean,
 ) {
     val cosmos = LocalCosmos.current
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Box(
         Modifier
             .fillMaxWidth()
-            // imePadding sorgt dafuer dass die InputBar bei offener Tastatur
-            // direkt darueber sitzt; vertical=4 statt 8 reduziert die Luft
-            // zwischen InputBar und BottomBar.
             .imePadding()
+            // BottomBar ist Overlay (Frank-Wunsch 2026-05-08): ChatInputBar muss
+            // ueber der BottomBar bleiben — bottom-Padding = 72dp BottomBar +
+            // bottomInset System-Nav.
+            .padding(bottom = 72.dp + bottomInset)
             .background(cosmos.glassBg)
             .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {

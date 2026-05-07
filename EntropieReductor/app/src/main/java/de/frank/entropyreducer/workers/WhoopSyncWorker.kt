@@ -20,7 +20,10 @@ class WhoopSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val outcome = repo.syncLastDays(days = 30)
+        // Frank-Wunsch 2026-05-08: vollstaendige Historie (letztes Jahr) statt
+        // nur 30 Tage — die KI kann mit mehr Daten besser Trends erkennen und
+        // die Korrelations-Card profitiert direkt von der laengeren Historie.
+        val outcome = repo.syncLastDays(days = 365)
         return outcome.fold(
             onSuccess = { Result.success() },
             onFailure = { Result.retry() },

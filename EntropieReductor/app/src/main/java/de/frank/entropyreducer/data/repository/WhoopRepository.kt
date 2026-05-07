@@ -48,8 +48,14 @@ class WhoopRepository @Inject constructor(
     /**
      * Synchronisiert die letzten [days] Tage. Liefert die Anzahl gespeicherter
      * Snapshots zurueck.
+     *
+     * Default auf 365 Tage erhoeht (Frank-Wunsch 2026-05-08: "moechte alle
+     * existierenden Daten von Whoop herunterladen"). Whoop selbst speichert
+     * nicht laenger als ~2 Jahre, daher reichen 365 Tage als pragmatische
+     * Obergrenze fuer den taeglichen Sync. Fuer den ersten Full-Sync existiert
+     * syncFullHistory() die bis 2018 zurueck zieht (Whoop-Gruendungs-Jahr).
      */
-    suspend fun syncLastDays(days: Int = 30): Result<Int> = runCatching {
+    suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatching {
         val token = oauth.freshWhoopAccessToken()
             ?: throw IllegalStateException("Kein Whoop-Access-Token — bitte erneut anmelden.")
 
@@ -85,6 +91,19 @@ class WhoopRepository @Inject constructor(
         Log.i(TAG, "Whoop-Sync: ${snapshots.size} Snapshots geschrieben")
         snapshots.size
     }.onFailure { Log.e(TAG, "Whoop-Sync fehlgeschlagen", it) }
+
+    /**
+     * Voller Initial-Sync seit 2018 (Whoop-Start). Wird einmalig vom Benutzer
+     * angestossen damit ALLE jemals erfassten Daten in der lokalen DB landen.
+     * Danach reichen die taeglichen 365-Tage-Syncs.
+     */
+    suspend fun syncFullHistory(): Result<Int> = runCatching {
+        val today = OffsetDateTime.now(ZoneOffset.UTC)
+        val startOfWhoop = today.toLocalDate().minusYears(7) // ~2018
+        val days = java.time.temporal.ChronoUnit.DAYS.between(startOfWhoop, today.toLocalDate()).toInt()
+        Log.i(TAG, "Full-Sync gestartet: $days Tage zurueck")
+        syncLastDays(days).getOrThrow()
+    }.onFailure { Log.e(TAG, "Whoop-Full-Sync fehlgeschlagen", it) }
 
     private fun mapToSnapshot(
         cycle: WhoopCycle,
