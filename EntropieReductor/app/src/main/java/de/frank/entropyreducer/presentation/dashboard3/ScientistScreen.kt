@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -170,7 +171,9 @@ fun ScientistScreen(
                             ThinkingIndicator()
                         }
                     }
-                    item { Spacer(Modifier.height(120.dp)) }
+                    // 200dp damit das letzte Item (oft eine Hypothese-Card mit
+                    // viel Inhalt) nicht von der ChatInputBar verdeckt wird.
+                    item { Spacer(Modifier.height(200.dp)) }
                 }
 
                 ChatInputBar(
@@ -380,8 +383,12 @@ private fun ChatInputBar(
     Box(
         Modifier
             .fillMaxWidth()
+            // imePadding sorgt dafuer dass die InputBar bei offener Tastatur
+            // direkt darueber sitzt; vertical=4 statt 8 reduziert die Luft
+            // zwischen InputBar und BottomBar.
+            .imePadding()
             .background(cosmos.glassBg)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(

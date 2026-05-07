@@ -128,6 +128,24 @@ fun ExperimentCalendarScreen(
         }
     }
 
+    // Tag-Detail-Sheet: zeigt Schichtcode + alle Google-Calendar-Events + alle
+    // Hypothesen des Tages. Tap auf eine Hypothese-Card oeffnet das eigentliche
+    // Hypothese-Detail-Sheet (oben). Sheet ist nur sichtbar wenn selectedDate gesetzt.
+    state.selectedDate?.let { date ->
+        DayDetailSheet(
+            date = date,
+            shift = state.shiftByDate[date],
+            shiftRaw = state.shiftRawByDate[date],
+            events = state.eventsByDate[date].orEmpty(),
+            hypotheses = state.hypothesesByDate[date].orEmpty(),
+            onClose = vm::closeDayDetail,
+            onOpenHypothesis = { h ->
+                vm.closeDayDetail()
+                vm.openHypothesis(h)
+            },
+        )
+    }
+
     if (state.showInsightPrompt) {
         AlertDialog(
             onDismissRequest = { vm.confirmInsightCreation(false) },
@@ -257,7 +275,10 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
                         shiftRaw = shiftRaw,
                         isCurrentMonth = inMonth,
                         isToday = date == today,
-                        onClick = { items.firstOrNull()?.let(vm::openHypothesis) },
+                        // Tap auf JEDEN Tag oeffnet das Tag-Detail-Sheet —
+                        // egal ob Hypothesen, Events oder nur Schicht. Frank
+                        // konnte vorher leere Tage gar nicht antippen.
+                        onClick = { vm.selectDay(date) },
                         modifier = Modifier.weight(1f).height(78.dp),
                     )
                 }
@@ -288,7 +309,9 @@ private fun DayCell(
             .clip(RoundedCornerShape(8.dp))
             .background(cellBg)
             .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(8.dp))
-            .clickable(enabled = items.isNotEmpty() || events.isNotEmpty(), onClick = onClick)
+            // Klick ist IMMER aktiv — auch fuer leere Tage und nur-Schicht-Tage,
+            // damit das Tag-Detail-Sheet sich oeffnet (Frank-Wunsch 2026-05-08).
+            .clickable(onClick = onClick)
             .padding(4.dp),
     ) {
         Column {
@@ -681,4 +704,134 @@ private val DAY_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, dd. MMMM yyyy", Locale.GERMANY)
 private val DAY_LONG_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE, dd.MM.", Locale.GERMANY)
+private val EVENT_TIME_FORMAT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY)
+
+/**
+ * Tag-Detail-Sheet (Frank-Wunsch 2026-05-08): zeigt fuer einen Datum-Tap im Kalender
+ * alle wichtigen Infos auf einmal — Schicht aus dem Schicht-Kalender, Google-Calendar-
+ * Events des Tages und alle Hypothesen die an diesem Tag aktiv/geplant sind. Tap auf
+ * eine Hypothese-Card oeffnet das eigentliche Hypothese-Detail-Sheet.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DayDetailSheet(
+    date: LocalDate,
+    shift: de.frank.entropyreducer.domain.model.ShiftCode?,
+    shiftRaw: String?,
+    events: List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity>,
+    hypotheses: List<HypothesisEntity>,
+    onClose: () -> Unit,
+    onOpenHypothesis: (HypothesisEntity) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLight,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Header: Datum + Schicht-Pille
+            Text(
+                text = date.format(DAY_FORMAT),
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            val shiftLabel = shiftRaw?.takeIf { it.isNotBlank() }
+                ?: shift?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+            if (!shiftLabel.isNullOrBlank()) {
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(CosmosColors.AccentPrimary.copy(alpha = 0.20f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        text = "Schicht: $shiftLabel",
+                        color = CosmosColors.AccentPrimary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            // Events des Tages
+            if (events.isNotEmpty()) {
+                Text(
+                    text = "Termine (${events.size})",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                events.forEach { ev ->
+                    DayEventRow(ev)
+                }
+            }
+
+            // Hypothesen am Tag
+            Text(
+                text = if (hypotheses.isEmpty()) "Keine Experimente am Tag"
+                else "Experimente (${hypotheses.size})",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelMedium,
+            )
+            hypotheses.forEach { h ->
+                HypothesisChip(h, onClick = { onOpenHypothesis(h) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayEventRow(ev: de.frank.entropyreducer.data.local.entities.CalendarEventEntity) {
+    val cosmos = LocalCosmos.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(cosmos.glassBg)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(if (ev.allDay) CosmosColors.AccentSecondary else CosmosColors.AccentPrimary),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = ev.summary.ifBlank { "(ohne Titel)" },
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            val sub = if (ev.allDay) {
+                "Ganztags"
+            } else {
+                val start = java.time.Instant.ofEpochMilli(ev.startMs)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalTime().format(EVENT_TIME_FORMAT)
+                val end = java.time.Instant.ofEpochMilli(ev.endMs)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalTime().format(EVENT_TIME_FORMAT)
+                "$start–$end"
+            }
+            val location = ev.location?.takeIf { it.isNotBlank() }
+            Text(
+                text = if (location != null) "$sub · $location" else sub,
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
 

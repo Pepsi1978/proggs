@@ -40,6 +40,17 @@ data class ExperimentCalendarUiState(
     val biomarkerBefore: BiomarkerSnapshotEntity? = null,
     val biomarkerAfter: BiomarkerSnapshotEntity? = null,
     val showInsightPrompt: Boolean = false,
+    /** Aktuell im Tag-Detail-Sheet ausgewaehltes Datum. null = kein Sheet sichtbar. */
+    val selectedDate: LocalDate? = null,
+)
+
+/** Hilfsklasse damit selectedFlow + biomarkerPair + insightPromptFlow + selectedDateFlow
+ *  als ein einziger Eintrag im combine-Builder rein passen (combine erlaubt max 5 Quellen). */
+private data class CalendarSelectionState(
+    val selectedHypothesis: HypothesisEntity?,
+    val biomarkerPair: Pair<BiomarkerSnapshotEntity?, BiomarkerSnapshotEntity?>,
+    val insightPrompt: Boolean,
+    val selectedDate: LocalDate?,
 )
 
 @HiltViewModel
@@ -55,6 +66,7 @@ class ExperimentCalendarViewModel @Inject constructor(
     private val selectedFlow = MutableStateFlow<HypothesisEntity?>(null)
     private val biomarkerPair = MutableStateFlow<Pair<BiomarkerSnapshotEntity?, BiomarkerSnapshotEntity?>>(null to null)
     private val insightPromptFlow = MutableStateFlow(false)
+    private val selectedDateFlow = MutableStateFlow<LocalDate?>(null)
 
     /**
      * Sync-Fenster fuer den Kalender — 60 Tage zurueck, 60 Tage vorwaerts.
@@ -68,14 +80,14 @@ class ExperimentCalendarViewModel @Inject constructor(
         viewFlow,
         anchorFlow,
         hypotheses.observeAll(),
-        combine(selectedFlow, biomarkerPair, insightPromptFlow) { sel, pair, prompt ->
-            Triple(sel, pair, prompt)
+        combine(selectedFlow, biomarkerPair, insightPromptFlow, selectedDateFlow) { sel, pair, prompt, selDate ->
+            CalendarSelectionState(sel, pair, prompt, selDate)
         },
         combine(
             calendarRepo.observeEventsRange(calendarRangeFrom, calendarRangeTo),
             calendarRepo.observeRange(calendarRangeFrom, calendarRangeTo),
         ) { events, days -> events to days },
-    ) { view, anchor, all, (selected, pair, prompt), calendar ->
+    ) { view, anchor, all, selection, calendar ->
         val byDate = expandByDate(all)
         val (events, days) = calendar
         val eventsByDate = events.groupBy { runCatching { LocalDate.parse(it.date) }.getOrNull() }
@@ -94,10 +106,11 @@ class ExperimentCalendarViewModel @Inject constructor(
             eventsByDate = eventsByDate,
             shiftByDate = shiftByDate,
             shiftRawByDate = shiftRawByDate,
-            selectedHypothesis = selected,
-            biomarkerBefore = pair.first,
-            biomarkerAfter = pair.second,
-            showInsightPrompt = prompt,
+            selectedHypothesis = selection.selectedHypothesis,
+            biomarkerBefore = selection.biomarkerPair.first,
+            biomarkerAfter = selection.biomarkerPair.second,
+            showInsightPrompt = selection.insightPrompt,
+            selectedDate = selection.selectedDate,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExperimentCalendarUiState())
 
@@ -114,6 +127,15 @@ class ExperimentCalendarViewModel @Inject constructor(
 
     fun goToToday() {
         anchorFlow.value = LocalDate.now()
+    }
+
+    /** Oeffnet das Tag-Detail-Sheet fuer einen Datum-Klick im Kalender. */
+    fun selectDay(date: LocalDate) {
+        selectedDateFlow.value = date
+    }
+
+    fun closeDayDetail() {
+        selectedDateFlow.value = null
     }
 
     fun openHypothesis(h: HypothesisEntity) {
