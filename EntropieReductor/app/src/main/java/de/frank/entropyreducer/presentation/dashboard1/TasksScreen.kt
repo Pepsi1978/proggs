@@ -281,7 +281,7 @@ private fun EntryDetailSheet(
         onDismissRequest = onClose,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        windowInsets = WindowInsets(0),
+        contentWindowInsets = { WindowInsets(0) },
     ) {
         Column(
             modifier = Modifier
@@ -845,8 +845,19 @@ private fun SeverityRainbowBar(severity: Int) {
         CosmosColors.StatusOrange,
         CosmosColors.StatusRed,
     )
+    val context = androidx.compose.ui.platform.LocalContext.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            // Tap auf die Schweregrad-Skala oeffnet einen Toast mit der Erklaerung
+            // gruen=niedrig, gelb=mittel, orange=hoch, rot=sehr hoch (Frank-Wunsch).
+            .clickable {
+                android.widget.Toast.makeText(
+                    context,
+                    "Schweregrad-Skala: gruen = niedrig, gelb = mittel, orange = hoch, rot = sehr hoch",
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+            },
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         for (i in 0 until 5) {

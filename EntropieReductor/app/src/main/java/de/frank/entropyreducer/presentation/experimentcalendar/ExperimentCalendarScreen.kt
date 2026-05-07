@@ -588,9 +588,9 @@ private fun HypothesisDetailContent(
             }
         }
 
-        // Felt change slider
+        // Felt change slider — Range -100..+100 wie im Soll-Bild 19/29.
         Text(
-            text = "Gefuehlte Entropie-Veränderung: ${felt.toInt().coerceIn(-10, 10)}",
+            text = "Gefuehlte Entropie-Veränderung: ${felt.toInt().coerceIn(-100, 100)}",
             color = cosmos.textPrimary,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -598,7 +598,9 @@ private fun HypothesisDetailContent(
             value = felt,
             onValueChange = { felt = it },
             onValueChangeFinished = { onSetFelt(felt.toInt()) },
-            valueRange = -10f..10f,
+            valueRange = -100f..100f,
+            // Steps in 10er-Schritten (entspricht 21 Stop-Punkten -100,-90,...0,...,90,100)
+            // damit Frank praezise einstellen kann ohne nano-fein navigieren zu muessen.
             steps = 19,
             colors = SliderDefaults.colors(
                 thumbColor = CosmosColors.AccentPrimary,

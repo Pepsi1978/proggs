@@ -220,7 +220,9 @@ class ExperimentCalendarViewModel @Inject constructor(
     fun setFeltChange(value: Int) {
         val current = selectedFlow.value ?: return
         viewModelScope.launch {
-            val updated = current.copy(felltEntropyChange = value.coerceIn(-10, 10))
+            // Soll-Bild 19/29: Slider-Range -100..+100. Frank bewertet starke
+            // Veraenderungen praezise — wir clampen daher auf -100..+100, nicht -10..+10.
+            val updated = current.copy(felltEntropyChange = value.coerceIn(-100, 100))
             hypotheses.update(updated)
             selectedFlow.value = updated
         }
