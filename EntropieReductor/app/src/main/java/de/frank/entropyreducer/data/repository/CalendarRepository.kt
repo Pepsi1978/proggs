@@ -50,15 +50,18 @@ class CalendarRepository @Inject constructor(
         val syncedAt = System.currentTimeMillis()
         val daysByDate = mutableMapOf<String, CalendarDayEntity>()
 
-        // 1. Initialisiere alle Tage als UNBEKANNT — sie werden ueberschrieben falls
-        //    ein Schicht-Event gefunden wird.
+        // 1. Initialisiere alle Tage als FREI — Frank's Kalender-Konvention:
+        //    es werden nur Tag-/Nachtschichten und Urlaub eingetragen, alles ohne
+        //    Eintrag bedeutet Frei-Tag. UNBEKANNT bleibt nur als Notfall-Fallback
+        //    fuer den Fall, dass der Sync gar nicht durchgelaufen ist (dann existiert
+        //    der DB-Eintrag erst gar nicht und der StatusObserver liest null).
         var d = from
         while (d.isBefore(to)) {
             val dateStr = d.toString()
-            val profile = ShiftCodeParser.profileFor(ShiftCode.UNBEKANNT)
+            val profile = ShiftCodeParser.profileFor(ShiftCode.FREI)
             daysByDate[dateStr] = CalendarDayEntity(
                 date = dateStr,
-                shiftCode = ShiftCode.UNBEKANNT,
+                shiftCode = ShiftCode.FREI,
                 rawCalendarText = "",
                 workWindowStart = profile.workWindowStart,
                 workWindowEnd = profile.workWindowEnd,
