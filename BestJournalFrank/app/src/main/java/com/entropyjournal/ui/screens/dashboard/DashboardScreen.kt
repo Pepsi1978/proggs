@@ -187,6 +187,40 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                // C1 — Profil-Header: zeigt das aktive Profil + Kurzfokus oben im Dashboard.
+                // Bei Custom-Profilen mit erfolgreichem fokus_kern aus der KI-Antwort wird
+                // dieser bevorzugt (zeigt: "Ich habe deinen Auftrag verstanden"), sonst der
+                // statische Profil-Fokus aus dem Profil-Prompt.
+                if (uiState.activeProfileLabel.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Aktives Profil: ${uiState.activeProfileLabel}",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            val focusText =
+                                if (uiState.customFokusKern.isNotBlank())
+                                    uiState.customFokusKern
+                                else uiState.activeProfileFocus
+                            if (focusText.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = focusText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Scrollable content
@@ -194,6 +228,47 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // B3 — Hinweis-Karte bei leerem Custom-Profil-Prompt. Wird statt
+                // des normalen Dashboards gerendert, damit der Benutzer den fehlenden
+                // Schritt nicht uebersieht.
+                if (uiState.emptyCustomPromptWarning) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Rounded.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Profil ohne Fokus-Text",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text =
+                                        "Dieses Profil hat noch keinen Fokus-Text. " +
+                                            "Öffne die Einstellungen, wähle dieses Profil " +
+                                            "und ergänze einen Fokus-Prompt — dann erscheint " +
+                                            "hier dein persönliches Dashboard.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
+                        }
+                    }
+                    return@LazyColumn
+                }
+
                 if (uiState.isLoading) {
                     item {
                         Box(

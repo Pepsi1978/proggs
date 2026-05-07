@@ -31,6 +31,17 @@ data class DashboardUiState(
     val customHeaderTop5: String = "",
     val customHeaderAnalyse: String = "",
     val customHeaderErgebnisse: String = "",
+    // B3 — true wenn das aktive Custom-Profil keinen Fokustext hat. UI zeigt
+    // dann eine Hinweis-Karte statt des Dashboards, damit der Benutzer den
+    // Schritt nicht uebersieht.
+    val emptyCustomPromptWarning: Boolean = false,
+    // C1 — sichtbarer Profil-Header (Profilname + Kurzfokus). Greift fuer alle
+    // Profile (eingebaute und custom). Wird im Dashboard oben angezeigt.
+    val activeProfileLabel: String = "",
+    val activeProfileFocus: String = "",
+    // A2 — fokus_kern und fokus_zitate aus der KI-Antwort fuer Custom-Profile.
+    val customFokusKern: String = "",
+    val customFokusZitateJson: String = "",
 )
 
 @HiltViewModel
@@ -86,6 +97,12 @@ constructor(
                 customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
                 customHeaderErgebnisse =
                     encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+                customFokusKern = encryptedPrefs.getString("custom_fokus_kern", "") ?: "",
+                customFokusZitateJson =
+                    encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: "",
+                activeProfileLabel = computeProfileLabel(scenario),
+                activeProfileFocus = computeProfileFocus(scenario),
+                emptyCustomPromptWarning = isEmptyCustomProfile(scenario),
             )
         // Poll for background dashboard updates triggered by JournalViewModel
         viewModelScope.launch {
@@ -103,10 +120,14 @@ constructor(
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
+                    val emptyWarn = isEmptyCustomProfile(currentScenario)
                     _uiState.value =
                         _uiState.value.copy(
                             currentScenario = currentScenario,
-                            isScenarioSwitch = true,
+                            isScenarioSwitch = !emptyWarn,
+                            activeProfileLabel = computeProfileLabel(currentScenario),
+                            activeProfileFocus = computeProfileFocus(currentScenario),
+                            emptyCustomPromptWarning = emptyWarn,
                         )
                     adviceRepository.clearDashboard()
                     if (currentScenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
@@ -118,6 +139,8 @@ constructor(
                         if (customPrompt.isNotBlank()) {
                             refreshDashboard()
                         }
+                        // Bei leerem Custom-Prompt: KEIN refresh, aber emptyCustomPromptWarning
+                        // ist oben bereits gesetzt — UI zeigt Hinweis-Karte.
                     } else {
                         refreshDashboard()
                     }
@@ -131,8 +154,22 @@ constructor(
                             CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, active)
                         adviceRepository.clearDashboard()
                         if (customPrompt.isNotBlank()) {
-                            _uiState.value = _uiState.value.copy(isScenarioSwitch = true)
+                            _uiState.value =
+                                _uiState.value.copy(
+                                    isScenarioSwitch = true,
+                                    activeProfileLabel = computeProfileLabel(active),
+                                    activeProfileFocus = computeProfileFocus(active),
+                                    emptyCustomPromptWarning = false,
+                                )
                             refreshDashboard()
+                        } else {
+                            // Custom-Prompt wurde geleert — Warn-Card statt stillem Skip
+                            _uiState.value =
+                                _uiState.value.copy(
+                                    activeProfileLabel = computeProfileLabel(active),
+                                    activeProfileFocus = "",
+                                    emptyCustomPromptWarning = true,
+                                )
                         }
                     }
                 }
@@ -221,6 +258,10 @@ constructor(
                                 encryptedPrefs.getString("custom_header_analyse", "") ?: "",
                             customHeaderErgebnisse =
                                 encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+                            customFokusKern =
+                                encryptedPrefs.getString("custom_fokus_kern", "") ?: "",
+                            customFokusZitateJson =
+                                encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: "",
                         )
                     // Auto-hide undo button after 5 seconds
                     if (adviceRepository.canUndo) {
@@ -254,6 +295,44 @@ constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    // C1 — Helper: lesbare Bezeichnung des aktiven Profils
+    private fun computeProfileLabel(scenario: Int): String {
+        return when {
+            scenario == 0 -> "Zusammenfassung"
+            scenario == 1 -> "Entropie"
+            scenario == 2 -> "Selbsterkenntnis"
+            scenario == 3 -> "Persönliche Ziele"
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX ->
+                CustomAnalysesStore.activeNameOrDefault(encryptedPrefs, scenario)
+            else -> "Profil"
+        }
+    }
+
+    // C1 — Helper: kurzer Fokus-Text fuer den Header (max 200 Zeichen).
+    // Bei eingebauten Profilen: kurze Beschreibung. Bei Custom: erste 200 Zeichen
+    // des Profil-Prompts.
+    private fun computeProfileFocus(scenario: Int): String {
+        return when {
+            scenario == 0 -> "Erzählende Zusammenfassung der wichtigsten Ereignisse und Gefühle."
+            scenario == 1 -> "Klassische Entropie-Analyse mit Stress- und Belastungsmustern."
+            scenario == 2 -> "Tiefgründige Selbsterkenntnis: Denkmuster und verborgene Stärken."
+            scenario == 3 -> "Motivierender Ziel-Begleiter mit Fortschritts-Sicht."
+            scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX -> {
+                val prompt = CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario)
+                if (prompt.isBlank()) ""
+                else if (prompt.length > 200) prompt.take(197) + "..."
+                else prompt
+            }
+            else -> ""
+        }
+    }
+
+    // B3 — Helper: ist das aktive Profil ein Custom-Profil mit leerem Prompt?
+    private fun isEmptyCustomProfile(scenario: Int): Boolean {
+        if (scenario < Constants.FIRST_CUSTOM_SCENARIO_INDEX) return false
+        return CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario).isBlank()
     }
 
     fun getLastUpdatedText(): String? {

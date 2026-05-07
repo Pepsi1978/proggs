@@ -283,6 +283,11 @@ ${summaryText.take(500)}"""
         val monthStart: Calendar,
         val monthEnd: Calendar,
         val weeksText: String,
+        // B1 — Original-Eintraege des Monats kompakt (Datum + Snippet pro Eintrag).
+        // Werden zusaetzlich zum weeksText in den Monatsretro-Prompt eingebaut, damit
+        // der Profil-Bezug nicht nur aus den (bereits zusammengefassten) Wochenretros
+        // gezogen wird sondern direkt aus den Original-Eintraegen sichtbar bleibt.
+        val monthEntriesCompact: String,
         val monthName: String,
         val month: Int,
         val year: Int,
@@ -325,9 +330,34 @@ ${summaryText.take(500)}"""
                 weeklyReviews.joinToString("\n\n---\n\n") { week ->
                     "[${week.periodLabel}] ${week.title}\n${week.summaryText}"
                 }
+            // B1 — Kompakte Liste der Original-Eintraege des Monats. Bei sehr vielen
+            // Eintraegen (>40) werden die ersten 40 genommen, der Rest mit Hinweis
+            // unten erwaehnt — verhindert Token-Eskalation.
+            val compactDf = SimpleDateFormat("dd.MM.", Locale.GERMANY)
+            val maxCompactEntries = 40
+            val compactList =
+                monthEntries.take(maxCompactEntries).joinToString("\n") { e ->
+                    val date = compactDf.format(java.util.Date(e.timestamp))
+                    val text = (e.displayText.ifBlank { e.rawText }).take(150)
+                    "[$date] $text"
+                }
+            val monthEntriesCompact =
+                if (monthEntries.size > maxCompactEntries)
+                    compactList + "\n(+ ${monthEntries.size - maxCompactEntries} weitere Einträge)"
+                else compactList
             val month = monthStart.get(Calendar.MONTH)
             val year = monthStart.get(Calendar.YEAR)
-            tasks.add(MonthlyTask(monthStart, monthEnd, weeksText, monthNames[month], month, year))
+            tasks.add(
+                MonthlyTask(
+                    monthStart,
+                    monthEnd,
+                    weeksText,
+                    monthEntriesCompact,
+                    monthNames[month],
+                    month,
+                    year,
+                )
+            )
         }
 
         if (tasks.isEmpty()) return 0
@@ -651,7 +681,10 @@ REGELN:
 ${Constants.NO_EM_DASH_RULE}
 
 WOCHENRÜCKBLICKE:
-${task.weeksText}"""
+${task.weeksText}
+
+ORIGINAL-TAGEBUCHEINTRÄGE DIESES MONATS (kompakt, als zweite Quelle für direkten Profil-Bezug):
+${task.monthEntriesCompact}"""
 
     private fun buildMonthlyPromptVerbose(task: MonthlyTask, profileStyle: String): String =
         """AUSFÜHRLICHE VERSION (PFLICHT BEACHTEN): Der Benutzer hat den Schalter "Längere Version" aktiviert. Liefere etwa DOPPELT so viel Text wie im Standard. Alle Zahlen- und Längenvorgaben unten sind bereits entsprechend gesetzt.
@@ -684,7 +717,10 @@ REGELN:
 ${Constants.NO_EM_DASH_RULE}
 
 WOCHENRÜCKBLICKE:
-${task.weeksText}"""
+${task.weeksText}
+
+ORIGINAL-TAGEBUCHEINTRÄGE DIESES MONATS (kompakt, als zweite Quelle für direkten Profil-Bezug):
+${task.monthEntriesCompact}"""
 
     private fun buildYearlyPromptStandard(year: Int, monthsText: String, profileStyle: String): String =
         """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
@@ -769,7 +805,21 @@ $monthsText"""
                 val custom =
                     CustomAnalysesStore.activePromptOrEmpty(encryptedPrefs, scenario)
                 if (custom.isNotBlank())
-                    "\n- Schreibe den Rückblick mit folgendem persönlichen Fokus des Benutzers: \"$custom\""
+                    """
+
+PROFIL-FOKUS — KERN-REGEL (PFLICHT BEACHTEN, GLEICHWERTIG ZU FORMAT UND STIL):
+Der Benutzer hat sich ein eigenes Profil gewählt. Sein Fokus ist:
+"$custom"
+
+Dieses Profil ist KEIN reiner Stil-Hinweis, sondern der inhaltliche Taktgeber für den ganzen Rückblick. Halte dich an diese vier Regeln:
+
+1) MINDESTENS 60 PROZENT des Rückblicks (Zusammenfassung-Stichpunkte UND Fließtext) müssen sich klar erkennbar mit dem Profil-Fokus beschäftigen — als Inhalt, nicht nur als Erwähnung. Wenn nötig, ordne Ereignisse aus den Einträgen explizit dem Profil-Thema zu, statt sie nur chronologisch aufzulisten.
+
+2) Mindestens EIN thematischer Abschnitt muss sich vollständig dem Profil-Fokus widmen, mit eigener Überschrift die zum Fokus passt.
+
+3) Drücke den Profil-Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen — wiederhole NICHT mechanisch die exakten Wörter aus dem Fokus. Beispiel "Ziele": Vorhaben, Wünsche, Ambitionen, Kurs, Entwicklungs-Schritte. Beispiel "Sport": Bewegung, Training, körperliche Aktivität, Ausdauer, Fitness, Gesundheit. Der Bezug muss spürbar sein, nicht buchstabengetreu.
+
+4) Beobachtungen aus den Einträgen, die KEINEN Bezug zum Fokus haben, dürfen erwähnt werden — aber kompakt, nicht ausschweifend. Lass lieber neutrale Alltagsbeobachtungen weg, wenn sie den Fokus verdrängen würden."""
                 else ""
             }
             else -> ""

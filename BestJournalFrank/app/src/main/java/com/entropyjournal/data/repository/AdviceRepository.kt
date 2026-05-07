@@ -1548,6 +1548,11 @@ $userFocus
 
 Das oben ist dein eigentlicher AUFTRAG. Führe diesen Auftrag auf Basis des Kontexts aus Schritt 1 aus. Wenn der Auftrag Recherche, Ideen, Alternativen, Vorschläge, Empfehlungen oder neue Informationen verlangt, dann liefere diese AKTIV, auch wenn sie in den Einträgen nicht vorkommen. Die Einträge informieren deinen Output, sie begrenzen ihn nicht.
 
+KERN-REGEL — DAS PROFIL TRÄGT MINDESTENS 50 PROZENT:
+Der gesamte Output (Gesamtanalyse, Top-Maßnahmen, Kategorien, Ratschläge, Fortschritte) MUSS zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Erkenntnisse, Punkte oder Themen, die KEINEN inhaltlichen Bezug zum Auftrag haben, lass weg — fülle den Output nicht mit allgemeinen Lebensthemen auf, nur damit das JSON voll ist. Lieber weniger Punkte mit klarem Bezug als viele generische.
+
+Wichtig zur Sprache: Drücke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Wörter aus dem Auftrag — das wirkt aufdringlich. Beispiel Auftrag "Ziele": Sprich auch von Vorhaben, Wünschen, Ambitionen, dem was du erreichen willst, deinem Kurs, Entwicklungs-Schritten. Beispiel Auftrag "Sport": Sprich auch von Bewegung, Training, körperlicher Aktivität, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPÜRBAR sein, nicht buchstabengetreu.
+
 ENTSCHEIDEND:
 - Steht im Auftrag "analysiere", "fasse zusammen", "was fällt auf" — bleib dicht an den Einträgen.
 - Steht im Auftrag "recherchiere", "finde Alternativen", "schlage vor", "empfehle", "ergänze", "was wäre wenn", "neue Ideen" — gehe AKTIV über die Einträge hinaus und bring eigene, neue Inhalte ein.
@@ -1577,13 +1582,15 @@ SPRACHREGELN:
 - Keine langen Gedankenstriche. Nutze Kommas oder Punkte.
 
 MENGEN-REGEL:
-Mindestens 10 Erkenntnisse insgesamt. Wenn der Auftrag neue Inhalte verlangt, dürfen diese einen Großteil ausmachen. Wenn der Auftrag reine Analyse verlangt, kommen alle Erkenntnisse aus den Einträgen.
+Mindestens 10 Erkenntnisse insgesamt — aber jede einzelne muss inhaltlich zum Auftrag passen. Wenn du keine 10 Erkenntnisse mit echtem Profil-Bezug findest, liefere lieber 7 starke statt 10 verwässerte. Bei reinen Analyse-Aufträgen stammen die Erkenntnisse aus den Einträgen, bei kreativen Aufträgen darfst du neue Inhalte einbringen.
 
 JSON-AUSGABE-SCHEMA:
 {
   "ueberschrift_top5": "Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter",
   "ueberschrift_analyse": "Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter",
   "ueberschrift_ergebnisse": "Kreative Überschrift, passend zum Auftrags-Ergebnis, max 3 Wörter",
+  "fokus_kern": "Ein Satz, der den Kern des Auftrags in eigenen Worten wiedergibt — als sichtbarer Anker für das Dashboard.",
+  "fokus_zitate": ["...", "..."],
   "gesamt_entropie": 0.0,
   "trend": "steigend|stabil|sinkend|unbekannt",
   "gesamtanalyse": "...",
@@ -1594,26 +1601,30 @@ JSON-AUSGABE-SCHEMA:
 
 1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 3 Wörter. MUSS das ERGEBNIS des Auftrags widerspiegeln, nicht nur das Thema. KEINE generischen Titel.
 
-2) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist das Auftrags-Thema in den Einträgen vertreten?
+2) "fokus_kern": PFLICHT. Ein einzelner Satz (15–30 Wörter), der dem Nutzer zeigt: "Ich habe deinen Auftrag verstanden — DAS ist der rote Faden." Kein Zitat des Auftrags, sondern eine eigene Formulierung in deinen Worten. Das wird oben im Dashboard angezeigt und ist der Beweis, dass das Profil greift.
 
-3) "trend": Nur bei 3+ Einträgen. Wie entwickelt sich das Auftrags-Thema in den Einträgen?
+3) "fokus_zitate": PFLICHT, 3 bis 5 Stück. Kurze, wörtlich oder fast-wörtlich entnommene Stellen aus den Tagebucheinträgen, die direkt zum Auftrag passen. Format jeweils: "[Datum] kurzes Zitat oder paraphrasierte Stelle". Wenn es bei kreativ-recherchierenden Aufträgen keine wörtlichen Treffer gibt, nimm die 3–5 Einträge mit der größten thematischen Nähe und beschreibe in einer Zeile den Bezug. Wenn weniger als 3 Einträge thematisch passen, gib trotzdem mindestens diese aus und ergänze ggf. einen Hinweis "(thematische Nähe)" — niemals leer lassen.
 
-4) "gesamtanalyse" (15–25 Sätze): Zwei Teile klar erkennbar.
+4) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist das Auftrags-Thema in den Einträgen vertreten?
+
+5) "trend": Nur bei 3+ Einträgen. Wie entwickelt sich das Auftrags-Thema in den Einträgen?
+
+6) "gesamtanalyse" (15–25 Sätze): Zwei Teile klar erkennbar. MINDESTENS 50 Prozent des Texts behandeln direkt oder umschreibend den Auftrag.
    Teil A (Kontext aus den Einträgen): Was steht in den Einträgen zum Thema? Benenne relevante Details.
    Teil B (Ergebnis des Auftrags): Was ist deine Antwort auf den Auftrag? Was liefert du neu, zusätzlich oder als Empfehlung?
    Verknüpfe beide Teile, damit der Nutzer den roten Faden sieht.
 
-5) "fortschritte" (0–5): Muster oder Entwicklungen aus den Einträgen, die für den Auftrag wichtig sind.
+7) "fortschritte" (0–5): Muster oder Entwicklungen aus den Einträgen, die für den Auftrag wichtig sind. Mindestens die Hälfte der Fortschritts-Einträge muss klar zum Auftrag gehören.
    { "titel": "max 5 Wörter", "beschreibung": "2–3 Sätze", "bezug": "1 Satz" }
 
-6) "top_massnahmen" (genau 5): Die wichtigsten ERGEBNISSE des Auftrags. Das können neue Vorschläge, Alternativen, Empfehlungen oder Erkenntnisse sein, die der Nutzer in den Einträgen NICHT erwähnt hat, wenn der Auftrag das verlangt. Bei reinen Analyse-Aufträgen stammen sie aus den Einträgen.
+8) "top_massnahmen" (genau 5): Die wichtigsten ERGEBNISSE des Auftrags. MINDESTENS 3 von 5 müssen unmissverständlich zum Auftrag gehören. Das können neue Vorschläge, Alternativen, Empfehlungen oder Erkenntnisse sein, die der Nutzer in den Einträgen NICHT erwähnt hat, wenn der Auftrag das verlangt. Bei reinen Analyse-Aufträgen stammen sie aus den Einträgen.
    {
      "titel": "max 6 Wörter",
      "beschreibung": "13–21 Wörter, kompakt auf den Punkt.",
      "erklaerung": "5–8 Sätze ausführlich. Wenn der Inhalt neu ist, begründe, warum er zum Kontext des Nutzers passt. Wenn der Inhalt aus den Einträgen stammt, nenne den konkreten Bezug."
    }
 
-7) "kategorien": Themengruppen, die den Auftrag strukturieren (dynamisch).
+9) "kategorien": Themengruppen, die den Auftrag strukturieren (dynamisch). MINDESTENS die Hälfte der Kategorien muss inhaltlich zum Auftrag gehören. Verzichte auf "Standard-Lebensthemen" wie Arbeit, Schlaf, Freizeit, wenn sie nicht zum Auftrag passen.
    {
      "name": "max 12 Zeichen", "icon": "material_icon_name", "farbe": "#HEX",
      "entropie_level": 0.0,
@@ -1659,6 +1670,11 @@ Analysiere die Tagebucheintr${"\u00e4"}ge des Nutzers mit GENAU diesem Fokus.
 Finde alles, was mit dem Fokus zusammenh${"\u00e4"}ngt. Erstelle daraus ein
 strukturiertes Dashboard im JSON-Format.
 
+KERN-REGEL — DAS PROFIL TRAEGT MINDESTENS 50 PROZENT:
+Auch in der ausfuehrlichen Version MUSS der gesamte Output (Gesamtanalyse, Top-Massnahmen, Kategorien, Ratschlaege, Fortschritte) zu mindestens 50 Prozent klar erkennbar mit dem Auftrag des Nutzers verbunden sein. Wenn du mehr Text schreibst, steige TIEFER ins Auftrags-Thema ein, nicht in andere Lebensbereiche. Punkte ohne Bezug zum Auftrag werden weggelassen. Lieber 18 starke Punkte mit echtem Bezug als 30 verwaesserte.
+
+Wichtig zur Sprache: Druecke den Bezug VARIANTENREICH aus. Nutze Synonyme, verwandte Begriffe, thematische Nachbarschaften und Umschreibungen. Wiederhole NICHT mechanisch die exakten Woerter aus dem Auftrag. Beispiel "Ziele": Vorhaben, Wuensche, Ambitionen, Kurs, Entwicklungs-Schritte. Beispiel "Sport": Bewegung, Training, koerperliche Aktivitaet, Ausdauer, Fitness, Gesundheit. Der Profil-Bezug muss SPUERBAR sein, nicht buchstabengetreu.
+
 WICHTIG — DYNAMISCHE ${"\u00dc"}BERSCHRIFTEN:
 Du MUSST drei passende ${"\u00dc"}berschriften f${"\u00fc"}r das Dashboard erfinden,
 die GENAU zum Benutzer-Fokus passen. KEINE generischen Titel wie
@@ -1678,13 +1694,15 @@ SPRACHREGELN:
 - Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
 
 MENGEN-REGEL:
-Mindestens 30 Erkenntnisse insgesamt. Jeder Aspekt verdient eine eigene Erkenntnis.
+Mindestens 30 Erkenntnisse insgesamt — aber jede einzelne mit echtem Profil-Bezug. Wenn weniger als 30 Punkte mit echtem Bezug existieren, lieber 22 starke ausfuehrliche Punkte als 30 verwaesserte.
 
 JSON-AUSGABE-SCHEMA:
 {
   "ueberschrift_top5": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die Top-Liste (passend zum Fokus, max 3 W${"\u00f6"}rter)",
   "ueberschrift_analyse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die ${"\u00dc"}bersicht (passend zum Fokus, max 3 W${"\u00f6"}rter)",
   "ueberschrift_ergebnisse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r alle Ergebnisse (passend zum Fokus, max 3 W${"\u00f6"}rter)",
+  "fokus_kern": "Ein Satz, der den Kern des Auftrags in eigenen Worten wiedergibt.",
+  "fokus_zitate": ["...", "..."],
   "gesamt_entropie": 0.0,
   "trend": "steigend|stabil|sinkend|unbekannt",
   "gesamtanalyse": "...",
@@ -1694,14 +1712,16 @@ JSON-AUSGABE-SCHEMA:
 }
 
 1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 3 W${"\u00f6"}rter.
-2) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich vertreten?
-3) "trend": Nur bei 3+ Eintr${"\u00e4"}gen.
-4) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Was sagen die Eintr${"\u00e4"}ge zum Fokus?
-5) "fortschritte" (0–5): Muster oder Entwicklungen.
+2) "fokus_kern": PFLICHT. Ein einzelner Satz (15–30 W${"ö"}rter), eigene Formulierung des Auftrags-Kerns.
+3) "fokus_zitate": PFLICHT, 4 bis 7 St${"ü"}ck. Format: "[Datum] kurzes Zitat oder paraphrasierte Stelle". Auch bei kreativen Auftr${"ä"}gen mindestens 3 Eintr${"ä"}ge mit thematischer N${"ä"}he.
+4) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich vertreten?
+5) "trend": Nur bei 3+ Eintr${"\u00e4"}gen.
+6) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Mindestens 50 Prozent direkter oder umschreibender Auftrags-Bezug.
+7) "fortschritte" (0–5): Muster oder Entwicklungen, mindestens die H${"ä"}lfte mit klarem Auftrags-Bezug.
    { "titel": "max 5 W${"\u00f6"}rter", "beschreibung": "2–3 S${"\u00e4"}tze", "bezug": "1 Satz" }
-6) "top_massnahmen" (mindestens 12): Wichtigste Erkenntnisse zum Fokus.
+8) "top_massnahmen" (mindestens 12): Mindestens 8 von 12 mit unmissverst${"ä"}ndlichem Auftrags-Bezug.
    { "titel": "max 6 W${"\u00f6"}rter", "beschreibung": "13–21 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
-7) "kategorien": Themengruppen passend zum Fokus.
+9) "kategorien": Themengruppen passend zum Fokus. Mindestens die H${"ä"}lfte mit echtem Auftrags-Bezug.
    { "name": "max 12 Zeichen", "icon": "material_icon_name", "farbe": "#HEX",
      "entropie_level": 0.0, "zusammenfassung": "3–5 S${"\u00e4"}tze",
      "ratschlaege": [{ "titel": "max 6 W${"\u00f6"}rter", "beschreibung": "13–21 W${"\u00f6"}rter",
@@ -1867,8 +1887,34 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
                     .trim()
             val blocks = parseAdviceJson(cleanJson, entryCount)
 
+            // B2 — Profil-Re-Ranking: Bei Custom-Profilen einen zweiten Gemini-Call,
+            // der das top_massnahmen-Array auf Profil-Bezug priorisiert. Der erste Call
+            // generiert die Analyse, der zweite optimiert sie auf den Benutzer-Fokus.
+            // Schlaegt der Re-Ranking-Call fehl, bleiben die Original-Bloecke unveraendert.
+            val finalBlocks =
+                if (encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                        >= Constants.FIRST_CUSTOM_SCENARIO_INDEX
+                ) {
+                    val scenarioForRerank =
+                        encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                    val customForRerank =
+                        CustomAnalysesStore.activePromptOrEmpty(
+                            encryptedPrefs,
+                            scenarioForRerank,
+                        )
+                    if (customForRerank.isNotBlank() && blocks.isNotEmpty()) {
+                        reRankTopActionsForProfile(
+                            blocks = blocks,
+                            userFocus = customForRerank,
+                            apiKey = apiKey,
+                            modelName = selectedModel,
+                            allEntriesText = allEntriesText,
+                        )
+                    } else blocks
+                } else blocks
+
             adviceDashboardDao.deleteAll()
-            adviceDashboardDao.upsertAll(blocks)
+            adviceDashboardDao.upsertAll(finalBlocks)
 
             Result.success(Unit)
         } catch (e: HttpException) {
@@ -1940,6 +1986,114 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
         return sb.toString()
     }
 
+    /**
+     * B2 — Profil-Re-Ranking: zweiter Gemini-Call, der das `topActionsJson`-Array
+     * auf den Benutzer-Fokus priorisiert. Sortiert profilrelevante Punkte nach oben
+     * und ersetzt bis zu 2 profilfremde Eintraege durch profilstaerkere aus den
+     * Tagebucheintraegen. Schlaegt der Call fehl, werden die Original-Bloecke
+     * unveraendert zurueckgegeben — kein harter Fehler.
+     *
+     * Der Re-Ranker erhaelt:
+     * - Das aktuelle top_massnahmen JSON
+     * - Den Profil-Fokus des Benutzers
+     * - Die Original-Tagebucheintraege als Quelle fuer Ersatz-Punkte
+     *
+     * Ergebnis: List<AdviceBlockEntity> mit ueberschriebenem topActionsJson.
+     */
+    private suspend fun reRankTopActionsForProfile(
+        blocks: List<AdviceBlockEntity>,
+        userFocus: String,
+        apiKey: String,
+        modelName: String,
+        allEntriesText: String,
+    ): List<AdviceBlockEntity> {
+        try {
+            val originalTopActions = blocks.firstOrNull()?.topActionsJson ?: return blocks
+            if (originalTopActions.isBlank() || originalTopActions == "[]") return blocks
+
+            val rerankSystemPrompt =
+                """
+Du bist ein Profil-Re-Ranker. Du bekommst ein JSON-Array von 5 Top-Massnahmen aus einer Dashboard-Analyse, den Profil-Fokus des Benutzers, und die Original-Tagebucheintraege.
+
+Deine Aufgabe in 3 Schritten:
+1) Sortiere die 5 Massnahmen so, dass die mit dem klarsten Bezug zum Profil-Fokus zuerst kommen.
+2) Pruefe ob bis zu 2 der 5 Massnahmen KEINEN inhaltlichen Bezug zum Profil-Fokus haben. Wenn ja, ersetze sie durch profilstaerkere Massnahmen, die du aus den Tagebucheintraegen ableitest. Halte dich an die gleiche JSON-Struktur jeder Massnahme (titel, beschreibung, erklaerung).
+3) Drueecke den Profil-Bezug VARIANTENREICH aus mit Synonymen und thematischen Nachbarschaften, NICHT mit mechanischer Wiederholung der Profil-Worte. Bezug muss spuerbar sein, nicht buchstabengetreu.
+
+WICHTIG:
+- Gib am Ende GENAU 5 Eintraege zurueck.
+- Aenderungen nur wenn echter Profil-Bezug fehlt — bei bereits guter Passung das Array nur sortieren, nichts ersetzen.
+- Behalte die JSON-Struktur jedes Eintrags (gleiche Schluessel: titel, beschreibung, erklaerung).
+- Sprache Deutsch, keine Gedankenstriche, beschreibung 13-21 Woerter.
+
+AUSGABEFORMAT:
+- NUR ein JSON-Array (eckige Klammern auf der Wurzelebene).
+- Keine Markdown-Backticks, kein Text davor/danach.
+- Beginne direkt mit [ und ende mit ].
+                """
+                    .trimIndent() + "\n\n" + Constants.NO_EM_DASH_RULE
+
+            val rerankUserText = buildString {
+                appendLine("=== PROFIL-FOKUS DES BENUTZERS ===")
+                appendLine(userFocus)
+                appendLine()
+                appendLine("=== AKTUELLES TOP-MASSNAHMEN-ARRAY (5 Eintraege) ===")
+                appendLine(originalTopActions)
+                appendLine()
+                appendLine("=== TAGEBUCHEINTRAEGE (Quelle fuer profilstarke Ersatz-Punkte) ===")
+                // Maximal 6000 Zeichen Tagebuch um Token-Eskalation zu vermeiden
+                appendLine(allEntriesText.take(6000))
+                appendLine()
+                appendLine(
+                    "Sortiere und ersetze bis zu 2 profilfremde Eintraege. Gib genau 5 Eintraege als JSON-Array zurueck."
+                )
+            }
+
+            val request =
+                GeminiRequestBuilder.build(
+                    userText = rerankUserText,
+                    systemPrompt = rerankSystemPrompt,
+                )
+            val response = geminiApi.generateContent(
+                model = modelName,
+                apiKey = apiKey,
+                request = request,
+            )
+            val rawText = response.extractText() ?: return blocks
+            val cleaned =
+                rawText
+                    .trim()
+                    .removePrefix("```json")
+                    .removePrefix("```")
+                    .removeSuffix("```")
+                    .stripEmDashes()
+                    .trim()
+
+            // Validierung: muss ein JSON-Array sein
+            if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+                Log.w("Rerank", "Re-Ranker liefert kein JSON-Array, behalte Original")
+                return blocks
+            }
+            // Validierung: parsebar
+            val parsed = try {
+                org.json.JSONArray(cleaned)
+            } catch (e: Exception) {
+                Log.w("Rerank", "Re-Ranker liefert ungueltiges JSON: ${e.message}")
+                return blocks
+            }
+            if (parsed.length() != 5) {
+                Log.w("Rerank", "Re-Ranker liefert ${parsed.length()} statt 5 Eintraege, behalte Original")
+                return blocks
+            }
+
+            Log.d("Rerank", "Profil-Re-Ranking erfolgreich, ${parsed.length()} Top-Massnahmen aktualisiert")
+            return blocks.map { it.copy(topActionsJson = cleaned) }
+        } catch (e: Exception) {
+            Log.w("Rerank", "Re-Ranking fehlgeschlagen: ${e.message}, behalte Original-Bloecke")
+            return blocks
+        }
+    }
+
     private fun parseAdviceJson(jsonString: String, entryCount: Int): List<AdviceBlockEntity> {
         val json = JSONObject(jsonString)
         val overallAnalysis = json.getString("gesamtanalyse")
@@ -1949,6 +2103,12 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
 
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
+            // fokus_kern + fokus_zitate sind die neuen Profil-Anker (A2). Sie werden
+            // in den Prefs gehalten und vom DashboardScreen oben als Profil-Header
+            // gerendert (C1). Defensiv eingelesen — bei alten Prompts oder fehlender
+            // KI-Antwort bleiben die Felder leer.
+            val fokusKern = json.optString("fokus_kern", "")
+            val fokusZitate = json.optJSONArray("fokus_zitate")?.toString() ?: "[]"
             encryptedPrefs
                 .edit()
                 .putString("custom_header_top5", json.optString("ueberschrift_top5", ""))
@@ -1957,6 +2117,8 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
                     "custom_header_ergebnisse",
                     json.optString("ueberschrift_ergebnisse", ""),
                 )
+                .putString("custom_fokus_kern", fokusKern)
+                .putString("custom_fokus_zitate_json", fokusZitate)
                 .apply()
         }
 
