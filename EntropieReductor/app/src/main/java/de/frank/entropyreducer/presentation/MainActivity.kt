@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -11,17 +12,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.repository.PromptRepository
+import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.data.settings.ThemeMode
+import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
 /**
  * Einzige Activity der App. Compose uebernimmt das gesamte Routing.
- * Beim ersten Start: Default-Prompts vorinstallieren.
+ * Beim ersten Start: Default-Prompts vorinstallieren, Theme aus AppSettings beobachten.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,11 +39,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            EntropieReductorTheme {
-                // BootstrapViewModel muss instanziiert werden — sein init {} legt
-                // beim ersten Start die Default-Prompts an. hiltViewModel() ist
-                // hier ein bewusster Side-Effect, kein toter Code.
-                hiltViewModel<BootstrapViewModel>()
+            // BootstrapViewModel: init {} legt beim ersten Start die Default-Prompts an.
+            hiltViewModel<BootstrapViewModel>()
+            // StartupViewModel: zieht beim App-Start einmalig den letzten Drive-Stand
+            // und wirft ggf. einen Sync hinterher, damit Geraete-Wechsel sauber laufen.
+            hiltViewModel<StartupViewModel>()
+
+            // ThemeViewModel beobachtet die Theme-Einstellung — der ganze Compose-Tree
+            // wird automatisch hell/dunkel gerendert wenn der Toggle umgeschaltet wird.
+            val themeVm: ThemeViewModel = hiltViewModel()
+            val themeMode by themeVm.themeMode.collectAsState()
+            val systemDark = isSystemInDarkTheme()
+            val effectiveDark = when (themeMode) {
+                ThemeMode.SYSTEM -> systemDark
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+
+            EntropieReductorTheme(darkTheme = effectiveDark) {
                 AppNavGraph()
             }
         }
@@ -81,5 +103,53 @@ class BootstrapViewModel @Inject constructor(
                 )
             }
         }
+    }
+}
+
+/**
+ * Beobachtet den Theme-Modus aus den Settings und liefert ihn als StateFlow
+ * an die Compose-Wurzel.
+ */
+@HiltViewModel
+class ThemeViewModel @Inject constructor(
+    private val settings: AppSettings,
+) : ViewModel() {
+    val themeMode: StateFlow<ThemeMode> = settings.themeModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
+
+    fun cycle(next: ThemeMode) {
+        viewModelScope.launch { settings.setThemeMode(next) }
+    }
+}
+
+/**
+ * Wird beim ersten Compose der App-Wurzel erzeugt — laedt einmalig das letzte
+ * Drive-Backup nach (falls verbunden), damit Geraete-Wechsel automatisch
+ * synchronisiert werden. Nutzt einen Mutex auf Android-Ebene (statisch),
+ * damit ein Activity-Recreate bei Theme-Wechsel nicht zwei Restores triggert.
+ */
+@HiltViewModel
+class StartupViewModel @Inject constructor(
+    private val secrets: EncryptedSecretsStore,
+    private val syncEntries: SyncEntriesUseCase,
+    private val coordinator: SyncCoordinator,
+) : ViewModel() {
+    init {
+        if (!startupRanThisProcess) {
+            startupRanThisProcess = true
+            viewModelScope.launch {
+                if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
+                    runCatching { syncEntries.restoreFromDrive() }
+                    // Nach dem Restore noch ein Backup, damit lokale Aenderungen,
+                    // die ggf. waehrend Offline-Phase entstanden, hochgeladen werden.
+                    coordinator.requestSync()
+                }
+            }
+        }
+    }
+
+    companion object {
+        @Volatile
+        private var startupRanThisProcess: Boolean = false
     }
 }

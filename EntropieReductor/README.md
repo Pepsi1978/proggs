@@ -44,6 +44,33 @@ Details siehe `DECISIONS.md`.
 8. **Mic** auf dem Aufgaben-Dashboard tippen, Notiz sprechen, beenden.
 9. Die KI klassifiziert den Eintrag und ordnet ihn in einen Zeit-Bucket ein.
 
+## Drive-Backup einrichten (einmalig)
+
+Damit das automatische Drive-Backup funktioniert, ist einmalig ein OAuth-Eintrag in der Google Cloud Console nötig:
+
+1. Cloud Console → APIs & Dienste → Anmeldedaten → **OAuth-Client-ID erstellen**
+2. Anwendungstyp: **Android**
+3. Paketname: `de.frank.entropyreducer.debug` (Debug) oder `de.frank.entropyreducer` (Release)
+4. SHA-1: aus dem `debug-shared.keystore` in `~/SK/BestJournalAndroid/` (gleicher Keystore wie BestJournalAndroid). Auslesen: `keytool -list -v -keystore ~/SK/BestJournalAndroid/debug-shared.keystore`
+5. APIs aktivieren: **Drive API** (`https://www.googleapis.com/auth/drive.appdata` Scope wird automatisch verwendet)
+6. App in der App neu starten → Einstellungen → Datenexport → "Mit Google verbinden"
+
+Bis dieser Schritt erledigt ist, zeigt der Sign-In-Dialog `DEVELOPER_ERROR` (Code 10) — die App fängt das ab und zeigt einen entsprechenden Snackbar mit Hinweis auf dieses README.
+
+**Was synchronisiert wird:** alle Entropie-Eintraege als JSON-Datei (`entropy_reducer_entries_v1.json`) im appDataFolder deines Google-Drive-Kontos. Diese Datei ist nicht im normalen Drive sichtbar — nur diese App kann sie lesen. Memory, Profil und API-Keys bleiben rein lokal.
+
+**Wann synchronisiert wird:** nach jeder Mutation (Anlegen / Status aendern / Loeschen) mit 1.5s Debouncing. Gleichzeitige Aenderungen werden zu einem einzigen Upload zusammengefasst (Coalescing — kein Job-Stacking). Beim App-Start wird einmalig vom Drive nachgeholt, was lokal fehlt (Last-Write-Wins per `updatedAt`).
+
+## Theme-Toggle
+
+Der Sun/Moon-Schalter neben dem Zahnrad-Icon zykelt durch drei Modi:
+
+- **Auto (System):** folgt der Hell-/Dunkel-Einstellung des Geraets (Standard).
+- **Hell-Modus:** immer hell.
+- **Dunkel-Modus:** immer dunkel — entspricht den Referenzbildern 11–20.
+
+Der gewaehlte Modus wird in den App-Settings persistiert und ueberlebt App-Neustarts.
+
 ## Bekannte Einschränkungen Stufe 1
 
 - **Status-Balken** zeigt nur die Aufgaben-Reduktions-Komponente (Spec §4.1) — Biomarker- und Kontext-Anteile folgen in Stufe 2.

@@ -95,7 +95,43 @@ Nur 3 Repositories (Entry, Prompt, Memory) — die anderen Entitäten haben aktu
 
 Debug-Build ist nicht minified, Release-Build hat `isMinifyEnabled = true` + `isShrinkResources = true` mit ProGuard-Rules für Kotlinx-Serialization, Retrofit, OkHttp, Room und Hilt.
 
-## 20. Audio-Format AAC in M4A statt OGG
+## 20a. Drive-Backup als JSON statt DB-File
+
+**Spec:** orientiert an BestJournalAndroid, dort wird die ganze SQLite-DB gesichert.
+**Entschieden:** EntropieReductor sichert nur die EntropyEntries als JSON-Datei.
+**Begruendung:**
+- Kompakter (typisch <100 KB statt mehrere MB)
+- Transparenter Format (JSON ist debugbar, DB-File ist binaer)
+- Einfacheres Mergen ueber updatedAt — kein WAL-Checkpoint, keine Schema-Versionierung-Probleme
+- Memory + API-Keys + Profil bleiben absichtlich lokal — Datenschutz
+
+## 20b. Coalescing statt Queueing
+
+**Problem:** Wenn der User in 5 Sekunden 10 Eintraege bearbeitet, sollen nicht 10 Drive-Uploads gestapelt werden.
+**Loesung:** SyncCoordinator mit Mutex (nie zwei Uploads gleichzeitig) + 1500ms-Debounce-Window. Pending-Job wird durch neuen Trigger ersetzt; ein laufender Upload wird NICHT abgebrochen, statt dessen merken wir dirtyDuringUpload und feuern danach noch einen Run. So konvergiert das System bei beliebig vielen schnellen Aenderungen zu maximal 2 Uploads (einer mit Stand X, einer mit Stand X+N).
+
+## 20c. GoogleSignInClient (legacy) statt CredentialManager
+
+**Aktuelle Empfehlung:** CredentialManager (seit 2024).
+**Entschieden:** GoogleSignInClient — funktioniert ohne Web-Client-ID-Konfiguration und unterstuetzt direkt das `requestScopes(DRIVE_APPDATA)`-Pattern, das wir fuer `GoogleAuthUtil.getToken` brauchen. Ein Wechsel auf CredentialManager wuerde zusaetzlichen JWT-Roundtrip benoetigen, ohne funktionalen Mehrwert in Stage 1. Migration moeglich in Stage 4.
+
+## 20d. Theme-Toggle: SYSTEM/LIGHT/DARK statt nur Boolean
+
+**Spec:** "Hell- und Dunkel-Modus".
+**Entschieden:** Drei Zustaende — SYSTEM, LIGHT, DARK — wie BestJournalAndroid.
+**Begruendung:** Reine Bool waere unschoen weil "Auto"-Mode (= System folgen) der Default sein soll. ThemeMode-Enum ist explizit, persistiert via DataStore (nicht EncryptedPrefs — kein Geheimnis), zykelt im Toggle.
+
+## 20e. Repository-Hooks via Lazy<SyncCoordinator>
+
+**Problem:** EntryRepository → SyncCoordinator → EntryRepository ist ein Hilt-Zyklus.
+**Loesung:** dagger.Lazy<SyncCoordinator> im EntryRepository, get() wird erst beim ersten Aufruf aufgeloest. Damit kein Init-Cycle. Pattern aus dem Hilt-Doku-Pattern fuer zyklische Module.
+
+## 20f. Auto-Restore exakt einmal pro Process
+
+**Problem:** Bei Theme-Toggle wird die Activity recreated, MainActivity.onCreate laeuft erneut. Wenn StartupViewModel in init {} ein Restore startet, laeuft das doppelt.
+**Loesung:** `@Volatile var startupRanThisProcess` als Companion-Object-Flag. Wird beim Process-Start auf false initialisiert (statisch), nach dem ersten Restore-Versuch auf true. Damit triggert auch ein Activity-Recreate keinen weiteren Restore.
+
+## 21. Audio-Format AAC in M4A statt OGG
 
 **Spec §2:** „M4A/AAC, mono, 16 kHz".
 **Umsetzung:** Genau so. Groq Whisper akzeptiert M4A, Datei wird sofort nach erfolgreicher Transkription gelöscht. Wenn ich das später auf OGG umstellen wollen sollte (kleinere Dateien), wäre das 1 Zeile Änderung in `AudioRecorder`.

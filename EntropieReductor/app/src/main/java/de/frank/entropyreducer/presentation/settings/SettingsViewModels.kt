@@ -3,14 +3,19 @@ package de.frank.entropyreducer.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
+import de.frank.entropyreducer.data.remote.drive.GoogleSignInHelper
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.MemorySource
+import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.domain.usecase.TestApiKeyUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -214,11 +219,116 @@ class MemoryViewModel @Inject constructor(
 }
 
 /* ----------------- Export ----------------- */
+
+data class ExportUiState(
+    val driveAccountEmail: String? = null,
+    val driveBackupEnabled: Boolean = false,
+    val lastBackupAtMs: Long = 0L,
+    val syncStatus: SyncStatus = SyncStatus.Idle,
+    val driveStatusMessage: String? = null,
+    val restoreInProgress: Boolean = false,
+)
+
 @HiltViewModel
 class ExportViewModel @Inject constructor(
     private val entries: EntryRepository,
     private val memories: MemoryRepository,
+    private val secrets: EncryptedSecretsStore,
+    val signInHelper: GoogleSignInHelper,
+    private val coordinator: SyncCoordinator,
+    private val syncEntries: SyncEntriesUseCase,
 ) : ViewModel() {
+
+    private val _state = MutableStateFlow(loadInitial())
+    val state: StateFlow<ExportUiState> = _state.asStateFlow()
+
+    init {
+        // Coordinator-Status in unseren UI-Status spiegeln.
+        viewModelScope.launch {
+            coordinator.status.collect { status ->
+                _state.update { it.copy(syncStatus = status) }
+            }
+        }
+    }
+
+    private fun loadInitial(): ExportUiState = ExportUiState(
+        driveAccountEmail = secrets.driveAccountEmail,
+        driveBackupEnabled = secrets.driveBackupEnabled,
+        lastBackupAtMs = secrets.driveLastBackupEpochMs,
+    )
+
+    fun onSignInSuccess(account: GoogleSignInAccount) {
+        val email = account.email ?: run {
+            _state.update { it.copy(driveStatusMessage = "Konto ohne E-Mail-Adresse — abgewiesen.") }
+            return
+        }
+        secrets.driveAccountEmail = email
+        secrets.driveBackupEnabled = true
+        _state.update {
+            it.copy(
+                driveAccountEmail = email,
+                driveBackupEnabled = true,
+                driveStatusMessage = "Mit $email verbunden. Erstes Backup laeuft …",
+            )
+        }
+        // Sofort initialer Backup-Run.
+        coordinator.requestImmediate()
+    }
+
+    fun onSignInError(message: String) {
+        _state.update { it.copy(driveStatusMessage = "Sign-In fehlgeschlagen: $message") }
+    }
+
+    fun toggleBackupEnabled(enabled: Boolean) {
+        secrets.driveBackupEnabled = enabled
+        _state.update { it.copy(driveBackupEnabled = enabled) }
+        if (enabled && secrets.driveAccountEmail != null) {
+            coordinator.requestImmediate()
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            signInHelper.signOut()
+            secrets.driveAccountEmail = null
+            secrets.driveBackupEnabled = false
+            _state.update {
+                it.copy(
+                    driveAccountEmail = null,
+                    driveBackupEnabled = false,
+                    driveStatusMessage = "Vom Drive-Konto getrennt. Bestehendes Backup bleibt auf Drive.",
+                )
+            }
+        }
+    }
+
+    fun backupNow() = syncEntries.backupNow()
+
+    fun restoreNow() {
+        viewModelScope.launch {
+            _state.update { it.copy(restoreInProgress = true) }
+            val result = syncEntries.restoreFromDrive()
+            _state.update { st ->
+                val msg = result.fold(
+                    onSuccess = { outcome ->
+                        when (outcome) {
+                            is SyncEntriesUseCase.RestoreOutcome.NoBackup ->
+                                "Kein Backup auf Drive gefunden."
+                            is SyncEntriesUseCase.RestoreOutcome.Merged ->
+                                "Restore: ${outcome.inserted} neu, ${outcome.updated} aktualisiert."
+                        }
+                    },
+                    onFailure = { ex -> "Restore fehlgeschlagen: ${ex.message}" },
+                )
+                st.copy(restoreInProgress = false, driveStatusMessage = msg)
+            }
+        }
+    }
+
+    fun clearStatusMessage() {
+        _state.update { it.copy(driveStatusMessage = null) }
+    }
+
     fun deleteAllEntries() = viewModelScope.launch { entries.deleteAll() }
     fun deleteAllMemories() = viewModelScope.launch { memories.deleteAll() }
 }

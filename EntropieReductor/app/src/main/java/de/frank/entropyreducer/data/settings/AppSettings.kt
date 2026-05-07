@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Drei Theme-Modi: dem System folgen, immer hell, immer dunkel. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 private val Context.dataStore by preferencesDataStore(name = "app_settings")
 
 /**
@@ -29,16 +32,25 @@ class AppSettings @Inject constructor(
     val transcriptionLanguageFlow: Flow<String> = ds.data.map { it[KEY_LANGUAGE] ?: "de" }
     val ttsVoiceFlow: Flow<String> = ds.data.map { it[KEY_TTS_VOICE] ?: "" }
     val profileTextFlow: Flow<String> = ds.data.map { it[KEY_PROFILE_TEXT] ?: "" }
-    val themeIsDarkFlow: Flow<Boolean?> = ds.data.map { it[KEY_THEME_DARK] }
+
+    /**
+     * Theme-Modus als Flow. Default: SYSTEM (folgt der Hell-/Dunkel-Einstellung
+     * des Geraets). Manueller Override via Toggle in der Top-Bar.
+     */
+    val themeModeFlow: Flow<ThemeMode> = ds.data.map { prefs ->
+        when (prefs[KEY_THEME_MODE]) {
+            "LIGHT" -> ThemeMode.LIGHT
+            "DARK" -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
+        }
+    }
 
     suspend fun setWhisperModel(value: String) = ds.edit { it[KEY_WHISPER_MODEL] = value }
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
     suspend fun setTtsVoice(value: String) = ds.edit { it[KEY_TTS_VOICE] = value }
     suspend fun setProfileText(value: String) = ds.edit { it[KEY_PROFILE_TEXT] = value }
-    suspend fun setThemeDark(value: Boolean?) = ds.edit {
-        if (value == null) it.remove(KEY_THEME_DARK) else it[KEY_THEME_DARK] = value
-    }
+    suspend fun setThemeMode(value: ThemeMode) = ds.edit { it[KEY_THEME_MODE] = value.name }
 
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
@@ -46,7 +58,7 @@ class AppSettings @Inject constructor(
         private val KEY_LANGUAGE = stringPreferencesKey("transcription_lang")
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
-        private val KEY_THEME_DARK = booleanPreferencesKey("theme_dark")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         const val DEFAULT_GEMINI = "gemini-2.5-flash"

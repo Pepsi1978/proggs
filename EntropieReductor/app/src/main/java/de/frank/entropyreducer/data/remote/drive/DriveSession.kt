@@ -1,0 +1,74 @@
+package de.frank.entropyreducer.data.remote.drive
+
+import android.accounts.Account
+import android.content.Context
+import android.content.Intent
+import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.UserRecoverableAuthException
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * User braucht Sign-In bevor Drive ueberhaupt erreichbar ist. Wir werfen
+ * diese Ausnahme, damit die UI eine klare Meldung zeigt + zum Sign-In
+ * weiterleitet.
+ */
+class DriveNotSignedInException : Exception("Kein Google-Konto fuer Drive-Backup verbunden.")
+
+/**
+ * Wenn Google die OAuth-Einwilligung verlangt (erstes Mal, oder Token abgelaufen),
+ * liefert das System einen Intent — die UI muss ihn starten.
+ */
+class DriveConsentRequiredException(val consentIntent: Intent) :
+    Exception("Drive-Einwilligung erforderlich.")
+
+/**
+ * Liefert auf Anfrage einen authentifizierten [Drive]-Client — gecacht innerhalb
+ * einer "Session" (= Backup-/Restore-Operation), damit nicht jede einzelne
+ * Drive-Operation einen neuen OAuth-Token-Roundtrip macht.
+ */
+@Singleton
+class DriveSession @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val secrets: EncryptedSecretsStore,
+) {
+    @Volatile private var current: Drive? = null
+    private val mutex = Mutex()
+
+    /** Liefert den aktuellen Drive-Client; baut ihn lazy beim ersten Aufruf. */
+    suspend fun get(): Drive {
+        current?.let { return it }
+        return mutex.withLock {
+            current ?: build().also { current = it }
+        }
+    }
+
+    /** Beendet die Session. Naechster `get()`-Aufruf fordert frischen Token an. */
+    fun end() { current = null }
+
+    private suspend fun build(): Drive = withContext(Dispatchers.IO) {
+        val email = secrets.driveAccountEmail ?: throw DriveNotSignedInException()
+        val account = Account(email, "com.google")
+        val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
+        val token = try {
+            GoogleAuthUtil.getToken(context, account, scope)
+        } catch (e: UserRecoverableAuthException) {
+            throw DriveConsentRequiredException(e.intent ?: Intent())
+        }
+        Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
+            request.headers.authorization = "Bearer $token"
+        }
+            .setApplicationName("EntropieReductor")
+            .build()
+    }
+}

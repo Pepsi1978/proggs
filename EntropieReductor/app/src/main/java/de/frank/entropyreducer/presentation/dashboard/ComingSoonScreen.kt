@@ -21,9 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -38,9 +43,12 @@ fun ComingSoonScreen(
     onOpenSettings: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
+    val themeVm: ThemeViewModel = hiltViewModel()
+    val themeMode by themeVm.themeMode.collectAsState()
     CosmosScaffold(
         title = title,
         actions = {
+            ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     imageVector = Icons.Outlined.Settings,

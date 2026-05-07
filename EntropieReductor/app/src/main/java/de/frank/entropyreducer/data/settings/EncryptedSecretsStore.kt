@@ -72,6 +72,21 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_GOOGLE_REFRESH, null)
         set(value) { prefs.edit().putString(KEY_GOOGLE_REFRESH, value).apply() }
 
+    /** Account-Mailadresse fuer Drive-Backup. Wird beim Sign-In gesetzt. */
+    var driveAccountEmail: String?
+        get() = prefs.getString(KEY_DRIVE_ACCOUNT, null)
+        set(value) { prefs.edit().putString(KEY_DRIVE_ACCOUNT, value).apply() }
+
+    /** Toggle: Drive-Backup aktiv? Steuert ob Mutationen einen Sync-Trigger feuern. */
+    var driveBackupEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DRIVE_ENABLED, false)
+        set(value) { prefs.edit().putBoolean(KEY_DRIVE_ENABLED, value).apply() }
+
+    /** Zeitstempel des letzten erfolgreichen Backup-Uploads. */
+    var driveLastBackupEpochMs: Long
+        get() = prefs.getLong(KEY_DRIVE_LAST_BACKUP, 0L)
+        set(value) { prefs.edit().putLong(KEY_DRIVE_LAST_BACKUP, value).apply() }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -88,5 +103,8 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_WHOOP_EXPIRY = "whoop_expiry"
         private const val KEY_GOOGLE_ACCESS = "google_access_token"
         private const val KEY_GOOGLE_REFRESH = "google_refresh_token"
+        private const val KEY_DRIVE_ACCOUNT = "drive_account_email"
+        private const val KEY_DRIVE_ENABLED = "drive_backup_enabled"
+        private const val KEY_DRIVE_LAST_BACKUP = "drive_last_backup_ms"
     }
 }

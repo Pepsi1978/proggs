@@ -132,4 +132,15 @@ dependencies {
     // Vico Charts (Stufe 2-4)
     implementation(libs.vico.compose.m3)
     implementation(libs.vico.core)
+
+    // Google Drive Backup/Restore (Stufe 1)
+    implementation(libs.google.api.client.android)
+    implementation(libs.google.drive.api)
+    implementation(libs.play.services.auth)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play)
+    implementation(libs.google.id)
+
+    // Pruefe Internet-Konnektivitaet
+    implementation(libs.core.ktx)
 }

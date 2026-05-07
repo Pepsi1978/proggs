@@ -49,10 +49,12 @@ import kotlinx.coroutines.launch
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.StatusBar
+import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -94,9 +96,13 @@ fun TasksScreen(
         }
     }
 
+    val themeVm: ThemeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val themeMode by themeVm.themeMode.collectAsState()
+
     CosmosScaffold(
         title = "Entropie Reduktor",
         actions = {
+            ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
