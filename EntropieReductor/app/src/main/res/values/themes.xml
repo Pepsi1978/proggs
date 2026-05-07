@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        Splash-/Bootstrap-Theme: nutzt das System-Theme, weil das eigentliche
+        Theming komplett in Compose passiert (siehe presentation/theme/Theme.kt).
+        Dadurch entfaellt die Abhaengigkeit zu com.google.android.material:material.
+    -->
+    <style name="Theme.EntropieReductor" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
+        <item name="android:navigationBarColor" tools:targetApi="l">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="l">true</item>
+        <item name="android:windowBackground">@color/cosmos_bg_dark</item>
+    </style>
+</resources>

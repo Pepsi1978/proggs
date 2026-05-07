@@ -1,0 +1,74 @@
+package de.frank.entropyreducer.di
+
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.BuildConfig
+import de.frank.entropyreducer.data.remote.GeminiApi
+import de.frank.entropyreducer.data.remote.GroqWhisperApi
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import java.util.concurrent.TimeUnit
+import javax.inject.Named
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        coerceInputValues = true
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttp(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.HEADERS
+            })
+        }
+        return builder.build()
+    }
+
+    @Provides
+    @Singleton
+    @Named("groq")
+    fun provideGroqRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api.groq.com/openai/v1/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides
+    @Singleton
+    @Named("gemini")
+    fun provideGeminiRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://generativelanguage.googleapis.com/v1beta/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideGroqApi(@Named("groq") retrofit: Retrofit): GroqWhisperApi =
+        retrofit.create(GroqWhisperApi::class.java)
+
+    @Provides @Singleton
+    fun provideGeminiApi(@Named("gemini") retrofit: Retrofit): GeminiApi =
+        retrofit.create(GeminiApi::class.java)
+}

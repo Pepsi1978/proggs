@@ -1,0 +1,216 @@
+package de.frank.entropyreducer.presentation.settings
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
+import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
+import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.repository.MemoryRepository
+import de.frank.entropyreducer.data.repository.PromptRepository
+import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.domain.model.MemorySource
+import de.frank.entropyreducer.domain.usecase.TestApiKeyUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.util.UUID
+import javax.inject.Inject
+
+/* ----------------- API Keys ----------------- */
+data class ApiKeysUiState(
+    val groqKey: String = "",
+    val geminiKey: String = "",
+    val ttsKey: String = "",
+    val groqSaved: Boolean = false,
+    val geminiSaved: Boolean = false,
+    val ttsSaved: Boolean = false,
+    val groqStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
+    val geminiStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
+    val ttsStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
+)
+enum class ConnectionStatus { UNKNOWN, OK, FAIL, TESTING }
+
+@HiltViewModel
+class ApiKeysViewModel @Inject constructor(
+    private val secrets: EncryptedSecretsStore,
+    private val testApi: TestApiKeyUseCase,
+) : ViewModel() {
+    private val _state = MutableStateFlow(
+        ApiKeysUiState(
+            groqKey = secrets.groqApiKey.orEmpty(),
+            geminiKey = secrets.geminiApiKey.orEmpty(),
+            ttsKey = secrets.googleTtsApiKey.orEmpty(),
+            groqSaved = !secrets.groqApiKey.isNullOrBlank(),
+            geminiSaved = !secrets.geminiApiKey.isNullOrBlank(),
+            ttsSaved = !secrets.googleTtsApiKey.isNullOrBlank(),
+        )
+    )
+    val state: StateFlow<ApiKeysUiState> = _state.asStateFlow()
+
+    fun setGroq(value: String) { _state.update { it.copy(groqKey = value) } }
+    fun setGemini(value: String) { _state.update { it.copy(geminiKey = value) } }
+    fun setTts(value: String) { _state.update { it.copy(ttsKey = value) } }
+
+    fun saveGroq() {
+        secrets.groqApiKey = state.value.groqKey.trim().ifBlank { null }
+        _state.update { it.copy(groqSaved = !state.value.groqKey.isBlank()) }
+    }
+    fun saveGemini() {
+        secrets.geminiApiKey = state.value.geminiKey.trim().ifBlank { null }
+        _state.update { it.copy(geminiSaved = !state.value.geminiKey.isBlank()) }
+    }
+    fun saveTts() {
+        secrets.googleTtsApiKey = state.value.ttsKey.trim().ifBlank { null }
+        _state.update { it.copy(ttsSaved = !state.value.ttsKey.isBlank()) }
+    }
+
+    fun testGemini() {
+        viewModelScope.launch {
+            _state.update { it.copy(geminiStatus = ConnectionStatus.TESTING) }
+            val result = testApi.testGemini(state.value.geminiKey.trim())
+            _state.update {
+                it.copy(geminiStatus = if (result.isSuccess) ConnectionStatus.OK else ConnectionStatus.FAIL)
+            }
+        }
+    }
+
+    /** Whisper-Test: kann mit aktuell verfuegbaren Mitteln nicht ohne echtes Audio getestet werden;
+     *  zeigen "OK" sobald gespeichert. Voller Test in Stufe 2. */
+    fun testGroq() {
+        _state.update {
+            it.copy(groqStatus = if (it.groqKey.isNotBlank()) ConnectionStatus.OK else ConnectionStatus.FAIL)
+        }
+    }
+
+    fun testTts() {
+        _state.update {
+            it.copy(ttsStatus = if (it.ttsKey.isNotBlank()) ConnectionStatus.OK else ConnectionStatus.FAIL)
+        }
+    }
+}
+
+
+/* ----------------- Models ----------------- */
+data class ModelsUiState(
+    val whisperModel: String = AppSettings.DEFAULT_WHISPER,
+    val geminiModel: String = AppSettings.DEFAULT_GEMINI,
+    val transcriptionLanguage: String = "de",
+    val ttsVoice: String = "",
+)
+
+@HiltViewModel
+class ModelsViewModel @Inject constructor(
+    private val settings: AppSettings,
+) : ViewModel() {
+    val state: StateFlow<ModelsUiState> = kotlinx.coroutines.flow.combine(
+        settings.whisperModelFlow,
+        settings.geminiModelFlow,
+        settings.transcriptionLanguageFlow,
+        settings.ttsVoiceFlow,
+    ) { w, g, l, v -> ModelsUiState(w, g, l, v) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ModelsUiState())
+
+    fun setWhisper(v: String) = viewModelScope.launch { settings.setWhisperModel(v) }
+    fun setGemini(v: String) = viewModelScope.launch { settings.setGeminiModel(v) }
+    fun setLanguage(v: String) = viewModelScope.launch { settings.setTranscriptionLanguage(v) }
+    fun setTtsVoice(v: String) = viewModelScope.launch { settings.setTtsVoice(v) }
+}
+
+/* ----------------- Profile ----------------- */
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val settings: AppSettings,
+    private val memoryRepo: MemoryRepository,
+) : ViewModel() {
+    val profileText: StateFlow<String> =
+        settings.profileTextFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun save(text: String) = viewModelScope.launch { settings.setProfileText(text) }
+
+    /** Stub fuer "Aus Profil ins Gedaechtnis uebernehmen" — voller KI-Aufruf in Stufe 4. */
+    fun distillToMemory(text: String) = viewModelScope.launch {
+        val now = System.currentTimeMillis()
+        // Stufe 1: einfaches Heuristik — pro Absatz ein Memory-Eintrag, max 8.
+        val paragraphs = text.split("\n\n", "\r\n\r\n").map { it.trim() }.filter { it.length in 20..400 }.take(8)
+        paragraphs.forEachIndexed { idx, p ->
+            memoryRepo.upsert(
+                MemoryEntryEntity(
+                    id = UUID.randomUUID().toString(),
+                    content = p,
+                    source = MemorySource.AUS_PROFIL,
+                    isActive = true,
+                    confidence = 80,
+                    createdAt = now + idx,
+                    updatedAt = now + idx,
+                )
+            )
+        }
+    }
+}
+
+/* ----------------- Prompts ----------------- */
+@HiltViewModel
+class PromptsViewModel @Inject constructor(
+    private val repo: PromptRepository,
+) : ViewModel() {
+    val prompts: StateFlow<List<SavedPromptEntity>> =
+        repo.getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun save(entity: SavedPromptEntity) = viewModelScope.launch { repo.upsert(entity) }
+    fun toggle(entity: SavedPromptEntity) = viewModelScope.launch {
+        repo.upsert(entity.copy(isActive = !entity.isActive, updatedAt = System.currentTimeMillis()))
+    }
+    fun delete(entity: SavedPromptEntity) = viewModelScope.launch { repo.delete(entity) }
+    fun create(name: String, content: String) = viewModelScope.launch {
+        val now = System.currentTimeMillis()
+        repo.upsert(
+            SavedPromptEntity(
+                id = UUID.randomUUID().toString(),
+                name = name, content = content, isActive = true,
+                createdAt = now, updatedAt = now,
+            )
+        )
+    }
+}
+
+/* ----------------- Memory ----------------- */
+@HiltViewModel
+class MemoryViewModel @Inject constructor(
+    private val repo: MemoryRepository,
+) : ViewModel() {
+    val memories: StateFlow<List<MemoryEntryEntity>> =
+        repo.getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun toggle(entity: MemoryEntryEntity) = viewModelScope.launch {
+        repo.upsert(entity.copy(isActive = !entity.isActive, updatedAt = System.currentTimeMillis()))
+    }
+    fun delete(entity: MemoryEntryEntity) = viewModelScope.launch { repo.delete(entity) }
+    fun update(entity: MemoryEntryEntity) = viewModelScope.launch { repo.upsert(entity) }
+    fun add(content: String) = viewModelScope.launch {
+        val now = System.currentTimeMillis()
+        repo.upsert(
+            MemoryEntryEntity(
+                id = UUID.randomUUID().toString(),
+                content = content, source = MemorySource.MANUELL,
+                isActive = true, confidence = 100,
+                createdAt = now, updatedAt = now,
+            )
+        )
+    }
+}
+
+/* ----------------- Export ----------------- */
+@HiltViewModel
+class ExportViewModel @Inject constructor(
+    private val entries: EntryRepository,
+    private val memories: MemoryRepository,
+) : ViewModel() {
+    fun deleteAllEntries() = viewModelScope.launch { entries.deleteAll() }
+    fun deleteAllMemories() = viewModelScope.launch { memories.deleteAll() }
+}
