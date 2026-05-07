@@ -41,6 +41,12 @@ class AppSettings @Inject constructor(
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
+    /** Zwischengespeicherte Markdown-Analyse aus Dashboard 2 (Spec §11.1.7). */
+    val cachedAnalysisMarkdownFlow: Flow<String> = ds.data.map { it[KEY_CACHED_ANALYSIS] ?: "" }
+    val cachedAnalysisAtMsFlow: Flow<Long> = ds.data.map { it[KEY_CACHED_ANALYSIS_AT] ?: 0L }
+    /** Letzte Genie-Codex-Synthese (Epoch-Millisekunden). */
+    val lastCodexSyntheseMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CODEX_SYNTHESE] ?: 0L }
+
     /**
      * Theme-Modus als Flow. Default: SYSTEM (folgt der Hell-/Dunkel-Einstellung
      * des Geraets). Manueller Override via Toggle in der Top-Bar.
@@ -64,6 +70,12 @@ class AppSettings @Inject constructor(
     suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
     suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
 
+    suspend fun setCachedAnalysis(markdown: String, atMs: Long) = ds.edit {
+        it[KEY_CACHED_ANALYSIS] = markdown
+        it[KEY_CACHED_ANALYSIS_AT] = atMs
+    }
+    suspend fun setLastCodexSynthese(value: Long) = ds.edit { it[KEY_LAST_CODEX_SYNTHESE] = value }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -74,6 +86,9 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
+        private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
+        private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")
+        private val KEY_LAST_CODEX_SYNTHESE = longPreferencesKey("last_codex_synthese_ms")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         const val DEFAULT_GEMINI = "gemini-2.5-flash"
