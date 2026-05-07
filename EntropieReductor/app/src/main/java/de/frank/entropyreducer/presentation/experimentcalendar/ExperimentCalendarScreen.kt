@@ -45,6 +45,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -397,11 +398,13 @@ private fun HypothesisDetailContent(
     onDelete: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    var notes by remember(hypothesis.id) {
-        androidx.compose.runtime.mutableStateOf(hypothesis.outcomeNotes.orEmpty())
+    // rememberSaveable: ueberlebt Foldable-Klappung + Drehung. Vorher (remember) gingen
+    // ungespeicherte Notes + Slider-Werte beim Configuration Change verloren.
+    var notes by rememberSaveable(hypothesis.id) {
+        mutableStateOf(hypothesis.outcomeNotes.orEmpty())
     }
-    var felt by remember(hypothesis.id) {
-        androidx.compose.runtime.mutableStateOf((hypothesis.felltEntropyChange ?: 0).toFloat())
+    var felt by rememberSaveable(hypothesis.id) {
+        mutableStateOf((hypothesis.felltEntropyChange ?: 0).toFloat())
     }
 
     Column(

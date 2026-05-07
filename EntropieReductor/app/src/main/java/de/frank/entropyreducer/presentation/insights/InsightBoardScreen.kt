@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -256,10 +257,13 @@ private fun InsightDetailContent(
     onDelete: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    var title by remember(insight.id) { mutableStateOf(insight.title) }
-    var description by remember(insight.id) { mutableStateOf(insight.description) }
-    var confidence by remember(insight.id) { mutableStateOf(insight.confidence.toFloat()) }
-    var categoryMenu by remember { mutableStateOf(false) }
+    // rememberSaveable: ungespeicherte Edits ueberleben Foldable-Klappung + Drehung
+    // (Galaxy Fold 6 Hauptszenario). Vorher gingen Titel/Description-Aenderungen
+    // verloren wenn der Nutzer das Geraet wechselte zwischen Falten und Tippen.
+    var title by rememberSaveable(insight.id) { mutableStateOf(insight.title) }
+    var description by rememberSaveable(insight.id) { mutableStateOf(insight.description) }
+    var confidence by rememberSaveable(insight.id) { mutableStateOf(insight.confidence.toFloat()) }
+    var categoryMenu by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
