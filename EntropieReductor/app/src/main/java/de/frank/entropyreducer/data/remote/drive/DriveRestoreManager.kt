@@ -43,7 +43,10 @@ class DriveRestoreManager @Inject constructor(
 
             val sink = ByteArrayOutputStream()
             drive.files().get(match.id).executeMediaAndDownloadTo(sink)
-            sink.toString(Charsets.UTF_8)
+            // ByteArrayOutputStream.toString(Charset) braucht API 33+ — auf API 28-32
+            // wuerde das mit NoSuchMethodError crashen. String(ByteArray, Charset) gibt's
+            // seit API 1, gleicher Output, kompatibel auf allen unterstuetzten Versionen.
+            String(sink.toByteArray(), Charsets.UTF_8)
         }
     }
 

@@ -31,8 +31,8 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 @Composable
 fun RecoveryRing(
     score: Int?,
-    label: String = "Recovery",
     modifier: Modifier = Modifier,
+    label: String = "Recovery",
     diameter: Int = 220,
 ) {
     val cosmos = LocalCosmos.current

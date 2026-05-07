@@ -89,7 +89,8 @@ class CalculateStatusUseCase @Inject constructor() {
         // 30-Tage-Median fuer HRV-Vergleich.
         val hrvMedian = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }
             ?.sorted()?.let { it[it.size / 2] }
-        val hrvBonus = if (hrv != null && hrvMedian != null) {
+        // Median > 0 absichern — sonst Division durch null bei degenerierten Daten.
+        val hrvBonus = if (hrv != null && hrvMedian != null && hrvMedian > 0.0) {
             val delta = hrv - hrvMedian
             (delta / hrvMedian * 50.0).coerceIn(-25.0, 25.0)
         } else 0.0

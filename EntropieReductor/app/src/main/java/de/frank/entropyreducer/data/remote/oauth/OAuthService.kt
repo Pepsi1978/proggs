@@ -103,9 +103,10 @@ class OAuthService @Inject constructor(
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Authorization-Antwort"))
         }
+        // WICHTIG: AuthState erst NACH erfolgreichem Token-Exchange persistieren.
+        // Sonst hätten wir einen State mit isAuthorized=true aber ohne Token —
+        // freshGoogleAccessToken würde silent failen und der Nutzer denkt verbunden.
         val state = AuthState(resp, ex)
-        saveGoogleAuthState(state)
-
         val tokenResult = exchangeToken(resp.createTokenExchangeRequest())
         return tokenResult.onSuccess { tokenResp ->
             state.update(tokenResp, null)
@@ -113,6 +114,9 @@ class OAuthService @Inject constructor(
             secrets.googleAccessToken = tokenResp.accessToken
             secrets.googleRefreshToken = tokenResp.refreshToken
             secrets.googleTokenExpiryEpochSec = tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
+        }.onFailure {
+            // Bei Token-Fehler: vorhandenen State löschen, damit kein Halb-Zustand entsteht.
+            clearGoogleAuthState()
         }.map { Unit }
     }
 
@@ -177,9 +181,8 @@ class OAuthService @Inject constructor(
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Whoop-Authorization-Antwort"))
         }
+        // Spiegel zur Google-Logik: AuthState erst nach erfolgreichem Token-Exchange.
         val state = AuthState(resp, ex)
-        saveWhoopAuthState(state)
-
         // Whoop verlangt Client-Secret beim Token-Exchange (Confidential-Client).
         val tokenRequest = if (clientSecret != null) {
             resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
@@ -193,6 +196,8 @@ class OAuthService @Inject constructor(
             secrets.whoopAccessToken = tokenResp.accessToken
             secrets.whoopRefreshToken = tokenResp.refreshToken
             secrets.whoopTokenExpiryEpochSec = tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
+        }.onFailure {
+            clearWhoopAuthState()
         }.map { Unit }
     }
 

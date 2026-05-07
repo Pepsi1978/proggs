@@ -61,9 +61,10 @@ class KiQuestionGenerator @Inject constructor() {
                     (it.estimatedDurationMinutes ?: 30) > (todayCalendar.availableMinutesEstimate)
             }
             if (todayEntry != null) {
+                val durationLabel = todayEntry.estimatedDurationMinutes?.let { "$it" } ?: "geschaetzt 30"
                 return KiQuestion(
                     triggerKey = "today_overload",
-                    text = "Aufgabe \"${todayEntry.title}\" braucht etwa ${todayEntry.estimatedDurationMinutes} Min. " +
+                    text = "Aufgabe \"${todayEntry.title}\" braucht etwa $durationLabel Min. " +
                         "Schaffst du sie heute trotz Tagdienst, oder schiebe ich sie auf den naechsten Frei-Block?",
                     rationale = "Tagdienst, ${todayCalendar.availableMinutesEstimate} Min verfuegbar",
                     relatedEntryIds = listOf(todayEntry.id),
