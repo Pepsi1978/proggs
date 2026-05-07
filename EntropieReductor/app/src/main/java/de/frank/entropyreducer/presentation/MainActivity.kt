@@ -152,6 +152,7 @@ class StartupViewModel @Inject constructor(
                 // existieren. Die Worker laufen leer, machen aber kein Schaden.
                 scheduler.ensureNightlyJobs()
                 scheduler.ensureKiQuestionJob()
+                scheduler.ensureCodexJob()
                 if (secrets.calendarAccountEmail != null) {
                     scheduler.runCalendarSyncNow()
                 }

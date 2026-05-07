@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -53,6 +54,34 @@ class BackgroundScheduler @Inject constructor(
                 .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build(),
+        )
+    }
+
+    /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */
+    fun ensureCodexJob() {
+        val initialDelayMinutes = minutesUntilNextWeekday(DayOfWeek.SUNDAY, 19 * 60)
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        wm.enqueueUniquePeriodicWork(
+            GenieCodexWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<GenieCodexWorker>(7, TimeUnit.DAYS)
+                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+    }
+
+    /** Stoesst eine Codex-Synthese sofort an (Manueller "Jetzt aktualisieren"-Button). */
+    fun runCodexNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            GenieCodexWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<GenieCodexWorker>().setConstraints(constraints).build(),
         )
     }
 
@@ -117,5 +146,18 @@ class BackgroundScheduler @Inject constructor(
         val nowMillis = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val resolvedMillis = resolved.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         return ((resolvedMillis - nowMillis) / 60_000L).coerceAtLeast(1L)
+    }
+
+    /** Anzahl Minuten bis zum naechsten Vorkommen des angegebenen Wochentags + Tagesminute. */
+    private fun minutesUntilNextWeekday(dayOfWeek: DayOfWeek, targetMinutes: Int): Long {
+        val now = LocalDateTime.now(ZoneId.systemDefault())
+        val targetTime = LocalTime.of(targetMinutes / 60, targetMinutes % 60)
+        var date = now.toLocalDate()
+        while (date.dayOfWeek != dayOfWeek) date = date.plusDays(1)
+        var target = date.atTime(targetTime)
+        if (!target.isAfter(now)) target = target.plusWeeks(1)
+        val nowMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val targetMs = target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return ((targetMs - nowMs) / 60_000L).coerceAtLeast(1L)
     }
 }
