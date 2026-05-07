@@ -99,14 +99,41 @@ fun BiomarkerHostScreen(
             }
             item { GesamterholungCard(state) }
             item { KeyValueGrid(state) }
+
+            // History-Charts — alle 8 Whoop-Werte mit eigenem 30-Tage-Verlauf.
+            // Frank-Wunsch 2026-05-08: jeder Whoop-Wert braucht eigene History-Card,
+            // damit Trends sichtbar sind (vorher waren nur HRV + Strain als Charts da).
             item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text("HRV-Verlauf (30 Tage)", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
-                        Spacer(Modifier.height(8.dp))
-                        HrvLineChart(values = state.history30Days.mapNotNull { it.hrvMs })
-                    }
-                }
+                MetricHistoryCard(
+                    title = "HRV-Verlauf (30 Tage)",
+                    accent = CosmosColors.AccentPrimary,
+                    values = state.history30Days.mapNotNull { it.hrvMs },
+                    unit = "ms",
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Resting Heart Rate (30 Tage)",
+                    accent = CosmosColors.Critical,
+                    values = state.history30Days.mapNotNull { it.restingHeartRate?.toDouble() },
+                    unit = "bpm",
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Schlaf-Performance (30 Tage)",
+                    accent = CosmosColors.Success,
+                    values = state.history30Days.mapNotNull { it.sleepPerformance?.toDouble() },
+                    unit = "%",
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Schlafdauer (30 Tage)",
+                    accent = CosmosColors.AccentSecondary,
+                    values = state.history30Days.mapNotNull { it.sleepTotalMinutes?.toDouble() },
+                    unit = "min",
+                )
             }
             item {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -123,19 +150,24 @@ fun BiomarkerHostScreen(
                 }
             }
             item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Text("Strain (30 Tage)", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
-                        Spacer(Modifier.height(8.dp))
-                        HrvLineChart(
-                            values = state.history30Days.mapNotNull { it.dayStrain },
-                            accent = CosmosColors.Warning,
-                            unit = "",
-                            title = "Strain (30 Tage)",
-                        )
-                    }
-                }
+                MetricHistoryCard(
+                    title = "Strain (30 Tage)",
+                    accent = CosmosColors.Warning,
+                    values = state.history30Days.mapNotNull { it.dayStrain },
+                    unit = "",
+                )
             }
+            item {
+                MetricHistoryCard(
+                    title = "Day Kilojoules (30 Tage)",
+                    accent = CosmosColors.AccentPrimary,
+                    values = state.history30Days.mapNotNull { it.dayKilojoules },
+                    unit = "kJ",
+                )
+            }
+            // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
+            // ueber die 30 Tage — hilft Frank Muster zu sehen.
+            item { CorrelationCard(state) }
             if (state.latest == null) {
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -268,6 +300,106 @@ private fun MetricMiniCard(
             Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+/**
+ * Generische History-Chart-Card. Wird fuer alle Whoop-Metriken wiederverwendet
+ * (HRV, RHR, Schlaf-Performance, Schlafdauer, Strain, Day Kilojoules) damit jede
+ * Metrik einen 30-Tage-Verlauf bekommt. Faellt bei leeren Daten auf einen kurzen
+ * Placeholder zurueck statt einen leeren Chart anzuzeigen.
+ */
+@Composable
+private fun MetricHistoryCard(
+    title: String,
+    accent: androidx.compose.ui.graphics.Color,
+    values: List<Double>,
+    unit: String,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+            Spacer(Modifier.height(8.dp))
+            if (values.isEmpty()) {
+                Text(
+                    text = "Noch keine Daten — sync dein Whoop-Armband.",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else {
+                HrvLineChart(values = values, accent = accent, unit = unit, title = title)
+            }
+        }
+    }
+}
+
+/**
+ * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer
+ * ueber die letzten 30 Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf
+ * mit hoeherer HRV einhergeht".
+ */
+@Composable
+private fun CorrelationCard(state: BiomarkerUiState) {
+    val cosmos = LocalCosmos.current
+    val pairs = state.history30Days.mapNotNull { snap ->
+        val hrv = snap.hrvMs ?: return@mapNotNull null
+        val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
+        hrv to sleep.toDouble()
+    }
+    val r = if (pairs.size >= 3) pearson(pairs) else null
+    val (label, color) = when {
+        r == null -> "Nicht genug Daten" to cosmos.textSecondary
+        r >= 0.5 -> "Starke positive Korrelation" to CosmosColors.Success
+        r >= 0.2 -> "Schwache positive Korrelation" to CosmosColors.AccentPrimary
+        r >= -0.2 -> "Keine klare Korrelation" to cosmos.textSecondary
+        r >= -0.5 -> "Schwache negative Korrelation" to CosmosColors.Warning
+        else -> "Starke negative Korrelation" to CosmosColors.Critical
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                text = "HRV ↔ Schlafdauer",
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = label,
+                color = color,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (r != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Pearson r = ${"%.2f".format(r)} (n=${pairs.size})",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Hoehere Werte deuten an: mehr Schlaf -> hoehere HRV. " +
+                    "Negative Werte heissen: mehr Schlaf -> niedrigere HRV (selten).",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
+
+private fun pearson(pairs: List<Pair<Double, Double>>): Double {
+    val n = pairs.size
+    val sumX = pairs.sumOf { it.first }
+    val sumY = pairs.sumOf { it.second }
+    val sumXY = pairs.sumOf { it.first * it.second }
+    val sumX2 = pairs.sumOf { it.first * it.first }
+    val sumY2 = pairs.sumOf { it.second * it.second }
+    val numerator = n * sumXY - sumX * sumY
+    val denomSq = (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)
+    if (denomSq <= 0) return 0.0
+    return numerator / kotlin.math.sqrt(denomSq)
 }
 
 /**
