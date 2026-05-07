@@ -33,7 +33,9 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
+import androidx.compose.foundation.clickable
 import de.frank.entropyreducer.presentation.components.charts.HrvLineChart
+import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.RecoveryRing
 import de.frank.entropyreducer.presentation.components.charts.SleepStagesBar
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
@@ -51,6 +53,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 fun BiomarkerHostScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
+    onOpenMetricDetail: (String) -> Unit = {},
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -98,41 +101,54 @@ fun BiomarkerHostScreen(
                 )
             }
             item { GesamterholungCard(state) }
-            item { KeyValueGrid(state) }
+            item { KeyValueGrid(state, onOpenMetricDetail) }
 
-            // History-Charts — alle 8 Whoop-Werte mit eigenem 30-Tage-Verlauf.
-            // Frank-Wunsch 2026-05-08: jeder Whoop-Wert braucht eigene History-Card,
-            // damit Trends sichtbar sind (vorher waren nur HRV + Strain als Charts da).
+            // History-Charts — alle Whoop-Werte mit VOLLSTAENDIGER Historie und
+            // interaktivem Chart (Y-Achse, X-Achse, Tap auf Punkt zeigt Wert).
+            // Frank-Wunsch 2026-05-08: nicht mehr 30-Tage-Slice sondern alles,
+            // klickbar fuer Detail-Screen.
             item {
                 MetricHistoryCard(
-                    title = "HRV-Verlauf (30 Tage)",
+                    title = "HRV-Verlauf",
                     accent = CosmosColors.AccentPrimary,
-                    values = state.history30Days.mapNotNull { it.hrvMs },
+                    points = state.history.mapNotNull { snap ->
+                        snap.hrvMs?.let { snap.capturedAt to it }
+                    },
                     unit = "ms",
+                    onClick = { onOpenMetricDetail(MetricKey.HRV) },
                 )
             }
             item {
                 MetricHistoryCard(
-                    title = "Resting Heart Rate (30 Tage)",
+                    title = "Resting Heart Rate",
                     accent = CosmosColors.Critical,
-                    values = state.history30Days.mapNotNull { it.restingHeartRate?.toDouble() },
+                    points = state.history.mapNotNull { snap ->
+                        snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                    },
                     unit = "bpm",
+                    onClick = { onOpenMetricDetail(MetricKey.RHR) },
                 )
             }
             item {
                 MetricHistoryCard(
-                    title = "Schlaf-Performance (30 Tage)",
+                    title = "Schlaf-Performance",
                     accent = CosmosColors.Success,
-                    values = state.history30Days.mapNotNull { it.sleepPerformance?.toDouble() },
+                    points = state.history.mapNotNull { snap ->
+                        snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
+                    },
                     unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
                 )
             }
             item {
                 MetricHistoryCard(
-                    title = "Schlafdauer (30 Tage)",
+                    title = "Schlafdauer",
                     accent = CosmosColors.AccentSecondary,
-                    values = state.history30Days.mapNotNull { it.sleepTotalMinutes?.toDouble() },
+                    points = state.history.mapNotNull { snap ->
+                        snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
+                    },
                     unit = "min",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
                 )
             }
             item {
@@ -151,22 +167,28 @@ fun BiomarkerHostScreen(
             }
             item {
                 MetricHistoryCard(
-                    title = "Strain (30 Tage)",
+                    title = "Strain",
                     accent = CosmosColors.Warning,
-                    values = state.history30Days.mapNotNull { it.dayStrain },
+                    points = state.history.mapNotNull { snap ->
+                        snap.dayStrain?.let { snap.capturedAt to it }
+                    },
                     unit = "",
+                    onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
                 )
             }
             item {
                 MetricHistoryCard(
-                    title = "Day Kilojoules (30 Tage)",
+                    title = "Day Kilojoules",
                     accent = CosmosColors.AccentPrimary,
-                    values = state.history30Days.mapNotNull { it.dayKilojoules },
+                    points = state.history.mapNotNull { snap ->
+                        snap.dayKilojoules?.let { snap.capturedAt to it }
+                    },
                     unit = "kJ",
+                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
             }
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
-            // ueber die 30 Tage — hilft Frank Muster zu sehen.
+            // ueber die volle Historie.
             item { CorrelationCard(state) }
             if (state.latest == null) {
                 item {
@@ -201,7 +223,7 @@ fun BiomarkerHostScreen(
 }
 
 @Composable
-private fun KeyValueGrid(state: BiomarkerUiState) {
+private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.latest
     val history = state.history30Days
     // 30-Tage-Mittel pro Metrik (ohne den heutigen Wert) — Basis fuer Trend-Pfeil + Delta.
@@ -218,6 +240,7 @@ private fun KeyValueGrid(state: BiomarkerUiState) {
             delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
             deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
+            onClick = { onOpenDetail(MetricKey.HRV) },
         )
         MetricMiniCard(
             modifier = Modifier.weight(1f),
@@ -227,6 +250,7 @@ private fun KeyValueGrid(state: BiomarkerUiState) {
             // Bei RHR ist NIEDRIGER besser — Pfeil-Logik invertiert.
             deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
+            onClick = { onOpenDetail(MetricKey.RHR) },
         )
     }
     Spacer(Modifier.height(8.dp))
@@ -244,6 +268,7 @@ private fun KeyValueGrid(state: BiomarkerUiState) {
             delta = formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
             deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
+            onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
         )
         MetricMiniCard(
             modifier = Modifier.weight(1f),
@@ -252,8 +277,25 @@ private fun KeyValueGrid(state: BiomarkerUiState) {
             delta = formatDelta(latest?.sleepPerformance?.toDouble(), avgSleepPerf, "%"),
             deltaPositive = (latest?.sleepPerformance?.toDouble() ?: 0.0) > (avgSleepPerf ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
+            onClick = { onOpenDetail(MetricKey.SLEEP_PERF) },
         )
     }
+}
+
+/** Zentrale Konstanten fuer Metrik-IDs — werden in Routes + Detail-Screen genutzt. */
+internal object MetricKey {
+    const val HRV = "hrv"
+    const val RHR = "rhr"
+    const val SLEEP_PERF = "sleep_perf"
+    const val SLEEP_TOTAL = "sleep_total"
+    const val STRAIN = "strain"
+    const val KILOJOULES = "kilojoules"
+    const val SLEEP_REM = "sleep_rem"
+    const val SLEEP_DEEP = "sleep_deep"
+    const val SLEEP_LIGHT = "sleep_light"
+    const val SLEEP_AWAKE = "sleep_awake"
+    const val SLEEP_DISTURBANCES = "sleep_disturbances"
+    const val RECOVERY = "recovery"
 }
 
 /**
@@ -284,10 +326,12 @@ private fun MetricMiniCard(
     delta: String,
     deltaPositive: Boolean,
     footnote: String,
+    onClick: (() -> Unit)? = null,
 ) {
     val cosmos = LocalCosmos.current
     val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
-    GlassCard(modifier = modifier) {
+    val cardModifier = if (onClick != null) modifier.clickable { onClick() } else modifier
+    GlassCard(modifier = cardModifier) {
         Column {
             Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
             Spacer(Modifier.height(2.dp))
@@ -303,31 +347,44 @@ private fun MetricMiniCard(
 }
 
 /**
- * Generische History-Chart-Card. Wird fuer alle Whoop-Metriken wiederverwendet
- * (HRV, RHR, Schlaf-Performance, Schlafdauer, Strain, Day Kilojoules) damit jede
- * Metrik einen 30-Tage-Verlauf bekommt. Faellt bei leeren Daten auf einen kurzen
- * Placeholder zurueck statt einen leeren Chart anzuzeigen.
+ * Generische History-Chart-Card mit interaktivem Linien-Chart (Y-Achse,
+ * X-Achse, Tap-zu-Tooltip). Tap auf die ganze Card oeffnet den Detail-Screen
+ * mit voller Zahlen-Liste (Frank-Wunsch 2026-05-08).
  */
 @Composable
 private fun MetricHistoryCard(
     title: String,
     accent: androidx.compose.ui.graphics.Color,
-    values: List<Double>,
+    points: List<Pair<Long, Double>>,
     unit: String,
+    onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "Details ▸",
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Spacer(Modifier.height(8.dp))
-            if (values.isEmpty()) {
+            if (points.isEmpty()) {
                 Text(
                     text = "Noch keine Daten — sync dein Whoop-Armband.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
-                HrvLineChart(values = values, accent = accent, unit = unit, title = title)
+                InteractiveLineChart(points = points, accent = accent, unit = unit)
             }
         }
     }
@@ -341,7 +398,8 @@ private fun MetricHistoryCard(
 @Composable
 private fun CorrelationCard(state: BiomarkerUiState) {
     val cosmos = LocalCosmos.current
-    val pairs = state.history30Days.mapNotNull { snap ->
+    // Nutzt VOLLE Historie damit die Korrelation mehr Datenpunkte hat.
+    val pairs = state.history.mapNotNull { snap ->
         val hrv = snap.hrvMs ?: return@mapNotNull null
         val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
         hrv to sleep.toDouble()

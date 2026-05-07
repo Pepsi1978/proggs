@@ -2,12 +2,15 @@ package de.frank.entropyreducer.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
 import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
+import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalendarScreen
 import de.frank.entropyreducer.presentation.insights.InsightBoardScreen
@@ -54,6 +57,19 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             BiomarkerHostScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
                 onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+                onOpenMetricDetail = { metricKey ->
+                    nav.navigate(Routes.biomarkerDetail(metricKey))
+                },
+            )
+        }
+        composable(
+            route = Routes.BIOMARKER_DETAIL_PATTERN,
+            arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
+            BiomarkerDetailScreen(
+                metricKey = metricKey,
+                onBack = { nav.popBackStack(); Unit },
             )
         }
 

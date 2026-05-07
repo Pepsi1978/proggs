@@ -42,6 +42,9 @@ class WhoopRepository @Inject constructor(
     fun observeRange(from: Long, to: Long): Flow<List<BiomarkerSnapshotEntity>> =
         dao.getRange(from, to)
 
+    /** Vollstaendige Historie aller Snapshots (Frank-Wunsch 2026-05-08). */
+    fun observeAll(): Flow<List<BiomarkerSnapshotEntity>> = dao.getAll()
+
     /**
      * Synchronisiert die letzten [days] Tage. Liefert die Anzahl gespeicherter
      * Snapshots zurueck.

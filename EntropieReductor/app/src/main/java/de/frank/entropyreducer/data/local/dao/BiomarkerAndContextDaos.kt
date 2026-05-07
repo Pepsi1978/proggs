@@ -20,6 +20,11 @@ interface BiomarkerSnapshotDao {
     @Query("SELECT * FROM biomarker_snapshots WHERE capturedAt BETWEEN :from AND :to ORDER BY capturedAt ASC")
     fun getRange(from: Long, to: Long): Flow<List<BiomarkerSnapshotEntity>>
 
+    /** Frank-Wunsch 2026-05-08: vollstaendige Historie aller Whoop-Snapshots,
+     *  nicht nur die letzten 30 Tage. Wird im BiomarkerDetailScreen + Charts genutzt. */
+    @Query("SELECT * FROM biomarker_snapshots ORDER BY capturedAt ASC")
+    fun getAll(): Flow<List<BiomarkerSnapshotEntity>>
+
     @Query("SELECT * FROM biomarker_snapshots WHERE id = :id")
     suspend fun getById(id: String): BiomarkerSnapshotEntity?
 

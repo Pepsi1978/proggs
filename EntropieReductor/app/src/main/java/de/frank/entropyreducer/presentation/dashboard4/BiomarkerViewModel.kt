@@ -17,6 +17,10 @@ import javax.inject.Inject
 
 data class BiomarkerUiState(
     val latest: BiomarkerSnapshotEntity? = null,
+    /** VOLLSTAENDIGE Historie aller Whoop-Snapshots — nicht mehr auf 30 Tage limitiert
+     *  (Frank-Wunsch 2026-05-08). Trends, Detail-Screen und Korrelationen nutzen das.
+     *  history30Days bleibt als 30-Tage-Slice fuer die Mini-Card-Deltas. */
+    val history: List<BiomarkerSnapshotEntity> = emptyList(),
     val history30Days: List<BiomarkerSnapshotEntity> = emptyList(),
     val isRefreshing: Boolean = false,
     val message: String? = null,
@@ -38,12 +42,18 @@ class BiomarkerViewModel @Inject constructor(
 
     val state: StateFlow<BiomarkerUiState> = combine(
         repo.observeLatest(),
+        repo.observeAll(),
         repo.observeRange(thirtyDaysAgo, now),
-        _refreshing,
-        _message,
-        statusObserver.observe(),
-    ) { latest, history, refreshing, msg, breakdown ->
-        BiomarkerUiState(latest, history, refreshing, msg, breakdown)
+        combine(_refreshing, _message, statusObserver.observe()) { r, m, b -> Triple(r, m, b) },
+    ) { latest, all, last30, status ->
+        BiomarkerUiState(
+            latest = latest,
+            history = all,
+            history30Days = last30,
+            isRefreshing = status.first,
+            message = status.second,
+            statusBreakdown = status.third,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
 
     fun refreshNow() {

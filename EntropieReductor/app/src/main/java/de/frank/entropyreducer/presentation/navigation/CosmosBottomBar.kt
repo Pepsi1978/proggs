@@ -47,14 +47,17 @@ fun CosmosBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    // System-Navigation-Bar / Gesten-Indikator nicht ueberdecken: Bottom-Inset
-    // wird ZUSAETZLICH zur 96dp-Inhalts-Hoehe reserviert (gesamte Box waechst
-    // entsprechend), Inhalt bekommt bottom-Padding damit Tabs ueber dem Inset bleiben.
+    // BottomBar drastisch verschlankt (Frank-Reklamation 2026-05-08, 3. Mal):
+    // vorher waren es 96dp Inhalts-Hoehe + bottomInset, das schaffte unter dem
+    // Eingabefeld ueberall ~5mm sichtbare Luft weil der Mic-Button-FAB-Ueberhang
+    // 24dp leeren Raum im Layout reservierte. Jetzt 72dp Inhalts-Hoehe
+    // (= Tabs-Hoehe), der Mic-Button bleibt drin (size 56dp) statt nach oben
+    // ueberzuhaengen — keine Luft mehr zwischen Content und Tabs.
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(96.dp + bottomInset)
+            .height(72.dp + bottomInset)
             .padding(bottom = bottomInset),
     ) {
         // Bar mit den 4 Tabs (Mic-Lücke in der Mitte)
@@ -83,9 +86,11 @@ fun CosmosBottomBar(
                 onClick = { onTabSelected(Routes.ANALYSIS) },
             )
             // Luecke fuer den Mic-Button
-            Spacer(Modifier.width(72.dp))
+            Spacer(Modifier.width(64.dp))
+            // "Forscher" statt "Wissenschaftler" (Frank-Wunsch 2026-05-08):
+            // "Wissenschaftler" wurde auf 64dp Tab-Breite zweizeilig umgebrochen.
             TabItem(
-                label = "Wissenschaftler",
+                label = "Forscher",
                 icon = Icons.Outlined.Science,
                 selected = currentTab == Routes.SCIENTIST,
                 onClick = { onTabSelected(Routes.SCIENTIST) },
@@ -97,14 +102,13 @@ fun CosmosBottomBar(
                 onClick = { onTabSelected(Routes.BIOMARKER) },
             )
         }
-        // Mic-Button mittig, schwebend (FAB-Style)
+        // Mic-Button mittig — kompakt 56dp damit er in 72dp-Hoehe passt ohne
+        // ueberzuhaengen. Vertikal mittig zentriert.
         MicButton(
             state = micState,
             onClick = onMicClick,
-            size = 64.dp,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 4.dp),
+            size = 56.dp,
+            modifier = Modifier.align(Alignment.Center),
         )
     }
 }
@@ -140,6 +144,8 @@ private fun TabItem(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = tint,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
     }

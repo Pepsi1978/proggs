@@ -13,6 +13,11 @@ object Routes {
     const val INSIGHT_BOARD = "insight_board"
     const val REPERTOIRE = "repertoire"
 
+    // Biomarker-Detail-Screen pro Metrik (Frank-Wunsch 2026-05-08).
+    // Pfad: biomarker/detail/{metricKey}
+    const val BIOMARKER_DETAIL_PATTERN = "biomarker/detail/{metricKey}"
+    fun biomarkerDetail(metricKey: String): String = "biomarker/detail/$metricKey"
+
     // Settings-Stack
     const val SETTINGS_HOME = "settings"
     const val SETTINGS_API = "settings/api_keys"
