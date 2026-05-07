@@ -103,7 +103,7 @@ fun CodexScreen(
         title = "Genie-Codex",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -116,14 +116,14 @@ fun CodexScreen(
                 GlassCard {
                     Column {
                         Text(
-                            text = "Was die KI ueber dich verstanden hat",
+                            text = "Was die KI über dich verstanden hat",
                             color = cosmos.textPrimary,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Wird automatisch sonntags 19:00 aktualisiert. Du kannst eine neue Synthese auch jederzeit manuell anstossen.",
+                            text = "Wird automatisch sonntags 19:00 aktualisiert. Du kannst eine neue Synthese auch jederzeit manuell anstoßen.",
                             color = cosmos.textSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )

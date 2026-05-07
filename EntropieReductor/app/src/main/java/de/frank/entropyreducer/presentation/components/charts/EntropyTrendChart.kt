@@ -55,7 +55,7 @@ fun EntropyTrendChart(
     Box(modifier = modifier.fillMaxWidth().height(height.dp)) {
         if (empty) {
             Text(
-                text = "Noch keine Trend-Daten — sammle ein paar Tage Eintraege.",
+                text = "Noch keine Trend-Daten — sammle ein paar Tage Einträge.",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(12.dp).align(Alignment.Center),

@@ -125,7 +125,7 @@ private fun StatusDetailSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Zustand jetzt — Aufschluesselung",
+                text = "Zustand jetzt — Aufschlüsselung",
                 style = MaterialTheme.typography.titleLarge,
                 color = cosmos.textPrimary,
             )
@@ -158,7 +158,7 @@ private fun StatusDetailSheet(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Berechnungslogik gemaess Spec §4.1. Der Wert wird alle paar Minuten " +
-                    "neu berechnet sowie sofort nach jeder Status-Aenderung eines Eintrags.",
+                    "neu berechnet sowie sofort nach jeder Status-Änderung eines Eintrags.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )

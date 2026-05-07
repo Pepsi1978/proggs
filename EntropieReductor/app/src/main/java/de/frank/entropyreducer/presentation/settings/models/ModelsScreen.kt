@@ -37,7 +37,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
         title = "KI-Modell-Auswahl",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -88,7 +88,7 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
                         Text("TTS-Stimme", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Wird beim ersten Verbinden mit der Google-TTS-API aus den verfuegbaren Chirp-3-HD-Stimmen geladen. Stufe 4.",
+                            "Wird beim ersten Verbinden mit der Google-TTS-API aus den verfügbaren Chirp-3-HD-Stimmen geladen. Stufe 4.",
                             style = MaterialTheme.typography.bodySmall,
                             color = cosmos.textSecondary,
                         )

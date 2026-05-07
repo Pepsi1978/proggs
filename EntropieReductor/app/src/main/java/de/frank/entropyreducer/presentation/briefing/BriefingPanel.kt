@@ -109,8 +109,8 @@ fun BriefingPanel(
                 Text(
                     text = when (selected) {
                         PlayingKind.DAILY -> "Noch kein Tagesbriefing vorhanden. Tippe auf Aktualisieren — das Genie braucht ca. 10 Sekunden."
-                        PlayingKind.WEEKLY -> "Dein Wochenrueckblick wird sonntags 19:00 erstellt. Du kannst ihn jederzeit manuell anstossen."
-                        PlayingKind.MONTHLY -> "Der Monatsrueckblick wird am 1. des Folgemonats 19:00 erstellt."
+                        PlayingKind.WEEKLY -> "Dein Wochenrückblick wird sonntags 19:00 erstellt. Du kannst ihn jederzeit manuell anstoßen."
+                        PlayingKind.MONTHLY -> "Der Monatsrückblick wird am 1. des Folgemonats 19:00 erstellt."
                         PlayingKind.NONE -> ""
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -181,7 +181,7 @@ fun BriefingPanel(
                     ) {
                         Icon(Icons.Outlined.Headphones, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
-                        Text("Anhoeren")
+                        Text("Anhören")
                     }
                 }
                 IconButton(onClick = regen) {

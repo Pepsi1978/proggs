@@ -79,7 +79,7 @@ fun InsightBoardScreen(
         title = "Insight Board",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -88,7 +88,7 @@ fun InsightBoardScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            section("Bestaetigte Methoden", state.confirmed, Section.CONFIRMED, state.expandedSection, vm)
+            section("Bestätigte Methoden", state.confirmed, Section.CONFIRMED, state.expandedSection, vm)
             section("In Beobachtung", state.observation, Section.OBSERVATION, state.expandedSection, vm)
             section("Verworfen", state.discarded, Section.DISCARDED, state.expandedSection, vm)
         }
@@ -356,7 +356,7 @@ private fun InsightDetailContent(
         ) {
             Icon(Icons.Outlined.Delete, null)
             Spacer(Modifier.width(8.dp))
-            Text("Insight loeschen")
+            Text("Insight löschen")
         }
     }
 }

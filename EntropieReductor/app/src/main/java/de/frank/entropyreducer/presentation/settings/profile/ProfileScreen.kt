@@ -44,10 +44,10 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
     var text by remember(saved) { mutableStateOf(saved) }
 
     CosmosScaffold(
-        title = "Persoenliches Profil",
+        title = "Persönliches Profil",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -61,11 +61,11 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
         ) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Text("Ueber mich — was die KI ueber dich wissen soll",
+                    Text("Über mich — was die KI über dich wissen soll",
                         style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Fuege hier alles ein, was die KI ueber dich verstehen soll. Du kannst zum Beispiel deinen vollstaendigen Memory-Export aus ChatGPT oder Claude einfuegen. Je mehr Kontext, desto besser kann die KI deine Entropie verstehen.",
+                        "Fuege hier alles ein, was die KI über dich verstehen soll. Du kannst zum Beispiel deinen vollständigen Memory-Export aus ChatGPT oder Claude einfuegen. Je mehr Kontext, desto besser kann die KI deine Entropie verstehen.",
                         style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -73,7 +73,7 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                         value = text,
                         onValueChange = { text = it },
                         modifier = Modifier.fillMaxWidth().height(360.dp),
-                        placeholder = { Text("Erzaehl mir ueber dich …", color = cosmos.textSecondary) },
+                        placeholder = { Text("Erzaehl mir über dich …", color = cosmos.textSecondary) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
@@ -89,7 +89,7 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                         OutlinedButton(
                             onClick = { vm.distillToMemory(text) },
                             modifier = Modifier.weight(1f),
-                        ) { Text("Aus Profil ins Gedaechtnis uebernehmen") }
+                        ) { Text("Aus Profil ins Gedächtnis übernehmen") }
                         Button(
                             onClick = { vm.save(text) },
                             modifier = Modifier.weight(0.6f),

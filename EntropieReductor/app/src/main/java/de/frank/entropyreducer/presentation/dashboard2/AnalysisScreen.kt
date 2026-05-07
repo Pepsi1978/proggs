@@ -237,7 +237,7 @@ private fun QuickStatsGrid(state: AnalysisUiState) {
         BigStatCard(
             icon = Icons.Outlined.Folder,
             tint = CosmosColors.AccentPrimary,
-            title = "Offene Eintraege",
+            title = "Offene Einträge",
             value = state.openCount.toString(),
             valueSuffix = "",
             detail = openEntriesDetail(state),
@@ -248,7 +248,7 @@ private fun QuickStatsGrid(state: AnalysisUiState) {
 
 private fun entropyLevelLabel(load: Int): String = when {
     load >= 80 -> "Sehr hoch — kritisch"
-    load >= 60 -> "Hoch — ueber Zielbereich"
+    load >= 60 -> "Hoch — über Zielbereich"
     load >= 40 -> "Mittel — Aufmerksamkeit"
     load >= 20 -> "Niedrig — gut"
     else -> "Sehr niedrig — exzellent"

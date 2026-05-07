@@ -45,7 +45,7 @@ import java.util.Date
  * Approval-Screen fuer die KI-vorgeschlagenen Trigger (Spec §16.2).
  * Zwei Sektionen:
  *  - Vorgeschlagen: pro Eintrag „Annehmen" / „Ablehnen"
- *  - Aktiv: pro Eintrag „Pausieren" / „Loeschen"
+ *  - Aktiv: pro Eintrag „Pausieren" / „Löschen"
  */
 @Composable
 fun KiTriggersScreen(
@@ -58,7 +58,7 @@ fun KiTriggersScreen(
         title = "KI-Trigger",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -107,7 +107,7 @@ fun KiTriggersScreen(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "Die KI schlaegt zweimal pro Woche neue Trigger vor — Mittwoch und Sonntag um 11:00. " +
-                                    "Du kannst sie jederzeit auch manuell anstossen.",
+                                    "Du kannst sie jederzeit auch manuell anstoßen.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = cosmos.textSecondary,
                             )
@@ -242,7 +242,7 @@ private fun ActiveTriggerCard(
                 OutlinedButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Outlined.Cancel, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(6.dp))
-                    Text("Loeschen")
+                    Text("Löschen")
                 }
             }
         }

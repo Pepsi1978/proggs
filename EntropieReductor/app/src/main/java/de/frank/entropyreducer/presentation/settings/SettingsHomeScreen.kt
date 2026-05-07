@@ -58,7 +58,7 @@ fun SettingsHomeScreen(
         title = "Einstellungen",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -102,7 +102,7 @@ private val sections = listOf(
         icon = Icons.Outlined.Lightbulb,
         accent = CosmosColors.Warning,
         title = "Insight Board",
-        subtitle = "Bestaetigte Methoden, Beobachtungen und verworfene Ansaetze.",
+        subtitle = "Bestätigte Methoden, Beobachtungen und verworfene Ansätze.",
         route = Routes.INSIGHT_BOARD,
     ),
     SectionDef(
@@ -115,21 +115,21 @@ private val sections = listOf(
     SectionDef(
         icon = Icons.Outlined.Key,
         accent = CosmosColors.AccentPrimary,
-        title = "API-Schluessel",
-        subtitle = "Verwalte deine API-Schluessel und verknuepfe deine bevorzugten Anbieter.",
+        title = "API-Schlüssel",
+        subtitle = "Verwalte deine API-Schlüssel und verknuepfe deine bevorzugten Anbieter.",
         route = Routes.SETTINGS_API,
     ),
     SectionDef(
         icon = Icons.Outlined.Psychology,
         accent = CosmosColors.AccentSecondary,
         title = "KI-Modell-Auswahl",
-        subtitle = "Waehle das passende KI-Modell fuer deine Fragen und Aufgaben aus.",
+        subtitle = "Waehle das passende KI-Modell für deine Fragen und Aufgaben aus.",
         route = Routes.SETTINGS_MODELS,
     ),
     SectionDef(
         icon = Icons.Outlined.Person,
         accent = CosmosColors.Success,
-        title = "Persoenliches Profil",
+        title = "Persönliches Profil",
         subtitle = "Passe deine Vorlieben, Ziele und Einstellungen an.",
         route = Routes.SETTINGS_PROFILE,
     ),
@@ -143,7 +143,7 @@ private val sections = listOf(
     SectionDef(
         icon = Icons.Outlined.Memory,
         accent = CosmosColors.AccentPrimary,
-        title = "Gedaechtnis",
+        title = "Gedächtnis",
         subtitle = "Entscheide, was sich das Genie merken darf und wie es dich unterstuetzt.",
         route = Routes.SETTINGS_MEMORY,
     ),
@@ -151,7 +151,7 @@ private val sections = listOf(
         icon = Icons.Outlined.AutoAwesome,
         accent = CosmosColors.AccentSecondary,
         title = "Genie-Codex",
-        subtitle = "Lege Verhaltensregeln, Werte und Antwortstil fuer das Genie fest.",
+        subtitle = "Lege Verhaltensregeln, Werte und Antwortstil für das Genie fest.",
         route = Routes.SETTINGS_CODEX,
     ),
     SectionDef(
@@ -165,7 +165,7 @@ private val sections = listOf(
         icon = Icons.Outlined.IosShare,
         accent = CosmosColors.Critical,
         title = "Datenexport / Datenschutz",
-        subtitle = "Exportiere deine Daten oder ueberwache den Datenschutz.",
+        subtitle = "Exportiere deine Daten oder überwache den Datenschutz.",
         route = Routes.SETTINGS_EXPORT,
     ),
 )

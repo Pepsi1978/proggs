@@ -80,7 +80,7 @@ class BootstrapViewModel @Inject constructor(
                     SavedPromptEntity(
                         id = UUID.randomUUID().toString(),
                         name = "Koerper zuerst",
-                        content = "Priorisiere Eintraege der Kategorie KOERPERLICH grundsaetzlich am hoechsten, weil koerperliche Verfassung Voraussetzung fuer jede andere Reduktion ist. Wenn ein koerperlicher Eintrag offen ist, darf kein anderer einen hoeheren Score bekommen.",
+                        content = "Priorisiere Einträge der Kategorie KOERPERLICH grundsaetzlich am höchsten, weil koerperliche Verfassung Voraussetzung für jede andere Reduktion ist. Wenn ein koerperlicher Eintrag offen ist, darf kein anderer einen höheren Score bekommen.",
                         isActive = true,
                         createdAt = now, updatedAt = now,
                     )

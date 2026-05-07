@@ -195,7 +195,7 @@ class ApiKeysViewModel @Inject constructor(
     private companion object {
         const val SAMPLE_PREVIEW =
             "Hallo Frank. So klingt diese Stimme. " +
-                "Sie liest dir spaeter Tagesbriefings, Wochenrueckblicke und " +
+                "Sie liest dir später Tagesbriefings, Wochenrückblicke und " +
                 "Genie-Antworten vor."
     }
 }
@@ -238,7 +238,7 @@ class ProfileViewModel @Inject constructor(
 
     fun save(text: String) = viewModelScope.launch { settings.setProfileText(text) }
 
-    /** Stub fuer "Aus Profil ins Gedaechtnis uebernehmen" — voller KI-Aufruf in Stufe 4. */
+    /** Stub fuer "Aus Profil ins Gedächtnis übernehmen" — voller KI-Aufruf in Stufe 4. */
     fun distillToMemory(text: String) = viewModelScope.launch {
         val now = System.currentTimeMillis()
         // Stufe 1: einfaches Heuristik — pro Absatz ein Memory-Eintrag, max 8.
@@ -360,7 +360,7 @@ class ExportViewModel @Inject constructor(
             it.copy(
                 driveAccountEmail = email,
                 driveBackupEnabled = true,
-                driveStatusMessage = "Mit $email verbunden. Pruefe Drive auf bestehenden Stand …",
+                driveStatusMessage = "Mit $email verbunden. Prüfe Drive auf bestehenden Stand …",
             )
         }
 

@@ -85,7 +85,7 @@ fun ExperimentCalendarScreen(
         title = "Experiment-Kalender",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
         actions = {
@@ -144,7 +144,7 @@ fun ExperimentCalendarScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { vm.confirmInsightCreation(false) }) { Text("Spaeter") }
+                TextButton(onClick = { vm.confirmInsightCreation(false) }) { Text("Später") }
             },
             containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
         )
@@ -204,7 +204,7 @@ private fun HeaderRow(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, "Zurueck", tint = cosmos.textPrimary)
+            Icon(Icons.Outlined.ChevronLeft, "Zurück", tint = cosmos.textPrimary)
         }
         Text(
             text = title,
@@ -567,7 +567,7 @@ private fun HypothesisDetailContent(
 
         // Felt change slider
         Text(
-            text = "Gefuehlte Entropie-Veraenderung: ${felt.toInt().coerceIn(-10, 10)}",
+            text = "Gefuehlte Entropie-Veränderung: ${felt.toInt().coerceIn(-10, 10)}",
             color = cosmos.textPrimary,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -616,7 +616,7 @@ private fun HypothesisDetailContent(
         ) {
             Icon(Icons.Outlined.Delete, null)
             Spacer(Modifier.width(8.dp))
-            Text("Hypothese loeschen")
+            Text("Hypothese löschen")
         }
     }
 }

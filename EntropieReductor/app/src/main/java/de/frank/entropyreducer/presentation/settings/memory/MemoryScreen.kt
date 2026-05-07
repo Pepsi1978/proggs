@@ -58,10 +58,10 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
     var adding by remember { mutableStateOf(false) }
 
     CosmosScaffold(
-        title = "Gedaechtnis",
+        title = "Gedächtnis",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -74,12 +74,12 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                 OutlinedButton(onClick = { adding = true }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Outlined.Add, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Manuell hinzufuegen", style = MaterialTheme.typography.labelSmall)
+                    Text("Manuell hinzufügen", style = MaterialTheme.typography.labelSmall)
                 }
                 OutlinedButton(onClick = { /* Stufe 4 — Vorschlaege */ }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Outlined.RateReview, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("KI-Vorschlaege pruefen", style = MaterialTheme.typography.labelSmall)
+                    Text("KI-Vorschlaege prüfen", style = MaterialTheme.typography.labelSmall)
                 }
                 OutlinedButton(onClick = { /* Stufe 4 — Profil destillieren */ }, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Outlined.AutoFixHigh, null, modifier = Modifier.size(16.dp))
@@ -96,7 +96,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                 if (memories.isEmpty()) {
                     item {
                         Text(
-                            "Noch keine Gedaechtnis-Eintraege. Manuell hinzufuegen oder aus dem Profil generieren.",
+                            "Noch keine Gedächtnis-Einträge. Manuell hinzufügen oder aus dem Profil generieren.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = cosmos.textSecondary,
                             modifier = Modifier.padding(top = 24.dp),
@@ -121,7 +121,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                                     colors = SwitchDefaults.colors(checkedThumbColor = CosmosColors.AccentPrimary),
                                 )
                                 IconButton(onClick = { vm.delete(m) }) {
-                                    Icon(Icons.Outlined.DeleteOutline, "Loeschen", tint = CosmosColors.Critical)
+                                    Icon(Icons.Outlined.DeleteOutline, "Löschen", tint = CosmosColors.Critical)
                                 }
                             }
                         }
@@ -143,12 +143,12 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                 ) { Text("Speichern") }
             },
             dismissButton = { TextButton(onClick = { adding = false }) { Text("Abbrechen") } },
-            title = { Text("Memory hinzufuegen") },
+            title = { Text("Memory hinzufügen") },
             text = {
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    label = { Text("Was soll die KI ueber dich wissen?") },
+                    label = { Text("Was soll die KI über dich wissen?") },
                     modifier = Modifier.fillMaxWidth().height(180.dp),
                 )
             },

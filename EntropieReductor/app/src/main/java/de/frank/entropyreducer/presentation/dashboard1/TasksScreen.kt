@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.dashboard1
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
@@ -54,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -99,9 +102,9 @@ fun TasksScreen(
         onAllGranted = { vm.onMicClick() },
         onDenied = { denied ->
             val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
-                "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Eintraege per Sprache erfassen kannst."
+                "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Einträge per Sprache erfassen kannst."
             } else {
-                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn fuer die Foreground-Notification."
+                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
             }
             scope.launch { snackbar.showSnackbar(msg) }
         },
@@ -182,11 +185,13 @@ fun TasksScreen(
                         )
                     }
 
-                    if (state.entriesByBucket.values.all { it.isEmpty() }) {
+                    if (state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()) {
                         item { EmptyState() }
                     } else {
+                        // Aktive Eintraege gruppiert nach Time-Bucket
                         TimeBucket.values().forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
+                                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
                             if (list.isNotEmpty()) {
                                 item { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
                                 items(list, key = { it.id }) { entry ->
@@ -198,7 +203,7 @@ fun TasksScreen(
                                             scope.launch {
                                                 val result = snackbar.showSnackbar(
                                                     message = "Eintrag erledigt: ${entry.title}",
-                                                    actionLabel = "Rueckgaengig",
+                                                    actionLabel = "Rückgängig",
                                                     duration = androidx.compose.material3.SnackbarDuration.Short,
                                                 )
                                                 if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
@@ -208,6 +213,20 @@ fun TasksScreen(
                                         },
                                     )
                                 }
+                            }
+                        }
+                        // Erledigt-Sektion am Ende
+                        if (state.resolvedEntries.isNotEmpty()) {
+                            item { ResolvedHeader(state.resolvedEntries.size) }
+                            items(state.resolvedEntries, key = { "resolved-${it.id}" }) { entry ->
+                                EntropyEntryCard(
+                                    entry = entry,
+                                    onClick = { vm.openEntryDetail(entry.id) },
+                                    onResolve = {
+                                        // Tap auf Haken bei erledigtem Eintrag → wieder offen
+                                        vm.reopenEntry(entry.id)
+                                    },
+                                )
                             }
                         }
                     }
@@ -237,7 +256,7 @@ fun TasksScreen(
  * Detail-Bottom-Sheet (Bild 12/22). Zeigt Eintrag im Detail mit Icon-Kreis,
  * Title, Beschreibung, Schweregrad-Hinweis, 4 Status-Buttons (Offen / In Arbeit /
  * Reduziert / Archiviert), Tags, KI-Begruendung + KI-Notizen, sowie ein
- * "Loeschen"-Button. Aus dem Sheet kann der Status direkt umgestellt werden.
+ * "Löschen"-Button. Aus dem Sheet kann der Status direkt umgestellt werden.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -272,7 +291,7 @@ private fun EntryDetailSheet(
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = androidx.compose.material.icons.Icons.Outlined.Close,
-                        contentDescription = "Schliessen",
+                        contentDescription = "Schließen",
                         tint = cosmos.textSecondary,
                     )
                 }
@@ -386,21 +405,26 @@ private fun EntryDetailSheet(
                     }
                 }
             }
-            // Loeschen-Button (rot, full width)
-            androidx.compose.material3.OutlinedButton(
+            // Loeschen-Button — gefuellt rot, klar sichtbar.
+            androidx.compose.material3.Button(
                 onClick = onDelete,
                 modifier = Modifier.fillMaxWidth(),
-                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                    contentColor = CosmosColors.Critical,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = CosmosColors.Critical,
+                    contentColor = androidx.compose.ui.graphics.Color.White,
                 ),
             ) {
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Outlined.Delete,
                     contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.White,
                     modifier = Modifier.size(18.dp),
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Loeschen")
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Löschen",
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -576,6 +600,51 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
     }
 }
 
+@Composable
+private fun ResolvedHeader(count: Int) {
+    val cosmos = LocalCosmos.current
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CosmosColors.Success.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.CheckCircle,
+                contentDescription = null,
+                tint = CosmosColors.Success,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = "ERLEDIGT",
+            style = MaterialTheme.typography.labelLarge,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(CosmosColors.Success.copy(alpha = 0.18f))
+                .padding(horizontal = 10.dp, vertical = 3.dp),
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.labelMedium,
+                color = CosmosColors.Success,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
 private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector = when (bucket) {
     TimeBucket.HEUTE -> Icons.Outlined.Today
     TimeBucket.MORGEN -> Icons.Outlined.Event
@@ -602,10 +671,14 @@ private fun EntropyEntryCard(
 ) {
     val cosmos = LocalCosmos.current
     val catColor = entry.category.color()
+    val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
+    // Erledigte Eintraege werden ausgegraut und durchgestrichen — visueller Status.
+    val cardAlpha = if (isResolved) 0.55f else 1f
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .alpha(cardAlpha),
     ) {
         Column {
             // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
@@ -646,21 +719,30 @@ private fun EntropyEntryCard(
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Spacer(Modifier.height(8.dp))
-                    // Haken-Button: Eintrag als erledigt markieren — direkt von der Card aus.
+                    // Checkbox-Stil: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn erledigt.
+                    // Tap toggelt — offen → erledigt (REDUZIERT), erledigt → wieder OFFEN.
+                    val checkBg = if (isResolved) CosmosColors.Success.copy(alpha = 0.85f) else androidx.compose.ui.graphics.Color.Transparent
+                    val checkBorder = if (isResolved) CosmosColors.Success else cosmos.glassBorder
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(CosmosColors.Success.copy(alpha = 0.18f))
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(checkBg)
+                            .border(
+                                androidx.compose.foundation.BorderStroke(2.dp, checkBorder),
+                                RoundedCornerShape(8.dp),
+                            )
                             .clickable(onClick = onResolve),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CheckCircle,
-                            contentDescription = "Erledigt",
-                            tint = CosmosColors.Success,
-                            modifier = Modifier.size(20.dp),
-                        )
+                        if (isResolved) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "Erledigt",
+                                tint = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -774,7 +856,7 @@ private fun EntryMetaRow(entry: EntropyEntryEntity) {
             de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "morgen"
             de.frank.entropyreducer.domain.model.TimeBucket.DIESE_WOCHE -> "diese Woche"
             de.frank.entropyreducer.domain.model.TimeBucket.DIESEN_MONAT -> "diesen Monat"
-            de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "spaeter"
+            de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
         }
         val durationHint = entry.estimatedDurationMinutes?.let {
             when {

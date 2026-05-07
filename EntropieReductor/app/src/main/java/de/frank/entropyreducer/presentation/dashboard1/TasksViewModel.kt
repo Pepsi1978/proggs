@@ -44,6 +44,10 @@ data class TasksUiState(
     val kiQuestion: KiQuestion? = null,
     /** Eintrag der aktuell im Detail-Bottom-Sheet angezeigt wird (null = geschlossen). */
     val detailEntry: EntropyEntryEntity? = null,
+    /** Erledigt-Bucket — die letzten REDUZIERT/ARCHIVIERT-Eintraege, sortiert nach
+     *  resolvedAt absteigend. Werden separat unter den aktiven Bucket-Sektionen
+     *  als ausgegrauter Block angezeigt. */
+    val resolvedEntries: List<EntropyEntryEntity> = emptyList(),
 )
 
 private data class UiOnlyState(
@@ -77,7 +81,14 @@ class TasksViewModel @Inject constructor(
         detailEntryIdFlow,
     ) { list, cats, ui, (breakdown, question), detailId ->
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
-        val grouped = filtered.groupBy { it.timeBucket }
+        // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung
+        val activeList = filtered.filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+        val grouped = activeList.groupBy { it.timeBucket }
+        // Erledigt-Bucket (REDUZIERT) — sortiert nach resolvedAt absteigend (neueste zuerst).
+        val resolvedList = filtered
+            .filter { it.status == EntryStatus.REDUZIERT }
+            .sortedByDescending { it.resolvedAt ?: it.updatedAt }
+            .take(20)
         val openCount = list.count { it.status == EntryStatus.OFFEN }
         val detail = detailId?.let { id -> list.firstOrNull { it.id == id } }
         TasksUiState(
@@ -92,6 +103,7 @@ class TasksViewModel @Inject constructor(
             recentlyCreatedId = ui.recentlyCreatedId,
             kiQuestion = question,
             detailEntry = detail,
+            resolvedEntries = resolvedList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
 

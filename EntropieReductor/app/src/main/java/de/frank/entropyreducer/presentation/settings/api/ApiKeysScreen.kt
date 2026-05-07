@@ -76,10 +76,10 @@ fun ApiKeysScreen(
     val oauthState by oauthVm.state.collectAsState()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
-        title = "API-Schluessel",
+        title = "API-Schlüssel",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -90,7 +90,7 @@ fun ApiKeysScreen(
         ) {
             item {
                 Text(
-                    text = "Verwalte deine API-Schluessel und Verbindungen. Deine Daten werden verschluesselt gespeichert und niemals ohne deine Zustimmung weitergegeben.",
+                    text = "Verwalte deine API-Schlüssel und Verbindungen. Deine Daten werden verschluesselt gespeichert und niemals ohne deine Zustimmung weitergegeben.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textSecondary,
                 )
@@ -98,7 +98,7 @@ fun ApiKeysScreen(
             item {
                 ApiKeyCard(
                     title = "Groq API Key",
-                    subtitle = "Fuer schnelle KI-Antworten ueber das Groq LLM API.",
+                    subtitle = "Für schnelle KI-Antworten über das Groq LLM API.",
                     accent = CosmosColors.Critical,
                     value = state.groqKey,
                     onValueChange = vm::setGroq,
@@ -110,7 +110,7 @@ fun ApiKeysScreen(
             item {
                 ApiKeyCard(
                     title = "Gemini API Key",
-                    subtitle = "Fuer fortschrittliche KI-Modelle von Google Gemini.",
+                    subtitle = "Für fortschrittliche KI-Modelle von Google Gemini.",
                     accent = CosmosColors.AccentSecondary,
                     value = state.geminiKey,
                     onValueChange = vm::setGemini,
@@ -122,7 +122,7 @@ fun ApiKeysScreen(
             item {
                 ApiKeyCard(
                     title = "Google Cloud TTS API Key",
-                    subtitle = "Fuer hochwertige Text-zu-Sprache Ausgaben (Chirp 3 HD).",
+                    subtitle = "Für hochwertige Text-zu-Sprache Ausgaben (Chirp 3 HD).",
                     accent = CosmosColors.AccentPrimary,
                     value = state.ttsKey,
                     onValueChange = vm::setTts,
@@ -143,7 +143,7 @@ fun ApiKeysScreen(
             item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
-                    text = "Deine API-Schluessel werden mit AES-256-GCM auf deinem Geraet verschluesselt.",
+                    text = "Deine API-Schlüssel werden mit AES-256-GCM auf deinem Geraet verschluesselt.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                     modifier = Modifier.padding(top = 8.dp),
@@ -207,7 +207,7 @@ private fun ApiKeyCard(
                     icon = Icons.Outlined.CheckCircle,
                 )
                 ConnectionStatus.FAIL -> ConnectionLabel(
-                    label = "Ungueltiger API-Schluessel oder fehlende Berechtigungen",
+                    label = "Ungueltiger API-Schlüssel oder fehlende Berechtigungen",
                     color = CosmosColors.Critical,
                     icon = Icons.Outlined.ErrorOutline,
                 )
@@ -263,7 +263,7 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Verbinde deinen Whoop-Account fuer Recovery, HRV und Schlafdaten. " +
+                "Verbinde deinen Whoop-Account für Recovery, HRV und Schlafdaten. " +
                     "Registriere dein Developer-App in app.whoop.com mit folgender Redirect-URI:",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
@@ -364,8 +364,8 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "Verbinde deinen Google-Kalender — die App liest die Schichtcodes als " +
-                    "Ganztagestermine ('Tag 1', 'Nacht 2 X', 'U' fuer Urlaub, etc.). " +
-                    "Login laeuft ueber Google Sign-In; keine Client-ID-Eingabe noetig.",
+                    "Ganztagestermine ('Tag 1', 'Nacht 2 X', 'U' für Urlaub, etc.). " +
+                    "Login laeuft über Google Sign-In; keine Client-ID-Eingabe noetig.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -437,7 +437,7 @@ private fun TtsVoiceCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Waehle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrueckblicke und Genie-Antworten.",
+                "Waehle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrückblicke und Genie-Antworten.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -456,13 +456,13 @@ private fun TtsVoiceCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (state.ttsSaved) displayName else "Erst API-Schluessel speichern",
+                        text = if (state.ttsSaved) displayName else "Erst API-Schlüssel speichern",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (state.ttsSaved) cosmos.textPrimary else cosmos.textSecondary,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = "Aendern",
+                        text = "Ändern",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (state.ttsSaved) CosmosColors.AccentPrimary else cosmos.textSecondary,
                     )
@@ -481,7 +481,7 @@ private fun TtsVoiceCard(
                     ) {
                         Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
-                        Text("Stimme anhoeren")
+                        Text("Stimme anhören")
                     }
                 }
                 TtsSpeakState.LOADING -> {

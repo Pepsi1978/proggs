@@ -87,7 +87,7 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
         title = "Datenexport / Datenschutz",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -114,25 +114,25 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Text("Loeschen", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+                        Text("Löschen", style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
                         Spacer(Modifier.height(8.dp))
                         Button(
                             onClick = { confirmDeleteEntries = true },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-                        ) { Text("Alle Eintraege loeschen") }
+                        ) { Text("Alle Einträge löschen") }
                         Spacer(Modifier.height(8.dp))
                         Button(
                             onClick = { confirmDeleteMemories = true },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-                        ) { Text("Alle Memory-Eintraege loeschen") }
+                        ) { Text("Alle Memory-Einträge löschen") }
                     }
                 }
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Alle Daten werden ausschliesslich lokal auf deinem Geraet gespeichert. Bei aktivem Drive-Backup wird zusaetzlich eine JSON-Kopie deiner Eintraege im appDataFolder deines Google-Kontos abgelegt — fuer dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
+                        text = "Alle Daten werden ausschliesslich lokal auf deinem Geraet gespeichert. Bei aktivem Drive-Backup wird zusaetzlich eine JSON-Kopie deiner Einträge im appDataFolder deines Google-Kontos abgelegt — für dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = cosmos.textSecondary,
                     )
@@ -148,16 +148,16 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
 
     if (confirmDeleteEntries) {
         ConfirmDialog(
-            title = "Alle Eintraege loeschen?",
-            text = "Diese Aktion kann nicht rueckgaengig gemacht werden. Bei aktivem Drive-Backup wird auch der Cloud-Stand entsprechend angepasst.",
+            title = "Alle Einträge löschen?",
+            text = "Diese Aktion kann nicht rückgängig gemacht werden. Bei aktivem Drive-Backup wird auch der Cloud-Stand entsprechend angepasst.",
             onConfirm = { vm.deleteAllEntries(); confirmDeleteEntries = false },
             onCancel = { confirmDeleteEntries = false },
         )
     }
     if (confirmDeleteMemories) {
         ConfirmDialog(
-            title = "Alle Memory-Eintraege loeschen?",
-            text = "Diese Aktion kann nicht rueckgaengig gemacht werden.",
+            title = "Alle Memory-Einträge löschen?",
+            text = "Diese Aktion kann nicht rückgängig gemacht werden.",
             onConfirm = { vm.deleteAllMemories(); confirmDeleteMemories = false },
             onCancel = { confirmDeleteMemories = false },
         )
@@ -210,7 +210,7 @@ private fun DriveBackupCard(
             // Status-Zeile
             val statusLabel = when (val s = state.syncStatus) {
                 SyncStatus.Idle -> if (state.lastBackupAtMs > 0) "Letzter Upload: ${formatTimestamp(state.lastBackupAtMs)}" else "Backup ist eingerichtet"
-                SyncStatus.Pending -> "Aenderung erfasst — Upload startet gleich"
+                SyncStatus.Pending -> "Änderung erfasst — Upload startet gleich"
                 SyncStatus.Running -> "Backup laeuft …"
                 is SyncStatus.Synced -> "Synchronisiert um ${formatTimestamp(s.atEpochMs)}"
                 is SyncStatus.Failed -> "Letzter Upload fehlgeschlagen: ${s.reason}"
@@ -230,7 +230,7 @@ private fun DriveBackupCard(
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Auto-Backup bei jeder Aenderung",
+                        "Auto-Backup bei jeder Änderung",
                         style = MaterialTheme.typography.bodyMedium,
                         color = cosmos.textPrimary,
                         modifier = Modifier.weight(1f),
@@ -278,7 +278,7 @@ private fun ConfirmDialog(title: String, text: String, onConfirm: () -> Unit, on
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical, contentColor = Color.White),
-            ) { Text("Loeschen") }
+            ) { Text("Löschen") }
         },
         dismissButton = { TextButton(onClick = onCancel) { Text("Abbrechen") } },
         title = { Text(title) },

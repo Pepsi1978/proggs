@@ -40,7 +40,7 @@ fun RepertoireScreen(
         title = "Mein Repertoire",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -48,7 +48,7 @@ fun RepertoireScreen(
             if (items.isEmpty()) {
                 GlassCard {
                     Text(
-                        text = "Noch keine bestaetigten Methoden — schliesse Hypothesen erfolgreich ab und Insights mit Confidence ueber 50 % landen hier.",
+                        text = "Noch keine bestätigten Methoden — schliesse Hypothesen erfolgreich ab und Insights mit Confidence über 50 % landen hier.",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                     )

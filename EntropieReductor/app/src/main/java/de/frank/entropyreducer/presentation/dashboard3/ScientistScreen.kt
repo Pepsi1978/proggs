@@ -95,7 +95,7 @@ fun ScientistScreen(
             val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
                 "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen."
             } else {
-                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn fuer die Foreground-Notification."
+                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
             }
             scope.launch { snackbar.showSnackbar(msg) }
         },
@@ -517,7 +517,7 @@ private fun StartHypothesisDialog(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Waehle einen Startzeitpunkt — du kannst ihn spaeter im Experiment-Kalender korrigieren.",
+                    text = "Waehle einen Startzeitpunkt — du kannst ihn später im Experiment-Kalender korrigieren.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -527,7 +527,7 @@ private fun StartHypothesisDialog(
             Column {
                 TextButton(onClick = { onConfirm(now) }) { Text("Heute") }
                 TextButton(onClick = { onConfirm(tomorrow) }) { Text("Morgen") }
-                TextButton(onClick = { onConfirm(nextFreeBlock) }) { Text("Naechster Frei-Block") }
+                TextButton(onClick = { onConfirm(nextFreeBlock) }) { Text("Nächster Frei-Block") }
             }
         },
         dismissButton = {

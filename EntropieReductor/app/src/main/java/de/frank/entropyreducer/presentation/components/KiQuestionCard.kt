@@ -32,7 +32,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 /**
  * Kontextrelevante Frage der KI auf Dashboard 1 (Spec §10.4).
  * Soll-Design: Sparkle-Icon + Header-Pill, Frage als grosser Text,
- * unten ein Mic-Kreis-Button (lila Glass-Hintergrund) + "Spaeter"-Link rechts.
+ * unten ein Mic-Kreis-Button (lila Glass-Hintergrund) + "Später"-Link rechts.
  */
 @Composable
 fun KiQuestionCard(
@@ -88,9 +88,9 @@ fun KiQuestionCard(
                     )
                 }
                 Spacer(Modifier.width(12.dp))
-                // "Spaeter" als Text-Link
+                // "Später" als Text-Link
                 Text(
-                    text = "Spaeter",
+                    text = "Später",
                     style = MaterialTheme.typography.bodyMedium,
                     color = CosmosColors.AccentSecondary,
                     fontWeight = FontWeight.Medium,

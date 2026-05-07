@@ -58,7 +58,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
         title = "Eigene Prompts",
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -93,7 +93,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                                     Icon(Icons.Outlined.Edit, "Bearbeiten", tint = CosmosColors.AccentPrimary)
                                 }
                                 IconButton(onClick = { vm.delete(p) }) {
-                                    Icon(Icons.Outlined.DeleteOutline, "Loeschen", tint = CosmosColors.Critical)
+                                    Icon(Icons.Outlined.DeleteOutline, "Löschen", tint = CosmosColors.Critical)
                                 }
                             }
                         }

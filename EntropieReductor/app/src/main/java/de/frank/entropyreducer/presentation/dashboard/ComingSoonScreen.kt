@@ -89,7 +89,7 @@ fun ComingSoonScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "In Kuerze verfuegbar",
+                        text = "In Kuerze verfügbar",
                         style = MaterialTheme.typography.headlineMedium,
                         color = cosmos.textPrimary,
                         textAlign = TextAlign.Center,
