@@ -138,9 +138,12 @@ class GenerateKiTriggersUseCase @Inject constructor(
             val out = mutableListOf<KiTriggerEntity>()
             for (i in 0 until arr.length()) {
                 val t = arr.optJSONObject(i) ?: continue
-                val name = t.optString("name").trim()
-                val condition = t.optString("condition").trim()
-                val action = t.optString("proposedAction").trim()
+                // optString() returnt den String "null" wenn der Wert JSONObject.NULL ist,
+                // nicht "". Deshalb explizit per isNull() pruefen.
+                // Quelle: developer.android.com/reference/org/json/JSONObject#optString
+                val name = if (t.isNull("name")) "" else t.optString("name").trim()
+                val condition = if (t.isNull("condition")) "" else t.optString("condition").trim()
+                val action = if (t.isNull("proposedAction")) "" else t.optString("proposedAction").trim()
                 if (name.isBlank() || condition.isBlank() || action.isBlank()) continue
                 out += KiTriggerEntity(
                     id = UUID.randomUUID().toString(),

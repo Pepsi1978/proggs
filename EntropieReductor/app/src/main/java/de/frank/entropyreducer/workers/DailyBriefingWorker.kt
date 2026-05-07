@@ -35,18 +35,23 @@ class DailyBriefingWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
+            val force = inputData.getBoolean(KEY_FORCE, false)
             val today = LocalDate.now(ZoneId.systemDefault()).toString()
             val storedDate = settings.dailyBriefingDateFlow.first()
-            if (storedDate == today) {
-                Log.i(TAG, "Tagesbriefing fuer $today existiert bereits — skip.")
+            if (!force && storedDate == today) {
+                Log.i(TAG, "Tagesbriefing fuer $today existiert bereits — skip (force=false).")
                 return Result.success()
             }
 
             val result = generator()
             val text = result.getOrNull()
             if (text.isNullOrBlank()) {
-                Log.w(TAG, "Tagesbriefing-Generierung fehlgeschlagen: ${result.exceptionOrNull()?.message}")
-                return Result.retry()
+                val ex = result.exceptionOrNull()
+                Log.w(TAG, "Tagesbriefing-Generierung fehlgeschlagen: ${ex?.message}")
+                // Wenn API-Key fehlt: Worker NICHT retry-en — sonst lauft er endlos
+                // bis der Benutzer den Key hinterlegt. Erst beim naechsten Polling-
+                // Lauf (90 Min) wird neu versucht.
+                return if (ex is IllegalStateException) Result.success() else Result.retry()
             }
 
             settings.setDailyBriefing(text, today, System.currentTimeMillis())
@@ -69,5 +74,6 @@ class DailyBriefingWorker @AssistedInject constructor(
         private const val NOTIFICATION_ID = 4712
         const val UNIQUE_NAME_PERIODIC = "daily-briefing-periodic"
         const val UNIQUE_NAME_ONESHOT = "daily-briefing-oneshot"
+        const val KEY_FORCE = "force"
     }
 }

@@ -124,8 +124,15 @@ class TtsPlayer @Inject constructor(
     ) {
         // Vorherige Wiedergabe sauber beenden
         stop()
+        // prepareAsync() statt prepare() — vermeidet StrictMode-DiskRead-Violation
+        // auf dem Main-Thread und ist laut MediaPlayer-Doku der empfohlene Weg.
+        // Quelle: developer.android.com/reference/android/media/MediaPlayer
         mediaPlayer = MediaPlayer().apply {
             setDataSource(file.absolutePath)
+            setOnPreparedListener { player ->
+                player.start()
+                onPlaybackStart?.invoke()
+            }
             setOnCompletionListener {
                 onComplete?.invoke()
                 cleanup(file)
@@ -136,9 +143,7 @@ class TtsPlayer @Inject constructor(
                 cleanup(file)
                 true
             }
-            prepare()
-            start()
-            onPlaybackStart?.invoke()
+            prepareAsync()
         }
     }
 

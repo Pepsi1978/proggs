@@ -128,7 +128,10 @@ class BackgroundScheduler @Inject constructor(
         wm.enqueueUniqueWork(
             DailyBriefingWorker.UNIQUE_NAME_ONESHOT,
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<DailyBriefingWorker>().setConstraints(constraints).build(),
+            OneTimeWorkRequestBuilder<DailyBriefingWorker>()
+                .setInputData(androidx.work.workDataOf(DailyBriefingWorker.KEY_FORCE to true))
+                .setConstraints(constraints)
+                .build(),
         )
     }
 
@@ -165,7 +168,10 @@ class BackgroundScheduler @Inject constructor(
         wm.enqueueUniqueWork(
             WeeklyReviewWorker.UNIQUE_NAME_ONESHOT,
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<WeeklyReviewWorker>().setConstraints(constraints).build(),
+            OneTimeWorkRequestBuilder<WeeklyReviewWorker>()
+                .setInputData(androidx.work.workDataOf(WeeklyReviewWorker.KEY_FORCE to true))
+                .setConstraints(constraints)
+                .build(),
         )
     }
 
@@ -175,7 +181,28 @@ class BackgroundScheduler @Inject constructor(
         wm.enqueueUniqueWork(
             MonthlyReviewWorker.UNIQUE_NAME_ONESHOT,
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<MonthlyReviewWorker>().setConstraints(constraints).build(),
+            OneTimeWorkRequestBuilder<MonthlyReviewWorker>()
+                .setInputData(androidx.work.workDataOf(MonthlyReviewWorker.KEY_FORCE to true))
+                .setConstraints(constraints)
+                .build(),
+        )
+    }
+
+    /**
+     * Stoesst die KI-Trigger-Engine sofort an (manueller "Trigger jetzt erzeugen"-Button).
+     * Setzt `force=true` damit der Worker den Wochentags-Check (Mi/So) ueberspringt —
+     * sonst wuerde ein manueller Aufruf an einem Donnerstag ohne Effekt durchlaufen.
+     */
+    fun runKiTriggerNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            KiTriggerWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<KiTriggerWorker>()
+                .setInputData(androidx.work.workDataOf(KiTriggerWorker.KEY_FORCE to true))
+                .setConstraints(constraints)
+                .build(),
         )
     }
 

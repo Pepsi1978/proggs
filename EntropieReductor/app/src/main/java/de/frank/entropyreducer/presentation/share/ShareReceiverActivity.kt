@@ -5,18 +5,22 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import dagger.hilt.android.AndroidEntryPoint
+import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
  * Share-Sheet-Empfaenger (Spec §17).
  * Transparent, ohne UI — uebernimmt den Text aus dem Send-Intent, schreibt
  * sofort einen EntropyEntry mit `source = SHARE_SHEET` und schliesst sich.
+ *
+ * Wichtig: Coroutine laeuft im Application-Scope (Singleton), NICHT in einem
+ * Activity-bound Scope. Sonst kann Android den Process kurz nach `finish()`
+ * killen — der HTTP-Call an Gemini wuerde abgebrochen, der Eintrag waere weg.
+ * Quelle: developer.android.com/kotlin/coroutines/coroutines-best-practices.
  *
  * Toast bestaetigt visuell — keine Activity-Navigation, kein Bildschirm-Flicker.
  */
@@ -25,7 +29,9 @@ class ShareReceiverActivity : ComponentActivity() {
 
     @Inject lateinit var processEntry: ProcessEntryUseCase
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    @Inject
+    @ApplicationScope
+    lateinit var appScope: CoroutineScope
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,9 +42,10 @@ class ShareReceiverActivity : ComponentActivity() {
             return
         }
         Toast.makeText(this, "Eintrag gespeichert — wird verarbeitet.", Toast.LENGTH_SHORT).show()
-        scope.launch {
-            // Best-Effort — Fehler loggen wir nicht direkt, ProcessEntryUseCase
-            // schreibt schon ein Roh-Entry und ruft KI im Hintergrund auf.
+        appScope.launch {
+            // Application-Scope — ueberlebt Activity-Tod. ProcessEntryUseCase
+            // speichert immer einen Eintrag (auch bei KI-Fehler als Fallback),
+            // also geht der Roh-Text nicht verloren.
             runCatching { processEntry(rawTranscript = text, source = EntrySource.SHARE_SHEET) }
         }
         finish()

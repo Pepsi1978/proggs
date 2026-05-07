@@ -26,15 +26,16 @@ class KiTriggerWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
+            val force = inputData.getBoolean(KEY_FORCE, false)
             val today = LocalDate.now(ZoneId.systemDefault()).dayOfWeek
-            if (today != DayOfWeek.WEDNESDAY && today != DayOfWeek.SUNDAY) {
-                Log.i(TAG, "Heute ist $today, KI-Trigger-Engine pausiert.")
+            if (!force && today != DayOfWeek.WEDNESDAY && today != DayOfWeek.SUNDAY) {
+                Log.i(TAG, "Heute ist $today, KI-Trigger-Engine pausiert (force=false).")
                 return Result.success()
             }
 
             val result = generator()
             val count = result.getOrNull() ?: 0
-            Log.i(TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt.")
+            Log.i(TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt (force=$force).")
             if (count > 0) {
                 notifier.postOrDelay(
                     notificationId = NOTIFICATION_ID,
@@ -42,9 +43,11 @@ class KiTriggerWorker @AssistedInject constructor(
                     body = "Tippen, um anzusehen — annehmen oder ablehnen.",
                 )
             }
+            // Generator-Failure (Kein Key, Network down) NICHT als Worker-Fehler retry-en —
+            // das fuehrt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
             Result.success()
         } catch (t: Throwable) {
-            Log.e(TAG, "KiTriggerWorker fehlgeschlagen", t)
+            Log.e(TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)
             Result.retry()
         }
     }
@@ -54,5 +57,6 @@ class KiTriggerWorker @AssistedInject constructor(
         private const val NOTIFICATION_ID = 4715
         const val UNIQUE_NAME_PERIODIC = "ki-trigger-periodic"
         const val UNIQUE_NAME_ONESHOT = "ki-trigger-oneshot"
+        const val KEY_FORCE = "force"
     }
 }

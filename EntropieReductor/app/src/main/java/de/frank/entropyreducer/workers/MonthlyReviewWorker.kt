@@ -30,26 +30,30 @@ class MonthlyReviewWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
+            val force = inputData.getBoolean(KEY_FORCE, false)
             val today = LocalDate.now(ZoneId.systemDefault())
             // Erst zwischen 1. und 7. eines Monats erlauben — danach nicht mehr nachholen.
-            if (today.dayOfMonth > 7) {
-                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spaet fuer den Monatsrueckblick.")
+            if (!force && today.dayOfMonth > 7) {
+                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spaet fuer den Monatsrueckblick (force=false).")
                 return Result.success()
             }
             val lastAt = settings.lastMonthlyReviewAtMsFlow.first()
             val lastDate = if (lastAt > 0) {
                 java.time.Instant.ofEpochMilli(lastAt).atZone(ZoneId.systemDefault()).toLocalDate()
             } else null
-            if (lastDate?.year == today.year && lastDate.monthValue == today.monthValue) {
-                Log.i(TAG, "Monatsrueckblick fuer ${today.month} existiert bereits.")
+            if (!force && lastDate?.year == today.year && lastDate.monthValue == today.monthValue) {
+                Log.i(TAG, "Monatsrueckblick fuer ${today.month} existiert bereits (force=false).")
                 return Result.success()
             }
 
             val result = generator(GenerateReviewUseCase.Range.MONTH)
             val text = result.getOrNull()
             if (text.isNullOrBlank()) {
-                Log.w(TAG, "Monatsrueckblick leer: ${result.exceptionOrNull()?.message}")
-                Result.retry()
+                val ex = result.exceptionOrNull()
+                Log.w(TAG, "Monatsrueckblick leer: ${ex?.message}")
+                // Bei fehlendem API-Key (IllegalStateException) NICHT retry-en —
+                // sonst Endlos-Loop. Bei echten Netz-/Server-Fehlern: retry.
+                if (ex is IllegalStateException) Result.success() else Result.retry()
             } else {
                 settings.setMonthlyReview(text, System.currentTimeMillis())
                 notifier.postOrDelay(
@@ -70,5 +74,6 @@ class MonthlyReviewWorker @AssistedInject constructor(
         private const val NOTIFICATION_ID = 4714
         const val UNIQUE_NAME_PERIODIC = "monthly-review-periodic"
         const val UNIQUE_NAME_ONESHOT = "monthly-review-oneshot"
+        const val KEY_FORCE = "force"
     }
 }

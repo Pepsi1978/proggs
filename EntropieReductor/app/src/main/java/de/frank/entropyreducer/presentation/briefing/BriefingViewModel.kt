@@ -7,6 +7,7 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,13 @@ class BriefingViewModel @Inject constructor(
     private val _state = MutableStateFlow(BriefingUiState())
     val state: StateFlow<BriefingUiState> = _state.asStateFlow()
 
+    /**
+     * Job des aktuell laufenden TTS-Aufrufs. Wird gecancelled bevor ein neuer
+     * speak() startet — sonst koennte der alte Callback den State des neuen
+     * Aufrufs ueberschreiben (Race Condition zwischen Tabs).
+     */
+    private var speakJob: Job? = null
+
     init {
         viewModelScope.launch {
             combine(
@@ -82,7 +90,15 @@ class BriefingViewModel @Inject constructor(
         }
     }
 
-    /** Setzt den Text vor — zwingt TTS-Stop wenn gerade gesprochen wird. */
+    /**
+     * Startet TTS-Wiedergabe fuer den gewaehlten Briefing-Typ. Toggle-Verhalten:
+     * Wenn fuer DEN GLEICHEN Tab schon laeuft → stop() (Pause).
+     * Wenn ein ANDERER Tab gerade laeuft → vorher stoppen, dann neu starten.
+     *
+     * Race-Schutz: Vorheriger speakJob wird IMMER gecancelled, bevor ein neuer
+     * Coroutine-Job startet. So koennen alte Callbacks den State des neuen
+     * Aufrufs nicht mehr ueberschreiben.
+     */
     fun speak(kind: PlayingKind) {
         val text = when (kind) {
             PlayingKind.DAILY -> _state.value.dailyText
@@ -91,23 +107,39 @@ class BriefingViewModel @Inject constructor(
             PlayingKind.NONE -> ""
         }
         if (text.isBlank()) return
+        // Toggle: gleicher Tab erneut getippt → stoppen.
         if (_state.value.playing == kind || _state.value.loading == kind) {
             stop()
             return
         }
-        _state.update { it.copy(loading = kind, errorMessage = null) }
-        viewModelScope.launch {
+        // Anderer Tab → laufenden Job cancellen, Player stoppen, dann neu starten.
+        speakJob?.cancel()
+        tts.stop()
+        _state.update { it.copy(loading = kind, playing = PlayingKind.NONE, errorMessage = null) }
+        speakJob = viewModelScope.launch {
             tts.speak(
                 text = text,
-                onPlaybackStart = { _state.update { it.copy(loading = PlayingKind.NONE, playing = kind) } },
-                onComplete = { _state.update { it.copy(playing = PlayingKind.NONE) } },
+                onPlaybackStart = {
+                    // Nur uebernehmen wenn dieser Job noch der aktuelle ist —
+                    // sonst koennte ein veralteter Callback den State zerschiessen.
+                    if (_state.value.loading == kind) {
+                        _state.update { it.copy(loading = PlayingKind.NONE, playing = kind) }
+                    }
+                },
+                onComplete = {
+                    if (_state.value.playing == kind) {
+                        _state.update { it.copy(playing = PlayingKind.NONE) }
+                    }
+                },
                 onError = { e ->
-                    _state.update {
-                        it.copy(
-                            loading = PlayingKind.NONE,
-                            playing = PlayingKind.NONE,
-                            errorMessage = e.message,
-                        )
+                    if (_state.value.loading == kind || _state.value.playing == kind) {
+                        _state.update {
+                            it.copy(
+                                loading = PlayingKind.NONE,
+                                playing = PlayingKind.NONE,
+                                errorMessage = e.message,
+                            )
+                        }
                     }
                 },
             )
@@ -115,6 +147,8 @@ class BriefingViewModel @Inject constructor(
     }
 
     fun stop() {
+        speakJob?.cancel()
+        speakJob = null
         tts.stop()
         _state.update { it.copy(playing = PlayingKind.NONE, loading = PlayingKind.NONE) }
     }

@@ -44,10 +44,9 @@ class KiTriggersViewModel @Inject constructor(
 
     fun delete(trigger: KiTriggerEntity) = viewModelScope.launch { repo.deleteById(trigger.id) }
 
-    fun generateNow() = scheduler.runDailyBriefingNow().also {
-        // Auch Trigger-Generierung anstossen — die KI darf parallel zum Briefing
-        // arbeiten. (Methode ist im Scheduler.runDailyBriefingNow() bewusst NICHT
-        // gekoppelt — wir wollen explizit den separaten Trigger-Run.)
-        scheduler.ensureCorrelationAndTriggerJobs()
-    }
+    /**
+     * Manueller "Trigger jetzt erzeugen"-Button — startet einen OneTime-Worker
+     * mit `force=true`, der Mi/So-Wochentagscheck wird uebersprungen.
+     */
+    fun generateNow() = scheduler.runKiTriggerNow()
 }

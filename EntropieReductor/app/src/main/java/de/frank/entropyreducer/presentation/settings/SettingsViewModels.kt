@@ -182,6 +182,16 @@ class ApiKeysViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Lifecycle-Cleanup: Wenn der Benutzer die API-Schluessel-Seite verlaesst
+     * waehrend eine Sprich-Probe noch laeuft, wuerde der MediaPlayer im
+     * Hintergrund weiter abspielen. ViewModel.onCleared stoppt das.
+     */
+    override fun onCleared() {
+        ttsPlayer.stop()
+        super.onCleared()
+    }
+
     private companion object {
         const val SAMPLE_PREVIEW =
             "Hallo Frank. So klingt diese Stimme. " +
