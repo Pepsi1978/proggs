@@ -12,9 +12,13 @@ import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
+import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoice
+import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.MemorySource
+import de.frank.entropyreducer.domain.tts.TtsPlayer
+import de.frank.entropyreducer.domain.tts.TtsResult
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.domain.usecase.TestApiKeyUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,13 +42,20 @@ data class ApiKeysUiState(
     val groqStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
     val geminiStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
     val ttsStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
+    val ttsVoiceName: String = GoogleTtsVoices.DEFAULT_VOICE_NAME,
+    val ttsVoices: List<GoogleTtsVoice> = GoogleTtsVoices.ALL,
+    val ttsSpeakState: TtsSpeakState = TtsSpeakState.IDLE,
+    val ttsLastError: String? = null,
 )
 enum class ConnectionStatus { UNKNOWN, OK, FAIL, TESTING }
+enum class TtsSpeakState { IDLE, LOADING, SPEAKING, ERROR }
 
 @HiltViewModel
 class ApiKeysViewModel @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val testApi: TestApiKeyUseCase,
+    private val settings: AppSettings,
+    private val ttsPlayer: TtsPlayer,
 ) : ViewModel() {
     private val _state = MutableStateFlow(
         ApiKeysUiState(
@@ -57,6 +68,16 @@ class ApiKeysViewModel @Inject constructor(
         )
     )
     val state: StateFlow<ApiKeysUiState> = _state.asStateFlow()
+
+    init {
+        // Voice-Auswahl aus AppSettings laden — leerer Wert -> Default-Stimme.
+        viewModelScope.launch {
+            settings.ttsVoiceFlow.collect { stored ->
+                val effective = stored.ifBlank { GoogleTtsVoices.DEFAULT_VOICE_NAME }
+                _state.update { it.copy(ttsVoiceName = effective) }
+            }
+        }
+    }
 
     fun setGroq(value: String) { _state.update { it.copy(groqKey = value) } }
     fun setGemini(value: String) { _state.update { it.copy(geminiKey = value) } }
@@ -105,6 +126,67 @@ class ApiKeysViewModel @Inject constructor(
                 it.copy(ttsStatus = if (result.isSuccess) ConnectionStatus.OK else ConnectionStatus.FAIL)
             }
         }
+    }
+
+    /** Speichert die ausgewaehlte Chirp-3-HD-Stimme und aktualisiert das UI sofort. */
+    fun setTtsVoice(voiceName: String) {
+        _state.update { it.copy(ttsVoiceName = voiceName) }
+        viewModelScope.launch { settings.setTtsVoice(voiceName) }
+    }
+
+    /**
+     * Stoppt die Wiedergabe sofort. UI kehrt in IDLE zurueck. Fuer X-Button im
+     * Voice-Picker, falls eine Probe noch laeuft.
+     */
+    fun stopTtsPreview() {
+        ttsPlayer.stop()
+        _state.update { it.copy(ttsSpeakState = TtsSpeakState.IDLE) }
+    }
+
+    /**
+     * Sprich-Test: synthesiziert einen kurzen Beispiel-Text mit der aktuell
+     * ausgewaehlten Stimme. UI-Spinner -> IDLE -> SPEAKING -> IDLE / ERROR.
+     */
+    fun testSpeak() {
+        if (_state.value.ttsSpeakState == TtsSpeakState.LOADING ||
+            _state.value.ttsSpeakState == TtsSpeakState.SPEAKING
+        ) return
+        _state.update { it.copy(ttsSpeakState = TtsSpeakState.LOADING, ttsLastError = null) }
+        viewModelScope.launch {
+            val result = ttsPlayer.speak(
+                text = SAMPLE_PREVIEW,
+                voiceNameOverride = state.value.ttsVoiceName,
+                onPlaybackStart = {
+                    _state.update { it.copy(ttsSpeakState = TtsSpeakState.SPEAKING) }
+                },
+                onComplete = {
+                    _state.update { it.copy(ttsSpeakState = TtsSpeakState.IDLE) }
+                },
+                onError = { e ->
+                    _state.update {
+                        it.copy(
+                            ttsSpeakState = TtsSpeakState.ERROR,
+                            ttsLastError = e.message,
+                        )
+                    }
+                },
+            )
+            if (result is TtsResult.Error) {
+                _state.update {
+                    it.copy(
+                        ttsSpeakState = TtsSpeakState.ERROR,
+                        ttsLastError = result.message,
+                    )
+                }
+            }
+        }
+    }
+
+    private companion object {
+        const val SAMPLE_PREVIEW =
+            "Hallo Frank. So klingt diese Stimme. " +
+                "Sie liest dir spaeter Tagesbriefings, Wochenrueckblicke und " +
+                "Genie-Antworten vor."
     }
 }
 

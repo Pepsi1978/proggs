@@ -2,16 +2,24 @@ package de.frank.entropyreducer.presentation.settings.api
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -19,6 +27,9 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.HourglassBottom
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -44,10 +55,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
+import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoice
+import de.frank.entropyreducer.data.remote.tts.VoiceGender
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.settings.ApiKeysUiState
 import de.frank.entropyreducer.presentation.settings.ApiKeysViewModel
 import de.frank.entropyreducer.presentation.settings.ConnectionStatus
+import de.frank.entropyreducer.presentation.settings.TtsSpeakState
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
@@ -114,6 +129,14 @@ fun ApiKeysScreen(
                     onSave = vm::saveTts,
                     onTest = vm::testTts,
                     status = state.ttsStatus,
+                )
+            }
+            item {
+                TtsVoiceCard(
+                    state = state,
+                    onSelectVoice = vm::setTtsVoice,
+                    onTestSpeak = vm::testSpeak,
+                    onStop = vm::stopTtsPreview,
                 )
             }
             item { WhoopOAuthCard(oauthVm, oauthState) }
@@ -378,6 +401,233 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 Spacer(Modifier.height(8.dp))
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
             }
+        }
+    }
+}
+
+/* ----------------- TTS Voice-Auswahl ----------------- */
+
+@Composable
+private fun TtsVoiceCard(
+    state: ApiKeysUiState,
+    onSelectVoice: (String) -> Unit,
+    onTestSpeak: () -> Unit,
+    onStop: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    var showPicker by remember { mutableStateOf(false) }
+    val current = state.ttsVoices.firstOrNull { it.name == state.ttsVoiceName }
+    val displayName = current?.displayName ?: state.ttsVoiceName
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Outlined.RecordVoiceOver,
+                    null,
+                    tint = CosmosColors.AccentPrimary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    "Stimme",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CosmosColors.AccentPrimary,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Waehle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrueckblicke und Genie-Antworten.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // Aktuelle Auswahl, klickbar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = cosmos.glassBorder.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .clickable(enabled = state.ttsSaved) { showPicker = true }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (state.ttsSaved) displayName else "Erst API-Schluessel speichern",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (state.ttsSaved) cosmos.textPrimary else cosmos.textSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "Aendern",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (state.ttsSaved) CosmosColors.AccentPrimary else cosmos.textSecondary,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Sprich-Test-Button mit Loading-/Speaking-/Error-State
+            when (state.ttsSpeakState) {
+                TtsSpeakState.IDLE -> {
+                    OutlinedButton(
+                        onClick = onTestSpeak,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = state.ttsSaved,
+                    ) {
+                        Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Stimme anhoeren")
+                    }
+                }
+                TtsSpeakState.LOADING -> {
+                    OutlinedButton(
+                        onClick = onStop,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = CosmosColors.AccentPrimary,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text("Lade Audio …")
+                    }
+                }
+                TtsSpeakState.SPEAKING -> {
+                    Button(
+                        onClick = onStop,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CosmosColors.AccentPrimary,
+                            contentColor = Color.Black,
+                        ),
+                    ) {
+                        Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Stoppen")
+                    }
+                }
+                TtsSpeakState.ERROR -> {
+                    OutlinedButton(
+                        onClick = onTestSpeak,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            Icons.Outlined.ErrorOutline,
+                            null,
+                            modifier = Modifier.size(18.dp),
+                            tint = CosmosColors.Critical,
+                        )
+                        Spacer(Modifier.size(6.dp))
+                        Text("Erneut versuchen")
+                    }
+                }
+            }
+
+            state.ttsLastError?.let { msg ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CosmosColors.Critical,
+                )
+            }
+        }
+    }
+
+    if (showPicker) {
+        VoicePickerDialog(
+            voices = state.ttsVoices,
+            selected = state.ttsVoiceName,
+            onSelect = { name ->
+                onSelectVoice(name)
+                showPicker = false
+            },
+            onDismiss = { showPicker = false },
+        )
+    }
+}
+
+@Composable
+private fun VoicePickerDialog(
+    voices: List<GoogleTtsVoice>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Abbrechen") }
+        },
+        title = {
+            Text("Chirp-3-HD-Stimme waehlen", color = cosmos.textPrimary)
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                items(voices, key = { it.name }) { voice ->
+                    VoiceRow(
+                        voice = voice,
+                        isSelected = voice.name == selected,
+                        onClick = { onSelect(voice.name) },
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun VoiceRow(
+    voice: GoogleTtsVoice,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = when (voice.gender) {
+        VoiceGender.FEMALE -> CosmosColors.AccentPrimary
+        VoiceGender.MALE -> CosmosColors.AccentSecondary
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(
+                color = if (isSelected) accent.copy(alpha = 0.18f) else Color.Transparent,
+                shape = RoundedCornerShape(10.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Outlined.RecordVoiceOver,
+            null,
+            tint = accent,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.size(10.dp))
+        Text(
+            voice.displayName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = cosmos.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        if (isSelected) {
+            Icon(
+                Icons.Outlined.CheckCircle,
+                null,
+                tint = accent,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
