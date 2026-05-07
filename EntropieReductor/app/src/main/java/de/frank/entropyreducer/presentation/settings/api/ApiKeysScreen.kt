@@ -19,6 +19,8 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.HourglassBottom
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -155,6 +157,15 @@ private fun ApiKeyCard(
                 placeholder = { Text("API Key", color = cosmos.textSecondary) },
                 visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
                 singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { hidden = !hidden }) {
+                        Icon(
+                            imageVector = if (hidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                            contentDescription = if (hidden) "Anzeigen" else "Verbergen",
+                            tint = cosmos.textSecondary,
+                        )
+                    }
+                },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -213,6 +224,7 @@ private fun ConnectionLabel(label: String, color: Color, icon: androidx.compose.
 @Composable
 private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
     val cosmos = LocalCosmos.current
+    var secretHidden by remember { mutableStateOf(true) }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -253,8 +265,17 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 onValueChange = vm::setWhoopClientSecret,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Client Secret", color = cosmos.textSecondary) },
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (secretHidden) PasswordVisualTransformation() else VisualTransformation.None,
                 singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { secretHidden = !secretHidden }) {
+                        Icon(
+                            imageVector = if (secretHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                            contentDescription = if (secretHidden) "Anzeigen" else "Verbergen",
+                            tint = cosmos.textSecondary,
+                        )
+                    }
+                },
             )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -146,6 +146,7 @@ class OAuthService @Inject constructor(
     /* =================================== Whoop =================================== */
 
     fun buildWhoopAuthIntent(clientId: String, redirectUri: String): Intent {
+        Log.d(TAG, "Whoop: buildAuthIntent — clientId=${clientId.take(8)}…, redirect=$redirectUri, scopes=$WHOOP_SCOPES")
         val request = AuthorizationRequest.Builder(
             whoopConfig,
             clientId,
@@ -176,11 +177,16 @@ class OAuthService @Inject constructor(
     }
 
     suspend fun handleWhoopAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
+        Log.d(TAG, "Whoop: handleAuthResult — clientSecret-vorhanden=${clientSecret != null}")
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
+        if (ex != null) {
+            Log.e(TAG, "Whoop: AuthorizationException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}")
+        }
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Whoop-Authorization-Antwort"))
         }
+        Log.d(TAG, "Whoop: Authorization OK — code-Laenge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}")
         // Spiegel zur Google-Logik: AuthState erst nach erfolgreichem Token-Exchange.
         val state = AuthState(resp, ex)
         // Whoop verlangt Client-Secret beim Token-Exchange (Confidential-Client).
@@ -189,14 +195,20 @@ class OAuthService @Inject constructor(
         } else {
             resp.createTokenExchangeRequest()
         }
+        Log.d(TAG, "Whoop: Token-Exchange-Request gebaut — additionalParams-Keys=${tokenRequest.additionalParameters.keys}")
         val tokenResult = exchangeToken(tokenRequest)
         return tokenResult.onSuccess { tokenResp ->
+            Log.i(TAG, "Whoop: Token-Exchange erfolgreich — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}")
             state.update(tokenResp, null)
             saveWhoopAuthState(state)
             secrets.whoopAccessToken = tokenResp.accessToken
             secrets.whoopRefreshToken = tokenResp.refreshToken
             secrets.whoopTokenExpiryEpochSec = tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
-        }.onFailure {
+        }.onFailure { failure ->
+            Log.e(TAG, "Whoop: Token-Exchange fehlgeschlagen — class=${failure.javaClass.simpleName}, message=${failure.message}", failure)
+            if (failure is AuthorizationException) {
+                Log.e(TAG, "Whoop: AuthException-Details — type=${failure.type} code=${failure.code} error=${failure.error} desc=${failure.errorDescription} uri=${failure.errorUri}")
+            }
             clearWhoopAuthState()
         }.map { Unit }
     }
@@ -226,10 +238,12 @@ class OAuthService @Inject constructor(
         request: net.openid.appauth.TokenRequest,
     ): Result<TokenResponse> = suspendCancellableCoroutine { cont ->
         val service = newService()
+        Log.d(TAG, "exchangeToken — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}")
         service.performTokenRequest(request) { resp, ex ->
             if (resp != null) {
                 cont.resume(Result.success(resp))
             } else {
+                Log.e(TAG, "exchangeToken FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}")
                 cont.resume(Result.failure(ex ?: IllegalStateException("Token-Exchange fehlgeschlagen")))
             }
             service.dispose()
@@ -238,8 +252,11 @@ class OAuthService @Inject constructor(
 
     companion object {
         private const val TAG = "OAuthService"
-        const val GOOGLE_REDIRECT_URI = "de.frank.entropyreducer:/oauth/google/callback"
-        const val WHOOP_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer:/oauth/whoop/callback"
+        // Whoop's Developer-Dashboard-Validator akzeptiert nur Redirect-URIs mit
+        // "://" (zwei Slashes nach dem Schema). RFC 8252 erlaubt zwar auch ":/",
+        // Whoop's Parser aber nicht — daher beide URIs einheitlich auf "://".
+        const val GOOGLE_REDIRECT_URI = "de.frank.entropyreducer://oauth/google/callback"
+        const val WHOOP_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/whoop/callback"
         const val GOOGLE_SCOPE_CALENDAR_READONLY = "https://www.googleapis.com/auth/calendar.readonly"
         val WHOOP_SCOPES = listOf(
             "read:recovery",
