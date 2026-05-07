@@ -98,3 +98,39 @@ val LightTextMuted = Color(0xFF6E6E86)
 // Light mode glass
 val LightGlassBorder = Color(0x15000000)
 val LightGlassBackground = Color(0xFFFFFEFC)
+
+// ═══════════════════════════════════════════════════════════════
+// EntropieReductor "Neon Cosmos" Palette — 1:1 von ~/proggs/EntropieReductor
+// Dunkles Galaxy-Blau mit Cyan-Akzenten + Off-White Light mit
+// dezenter Galaxy-Andeutung. Frank-Wunsch 2026-05-08: als auswaehlbares
+// Theme im Themes Manager der BestJournalFrank App.
+// ═══════════════════════════════════════════════════════════════
+
+// Hintergruende — Dark
+val ERBgDark = Color(0xFF0A0E1A)
+val ERBgDarkMid = Color(0xFF0F1729)
+val ERBgDarkAccent = Color(0xFF1A1F38)
+
+// Hintergruende — Light (Off-White mit dezenter Galaxy-Andeutung)
+val ERBgLight = Color(0xFFF5F7FB)
+val ERBgLightMid = Color(0xFFE8EDFA)
+val ERBgLightAccent = Color(0xFFDCE3F5)
+
+// Glas-Flaechen (fuer Boxen/Karten)
+val ERGlassDark = Color(0x14FFFFFF)             // weisses Overlay alpha 0.08
+val ERGlassDarkBorder = Color(0x29FFFFFF)       // weisses Overlay alpha 0.16
+val ERGlassLight = Color(0xCCFFFFFF)            // weiss alpha 0.80
+val ERGlassLightBorder = Color(0x14000000)      // schwarz alpha 0.08
+
+// Akzente (gleich in beiden Modi)
+val ERAccentPrimary = Color(0xFF22D3EE)         // Cyan
+val ERAccentSecondary = Color(0xFFA78BFA)       // Violett
+val ERSuccess = Color(0xFF34D399)               // Mintgruen
+val ERWarning = Color(0xFFFBBF24)               // Bernstein
+val ERCritical = Color(0xFFF87171)              // Korallrot
+
+// Text
+val ERTextPrimaryDark = Color(0xFFF8FAFC)
+val ERTextSecondaryDark = Color(0xFF94A3B8)
+val ERTextPrimaryLight = Color(0xFF0F172A)
+val ERTextSecondaryLight = Color(0xFF475569)

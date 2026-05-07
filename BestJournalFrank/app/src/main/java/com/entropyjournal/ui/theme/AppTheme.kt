@@ -18,7 +18,8 @@ enum class AppTheme(val storageKey: String) {
     Dracula("dracula"),
     OneDark("one_dark"),
     Nord("nord"),
-    Gruvbox("gruvbox");
+    Gruvbox("gruvbox"),
+    Cosmos("cosmos");
 
     companion object {
         fun fromKey(key: String?): AppTheme =

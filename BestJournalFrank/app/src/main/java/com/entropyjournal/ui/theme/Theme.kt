@@ -214,6 +214,7 @@ fun EntropyJournalTheme(
             AppTheme.OneDark -> if (darkTheme) OneDarkScheme else OneLightScheme
             AppTheme.Nord -> if (darkTheme) NordDarkScheme else NordLightScheme
             AppTheme.Gruvbox -> if (darkTheme) GruvboxDarkScheme else GruvboxLightScheme
+            AppTheme.Cosmos -> if (darkTheme) CosmosDarkScheme else CosmosLightScheme
             AppTheme.Neutral -> if (darkTheme) NeutralDarkScheme else NeutralLightScheme
         }
 
