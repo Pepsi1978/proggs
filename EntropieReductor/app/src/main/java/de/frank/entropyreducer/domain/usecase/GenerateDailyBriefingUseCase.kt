@@ -2,8 +2,10 @@ package de.frank.entropyreducer.domain.usecase
 
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
+import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
+import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
@@ -39,6 +41,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
     private val memories: MemoryRepository,
     private val biomarkerDao: BiomarkerSnapshotDao,
     private val calendarDao: CalendarDayDao,
+    private val calendarEventDao: CalendarEventDao,
     private val systemPromptBuilder: SystemPromptBuilder,
 ) {
 
@@ -55,6 +58,13 @@ class GenerateDailyBriefingUseCase @Inject constructor(
         val latestBiomarker = biomarkerDao.getLatest().first()
         val todayDay = calendarDao.getDay(today.toString()).first()
         val tomorrowDay = calendarDao.getDay(tomorrow.toString()).first()
+        // Termine aus Google Calendar fuer heute + morgen + uebermorgen — damit
+        // das Genie sagen kann "Du hast heute 14:00 Arzttermin" oder "Morgen
+        // ist Urlaub geplant".
+        val nextThreeDays = listOf(today, tomorrow, today.plusDays(2))
+        val upcomingEvents = nextThreeDays.flatMap { d ->
+            calendarEventDao.getByDate(d.toString()).first()
+        }
 
         val systemPrompt = systemPromptBuilder.build(
             basePrompt = BASE_PROMPT,
@@ -67,7 +77,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             tail = TAIL_INSTRUCTION,
         )
 
-        val userPayload = buildUserPayload(activeEntries, latestBiomarker, todayDay, tomorrowDay)
+        val userPayload = buildUserPayload(activeEntries, latestBiomarker, todayDay, tomorrowDay, upcomingEvents)
 
         return try {
             val response = gemini.generateContent(
@@ -106,6 +116,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
         biomarker: BiomarkerSnapshotEntity?,
         today: CalendarDayEntity?,
         tomorrow: CalendarDayEntity?,
+        events: List<CalendarEventEntity>,
     ): String = buildString {
         appendLine("Generiere mein heutiges Tagesbriefing.")
         appendLine()
@@ -116,6 +127,18 @@ class GenerateDailyBriefingUseCase @Inject constructor(
                 "Letzter Biomarker: HRV ${it.hrvMs ?: "?"} ms, Recovery ${it.recoveryScore ?: "?"}%, " +
                     "Sleep Performance ${it.sleepPerformance ?: "?"}%.",
             )
+        }
+        if (events.isNotEmpty()) {
+            appendLine()
+            appendLine("Bevorstehende Termine aus dem Kalender (heute + naechste 2 Tage):")
+            events.take(20).forEach { ev ->
+                val timeLabel = if (ev.allDay) "ganztags" else
+                    java.text.DateFormat
+                        .getTimeInstance(java.text.DateFormat.SHORT)
+                        .format(java.util.Date(ev.startMs))
+                appendLine("- ${ev.date} $timeLabel: ${ev.summary}" +
+                    (ev.location?.let { " ($it)" } ?: ""))
+            }
         }
         appendLine()
         appendLine("Top-Aufgaben (max 10, sortiert nach Prioritaet):")
