@@ -35,6 +35,21 @@ if ($obj) {
         if ($homeDir -and $cwd.StartsWith($homeDir)) {
             $cwd = ('~' + $cwd.Substring($homeDir.Length)) -replace '\\', '/'
         }
+        # Smart-truncate fuer den Ordner-Pfad (Variante B):
+        # - <= 35 Zeichen: unveraendert
+        # - > 35 Zeichen: ~/proggs/<Projekt>/…/<vorletztes>/<letztes>
+        $maxLen = 35
+        if ($cwd.Length -gt $maxLen) {
+            $segs = $cwd.Split('/')
+            $n = $segs.Length
+            if ($n -ge 5) {
+                if ($segs[0] -eq '~' -and $segs[1] -eq 'proggs' -and $n -ge 5) {
+                    $cwd = "~/proggs/$($segs[2])/…/$($segs[$n-2])/$($segs[$n-1])"
+                } else {
+                    $cwd = "$($segs[0])/$($segs[1])/…/$($segs[$n-2])/$($segs[$n-1])"
+                }
+            }
+        }
     }
     if ($obj.context_window.remaining_percentage -ne $null) {
         $ctx_remaining = [int][Math]::Round($obj.context_window.remaining_percentage)

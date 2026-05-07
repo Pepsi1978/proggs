@@ -14,7 +14,34 @@ effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
 
 # JSON-Felder parsen
 model=$(echo "$input" | jq -r '.model.display_name // "?"')
-cwd=$(echo "$input" | jq -r '.workspace.current_dir // empty' | sed "s|$HOME|~|g")
+cwd_raw=$(echo "$input" | jq -r '.workspace.current_dir // empty' | sed "s|$HOME|~|g")
+
+# Smart-truncate fuer den Ordner-Pfad (Variante B):
+# - <= 35 Zeichen: unveraendert
+# - > 35 Zeichen: erstes Segment + …/ + letzte 2 Segmente
+# - Erstes Segment ist bei Frank meist "~/proggs/<Projekt>" → zwei Segmente am Anfang behalten
+shorten_path() {
+    local path="$1"
+    local max_len=35
+    if [ -z "$path" ] || [ ${#path} -le $max_len ]; then
+        echo "$path"
+        return
+    fi
+    IFS='/' read -ra segs <<< "$path"
+    local n=${#segs[@]}
+    if [ "$n" -le 4 ]; then
+        echo "$path"
+        return
+    fi
+    # Wenn Pfad mit ~/proggs/ startet: ~/proggs/<Projekt>/…/<vorletztes>/<letztes>
+    if [ "${segs[0]}" = "~" ] && [ "${segs[1]}" = "proggs" ] && [ "$n" -ge 5 ]; then
+        echo "~/proggs/${segs[2]}/…/${segs[n-2]}/${segs[n-1]}"
+    else
+        # Generisch: erstes Segment + … + letzte 2
+        echo "${segs[0]}/${segs[1]}/…/${segs[n-2]}/${segs[n-1]}"
+    fi
+}
+cwd=$(shorten_path "$cwd_raw")
 ctx_remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
 five_h_used=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
 five_h_resets=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
