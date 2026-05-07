@@ -5,12 +5,14 @@ import de.frank.entropyreducer.domain.model.ShiftCode
 /**
  * Parsed Frank's Schichtcode aus einem Google-Calendar-Ganztagestermin.
  *
- * Erlaubte Schreibweisen (case-insensitive, Whitespace toleriert):
+ * Erlaubte Schreibweisen (case-insensitive, Whitespace und Bindestriche toleriert):
  *   - "U" oder "Urlaub..." -> URLAUB
  *   - "Tag 1".."Tag 4" oder "Tag1".."Tag4" -> TAGDIENST
  *   - "Tag 1 X" oder "Tag 1 F" (Frei-Marker) -> FREI
  *   - "Nacht 1".."Nacht 4" -> NACHTDIENST
  *   - "Nacht 1 X" / "Nacht 1 F" -> FREI
+ *   - "X", "F", "X-Tag", "F-Tag", "Frei", "Freitag", "frei tag" -> FREI
+ *     (Frank's Konvention: alleine stehendes X / F = freier Tag im Schichtsystem)
  *   - alles andere -> UNBEKANNT
  *
  * Spec §15.5.
@@ -19,12 +21,20 @@ object ShiftCodeParser {
 
     private val tagPattern = Regex("""^TAG\s*[1-4](?:\s*([XF]))?$""")
     private val nachtPattern = Regex("""^NACHT\s*[1-4](?:\s*([XF]))?$""")
+    /**
+     * Frei-Tag-Pattern: erkennt "X", "F", "X-Tag", "F-Tag", "X Tag", "F Tag",
+     * "FREI", "FREITAG" als alleinstehende Marker fuer einen freien Tag im
+     * Schichtsystem. Optional mit Bindestrich, Leerzeichen oder ohne Suffix.
+     */
+    private val freiPattern = Regex("""^(?:[XF](?:[\s\-]*TAG)?|FREI(?:TAG)?)$""")
 
     fun parse(summary: String): ShiftCode {
         val s = summary.trim().uppercase()
         if (s.isEmpty()) return ShiftCode.UNBEKANNT
 
         if (s == "U" || s.startsWith("URLAUB")) return ShiftCode.URLAUB
+
+        if (freiPattern.matches(s)) return ShiftCode.FREI
 
         tagPattern.find(s)?.let { match ->
             return if (match.groupValues[1].isNotEmpty()) ShiftCode.FREI else ShiftCode.TAGDIENST

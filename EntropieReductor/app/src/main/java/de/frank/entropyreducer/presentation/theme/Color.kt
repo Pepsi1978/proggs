@@ -35,10 +35,11 @@ object CosmosColors {
     val TextSecondaryLight = Color(0xFF475569)
 
     // Statusbalken-Stops (von 0% nach 100%)
-    val StatusRed = Color(0xFFF87171)             // 0-25
-    val StatusYellow = Color(0xFFFBBF24)          // 25-50
-    val StatusLightGreen = Color(0xFF86EFAC)      // 50-75
-    val StatusGreen = Color(0xFF22C55E)           // 75-100
+    val StatusRed = Color(0xFFF87171)             // 0-20
+    val StatusOrange = Color(0xFFFB923C)          // 20-40
+    val StatusYellow = Color(0xFFFBBF24)          // 40-60
+    val StatusLightGreen = Color(0xFF86EFAC)      // 60-80
+    val StatusGreen = Color(0xFF22C55E)           // 80-100
 
     // Kategorie-Farben
     val CatPhysical = Color(0xFFF87171)
