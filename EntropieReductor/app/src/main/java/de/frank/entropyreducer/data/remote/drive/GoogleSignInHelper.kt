@@ -2,10 +2,13 @@ package de.frank.entropyreducer.data.remote.drive
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,13 +41,30 @@ class GoogleSignInHelper @Inject constructor(
     /** Liefert den Sign-In-Intent — die UI startet ihn via ActivityResultContract. */
     fun signInIntent(): Intent = client.signInIntent
 
-    /** Aus einem ActivityResult-Daten-Intent das Konto extrahieren. */
-    fun accountFromResult(data: Intent?): GoogleSignInAccount? {
-        return runCatching {
-            GoogleSignIn.getSignedInAccountFromIntent(data).getResult(
-                com.google.android.gms.common.api.ApiException::class.java
-            )
-        }.getOrNull()
+    /**
+     * Liefert das Konto bei Erfolg, sonst eine [SignInError] mit dem echten
+     * Google-Status-Code — damit die UI den Fehler unterscheiden und dem Nutzer
+     * eine spezifische Meldung zeigen kann.
+     */
+    sealed class SignInResult {
+        data class Success(val account: GoogleSignInAccount) : SignInResult()
+        data class Error(val statusCode: Int, val message: String) : SignInResult()
+    }
+
+    fun accountFromResult(data: Intent?): SignInResult {
+        return try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(data)
+                .getResult(ApiException::class.java)
+            SignInResult.Success(account)
+        } catch (e: ApiException) {
+            val code = e.statusCode
+            val codeName = GoogleSignInStatusCodes.getStatusCodeString(code)
+            Log.e(TAG, "Sign-In fehlgeschlagen: code=$code ($codeName), statusMessage=${e.status.statusMessage}", e)
+            SignInResult.Error(code, codeName)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Sign-In: unerwartete Exception", t)
+            SignInResult.Error(-1, t.message ?: "Unbekannter Fehler")
+        }
     }
 
     fun lastSignedIn(): GoogleSignInAccount? = GoogleSignIn.getLastSignedInAccount(context)
@@ -53,5 +73,9 @@ class GoogleSignInHelper @Inject constructor(
     suspend fun signOut() {
         runCatching { client.signOut().result }
         runCatching { client.revokeAccess().result }
+    }
+
+    companion object {
+        private const val TAG = "GoogleSignInHelper"
     }
 }

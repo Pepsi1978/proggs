@@ -3,6 +3,7 @@ package de.frank.entropyreducer.data.remote.drive
 import android.accounts.Account
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.api.client.http.javanet.NetHttpTransport
@@ -58,17 +59,27 @@ class DriveSession @Inject constructor(
 
     private suspend fun build(): Drive = withContext(Dispatchers.IO) {
         val email = secrets.driveAccountEmail ?: throw DriveNotSignedInException()
+        Log.d(TAG, "Token-Request fuer $email, Scope=DRIVE_APPDATA")
         val account = Account(email, "com.google")
         val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
         val token = try {
             GoogleAuthUtil.getToken(context, account, scope)
         } catch (e: UserRecoverableAuthException) {
+            Log.w(TAG, "Consent erforderlich: ${e.message}")
             throw DriveConsentRequiredException(e.intent ?: Intent())
+        } catch (t: Throwable) {
+            Log.e(TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
+            throw t
         }
+        Log.d(TAG, "Token erhalten (Laenge=${token.length}), Drive-Client wird gebaut")
         Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
             request.headers.authorization = "Bearer $token"
         }
             .setApplicationName("EntropieReductor")
             .build()
+    }
+
+    companion object {
+        private const val TAG = "EREDriveSession"
     }
 }

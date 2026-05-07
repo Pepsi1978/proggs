@@ -1,3 +1,5 @@
+import java.io.File as JFile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,9 +9,49 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// Secrets liegen ausserhalb des Repos in $HOME/SK/EntropieReductor/.
+// Der syncSecretsFromSk-Task kopiert die Debug-Keystore vor jedem Build in den
+// Projekt-Root (rootProject) als debug-shared.keystore — der dortige Pfad ist in
+// .gitignore ausgeschlossen, kommt also nie ins Git-Repo.
+val skBase: JFile = JFile(System.getProperty("user.home"))
+    .resolve("SK").resolve("EntropieReductor")
+val skKeystoreSrc: JFile = skBase.resolve("entropiereductor.debug.keystore")
+val rootKeystoreDst: JFile = rootProject.file("debug-shared.keystore")
+
+val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
+    val src = skKeystoreSrc
+    val dst = rootKeystoreDst
+    val sk = skBase
+    doLast {
+        if (!sk.isDirectory) {
+            throw GradleException(
+                "SK-Ordner fehlt: ${sk.absolutePath}\n" +
+                    "Erwartet: entropiereductor.debug.keystore\n" +
+                    "Siehe ~/SK/EntropieReductor/README.md."
+            )
+        }
+        if (!src.exists()) {
+            throw GradleException("SK-Datei fehlt: ${src.absolutePath}")
+        }
+        dst.parentFile.mkdirs()
+        src.copyTo(dst, overwrite = true)
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFromSk) }
+
 android {
     namespace = "de.frank.entropyreducer"
     compileSdk = 35
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootKeystoreDst
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
 
     defaultConfig {
         applicationId = "de.frank.entropyreducer"

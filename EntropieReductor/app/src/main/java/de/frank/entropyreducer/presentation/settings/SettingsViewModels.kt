@@ -268,11 +268,44 @@ class ExportViewModel @Inject constructor(
             it.copy(
                 driveAccountEmail = email,
                 driveBackupEnabled = true,
-                driveStatusMessage = "Mit $email verbunden. Erstes Backup laeuft …",
+                driveStatusMessage = "Mit $email verbunden. Pruefe Drive auf bestehenden Stand …",
             )
         }
-        // Sofort initialer Backup-Run.
-        coordinator.requestImmediate()
+
+        viewModelScope.launch {
+            // KRITISCH: Auf neuem Geraet darf der erste Sign-In NICHT direkt
+            // ein Backup mit dem leeren lokalen Stand hochladen — sonst wird
+            // der vorhandene Drive-Backup-Stand durch 0 Eintraege ueberschrieben.
+            // Stattdessen pruefen wir zuerst ob auf Drive bereits ein Backup
+            // liegt: ja → restore, nein → erstes Backup hochladen.
+            val hasBackup = runCatching { syncEntries.hasRemoteBackup() }.getOrDefault(false)
+            if (hasBackup) {
+                _state.update { it.copy(driveStatusMessage = "Backup gefunden — wird heruntergeladen …") }
+                syncEntries.restoreFromDrive()
+                    .onSuccess { result ->
+                        val text = when (result) {
+                            is SyncEntriesUseCase.RestoreOutcome.NoBackup ->
+                                "Kein Backup gefunden — frisches Backup wird angelegt."
+                            is SyncEntriesUseCase.RestoreOutcome.Merged ->
+                                "Wiederhergestellt: ${result.inserted} neu, ${result.updated} aktualisiert."
+                        }
+                        _state.update { it.copy(driveStatusMessage = text) }
+                        if (result is SyncEntriesUseCase.RestoreOutcome.NoBackup) {
+                            coordinator.requestImmediate()
+                        }
+                    }
+                    .onFailure { ex ->
+                        _state.update {
+                            it.copy(driveStatusMessage = "Restore fehlgeschlagen: ${ex.message}")
+                        }
+                    }
+            } else {
+                _state.update {
+                    it.copy(driveStatusMessage = "Kein bestehender Backup-Stand. Erstes Backup laeuft …")
+                }
+                coordinator.requestImmediate()
+            }
+        }
     }
 
     fun onSignInError(message: String) {

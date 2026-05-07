@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.remote.drive
 
+import android.util.Log
 import com.google.api.client.http.ByteArrayContent
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.services.drive.model.File as DriveFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
@@ -9,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "EREDriveBackup"
 
 /**
  * Schreibt eine JSON-Backup-Datei in den `appDataFolder` des Google-Drive-Kontos.
@@ -29,8 +33,10 @@ class DriveBackupManager @Inject constructor(
     private val fileName = "entropy_reducer_entries_v1.json"
 
     suspend fun upload(jsonContent: String): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        Log.d(TAG, "upload() start, payloadBytes=${jsonContent.toByteArray(Charsets.UTF_8).size}")
+        try {
             val drive = session.get()
+            Log.d(TAG, "Drive client erhalten, listing existing backup files…")
 
             val matches = drive.files().list()
                 .setSpaces("appDataFolder")
@@ -40,17 +46,19 @@ class DriveBackupManager @Inject constructor(
                 .execute()
                 .files
                 .orEmpty()
+            Log.d(TAG, "list() ok, ${matches.size} existing match(es)")
 
             val media = ByteArrayContent("application/json", jsonContent.toByteArray(Charsets.UTF_8))
             val firstId = matches.firstOrNull()?.id
 
             if (firstId != null) {
+                Log.d(TAG, "update existing fileId=$firstId")
                 drive.files().update(firstId, null, media).execute()
-                // Stale Duplikate aufraeumen
                 matches.drop(1).forEach { stale ->
                     runCatching { drive.files().delete(stale.id).execute() }
                 }
             } else {
+                Log.d(TAG, "create new file in appDataFolder")
                 val metadata = DriveFile().apply {
                     name = fileName
                     parents = listOf("appDataFolder")
@@ -59,7 +67,15 @@ class DriveBackupManager @Inject constructor(
             }
 
             secrets.driveLastBackupEpochMs = System.currentTimeMillis()
-            Unit
+            Log.d(TAG, "upload() success")
+            Result.success(Unit)
+        } catch (e: GoogleJsonResponseException) {
+            Log.e(TAG, "Google JSON error: status=${e.statusCode} ${e.statusMessage}")
+            Log.e(TAG, "Body: ${e.details?.toString() ?: e.content ?: "(no body)"}")
+            Result.failure(e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "upload() failed: ${t.javaClass.simpleName}: ${t.message}", t)
+            Result.failure(t)
         }
     }
 }

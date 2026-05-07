@@ -68,9 +68,12 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
     val signInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val account = vm.signInHelper.accountFromResult(result.data)
-        if (account != null) vm.onSignInSuccess(account)
-        else vm.onSignInError("Vorgang abgebrochen oder Cloud-Console-Setup fehlt (siehe README).")
+        when (val signInResult = vm.signInHelper.accountFromResult(result.data)) {
+            is de.frank.entropyreducer.data.remote.drive.GoogleSignInHelper.SignInResult.Success ->
+                vm.onSignInSuccess(signInResult.account)
+            is de.frank.entropyreducer.data.remote.drive.GoogleSignInHelper.SignInResult.Error ->
+                vm.onSignInError("Code ${signInResult.statusCode} (${signInResult.message})")
+        }
     }
 
     LaunchedEffect(state.driveStatusMessage) {
