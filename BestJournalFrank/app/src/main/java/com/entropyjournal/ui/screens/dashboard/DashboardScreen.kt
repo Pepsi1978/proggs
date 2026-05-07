@@ -188,39 +188,6 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     )
                 }
 
-                // C1 — Profil-Header: zeigt das aktive Profil + Kurzfokus oben im Dashboard.
-                // Bei Custom-Profilen mit erfolgreichem fokus_kern aus der KI-Antwort wird
-                // dieser bevorzugt (zeigt: "Ich habe deinen Auftrag verstanden"), sonst der
-                // statische Profil-Fokus aus dem Profil-Prompt.
-                if (uiState.activeProfileLabel.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "Aktives Profil: ${uiState.activeProfileLabel}",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            val focusText =
-                                if (uiState.customFokusKern.isNotBlank())
-                                    uiState.customFokusKern
-                                else uiState.activeProfileFocus
-                            if (focusText.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = focusText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
             // Scrollable content
@@ -228,6 +195,40 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // C1 — Profil-Header: zeigt das aktive Profil + Kurzfokus.
+                // Frank-Wunsch 2026-05-08: scrollt mit dem restlichen Dashboard-Inhalt mit
+                // (vorher war das Surface in der fixed Column oben — bleibt jetzt also nicht
+                // mehr stehen wenn man nach unten scrollt).
+                if (uiState.activeProfileLabel.isNotBlank()) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Aktives Profil: ${uiState.activeProfileLabel}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                val focusText =
+                                    if (uiState.customFokusKern.isNotBlank())
+                                        uiState.customFokusKern
+                                    else uiState.activeProfileFocus
+                                if (focusText.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = focusText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 // B3 — Hinweis-Karte bei leerem Custom-Profil-Prompt. Wird statt
                 // des normalen Dashboards gerendert, damit der Benutzer den fehlenden
                 // Schritt nicht uebersieht.

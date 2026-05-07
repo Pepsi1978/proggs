@@ -339,7 +339,11 @@ val CosmosDarkScheme: ColorScheme =
         error = ERCritical,
         onError = ERTextPrimaryDark,
         surfaceTint = ERBgDarkGlass,
-        outline = ERGlassDarkBorder,
+        // outline wird in BottomNavBar.kt fuer inaktive Icons verwendet — daher
+        // muss die Farbe deckend sein (nicht alpha-transparent), sonst sind die
+        // Buttons unten unleserlich. outlineVariant bleibt transparent fuer den
+        // Glas-Border-Schimmer auf Karten.
+        outline = ERTextSecondaryDark,
         outlineVariant = ERGlassDarkBorder,
     )
 
@@ -364,6 +368,11 @@ val CosmosLightScheme: ColorScheme =
         error = ERCritical,
         onError = ERTextPrimaryDark,
         surfaceTint = ERBgLightGlass,
-        outline = ERGlassLightBorder,
+        // outline wird in BottomNavBar.kt fuer inaktive Icons verwendet — daher
+        // muss die Farbe sehr dunkel und voll deckend sein damit die Buttons
+        // unten auf weissem Hintergrund schwarz/lesbar sind. Frank-Reklamation
+        // 2026-05-08: "Buttons fast nicht zu sehen auf dem Weiss".
+        // outlineVariant bleibt transparent fuer den feinen Card-Border-Schimmer.
+        outline = ERTextPrimaryLight,
         outlineVariant = ERGlassLightBorder,
     )
