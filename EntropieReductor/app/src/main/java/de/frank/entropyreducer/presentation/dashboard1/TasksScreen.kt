@@ -8,15 +8,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
@@ -268,15 +273,22 @@ private fun EntryDetailSheet(
 ) {
     val cosmos = LocalCosmos.current
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // windowInsets = WindowInsets(0): Sheet uebernimmt die Insets selbst nicht — die
+    // Column unten kompensiert mit eigenem Bottom-Padding. So bleibt der ganze Sheet
+    // bis zum unteren Bildschirmrand sichtbar (kein doppeltes Inset-Padding).
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onClose,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
+        windowInsets = WindowInsets(0),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = bottomInset + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header: Title + X
@@ -405,25 +417,33 @@ private fun EntryDetailSheet(
                     }
                 }
             }
-            // Loeschen-Button — gefuellt rot, klar sichtbar.
+            // Loeschen-Button — gefuellt rot, klar sichtbar, fixe Hoehe damit Text
+            // immer lesbar ist; horizontales Default-Padding entfernt damit Icon+Text
+            // bei jeder Sheet-Breite mittig sitzen.
             androidx.compose.material3.Button(
                 onClick = onDelete,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = CosmosColors.Critical,
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp),
             ) {
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Outlined.Delete,
                     contentDescription = null,
                     tint = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = "Löschen",
+                    color = androidx.compose.ui.graphics.Color.White,
                     fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
             Spacer(Modifier.height(20.dp))

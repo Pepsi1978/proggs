@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
@@ -47,13 +47,15 @@ fun CosmosBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
+    // System-Navigation-Bar / Gesten-Indikator nicht ueberdecken: Bottom-Inset
+    // wird ZUSAETZLICH zur 96dp-Inhalts-Hoehe reserviert (gesamte Box waechst
+    // entsprechend), Inhalt bekommt bottom-Padding damit Tabs ueber dem Inset bleiben.
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // System-Navigation-Bar nicht ueberdecken — windowInsetsPadding sorgt
-            // dafuer dass die BottomBar oberhalb der Geraete-Gesten/Navigation-Bar liegt.
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .height(96.dp),
+            .height(96.dp + bottomInset)
+            .padding(bottom = bottomInset),
     ) {
         // Bar mit den 4 Tabs (Mic-Lücke in der Mitte)
         Row(
