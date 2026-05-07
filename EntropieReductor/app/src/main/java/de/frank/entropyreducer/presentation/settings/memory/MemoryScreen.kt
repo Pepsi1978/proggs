@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.settings.memory
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,26 +67,39 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // 3 Buttons oben
+            // 3 Buttons oben — Frank-Reklamation 2026-05-08: vorher waren die Texte
+            // zu lang fuer weight(1f), der 3. Button "Aus Profil neu generieren"
+            // wurde auf 4 Zeilen umgebrochen (sah aus wie "reine Kugel"). Jetzt
+            // jede Card mit Icon oben + zwei kuerzeren Zeilen darunter (Titel + Hint),
+            // gleiche Hoehe, gleiche Akzentfarbe pro Aktion.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedButton(onClick = { adding = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.Add, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Manuell hinzufügen", style = MaterialTheme.typography.labelSmall)
-                }
-                OutlinedButton(onClick = { /* Stufe 4 — Vorschlaege */ }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.RateReview, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("KI-Vorschlaege prüfen", style = MaterialTheme.typography.labelSmall)
-                }
-                OutlinedButton(onClick = { /* Stufe 4 — Profil destillieren */ }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Outlined.AutoFixHigh, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Aus Profil neu generieren", style = MaterialTheme.typography.labelSmall)
-                }
+                MemoryActionButton(
+                    icon = Icons.Outlined.Add,
+                    title = "Hinzufügen",
+                    subtitle = "Manuell",
+                    accent = CosmosColors.AccentPrimary,
+                    onClick = { adding = true },
+                    modifier = Modifier.weight(1f),
+                )
+                MemoryActionButton(
+                    icon = Icons.Outlined.RateReview,
+                    title = "KI-Vorschläge",
+                    subtitle = "Prüfen",
+                    accent = CosmosColors.AccentSecondary,
+                    onClick = { /* Stufe 4 */ },
+                    modifier = Modifier.weight(1f),
+                )
+                MemoryActionButton(
+                    icon = Icons.Outlined.AutoFixHigh,
+                    title = "Aus Profil",
+                    subtitle = "Neu generieren",
+                    accent = CosmosColors.Success,
+                    onClick = { /* Stufe 4 */ },
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             LazyColumn(
@@ -153,6 +167,63 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
                 )
             },
         )
+    }
+}
+
+/**
+ * Action-Button mit Icon-in-Kreis + Titel + Subtitel — fuer die 3 Aktionen oben
+ * im Gedaechtnis-Screen. Vorher waren das schmale OutlinedButtons mit zu langen
+ * Texten die sich auf 3-4 Zeilen umbrachen ("reine Kugel"-Effekt).
+ */
+@Composable
+private fun MemoryActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = modifier) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 6.dp),
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = cosmos.textPrimary,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

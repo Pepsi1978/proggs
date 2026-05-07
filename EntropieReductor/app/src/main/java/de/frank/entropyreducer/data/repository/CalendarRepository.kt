@@ -23,7 +23,13 @@ import javax.inject.Singleton
  * Synchronisiert Ganztagestermine aus Google Calendar in den lokalen Cache.
  * Pro Tag im Sync-Fenster wird genau ein CalendarDayEntity erzeugt.
  *
- * Sync-Fenster: 30 Tage zurueck + 30 Tage vorwaerts (Spec §15.5).
+ * Sync-Fenster: 30 Tage zurueck + 5 Jahre vorwaerts (Frank-Wunsch 2026-05-08:
+ * "Kalender geht 50 Jahre nach vorne, ich kenne meine Dienstplaene"). 5 Jahre =
+ * 1825 Tage ist ein guter Kompromiss zwischen "alles drin" und Sync-Performance.
+ * Mehrtaegige Termine (z.B. "X" 10.-11. Mai oder "Urlaub" 10 Tage am Stueck)
+ * werden in JEDEN betroffenen Tag eingetragen — vorher hat nur der Start-Tag
+ * den Schichtcode bekommen, der Folgetag blieb leer.
+ *
  * Bei mehreren passenden Events pro Tag gewinnt der erste erkannte Schichtcode;
  * Termine ohne Schichtcode werden als UNBEKANNT eingetragen, ohne andere zu ueberschreiben.
  */
@@ -53,7 +59,9 @@ class CalendarRepository @Inject constructor(
 
         val today = LocalDate.now()
         val from = today.minusDays(30)
-        val to = today.plusDays(31) // exklusive Obergrenze
+        // 5 Jahre nach vorne (Frank-Wunsch 2026-05-08): so kennt die KI
+        // alle bekannten Dienstplaene + Urlaube + Termine im Voraus.
+        val to = today.plusDays(1825)
 
         val syncedAt = System.currentTimeMillis()
         val daysByDate = mutableMapOf<String, CalendarDayEntity>()
@@ -119,45 +127,77 @@ class CalendarRepository @Inject constructor(
                 } ?: return@forEach
 
                 if (isAllDay) {
-                    val parsed = ShiftCodeParser.parse(summary)
-                    val existing = daysByDate[eventDate]
-                    // Sanftes Override: erkannter Schichtcode darf einen UNBEKANNT-Eintrag
-                    // ersetzen, aber nicht einen schon erkannten Code.
-                    if (parsed != ShiftCode.UNBEKANNT ||
-                        existing == null || existing.shiftCode == ShiftCode.UNBEKANNT
-                    ) {
+                    // Multi-Day-Expansion (Frank-Wunsch 2026-05-08):
+                    // Google Calendar all-day-events haben start.date = erster Tag und
+                    // end.date = exklusive Obergrenze. "X" 10.-11. Mai kommt also als
+                    // start=2026-05-10, end=2026-05-12. Vorher haben wir nur den
+                    // Start-Tag eingetragen und der Folgetag blieb leer. Jetzt
+                    // iterieren wir ueber JEDEN Tag im Range.
+                    val startDate = runCatching { LocalDate.parse(allDayDate) }.getOrNull()
+                    val endDateString = event.end?.date
+                    val endDateExclusive = endDateString
+                        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        ?: startDate?.plusDays(1)
+                    if (startDate != null && endDateExclusive != null) {
+                        val parsed = ShiftCodeParser.parse(summary)
                         val profile = ShiftCodeParser.profileFor(parsed)
-                        daysByDate[eventDate] = CalendarDayEntity(
+                        var dayIter: LocalDate = startDate
+                        while (dayIter.isBefore(endDateExclusive)) {
+                            val dayStr = dayIter.toString()
+                            val existing = daysByDate[dayStr]
+                            if (parsed != ShiftCode.UNBEKANNT ||
+                                existing == null || existing.shiftCode == ShiftCode.UNBEKANNT
+                            ) {
+                                daysByDate[dayStr] = CalendarDayEntity(
+                                    date = dayStr,
+                                    shiftCode = parsed,
+                                    rawCalendarText = summary,
+                                    workWindowStart = profile.workWindowStart,
+                                    workWindowEnd = profile.workWindowEnd,
+                                    sleepWindowStart = profile.sleepWindowStart,
+                                    sleepWindowEnd = profile.sleepWindowEnd,
+                                    availableMinutesEstimate = profile.availableMinutesEstimate,
+                                    syncedAt = syncedAt,
+                                )
+                            }
+                            // Auch das CalendarEventEntity pro Tag eintragen — sonst
+                            // sieht man im Tag-Detail-Sheet am Folgetag nicht den
+                            // dazugehoerigen Termin.
+                            event.id?.let { id ->
+                                collectedEvents += CalendarEventEntity(
+                                    id = if (dayIter == startDate) id else "$id-$dayStr",
+                                    date = dayStr,
+                                    summary = summary,
+                                    description = event.description?.trim()?.takeIf { it.isNotBlank() },
+                                    location = event.location?.trim()?.takeIf { it.isNotBlank() },
+                                    startMs = 0L,
+                                    endMs = 0L,
+                                    allDay = true,
+                                    syncedAt = syncedAt,
+                                )
+                            }
+                            dayIter = dayIter.plusDays(1)
+                        }
+                    }
+                } else {
+                    // Time-Bound-Event: nur den eventDate-Eintrag schreiben (Termine
+                    // ueberspannen typischerweise keinen Tageswechsel, und falls doch
+                    // wuerde Google Calendar zwei separate Eintraege liefern).
+                    val startMs = parseIsoToMs(timedStart)
+                    val endMs = parseIsoToMs(event.end?.dateTime)
+                    event.id?.let { id ->
+                        collectedEvents += CalendarEventEntity(
+                            id = id,
                             date = eventDate,
-                            shiftCode = parsed,
-                            rawCalendarText = summary,
-                            workWindowStart = profile.workWindowStart,
-                            workWindowEnd = profile.workWindowEnd,
-                            sleepWindowStart = profile.sleepWindowStart,
-                            sleepWindowEnd = profile.sleepWindowEnd,
-                            availableMinutesEstimate = profile.availableMinutesEstimate,
+                            summary = summary,
+                            description = event.description?.trim()?.takeIf { it.isNotBlank() },
+                            location = event.location?.trim()?.takeIf { it.isNotBlank() },
+                            startMs = startMs,
+                            endMs = endMs,
+                            allDay = false,
                             syncedAt = syncedAt,
                         )
                     }
-                }
-
-                // 2b. Generic-Event-Persistierung: ALLE Events (Ganztags + Time-Bound)
-                //     werden in die calendar_events-Tabelle geschrieben — egal ob
-                //     Schichtcode oder Arzttermin. UI + KI koennen sich dann darauf beziehen.
-                val startMs = if (isAllDay) 0L else parseIsoToMs(timedStart)
-                val endMs = if (isAllDay) 0L else parseIsoToMs(event.end?.dateTime)
-                event.id?.let { id ->
-                    collectedEvents += CalendarEventEntity(
-                        id = id,
-                        date = eventDate,
-                        summary = summary,
-                        description = event.description?.trim()?.takeIf { it.isNotBlank() },
-                        location = event.location?.trim()?.takeIf { it.isNotBlank() },
-                        startMs = startMs,
-                        endMs = endMs,
-                        allDay = isAllDay,
-                        syncedAt = syncedAt,
-                    )
                 }
             }
             pageToken = resp.nextPageToken

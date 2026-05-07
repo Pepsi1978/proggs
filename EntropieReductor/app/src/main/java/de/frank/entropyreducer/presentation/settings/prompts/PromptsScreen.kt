@@ -77,8 +77,15 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                                 Switch(
                                     checked = p.isActive,
                                     onCheckedChange = { vm.toggle(p) },
+                                    // Frank-Reklamation 2026-05-08: aktivierter Switch
+                                    // sah aus wie ein einfarbig blaues Feld weil Thumb +
+                                    // Track die gleiche Akzentfarbe hatten. Jetzt: Thumb
+                                    // ist weiss + Track ist die Akzentfarbe — klar als
+                                    // Schalter erkennbar.
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = CosmosColors.AccentPrimary,
+                                        checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                        checkedTrackColor = CosmosColors.AccentPrimary,
+                                        checkedBorderColor = CosmosColors.AccentPrimary,
                                     ),
                                 )
                             }

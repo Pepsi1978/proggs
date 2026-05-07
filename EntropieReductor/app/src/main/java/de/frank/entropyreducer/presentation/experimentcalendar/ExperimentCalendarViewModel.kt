@@ -69,12 +69,12 @@ class ExperimentCalendarViewModel @Inject constructor(
     private val selectedDateFlow = MutableStateFlow<LocalDate?>(null)
 
     /**
-     * Sync-Fenster fuer den Kalender — 60 Tage zurueck, 60 Tage vorwaerts.
-     * Stimmt mit dem Sync-Worker-Fenster ueberein und gibt Frank's Monatsansicht
-     * genug Spielraum fuer Vor-/Zurueck-Navigation ohne staendigen Re-Sync.
+     * Beobachtungs-Fenster fuer den Kalender — 60 Tage zurueck, 5 Jahre nach vorne.
+     * Frank-Wunsch 2026-05-08: alle bekannten Dienstplaene + Termine sichtbar
+     * sobald sie gesynct sind, nicht nur 60 Tage. Sync-Worker zieht passend.
      */
     private val calendarRangeFrom = LocalDate.now().minusDays(60).toString()
-    private val calendarRangeTo = LocalDate.now().plusDays(60).toString()
+    private val calendarRangeTo = LocalDate.now().plusDays(1825).toString()
 
     val state: StateFlow<ExperimentCalendarUiState> = combine(
         viewFlow,
