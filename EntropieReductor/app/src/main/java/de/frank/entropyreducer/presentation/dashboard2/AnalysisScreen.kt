@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingFlat
@@ -221,18 +222,97 @@ fun AnalysisScreen(
 
 @Composable
 private fun QuickStatsGrid(state: AnalysisUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatTile("Entropie-Last", state.totalEntropyLoad.toString(), modifier = Modifier.weight(1f))
-            StatTile("Offene Eintraege", state.openCount.toString(), modifier = Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatTile(
-                title = "Dominanz",
-                value = state.dominantCategory?.label() ?: "—",
-                modifier = Modifier.weight(1f),
+    // Soll-Design: 2 grosse Cards nebeneinander (Bild 13/23) mit Icon-Kreis,
+    // Title, grosser Zahl und Detail-Text darunter.
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        BigStatCard(
+            icon = Icons.Outlined.AutoAwesome,
+            tint = CosmosColors.AccentSecondary,
+            title = "Gesamt-Entropie-Last",
+            value = state.totalEntropyLoad.toString(),
+            valueSuffix = "/100",
+            detail = entropyLevelLabel(state.totalEntropyLoad),
+            modifier = Modifier.weight(1f),
+        )
+        BigStatCard(
+            icon = Icons.Outlined.Folder,
+            tint = CosmosColors.AccentPrimary,
+            title = "Offene Eintraege",
+            value = state.openCount.toString(),
+            valueSuffix = "",
+            detail = openEntriesDetail(state),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+private fun entropyLevelLabel(load: Int): String = when {
+    load >= 80 -> "Sehr hoch — kritisch"
+    load >= 60 -> "Hoch — ueber Zielbereich"
+    load >= 40 -> "Mittel — Aufmerksamkeit"
+    load >= 20 -> "Niedrig — gut"
+    else -> "Sehr niedrig — exzellent"
+}
+
+private fun openEntriesDetail(state: AnalysisUiState): String {
+    val critical = state.criticalCount
+    val normal = state.openCount - critical
+    return if (critical > 0) "$critical kritisch — $normal normal" else "$normal normal"
+}
+
+@Composable
+private fun BigStatCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: androidx.compose.ui.graphics.Color,
+    title: String,
+    value: String,
+    valueSuffix: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = modifier) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(tint.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = value,
+                    color = cosmos.textPrimary,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (valueSuffix.isNotBlank()) {
+                    Text(
+                        text = valueSuffix,
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = detail,
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
             )
-            TrendTile(state.sevenDayTrendDelta, modifier = Modifier.weight(1f))
         }
     }
 }

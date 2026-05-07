@@ -37,6 +37,8 @@ enum class TrendRange(val days: Int, val label: String) {
 
 data class AnalysisUiState(
     val openCount: Int = 0,
+    /** Eintraege mit priorityScore >= 80 — werden in der Big-Stat-Card als "kritisch" gezeigt. */
+    val criticalCount: Int = 0,
     val totalEntropyLoad: Int = 0,
     val dominantCategory: EntropyCategory? = null,
     val sevenDayTrendDelta: Int = 0,
@@ -88,6 +90,7 @@ class AnalysisViewModel @Inject constructor(
     ) { active, range, breakdown, (md, mdAt), (ui, calendarDays) ->
         val (series, shifts) = computeTrendFromSnapshot(active, range, calendarDays)
         val open = active.count { it.status == EntryStatus.OFFEN }
+        val critical = active.count { it.status == EntryStatus.OFFEN && it.priorityScore >= 80.0 }
         val totalLoad = active.sumOf { it.severity }.coerceIn(0, 1000)
         val dominant = active.groupingBy { it.category }.eachCount()
             .maxByOrNull { it.value }?.key
@@ -95,6 +98,7 @@ class AnalysisViewModel @Inject constructor(
 
         AnalysisUiState(
             openCount = open,
+            criticalCount = critical,
             totalEntropyLoad = totalLoad,
             dominantCategory = dominant,
             sevenDayTrendDelta = sevenDayDelta,
