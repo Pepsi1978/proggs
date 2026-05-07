@@ -309,9 +309,15 @@ val GruvboxLightScheme: ColorScheme =
     )
 
 // Cosmos — "Neon Cosmos" 1:1 von ~/proggs/EntropieReductor portiert.
-// Felder sind EXAKT die gleichen wie in EntropieReductor's Theme.kt — keine
-// zusaetzlichen Material3-Defaults ueberschreiben, damit Material3's intelligente
-// Defaults greifen koennen.
+//
+// In EntropieReductor sind die Cards/Boxen eigene GlassCard-Composables die ein
+// weisses Overlay mit 8% Alpha auf dem dunklen Hintergrund ablegen. BestJournalFrank
+// verwendet Material3-Cards — daher setzen wir surface, surfaceVariant und alle
+// 5 surfaceContainer-Slots auf die mathematisch berechnete Glas-Mix-Farbe.
+// Resultat: Material3-Cards sehen visuell IDENTISCH aus wie EntropieReductor's GlassCards.
+//
+// surfaceTint wird absichtlich auf surface gesetzt (statt primary), damit Material3
+// keine Cyan-Tints auf hoehere Elevations legt — das wuerde den Glas-Look ruinieren.
 val CosmosDarkScheme: ColorScheme =
     darkColorScheme(
         primary = ERAccentPrimary,
@@ -321,12 +327,20 @@ val CosmosDarkScheme: ColorScheme =
         tertiary = ERSuccess,
         background = ERBgDark,
         onBackground = ERTextPrimaryDark,
-        surface = ERBgDarkMid,
+        surface = ERBgDarkGlass,
         onSurface = ERTextPrimaryDark,
-        surfaceVariant = ERBgDarkAccent,
+        surfaceVariant = ERBgDarkGlassElevated,
         onSurfaceVariant = ERTextSecondaryDark,
+        surfaceContainerLowest = ERBgDark,
+        surfaceContainerLow = ERBgDarkGlass,
+        surfaceContainer = ERBgDarkGlass,
+        surfaceContainerHigh = ERBgDarkGlassElevated,
+        surfaceContainerHighest = ERBgDarkGlassElevated,
         error = ERCritical,
         onError = ERTextPrimaryDark,
+        surfaceTint = ERBgDarkGlass,
+        outline = ERGlassDarkBorder,
+        outlineVariant = ERGlassDarkBorder,
     )
 
 val CosmosLightScheme: ColorScheme =
@@ -338,10 +352,18 @@ val CosmosLightScheme: ColorScheme =
         tertiary = ERSuccess,
         background = ERBgLight,
         onBackground = ERTextPrimaryLight,
-        surface = ERBgLight,
+        surface = ERBgLightGlass,
         onSurface = ERTextPrimaryLight,
-        surfaceVariant = ERBgLightAccent,
+        surfaceVariant = ERBgLightGlassElevated,
         onSurfaceVariant = ERTextSecondaryLight,
+        surfaceContainerLowest = ERBgLight,
+        surfaceContainerLow = ERBgLightGlass,
+        surfaceContainer = ERBgLightGlass,
+        surfaceContainerHigh = ERBgLightGlassElevated,
+        surfaceContainerHighest = ERBgLightGlassElevated,
         error = ERCritical,
         onError = ERTextPrimaryDark,
+        surfaceTint = ERBgLightGlass,
+        outline = ERGlassLightBorder,
+        outlineVariant = ERGlassLightBorder,
     )

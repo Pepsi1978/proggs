@@ -134,3 +134,16 @@ val ERTextPrimaryDark = Color(0xFFF8FAFC)
 val ERTextSecondaryDark = Color(0xFF94A3B8)
 val ERTextPrimaryLight = Color(0xFF0F172A)
 val ERTextSecondaryLight = Color(0xFF475569)
+
+// Glas-Mix-Farben — entstehen wenn der GlassDark/Light-Overlay
+// auf BgDark/BgLight liegt. EntropieReductor zeichnet alle Cards mit eigenem
+// GlassCard-Composable, hier in BestJournalFrank werden die Material3-Defaults
+// genutzt, also setzen wir die surface-Slots direkt auf die berechneten Werte.
+// Mathematik: rgb_out = rgb_overlay * alpha + rgb_bg * (1 - alpha)
+//
+// Dark: GlassDark = white@0.078 ueber BgDark #0A0E1A → #1D212C (graublau)
+// Light: GlassLight = white@0.80 ueber BgLight #F5F7FB → #FDFDFE (fast weiss)
+val ERBgDarkGlass = Color(0xFF1D212C)             // Standard-Surface (Cards)
+val ERBgDarkGlassElevated = Color(0xFF272B36)     // Elevated-Surface (Hover/Dialog)
+val ERBgLightGlass = Color(0xFFFDFDFE)            // Standard-Surface Light
+val ERBgLightGlassElevated = Color(0xFFEEF2F9)    // Elevated-Surface Light
