@@ -193,3 +193,51 @@ Debug-Build ist nicht minified, Release-Build hat `isMinifyEnabled = true` + `is
 **Spec §10.4:** "alle 30 Min."
 **Umsetzung:** PeriodicWorkRequest mit 30 Min Intervall. Bei jedem Lauf wird der Generator gestartet, der die fuenf Trigger sequentiell prueft. Bei Treffer wird die Frage in den Cache geschrieben und eine schichtbewusste Notification ausgeloest (nur wenn neuer triggerKey).
 **Begruendung:** WorkManager-Periodic-Tasks haben minimal 15min, also ist 30min sicher. Die UI beobachtet den Repository-Flow und zeigt die Frage sofort beim Cache-Update.
+
+## 31. Stufe 4 — TTS: MediaPlayer statt ExoPlayer
+
+**Spec §22 Stufe 4 #1:** "ExoPlayer-Wiedergabe".
+**Entschieden:** MediaPlayer aus dem Android-Framework, nicht ExoPlayer aus Media3.
+**Begruendung:** TTS-Use-Cases sind 30-90s MP3-Dateien aus Cache — kein Streaming, kein DRM, keine Spatial-Audio-Anforderung. MediaPlayer ist 3 MB kleiner und nachweislich zuverlaessig im BestJournalFrank-Pattern (gleicher Use-Case, seit Monaten produktiv). Wechsel zu ExoPlayer ist trivial wenn spaeter Streaming-Synthese kommt — Single-Aufruf-Stelle in `domain/tts/TtsPlayer.kt`.
+
+## 32. Stufe 4 — TTS-Voices als statische Konstante, kein API-Listing
+
+**Spec §22 Stufe 4 #1:** "Voice-Listing".
+**Entschieden:** 30 deutsche Chirp-3-HD-Stimmen als statische Liste in `data/remote/tts/GoogleTtsVoices.kt`, kein dynamisches Voice-Listing.
+**Begruendung:** Google fuegt selten neue Stimmen hinzu (~1x/Jahr), und der Voice-Picker mit 30 Eintraegen ist schon am Limit dessen was UX-vertretbar ist. Statische Liste spart einen API-Call beim App-Start und macht das UI offline-faehig. Falls eine neue Chirp-Generation kommt, ist die Aktualisierung ein 30-Sekunden-Edit.
+
+## 33. Stufe 4 — Tagesbriefing als Polling-Worker (90 Min)
+
+**Spec §22 Stufe 4 #2:** "Tagesbriefing automatisch + manuell".
+**Entschieden:** Worker laeuft alle 90 Min und prueft selbst, ob heute schon ein Briefing existiert (`AppSettings.dailyBriefingDate == today`).
+**Begruendung:** Schichtdienst-Logik (Tag- vs. Nachtdienst, Wachfenster, Schlaffenster) macht eine fixe "Morgens 06:00"-Regel unzuverlaessig. Polling-Pattern uebertraegt die Schichtaware-Logik komplett auf den Worker, ohne Schedule-Branches. Performance unkritisch — Worker exit nach 1ms wenn Date == today.
+
+## 34. Stufe 4 — Briefings als AppSettings-Cache, nicht Room
+
+**Spec §16.3:** "Markdown-Prosa gespeichert als spezielle Insights mit Tag wochenrueckblick/monatsrueckblick".
+**Entschieden:** Tagesbriefing/Wochen-/Monatsrueckblick werden in AppSettings (DataStore) als 1-Slot-Cache gespeichert, nicht als Insight-Eintrag in Room.
+**Begruendung:** Insights bedeuten "Erkenntnis aus Hypothesen mit Confidence 0-100". Ein Wochenrueckblick ist KEIN Insight-Erkenntnis-Typ — er ist ein narrativer Text. Vermischung wuerde die Confidence-Auswertung verwaessern. Spaeter kann ein eigenes Room-Entity `BriefingHistoryEntity` ergaenzt werden, falls Verlauf gewuenscht ist; aktuell reicht 1 Slot pro Briefing-Typ.
+
+## 35. Stufe 4 — Korrelations-Engine: 36h-Fenster fuer Stack-Match
+
+**Spec §16.1:** "vorhanden vs. weggelassen".
+**Entschieden:** Ein BiomarkerSnapshot zaehlt zur "MIT"-Gruppe, wenn in den 36 Stunden VOR `capturedAt` ein SupplementLog mit dem entsprechenden StackType eingetragen wurde.
+**Begruendung:** Whoop misst Recovery am Morgen — Effekt eines abendlichen Supplements braucht ueber Nacht Wirkung. 36h ist konservativ genug fuer Sleep-Effekte, aber kurz genug dass keine Carry-Over-Verfaelschung passiert. Cohen's d > 0.3 als Effektgroessen-Schwelle ist Standard fuer "moderate Effekte" in der Psychometrie.
+
+## 36. Stufe 4 — KI-Trigger: Phrasen-Matcher fuer Bedingungen
+
+**Spec §16.2:** "Bei Match: fuehrt die proposedAction aus".
+**Entschieden:** Der TriggerPollingWorker matcht Klartext-Bedingungen ("HRV unter 35 ms am Morgen") gegen den letzten Biomarker-Snapshot via Phrasen-Heuristik (sucht "hrv"/"recovery"/"sleep", "unter"/"ueber" + Zahl).
+**Begruendung:** Eine vollstaendige DSL fuer Trigger-Bedingungen waere ein eigenes Mini-Compiler-Projekt. Phrasen-Matcher deckt 80% der Gemini-Vorschlaege ab. Falls die KI eine komplexere Bedingung formuliert die nicht matcht, schlaegt der Trigger einfach nicht an — Verhalten ist sicher (false negative statt false positive).
+
+## 37. Stufe 4 — Share-Receiver als separate transparente Activity
+
+**Spec §17:** "Eigene Activity ShareReceiverActivity, transparent, ohne UI."
+**Entschieden:** Neue Activity `presentation.share.ShareReceiverActivity` mit `@android:style/Theme.NoDisplay`, `noHistory=true`, `excludeFromRecents=true`. Share-Intent im Manifest von MainActivity getrennt.
+**Begruendung:** Wenn Share-Intent direkt MainActivity startet, oeffnet sich beim Teilen die App — das ist nicht das Mental-Model. Mit transparenter Activity sieht der Benutzer nur Toast "Eintrag gespeichert" und kehrt zur Quell-App zurueck.
+
+## 38. Stufe 4 — Glance-Widget mit Hilt-EntryPoint statt @HiltAndroidApp-Default-Inject
+
+**Spec §18:** "Glance Widget".
+**Entschieden:** Widget-Composable bekommt EntropyEntryDao via `EntryPointAccessors.fromApplication()` mit eigenem `@EntryPoint`-Interface, nicht via `@AndroidEntryPoint` (das geht bei GlanceAppWidget nicht).
+**Begruendung:** GlanceAppWidget ist kein Android-Component im klassischen Sinn (keine Activity, kein Service), Hilt's `@AndroidEntryPoint` funktioniert nicht. EntryPoint-Interface ist die offizielle Hilt-Empfehlung fuer solche Faelle.

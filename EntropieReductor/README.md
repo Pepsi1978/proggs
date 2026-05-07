@@ -4,7 +4,7 @@ Ein persönliches Forschungs-Werkzeug zur systematischen Reduktion persönlicher
 
 Die KI agiert als **Genie der persönlichen Entropie-Reduktion** — selbstreflexiv als „Einstein der Entropie-Reduktion". Sie betrachtet ihre Arbeit als forschend, hypothesengetrieben, neue Wege findend.
 
-## Stand: Stufe 1 (Fundament + MVP)
+## Stand: Stufe 4 (Vollausbau — Politur + lernende Mechanismen)
 
 | Bereich | Status |
 |---------|--------|
@@ -12,12 +12,25 @@ Die KI agiert als **Genie der persönlichen Entropie-Reduktion** — selbstrefle
 | Datenmodell + Room (alle 12 Entitäten) | ✅ |
 | EncryptedSecretsStore (AES-256 GCM) | ✅ |
 | Mic-Pipeline → Groq Whisper → Gemini → DB | ✅ |
-| Settings — alle 7 Sektionen | ✅ (Stufe-1-Funktionalität) |
-| Dashboard 1 — Aufgaben | ✅ (Grundversion) |
-| Dashboard 2 — Analyse | Stufe 3 |
-| Dashboard 3 — Wissenschaftler | Stufe 3 |
-| Dashboard 4 — Biomarker | Stufe 2 |
-| Genie-Codex, Wochenrückblick | Stufe 4 |
+| Settings — alle 8 Sektionen | ✅ |
+| Dashboard 1 — Aufgaben | ✅ |
+| Dashboard 2 — Analyse | ✅ |
+| Dashboard 3 — Wissenschaftler | ✅ |
+| Dashboard 4 — Biomarker | ✅ |
+| Experiment-Kalender | ✅ |
+| Insight Board + Repertoire | ✅ |
+| Genie-Codex-Synthese | ✅ |
+| Drive-Backup (App-Folder) | ✅ |
+| Whoop OAuth + Sync | ✅ |
+| Google Calendar OAuth + Sync | ✅ |
+| Schicht-bewusste Notifications | ✅ |
+| **Stufe 4 — Google Cloud TTS Chirp 3 HD (30 Stimmen)** | ✅ |
+| **Stufe 4 — Tagesbriefing (auto + manuell, mit Audio)** | ✅ |
+| **Stufe 4 — Wochen- + Monatsrückblick** | ✅ |
+| **Stufe 4 — Korrelations-Engine (Cohen's d)** | ✅ |
+| **Stufe 4 — KI-Trigger-Engine + Approval-Flow** | ✅ |
+| **Stufe 4 — Share-Sheet-Empfänger** | ✅ |
+| **Stufe 4 — Home-Screen-Widget (Glance)** | ✅ |
 
 Details siehe `DECISIONS.md`.
 
@@ -38,8 +51,10 @@ Details siehe `DECISIONS.md`.
    - **Settings → API-Schlüssel** öffnen.
    - **Groq API Key** eintragen (https://console.groq.com — kostenlos für moderate Nutzung).
    - **Gemini API Key** eintragen (https://aistudio.google.com — Free-Tier ausreichend für persönlichen Gebrauch).
-   - **Google Cloud TTS API Key** wird in Stufe 4 verwendet.
+   - **Google Cloud TTS API Key** für Chirp 3 HD-Stimmen (1 Mio Zeichen/Monat gratis, danach $30/Mio).
+     Setup: Google Cloud Console → APIs aktivieren → "Cloud Text-to-Speech API" → Anmeldedaten → "API-Schlüssel erstellen".
    - „Speichern" + „Verbindung testen".
+   - **Stimme auswählen**: Auf der gleichen Seite → „Stimme anhören" → Picker → eine der 30 deutschen Chirp-3-HD-Stimmen.
 7. **Persönliches Profil** ausfüllen — füge einen Memory-Export aus ChatGPT/Claude ein.
 8. **Mic** auf dem Aufgaben-Dashboard tippen, Notiz sprechen, beenden.
 9. Die KI klassifiziert den Eintrag und ordnet ihn in einen Zeit-Bucket ein.
@@ -71,13 +86,22 @@ Der Sun/Moon-Schalter neben dem Zahnrad-Icon zykelt durch drei Modi:
 
 Der gewaehlte Modus wird in den App-Settings persistiert und ueberlebt App-Neustarts.
 
-## Bekannte Einschränkungen Stufe 1
+## Stufe-4-Mechanismen — wie sie laufen
 
-- **Status-Balken** zeigt nur die Aufgaben-Reduktions-Komponente (Spec §4.1) — Biomarker- und Kontext-Anteile folgen in Stufe 2.
-- **Zeit-Buckets** ohne Schichtdienst-Bezug — die KI bekommt aktuell keinen Kalender-Kontext.
-- **KI-Frage-des-Moments** auf Dashboard 1 — folgt in Stufe 2.
-- **Detail-Sheet** für Einträge — folgt mit Stufe 2 (aktuell sind Einträge per Long-Press editierbar).
-- **Tabs Analyse/Wissenschaftler/Biomarker** zeigen Coming-Soon-Karten.
+| Mechanismus | Wann läuft er | Was passiert |
+|-------------|--------------|--------------|
+| **Tagesbriefing** | Polling alle 90 Min | Worker prüft, ob heute schon eines existiert; wenn nicht: kurzes Briefing (max 7 Sätze, 2. Person) per Gemini, gecached in AppSettings, als Audio anhörbar (Chirp 3 HD). |
+| **Wochenrückblick** | Sonntag 19:00 lokal | 350 Wörter Fließtext der letzten 7 Tage, mit Notification "anhören". |
+| **Monatsrückblick** | 1. des Folgemonats 19:00 (Worker prüft täglich) | 700 Wörter Fließtext der letzten 30 Tage. |
+| **Korrelations-Engine** | Täglich 03:30 | Cohen's d zwischen Supplements (vorhanden vs. weggelassen) und HRV/Recovery/Sleep. Schwelle: \|d\| > 0.3 und n ≥ 7 in beiden Gruppen. Loggt Beobachtungen, keine Kausalitätsaussagen. |
+| **KI-Trigger-Engine** | Mittwoch + Sonntag 11:00 (Worker prüft täglich) | Gemini schlägt bis zu 3 Trigger vor (Bedingung + Aktion). Zeigen sich als „Ausstehend" in Settings → KI-Trigger. Du nimmst an oder lehnst ab. |
+| **Trigger-Polling** | Alle 15 Min | Aktive Trigger werden gegen den letzten Biomarker-Snapshot geprüft. Bei Match feuert eine Notification (6h-Cooldown pro Trigger). |
+| **Share-Sheet** | Beim Teilen aus anderer App | Transparente Activity nimmt den Text entgegen, schreibt sofort einen Eintrag mit `source = SHARE_SHEET`, KI verarbeitet im Hintergrund. |
+| **Home-Widget** | Update alle 15 Min | 4×2-Glance-Widget: Status-Pille, Top-Aufgabe, großer Mic-Button → öffnet App. |
+
+## Samsung-Hinweis (One UI)
+
+Auf Samsung-Geräten (z.B. Fold 6) bitte App in **Geräte-Pflege → Akku → App-Akku-Verbrauch → Einschränkung aufheben** markieren — sonst killt One UI die WorkManager-Worker im Schlaffenster und Tagesbriefing/Triggers laufen nicht zuverlässig.
 
 ## Tech-Stack
 
