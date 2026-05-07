@@ -18,7 +18,7 @@ write_status() {
 fixes=()
 
 # Detect SessionStart source (startup, clear, resume, compact, ...)
-# Used to decide if effortLevel should be reset (only on echtem Neustart).
+# Used to decide if effortLevel and model should be reset (only on echtem Neustart).
 session_source=""
 stdin_input=""
 if [ ! -t 0 ]; then
@@ -33,6 +33,13 @@ except Exception:
 " 2>/dev/null)
     fi
 fi
+
+# Source-Logging fuer Debugging (Vorschlag 1): Pruefe ob das Feld ankommt
+SOURCE_LOG="$HOME/.claude/logs/session-source.log"
+mkdir -p "$(dirname "$SOURCE_LOG")" 2>/dev/null || true
+has_stdin="False"
+[ -n "$stdin_input" ] && has_stdin="True"
+echo "$(date '+%Y-%m-%d %H:%M:%S') | source='$session_source' | hasStdin=$has_stdin" >> "$SOURCE_LOG" 2>/dev/null || true
 
 # =============================================
 # CHECK 1: Bypass Permissions — MUST be active
@@ -211,19 +218,38 @@ if 'effortLevel' not in d:
 fi
 
 # =============================================
-# CHECK 4: Model — MUST be opus[1m] (1M context)
+# CHECK 4: Model — Source-aware Reset (opus[1m])
 # =============================================
-# Without explicit model key, Claude Code defaults to 200k context.
-# The user always wants 1M context window (opus[1m]).
+# Frank-Regel seit 2026-05-07: gleiches Source-Pattern wie effortLevel.
+# - Bei echtem Neustart  -> model auf opus[1m] zuruecksetzen
+# - Bei Compaction/Resume -> bestehenden Wert NICHT anfassen
+# - Wenn model-Feld fehlt -> bei JEDEM Source ergaenzen (1M-Kontext-Schutz)
 
 if [ -f "$SETTINGS" ]; then
     current_model=$(python3 -c "import json; d=json.load(open('$SETTINGS')); print(d.get('model',''))" 2>/dev/null)
-    if [ "$current_model" != "opus[1m]" ]; then
+    if [ -z "$current_model" ]; then
+        # Feld fehlt komplett — IMMER ergaenzen
         python3 -c "
 import json, os, tempfile
 with open('$SETTINGS', 'r') as f:
     d = json.load(f)
-old = d.get('model', '(not set)')
+if 'model' not in d:
+    d['model'] = 'opus[1m]'
+    dir_name = os.path.dirname('$SETTINGS')
+    fd, tmp = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+    with os.fdopen(fd, 'w') as f:
+        json.dump(d, f, indent=2)
+        f.write('\n')
+    os.replace(tmp, '$SETTINGS')
+" 2>/dev/null
+        fixes+=("model hinzugefuegt: opus[1m] (war: nicht gesetzt)")
+        hook_log "AUTO-FIX: model set to opus[1m] (was missing)" 2>/dev/null || true
+    elif [ "$current_model" != "opus[1m]" ] && [ "$should_reset_effort" = "1" ]; then
+        # Falscher Wert UND echter Neustart — auf opus[1m] zuruecksetzen
+        python3 -c "
+import json, os, tempfile
+with open('$SETTINGS', 'r') as f:
+    d = json.load(f)
 d['model'] = 'opus[1m]'
 dir_name = os.path.dirname('$SETTINGS')
 fd, tmp = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
@@ -232,8 +258,11 @@ with os.fdopen(fd, 'w') as f:
     f.write('\n')
 os.replace(tmp, '$SETTINGS')
 " 2>/dev/null
-        fixes+=("model repariert (war: ${current_model:-nicht gesetzt}, jetzt: opus[1m])")
-        hook_log "AUTO-FIX: model restored to opus[1m] (was: ${current_model:-missing})" 2>/dev/null || true
+        fixes+=("model repariert (war: $current_model, jetzt: opus[1m] — Quelle: $session_source)")
+        hook_log "AUTO-FIX: model restored to opus[1m] (was: $current_model, source: $session_source)" 2>/dev/null || true
+    elif [ "$current_model" != "opus[1m]" ]; then
+        # Compaction/Resume — Wert respektieren, nur loggen
+        hook_log "model preserved: $current_model (source: $session_source)" 2>/dev/null || true
     fi
 fi
 

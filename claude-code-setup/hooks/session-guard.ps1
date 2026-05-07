@@ -21,7 +21,7 @@ $warnings = @()
 $fixes = @()
 
 # Detect SessionStart source (startup, clear, resume, compact, ...)
-# Used to decide if effortLevel should be reset (only on echtem Neustart).
+# Used to decide if effortLevel and model should be reset (only on echtem Neustart).
 $sessionSource = ""
 try {
     $stdinRaw = [Console]::In.ReadToEnd()
@@ -29,6 +29,15 @@ try {
         $stdinJson = $stdinRaw | ConvertFrom-Json -ErrorAction Stop
         if ($stdinJson.source) { $sessionSource = $stdinJson.source }
     }
+} catch { }
+
+# Source-Logging fuer Debugging (Vorschlag 1): Pruefe ob das Feld ankommt
+try {
+    $sourceLogPath = Join-Path $env:USERPROFILE ".claude" "logs" "session-source.log"
+    $logDir = Split-Path $sourceLogPath -Parent
+    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+    $logEntry = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | source='$sessionSource' | hasStdin=$([bool]$stdinRaw)"
+    Add-Content -Path $sourceLogPath -Value $logEntry -Encoding UTF8
 } catch { }
 
 # =============================================
@@ -231,35 +240,43 @@ try {
 }
 
 # ================================================
-# CHECK 4: Model — MUST be opus[1m] (1M context)
+# CHECK 4: Model — Source-aware Reset (opus[1m])
 # ================================================
-# Without explicit model key, Claude Code defaults to 200k context.
-# The user always wants 1M context window (opus[1m]).
+# Frank-Regel seit 2026-05-07: gleiches Source-Pattern wie effortLevel.
+# - Bei echtem Neustart (source=startup oder clear)  → model auf opus[1m] zuruecksetzen
+# - Bei Auto-Compaction oder Resume                  → bestehenden Wert NICHT anfassen
+# - Wenn $sessionSource leer ist (Fallback)          → NICHT zuruecksetzen (sicherer Default)
+#
+# Damit kann Frank per /model mitten in der Session das Modell wechseln (z.B. auf
+# sonnet fuer Speed) und der Hook ueberschreibt das nicht ueber Compactions hinweg.
+# Wenn das model-Feld komplett fehlt, wird es bei JEDEM Source ergaenzt — sonst
+# defaultet Claude Code auf 200k Kontext.
 
 try {
     if (Test-Path $settingsPath) {
         $raw = Get-Content $settingsPath -Raw -Encoding UTF8
         $parsed = $raw | ConvertFrom-Json
         $currentModel = $parsed.model
-        if ($currentModel -ne 'opus[1m]') {
-            if ($null -eq $currentModel -or $currentModel -eq '') {
-                # No model key exists — add it
-                $hashData = $raw | ConvertFrom-Json -AsHashtable
-                $hashData["model"] = "opus[1m]"
-                $tmpFile = "$settingsPath.tmp"
-                ($hashData | ConvertTo-Json -Depth 20) | Out-File -FilePath $tmpFile -Encoding UTF8 -NoNewline
-                Move-Item -Path $tmpFile -Destination $settingsPath -Force
-                $fixes += "model hinzugefuegt: opus[1m] (war: nicht gesetzt)"
-                Hook-Log "AUTO-FIX: model set to opus[1m] (was missing)"
-            } else {
-                # Wrong model — fix it
-                $fixed = $raw -replace '"model"\s*:\s*"[^"]*"', '"model": "opus[1m]"'
-                $tmpFile = "$settingsPath.tmp"
-                [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
-                Move-Item -Path $tmpFile -Destination $settingsPath -Force
-                $fixes += "model repariert (war: $currentModel, jetzt: opus[1m])"
-                Hook-Log "AUTO-FIX: model restored to opus[1m] (was: $currentModel)"
-            }
+        if ($null -eq $currentModel -or $currentModel -eq '') {
+            # Feld fehlt komplett — IMMER ergaenzen (1M-Kontext-Schutz)
+            $hashData = $raw | ConvertFrom-Json -AsHashtable
+            $hashData["model"] = "opus[1m]"
+            $tmpFile = "$settingsPath.tmp"
+            ($hashData | ConvertTo-Json -Depth 20) | Out-File -FilePath $tmpFile -Encoding UTF8 -NoNewline
+            Move-Item -Path $tmpFile -Destination $settingsPath -Force
+            $fixes += "model hinzugefuegt: opus[1m] (war: nicht gesetzt)"
+            Hook-Log "AUTO-FIX: model set to opus[1m] (was missing)"
+        } elseif ($currentModel -ne 'opus[1m]' -and $shouldResetEffort) {
+            # Falscher Wert UND echter Neustart — auf opus[1m] zuruecksetzen
+            $fixed = $raw -replace '"model"\s*:\s*"[^"]*"', '"model": "opus[1m]"'
+            $tmpFile = "$settingsPath.tmp"
+            [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+            Move-Item -Path $tmpFile -Destination $settingsPath -Force
+            $fixes += "model repariert (war: $currentModel, jetzt: opus[1m] — Quelle: $sessionSource)"
+            Hook-Log "AUTO-FIX: model restored to opus[1m] (was: $currentModel, source: $sessionSource)"
+        } elseif ($currentModel -ne 'opus[1m]') {
+            # Compaction/Resume — Wert respektieren, nur loggen
+            Hook-Log "model preserved: $currentModel (source: $sessionSource)"
         }
     }
 } catch {
