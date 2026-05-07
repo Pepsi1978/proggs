@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.presentation.dashboard1
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,14 +20,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
@@ -207,28 +215,72 @@ private fun CategoryFilterRow(
     ) {
         item {
             val isAll = active.isEmpty()
-            AssistChip(
+            CategoryFilterChip(
+                label = "Alle",
+                icon = Icons.Outlined.GridView,
+                tint = CosmosColors.AccentPrimary,
+                selected = isAll,
                 onClick = onClearAll,
-                label = { Text("Alle", fontWeight = if (isAll) FontWeight.Bold else FontWeight.Normal) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (isAll) CosmosColors.AccentPrimary.copy(alpha = 0.2f) else Color.Transparent,
-                    labelColor = if (isAll) CosmosColors.AccentPrimary else LocalCosmos.current.textSecondary,
-                ),
             )
         }
         items(EntropyCategory.values().toList()) { cat ->
             val on = cat in active
-            AssistChip(
+            CategoryFilterChip(
+                label = cat.label(),
+                icon = iconForCategory(cat),
+                tint = cat.color(),
+                selected = on,
                 onClick = { onToggle(cat) },
-                label = { Text(cat.label()) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (on) cat.color().copy(alpha = 0.2f) else Color.Transparent,
-                    labelColor = if (on) cat.color() else LocalCosmos.current.textSecondary,
-                ),
             )
         }
     }
 }
+
+@Composable
+private fun CategoryFilterChip(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(
+                if (selected) tint.copy(alpha = 0.20f) else cosmos.glassBg,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected) tint else cosmos.textSecondary,
+            modifier = Modifier.size(15.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) tint else cosmos.textSecondary,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+private fun iconForCategory(category: EntropyCategory): androidx.compose.ui.graphics.vector.ImageVector =
+    when (category) {
+        EntropyCategory.KOERPERLICH -> Icons.Outlined.Bolt
+        EntropyCategory.MENTAL -> Icons.Outlined.Psychology
+        EntropyCategory.ZEITLICH -> Icons.Outlined.AccessTime
+        EntropyCategory.EMOTIONAL -> Icons.Outlined.FavoriteBorder
+        EntropyCategory.GESUNDHEITLICH -> Icons.Outlined.MedicalServices
+        EntropyCategory.UMGEBUNG -> Icons.Outlined.Home
+        EntropyCategory.SONSTIGES -> Icons.Outlined.MoreHoriz
+    }
 
 @Composable
 private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
@@ -240,29 +292,66 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
         TimeBucket.DIESEN_MONAT -> "DIESEN MONAT"
         TimeBucket.SPAETER -> "SPAETER"
     }
+    val accent = bucketAccent(bucket)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Icon-Pille mit Calendar-Icon (Soll-Design)
         Box(
             modifier = Modifier
-                .size(width = 6.dp, height = 18.dp)
-                .clip(RoundedCornerShape(50))
-                .background(CosmosColors.AccentPrimary),
-        )
-        Spacer(Modifier.size(8.dp))
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(accent.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = bucketIcon(bucket),
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
             color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.weight(1f))
-        Text(
-            text = "$count",
-            style = MaterialTheme.typography.labelMedium,
-            color = cosmos.textSecondary,
-        )
+        // Count-Pill rechts
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(accent.copy(alpha = 0.18f))
+                .padding(horizontal = 10.dp, vertical = 3.dp),
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
+}
+
+private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector = when (bucket) {
+    TimeBucket.HEUTE -> Icons.Outlined.Today
+    TimeBucket.MORGEN -> Icons.Outlined.Event
+    TimeBucket.DIESE_WOCHE -> Icons.Outlined.DateRange
+    TimeBucket.DIESEN_MONAT -> Icons.Outlined.CalendarMonth
+    TimeBucket.SPAETER -> Icons.Outlined.HourglassEmpty
+}
+
+@Composable
+private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
+    TimeBucket.HEUTE -> CosmosColors.AccentPrimary
+    TimeBucket.MORGEN -> CosmosColors.AccentSecondary
+    TimeBucket.DIESE_WOCHE -> CosmosColors.CatHealth
+    TimeBucket.DIESEN_MONAT -> CosmosColors.CatMental
+    TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
 }
 
 @Composable
