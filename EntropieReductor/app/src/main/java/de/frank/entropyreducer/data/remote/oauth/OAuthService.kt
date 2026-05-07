@@ -146,7 +146,9 @@ class OAuthService @Inject constructor(
     /* =================================== Whoop =================================== */
 
     fun buildWhoopAuthIntent(clientId: String, redirectUri: String): Intent {
-        Log.d(TAG, "Whoop: buildAuthIntent — clientId=${clientId.take(8)}…, redirect=$redirectUri, scopes=$WHOOP_SCOPES")
+        // Diagnostik: volle Client-ID + Laenge — UUIDs sind nicht geheim, tauchen in der
+        // OAuth-URL im Browser ohnehin auf. Hilft den "client_does_not_exist"-Bug einzugrenzen.
+        Log.d(TAG, "Whoop: buildAuthIntent — clientId='$clientId' (Laenge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES")
         val request = AuthorizationRequest.Builder(
             whoopConfig,
             clientId,

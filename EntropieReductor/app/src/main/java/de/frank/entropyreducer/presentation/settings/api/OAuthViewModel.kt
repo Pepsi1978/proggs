@@ -53,9 +53,36 @@ class OAuthViewModel @Inject constructor(
     fun setGoogleClientId(value: String) { _state.update { it.copy(googleClientId = value) } }
 
     fun saveWhoopCredentials() {
-        secrets.whoopClientId = state.value.whoopClientId.trim().ifBlank { null }
-        secrets.whoopClientSecret = state.value.whoopClientSecret.trim().ifBlank { null }
+        // Poka-Yoke: Client-ID muss UUID-aehnlich aussehen (Hex+Bindestriche, max 64 Zeichen).
+        // Verhindert versehentliches Paste eines kompletten Briefes ins ID-Feld.
+        val rawId = state.value.whoopClientId.trim()
+        val rawSecret = state.value.whoopClientSecret.trim()
+        if (rawId.isNotBlank() && !rawId.matches(WHOOP_CLIENT_ID_REGEX)) {
+            _state.update {
+                it.copy(message = "Whoop-Client-ID hat ein ungewoehnliches Format. " +
+                    "Erwartet: 36-stellige UUID wie 8aaa546c-da64-4cd7-abce-5d1a3cf19be8. " +
+                    "Eingabe wurde NICHT gespeichert.")
+            }
+            return
+        }
+        if (rawSecret.length > 256) {
+            _state.update {
+                it.copy(message = "Whoop-Client-Secret ist ungewoehnlich lang " +
+                    "(${rawSecret.length} Zeichen). Bitte nur den eigentlichen Secret-String " +
+                    "aus dem Whoop-Dashboard einfuegen. Eingabe wurde NICHT gespeichert.")
+            }
+            return
+        }
+        secrets.whoopClientId = rawId.ifBlank { null }
+        secrets.whoopClientSecret = rawSecret.ifBlank { null }
         _state.update { it.copy(message = "Whoop-Credentials gespeichert.") }
+    }
+
+    private companion object {
+        // UUID-Format: 8-4-4-4-12 hex digits, with dashes. 36 Zeichen total.
+        val WHOOP_CLIENT_ID_REGEX = Regex(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        )
     }
 
     /** Liefert den Authorization-Intent fuer Google Calendar — die UI startet ihn. */
