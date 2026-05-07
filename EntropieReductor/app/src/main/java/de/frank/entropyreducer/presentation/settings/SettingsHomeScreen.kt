@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
@@ -87,6 +90,27 @@ private data class SectionDef(
 )
 
 private val sections = listOf(
+    SectionDef(
+        icon = Icons.Outlined.CalendarMonth,
+        accent = CosmosColors.AccentPrimary,
+        title = "Experiment-Kalender",
+        subtitle = "Tag/Wochen/Monatsansicht aller laufenden und vorgeschlagenen Hypothesen.",
+        route = Routes.EXPERIMENT_CALENDAR,
+    ),
+    SectionDef(
+        icon = Icons.Outlined.Lightbulb,
+        accent = CosmosColors.Warning,
+        title = "Insight Board",
+        subtitle = "Bestaetigte Methoden, Beobachtungen und verworfene Ansaetze.",
+        route = Routes.INSIGHT_BOARD,
+    ),
+    SectionDef(
+        icon = Icons.Outlined.EmojiEvents,
+        accent = CosmosColors.Success,
+        title = "Mein Repertoire",
+        subtitle = "Deine bewaehrtesten Hebel — sortiert nach Wirkung × Wiederholung.",
+        route = Routes.REPERTOIRE,
+    ),
     SectionDef(
         icon = Icons.Outlined.Key,
         accent = CosmosColors.AccentPrimary,

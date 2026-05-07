@@ -8,6 +8,11 @@ object Routes {
     const val SCIENTIST = "scientist"
     const val BIOMARKER = "biomarker"
 
+    // Stage-3-Spezialansichten (siehe Spec §14)
+    const val EXPERIMENT_CALENDAR = "experiment_calendar"
+    const val INSIGHT_BOARD = "insight_board"
+    const val REPERTOIRE = "repertoire"
+
     // Settings-Stack
     const val SETTINGS_HOME = "settings"
     const val SETTINGS_API = "settings/api_keys"

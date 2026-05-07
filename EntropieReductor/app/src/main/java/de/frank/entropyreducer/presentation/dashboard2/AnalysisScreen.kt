@@ -200,7 +200,7 @@ fun AnalysisScreen(
                         item {
                             GlassCard {
                                 Text(
-                                    text = "Noch keine Analyse vorhanden. Tippe auf „Jetzt analysieren", um Muster, verborgene Zusammenhaenge und strategische Empfehlungen zu erhalten.",
+                                    text = "Noch keine Analyse vorhanden. Tippe auf \"Jetzt analysieren\", um Muster, verborgene Zusammenhaenge und strategische Empfehlungen zu erhalten.",
                                     color = cosmos.textSecondary,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )

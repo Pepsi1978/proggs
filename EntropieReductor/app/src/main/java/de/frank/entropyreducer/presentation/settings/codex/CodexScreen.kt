@@ -171,7 +171,7 @@ fun CodexScreen(
                 GlassCard {
                     if (state.latest == null) {
                         Text(
-                            text = "Noch keine Synthese vorhanden. Tippe auf „Jetzt aktualisieren", um die erste Genie-Codex-Version zu erstellen.",
+                            text = "Noch keine Synthese vorhanden. Tippe auf \"Jetzt aktualisieren\", um die erste Genie-Codex-Version zu erstellen.",
                             color = cosmos.textSecondary,
                             style = MaterialTheme.typography.bodyMedium,
                         )
