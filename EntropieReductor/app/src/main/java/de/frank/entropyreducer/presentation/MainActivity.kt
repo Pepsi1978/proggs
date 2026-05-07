@@ -152,7 +152,7 @@ class StartupViewModel @Inject constructor(
                 // existieren. Die Worker laufen leer, machen aber kein Schaden.
                 scheduler.ensureNightlyJobs()
                 scheduler.ensureKiQuestionJob()
-                if (oauth.loadGoogleAuthState().isAuthorized) {
+                if (secrets.calendarAccountEmail != null) {
                     scheduler.runCalendarSyncNow()
                 }
                 if (oauth.loadWhoopAuthState().isAuthorized) {

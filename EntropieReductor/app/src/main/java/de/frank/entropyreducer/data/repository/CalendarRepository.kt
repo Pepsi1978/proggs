@@ -3,8 +3,8 @@ package de.frank.entropyreducer.data.repository
 import android.util.Log
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
+import de.frank.entropyreducer.data.remote.calendar.CalendarSession
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
-import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.calendar.ShiftCodeParser
 import de.frank.entropyreducer.domain.model.ShiftCode
@@ -28,7 +28,7 @@ import javax.inject.Singleton
 class CalendarRepository @Inject constructor(
     private val dao: CalendarDayDao,
     private val api: GoogleCalendarApi,
-    private val oauth: OAuthService,
+    private val session: CalendarSession,
     private val settings: AppSettings,
 ) {
 
@@ -41,8 +41,7 @@ class CalendarRepository @Inject constructor(
      * Liefert die Anzahl gesyncter Tage zurueck.
      */
     suspend fun syncDefaultWindow(): Result<Int> = runCatching {
-        val token = oauth.freshGoogleAccessToken()
-            ?: throw IllegalStateException("Kein Google-Calendar-Access-Token — bitte erneut anmelden.")
+        val token = session.freshToken()
 
         val today = LocalDate.now()
         val from = today.minusDays(30)
@@ -117,6 +116,7 @@ class CalendarRepository @Inject constructor(
         Log.i(TAG, "Calendar-Sync: ${daysByDate.size} Tage geschrieben")
         daysByDate.size
     }.onFailure { Log.e(TAG, "Calendar-Sync fehlgeschlagen", it) }
+        .also { session.end() } // Token-Cache leeren — naechster Sync holt frisch
 
     companion object {
         private const val TAG = "CalendarRepository"

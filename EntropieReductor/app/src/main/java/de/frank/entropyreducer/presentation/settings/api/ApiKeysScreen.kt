@@ -321,40 +321,39 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        result.data?.let { data -> vm.onGoogleAuthResult(data, state.googleClientId) }
+        when (val signInResult = vm.calendarSignIn.accountFromResult(result.data)) {
+            is de.frank.entropyreducer.data.remote.calendar.CalendarSignInHelper.SignInResult.Success ->
+                vm.onCalendarSignInSuccess(signInResult.account)
+            is de.frank.entropyreducer.data.remote.calendar.CalendarSignInHelper.SignInResult.Error ->
+                vm.onCalendarSignInError(signInResult.message)
+        }
     }
+
+    val connected = state.calendarAccountEmail != null
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
-                "Google Calendar OAuth",
+                "Google Calendar",
                 style = MaterialTheme.typography.titleMedium,
                 color = CosmosColors.AccentPrimary,
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 "Verbinde deinen Google-Kalender — die App liest die Schichtcodes als " +
-                    "Ganztagestermine. Trage die OAuth-Client-ID aus der Cloud Console ein " +
-                    "und stelle die folgende Redirect-URI dort bereit:",
+                    "Ganztagestermine ('Tag 1', 'Nacht 2 X', 'U' fuer Urlaub, etc.). " +
+                    "Login laeuft ueber Google Sign-In; keine Client-ID-Eingabe noetig.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                OAuthService.GOOGLE_REDIRECT_URI,
-                style = MaterialTheme.typography.bodySmall,
-                color = CosmosColors.AccentPrimary,
-            )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = state.googleClientId,
-                onValueChange = vm::setGoogleClientId,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Google OAuth Client ID", color = cosmos.textSecondary) },
-                singleLine = true,
-            )
-            Spacer(Modifier.height(12.dp))
-            if (state.googleCalendarConnected) {
+            if (connected) {
+                Text(
+                    "Verbunden mit ${state.calendarAccountEmail}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CosmosColors.Success,
+                )
+                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = vm::disconnectGoogleCalendar,
                     modifier = Modifier.fillMaxWidth(),
@@ -366,9 +365,7 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 }
             } else {
                 Button(
-                    onClick = {
-                        vm.buildGoogleAuthIntent(state.googleClientId)?.let { launcher.launch(it) }
-                    },
+                    onClick = { launcher.launch(vm.calendarSignIn.signInIntent()) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentPrimary),
                 ) {
@@ -376,10 +373,6 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     Spacer(Modifier.size(6.dp))
                     Text("Mit Google Calendar verbinden")
                 }
-            }
-            if (state.googleCalendarConnected) {
-                Spacer(Modifier.height(8.dp))
-                ConnectionLabel("Verbunden — Schichtcodes werden alle 24h gesynct", CosmosColors.Success, Icons.Outlined.CheckCircle)
             }
             state.message?.let { msg ->
                 Spacer(Modifier.height(8.dp))

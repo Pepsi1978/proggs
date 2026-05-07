@@ -90,6 +90,12 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_DRIVE_ACCOUNT, null)
         set(value) { prefs.edit().putString(KEY_DRIVE_ACCOUNT, value).apply() }
 
+    /** Account-Mailadresse fuer Google-Calendar-Sync. Separat von Drive damit beide
+     *  Sign-Ins unabhaengig voneinander widerrufen werden koennen. */
+    var calendarAccountEmail: String?
+        get() = prefs.getString(KEY_CALENDAR_ACCOUNT, null)
+        set(value) { prefs.edit().putString(KEY_CALENDAR_ACCOUNT, value).apply() }
+
     /** Toggle: Drive-Backup aktiv? Steuert ob Mutationen einen Sync-Trigger feuern. */
     var driveBackupEnabled: Boolean
         get() = prefs.getBoolean(KEY_DRIVE_ENABLED, false)
@@ -122,5 +128,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_DRIVE_ACCOUNT = "drive_account_email"
         private const val KEY_DRIVE_ENABLED = "drive_backup_enabled"
         private const val KEY_DRIVE_LAST_BACKUP = "drive_last_backup_ms"
+        private const val KEY_CALENDAR_ACCOUNT = "calendar_account_email"
     }
 }
