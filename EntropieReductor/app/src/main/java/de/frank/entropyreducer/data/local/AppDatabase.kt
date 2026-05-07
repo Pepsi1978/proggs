@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
+import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.GenieCodexDao
 import de.frank.entropyreducer.data.local.dao.HypothesisDao
@@ -17,6 +18,7 @@ import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
+import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
@@ -40,10 +42,11 @@ import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
         BiomarkerSnapshotEntity::class,
         SupplementLogEntity::class,
         CalendarDayEntity::class,
+        CalendarEventEntity::class,
         KiTriggerEntity::class,
         GenieCodexVersionEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(EntropyTypeConverters::class)
@@ -58,6 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun biomarkerSnapshotDao(): BiomarkerSnapshotDao
     abstract fun supplementLogDao(): SupplementLogDao
     abstract fun calendarDayDao(): CalendarDayDao
+    abstract fun calendarEventDao(): CalendarEventDao
     abstract fun kiTriggerDao(): KiTriggerDao
     abstract fun genieCodexDao(): GenieCodexDao
 

@@ -246,13 +246,17 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
                     val date = grid[row * 7 + col]
                     val inMonth = YearMonth.from(date) == month
                     val items = state.hypothesesByDate[date].orEmpty()
+                    val events = state.eventsByDate[date].orEmpty()
+                    val shift = state.shiftByDate[date]
                     DayCell(
                         date = date,
                         items = items,
+                        events = events,
+                        shift = shift,
                         isCurrentMonth = inMonth,
                         isToday = date == today,
                         onClick = { items.firstOrNull()?.let(vm::openHypothesis) },
-                        modifier = Modifier.weight(1f).height(64.dp),
+                        modifier = Modifier.weight(1f).height(72.dp),
                     )
                 }
             }
@@ -264,6 +268,8 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
 private fun DayCell(
     date: LocalDate,
     items: List<HypothesisEntity>,
+    events: List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity> = emptyList(),
+    shift: de.frank.entropyreducer.domain.model.ShiftCode? = null,
     isCurrentMonth: Boolean,
     isToday: Boolean,
     onClick: () -> Unit,
@@ -272,30 +278,68 @@ private fun DayCell(
     val cosmos = LocalCosmos.current
     val borderColor = if (isToday) CosmosColors.AccentPrimary else cosmos.glassBorder
     val textColor = if (isCurrentMonth) cosmos.textPrimary else cosmos.textSecondary.copy(alpha = 0.5f)
+    val shiftTint = shift?.let { shiftBackgroundFor(it) }
+    val cellBg = shiftTint ?: cosmos.glassBg
     Box(
         modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(cosmos.glassBg)
+            .background(cellBg)
             .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(8.dp))
-            .clickable(enabled = items.isNotEmpty(), onClick = onClick)
+            .clickable(enabled = items.isNotEmpty() || events.isNotEmpty(), onClick = onClick)
             .padding(4.dp),
     ) {
         Column {
-            Text(
-                text = date.dayOfMonth.toString(),
-                color = textColor,
-                style = MaterialTheme.typography.labelMedium,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    color = textColor,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                if (shift != null && shift != de.frank.entropyreducer.domain.model.ShiftCode.FREI) {
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = shiftBadgeFor(shift),
+                        color = CosmosColors.AccentPrimary,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
             Spacer(Modifier.height(2.dp))
+            // Hypothesen-Markers (farbiger Streifen) — max 2 sichtbar
             items.take(2).forEach { h ->
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
+                        .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(colorForStatus(h.status)),
                 )
                 Spacer(Modifier.height(2.dp))
+            }
+            // Google-Calendar-Event-Markers (kleine Punkte) — bis zu 3 dots
+            if (events.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val visible = events.take(3)
+                    visible.forEach { ev ->
+                        Box(
+                            Modifier
+                                .size(5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (ev.allDay) CosmosColors.AccentSecondary
+                                    else CosmosColors.AccentPrimary,
+                                ),
+                        )
+                        Spacer(Modifier.width(2.dp))
+                    }
+                    if (events.size > 3) {
+                        Text(
+                            text = "+${events.size - 3}",
+                            color = cosmos.textSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
             }
             if (items.size > 2) {
                 Text(
@@ -307,6 +351,31 @@ private fun DayCell(
         }
     }
 }
+
+/** Pastell-Hintergrund je Schicht — passt zum Cosmos-Theme. */
+@Composable
+private fun shiftBackgroundFor(shift: de.frank.entropyreducer.domain.model.ShiftCode): androidx.compose.ui.graphics.Color {
+    val cosmos = LocalCosmos.current
+    return when (shift) {
+        de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST ->
+            CosmosColors.AccentPrimary.copy(alpha = 0.15f)
+        de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST ->
+            CosmosColors.AccentSecondary.copy(alpha = 0.20f)
+        de.frank.entropyreducer.domain.model.ShiftCode.URLAUB ->
+            CosmosColors.Success.copy(alpha = 0.18f)
+        de.frank.entropyreducer.domain.model.ShiftCode.FREI -> cosmos.glassBg
+        de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> cosmos.glassBg
+    }
+}
+
+private fun shiftBadgeFor(shift: de.frank.entropyreducer.domain.model.ShiftCode): String =
+    when (shift) {
+        de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST -> "T"
+        de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST -> "N"
+        de.frank.entropyreducer.domain.model.ShiftCode.URLAUB -> "U"
+        de.frank.entropyreducer.domain.model.ShiftCode.FREI -> ""
+        de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> ""
+    }
 
 @Composable
 private fun WeekView(state: ExperimentCalendarUiState, vm: ExperimentCalendarViewModel) {

@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
+import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
 import kotlinx.coroutines.flow.Flow
@@ -75,4 +76,27 @@ interface KiTriggerDao {
 
     @Query("DELETE FROM ki_triggers WHERE id = :id")
     suspend fun deleteById(id: String)
+}
+
+/**
+ * Google-Calendar-Events (Stufe 4 Erweiterung). Wird bei jedem Sync neu befuellt
+ * — alte Events im Sync-Fenster werden zuerst geloescht, dann die aktuellen
+ * geschrieben, damit geloeschte Google-Events nicht haengen bleiben.
+ */
+@Dao
+interface CalendarEventDao {
+    @Query("SELECT * FROM calendar_events WHERE date = :date ORDER BY allDay DESC, startMs ASC")
+    fun getByDate(date: String): Flow<List<CalendarEventEntity>>
+
+    @Query("SELECT * FROM calendar_events WHERE date BETWEEN :fromDate AND :toDate ORDER BY date ASC, allDay DESC, startMs ASC")
+    fun getRange(fromDate: String, toDate: String): Flow<List<CalendarEventEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(events: List<CalendarEventEntity>)
+
+    @Query("DELETE FROM calendar_events WHERE date BETWEEN :fromDate AND :toDate")
+    suspend fun deleteRange(fromDate: String, toDate: String)
+
+    @Query("DELETE FROM calendar_events")
+    suspend fun deleteAll()
 }

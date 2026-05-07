@@ -45,6 +45,8 @@ data class CalendarEventsResponse(
 data class CalendarEvent(
     @SerialName("id") val id: String? = null,
     @SerialName("summary") val summary: String? = null,
+    @SerialName("description") val description: String? = null,
+    @SerialName("location") val location: String? = null,
     @SerialName("start") val start: CalendarDate? = null,
     @SerialName("end") val end: CalendarDate? = null,
     @SerialName("status") val status: String? = null,

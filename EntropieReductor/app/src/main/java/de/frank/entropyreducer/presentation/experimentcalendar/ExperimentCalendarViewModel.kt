@@ -28,6 +28,11 @@ data class ExperimentCalendarUiState(
     val view: CalendarView = CalendarView.MONAT,
     val anchorDate: LocalDate = LocalDate.now(),
     val hypothesesByDate: Map<LocalDate, List<HypothesisEntity>> = emptyMap(),
+    /** Google-Calendar-Events pro Tag (Stufe 4 Erweiterung) — wird im Kalender als
+     *  zusaetzliche Tag-Marker gerendert und im Detail-Sheet als Liste gezeigt. */
+    val eventsByDate: Map<LocalDate, List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity>> = emptyMap(),
+    /** Schichtcode pro Tag — fuer Tag-Hintergrund/Marker. */
+    val shiftByDate: Map<LocalDate, de.frank.entropyreducer.domain.model.ShiftCode> = emptyMap(),
     val selectedHypothesis: HypothesisEntity? = null,
     val biomarkerBefore: BiomarkerSnapshotEntity? = null,
     val biomarkerAfter: BiomarkerSnapshotEntity? = null,
@@ -39,6 +44,7 @@ class ExperimentCalendarViewModel @Inject constructor(
     private val hypotheses: HypothesisRepository,
     private val biomarkerDao: BiomarkerSnapshotDao,
     private val matchInsight: MatchInsightUseCase,
+    private val calendarRepo: de.frank.entropyreducer.data.repository.CalendarRepository,
 ) : ViewModel() {
 
     private val viewFlow = MutableStateFlow(CalendarView.MONAT)
@@ -47,6 +53,14 @@ class ExperimentCalendarViewModel @Inject constructor(
     private val biomarkerPair = MutableStateFlow<Pair<BiomarkerSnapshotEntity?, BiomarkerSnapshotEntity?>>(null to null)
     private val insightPromptFlow = MutableStateFlow(false)
 
+    /**
+     * Sync-Fenster fuer den Kalender — 60 Tage zurueck, 60 Tage vorwaerts.
+     * Stimmt mit dem Sync-Worker-Fenster ueberein und gibt Frank's Monatsansicht
+     * genug Spielraum fuer Vor-/Zurueck-Navigation ohne staendigen Re-Sync.
+     */
+    private val calendarRangeFrom = LocalDate.now().minusDays(60).toString()
+    private val calendarRangeTo = LocalDate.now().plusDays(60).toString()
+
     val state: StateFlow<ExperimentCalendarUiState> = combine(
         viewFlow,
         anchorFlow,
@@ -54,12 +68,25 @@ class ExperimentCalendarViewModel @Inject constructor(
         combine(selectedFlow, biomarkerPair, insightPromptFlow) { sel, pair, prompt ->
             Triple(sel, pair, prompt)
         },
-    ) { view, anchor, all, (selected, pair, prompt) ->
+        combine(
+            calendarRepo.observeEventsRange(calendarRangeFrom, calendarRangeTo),
+            calendarRepo.observeRange(calendarRangeFrom, calendarRangeTo),
+        ) { events, days -> events to days },
+    ) { view, anchor, all, (selected, pair, prompt), calendar ->
         val byDate = expandByDate(all)
+        val (events, days) = calendar
+        val eventsByDate = events.groupBy { runCatching { LocalDate.parse(it.date) }.getOrNull() }
+            .mapNotNull { (k, v) -> k?.let { it to v } }
+            .toMap()
+        val shiftByDate = days.associate { entry ->
+            LocalDate.parse(entry.date) to entry.shiftCode
+        }
         ExperimentCalendarUiState(
             view = view,
             anchorDate = anchor,
             hypothesesByDate = byDate,
+            eventsByDate = eventsByDate,
+            shiftByDate = shiftByDate,
             selectedHypothesis = selected,
             biomarkerBefore = pair.first,
             biomarkerAfter = pair.second,

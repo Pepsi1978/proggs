@@ -34,6 +34,7 @@ object DatabaseModule {
     @Provides fun provideBiomarkerSnapshotDao(db: AppDatabase) = db.biomarkerSnapshotDao()
     @Provides fun provideSupplementLogDao(db: AppDatabase) = db.supplementLogDao()
     @Provides fun provideCalendarDayDao(db: AppDatabase) = db.calendarDayDao()
+    @Provides fun provideCalendarEventDao(db: AppDatabase) = db.calendarEventDao()
     @Provides fun provideKiTriggerDao(db: AppDatabase) = db.kiTriggerDao()
     @Provides fun provideGenieCodexDao(db: AppDatabase) = db.genieCodexDao()
 }
