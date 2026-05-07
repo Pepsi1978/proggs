@@ -1,0 +1,45 @@
+package de.frank.entropyreducer.workers
+
+import android.content.Context
+import android.util.Log
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.domain.usecase.DetectCorrelationsUseCase
+
+/**
+ * Korrelations-Engine Worker (Spec §16.1) — taeglich 03:30.
+ * Berechnet Cohen's-d-Beobachtungen zwischen Supplements und Biomarker und
+ * loggt sie. Echte Trigger-Vorschlaege erzeugt der KiTriggerWorker spaeter
+ * aus den gesammelten Beobachtungen.
+ */
+@HiltWorker
+class CorrelationWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted params: WorkerParameters,
+    private val detector: DetectCorrelationsUseCase,
+) : CoroutineWorker(appContext, params) {
+
+    override suspend fun doWork(): Result = try {
+        val observations = detector()
+        Log.i(TAG, "Korrelations-Lauf fertig: ${observations.size} Beobachtungen.")
+        observations.forEach { obs ->
+            Log.i(
+                TAG,
+                "Beobachtung: ${obs.stackType} -> ${obs.metric}, d=${"%.2f".format(obs.effectSize)}, " +
+                    "n=${obs.nWith}/${obs.nWithout}, mean=${"%.1f".format(obs.meanWith)}/${"%.1f".format(obs.meanWithout)}",
+            )
+        }
+        Result.success()
+    } catch (t: Throwable) {
+        Log.e(TAG, "CorrelationWorker fehlgeschlagen", t)
+        Result.retry()
+    }
+
+    companion object {
+        private const val TAG = "CorrelationWorker"
+        const val UNIQUE_NAME_PERIODIC = "correlation-periodic"
+    }
+}

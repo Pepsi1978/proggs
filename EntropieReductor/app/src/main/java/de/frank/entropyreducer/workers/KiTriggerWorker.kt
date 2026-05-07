@@ -1,0 +1,58 @@
+package de.frank.entropyreducer.workers
+
+import android.content.Context
+import android.util.Log
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.domain.usecase.GenerateKiTriggersUseCase
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+
+/**
+ * KI-Trigger-Engine Worker (Spec §16.2). Worker laeuft taeglich 11:00,
+ * arbeitet aber nur an Mittwoch + Sonntag — sonst sofortiger Erfolg.
+ */
+@HiltWorker
+class KiTriggerWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted params: WorkerParameters,
+    private val generator: GenerateKiTriggersUseCase,
+    private val notifier: ShiftAwareNotifier,
+) : CoroutineWorker(appContext, params) {
+
+    override suspend fun doWork(): Result {
+        return try {
+            val today = LocalDate.now(ZoneId.systemDefault()).dayOfWeek
+            if (today != DayOfWeek.WEDNESDAY && today != DayOfWeek.SUNDAY) {
+                Log.i(TAG, "Heute ist $today, KI-Trigger-Engine pausiert.")
+                return Result.success()
+            }
+
+            val result = generator()
+            val count = result.getOrNull() ?: 0
+            Log.i(TAG, "KI-Trigger-Engine: $count neue Vorschlaege erzeugt.")
+            if (count > 0) {
+                notifier.postOrDelay(
+                    notificationId = NOTIFICATION_ID,
+                    title = "Die KI schlaegt $count neue Trigger vor",
+                    body = "Tippen, um anzusehen — annehmen oder ablehnen.",
+                )
+            }
+            Result.success()
+        } catch (t: Throwable) {
+            Log.e(TAG, "KiTriggerWorker fehlgeschlagen", t)
+            Result.retry()
+        }
+    }
+
+    companion object {
+        private const val TAG = "KiTriggerWorker"
+        private const val NOTIFICATION_ID = 4715
+        const val UNIQUE_NAME_PERIODIC = "ki-trigger-periodic"
+        const val UNIQUE_NAME_ONESHOT = "ki-trigger-oneshot"
+    }
+}

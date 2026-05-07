@@ -153,6 +153,9 @@ class StartupViewModel @Inject constructor(
                 scheduler.ensureNightlyJobs()
                 scheduler.ensureKiQuestionJob()
                 scheduler.ensureCodexJob()
+                scheduler.ensureDailyBriefingJob()
+                scheduler.ensureReviewJobs()
+                scheduler.ensureCorrelationAndTriggerJobs()
                 if (secrets.calendarAccountEmail != null) {
                     scheduler.runCalendarSyncNow()
                 }

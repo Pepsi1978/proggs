@@ -47,6 +47,20 @@ class AppSettings @Inject constructor(
     /** Letzte Genie-Codex-Synthese (Epoch-Millisekunden). */
     val lastCodexSyntheseMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CODEX_SYNTHESE] ?: 0L }
 
+    /** Aktuelles Tagesbriefing (Markdown). Wird vom DailyBriefingWorker geschrieben. */
+    val dailyBriefingTextFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_TEXT] ?: "" }
+    /** Datum des aktuellen Tagesbriefings im ISO-Format (yyyy-MM-dd). Leer wenn keins. */
+    val dailyBriefingDateFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_DATE] ?: "" }
+    /** Zeitstempel der letzten Generierung des Tagesbriefings (Epoch-Millisekunden). */
+    val dailyBriefingGeneratedAtMsFlow: Flow<Long> = ds.data.map { it[KEY_DAILY_BRIEFING_AT] ?: 0L }
+
+    /** Letzter Wochenrueckblick (Markdown), gespeichert vom WeeklyReviewWorker. */
+    val lastWeeklyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_WEEKLY_REVIEW_TEXT] ?: "" }
+    val lastWeeklyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_WEEKLY_REVIEW_AT] ?: 0L }
+    /** Letzter Monatsrueckblick (Markdown). */
+    val lastMonthlyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_MONTHLY_REVIEW_TEXT] ?: "" }
+    val lastMonthlyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_MONTHLY_REVIEW_AT] ?: 0L }
+
     /**
      * Theme-Modus als Flow. Default: SYSTEM (folgt der Hell-/Dunkel-Einstellung
      * des Geraets). Manueller Override via Toggle in der Top-Bar.
@@ -76,6 +90,23 @@ class AppSettings @Inject constructor(
     }
     suspend fun setLastCodexSynthese(value: Long) = ds.edit { it[KEY_LAST_CODEX_SYNTHESE] = value }
 
+    /** Speichert ein neues Tagesbriefing — atomar Text + Datum + Zeitstempel. */
+    suspend fun setDailyBriefing(text: String, isoDate: String, atMs: Long) = ds.edit {
+        it[KEY_DAILY_BRIEFING_TEXT] = text
+        it[KEY_DAILY_BRIEFING_DATE] = isoDate
+        it[KEY_DAILY_BRIEFING_AT] = atMs
+    }
+
+    suspend fun setWeeklyReview(text: String, atMs: Long) = ds.edit {
+        it[KEY_WEEKLY_REVIEW_TEXT] = text
+        it[KEY_WEEKLY_REVIEW_AT] = atMs
+    }
+
+    suspend fun setMonthlyReview(text: String, atMs: Long) = ds.edit {
+        it[KEY_MONTHLY_REVIEW_TEXT] = text
+        it[KEY_MONTHLY_REVIEW_AT] = atMs
+    }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -89,6 +120,13 @@ class AppSettings @Inject constructor(
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")
         private val KEY_LAST_CODEX_SYNTHESE = longPreferencesKey("last_codex_synthese_ms")
+        private val KEY_DAILY_BRIEFING_TEXT = stringPreferencesKey("daily_briefing_text")
+        private val KEY_DAILY_BRIEFING_DATE = stringPreferencesKey("daily_briefing_date")
+        private val KEY_DAILY_BRIEFING_AT = longPreferencesKey("daily_briefing_at_ms")
+        private val KEY_WEEKLY_REVIEW_TEXT = stringPreferencesKey("weekly_review_text")
+        private val KEY_WEEKLY_REVIEW_AT = longPreferencesKey("weekly_review_at_ms")
+        private val KEY_MONTHLY_REVIEW_TEXT = stringPreferencesKey("monthly_review_text")
+        private val KEY_MONTHLY_REVIEW_AT = longPreferencesKey("monthly_review_at_ms")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
         const val DEFAULT_GEMINI = "gemini-2.5-flash"

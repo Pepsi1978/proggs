@@ -104,6 +104,117 @@ class BackgroundScheduler @Inject constructor(
         )
     }
 
+    /**
+     * Plant das Tagesbriefing als Polling-Worker alle 90 Minuten. Worker selbst
+     * entscheidet anhand `dailyBriefingDate`, ob heute schon eines gebaut wurde —
+     * so deckt eine einzelne Schedule-Konfiguration alle Schichtfenster ab.
+     */
+    fun ensureDailyBriefingJob() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniquePeriodicWork(
+            DailyBriefingWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<DailyBriefingWorker>(90, TimeUnit.MINUTES)
+                .setInitialDelay(5, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+    }
+
+    fun runDailyBriefingNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            DailyBriefingWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<DailyBriefingWorker>().setConstraints(constraints).build(),
+        )
+    }
+
+    /** Plant Wochenrueckblick (sonntags 19:00) + Monatsrueckblick (1. des Monats 19:00). */
+    fun ensureReviewJobs() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        // Wochenrueckblick — Sonntag 19:00
+        val weeklyDelay = minutesUntilNextWeekday(DayOfWeek.SUNDAY, 19 * 60)
+        wm.enqueueUniquePeriodicWork(
+            WeeklyReviewWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<WeeklyReviewWorker>(7, TimeUnit.DAYS)
+                .setInitialDelay(weeklyDelay, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+        // Monatsrueckblick — alle 24h pruefen, Worker entscheidet selbst (1. des Monats)
+        wm.enqueueUniquePeriodicWork(
+            MonthlyReviewWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<MonthlyReviewWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(minutesUntil(19 * 60), TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+    }
+
+    fun runWeeklyReviewNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            WeeklyReviewWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<WeeklyReviewWorker>().setConstraints(constraints).build(),
+        )
+    }
+
+    fun runMonthlyReviewNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            MonthlyReviewWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<MonthlyReviewWorker>().setConstraints(constraints).build(),
+        )
+    }
+
+    /**
+     * Plant die Korrelations-Engine (taeglich 03:30) und die KI-Trigger-Engine
+     * (Mittwoch + Sonntag 11:00). Spec §16.1 + §16.2.
+     */
+    fun ensureCorrelationAndTriggerJobs() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        wm.enqueueUniquePeriodicWork(
+            CorrelationWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<CorrelationWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(minutesUntil(3 * 60 + 30), TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+        // KI-Trigger-Engine: Worker laeuft taeglich 11:00, prueft selbst Mi/So.
+        wm.enqueueUniquePeriodicWork(
+            KiTriggerWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<KiTriggerWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(minutesUntil(11 * 60), TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
+        // Trigger-Polling — alle 15 Min Bedingungen aktiver Trigger pruefen.
+        wm.enqueueUniquePeriodicWork(
+            TriggerPollingWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<TriggerPollingWorker>(15, TimeUnit.MINUTES)
+                .setInitialDelay(7, TimeUnit.MINUTES)
+                .build(),
+        )
+    }
+
     /** Stoesst einen einmaligen Calendar-Sync an (z.B. nach Sign-In). */
     fun runCalendarSyncNow() {
         val constraints = Constraints.Builder()
