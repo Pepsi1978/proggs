@@ -33,6 +33,9 @@ data class ExperimentCalendarUiState(
     val eventsByDate: Map<LocalDate, List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity>> = emptyMap(),
     /** Schichtcode pro Tag — fuer Tag-Hintergrund/Marker. */
     val shiftByDate: Map<LocalDate, de.frank.entropyreducer.domain.model.ShiftCode> = emptyMap(),
+    /** Roh-Text aus dem Kalendereintrag pro Tag — wird im Tag-Cell angezeigt
+     *  damit "X", "F", "U", "Tag 1" etc. lesbar sind statt nur Schicht-Hintergrund. */
+    val shiftRawByDate: Map<LocalDate, String> = emptyMap(),
     val selectedHypothesis: HypothesisEntity? = null,
     val biomarkerBefore: BiomarkerSnapshotEntity? = null,
     val biomarkerAfter: BiomarkerSnapshotEntity? = null,
@@ -81,12 +84,16 @@ class ExperimentCalendarViewModel @Inject constructor(
         val shiftByDate = days.associate { entry ->
             LocalDate.parse(entry.date) to entry.shiftCode
         }
+        val shiftRawByDate = days.associate { entry ->
+            LocalDate.parse(entry.date) to entry.rawCalendarText
+        }
         ExperimentCalendarUiState(
             view = view,
             anchorDate = anchor,
             hypothesesByDate = byDate,
             eventsByDate = eventsByDate,
             shiftByDate = shiftByDate,
+            shiftRawByDate = shiftRawByDate,
             selectedHypothesis = selected,
             biomarkerBefore = pair.first,
             biomarkerAfter = pair.second,

@@ -248,15 +248,17 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
                     val items = state.hypothesesByDate[date].orEmpty()
                     val events = state.eventsByDate[date].orEmpty()
                     val shift = state.shiftByDate[date]
+                    val shiftRaw = state.shiftRawByDate[date]
                     DayCell(
                         date = date,
                         items = items,
                         events = events,
                         shift = shift,
+                        shiftRaw = shiftRaw,
                         isCurrentMonth = inMonth,
                         isToday = date == today,
                         onClick = { items.firstOrNull()?.let(vm::openHypothesis) },
-                        modifier = Modifier.weight(1f).height(72.dp),
+                        modifier = Modifier.weight(1f).height(78.dp),
                     )
                 }
             }
@@ -270,6 +272,7 @@ private fun DayCell(
     items: List<HypothesisEntity>,
     events: List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity> = emptyList(),
     shift: de.frank.entropyreducer.domain.model.ShiftCode? = null,
+    shiftRaw: String? = null,
     isCurrentMonth: Boolean,
     isToday: Boolean,
     onClick: () -> Unit,
@@ -295,14 +298,20 @@ private fun DayCell(
                     color = textColor,
                     style = MaterialTheme.typography.labelMedium,
                 )
-                if (shift != null && shift != de.frank.entropyreducer.domain.model.ShiftCode.FREI) {
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        text = shiftBadgeFor(shift),
-                        color = CosmosColors.AccentPrimary,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
+            }
+            // Schicht-Text: zeigt den Original-Eintrag aus Google Calendar
+            // ("Tag 1", "Nacht 2", "U", "X-Tag", "F", "Frei", ...). Wenn kein
+            // Schichtcode-Eintrag vorhanden ist, bleibt die Zelle leer.
+            val shiftDisplay = shiftDisplayText(shift, shiftRaw)
+            if (shiftDisplay.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = shiftDisplay,
+                    color = shiftDisplayColor(shift),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
             }
             Spacer(Modifier.height(2.dp))
             // Hypothesen-Markers (farbiger Streifen) — max 2 sichtbar
@@ -376,6 +385,38 @@ private fun shiftBadgeFor(shift: de.frank.entropyreducer.domain.model.ShiftCode)
         de.frank.entropyreducer.domain.model.ShiftCode.FREI -> ""
         de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> ""
     }
+
+/**
+ * Anzeigetext fuer einen Tag im Kalender — kombiniert Schichtcode + Roh-Text
+ * aus dem Google-Calendar-Eintrag. Logik:
+ *  - Wenn Roh-Text vorhanden: nimm ihn (gekuerzt) — "Tag 1", "Nacht 2", "U", "X-Tag", "F".
+ *  - Sonst: Fallback auf den Buchstaben aus dem Schichtcode-Enum.
+ *  - Bei FREI ohne Roh-Text: leerer String (saubere Zelle).
+ */
+private fun shiftDisplayText(
+    shift: de.frank.entropyreducer.domain.model.ShiftCode?,
+    raw: String?,
+): String {
+    if (shift == null) return ""
+    val text = raw?.trim().orEmpty()
+    if (text.isNotBlank()) {
+        // Lange Eintraege auf max 8 Zeichen kuerzen damit die Tag-Zelle nicht ueberlaeuft.
+        return if (text.length > 8) text.take(7) + "…" else text
+    }
+    return shiftBadgeFor(shift)
+}
+
+@Composable
+private fun shiftDisplayColor(shift: de.frank.entropyreducer.domain.model.ShiftCode?): androidx.compose.ui.graphics.Color {
+    return when (shift) {
+        de.frank.entropyreducer.domain.model.ShiftCode.TAGDIENST -> CosmosColors.AccentPrimary
+        de.frank.entropyreducer.domain.model.ShiftCode.NACHTDIENST -> CosmosColors.AccentSecondary
+        de.frank.entropyreducer.domain.model.ShiftCode.URLAUB -> CosmosColors.Success
+        de.frank.entropyreducer.domain.model.ShiftCode.FREI -> CosmosColors.Success
+        de.frank.entropyreducer.domain.model.ShiftCode.UNBEKANNT -> LocalCosmos.current.textSecondary
+        null -> LocalCosmos.current.textSecondary
+    }
+}
 
 @Composable
 private fun WeekView(state: ExperimentCalendarUiState, vm: ExperimentCalendarViewModel) {

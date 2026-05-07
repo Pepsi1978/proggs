@@ -42,6 +42,8 @@ data class TasksUiState(
     val errorMessage: String? = null,
     val recentlyCreatedId: String? = null,
     val kiQuestion: KiQuestion? = null,
+    /** Eintrag der aktuell im Detail-Bottom-Sheet angezeigt wird (null = geschlossen). */
+    val detailEntry: EntropyEntryEntity? = null,
 )
 
 private data class UiOnlyState(
@@ -65,17 +67,19 @@ class TasksViewModel @Inject constructor(
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
     private val uiOnlyFlow = MutableStateFlow(UiOnlyState())
+    private val detailEntryIdFlow = MutableStateFlow<String?>(null)
 
     val state: StateFlow<TasksUiState> = combine(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
-        statusObserver.observe(),
-        kiQuestions.currentQuestion,
-    ) { list, cats, ui, breakdown, question ->
+        combine(statusObserver.observe(), kiQuestions.currentQuestion) { b, q -> b to q },
+        detailEntryIdFlow,
+    ) { list, cats, ui, (breakdown, question), detailId ->
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         val grouped = filtered.groupBy { it.timeBucket }
         val openCount = list.count { it.status == EntryStatus.OFFEN }
+        val detail = detailId?.let { id -> list.firstOrNull { it.id == id } }
         TasksUiState(
             entriesByBucket = grouped,
             activeCategories = cats,
@@ -87,10 +91,74 @@ class TasksViewModel @Inject constructor(
             errorMessage = ui.errorMessage,
             recentlyCreatedId = ui.recentlyCreatedId,
             kiQuestion = question,
+            detailEntry = detail,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
 
+    fun openEntryDetail(id: String) { detailEntryIdFlow.value = id }
+    fun closeEntryDetail() { detailEntryIdFlow.value = null }
+
+    /** Loescht einen Eintrag (nicht nur archivieren — komplett weg). Aus dem Detail-Sheet. */
+    fun deleteEntry(id: String) {
+        viewModelScope.launch {
+            val entry = entries.get(id) ?: return@launch
+            entries.delete(entry)
+            detailEntryIdFlow.value = null
+        }
+    }
+
+    /** Status setzen aus dem Detail-Sheet (4-Buttons: OFFEN / IN_ARBEIT / REDUZIERT / ARCHIVIERT). */
+    fun setEntryStatus(id: String, status: EntryStatus) {
+        viewModelScope.launch {
+            val entry = entries.get(id) ?: return@launch
+            val now = System.currentTimeMillis()
+            entries.update(
+                entry.copy(
+                    status = status,
+                    resolvedAt = if (status == EntryStatus.REDUZIERT || status == EntryStatus.ARCHIVIERT) now else null,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
+
     fun snoozeKiQuestion() = viewModelScope.launch { kiQuestions.snoozeFor24Hours() }
+
+    /**
+     * Markiert einen Eintrag als REDUZIERT (= erledigt) — wird vom Haken-Button
+     * auf der Eintrag-Card aufgerufen. resolvedAt wird auf jetzt gesetzt damit
+     * die Analyse "heute reduziert" zaehlen kann.
+     */
+    fun markEntryResolved(entryId: String) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            val now = System.currentTimeMillis()
+            entries.update(
+                entry.copy(
+                    status = EntryStatus.REDUZIERT,
+                    resolvedAt = now,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Setzt einen erledigten Eintrag wieder auf OFFEN — fuer Undo-Snackbar oder
+     * wenn der Benutzer sich vertippt hat.
+     */
+    fun reopenEntry(entryId: String) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            entries.update(
+                entry.copy(
+                    status = EntryStatus.OFFEN,
+                    resolvedAt = null,
+                    updatedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
+    }
 
     fun toggleCategory(cat: EntropyCategory) {
         val current = activeCategoriesFlow.value.toMutableSet()

@@ -21,6 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -62,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
+import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
@@ -186,7 +190,23 @@ fun TasksScreen(
                             if (list.isNotEmpty()) {
                                 item { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
                                 items(list, key = { it.id }) { entry ->
-                                    EntropyEntryCard(entry)
+                                    EntropyEntryCard(
+                                        entry = entry,
+                                        onClick = { vm.openEntryDetail(entry.id) },
+                                        onResolve = {
+                                            vm.markEntryResolved(entry.id)
+                                            scope.launch {
+                                                val result = snackbar.showSnackbar(
+                                                    message = "Eintrag erledigt: ${entry.title}",
+                                                    actionLabel = "Rueckgaengig",
+                                                    duration = androidx.compose.material3.SnackbarDuration.Short,
+                                                )
+                                                if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                                    vm.reopenEntry(entry.id)
+                                                }
+                                            }
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -201,6 +221,225 @@ fun TasksScreen(
             ) { Snackbar(it) }
         }
     }
+
+    // Detail-Bottom-Sheet — wird durch Tap auf eine Eintrag-Card geoeffnet.
+    state.detailEntry?.let { entry ->
+        EntryDetailSheet(
+            entry = entry,
+            onClose = { vm.closeEntryDetail() },
+            onSetStatus = { st -> vm.setEntryStatus(entry.id, st) },
+            onDelete = { vm.deleteEntry(entry.id) },
+        )
+    }
+}
+
+/**
+ * Detail-Bottom-Sheet (Bild 12/22). Zeigt Eintrag im Detail mit Icon-Kreis,
+ * Title, Beschreibung, Schweregrad-Hinweis, 4 Status-Buttons (Offen / In Arbeit /
+ * Reduziert / Archiviert), Tags, KI-Begruendung + KI-Notizen, sowie ein
+ * "Loeschen"-Button. Aus dem Sheet kann der Status direkt umgestellt werden.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun EntryDetailSheet(
+    entry: EntropyEntryEntity,
+    onClose: () -> Unit,
+    onSetStatus: (EntryStatus) -> Unit,
+    onDelete: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Header: Title + X
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Eintrag im Detail",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Outlined.Close,
+                        contentDescription = "Schliessen",
+                        tint = cosmos.textSecondary,
+                    )
+                }
+            }
+            // Hero-Card mit Icon-Kreis + Title + Score
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(verticalAlignment = Alignment.Top) {
+                        CategoryIconCircle(category = entry.category, tint = entry.category.color())
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            EntropyCategoryPill(entry.category)
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = entry.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = cosmos.textPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = entry.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cosmos.textSecondary,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "${entry.priorityScore.toInt()}",
+                                color = CosmosColors.AccentPrimary,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text("Prio", color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Schweregrad: ${severityLabel(entry.severity)} (${entry.severity}/10)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = cosmos.textSecondary,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    SeverityRainbowBar(severity = entry.severity)
+                }
+            }
+            // Status-Section: 4 Buttons
+            Text(
+                "Status",
+                style = MaterialTheme.typography.titleSmall,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatusButton("Offen", EntryStatus.OFFEN, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+                StatusButton("In Arbeit", EntryStatus.IN_ARBEIT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatusButton("Reduziert", EntryStatus.REDUZIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+                StatusButton("Archiviert", EntryStatus.ARCHIVIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+            }
+            // Tags
+            if (entry.tags.isNotEmpty()) {
+                Text("Tags", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    entry.tags.forEach { tag ->
+                        Text(
+                            text = tag,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = cosmos.textSecondary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(cosmos.glassBg)
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+            // KI-Begruendung
+            if (entry.priorityReason.isNotBlank() || !entry.aiNotes.isNullOrBlank()) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Text(
+                            "KI-Begruendung",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = CosmosColors.AccentSecondary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = entry.priorityReason.ifBlank { "(keine Begruendung)" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cosmos.textPrimary,
+                        )
+                        if (!entry.aiNotes.isNullOrBlank()) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "KI-Notizen",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = CosmosColors.AccentSecondary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = entry.aiNotes!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = cosmos.textPrimary,
+                            )
+                        }
+                    }
+                }
+            }
+            // Loeschen-Button (rot, full width)
+            androidx.compose.material3.OutlinedButton(
+                onClick = onDelete,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = CosmosColors.Critical,
+                ),
+            ) {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Outlined.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("Loeschen")
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun StatusButton(
+    label: String,
+    status: EntryStatus,
+    current: EntryStatus,
+    onClick: (EntryStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    val selected = status == current
+    val accent = if (selected) CosmosColors.AccentPrimary else cosmos.textSecondary
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) CosmosColors.AccentPrimary.copy(alpha = 0.18f) else cosmos.glassBg)
+            .clickable { onClick(status) }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = accent,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+private fun severityLabel(severity: Int): String = when {
+    severity <= 3 -> "Niedrig"
+    severity <= 6 -> "Mittel"
+    severity <= 8 -> "Hoch"
+    else -> "Sehr hoch"
 }
 
 @Composable
@@ -355,12 +594,21 @@ private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
 }
 
 @Composable
-private fun EntropyEntryCard(entry: EntropyEntryEntity) {
+private fun EntropyEntryCard(
+    entry: EntropyEntryEntity,
+    onClick: () -> Unit = {},
+    onResolve: () -> Unit = {},
+    onSeverityHint: () -> Unit = {},
+) {
     val cosmos = LocalCosmos.current
     val catColor = entry.category.color()
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
         Column {
-            // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"
+            // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
             Row(verticalAlignment = Alignment.Top) {
                 CategoryIconCircle(category = entry.category, tint = catColor)
                 Spacer(Modifier.width(12.dp))
@@ -397,6 +645,23 @@ private fun EntropyEntryCard(entry: EntropyEntryEntity) {
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
                     )
+                    Spacer(Modifier.height(8.dp))
+                    // Haken-Button: Eintrag als erledigt markieren — direkt von der Card aus.
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(CosmosColors.Success.copy(alpha = 0.18f))
+                            .clickable(onClick = onResolve),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CheckCircle,
+                            contentDescription = "Erledigt",
+                            tint = CosmosColors.Success,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
 
