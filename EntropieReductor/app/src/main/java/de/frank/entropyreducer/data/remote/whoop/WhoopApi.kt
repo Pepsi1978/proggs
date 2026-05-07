@@ -13,7 +13,9 @@ import retrofit2.http.Query
  */
 interface WhoopApi {
 
-    @GET("v1/recovery")
+    // Whoop API v2 — v1 wurde 2025/2026 abgeschaltet (Quelle: developer.whoop.com/api).
+
+    @GET("v2/recovery")
     suspend fun listRecovery(
         @Header("Authorization") authorization: String,
         @Query("start") start: String? = null,
@@ -22,7 +24,7 @@ interface WhoopApi {
         @Query("nextToken") nextToken: String? = null,
     ): WhoopPagedRecovery
 
-    @GET("v1/cycle")
+    @GET("v2/cycle")
     suspend fun listCycles(
         @Header("Authorization") authorization: String,
         @Query("start") start: String? = null,
@@ -31,7 +33,7 @@ interface WhoopApi {
         @Query("nextToken") nextToken: String? = null,
     ): WhoopPagedCycle
 
-    @GET("v1/activity/sleep")
+    @GET("v2/activity/sleep")
     suspend fun listSleep(
         @Header("Authorization") authorization: String,
         @Query("start") start: String? = null,
@@ -40,7 +42,7 @@ interface WhoopApi {
         @Query("nextToken") nextToken: String? = null,
     ): WhoopPagedSleep
 
-    @GET("v1/activity/workout")
+    @GET("v2/activity/workout")
     suspend fun listWorkouts(
         @Header("Authorization") authorization: String,
         @Query("start") start: String? = null,
@@ -49,7 +51,7 @@ interface WhoopApi {
         @Query("nextToken") nextToken: String? = null,
     ): WhoopPagedWorkout
 
-    @GET("v1/user/profile/basic")
+    @GET("v2/user/profile/basic")
     suspend fun getProfile(
         @Header("Authorization") authorization: String,
     ): WhoopProfile
