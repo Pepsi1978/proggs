@@ -20,6 +20,17 @@ function Write-Status {
 $warnings = @()
 $fixes = @()
 
+# Detect SessionStart source (startup, clear, resume, compact, ...)
+# Used to decide if effortLevel should be reset (only on echtem Neustart).
+$sessionSource = ""
+try {
+    $stdinRaw = [Console]::In.ReadToEnd()
+    if ($stdinRaw -and $stdinRaw.Trim() -ne "") {
+        $stdinJson = $stdinRaw | ConvertFrom-Json -ErrorAction Stop
+        if ($stdinJson.source) { $sessionSource = $stdinJson.source }
+    }
+} catch { }
+
 # =============================================
 # CHECK 1: Bypass Permissions — MUST be active
 # =============================================
@@ -170,24 +181,49 @@ try {
 }
 
 # ================================================
-# CHECK 3: Effort Level — MUST reset to "high"
+# CHECK 3: Effort Level — Source-aware Reset
 # ================================================
-# effortLevel is persistent in settings.json. /effort medium or /effort low
-# are session-only overrides. The DEFAULT is "high" (user rule since 2026-04-12).
-# This check ensures every new session starts with "high".
+# Frank-Regel seit 2026-05-07:
+# - Bei echtem Neustart (source=startup oder clear)  → effortLevel auf "high" zuruecksetzen
+# - Bei Auto-Compaction oder Resume (source=compact, resume) → effortLevel UNVERAENDERT lassen
+# - Wenn $sessionSource leer ist (Fallback) → NICHT zuruecksetzen (sicherer Default)
+#
+# Damit bleibt manuell gesetzter Wert (z.B. xhigh per /effort xhigh) waehrend der
+# ganzen Session erhalten — auch ueber Auto-Compactions hinweg. Erst bei einem
+# echten neuen Claude-Start kommt "high" als Default zurueck.
+
+$shouldResetEffort = ($sessionSource -eq "startup" -or $sessionSource -eq "clear")
 
 try {
     if (Test-Path $settingsPath) {
         $raw = Get-Content $settingsPath -Raw -Encoding UTF8
         $parsed = $raw | ConvertFrom-Json
-        if ($parsed.effortLevel -and $parsed.effortLevel -ne 'high') {
-            $oldEffort = $parsed.effortLevel
-            $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "high"'
-            $tmpFile = "$settingsPath.tmp"
-            [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
-            Move-Item -Path $tmpFile -Destination $settingsPath -Force
-            $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: high)"
-            Hook-Log "AUTO-FIX: effortLevel reset to high (was: $oldEffort)"
+        if ($shouldResetEffort) {
+            # Echter Neustart — auf "high" setzen falls nicht schon
+            if ($parsed.effortLevel -and $parsed.effortLevel -ne 'high') {
+                $oldEffort = $parsed.effortLevel
+                $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "high"'
+                $tmpFile = "$settingsPath.tmp"
+                [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                Move-Item -Path $tmpFile -Destination $settingsPath -Force
+                $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: high — Quelle: $sessionSource)"
+                Hook-Log "AUTO-FIX: effortLevel reset to high (was: $oldEffort, source: $sessionSource)"
+            } elseif (-not $parsed.effortLevel -and $raw -notmatch '"effortLevel"') {
+                # Feld fehlt komplett — bei echtem Neustart ergaenzen
+                $fixed = $raw -replace '(\s*)"permissions"', "`$1`"effortLevel`": `"high`",`$1`"permissions`""
+                if ($fixed -ne $raw) {
+                    $tmpFile = "$settingsPath.tmp"
+                    [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                    Move-Item -Path $tmpFile -Destination $settingsPath -Force
+                    $fixes += "effortLevel auf 'high' gesetzt (Feld fehlte)"
+                    Hook-Log "AUTO-FIX: effortLevel set to 'high' (was missing)"
+                }
+            }
+        } else {
+            # Compaction/Resume/unknown — NICHT anfassen
+            if ($parsed.effortLevel) {
+                Hook-Log "effortLevel preserved: $($parsed.effortLevel) (source: $sessionSource)"
+            }
         }
     }
 } catch {
