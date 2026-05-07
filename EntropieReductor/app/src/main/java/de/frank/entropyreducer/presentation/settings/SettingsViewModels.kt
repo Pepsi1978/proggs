@@ -80,17 +80,25 @@ class ApiKeysViewModel @Inject constructor(
         }
     }
 
-    /** Whisper-Test: kann mit aktuell verfuegbaren Mitteln nicht ohne echtes Audio getestet werden;
-     *  zeigen "OK" sobald gespeichert. Voller Test in Stufe 2. */
+    /** Echter Groq-Test via GET /openai/v1/models. */
     fun testGroq() {
-        _state.update {
-            it.copy(groqStatus = if (it.groqKey.isNotBlank()) ConnectionStatus.OK else ConnectionStatus.FAIL)
+        viewModelScope.launch {
+            _state.update { it.copy(groqStatus = ConnectionStatus.TESTING) }
+            val result = testApi.testGroq(state.value.groqKey.trim())
+            _state.update {
+                it.copy(groqStatus = if (result.isSuccess) ConnectionStatus.OK else ConnectionStatus.FAIL)
+            }
         }
     }
 
+    /** Echter TTS-Test via GET /v1/voices?key={key}. */
     fun testTts() {
-        _state.update {
-            it.copy(ttsStatus = if (it.ttsKey.isNotBlank()) ConnectionStatus.OK else ConnectionStatus.FAIL)
+        viewModelScope.launch {
+            _state.update { it.copy(ttsStatus = ConnectionStatus.TESTING) }
+            val result = testApi.testTts(state.value.ttsKey.trim())
+            _state.update {
+                it.copy(ttsStatus = if (result.isSuccess) ConnectionStatus.OK else ConnectionStatus.FAIL)
+            }
         }
     }
 }

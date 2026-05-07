@@ -70,12 +70,8 @@ class RecordingService : Service() {
         private const val NOTIFICATION_ID = 4711
 
         fun start(context: Context) {
-            val intent = Intent(context, RecordingService::class.java)
-            if (Build.VERSION.SDK_INT >= 26) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            // minSdk = 28 — Foreground-Service-Start ist hier immer Pflicht.
+            context.startForegroundService(Intent(context, RecordingService::class.java))
         }
 
         fun stop(context: Context) {

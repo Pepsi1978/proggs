@@ -42,7 +42,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.Manifest
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.TimeBucket
@@ -50,6 +53,7 @@ import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.StatusBar
+import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -69,6 +73,19 @@ fun TasksScreen(
     val state by vm.state.collectAsState()
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val micPerm = rememberMicPermissionState(
+        onAllGranted = { vm.onMicClick() },
+        onDenied = { denied ->
+            val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
+                "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Eintraege per Sprache erfassen kannst."
+            } else {
+                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn fuer die Foreground-Notification."
+            }
+            scope.launch { snackbar.showSnackbar(msg) }
+        },
+    )
 
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
@@ -93,7 +110,9 @@ fun TasksScreen(
                 currentTab = currentTab,
                 micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = vm::onMicClick,
+                onMicClick = {
+                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
+                },
             )
         },
     ) { padding ->
@@ -117,7 +136,13 @@ fun TasksScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item { CategoryFilterRow(state.activeCategories, onToggle = vm::toggleCategory) }
+                    item {
+                        CategoryFilterRow(
+                            active = state.activeCategories,
+                            onToggle = vm::toggleCategory,
+                            onClearAll = vm::clearCategoryFilter,
+                        )
+                    }
 
                     if (state.entriesByBucket.values.all { it.isEmpty() }) {
                         item { EmptyState() }
@@ -148,6 +173,7 @@ fun TasksScreen(
 private fun CategoryFilterRow(
     active: Set<EntropyCategory>,
     onToggle: (EntropyCategory) -> Unit,
+    onClearAll: () -> Unit,
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -156,7 +182,7 @@ private fun CategoryFilterRow(
         item {
             val isAll = active.isEmpty()
             AssistChip(
-                onClick = { /* "Alle" entspricht keine Filter aktiv */ },
+                onClick = onClearAll,
                 label = { Text("Alle", fontWeight = if (isAll) FontWeight.Bold else FontWeight.Normal) },
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = if (isAll) CosmosColors.AccentPrimary.copy(alpha = 0.2f) else Color.Transparent,

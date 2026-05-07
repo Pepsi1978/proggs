@@ -20,7 +20,8 @@ object DatabaseModule {
         Room.databaseBuilder(ctx, AppDatabase::class.java, AppDatabase.DB_NAME)
             // Stufe 1: keine Migrationen — Schema noch in Entwicklung.
             // Bei Schema-Aenderungen waehrend Stufe 1 wird die DB zurueckgesetzt.
-            .fallbackToDestructiveMigration()
+            // dropAllTables = true ist explizit gewollt waehrend MVP.
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides fun provideEntropyEntryDao(db: AppDatabase) = db.entropyEntryDao()

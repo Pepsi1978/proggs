@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.BuildConfig
 import de.frank.entropyreducer.data.remote.GeminiApi
+import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,9 +38,15 @@ object NetworkModule {
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
         if (BuildConfig.DEBUG) {
-            builder.addInterceptor(HttpLoggingInterceptor().apply {
+            // SICHERHEIT: API-Keys NIEMALS ins Logcat schreiben — auch nicht im Debug-Build.
+            // redactHeader() ist die offizielle OkHttp-Mechanik dafuer.
+            // Quelle: square.github.io/okhttp/.../HttpLoggingInterceptor#redactHeader (Stand 2025).
+            val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.HEADERS
-            })
+                redactHeader("Authorization")          // Groq Bearer-Token
+                redactHeader("x-goog-api-key")         // Gemini API-Key
+            }
+            builder.addInterceptor(logging)
         }
         return builder.build()
     }
@@ -64,6 +71,16 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
 
+    @Provides
+    @Singleton
+    @Named("googleTts")
+    fun provideGoogleTtsRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://texttospeech.googleapis.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
     @Provides @Singleton
     fun provideGroqApi(@Named("groq") retrofit: Retrofit): GroqWhisperApi =
         retrofit.create(GroqWhisperApi::class.java)
@@ -71,4 +88,8 @@ object NetworkModule {
     @Provides @Singleton
     fun provideGeminiApi(@Named("gemini") retrofit: Retrofit): GeminiApi =
         retrofit.create(GeminiApi::class.java)
+
+    @Provides @Singleton
+    fun provideGoogleTtsApi(@Named("googleTts") retrofit: Retrofit): GoogleTtsApi =
+        retrofit.create(GoogleTtsApi::class.java)
 }

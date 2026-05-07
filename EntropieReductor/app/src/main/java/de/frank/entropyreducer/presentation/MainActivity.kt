@@ -30,9 +30,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Boot-VM laedt Default-Prompts beim ersten Start
-            val bootVm: BootstrapViewModel = hiltViewModel()
             EntropieReductorTheme {
+                // BootstrapViewModel muss instanziiert werden — sein init {} legt
+                // beim ersten Start die Default-Prompts an. hiltViewModel() ist
+                // hier ein bewusster Side-Effect, kein toter Code.
+                hiltViewModel<BootstrapViewModel>()
                 AppNavGraph()
             }
         }

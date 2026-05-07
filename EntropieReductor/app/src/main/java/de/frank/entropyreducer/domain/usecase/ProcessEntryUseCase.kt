@@ -33,6 +33,7 @@ class ProcessEntryUseCase @Inject constructor(
     private val prompts: PromptRepository,
     private val entries: EntryRepository,
     private val systemPromptBuilder: SystemPromptBuilder,
+    private val json: Json,
 ) {
 
     suspend operator fun invoke(
@@ -86,8 +87,7 @@ class ProcessEntryUseCase @Inject constructor(
 
             val parsed = rawJson?.let {
                 runCatching {
-                    Json { ignoreUnknownKeys = true; coerceInputValues = true }
-                        .decodeFromString(StructuredEntryDto.serializer(), it)
+                    json.decodeFromString(StructuredEntryDto.serializer(), it)
                 }.getOrNull()
             }
 

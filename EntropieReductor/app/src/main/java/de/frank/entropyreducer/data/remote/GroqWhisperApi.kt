@@ -9,9 +9,8 @@ import retrofit2.http.POST
 import retrofit2.http.Part
 
 /**
- * Groq Whisper Transkriptions-API.
- * Endpoint: https://api.groq.com/openai/v1/audio/transcriptions
- * Doku: https://console.groq.com/docs/speech-to-text
+ * Groq Whisper-Transkriptions- und Modell-API.
+ * Doku: https://console.groq.com/docs/api-reference (Stand 2025).
  */
 interface GroqWhisperApi {
 
@@ -24,9 +23,31 @@ interface GroqWhisperApi {
         @Part("language") language: RequestBody,
         @Part("response_format") responseFormat: RequestBody,
     ): TranscriptionResponse
+
+    /**
+     * Listet verfuegbare Modelle auf — wird fuer Verbindungs-Tests genutzt
+     * (Bearer-Auth pruefen ohne Audio-Upload).
+     */
+    @retrofit2.http.GET("models")
+    suspend fun listModels(
+        @Header("Authorization") bearer: String,
+    ): ModelsListResponse
 }
 
 @Serializable
 data class TranscriptionResponse(
     val text: String,
+)
+
+@Serializable
+data class ModelsListResponse(
+    val data: List<ModelInfo> = emptyList(),
+    @kotlinx.serialization.SerialName("object") val obj: String? = null,
+)
+
+@Serializable
+data class ModelInfo(
+    val id: String,
+    @kotlinx.serialization.SerialName("object") val obj: String? = null,
+    val owned_by: String? = null,
 )

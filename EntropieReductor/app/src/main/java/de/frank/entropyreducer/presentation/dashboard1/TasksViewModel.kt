@@ -64,9 +64,16 @@ class TasksViewModel @Inject constructor(
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         val grouped = filtered.groupBy { it.timeBucket }
         val openCount = list.count { it.status == EntryStatus.OFFEN }
-        val sumSeverity = list.filter { it.status != EntryStatus.ARCHIVIERT }.sumOf { it.severity }
-        val maxPossible = (list.size.coerceAtLeast(1) * 10)
-        val reductionPct = (100 - (sumSeverity * 100 / maxPossible)).coerceIn(0, 100)
+        // Status-Bar-Score (Spec §4.1): Anteil der reduzierten Last am Gesamt-Potenzial.
+        // REDUZIERT zaehlt NICHT zur aktuellen Entropie-Last — nur OFFEN + IN_ARBEIT.
+        // ARCHIVIERT ist hier ohnehin schon ausgefiltert (siehe DAO).
+        val openSeverity = list
+            .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+            .sumOf { it.severity }
+        val totalSeverity = list.sumOf { it.severity }.coerceAtLeast(1)
+        // 100% = alle Eintraege reduziert oder keine Eintraege vorhanden.
+        // 0% = nichts reduziert, alles offen mit voller Schwere.
+        val reductionPct = (100 - (openSeverity * 100 / totalSeverity)).coerceIn(0, 100)
         TasksUiState(
             entriesByBucket = grouped,
             activeCategories = cats,

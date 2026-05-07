@@ -26,7 +26,7 @@ class TranscribeAudioUseCase @Inject constructor(
         val model = settings.whisperModelFlow.first()
         val language = settings.transcriptionLanguageFlow.first()
 
-        return runCatching {
+        val result = runCatching {
             val requestFile = audioFile.asRequestBody("audio/m4a".toMediaType())
             val filePart = MultipartBody.Part.createFormData("file", audioFile.name, requestFile)
             val plain = "text/plain".toMediaType()
@@ -38,9 +38,11 @@ class TranscribeAudioUseCase @Inject constructor(
                 responseFormat = "json".toRequestBody(plain),
             )
             response.text.trim()
-        }.also {
-            // Audio-Datei nach erfolgreicher Transkription loeschen (Spec §20).
-            audioFile.delete()
         }
+        // Spec §20: Audio nach erfolgreicher Transkription sofort loeschen.
+        // Bei Fehler behalten — sonst kann der Nutzer den Eintrag spaeter nicht
+        // erneut bewerten lassen. Tageweises Cache-Aufraeumen folgt mit Stufe 2.
+        if (result.isSuccess) audioFile.delete()
+        return result
     }
 }
