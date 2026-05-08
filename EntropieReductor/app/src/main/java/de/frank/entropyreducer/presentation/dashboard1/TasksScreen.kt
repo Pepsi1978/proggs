@@ -167,6 +167,13 @@ fun TasksScreen(
                 },
             )
         },
+        // Frank-Wunsch 2026-05-09 (vierte Praezisierung): Backup-Statuszeile
+        // soll direkt unter dem Titel "Entropie Reduktor" sitzen ohne unsichtbaren
+        // Spacer dazwischen. Die ~18dp "unsichtbare Luft" unter dem vertikal
+        // zentrierten Titel kamen aus der Material-3-TopAppBar (64dp Default-
+        // Hoehe). compactHeader=true reduziert die Hoehe auf 44dp -> Luft
+        // schrumpft auf ~8dp. Andere Screens bleiben unangetastet.
+        compactHeader = true,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(modifier = Modifier.fillMaxSize()) {

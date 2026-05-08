@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
@@ -26,6 +27,14 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * scrollt unter der BottomBar durch. Der Aufrufer muss in seinem
  * `contentPadding` einen unteren Wert (mind. 96.dp) reservieren damit das
  * letzte Item nicht von der BottomBar verdeckt wird.
+ *
+ * `compactHeader` (Frank-Wunsch 2026-05-09 — vierte Praezisierung): Reduziert
+ * die TopAppBar-Hoehe von Material-3-Default 64dp auf 44dp, damit der Titel
+ * "Entropie Reduktor" deutlich naeher am darunterliegenden Inhalt sitzt. Die
+ * ~18dp "unsichtbare Luft" unter dem vertikal zentrierten Titel (Material-3-
+ * Spec) waren der eigentliche Uebeltaeter — kein Spacer, sondern die TopAppBar
+ * selbst. Wird aktuell nur vom Aufgaben-Screen genutzt; alle anderen Screens
+ * behalten die Default-Hoehe.
  */
 @Composable
 fun CosmosScaffold(
@@ -33,6 +42,7 @@ fun CosmosScaffold(
     actions: @Composable () -> Unit = {},
     navigationIcon: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    compactHeader: Boolean = false,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -50,6 +60,7 @@ fun CosmosScaffold(
                 },
                 navigationIcon = navigationIcon,
                 actions = { actions() },
+                expandedHeight = if (compactHeader) 44.dp else TopAppBarDefaults.TopAppBarExpandedHeight,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     titleContentColor = cosmos.textPrimary,
