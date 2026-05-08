@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.repository.WhoopRepository
+import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
 import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.workers.BackgroundScheduler
@@ -15,6 +16,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private data class StatusBundle(
+    val refreshing: Boolean,
+    val message: String?,
+    val breakdown: StatusBreakdown?,
+    val lastWhoopSyncMs: Long,
+)
 
 data class BiomarkerUiState(
     val latest: BiomarkerSnapshotEntity? = null,
@@ -31,6 +39,10 @@ data class BiomarkerUiState(
     val isRefreshing: Boolean = false,
     val message: String? = null,
     val statusBreakdown: StatusBreakdown? = null,
+    /** Zeitstempel der letzten erfolgreichen Whoop-Synchronisation in ms.
+     *  0 = noch nie erfolgreich gesynced. Frank-Wunsch 2026-05-09:
+     *  „Zuletzt synchronisiert"-Zeile als kleine Info unter dem Header. */
+    val lastWhoopSyncMs: Long = 0L,
 )
 
 @HiltViewModel
@@ -38,6 +50,7 @@ class BiomarkerViewModel @Inject constructor(
     private val repo: WhoopRepository,
     private val scheduler: BackgroundScheduler,
     statusObserver: StatusObserver,
+    settings: AppSettings,
 ) : ViewModel() {
 
     private val _refreshing = MutableStateFlow(false)
@@ -51,7 +64,9 @@ class BiomarkerViewModel @Inject constructor(
         repo.observeLatest(),
         repo.observeAll(),
         repo.observeRange(thirtyDaysAgo, now),
-        combine(_refreshing, _message, statusObserver.observe()) { r, m, b -> Triple(r, m, b) },
+        combine(_refreshing, _message, statusObserver.observe(), settings.lastWhoopSyncMsFlow) { r, m, b, sync ->
+            StatusBundle(r, m, b, sync)
+        },
         _selectedDate,
     ) { latest, all, last30, status, selDate ->
         // Snapshot für den gewaehlten Tag finden — wenn kein Snapshot für das
@@ -68,9 +83,10 @@ class BiomarkerViewModel @Inject constructor(
             history30Days = last30,
             selectedDate = selDate,
             selectedSnapshot = selSnap,
-            isRefreshing = status.first,
-            message = status.second,
-            statusBreakdown = status.third,
+            isRefreshing = status.refreshing,
+            message = status.message,
+            statusBreakdown = status.breakdown,
+            lastWhoopSyncMs = status.lastWhoopSyncMs,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
 

@@ -57,8 +57,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.4.0"
+        versionCode = 10
+        versionName = "0.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -129,6 +129,9 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    // ProcessLifecycleOwner — feuert bei jedem App-Foreground-Wechsel,
+    // damit Whoop-Sync auch nach App-im-Hintergrund-zurueckholen laeuft.
+    implementation(libs.lifecycle.process)
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
 

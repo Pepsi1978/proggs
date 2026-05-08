@@ -100,6 +100,18 @@ fun BiomarkerHostScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
+                // Frank-Wunsch 2026-05-09: kleine Info-Zeile direkt unter dem
+                // Header die zeigt wann zuletzt erfolgreich mit Whoop synchronisiert
+                // wurde. Hilft Frank zu sehen ob die Daten frisch sind oder ob der
+                // Sync klemmt — ohne in die Settings gehen zu muessen.
+                Text(
+                    text = "Zuletzt synchronisiert: ${formatRelativeSyncTime(state.lastWhoopSyncMs)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
                 StatusBar(
                     percent = state.statusBreakdown?.total ?: 0,
                     breakdown = state.statusBreakdown,
@@ -713,6 +725,37 @@ private fun GesamterholungCard(state: BiomarkerUiState) {
                 contentAlignment = Alignment.Center,
             ) {
                 RecoveryRing(score = score)
+            }
+        }
+    }
+}
+
+/**
+ * Formatiert den letzten erfolgreichen Sync-Zeitstempel als kurze deutsche
+ * Relativzeit. Frank will auf einen Blick sehen ob die Whoop-Daten frisch sind.
+ *
+ * 0L = noch nie gesynced. < 1 Min = "gerade eben". < 60 Min = "vor X Minuten".
+ * Sonst absolute Zeit oder Datum, je nachdem ob heute oder frueher.
+ */
+private fun formatRelativeSyncTime(syncMs: Long): String {
+    if (syncMs <= 0L) return "noch nie"
+    val now = System.currentTimeMillis()
+    val diffSec = (now - syncMs) / 1_000L
+    return when {
+        diffSec < 60 -> "gerade eben"
+        diffSec < 3600 -> "vor ${diffSec / 60} Minuten"
+        else -> {
+            val syncInstant = java.time.Instant.ofEpochMilli(syncMs)
+                .atZone(java.time.ZoneId.systemDefault())
+            val nowInstant = java.time.Instant.ofEpochMilli(now)
+                .atZone(java.time.ZoneId.systemDefault())
+            val sameDay = syncInstant.toLocalDate() == nowInstant.toLocalDate()
+            val timeFmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+            if (sameDay) {
+                "heute ${syncInstant.format(timeFmt)}"
+            } else {
+                val dateFmt = java.time.format.DateTimeFormatter.ofPattern("d.M. HH:mm")
+                syncInstant.format(dateFmt)
             }
         }
     }
