@@ -121,8 +121,8 @@
                      an. Erneuter Klick holt das Promptboard zurueck und
                      dieses Fenster rutscht wieder an dessen linken Rand.
                      Visuell 1:1 wie der Stern in der Promptboard-Toolbar:
-                     Segoe Fluent Icons E734 (Outline, weiss) im Ruhezustand,
-                     E735 (Fill, gold #FFD700) wenn Solo-Andocken aktiv. -->
+                     Segoe Fluent Icons E735 (Fill, gold #FFD700) — auf Wunsch
+                     des Benutzers IMMER goldig, unabhaengig vom Solo-Modus. -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
@@ -130,7 +130,8 @@
                             Style="{StaticResource BoardIconButton}"
                             Click="BtnSoloDockStar_Click"
                             Margin="0,0,4,0"
-                            Content="&#xE734;"
+                            Content="&#xE735;"
+                            Foreground="#FFFFD700"
                             ToolTip="Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein)."/>
                     <!-- Semikolon-Button mit Aufleucht-Effekt:
                          Beim Klick blitzt der Button kurz golden auf und legt

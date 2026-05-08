@@ -312,9 +312,10 @@ public partial class PromptInputWindow : Window
     /// <summary>
     /// Wird vom OverlayWindow aufgerufen nachdem der Solo-Andock-Layout-
     /// Wechsel umgesetzt wurde. Synchronisiert intern das Flag und
-    /// aktualisiert das Stern-Visual (gefuellter Gold-Stern wenn aktiv,
-    /// weisser Outline-Stern wenn inaktiv) — 1:1 wie der Stern in der
-    /// Promptboard-Toolbar.
+    /// aktualisiert NUR den Tooltip-Text — das Stern-Visual bleibt auf
+    /// Wunsch des Benutzers (Frank, 2026-05-09) IMMER goldig, unabhaengig
+    /// vom Solo-Modus. Der gefuellte Gold-Stern (E735) ist im XAML fix
+    /// verdrahtet (Foreground=#FFD700).
     /// </summary>
     public void SetSoloDockState(bool active)
     {
@@ -324,22 +325,12 @@ public partial class PromptInputWindow : Window
 
     private void UpdateSoloStarVisual()
     {
-        // Segoe Fluent Icons — gleiche Glyphen und Farben wie der Stern
-        // im Promptboard, damit beide Buttons visuell identisch sind:
-        //   E735 = FavoriteStarFill  (gefuellt, gold)
-        //   E734 = FavoriteStar      (Outline, weiss)
-        if (_isSoloDock)
-        {
-            SoloDockStarButton.Content    = "";
-            SoloDockStarButton.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
-            SoloDockStarButton.ToolTip    = "Promptboard wieder einblenden (zurueck in den Normalmodus).";
-        }
-        else
-        {
-            SoloDockStarButton.Content    = "";
-            SoloDockStarButton.Foreground = Brushes.White;
-            SoloDockStarButton.ToolTip    = "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein).";
-        }
+        // Visual bleibt fix (Glyph E735 + Gold #FFD700 aus XAML). Nur der
+        // Tooltip aendert sich, damit der Benutzer trotzdem erkennt was der
+        // naechste Klick MACHEN wird — auch ohne Farbwechsel.
+        SoloDockStarButton.ToolTip = _isSoloDock
+            ? "Promptboard wieder einblenden (zurueck in den Normalmodus)."
+            : "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein).";
     }
 
     /// <summary>

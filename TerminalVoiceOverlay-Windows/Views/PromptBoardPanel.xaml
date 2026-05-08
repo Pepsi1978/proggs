@@ -159,7 +159,6 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="PromptBoard"
@@ -190,15 +189,27 @@
                             Content="&#xE73E;"
                             Margin="6,0,0,0"
                             ToolTip="Nur aktivierte Prompts anzeigen — blendet alle Prompts ohne Haekchen aus. Erneuter Klick zeigt wieder alle."/>
+                    <!-- Stern direkt neben dem Filter-Button. Foreground auf
+                         Gold #FFD700 fix gesetzt — der Stern bleibt auf Wunsch
+                         des Benutzers IMMER goldig, unabhaengig vom Solo-Modus.
+                         Symmetrisches Pendant zum Stern in der Eingabe-Toolbar
+                         (der dort auch dauerhaft gold ist). Klick blendet das
+                         Promtboard aus und dockt das Eingabefeld ans Voice-
+                         Overlay an. Glyph E735 = FavoriteStarFill (gefuelltes
+                         Pendant zur E734-Outline). -->
+                    <Button x:Name="BtnBoardStar"
+                            Style="{StaticResource IconButton}"
+                            Content="&#xE735;"
+                            Foreground="#FFFFD700"
+                            Click="BtnBoardStar_Click"
+                            ToolTip="Promptboard schliessen und Eingabefeld direkt am Voice-Overlay andocken (Stern im Eingabefeld holt das Promtboard wieder zurueck)."/>
                 </StackPanel>
-                <!-- Reihenfolge der Toolbar-Buttons: [!] [Stern] [Historie] [+]
+                <!-- Reihenfolge der rechten Action-Buttons: [!] [Historie] [+]
                      [Backup] [Settings]. Spalte 2 (Width=*) ist eine
                      leere Lueckenspalte, die alle Toolbar-Buttons nach rechts
-                     druckt. Der Stern (BtnBoardStar) blendet das Promtboard
-                     aus und dockt das Eingabefeld direkt an die schmale
-                     Voice-Overlay-Leiste an — symmetrisches Pendant zum
-                     Stern in der Eingabe-Toolbar (1:1 gleicher Look:
-                     Segoe Fluent Icons E734, Outline weiss).
+                     druckt. Der Stern (BtnBoardStar) sitzt jetzt links neben
+                     dem Filter-Button im SyncBlock und nicht hier in der
+                     rechten Action-Gruppe — Frank-Wunsch 2026-05-09.
                      Glyphen aus Segoe Fluent Icons / MDL2 Assets damit alle
                      Symbole dieselben vertikalen Metriken haben und mittig
                      in den runden Basen sitzen. -->
@@ -209,27 +220,21 @@
                         FontFamily="Segoe UI"
                         ToolTip="Alle Häkchen entfernen (Always-On in allen Kategorien)"/>
                 <Button Grid.Column="4"
-                        x:Name="BtnBoardStar"
-                        Style="{StaticResource IconButton}"
-                        Content="&#xE734;"
-                        Click="BtnBoardStar_Click"
-                        ToolTip="Promptboard schliessen und Eingabefeld direkt am Voice-Overlay andocken (Stern im Eingabefeld holt das Promtboard wieder zurueck)."/>
-                <Button Grid.Column="5"
                         x:Name="BtnHistory"
                         Style="{StaticResource IconButton}"
                         Content="&#xE81C;"
                         ToolTip="Prompt-Historie"/>
-                <Button Grid.Column="6"
+                <Button Grid.Column="5"
                         x:Name="BtnAddCategory"
                         Style="{StaticResource IconButton}"
                         Content="&#xE710;"
                         ToolTip="Neue Kategorie"/>
-                <Button Grid.Column="7"
+                <Button Grid.Column="6"
                         x:Name="BtnBackup"
                         Style="{StaticResource IconButton}"
                         Content="&#xE74E;"
                         ToolTip="Backup / Wiederherstellen"/>
-                <Button Grid.Column="8"
+                <Button Grid.Column="7"
                         x:Name="BtnSettings"
                         Style="{StaticResource IconButton}"
                         Content="&#xE713;"

@@ -390,9 +390,20 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         self.clearAllChecksButton = clearChecksBtn
 
         // Stern-Button — Promtboard ausblenden und Eingabefeld direkt am
-        // Pillar andocken (1:1 wie der Stern in der PromptInput-Toolbar,
-        // symmetrisches Pendant). Windows-Parity: BtnBoardStar.
+        // Pillar andocken (symmetrisches Pendant zum Stern in der PromptInput-
+        // Toolbar). Auf Wunsch des Benutzers (Frank, 2026-05-09) IMMER
+        // goldig (#FFD700) — unabhaengig vom Solo-Modus. Position direkt
+        // neben dem Filter-Button im SyncBlock, NICHT mehr in der rechten
+        // Action-Gruppe.
         let boardStarBtn = makeIconButton(symbol: "★", tooltip: "Promptboard schliessen und Eingabefeld direkt am Voice-Overlay andocken (Stern im Eingabefeld holt das Promtboard wieder zurueck).", action: #selector(onBoardStarTapped))
+        boardStarBtn.contentTintColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1.0)
+        if let cell = boardStarBtn.cell as? NSButtonCell {
+            let goldAttrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1.0),
+                .font: cell.font ?? NSFont.boldSystemFont(ofSize: 14)
+            ]
+            boardStarBtn.attributedTitle = NSAttributedString(string: "★", attributes: goldAttrs)
+        }
 
         let historyBtn = makeIconButton(symbol: "📜", tooltip: "Prompt-Historie", action: #selector(onToggleHistory))
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
@@ -400,16 +411,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
         self.historyToggleButton = historyBtn
 
-        // Reihenfolge (Windows-Parity 2026-05-09: Stern wieder im Header,
-        // jetzt als symmetrisches Pendant zum Stern in der PromptInput-
-        // Toolbar — er schaltet zwischen Board-Ansicht und Solo-Eingabe um):
-        // [Title] [Sync+Filter] <flex spacer> [!] [Stern] [Historie] [+] [Backup] [Settings]
-        let syncBlock = NSStackView(views: [syncLabel, filterBtn])
+        // Reihenfolge (Frank-Wunsch 2026-05-09: Stern direkt neben dem
+        // Filter-Button im SyncBlock, immer goldig). Layout:
+        // [Title] [Sync + Filter + Stern] <flex spacer> [!] [Historie] [+] [Backup] [Settings]
+        let syncBlock = NSStackView(views: [syncLabel, filterBtn, boardStarBtn])
         syncBlock.orientation = .horizontal
         syncBlock.spacing = 6
         syncBlock.alignment = .centerY
 
-        let header = NSStackView(views: [titleLabel, syncBlock, NSView(), clearChecksBtn, boardStarBtn, historyBtn, addCatBtn, backupBtn, settingsBtn])
+        let header = NSStackView(views: [titleLabel, syncBlock, NSView(), clearChecksBtn, historyBtn, addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 6

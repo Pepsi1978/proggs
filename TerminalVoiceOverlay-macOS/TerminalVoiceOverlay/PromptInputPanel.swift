@@ -178,8 +178,12 @@ final class PromptInputPanel: NSPanel {
 
         // Toolbar-Buttons rechts oben — 1:1 Pendant zur Windows-Toolbar:
         // [Solo-Dock-Stern] [;] [G] [X]
+        // Stern bleibt auf Wunsch des Benutzers (Frank, 2026-05-09) IMMER
+        // goldig (gefuellter Stern ★ in #FFD700), unabhaengig vom Solo-Modus.
         configureToolbarButton(soloDockButton,
-            symbol: "☆", color: .white, fontSize: 14,
+            symbol: "★",
+            color: NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1),
+            fontSize: 14,
             tooltip: "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein).",
             action: #selector(onSoloDockClick))
         configureToolbarButton(separatorButton,
@@ -337,21 +341,21 @@ final class PromptInputPanel: NSPanel {
         onSoloDockToggle?(newState)
     }
 
-    /// Visual nachziehen — wird vom AppDelegate aufgerufen NACHDEM der
-    /// Layout-Wechsel passiert ist. So bleibt das Stern-Icon immer in
-    /// Sync mit dem tatsaechlichen Promptboard-Sichtbarkeitszustand.
+    /// Aktualisiert NUR den Tooltip — auf Wunsch des Benutzers (Frank,
+    /// 2026-05-09) bleibt das Stern-Icon IMMER goldig (gefuellter Stern,
+    /// #FFD700), unabhaengig vom Solo-Modus. Das hilft dem Benutzer den
+    /// Stern als visuellen Anker wiederzuerkennen — gleicher Look wie der
+    /// Stern in der Promtboard-Toolbar.
     func setSoloDockState(_ active: Bool) {
         isSoloDocked = active
         guard let label = toolbarLabel(of: soloDockButton) else { return }
-        if active {
-            label.stringValue = "★"
-            label.textColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
-            soloDockButton.toolTip = "Promptboard wieder einblenden (zurueck in den Normalmodus)."
-        } else {
-            label.stringValue = "☆"
-            label.textColor = .white
-            soloDockButton.toolTip = "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein)."
-        }
+        // Visual fix gold — bei jedem Aufruf neu setzen, damit auch ein
+        // fruehes Init-Update die Defaultfarbe ueberschreibt.
+        label.stringValue = "★"
+        label.textColor = NSColor(calibratedRed: 1.0, green: 0.84, blue: 0.0, alpha: 1)
+        soloDockButton.toolTip = active
+            ? "Promptboard wieder einblenden (zurueck in den Normalmodus)."
+            : "Promptboard ausblenden und Eingabe direkt ans Voice-Overlay andocken (erneuter Klick blendet das Promptboard wieder ein)."
     }
 
     @objc private func onInsertSeparatorClick() {
