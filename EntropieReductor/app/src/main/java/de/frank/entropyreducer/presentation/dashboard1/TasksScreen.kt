@@ -58,7 +58,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -105,9 +107,7 @@ fun TasksScreen(
     // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
     // die Anzeige immer den neusten manualBucket/timeBucket-Stand zeigt.
-    var bucketPickerEntryId by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf<String?>(null)
-    }
+    var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
 
     val micPerm = rememberMicPermissionState(
         onAllGranted = { vm.onMicClick() },
