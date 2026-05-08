@@ -187,6 +187,8 @@ fun BiomarkerHostScreen(
 
             // ============ Körper-Block (Atmung, Sauerstoff, Hauttemperatur) ============
             item {
+                // Frank-Wunsch 2026-05-09: Atemfrequenz folgt der Whoop-Doktrin —
+                // niedrigere Atemfrequenz im Schlaf = entspannter = besser.
                 MetricHistoryCard(
                     title = "Atemfrequenz",
                     accent = CosmosColors.AccentPrimary,
@@ -198,6 +200,7 @@ fun BiomarkerHostScreen(
                     },
                     unit = "/min",
                     onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
+                    lowerIsBetter = true,
                 )
             }
             item {
@@ -715,7 +718,20 @@ private fun MetricHistoryCard(
             ?: (formatLatestForCard(absValue) + if (unit.isNotBlank()) " $unit" else "")
         "$sign$formatted"
     }
-    val diffColor = if (diff != null && diff >= 0) CosmosColors.Success else CosmosColors.Critical
+    // Frank-Praezisierung 2026-05-09: Farbe respektiert lowerIsBetter — bei Ruhepuls,
+    // Schlafdefizit, Atemfrequenz, Hauttemperatur ist ein NIEDRIGERER Wert besser
+    // (also negative Abweichung = gruen). Bei HRV, Schlaf-Performance, SpO2 etc.
+    // ist hoeher besser. Bei diff == 0 neutrale Farbe (kein Auf/Ab).
+    val isImprovement: Boolean? = when {
+        diff == null || diff == 0.0 -> null
+        lowerIsBetter -> diff < 0
+        else -> diff > 0
+    }
+    val diffColor = when (isImprovement) {
+        null -> cosmos.textSecondary
+        true -> CosmosColors.Success
+        false -> CosmosColors.Critical
+    }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -758,41 +774,50 @@ private fun MetricHistoryCard(
                 )
                 if (avgLabel != null && diffLabel != null) {
                     Spacer(Modifier.height(12.dp))
-                    // Frank-Praezisierung 2026-05-09: Durchschnitt + Abweichung
-                    // NEBENEINANDER (nicht untereinander), als ausgeschriebene
-                    // Worte 'Durchschnitt:' und 'Abweichung:' (statt Ø-Symbol das
-                    // optisch hoeher sass als der Text). Wort 'Durchschnitt:' in
-                    // der gleichen Akzentfarbe wie der Wert dahinter, 'Abweichung:'
-                    // in textSecondary, der Diff-Wert in Gruen oder Rot. FlowRow
-                    // damit bei langen Werten (z.B. Schlafdauer 8h 33m) sauber
-                    // umgebrochen werden kann statt ueber den Rand zu laufen.
+                    // Frank-Praezisierung 2026-05-09 (vierte Iteration):
+                    // - Durchschnitt + Abweichung GARANTIERT nebeneinander (kein FlowRow-Umbruch)
+                    // - EINHEITLICHE Hintergrundfarbe fuer alle Charts: AccentPrimary getoent
+                    //   (gleiche Farbe wie sie bei HRV-Card schon ist)
+                    // - EINHEITLICHE Schriftfarben fuer alle Charts: 'Durchschnitt:' und
+                    //   der Wert in AccentPrimary; 'Abweichung:' in textSecondary; nur
+                    //   der Diff-Wert ist farbig (gruen positiv / rot negativ)
+                    // - Diff-Farbe respektiert lowerIsBetter pro Metrik (siehe oben)
+                    // - 'Durchschnitt' linksbuendig, 'Abweichung' rechtsbuendig
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(accent.copy(alpha = 0.10f))
+                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                     ) {
-                        androidx.compose.foundation.layout.FlowRow(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.End),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Linke Haelfte — Durchschnitt linksbuendig
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Text(
                                     text = "Durchschnitt: ",
-                                    color = accent,
+                                    color = CosmosColors.AccentPrimary,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Medium,
                                 )
                                 Text(
                                     text = avgLabel,
-                                    color = accent,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    color = CosmosColors.AccentPrimary,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Rechte Haelfte — Abweichung rechtsbuendig
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.End,
+                            ) {
                                 Text(
                                     text = "Abweichung: ",
                                     color = cosmos.textSecondary,
@@ -802,7 +827,7 @@ private fun MetricHistoryCard(
                                 Text(
                                     text = diffLabel,
                                     color = diffColor,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
