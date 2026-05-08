@@ -83,12 +83,15 @@ fun InteractiveLineChart(
     // SMA glaettet Tagesausreisser, Slope der Regression entscheidet die Farbe:
     // semantisch "Verbesserung = gruen" — bei lowerIsBetter wird der Slope invertiert.
     val sma = computeSma(safe.map { it.second }, window = 14)
-    val rawSlope = if (sma.size >= 2) linearSlope(sma) else 0.0
-    val semanticSlope = if (lowerIsBetter) -rawSlope else rawSlope
-    val neutralEpsilon = rangeY * 0.001 // unter 0.1% des Wertebereichs gilt als neutral
+    val smaSlope = if (sma.size >= 2) linearSlope(sma) else 0.0
+    val semanticSlope = if (lowerIsBetter) -smaSlope else smaSlope
+    // Frank-Wunsch 2026-05-09 Update: Epsilon entfernt — jede fallende Linie soll
+    // rot sein, jede steigende gruen, auch bei minimalen Slopes. Vorher hat ein
+    // Epsilon=0.1% des Wertebereichs leichte Trends als 'neutral' eingestuft, was
+    // viele real-fallende Linien schwarz/grau gefaerbt hat.
     val trendColor = when {
-        semanticSlope > neutralEpsilon -> CosmosColors.Success
-        semanticSlope < -neutralEpsilon -> CosmosColors.Critical
+        semanticSlope > 0.0 -> CosmosColors.Success
+        semanticSlope < 0.0 -> CosmosColors.Critical
         else -> cosmos.textSecondary
     }
 
@@ -198,8 +201,8 @@ fun InteractiveLineChart(
                     val intercept = rawMean - rawSlope * xMean
                     val rawSemanticSlope = if (lowerIsBetter) -rawSlope else rawSlope
                     val rawTrendColor = when {
-                        rawSemanticSlope > neutralEpsilon -> CosmosColors.Success
-                        rawSemanticSlope < -neutralEpsilon -> CosmosColors.Critical
+                        rawSemanticSlope > 0.0 -> CosmosColors.Success
+                        rawSemanticSlope < 0.0 -> CosmosColors.Critical
                         else -> cosmos.textSecondary
                     }
                     val stepXLin = w / (safe.size - 1).toFloat()

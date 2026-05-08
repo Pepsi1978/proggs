@@ -231,7 +231,7 @@ fun BiomarkerHostScreen(
             }
             item {
                 MetricHistoryCard(
-                    title = "Day Kilojoules",
+                    title = "Tagesumsatz",
                     accent = CosmosColors.AccentPrimary,
                     points = historyLast70.mapNotNull { snap ->
                         snap.dayKilojoules?.let { snap.capturedAt to it }
@@ -306,6 +306,7 @@ fun BiomarkerHostScreen(
                     },
                     unit = "°C",
                     onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                    lowerIsBetter = true,
                 )
             }
             item {
