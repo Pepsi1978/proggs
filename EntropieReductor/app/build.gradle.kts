@@ -57,8 +57,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.5.5"
+        versionCode = 25
+        versionName = "0.5.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -76,10 +76,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // VARIANT_LABEL erscheint im LaunchScreen (Frank-Wunsch 2026-05-09).
+            buildConfigField("String", "VARIANT_LABEL", "\"Release Version\"")
         }
         debug {
             applicationIdSuffix = ".debug"
             isMinifyEnabled = false
+            buildConfigField("String", "VARIANT_LABEL", "\"Debugversion\"")
         }
         // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
         // (R8, Minification) mit Debug-Signing fuer schnelle Performance-Tests.
@@ -94,6 +97,7 @@ android {
             applicationIdSuffix = ".bench"
             isDebuggable = false
             matchingFallbacks += "release"
+            buildConfigField("String", "VARIANT_LABEL", "\"Performance Version\"")
         }
     }
 

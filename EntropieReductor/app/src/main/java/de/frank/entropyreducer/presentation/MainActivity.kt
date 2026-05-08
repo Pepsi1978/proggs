@@ -7,6 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +23,7 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.data.settings.ThemeMode
 import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
+import de.frank.entropyreducer.presentation.launch.LaunchScreen
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
 import de.frank.entropyreducer.workers.BackgroundScheduler
@@ -60,7 +64,19 @@ class MainActivity : ComponentActivity() {
             }
 
             EntropieReductorTheme(darkTheme = effectiveDark) {
-                AppNavGraph()
+                // Frank-Wunsch 2026-05-09: Beim App-Start zuerst ein
+                // LaunchScreen mit dem Variant-Label (Debugversion oder
+                // Performance Version) — Frank kann so beide parallel
+                // installierten Builds sofort unterscheiden. rememberSaveable
+                // ueberlebt Configuration-Changes wie Theme-Wechsel oder
+                // Foldable-Klappung; nur ein echter App-Neustart bringt den
+                // LaunchScreen zurueck.
+                var started by rememberSaveable { mutableStateOf(false) }
+                if (started) {
+                    AppNavGraph()
+                } else {
+                    LaunchScreen(onStart = { started = true })
+                }
             }
         }
     }
