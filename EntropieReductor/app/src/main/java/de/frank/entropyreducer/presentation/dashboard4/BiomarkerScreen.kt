@@ -97,8 +97,12 @@ fun BiomarkerHostScreen(
         // Frank-Wunsch 2026-05-09: alle Verlaufs-Charts zeigen nur die letzten 70 Tage.
         // Aeltere Daten bleiben in der DB erhalten und sind im Detail-Screen sichtbar
         // (state.history bleibt komplett, nur die Chart-Cards filtern hier).
-        val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
-        val historyLast70 = state.history.filter { it.capturedAt >= seventyDaysAgoMs }
+        // Performance: Filter nur neu berechnen wenn sich state.history aendert —
+        // nicht bei jedem unrelated state-Update (z.B. lastWhoopSyncMs).
+        val historyLast70 = androidx.compose.runtime.remember(state.history) {
+            val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
+            state.history.filter { it.capturedAt >= seventyDaysAgoMs }
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
