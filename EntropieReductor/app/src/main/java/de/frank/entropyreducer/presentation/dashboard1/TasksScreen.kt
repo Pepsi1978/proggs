@@ -758,13 +758,13 @@ private fun CategoryFilterChip(
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
+    // PERFORMANCE 2026-05-09: clip() entfernt — background mit Shape uebernimmt das.
+    val pillShape = remember { RoundedCornerShape(50) }
+    val bg = if (selected) tint.copy(alpha = 0.20f) else cosmos.glassBg
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(
-                if (selected) tint.copy(alpha = 0.20f) else cosmos.glassBg,
-            )
+            .background(bg, pillShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
     ) {
@@ -1009,17 +1009,22 @@ private fun EntropyEntryCard(
             SeverityRainbowBar(severity = entry.severity)
 
             // Tag-Pills
-            if (entry.tags.isNotEmpty()) {
+            // PERFORMANCE 2026-05-09: tagsToShow + pillShape mit remember cachen.
+            // entry.tags.take(3) allociert sonst pro Recompose eine neue List.
+            // clip() entfernt — background(color, shape) zeichnet die Pille direkt
+            // ohne separaten GraphicsLayer, kein Overflow weil Tag-Strings kurz sind.
+            val tagsToShow = remember(entry.id, entry.tags) { entry.tags.take(3) }
+            if (tagsToShow.isNotEmpty()) {
+                val pillShape = remember { RoundedCornerShape(50) }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    entry.tags.take(3).forEach { tag ->
+                    tagsToShow.forEach { tag ->
                         Text(
                             text = tag,
                             style = MaterialTheme.typography.labelSmall,
                             color = cosmos.textSecondary,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(cosmos.glassBg)
+                                .background(cosmos.glassBg, pillShape)
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                         )
                     }
@@ -1056,11 +1061,13 @@ private fun BucketPickerButton(
     val accent = bucketAccent(bucket)
     val bg = if (isManual) accent.copy(alpha = 0.22f) else cosmos.glassBg
     val tint = if (isManual) accent else cosmos.textSecondary
+    // PERFORMANCE 2026-05-09: clip() entfernt — background(color, shape) clippt
+    // visuell (zeichnet abgerundete Form), Inhalte sind kurz und passen rein.
+    val pillShape = remember { RoundedCornerShape(50) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bg)
+            .background(bg, pillShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
@@ -1251,11 +1258,14 @@ private fun CategoryIconCircle(
         de.frank.entropyreducer.domain.model.EntropyCategory.UMGEBUNG -> Icons.Outlined.Home
         de.frank.entropyreducer.domain.model.EntropyCategory.SONSTIGES -> Icons.Outlined.MoreHoriz
     }
+    // PERFORMANCE 2026-05-09: clip() entfernt — background(color, CircleShape)
+    // zeichnet den Kreis direkt, das Icon ist innerhalb der size(44.dp) und
+    // hat selbst nur 22.dp, kein Overflow moeglich.
+    val circleShape = remember { RoundedCornerShape(50) }
     Box(
         modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(50))
-            .background(tint.copy(alpha = 0.15f)),
+            .background(tint.copy(alpha = 0.15f), circleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -1351,14 +1361,15 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
             )
         }
         // Empfohlen-Badge (immer wenn priorityScore > 70)
+        // PERFORMANCE 2026-05-09: clip() entfernt — background mit Shape clippt visuell.
         if (entry.priorityScore > 70) {
+            val pillShape = remember { RoundedCornerShape(50) }
             Text(
                 text = "Empfohlen",
                 color = CosmosColors.Success,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(CosmosColors.Success.copy(alpha = 0.15f))
+                    .background(CosmosColors.Success.copy(alpha = 0.15f), pillShape)
                     .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }

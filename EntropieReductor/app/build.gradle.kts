@@ -57,8 +57,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 35
-        versionCode = 23
-        versionName = "0.5.4"
+        versionCode = 24
+        versionName = "0.5.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -96,6 +96,15 @@ android {
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
         )
+    }
+
+    // PERFORMANCE 2026-05-09: Compose Compiler Reports aktivieren — schreibt
+    // beim Build pro Modul eine Datei mit allen nicht-skippable Composables
+    // und allen unstable Parametern in build/compose_compiler/. Goldquelle
+    // der Wahrheit fuer Compose-Performance-Probleme.
+    composeCompiler {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        metricsDestination = layout.buildDirectory.dir("compose_compiler")
     }
 
     buildFeatures {
