@@ -1,42 +1,26 @@
 package de.frank.entropyreducer.domain.usecase
 
 import android.util.Log
-import de.frank.entropyreducer.data.local.dao.CalendarDayDao
-import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
-import de.frank.entropyreducer.domain.model.EntryStatus
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
- * Pruft alle aktiven Eintraege gegen den aktuellen Schichtkalender und korrigiert
- * den TimeBucket falls die Heuristik (CalculateBucketsUseCase) einen besseren
- * Bucket vorschlaegt. Aktiv ausgefuehrt nach erfolgreichem Calendar-Sync.
+ * Wird vom CalendarSyncWorker nach jedem Calendar-Sync aufgerufen. Frueher hat
+ * dieser UseCase die Bucket-Heuristik aus CalculateBucketsUseCase angewendet —
+ * das hat aber Frank's strikte 5/5/10/unbegrenzt-Spezifikation gebrochen
+ * (alle 30-min-Eintraege ohne Kalenderdaten landeten in HEUTE).
  *
- * Spec §22 Stufe 2 — Calendar-Sync triggert Bucket-Aktualisierung.
+ * Frank-Wunsch 2026-05-09: Die Bucket-Verteilung ist STRIKT — 5/5/10/unbegrenzt
+ * nach priorityScore. Es gibt nur eine autoritative Quelle dafuer:
+ * BalanceBucketsUseCase. RebucketEntriesUseCase delegiert vollstaendig dorthin
+ * damit der Calendar-Worker die Verteilung nicht mehr zerstoeren kann.
  */
 class RebucketEntriesUseCase @Inject constructor(
-    private val entryDao: EntropyEntryDao,
-    private val calendarDao: CalendarDayDao,
-    private val bucketing: CalculateBucketsUseCase,
+    private val balance: BalanceBucketsUseCase,
 ) {
 
     suspend operator fun invoke(): Int {
-        val today = java.time.LocalDate.now().toString()
-        val until = java.time.LocalDate.now().plusDays(31).toString()
-        val calendarMap = calendarDao.getRange(today, until).first().associateBy { it.date }
-
-        val active = entryDao.getActive().first()
-            .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-
-        var updated = 0
-        active.forEach { entry ->
-            val suggested = bucketing.suggestRebucket(entry, calendarMap)
-            if (suggested != null) {
-                entryDao.update(entry.copy(timeBucket = suggested, updatedAt = System.currentTimeMillis()))
-                updated++
-            }
-        }
-        Log.i(TAG, "Rebucketing: $updated von ${active.size} Eintraegen aktualisiert")
+        val updated = balance()
+        Log.i(TAG, "Rebucketing: $updated Eintraege durch BalanceBucketsUseCase aktualisiert")
         return updated
     }
 

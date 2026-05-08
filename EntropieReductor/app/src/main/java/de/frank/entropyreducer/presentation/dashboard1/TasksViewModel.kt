@@ -73,6 +73,7 @@ class TasksViewModel @Inject constructor(
     private val generateKiQuestion: de.frank.entropyreducer.domain.kiquestion.GenerateKiQuestionUseCase,
     private val memories: de.frank.entropyreducer.data.repository.MemoryRepository,
     @Suppress("unused") private val bucketingUseCase: CalculateBucketsUseCase,
+    private val balanceBuckets: de.frank.entropyreducer.domain.usecase.BalanceBucketsUseCase,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -178,66 +179,7 @@ class TasksViewModel @Inject constructor(
      */
     private fun autoBalanceBuckets() {
         viewModelScope.launch {
-            val all = entries.getActive().first()
-            val active = all.filter {
-                it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT
-            }
-            val byPrio = active.sortedByDescending { it.priorityScore }
-
-            // Limits pro Bucket
-            val limits = mapOf(
-                TimeBucket.HEUTE to 5,
-                TimeBucket.MORGEN to 5,
-                TimeBucket.FREIBLOCK to 10,
-                // SPAETER hat kein Limit
-            )
-            val orderedBuckets = listOf(
-                TimeBucket.HEUTE,
-                TimeBucket.MORGEN,
-                TimeBucket.FREIBLOCK,
-                TimeBucket.SPAETER,
-            )
-
-            val placement = mutableMapOf<String, TimeBucket>()
-            val capacityLeft = limits.toMutableMap()
-
-            // Pass 1: Manuelle Eintraege belegen ihre Wunsch-Buckets (mit Limit)
-            for (bucket in orderedBuckets) {
-                if (bucket == TimeBucket.SPAETER) continue
-                val cap = capacityLeft[bucket] ?: 0
-                val candidates = byPrio.filter { it.manualBucket == bucket }
-                val placed = candidates.take(cap)
-                placed.forEach { placement[it.id] = bucket }
-                capacityLeft[bucket] = cap - placed.size
-            }
-
-            // Pass 2: AI-Pool + verdraengte Manuelle fuellen freie Slots auf
-            val pool = byPrio.filter { it.id !in placement }
-            var poolIndex = 0
-            for (bucket in orderedBuckets) {
-                if (bucket == TimeBucket.SPAETER) {
-                    while (poolIndex < pool.size) {
-                        placement[pool[poolIndex].id] = TimeBucket.SPAETER
-                        poolIndex++
-                    }
-                    break
-                }
-                val cap = capacityLeft[bucket] ?: 0
-                val toFill = minOf(cap, pool.size - poolIndex)
-                for (i in 0 until toFill) {
-                    placement[pool[poolIndex].id] = bucket
-                    poolIndex++
-                }
-            }
-
-            // Schreibe Aenderungen — idempotent (nur wenn sich timeBucket aendert)
-            val now = System.currentTimeMillis()
-            active.forEach { e ->
-                val target = placement[e.id] ?: TimeBucket.SPAETER
-                if (e.timeBucket != target) {
-                    entries.update(e.copy(timeBucket = target, updatedAt = now))
-                }
-            }
+            balanceBuckets()
         }
     }
 
