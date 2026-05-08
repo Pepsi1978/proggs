@@ -92,9 +92,15 @@ class TasksViewModel @Inject constructor(
         combine(detailEntryIdFlow, pendingMethodForFlow) { d, p -> d to p },
     ) { list, cats, ui, (breakdown, question), (detailId, pendingMethod) ->
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
-        // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung
+        // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung.
+        // PERFORMANCE 2026-05-09: Sortierung nach priorityScore wird HIER vorberechnet
+        // statt in der LazyColumn-Lambda. Verhindert dass `sortedByDescending` bei
+        // jedem State-Update (Status-Tick alle 5 min, DB-Aenderung) neu laeuft —
+        // das war eine der Hauptursachen fuer Scroll-Ruckler im Aufgaben-Bereich.
         val activeList = filtered.filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-        val grouped = activeList.groupBy { it.timeBucket }
+        val grouped = activeList
+            .groupBy { it.timeBucket }
+            .mapValues { (_, entries) -> entries.sortedByDescending { it.priorityScore } }
         // Erledigt-Bucket (REDUZIERT) — sortiert nach resolvedAt absteigend (neueste zuerst).
         val resolvedList = filtered
             .filter { it.status == EntryStatus.REDUZIERT }

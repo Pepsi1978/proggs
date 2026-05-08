@@ -44,7 +44,6 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
@@ -57,6 +56,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -169,16 +169,23 @@ fun TasksScreen(
                     }
                 }
 
+                // PERFORMANCE 2026-05-09: derivedStateOf cached den all-empty Check —
+                // wird sonst bei jedem State-Update neu berechnet.
+                val isEmpty by remember(state.entriesByBucket, state.resolvedEntries) {
+                    derivedStateOf {
+                        state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
+                    item(key = "briefing", contentType = "briefing") {
                         de.frank.entropyreducer.presentation.briefing.BriefingPanel()
                     }
                     state.kiQuestion?.let { q ->
-                        item {
+                        item(key = "ki-question", contentType = "ki-question") {
                             de.frank.entropyreducer.presentation.components.KiQuestionCard(
                                 question = q,
                                 onSubmitAnswer = { answer -> vm.submitKiQuestionAnswer(answer) },
@@ -187,7 +194,7 @@ fun TasksScreen(
                             )
                         }
                     }
-                    item {
+                    item(key = "category-filter", contentType = "category-filter") {
                         CategoryFilterRow(
                             active = state.activeCategories,
                             onToggle = vm::toggleCategory,
@@ -195,8 +202,8 @@ fun TasksScreen(
                         )
                     }
 
-                    if (state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()) {
-                        item { EmptyState() }
+                    if (isEmpty) {
+                        item(key = "empty", contentType = "empty") { EmptyState() }
                     } else {
                         // Aktive Eintraege gruppiert nach Time-Bucket. Frank-Wunsch
                         // 2026-05-09: HEUTE-Limit wird im ViewModel via
@@ -205,13 +212,21 @@ fun TasksScreen(
                         // MORGEN/FREIBLOCK/SPAETER verteilt. Wir zeigen alle Buckets
                         // sortiert nach priorityScore desc damit Frank ALLE Aufgaben
                         // sieht.
+                        // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
+                        // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
+                        // sind beim Eintreffen schon sortiert und gefiltert.
                         TimeBucket.values().forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
-                                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-                                .sortedByDescending { it.priorityScore }
                             if (list.isNotEmpty()) {
-                                item { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
-                                items(list, key = { it.id }) { entry ->
+                                item(
+                                    key = "header-${bucket.name}",
+                                    contentType = "bucket-header",
+                                ) { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
+                                items(
+                                    items = list,
+                                    key = { it.id },
+                                    contentType = { "entry" },
+                                ) { entry ->
                                     EntropyEntryCard(
                                         entry = entry,
                                         onClick = { vm.openEntryDetail(entry.id) },
@@ -235,8 +250,14 @@ fun TasksScreen(
                         }
                         // Erledigt-Sektion am Ende
                         if (state.resolvedEntries.isNotEmpty()) {
-                            item { ResolvedHeader(state.resolvedEntries.size) }
-                            items(state.resolvedEntries, key = { "resolved-${it.id}" }) { entry ->
+                            item(key = "resolved-header", contentType = "resolved-header") {
+                                ResolvedHeader(state.resolvedEntries.size)
+                            }
+                            items(
+                                items = state.resolvedEntries,
+                                key = { "resolved-${it.id}" },
+                                contentType = { "entry" },
+                            ) { entry ->
                                 EntropyEntryCard(
                                     entry = entry,
                                     onClick = { vm.openEntryDetail(entry.id) },
@@ -248,7 +269,9 @@ fun TasksScreen(
                             }
                         }
                     }
-                    item { Spacer(Modifier.height(120.dp)) }  // Platz für Bottom-Nav
+                    item(key = "bottom-spacer", contentType = "spacer") {
+                        Spacer(Modifier.height(120.dp))  // Platz für Bottom-Nav
+                    }
                 }
             }
 
@@ -1223,26 +1246,22 @@ private fun CategoryIconCircle(
 private fun SeverityRainbowBar(severity: Int) {
     val cosmos = LocalCosmos.current
     val sev = severity.coerceIn(1, 10)
-    val palette = listOf(
-        CosmosColors.StatusGreen,
-        CosmosColors.StatusLightGreen,
-        CosmosColors.StatusYellow,
-        CosmosColors.StatusOrange,
-        CosmosColors.StatusRed,
-    )
-    val context = androidx.compose.ui.platform.LocalContext.current
+    // PERFORMANCE 2026-05-09: palette wird remembered, ist konstant pro Rendering.
+    val palette = remember {
+        listOf(
+            CosmosColors.StatusGreen,
+            CosmosColors.StatusLightGreen,
+            CosmosColors.StatusYellow,
+            CosmosColors.StatusOrange,
+            CosmosColors.StatusRed,
+        )
+    }
+    // PERFORMANCE 2026-05-09: Toast-Click-Handler entfernt — er erzeugte pro Karte
+    // ein nicht-stables Lambda (LocalContext-Erfassung) und einen extra Layer fuer
+    // den Click-Indicator. Beim Scrollen durch viele Karten Hauptursache fuer Jank.
+    // Die Schweregrad-Skala kann in Settings dokumentiert werden.
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // Tap auf die Schweregrad-Skala oeffnet einen Toast mit der Erklaerung
-            // grün=niedrig, gelb=mittel, orange=hoch, rot=sehr hoch (Frank-Wunsch).
-            .clickable {
-                android.widget.Toast.makeText(
-                    context,
-                    "Schweregrad-Skala: grün = niedrig, gelb = mittel, orange = hoch, rot = sehr hoch",
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
-            },
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         for (i in 0 until 5) {
