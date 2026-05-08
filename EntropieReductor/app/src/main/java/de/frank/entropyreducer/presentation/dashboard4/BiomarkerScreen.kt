@@ -145,6 +145,7 @@ fun BiomarkerHostScreen(
                     },
                     unit = "bpm",
                     onClick = { onOpenMetricDetail(MetricKey.RHR) },
+                    lowerIsBetter = true,
                 )
             }
             item {
@@ -266,6 +267,7 @@ fun BiomarkerHostScreen(
             }
             item {
                 MetricHistoryCard(
+                    lowerIsBetter = true,
                     title = "Schlafdefizit",
                     accent = CosmosColors.Warning,
                     points = state.history.mapNotNull { snap ->
@@ -306,6 +308,7 @@ fun BiomarkerHostScreen(
                     },
                     unit = "bpm",
                     onClick = { onOpenMetricDetail(MetricKey.AVG_HR) },
+                    lowerIsBetter = true,
                 )
             }
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
@@ -579,6 +582,9 @@ private fun MetricHistoryCard(
     points: List<Pair<Long, Double>>,
     unit: String,
     onClick: () -> Unit,
+    /** True bei Metriken wo niedriger besser ist (RHR, Schlafdefizit, Avg-HR).
+     *  Trendlinien-Farbe wird dann semantisch gefaerbt: fallend = gruen. */
+    lowerIsBetter: Boolean = false,
 ) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
@@ -605,7 +611,12 @@ private fun MetricHistoryCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
-                InteractiveLineChart(points = points, accent = accent, unit = unit)
+                InteractiveLineChart(
+                    points = points,
+                    accent = accent,
+                    unit = unit,
+                    lowerIsBetter = lowerIsBetter,
+                )
             }
         }
     }

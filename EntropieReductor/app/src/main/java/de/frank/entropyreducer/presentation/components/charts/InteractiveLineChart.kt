@@ -57,6 +57,10 @@ fun InteractiveLineChart(
     unit: String,
     modifier: Modifier = Modifier,
     height: Int = 180,
+    /** Frank-Wunsch 2026-05-09: bei Metriken wo niedriger besser ist (RHR, Schlafdefizit
+     *  etc.) faerbt die Trendlinie semantisch — fallend = Verbesserung = gruen.
+     *  Bei normalen Metriken (HRV, Schlafdauer) bleibt steigend = besser = gruen. */
+    lowerIsBetter: Boolean = false,
 ) {
     val cosmos = LocalCosmos.current
     val safe = points.filter { it.second.isFinite() }.sortedBy { it.first }
@@ -74,6 +78,19 @@ fun InteractiveLineChart(
     val midY = (minY + maxY) / 2.0
     val firstDate = Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate()
     val lastDate = Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate()
+
+    // Frank-Wunsch 2026-05-09: 14-Tage-SMA + lineare Regression als Trendlinie.
+    // SMA glaettet Tagesausreisser, Slope der Regression entscheidet die Farbe:
+    // semantisch "Verbesserung = gruen" — bei lowerIsBetter wird der Slope invertiert.
+    val sma = computeSma(safe.map { it.second }, window = 14)
+    val rawSlope = if (sma.size >= 2) linearSlope(sma) else 0.0
+    val semanticSlope = if (lowerIsBetter) -rawSlope else rawSlope
+    val neutralEpsilon = rangeY * 0.001 // unter 0.1% des Wertebereichs gilt als neutral
+    val trendColor = when {
+        semanticSlope > neutralEpsilon -> CosmosColors.Success
+        semanticSlope < -neutralEpsilon -> CosmosColors.Critical
+        else -> cosmos.textSecondary
+    }
 
     var selectedIndex by remember(safe.size) { mutableStateOf<Int?>(null) }
 
@@ -146,6 +163,25 @@ fun InteractiveLineChart(
                             start = Offset(x1, y1),
                             end = Offset(x2, y2),
                             strokeWidth = 4f,
+                        )
+                    }
+                }
+                // Trendlinie (SMA-14 + Regression) — UEBER der Datenlinie, dicker.
+                // Frank-Wunsch 2026-05-09: gruen wenn semantische Verbesserung,
+                // rot wenn Verschlechterung, doppelte Strichbreite vs. Datenlinie.
+                if (sma.size >= 2 && safe.size >= 2) {
+                    val stepXSma = w / (safe.size - 1).toFloat()
+                    val firstSmaIdx = safe.size - sma.size
+                    for (i in 0 until sma.size - 1) {
+                        val x1 = (firstSmaIdx + i) * stepXSma
+                        val x2 = (firstSmaIdx + i + 1) * stepXSma
+                        val y1 = h - ((sma[i] - minY) / rangeY * h).toFloat()
+                        val y2 = h - ((sma[i + 1] - minY) / rangeY * h).toFloat()
+                        drawLine(
+                            color = trendColor,
+                            start = Offset(x1, y1),
+                            end = Offset(x2, y2),
+                            strokeWidth = 8f,
                         )
                     }
                 }
@@ -223,3 +259,48 @@ private fun formatY(value: Double): String {
 
 private val SHORT_DATE: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd.MM", Locale.GERMANY)
+
+/**
+ * Einfacher gleitender Durchschnitt (SMA) ueber ein festes Fenster.
+ * Liefert eine Liste der Laenge `values.size - window + 1` — bei zu wenig
+ * Datenpunkten wird eine leere Liste zurueckgegeben.
+ *
+ * Frank-Wunsch 2026-05-09: 14-Tage-Glaettung als Trendlinien-Basis.
+ */
+private fun computeSma(values: List<Double>, window: Int): List<Double> {
+    if (values.size < window) return emptyList()
+    val out = ArrayList<Double>(values.size - window + 1)
+    var sum = 0.0
+    for (i in 0 until window) sum += values[i]
+    out += sum / window
+    for (i in window until values.size) {
+        sum += values[i] - values[i - window]
+        out += sum / window
+    }
+    return out
+}
+
+/**
+ * Steigung (Slope) einer linearen Regression nach kleinste-Quadrate-Verfahren.
+ * x-Werte sind Indizes (0, 1, 2, ...), y-Werte sind die uebergebenen Werte.
+ * Vorzeichen entscheidet ueber Trend: positiv = steigend, negativ = fallend.
+ */
+private fun linearSlope(values: List<Double>): Double {
+    val n = values.size
+    if (n < 2) return 0.0
+    var sumX = 0.0
+    var sumY = 0.0
+    var sumXY = 0.0
+    var sumXX = 0.0
+    for (i in 0 until n) {
+        val x = i.toDouble()
+        val y = values[i]
+        sumX += x
+        sumY += y
+        sumXY += x * y
+        sumXX += x * x
+    }
+    val denominator = n * sumXX - sumX * sumX
+    if (denominator == 0.0) return 0.0
+    return (n * sumXY - sumX * sumY) / denominator
+}
