@@ -61,11 +61,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -227,10 +232,16 @@ fun TasksScreen(
                                     key = { it.id },
                                     contentType = { "entry" },
                                 ) { entry ->
-                                    EntropyEntryCard(
-                                        entry = entry,
-                                        onClick = { vm.openEntryDetail(entry.id) },
-                                        onResolve = {
+                                    // PERFORMANCE 2026-05-09: Lambdas mit remember(entry.id)
+                                    // stabilisieren, damit EntropyEntryCard skippable bleibt
+                                    // (zusammen mit @Immutable auf der Entity). Ohne diese
+                                    // Stabilisierung erzeugt jede Recomposition neue Lambda-
+                                    // Instanzen → alle sichtbaren Karten recomposen → Jank.
+                                    val onClick = remember(entry.id) {
+                                        { vm.openEntryDetail(entry.id) }
+                                    }
+                                    val onResolve = remember(entry.id, entry.title) {
+                                        {
                                             vm.markEntryResolved(entry.id)
                                             scope.launch {
                                                 val result = snackbar.showSnackbar(
@@ -242,8 +253,17 @@ fun TasksScreen(
                                                     vm.reopenEntry(entry.id)
                                                 }
                                             }
-                                        },
-                                        onPickBucket = { bucketPickerEntryId = entry.id },
+                                            Unit
+                                        }
+                                    }
+                                    val onPickBucket = remember(entry.id) {
+                                        { bucketPickerEntryId = entry.id }
+                                    }
+                                    EntropyEntryCard(
+                                        entry = entry,
+                                        onClick = onClick,
+                                        onResolve = onResolve,
+                                        onPickBucket = onPickBucket,
                                     )
                                 }
                             }
@@ -258,13 +278,16 @@ fun TasksScreen(
                                 key = { "resolved-${it.id}" },
                                 contentType = { "entry" },
                             ) { entry ->
+                                val onClick = remember(entry.id) {
+                                    { vm.openEntryDetail(entry.id) }
+                                }
+                                val onResolve = remember(entry.id) {
+                                    { vm.reopenEntry(entry.id) }
+                                }
                                 EntropyEntryCard(
                                     entry = entry,
-                                    onClick = { vm.openEntryDetail(entry.id) },
-                                    onResolve = {
-                                        // Tap auf Haken bei erledigtem Eintrag → wieder offen
-                                        vm.reopenEntry(entry.id)
-                                    },
+                                    onClick = onClick,
+                                    onResolve = onResolve,
                                 )
                             }
                         }
@@ -897,13 +920,20 @@ private fun EntropyEntryCard(
     val cosmos = LocalCosmos.current
     val catColor = entry.category.color()
     val isResolved = entry.status == EntryStatus.REDUZIERT || entry.status == EntryStatus.ARCHIVIERT
-    // Erledigte Eintraege werden ausgegraut und durchgestrichen — visueller Status.
+    // PERFORMANCE 2026-05-09: graphicsLayer statt Modifier.alpha — bei alpha = 1f
+    // wird der Layer komplett uebersprungen (compositingStrategy = ModulateAlpha
+    // sorgt dafuer dass nur die Pixel-Alpha moduliert wird, ohne separate
+    // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
+    // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .alpha(cardAlpha),
+            .graphicsLayer {
+                alpha = cardAlpha
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            },
     ) {
         Column {
             // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
@@ -1246,7 +1276,11 @@ private fun CategoryIconCircle(
 private fun SeverityRainbowBar(severity: Int) {
     val cosmos = LocalCosmos.current
     val sev = severity.coerceIn(1, 10)
-    // PERFORMANCE 2026-05-09: palette wird remembered, ist konstant pro Rendering.
+    // PERFORMANCE 2026-05-09: Komplette Neuimplementierung mit Canvas — vorher
+    // 5 einzelne Box-Composables mit clip+background, was 5 zusaetzliche
+    // GraphicsLayer pro Karte erzeugte. Bei 10 sichtbaren Karten = 50 Layer
+    // nur fuer die Severity-Skala. Canvas zeichnet alle 5 Segmente in EINEM
+    // Layer mit drawRoundRect — kein clip, kein Layer-Compositing.
     val palette = remember {
         listOf(
             CosmosColors.StatusGreen,
@@ -1256,23 +1290,25 @@ private fun SeverityRainbowBar(severity: Int) {
             CosmosColors.StatusRed,
         )
     }
-    // PERFORMANCE 2026-05-09: Toast-Click-Handler entfernt — er erzeugte pro Karte
-    // ein nicht-stables Lambda (LocalContext-Erfassung) und einen extra Layer fuer
-    // den Click-Indicator. Beim Scrollen durch viele Karten Hauptursache fuer Jank.
-    // Die Schweregrad-Skala kann in Settings dokumentiert werden.
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    val emptyColor = cosmos.glassBg
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp),
     ) {
-        for (i in 0 until 5) {
-            // Segment i ist gefuellt wenn severity >= (i+1)*2
+        val segmentCount = 5
+        val gap = 3.dp.toPx()
+        val totalGap = gap * (segmentCount - 1)
+        val segmentWidth = (size.width - totalGap) / segmentCount
+        val cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
+        for (i in 0 until segmentCount) {
             val filled = sev >= (i + 1) * 2
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(if (filled) palette[i] else cosmos.glassBg),
+            val x = i * (segmentWidth + gap)
+            drawRoundRect(
+                color = if (filled) palette[i] else emptyColor,
+                topLeft = Offset(x, 0f),
+                size = Size(segmentWidth, size.height),
+                cornerRadius = cornerRadius,
             )
         }
     }

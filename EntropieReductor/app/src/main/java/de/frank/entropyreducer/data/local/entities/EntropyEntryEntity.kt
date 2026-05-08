@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.data.local.entities
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -14,7 +15,16 @@ import de.frank.entropyreducer.domain.model.TimeBucket
  * Indizes (Frank-Wunsch 2026-05-09 Performance): die Haupt-Queries filtern auf
  * status, timeBucket, category, resolvedAt und sortieren nach priorityScore.
  * Ohne Index waeren das Full-Table-Scans — bei 100+ Eintraegen merklich.
+ *
+ * @Immutable (PERFORMANCE 2026-05-09): garantiert Compose dass alle Felder
+ * effektiv unveraenderlich sind. Ohne diese Annotation behandelt Compose
+ * `tags: List<String>` als unstable (List ist eine Schnittstelle, kein
+ * konkret immutable Typ), was die ganze Entity unstable macht und
+ * EntropyEntryCard nicht-skippable. Bei jeder LazyColumn-Recomposition
+ * wuerden alle sichtbaren Karten neu komponiert — Hauptursache fuer Jank
+ * beim Scrollen im Aufgaben-Bereich.
  */
+@Immutable
 @Entity(
     tableName = "entropy_entries",
     indices = [
