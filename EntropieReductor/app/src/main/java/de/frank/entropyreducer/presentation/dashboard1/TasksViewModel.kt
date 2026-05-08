@@ -7,8 +7,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.KiQuestionRepository
+import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.kiquestion.KiQuestion
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
@@ -20,12 +23,14 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,6 +60,15 @@ data class TasksUiState(
     /** Proaktiver Forscher: Eintrag für den gerade nach der Loesungsmethode
      *  gefragt wird. null = kein Dialog sichtbar (Frank-Wunsch 2026-05-08). */
     val pendingMethodFor: EntropyEntryEntity? = null,
+    /** Status des Drive-Backup-Sync — fuer die kleine Backup-Statuszeile direkt
+     *  unter dem Titel "Entropie Reduktor" (Frank-Wunsch 2026-05-09: "ich will
+     *  sehen ob mein neuer Eintrag im Backup ist"). */
+    val syncStatus: SyncStatus = SyncStatus.Idle,
+    /** Zeitpunkt des letzten erfolgreichen Drive-Backup-Uploads (epoch ms).
+     *  0L = noch kein Backup gelaufen / Backup nicht aktiv. */
+    val lastBackupAtMs: Long = 0L,
+    /** Ist Drive-Backup aktiviert? Wenn false wird die Statuszeile ausgeblendet. */
+    val driveBackupEnabled: Boolean = false,
 )
 
 private data class UiOnlyState(
@@ -77,6 +91,8 @@ class TasksViewModel @Inject constructor(
     private val memories: de.frank.entropyreducer.data.repository.MemoryRepository,
     @Suppress("unused") private val bucketingUseCase: CalculateBucketsUseCase,
     private val balanceBuckets: de.frank.entropyreducer.domain.usecase.BalanceBucketsUseCase,
+    private val syncCoordinator: SyncCoordinator,
+    private val secrets: EncryptedSecretsStore,
 ) : AndroidViewModel(application) {
 
     private val activeCategoriesFlow = MutableStateFlow<Set<EntropyCategory>>(emptySet())
@@ -88,9 +104,13 @@ class TasksViewModel @Inject constructor(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
-        combine(statusObserver.observe(), kiQuestions.currentQuestion) { b, q -> b to q },
+        combine(statusObserver.observe(), kiQuestions.currentQuestion, syncCoordinator.status) { b, q, s -> Triple(b, q, s) },
         combine(detailEntryIdFlow, pendingMethodForFlow) { d, p -> d to p },
-    ) { list, cats, ui, (breakdown, question), (detailId, pendingMethod) ->
+    ) { list, cats, ui, statusTriple, detailPair ->
+        val breakdown = statusTriple.first
+        val question = statusTriple.second
+        val syncStatus = statusTriple.third
+        val (detailId, pendingMethod) = detailPair
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung.
         // PERFORMANCE 2026-05-09: Sortierung nach priorityScore wird HIER vorberechnet
@@ -122,6 +142,15 @@ class TasksViewModel @Inject constructor(
             detailEntry = detail,
             resolvedEntries = resolvedList,
             pendingMethodFor = pendingMethod,
+            syncStatus = syncStatus,
+            // Live-Wert wenn gerade synchronisiert wurde (atEpochMs aus Synced),
+            // sonst der zuletzt persistierte Wert aus den Secrets. SharedPreferences
+            // ist nicht reaktiv, aber bei jedem syncStatus-Update wird der Block
+            // neu ausgewertet — das reicht weil DriveBackupManager den Secrets-Wert
+            // VOR dem Status-Update auf Synced setzt.
+            lastBackupAtMs = (syncStatus as? SyncStatus.Synced)?.atEpochMs
+                ?: secrets.driveLastBackupEpochMs,
+            driveBackupEnabled = secrets.driveBackupEnabled && secrets.driveAccountEmail != null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), TasksUiState())
 
@@ -142,6 +171,38 @@ class TasksViewModel @Inject constructor(
         // archiviert und verschwinden aus der Aufgabenliste. Sie sind weiter
         // ueber den Settings-Archiv-Bereich erreichbar (Frank-Wunsch 2026-05-09).
         autoArchiveOldResolved()
+        // Day-Change-Watcher: Prueft minuetlich ob die lokale Datums-Komponente
+        // sich geaendert hat (Mitternacht in Lokalzeit ueberschritten). Wenn ja
+        // → MORGEN-Eintraege werden zu HEUTE, autoBalance verteilt Ueberschuss.
+        // Frank-Wunsch 2026-05-09: "ab 0 Uhr meiner Zeitzone hier sollen diese
+        // Aufgaben dann in heute drin stehen". Laeuft im Hintergrund solange
+        // der ViewModel lebt — bei App-Killing uebernimmt der init-Block beim
+        // naechsten Oeffnen den Rollover.
+        startDayChangeWatcher()
+    }
+
+    /**
+     * Periodischer Watcher: prueft minuetlich ob die lokale Datums-Komponente
+     * sich geaendert hat. Wenn ja → MORGEN→HEUTE-Rollover ausloesen.
+     * 1 Minute ist granular genug damit ein Tag-Wechsel um 0:00 spaetestens
+     * um 0:01 erkannt wird, ohne dass der Watcher merklich Strom kostet
+     * (60 Tick-Operationen pro Stunde, jede macht nur ein LocalDate-Vergleich).
+     */
+    private fun startDayChangeWatcher() {
+        viewModelScope.launch {
+            var lastCheckedDate = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+            while (isActive) {
+                delay(60_000L)
+                val today = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+                if (today != lastCheckedDate) {
+                    lastCheckedDate = today
+                    rolloverManualBucketsForNewDay()
+                    // Auch alte erledigte Eintraege archivieren — der 14-Tage-
+                    // Cutoff bewegt sich mit dem Datum mit.
+                    autoArchiveOldResolved()
+                }
+            }
+        }
     }
 
     /**

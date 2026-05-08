@@ -29,6 +29,9 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DateRange
@@ -79,9 +82,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
@@ -163,6 +170,14 @@ fun TasksScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
                 Spacer(Modifier.height(8.dp))
+
+                // Backup-Statuszeile direkt unter dem Titel — Frank-Wunsch 2026-05-09:
+                // "ich will sehen ob mein neuer Eintrag im Backup ist". Wird nur
+                // angezeigt wenn Drive-Backup aktiviert ist.
+                if (state.driveBackupEnabled) {
+                    BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 state.processingMessage?.let {
                     GlassCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()) {
@@ -711,6 +726,24 @@ private fun severityLabel(severity: Int): String = when {
     else -> "Sehr hoch"
 }
 
+/**
+ * Mappt einen priorityScore (0.0-100.0) auf eine Farbe fuer die grosse Prio-Zahl
+ * auf der Aufgabenkarte. Skala (Frank-Wunsch 2026-05-09):
+ *   80-100 -> Rot       (sehr wichtig)
+ *   60-80  -> Orange
+ *   40-60  -> Gelb
+ *   20-40  -> Blau
+ *    0-20  -> Gruen     (geringste Prio)
+ * Achtung: Bewusst andersherum als die Severity-Bar (dort ist Rot schlecht).
+ */
+private fun priorityColor(score: Double): Color = when {
+    score >= 80.0 -> CosmosColors.PriorityRed
+    score >= 60.0 -> CosmosColors.PriorityOrange
+    score >= 40.0 -> CosmosColors.PriorityYellow
+    score >= 20.0 -> CosmosColors.PriorityBlue
+    else -> CosmosColors.PriorityGreen
+}
+
 @Composable
 private fun CategoryFilterRow(
     active: Set<EntropyCategory>,
@@ -964,7 +997,7 @@ private fun EntropyEntryCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "${entry.priorityScore.toInt()}",
-                        color = CosmosColors.AccentPrimary,
+                        color = priorityColor(entry.priorityScore),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1421,4 +1454,78 @@ private fun EmptyState() {
             modifier = Modifier.padding(horizontal = 24.dp),
         )
     }
+}
+
+/**
+ * Kleine, dezente Statuszeile direkt unter dem Titel "Entropie Reduktor".
+ * Zeigt visuell ob Drive-Backup gerade laeuft, fertig ist oder fehlgeschlagen ist
+ * — und seit wann. Frank-Wunsch 2026-05-09: er will nach jedem neuen Eintrag
+ * sofort sehen "okay, das ist im Backup".
+ */
+@Composable
+private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
+    val cosmos = LocalCosmos.current
+    val (icon, tint, label) = when (syncStatus) {
+        SyncStatus.Idle -> Triple(
+            Icons.Outlined.CloudDone,
+            CosmosColors.Success,
+            if (lastBackupAtMs > 0L) "Backup: ${formatBackupTime(lastBackupAtMs)}" else "Backup eingerichtet",
+        )
+        SyncStatus.Pending -> Triple(
+            Icons.Outlined.CloudSync,
+            CosmosColors.AccentSecondary,
+            "Aenderung erfasst — Backup startet gleich",
+        )
+        SyncStatus.Running -> Triple(
+            Icons.Outlined.CloudSync,
+            CosmosColors.AccentPrimary,
+            "Backup laeuft …",
+        )
+        is SyncStatus.Synced -> Triple(
+            Icons.Outlined.CloudDone,
+            CosmosColors.Success,
+            "Im Backup gesichert: ${formatBackupTime(syncStatus.atEpochMs)}",
+        )
+        is SyncStatus.Failed -> Triple(
+            Icons.Outlined.CloudOff,
+            CosmosColors.Critical,
+            "Backup fehlgeschlagen",
+        )
+    }
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = cosmos.textSecondary,
+        )
+    }
+}
+
+/** Formatiert einen Epoch-ms-Zeitstempel in "HH:mm" (heute) oder "dd.MM. HH:mm" (sonst). */
+private fun formatBackupTime(epochMs: Long): String {
+    val now = System.currentTimeMillis()
+    val today0 = Date(now).run {
+        // 0:00 Lokalzeit
+        java.util.Calendar.getInstance().apply {
+            timeInMillis = now
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val pattern = if (epochMs >= today0) "HH:mm" else "dd.MM. HH:mm"
+    return SimpleDateFormat(pattern, Locale.GERMAN).format(Date(epochMs))
 }
