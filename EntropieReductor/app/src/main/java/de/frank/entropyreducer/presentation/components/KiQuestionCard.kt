@@ -53,7 +53,7 @@ fun KiQuestionCard(
 ) {
     val cosmos = LocalCosmos.current
     var answer by remember(question.triggerKey) { mutableStateOf("") }
-    GlassCard(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+    GlassCard(modifier = modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
