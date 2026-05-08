@@ -177,6 +177,7 @@ fun TasksScreen(
                                 question = q,
                                 onSubmitAnswer = { answer -> vm.submitKiQuestionAnswer(answer) },
                                 onSnooze = vm::snoozeKiQuestion,
+                                onRefresh = vm::refreshKiQuestion,
                             )
                         }
                     }

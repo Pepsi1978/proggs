@@ -48,6 +48,7 @@ fun KiQuestionCard(
     question: KiQuestion,
     onSubmitAnswer: (String) -> Unit,
     onSnooze: () -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
@@ -126,6 +127,17 @@ fun KiQuestionCard(
                     )
                 }
                 Spacer(Modifier.weight(1f))
+                // Aktualisieren-Button: neue clevere Frage anfordern (Frank-Wunsch 2026-05-08).
+                Text(
+                    text = "Aktualisieren",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CosmosColors.AccentPrimary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable(onClick = onRefresh)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
                 Text(
                     text = "Später",
                     style = MaterialTheme.typography.bodyMedium,

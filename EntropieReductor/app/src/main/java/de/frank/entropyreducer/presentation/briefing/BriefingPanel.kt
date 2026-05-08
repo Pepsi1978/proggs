@@ -214,7 +214,7 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     val draftState = remember { mutableStateOf("") }
     Text(
-        text = "Antwort auf das Briefing — die KI lernt daraus (Whisper Large V3 Turbo).",
+        text = "Antwort auf das Briefing — die KI lernt daraus.",
         style = MaterialTheme.typography.labelMedium,
         color = cosmos.textSecondary,
     )

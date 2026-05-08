@@ -37,7 +37,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
     private val staticGenerator: KiQuestionGenerator,
 ) {
 
-    suspend operator fun invoke(): KiQuestion? {
+    suspend operator fun invoke(avoidPreviousText: String? = null): KiQuestion? {
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
         val openEntries = entries.getActive().first()
@@ -58,7 +58,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
         }
 
         val model = settings.geminiModelFlow.first()
-        val context = buildContext(openEntries, latest, todayCal, tomorrowCal)
+        val context = buildContext(openEntries, latest, todayCal, tomorrowCal, avoidPreviousText)
         val systemPrompt = SYSTEM_PROMPT
         return try {
             val response = gemini.generateContent(
@@ -105,6 +105,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
         biomarker: de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity?,
         todayCal: de.frank.entropyreducer.data.local.entities.CalendarDayEntity?,
         tomorrowCal: de.frank.entropyreducer.data.local.entities.CalendarDayEntity?,
+        avoidPreviousText: String? = null,
     ): String = buildString {
         appendLine("AKTUELLER ZUSTAND DES NUTZERS:")
         appendLine()
@@ -135,12 +136,18 @@ class GenerateKiQuestionUseCase @Inject constructor(
         appendLine("nachdenkt, eine Entscheidung trifft oder einen neuen Eintrag macht.")
         appendLine()
         appendLine("REGELN:")
-        appendLine("- Maximal 2 Saetze. Praegnant, klar.")
+        appendLine("- Maximal 2 Sätze. Prägnant, klar.")
         appendLine("- Echtes Deutsch mit Umlauten ä ö ü ß. NIEMALS ae/oe/ue/ss als Ersatz.")
         appendLine("- Du-Anrede.")
-        appendLine("- Kein Smalltalk, keine Begruessung — direkt die Frage.")
-        appendLine("- Beziehe dich auf konkrete Eintraege oder Werte aus dem Kontext oben.")
-        appendLine("- Nur die Frage zurueck, KEINE Anfuehrungszeichen, kein Vorspann.")
+        appendLine("- Kein Smalltalk, keine Begrüßung — direkt die Frage.")
+        appendLine("- Beziehe dich auf konkrete Einträge oder Werte aus dem Kontext oben.")
+        appendLine("- Nur die Frage zurück, KEINE Anführungszeichen, kein Vorspann.")
+        if (!avoidPreviousText.isNullOrBlank()) {
+            appendLine()
+            appendLine("WICHTIG: Die letzte Frage war:")
+            appendLine("\"$avoidPreviousText\"")
+            appendLine("Stelle eine ANDERE Frage zu einem ANDEREN Aspekt — nicht das gleiche Thema.")
+        }
     }
 
     companion object {

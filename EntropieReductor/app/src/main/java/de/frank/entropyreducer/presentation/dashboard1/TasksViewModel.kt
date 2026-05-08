@@ -122,11 +122,17 @@ class TasksViewModel @Inject constructor(
     }
 
     /** Generiert die KI-Frage neu durch Gemini-API mit allen offenen Eintraegen
-     *  als Kontext. Fallback auf statisch wenn kein API-Key vorhanden. */
+     *  als Kontext. Fallback auf statisch wenn kein API-Key vorhanden.
+     *  Frank-Wunsch 2026-05-08: bei manuellem Refresh soll eine ANDERE Frage
+     *  als die letzte entstehen — die letzte Frage wird als "vermeide diese
+     *  wiederholungen"-Hint mitgeschickt, plus Frage wird sofort genullt damit
+     *  der alte Text nicht stehen bleibt waehrend die neue Frage generiert wird. */
     fun refreshKiQuestion() {
         viewModelScope.launch {
+            val previousText = kiQuestions.currentQuestion.first()?.text
+            kiQuestions.setCurrent(null)
             try {
-                val question = generateKiQuestion()
+                val question = generateKiQuestion(previousText)
                 kiQuestions.setCurrent(question)
             } catch (t: Throwable) {
                 android.util.Log.e("TasksViewModel", "refreshKiQuestion failed", t)
