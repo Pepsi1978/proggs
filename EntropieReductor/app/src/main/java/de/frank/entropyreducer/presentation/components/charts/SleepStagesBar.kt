@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -51,10 +52,12 @@ fun SleepStagesBar(
                 .background(cosmos.glassBg),
         ) {
             Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-                StageSegment(weight = deep, total = total, color = Color(0xFF6366F1))
-                StageSegment(weight = rem, total = total, color = CosmosColors.AccentSecondary)
-                StageSegment(weight = light, total = total, color = CosmosColors.AccentPrimary)
-                StageSegment(weight = awake, total = total, color = CosmosColors.Warning)
+                // Frank-Wunsch 2026-05-09: Prozentwerte mittig in den Phasen-Segmenten
+                // anzeigen — REM, Tiefschlaf, Leichtschlaf bekommen Prozent, Wach nicht.
+                StageSegment(weight = deep, total = total, color = Color(0xFF6366F1), showPercent = true)
+                StageSegment(weight = rem, total = total, color = CosmosColors.AccentSecondary, showPercent = true)
+                StageSegment(weight = light, total = total, color = CosmosColors.AccentPrimary, showPercent = true)
+                StageSegment(weight = awake, total = total, color = CosmosColors.Warning, showPercent = false)
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -75,15 +78,29 @@ private fun androidx.compose.foundation.layout.RowScope.StageSegment(
     weight: Int,
     total: Int,
     color: Color,
+    showPercent: Boolean = false,
 ) {
     val ratio = (weight.toFloat() / total).coerceIn(0f, 1f)
     if (ratio <= 0f) return
+    val percent = (ratio * 100).toInt()
     Box(
         modifier = Modifier
             .weight(ratio)
             .fillMaxHeight()
             .background(color),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        // Prozent nur anzeigen wenn Segment breit genug (sonst wird's gequetscht)
+        // und das Anzeigen erlaubt ist (Wach-Segment bewusst ohne Beschriftung).
+        if (showPercent && ratio >= 0.07f) {
+            Text(
+                text = "$percent %",
+                color = Color.White,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
 }
 
 @Composable

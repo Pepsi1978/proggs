@@ -78,7 +78,7 @@ fun WorkoutsForDayCard(workouts: List<WhoopWorkoutEntity>) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Keine Trainings — Whoop hat fuer diesen Tag keine Workout-Aktivitaet erfasst.",
+                    "Keine Trainings — Whoop hat für diesen Tag keine Workout-Aktivität erfasst.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -120,7 +120,7 @@ fun WorkoutsForDayCard(workouts: List<WhoopWorkoutEntity>) {
                         text = buildString {
                             append("Summe ")
                             append("%.1f".format(totalStrain))
-                            append(" Strain · ")
+                            append(" Belastung · ")
                             append("%.0f".format(totalKcal))
                             append(" kcal")
                         },
@@ -207,7 +207,7 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
             ) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        "Strain",
+                        "Belastung",
                         color = strainColor,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
@@ -232,35 +232,54 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
             ?.let { "%.0f m".format(it) }
         val kcal = workout.kilojoule?.let { "%.0f".format(it / 4.184) } ?: "—"
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            StatPill(label = "Kalorien", value = "$kcal kcal", modifier = Modifier.weight(1f))
-            StatPill(
-                label = "Ø Puls",
-                value = workout.averageHeartRate?.let { "$it bpm" } ?: "—",
-                modifier = Modifier.weight(1f),
-            )
-            StatPill(
-                label = "Max Puls",
-                value = workout.maxHeartRate?.let { "$it bpm" } ?: "—",
-                modifier = Modifier.weight(1f),
-            )
-            when {
-                distanceText != null -> StatPill(
-                    label = "Strecke",
-                    value = distanceText,
+        // Frank-Wunsch 2026-05-09: "Aufzeichnung %"-Pill komplett raus. Wenn keine
+        // Distanz oder Höhe: nur 3 Pills (Kalorien, Ø Puls, Max Puls) — und die
+        // sollen mittig stehen, nicht linksbündig die ganze Breite einnehmen.
+        if (distanceText != null || altitudeText != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                StatPill(label = "Kalorien", value = "$kcal kcal", modifier = Modifier.weight(1f))
+                StatPill(
+                    label = "Ø Puls",
+                    value = workout.averageHeartRate?.let { "$it bpm" } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
-                altitudeText != null -> StatPill(
-                    label = "Höhe +",
-                    value = altitudeText,
+                StatPill(
+                    label = "Max Puls",
+                    value = workout.maxHeartRate?.let { "$it bpm" } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
-                else -> StatPill(
-                    label = "Aufzeichnung",
-                    value = workout.percentRecorded?.let { "%.0f %%".format(it) } ?: "—",
+                if (distanceText != null) {
+                    StatPill(
+                        label = "Strecke",
+                        value = distanceText,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    StatPill(
+                        label = "Höhe +",
+                        value = altitudeText ?: "—",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        } else {
+            // 3 Pills mittig (10% padding links und rechts → wirkt zentriert)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                StatPill(label = "Kalorien", value = "$kcal kcal", modifier = Modifier.weight(1f))
+                StatPill(
+                    label = "Ø Puls",
+                    value = workout.averageHeartRate?.let { "$it bpm" } ?: "—",
+                    modifier = Modifier.weight(1f),
+                )
+                StatPill(
+                    label = "Max Puls",
+                    value = workout.maxHeartRate?.let { "$it bpm" } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
             }

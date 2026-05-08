@@ -286,7 +286,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         format = { "%.1f ms".format(it) },
     )
     MetricKey.RHR -> MetricSpec(
-        title = "Resting Heart Rate",
+        title = "Ruhepuls",
         unit = "bpm",
         accent = CosmosColors.Critical,
         extract = { it.restingHeartRate?.toDouble() },
@@ -348,7 +348,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         lowerIsBetter = true,
     )
     MetricKey.STRAIN -> MetricSpec(
-        title = "Strain",
+        title = "Belastung",
         unit = "",
         accent = CosmosColors.Warning,
         extract = { it.dayStrain },

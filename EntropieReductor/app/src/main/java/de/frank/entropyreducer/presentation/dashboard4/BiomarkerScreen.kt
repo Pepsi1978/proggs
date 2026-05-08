@@ -130,14 +130,15 @@ fun BiomarkerHostScreen(
             item { GesamterholungCard(state) }
             item { KeyValueGrid(state, onOpenMetricDetail) }
 
-            // Workout-Bereich (Frank-Wunsch 2026-05-09): grosses Pattern mit Strain,
-            // Kalorien, Avg/Max-HR, Sportart, Dauer, Start/Ende und HF-Zonen pro Training.
-            item { WorkoutsForDayCard(workouts = state.workoutsForSelectedDay) }
+            // Frank-Wunsch 2026-05-09 (Reorganisation): Reihenfolge ist jetzt
+            // 1. HRV → Ruhepuls → Avg-HR (alle Herzfrequenzen zusammen)
+            // 2. Atemfrequenz → SpO2 → Hauttemperatur → Hauttemperatur-Delta (Körper-Werte)
+            // 3. Schlaf-Performance → Schlafdauer → Schlafphasen → Erholsamer Schlaf
+            //    → Schlafeffizienz → Schlafregelmaessigkeit → Schlafdefizit (Schlaf-Block)
+            // 4. Tagesumsatz → Belastung → Workouts (Aktivitaet-Block)
+            // 5. Korrelation HRV ↔ Schlafdauer (Analyse)
 
-            // History-Charts — alle Whoop-Werte mit VOLLSTAENDIGER Historie und
-            // interaktivem Chart (Y-Achse, X-Achse, Tap auf Punkt zeigt Wert).
-            // Frank-Wunsch 2026-05-08: nicht mehr 30-Tage-Slice sondern alles,
-            // klickbar für Detail-Screen.
+            // ============ Herzfrequenz-Block ============
             item {
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
@@ -151,7 +152,7 @@ fun BiomarkerHostScreen(
             }
             item {
                 MetricHistoryCard(
-                    title = "Resting Heart Rate",
+                    title = "Ruhepuls",
                     accent = CosmosColors.Critical,
                     points = historyLast70.mapNotNull { snap ->
                         snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
@@ -161,6 +162,65 @@ fun BiomarkerHostScreen(
                     lowerIsBetter = true,
                 )
             }
+            item {
+                MetricHistoryCard(
+                    title = "Durchschnittliche Herzfrequenz",
+                    accent = CosmosColors.Critical,
+                    points = historyLast70.mapNotNull { snap ->
+                        snap.averageHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    unit = "bpm",
+                    onClick = { onOpenMetricDetail(MetricKey.AVG_HR) },
+                    lowerIsBetter = true,
+                )
+            }
+
+            // ============ Körper-Block (Atmung, Sauerstoff, Hauttemperatur) ============
+            item {
+                MetricHistoryCard(
+                    title = "Atemfrequenz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = historyLast70.mapNotNull { snap ->
+                        snap.respiratoryRate?.let { snap.capturedAt to it }
+                    },
+                    unit = "/min",
+                    onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Sauerstoffsättigung",
+                    accent = CosmosColors.Success,
+                    points = historyLast70.mapNotNull { snap ->
+                        snap.spo2Percent?.let { snap.capturedAt to it }
+                    },
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SPO2) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Hauttemperatur",
+                    accent = CosmosColors.Warning,
+                    points = historyLast70.mapNotNull { snap ->
+                        snap.skinTempCelsius?.let { snap.capturedAt to it }
+                    },
+                    unit = "°C",
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                    lowerIsBetter = true,
+                )
+            }
+            // Eigenberechnung — Hauttemperatur-Abweichung gegenueber 30-Tage-Baseline.
+            item {
+                SkinTempDeltaCard(
+                    delta = state.skinTempDelta,
+                    baseline = state.skinTempBaseline,
+                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                )
+            }
+
+            // ============ Schlaf-Block (alles untereinander) ============
             item {
                 MetricHistoryCard(
                     title = "Schlaf-Performance",
@@ -173,6 +233,7 @@ fun BiomarkerHostScreen(
                 )
             }
             item {
+                // Schlafdauer in Stunden statt Minuten (Frank-Wunsch 2026-05-09).
                 MetricHistoryCard(
                     title = "Schlafdauer",
                     accent = CosmosColors.AccentSecondary,
@@ -181,18 +242,16 @@ fun BiomarkerHostScreen(
                     },
                     unit = "min",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                    valueFormatter = SLEEP_HOUR_FORMAT,
                 )
             }
             item {
-                // Schlafstadien-Card ist klickbar — führt zur Liste aller Schlaf-Werte
-                // im Detail-Screen. Frank-Wunsch 2026-05-08: "wenn ich auf Schlaf drücke
-                // soll was passieren". Wir oeffnen das SLEEP_TOTAL Detail mit allen
-                // Werten + 4 weitere Tap-Tipps für REM/Deep/Light/Awake-Detail-Screens.
+                // Schlafphasen-Card mit Stage-Bar + 4 Stage-Chips.
                 GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) }) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Schlafstadien gestern Nacht",
+                                text = "Schlafphasen",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = cosmos.textPrimary,
                                 modifier = Modifier.weight(1f),
@@ -212,7 +271,6 @@ fun BiomarkerHostScreen(
                             awakeMinutes = (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
                         )
                         Spacer(Modifier.height(8.dp))
-                        // Mini-Schnellzugriff auf 4 Sleep-Stage-Detail-Screens
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             SleepStageChip("REM", CosmosColors.AccentSecondary) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
                             SleepStageChip("Tief", CosmosColors.AccentPrimary) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
@@ -222,61 +280,13 @@ fun BiomarkerHostScreen(
                     }
                 }
             }
-            // Eigenberechnung — Erholsamer Schlaf %. Liegt direkt unter den
-            // Schlafstadien weil sie thematisch zusammen gehoeren.
+            // Eigenberechnung — Erholsamer Schlaf % aus REM + Tiefschlaf.
             item {
                 RestorativeSleepCard(
                     percent = state.restorativeSleepPercent,
                     remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
                     deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
-                )
-            }
-            item {
-                MetricHistoryCard(
-                    title = "Strain",
-                    accent = CosmosColors.Warning,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.dayStrain?.let { snap.capturedAt to it }
-                    },
-                    unit = "",
-                    onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
-                )
-            }
-            item {
-                // Frank-Wunsch 2026-05-09 Update: Tagesumsatz-Card schliesst den
-                // heutigen Tag aus, weil der Wert sich ueber den Tag aufbaut —
-                // morgens steht er bei ~600 kcal, abends bei ~2500. Ein unfertiger
-                // Wert wuerde beide Trendlinien (SMA + Lin-Reg) nach unten ziehen.
-                // Erst wenn der Tag um Mitternacht abgeschlossen ist, fliesst er
-                // ein. Andere Metriken (Schlaf, Recovery, HRV) sind morgens beim
-                // Aufwachen schon final — die brauchen keinen Filter.
-                val todayStartMs = java.time.LocalDate.now()
-                    .atStartOfDay(java.time.ZoneId.systemDefault())
-                    .toInstant().toEpochMilli()
-                MetricHistoryCard(
-                    title = "Tagesumsatz",
-                    accent = CosmosColors.AccentPrimary,
-                    points = historyLast70
-                        .filter { it.capturedAt < todayStartMs }
-                        .mapNotNull { snap ->
-                            // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
-                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
-                        },
-                    unit = "kcal",
-                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
-                )
-            }
-            // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08).
-            item {
-                MetricHistoryCard(
-                    title = "Atemfrequenz",
-                    accent = CosmosColors.AccentPrimary,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.respiratoryRate?.let { snap.capturedAt to it }
-                    },
-                    unit = "/min",
-                    onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
                 )
             }
             item {
@@ -313,51 +323,45 @@ fun BiomarkerHostScreen(
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
                 )
             }
+
+            // ============ Aktivitaet-Block (Tagesumsatz, Belastung, Workouts) ============
             item {
+                // Tagesumsatz-Card schliesst den heutigen Tag aus weil der Wert sich
+                // ueber den Tag aufbaut. Andere Metriken (Schlaf, HRV) sind morgens
+                // schon final — die brauchen keinen Filter.
+                val todayStartMs = java.time.LocalDate.now()
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant().toEpochMilli()
                 MetricHistoryCard(
-                    title = "Sauerstoffsättigung",
-                    accent = CosmosColors.Success,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.spo2Percent?.let { snap.capturedAt to it }
-                    },
-                    unit = "%",
-                    onClick = { onOpenMetricDetail(MetricKey.SPO2) },
+                    title = "Tagesumsatz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = historyLast70
+                        .filter { it.capturedAt < todayStartMs }
+                        .mapNotNull { snap ->
+                            // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
+                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
+                        },
+                    unit = "kcal",
+                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
             }
             item {
+                // Belastung steht direkt UEBER der Workout-Card — Frank-Wunsch
+                // 2026-05-09: thematische Naehe.
                 MetricHistoryCard(
-                    title = "Hauttemperatur",
+                    title = "Belastung",
                     accent = CosmosColors.Warning,
                     points = historyLast70.mapNotNull { snap ->
-                        snap.skinTempCelsius?.let { snap.capturedAt to it }
+                        snap.dayStrain?.let { snap.capturedAt to it }
                     },
-                    unit = "°C",
-                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
-                    lowerIsBetter = true,
+                    unit = "",
+                    onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
                 )
             }
-            // Eigenberechnung — Hauttemperatur-Abweichung gegenueber 30-Tage-Baseline.
-            // Tap fuehrt zum Hauttemperatur-Detail-Screen (Verlauf + Baseline visualisiert).
-            item {
-                SkinTempDeltaCard(
-                    delta = state.skinTempDelta,
-                    baseline = state.skinTempBaseline,
-                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
-                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
-                )
-            }
-            item {
-                MetricHistoryCard(
-                    title = "Durchschnittliche Herzfrequenz",
-                    accent = CosmosColors.Critical,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.averageHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    unit = "bpm",
-                    onClick = { onOpenMetricDetail(MetricKey.AVG_HR) },
-                    lowerIsBetter = true,
-                )
-            }
+            // Workout-Bereich ganz unten in den Daten-Patterns, vor der Korrelation.
+            // Frank-Wunsch 2026-05-09: grosses Pattern mit Sportart-Icon, Belastung,
+            // Kalorien, Puls, Dauer, HF-Zonen pro Training.
+            item { WorkoutsForDayCard(workouts = state.workoutsForSelectedDay) }
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
             // über die volle Historie.
             item { CorrelationCard(state) }
@@ -636,8 +640,18 @@ private fun MetricHistoryCard(
     /** True bei Metriken wo niedriger besser ist (RHR, Schlafdefizit, Avg-HR).
      *  Trendlinien-Farbe wird dann semantisch gefaerbt: fallend = gruen. */
     lowerIsBetter: Boolean = false,
+    /** Frank-Wunsch 2026-05-09: bei Schlafdauer die Y-Achse + Tooltip + Header-Wert
+     *  in Stunden statt Minuten formatieren. Wenn null: Standard formatY + unit. */
+    valueFormatter: ((Double) -> String)? = null,
 ) {
     val cosmos = LocalCosmos.current
+    // Frank-Wunsch 2026-05-09: aktuellen Wert (letzter Datenpunkt) prominent oben
+    // im Card-Header zwischen Titel und "Details ▸" anzeigen damit man den Tageswert
+    // sofort sieht ohne den Chart antippen zu muessen.
+    val latestValue = points.lastOrNull()?.second
+    val latestLabel = latestValue?.let { v ->
+        valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
+    }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -647,6 +661,15 @@ private fun MetricHistoryCard(
                     color = cosmos.textPrimary,
                     modifier = Modifier.weight(1f),
                 )
+                if (latestLabel != null) {
+                    Text(
+                        text = latestLabel,
+                        color = accent,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                }
                 Text(
                     text = "Details ▸",
                     color = accent,
@@ -667,10 +690,29 @@ private fun MetricHistoryCard(
                     accent = accent,
                     unit = unit,
                     lowerIsBetter = lowerIsBetter,
+                    valueFormatter = valueFormatter,
                 )
             }
         }
     }
+}
+
+/** Format-Helper fuer den Header-Wert oben in der Card — kompakt, ohne Zwangsdezimalstelle. */
+private fun formatLatestForCard(value: Double): String {
+    val abs = kotlin.math.abs(value)
+    return when {
+        abs >= 100 -> "%.0f".format(value)
+        abs >= 10 -> "%.1f".format(value)
+        else -> "%.1f".format(value)
+    }
+}
+
+/** Schlafstunden-Formatter — wandelt Minuten zu "8h 33min" Anzeige. */
+private val SLEEP_HOUR_FORMAT: (Double) -> String = { mins ->
+    val totalMin = mins.toInt().coerceAtLeast(0)
+    val h = totalMin / 60
+    val m = totalMin % 60
+    "${h}h ${m.toString().padStart(2, '0')}m"
 }
 
 /**

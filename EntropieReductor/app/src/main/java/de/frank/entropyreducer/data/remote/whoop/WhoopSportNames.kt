@@ -10,8 +10,8 @@ package de.frank.entropyreducer.data.remote.whoop
 object WhoopSportNames {
 
     private val SPORT_NAMES: Map<Int, String> = mapOf(
-        -1 to "Aktivitaet",
-        0 to "Aktivitaet",
+        -1 to "Aktivität",
+        0 to "Aktivität",
         1 to "Radfahren",
         16 to "Baseball",
         17 to "Basketball",
@@ -25,7 +25,7 @@ object WhoopSportNames {
         27 to "Rugby",
         28 to "Segeln",
         29 to "Skifahren",
-        30 to "Fussball",
+        30 to "Fußball",
         31 to "Softball",
         32 to "Squash",
         33 to "Schwimmen",
@@ -76,7 +76,7 @@ object WhoopSportNames {
         96 to "HIIT",
         97 to "Spinning",
         98 to "Jiu-Jitsu",
-        99 to "Koerperliche Arbeit",
+        99 to "Körperliche Arbeit",
         100 to "Cricket",
         101 to "Pickleball",
         102 to "Inline-Skating",
@@ -85,7 +85,7 @@ object WhoopSportNames {
         105 to "Rollstuhlsport",
         106 to "Paddle Tennis",
         107 to "Barre",
-        108 to "Buehnenauftritt",
+        108 to "Bühnenauftritt",
         109 to "Stress-Job",
         110 to "Parkour",
         111 to "Gaelic Football",
@@ -115,7 +115,7 @@ object WhoopSportNames {
      * zurueckgegeben damit die UI nicht leer bleibt.
      */
     fun nameOf(sportId: Int?): String = when (sportId) {
-        null -> "Aktivitaet"
+        null -> "Aktivität"
         else -> SPORT_NAMES[sportId] ?: "Sport #$sportId"
     }
 

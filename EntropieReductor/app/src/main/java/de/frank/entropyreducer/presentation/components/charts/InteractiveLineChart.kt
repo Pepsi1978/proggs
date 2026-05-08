@@ -61,6 +61,10 @@ fun InteractiveLineChart(
      *  etc.) faerbt die Trendlinie semantisch — fallend = Verbesserung = gruen.
      *  Bei normalen Metriken (HRV, Schlafdauer) bleibt steigend = besser = gruen. */
     lowerIsBetter: Boolean = false,
+    /** Frank-Wunsch 2026-05-09: bei Schlafdauer sollen die Y-Achsen-Beschriftungen und
+     *  der Tooltip in Stunden statt Minuten formatiert werden. Wenn null wird der
+     *  Standard-Formatter `formatY` verwendet und die Einheit angehaengt. */
+    valueFormatter: ((Double) -> String)? = null,
 ) {
     val cosmos = LocalCosmos.current
     val safe = points.filter { it.second.isFinite() }.sortedBy { it.first }
@@ -75,9 +79,24 @@ fun InteractiveLineChart(
     val minY = safe.minOf { it.second }
     val maxY = safe.maxOf { it.second }
     val rangeY = (maxY - minY).coerceAtLeast(1.0)
-    val midY = (minY + maxY) / 2.0
     val firstDate = Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate()
     val lastDate = Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate()
+
+    // Frank-Wunsch 2026-05-09: detailliertere Y-Achse — 5 Werte statt 3
+    // (Min, 25%, Mitte, 75%, Max) damit man Werte besser ablesen kann.
+    val yLabels = listOf(
+        maxY,
+        minY + rangeY * 0.75,
+        minY + rangeY * 0.5,
+        minY + rangeY * 0.25,
+        minY,
+    )
+
+    // Werte-Formatter: wenn extern gesetzt (z.B. fuer Schlafstunden) verwenden,
+    // sonst Standard formatY + Einheit anhaengen.
+    val format: (Double) -> String = valueFormatter ?: { v ->
+        formatY(v) + if (unit.isNotBlank()) " $unit" else ""
+    }
 
     // Frank-Wunsch 2026-05-09: 14-Tage-SMA + lineare Regression als Trendlinie.
     // SMA glaettet Tagesausreisser, Slope der Regression entscheidet die Farbe:
@@ -98,27 +117,19 @@ fun InteractiveLineChart(
     var selectedIndex by remember(safe.size) { mutableStateOf<Int?>(null) }
 
     Row(modifier = modifier.fillMaxWidth()) {
-        // Y-Achse links
+        // Y-Achse links — 5 Werte (Frank-Wunsch 2026-05-09: detaillierter)
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.height(height.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.End,
         ) {
-            Text(
-                text = formatY(maxY) + if (unit.isNotBlank()) " $unit" else "",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            Text(
-                text = formatY(midY) + if (unit.isNotBlank()) " $unit" else "",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            Text(
-                text = formatY(minY) + if (unit.isNotBlank()) " $unit" else "",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            yLabels.forEach { v ->
+                Text(
+                    text = format(v),
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
         }
         Spacer(Modifier.width(6.dp))
         Box(
@@ -143,8 +154,8 @@ fun InteractiveLineChart(
                 val w = size.width
                 val h = size.height
                 val gridColor = cosmos.glassBorder
-                // Horizontale Hilfslinien (3 Stueck)
-                listOf(0f, h / 2f, h).forEach { y ->
+                // Horizontale Hilfslinien (5 Stueck — passt zu den 5 Y-Labels)
+                listOf(0f, h * 0.25f, h * 0.5f, h * 0.75f, h).forEach { y ->
                     drawLine(
                         color = gridColor.copy(alpha = 0.3f),
                         start = Offset(0f, y),
@@ -251,7 +262,7 @@ fun InteractiveLineChart(
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
                     Text(
-                        text = "${date.format(SHORT_DATE)}: ${formatY(value)} $unit",
+                        text = "${date.format(SHORT_DATE)}: ${format(value)}",
                         color = cosmos.textPrimary,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
