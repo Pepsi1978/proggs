@@ -326,6 +326,24 @@ public partial class PromptBoardPanel : Window
     }
 
     /// <summary>
+    /// Klick-Handler fuer den Stern-Button in der Promtboard-Toolbar (neben
+    /// dem "!"). Symmetrisches Pendant zum Stern im Eingabefenster: feuert
+    /// <see cref="SoloDockToggleRequested"/>(true) — das OverlayWindow stellt
+    /// sicher dass das Eingabefenster offen ist, blendet das Promtboard aus
+    /// und dockt das Eingabefeld direkt an die linke Pillar-Kante an. Das
+    /// Open des Eingabefensters macht jetzt das OverlayWindow (in
+    /// ApplySoloDockMode), damit kein visueller Flash zwischen "Eingabe
+    /// neben Board" und "Eingabe an Pillar" entsteht.
+    /// Der Rueckweg (Eingabefeld zurueck zum Promtboard) laeuft ueber den
+    /// Stern in der Eingabe-Toolbar, der genauso das Event feuert — nur mit
+    /// active=false.
+    /// </summary>
+    private void BtnBoardStar_Click(object sender, RoutedEventArgs e)
+    {
+        SoloDockToggleRequested?.Invoke(true);
+    }
+
+    /// <summary>
     /// Klick-Handler fuer den "!"-Button neben dem Sync-Label. Entfernt das
     /// Always-On-Haekchen von ALLEN Prompts in ALLEN Kategorien — nuetzlich
     /// wenn der Benutzer einen frischen Start braucht und nur noch gezielt
@@ -759,6 +777,28 @@ public partial class PromptBoardPanel : Window
             BtnHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
             BtnHistory.ToolTip    = "Prompt-Historie";
         }
+    }
+
+    /// <summary>
+    /// Wird aufgerufen wenn das Promtboard geschlossen wird (z.B. durch
+    /// den zweiten Klick auf den Voice-Overlay-Stern). Schliesst die beiden
+    /// abhaengigen Fenster (Eingabe + Historie) gleich mit, damit keine
+    /// "Geister"-Fenster ohne Eltern-Board uebrig bleiben. Ohne diesen
+    /// Override wuerde das Eingabefenster im Solo-Modus offen bleiben,
+    /// obwohl der Benutzer alles dichtmachen wollte.
+    /// </summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        try
+        {
+            _inputWindow?.Close();
+            _historyWindow?.Close();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"PromptBoardPanel.OnClosed cleanup failed: {ex.Message}");
+        }
+        base.OnClosed(e);
     }
 
     protected override void OnSourceInitialized(EventArgs e)

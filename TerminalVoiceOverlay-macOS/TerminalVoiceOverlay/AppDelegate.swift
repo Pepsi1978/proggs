@@ -741,25 +741,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Star Button: PromptBoard toggle (panel + always-on prefix)
 
     /// Pillar-Stern-Klick (Windows-Pendant: BtnUltrathink_Click).
-    /// Default seit der Architektur-Aenderung: Es wird NUR die Prompt-Eingabe
-    /// direkt am Pillar geoeffnet — das PromptBoard bleibt versteckt.
-    /// Der Benutzer kann das Board ueber den Solo-Dock-Stern in der
-    /// Eingabe-Toolbar bei Bedarf dazuschalten.
+    /// Default seit 2026-05-09: erster Klick zeigt das PromptBoard mit
+    /// allen Kategorien, das Eingabefeld bleibt zu. Der Benutzer schaltet
+    /// ueber den NEUEN Stern in der Promtboard-Toolbar in den Solo-Modus
+    /// (Board zu, Eingabefeld am Pillar). Der Stern in der Eingabe-Toolbar
+    /// holt das Promtboard wieder zurueck. Zweiter Klick auf diesen Pillar-
+    /// Stern schliesst alles.
     private func toggleUltrathink() {
         alwaysOnActive.toggle()
         panel.setUltrathinkEnabled(alwaysOnActive)
         if alwaysOnActive {
-            showPromptInputDockedToOverlay()
+            showPromptPanel()
         } else {
             hidePromptStack()
         }
         NSLog("PromptBoard panel %@", alwaysOnActive ? "OPEN" : "CLOSED")
     }
 
+    /// Klassischer Show-Pfad: das Promtboard erscheint rechts neben dem
+    /// Pillar mit allen Kategorien. Eingabefeld bleibt zu — der Benutzer
+    /// kann es ueber den Stern in der Promtboard-Toolbar dazuschalten
+    /// (= applySoloDockMode(true)). Pendant zu Windows ShowPromptPanel.
+    private func showPromptPanel() {
+        ensurePromptBoardInstance()
+        guard let board = promptBoardPanel else { return }
+        inputSoloDock = false
+        board.refresh()
+        board.dock(rightOf: self.panel)
+        board.orderFrontRegardless()
+    }
+
     /// True wenn die Prompt-Eingabe direkt am Pillar haengt (PromptBoard
-    /// ist dann versteckt). Wird nur durch den Solo-Dock-Stern in der
-    /// Eingabe-Toolbar umgeschaltet, NICHT durch den Pillar-Stern.
-    private var inputSoloDock: Bool = true
+    /// ist dann versteckt). Default seit 2026-05-09 ist false — der Pillar-
+    /// Stern oeffnet jetzt zuerst das Promtboard, der Solo-Dock-Stern
+    /// (in der Promtboard-Toolbar oder der Eingabe-Toolbar) schaltet um.
+    private var inputSoloDock: Bool = false
 
     /// Startup-Default: Pillar-Stern oeffnet die Eingabe direkt am Pillar.
     /// Das PromptBoard wird intern instanziiert (fuer Daten/Logik), aber
@@ -795,19 +811,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         promptBoardPanel?.orderOut(nil)
     }
 
-    /// Solo-Dock-Stern in der PromptInput-Toolbar wurde geklickt.
+    /// Solo-Dock-Stern wurde geklickt. Wird sowohl vom Stern in der
+    /// Promtboard-Toolbar (active=true, Wechsel Board → Solo) als auch vom
+    /// Stern in der PromptInput-Toolbar (active=false, Rueckweg Solo → Board)
+    /// aufgerufen.
     /// `active=true`: PromptBoard ausblenden, Eingabe ans Pillar andocken.
     /// `active=false`: PromptBoard rechts neben Pillar zeigen, Eingabe rueckt
     /// an dessen linken Rand (Standard-Zweier-Layout).
     private func applySoloDockMode(_ active: Bool) {
-        guard let board = promptBoardPanel,
-              let input = board.currentInputPanel else { return }
-        inputSoloDock = active
+        guard let board = promptBoardPanel else { return }
+
         if active {
+            // Wechsel Board → Solo: das Eingabefeld muss EXISTIEREN bevor
+            // wir es positionieren koennen. Klick aus der Board-Toolbar kann
+            // bedeuten dass es noch nie offen war — also bei Bedarf erzeugen
+            // und Callbacks (Solo-Toggle, Gemini) verdrahten. Pendant zu
+            // Windows OverlayWindow.ApplySoloDockMode #1742-1750.
+            if board.currentInputPanel == nil {
+                board.openInputPanelExternally()
+                wireInputPanelCallbacks()
+            }
+            guard let input = board.currentInputPanel else { return }
+            inputSoloDock = true
             board.orderOut(nil)
             input.dockToOverlay(self.panel)
             input.setSoloDockState(true)
+            input.makeKeyAndOrderFront(nil)
         } else {
+            guard let input = board.currentInputPanel else { return }
+            inputSoloDock = false
             board.dock(rightOf: self.panel)
             board.orderFrontRegardless()
             board.refresh()
@@ -815,8 +847,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // dock(leftOf:) — diese Methode existiert schon im PromptInputPanel.
             input.dock(leftOf: board, force: true)
             input.setSoloDockState(false)
+            input.makeKeyAndOrderFront(nil)
         }
-        input.makeKeyAndOrderFront(nil)
     }
 
     /// Erstellt die PromptBoardPanel-Instanz inkl. aller Callbacks, macht es
@@ -850,6 +882,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.panel.setFrame(NSRect(origin: pillarOrigin, size: pillarSize),
                                 display: true)
             self.panel.savePillarPosition()
+        }
+        // Stern in der Promtboard-Toolbar — symmetrisches Pendant zum Stern
+        // im Eingabefeld. Klick blendet das Board aus und dockt das
+        // Eingabefeld direkt an den Pillar an. applySoloDockMode(true) macht
+        // bei Bedarf gleich noch ein openInputPanelExternally() falls das
+        // Eingabefeld noch nicht existiert.
+        p.onBoardStarToggle = { [weak self] in
+            self?.applySoloDockMode(true)
         }
         promptBoardPanel = p
     }

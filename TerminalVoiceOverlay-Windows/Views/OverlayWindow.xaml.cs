@@ -1578,11 +1578,12 @@ namespace TerminalVoiceOverlay.Views
 
         /// <summary>Star button — toggles the full PromptBoard integration:
         /// opens/closes the side panel AND enables/disables the always-on
-        /// prefix. Default-Einstieg seit Aenderung 2026-04-27: das Promtboard
-        /// wird NICHT mehr direkt gezeigt; nur das Prompt-Eingabefenster
-        /// dockt direkt am Pillar an. Das Promtboard kann der Benutzer bei
-        /// Bedarf ueber den Stern-Toggle in der Eingabe-Toolbar dazu-
-        /// schalten (= ApplySoloDockMode(false)).</summary>
+        /// prefix. Default-Einstieg seit Aenderung 2026-05-09: erster Klick
+        /// zeigt das Promtboard (mit allen Kategorien), das Eingabefeld bleibt
+        /// zu. Der Benutzer schaltet ueber den NEUEN Stern in der Promtboard-
+        /// Toolbar in den Solo-Modus (Board zu, Eingabefeld am Pillar). Der
+        /// Stern in der Eingabe-Toolbar holt das Promtboard wieder zurueck.
+        /// Zweiter Klick auf diesen Voice-Overlay-Stern schliesst alles.</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
             alwaysOnActive = !alwaysOnActive;
@@ -1591,7 +1592,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 UltrathinkButton.Background = BtnUltrathinkOn;
                 UltrathinkStar.Fill = StarGold;
-                ShowPromptInputDockedToOverlay();
+                ShowPromptPanel();
             }
             else
             {
@@ -1736,20 +1737,33 @@ namespace TerminalVoiceOverlay.Views
         private void ApplySoloDockMode(bool active)
         {
             if (_promptPanel is null) return;
-            var input = _promptPanel.InputWindow;
-            if (input is null) return;
 
             if (active)
             {
+                // Wechsel Board → Solo: das Eingabefenster muss EXISTIEREN
+                // bevor wir es positionieren koennen. Kann beim Klick auf den
+                // neuen Board-Stern noch null sein, weil der Board-Default
+                // Eingabefenster zugemacht laesst. EnsureInputWindowOpen
+                // baut Subscriptions auf und zeigt das Fenster — wir docken
+                // es im selben Frame zum Pillar um, sodass der Flash am Board-
+                // Rand visuell verschwindet.
+                _promptPanel.EnsureInputWindowOpen();
+                var input = _promptPanel.InputWindow;
+                if (input is null) return;
+
                 // Promtboard ausblenden — wir nutzen Window.Hide, NICHT Close,
                 // damit die Instanz und der ganze State (Kategorien, Prompts,
                 // Subscriptions) erhalten bleiben.
                 _promptPanel.Hide();
                 _inputSoloDock = true;
                 input.DockToOverlay(this);
+                input.SetSoloDockState(true);
             }
             else
             {
+                var input = _promptPanel.InputWindow;
+                if (input is null) return;
+
                 _inputSoloDock = false;
                 _promptPanel.Show();
                 PositionPromptPanel();
@@ -1757,9 +1771,8 @@ namespace TerminalVoiceOverlay.Views
                 // LocationChanged → RefollowChildren in PromptBoardPanel.
                 // Trotzdem explizit redocken damit die Naht sofort sitzt.
                 input.DockTo(_promptPanel);
+                input.SetSoloDockState(false);
             }
-
-            input.SetSoloDockState(active);
         }
 
         private void OnPromptPanelInsert(string text)

@@ -78,6 +78,15 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
     /// so both windows move together as a single unit.
     var onPanelDragged: ((NSPoint) -> Void)?
 
+    /// Fires when the user clicks the new star button in the toolbar
+    /// (next to the "!" reset button). Symmetrisches Pendant zum Stern in
+    /// der PromptInput-Toolbar: blendet das Promtboard aus und dockt das
+    /// Eingabefeld direkt an den Voice-Overlay-Pillar an. AppDelegate
+    /// haengt sich hier ein und ruft applySoloDockMode(true) auf — die
+    /// Logik ist 1:1 dieselbe wie beim Solo-Stern im Eingabefeld, deshalb
+    /// reicht ein parameterloser Callback.
+    var onBoardStarToggle: (() -> Void)?
+
     /// Debounce timer for auto-backup to Google Drive. Every mutation
     /// (add / edit / delete / toggle) reschedules the timer; the actual
     /// upload only fires once the user has stopped clicking for the delay
@@ -380,21 +389,27 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
         let clearChecksBtn = makeIconButton(symbol: "!", tooltip: "Alle Haekchen entfernen (Always-On in allen Kategorien)", action: #selector(onClearAllChecks))
         self.clearAllChecksButton = clearChecksBtn
 
+        // Stern-Button — Promtboard ausblenden und Eingabefeld direkt am
+        // Pillar andocken (1:1 wie der Stern in der PromptInput-Toolbar,
+        // symmetrisches Pendant). Windows-Parity: BtnBoardStar.
+        let boardStarBtn = makeIconButton(symbol: "★", tooltip: "Promptboard schliessen und Eingabefeld direkt am Voice-Overlay andocken (Stern im Eingabefeld holt das Promtboard wieder zurueck).", action: #selector(onBoardStarTapped))
+
         let historyBtn = makeIconButton(symbol: "📜", tooltip: "Prompt-Historie", action: #selector(onToggleHistory))
         let addCatBtn = makeIconButton(symbol: "+", tooltip: "Neue Kategorie", action: #selector(onAddCategory))
         let backupBtn = makeIconButton(symbol: "⇪", tooltip: "Backup / Wiederherstellen", action: #selector(onBackup))
         let settingsBtn = makeIconButton(symbol: "⚙︎", tooltip: "Einstellungen", action: #selector(onSettings), fontSize: 18)
         self.historyToggleButton = historyBtn
 
-        // Reihenfolge (Windows-Parity #1877: kein Stern mehr im PromptBoard-Header
-        // — Stern ist jetzt im Pillar und in der PromptInput-Toolbar):
-        // [Title] [Sync+Filter] <flex spacer> [!] [Historie] [+] [Backup] [Settings]
+        // Reihenfolge (Windows-Parity 2026-05-09: Stern wieder im Header,
+        // jetzt als symmetrisches Pendant zum Stern in der PromptInput-
+        // Toolbar — er schaltet zwischen Board-Ansicht und Solo-Eingabe um):
+        // [Title] [Sync+Filter] <flex spacer> [!] [Stern] [Historie] [+] [Backup] [Settings]
         let syncBlock = NSStackView(views: [syncLabel, filterBtn])
         syncBlock.orientation = .horizontal
         syncBlock.spacing = 6
         syncBlock.alignment = .centerY
 
-        let header = NSStackView(views: [titleLabel, syncBlock, NSView(), clearChecksBtn, historyBtn, addCatBtn, backupBtn, settingsBtn])
+        let header = NSStackView(views: [titleLabel, syncBlock, NSView(), clearChecksBtn, boardStarBtn, historyBtn, addCatBtn, backupBtn, settingsBtn])
         header.orientation = .horizontal
         header.alignment = .centerY
         header.spacing = 6
@@ -1112,6 +1127,16 @@ final class PromptBoardPanel: NSPanel, NSGestureRecognizerDelegate {
             ]
         )
         btn.toolTip = historyPanelVisible ? "Prompt-Historie schliessen" : "Prompt-Historie"
+    }
+
+    // MARK: - Stern-Button (Solo-Andocken Pendant)
+
+    /// Action des neuen Stern-Buttons in der Toolbar. Reicht den Klick 1:1
+    /// nach aussen weiter — AppDelegate ruft daraufhin applySoloDockMode(true)
+    /// auf und blendet das Promtboard zugunsten des am Pillar angedockten
+    /// Eingabefelds aus.
+    @objc private func onBoardStarTapped() {
+        onBoardStarToggle?()
     }
 
     // MARK: - Filter "Nur aktivierte Prompts" + "Alle Haekchen entfernen"
