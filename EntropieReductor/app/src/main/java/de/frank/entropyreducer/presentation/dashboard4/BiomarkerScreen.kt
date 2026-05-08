@@ -112,7 +112,7 @@ fun BiomarkerHostScreen(
             // History-Charts — alle Whoop-Werte mit VOLLSTAENDIGER Historie und
             // interaktivem Chart (Y-Achse, X-Achse, Tap auf Punkt zeigt Wert).
             // Frank-Wunsch 2026-05-08: nicht mehr 30-Tage-Slice sondern alles,
-            // klickbar fuer Detail-Screen.
+            // klickbar für Detail-Screen.
             item {
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
@@ -158,10 +158,10 @@ fun BiomarkerHostScreen(
                 )
             }
             item {
-                // Schlafstadien-Card ist klickbar — fuehrt zur Liste aller Schlaf-Werte
+                // Schlafstadien-Card ist klickbar — führt zur Liste aller Schlaf-Werte
                 // im Detail-Screen. Frank-Wunsch 2026-05-08: "wenn ich auf Schlaf druecke
                 // soll was passieren". Wir oeffnen das SLEEP_TOTAL Detail mit allen
-                // Werten + 4 weitere Tap-Tipps fuer REM/Deep/Light/Awake-Detail-Screens.
+                // Werten + 4 weitere Tap-Tipps für REM/Deep/Light/Awake-Detail-Screens.
                 GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) }) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -219,7 +219,7 @@ fun BiomarkerHostScreen(
                 )
             }
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
-            // ueber die volle Historie.
+            // über die volle Historie.
             item { CorrelationCard(state) }
             if (state.latest == null) {
                 item {
@@ -257,10 +257,10 @@ fun BiomarkerHostScreen(
 private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     // Mini-Cards zeigen jetzt den AUSGEWAEHLTEN Tag (Frank-Wunsch 2026-05-08:
     // zwischen Heute / gestern / vorgestern wechseln). Fallback auf latest
-    // wenn fuer den ausgewaehlten Tag kein Snapshot existiert.
+    // wenn für den ausgewaehlten Tag kein Snapshot existiert.
     val latest = state.selectedSnapshot ?: state.latest
     val history = state.history30Days
-    // 30-Tage-Mittel pro Metrik (ohne den heutigen Wert) — Basis fuer Trend-Pfeil + Delta.
+    // 30-Tage-Mittel pro Metrik (ohne den heutigen Wert) — Basis für Trend-Pfeil + Delta.
     val avgHrv = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
     val avgRhr = history.mapNotNull { it.restingHeartRate }.takeIf { it.isNotEmpty() }?.average()
     val avgSleep = history.mapNotNull { it.sleepTotalMinutes }.takeIf { it.isNotEmpty() }?.average()
@@ -316,7 +316,7 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
     }
 }
 
-/** Zentrale Konstanten fuer Metrik-IDs — werden in Routes + Detail-Screen genutzt. */
+/** Zentrale Konstanten für Metrik-IDs — werden in Routes + Detail-Screen genutzt. */
 internal object MetricKey {
     const val HRV = "hrv"
     const val RHR = "rhr"
@@ -381,7 +381,7 @@ private fun MetricMiniCard(
 }
 
 /**
- * Klein-Pille fuer Sleep-Stage-Schnellzugriff im Schlaf-Card. Tap navigiert zum
+ * Klein-Pille für Sleep-Stage-Schnellzugriff im Schlaf-Card. Tap navigiert zum
  * jeweiligen Stage-Detail-Screen mit allen Werten als Liste + Verlaufschart.
  */
 @Composable
@@ -513,7 +513,7 @@ private fun MetricHistoryCard(
 
 /**
  * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer
- * ueber die letzten 30 Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf
+ * über die letzten 30 Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf
  * mit hoeherer HRV einhergeht".
  */
 @Composable
@@ -583,7 +583,7 @@ private fun pearson(pairs: List<Pair<Double, Double>>): Double {
 
 /**
  * Gesamterholung-Card im Soll-Design (Bild 15/25).
- * Layout: links Title + Status-Sub-Text + Erlaeuterung; rechts grosser Recovery-Ring.
+ * Layout: links Title + Status-Sub-Text + Erlaeuterung; rechts großer Recovery-Ring.
  */
 @Composable
 private fun GesamterholungCard(state: BiomarkerUiState) {
@@ -592,10 +592,10 @@ private fun GesamterholungCard(state: BiomarkerUiState) {
     val score = (state.selectedSnapshot ?: state.latest)?.recoveryScore
     val statusLabel = when {
         score == null -> "Noch keine Daten"
-        score >= 75 -> "Dein Koerper ist im Hoch."
-        score >= 50 -> "Dein Koerper ist im Gleichgewicht."
-        score >= 25 -> "Dein Koerper braucht heute Schonung."
-        else -> "Dein Koerper ist erschoepft."
+        score >= 75 -> "Dein Körper ist im Hoch."
+        score >= 50 -> "Dein Körper ist im Gleichgewicht."
+        score >= 25 -> "Dein Körper braucht heute Schonung."
+        else -> "Dein Körper ist erschoepft."
     }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {

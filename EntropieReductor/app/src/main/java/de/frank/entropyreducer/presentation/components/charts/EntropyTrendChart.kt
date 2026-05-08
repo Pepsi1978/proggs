@@ -31,11 +31,11 @@ import de.frank.entropyreducer.presentation.theme.color
 import de.frank.entropyreducer.presentation.theme.label
 
 /**
- * Multi-Linien-Trend-Chart fuer Dashboard 2 (Spec §11.1.4).
+ * Multi-Linien-Trend-Chart für Dashboard 2 (Spec §11.1.4).
  *
  * - X-Achse: Tage (timeline-aligniert).
  * - Y-Achse: Entropie-Last pro Kategorie (0..100 normalisiert).
- * - Schichtblock-Hintergrund: TAGDIENST gelblich, NACHTDIENST violett, FREI gruen,
+ * - Schichtblock-Hintergrund: TAGDIENST gelblich, NACHTDIENST violett, FREI grün,
  *   URLAUB cyan — als duenne, halb-transparente vertikale Streifen.
  *
  * Erwartet [series] in Kategorien-Bukets, jeweils ein Punkt pro Tag (gleich lang
@@ -78,7 +78,7 @@ fun EntropyTrendChart(
                 val color = when (shift) {
                     ShiftCode.TAGDIENST -> Color(0x14FBBF24)     // gelblich
                     ShiftCode.NACHTDIENST -> Color(0x14A78BFA)   // violett
-                    ShiftCode.FREI -> Color(0x1234D399)          // gruen
+                    ShiftCode.FREI -> Color(0x1234D399)          // grün
                     ShiftCode.URLAUB -> Color(0x1422D3EE)        // cyan
                     ShiftCode.UNBEKANNT -> Color.Transparent
                 }
@@ -112,7 +112,7 @@ fun EntropyTrendChart(
 }
 
 /**
- * Legende fuer [EntropyTrendChart] mit den dargestellten Kategorien.
+ * Legende für [EntropyTrendChart] mit den dargestellten Kategorien.
  */
 @Composable
 fun EntropyTrendLegend(

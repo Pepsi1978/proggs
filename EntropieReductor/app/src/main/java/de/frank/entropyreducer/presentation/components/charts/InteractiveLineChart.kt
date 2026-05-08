@@ -46,7 +46,7 @@ import java.util.Locale
  * - Y-Achsen-Beschriftung links (Min/Mid/Max)
  * - Datenlinie + Punkte
  * - X-Achsen-Datums-Labels (erstes/letztes Datum)
- * - Tooltip bei Tap: zeigt Datum + Wert ueber dem getroffenen Punkt
+ * - Tooltip bei Tap: zeigt Datum + Wert über dem getroffenen Punkt
  *
  * Punkt mit kleinster Distanz zum Tap-X wird selektiert.
  */

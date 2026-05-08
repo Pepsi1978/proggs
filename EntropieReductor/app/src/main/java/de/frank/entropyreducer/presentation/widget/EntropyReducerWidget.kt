@@ -49,9 +49,9 @@ import kotlinx.coroutines.flow.first
  * Layout (4×2 default, resizable 2×2 bis 4×3):
  *   - Oben: Status-Pille (Prozent offene vs erledigte Eintraege)
  *   - Mitte: Top-1-Aufgabe (hoechste Prio)
- *   - Unten: grosser Mic-Button -> oeffnet App
+ *   - Unten: großer Mic-Button -> oeffnet App
  *
- * Update: alle 15 Min via PeriodicWorkRequest des Systems oder manuell ueber
+ * Update: alle 15 Min via PeriodicWorkRequest des Systems oder manuell über
  * `EntropyReducerWidget().updateAll(context)` nach Datenaenderungen.
  */
 class EntropyReducerWidget : GlanceAppWidget() {

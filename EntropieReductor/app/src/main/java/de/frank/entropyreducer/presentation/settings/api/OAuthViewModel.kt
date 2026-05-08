@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Zustand der OAuth-Verbindungen fuer Whoop und Google Calendar. */
+/** Zustand der OAuth-Verbindungen für Whoop und Google Calendar. */
 data class OAuthUiState(
     val calendarAccountEmail: String? = null,
     val whoopConnected: Boolean = false,
@@ -27,10 +27,10 @@ data class OAuthUiState(
 )
 
 /**
- * ViewModel fuer die OAuth-Cards im API-Keys-Bildschirm.
+ * ViewModel für die OAuth-Cards im API-Keys-Bildschirm.
  *
- * Whoop laeuft ueber AppAuth + Custom-URI-Redirect (siehe OAuthService).
- * Google Calendar laeuft ueber GoogleSignIn + Play-Services-Token-Refresh
+ * Whoop laeuft über AppAuth + Custom-URI-Redirect (siehe OAuthService).
+ * Google Calendar laeuft über GoogleSignIn + Play-Services-Token-Refresh
  * (siehe CalendarSignInHelper / CalendarSession), weil Google im Web-App-Client
  * keine Custom-URI-Schemes mehr akzeptiert.
  */

@@ -9,7 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Holt die juengste Backup-Datei aus dem appDataFolder zurueck.
+ * Holt die juengste Backup-Datei aus dem appDataFolder zurück.
  * Liefert `null`, wenn auf Drive nichts liegt — der Aufrufer entscheidet,
  * ob das ein erwarteter "frischer" Zustand oder ein Fehler ist.
  */
@@ -22,7 +22,7 @@ class DriveRestoreManager @Inject constructor(
     private val fileName = "entropy_reducer_entries_v1.json"
 
     /**
-     * Gibt das letzte JSON-Backup zurueck — oder null, wenn kein Backup vorhanden.
+     * Gibt das letzte JSON-Backup zurück — oder null, wenn kein Backup vorhanden.
      * Wirft `DriveNotSignedInException` / `DriveConsentRequiredException` wenn
      * der Account-Zugang noch nicht gesetzt ist.
      */
@@ -44,7 +44,7 @@ class DriveRestoreManager @Inject constructor(
             val sink = ByteArrayOutputStream()
             drive.files().get(match.id).executeMediaAndDownloadTo(sink)
             // ByteArrayOutputStream.toString(Charset) braucht API 33+ — auf API 28-32
-            // wuerde das mit NoSuchMethodError crashen. String(ByteArray, Charset) gibt's
+            // würde das mit NoSuchMethodError crashen. String(ByteArray, Charset) gibt's
             // seit API 1, gleicher Output, kompatibel auf allen unterstuetzten Versionen.
             String(sink.toByteArray(), Charsets.UTF_8)
         }

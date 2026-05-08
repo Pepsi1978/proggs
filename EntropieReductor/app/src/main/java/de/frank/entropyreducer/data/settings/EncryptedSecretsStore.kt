@@ -85,13 +85,13 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_WHOOP_AUTH_STATE, null)
         set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).apply() }
 
-    /** Account-Mailadresse fuer Drive-Backup. Wird beim Sign-In gesetzt. */
+    /** Account-Mailadresse für Drive-Backup. Wird beim Sign-In gesetzt. */
     var driveAccountEmail: String?
         get() = prefs.getString(KEY_DRIVE_ACCOUNT, null)
         set(value) { prefs.edit().putString(KEY_DRIVE_ACCOUNT, value).apply() }
 
-    /** Account-Mailadresse fuer Google-Calendar-Sync. Separat von Drive damit beide
-     *  Sign-Ins unabhaengig voneinander widerrufen werden koennen. */
+    /** Account-Mailadresse für Google-Calendar-Sync. Separat von Drive damit beide
+     *  Sign-Ins unabhaengig voneinander widerrufen werden können. */
     var calendarAccountEmail: String?
         get() = prefs.getString(KEY_CALENDAR_ACCOUNT, null)
         set(value) { prefs.edit().putString(KEY_CALENDAR_ACCOUNT, value).apply() }

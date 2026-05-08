@@ -10,9 +10,9 @@ import dagger.assisted.AssistedInject
 import de.frank.entropyreducer.domain.usecase.DetectCorrelationsUseCase
 
 /**
- * Korrelations-Engine Worker (Spec §16.1) — taeglich 03:30.
+ * Korrelations-Engine Worker (Spec §16.1) — täglich 03:30.
  * Berechnet Cohen's-d-Beobachtungen zwischen Supplements und Biomarker und
- * loggt sie. Echte Trigger-Vorschlaege erzeugt der KiTriggerWorker spaeter
+ * loggt sie. Echte Trigger-Vorschlaege erzeugt der KiTriggerWorker später
  * aus den gesammelten Beobachtungen.
  */
 @HiltWorker

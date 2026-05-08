@@ -42,7 +42,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Approval-Screen fuer die KI-vorgeschlagenen Trigger (Spec §16.2).
+ * Approval-Screen für die KI-vorgeschlagenen Trigger (Spec §16.2).
  * Zwei Sektionen:
  *  - Vorgeschlagen: pro Eintrag „Annehmen" / „Ablehnen"
  *  - Aktiv: pro Eintrag „Pausieren" / „Löschen"

@@ -68,7 +68,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             // 3 Buttons oben — Frank-Reklamation 2026-05-08: vorher waren die Texte
-            // zu lang fuer weight(1f), der 3. Button "Aus Profil neu generieren"
+            // zu lang für weight(1f), der 3. Button "Aus Profil neu generieren"
             // wurde auf 4 Zeilen umgebrochen (sah aus wie "reine Kugel"). Jetzt
             // jede Card mit Icon oben + zwei kuerzeren Zeilen darunter (Titel + Hint),
             // gleiche Hoehe, gleiche Akzentfarbe pro Aktion.
@@ -171,7 +171,7 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
 }
 
 /**
- * Action-Button mit Icon-in-Kreis + Titel + Subtitel — fuer die 3 Aktionen oben
+ * Action-Button mit Icon-in-Kreis + Titel + Subtitel — für die 3 Aktionen oben
  * im Gedaechtnis-Screen. Vorher waren das schmale OutlinedButtons mit zu langen
  * Texten die sich auf 3-4 Zeilen umbrachen ("reine Kugel"-Effekt).
  */

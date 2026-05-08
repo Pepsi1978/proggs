@@ -25,8 +25,8 @@ interface GroqWhisperApi {
     ): TranscriptionResponse
 
     /**
-     * Listet verfuegbare Modelle auf — wird fuer Verbindungs-Tests genutzt
-     * (Bearer-Auth pruefen ohne Audio-Upload).
+     * Listet verfuegbare Modelle auf — wird für Verbindungs-Tests genutzt
+     * (Bearer-Auth prüfen ohne Audio-Upload).
      */
     @retrofit2.http.GET("models")
     suspend fun listModels(

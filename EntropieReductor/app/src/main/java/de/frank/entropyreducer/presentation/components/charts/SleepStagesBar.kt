@@ -24,7 +24,7 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Gestapelter horizontaler Bar fuer Schlafstadien (REM/Tief/Leicht/Wach).
+ * Gestapelter horizontaler Bar für Schlafstadien (REM/Tief/Leicht/Wach).
  * Spec §13.1 Punkt 6.
  */
 @Composable

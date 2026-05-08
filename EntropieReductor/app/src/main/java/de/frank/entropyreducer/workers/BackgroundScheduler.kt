@@ -151,7 +151,7 @@ class BackgroundScheduler @Inject constructor(
                 .setConstraints(constraints)
                 .build(),
         )
-        // Monatsrueckblick — alle 24h pruefen, Worker entscheidet selbst (1. des Monats)
+        // Monatsrueckblick — alle 24h prüfen, Worker entscheidet selbst (1. des Monats)
         wm.enqueueUniquePeriodicWork(
             MonthlyReviewWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
@@ -191,7 +191,7 @@ class BackgroundScheduler @Inject constructor(
     /**
      * Stoesst die KI-Trigger-Engine sofort an (manueller "Trigger jetzt erzeugen"-Button).
      * Setzt `force=true` damit der Worker den Wochentags-Check (Mi/So) ueberspringt —
-     * sonst wuerde ein manueller Aufruf an einem Donnerstag ohne Effekt durchlaufen.
+     * sonst würde ein manueller Aufruf an einem Donnerstag ohne Effekt durchlaufen.
      */
     fun runKiTriggerNow() {
         val constraints = Constraints.Builder()
@@ -207,7 +207,7 @@ class BackgroundScheduler @Inject constructor(
     }
 
     /**
-     * Plant die Korrelations-Engine (taeglich 03:30) und die KI-Trigger-Engine
+     * Plant die Korrelations-Engine (täglich 03:30) und die KI-Trigger-Engine
      * (Mittwoch + Sonntag 11:00). Spec §16.1 + §16.2.
      */
     fun ensureCorrelationAndTriggerJobs() {
@@ -223,7 +223,7 @@ class BackgroundScheduler @Inject constructor(
                 .setConstraints(constraints)
                 .build(),
         )
-        // KI-Trigger-Engine: Worker laeuft taeglich 11:00, prueft selbst Mi/So.
+        // KI-Trigger-Engine: Worker laeuft täglich 11:00, prueft selbst Mi/So.
         wm.enqueueUniquePeriodicWork(
             KiTriggerWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
@@ -232,7 +232,7 @@ class BackgroundScheduler @Inject constructor(
                 .setConstraints(constraints)
                 .build(),
         )
-        // Trigger-Polling — alle 15 Min Bedingungen aktiver Trigger pruefen.
+        // Trigger-Polling — alle 15 Min Bedingungen aktiver Trigger prüfen.
         wm.enqueueUniquePeriodicWork(
             TriggerPollingWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,

@@ -15,7 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Sign-In-Helper analog zum DriveSignInHelper, aber fuer Calendar-Read-Only.
+ * Sign-In-Helper analog zum DriveSignInHelper, aber für Calendar-Read-Only.
  * Eigener Client, eigene Scopes — der Drive-Sign-In bleibt unberuehrt.
  *
  * SETUP-VORAUSSETZUNG: In Google Cloud Console muss ein OAuth 2.0 Client

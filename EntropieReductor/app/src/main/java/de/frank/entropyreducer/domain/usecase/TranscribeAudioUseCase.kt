@@ -39,8 +39,8 @@ class TranscribeAudioUseCase @Inject constructor(
             )
             response.text.trim()
         }
-        // Spec §20: Audio nach erfolgreicher Transkription sofort loeschen.
-        // Bei Fehler behalten — sonst kann der Nutzer den Eintrag spaeter nicht
+        // Spec §20: Audio nach erfolgreicher Transkription sofort löschen.
+        // Bei Fehler behalten — sonst kann der Nutzer den Eintrag später nicht
         // erneut bewerten lassen. Tageweises Cache-Aufraeumen folgt mit Stufe 2.
         if (result.isSuccess) audioFile.delete()
         return result

@@ -21,17 +21,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 /**
- * Wiedergabe-Schicht fuer Google Cloud TTS Chirp 3 HD.
+ * Wiedergabe-Schicht für Google Cloud TTS Chirp 3 HD.
  *
  * Architektur (analog BestJournalFrank's bewaehrtem Pattern):
  *  1. POST `/v1/text:synthesize` mit API-Key als Query-Parameter
  *  2. Antwort enthaelt `audioContent` (Base64-kodiertes MP3)
  *  3. Decodieren in App-Cache-Datei
- *  4. Mit MediaPlayer abspielen — entry/exit-Callbacks fuer UI-States
+ *  4. Mit MediaPlayer abspielen — entry/exit-Callbacks für UI-States
  *
  * Bewusst MediaPlayer statt ExoPlayer (Stufenplan-Empfehlung): Der Tagesbriefing-
  * /Wochenrueckblick-Use-Case spielt 30-90s MP3-Dateien ab, MediaPlayer reicht und
- * ist 3 MB kleiner. Falls spaeter Streaming-Synthese kommt — Tausch ist trivial.
+ * ist 3 MB kleiner. Falls später Streaming-Synthese kommt — Tausch ist trivial.
  */
 @Singleton
 class TtsPlayer @Inject constructor(
@@ -86,7 +86,7 @@ class TtsPlayer @Inject constructor(
         }
     }
 
-    /** Stoppt die laufende Wiedergabe. Nach `stop()` ist sofort eine neue moeglich. */
+    /** Stoppt die laufende Wiedergabe. Nach `stop()` ist sofort eine neue möglich. */
     fun stop() {
         try {
             mediaPlayer?.takeIf { it.isPlaying }?.stop()

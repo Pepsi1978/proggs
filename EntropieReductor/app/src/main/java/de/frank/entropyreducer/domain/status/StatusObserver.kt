@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * Liefert einen Live-Flow des aktuellen Status-Balken-Zustands.
  *
  * Spec §4.1 — Wert wird alle 5 Minuten neu berechnet UND sofort bei jeder Eintrags-
- * oder Biomarker-/Calendar-Aenderung. Der Ticker triggert ein neues Read-Window
+ * oder Biomarker-/Calendar-Änderung. Der Ticker triggert ein neues Read-Window
  * (today, 30-Tage-Bereich), damit der Status um Mitternacht ohne App-Restart
  * den richtigen Schichtcode-Tag liest.
  */

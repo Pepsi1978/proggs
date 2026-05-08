@@ -24,14 +24,14 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 /**
- * Erzeugt die strukturierte Markdown-Analyse fuer Dashboard 2 (Spec §11.2).
+ * Erzeugt die strukturierte Markdown-Analyse für Dashboard 2 (Spec §11.2).
  *
  * Gemini bekommt: alle aktiven Eintraege als JSON-aehnliche Liste, aktive Memories,
  * den Biomarker-Trend der letzten 30 Tage, den Schichtkalender der letzten 30 Tage,
  * sowie alle bestaetigten Insights.
  *
  * Ergebnis ist Markdown mit den vier Sektionen Muster / Verborgene Zusammenhaenge /
- * Das grosse Ganze / Strategische Empfehlungen.
+ * Das große Ganze / Strategische Empfehlungen.
  */
 class GenerateAnalysisUseCase @Inject constructor(
     private val gemini: GeminiApi,
@@ -157,7 +157,7 @@ class GenerateAnalysisUseCase @Inject constructor(
 
     companion object {
         private const val BASE_PROMPT = """
-Du erhaeltst alle aktiven Entropie-Eintraege des Nutzers, alle aktiven Memory-Eintraege, den Biomarker-Trendverlauf der letzten 30 Tage und den Schichtkalender der letzten 30 Tage. Deine Aufgabe ist NICHT, Prioritaeten zu setzen — sondern Muster, Cluster und das grosse Ganze zu erkennen.
+Du erhaeltst alle aktiven Entropie-Eintraege des Nutzers, alle aktiven Memory-Eintraege, den Biomarker-Trendverlauf der letzten 30 Tage und den Schichtkalender der letzten 30 Tage. Deine Aufgabe ist NICHT, Prioritaeten zu setzen — sondern Muster, Cluster und das große Ganze zu erkennen.
         """
         private const val TAIL_INSTRUCTION = """
 Antworte in strukturiertem deutschen Markdown mit genau diesen vier Abschnitten:
@@ -168,7 +168,7 @@ Welche Kategorien dominieren? Welche Themen wiederholen sich?
 ## Verborgene Zusammenhaenge
 Korrelationen zwischen Schichtcode, Biomarkern und Entropie-Eintraegen. Beispiel-Mustertyp: „Mental-Eintraege haeufen sich nach Nachtdienst-Tagen."
 
-## Das grosse Ganze
+## Das große Ganze
 Eine praegnante Beobachtung in 2-3 Saetzen: was ist der Kern dessen, was Frank gerade durchlebt?
 
 ## Strategische Empfehlungen

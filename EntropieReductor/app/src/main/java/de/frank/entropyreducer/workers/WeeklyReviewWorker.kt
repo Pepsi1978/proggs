@@ -39,7 +39,7 @@ class WeeklyReviewWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault())
             val lastAt = settings.lastWeeklyReviewAtMsFlow.first()
             if (!force && lastAt > 0 && isSameWeek(today, lastAt)) {
-                Log.i(TAG, "Wochenrueckblick fuer KW ${weekOf(today)} existiert bereits (force=false).")
+                Log.i(TAG, "Wochenrueckblick für KW ${weekOf(today)} existiert bereits (force=false).")
                 return Result.success()
             }
 

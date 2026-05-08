@@ -23,7 +23,7 @@ import javax.inject.Inject
 /**
  * Genie-Codex-Synthese (Spec §16.5). Wird sonntags 19:00 oder manuell ausgeloest.
  *
- * Liefert die ID der neu erstellten Codex-Version zurueck — oder null bei Fehler.
+ * Liefert die ID der neu erstellten Codex-Version zurück — oder null bei Fehler.
  */
 class GenieCodexSynthesizer @Inject constructor(
     private val gemini: GeminiApi,
@@ -63,7 +63,7 @@ class GenieCodexSynthesizer @Inject constructor(
         )
 
         val payload = buildString {
-            appendLine("Daten der letzten 30 Tage als Eingabe fuer die Synthese:")
+            appendLine("Daten der letzten 30 Tage als Eingabe für die Synthese:")
             appendLine()
             appendLine("## Aktive Memory-Eintraege (${activeMemories.size})")
             activeMemories.forEach { appendLine("- ${it.content}") }
@@ -120,7 +120,7 @@ class GenieCodexSynthesizer @Inject constructor(
     companion object {
         private const val TAG = "GenieCodexSynthesizer"
         private const val BASE_PROMPT = """
-Du baust eine kompakte Synthese „Was ich aktuell ueber Frank verstehe", basierend auf den unten angehaengten Daten.
+Du baust eine kompakte Synthese „Was ich aktuell über Frank verstehe", basierend auf den unten angehaengten Daten.
         """
         private const val TAIL_INSTRUCTION = """
 Format: deutsches Markdown, 4 Sektionen:
@@ -135,7 +135,7 @@ Welche Methoden funktionieren reproduzierbar?
 Welche Hypothesen laufen gerade, welche Muster sind noch unklar?
 
 ## Mein aktuelles mentales Modell
-In 2-3 Saetzen: Was ist mein bester Ueberblick ueber das System Frank?
+In 2-3 Saetzen: Was ist mein bester Ueberblick über das System Frank?
 
 Maximum 600 Woerter. Schreib in erster Person aus Sicht des Genies. Direkt, praezise, ohne Schmeichelei.
         """

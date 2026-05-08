@@ -24,7 +24,7 @@ import javax.inject.Singleton
  * diese Ausnahme, damit die UI eine klare Meldung zeigt + zum Sign-In
  * weiterleitet.
  */
-class DriveNotSignedInException : Exception("Kein Google-Konto fuer Drive-Backup verbunden.")
+class DriveNotSignedInException : Exception("Kein Google-Konto für Drive-Backup verbunden.")
 
 /**
  * Wenn Google die OAuth-Einwilligung verlangt (erstes Mal, oder Token abgelaufen),
@@ -59,7 +59,7 @@ class DriveSession @Inject constructor(
 
     private suspend fun build(): Drive = withContext(Dispatchers.IO) {
         val email = secrets.driveAccountEmail ?: throw DriveNotSignedInException()
-        Log.d(TAG, "Token-Request fuer $email, Scope=DRIVE_APPDATA")
+        Log.d(TAG, "Token-Request für $email, Scope=DRIVE_APPDATA")
         val account = Account(email, "com.google")
         val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
         val token = try {

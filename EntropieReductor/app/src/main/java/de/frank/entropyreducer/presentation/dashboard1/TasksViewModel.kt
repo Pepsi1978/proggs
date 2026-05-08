@@ -48,7 +48,7 @@ data class TasksUiState(
      *  resolvedAt absteigend. Werden separat unter den aktiven Bucket-Sektionen
      *  als ausgegrauter Block angezeigt. */
     val resolvedEntries: List<EntropyEntryEntity> = emptyList(),
-    /** Proaktiver Forscher: Eintrag fuer den gerade nach der Loesungsmethode
+    /** Proaktiver Forscher: Eintrag für den gerade nach der Loesungsmethode
      *  gefragt wird. null = kein Dialog sichtbar (Frank-Wunsch 2026-05-08). */
     val pendingMethodFor: EntropyEntryEntity? = null,
 )
@@ -69,6 +69,7 @@ class TasksViewModel @Inject constructor(
     private val process: ProcessEntryUseCase,
     private val statusObserver: StatusObserver,
     private val kiQuestions: KiQuestionRepository,
+    private val generateKiQuestion: de.frank.entropyreducer.domain.kiquestion.GenerateKiQuestionUseCase,
     @Suppress("unused") private val bucketingUseCase: CalculateBucketsUseCase,
 ) : AndroidViewModel(application) {
 
@@ -111,6 +112,26 @@ class TasksViewModel @Inject constructor(
             pendingMethodFor = pendingMethod,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
+
+    init {
+        // KI-Frage des Moments dynamisch generieren beim ViewModel-Start
+        // (Frank-Wunsch 2026-05-08: keine vordefinierten Standardfragen,
+        // immer durch Gemini aus dem aktuellen Kontext gebildet).
+        refreshKiQuestion()
+    }
+
+    /** Generiert die KI-Frage neu durch Gemini-API mit allen offenen Eintraegen
+     *  als Kontext. Fallback auf statisch wenn kein API-Key vorhanden. */
+    fun refreshKiQuestion() {
+        viewModelScope.launch {
+            try {
+                val question = generateKiQuestion()
+                kiQuestions.setCurrent(question)
+            } catch (t: Throwable) {
+                android.util.Log.e("TasksViewModel", "refreshKiQuestion failed", t)
+            }
+        }
+    }
 
     fun openEntryDetail(id: String) { detailEntryIdFlow.value = id }
     fun closeEntryDetail() { detailEntryIdFlow.value = null }
@@ -199,12 +220,61 @@ class TasksViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Aufgaben-Nachtrag (Frank-Wunsch 2026-05-08): wenn Frank im Detail-Sheet
+     * einen Nachtrag einspricht, wird der Eintrag durch ProcessEntryUseCase
+     * neu bewertet — Title + Beschreibung + Tags + priorityScore + timeBucket
+     * werden auf Basis von "Originaltext PLUS Nachtrag" neu generiert. So landet
+     * die Aufgabe automatisch an der richtigen Prio-Stelle (auch wenn der
+     * Nachtrag z.B. eine viel laengere Dauer impliziert).
+     */
+    fun addFollowupAndReprocess(entryId: String, followup: String) {
+        if (followup.isBlank()) return
+        viewModelScope.launch {
+            val current = entries.get(entryId) ?: return@launch
+            val combined = if (current.description.isNotBlank()) {
+                "${current.description}\n\nNachtrag: ${followup.trim()}"
+            } else {
+                "Nachtrag: ${followup.trim()}"
+            }
+            uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = "Bewerte mit Nachtrag neu …")
+            process("${current.title}. $combined", EntrySource.NUTZER_TEXT)
+                .onSuccess {
+                    // Den NEUEN Eintrag aus process() wieder mergen mit dem alten:
+                    // wir wollen den alten id behalten, aber die neuen Felder uebernehmen.
+                    // Pragmatisch: den alten Eintrag mit Nachtrag-text + neuen
+                    // priority/category/bucket aktualisieren, neuen Eintrag wieder
+                    // loeschen damit kein Doppel.
+                    val newEntry = it
+                    entries.update(
+                        current.copy(
+                            description = combined,
+                            priorityScore = newEntry.priorityScore,
+                            timeBucket = newEntry.timeBucket,
+                            severity = newEntry.severity,
+                            estimatedDurationMinutes = newEntry.estimatedDurationMinutes,
+                            category = newEntry.category,
+                            updatedAt = System.currentTimeMillis(),
+                        ),
+                    )
+                    entries.delete(newEntry)
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = null)
+                }
+                .onFailure { ex ->
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        processingMessage = null,
+                        errorMessage = ex.message ?: "Nachtrag-Bewertung fehlgeschlagen",
+                    )
+                }
+        }
+    }
+
     fun dismissMethodPrompt() {
         pendingMethodForFlow.value = null
     }
 
     /**
-     * Setzt einen erledigten Eintrag wieder auf OFFEN — fuer Undo-Snackbar oder
+     * Setzt einen erledigten Eintrag wieder auf OFFEN — für Undo-Snackbar oder
      * wenn der Benutzer sich vertippt hat.
      */
     fun reopenEntry(entryId: String) {

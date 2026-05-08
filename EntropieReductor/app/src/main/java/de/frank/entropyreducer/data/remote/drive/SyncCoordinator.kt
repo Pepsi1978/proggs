@@ -20,18 +20,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Public State des Sync-Vorgangs — beobachtet von der UI fuer Status-Anzeigen.
+ * Public State des Sync-Vorgangs — beobachtet von der UI für Status-Anzeigen.
  */
 sealed interface SyncStatus {
     data object Idle : SyncStatus
-    data object Pending : SyncStatus     // Aenderung erfasst, Debounce laeuft
+    data object Pending : SyncStatus     // Änderung erfasst, Debounce laeuft
     data object Running : SyncStatus     // Upload ist gerade aktiv
     data class Synced(val atEpochMs: Long) : SyncStatus
     data class Failed(val reason: String) : SyncStatus
 }
 
 /**
- * Verhindert Job-Stacking: jede Aenderung am Datenbestand fuehrt zu einem
+ * Verhindert Job-Stacking: jede Änderung am Datenbestand führt zu einem
  * Sync-Trigger. Ein laufender Sync wird NICHT abgebrochen, ein bereits
  * geplanter (Pending) Sync wird hingegen mit dem neueren Trigger zusammengelegt.
  *
@@ -40,8 +40,8 @@ sealed interface SyncStatus {
  *  - Ein Debounce-Window von 1500ms sammelt schnelle, aufeinanderfolgende
  *    Aenderungen (Stop-Recording + KI-Antwort + Status-Update) zu einem
  *    einzigen Upload zusammen.
- *  - Nach erfolgreichem Upload pruefen wir, ob waehrenddessen eine neue
- *    Aenderung kam. Wenn ja: noch ein Upload, weil der erste den neuen
+ *  - Nach erfolgreichem Upload prüfen wir, ob waehrenddessen eine neue
+ *    Änderung kam. Wenn ja: noch ein Upload, weil der erste den neuen
  *    Stand noch nicht hatte.
  */
 @Singleton

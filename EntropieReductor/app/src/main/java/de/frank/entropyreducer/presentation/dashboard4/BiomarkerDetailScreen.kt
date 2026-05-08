@@ -46,7 +46,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Detail-Screen fuer eine einzelne Whoop-Metrik (HRV, RHR, Sleep-Performance, ...).
+ * Detail-Screen für eine einzelne Whoop-Metrik (HRV, RHR, Sleep-Performance, ...).
  *
  * Frank-Wunsch 2026-05-08: "Wenn ich auf HRV druecke, moechte ich die gesamte
  * Historie sehen, in Zahlen und als interaktiver Chart, mit Range-Switcher".
@@ -54,7 +54,7 @@ import java.util.Locale
  * Zeigt:
  * - Header mit Metrik-Name + Statistiken (Min/Max/Mittel, Anzahl Werte)
  * - Range-Switcher (7T / 30T / 90T / Alle)
- * - Grosser interaktiver Chart (Y-Achse, X-Achse, Tap-Tooltip)
+ * - Großer interaktiver Chart (Y-Achse, X-Achse, Tap-Tooltip)
  * - Liste ALLER Werte mit Datum + Wert + Delta zum Vortag
  */
 @Composable
@@ -89,7 +89,7 @@ fun BiomarkerDetailScreen(
         title = spec.title,
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Outlined.ArrowBack, "Zurueck", tint = cosmos.textPrimary)
+                Icon(Icons.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
             }
         },
     ) { padding ->
@@ -133,7 +133,7 @@ fun BiomarkerDetailScreen(
                 }
             }
             item {
-                // Grosser Chart
+                // Großer Chart
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Text(

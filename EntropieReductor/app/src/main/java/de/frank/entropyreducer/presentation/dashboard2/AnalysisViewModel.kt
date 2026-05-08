@@ -28,7 +28,7 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-/** Zoom-Stufen fuer den Trend-Chart (Spec §11.1.4). */
+/** Zoom-Stufen für den Trend-Chart (Spec §11.1.4). */
 enum class TrendRange(val days: Int, val label: String) {
     SEVEN(7, "7 T"),
     THIRTY(30, "30 T"),

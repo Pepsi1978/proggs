@@ -29,7 +29,7 @@ import javax.inject.Inject
 /**
  * Eine Runde im Wissenschaftler-Dialog (Spec §12.4).
  *
- * Eingabe: aktuelle Session-ID + Nutzer-Text (oder null fuer den Kickoff in einer leeren Session).
+ * Eingabe: aktuelle Session-ID + Nutzer-Text (oder null für den Kickoff in einer leeren Session).
  * - System-Prompt nach §7 + §12.4 zusammenbauen.
  * - Komplette Session-Historie als contents anhaengen (alternierend user/model).
  * - Antwort parsen: narrativer Text → in DB als ScientistMessage.KI;
@@ -54,7 +54,7 @@ class ScientistChatUseCase @Inject constructor(
 
     /**
      * Persistiert die Nutzer-Nachricht (falls nicht null), fragt Gemini, persistiert die KI-Antwort
-     * inkl. abgeleiteter Hypothesen + Memory-Vorschlaege. Gibt die KI-Message zurueck.
+     * inkl. abgeleiteter Hypothesen + Memory-Vorschlaege. Gibt die KI-Message zurück.
      */
     suspend operator fun invoke(
         sessionId: String,
@@ -79,7 +79,7 @@ class ScientistChatUseCase @Inject constructor(
             scientist.touchSession(sessionId)
         }
 
-        // 2. Kontext-Blocks fuer System-Prompt
+        // 2. Kontext-Blocks für System-Prompt
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
         val activePrompts = prompts.getActive().first()
@@ -223,7 +223,7 @@ Spezifische Aufgabe: Du arbeitest mit Frank im offenen Dialog. Dein Ziel in jede
 
 1. Reflektiere kurz, was Frank zuletzt gesagt hat (max. 2 Saetze).
 2. Formuliere optional eine oder mehrere konkrete neue Hypothesen oder Experimente, die Frank wahrscheinlich noch nicht ausprobiert hat. Markiere jede explizit als „[HYPOTHESE]" mit Titel, Beschreibung, Begruendung, vorgeschlagener Dauer in Tagen.
-3. Stelle EINE meta-intelligente Folgefrage — eine Frage, die dir neue Information ueber Frank erschliesst, die du noch nicht hast.
+3. Stelle EINE meta-intelligente Folgefrage — eine Frage, die dir neue Information über Frank erschliesst, die du noch nicht hast.
 4. Falls du erkennst, dass etwas Wahres dauerhaft Wert hat als Memory, kennzeichne es mit „[MEMORY-VORSCHLAG]: <Inhalt>".
         """
         private const val TAIL_INSTRUCTION = """

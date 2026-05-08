@@ -31,7 +31,7 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
  * Kontextrelevante Frage der KI auf Dashboard 1 (Spec §10.4).
- * Soll-Design: Sparkle-Icon + Header-Pill, Frage als grosser Text,
+ * Soll-Design: Sparkle-Icon + Header-Pill, Frage als großer Text,
  * unten ein Mic-Kreis-Button (lila Glass-Hintergrund) + "Später"-Link rechts.
  */
 @Composable

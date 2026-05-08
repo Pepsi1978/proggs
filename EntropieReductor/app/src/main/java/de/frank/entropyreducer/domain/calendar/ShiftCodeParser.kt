@@ -23,7 +23,7 @@ object ShiftCodeParser {
     private val nachtPattern = Regex("""^NACHT\s*[1-4](?:\s*([XF]))?$""")
     /**
      * Frei-Tag-Pattern: erkennt "X", "F", "X-Tag", "F-Tag", "X Tag", "F Tag",
-     * "FREI", "FREITAG" als alleinstehende Marker fuer einen freien Tag im
+     * "FREI", "FREITAG" als alleinstehende Marker für einen freien Tag im
      * Schichtsystem. Optional mit Bindestrich, Leerzeichen oder ohne Suffix.
      */
     private val freiPattern = Regex("""^(?:[XF](?:[\s\-]*TAG)?|FREI(?:TAG)?)$""")
@@ -46,7 +46,7 @@ object ShiftCodeParser {
     }
 
     /**
-     * Liefert das Schicht-Profil fuer die gegebene Schicht (Spec §15.5 Tabelle).
+     * Liefert das Schicht-Profil für die gegebene Schicht (Spec §15.5 Tabelle).
      * workWindow / sleepWindow als HH:mm; bei FREI/URLAUB sind die Fenster flexibel (null).
      */
     fun profileFor(code: ShiftCode): ShiftProfile = when (code) {

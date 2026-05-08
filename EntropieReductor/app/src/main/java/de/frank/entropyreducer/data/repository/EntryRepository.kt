@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Offline-first Repository fuer Entropie-Eintraege — Source of Truth ist Room.
+ * Offline-first Repository für Entropie-Eintraege — Source of Truth ist Room.
  * Nach jeder Mutation feuert ein Drive-Sync-Trigger, sofern Backup aktiviert ist.
  * Lazy-Inject vermeidet Hilt-Zyklen (SyncCoordinator -> EntryRepository -> SyncCoordinator).
  */

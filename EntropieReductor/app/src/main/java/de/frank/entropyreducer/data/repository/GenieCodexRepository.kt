@@ -7,7 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Versionierte Synthese „Was die KI ueber Frank verstanden hat". Spec §6.6, §16.5.
+ * Versionierte Synthese „Was die KI über Frank verstanden hat". Spec §6.6, §16.5.
  */
 @Singleton
 class GenieCodexRepository @Inject constructor(

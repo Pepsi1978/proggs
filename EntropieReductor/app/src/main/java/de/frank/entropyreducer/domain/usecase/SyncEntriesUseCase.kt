@@ -11,9 +11,9 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 /**
- * High-Level UseCase fuer manuelles Backup + Restore. Die "automatische"
- * Variante (jede Aenderung triggert ein Backup) laeuft ueber den
- * [SyncCoordinator]; dieser UseCase ist fuer explizite Aktionen aus den
+ * High-Level UseCase für manuelles Backup + Restore. Die "automatische"
+ * Variante (jede Änderung triggert ein Backup) laeuft über den
+ * [SyncCoordinator]; dieser UseCase ist für explizite Aktionen aus den
  * Einstellungen.
  */
 class SyncEntriesUseCase @Inject constructor(

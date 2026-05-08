@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.first
  *   1. Was diese Woche / dieser Monat gepraegt hat
  *   2. Welche Entropie der Benutzer reduziert hat
  *   3. Welche Muster das Genie beobachtet hat
- *   4. Eine Frage fuer die kommende Woche / den kommenden Monat (1 Satz)
+ *   4. Eine Frage für die kommende Woche / den kommenden Monat (1 Satz)
  *
  * Hartes Wort-Limit: 350 (Woche) / 700 (Monat). Kein Markdown, kein Emoji.
  */
@@ -154,6 +154,6 @@ Struktur (4 Absaetze, durch Leerzeile getrennt):
 1. Was diese ${range.label} gepraegt hat (1 Absatz).
 2. Welche Entropie du reduziert hast (1 Absatz).
 3. Welche Muster ich beobachtet habe (1 Absatz).
-4. Eine Frage fuer die kommende ${range.label} (1 Satz).
+4. Eine Frage für die kommende ${range.label} (1 Satz).
 """
 }

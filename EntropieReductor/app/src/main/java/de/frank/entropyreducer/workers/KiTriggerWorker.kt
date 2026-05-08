@@ -13,7 +13,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * KI-Trigger-Engine Worker (Spec §16.2). Worker laeuft taeglich 11:00,
+ * KI-Trigger-Engine Worker (Spec §16.2). Worker laeuft täglich 11:00,
  * arbeitet aber nur an Mittwoch + Sonntag — sonst sofortiger Erfolg.
  */
 @HiltWorker
@@ -44,7 +44,7 @@ class KiTriggerWorker @AssistedInject constructor(
                 )
             }
             // Generator-Failure (Kein Key, Network down) NICHT als Worker-Fehler retry-en —
-            // das fuehrt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
+            // das führt zu Endlos-Retries. Lieber als Erfolg melden mit count=0.
             Result.success()
         } catch (t: Throwable) {
             Log.e(TAG, "KiTriggerWorker fehlgeschlagen mit harter Exception", t)

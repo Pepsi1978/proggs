@@ -21,9 +21,9 @@ data class CalendarDayEntity(
  * Einzelnes Google-Calendar-Event (Stufe 4 Erweiterung).
  *
  * Wird ZUSAETZLICH zum Schichtcode aus dem Sync-Worker befuellt — d.h. der
- * ExperimentCalendarScreen kann pro Tag sowohl die Schicht (als grosser Marker)
+ * ExperimentCalendarScreen kann pro Tag sowohl die Schicht (als großer Marker)
  * als auch alle anderen Termine (Arzttermine, Geburtstage, Erinnerungen, ...)
- * anzeigen. Fuer die KI bedeutet das: sie kann auf "morgen ist Urlaub" oder
+ * anzeigen. Für die KI bedeutet das: sie kann auf "morgen ist Urlaub" oder
  * "Freitag steht ein Arzttermin an" reagieren.
  *
  * Gespeichert wird die Event-ID aus Google damit ein Re-Sync sauberes Upsert

@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
  *
  * Wichtig: Coroutine laeuft im Application-Scope (Singleton), NICHT in einem
  * Activity-bound Scope. Sonst kann Android den Process kurz nach `finish()`
- * killen — der HTTP-Call an Gemini wuerde abgebrochen, der Eintrag waere weg.
+ * killen — der HTTP-Call an Gemini würde abgebrochen, der Eintrag waere weg.
  * Quelle: developer.android.com/kotlin/coroutines/coroutines-best-practices.
  *
  * Toast bestaetigt visuell — keine Activity-Navigation, kein Bildschirm-Flicker.

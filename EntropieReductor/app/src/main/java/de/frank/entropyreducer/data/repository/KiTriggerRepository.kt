@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Schreibender und lesender Zugriff auf die KI-Trigger (Spec §16.2).
  * Kapselt DAO-Zugriff sodass UseCases und ViewModels keine Room-Abhaengigkeit
- * direkt importieren muessen.
+ * direkt importieren müssen.
  */
 @Singleton
 class KiTriggerRepository @Inject constructor(

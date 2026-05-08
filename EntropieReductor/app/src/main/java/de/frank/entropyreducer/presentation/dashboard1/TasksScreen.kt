@@ -235,7 +235,7 @@ fun TasksScreen(
                             }
                         }
                     }
-                    item { Spacer(Modifier.height(120.dp)) }  // Platz fuer Bottom-Nav
+                    item { Spacer(Modifier.height(120.dp)) }  // Platz für Bottom-Nav
                 }
             }
 
@@ -253,6 +253,9 @@ fun TasksScreen(
             onClose = { vm.closeEntryDetail() },
             onSetStatus = { st -> vm.setEntryStatus(entry.id, st) },
             onDelete = { vm.deleteEntry(entry.id) },
+            onAddFollowup = { transcript ->
+                vm.addFollowupAndReprocess(entry.id, transcript)
+            },
         )
     }
 
@@ -276,50 +279,111 @@ private fun MethodPromptDialog(
 ) {
     val cosmos = LocalCosmos.current
     val notesState = remember(entry.id) { androidx.compose.runtime.mutableStateOf("") }
-    var notes = notesState.value
+    val notes = notesState.value
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // System-SpeechRecognizer (gratis, online ueber Google) — direkt einsprechen
+    // ohne Whisper-API. Frank-Wunsch 2026-05-08.
+    val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val transcript = result.data
+                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+            if (!transcript.isNullOrBlank()) {
+                notesState.value = if (notesState.value.isBlank()) transcript
+                else "${notesState.value} $transcript"
+            }
+        }
+    }
+    val startSpeechIntent = {
+        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+            )
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Wie hast du das gelöst?")
+            putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        runCatching { speechLauncher.launch(intent) }
+    }
+
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
         title = {
-            Column {
-                Text(
-                    text = "Wie hast du das geloest?",
-                    color = cosmos.textPrimary,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "\"${entry.title}\"",
-                    color = cosmos.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Sparkle-Icon-Kreis links — visueller Anker fuer "Forscher fragt"
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(CosmosColors.AccentSecondary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("⚛", color = CosmosColors.AccentSecondary, fontSize = 22.sp)
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Wie hast du das gelöst?",
+                        color = cosmos.textPrimary,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "\"${entry.title}\"",
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 2,
+                    )
+                }
             }
         },
         text = {
             Column {
                 Text(
-                    text = "Der Forscher merkt sich deine Methode und kann sie spaeter " +
-                        "als bestaetigte Vorgehensweise im Insight-Board hinterlegen. " +
-                        "Optional — kannst du auch ueberspringen.",
+                    text = "Der Forscher merkt sich deine Methode und legt sie als " +
+                        "bestätigte Vorgehensweise im Insight-Board ab.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(12.dp))
-                androidx.compose.material3.OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notesState.value = it },
-                    placeholder = { Text("z.B. Frueh schlafen + 20min Spaziergang", color = cosmos.textSecondary) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = cosmos.textPrimary,
-                        unfocusedTextColor = cosmos.textPrimary,
-                        focusedBorderColor = CosmosColors.AccentPrimary,
-                        unfocusedBorderColor = cosmos.glassBorder,
-                    ),
-                )
+                Box {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notesState.value = it },
+                        placeholder = { Text("z.B. Früh schlafen + 20 min Spaziergang", color = cosmos.textSecondary) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = cosmos.textPrimary,
+                            unfocusedTextColor = cosmos.textPrimary,
+                            focusedBorderColor = CosmosColors.AccentPrimary,
+                            unfocusedBorderColor = cosmos.glassBorder,
+                        ),
+                    )
+                    // Mic-Button rechts unten in der TextField-Box — startet
+                    // System-SpeechRecognizer und schreibt Transkript ans Ende.
+                    androidx.compose.material3.IconButton(
+                        onClick = { startSpeechIntent() },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.85f)),
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Outlined.Mic,
+                            contentDescription = "Per Sprache antworten",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -332,7 +396,7 @@ private fun MethodPromptDialog(
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Ueberspringen", color = cosmos.textSecondary)
+                Text("Überspringen", color = cosmos.textSecondary)
             }
         },
     )
@@ -351,6 +415,7 @@ private fun EntryDetailSheet(
     onClose: () -> Unit,
     onSetStatus: (EntryStatus) -> Unit,
     onDelete: () -> Unit,
+    onAddFollowup: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -447,6 +512,11 @@ private fun EntryDetailSheet(
                 StatusButton("Reduziert", EntryStatus.REDUZIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
                 StatusButton("Archiviert", EntryStatus.ARCHIVIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
             }
+            // Nachtrag-per-Sprache (Frank-Wunsch 2026-05-08): Mic-Button startet
+            // System-SpeechRecognizer, Transkript wird an die Beschreibung
+            // angehaengt und der Eintrag durch ProcessEntryUseCase neu bewertet
+            // (Prio + Bucket + Dauer landen automatisch an der richtigen Stelle).
+            FollowupMicButton(onTranscript = onAddFollowup)
             // Tags
             if (entry.tags.isNotEmpty()) {
                 Text("Tags", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
@@ -498,7 +568,7 @@ private fun EntryDetailSheet(
                     }
                 }
             }
-            // Loeschen-Button — gefuellt rot, klar sichtbar, fixe Hoehe damit Text
+            // Löschen-Button — gefuellt rot, klar sichtbar, fixe Hoehe damit Text
             // immer lesbar ist; horizontales Default-Padding entfernt damit Icon+Text
             // bei jeder Sheet-Breite mittig sitzen.
             androidx.compose.material3.Button(
@@ -528,6 +598,71 @@ private fun EntryDetailSheet(
                 )
             }
             Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun FollowupMicButton(onTranscript: (String) -> Unit) {
+    val cosmos = LocalCosmos.current
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val transcript = result.data
+                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+            if (!transcript.isNullOrBlank()) onTranscript(transcript)
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
+            .clickable {
+                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(
+                        android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                    )
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Nachtrag zur Aufgabe einsprechen")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                runCatching { launcher.launch(intent) }
+            }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(50))
+                .background(CosmosColors.AccentSecondary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Mic,
+                contentDescription = "Nachtrag aufnehmen",
+                tint = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Text(
+                "Nachtrag einsprechen",
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "KI bewertet die Aufgabe mit Nachtrag neu (Prio, Dauer, Bucket).",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }
@@ -912,7 +1047,7 @@ private fun CategoryIconCircle(
 
 /**
  * 5-Segment-Severity-Bar im Regenbogen-Stil (Soll-Design). Die Segmente sind
- * gleich gross, der "ausgefuellte" Anteil ergibt sich aus severity/10. Nicht
+ * gleich groß, der "ausgefuellte" Anteil ergibt sich aus severity/10. Nicht
  * gefuellte Segmente sind ausgegraut, gefuellte zeigen ihre Status-Farbe.
  */
 @Composable
@@ -931,11 +1066,11 @@ private fun SeverityRainbowBar(severity: Int) {
         modifier = Modifier
             .fillMaxWidth()
             // Tap auf die Schweregrad-Skala oeffnet einen Toast mit der Erklaerung
-            // gruen=niedrig, gelb=mittel, orange=hoch, rot=sehr hoch (Frank-Wunsch).
+            // grün=niedrig, gelb=mittel, orange=hoch, rot=sehr hoch (Frank-Wunsch).
             .clickable {
                 android.widget.Toast.makeText(
                     context,
-                    "Schweregrad-Skala: gruen = niedrig, gelb = mittel, orange = hoch, rot = sehr hoch",
+                    "Schweregrad-Skala: grün = niedrig, gelb = mittel, orange = hoch, rot = sehr hoch",
                     android.widget.Toast.LENGTH_LONG,
                 ).show()
             },

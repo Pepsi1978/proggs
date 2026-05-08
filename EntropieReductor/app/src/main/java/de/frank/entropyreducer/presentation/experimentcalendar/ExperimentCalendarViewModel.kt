@@ -31,7 +31,7 @@ data class ExperimentCalendarUiState(
     /** Google-Calendar-Events pro Tag (Stufe 4 Erweiterung) — wird im Kalender als
      *  zusaetzliche Tag-Marker gerendert und im Detail-Sheet als Liste gezeigt. */
     val eventsByDate: Map<LocalDate, List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity>> = emptyMap(),
-    /** Schichtcode pro Tag — fuer Tag-Hintergrund/Marker. */
+    /** Schichtcode pro Tag — für Tag-Hintergrund/Marker. */
     val shiftByDate: Map<LocalDate, de.frank.entropyreducer.domain.model.ShiftCode> = emptyMap(),
     /** Roh-Text aus dem Kalendereintrag pro Tag — wird im Tag-Cell angezeigt
      *  damit "X", "F", "U", "Tag 1" etc. lesbar sind statt nur Schicht-Hintergrund. */
@@ -69,7 +69,7 @@ class ExperimentCalendarViewModel @Inject constructor(
     private val selectedDateFlow = MutableStateFlow<LocalDate?>(null)
 
     /**
-     * Beobachtungs-Fenster fuer den Kalender — 60 Tage zurueck, 5 Jahre nach vorne.
+     * Beobachtungs-Fenster für den Kalender — 60 Tage zurück, 5 Jahre nach vorne.
      * Frank-Wunsch 2026-05-08: alle bekannten Dienstplaene + Termine sichtbar
      * sobald sie gesynct sind, nicht nur 60 Tage. Sync-Worker zieht passend.
      */
@@ -129,7 +129,7 @@ class ExperimentCalendarViewModel @Inject constructor(
         anchorFlow.value = LocalDate.now()
     }
 
-    /** Oeffnet das Tag-Detail-Sheet fuer einen Datum-Klick im Kalender. */
+    /** Oeffnet das Tag-Detail-Sheet für einen Datum-Klick im Kalender. */
     fun selectDay(date: LocalDate) {
         selectedDateFlow.value = date
     }

@@ -8,7 +8,7 @@ import de.frank.entropyreducer.domain.model.TimeBucket
 import kotlinx.serialization.Serializable
 
 /**
- * Backup-Format fuer Drive (appDataFolder).
+ * Backup-Format für Drive (appDataFolder).
  * version: erlaubt zukuenftige Schema-Evolution.
  * exportedAt: Zeitstempel des Exports — Restore prueft, ob das Drive-Backup
  *             juenger ist als der lokale Stand.

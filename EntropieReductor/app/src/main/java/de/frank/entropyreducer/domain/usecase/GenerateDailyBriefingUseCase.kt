@@ -58,7 +58,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
         val latestBiomarker = biomarkerDao.getLatest().first()
         val todayDay = calendarDao.getDay(today.toString()).first()
         val tomorrowDay = calendarDao.getDay(tomorrow.toString()).first()
-        // Termine aus Google Calendar fuer heute + morgen + uebermorgen — damit
+        // Termine aus Google Calendar für heute + morgen + uebermorgen — damit
         // das Genie sagen kann "Du hast heute 14:00 Arzttermin" oder "Morgen
         // ist Urlaub geplant".
         val nextThreeDays = listOf(today, tomorrow, today.plusDays(2))
@@ -159,7 +159,7 @@ Header, keine Listen. Maximum 7 Saetze.
 
 Inhaltsstruktur:
 1. Kontextueller Eroeffnungssatz (Schicht heute / Tageskontext).
-2. Biomarker-Verankerung (Recovery, HRV) — was bedeutet das fuer heute?
+2. Biomarker-Verankerung (Recovery, HRV) — was bedeutet das für heute?
 3. Was sind heute die wichtigsten 2-3 Aufgaben und WARUM in dieser Reihenfolge?
 4. Eine Hypothese oder Beobachtung — was koennte heute klappen?
 5. Abschliessender Satz: eine sanfte Frage oder ein Vertrauenshinweis.

@@ -222,8 +222,8 @@ fun AnalysisScreen(
 
 @Composable
 private fun QuickStatsGrid(state: AnalysisUiState) {
-    // Soll-Design: 2 grosse Cards nebeneinander (Bild 13/23) mit Icon-Kreis,
-    // Title, grosser Zahl und Detail-Text darunter.
+    // Soll-Design: 2 große Cards nebeneinander (Bild 13/23) mit Icon-Kreis,
+    // Title, großer Zahl und Detail-Text darunter.
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         BigStatCard(
             icon = Icons.Outlined.AutoAwesome,

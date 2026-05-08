@@ -6,7 +6,7 @@ import javax.inject.Singleton
 import kotlin.math.max
 
 /**
- * Sortiert Insights fuer „Mein Repertoire" (Spec §14.1) nach:
+ * Sortiert Insights für „Mein Repertoire" (Spec §14.1) nach:
  *
  *   confidence × Anzahl Wiederholungen × durchschnittliche reduzierte Severity
  *

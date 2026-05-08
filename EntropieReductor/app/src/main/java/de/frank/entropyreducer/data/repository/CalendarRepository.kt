@@ -23,7 +23,7 @@ import javax.inject.Singleton
  * Synchronisiert Ganztagestermine aus Google Calendar in den lokalen Cache.
  * Pro Tag im Sync-Fenster wird genau ein CalendarDayEntity erzeugt.
  *
- * Sync-Fenster: 30 Tage zurueck + 5 Jahre vorwaerts (Frank-Wunsch 2026-05-08:
+ * Sync-Fenster: 30 Tage zurück + 5 Jahre vorwaerts (Frank-Wunsch 2026-05-08:
  * "Kalender geht 50 Jahre nach vorne, ich kenne meine Dienstplaene"). 5 Jahre =
  * 1825 Tage ist ein guter Kompromiss zwischen "alles drin" und Sync-Performance.
  * Mehrtaegige Termine (z.B. "X" 10.-11. Mai oder "Urlaub" 10 Tage am Stueck)
@@ -52,7 +52,7 @@ class CalendarRepository @Inject constructor(
 
     /**
      * Synchronisiert das Standard-Fenster (-30 / +30 Tage) und schreibt CalendarDay-Eintraege.
-     * Liefert die Anzahl gesyncter Tage zurueck.
+     * Liefert die Anzahl gesyncter Tage zurück.
      */
     suspend fun syncDefaultWindow(): Result<Int> = runCatching {
         val token = session.freshToken()
@@ -69,7 +69,7 @@ class CalendarRepository @Inject constructor(
         // 1. Initialisiere alle Tage als FREI — Frank's Kalender-Konvention:
         //    es werden nur Tag-/Nachtschichten und Urlaub eingetragen, alles ohne
         //    Eintrag bedeutet Frei-Tag. UNBEKANNT bleibt nur als Notfall-Fallback
-        //    fuer den Fall, dass der Sync gar nicht durchgelaufen ist (dann existiert
+        //    für den Fall, dass der Sync gar nicht durchgelaufen ist (dann existiert
         //    der DB-Eintrag erst gar nicht und der StatusObserver liest null).
         var d = from
         while (d.isBefore(to)) {
@@ -132,7 +132,7 @@ class CalendarRepository @Inject constructor(
                     // end.date = exklusive Obergrenze. "X" 10.-11. Mai kommt also als
                     // start=2026-05-10, end=2026-05-12. Vorher haben wir nur den
                     // Start-Tag eingetragen und der Folgetag blieb leer. Jetzt
-                    // iterieren wir ueber JEDEN Tag im Range.
+                    // iterieren wir über JEDEN Tag im Range.
                     val startDate = runCatching { LocalDate.parse(allDayDate) }.getOrNull()
                     val endDateString = event.end?.date
                     val endDateExclusive = endDateString
@@ -182,7 +182,7 @@ class CalendarRepository @Inject constructor(
                 } else {
                     // Time-Bound-Event: nur den eventDate-Eintrag schreiben (Termine
                     // ueberspannen typischerweise keinen Tageswechsel, und falls doch
-                    // wuerde Google Calendar zwei separate Eintraege liefern).
+                    // würde Google Calendar zwei separate Eintraege liefern).
                     val startMs = parseIsoToMs(timedStart)
                     val endMs = parseIsoToMs(event.end?.dateTime)
                     event.id?.let { id ->
@@ -205,7 +205,7 @@ class CalendarRepository @Inject constructor(
 
         // 3. Persistieren.
         dao.upsertAll(daysByDate.values.toList())
-        // Events: alte im Sync-Fenster loeschen, neue schreiben — so verschwinden
+        // Events: alte im Sync-Fenster löschen, neue schreiben — so verschwinden
         // geloeschte Google-Events automatisch auch aus der lokalen DB.
         eventDao.deleteRange(from.toString(), to.toString())
         if (collectedEvents.isNotEmpty()) {

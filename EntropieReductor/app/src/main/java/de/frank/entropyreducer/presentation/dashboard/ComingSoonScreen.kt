@@ -33,7 +33,7 @@ import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
-/** Platzhalter-Screen fuer Tabs aus Stufen 2-4. */
+/** Platzhalter-Screen für Tabs aus Stufen 2-4. */
 @Composable
 fun ComingSoonScreen(
     title: String,

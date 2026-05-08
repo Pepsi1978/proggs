@@ -86,7 +86,7 @@ class CalculateStatusUseCase @Inject constructor() {
         val recovery = latest.recoveryScore?.toDouble()
         val hrv = latest.hrvMs
         val sleep = latest.sleepPerformance?.toDouble()
-        // 30-Tage-Median fuer HRV-Vergleich.
+        // 30-Tage-Median für HRV-Vergleich.
         val hrvMedian = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }
             ?.sorted()?.let { it[it.size / 2] }
         // Median > 0 absichern — sonst Division durch null bei degenerierten Daten.

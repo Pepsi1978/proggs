@@ -14,7 +14,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.flow.first
 
 /**
- * Erstellt das Tagesbriefing — taeglich kurz nach dem Aufwachen (Spec Stufe 4 #2).
+ * Erstellt das Tagesbriefing — täglich kurz nach dem Aufwachen (Spec Stufe 4 #2).
  *
  * Schreibt Ergebnis in AppSettings (text + Datum + Zeitstempel). Dashboard 1
  * beobachtet den Flow und zeigt es als Card mit "Anhoeren"-Button (TtsPlayer).
@@ -39,7 +39,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault()).toString()
             val storedDate = settings.dailyBriefingDateFlow.first()
             if (!force && storedDate == today) {
-                Log.i(TAG, "Tagesbriefing fuer $today existiert bereits — skip (force=false).")
+                Log.i(TAG, "Tagesbriefing für $today existiert bereits — skip (force=false).")
                 return Result.success()
             }
 

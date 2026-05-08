@@ -13,7 +13,7 @@ import androidx.core.app.NotificationCompat
 import de.frank.entropyreducer.R
 
 /**
- * Foreground-Service fuer stabile Aufnahme bei Bildschirm-Aus (Spec §8.2).
+ * Foreground-Service für stabile Aufnahme bei Bildschirm-Aus (Spec §8.2).
  * Startet/stoppt nur die Vordergrund-Notifikation — die eigentliche Aufnahme
  * laeuft im AudioRecorder-Singleton.
  */

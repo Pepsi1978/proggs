@@ -122,7 +122,7 @@ class ProcessEntryUseCase @Inject constructor(
             Result.success(entry)
         } catch (t: Throwable) {
             // Fallback-Eintrag mit OFFEN-Status speichern, damit der Nutzer ihn
-            // spaeter erneut bewerten lassen kann (Spec §19).
+            // später erneut bewerten lassen kann (Spec §19).
             val fallback = fallbackEntry(rawTranscript, source)
             entries.upsert(fallback)
             Result.failure(t)

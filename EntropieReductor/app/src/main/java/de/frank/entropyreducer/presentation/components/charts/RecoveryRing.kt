@@ -25,7 +25,7 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Whoop-stiliger Recovery-Ring (Spec §13.1). Score 0-100, Farbverlauf rot/gelb/gruen,
+ * Whoop-stiliger Recovery-Ring (Spec §13.1). Score 0-100, Farbverlauf rot/gelb/grün,
  * 360°-Bogen mit weichen Spring-Aenderungen.
  */
 @Composable

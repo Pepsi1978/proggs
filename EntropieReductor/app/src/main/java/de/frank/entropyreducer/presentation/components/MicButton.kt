@@ -36,7 +36,7 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 enum class MicState { IDLE, RECORDING, PROCESSING }
 
 /**
- * Mic-Button gemaess Spec §4.2 + §8.1 und Referenzbildern.
+ * Mic-Button gemäß Spec §4.2 + §8.1 und Referenzbildern.
  * - Idle: Atmen-Effect (Scale 1.0 ↔ 1.04, 2 Sek)
  * - Recording: pulsierender konzentrischer Ring + roter Mic-Icon
  * - Processing: Spinner

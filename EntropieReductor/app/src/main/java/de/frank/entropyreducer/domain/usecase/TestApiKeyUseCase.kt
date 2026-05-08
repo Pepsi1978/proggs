@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
- * Echte Verbindungs-Tests fuer die Settings → API-Schluessel-Sektion.
+ * Echte Verbindungs-Tests für die Settings → API-Schluessel-Sektion.
  * Statt nur "Key vorhanden?" wird ein realer Roundtrip gemacht — bei
  * ungueltigem Key liefert der Server 401/403, bei gueltigem 200.
  */
@@ -52,7 +52,7 @@ class TestApiKeyUseCase @Inject constructor(
     /**
      * TTS-Test: GET /v1/voices?key={key}&languageCode=de-DE.
      * Quelle: cloud.google.com/text-to-speech/docs/reference/rest/v1/voices/list.
-     * API-Key wird als Query-Parameter uebergeben (Standard fuer Google-Cloud-APIs).
+     * API-Key wird als Query-Parameter uebergeben (Standard für Google-Cloud-APIs).
      */
     suspend fun testTts(apiKey: String): Result<Unit> = runCatching {
         tts.listVoices(apiKey = apiKey, languageCode = "de-DE")

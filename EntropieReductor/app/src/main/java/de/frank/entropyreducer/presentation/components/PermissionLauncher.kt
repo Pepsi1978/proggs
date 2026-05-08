@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 
 /**
- * Permission-State fuer den Mic-Workflow.
+ * Permission-State für den Mic-Workflow.
  *
  * Quelle: https://developer.android.com/training/permissions/requesting (offizielle Doku, 2025).
  * Ersetzt das deprecated accompanist-permissions durch die native ActivityResult-API.
@@ -23,8 +23,8 @@ import androidx.core.content.ContextCompat
  * 4. Bei Denied feuert [onDenied] mit der Liste verweigerter Permissions.
  *
  * Permissions:
- * - [Manifest.permission.RECORD_AUDIO] (immer): fuer MediaRecorder.
- * - [Manifest.permission.POST_NOTIFICATIONS] (Android 13 = API 33+): fuer den
+ * - [Manifest.permission.RECORD_AUDIO] (immer): für MediaRecorder.
+ * - [Manifest.permission.POST_NOTIFICATIONS] (Android 13 = API 33+): für den
  *   Foreground-Service-Notification-Channel "Aufnahme".
  */
 class MicPermissionState internal constructor(

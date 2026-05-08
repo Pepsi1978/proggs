@@ -64,7 +64,7 @@ class HypothesisParser @Inject constructor() {
     }
 
     companion object {
-        // [HYPOTHESE] ... [/HYPOTHESE]  — DOTALL fuer Mehrzeiligkeit.
+        // [HYPOTHESE] ... [/HYPOTHESE]  — DOTALL für Mehrzeiligkeit.
         // Toleriert optionale Markdown-Bold-Sterne und optionale Whitespaces vor der
         // schliessenden Klammer (Gemini-Output ist nicht 100% formattreu, siehe
         // arsturn.com/blog/common-gemini-2-5-pro-coding-mistakes — LLMs wechseln zwischen

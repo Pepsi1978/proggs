@@ -135,7 +135,7 @@ class ApiKeysViewModel @Inject constructor(
     }
 
     /**
-     * Stoppt die Wiedergabe sofort. UI kehrt in IDLE zurueck. Fuer X-Button im
+     * Stoppt die Wiedergabe sofort. UI kehrt in IDLE zurück. Für X-Button im
      * Voice-Picker, falls eine Probe noch laeuft.
      */
     fun stopTtsPreview() {
@@ -184,7 +184,7 @@ class ApiKeysViewModel @Inject constructor(
 
     /**
      * Lifecycle-Cleanup: Wenn der Benutzer die API-Schluessel-Seite verlaesst
-     * waehrend eine Sprich-Probe noch laeuft, wuerde der MediaPlayer im
+     * waehrend eine Sprich-Probe noch laeuft, würde der MediaPlayer im
      * Hintergrund weiter abspielen. ViewModel.onCleared stoppt das.
      */
     override fun onCleared() {
@@ -238,7 +238,7 @@ class ProfileViewModel @Inject constructor(
 
     fun save(text: String) = viewModelScope.launch { settings.setProfileText(text) }
 
-    /** Stub fuer "Aus Profil ins Gedächtnis übernehmen" — voller KI-Aufruf in Stufe 4. */
+    /** Stub für "Aus Profil ins Gedächtnis übernehmen" — voller KI-Aufruf in Stufe 4. */
     fun distillToMemory(text: String) = viewModelScope.launch {
         val now = System.currentTimeMillis()
         // Stufe 1: einfaches Heuristik — pro Absatz ein Memory-Eintrag, max 8.
@@ -368,7 +368,7 @@ class ExportViewModel @Inject constructor(
             // KRITISCH: Auf neuem Geraet darf der erste Sign-In NICHT direkt
             // ein Backup mit dem leeren lokalen Stand hochladen — sonst wird
             // der vorhandene Drive-Backup-Stand durch 0 Eintraege ueberschrieben.
-            // Stattdessen pruefen wir zuerst ob auf Drive bereits ein Backup
+            // Stattdessen prüfen wir zuerst ob auf Drive bereits ein Backup
             // liegt: ja → restore, nein → erstes Backup hochladen.
             val hasBackup = runCatching { syncEntries.hasRemoteBackup() }.getOrDefault(false)
             if (hasBackup) {

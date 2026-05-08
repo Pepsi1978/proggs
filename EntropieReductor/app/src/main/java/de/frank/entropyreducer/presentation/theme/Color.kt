@@ -17,7 +17,7 @@ object CosmosColors {
 
     // Glas-Flaechen
     val GlassDark = Color(0x14FFFFFF)             // weisses Overlay alpha 0.08
-    val GlassDarkBorder = Color(0x29FFFFFF)       // weisses Overlay alpha 0.16 fuer 1dp Border
+    val GlassDarkBorder = Color(0x29FFFFFF)       // weisses Overlay alpha 0.16 für 1dp Border
     val GlassLight = Color(0xCCFFFFFF)            // weiss alpha 0.80
     val GlassLightBorder = Color(0x14000000)      // schwarz alpha 0.08
 
@@ -51,7 +51,7 @@ object CosmosColors {
     val CatOther = Color(0xFF94A3B8)
 }
 
-/** Liefert die Akzentfarbe einer Kategorie — fuer Pillen und Highlights. */
+/** Liefert die Akzentfarbe einer Kategorie — für Pillen und Highlights. */
 fun EntropyCategory.color(): Color = when (this) {
     EntropyCategory.KOERPERLICH -> CosmosColors.CatPhysical
     EntropyCategory.MENTAL -> CosmosColors.CatMental

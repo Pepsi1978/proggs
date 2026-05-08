@@ -11,13 +11,13 @@ import retrofit2.http.Query
  * Google Cloud Text-to-Speech v1 API mit API-Key-Auth (kein OAuth).
  * Doku: https://cloud.google.com/text-to-speech/docs/reference/rest (Stand 2025).
  *
- * API-Key wird als Query-Parameter `key` uebergeben — Standard fuer
+ * API-Key wird als Query-Parameter `key` uebergeben — Standard für
  * Google-Cloud-APIs ohne Service-Account.
  */
 interface GoogleTtsApi {
 
     /**
-     * Listet verfuegbare Voices. Wird fuer Verbindungs-Tests + Voice-Auswahl
+     * Listet verfuegbare Voices. Wird für Verbindungs-Tests + Voice-Auswahl
      * (Spec §6.2 / Stufe 4) genutzt.
      */
     @GET("v1/voices")
@@ -27,7 +27,7 @@ interface GoogleTtsApi {
     ): VoicesListResponse
 
     /**
-     * Synthetisiert Text zu Audio (MP3 base64). Stufe 4 — fuer Tagesbriefing.
+     * Synthetisiert Text zu Audio (MP3 base64). Stufe 4 — für Tagesbriefing.
      */
     @POST("v1/text:synthesize")
     suspend fun synthesize(

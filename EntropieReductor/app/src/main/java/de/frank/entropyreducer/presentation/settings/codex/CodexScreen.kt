@@ -82,7 +82,7 @@ class CodexViewModel @Inject constructor(
         viewModelScope.launch {
             runningFlow.value = true
             scheduler.runCodexNow()
-            // Worker laeuft asynchron — UI-State faellt zurueck, sobald die neue Version
+            // Worker laeuft asynchron — UI-State faellt zurück, sobald die neue Version
             // im Repository erscheint. Wir resetten den Spinner nach 2 s, damit der Button
             // nicht ewig deaktiviert bleibt.
             kotlinx.coroutines.delay(2_000)

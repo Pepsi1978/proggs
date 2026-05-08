@@ -10,8 +10,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * MediaRecorder-Wrapper fuer M4A/AAC mono 16 kHz, 64 kbit/s.
- * Liefert die geschriebene Datei zurueck. Spec §8.2.
+ * MediaRecorder-Wrapper für M4A/AAC mono 16 kHz, 64 kbit/s.
+ * Liefert die geschriebene Datei zurück. Spec §8.2.
  */
 @Singleton
 class AudioRecorder @Inject constructor(
@@ -20,7 +20,7 @@ class AudioRecorder @Inject constructor(
     private var recorder: MediaRecorder? = null
     private var currentFile: File? = null
 
-    /** Startet eine Aufnahme und gibt die Ziel-Datei zurueck. */
+    /** Startet eine Aufnahme und gibt die Ziel-Datei zurück. */
     fun start(): File {
         val dir = File(context.cacheDir, "audio").apply { if (!exists()) mkdirs() }
         val file = File(dir, "${UUID.randomUUID()}.m4a")
@@ -47,7 +47,7 @@ class AudioRecorder @Inject constructor(
         return file
     }
 
-    /** Beendet die Aufnahme und gibt die geschriebene Datei zurueck. */
+    /** Beendet die Aufnahme und gibt die geschriebene Datei zurück. */
     fun stop(): File? {
         return try {
             recorder?.stop()

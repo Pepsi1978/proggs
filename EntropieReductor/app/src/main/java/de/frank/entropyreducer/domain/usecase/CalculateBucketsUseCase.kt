@@ -10,7 +10,7 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 /**
- * Bestimmt fuer einen Eintrag den passenden TimeBucket (HEUTE / MORGEN / DIESE_WOCHE /
+ * Bestimmt für einen Eintrag den passenden TimeBucket (HEUTE / MORGEN / DIESE_WOCHE /
  * DIESEN_MONAT / SPAETER) basierend auf Schichtdienst-Kalender und geschaetzter Dauer.
  *
  * Heuristik:

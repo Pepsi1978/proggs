@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
 /**
  * Trigger-Polling-Worker (Spec §16.2) — alle 15 Min.
  *
- * Iteriert ueber alle aktiven (genehmigten) KI-Trigger und prueft, ob ihre
+ * Iteriert über alle aktiven (genehmigten) KI-Trigger und prueft, ob ihre
  * Klartext-Bedingung gerade zutrifft. Aktuelle Auswertungs-Schritte:
  *  - Phrasen-basiertes Matching auf den letzten Biomarker (HRV, Recovery,
  *    Sleep). Beispiel: "HRV unter 35 ms am Morgen" → Schwellwert-Vergleich.
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.first
  *    aktualisiert und eine Notification erinnert den Benutzer.
  *
  * Komplexere Bedingungen (mehrere Variablen, kombinierte Regeln) sind ein
- * Folge-Refactoring — das Pattern hier reicht fuer die haeufigsten Vorschlaege
+ * Folge-Refactoring — das Pattern hier reicht für die haeufigsten Vorschlaege
  * der Trigger-Engine.
  */
 @HiltWorker
@@ -69,12 +69,12 @@ class TriggerPollingWorker @AssistedInject constructor(
     }
 
     /**
-     * Phrasen-Matcher fuer typische Bedingungen.
+     * Phrasen-Matcher für typische Bedingungen.
      * Erkennt Muster wie:
      *   - "HRV unter 35 ms"
      *   - "Recovery unter 50%"
      *   - "Sleep Performance unter 70%"
-     * Gross-/Kleinschreibung wird ignoriert. Bei nicht erkannter Phrase: false.
+     * Groß-/Kleinschreibung wird ignoriert. Bei nicht erkannter Phrase: false.
      */
     private fun matchesCondition(condition: String, latest: BiomarkerSnapshotEntity): Boolean {
         val c = condition.lowercase()
@@ -83,15 +83,15 @@ class TriggerPollingWorker @AssistedInject constructor(
         return when {
             "hrv" in c && ("unter" in c || "<" in c) ->
                 latest.hrvMs?.let { it < number } == true
-            "hrv" in c && ("ueber" in c || "über" in c || ">" in c) ->
+            "hrv" in c && ("über" in c || "über" in c || ">" in c) ->
                 latest.hrvMs?.let { it > number } == true
             "recovery" in c && ("unter" in c || "<" in c) ->
                 latest.recoveryScore?.let { it < number.toInt() } == true
-            "recovery" in c && ("ueber" in c || "über" in c || ">" in c) ->
+            "recovery" in c && ("über" in c || "über" in c || ">" in c) ->
                 latest.recoveryScore?.let { it > number.toInt() } == true
             "sleep" in c && ("unter" in c || "<" in c) ->
                 latest.sleepPerformance?.let { it < number.toInt() } == true
-            "sleep" in c && ("ueber" in c || "über" in c || ">" in c) ->
+            "sleep" in c && ("über" in c || "über" in c || ">" in c) ->
                 latest.sleepPerformance?.let { it > number.toInt() } == true
             else -> false
         }

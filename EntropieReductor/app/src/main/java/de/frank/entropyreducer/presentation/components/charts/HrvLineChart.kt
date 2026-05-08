@@ -20,8 +20,8 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import kotlin.math.roundToInt
 
 /**
- * Schmaler Linien-Chart fuer Zeitreihen wie HRV oder Strain.
- * Bewusst leichtgewichtig — kein Vico-Overhead fuer 30 Tage.
+ * Schmaler Linien-Chart für Zeitreihen wie HRV oder Strain.
+ * Bewusst leichtgewichtig — kein Vico-Overhead für 30 Tage.
  *
  * Gestrichelte Median-Linie hilft beim Vergleich zum 30-Tage-Mittel.
  */

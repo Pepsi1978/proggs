@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Annotation fuer den Application-weiten CoroutineScope.
+ * Annotation für den Application-weiten CoroutineScope.
  * Quelle: developer.android.com/kotlin/coroutines/coroutines-best-practices —
  * "Use an external CoroutineScope managed by the Application class for work
  * that should outlive the caller's lifecycle."

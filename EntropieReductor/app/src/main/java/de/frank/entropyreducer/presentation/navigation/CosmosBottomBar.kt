@@ -93,7 +93,7 @@ fun CosmosBottomBar(
                 selected = currentTab == Routes.ANALYSIS,
                 onClick = { onTabSelected(Routes.ANALYSIS) },
             )
-            // Luecke fuer den Mic-Button
+            // Luecke für den Mic-Button
             Spacer(Modifier.width(64.dp))
             // "Forscher" statt "Wissenschaftler" (Frank-Wunsch 2026-05-08):
             // "Wissenschaftler" wurde auf 64dp Tab-Breite zweizeilig umgebrochen.

@@ -21,7 +21,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
- * OAuth-2.0-Wrapper auf Basis von AppAuth fuer Google Calendar und Whoop.
+ * OAuth-2.0-Wrapper auf Basis von AppAuth für Google Calendar und Whoop.
  * Spec §15.4 und §15.5.
  *
  * SETUP:
@@ -39,13 +39,13 @@ class OAuthService @Inject constructor(
     private val secrets: EncryptedSecretsStore,
 ) {
 
-    /** Konfiguration fuer Google Calendar. Endpoints von Google's OpenID-Connect-Discovery. */
+    /** Konfiguration für Google Calendar. Endpoints von Google's OpenID-Connect-Discovery. */
     val googleConfig = AuthorizationServiceConfiguration(
         Uri.parse("https://accounts.google.com/o/oauth2/v2/auth"),
         Uri.parse("https://oauth2.googleapis.com/token"),
     )
 
-    /** Konfiguration fuer Whoop. Spec §15.4. */
+    /** Konfiguration für Whoop. Spec §15.4. */
     val whoopConfig = AuthorizationServiceConfiguration(
         Uri.parse("https://api.prod.whoop.com/oauth/oauth2/auth"),
         Uri.parse("https://api.prod.whoop.com/oauth/oauth2/token"),
@@ -57,7 +57,7 @@ class OAuthService @Inject constructor(
     /* ============================ Google Calendar ============================ */
 
     /**
-     * Baut den Authorization-Intent fuer Google Calendar. Die UI startet ihn
+     * Baut den Authorization-Intent für Google Calendar. Die UI startet ihn
      * via ActivityResultContract.
      */
     fun buildGoogleAuthIntent(clientId: String): Intent {
@@ -69,7 +69,7 @@ class OAuthService @Inject constructor(
         )
             .setScopes(GOOGLE_SCOPE_CALENDAR_READONLY, "email")
             .setPrompt("consent")
-            // Fordert Refresh-Token an — Pflicht fuer Background-Sync.
+            // Fordert Refresh-Token an — Pflicht für Background-Sync.
             .setAdditionalParameters(mapOf("access_type" to "offline"))
             .build()
         return newService().getAuthorizationRequestIntent(request)
@@ -121,7 +121,7 @@ class OAuthService @Inject constructor(
     }
 
     /**
-     * Liefert ein gueltiges Access-Token fuer Google Calendar. Refreshed transparent
+     * Liefert ein gueltiges Access-Token für Google Calendar. Refreshed transparent
      * wenn das Token abgelaufen ist.
      */
     suspend fun freshGoogleAccessToken(): String? {

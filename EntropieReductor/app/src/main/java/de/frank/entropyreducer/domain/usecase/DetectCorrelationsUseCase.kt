@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.first
  *  4. Wenn |d| > 0.3 UND n >= 7 in beiden Gruppen: Beobachtung melden.
  *
  * Strikte Sprachregelung: "Beobachtung, keine Kausalitaet" — Result-Eintraege
- * tragen das immer mit, damit das Genie es spaeter nicht in Kausal-Aussagen
+ * tragen das immer mit, damit das Genie es später nicht in Kausal-Aussagen
  * verwandelt.
  */
 class DetectCorrelationsUseCase @Inject constructor(

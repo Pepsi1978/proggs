@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * UI-Zustand fuer das Briefing-Panel auf Dashboard 1 (Tagesbriefing) und
- * Detail-Screens fuer Wochen-/Monatsrueckblick.
+ * UI-Zustand für das Briefing-Panel auf Dashboard 1 (Tagesbriefing) und
+ * Detail-Screens für Wochen-/Monatsrueckblick.
  */
 data class BriefingUiState(
     val dailyText: String = "",
@@ -35,9 +35,9 @@ data class BriefingUiState(
 enum class PlayingKind { NONE, DAILY, WEEKLY, MONTHLY }
 
 /**
- * ViewModel fuer das Briefing-Panel — kombiniert die drei Cache-Flows aus
+ * ViewModel für das Briefing-Panel — kombiniert die drei Cache-Flows aus
  * AppSettings, kapselt TTS-Wiedergabe und triggert manuelle Generierung
- * ueber den BackgroundScheduler.
+ * über den BackgroundScheduler.
  */
 @HiltViewModel
 class BriefingViewModel @Inject constructor(
@@ -91,12 +91,12 @@ class BriefingViewModel @Inject constructor(
     }
 
     /**
-     * Startet TTS-Wiedergabe fuer den gewaehlten Briefing-Typ. Toggle-Verhalten:
-     * Wenn fuer DEN GLEICHEN Tab schon laeuft → stop() (Pause).
+     * Startet TTS-Wiedergabe für den gewaehlten Briefing-Typ. Toggle-Verhalten:
+     * Wenn für DEN GLEICHEN Tab schon laeuft → stop() (Pause).
      * Wenn ein ANDERER Tab gerade laeuft → vorher stoppen, dann neu starten.
      *
      * Race-Schutz: Vorheriger speakJob wird IMMER gecancelled, bevor ein neuer
-     * Coroutine-Job startet. So koennen alte Callbacks den State des neuen
+     * Coroutine-Job startet. So können alte Callbacks den State des neuen
      * Aufrufs nicht mehr ueberschreiben.
      */
     fun speak(kind: PlayingKind) {

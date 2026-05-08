@@ -15,13 +15,13 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class CalendarNotSignedInException : Exception("Kein Google-Konto fuer Calendar-Sync verbunden.")
+class CalendarNotSignedInException : Exception("Kein Google-Konto für Calendar-Sync verbunden.")
 
 class CalendarConsentRequiredException(val consentIntent: Intent) :
     Exception("Calendar-Einwilligung erforderlich.")
 
 /**
- * Liefert auf Anfrage einen frischen OAuth-Access-Token fuer den Calendar-Read-Only-Scope.
+ * Liefert auf Anfrage einen frischen OAuth-Access-Token für den Calendar-Read-Only-Scope.
  * Token werden automatisch von Play-Services refreshed — keine eigenen Refresh-Tokens noetig.
  */
 @Singleton
@@ -32,7 +32,7 @@ class CalendarSession @Inject constructor(
     @Volatile private var cachedToken: String? = null
     private val mutex = Mutex()
 
-    /** Liefert ein gueltiges Bearer-Token. Cached intern fuer die aktuelle Operation. */
+    /** Liefert ein gueltiges Bearer-Token. Cached intern für die aktuelle Operation. */
     suspend fun freshToken(): String {
         cachedToken?.let { return it }
         return mutex.withLock {
@@ -45,7 +45,7 @@ class CalendarSession @Inject constructor(
 
     private suspend fun requestToken(): String = withContext(Dispatchers.IO) {
         val email = secrets.calendarAccountEmail ?: throw CalendarNotSignedInException()
-        Log.d(TAG, "Token-Request fuer $email, Scope=CALENDAR_READONLY")
+        Log.d(TAG, "Token-Request für $email, Scope=CALENDAR_READONLY")
         val account = Account(email, "com.google")
         val scope = "oauth2:${CalendarSignInHelper.CALENDAR_READONLY_SCOPE}"
         val token = try {

@@ -309,7 +309,7 @@ private fun DayCell(
             .clip(RoundedCornerShape(8.dp))
             .background(cellBg)
             .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(8.dp))
-            // Klick ist IMMER aktiv — auch fuer leere Tage und nur-Schicht-Tage,
+            // Klick ist IMMER aktiv — auch für leere Tage und nur-Schicht-Tage,
             // damit das Tag-Detail-Sheet sich oeffnet (Frank-Wunsch 2026-05-08).
             .clickable(onClick = onClick)
             .padding(4.dp),
@@ -410,7 +410,7 @@ private fun shiftBadgeFor(shift: de.frank.entropyreducer.domain.model.ShiftCode)
     }
 
 /**
- * Anzeigetext fuer einen Tag im Kalender — kombiniert Schichtcode + Roh-Text
+ * Anzeigetext für einen Tag im Kalender — kombiniert Schichtcode + Roh-Text
  * aus dem Google-Calendar-Eintrag. Logik:
  *  - Wenn Roh-Text vorhanden: nimm ihn (gekuerzt) — "Tag 1", "Nacht 2", "U", "X-Tag", "F".
  *  - Sonst: Fallback auf den Buchstaben aus dem Schichtcode-Enum.
@@ -600,7 +600,7 @@ private fun HypothesisDetailContent(
             onValueChangeFinished = { onSetFelt(felt.toInt()) },
             valueRange = -100f..100f,
             // Steps in 10er-Schritten (entspricht 21 Stop-Punkten -100,-90,...0,...,90,100)
-            // damit Frank praezise einstellen kann ohne nano-fein navigieren zu muessen.
+            // damit Frank praezise einstellen kann ohne nano-fein navigieren zu müssen.
             steps = 19,
             colors = SliderDefaults.colors(
                 thumbColor = CosmosColors.AccentPrimary,
@@ -710,7 +710,7 @@ private val EVENT_TIME_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm", Locale.GERMANY)
 
 /**
- * Tag-Detail-Sheet (Frank-Wunsch 2026-05-08): zeigt fuer einen Datum-Tap im Kalender
+ * Tag-Detail-Sheet (Frank-Wunsch 2026-05-08): zeigt für einen Datum-Tap im Kalender
  * alle wichtigen Infos auf einmal — Schicht aus dem Schicht-Kalender, Google-Calendar-
  * Events des Tages und alle Hypothesen die an diesem Tag aktiv/geplant sind. Tap auf
  * eine Hypothese-Card oeffnet das eigentliche Hypothese-Detail-Sheet.

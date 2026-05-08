@@ -25,7 +25,7 @@ import javax.inject.Singleton
  * BiomarkerSnapshot zusammen. Workouts werden derzeit nur gezaehlt (kein Snapshot-Feld).
  *
  * Strategie:
- *  - Sync-Fenster ist standardmaessig 30 Tage zurueck (Spec §15.4 — Trends).
+ *  - Sync-Fenster ist standardmaessig 30 Tage zurück (Spec §15.4 — Trends).
  *  - Recovery + Cycle + Sleep werden parallel gepullt, dann nach Cycle-Tag gegroupt.
  *  - Pro Cycle ein Snapshot (Cycle-Start = capturedAt).
  *  - Rate-Limit-Handling: Bei 429 → Exponential-Backoff (1s, 2s, 4s, max 3 Retries).
@@ -47,13 +47,13 @@ class WhoopRepository @Inject constructor(
 
     /**
      * Synchronisiert die letzten [days] Tage. Liefert die Anzahl gespeicherter
-     * Snapshots zurueck.
+     * Snapshots zurück.
      *
      * Default auf 365 Tage erhoeht (Frank-Wunsch 2026-05-08: "moechte alle
      * existierenden Daten von Whoop herunterladen"). Whoop selbst speichert
-     * nicht laenger als ~2 Jahre, daher reichen 365 Tage als pragmatische
-     * Obergrenze fuer den taeglichen Sync. Fuer den ersten Full-Sync existiert
-     * syncFullHistory() die bis 2018 zurueck zieht (Whoop-Gruendungs-Jahr).
+     * nicht länger als ~2 Jahre, daher reichen 365 Tage als pragmatische
+     * Obergrenze für den taeglichen Sync. Für den ersten Full-Sync existiert
+     * syncFullHistory() die bis 2018 zurück zieht (Whoop-Gruendungs-Jahr).
      */
     suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatching {
         val token = oauth.freshWhoopAccessToken()
@@ -79,7 +79,7 @@ class WhoopRepository @Inject constructor(
         }
 
         val recByCycleId = recoveries.associateBy { it.cycleId }
-        // Sleeps haben keine direkte cycle_id im Public-Schema — wir matchen ueber das Datum.
+        // Sleeps haben keine direkte cycle_id im Public-Schema — wir matchen über das Datum.
         val sleepByDate = sleeps
             .filter { it.nap != true && !it.start.isNullOrBlank() }
             .groupBy { Instant.parse(it.start!!).atZone(ZoneId.systemDefault()).toLocalDate().toString() }
@@ -101,7 +101,7 @@ class WhoopRepository @Inject constructor(
         val today = OffsetDateTime.now(ZoneOffset.UTC)
         val startOfWhoop = today.toLocalDate().minusYears(7) // ~2018
         val days = java.time.temporal.ChronoUnit.DAYS.between(startOfWhoop, today.toLocalDate()).toInt()
-        Log.i(TAG, "Full-Sync gestartet: $days Tage zurueck")
+        Log.i(TAG, "Full-Sync gestartet: $days Tage zurück")
         syncLastDays(days).getOrThrow()
     }.onFailure { Log.e(TAG, "Whoop-Full-Sync fehlgeschlagen", it) }
 

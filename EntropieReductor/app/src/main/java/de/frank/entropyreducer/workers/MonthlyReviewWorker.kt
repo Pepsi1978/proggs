@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.first
 
 /**
  * Monatsrueckblick — am 1. des Folgemonats 19:00 (Spec §16.3).
- * Worker laeuft taeglich, prueft selbst ob heute der 1. ist und ob diesen Monat
+ * Worker laeuft täglich, prueft selbst ob heute der 1. ist und ob diesen Monat
  * schon ein Rueckblick erstellt wurde (via lastMonthlyReviewAt). So uberlebt der
  * Job auch, wenn das Geraet zwischen 1. und 2. ausgeschaltet war.
  */
@@ -34,7 +34,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault())
             // Erst zwischen 1. und 7. eines Monats erlauben — danach nicht mehr nachholen.
             if (!force && today.dayOfMonth > 7) {
-                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spaet fuer den Monatsrueckblick (force=false).")
+                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spaet für den Monatsrueckblick (force=false).")
                 return Result.success()
             }
             val lastAt = settings.lastMonthlyReviewAtMsFlow.first()
@@ -42,7 +42,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
                 java.time.Instant.ofEpochMilli(lastAt).atZone(ZoneId.systemDefault()).toLocalDate()
             } else null
             if (!force && lastDate?.year == today.year && lastDate.monthValue == today.monthValue) {
-                Log.i(TAG, "Monatsrueckblick fuer ${today.month} existiert bereits (force=false).")
+                Log.i(TAG, "Monatsrueckblick für ${today.month} existiert bereits (force=false).")
                 return Result.success()
             }
 

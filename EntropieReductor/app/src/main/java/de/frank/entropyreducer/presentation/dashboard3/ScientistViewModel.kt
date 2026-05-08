@@ -201,7 +201,7 @@ class ScientistViewModel @Inject constructor(
     /** Markiert eine vorgeschlagene Hypothese als AKTIV mit den gewaehlten Daten.
      *
      *  Setzt biomarkerBeforeId aus dem aktuellsten Snapshot, sofern noch nicht
-     *  vorhanden — der ConfidenceCalculator (§16.6) braucht den Vor-Snapshot fuer
+     *  vorhanden — der ConfidenceCalculator (§16.6) braucht den Vor-Snapshot für
      *  die HRV/Recovery-Delta-Berechnung beim spaeteren Insight-Update.
      */
     fun startHypothesis(hypothesis: HypothesisEntity, plannedStartMs: Long) {

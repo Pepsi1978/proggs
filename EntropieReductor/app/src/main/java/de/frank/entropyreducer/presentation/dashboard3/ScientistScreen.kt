@@ -389,7 +389,7 @@ private fun ChatInputBar(
             .fillMaxWidth()
             .imePadding()
             // BottomBar ist Overlay (Frank-Wunsch 2026-05-08): ChatInputBar muss
-            // ueber der BottomBar bleiben — bottom-Padding = 72dp BottomBar +
+            // über der BottomBar bleiben — bottom-Padding = 72dp BottomBar +
             // bottomInset System-Nav.
             .padding(bottom = 72.dp + bottomInset)
             .background(cosmos.glassBg)

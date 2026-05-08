@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Leichtgewichtiger Markdown-Renderer fuer die KI-Antworten.
+ * Leichtgewichtiger Markdown-Renderer für die KI-Antworten.
  *
  * Unterstuetzt:
  *  - `## Headline` (h2)

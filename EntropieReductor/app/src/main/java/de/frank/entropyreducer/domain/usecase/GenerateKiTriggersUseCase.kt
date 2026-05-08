@@ -139,7 +139,7 @@ class GenerateKiTriggersUseCase @Inject constructor(
             for (i in 0 until arr.length()) {
                 val t = arr.optJSONObject(i) ?: continue
                 // optString() returnt den String "null" wenn der Wert JSONObject.NULL ist,
-                // nicht "". Deshalb explizit per isNull() pruefen.
+                // nicht "". Deshalb explizit per isNull() prüfen.
                 // Quelle: developer.android.com/reference/org/json/JSONObject#optString
                 val name = if (t.isNull("name")) "" else t.optString("name").trim()
                 val condition = if (t.isNull("condition")) "" else t.optString("condition").trim()

@@ -157,7 +157,7 @@ private fun StatusDetailSheet(
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Berechnungslogik gemaess Spec §4.1. Der Wert wird alle paar Minuten " +
+                text = "Berechnungslogik gemäß Spec §4.1. Der Wert wird alle paar Minuten " +
                     "neu berechnet sowie sofort nach jeder Status-Änderung eines Eintrags.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
@@ -189,7 +189,7 @@ private fun shiftLabel(shift: ShiftCode): String = when (shift) {
     ShiftCode.UNBEKANNT -> "Unbekannt"
 }
 
-/** Variante als Ring fuer Recovery-Score (Dashboard 4). */
+/** Variante als Ring für Recovery-Score (Dashboard 4). */
 @Composable
 fun RingPlaceholder(
     score: Int,

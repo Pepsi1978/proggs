@@ -24,7 +24,7 @@ import javax.inject.Singleton
 
 /**
  * Wrapper um den NotificationManager, der vor jeder Notification prueft ob die
- * aktuelle Zeit im Schlaffenster fuer den heutigen CalendarDay liegt. Wenn ja,
+ * aktuelle Zeit im Schlaffenster für den heutigen CalendarDay liegt. Wenn ja,
  * wird die Notification verzoegert bis zum Wachzeitpunkt + 15 Min.
  *
  * Spec §16.4. Default-Schlaffenster bei UNBEKANNT: 22:00-06:00.
@@ -127,13 +127,13 @@ class ShiftAwareNotifier @Inject constructor(
 
     /**
      * Pruft ob [now] im Fenster zwischen [start] und [end] liegt — auch wenn das Fenster
-     * ueber Mitternacht geht (z.B. Tagdienst Schlaf 21:00 - 04:00).
+     * über Mitternacht geht (z.B. Tagdienst Schlaf 21:00 - 04:00).
      */
     private fun isWithinSleepWindow(now: LocalTime, start: LocalTime, end: LocalTime): Boolean {
         return if (start.isBefore(end)) {
             now in start..end
         } else {
-            // ueber Mitternacht
+            // über Mitternacht
             !now.isBefore(start) || !now.isAfter(end)
         }
     }

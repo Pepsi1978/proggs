@@ -19,11 +19,11 @@ data class BiomarkerUiState(
     val latest: BiomarkerSnapshotEntity? = null,
     /** VOLLSTAENDIGE Historie aller Whoop-Snapshots — nicht mehr auf 30 Tage limitiert
      *  (Frank-Wunsch 2026-05-08). Trends, Detail-Screen und Korrelationen nutzen das.
-     *  history30Days bleibt als 30-Tage-Slice fuer die Mini-Card-Deltas. */
+     *  history30Days bleibt als 30-Tage-Slice für die Mini-Card-Deltas. */
     val history: List<BiomarkerSnapshotEntity> = emptyList(),
     val history30Days: List<BiomarkerSnapshotEntity> = emptyList(),
     /** Aktuell ausgewaehlter Tag (Frank-Wunsch 2026-05-08: zwischen Heute / gestern /
-     *  vorgestern wechseln). Default = Heute. Der Snapshot fuer diesen Tag wird in
+     *  vorgestern wechseln). Default = Heute. Der Snapshot für diesen Tag wird in
      *  selectedSnapshot gehalten und in den Mini-Cards + Recovery-Ring angezeigt. */
     val selectedDate: java.time.LocalDate = java.time.LocalDate.now(),
     val selectedSnapshot: BiomarkerSnapshotEntity? = null,
@@ -53,7 +53,7 @@ class BiomarkerViewModel @Inject constructor(
         combine(_refreshing, _message, statusObserver.observe()) { r, m, b -> Triple(r, m, b) },
         _selectedDate,
     ) { latest, all, last30, status, selDate ->
-        // Snapshot fuer den gewaehlten Tag finden — wenn kein Snapshot fuer das
+        // Snapshot für den gewaehlten Tag finden — wenn kein Snapshot für das
         // exakte Datum existiert, wird der naechste juengere Snapshot vor dem
         // gewaehlten Tag genommen (Whoop syncs typischerweise einmal pro Tag).
         val selStartMs = selDate.atStartOfDay(java.time.ZoneId.systemDefault())

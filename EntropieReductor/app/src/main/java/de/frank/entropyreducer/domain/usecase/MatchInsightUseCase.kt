@@ -27,7 +27,7 @@ import javax.inject.Inject
  *  4) Kein Match + andere Outcomes: nichts tun.
  *
  * Optional kann der Aufrufer das LLM-Matching ueberspringen (z.B. wenn der Nutzer
- * im Detail-Sheet manuell „Daraus einen Insight machen" gewaehlt hat).
+ * im Detail-Sheet manuell „Daraus einen Insight machen" gewählt hat).
  */
 class MatchInsightUseCase @Inject constructor(
     private val gemini: GeminiApi,
@@ -40,8 +40,8 @@ class MatchInsightUseCase @Inject constructor(
 ) {
 
     /**
-     * Verarbeitet die abgeschlossene Hypothese — egal ob ueber den Auto-Flow oder
-     * manuell ausgeloest. Liefert den Insight zurueck, der erstellt/aktualisiert wurde
+     * Verarbeitet die abgeschlossene Hypothese — egal ob über den Auto-Flow oder
+     * manuell ausgeloest. Liefert den Insight zurück, der erstellt/aktualisiert wurde
      * (oder null, wenn nichts angelegt wurde).
      */
     suspend operator fun invoke(
@@ -114,7 +114,7 @@ class MatchInsightUseCase @Inject constructor(
 
     private suspend fun createNewInsight(h: HypothesisEntity): InsightEntity {
         // Erste Heuristik: Kategorie aus relatedEntryIds nicht zuverlaessig — wir setzen SONSTIGES
-        // und ueberlassen es Frank, die Kategorie spaeter zu korrigieren.
+        // und ueberlassen es Frank, die Kategorie später zu korrigieren.
         val now = System.currentTimeMillis()
         val insight = InsightEntity(
             id = UUID.randomUUID().toString(),
