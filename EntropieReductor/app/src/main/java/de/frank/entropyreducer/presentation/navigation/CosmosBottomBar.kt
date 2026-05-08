@@ -60,14 +60,22 @@ fun CosmosBottomBar(
             .height(72.dp + bottomInset)
             .padding(bottom = bottomInset),
     ) {
-        // Bar mit den 4 Tabs (Mic-Lücke in der Mitte)
+        // Bar mit den 4 Tabs (Mic-Lücke in der Mitte). Frank-Reklamation 2026-05-08:
+        // glassBg war zu transparent (alpha 0.08 im Dunkelmodus = fast unsichtbar).
+        // Jetzt ein festerer Hintergrund (alpha 0.92) damit die Bar klar erkennbar ist
+        // aber man trotzdem leicht durchsieht — "nur minimal transparent".
+        val barBg = if (cosmos.isDark) {
+            CosmosColors.BgDarkAccent.copy(alpha = 0.92f)
+        } else {
+            CosmosColors.BgLightAccent.copy(alpha = 0.92f)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
                 .padding(horizontal = 12.dp)
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(cosmos.glassBg)
+                .background(barBg)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
                 .align(Alignment.BottomCenter),
             verticalAlignment = Alignment.CenterVertically,
