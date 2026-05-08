@@ -167,58 +167,49 @@ fun ScientistScreen(
             )
         },
     ) { padding ->
+        // Frank-Wunsch 2026-05-09: ChatInputBar (Eingabefeld + Send) komplett entfernt.
+        // Mic-Aufnahme erfolgt ueber das zentrale BottomBar-Mic. Nach erfolgreicher
+        // Transkription oeffnet sich ein TranscriptEditDialog (Pop-up) mit dem Text drin,
+        // den Frank editieren oder direkt absenden kann.
+        // Der Bildschirm scrollt jetzt vollstaendig durch — kein abgeschnittener Bereich
+        // ueber der BottomBar mehr (analog zu TasksScreen).
         Box(Modifier.fillMaxSize().padding(padding)) {
-            Column(Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Proaktive Forscher-Frage als erstes Item — sticky hat Compose nicht
-                    // direkt fuer LazyColumn-Header, aber als erstes Element scrollt sie mit
-                    // weg sobald Frank sich tiefer in die Diskussion einliest. Beim
-                    // Aktualisieren landet er per LaunchedEffect oben am letzten Eintrag,
-                    // die Frage ist dann ggf. weggescrollt — das ist gewollt.
-                    state.scientistQuestion?.let { question ->
-                        item(key = "scientist_question_${question.triggerKey}") {
-                            KiQuestionCard(
-                                question = question,
-                                onSubmitAnswer = vm::submitScientistQuestionAnswer,
-                                onSnooze = vm::snoozeScientistQuestion,
-                                onRefresh = vm::refreshScientistQuestion,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                            )
-                        }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                state.scientistQuestion?.let { question ->
+                    item(key = "scientist_question_${question.triggerKey}") {
+                        KiQuestionCard(
+                            question = question,
+                            onSubmitAnswer = vm::submitScientistQuestionAnswer,
+                            onSnooze = vm::snoozeScientistQuestion,
+                            onRefresh = vm::refreshScientistQuestion,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
                     }
-                    items(state.messages, key = { it.id }) { msg ->
-                        when (msg.role) {
-                            ScientistRole.KI -> KiBubble(
-                                message = msg,
-                                hypotheses = state.hypothesesByMessageId[msg.id].orEmpty(),
-                                onTryHypothesis = { hypothesisToStart = it },
-                                onOpenHypothesis = { vm.openHypothesisDetail(it.id) },
-                                onDeleteHypothesis = { vm.requestDeleteHypothesis(it.id) },
-                            )
-                            ScientistRole.NUTZER -> NutzerBubble(msg)
-                        }
-                    }
-                    if (state.isThinking) {
-                        item {
-                            ThinkingIndicator()
-                        }
-                    }
-                    // 200dp damit das letzte Item (oft eine Hypothese-Card mit
-                    // viel Inhalt) nicht von der ChatInputBar verdeckt wird.
-                    item { Spacer(Modifier.height(200.dp)) }
                 }
-
-                ChatInputBar(
-                    draft = state.draftText,
-                    onDraftChange = vm::setDraft,
-                    onSend = vm::send,
-                    canSend = state.draftText.isNotBlank() && !state.isThinking,
-                )
+                items(state.messages, key = { it.id }) { msg ->
+                    when (msg.role) {
+                        ScientistRole.KI -> KiBubble(
+                            message = msg,
+                            hypotheses = state.hypothesesByMessageId[msg.id].orEmpty(),
+                            onTryHypothesis = { hypothesisToStart = it },
+                            onOpenHypothesis = { vm.openHypothesisDetail(it.id) },
+                            onDeleteHypothesis = { vm.requestDeleteHypothesis(it.id) },
+                        )
+                        ScientistRole.NUTZER -> NutzerBubble(msg)
+                    }
+                }
+                if (state.isThinking) {
+                    item { ThinkingIndicator() }
+                }
+                // Bottom-Spacer fuer die BottomBar-Hoehe (72dp + System-Nav-Inset).
+                // Damit das letzte Item nicht hinter der BottomBar verschwindet,
+                // genauso wie auf dem Aufgaben-Screen.
+                item { Spacer(Modifier.height(100.dp)) }
             }
 
             SnackbarHost(
@@ -226,6 +217,17 @@ fun ScientistScreen(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
             ) { Snackbar(it) }
         }
+    }
+
+    // TranscriptEditDialog: erscheint nach erfolgreicher Whisper-Transkription
+    // mit dem aufgenommenen Text als editierbarem Vorlagewert.
+    state.pendingTranscript?.let { text ->
+        TranscriptEditDialog(
+            text = text,
+            onTextChange = vm::editPendingTranscript,
+            onSend = vm::sendPendingTranscript,
+            onDismiss = vm::dismissPendingTranscript,
+        )
     }
 
     hypothesisToStart?.let { h ->
@@ -481,61 +483,67 @@ private fun ThinkingIndicator() {
     }
 }
 
+/**
+ * Frank-Wunsch 2026-05-09: Pop-up nach erfolgreicher Whisper-Transkription.
+ * Zeigt das aufgenommene Transkript als editierbares Textfeld — Frank kann nochmal
+ * korrigieren bevor er auf Senden drueckt. Cancel-Button verwirft die Aufnahme.
+ */
 @Composable
-private fun ChatInputBar(
-    draft: String,
-    onDraftChange: (String) -> Unit,
+private fun TranscriptEditDialog(
+    text: String,
+    onTextChange: (String) -> Unit,
     onSend: () -> Unit,
-    canSend: Boolean,
+    onDismiss: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .imePadding()
-            // BottomBar ist Overlay (Frank-Wunsch 2026-05-08): ChatInputBar muss
-            // über der BottomBar bleiben — bottom-Padding = 72dp BottomBar +
-            // bottomInset System-Nav.
-            .padding(bottom = 72.dp + bottomInset)
-            .background(cosmos.glassBg)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = onDraftChange,
-                modifier = Modifier.weight(1f),
-                // Frank-Wunsch 2026-05-09: Das Mic im ChatInputBar entfaellt — der
-                // zentrale Mic-Button in der BottomBar uebernimmt seine Funktion.
-                // Placeholder bleibt "Schreib oder sprich" weil das Sprechen ueber
-                // das Bottom-Mic moeglich ist.
-                placeholder = { Text("Schreib oder sprich …", color = cosmos.textSecondary) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = cosmos.textPrimary,
-                    unfocusedTextColor = cosmos.textPrimary,
-                    focusedBorderColor = CosmosColors.AccentPrimary,
-                    unfocusedBorderColor = cosmos.glassBorder,
-                ),
-                shape = RoundedCornerShape(20.dp),
-                maxLines = 4,
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Transkript pruefen",
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.width(8.dp))
-            IconButton(
-                onClick = onSend,
-                enabled = canSend,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        if (canSend) CosmosColors.AccentPrimary
-                        else CosmosColors.AccentPrimary.copy(alpha = 0.30f),
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Du kannst den Text noch anpassen, bevor er an den Wissenschaftler geht.",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = onTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = cosmos.textPrimary,
+                        unfocusedTextColor = cosmos.textPrimary,
+                        focusedBorderColor = CosmosColors.AccentPrimary,
+                        unfocusedBorderColor = cosmos.glassBorder,
                     ),
-            ) {
-                Icon(Icons.Outlined.Send, "Senden", tint = CosmosColors.BgDark)
+                    shape = RoundedCornerShape(16.dp),
+                    maxLines = 8,
+                )
             }
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onSend,
+                enabled = text.isNotBlank(),
+            ) {
+                Text("Senden", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Abbrechen", color = cosmos.textSecondary)
+            }
+        },
+        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+    )
 }
 
 @Composable

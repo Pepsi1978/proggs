@@ -45,6 +45,10 @@ data class ScientistUiState(
     val micState: MicState = MicState.IDLE,
     val processingMessage: String? = null,
     val errorMessage: String? = null,
+    // Frank-Wunsch 2026-05-09: nach erfolgreicher Whisper-Transkription enthaelt
+    // dieses Feld den aufgenommenen Text. Solange != null zeigt der Screen den
+    // TranscriptEditDialog — Frank kann editieren oder absenden.
+    val pendingTranscript: String? = null,
     // Inline-Hypothesen-Chat (Sheet pro Hypothese)
     val activeHypothesisDetailId: String? = null,
     val hypothesisDetail: HypothesisEntity? = null,
@@ -88,6 +92,7 @@ class ScientistViewModel @Inject constructor(
         val micState: MicState = MicState.IDLE,
         val processingMessage: String? = null,
         val errorMessage: String? = null,
+        val pendingTranscript: String? = null,
     )
 
     private data class HypothesisUi(
@@ -161,6 +166,7 @@ class ScientistViewModel @Inject constructor(
             micState = block.ui.micState,
             processingMessage = block.ui.processingMessage,
             errorMessage = block.ui.errorMessage,
+            pendingTranscript = block.ui.pendingTranscript,
             activeHypothesisDetailId = block.hypothesisBlock.detailId,
             hypothesisDetail = block.hypothesisBlock.detailId?.let { hypById[it] },
             hypothesisMessages = block.hypothesisBlock.messages,
@@ -262,12 +268,20 @@ class ScientistViewModel @Inject constructor(
                 )
                 viewModelScope.launch {
                     transcribe(file).onSuccess { transcript ->
-                        uiOnlyFlow.value = uiOnlyFlow.value.copy(
-                            micState = MicState.IDLE,
-                            processingMessage = null,
-                        )
+                        // Frank-Wunsch 2026-05-09: Statt das Transkript in einen
+                        // Draft-Text-Feld zu haengen, oeffnet sich ein Edit-Dialog.
+                        // pendingTranscript != null triggert im UI das Pop-up.
                         if (transcript.isNotBlank()) {
-                            draftFlow.value = (draftFlow.value + " " + transcript).trim()
+                            uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                                micState = MicState.IDLE,
+                                processingMessage = null,
+                                pendingTranscript = transcript.trim(),
+                            )
+                        } else {
+                            uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                                micState = MicState.IDLE,
+                                processingMessage = null,
+                            )
                         }
                     }.onFailure { ex ->
                         uiOnlyFlow.value = uiOnlyFlow.value.copy(
@@ -284,6 +298,23 @@ class ScientistViewModel @Inject constructor(
 
     fun dismissError() {
         uiOnlyFlow.value = uiOnlyFlow.value.copy(errorMessage = null)
+    }
+
+    // ====== Pending Transcript (TranscriptEditDialog) ======
+
+    fun editPendingTranscript(text: String) {
+        uiOnlyFlow.value = uiOnlyFlow.value.copy(pendingTranscript = text)
+    }
+
+    fun sendPendingTranscript() {
+        val text = uiOnlyFlow.value.pendingTranscript?.trim().orEmpty()
+        if (text.isBlank() || uiOnlyFlow.value.isThinking) return
+        uiOnlyFlow.value = uiOnlyFlow.value.copy(pendingTranscript = null)
+        triggerAi(text)
+    }
+
+    fun dismissPendingTranscript() {
+        uiOnlyFlow.value = uiOnlyFlow.value.copy(pendingTranscript = null)
     }
 
     fun startHypothesis(hypothesis: HypothesisEntity, plannedStartMs: Long) {
