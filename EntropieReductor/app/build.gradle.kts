@@ -85,16 +85,19 @@ android {
             buildConfigField("String", "VARIANT_LABEL", "\"Debugversion\"")
         }
         // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
-        // (R8, Minification) mit Debug-Signing fuer schnelle Performance-Tests.
-        // Frank-Wunsch 2026-05-09: PARALLELE Installation neben Debug — Frank
-        // arbeitet mit der Debug-Version (de.frank.entropyreducer.debug) und
-        // schaut zwischendurch in die Benchmark-Version (de.frank.entropyreducer.bench)
-        // um die fluessige Performance zu sehen. Daten in Benchmark-Variante
-        // werden ueber das App-eigene Drive-Backup wiederhergestellt (DriveBackupManager).
+        // (R8, Minification) mit Debug-Signing UND gleicher applicationId wie
+        // die Debug-Variante (.debug Suffix). Frank-Wunsch 2026-05-09:
+        // 'Speicher dir das fuer die Zukunft, dass du immer aus der Debug-Version
+        // die Performance-Version baust.' Performance- und Debug-Variante sind
+        // logisch DIESELBE App in zwei Modi — beim Installieren ueberschreibt
+        // die eine die andere, alle Daten/Keys/Backups bleiben erhalten weil
+        // applicationId identisch ist (de.frank.entropyreducer.debug). Frank
+        // arbeitet hauptsaechlich mit Debug; wenn er die Performance sehen
+        // will, baue ich Benchmark drueber, danach Debug zurueck drueber.
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".bench"
+            applicationIdSuffix = ".debug"
             isDebuggable = false
             matchingFallbacks += "release"
             buildConfigField("String", "VARIANT_LABEL", "\"Performance Version\"")
