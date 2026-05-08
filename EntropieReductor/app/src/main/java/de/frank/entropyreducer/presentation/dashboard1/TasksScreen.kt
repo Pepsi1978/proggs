@@ -280,36 +280,6 @@ private fun MethodPromptDialog(
     val cosmos = LocalCosmos.current
     val notesState = remember(entry.id) { androidx.compose.runtime.mutableStateOf("") }
     val notes = notesState.value
-    val context = androidx.compose.ui.platform.LocalContext.current
-    // System-SpeechRecognizer (gratis, online ueber Google) — direkt einsprechen
-    // ohne Whisper-API. Frank-Wunsch 2026-05-08.
-    val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val transcript = result.data
-                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.trim()
-            if (!transcript.isNullOrBlank()) {
-                notesState.value = if (notesState.value.isBlank()) transcript
-                else "${notesState.value} $transcript"
-            }
-        }
-    }
-    val startSpeechIntent = {
-        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-            )
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
-            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Wie hast du das gelöst?")
-            putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        }
-        runCatching { speechLauncher.launch(intent) }
-    }
-
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
@@ -366,23 +336,15 @@ private fun MethodPromptDialog(
                             unfocusedBorderColor = cosmos.glassBorder,
                         ),
                     )
-                    // Mic-Button rechts unten in der TextField-Box — startet
-                    // System-SpeechRecognizer und schreibt Transkript ans Ende.
-                    androidx.compose.material3.IconButton(
-                        onClick = { startSpeechIntent() },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(6.dp)
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.85f)),
-                    ) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Outlined.Mic,
-                            contentDescription = "Per Sprache antworten",
-                            tint = androidx.compose.ui.graphics.Color.White,
-                        )
-                    }
+                    // Mic-Button rechts unten — Whisper Large V3 Turbo (Frank-Wunsch
+                    // 2026-05-08, ersetzt System-SpeechRecognizer).
+                    de.frank.entropyreducer.presentation.components.WhisperMicButton(
+                        onTranscript = { transcript ->
+                            notesState.value = if (notesState.value.isBlank()) transcript
+                            else "${notesState.value} $transcript"
+                        },
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
+                    )
                 }
             }
         },
@@ -605,51 +567,19 @@ private fun EntryDetailSheet(
 @Composable
 private fun FollowupMicButton(onTranscript: (String) -> Unit) {
     val cosmos = LocalCosmos.current
-    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val transcript = result.data
-                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.trim()
-            if (!transcript.isNullOrBlank()) onTranscript(transcript)
-        }
-    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
-            .clickable {
-                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(
-                        android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                    )
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
-                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Nachtrag zur Aufgabe einsprechen")
-                    putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                }
-                runCatching { launcher.launch(intent) }
-            }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(50))
-                .background(CosmosColors.AccentSecondary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Mic,
-                contentDescription = "Nachtrag aufnehmen",
-                tint = androidx.compose.ui.graphics.Color.White,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        // Whisper Large V3 Turbo statt System-SpeechRecognizer (Frank-Wunsch 2026-05-08).
+        de.frank.entropyreducer.presentation.components.WhisperMicButton(
+            onTranscript = onTranscript,
+            size = 40.dp,
+        )
         Spacer(Modifier.width(10.dp))
         Column {
             Text(
@@ -659,7 +589,7 @@ private fun FollowupMicButton(onTranscript: (String) -> Unit) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "KI bewertet die Aufgabe mit Nachtrag neu (Prio, Dauer, Bucket).",
+                "Whisper Large V3 Turbo — KI bewertet die Aufgabe mit Nachtrag neu.",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )

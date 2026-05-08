@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
@@ -192,6 +194,66 @@ fun BriefingPanel(
                     )
                 }
             }
+
+            // Briefing-Antwort-Feld (Frank-Wunsch 2026-05-08): Frank kann auf
+            // das Briefing antworten — per Text oder per Sprache. Antwort
+            // wird als Eintrag mit Tag "Briefing-Antwort" verarbeitet, KI
+            // lernt daraus.
+            if (text.isNotBlank()) {
+                Spacer(Modifier.height(12.dp))
+                BriefingResponseInput(
+                    onSubmit = { resp -> vm.submitBriefingResponse(selected, resp) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
+    val cosmos = LocalCosmos.current
+    val draftState = remember { mutableStateOf("") }
+    Text(
+        text = "Antwort auf das Briefing — die KI lernt daraus (Whisper Large V3 Turbo).",
+        style = MaterialTheme.typography.labelMedium,
+        color = cosmos.textSecondary,
+    )
+    Spacer(Modifier.height(6.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.OutlinedTextField(
+            value = draftState.value,
+            onValueChange = { draftState.value = it },
+            placeholder = { Text("Tippe oder sprich deine Antwort …", color = cosmos.textSecondary) },
+            modifier = Modifier.weight(1f),
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = cosmos.textPrimary,
+                unfocusedTextColor = cosmos.textPrimary,
+                focusedBorderColor = CosmosColors.AccentPrimary,
+                unfocusedBorderColor = cosmos.glassBorder,
+            ),
+            maxLines = 3,
+        )
+        Spacer(Modifier.size(6.dp))
+        // Whisper-Mic statt System-SpeechRecognizer (Frank-Wunsch 2026-05-08).
+        de.frank.entropyreducer.presentation.components.WhisperMicButton(
+            onTranscript = { transcript ->
+                draftState.value = if (draftState.value.isBlank()) transcript
+                else "${draftState.value} $transcript"
+            },
+        )
+        Spacer(Modifier.size(6.dp))
+        IconButton(
+            onClick = {
+                onSubmit(draftState.value)
+                draftState.value = ""
+            },
+            enabled = draftState.value.isNotBlank(),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Send,
+                contentDescription = "Antwort senden",
+                tint = if (draftState.value.isNotBlank()) CosmosColors.AccentPrimary else cosmos.textSecondary,
+            )
         }
     }
 }

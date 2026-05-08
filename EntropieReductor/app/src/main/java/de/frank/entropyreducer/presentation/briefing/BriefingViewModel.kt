@@ -44,6 +44,7 @@ class BriefingViewModel @Inject constructor(
     private val settings: AppSettings,
     private val tts: TtsPlayer,
     private val scheduler: BackgroundScheduler,
+    private val process: de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BriefingUiState())
@@ -156,6 +157,29 @@ class BriefingViewModel @Inject constructor(
     fun regenerateDaily() = scheduler.runDailyBriefingNow()
     fun regenerateWeekly() = scheduler.runWeeklyReviewNow()
     fun regenerateMonthly() = scheduler.runMonthlyReviewNow()
+
+    /**
+     * Briefing-Antwort-Feature (Frank-Wunsch 2026-05-08): Frank kann auf das
+     * Briefing antworten — entweder per Text oder per Sprache. Die Antwort wird
+     * durch ProcessEntryUseCase als neuer Eintrag mit Tag "Briefing-Antwort"
+     * verarbeitet — die KI kann Beobachtungen daraus extrahieren oder neue
+     * Aufgaben anlegen, je nach Inhalt der Antwort.
+     */
+    fun submitBriefingResponse(kind: PlayingKind, response: String) {
+        if (response.isBlank()) return
+        viewModelScope.launch {
+            val prefix = when (kind) {
+                PlayingKind.DAILY -> "Briefing-Antwort (Tag)"
+                PlayingKind.WEEKLY -> "Briefing-Antwort (Woche)"
+                PlayingKind.MONTHLY -> "Briefing-Antwort (Monat)"
+                PlayingKind.NONE -> "Briefing-Antwort"
+            }
+            process(
+                rawTranscript = "$prefix: ${response.trim()}",
+                source = de.frank.entropyreducer.domain.model.EntrySource.NUTZER_TEXT,
+            )
+        }
+    }
 
     override fun onCleared() {
         tts.stop()
