@@ -81,6 +81,18 @@ android {
             applicationIdSuffix = ".debug"
             isMinifyEnabled = false
         }
+        // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
+        // (R8, Minification) mit Debug-Signing fuer schnelle Performance-Tests
+        // ohne Release-Keystore. Compose-Debug-Builds sind 5-10x langsamer als
+        // Release-Builds — fuer realistische Frame-Rate-Messungen muss Release-
+        // Performance getestet werden.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".bench"
+            isDebuggable = false
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {
