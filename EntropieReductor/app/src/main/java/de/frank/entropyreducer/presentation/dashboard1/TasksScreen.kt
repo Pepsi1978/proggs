@@ -170,16 +170,18 @@ fun TasksScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Backup-Statuszeile DIREKT unter dem Titel "Entropie Reduktor"
+                // — Frank-Wunsch 2026-05-09 (praezisiert): kommt ueber die
+                // StatusBar, ist die allererste Zeile unter dem Titel. Funktionen
+                // identisch (Cloud-Icon + Status-Label). Wird nur angezeigt
+                // wenn Drive-Backup aktiviert ist.
+                if (state.driveBackupEnabled) {
+                    Spacer(Modifier.height(4.dp))
+                    BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
+                    Spacer(Modifier.height(4.dp))
+                }
                 StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
                 Spacer(Modifier.height(8.dp))
-
-                // Backup-Statuszeile direkt unter dem Titel — Frank-Wunsch 2026-05-09:
-                // "ich will sehen ob mein neuer Eintrag im Backup ist". Wird nur
-                // angezeigt wenn Drive-Backup aktiviert ist.
-                if (state.driveBackupEnabled) {
-                    BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
-                    Spacer(Modifier.height(8.dp))
-                }
 
                 // Re-Score-Banner: laeuft eine Re-Bewertung aller offenen Aufgaben
                 // mit der aktuellen priorityScore-Doktrin? Frank-Wunsch 2026-05-09:
