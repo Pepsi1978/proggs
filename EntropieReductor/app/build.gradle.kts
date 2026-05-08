@@ -82,14 +82,17 @@ android {
             isMinifyEnabled = false
         }
         // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
-        // (R8, Minification) mit Debug-Signing fuer schnelle Performance-Tests
-        // ohne Release-Keystore. Compose-Debug-Builds sind 5-10x langsamer als
-        // Release-Builds — fuer realistische Frame-Rate-Messungen muss Release-
-        // Performance getestet werden.
+        // (R8, Minification) mit Debug-Signing und applicationIdSuffix .debug
+        // (gleich wie der debug-Build), sodass die Benchmark-App die Debug-App
+        // auf dem Geraet ersetzt UND alle Daten/Backups erhalten bleiben (gleiche
+        // applicationId = de.frank.entropyreducer.debug). Frank arbeitet immer
+        // mit der debug-Variante — die Benchmark-Variante ist die SCHNELLE
+        // Version davon. Compose-Debug-Builds sind 5-10x langsamer als Release-
+        // Builds — fuer Alltag und Performance muss Release getestet werden.
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".bench"
+            applicationIdSuffix = ".debug"
             isDebuggable = false
             matchingFallbacks += "release"
         }
