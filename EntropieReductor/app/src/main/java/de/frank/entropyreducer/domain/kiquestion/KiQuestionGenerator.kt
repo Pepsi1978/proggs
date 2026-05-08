@@ -26,6 +26,10 @@ class KiQuestionGenerator @Inject constructor() {
         tomorrowCalendar: CalendarDayEntity?,
         nowMs: Long = System.currentTimeMillis(),
     ): KiQuestion? {
+        // Frank-Wunsch 2026-05-09: KEINE statischen Fallback-Fragen mehr.
+        // Wenn die KI keine Frage liefert, bleibt die Card unsichtbar — lieber gar
+        // keine Frage als die alte 'Du hast 6-mal Eintraege der Kategorie Umgebung'.
+        return null
         // Trigger 3 — Recovery niedrig: hoechste Prioritaet, weil koerperlich relevant.
         latestSnapshot?.recoveryScore?.let { recovery ->
             if (recovery < 33) {

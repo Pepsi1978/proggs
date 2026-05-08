@@ -192,10 +192,18 @@ fun TasksScreen(
                     if (state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()) {
                         item { EmptyState() }
                     } else {
-                        // Aktive Eintraege gruppiert nach Time-Bucket
+                        // Aktive Eintraege gruppiert nach Time-Bucket. Frank-Wunsch
+                        // 2026-05-09: max 5 Aufgaben im HEUTE-Bucket (nach priorityScore
+                        // sortiert) — wenn eine reduziert wird, rueckt automatisch die
+                        // naechste nach. Andere Buckets behalten alle Eintraege.
                         TimeBucket.values().forEach { bucket ->
-                            val list = state.entriesByBucket[bucket].orEmpty()
+                            val rawList = state.entriesByBucket[bucket].orEmpty()
                                 .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+                            val list = if (bucket == TimeBucket.HEUTE) {
+                                rawList.sortedByDescending { it.priorityScore }.take(5)
+                            } else {
+                                rawList
+                            }
                             if (list.isNotEmpty()) {
                                 item { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
                                 items(list, key = { it.id }) { entry ->
