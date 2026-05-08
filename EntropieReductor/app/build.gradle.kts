@@ -78,22 +78,23 @@ android {
             )
             // VARIANT_LABEL erscheint im LaunchScreen (Frank-Wunsch 2026-05-09).
             buildConfigField("String", "VARIANT_LABEL", "\"Release Version\"")
+            resValue("string", "app_name", "Entropie Reduktor")
         }
+        // Frank-Wunsch 2026-05-09: Debug-Variante hat .slow Suffix und heisst
+        // 'Slow Entropie Reduktor' — eine zweite App auf dem Geraet, separater
+        // applicationId, separate Daten. Wird gelegentlich zum Debuggen
+        // installiert; alle Daten/Login muss Frank ueber Drive-Backup laden.
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".slow"
             isMinifyEnabled = false
             buildConfigField("String", "VARIANT_LABEL", "\"Debugversion\"")
+            resValue("string", "app_name", "Slow Entropie Reduktor")
         }
-        // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
-        // (R8, Minification) mit Debug-Signing UND gleicher applicationId wie
-        // die Debug-Variante (.debug Suffix). Frank-Wunsch 2026-05-09:
-        // 'Speicher dir das fuer die Zukunft, dass du immer aus der Debug-Version
-        // die Performance-Version baust.' Performance- und Debug-Variante sind
-        // logisch DIESELBE App in zwei Modi — beim Installieren ueberschreibt
-        // die eine die andere, alle Daten/Keys/Backups bleiben erhalten weil
-        // applicationId identisch ist (de.frank.entropyreducer.debug). Frank
-        // arbeitet hauptsaechlich mit Debug; wenn er die Performance sehen
-        // will, baue ich Benchmark drueber, danach Debug zurueck drueber.
+        // Frank-Wunsch 2026-05-09: Benchmark-Variante hat .debug Suffix —
+        // gleicher applicationId wie die existierende Debug-App auf Frank's
+        // Geraet. Beim Install ueberschreibt sie diese und uebernimmt ALLE
+        // Daten (gleicher applicationId = Android haelt die Daten). Wird zu
+        // Frank's Hauptapp namens 'Entropie Reduktor' im Performance-Modus.
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
@@ -101,6 +102,7 @@ android {
             isDebuggable = false
             matchingFallbacks += "release"
             buildConfigField("String", "VARIANT_LABEL", "\"Performance Version\"")
+            resValue("string", "app_name", "Entropie Reduktor")
         }
     }
 

@@ -1,5 +1,8 @@
 <resources>
-    <string name="app_name">Entropie Reduktor</string>
+    <!-- app_name wird pro buildType in build.gradle.kts via resValue gesetzt:
+         - debug: "Slow Entropie Reduktor" (zweite App, applicationId .slow)
+         - benchmark: "Entropie Reduktor" (Hauptapp, applicationId .debug, ueberschreibt Debug)
+         - release: "Entropie Reduktor" -->
 
     <!-- Bottom Navigation -->
     <string name="nav_tasks">Aufgaben</string>
