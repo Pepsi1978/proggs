@@ -816,8 +816,12 @@ class TasksViewModel @Inject constructor(
          * Wenn lastRescoreVersionCode (in EncryptedSecretsStore) kleiner ist,
          * triggert der ViewModel-Init einen einmaligen Auto-Re-Score aller
          * offenen Aufgaben. Beim naechsten Doktrin-Update bitte hier die neue
-         * versionCode-Nummer eintragen. Aktuell: 29 (App-Version 0.6.0).
+         * versionCode-Nummer eintragen. Historie:
+         *   29 (0.6.0): Erste 5-Farben-Skala mit Entropie-Reduktion-Definition
+         *   31 (0.6.2): Vollausbau mit Entropie-Definition, Wellbeing-First-
+         *               Prinzip, drei Score-Achsen, Frank-spezifischen Beispielen
+         *               pro Stufe, Aufwand-Nutzen-Hebel und 5-10%-Quote fuer Rot.
          */
-        private const val RESCORE_DOCTRINE_VERSION = 29
+        private const val RESCORE_DOCTRINE_VERSION = 31
     }
 }

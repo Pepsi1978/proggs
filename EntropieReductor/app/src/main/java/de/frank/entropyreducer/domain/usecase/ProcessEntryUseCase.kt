@@ -273,44 +273,145 @@ class ProcessEntryUseCase @Inject constructor(
 
     companion object {
         private const val PRIORITY_DOCTRINE = """
-priorityScore-Doktrin (Frank-Spezifikation 2026-05-09): Der Wert misst, wieviel
-persoenliche Entropie durch die Erledigung dieser Aufgabe entfernt wuerde. Je
-mehr Entropie weg, desto hoeher der Score. Skala in fuenf bewussten Farbstufen:
+priorityScore-Doktrin (Frank-Spezifikation 2026-05-09):
 
-  90-100 (Rot, sehr wichtig):    Aufgabe entfernt fast die gesamte aktuelle
-                                  persoenliche Entropie auf einmal — das eine
-                                  Ding das gerade quer ueber alle Lebensbereiche
-                                  blockiert. Selten. Nur vergeben wenn die
-                                  Erledigung wirklich vieles auf einmal aufloest.
+DEFINITION VON PERSOENLICHER ENTROPIE:
+Persoenliche Entropie ist alles, was Franks Bewusstseinsraum verwaessert,
+verlangsamt oder belastet — also alles, was innere Kohaerenz stoert.
+Frank versteht sein gesamtes Dasein als Bewusstseinsraum; Entropie ist
+jede Form von Information, die in diesem Raum als Last erscheint, ohne
+zur Ordnung beizutragen. Konkret aeussert sich persoenliche Entropie
+als:
+  - mentale Unruhe: Gedankenkreisen, Sorgen, Entscheidungslast,
+    Optionsueberflutung, fragmentierte Aufmerksamkeit
+  - koerperlicher Schmerz, Dysfunktion, Muedigkeit, Erschoepfung
+  - emotionale Reibung: ungeloeste Konflikte, Frust, Druck, Anspannung
+  - Zeitlasten: aufgeschobene Aufgaben, "loose ends", vergessene
+    Verpflichtungen
+  - Inkohaerenz: Diskrepanz zwischen gefuehltem Ist und gewuenschtem
+    Sein
+  - Reizueberflutung, sensorische Belastung, vegetative Dysregulation
 
-  80-89  (Rot, sehr wichtig):    Aufgabe entfernt sehr grosse Mengen Entropie
-                                  in mehreren Lebensbereichen gleichzeitig.
+Entropie wird REDUZIERT, wenn ein bestehender belastender Zustand
+aufgeloest wird (Schmerz weg, Sorge geklaert, Entscheidung getroffen,
+Termin erledigt, Unklarheit beseitigt). Entropie wird NICHT reduziert,
+wenn lediglich ein Wunschzustand zusaetzlich realisiert wird, ohne
+dass etwas Belastendes verschwindet (z.B. neues Hobby starten, neue
+Reise planen — das sind Lebensqualitaets-Boosts, kein Entropie-Abbau).
 
-  60-79  (Orange):                Aufgabe entfernt grosse Entropie in einem
-                                  klaren Lebensbereich, plus Streueffekte in
-                                  Nachbarbereichen.
+Wellbeing-First-Prinzip: mentales und psychisches Wohlbefinden hat
+den hoechsten Hebel. Eine Aufgabe, die innere Ruhe, Klarheit oder
+Sicherheit schafft, wirkt staerker auf den Score als eine Aufgabe,
+die nur einen rein technischen Zustand verbessert.
 
-  40-59  (Gelb):                  Aufgabe entfernt mittlere Entropie, fokussiert
-                                  auf einen klaren Lebensbereich.
+WAS DER SCORE MISST:
+Der priorityScore misst, wieviel persoenliche Entropie durch die
+Erledigung dieser Aufgabe entfernt wuerde. Drei Achsen bestimmen den
+Score gemeinsam:
+  1. Schwere der entfernten Last (wie sehr belastet es jetzt?)
+  2. Breite der Wirkung (wieviele Lebensbereiche profitieren?)
+  3. Kohaerenz-Effekt (wird durch die Erledigung innerlich etwas
+     freigesetzt — Energie, Klarheit, Ruhe, mentale Bandbreite?)
 
-  20-39  (Blau):                  Aufgabe entfernt nur kleine Entropie in einem
-                                  klaren Bereich. Wichtig aber nicht dringend.
+severity (1-10) ist die rohe Schwere des Problems isoliert betrachtet.
+priorityScore (0-100) ergibt sich aus severity x Breite x Kohaerenz-
+Effekt, gewichtet mit dem Wellbeing-First-Prinzip. Daher gilt:
+  - hohe severity + abgegrenzter Mikro-Bereich  = mittlerer/niedriger Score
+  - mittlere severity + Wirkung ueber mehrere Bereiche = hoher Score
+  - hohe severity + breite Wirkung + Wellbeing-Hebel = sehr hoher Score
 
-  0-19   (Gruen, geringste Prio): Aufgabe entfernt nur einen winzigen Teil
-                                  Entropie in einem ganz speziellen,
-                                  abgegrenzten Bereich. Kann lange warten.
+SKALA IN FUENF FARBSTUFEN:
 
-Wichtige Regeln:
-- Score basiert auf ENTFERNTER Entropie, NICHT auf Schweregrad allein. Eine
-  hohe severity bedeutet nicht automatisch hohe priorityScore — wenn die
-  Aufgabe nur einen kleinen Bereich beeinflusst, bleibt der Score niedrig
-  trotz hoher severity.
-- Nutzer-Prompts, Biomarker und Kalender-Verfuegbarkeit modulieren den Score
-  nach oben oder unten, aber das Grundprinzip bleibt: ENTROPIE-REDUKTION.
-- Aufgaben die nur "nice-to-have" sind oder Lebensqualitaet steigern (ohne
-  bestehende Entropie zu reduzieren) bekommen niedrige Scores (Gruen/Blau).
-- Im Zweifel lieber konservativer einstufen — Rot soll Frank den Atem
-  stocken lassen ("oh, das ist wirklich wichtig"), nicht inflationaer sein.
+  90-100 (Rot, sehr wichtig):    Aufgabe entfernt fast die gesamte
+                                  aktuelle persoenliche Entropie auf
+                                  einmal — das eine Ding, das gerade
+                                  quer ueber alle Lebensbereiche
+                                  blockiert. Selten. Nur vergeben, wenn
+                                  die Erledigung wirklich vieles auf
+                                  einmal aufloest.
+                                  Beispiel: chronischer Zahnschmerz mit
+                                  freiliegendem Nerv ziehen lassen —
+                                  entfernt koerperlichen Schmerz, mentale
+                                  Last, emotionale Sorge und praeventives
+                                  Risiko gleichzeitig.
+
+  80-89  (Rot, sehr wichtig):    Aufgabe entfernt sehr grosse Mengen
+                                  Entropie in mehreren Lebensbereichen
+                                  gleichzeitig.
+                                  Beispiel: schmerzhaften Leberfleck am
+                                  Ruecken haut-aerztlich abklaeren und
+                                  entfernen — koerperliche Last weg,
+                                  mentale Sorge weg, praeventive
+                                  Sicherheit.
+
+  60-79  (Orange):                Aufgabe entfernt grosse Entropie in
+                                  einem klaren Lebensbereich, plus
+                                  Streueffekte in Nachbarbereichen.
+                                  Beispiel: Notfallset und Notstrom-
+                                  System im Auto fertig packen — loest
+                                  Unsicherheits-Last auf, ermoeglicht
+                                  spontane Schweden-Fahrten, schafft
+                                  mentale Ruhe.
+
+  40-59  (Gelb):                  Aufgabe entfernt mittlere Entropie,
+                                  fokussiert auf einen klaren Bereich.
+                                  Beispiel: grosses Blutbild machen
+                                  lassen — klaert mehrere offene
+                                  Hypothesen auf einmal, primaer im
+                                  Gesundheitsbereich.
+
+  20-39  (Blau):                  Aufgabe entfernt nur kleine Entropie
+                                  in einem klaren Bereich. Wichtig,
+                                  aber nicht draengend.
+                                  Beispiel: Mountainbike aus der
+                                  Wohnung verkaufen — kleiner physischer
+                                  Raumgewinn, klar abgegrenzt.
+
+  0-19   (Gruen, geringste Prio): Aufgabe entfernt nur einen winzigen
+                                  Teil Entropie in einem speziellen,
+                                  abgegrenzten Bereich. Auch: Aufgaben,
+                                  die reine Wunschzustaende hinzufuegen,
+                                  ohne Bestehendes aufzuloesen, gehoeren
+                                  hierher.
+                                  Beispiel: neue Suno-Songkategorie
+                                  ausprobieren — kreative Bereicherung,
+                                  aber kein aktueller Entropie-Abbau.
+
+WICHTIGE REGELN:
+
+- Score basiert auf ENTFERNTER Entropie, NICHT auf Schweregrad allein.
+  Eine hohe severity bedeutet nicht automatisch hohe priorityScore —
+  wenn die Aufgabe nur einen kleinen Bereich beeinflusst, bleibt der
+  Score niedrig trotz hoher severity.
+
+- Wellbeing-First: mentale/psychische Entlastung gewichtet staerker
+  als rein technische/aeussere Verbesserung. Eine Aufgabe, die innere
+  Ruhe schafft, kann auch bei mittlerer severity hoch eingestuft
+  werden.
+
+- Aufwand-Nutzen-Hebel: bei sonst gleicher Entropie-Reduktion hebt
+  niedriger Aufwand (estimatedDurationMinutes) den Score leicht an,
+  weil schnelle Erledigung den Bewusstseinsraum sofort entlastet.
+  Hoher Aufwand senkt den Score nicht, wenn die entfernte Entropie
+  gross ist — aber "quick wins" mit grosser Wirkung sind besonders
+  wertvoll.
+
+- Wunsch-Hinzufuegung ist kein Entropie-Abbau: Aufgaben, die nur ein
+  neues Ziel/Hobby/Erlebnis ergaenzen, ohne dass eine bestehende
+  Belastung verschwindet, bleiben im Gruen/Blau-Bereich, auch wenn
+  sie persoenlich attraktiv sind.
+
+- Modulatoren: Nutzer-Prompts, Biomarker (z.B. niedrige Whoop-
+  Recovery, niedrige HRV, schlechter Schlaf in den letzten Tagen) und
+  Kalender-Verfuegbarkeit modulieren den Score. Wenn die Aufgabe
+  direkt einen schwachen Biomarker adressiert, hebe den Score an.
+  Wenn der Kalender heute keine Zeit erlaubt und die Aufgabe nicht
+  zeitkritisch ist, senke leicht.
+
+- Im Zweifel konservativer einstufen — Rot soll Frank den Atem
+  stocken lassen ("oh, das ist wirklich wichtig"), nicht inflationaer
+  sein. Realistisch sollten nur etwa 5-10 Prozent aller Eintraege im
+  Rot-Bereich landen.
 """
 
         private const val BASE_PROMPT =
