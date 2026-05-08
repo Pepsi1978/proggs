@@ -176,11 +176,11 @@ fun TasksScreen(
                 // identisch (Cloud-Icon + Status-Label). Wird nur angezeigt
                 // wenn Drive-Backup aktiviert ist.
                 if (state.driveBackupEnabled) {
-                    // Frank-Wunsch 2026-05-09 (zweite Praezisierung): Zeile soll
-                    // moeglichst nah an "Entropie Reduktor" oben kleben — KEIN
-                    // Spacer davor, nur 2dp danach. Spart vertikalen Platz.
+                    // Frank-Wunsch 2026-05-09 (dritte Praezisierung): Zeile MUSS
+                    // direkt am Boden des Titels "Entropie Reduktor" kleben —
+                    // kein Spacer davor, kein Spacer danach, vertikales Padding
+                    // in der Row selbst auf 0 reduziert (siehe BackupStatusBadge).
                     BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
-                    Spacer(Modifier.height(2.dp))
                 }
                 StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
                 Spacer(Modifier.height(8.dp))
@@ -1512,7 +1512,7 @@ private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
     }
     Row(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
