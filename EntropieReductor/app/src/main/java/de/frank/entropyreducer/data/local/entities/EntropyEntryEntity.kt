@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
@@ -9,8 +10,23 @@ import de.frank.entropyreducer.domain.model.TimeBucket
 
 /**
  * Eintrag im Aufgaben-Stream: rohe Notiz + KI-Analyse + Status.
+ *
+ * Indizes (Frank-Wunsch 2026-05-09 Performance): die Haupt-Queries filtern auf
+ * status, timeBucket, category, resolvedAt und sortieren nach priorityScore.
+ * Ohne Index waeren das Full-Table-Scans — bei 100+ Eintraegen merklich.
  */
-@Entity(tableName = "entropy_entries")
+@Entity(
+    tableName = "entropy_entries",
+    indices = [
+        Index("status"),
+        Index("timeBucket"),
+        Index("category"),
+        Index("resolvedAt"),
+        Index("priorityScore"),
+        Index(value = ["status", "timeBucket"]), // getActive + getByTimeBucket
+        Index(value = ["status", "resolvedAt"]), // getRecentlyResolved + getResolvedBefore
+    ],
+)
 data class EntropyEntryEntity(
     @PrimaryKey val id: String,
     val rawTranscript: String,

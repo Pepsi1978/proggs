@@ -114,7 +114,7 @@ class TasksViewModel @Inject constructor(
             resolvedEntries = resolvedList,
             pendingMethodFor = pendingMethod,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), TasksUiState())
 
     init {
         // KI-Frage des Moments dynamisch generieren beim ViewModel-Start

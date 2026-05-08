@@ -2,6 +2,8 @@ package de.frank.entropyreducer.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +26,25 @@ import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
 import de.frank.entropyreducer.presentation.settings.profile.ProfileScreen
 import de.frank.entropyreducer.presentation.settings.prompts.PromptsScreen
 
+/**
+ * Tab-Switch mit State-Erhaltung (Frank-Wunsch 2026-05-09 Performance):
+ * - popUpTo(start) { saveState = true } speichert den State des Tabs den wir verlassen
+ * - launchSingleTop verhindert mehrfache Composable-Instanzen des Ziel-Tabs
+ * - restoreState = true holt den gespeicherten State des Ziel-Tabs zurueck
+ *
+ * Effekt: ViewModels, Scroll-Position, Filter, Suchanfragen ueberleben Tab-Switches.
+ * Vorher wurde bei jedem Tab-Switch alles neu initialisiert — das hat geruckelt.
+ */
+private fun NavController.tabSwitch(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
@@ -35,28 +56,28 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         composable(Routes.TASKS) {
             TasksScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+                onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.TASKS,
             )
         }
         composable(Routes.ANALYSIS) {
             AnalysisScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+                onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.ANALYSIS,
             )
         }
         composable(Routes.SCIENTIST) {
             ScientistScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+                onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.SCIENTIST,
             )
         }
         composable(Routes.BIOMARKER) {
             BiomarkerHostScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
-                onSwitchTab = { route -> nav.navigate(route) { launchSingleTop = true } },
+                onSwitchTab = { route -> nav.tabSwitch(route) },
                 onOpenMetricDetail = { metricKey ->
                     nav.navigate(Routes.biomarkerDetail(metricKey))
                 },

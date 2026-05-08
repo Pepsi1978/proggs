@@ -49,7 +49,7 @@ import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
         KiTriggerEntity::class,
         GenieCodexVersionEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(EntropyTypeConverters::class)

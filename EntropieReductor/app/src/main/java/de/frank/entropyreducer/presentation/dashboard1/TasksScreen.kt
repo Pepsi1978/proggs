@@ -671,6 +671,8 @@ private fun CategoryFilterRow(
     onToggle: (EntropyCategory) -> Unit,
     onClearAll: () -> Unit,
 ) {
+    // values() allociert ein neues Array bei jedem Aufruf — einmal cachen.
+    val categories = remember { EntropyCategory.values().toList() }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -685,7 +687,10 @@ private fun CategoryFilterRow(
                 onClick = onClearAll,
             )
         }
-        items(EntropyCategory.values().toList()) { cat ->
+        items(
+            items = categories,
+            key = { it.name },
+        ) { cat ->
             val on = cat in active
             CategoryFilterChip(
                 label = cat.label(),

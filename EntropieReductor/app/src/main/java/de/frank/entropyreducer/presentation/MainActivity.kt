@@ -25,6 +25,7 @@ import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -129,6 +130,11 @@ class ThemeViewModel @Inject constructor(
  * Drive-Backup nach (falls verbunden), damit Geraete-Wechsel automatisch
  * synchronisiert werden. Nutzt einen Mutex auf Android-Ebene (statisch),
  * damit ein Activity-Recreate bei Theme-Wechsel nicht zwei Restores triggert.
+ *
+ * Performance-Warmup (Frank-Wunsch 2026-05-09): Beim Start werden die wichtigsten
+ * Repositories einmal angefasst, damit Room die Datenbank initialisiert und die
+ * ersten Queries gecacht sind. Tab-Switches sind dadurch sofort responsive — der
+ * erste DB-Hit fuer jede Query passiert hier im Hintergrund, nicht beim Tab-Klick.
  */
 @HiltViewModel
 class StartupViewModel @Inject constructor(
@@ -137,10 +143,28 @@ class StartupViewModel @Inject constructor(
     private val coordinator: SyncCoordinator,
     private val scheduler: BackgroundScheduler,
     private val oauth: OAuthService,
+    private val entries: de.frank.entropyreducer.data.repository.EntryRepository,
+    private val memories: de.frank.entropyreducer.data.repository.MemoryRepository,
+    private val balanceBuckets: de.frank.entropyreducer.domain.usecase.BalanceBucketsUseCase,
 ) : ViewModel() {
     init {
         if (!startupRanThisProcess) {
             startupRanThisProcess = true
+            // Performance-Warmup: parallel zur Drive-Restore-Logik laeuft das
+            // Repository-Warming. So sind beim ersten Tab-Klick alle DB-Queries
+            // schon gecacht (Frank-Wunsch 2026-05-09 Performance).
+            viewModelScope.launch {
+                runCatching {
+                    // Eine .first() pro Repository = ein DB-Query, danach hat Room
+                    // die Tabellen geladen und Connection-Pool ist warm.
+                    entries.getActive().first()
+                    memories.getActive().first()
+                    // Balance-Buckets gleich beim Start ausfuehren — damit beim ersten
+                    // Oeffnen des Aufgaben-Tabs schon die korrekte 5/5/10/Rest-Verteilung
+                    // steht und nicht erst durch das ViewModel-Init geladen werden muss.
+                    balanceBuckets()
+                }
+            }
             viewModelScope.launch {
                 if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
                     runCatching { syncEntries.restoreFromDrive() }

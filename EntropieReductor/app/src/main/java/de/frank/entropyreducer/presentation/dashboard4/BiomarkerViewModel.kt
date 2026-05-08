@@ -88,7 +88,7 @@ class BiomarkerViewModel @Inject constructor(
             statusBreakdown = status.breakdown,
             lastWhoopSyncMs = status.lastWhoopSyncMs,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 
     fun selectDate(date: java.time.LocalDate) {
         _selectedDate.value = date

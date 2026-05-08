@@ -112,7 +112,7 @@ class AnalysisViewModel @Inject constructor(
             error = ui.error,
             statusBreakdown = breakdown,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AnalysisUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), AnalysisUiState())
 
     init {
         // Cache aus den Settings holen, falls vorhanden

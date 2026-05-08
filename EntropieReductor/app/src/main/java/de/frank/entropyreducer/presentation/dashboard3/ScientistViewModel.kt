@@ -170,7 +170,7 @@ class ScientistViewModel @Inject constructor(
             pendingDeleteHypothesisId = block.pendingDeleteId,
             scientistQuestion = block.scientistQuestion,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScientistUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), ScientistUiState())
 
     init {
         viewModelScope.launch {
@@ -435,6 +435,30 @@ class ScientistViewModel @Inject constructor(
                 if (hypothesisDetailIdFlow.value == id) {
                     hypothesisDetailIdFlow.value = null
                     hypothesisDraftFlow.value = ""
+                }
+                // Frank-Wunsch 2026-05-09: Beim Loeschen einer Hypothese soll der GANZE
+                // Wissenschaftler-Eintrag (Einleitungstext + Hypothesen-Karte) verschwinden,
+                // nicht nur die Karte. Der Text in der Bubble bezieht sich genau auf diese
+                // Hypothese und ist ohne sie sinnlos.
+                //
+                // Strategie:
+                // - Alle ScientistMessages durchgehen, die diese Hypothese-ID in
+                //   attachedHypothesisIds tragen.
+                // - Wenn die Hypothese die EINZIGE in der Message ist: ganze Message loeschen.
+                // - Wenn mehrere drin sind: nur die ID rauswerfen, Message bleibt erhalten
+                //   (Frank's Aussage zielt auf den haeufigen Fall 1-Hypothese-pro-Message;
+                //   beim seltenen Mehrfach-Fall ist Message-Erhalt sicherer).
+                runCatching {
+                    val all = scientist.getAllMessages()
+                    all.filter { it.attachedHypothesisIds.contains(id) }.forEach { msg ->
+                        if (msg.attachedHypothesisIds.size <= 1) {
+                            scientist.deleteMessageById(msg.id)
+                        } else {
+                            scientist.updateMessage(
+                                msg.copy(attachedHypothesisIds = msg.attachedHypothesisIds - id),
+                            )
+                        }
+                    }
                 }
                 hypotheses.delete(h)
             }
