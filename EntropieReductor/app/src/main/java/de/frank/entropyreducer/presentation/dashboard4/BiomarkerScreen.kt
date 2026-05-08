@@ -261,7 +261,7 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.respiratoryRate?.let { snap.capturedAt to it }
                     },
-                    unit = "Atemzüge/min",
+                    unit = "/min",
                     onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
                 )
             }

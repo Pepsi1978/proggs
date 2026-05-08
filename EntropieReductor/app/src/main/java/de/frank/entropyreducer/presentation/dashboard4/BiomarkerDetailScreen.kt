@@ -373,10 +373,10 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
     // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08).
     MetricKey.RESPIRATORY -> MetricSpec(
         title = "Atemfrequenz",
-        unit = "Atemzüge/min",
+        unit = "/min",
         accent = CosmosColors.AccentPrimary,
         extract = { it.respiratoryRate },
-        format = { "%.1f".format(it) },
+        format = { "%.1f /min".format(it) },
     )
     MetricKey.SLEEP_CONSISTENCY -> MetricSpec(
         title = "Schlafregelmäßigkeit",
