@@ -166,9 +166,10 @@ fun InteractiveLineChart(
                         )
                     }
                 }
-                // Trendlinie (SMA-14 + Regression) — UEBER der Datenlinie, dicker.
-                // Frank-Wunsch 2026-05-09: gruen wenn semantische Verbesserung,
-                // rot wenn Verschlechterung, doppelte Strichbreite vs. Datenlinie.
+                // Trendlinie 1 (SMA-14) — kurzfristige Glaettung, leicht wellig.
+                // Frank-Wunsch 2026-05-09 Update: SMA bleibt drin, aber etwas duenner
+                // weil sie jetzt der Sekundaer-Indikator ist. Die gerade lineare
+                // Regressionslinie (unten) ist der primaere Gesamttrend.
                 if (sma.size >= 2 && safe.size >= 2) {
                     val stepXSma = w / (safe.size - 1).toFloat()
                     val firstSmaIdx = safe.size - sma.size
@@ -181,9 +182,35 @@ fun InteractiveLineChart(
                             color = trendColor,
                             start = Offset(x1, y1),
                             end = Offset(x2, y2),
-                            strokeWidth = 8f,
+                            strokeWidth = 6f,
                         )
                     }
+                }
+                // Trendlinie 2 (Lineare Regression) — komplett gerade, ueber alle
+                // Roh-Datenpunkte gefittet. Frank-Wunsch 2026-05-09: "wirklich eine
+                // lineare gerade Linie, die zeigt steigen oder fallen die Werte
+                // generell ueber den gesamten Blockverlauf". Dicker als die SMA-
+                // Linie damit sie als Primaer-Trend dominant ist.
+                if (safe.size >= 2) {
+                    val rawSlope = linearSlope(safe.map { it.second })
+                    val rawMean = safe.map { it.second }.average()
+                    val xMean = (safe.size - 1) / 2.0
+                    val intercept = rawMean - rawSlope * xMean
+                    val rawSemanticSlope = if (lowerIsBetter) -rawSlope else rawSlope
+                    val rawTrendColor = when {
+                        rawSemanticSlope > neutralEpsilon -> CosmosColors.Success
+                        rawSemanticSlope < -neutralEpsilon -> CosmosColors.Critical
+                        else -> cosmos.textSecondary
+                    }
+                    val stepXLin = w / (safe.size - 1).toFloat()
+                    val yStart = h - ((intercept - minY) / rangeY * h).toFloat()
+                    val yEnd = h - ((intercept + rawSlope * (safe.size - 1) - minY) / rangeY * h).toFloat()
+                    drawLine(
+                        color = rawTrendColor,
+                        start = Offset(0f, yStart),
+                        end = Offset((safe.size - 1) * stepXLin, yEnd),
+                        strokeWidth = 10f,
+                    )
                 }
                 // Punkte
                 val stepX = if (safe.size <= 1) 0f else w / (safe.size - 1).toFloat()

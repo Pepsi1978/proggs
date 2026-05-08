@@ -94,6 +94,11 @@ fun BiomarkerHostScreen(
             )
         },
     ) { padding ->
+        // Frank-Wunsch 2026-05-09: alle Verlaufs-Charts zeigen nur die letzten 70 Tage.
+        // Aeltere Daten bleiben in der DB erhalten und sind im Detail-Screen sichtbar
+        // (state.history bleibt komplett, nur die Chart-Cards filtern hier).
+        val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
+        val historyLast70 = state.history.filter { it.capturedAt >= seventyDaysAgoMs }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
@@ -129,7 +134,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
                     accent = CosmosColors.AccentPrimary,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.hrvMs?.let { snap.capturedAt to it }
                     },
                     unit = "ms",
@@ -140,7 +145,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Resting Heart Rate",
                     accent = CosmosColors.Critical,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "bpm",
@@ -152,7 +157,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlaf-Performance",
                     accent = CosmosColors.Success,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "%",
@@ -163,7 +168,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafdauer",
                     accent = CosmosColors.AccentSecondary,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "min",
@@ -213,7 +218,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Strain",
                     accent = CosmosColors.Warning,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.dayStrain?.let { snap.capturedAt to it }
                     },
                     unit = "",
@@ -224,7 +229,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Day Kilojoules",
                     accent = CosmosColors.AccentPrimary,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.dayKilojoules?.let { snap.capturedAt to it }
                     },
                     unit = "kJ",
@@ -236,7 +241,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Atemfrequenz",
                     accent = CosmosColors.AccentPrimary,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.respiratoryRate?.let { snap.capturedAt to it }
                     },
                     unit = "Atemzüge/min",
@@ -247,7 +252,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafeffizienz",
                     accent = CosmosColors.Success,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "%",
@@ -258,7 +263,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafregelmäßigkeit",
                     accent = CosmosColors.Success,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "%",
@@ -270,7 +275,7 @@ fun BiomarkerHostScreen(
                     lowerIsBetter = true,
                     title = "Schlafdefizit",
                     accent = CosmosColors.Warning,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "min",
@@ -281,7 +286,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Sauerstoffsättigung",
                     accent = CosmosColors.Success,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.spo2Percent?.let { snap.capturedAt to it }
                     },
                     unit = "%",
@@ -292,7 +297,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Hauttemperatur",
                     accent = CosmosColors.Warning,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.skinTempCelsius?.let { snap.capturedAt to it }
                     },
                     unit = "°C",
@@ -303,7 +308,7 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Durchschnittliche Herzfrequenz",
                     accent = CosmosColors.Critical,
-                    points = state.history.mapNotNull { snap ->
+                    points = historyLast70.mapNotNull { snap ->
                         snap.averageHeartRate?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "bpm",
