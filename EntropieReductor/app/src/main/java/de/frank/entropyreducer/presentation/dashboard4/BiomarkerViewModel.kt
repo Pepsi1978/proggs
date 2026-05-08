@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
@@ -22,6 +23,7 @@ private data class StatusBundle(
     val message: String?,
     val breakdown: StatusBreakdown?,
     val lastWhoopSyncMs: Long,
+    val selectedDate: java.time.LocalDate,
 )
 
 @androidx.compose.runtime.Immutable
@@ -44,6 +46,20 @@ data class BiomarkerUiState(
      *  0 = noch nie erfolgreich gesynced. Frank-Wunsch 2026-05-09:
      *  „Zuletzt synchronisiert"-Zeile als kleine Info unter dem Header. */
     val lastWhoopSyncMs: Long = 0L,
+    /** Alle Whoop-Workouts, juengste zuerst (Frank-Wunsch 2026-05-09: kompletter
+     *  Workout-Bereich mit Sportart, Strain, HR-Zonen). UI gruppiert nach Tag. */
+    val workouts: List<WhoopWorkoutEntity> = emptyList(),
+    /** Workouts des aktuell ausgewaehlten Tages — sortiert nach Startzeit aufsteigend. */
+    val workoutsForSelectedDay: List<WhoopWorkoutEntity> = emptyList(),
+    /** Eigenberechnung — Erholsamer Schlaf in % = (REM + Tiefschlaf) / Gesamtschlaf.
+     *  Whoop's eigenes Restorative-Sleep-Feature ist nicht ueber die API abrufbar,
+     *  aber die Formel ergibt sehr nahe Werte (Frank-Recherche 2026-05-09). */
+    val restorativeSleepPercent: Double? = null,
+    /** Eigenberechnung — Hauttemperatur-Abweichung gegenueber dem 30-Tage-Schnitt
+     *  vor dem ausgewaehlten Tag. Whoop liefert nur den Absolutwert in °C, das
+     *  Delta wird hier mit der eigenen Baseline berechnet. */
+    val skinTempBaseline: Double? = null,
+    val skinTempDelta: Double? = null,
 )
 
 @HiltViewModel
@@ -64,12 +80,19 @@ class BiomarkerViewModel @Inject constructor(
     val state: StateFlow<BiomarkerUiState> = combine(
         repo.observeLatest(),
         repo.observeAll(),
+        repo.observeWorkouts(),
         repo.observeRange(thirtyDaysAgo, now),
-        combine(_refreshing, _message, statusObserver.observe(), settings.lastWhoopSyncMsFlow) { r, m, b, sync ->
-            StatusBundle(r, m, b, sync)
+        combine(
+            _refreshing,
+            _message,
+            statusObserver.observe(),
+            settings.lastWhoopSyncMsFlow,
+            _selectedDate,
+        ) { r, m, b, sync, sel ->
+            StatusBundle(r, m, b, sync, sel)
         },
-        _selectedDate,
-    ) { latest, all, last30, status, selDate ->
+    ) { latest, all, workouts, last30, status ->
+        val selDate = status.selectedDate
         // Snapshot für den gewählten Tag finden — wenn kein Snapshot für das
         // exakte Datum existiert, wird der nächste juengere Snapshot vor dem
         // gewählten Tag genommen (Whoop syncs typischerweise einmal pro Tag).
@@ -78,6 +101,36 @@ class BiomarkerViewModel @Inject constructor(
         val selEndMs = selStartMs + 24L * 60 * 60 * 1000
         val selSnap = all.lastOrNull { it.capturedAt in selStartMs until selEndMs }
             ?: if (selDate == java.time.LocalDate.now()) latest else null
+
+        // Workouts fuer den gewaehlten Tag — Whoop liefert dateKey im UTC-Tag,
+        // wir vergleichen lokal (Frank arbeitet in lokaler Zeit) per Bereichsfilter.
+        val workoutsForDay = workouts
+            .filter { it.startMs in selStartMs until selEndMs }
+            .sortedBy { it.startMs }
+
+        // Eigenberechnung — Erholsamer Schlaf %: (REM + Tiefschlaf) / Gesamtschlaf.
+        // Wachzeit zaehlt NICHT zum Gesamtschlaf — nur die echten Schlafphasen.
+        val rem = selSnap?.sleepRemMinutes ?: 0
+        val deep = selSnap?.sleepDeepMinutes ?: 0
+        val light = selSnap?.sleepLightMinutes ?: 0
+        val totalSleep = rem + deep + light
+        val restorativePct = if (totalSleep > 0) {
+            (rem + deep).toDouble() / totalSleep.toDouble() * 100.0
+        } else null
+
+        // Eigenberechnung — Hauttemperatur-Delta. Baseline = Mittel der letzten
+        // 30 Tage VOR dem ausgewaehlten Tag. Mindestens 7 Werte sonst NICHT
+        // anzeigen damit der Wert verlaesslich ist.
+        val baselineEndMs = selStartMs
+        val baselineStartMs = baselineEndMs - 30L * 24 * 60 * 60 * 1000
+        val baselineValues = all
+            .filter { it.capturedAt in baselineStartMs until baselineEndMs }
+            .mapNotNull { it.skinTempCelsius }
+        val baseline = if (baselineValues.size >= 7) baselineValues.average() else null
+        val skinTempDelta = if (baseline != null && selSnap?.skinTempCelsius != null) {
+            selSnap.skinTempCelsius - baseline
+        } else null
+
         BiomarkerUiState(
             latest = latest,
             history = all,
@@ -88,6 +141,11 @@ class BiomarkerViewModel @Inject constructor(
             message = status.message,
             statusBreakdown = status.breakdown,
             lastWhoopSyncMs = status.lastWhoopSyncMs,
+            workouts = workouts,
+            workoutsForSelectedDay = workoutsForDay,
+            restorativeSleepPercent = restorativePct,
+            skinTempBaseline = baseline,
+            skinTempDelta = skinTempDelta,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 

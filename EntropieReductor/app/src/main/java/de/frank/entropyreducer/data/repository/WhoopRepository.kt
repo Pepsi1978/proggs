@@ -2,12 +2,16 @@ package de.frank.entropyreducer.data.repository
 
 import android.util.Log
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
+import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopCycle
 import de.frank.entropyreducer.data.remote.whoop.WhoopRecovery
 import de.frank.entropyreducer.data.remote.whoop.WhoopSleep
+import de.frank.entropyreducer.data.remote.whoop.WhoopSportNames
+import de.frank.entropyreducer.data.remote.whoop.WhoopWorkout
 import de.frank.entropyreducer.data.settings.AppSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +37,7 @@ import javax.inject.Singleton
 @Singleton
 class WhoopRepository @Inject constructor(
     private val dao: BiomarkerSnapshotDao,
+    private val workoutDao: WhoopWorkoutDao,
     private val api: WhoopApi,
     private val oauth: OAuthService,
     private val settings: AppSettings,
@@ -44,6 +49,9 @@ class WhoopRepository @Inject constructor(
 
     /** Vollstaendige Historie aller Snapshots (Frank-Wunsch 2026-05-08). */
     fun observeAll(): Flow<List<BiomarkerSnapshotEntity>> = dao.getAll()
+
+    /** Alle Whoop-Workouts (juengste zuerst). UI gruppiert nach dateKey im VM. */
+    fun observeWorkouts(): Flow<List<WhoopWorkoutEntity>> = workoutDao.observeAll()
 
     /**
      * Synchronisiert die letzten [days] Tage. Liefert die Anzahl gespeicherter
@@ -63,6 +71,7 @@ class WhoopRepository @Inject constructor(
         // Whoop's API gibt davor 0-Werte (z.B. Avg-HR=0) was die Charts/Korrelationen
         // verfaelscht. Vor jedem Sync alte DB-Eintraege loeschen — idempotent.
         dao.deleteOlderThan(WHOOP_DATA_START_MS)
+        workoutDao.deleteOlderThan(WHOOP_DATA_START_MS)
 
         val end = OffsetDateTime.now(ZoneOffset.UTC)
         val requestedStart = end.minusDays(days.toLong())
@@ -91,6 +100,12 @@ class WhoopRepository @Inject constructor(
             api.listSleep(authorization = auth, start = isoStart, end = isoEnd, nextToken = token2)
                 .let { it.records to it.nextToken }
         }
+        // Workouts werden pro Tag mehrfach abgerufen — jeweils eigene Tabelle
+        // (whoop_workouts), das Aggregat fuer den Tag macht das ViewModel.
+        val workouts = paged { token2 ->
+            api.listWorkouts(authorization = auth, start = isoStart, end = isoEnd, nextToken = token2)
+                .let { it.records to it.nextToken }
+        }
 
         val recByCycleId = recoveries.associateBy { it.cycleId }
         // Sleeps haben keine direkte cycle_id im Public-Schema — wir matchen über das Datum.
@@ -101,8 +116,15 @@ class WhoopRepository @Inject constructor(
 
         val snapshots = cycles.mapNotNull { cycle -> mapToSnapshot(cycle, recByCycleId[cycle.id], sleepByDate) }
         snapshots.forEach { dao.upsert(it) }
+
+        // Workouts persistieren — eigene Tabelle, ein Eintrag pro Training.
+        val workoutEntities = workouts.mapNotNull { mapToWorkoutEntity(it) }
+        if (workoutEntities.isNotEmpty()) {
+            workoutDao.upsertAll(workoutEntities)
+        }
+        Log.i(TAG, "Whoop-Sync: ${snapshots.size} Snapshots + ${workoutEntities.size} Workouts geschrieben")
+
         settings.setLastWhoopSync(System.currentTimeMillis())
-        Log.i(TAG, "Whoop-Sync: ${snapshots.size} Snapshots geschrieben")
         snapshots.size
     }.onFailure { Log.e(TAG, "Whoop-Sync fehlgeschlagen", it) }
 
@@ -160,6 +182,44 @@ class WhoopRepository @Inject constructor(
             skinTempCelsius = recoveryScore?.skinTempCelsius,
             averageHeartRate = cycle.score?.averageHeartRate?.toInt(),
             maxHeartRate = cycle.score?.maxHeartRate?.toInt(),
+            sleepCycleCount = sleepScore?.stageSummary?.sleepCycleCount,
+        )
+    }
+
+    /**
+     * Wandelt ein Whoop-Workout in eine WhoopWorkoutEntity um. Workouts ohne
+     * Start- oder End-Zeitstempel werden uebersprungen (= ungueltig).
+     */
+    private fun mapToWorkoutEntity(workout: WhoopWorkout): WhoopWorkoutEntity? {
+        val id = workout.id ?: return null
+        val startStr = workout.start ?: return null
+        val endStr = workout.end ?: return null
+        val startMs = runCatching { Instant.parse(startStr).toEpochMilli() }.getOrNull() ?: return null
+        val endMs = runCatching { Instant.parse(endStr).toEpochMilli() }.getOrNull() ?: return null
+        val dateKey = Instant.ofEpochMilli(startMs).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+        val score = workout.score
+        val zones = score?.zoneDuration
+        return WhoopWorkoutEntity(
+            id = id,
+            dateKey = dateKey,
+            startMs = startMs,
+            endMs = endMs,
+            sportId = workout.sportId,
+            sportName = WhoopSportNames.nameOf(workout.sportId),
+            strain = score?.strain,
+            kilojoule = score?.kilojoule,
+            averageHeartRate = score?.averageHeartRate?.toInt(),
+            maxHeartRate = score?.maxHeartRate?.toInt(),
+            percentRecorded = score?.percentRecorded,
+            distanceMeter = score?.distanceMeter,
+            altitudeGainMeter = score?.altitudeGainMeter,
+            zoneZeroMilli = zones?.zoneZeroMilli,
+            zoneOneMilli = zones?.zoneOneMilli,
+            zoneTwoMilli = zones?.zoneTwoMilli,
+            zoneThreeMilli = zones?.zoneThreeMilli,
+            zoneFourMilli = zones?.zoneFourMilli,
+            zoneFiveMilli = zones?.zoneFiveMilli,
+            createdAt = System.currentTimeMillis(),
         )
     }
 

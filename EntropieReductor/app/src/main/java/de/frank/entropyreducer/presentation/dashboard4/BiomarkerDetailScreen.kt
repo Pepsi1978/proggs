@@ -443,6 +443,26 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         extract = { it.maxHeartRate?.toDouble() },
         format = { "%.0f bpm".format(it) },
     )
+    MetricKey.SLEEP_RESTORATIVE -> MetricSpec(
+        title = "Erholsamer Schlaf",
+        unit = "%",
+        accent = CosmosColors.Success,
+        extract = { snap ->
+            val rem = snap.sleepRemMinutes ?: 0
+            val deep = snap.sleepDeepMinutes ?: 0
+            val light = snap.sleepLightMinutes ?: 0
+            val total = rem + deep + light
+            if (total > 0) (rem + deep).toDouble() / total.toDouble() * 100.0 else null
+        },
+        format = { "%.0f %%".format(it) },
+    )
+    MetricKey.SLEEP_CYCLES -> MetricSpec(
+        title = "Schlafzyklen",
+        unit = "x",
+        accent = CosmosColors.AccentSecondary,
+        extract = { it.sleepCycleCount?.toDouble() },
+        format = { "%.0f x".format(it) },
+    )
     else -> MetricSpec(
         title = "Unbekannt",
         unit = "",

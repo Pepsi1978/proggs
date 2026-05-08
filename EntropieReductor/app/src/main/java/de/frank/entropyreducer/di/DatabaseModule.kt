@@ -59,6 +59,7 @@ object DatabaseModule {
     @Provides fun provideCalendarEventDao(db: AppDatabase) = db.calendarEventDao()
     @Provides fun provideKiTriggerDao(db: AppDatabase) = db.kiTriggerDao()
     @Provides fun provideGenieCodexDao(db: AppDatabase) = db.genieCodexDao()
+    @Provides fun provideWhoopWorkoutDao(db: AppDatabase) = db.whoopWorkoutDao()
 
     // Forscher-DAOs jetzt aus der ScientistDatabase — eigene Persistenz-Domaene.
     @Provides fun provideScientistSessionDao(db: ScientistDatabase) = db.scientistSessionDao()

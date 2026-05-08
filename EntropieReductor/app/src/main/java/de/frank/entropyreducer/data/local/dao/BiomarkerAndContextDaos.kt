@@ -10,6 +10,7 @@ import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
+import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -39,6 +40,35 @@ interface BiomarkerSnapshotDao {
      *  jedem Sync aufgerufen damit alte Daten konsistent verschwinden. */
     @Query("DELETE FROM biomarker_snapshots WHERE capturedAt < :threshold")
     suspend fun deleteOlderThan(threshold: Long)
+}
+
+/**
+ * Whoop-Workouts (1:N pro Tag). Liefert eine flache Liste — Aggregation pro Tag
+ * geschieht im ViewModel via groupBy(dateKey). Frank-Wunsch 2026-05-09: alle
+ * Trainings mit Sportart, Strain, HR-Zonen sichtbar machen.
+ */
+@Dao
+interface WhoopWorkoutDao {
+    @Query("SELECT * FROM whoop_workouts ORDER BY startMs DESC")
+    fun observeAll(): Flow<List<WhoopWorkoutEntity>>
+
+    @Query("SELECT * FROM whoop_workouts WHERE startMs BETWEEN :from AND :to ORDER BY startMs DESC")
+    fun observeRange(from: Long, to: Long): Flow<List<WhoopWorkoutEntity>>
+
+    @Query("SELECT * FROM whoop_workouts WHERE dateKey = :dateKey ORDER BY startMs ASC")
+    fun observeByDateKey(dateKey: String): Flow<List<WhoopWorkoutEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(workout: WhoopWorkoutEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(workouts: List<WhoopWorkoutEntity>)
+
+    @Query("DELETE FROM whoop_workouts WHERE startMs < :threshold")
+    suspend fun deleteOlderThan(threshold: Long)
+
+    @Query("DELETE FROM whoop_workouts")
+    suspend fun deleteAll()
 }
 
 @Dao

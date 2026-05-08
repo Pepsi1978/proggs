@@ -175,8 +175,12 @@ data class WhoopSleepNeeded(
 data class WhoopWorkout(
     @SerialName("id") val id: String? = null,
     @SerialName("user_id") val userId: Long? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
     @SerialName("start") val start: String? = null,
     @SerialName("end") val end: String? = null,
+    @SerialName("timezone_offset") val timezoneOffset: String? = null,
+    @SerialName("sport_id") val sportId: Int? = null,
     @SerialName("score_state") val scoreState: String? = null,
     @SerialName("score") val score: WhoopWorkoutScore? = null,
 )
@@ -187,6 +191,26 @@ data class WhoopWorkoutScore(
     @SerialName("kilojoule") val kilojoule: Double? = null,
     @SerialName("average_heart_rate") val averageHeartRate: Double? = null,
     @SerialName("max_heart_rate") val maxHeartRate: Double? = null,
+    @SerialName("percent_recorded") val percentRecorded: Double? = null,
+    @SerialName("distance_meter") val distanceMeter: Double? = null,
+    @SerialName("altitude_gain_meter") val altitudeGainMeter: Double? = null,
+    @SerialName("altitude_change_meter") val altitudeChangeMeter: Double? = null,
+    @SerialName("zone_duration") val zoneDuration: WhoopWorkoutZones? = null,
+)
+
+/**
+ * Whoop teilt jedes Workout in 6 Herzfrequenz-Zonen auf (0 = sehr leicht, 5 = max).
+ * Werte sind Aufenthaltsdauer pro Zone in Millisekunden. Manche Whoop-Versionen
+ * liefern nur 5 Zonen — `zoneFiveMilli` ist daher optional.
+ */
+@Serializable
+data class WhoopWorkoutZones(
+    @SerialName("zone_zero_milli") val zoneZeroMilli: Long? = null,
+    @SerialName("zone_one_milli") val zoneOneMilli: Long? = null,
+    @SerialName("zone_two_milli") val zoneTwoMilli: Long? = null,
+    @SerialName("zone_three_milli") val zoneThreeMilli: Long? = null,
+    @SerialName("zone_four_milli") val zoneFourMilli: Long? = null,
+    @SerialName("zone_five_milli") val zoneFiveMilli: Long? = null,
 )
 
 @Serializable

@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.local.dao.KiTriggerDao
 import de.frank.entropyreducer.data.local.dao.MemoryDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
+import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
@@ -23,6 +24,7 @@ import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
+import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 
 /**
  * Haupt-Datenbank — enthaelt alle nicht-Forscher-Daten. Frank-Wunsch 2026-05-09:
@@ -50,8 +52,9 @@ import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
         CalendarEventEntity::class,
         KiTriggerEntity::class,
         GenieCodexVersionEntity::class,
+        WhoopWorkoutEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(EntropyTypeConverters::class)
@@ -66,6 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun calendarEventDao(): CalendarEventDao
     abstract fun kiTriggerDao(): KiTriggerDao
     abstract fun genieCodexDao(): GenieCodexDao
+    abstract fun whoopWorkoutDao(): WhoopWorkoutDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"

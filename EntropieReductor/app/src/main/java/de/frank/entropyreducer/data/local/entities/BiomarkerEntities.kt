@@ -31,6 +31,44 @@ data class BiomarkerSnapshotEntity(
     val skinTempCelsius: Double? = null,           // Hauttemperatur
     val averageHeartRate: Int? = null,             // Durchschnittliche Herzfrequenz
     val maxHeartRate: Int? = null,                 // Max Herzfrequenz
+    val sleepCycleCount: Int? = null,              // Anzahl der Schlafzyklen pro Nacht
+)
+
+/**
+ * Ein einzelnes Whoop-Workout. Ein Tag kann mehrere Workouts enthalten —
+ * deshalb eigene Tabelle (1:N pro Cycle) statt Felder im BiomarkerSnapshot.
+ *
+ * `dateKey` ist im Format "YYYY-MM-DD" (lokale Zeitzone) und dient zum schnellen
+ * Filtern aller Workouts eines Tages — entspricht dem Cycle-Tag der App.
+ *
+ * Felder:
+ *  - `strain`: Belastungs-Score 0-21 fuer dieses einzelne Training
+ *  - `kilojoule`: Energie in Kilojoule (1 kcal = 4.184 kJ)
+ *  - `sportId` + `sportName`: Whoop-Sport-ID + lesbarer deutscher Name (z.B. "Krafttraining")
+ *  - `zoneZeroMilli`..`zoneFiveMilli`: Aufenthaltsdauer in den 6 Herzfrequenz-Zonen in ms
+ */
+@Entity(tableName = "whoop_workouts")
+data class WhoopWorkoutEntity(
+    @PrimaryKey val id: String,
+    val dateKey: String,
+    val startMs: Long,
+    val endMs: Long,
+    val sportId: Int?,
+    val sportName: String?,
+    val strain: Double?,
+    val kilojoule: Double?,
+    val averageHeartRate: Int?,
+    val maxHeartRate: Int?,
+    val percentRecorded: Double?,
+    val distanceMeter: Double?,
+    val altitudeGainMeter: Double?,
+    val zoneZeroMilli: Long?,
+    val zoneOneMilli: Long?,
+    val zoneTwoMilli: Long?,
+    val zoneThreeMilli: Long?,
+    val zoneFourMilli: Long?,
+    val zoneFiveMilli: Long?,
+    val createdAt: Long,
 )
 
 @Entity(tableName = "supplement_logs")

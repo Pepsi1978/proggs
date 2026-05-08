@@ -130,6 +130,10 @@ fun BiomarkerHostScreen(
             item { GesamterholungCard(state) }
             item { KeyValueGrid(state, onOpenMetricDetail) }
 
+            // Workout-Bereich (Frank-Wunsch 2026-05-09): grosses Pattern mit Strain,
+            // Kalorien, Avg/Max-HR, Sportart, Dauer, Start/Ende und HF-Zonen pro Training.
+            item { WorkoutsForDayCard(workouts = state.workoutsForSelectedDay) }
+
             // History-Charts — alle Whoop-Werte mit VOLLSTAENDIGER Historie und
             // interaktivem Chart (Y-Achse, X-Achse, Tap auf Punkt zeigt Wert).
             // Frank-Wunsch 2026-05-08: nicht mehr 30-Tage-Slice sondern alles,
@@ -217,6 +221,16 @@ fun BiomarkerHostScreen(
                         }
                     }
                 }
+            }
+            // Eigenberechnung — Erholsamer Schlaf %. Liegt direkt unter den
+            // Schlafstadien weil sie thematisch zusammen gehoeren.
+            item {
+                RestorativeSleepCard(
+                    percent = state.restorativeSleepPercent,
+                    remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
+                    deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
+                )
             }
             item {
                 MetricHistoryCard(
@@ -320,6 +334,16 @@ fun BiomarkerHostScreen(
                     unit = "°C",
                     onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                     lowerIsBetter = true,
+                )
+            }
+            // Eigenberechnung — Hauttemperatur-Abweichung gegenueber 30-Tage-Baseline.
+            // Tap fuehrt zum Hauttemperatur-Detail-Screen (Verlauf + Baseline visualisiert).
+            item {
+                SkinTempDeltaCard(
+                    delta = state.skinTempDelta,
+                    baseline = state.skinTempBaseline,
+                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                 )
             }
             item {
@@ -456,6 +480,10 @@ internal object MetricKey {
     const val SKIN_TEMP = "skin_temp"
     const val AVG_HR = "avg_hr"
     const val MAX_HR = "max_hr"
+    // Frank-Wunsch 2026-05-09 — Eigenberechnungen aus Whoop-Rohdaten:
+    const val SLEEP_RESTORATIVE = "sleep_restorative"
+    const val SKIN_TEMP_DELTA = "skin_temp_delta"
+    const val SLEEP_CYCLES = "sleep_cycles"
 }
 
 /**
@@ -771,6 +799,161 @@ private fun GesamterholungCard(state: BiomarkerUiState) {
  * 0L = noch nie gesynced. < 1 Min = "gerade eben". < 60 Min = "vor X Minuten".
  * Sonst absolute Zeit oder Datum, je nachdem ob heute oder frueher.
  */
+/**
+ * Erholsamer-Schlaf-Karte — Eigenberechnung aus REM + Tiefschlaf in % vom
+ * Gesamtschlaf. Whoop's Restorative-Sleep-Feature ist nicht ueber die API
+ * abrufbar, aber die Formel liefert sehr nahe Werte (Frank-Recherche 2026-05-09).
+ *
+ * Optisch: grosser Prozent-Wert, Sub-Zeile mit den beiden Komponenten REM/Tief,
+ * Begruendungstext darunter. Tap fuehrt zum Detail-Screen mit Verlauf.
+ */
+@Composable
+private fun RestorativeSleepCard(
+    percent: Double?,
+    remMinutes: Int?,
+    deepMinutes: Int?,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val color = when {
+        percent == null -> cosmos.textSecondary
+        percent >= 50 -> CosmosColors.Success
+        percent >= 35 -> CosmosColors.AccentPrimary
+        percent >= 25 -> CosmosColors.Warning
+        else -> CosmosColors.Critical
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Erholsamer Schlaf",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "Details ▸",
+                    color = color,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = percent?.let { "%.0f".format(it) } ?: "—",
+                    color = color,
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = if (percent != null) " %" else "",
+                    color = color,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (remMinutes != null && deepMinutes != null) {
+                    "REM ${remMinutes} min · Tiefschlaf ${deepMinutes} min"
+                } else "Noch keine Schlafdaten",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Anteil von REM und Tiefschlaf am gesamten Schlaf — die regenerativen Phasen.",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
+
+/**
+ * Hauttemperatur-Delta-Karte — zeigt die Abweichung des aktuellen Wertes vom
+ * 30-Tage-Schnitt. Grosse Werte oder rote Faerbung deuten auf Erkrankung,
+ * Stress, Zyklus-Effekt oder Aufenthalt in warmer/kalter Umgebung hin.
+ *
+ * Wenn die Baseline noch nicht stabil (< 7 Werte): freundlicher Hinweis.
+ */
+@Composable
+private fun SkinTempDeltaCard(
+    delta: Double?,
+    baseline: Double?,
+    currentValue: Double?,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
+    val color = when {
+        delta == null -> cosmos.textSecondary
+        absDelta >= 1.0 -> CosmosColors.Critical
+        absDelta >= 0.5 -> CosmosColors.Warning
+        absDelta >= 0.2 -> CosmosColors.AccentPrimary
+        else -> CosmosColors.Success
+    }
+    val sign = when {
+        delta == null -> ""
+        delta >= 0 -> "+"
+        else -> "−"
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Hauttemperatur-Abweichung",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "Details ▸",
+                    color = color,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = if (delta != null) "$sign${"%.2f".format(absDelta)}" else "—",
+                    color = color,
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = if (delta != null) " °C" else "",
+                    color = color,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (currentValue != null && baseline != null) {
+                    "Aktuell ${"%.2f".format(currentValue)}°C · Baseline ${"%.2f".format(baseline)}°C"
+                } else if (baseline == null) {
+                    "Baseline laeuft noch — mindestens 7 Naechte Verlauf benoetigt"
+                } else "Noch keine Hauttemperatur erfasst"
+            ,
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Gleitender 30-Tage-Schnitt als persoenliche Baseline. " +
+                    "Grosse Abweichungen koennen auf Krankheit, Stress oder Zyklus deuten.",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
+
 private fun formatRelativeSyncTime(syncMs: Long): String {
     if (syncMs <= 0L) return "noch nie"
     val now = System.currentTimeMillis()
