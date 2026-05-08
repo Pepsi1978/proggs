@@ -230,16 +230,25 @@ fun BiomarkerHostScreen(
                 )
             }
             item {
+                // Frank-Wunsch 2026-05-09 Update: Tagesumsatz-Card schliesst den
+                // heutigen Tag aus, weil der Wert sich ueber den Tag aufbaut —
+                // morgens steht er bei ~600 kcal, abends bei ~2500. Ein unfertiger
+                // Wert wuerde beide Trendlinien (SMA + Lin-Reg) nach unten ziehen.
+                // Erst wenn der Tag um Mitternacht abgeschlossen ist, fliesst er
+                // ein. Andere Metriken (Schlaf, Recovery, HRV) sind morgens beim
+                // Aufwachen schon final — die brauchen keinen Filter.
+                val todayStartMs = java.time.LocalDate.now()
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant().toEpochMilli()
                 MetricHistoryCard(
                     title = "Tagesumsatz",
                     accent = CosmosColors.AccentPrimary,
-                    points = historyLast70.mapNotNull { snap ->
-                        // Frank-Wunsch 2026-05-09: Whoop liefert Tagesumsatz in
-                        // Kilojoule, wir zeigen ihn aber in Kilokalorien an
-                        // (1 kcal = 4.184 kJ). Umrechnung passiert nur an der UI,
-                        // die DB-Daten bleiben in Whoop's Original-Einheit.
-                        snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
-                    },
+                    points = historyLast70
+                        .filter { it.capturedAt < todayStartMs }
+                        .mapNotNull { snap ->
+                            // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
+                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
+                        },
                     unit = "kcal",
                     onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
