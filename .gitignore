@@ -20,6 +20,10 @@ BestJournalAndroid/**/*.jks
 BestJournalAndroid/Screenshots/
 BestJournalFrank/Screenshots/
 
+# Auto-generated screenshots from scripts/screenshot.sh — bleibt lokal,
+# kein Sinn die im Repo zu haben (jeweils 300-500 KB pro Datei).
+screenshots/
+
 # .NET Build-Artefakte (PDB-Symboldateien werden bei jedem Release-Build neu
 # erzeugt — sollen nicht im Repo liegen).
 **/publish/*.pdb

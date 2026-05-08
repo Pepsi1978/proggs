@@ -93,6 +93,12 @@ fun BiomarkerHostScreen(
                 onMicClick = { onSwitchTab(Routes.TASKS) },
             )
         },
+        // Frank-Wunsch 2026-05-09 (analog zum Aufgaben-Screen, fuenfte Praezisierung):
+        // Der "Zuletzt synchronisiert"-Zeitstempel soll genauso nah am Titel
+        // "Biomarker" sitzen wie die Backup-Statuszeile am Titel "Entropie Reduktor".
+        // compactHeader=true reduziert die Material-3-TopAppBar-Hoehe von 64dp
+        // (Default) auf 44dp und damit die Luft unter dem Titel von ~18dp auf ~8dp.
+        compactHeader = true,
     ) { padding ->
         // Frank-Wunsch 2026-05-09: alle Verlaufs-Charts zeigen nur die letzten 70 Tage.
         // Aeltere Daten bleiben in der DB erhalten und sind im Detail-Screen sichtbar
@@ -105,7 +111,15 @@ fun BiomarkerHostScreen(
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            // Frank-Wunsch 2026-05-09: top auf 0 damit der Sync-Zeitstempel direkt
+            // an die jetzt kompakte TopAppBar anschliesst (~8dp natuerliche Luft
+            // bleiben durch das vertikale Zentrieren des Titels in der TopAppBar).
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 0.dp,
+                bottom = 16.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
