@@ -148,6 +148,9 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.hrvMs?.let { snap.capturedAt to it }
                     },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
+                        snap.hrvMs?.let { snap.capturedAt to it }
+                    },
                     unit = "ms",
                     onClick = { onOpenMetricDetail(MetricKey.HRV) },
                 )
@@ -157,6 +160,9 @@ fun BiomarkerHostScreen(
                     title = "Ruhepuls",
                     accent = CosmosColors.Critical,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "bpm",
@@ -173,6 +179,9 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.respiratoryRate?.let { snap.capturedAt to it }
                     },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
+                        snap.respiratoryRate?.let { snap.capturedAt to it }
+                    },
                     unit = "/min",
                     onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
                 )
@@ -184,6 +193,9 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.spo2Percent?.let { snap.capturedAt to it }
                     },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
+                        snap.spo2Percent?.let { snap.capturedAt to it }
+                    },
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SPO2) },
                 )
@@ -193,6 +205,9 @@ fun BiomarkerHostScreen(
                     title = "Hauttemperatur",
                     accent = CosmosColors.Warning,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.skinTempCelsius?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.skinTempCelsius?.let { snap.capturedAt to it }
                     },
                     unit = "°C",
@@ -218,6 +233,9 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
                     },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
+                        snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
+                    },
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
                 )
@@ -228,6 +246,9 @@ fun BiomarkerHostScreen(
                     title = "Schlafdauer",
                     accent = CosmosColors.AccentSecondary,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "min",
@@ -286,6 +307,9 @@ fun BiomarkerHostScreen(
                     points = historyLast70.mapNotNull { snap ->
                         snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
                     },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
+                        snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                    },
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
                 )
@@ -295,6 +319,9 @@ fun BiomarkerHostScreen(
                     title = "Schlafregelmäßigkeit",
                     accent = CosmosColors.Success,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "%",
@@ -307,6 +334,9 @@ fun BiomarkerHostScreen(
                     title = "Schlafdefizit",
                     accent = CosmosColors.Warning,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
                     },
                     unit = "min",
@@ -331,6 +361,11 @@ fun BiomarkerHostScreen(
                             // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
                             snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
                         },
+                    fullHistoryPoints = state.history
+                        .filter { it.capturedAt < todayStartMs }
+                        .mapNotNull { snap ->
+                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
+                        },
                     unit = "kcal",
                     onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
@@ -342,6 +377,9 @@ fun BiomarkerHostScreen(
                     title = "Belastung",
                     accent = CosmosColors.Warning,
                     points = historyLast70.mapNotNull { snap ->
+                        snap.dayStrain?.let { snap.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.history.mapNotNull { snap ->
                         snap.dayStrain?.let { snap.capturedAt to it }
                     },
                     unit = "",
@@ -632,6 +670,10 @@ private fun MetricHistoryCard(
     /** Frank-Wunsch 2026-05-09: bei Schlafdauer die Y-Achse + Tooltip + Header-Wert
      *  in Stunden statt Minuten formatieren. Wenn null: Standard formatY + unit. */
     valueFormatter: ((Double) -> String)? = null,
+    /** Frank-Wunsch 2026-05-09: Durchschnitt soll ueber ALLE jemals gespeicherten
+     *  Werte (volle Historie seit 25.02.2026) berechnet werden, nicht nur die letzten
+     *  70 Tage die im Chart sichtbar sind. Wenn null: fallback auf points. */
+    fullHistoryPoints: List<Pair<Long, Double>>? = null,
 ) {
     val cosmos = LocalCosmos.current
     // Frank-Wunsch 2026-05-09: aktuellen Wert (letzter Datenpunkt) prominent oben
@@ -641,6 +683,24 @@ private fun MetricHistoryCard(
     val latestLabel = latestValue?.let { v ->
         valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
     }
+    // Frank-Wunsch 2026-05-09: unter jedem Chart der Durchschnitt aller Werte + die
+    // Abweichung des aktuellen Werts vom Durchschnitt. Plus = gruen, Minus = rot.
+    // Frank-Praezisierung 2026-05-09: Durchschnitt MUSS ueber die volle Historie
+    // berechnet werden — nicht nur ueber das Chart-Fenster.
+    val avgSource = fullHistoryPoints ?: points
+    val avg = avgSource.map { it.second }.takeIf { it.isNotEmpty() }?.average()
+    val diff = if (latestValue != null && avg != null) latestValue - avg else null
+    val avgLabel = avg?.let { v ->
+        valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
+    }
+    val diffLabel = diff?.let { d ->
+        val sign = if (d >= 0) "+" else "−"
+        val absValue = kotlin.math.abs(d)
+        val formatted = valueFormatter?.invoke(absValue)
+            ?: (formatLatestForCard(absValue) + if (unit.isNotBlank()) " $unit" else "")
+        "$sign$formatted"
+    }
+    val diffColor = if (diff != null && diff >= 0) CosmosColors.Success else CosmosColors.Critical
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -681,6 +741,29 @@ private fun MetricHistoryCard(
                     lowerIsBetter = lowerIsBetter,
                     valueFormatter = valueFormatter,
                 )
+                if (avgLabel != null && diffLabel != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Ø $avgLabel",
+                            color = cosmos.textSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "·",
+                            color = cosmos.textSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = diffLabel,
+                            color = diffColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
         }
     }
