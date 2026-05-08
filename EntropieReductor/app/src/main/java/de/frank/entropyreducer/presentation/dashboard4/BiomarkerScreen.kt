@@ -131,12 +131,14 @@ fun BiomarkerHostScreen(
             item { KeyValueGrid(state, onOpenMetricDetail) }
 
             // Frank-Wunsch 2026-05-09 (Reorganisation): Reihenfolge ist jetzt
-            // 1. HRV → Ruhepuls → Avg-HR (alle Herzfrequenzen zusammen)
-            // 2. Atemfrequenz → SpO2 → Hauttemperatur → Hauttemperatur-Delta (Körper-Werte)
+            // 1. HRV → Ruhepuls (Herzfrequenz)
+            // 2. Atemfrequenz → SpO2 → Hauttemperatur → Hauttemperatur-Delta (Körper)
             // 3. Schlaf-Performance → Schlafdauer → Schlafphasen → Erholsamer Schlaf
-            //    → Schlafeffizienz → Schlafregelmaessigkeit → Schlafdefizit (Schlaf-Block)
-            // 4. Tagesumsatz → Belastung → Workouts (Aktivitaet-Block)
+            //    → Schlafeffizienz → Schlafregelmaessigkeit → Schlafdefizit (Schlaf)
+            // 4. Tagesumsatz → Belastung → Workouts (Aktivitaet)
             // 5. Korrelation HRV ↔ Schlafdauer (Analyse)
+            // Frank-Wunsch 2026-05-09 (Update): Durchschnittliche Tages-Herzfrequenz
+            // wurde entfernt — Ruhepuls reicht. Avg/Max-HR bleiben pro Workout drin.
 
             // ============ Herzfrequenz-Block ============
             item {
@@ -159,18 +161,6 @@ fun BiomarkerHostScreen(
                     },
                     unit = "bpm",
                     onClick = { onOpenMetricDetail(MetricKey.RHR) },
-                    lowerIsBetter = true,
-                )
-            }
-            item {
-                MetricHistoryCard(
-                    title = "Durchschnittliche Herzfrequenz",
-                    accent = CosmosColors.Critical,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.averageHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    unit = "bpm",
-                    onClick = { onOpenMetricDetail(MetricKey.AVG_HR) },
                     lowerIsBetter = true,
                 )
             }
@@ -482,7 +472,6 @@ internal object MetricKey {
     const val SLEEP_DEBT = "sleep_debt"
     const val SPO2 = "spo2"
     const val SKIN_TEMP = "skin_temp"
-    const val AVG_HR = "avg_hr"
     const val MAX_HR = "max_hr"
     // Frank-Wunsch 2026-05-09 — Eigenberechnungen aus Whoop-Rohdaten:
     const val SLEEP_RESTORATIVE = "sleep_restorative"

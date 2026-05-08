@@ -428,14 +428,6 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         extract = { it.skinTempCelsius },
         format = { "%.1f °C".format(it) },
     )
-    MetricKey.AVG_HR -> MetricSpec(
-        title = "Durchschnittliche Herzfrequenz",
-        unit = "bpm",
-        accent = CosmosColors.Critical,
-        extract = { it.averageHeartRate?.toDouble() },
-        format = { "%.0f bpm".format(it) },
-        lowerIsBetter = true,
-    )
     MetricKey.MAX_HR -> MetricSpec(
         title = "Max. Herzfrequenz",
         unit = "bpm",
