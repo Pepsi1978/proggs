@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class BiomarkerUiState(
@@ -86,8 +87,26 @@ class BiomarkerViewModel @Inject constructor(
     }
 
     fun refreshNow() {
-        scheduler.runWhoopSyncNow()
-        _message.value = "Whoop-Sync gestartet … Dauer typischerweise unter 30 Sekunden."
+        // Direkter Sync (Frank-Wunsch 2026-05-09: "Refresh tut nichts").
+        // Vorher: nur scheduler.runWhoopSyncNow() — Worker laeuft asynchron im
+        // Hintergrund, ohne sichtbares Feedback. Jetzt: direkt im VM-Coroutine,
+        // mit Fortschrittsmeldung und konkreten Fehlermeldungen wenn was schief
+        // geht (Token abgelaufen / Netzwerk / API-Limit).
+        viewModelScope.launch {
+            _refreshing.value = true
+            _message.value = "Whoop-Sync läuft …"
+            val result = repo.syncLastDays(365)
+            _refreshing.value = false
+            result.onSuccess { count ->
+                _message.value = if (count == 0) {
+                    "Sync OK, aber 0 Snapshots — pruefe ob deine Whoop-API-Berechtigung noch gueltig ist."
+                } else {
+                    "$count Whoop-Snapshots geladen ($count letzte Tage)."
+                }
+            }.onFailure { ex ->
+                _message.value = "Whoop-Sync fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+            }
+        }
     }
 
     fun clearMessage() { _message.value = null }

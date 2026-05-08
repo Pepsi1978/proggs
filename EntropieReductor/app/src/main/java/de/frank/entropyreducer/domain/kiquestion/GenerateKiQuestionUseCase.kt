@@ -48,13 +48,9 @@ class GenerateKiQuestionUseCase @Inject constructor(
 
         val key = secrets.geminiApiKey
         if (key.isNullOrBlank() || openEntries.isEmpty()) {
-            // Ohne Key oder ohne Eintraege fallback auf statisch.
-            return staticGenerator.generate(
-                entries = openEntries,
-                latestSnapshot = latest,
-                todayCalendar = todayCal,
-                tomorrowCalendar = tomorrowCal,
-            )
+            // Frank-Wunsch 2026-05-09: KEIN statischer Fallback. Wenn keine
+            // echte KI-Frage gebildet werden kann, wird gar keine Frage angezeigt.
+            return null
         }
 
         val model = settings.geminiModelFlow.first()
@@ -84,8 +80,8 @@ class GenerateKiQuestionUseCase @Inject constructor(
                 ?.trim()
                 ?.removePrefix("\"")?.removeSuffix("\"")
             if (text.isNullOrBlank()) {
-                Log.w(TAG, "Leere KI-Antwort, fallback auf statisch")
-                staticGenerator.generate(openEntries, latest, todayCal, tomorrowCal)
+                Log.w(TAG, "Leere KI-Antwort — keine Frage anzeigen (Frank-Wunsch 2026-05-09)")
+                null
             } else {
                 KiQuestion(
                     triggerKey = "ai_${System.currentTimeMillis()}",
@@ -95,8 +91,8 @@ class GenerateKiQuestionUseCase @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "KI-Frage-Generierung fehlgeschlagen, fallback auf statisch", t)
-            staticGenerator.generate(openEntries, latest, todayCal, tomorrowCal)
+            Log.e(TAG, "KI-Frage-Generierung fehlgeschlagen — keine Frage anzeigen", t)
+            null
         }
     }
 
