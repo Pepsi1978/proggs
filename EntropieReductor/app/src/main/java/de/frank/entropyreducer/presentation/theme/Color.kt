@@ -41,6 +41,16 @@ object CosmosColors {
     val StatusLightGreen = Color(0xFF86EFAC)      // 60-80
     val StatusGreen = Color(0xFF22C55E)           // 80-100
 
+    // Prioritaets-Farbskala fuer die Prio-Zahl auf den Aufgabenkarten.
+    // Hohe Werte = wichtig = warm (Rot/Orange), niedrige Werte = unwichtig = kuehl (Blau/Gruen).
+    // Hinweis: Diese Skala ist BEWUSST anders herum als StatusRed/Green oben — beim Schweregrad
+    // ist Rot schlecht, bei der Prio-Zahl ist Rot wichtig.
+    val PriorityRed = Color(0xFFEF4444)           // 80-100  (sehr wichtig)
+    val PriorityOrange = Color(0xFFFB923C)        // 60-80
+    val PriorityYellow = Color(0xFFFBBF24)        // 40-60
+    val PriorityBlue = Color(0xFF60A5FA)          // 20-40
+    val PriorityGreen = Color(0xFF22C55E)         // 0-20    (geringste Prio)
+
     // Kategorie-Farben
     val CatPhysical = Color(0xFFF87171)
     val CatMental = Color(0xFFA78BFA)
