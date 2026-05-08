@@ -33,6 +33,12 @@ interface BiomarkerSnapshotDao {
 
     @Query("DELETE FROM biomarker_snapshots")
     suspend fun deleteAll()
+
+    /** Frank-Wunsch 2026-05-09: Whoop-Daten erst ab 25.02.2026 (Geraete-Kaufdatum)
+     *  zeigen — alles davor sind Whoop-API-Phantomwerte (z.B. Avg-HR=0). Wird bei
+     *  jedem Sync aufgerufen damit alte Daten konsistent verschwinden. */
+    @Query("DELETE FROM biomarker_snapshots WHERE capturedAt < :threshold")
+    suspend fun deleteOlderThan(threshold: Long)
 }
 
 @Dao

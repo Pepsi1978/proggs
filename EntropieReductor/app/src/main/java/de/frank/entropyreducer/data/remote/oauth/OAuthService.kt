@@ -244,14 +244,30 @@ class OAuthService @Inject constructor(
         }
         val clientSecret = secrets.whoopClientSecret
         if (clientSecret.isNullOrBlank()) {
-            // Schicht 2 — reaktiv: Bug sichtbar machen statt verstecken.
-            // Kein Secret bedeutet: in den API-Schluessel-Settings ist die Eingabe
-            // verloren gegangen. Ohne Secret kann Whoop niemals refreshen — silent
-            // null zurueckzugeben wuerde den Banner triggern, ohne dass Frank den
-            // wahren Grund erfaehrt.
             Log.e(TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
             throw IllegalStateException(
                 "Whoop-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben.",
+            )
+        }
+        // Schicht 4 — DIAGNOSE-SONDEN (erweitert): Vor dem Refresh den AuthState
+        // detailliert loggen damit man bei invalid_client genau sieht was fehlt.
+        val rt = state.refreshToken
+        val at = state.accessToken
+        val expiry = state.accessTokenExpirationTime
+        val nowMs = System.currentTimeMillis()
+        val expiryDeltaMs = if (expiry != null) expiry - nowMs else Long.MIN_VALUE
+        val needsRefresh = state.needsTokenRefresh
+        val scope = state.scope
+        val clientId = secrets.whoopClientId
+        Log.i(TAG, "Whoop-Refresh-Vorbereitung: clientId-Laenge=${clientId?.length ?: 0}, secret-Laenge=${clientSecret.length}, refreshToken-Laenge=${rt?.length ?: 0}, accessToken-Laenge=${at?.length ?: 0}, scope='$scope', expiryDeltaMs=$expiryDeltaMs, needsTokenRefresh=$needsRefresh")
+        if (rt.isNullOrBlank()) {
+            Log.e(TAG, "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurueckgegeben (offline-Scope nicht akzeptiert?). Kein Refresh moeglich.")
+            // Frank's Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh
+            // nicht moeglich. NICHT clearWhoopAuthState() rufen — der State bleibt,
+            // die Settings zeigen weiter "verbunden", die DB-Daten bleiben sichtbar.
+            // UI zeigt im Banner ehrlich an: "Refresh-Token fehlt — neu anmelden".
+            throw IllegalStateException(
+                "Whoop-Refresh-Token fehlt — bitte unter API-Schluessel neu anmelden.",
             )
         }
         val clientAuth = ClientSecretPost(clientSecret)
@@ -264,14 +280,15 @@ class OAuthService @Inject constructor(
                 if (ex != null) {
                     // Schicht 4 — Diagnose: alles was Whoop geschickt hat in den Log
                     Log.e(TAG, "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}", ex)
-                    // Schicht 3 — selbstheilend: kaputten AuthState wegwerfen.
-                    // Dadurch zeigt die UI ueberall konsistent "nicht verbunden",
-                    // statt in Settings "verbunden" und im Banner "neu anmelden".
-                    // Frank meldet sich einmal neu an und der Refresh laeuft.
-                    clearWhoopAuthState()
+                    // Schicht 3 — Frank-Wunsch 2026-05-09: NICHT mehr clearen.
+                    // Wenn der Refresh fehlschlaegt, bleibt der AuthState bestehen.
+                    // Vorteile: alte DB-Daten bleiben sichtbar, Settings zeigen
+                    // weiter "verbunden", Frank kann manuell neu anmelden wenn er
+                    // will. Nachteil (akzeptiert): UI ist etwas widerspruechlich,
+                    // aber besser als Datenverlust.
                     cont.resume(null)
                 } else {
-                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten")
+                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Laenge=${accessToken?.length ?: 0})")
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
                     cont.resume(accessToken)

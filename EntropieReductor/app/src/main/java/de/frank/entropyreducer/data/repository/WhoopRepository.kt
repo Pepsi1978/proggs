@@ -59,8 +59,22 @@ class WhoopRepository @Inject constructor(
         val token = oauth.freshWhoopAccessToken()
             ?: throw IllegalStateException("Kein Whoop-Access-Token — bitte erneut anmelden.")
 
+        // Frank-Wunsch 2026-05-09: Daten erst ab Geraete-Kaufdatum 25.02.2026 holen.
+        // Whoop's API gibt davor 0-Werte (z.B. Avg-HR=0) was die Charts/Korrelationen
+        // verfaelscht. Vor jedem Sync alte DB-Eintraege loeschen — idempotent.
+        dao.deleteOlderThan(WHOOP_DATA_START_MS)
+
         val end = OffsetDateTime.now(ZoneOffset.UTC)
-        val start = end.minusDays(days.toLong())
+        val requestedStart = end.minusDays(days.toLong())
+        // Untergrenze auf Geraete-Kaufdatum clampen: nie davor anfragen.
+        val start = if (requestedStart.toInstant().toEpochMilli() < WHOOP_DATA_START_MS) {
+            OffsetDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(WHOOP_DATA_START_MS),
+                ZoneOffset.UTC,
+            )
+        } else {
+            requestedStart
+        }
         val auth = "Bearer $token"
         val isoStart = start.format(ISO)
         val isoEnd = end.format(ISO)
@@ -182,5 +196,14 @@ class WhoopRepository @Inject constructor(
     companion object {
         private const val TAG = "WhoopRepository"
         private val ISO: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+
+        /** Frank-Wunsch 2026-05-09: Geraete-Kaufdatum 25.02.2026 — frueher gibt
+         *  Whoop nur Phantom-Werte (Avg-HR=0 etc.). Hardcoded weil sich das nicht
+         *  aendert. UTC-Mitternacht reicht: Whoop's API ist tag-granular, ein paar
+         *  Stunden Versatz schadet nicht. */
+        private val WHOOP_DATA_START_MS: Long = java.time.LocalDate.of(2026, 2, 25)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
     }
 }
