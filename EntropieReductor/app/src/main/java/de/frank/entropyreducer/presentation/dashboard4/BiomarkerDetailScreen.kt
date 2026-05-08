@@ -355,11 +355,13 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         format = { "%.1f".format(it) },
     )
     MetricKey.KILOJOULES -> MetricSpec(
-        title = "Day Kilojoules",
-        unit = "kJ",
+        title = "Tagesumsatz",
+        unit = "kcal",
         accent = CosmosColors.AccentPrimary,
-        extract = { it.dayKilojoules },
-        format = { "%.0f kJ".format(it) },
+        // Frank-Wunsch 2026-05-09: Anzeige in Kilokalorien statt Kilojoule
+        // (Whoop liefert kJ, Faktor 4.184 fuer kcal). DB bleibt unveraendert in kJ.
+        extract = { it.dayKilojoules?.div(4.184) },
+        format = { "%.0f kcal".format(it) },
     )
     MetricKey.RECOVERY -> MetricSpec(
         title = "Recovery",

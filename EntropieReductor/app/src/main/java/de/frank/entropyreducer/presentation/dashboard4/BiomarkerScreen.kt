@@ -234,9 +234,13 @@ fun BiomarkerHostScreen(
                     title = "Tagesumsatz",
                     accent = CosmosColors.AccentPrimary,
                     points = historyLast70.mapNotNull { snap ->
-                        snap.dayKilojoules?.let { snap.capturedAt to it }
+                        // Frank-Wunsch 2026-05-09: Whoop liefert Tagesumsatz in
+                        // Kilojoule, wir zeigen ihn aber in Kilokalorien an
+                        // (1 kcal = 4.184 kJ). Umrechnung passiert nur an der UI,
+                        // die DB-Daten bleiben in Whoop's Original-Einheit.
+                        snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
                     },
-                    unit = "kJ",
+                    unit = "kcal",
                     onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
             }
