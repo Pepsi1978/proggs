@@ -1,5 +1,7 @@
 package de.frank.entropyreducer.data.remote.drive
 
+import android.util.Log
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
@@ -7,6 +9,8 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "EREDriveRestore"
 
 /**
  * Holt die juengste Backup-Datei aus dem appDataFolder zurück.
@@ -25,9 +29,16 @@ class DriveRestoreManager @Inject constructor(
      * Gibt das letzte JSON-Backup zurück — oder null, wenn kein Backup vorhanden.
      * Wirft `DriveNotSignedInException` / `DriveConsentRequiredException` wenn
      * der Account-Zugang noch nicht gesetzt ist.
+     *
+     * Bei einem 401 (abgelaufener Token) wird der Token einmal invalidiert
+     * und der Aufruf wiederholt — siehe DriveSession.invalidateToken().
      */
     suspend fun fetchLatest(): Result<String?> = withContext(Dispatchers.IO) {
-        runCatching {
+        fetchLatestInternal(retryOn401 = true)
+    }
+
+    private suspend fun fetchLatestInternal(retryOn401: Boolean): Result<String?> {
+        return try {
             val drive = session.get()
 
             val match = drive.files().list()
@@ -39,20 +50,36 @@ class DriveRestoreManager @Inject constructor(
                 .execute()
                 .files
                 ?.firstOrNull()
-                ?: return@runCatching null
+                ?: return Result.success(null)
 
             val sink = ByteArrayOutputStream()
             drive.files().get(match.id).executeMediaAndDownloadTo(sink)
             // ByteArrayOutputStream.toString(Charset) braucht API 33+ — auf API 28-32
             // würde das mit NoSuchMethodError crashen. String(ByteArray, Charset) gibt's
             // seit API 1, gleicher Output, kompatibel auf allen unterstuetzten Versionen.
-            String(sink.toByteArray(), Charsets.UTF_8)
+            Result.success(String(sink.toByteArray(), Charsets.UTF_8))
+        } catch (e: GoogleJsonResponseException) {
+            Log.e(TAG, "Google JSON error: status=${e.statusCode} ${e.statusMessage}")
+            if (e.statusCode == 401 && retryOn401) {
+                Log.w(TAG, "401 Unauthorized — Token invalidieren und einmal retry")
+                session.invalidateToken()
+                fetchLatestInternal(retryOn401 = false)
+            } else {
+                Result.failure(e)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "fetchLatest() failed: ${t.javaClass.simpleName}: ${t.message}", t)
+            Result.failure(t)
         }
     }
 
     /** Existiert ein Backup auf Drive? */
     suspend fun hasBackup(): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
+        hasBackupInternal(retryOn401 = true)
+    }
+
+    private suspend fun hasBackupInternal(retryOn401: Boolean): Boolean {
+        return try {
             val drive = session.get()
             drive.files().list()
                 .setSpaces("appDataFolder")
@@ -62,6 +89,16 @@ class DriveRestoreManager @Inject constructor(
                 .execute()
                 .files
                 ?.isNotEmpty() == true
-        }.getOrDefault(false)
+        } catch (e: GoogleJsonResponseException) {
+            if (e.statusCode == 401 && retryOn401) {
+                Log.w(TAG, "hasBackup 401 — Token invalidieren und einmal retry")
+                session.invalidateToken()
+                hasBackupInternal(retryOn401 = false)
+            } else {
+                false
+            }
+        } catch (_: Throwable) {
+            false
+        }
     }
 }

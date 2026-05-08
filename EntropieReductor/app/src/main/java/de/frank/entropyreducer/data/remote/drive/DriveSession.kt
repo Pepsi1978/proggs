@@ -44,6 +44,7 @@ class DriveSession @Inject constructor(
     private val secrets: EncryptedSecretsStore,
 ) {
     @Volatile private var current: Drive? = null
+    @Volatile private var currentToken: String? = null
     private val mutex = Mutex()
 
     /** Liefert den aktuellen Drive-Client; baut ihn lazy beim ersten Aufruf. */
@@ -55,7 +56,28 @@ class DriveSession @Inject constructor(
     }
 
     /** Beendet die Session. Naechster `get()`-Aufruf fordert frischen Token an. */
-    fun end() { current = null }
+    fun end() {
+        current = null
+        currentToken = null
+    }
+
+    /**
+     * Bei einem 401 vom Drive-Server: Token aus dem Google-Play-Services-Cache
+     * loeschen, damit der naechste `get()`-Aufruf wirklich einen frischen Token
+     * holt. Ohne `clearToken` wuerde `GoogleAuthUtil.getToken()` den toten
+     * Token aus seinem internen Cache zurueckgeben — und der naechste Drive-
+     * Aufruf wuerde wieder mit 401 scheitern.
+     */
+    suspend fun invalidateToken() = withContext(Dispatchers.IO) {
+        val deadToken = currentToken
+        current = null
+        currentToken = null
+        if (!deadToken.isNullOrEmpty()) {
+            runCatching { GoogleAuthUtil.clearToken(context, deadToken) }
+                .onFailure { Log.w(TAG, "clearToken fehlgeschlagen: ${it.message}") }
+            Log.d(TAG, "Token invalidiert, naechster get() holt frisch.")
+        }
+    }
 
     private suspend fun build(): Drive = withContext(Dispatchers.IO) {
         val email = secrets.driveAccountEmail ?: throw DriveNotSignedInException()
@@ -71,6 +93,7 @@ class DriveSession @Inject constructor(
             Log.e(TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t
         }
+        currentToken = token
         Log.d(TAG, "Token erhalten (Länge=${token.length}), Drive-Client wird gebaut")
         Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
             request.headers.authorization = "Bearer $token"
