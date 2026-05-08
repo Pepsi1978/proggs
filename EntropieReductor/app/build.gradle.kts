@@ -82,17 +82,16 @@ android {
             isMinifyEnabled = false
         }
         // PERFORMANCE 2026-05-09: Benchmark-Variante — Release-Optimierungen
-        // (R8, Minification) mit Debug-Signing und applicationIdSuffix .debug
-        // (gleich wie der debug-Build), sodass die Benchmark-App die Debug-App
-        // auf dem Geraet ersetzt UND alle Daten/Backups erhalten bleiben (gleiche
-        // applicationId = de.frank.entropyreducer.debug). Frank arbeitet immer
-        // mit der debug-Variante — die Benchmark-Variante ist die SCHNELLE
-        // Version davon. Compose-Debug-Builds sind 5-10x langsamer als Release-
-        // Builds — fuer Alltag und Performance muss Release getestet werden.
+        // (R8, Minification) mit Debug-Signing fuer schnelle Performance-Tests.
+        // Frank-Wunsch 2026-05-09: PARALLELE Installation neben Debug — Frank
+        // arbeitet mit der Debug-Version (de.frank.entropyreducer.debug) und
+        // schaut zwischendurch in die Benchmark-Version (de.frank.entropyreducer.bench)
+        // um die fluessige Performance zu sehen. Daten in Benchmark-Variante
+        // werden ueber das App-eigene Drive-Backup wiederhergestellt (DriveBackupManager).
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".bench"
             isDebuggable = false
             matchingFallbacks += "release"
         }
