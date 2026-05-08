@@ -104,7 +104,19 @@ class BiomarkerViewModel @Inject constructor(
                     "$count Whoop-Snapshots geladen ($count letzte Tage)."
                 }
             }.onFailure { ex ->
-                _message.value = "Whoop-Sync fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                // Direktive 3 — Diagnose: Token-Probleme als eigene Fehlerklasse
+                // unterscheiden, damit Frank im Banner sofort sieht was zu tun ist.
+                // "Whoop-Sync fehlgeschlagen: …" war zu generisch — bei abgelaufenem
+                // Token wusste man nicht ob es Internet, Whoop-API oder Login ist.
+                val msg = ex.message.orEmpty()
+                _message.value = when {
+                    ex is IllegalStateException && msg.contains("Access-Token") ->
+                        "Whoop-Anmeldung abgelaufen. Bitte unter Einstellungen → API-Schluessel neu anmelden."
+                    ex is IllegalStateException && msg.contains("Client-Secret") ->
+                        "Whoop-Client-Secret fehlt — bitte in den API-Schluessel-Settings eintragen."
+                    else ->
+                        "Whoop-Sync fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                }
             }
         }
     }

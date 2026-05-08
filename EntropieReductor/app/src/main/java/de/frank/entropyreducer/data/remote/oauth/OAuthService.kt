@@ -13,6 +13,7 @@ import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.ClientSecretPost
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenResponse
 import org.json.JSONException
@@ -215,16 +216,62 @@ class OAuthService @Inject constructor(
         }.map { Unit }
     }
 
+    /**
+     * Liefert ein gueltiges Access-Token fuer Whoop. Refreshed transparent wenn das
+     * alte abgelaufen ist.
+     *
+     * Whoop ist ein Confidential Client — beim Refresh-Request MUSS das
+     * Client-Secret mitgeschickt werden. AppAuth's einfache
+     * performActionWithFreshTokens(service) Variante schickt es NICHT mit, was zu
+     * einem stillen invalid_client-Fehler bei jedem Refresh fuehrt — und damit
+     * dazu dass der Nutzer sich ca. jede Stunde neu anmelden muss.
+     *
+     * Direktive 3 — Resilient Bugfixing, vier Schichten:
+     *   Schicht 1 (Praeventiv) — ClientSecretPost beim Refresh mitsenden
+     *   Schicht 2 (Reaktiv) — bei fehlendem Secret KLARE Exception werfen statt
+     *                         silent null zurueckgeben
+     *   Schicht 3 (Selbstheilend) — bei Refresh-Fehler AuthState resetten, damit
+     *                               UI-Anzeige nicht widerspruechlich bleibt
+     *                               (Settings sagen "verbunden", Banner sagt "anmelden")
+     *   Schicht 4 (Diagnose) — detaillierte Logs damit naechster Vorfall in 30s
+     *                          diagnostiziert werden kann
+     */
     suspend fun freshWhoopAccessToken(): String? {
         val state = loadWhoopAuthState()
-        if (!state.isAuthorized) return null
+        if (!state.isAuthorized) {
+            Log.d(TAG, "Whoop-Refresh: kein AuthState — kein Token zurueckgeben")
+            return null
+        }
+        val clientSecret = secrets.whoopClientSecret
+        if (clientSecret.isNullOrBlank()) {
+            // Schicht 2 — reaktiv: Bug sichtbar machen statt verstecken.
+            // Kein Secret bedeutet: in den API-Schluessel-Settings ist die Eingabe
+            // verloren gegangen. Ohne Secret kann Whoop niemals refreshen — silent
+            // null zurueckzugeben wuerde den Banner triggern, ohne dass Frank den
+            // wahren Grund erfaehrt.
+            Log.e(TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
+            throw IllegalStateException(
+                "Whoop-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben.",
+            )
+        }
+        val clientAuth = ClientSecretPost(clientSecret)
         val service = newService()
         return suspendCancellableCoroutine { cont ->
-            state.performActionWithFreshTokens(service) { accessToken, _, ex ->
+            // Schicht 1 — praeventiv: ClientSecretPost als ClientAuthentication
+            // mitsenden. AppAuth haengt das Client-Secret an den Token-Refresh-
+            // Request, Whoop akzeptiert, neuer Access-Token kommt zurueck.
+            state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
                 if (ex != null) {
-                    Log.e(TAG, "Whoop-Token-Refresh fehlgeschlagen", ex)
+                    // Schicht 4 — Diagnose: alles was Whoop geschickt hat in den Log
+                    Log.e(TAG, "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}", ex)
+                    // Schicht 3 — selbstheilend: kaputten AuthState wegwerfen.
+                    // Dadurch zeigt die UI ueberall konsistent "nicht verbunden",
+                    // statt in Settings "verbunden" und im Banner "neu anmelden".
+                    // Frank meldet sich einmal neu an und der Refresh laeuft.
+                    clearWhoopAuthState()
                     cont.resume(null)
                 } else {
+                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten")
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
                     cont.resume(accessToken)

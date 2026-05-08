@@ -45,6 +45,29 @@ class OAuthViewModel @Inject constructor(
     private val _state = MutableStateFlow(loadInitial())
     val state: StateFlow<OAuthUiState> = _state.asStateFlow()
 
+    init {
+        // Direktive 3 — UI-Konsistenz: AuthState kann "isAuthorized=true" sagen
+        // selbst wenn der Refresh seit Stunden invalid_client wirft. Ein einmaliger
+        // Probe-Refresh beim ViewModel-Init synchronisiert die UI-Anzeige mit dem
+        // tatsaechlichen Zustand. freshWhoopAccessToken() heilt den AuthState bei
+        // Fehler selbst (siehe OAuthService — Schicht 3), wir muessen hier nur den
+        // UI-Status nachziehen.
+        viewModelScope.launch {
+            runCatching { oauth.freshWhoopAccessToken() }
+                .onSuccess { token ->
+                    val nowConnected = token != null
+                    if (nowConnected != _state.value.whoopConnected) {
+                        _state.update { it.copy(whoopConnected = nowConnected) }
+                    }
+                }
+                .onFailure {
+                    // IllegalStateException("Whoop-Client-Secret fehlt …") landet hier.
+                    // UI als nicht-verbunden markieren, damit Frank den Banner versteht.
+                    _state.update { it.copy(whoopConnected = false) }
+                }
+        }
+    }
+
     private fun loadInitial(): OAuthUiState = OAuthUiState(
         calendarAccountEmail = secrets.calendarAccountEmail,
         whoopConnected = oauth.loadWhoopAuthState().isAuthorized,
