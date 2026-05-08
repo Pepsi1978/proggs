@@ -1,6 +1,6 @@
 ---
 name: screenshot-loop
-description: Macht im 2-Sekunden-Takt automatisch Screenshots vom angeschlossenen Android-Geraet (Galaxy S23 Ultra, Galaxy Tab S9, Galaxy Fold 6) und vibriert dabei das Geraet als Bestaetigung — Frank navigiert manuell durch die App, der Skill knipst was gerade auf dem Bildschirm ist. Nutze diesen Skill IMMER und SOFORT wenn der Benutzer sagt "starte Screenshot-Loop", "Screenshot-Loop starten", "starte den Screenshot-Loop", "mach alle 2 Sekunden ein Bild", "automatische Screenshots", "Polling-Screenshots", "Auto-Screenshot-Skript starten", oder eine aehnliche Phrase die auf einen periodischen Screenshot-Modus hindeutet. Auch triggern wenn der Benutzer sinngemaess "ich navigiere durch die App, du machst alle paar Sekunden ein Bild" sagt — auch wenn das exakte Wort "Loop" nicht faellt. Nicht triggern bei einzelnen Screenshot-Anfragen ("mach ein Bild", "zeig mir den Screen jetzt") — dafuer reicht ein einzelner Aufruf von ~/proggs/scripts/screenshot.sh.
+description: Macht im 2,7-Sekunden-Takt automatisch Screenshots vom angeschlossenen Android-Geraet (Galaxy S23 Ultra, Galaxy Tab S9, Galaxy Fold 6) und vibriert dabei das Geraet als Bestaetigung — Frank navigiert manuell durch die App, der Skill knipst was gerade auf dem Bildschirm ist. Nutze diesen Skill IMMER und SOFORT wenn der Benutzer sagt "starte Screenshot-Loop", "Screenshot-Loop starten", "starte den Screenshot-Loop", "mach alle paar Sekunden ein Bild", "automatische Screenshots", "Polling-Screenshots", "Auto-Screenshot-Skript starten", oder eine aehnliche Phrase die auf einen periodischen Screenshot-Modus hindeutet. Auch triggern wenn der Benutzer sinngemaess "ich navigiere durch die App, du machst alle paar Sekunden ein Bild" sagt — auch wenn das exakte Wort "Loop" nicht faellt. Nicht triggern bei einzelnen Screenshot-Anfragen ("mach ein Bild", "zeig mir den Screen jetzt") — dafuer reicht ein einzelner Aufruf von ~/proggs/scripts/screenshot.sh.
 ---
 
 # Screenshot-Loop
@@ -14,7 +14,7 @@ Wenn der Benutzer signalisiert dass er **mehrere Bildschirme** der App systemati
 ## Was der Skill garantiert
 
 1. **Pre-Flight-Test** vor dem Loop: ein einzelner Vibrations-Puls aufs Geraet plus Konsolen-Ausgabe `Test war erfolgreich. Ich starte jetzt mit den Screenshots.`
-2. **2-Sekunden-Takt** im Loop: Screenshot + Vibration synchron, dann 2 Sekunden Pause, dann naechster.
+2. **2,7-Sekunden-Takt** im Loop: Screenshot + Vibration synchron, dann 2,7 Sekunden Pause, dann naechster. Frank-Praezisierung 2026-05-09: 2,0 Sekunden waren zu schnell um den Bildschirm umzuschalten — 2,7 Sekunden gibt genug Zeit zum Wechseln zwischen Bildschirmen.
 3. **Vibration markiert den Moment** des Bildes — Frank kann sofort weiterscrollen sobald er die Vibration spuert.
 4. **Standardordner**: alle Bilder landen unter `~/Pictures/Claude Screenshots/` mit Naming `auto_NNN_<timestamp>.png` (NNN dreistellig, fortlaufend).
 5. **Maximaldauer 5 Minuten** ODER 150 Bilder — was zuerst eintritt, dann automatischer Stop.
@@ -75,7 +75,7 @@ for i in $(seq 1 $MAX_BILDER); do
   bash "$SCREENSHOT_SCRIPT" -s "$DEVICE" -n "auto_$NUM" >/dev/null 2>&1 \
     && adb -s "$DEVICE" shell cmd vibrator_manager synced oneshot 250 >/dev/null 2>&1
   echo "  [$NUM] OK"
-  sleep 2
+  sleep 2.7
 done
 
 echo
