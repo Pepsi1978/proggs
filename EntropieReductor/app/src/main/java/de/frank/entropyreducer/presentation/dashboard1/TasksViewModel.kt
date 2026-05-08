@@ -71,6 +71,7 @@ class TasksViewModel @Inject constructor(
     private val statusObserver: StatusObserver,
     private val kiQuestions: KiQuestionRepository,
     private val generateKiQuestion: de.frank.entropyreducer.domain.kiquestion.GenerateKiQuestionUseCase,
+    private val memories: de.frank.entropyreducer.data.repository.MemoryRepository,
     @Suppress("unused") private val bucketingUseCase: CalculateBucketsUseCase,
 ) : AndroidViewModel(application) {
 
@@ -188,7 +189,34 @@ class TasksViewModel @Inject constructor(
     fun submitKiQuestionAnswer(answer: String) {
         if (answer.isBlank()) return
         viewModelScope.launch {
+            // Frage + Antwort fuer Forscher und Gedaechtnis speichern (Frank-Wunsch
+            // 2026-05-09: Antworten muessen verteilt werden, nicht nur fuer den
+            // einzelnen Eintrag-Update). Memory-Source MANUELL damit es als
+            // bestaetigtes Wissen gilt; confidence 70 (hoch weil Frank's eigene
+            // Aussage). Inhalt im Format "F: <Frage> | A: <Antwort>" — die KI
+            // kann das im Briefing/Review/Forscher als Kontext nutzen.
+            val currentQuestion = kiQuestions.currentQuestion.first()
+            val questionText = currentQuestion?.text.orEmpty()
             kiQuestions.setCurrent(null)
+            try {
+                memories.upsert(
+                    de.frank.entropyreducer.data.local.entities.MemoryEntryEntity(
+                        id = java.util.UUID.randomUUID().toString(),
+                        content = if (questionText.isNotBlank()) {
+                            "KI-Frage des Moments — Frage: \"$questionText\" — Antwort von Frank: \"${answer.trim()}\""
+                        } else {
+                            "Frank's Antwort auf KI-Frage: \"${answer.trim()}\""
+                        },
+                        source = de.frank.entropyreducer.domain.model.MemorySource.MANUELL,
+                        isActive = true,
+                        confidence = 70,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                    ),
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e("TasksViewModel", "Memory speichern fehlgeschlagen", t)
+            }
             uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = "Antwort wird verarbeitet …")
             val newResult = process(answer.trim(), EntrySource.NUTZER_TEXT)
             newResult.onSuccess { newEntry ->
