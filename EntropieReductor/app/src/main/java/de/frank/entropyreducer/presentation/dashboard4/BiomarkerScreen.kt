@@ -757,32 +757,33 @@ private fun MetricHistoryCard(
                 )
                 if (avgLabel != null && diffLabel != null) {
                     Spacer(Modifier.height(12.dp))
-                    // Frank-Wunsch 2026-05-09 (Praezisierung): eigener abgegrenzter
-                    // Sub-Bereich innerhalb der Card rechts unten — gleiche Schriftgroesse
-                    // wie der Header-Wert oben, mit eigenem Akzent-Hintergrund damit es
-                    // sich klar vom Chart abhebt. Werte rechtsbuendig, Avg in der
-                    // Akzentfarbe der Card (anders als die graue Skalazahl der Y-Achse),
-                    // Diff in Gruen (positiv) oder Rot (negativ).
+                    // Frank-Praezisierung 2026-05-09: Durchschnitt + Abweichung
+                    // NEBENEINANDER (nicht untereinander), als ausgeschriebene
+                    // Worte 'Durchschnitt:' und 'Abweichung:' (statt Ø-Symbol das
+                    // optisch hoeher sass als der Text). Wort 'Durchschnitt:' in
+                    // der gleichen Akzentfarbe wie der Wert dahinter, 'Abweichung:'
+                    // in textSecondary, der Diff-Wert in Gruen oder Rot. FlowRow
+                    // damit bei langen Werten (z.B. Schlafdauer 8h 33m) sauber
+                    // umgebrochen werden kann statt ueber den Rand zu laufen.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(accent.copy(alpha = 0.10f))
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                     ) {
-                        Column(
+                        androidx.compose.foundation.layout.FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.End,
+                            horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.End),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Row(verticalAlignment = Alignment.Bottom) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Ø",
-                                    color = cosmos.textSecondary,
-                                    fontSize = 13.sp,
+                                    text = "Durchschnitt: ",
+                                    color = accent,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(bottom = 2.dp),
                                 )
-                                Spacer(Modifier.width(6.dp))
                                 Text(
                                     text = avgLabel,
                                     color = accent,
@@ -790,13 +791,20 @@ private fun MetricHistoryCard(
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = diffLabel,
-                                color = diffColor,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Abweichung: ",
+                                    color = cosmos.textSecondary,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    text = diffLabel,
+                                    color = diffColor,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
                     }
                 }

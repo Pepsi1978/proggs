@@ -20,9 +20,10 @@ BestJournalAndroid/**/*.jks
 BestJournalAndroid/Screenshots/
 BestJournalFrank/Screenshots/
 
-# Auto-generated screenshots from scripts/screenshot.sh — bleibt lokal,
-# kein Sinn die im Repo zu haben (jeweils 300-500 KB pro Datei).
-screenshots/
+# Hinweis 2026-05-09: scripts/screenshot.sh schreibt ab sofort nach
+# ~/Pictures/Claude Screenshots/ (Frank-Standardordner) — also ausserhalb
+# des Repos. Kein .gitignore-Eintrag noetig. Falls jemand das Skript mit
+# -o auf einen In-Repo-Pfad umlenkt, soll diese Datei manuell ignoriert werden.
 
 # .NET Build-Artefakte (PDB-Symboldateien werden bei jedem Release-Build neu
 # erzeugt — sollen nicht im Repo liegen).

@@ -30,7 +30,10 @@ DEVICE=""
 OUTPUT=""
 NAME_HINT=""
 DISPLAY_ID=""
-OUTPUT_DIR="$HOME/proggs/screenshots"
+# Frank-Standardordner 2026-05-09: alle Screenshots landen ab sofort hier.
+# Funktioniert identisch auf Windows (C:\Users\barwa\Pictures\Claude Screenshots)
+# und macOS (/Users/barwa/Pictures/Claude Screenshots). Mit -o ueberschreibbar.
+OUTPUT_DIR="$HOME/Pictures/Claude Screenshots"
 
 # Argumente parsen
 while [[ $# -gt 0 ]]; do
