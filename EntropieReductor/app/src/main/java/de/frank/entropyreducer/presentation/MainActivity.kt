@@ -90,7 +90,7 @@ class BootstrapViewModel @Inject constructor(
                     SavedPromptEntity(
                         id = UUID.randomUUID().toString(),
                         name = "Schichtdienst-Logik",
-                        content = "Frank arbeitet im Schichtsystem (4 Tagdienste, 4 frei, 4 Nachtdienste, 4 frei). Beruecksichtige bei zeitlichen Aufgaben, ob ein Eintrag in einem Frei-Block schneller erledigt werden kann. Aufgaben, die einen Frei-Block brauchen, werden im Dienst niedriger priorisiert.",
+                        content = "Frank arbeitet im Schichtsystem (4 Tagdienste, 4 frei, 4 Nachtdienste, 4 frei). Berücksichtige bei zeitlichen Aufgaben, ob ein Eintrag in einem Frei-Block schneller erledigt werden kann. Aufgaben, die einen Frei-Block brauchen, werden im Dienst niedriger priorisiert.",
                         isActive = true,
                         createdAt = now + 1, updatedAt = now + 1,
                     )

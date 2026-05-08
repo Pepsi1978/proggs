@@ -67,7 +67,7 @@ class TtsPlayer @Inject constructor(
         if (text.isBlank()) return TtsResult.Error("Text ist leer")
 
         val apiKey = secrets.googleTtsApiKey?.takeIf { it.isNotBlank() }
-            ?: return TtsResult.Error("Kein TTS-API-Schluessel hinterlegt")
+            ?: return TtsResult.Error("Kein TTS-API-Schlüssel hinterlegt")
 
         val voiceName = voiceNameOverride
             ?: settings.ttsVoiceFlow.first().takeIf { it.isNotBlank() }

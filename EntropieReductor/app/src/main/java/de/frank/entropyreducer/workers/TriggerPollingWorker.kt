@@ -43,7 +43,7 @@ class TriggerPollingWorker @AssistedInject constructor(
             if (active.isEmpty()) return Result.success()
             val latest = biomarkerDao.getLatest().first()
             if (latest == null) {
-                Log.i(TAG, "Kein Biomarker-Snapshot vorhanden, ueberspringe Polling.")
+                Log.i(TAG, "Kein Biomarker-Snapshot vorhanden, überspringe Polling.")
                 return Result.success()
             }
             val now = System.currentTimeMillis()

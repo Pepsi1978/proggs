@@ -124,7 +124,7 @@ private val sections = listOf(
         icon = Icons.Outlined.Psychology,
         accent = CosmosColors.AccentSecondary,
         title = "KI-Modell-Auswahl",
-        subtitle = "Waehle das passende KI-Modell für deine Fragen und Aufgaben aus.",
+        subtitle = "Wähle das passende KI-Modell für deine Fragen und Aufgaben aus.",
         route = Routes.SETTINGS_MODELS,
     ),
     SectionDef(
@@ -166,7 +166,7 @@ private val sections = listOf(
         icon = Icons.Outlined.Inventory2,
         accent = CosmosColors.AccentSecondary,
         title = "Archiv",
-        subtitle = "Erledigte Aufgaben mit deiner Loesungsmethode — Quelle für den Forscher.",
+        subtitle = "Erledigte Aufgaben mit deiner Lösungsmethode — Quelle für den Forscher.",
         route = Routes.SETTINGS_ARCHIVE,
     ),
     SectionDef(

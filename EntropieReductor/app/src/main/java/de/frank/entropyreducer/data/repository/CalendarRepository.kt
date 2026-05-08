@@ -24,7 +24,7 @@ import javax.inject.Singleton
  * Pro Tag im Sync-Fenster wird genau ein CalendarDayEntity erzeugt.
  *
  * Sync-Fenster: 30 Tage zurück + 5 Jahre vorwaerts (Frank-Wunsch 2026-05-08:
- * "Kalender geht 50 Jahre nach vorne, ich kenne meine Dienstplaene"). 5 Jahre =
+ * "Kalender geht 50 Jahre nach vorne, ich kenne meine Dienstpläne"). 5 Jahre =
  * 1825 Tage ist ein guter Kompromiss zwischen "alles drin" und Sync-Performance.
  * Mehrtaegige Termine (z.B. "X" 10.-11. Mai oder "Urlaub" 10 Tage am Stueck)
  * werden in JEDEN betroffenen Tag eingetragen — vorher hat nur der Start-Tag

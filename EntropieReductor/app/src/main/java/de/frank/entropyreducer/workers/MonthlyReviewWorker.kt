@@ -34,7 +34,7 @@ class MonthlyReviewWorker @AssistedInject constructor(
             val today = LocalDate.now(ZoneId.systemDefault())
             // Erst zwischen 1. und 7. eines Monats erlauben — danach nicht mehr nachholen.
             if (!force && today.dayOfMonth > 7) {
-                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spaet für den Monatsrueckblick (force=false).")
+                Log.i(TAG, "Heute ist der ${today.dayOfMonth}., zu spät für den Monatsrueckblick (force=false).")
                 return Result.success()
             }
             val lastAt = settings.lastMonthlyReviewAtMsFlow.first()

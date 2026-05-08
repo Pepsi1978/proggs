@@ -148,7 +148,7 @@ class GenerateAnalysisUseCase @Inject constructor(
         appendLine()
 
         if (confirmedInsights.isNotEmpty()) {
-            appendLine("## Bestaetigte Insights (${confirmedInsights.size})")
+            appendLine("## Bestätigte Insights (${confirmedInsights.size})")
             confirmedInsights.forEach { i ->
                 appendLine("- [${i.targetCategory.name} conf=${i.confidence}] ${i.title}: ${i.description}")
             }
@@ -169,7 +169,7 @@ Welche Kategorien dominieren? Welche Themen wiederholen sich?
 Korrelationen zwischen Schichtcode, Biomarkern und Entropie-Eintraegen. Beispiel-Mustertyp: „Mental-Eintraege haeufen sich nach Nachtdienst-Tagen."
 
 ## Das große Ganze
-Eine praegnante Beobachtung in 2-3 Saetzen: was ist der Kern dessen, was Frank gerade durchlebt?
+Eine prägnante Beobachtung in 2-3 Saetzen: was ist der Kern dessen, was Frank gerade durchlebt?
 
 ## Strategische Empfehlungen
 Maximal drei Hebel. Jeder als „Hypothese:" oder „Experiment-Vorschlag:" gekennzeichnet, mit Begruendung in 1 Satz.

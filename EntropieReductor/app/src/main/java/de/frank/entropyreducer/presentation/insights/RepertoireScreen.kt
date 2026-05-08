@@ -48,7 +48,7 @@ fun RepertoireScreen(
             if (items.isEmpty()) {
                 GlassCard {
                     Text(
-                        text = "Noch keine bestätigten Methoden — schliesse Hypothesen erfolgreich ab und Insights mit Confidence über 50 % landen hier.",
+                        text = "Noch keine bestätigten Methoden — schließe Hypothesen erfolgreich ab und Insights mit Confidence über 50 % landen hier.",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                     )

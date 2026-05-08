@@ -137,7 +137,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
         }
         if (events.isNotEmpty()) {
             appendLine()
-            appendLine("Bevorstehende Termine aus dem Kalender (heute + naechste 2 Tage):")
+            appendLine("Bevorstehende Termine aus dem Kalender (heute + nächste 2 Tage):")
             events.take(20).forEach { ev ->
                 val timeLabel = if (ev.allDay) "ganztags" else
                     java.text.DateFormat
@@ -148,21 +148,21 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             }
         }
         appendLine()
-        appendLine("Heutige Aufgaben (HEUTE-Bucket, max 5, sortiert nach Prioritaet — alle anderen Buckets sind fuer das Briefing IRRELEVANT):")
+        appendLine("Heutige Aufgaben (HEUTE-Bucket, max 5, sortiert nach Prioritaet — alle anderen Buckets sind für das Briefing IRRELEVANT):")
         if (entries.isEmpty()) {
-            appendLine("(Keine Aufgaben fuer heute eingeplant)")
+            appendLine("(Keine Aufgaben für heute eingeplant)")
         } else {
             entries.forEachIndexed { i, e ->
                 appendLine("${i + 1}. [${e.category}] ${e.title} (Prio ${e.priorityScore.toInt()}): ${e.description}")
             }
         }
         appendLine()
-        appendLine("WICHTIG: Beziehe dich im Briefing AUSSCHLIESSLICH auf die oben genannten heutigen Aufgaben. Andere Aufgaben (Morgen, Freiblock, Spaeter) existieren — sind heute aber nicht relevant. Schweige darueber.")
+        appendLine("WICHTIG: Beziehe dich im Briefing AUSSCHLIESSLICH auf die oben genannten heutigen Aufgaben. Andere Aufgaben (Morgen, Freiblock, Später) existieren — sind heute aber nicht relevant. Schweige darüber.")
     }
 
     private companion object {
         const val BASE_PROMPT = """
-Du bist Frank's persoenliches Genie. Du erzeugst sein Tagesbriefing — kurz, warm, praezise.
+Du bist Frank's persoenliches Genie. Du erzeugst sein Tagesbriefing — kurz, warm, präzise.
 Stil: deutsche Fliesstext-Prosa in zweiter Person ("Du"). Keine Floskeln, keine Markdown-
 Header, keine Listen. Maximum 7 Saetze.
 
@@ -170,10 +170,10 @@ Inhaltsstruktur:
 1. Kontextueller Eroeffnungssatz (Schicht heute / Tageskontext).
 2. Biomarker-Verankerung (Recovery, HRV) — was bedeutet das für heute?
 3. Was sind heute die wichtigsten 2-3 Aufgaben aus den HEUTE-Aufgaben und WARUM in dieser Reihenfolge? (NUR die explizit genannten heutigen Aufgaben — keine anderen.)
-4. Eine Hypothese oder Beobachtung — was koennte heute klappen?
+4. Eine Hypothese oder Beobachtung — was könnte heute klappen?
 5. Abschliessender Satz: eine sanfte Frage oder ein Vertrauenshinweis.
 
-Sprich NIEMALS ueber Aufgaben, die nicht in der heutigen Liste stehen. Das Briefing ist ein Tagesfokus-Werkzeug, kein Wochenueberblick.
+Sprich NIEMALS über Aufgaben, die nicht in der heutigen Liste stehen. Das Briefing ist ein Tagesfokus-Werkzeug, kein Wochenueberblick.
 """
         const val TAIL_INSTRUCTION = """
 Antworte ausschliesslich mit dem Briefing-Text. Keine Praeambel, kein Schluss-Disclaimer.

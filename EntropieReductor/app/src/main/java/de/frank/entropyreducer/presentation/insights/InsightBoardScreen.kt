@@ -175,7 +175,7 @@ private fun SectionHeader(title: String, count: Int, isExpanded: Boolean, onClic
 private fun EmptySection() {
     val cosmos = LocalCosmos.current
     Text(
-        text = "Noch nichts hier — schliesse Hypothesen erfolgreich ab, dann sammeln sich Insights.",
+        text = "Noch nichts hier — schließe Hypothesen erfolgreich ab, dann sammeln sich Insights.",
         color = cosmos.textSecondary,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

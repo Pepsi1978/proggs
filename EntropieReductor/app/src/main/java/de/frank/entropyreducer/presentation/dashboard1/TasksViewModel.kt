@@ -312,7 +312,7 @@ class TasksViewModel @Inject constructor(
             entries.update(updated)
             // Proaktiver Forscher (Frank-Wunsch 2026-05-08): wenn der Eintrag
             // gerade auf REDUZIERT geht, fragen wir wie er geloest wurde —
-            // damit das InsightBoard "bestaetigte Methoden" lernen kann.
+            // damit das InsightBoard "bestätigte Methoden" lernen kann.
             if (status == EntryStatus.REDUZIERT && entry.status != EntryStatus.REDUZIERT) {
                 pendingMethodForFlow.value = updated
             }
@@ -405,7 +405,7 @@ class TasksViewModel @Inject constructor(
     /** Heuristischer Dedup: wenn der Title eines bestehenden Eintrags eine
      *  signifikante Substring-Ueberlappung mit dem neuen Title hat (>=60% der
      *  kuerzeren Variante), gelten sie als gleich. Faengt "Laufeinheit im Freien"
-     *  vs "Laufen draussen" nicht ab — dafuer braeuchte es einen Embedding-Match.
+     *  vs "Laufen draußen" nicht ab — dafuer braeuchte es einen Embedding-Match.
      *  Fuer den haeufigen Fall "exact answer" reicht dieser einfache Check. */
     private fun titlesAreSimilar(a: String, b: String): Boolean {
         val na = a.lowercase().trim()
@@ -445,7 +445,7 @@ class TasksViewModel @Inject constructor(
      * Speichert die vom Forscher abgefragte Loesungsmethode in den ai_notes des
      * Eintrags. Format: 'Methode: <text>' an den vorhandenen aiNotes angehaengt.
      * Damit kann die KI im Briefing/Review/Insight-Board diese Methode
-     * wiederfinden und als "bestaetigte Methode" einordnen.
+     * wiederfinden und als "bestätigte Methode" einordnen.
      */
     fun submitMethod(notes: String) {
         val current = pendingMethodForFlow.value ?: return

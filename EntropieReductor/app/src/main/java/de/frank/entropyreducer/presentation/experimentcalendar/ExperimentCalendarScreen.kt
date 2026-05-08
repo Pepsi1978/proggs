@@ -590,7 +590,7 @@ private fun HypothesisDetailContent(
 
         // Felt change slider — Range -100..+100 wie im Soll-Bild 19/29.
         Text(
-            text = "Gefuehlte Entropie-Veränderung: ${felt.toInt().coerceIn(-100, 100)}",
+            text = "Gefühlte Entropie-Veränderung: ${felt.toInt().coerceIn(-100, 100)}",
             color = cosmos.textPrimary,
             style = MaterialTheme.typography.bodyMedium,
         )

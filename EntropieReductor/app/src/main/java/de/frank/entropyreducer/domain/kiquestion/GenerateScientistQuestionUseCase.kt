@@ -153,7 +153,7 @@ class GenerateScientistQuestionUseCase @Inject constructor(
             appendLine()
         }
         if (confirmedInsights.isNotEmpty()) {
-            appendLine("Bestaetigte Insights:")
+            appendLine("Bestätigte Insights:")
             confirmedInsights.take(8).forEach { appendLine("- ${it.title} (conf=${it.confidence})") }
             appendLine()
         }
@@ -169,13 +169,13 @@ class GenerateScientistQuestionUseCase @Inject constructor(
         appendLine("braeuchte um getestet zu werden.")
         appendLine()
         appendLine("REGELN:")
-        appendLine("- Maximal 2 Saetze. Praegnant, klar.")
+        appendLine("- Maximal 2 Saetze. Prägnant, klar.")
         appendLine("- Echtes Deutsch mit Umlauten ä ö ü ß. NIEMALS ae/oe/ue/ss als Ersatz.")
         appendLine("- Du-Anrede.")
         appendLine("- Kein Smalltalk, keine Begruessung — direkt die Frage.")
         appendLine("- Beziehe dich auf konkrete Inhalte oben (Memory, Hypothese, Insight, Methode).")
         appendLine("- Fokus auf Wissensluecken, nicht auf aktive Aufgaben.")
-        appendLine("- Nur die Frage zurueck, KEINE Anfuehrungszeichen, kein Vorspann.")
+        appendLine("- Nur die Frage zurück, KEINE Anfuehrungszeichen, kein Vorspann.")
         if (!avoidPreviousText.isNullOrBlank()) {
             appendLine()
             appendLine("WICHTIG: Die letzte Forscher-Frage war:")
@@ -186,6 +186,6 @@ class GenerateScientistQuestionUseCase @Inject constructor(
 
     companion object {
         private const val TAG = "GenScientistQuestion"
-        private const val SYSTEM_PROMPT = """Du bist der Forscher aus dem Entropie Reductor — ein wissenschaftlicher Assistent mit hoher Meta-Intelligenz. Du formulierst eine einzige praegnante, proaktive Frage an Frank, die seine Wissensbasis schaerft. Deine Antworten sind immer auf Deutsch mit echten Umlauten (ä, ö, ü, ß) und niemals mit ae/oe/ue/ss-Ersatz."""
+        private const val SYSTEM_PROMPT = """Du bist der Forscher aus dem Entropie Reductor — ein wissenschaftlicher Assistent mit hoher Meta-Intelligenz. Du formulierst eine einzige prägnante, proaktive Frage an Frank, die seine Wissensbasis schaerft. Deine Antworten sind immer auf Deutsch mit echten Umlauten (ä, ö, ü, ß) und niemals mit ae/oe/ue/ss-Ersatz."""
     }
 }

@@ -68,7 +68,7 @@ class GenieCodexSynthesizer @Inject constructor(
             appendLine("## Aktive Memory-Eintraege (${activeMemories.size})")
             activeMemories.forEach { appendLine("- ${it.content}") }
             appendLine()
-            appendLine("## Bestaetigte Insights (${confirmedInsights.size})")
+            appendLine("## Bestätigte Insights (${confirmedInsights.size})")
             confirmedInsights.forEach {
                 appendLine("- (${it.targetCategory.name}, conf=${it.confidence}) ${it.title}: ${it.description}")
             }
@@ -137,7 +137,7 @@ Welche Hypothesen laufen gerade, welche Muster sind noch unklar?
 ## Mein aktuelles mentales Modell
 In 2-3 Saetzen: Was ist mein bester Ueberblick über das System Frank?
 
-Maximum 600 Woerter. Schreib in erster Person aus Sicht des Genies. Direkt, praezise, ohne Schmeichelei.
+Maximum 600 Woerter. Schreib in erster Person aus Sicht des Genies. Direkt, präzise, ohne Schmeichelei.
         """
     }
 }

@@ -106,7 +106,7 @@ class GenerateReviewUseCase @Inject constructor(
                 )
             }
             appendLine()
-            appendLine("Neue bestaetigte Insights (${newInsights.size}):")
+            appendLine("Neue bestätigte Insights (${newInsights.size}):")
             newInsights.forEach { i: InsightEntity ->
                 appendLine("- [${i.targetCategory}] ${i.title} (Confidence ${i.confidence})")
             }
@@ -147,7 +147,7 @@ class GenerateReviewUseCase @Inject constructor(
     private fun buildBasePrompt(range: Range): String = """
 Du bist Frank's persoenliches Genie. Du verfasst seinen ${range.label}srueckblick.
 
-Stil: deutsche Fliesstext-Prosa, zweite Person ("Du"), warm aber praezise, ohne Floskeln.
+Stil: deutsche Fliesstext-Prosa, zweite Person ("Du"), warm aber präzise, ohne Floskeln.
 Keine Markdown-Header, keine Listen, keine Emojis. Maximum ${range.maxWords} Woerter.
 
 Struktur (4 Absaetze, durch Leerzeile getrennt):

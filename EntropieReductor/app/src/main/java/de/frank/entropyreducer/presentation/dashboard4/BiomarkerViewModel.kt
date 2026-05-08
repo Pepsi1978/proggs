@@ -70,9 +70,9 @@ class BiomarkerViewModel @Inject constructor(
         },
         _selectedDate,
     ) { latest, all, last30, status, selDate ->
-        // Snapshot für den gewaehlten Tag finden — wenn kein Snapshot für das
-        // exakte Datum existiert, wird der naechste juengere Snapshot vor dem
-        // gewaehlten Tag genommen (Whoop syncs typischerweise einmal pro Tag).
+        // Snapshot für den gewählten Tag finden — wenn kein Snapshot für das
+        // exakte Datum existiert, wird der nächste juengere Snapshot vor dem
+        // gewählten Tag genommen (Whoop syncs typischerweise einmal pro Tag).
         val selStartMs = selDate.atStartOfDay(java.time.ZoneId.systemDefault())
             .toInstant().toEpochMilli()
         val selEndMs = selStartMs + 24L * 60 * 60 * 1000

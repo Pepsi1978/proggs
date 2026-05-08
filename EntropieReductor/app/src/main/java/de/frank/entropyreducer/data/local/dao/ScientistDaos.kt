@@ -41,8 +41,17 @@ interface ScientistMessageDao {
     @Query("SELECT * FROM scientist_messages WHERE sessionId = :sessionId ORDER BY createdAt ASC")
     fun getForSession(sessionId: String): Flow<List<ScientistMessageEntity>>
 
+    @Query("SELECT * FROM scientist_messages ORDER BY createdAt ASC")
+    suspend fun getAll(): List<ScientistMessageEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: ScientistMessageEntity)
+
+    @Update
+    suspend fun update(message: ScientistMessageEntity)
+
+    @Query("DELETE FROM scientist_messages WHERE id = :id")
+    suspend fun deleteById(id: String)
 
     @Query("DELETE FROM scientist_messages WHERE sessionId = :sessionId")
     suspend fun deleteSession(sessionId: String)

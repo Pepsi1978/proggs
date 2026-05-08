@@ -1013,7 +1013,7 @@ private fun BucketPickerButton(
     ) {
         Icon(
             imageVector = bucketIcon(bucket),
-            contentDescription = "Bucket aendern",
+            contentDescription = "Bucket ändern",
             tint = tint,
             modifier = Modifier.size(14.dp),
         )

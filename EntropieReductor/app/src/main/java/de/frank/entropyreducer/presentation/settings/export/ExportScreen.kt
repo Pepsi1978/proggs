@@ -132,7 +132,7 @@ fun ExportScreen(onBack: () -> Unit, vm: ExportViewModel = hiltViewModel()) {
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Alle Daten werden ausschliesslich lokal auf deinem Geraet gespeichert. Bei aktivem Drive-Backup wird zusaetzlich eine JSON-Kopie deiner Einträge im appDataFolder deines Google-Kontos abgelegt — für dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
+                        text = "Alle Daten werden ausschliesslich lokal auf deinem Gerät gespeichert. Bei aktivem Drive-Backup wird zusaetzlich eine JSON-Kopie deiner Einträge im appDataFolder deines Google-Kontos abgelegt — für dich nicht im normalen Drive sichtbar, nur diese App kann sie lesen.",
                         style = MaterialTheme.typography.bodySmall,
                         color = cosmos.textSecondary,
                     )

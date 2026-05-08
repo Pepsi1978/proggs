@@ -57,7 +57,7 @@ class CalendarSession @Inject constructor(
             Log.e(TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t
         }
-        Log.d(TAG, "Calendar-Token erhalten (Laenge=${token.length})")
+        Log.d(TAG, "Calendar-Token erhalten (Länge=${token.length})")
         token
     }
 

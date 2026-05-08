@@ -69,7 +69,7 @@ class KiQuestionGenerator @Inject constructor() {
                 return KiQuestion(
                     triggerKey = "today_overload",
                     text = "Aufgabe \"${todayEntry.title}\" braucht etwa $durationLabel Min. " +
-                        "Schaffst du sie heute trotz Tagdienst, oder schiebe ich sie auf den naechsten Frei-Block?",
+                        "Schaffst du sie heute trotz Tagdienst, oder schiebe ich sie auf den nächsten Frei-Block?",
                     rationale = "Tagdienst, ${todayCalendar.availableMinutesEstimate} Min verfuegbar",
                     relatedEntryIds = listOf(todayEntry.id),
                 )
@@ -98,7 +98,7 @@ class KiQuestionGenerator @Inject constructor() {
             return KiQuestion(
                 triggerKey = "category_cluster:${cat.name}",
                 text = "Du hast in den letzten 3 Tagen ${list.size}-mal Eintraege der Kategorie " +
-                    "${cat.name.lowercase()} genannt. Moechtest du das vertiefen?",
+                    "${cat.name.lowercase()} genannt. Möchtest du das vertiefen?",
                 rationale = "Cluster ${cat.name}: ${list.size} Eintraege",
                 relatedEntryIds = list.map { it.id },
             )

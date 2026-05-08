@@ -48,7 +48,7 @@ import java.util.Locale
 /**
  * Detail-Screen für eine einzelne Whoop-Metrik (HRV, RHR, Sleep-Performance, ...).
  *
- * Frank-Wunsch 2026-05-08: "Wenn ich auf HRV druecke, moechte ich die gesamte
+ * Frank-Wunsch 2026-05-08: "Wenn ich auf HRV drücke, möchte ich die gesamte
  * Historie sehen, in Zahlen und als interaktiver Chart, mit Range-Switcher".
  *
  * Zeigt:
@@ -340,7 +340,7 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         lowerIsBetter = true,
     )
     MetricKey.SLEEP_DISTURBANCES -> MetricSpec(
-        title = "Stoerungen",
+        title = "Störungen",
         unit = "x",
         accent = CosmosColors.Warning,
         extract = { it.sleepDisturbances?.toDouble() },

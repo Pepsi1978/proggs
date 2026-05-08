@@ -149,7 +149,7 @@ private fun ArchiveHeader(totalCount: Int) {
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "Erledigte Aufgaben mit eingesprochener Loesungs-Methode. Der Forscher nutzt das Archiv um Muster und neue Hypothesen zu erkennen.",
+                    "Erledigte Aufgaben mit eingesprochener Lösungs-Methode. Der Forscher nutzt das Archiv um Muster und neue Hypothesen zu erkennen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )

@@ -71,7 +71,7 @@ class DriveSession @Inject constructor(
             Log.e(TAG, "Token-Hol fehlgeschlagen: ${t.javaClass.simpleName}: ${t.message}", t)
             throw t
         }
-        Log.d(TAG, "Token erhalten (Laenge=${token.length}), Drive-Client wird gebaut")
+        Log.d(TAG, "Token erhalten (Länge=${token.length}), Drive-Client wird gebaut")
         Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
             request.headers.authorization = "Bearer $token"
         }

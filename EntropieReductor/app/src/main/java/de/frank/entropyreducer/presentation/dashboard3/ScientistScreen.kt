@@ -152,11 +152,18 @@ fun ScientistScreen(
             }
         },
         bottomBar = {
+            // Frank-Wunsch 2026-05-09: Das zentrale Mic in der BottomBar ist
+            // kontextabhaengig — wenn der Forscher-Tab aktiv ist, schiebt es
+            // Whisper-Transkripte in den globalen Forscher-Chat-Draft. Damit gibt
+            // es nur EIN Mic auf dem Screen statt zwei (das ChatInputBar-Mic
+            // entfaellt darunter).
             CosmosBottomBar(
                 currentTab = currentTab,
-                micState = de.frank.entropyreducer.presentation.components.MicState.IDLE,
+                micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = {},
+                onMicClick = {
+                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
+                },
             )
         },
     ) { padding ->
@@ -209,10 +216,6 @@ fun ScientistScreen(
                 ChatInputBar(
                     draft = state.draftText,
                     onDraftChange = vm::setDraft,
-                    micState = state.micState,
-                    onMicClick = {
-                        if (micPerm.check()) vm.onMicClick() else micPerm.request()
-                    },
                     onSend = vm::send,
                     canSend = state.draftText.isNotBlank() && !state.isThinking,
                 )
@@ -240,7 +243,7 @@ fun ScientistScreen(
     state.pendingDeleteHypothesisId?.let { _ ->
         AlertDialog(
             onDismissRequest = vm::dismissDeleteConfirmation,
-            title = { Text("Hypothese loeschen?") },
+            title = { Text("Hypothese löschen?") },
             text = {
                 Text(
                     "Die Hypothese und der gesamte Chat-Verlauf zu ihr werden dauerhaft entfernt. " +
@@ -250,7 +253,7 @@ fun ScientistScreen(
             },
             confirmButton = {
                 TextButton(onClick = vm::confirmDeleteHypothesis) {
-                    Text("Loeschen", color = CosmosColors.Critical)
+                    Text("Löschen", color = CosmosColors.Critical)
                 }
             },
             dismissButton = {
@@ -405,7 +408,7 @@ private fun HypothesisCardInChat(
                 ) {
                     Icon(
                         Icons.Outlined.Delete,
-                        contentDescription = "Hypothese loeschen",
+                        contentDescription = "Hypothese löschen",
                         tint = cosmos.textSecondary,
                         modifier = Modifier.size(18.dp),
                     )
@@ -482,8 +485,6 @@ private fun ThinkingIndicator() {
 private fun ChatInputBar(
     draft: String,
     onDraftChange: (String) -> Unit,
-    micState: de.frank.entropyreducer.presentation.components.MicState,
-    onMicClick: () -> Unit,
     onSend: () -> Unit,
     canSend: Boolean,
 ) {
@@ -505,6 +506,10 @@ private fun ChatInputBar(
                 value = draft,
                 onValueChange = onDraftChange,
                 modifier = Modifier.weight(1f),
+                // Frank-Wunsch 2026-05-09: Das Mic im ChatInputBar entfaellt — der
+                // zentrale Mic-Button in der BottomBar uebernimmt seine Funktion.
+                // Placeholder bleibt "Schreib oder sprich" weil das Sprechen ueber
+                // das Bottom-Mic moeglich ist.
                 placeholder = { Text("Schreib oder sprich …", color = cosmos.textSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = cosmos.textPrimary,
@@ -515,32 +520,6 @@ private fun ChatInputBar(
                 shape = RoundedCornerShape(20.dp),
                 maxLines = 4,
             )
-            Spacer(Modifier.width(8.dp))
-            IconButton(
-                onClick = onMicClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING)
-                            CosmosColors.Critical.copy(alpha = 0.30f)
-                        else CosmosColors.AccentSecondary.copy(alpha = 0.20f),
-                    ),
-            ) {
-                Icon(
-                    imageVector = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
-                        Icons.Outlined.Stop
-                    } else {
-                        Icons.Outlined.Mic
-                    },
-                    contentDescription = "Mikrofon",
-                    tint = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
-                        CosmosColors.Critical
-                    } else {
-                        CosmosColors.AccentSecondary
-                    },
-                )
-            }
             Spacer(Modifier.width(8.dp))
             IconButton(
                 onClick = onSend,
@@ -634,7 +613,7 @@ private fun StartHypothesisDialog(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Waehle einen Startzeitpunkt — du kannst ihn später im Experiment-Kalender korrigieren.",
+                    text = "Wähle einen Startzeitpunkt — du kannst ihn später im Experiment-Kalender korrigieren.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -708,7 +687,7 @@ private fun HypothesisDetailSheet(
                 IconButton(onClick = onDeleteHypothesis) {
                     Icon(
                         Icons.Outlined.Delete,
-                        contentDescription = "Hypothese loeschen",
+                        contentDescription = "Hypothese löschen",
                         tint = CosmosColors.Critical,
                     )
                 }

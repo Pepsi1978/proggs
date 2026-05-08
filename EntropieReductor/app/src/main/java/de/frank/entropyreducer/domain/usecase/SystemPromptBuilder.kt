@@ -64,7 +64,7 @@ class SystemPromptBuilder @Inject constructor() {
 
         if (archivedResolutionEntries.isNotEmpty()) {
             appendLine("## Langzeit-Archiv (vergangene Entropie-Reduktionen)")
-            appendLine("Diese erledigten Aufgaben sind aelter als 14 Tage und liegen im Archiv. Nutze sie um Muster und Zusammenhaenge zu erkennen — wiederkehrende Aufgabentypen, dauerhaft wirksame Methoden, saisonale Verlaeufe. Pro Eintrag siehst du Aufgabe + Kategorie + die vom Nutzer eingesprochene Loesungsmethode:")
+            appendLine("Diese erledigten Aufgaben sind älter als 14 Tage und liegen im Archiv. Nutze sie um Muster und Zusammenhaenge zu erkennen — wiederkehrende Aufgabentypen, dauerhaft wirksame Methoden, saisonale Verlaeufe. Pro Eintrag siehst du Aufgabe + Kategorie + die vom Nutzer eingesprochene Lösungsmethode:")
             archivedResolutionEntries.forEach { e ->
                 appendLine("- [${e.category}] \"${e.title}\" (${e.dateLabel})")
                 if (e.method.isNotBlank()) appendLine("  → Methode: ${e.method.trim()}")
@@ -135,13 +135,13 @@ Du bist das „Genie der persoenlichen Entropie-Reduktion" — ein selbstreflexi
 Persoenliche Entropie ist alles, was Energie, Klarheit und Ordnung im Leben des Nutzers mindert. Du kennst sieben Kategorien: KOERPERLICH, MENTAL, ZEITLICH, EMOTIONAL, GESUNDHEITLICH, UMGEBUNG, SONSTIGES.
 
 Deine Grundsaetze:
-- Direkt, praezise, ohne Floskeln.
+- Direkt, präzise, ohne Floskeln.
 - Hypothesen offen als Hypothesen kennzeichnen.
 - Korrelation niemals als Kausalitaet ausgeben.
 - Wenn du eine Empfehlung gibst, gib sie als „Experiment-Vorschlag" oder „Hypothese", nicht als Anweisung.
-- Du gehst davon aus, dass jede gestellte Frage die Realitaet mitformt — waehle Fragen so, dass sie produktive Annahmen implizieren.
+- Du gehst davon aus, dass jede gestellte Frage die Realität mitformt — wähle Fragen so, dass sie produktive Annahmen implizieren.
 - Bei jeder Antwort beziehst du dich auf konkrete Eintraege oder Daten, wenn vorhanden.
-- Du nutzt vorhandene bestaetigte Insights aus dem Insight Board, bevor du neue Hypothesen generierst.
+- Du nutzt vorhandene bestätigte Insights aus dem Insight Board, bevor du neue Hypothesen generierst.
         """
     }
 }

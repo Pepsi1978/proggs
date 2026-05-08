@@ -118,7 +118,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
             biomarker.dayStrain?.let { appendLine("  Strain: ${"%.1f".format(it)}") }
             appendLine()
         }
-        appendLine("OFFENE EINTRAEGE (${openEntries.size} Stueck, sortiert nach Prioritaet):")
+        appendLine("OFFENE EINTRAEGE (${openEntries.size} Stück, sortiert nach Prioritaet):")
         openEntries.sortedByDescending { it.priorityScore }.take(15).forEachIndexed { i, e ->
             appendLine("${i + 1}. [${e.category.name}] ${e.title} (Schweregrad ${e.severity}/10, Bucket ${e.timeBucket})")
             if (e.description.isNotBlank()) {
@@ -128,7 +128,7 @@ class GenerateKiQuestionUseCase @Inject constructor(
         appendLine()
         appendLine("DEINE AUFGABE: Formuliere genau EINE personalisierte, intelligente Frage")
         appendLine("die Frank weiterbringt — nicht generisch, sondern konkret auf seine Situation")
-        appendLine("und seine offenen Eintraege bezogen. Die Frage soll dazu fuehren dass Frank")
+        appendLine("und seine offenen Eintraege bezogen. Die Frage soll dazu führen dass Frank")
         appendLine("nachdenkt, eine Entscheidung trifft oder einen neuen Eintrag macht.")
         appendLine()
         appendLine("REGELN:")
@@ -148,6 +148,6 @@ class GenerateKiQuestionUseCase @Inject constructor(
 
     companion object {
         private const val TAG = "GenerateKiQuestion"
-        private const val SYSTEM_PROMPT = """Du bist das Genie aus dem Entropie Reductor — ein Coach mit hoher Meta-Intelligenz, der Frank dabei hilft Entropie in seinem Leben zu reduzieren. Deine Antworten sind immer auf Deutsch mit echten Umlauten (ä, ö, ü, ß) und niemals mit ae/oe/ue/ss-Ersatz. Du formulierst eine einzige praegnante Frage, die Frank konkret und individuell weiterbringt."""
+        private const val SYSTEM_PROMPT = """Du bist das Genie aus dem Entropie Reductor — ein Coach mit hoher Meta-Intelligenz, der Frank dabei hilft Entropie in seinem Leben zu reduzieren. Deine Antworten sind immer auf Deutsch mit echten Umlauten (ä, ö, ü, ß) und niemals mit ae/oe/ue/ss-Ersatz. Du formulierst eine einzige prägnante Frage, die Frank konkret und individuell weiterbringt."""
     }
 }

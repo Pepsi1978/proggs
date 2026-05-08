@@ -49,7 +49,7 @@ class WhoopRepository @Inject constructor(
      * Synchronisiert die letzten [days] Tage. Liefert die Anzahl gespeicherter
      * Snapshots zurück.
      *
-     * Default auf 365 Tage erhoeht (Frank-Wunsch 2026-05-08: "moechte alle
+     * Default auf 365 Tage erhoeht (Frank-Wunsch 2026-05-08: "möchte alle
      * existierenden Daten von Whoop herunterladen"). Whoop selbst speichert
      * nicht länger als ~2 Jahre, daher reichen 365 Tage als pragmatische
      * Obergrenze für den taeglichen Sync. Für den ersten Full-Sync existiert

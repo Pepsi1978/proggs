@@ -183,7 +183,7 @@ class ProcessEntryUseCase @Inject constructor(
 Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne Schluss:
 
 {
-  "title": "Kurzer praegnanter Titel, max. 60 Zeichen",
+  "title": "Kurzer prägnanter Titel, max. 60 Zeichen",
   "description": "Strukturierte Beschreibung in 1-3 Saetzen",
   "category": "KOERPERLICH | MENTAL | ZEITLICH | EMOTIONAL | GESUNDHEITLICH | UMGEBUNG | SONSTIGES",
   "severity": 1-10,
@@ -195,7 +195,7 @@ Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne
   "aiNotes": null
 }
 
-severity ist die rohe Schwere. priorityScore beruecksichtigt Schwere + alle aktiven Nutzer-Prompts + Biomarker-Status + Kalender-Verfuegbarkeit.
+severity ist die rohe Schwere. priorityScore berücksichtigt Schwere + alle aktiven Nutzer-Prompts + Biomarker-Status + Kalender-Verfuegbarkeit.
         """
     }
 }

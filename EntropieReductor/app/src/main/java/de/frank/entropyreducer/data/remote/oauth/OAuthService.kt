@@ -149,7 +149,7 @@ class OAuthService @Inject constructor(
     fun buildWhoopAuthIntent(clientId: String, redirectUri: String): Intent {
         // Diagnostik: volle Client-ID + Laenge — UUIDs sind nicht geheim, tauchen in der
         // OAuth-URL im Browser ohnehin auf. Hilft den "client_does_not_exist"-Bug einzugrenzen.
-        Log.d(TAG, "Whoop: buildAuthIntent — clientId='$clientId' (Laenge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES")
+        Log.d(TAG, "Whoop: buildAuthIntent — clientId='$clientId' (Länge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES")
         val request = AuthorizationRequest.Builder(
             whoopConfig,
             clientId,
@@ -189,7 +189,7 @@ class OAuthService @Inject constructor(
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Whoop-Authorization-Antwort"))
         }
-        Log.d(TAG, "Whoop: Authorization OK — code-Laenge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}")
+        Log.d(TAG, "Whoop: Authorization OK — code-Länge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}")
         // Spiegel zur Google-Logik: AuthState erst nach erfolgreichem Token-Exchange.
         val state = AuthState(resp, ex)
         // Whoop verlangt Client-Secret beim Token-Exchange (Confidential-Client).
@@ -201,7 +201,7 @@ class OAuthService @Inject constructor(
         Log.d(TAG, "Whoop: Token-Exchange-Request gebaut — additionalParams-Keys=${tokenRequest.additionalParameters.keys}")
         val tokenResult = exchangeToken(tokenRequest)
         return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "Whoop: Token-Exchange erfolgreich — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}")
+            Log.i(TAG, "Whoop: Token-Exchange erfolgreich — access-Länge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}")
             state.update(tokenResp, null)
             saveWhoopAuthState(state)
             secrets.whoopAccessToken = tokenResp.accessToken
@@ -239,14 +239,14 @@ class OAuthService @Inject constructor(
     suspend fun freshWhoopAccessToken(): String? {
         val state = loadWhoopAuthState()
         if (!state.isAuthorized) {
-            Log.d(TAG, "Whoop-Refresh: kein AuthState — kein Token zurueckgeben")
+            Log.d(TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")
             return null
         }
         val clientSecret = secrets.whoopClientSecret
         if (clientSecret.isNullOrBlank()) {
             Log.e(TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
             throw IllegalStateException(
-                "Whoop-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben.",
+                "Whoop-Client-Secret fehlt — bitte in den API-Schlüssel-Settings neu eingeben.",
             )
         }
         // Schicht 4 — DIAGNOSE-SONDEN (erweitert): Vor dem Refresh den AuthState
@@ -259,15 +259,15 @@ class OAuthService @Inject constructor(
         val needsRefresh = state.needsTokenRefresh
         val scope = state.scope
         val clientId = secrets.whoopClientId
-        Log.i(TAG, "Whoop-Refresh-Vorbereitung: clientId-Laenge=${clientId?.length ?: 0}, secret-Laenge=${clientSecret.length}, refreshToken-Laenge=${rt?.length ?: 0}, accessToken-Laenge=${at?.length ?: 0}, scope='$scope', expiryDeltaMs=$expiryDeltaMs, needsTokenRefresh=$needsRefresh")
+        Log.i(TAG, "Whoop-Refresh-Vorbereitung: clientId-Länge=${clientId?.length ?: 0}, secret-Länge=${clientSecret.length}, refreshToken-Länge=${rt?.length ?: 0}, accessToken-Länge=${at?.length ?: 0}, scope='$scope', expiryDeltaMs=$expiryDeltaMs, needsTokenRefresh=$needsRefresh")
         if (rt.isNullOrBlank()) {
-            Log.e(TAG, "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurueckgegeben (offline-Scope nicht akzeptiert?). Kein Refresh moeglich.")
+            Log.e(TAG, "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.")
             // Frank's Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh
             // nicht moeglich. NICHT clearWhoopAuthState() rufen — der State bleibt,
             // die Settings zeigen weiter "verbunden", die DB-Daten bleiben sichtbar.
             // UI zeigt im Banner ehrlich an: "Refresh-Token fehlt — neu anmelden".
             throw IllegalStateException(
-                "Whoop-Refresh-Token fehlt — bitte unter API-Schluessel neu anmelden.",
+                "Whoop-Refresh-Token fehlt — bitte unter API-Schlüssel neu anmelden.",
             )
         }
         val clientAuth = ClientSecretPost(clientSecret)
@@ -288,7 +288,7 @@ class OAuthService @Inject constructor(
                     // aber besser als Datenverlust.
                     cont.resume(null)
                 } else {
-                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Laenge=${accessToken?.length ?: 0})")
+                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken?.length ?: 0})")
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
                     cont.resume(accessToken)

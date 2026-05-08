@@ -143,7 +143,7 @@ fun ApiKeysScreen(
             item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
-                    text = "Deine API-Schlüssel werden mit AES-256-GCM auf deinem Geraet verschluesselt.",
+                    text = "Deine API-Schlüssel werden mit AES-256-GCM auf deinem Gerät verschluesselt.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                     modifier = Modifier.padding(top = 8.dp),
@@ -365,7 +365,7 @@ private fun GoogleCalendarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
             Text(
                 "Verbinde deinen Google-Kalender — die App liest die Schichtcodes als " +
                     "Ganztagestermine ('Tag 1', 'Nacht 2 X', 'U' für Urlaub, etc.). " +
-                    "Login laeuft über Google Sign-In; keine Client-ID-Eingabe noetig.",
+                    "Login laeuft über Google Sign-In; keine Client-ID-Eingabe nötig.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -437,7 +437,7 @@ private fun TtsVoiceCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Waehle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrückblicke und Genie-Antworten.",
+                "Wähle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrückblicke und Genie-Antworten.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -567,7 +567,7 @@ private fun VoicePickerDialog(
             OutlinedButton(onClick = onDismiss) { Text("Abbrechen") }
         },
         title = {
-            Text("Chirp-3-HD-Stimme waehlen", color = cosmos.textPrimary)
+            Text("Chirp-3-HD-Stimme wählen", color = cosmos.textPrimary)
         },
         text = {
             LazyColumn(

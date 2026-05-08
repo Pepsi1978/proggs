@@ -115,7 +115,7 @@ class ShiftAwareNotifier @Inject constructor(
                 "Frage des Moments",
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = "Kontextrelevante Fragen der KI — bewusst zurueckhaltend dosiert."
+                description = "Kontextrelevante Fragen der KI — bewusst zurückhaltend dosiert."
             }
             nm.createNotificationChannel(channel)
         }

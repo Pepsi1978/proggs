@@ -73,7 +73,7 @@ fun ProfileScreen(onBack: () -> Unit, vm: ProfileViewModel = hiltViewModel()) {
                         value = text,
                         onValueChange = { text = it },
                         modifier = Modifier.fillMaxWidth().height(360.dp),
-                        placeholder = { Text("Erzaehl mir über dich …", color = cosmos.textSecondary) },
+                        placeholder = { Text("Erzähl mir über dich …", color = cosmos.textSecondary) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,

@@ -136,7 +136,7 @@ class ScientistChatUseCase @Inject constructor(
                 }
                 if (confirmedInsights.isNotEmpty()) {
                     appendLine()
-                    appendLine("## Bestaetigte Insights")
+                    appendLine("## Bestätigte Insights")
                     confirmedInsights.forEach {
                         appendLine("- ${it.title} (conf=${it.confidence}): ${it.description}")
                     }

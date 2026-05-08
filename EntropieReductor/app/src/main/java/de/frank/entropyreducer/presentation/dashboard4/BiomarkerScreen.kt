@@ -181,7 +181,7 @@ fun BiomarkerHostScreen(
             }
             item {
                 // Schlafstadien-Card ist klickbar — führt zur Liste aller Schlaf-Werte
-                // im Detail-Screen. Frank-Wunsch 2026-05-08: "wenn ich auf Schlaf druecke
+                // im Detail-Screen. Frank-Wunsch 2026-05-08: "wenn ich auf Schlaf drücke
                 // soll was passieren". Wir oeffnen das SLEEP_TOTAL Detail mit allen
                 // Werten + 4 weitere Tap-Tipps für REM/Deep/Light/Awake-Detail-Screens.
                 GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) }) {
@@ -639,7 +639,7 @@ private fun MetricHistoryCard(
 /**
  * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer
  * über die letzten 30 Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf
- * mit hoeherer HRV einhergeht".
+ * mit höherer HRV einhergeht".
  */
 @Composable
 private fun CorrelationCard(state: BiomarkerUiState) {
@@ -684,8 +684,8 @@ private fun CorrelationCard(state: BiomarkerUiState) {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Hoehere Werte deuten an: mehr Schlaf -> hoehere HRV. " +
-                    "Negative Werte heissen: mehr Schlaf -> niedrigere HRV (selten).",
+                text = "Höhere Werte deuten an: mehr Schlaf -> höhere HRV. " +
+                    "Negative Werte heißen: mehr Schlaf -> niedrigere HRV (selten).",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )

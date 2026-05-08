@@ -81,7 +81,7 @@ fun InteractiveLineChart(
 
     // Frank-Wunsch 2026-05-09: 14-Tage-SMA + lineare Regression als Trendlinie.
     // SMA glaettet Tagesausreisser, Slope der Regression entscheidet die Farbe:
-    // semantisch "Verbesserung = gruen" — bei lowerIsBetter wird der Slope invertiert.
+    // semantisch "Verbesserung = grün" — bei lowerIsBetter wird der Slope invertiert.
     val sma = computeSma(safe.map { it.second }, window = 14)
     val smaSlope = if (sma.size >= 2) linearSlope(sma) else 0.0
     val semanticSlope = if (lowerIsBetter) -smaSlope else smaSlope
@@ -192,7 +192,7 @@ fun InteractiveLineChart(
                 // Trendlinie 2 (Lineare Regression) — komplett gerade, ueber alle
                 // Roh-Datenpunkte gefittet. Frank-Wunsch 2026-05-09: "wirklich eine
                 // lineare gerade Linie, die zeigt steigen oder fallen die Werte
-                // generell ueber den gesamten Blockverlauf". Dicker als die SMA-
+                // generell über den gesamten Blockverlauf". Dicker als die SMA-
                 // Linie damit sie als Primaer-Trend dominant ist.
                 if (safe.size >= 2) {
                     val rawSlope = linearSlope(safe.map { it.second })

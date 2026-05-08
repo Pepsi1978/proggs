@@ -30,6 +30,9 @@ class ScientistRepository @Inject constructor(
         sessionDao.update(session.copy(isArchived = true))
 
     suspend fun insertMessage(message: ScientistMessageEntity) = messageDao.insert(message)
+    suspend fun updateMessage(message: ScientistMessageEntity) = messageDao.update(message)
+    suspend fun deleteMessageById(id: String) = messageDao.deleteById(id)
+    suspend fun getAllMessages(): List<ScientistMessageEntity> = messageDao.getAll()
 
     suspend fun touchSession(sessionId: String) {
         val s = sessionDao.getById(sessionId) ?: return

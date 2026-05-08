@@ -101,7 +101,7 @@ class HypothesisChatUseCase @Inject constructor(
             tail = buildString {
                 appendLine(TAIL_INSTRUCTION.trim())
                 appendLine()
-                appendLine("## Diese Hypothese im Detail (worueber wir gerade sprechen)")
+                appendLine("## Diese Hypothese im Detail (worüber wir gerade sprechen)")
                 appendLine("Titel: ${hypothesis.title}")
                 appendLine("Beschreibung: ${hypothesis.description}")
                 appendLine("Begruendung: ${hypothesis.rationale}")
@@ -117,7 +117,7 @@ class HypothesisChatUseCase @Inject constructor(
                     appendLine()
                 }
                 if (confirmedInsights.isNotEmpty()) {
-                    appendLine("## Bestaetigte Insights")
+                    appendLine("## Bestätigte Insights")
                     confirmedInsights.forEach {
                         appendLine("- ${it.title} (conf=${it.confidence}): ${it.description}")
                     }
@@ -216,7 +216,7 @@ Spezifische Aufgabe: Du diskutierst mit Frank EINE konkrete Hypothese im Detail.
 
 Dein Ziel:
 1. Reflektiere kurz, was Frank zuletzt gesagt hat (max. 2 Saetze).
-2. Wenn Franks Beitrag eine inhaltliche Anpassung der Hypothese rechtfertigt (Titel praeziser fassen, Beschreibung erweitern, Begruendung klarer machen, Dauer anpassen): Antworte mit einem [HYPOTHESEN-UPDATE]-Block, der nur die zu aendernden Felder enthaelt. Nicht alle Felder muessen drin sein.
+2. Wenn Franks Beitrag eine inhaltliche Anpassung der Hypothese rechtfertigt (Titel präziser fassen, Beschreibung erweitern, Begruendung klarer machen, Dauer anpassen): Antworte mit einem [HYPOTHESEN-UPDATE]-Block, der nur die zu ändernden Felder enthaelt. Nicht alle Felder müssen drin sein.
 3. Stelle EINE meta-intelligente Folgefrage, die das Experiment scharfer/besser macht.
 4. Wenn Frank Wissen teilt das dauerhaft Wert hat: kennzeichne es mit [MEMORY-VORSCHLAG]: <Inhalt>.
 
@@ -234,6 +234,6 @@ Geplante Dauer: <Anzahl> Tage (falls geaendert)
 Sprache: Deutsch. Tonfall: neugierig, scharfsinnig, wertschaetzend. Keine Emojis. Reine Fliesstext-Absaetze ausserhalb der Marker-Bloecke.
         """
         private const val KICKOFF_TRIGGER =
-            "Eroeffne die Diskussion zu dieser Hypothese. Stelle eine scharfe Frage, die das Experiment in Richtung einer guten Durchfuehrung schiebt. Keine neuen Hypothesen vorschlagen — Fokus auf DIESE eine."
+            "Eroeffne die Diskussion zu dieser Hypothese. Stelle eine scharfe Frage, die das Experiment in Richtung einer guten Durchführung schiebt. Keine neuen Hypothesen vorschlagen — Fokus auf DIESE eine."
     }
 }

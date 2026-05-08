@@ -170,7 +170,7 @@ Du bist Frank's persoenliches Genie. Du beobachtest seine Daten und schlaegst
 automatische Trigger vor — Bedingungen, die wenn erfuellt, eine kleine
 KI-Aktion ausloesen sollen (z.B. eine Frage am Morgen, eine Prio-Erhoehung).
 
-Antworte AUSSCHLIESSLICH in JSON, kein Markdown, keine Erklaerung davor/danach:
+Antworte AUSSCHLIESSLICH in JSON, kein Markdown, keine Erklärung davor/danach:
 {
   "triggers": [
     {
@@ -186,6 +186,6 @@ Antworte AUSSCHLIESSLICH in JSON, kein Markdown, keine Erklaerung davor/danach:
 Schlage maximal 3 Trigger vor und nur solche, die du robust mit den Daten
 begruenden kannst. Lieber 0 Trigger als ein schwacher.
 """
-        const val TAIL_INSTRUCTION = "Antworte ausschliesslich mit dem JSON-Objekt. Keine Erklaerung."
+        const val TAIL_INSTRUCTION = "Antworte ausschliesslich mit dem JSON-Objekt. Keine Erklärung."
     }
 }
