@@ -47,77 +47,75 @@ fun CosmosBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    // BottomBar drastisch verschlankt (Frank-Reklamation 2026-05-08, 3. Mal):
-    // vorher waren es 96dp Inhalts-Hoehe + bottomInset, das schaffte unter dem
-    // Eingabefeld ueberall ~5mm sichtbare Luft weil der Mic-Button-FAB-Ueberhang
-    // 24dp leeren Raum im Layout reservierte. Jetzt 72dp Inhalts-Hoehe
-    // (= Tabs-Hoehe), der Mic-Button bleibt drin (size 56dp) statt nach oben
-    // ueberzuhaengen — keine Luft mehr zwischen Content und Tabs.
+    // BottomBar (Frank-Wunsch 2026-05-09): das graue Bar-Background MUSS bis zum
+    // physischen Bildschirm-Rand reichen — vorher war unter den Tabs ein
+    // transparenter Streifen wo Googles Geste-Indikator durchschien. Jetzt:
+    // Background auf der GANZEN Box (72dp Tabs + bottomInset Geste-Streifen),
+    // die innere Tab-Row sitzt nur in den oberen 72dp, der Bereich darunter
+    // (System-Geste-Inset) zeigt den gleichen grauen Background — kein
+    // optisch abgeschnittenes Ende mehr.
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val barBg = if (cosmos.isDark) {
+        CosmosColors.BgDarkAccent.copy(alpha = 0.92f)
+    } else {
+        CosmosColors.BgLightAccent.copy(alpha = 0.92f)
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(72.dp + bottomInset)
-            .padding(bottom = bottomInset),
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .background(barBg),
     ) {
-        // Bar mit den 4 Tabs (Mic-Lücke in der Mitte). Frank-Reklamation 2026-05-08:
-        // glassBg war zu transparent (alpha 0.08 im Dunkelmodus = fast unsichtbar).
-        // Jetzt ein festerer Hintergrund (alpha 0.92) damit die Bar klar erkennbar ist
-        // aber man trotzdem leicht durchsieht — "nur minimal transparent".
-        val barBg = if (cosmos.isDark) {
-            CosmosColors.BgDarkAccent.copy(alpha = 0.92f)
-        } else {
-            CosmosColors.BgLightAccent.copy(alpha = 0.92f)
-        }
-        Row(
+        // Innere Box haelt Tabs + Mic-Button in den oberen 72dp — der untere
+        // Streifen (Geste-Inset) bleibt nur als grauer Background sichtbar.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
-                .padding(horizontal = 12.dp)
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(barBg)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .align(Alignment.BottomCenter),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .align(Alignment.TopCenter),
         ) {
-            TabItem(
-                label = "Aufgaben",
-                icon = Icons.Outlined.Checklist,
-                selected = currentTab == Routes.TASKS,
-                onClick = { onTabSelected(Routes.TASKS) },
-            )
-            TabItem(
-                label = "Analyse",
-                icon = Icons.Outlined.Analytics,
-                selected = currentTab == Routes.ANALYSIS,
-                onClick = { onTabSelected(Routes.ANALYSIS) },
-            )
-            // Luecke für den Mic-Button
-            Spacer(Modifier.width(64.dp))
-            // "Forscher" statt "Wissenschaftler" (Frank-Wunsch 2026-05-08):
-            // "Wissenschaftler" wurde auf 64dp Tab-Breite zweizeilig umgebrochen.
-            TabItem(
-                label = "Forscher",
-                icon = Icons.Outlined.Science,
-                selected = currentTab == Routes.SCIENTIST,
-                onClick = { onTabSelected(Routes.SCIENTIST) },
-            )
-            TabItem(
-                label = "Biomarker",
-                icon = Icons.Outlined.MonitorHeart,
-                selected = currentTab == Routes.BIOMARKER,
-                onClick = { onTabSelected(Routes.BIOMARKER) },
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                TabItem(
+                    label = "Aufgaben",
+                    icon = Icons.Outlined.Checklist,
+                    selected = currentTab == Routes.TASKS,
+                    onClick = { onTabSelected(Routes.TASKS) },
+                )
+                TabItem(
+                    label = "Analyse",
+                    icon = Icons.Outlined.Analytics,
+                    selected = currentTab == Routes.ANALYSIS,
+                    onClick = { onTabSelected(Routes.ANALYSIS) },
+                )
+                // Luecke für den Mic-Button
+                Spacer(Modifier.width(64.dp))
+                TabItem(
+                    label = "Forscher",
+                    icon = Icons.Outlined.Science,
+                    selected = currentTab == Routes.SCIENTIST,
+                    onClick = { onTabSelected(Routes.SCIENTIST) },
+                )
+                TabItem(
+                    label = "Biomarker",
+                    icon = Icons.Outlined.MonitorHeart,
+                    selected = currentTab == Routes.BIOMARKER,
+                    onClick = { onTabSelected(Routes.BIOMARKER) },
+                )
+            }
+            MicButton(
+                state = micState,
+                onClick = onMicClick,
+                size = 56.dp,
+                modifier = Modifier.align(Alignment.Center),
             )
         }
-        // Mic-Button mittig — kompakt 56dp damit er in 72dp-Hoehe passt ohne
-        // ueberzuhaengen. Vertikal mittig zentriert.
-        MicButton(
-            state = micState,
-            onClick = onMicClick,
-            size = 56.dp,
-            modifier = Modifier.align(Alignment.Center),
-        )
     }
 }
 
