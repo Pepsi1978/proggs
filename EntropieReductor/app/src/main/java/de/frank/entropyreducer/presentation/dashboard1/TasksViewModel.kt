@@ -123,6 +123,62 @@ class TasksViewModel @Inject constructor(
         // Tag-Rollover: MORGEN-Eintraege die gestern gesetzt wurden werden heute
         // automatisch zu HEUTE (Frank-Wunsch 2026-05-09).
         rolloverManualBucketsForNewDay()
+        // Auto-Verteilung: Wenn die KI alle Eintraege in HEUTE eingeordnet hat,
+        // verteilen wir sie auf MORGEN/FREIBLOCK/SPAETER damit Frank ALLE
+        // Aufgaben sieht — nicht nur die top 5 in HEUTE (Frank-Reklamation
+        // 2026-05-09: 12 Aufgaben da, nur 5 sichtbar).
+        autoBalanceBuckets()
+    }
+
+    /**
+     * Verteilt KI-bestimmte Aufgaben auf alle 4 Buckets (Frank-Wunsch 2026-05-09).
+     * Manuelle Eintraege (manualBucket != null) bleiben unangetastet — die hat
+     * Frank bewusst dort hingelegt. KI-Eintraege werden nach priorityScore desc
+     * sortiert und auf HEUTE/MORGEN/FREIBLOCK/SPAETER aufgeteilt:
+     *   - HEUTE: max 5 Eintraege (manuelle HEUTE-Eintraege belegen Slots zuerst,
+     *     KI-Eintraege fuellen Rest)
+     *   - MORGEN: max 5 weitere
+     *   - FREIBLOCK: max 5 weitere
+     *   - SPAETER: alles uebrige
+     * Idempotent: schreibt nur wenn sich timeBucket aendert — verhindert
+     * Endlosschleifen wenn autoBalance auf Flow-Updates triggert.
+     */
+    private fun autoBalanceBuckets() {
+        viewModelScope.launch {
+            val all = entries.getActive().first()
+            val active = all.filter {
+                it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT
+            }
+            // Manuelle Eintraege belegen ihre Slots zuerst.
+            val manualByBucket = active
+                .filter { it.manualBucket != null }
+                .groupBy { it.manualBucket!! }
+            val aiEntries = active
+                .filter { it.manualBucket == null }
+                .sortedByDescending { it.priorityScore }
+
+            val capacityHeute = (5 - (manualByBucket[TimeBucket.HEUTE]?.size ?: 0)).coerceAtLeast(0)
+            val capacityMorgen = (5 - (manualByBucket[TimeBucket.MORGEN]?.size ?: 0)).coerceAtLeast(0)
+            val capacityFreiblock = (5 - (manualByBucket[TimeBucket.FREIBLOCK]?.size ?: 0)).coerceAtLeast(0)
+
+            val toHeute = aiEntries.take(capacityHeute)
+            var rest = aiEntries.drop(capacityHeute)
+            val toMorgen = rest.take(capacityMorgen)
+            rest = rest.drop(capacityMorgen)
+            val toFreiblock = rest.take(capacityFreiblock)
+            val toSpaeter = rest.drop(capacityFreiblock)
+
+            val now = System.currentTimeMillis()
+            suspend fun setBucket(e: EntropyEntryEntity, target: TimeBucket) {
+                if (e.timeBucket != target) {
+                    entries.update(e.copy(timeBucket = target, updatedAt = now))
+                }
+            }
+            toHeute.forEach { setBucket(it, TimeBucket.HEUTE) }
+            toMorgen.forEach { setBucket(it, TimeBucket.MORGEN) }
+            toFreiblock.forEach { setBucket(it, TimeBucket.FREIBLOCK) }
+            toSpaeter.forEach { setBucket(it, TimeBucket.SPAETER) }
+        }
     }
 
     /**
@@ -153,9 +209,10 @@ class TasksViewModel @Inject constructor(
                 )
             }
             if (toRollover.isNotEmpty()) {
-                // Nach Rollover Limit pruefen — wenn HEUTE jetzt mehr als 5 hat,
-                // werden die schwaechsten nach MORGEN geschoben.
-                enforceTodayLimit(currentId = null)
+                // Nach Rollover Auto-Verteilung neu aufrufen — gerollte Eintraege
+                // koennten HEUTE-Limit sprengen, autoBalanceBuckets schiebt
+                // schwaechste KI-Eintraege automatisch in MORGEN/FREIBLOCK/SPAETER.
+                autoBalanceBuckets()
             }
         }
     }
@@ -178,7 +235,10 @@ class TasksViewModel @Inject constructor(
                     updatedAt = now,
                 ),
             )
-            if (bucket == TimeBucket.HEUTE) enforceTodayLimit(currentId = entryId)
+            // Nach manueller Zuordnung auto-balance: andere KI-Eintraege werden
+            // ggf. neu verteilt damit Buckets ihre Limits einhalten und alle
+            // Eintraege sichtbar bleiben.
+            autoBalanceBuckets()
         }
     }
 
@@ -196,43 +256,12 @@ class TasksViewModel @Inject constructor(
                     updatedAt = System.currentTimeMillis(),
                 ),
             )
+            // KI uebernimmt — Eintrag wird ggf. in einen anderen Bucket
+            // einsortiert basierend auf priorityScore und freien Slots.
+            autoBalanceBuckets()
         }
     }
 
-    /**
-     * HEUTE-Limit von 5 Eintraegen einhalten. Wenn mehr als 5 da sind, werden
-     * die schwaechsten (niedrigster priorityScore) nach MORGEN verdraengt.
-     * currentId wird ausgenommen damit der gerade manuell gesetzte Eintrag nicht
-     * sofort wieder rausfaellt.
-     */
-    private suspend fun enforceTodayLimit(currentId: String?) {
-        val all = entries.getActive().first()
-        val today = all.filter {
-            (it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT) &&
-                it.timeBucket == TimeBucket.HEUTE
-        }
-        if (today.size <= 5) return
-        val excessCount = today.size - 5
-        val sortedByLowest = today
-            .filter { it.id != currentId }
-            .sortedBy { it.priorityScore }
-        val now = System.currentTimeMillis()
-        sortedByLowest.take(excessCount).forEach { e ->
-            entries.update(
-                e.copy(
-                    timeBucket = TimeBucket.MORGEN,
-                    // Wenn der Eintrag manuell HEUTE war, behalten wir das manuelle
-                    // Flag (auf MORGEN aktualisiert) — Frank hat ihn bewusst dort
-                    // hinzugefuegt, soll ihn in MORGEN nicht verlieren. War er
-                    // KI-bestimmt, bleibt manualBucket = null und die KI darf ihn
-                    // beim naechsten Rebucket wieder neu einsortieren.
-                    manualBucket = if (e.manualBucket != null) TimeBucket.MORGEN else null,
-                    manualBucketSetAt = if (e.manualBucket != null) now else null,
-                    updatedAt = now,
-                ),
-            )
-        }
-    }
 
     /** Generiert die KI-Frage neu durch Gemini-API mit allen offenen Eintraegen
      *  als Kontext. Fallback auf statisch wenn kein API-Key vorhanden.
@@ -357,6 +386,8 @@ class TasksViewModel @Inject constructor(
                 }
                 // Naechste Frage dynamisch generieren (basiert auf neuem Stand).
                 refreshKiQuestion()
+                // Nach neuem Eintrag Buckets neu verteilen damit HEUTE-Limit haelt.
+                autoBalanceBuckets()
             }.onFailure { ex ->
                 uiOnlyFlow.value = uiOnlyFlow.value.copy(
                     processingMessage = null,
@@ -473,6 +504,7 @@ class TasksViewModel @Inject constructor(
                     )
                     entries.delete(newEntry)
                     uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = null)
+                    autoBalanceBuckets()
                 }
                 .onFailure { ex ->
                     uiOnlyFlow.value = uiOnlyFlow.value.copy(
@@ -557,6 +589,7 @@ class TasksViewModel @Inject constructor(
                                     processingMessage = null,
                                     recentlyCreatedId = e.id,
                                 )
+                                autoBalanceBuckets()
                             }
                             .onFailure { ex ->
                                 uiOnlyFlow.value = uiOnlyFlow.value.copy(
