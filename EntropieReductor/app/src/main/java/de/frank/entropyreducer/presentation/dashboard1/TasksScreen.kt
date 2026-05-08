@@ -176,9 +176,11 @@ fun TasksScreen(
                 // identisch (Cloud-Icon + Status-Label). Wird nur angezeigt
                 // wenn Drive-Backup aktiviert ist.
                 if (state.driveBackupEnabled) {
-                    Spacer(Modifier.height(4.dp))
+                    // Frank-Wunsch 2026-05-09 (zweite Praezisierung): Zeile soll
+                    // moeglichst nah an "Entropie Reduktor" oben kleben — KEIN
+                    // Spacer davor, nur 2dp danach. Spart vertikalen Platz.
                     BackupStatusBadge(state.syncStatus, state.lastBackupAtMs)
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                 }
                 StatusBar(percent = state.statusPercent, breakdown = state.statusBreakdown)
                 Spacer(Modifier.height(8.dp))
@@ -552,7 +554,7 @@ private fun EntryDetailSheet(
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 "${entry.priorityScore.toInt()}",
-                                color = CosmosColors.AccentPrimary,
+                                color = priorityColor(entry.priorityScore),
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
                             )
