@@ -30,4 +30,16 @@ data class EntropyEntryEntity(
     val aiNotes: String?,
     val source: EntrySource,
     val biomarkerSnapshotId: String?,
+    /**
+     * Manuell von Frank gesetzter Bucket (Frank-Wunsch 2026-05-09). Ueberschreibt
+     * die KI-Zuordnung. null = KI bestimmt den Bucket. Wenn gesetzt, wird
+     * timeBucket im selben Update auf den gleichen Wert geschrieben — manualBucket
+     * dient nur als Marker dass die Zuordnung vom User stammt (nicht von der KI).
+     */
+    val manualBucket: TimeBucket? = null,
+    /**
+     * Zeitstempel wann manualBucket gesetzt wurde — fuer Tag-Rollover-Logik:
+     * MORGEN-Eintraege werden am naechsten Tag automatisch zu HEUTE.
+     */
+    val manualBucketSetAt: Long? = null,
 )

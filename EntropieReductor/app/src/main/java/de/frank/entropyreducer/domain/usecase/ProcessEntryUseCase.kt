@@ -189,7 +189,7 @@ Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne
   "severity": 1-10,
   "priorityScore": 0.0-100.0,
   "priorityReason": "Begruendung in 1 Satz",
-  "timeBucket": "HEUTE | MORGEN | DIESE_WOCHE | DIESEN_MONAT | SPAETER",
+  "timeBucket": "HEUTE | MORGEN | FREIBLOCK | SPAETER",
   "estimatedDurationMinutes": null,
   "tags": ["tag1","tag2"],
   "aiNotes": null

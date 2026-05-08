@@ -41,6 +41,9 @@ data class BackupEntry(
     val aiNotes: String? = null,
     val source: String,
     val biomarkerSnapshotId: String? = null,
+    /** Manueller Bucket-Override (Frank-Wunsch 2026-05-09). null = KI-Zuordnung. */
+    val manualBucket: String? = null,
+    val manualBucketSetAt: Long? = null,
 )
 
 fun EntropyEntryEntity.toBackup(): BackupEntry = BackupEntry(
@@ -62,7 +65,25 @@ fun EntropyEntryEntity.toBackup(): BackupEntry = BackupEntry(
     aiNotes = aiNotes,
     source = source.name,
     biomarkerSnapshotId = biomarkerSnapshotId,
+    manualBucket = manualBucket?.name,
+    manualBucketSetAt = manualBucketSetAt,
 )
+
+/**
+ * Mapping fuer Bucket-Strings aus aelteren Backup-Versionen (Frank-Wunsch
+ * 2026-05-09). DIESE_WOCHE und DIESEN_MONAT existieren nicht mehr — sie werden
+ * auf FREIBLOCK gemappt damit alte Drive-Backups nichts verlieren. Unbekannte
+ * Werte fallen auf SPAETER zurueck.
+ */
+private fun parseBucketCompat(name: String?): TimeBucket {
+    if (name == null) return TimeBucket.HEUTE
+    return runCatching { TimeBucket.valueOf(name) }.getOrElse {
+        when (name) {
+            "DIESE_WOCHE", "DIESEN_MONAT" -> TimeBucket.FREIBLOCK
+            else -> TimeBucket.SPAETER
+        }
+    }
+}
 
 fun BackupEntry.toEntity(): EntropyEntryEntity = EntropyEntryEntity(
     id = id,
@@ -75,8 +96,7 @@ fun BackupEntry.toEntity(): EntropyEntryEntity = EntropyEntryEntity(
     priorityScore = priorityScore.coerceIn(0.0, 100.0),
     priorityReason = priorityReason,
     status = runCatching { EntryStatus.valueOf(status) }.getOrDefault(EntryStatus.OFFEN),
-    timeBucket = runCatching { TimeBucket.valueOf(timeBucket) }
-        .getOrDefault(TimeBucket.HEUTE),
+    timeBucket = parseBucketCompat(timeBucket),
     estimatedDurationMinutes = estimatedDurationMinutes,
     createdAt = createdAt,
     updatedAt = updatedAt,
@@ -86,4 +106,6 @@ fun BackupEntry.toEntity(): EntropyEntryEntity = EntropyEntryEntity(
     source = runCatching { EntrySource.valueOf(source) }
         .getOrDefault(EntrySource.NUTZER_TEXT),
     biomarkerSnapshotId = biomarkerSnapshotId,
+    manualBucket = manualBucket?.let { parseBucketCompat(it) },
+    manualBucketSetAt = manualBucketSetAt,
 )

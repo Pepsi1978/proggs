@@ -120,6 +120,118 @@ class TasksViewModel @Inject constructor(
         // (Frank-Wunsch 2026-05-08: keine vordefinierten Standardfragen,
         // immer durch Gemini aus dem aktuellen Kontext gebildet).
         refreshKiQuestion()
+        // Tag-Rollover: MORGEN-Eintraege die gestern gesetzt wurden werden heute
+        // automatisch zu HEUTE (Frank-Wunsch 2026-05-09).
+        rolloverManualBucketsForNewDay()
+    }
+
+    /**
+     * Wenn Frank gestern eine Aufgabe manuell auf MORGEN gesetzt hat, ist sie heute
+     * "morgen" -> wird zu HEUTE. Pruefung: manualBucketSetAt liegt vor Mitternacht
+     * heute. FREIBLOCK und SPAETER bleiben unveraendert (kein Datums-Rollover).
+     */
+    private fun rolloverManualBucketsForNewDay() {
+        viewModelScope.launch {
+            val midnightTodayMs = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant().toEpochMilli()
+            val active = entries.getActive().first()
+            val toRollover = active.filter {
+                it.manualBucket == TimeBucket.MORGEN &&
+                    (it.manualBucketSetAt ?: Long.MAX_VALUE) < midnightTodayMs &&
+                    (it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT)
+            }
+            val now = System.currentTimeMillis()
+            toRollover.forEach { e ->
+                entries.update(
+                    e.copy(
+                        manualBucket = TimeBucket.HEUTE,
+                        manualBucketSetAt = now,
+                        timeBucket = TimeBucket.HEUTE,
+                        updatedAt = now,
+                    ),
+                )
+            }
+            if (toRollover.isNotEmpty()) {
+                // Nach Rollover Limit pruefen — wenn HEUTE jetzt mehr als 5 hat,
+                // werden die schwaechsten nach MORGEN geschoben.
+                enforceTodayLimit(currentId = null)
+            }
+        }
+    }
+
+    /**
+     * Setzt einen manuellen Bucket fuer einen Eintrag (Frank-Wunsch 2026-05-09).
+     * Ueberschreibt die KI-Zuordnung. Bei HEUTE wird das 5er-Limit eingehalten:
+     * der Eintrag mit niedrigster Prio (ausgenommen der gerade gesetzte) wandert
+     * automatisch nach MORGEN.
+     */
+    fun setManualBucket(entryId: String, bucket: TimeBucket) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            val now = System.currentTimeMillis()
+            entries.update(
+                entry.copy(
+                    manualBucket = bucket,
+                    manualBucketSetAt = now,
+                    timeBucket = bucket,
+                    updatedAt = now,
+                ),
+            )
+            if (bucket == TimeBucket.HEUTE) enforceTodayLimit(currentId = entryId)
+        }
+    }
+
+    /**
+     * Setzt manualBucket zurueck — KI uebernimmt die Bucket-Zuordnung wieder.
+     * timeBucket bleibt bis zum naechsten Process/Rebucket auf dem aktuellen Wert.
+     */
+    fun clearManualBucket(entryId: String) {
+        viewModelScope.launch {
+            val entry = entries.get(entryId) ?: return@launch
+            entries.update(
+                entry.copy(
+                    manualBucket = null,
+                    manualBucketSetAt = null,
+                    updatedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
+    }
+
+    /**
+     * HEUTE-Limit von 5 Eintraegen einhalten. Wenn mehr als 5 da sind, werden
+     * die schwaechsten (niedrigster priorityScore) nach MORGEN verdraengt.
+     * currentId wird ausgenommen damit der gerade manuell gesetzte Eintrag nicht
+     * sofort wieder rausfaellt.
+     */
+    private suspend fun enforceTodayLimit(currentId: String?) {
+        val all = entries.getActive().first()
+        val today = all.filter {
+            (it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT) &&
+                it.timeBucket == TimeBucket.HEUTE
+        }
+        if (today.size <= 5) return
+        val excessCount = today.size - 5
+        val sortedByLowest = today
+            .filter { it.id != currentId }
+            .sortedBy { it.priorityScore }
+        val now = System.currentTimeMillis()
+        sortedByLowest.take(excessCount).forEach { e ->
+            entries.update(
+                e.copy(
+                    timeBucket = TimeBucket.MORGEN,
+                    // Wenn der Eintrag manuell HEUTE war, behalten wir das manuelle
+                    // Flag (auf MORGEN aktualisiert) — Frank hat ihn bewusst dort
+                    // hinzugefuegt, soll ihn in MORGEN nicht verlieren. War er
+                    // KI-bestimmt, bleibt manualBucket = null und die KI darf ihn
+                    // beim naechsten Rebucket wieder neu einsortieren.
+                    manualBucket = if (e.manualBucket != null) TimeBucket.MORGEN else null,
+                    manualBucketSetAt = if (e.manualBucket != null) now else null,
+                    updatedAt = now,
+                ),
+            )
+        }
     }
 
     /** Generiert die KI-Frage neu durch Gemini-API mit allen offenen Eintraegen

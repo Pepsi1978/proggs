@@ -102,6 +102,12 @@ fun TasksScreen(
     val cosmos = LocalCosmos.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    // Lokaler State fuer den Bucket-Picker — speichert nur die Entry-ID, der
+    // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
+    // die Anzeige immer den neusten manualBucket/timeBucket-Stand zeigt.
+    var bucketPickerEntryId by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
 
     val micPerm = rememberMicPermissionState(
         onAllGranted = { vm.onMicClick() },
@@ -223,6 +229,7 @@ fun TasksScreen(
                                                 }
                                             }
                                         },
+                                        onPickBucket = { bucketPickerEntryId = entry.id },
                                     )
                                 }
                             }
@@ -275,6 +282,26 @@ fun TasksScreen(
             onSubmit = { notes -> vm.submitMethod(notes) },
             onDismiss = { vm.dismissMethodPrompt() },
         )
+    }
+
+    // Bucket-Picker-Sheet (Frank-Wunsch 2026-05-09): aktiv wenn der Pill-Button
+    // unten rechts in einer Card geklickt wurde. Eintrag wird live aus dem State
+    // gezogen, damit Aenderungen ohne Sheet-Neuoeffnen sichtbar sind.
+    bucketPickerEntryId?.let { id ->
+        val allActive: List<EntropyEntryEntity> =
+            state.entriesByBucket.values.flatten() + state.resolvedEntries
+        val entry = allActive.firstOrNull { it.id == id }
+        if (entry != null) {
+            BucketPickerSheet(
+                entry = entry,
+                onPick = { bucket -> vm.setManualBucket(id, bucket) },
+                onClearManual = { vm.clearManualBucket(id) },
+                onClose = { bucketPickerEntryId = null },
+            )
+        } else {
+            // Eintrag nicht mehr da — Sheet einfach schliessen.
+            bucketPickerEntryId = null
+        }
     }
 }
 
@@ -724,9 +751,8 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
     val label = when (bucket) {
         TimeBucket.HEUTE -> "HEUTE"
         TimeBucket.MORGEN -> "MORGEN"
-        TimeBucket.DIESE_WOCHE -> "DIESE WOCHE"
-        TimeBucket.DIESEN_MONAT -> "DIESEN MONAT"
-        TimeBucket.SPAETER -> "SPAETER"
+        TimeBucket.FREIBLOCK -> "FREIBLOCK"
+        TimeBucket.SPAETER -> "SPÄTER"
     }
     val accent = bucketAccent(bucket)
     Row(
@@ -821,8 +847,7 @@ private fun ResolvedHeader(count: Int) {
 private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector = when (bucket) {
     TimeBucket.HEUTE -> Icons.Outlined.Today
     TimeBucket.MORGEN -> Icons.Outlined.Event
-    TimeBucket.DIESE_WOCHE -> Icons.Outlined.DateRange
-    TimeBucket.DIESEN_MONAT -> Icons.Outlined.CalendarMonth
+    TimeBucket.FREIBLOCK -> Icons.Outlined.DateRange
     TimeBucket.SPAETER -> Icons.Outlined.HourglassEmpty
 }
 
@@ -830,8 +855,7 @@ private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.
 private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
     TimeBucket.HEUTE -> CosmosColors.AccentPrimary
     TimeBucket.MORGEN -> CosmosColors.AccentSecondary
-    TimeBucket.DIESE_WOCHE -> CosmosColors.CatHealth
-    TimeBucket.DIESEN_MONAT -> CosmosColors.CatMental
+    TimeBucket.FREIBLOCK -> CosmosColors.CatHealth
     TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
 }
 
@@ -841,6 +865,7 @@ private fun EntropyEntryCard(
     onClick: () -> Unit = {},
     onResolve: () -> Unit = {},
     onSeverityHint: () -> Unit = {},
+    onPickBucket: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val catColor = entry.category.color()
@@ -944,11 +969,214 @@ private fun EntropyEntryCard(
                 }
             }
 
-            // Meta-Row unten: Bucket-Hinweis | Empfohlen-Badge | Wearable-Badge
+            // Meta-Row unten: Bucket-Hinweis | Empfohlen-Badge | Wearable-Badge | Picker-Button
             Spacer(Modifier.height(10.dp))
-            EntryMetaRow(entry = entry)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                EntryMetaRow(entry = entry, modifier = Modifier.weight(1f))
+                BucketPickerButton(
+                    isManual = entry.manualBucket != null,
+                    bucket = entry.timeBucket,
+                    onClick = onPickBucket,
+                )
+            }
         }
     }
+}
+
+/**
+ * Kleiner Button unten rechts in der Card der das Bucket-Auswahl-Sheet oeffnet
+ * (Frank-Wunsch 2026-05-09). Zeigt das Bucket-Icon mit aktiver Farbe wenn
+ * Frank den Bucket manuell zugewiesen hat (manualBucket != null), sonst nur
+ * dezenter Outline-Style — die KI hat entschieden.
+ */
+@Composable
+private fun BucketPickerButton(
+    isManual: Boolean,
+    bucket: TimeBucket,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = bucketAccent(bucket)
+    val bg = if (isManual) accent.copy(alpha = 0.22f) else cosmos.glassBg
+    val tint = if (isManual) accent else cosmos.textSecondary
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Icon(
+            imageVector = bucketIcon(bucket),
+            contentDescription = "Bucket aendern",
+            tint = tint,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = if (isManual) "manuell" else "KI",
+            style = MaterialTheme.typography.labelSmall,
+            color = tint,
+            fontWeight = if (isManual) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+/**
+ * Bottom-Sheet zur manuellen Bucket-Zuordnung (Frank-Wunsch 2026-05-09). Zeigt
+ * vier Bucket-Optionen + "KI bestimmt" als Reset. Aktive Auswahl wird in der
+ * Bucket-Akzent-Farbe hervorgehoben.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun BucketPickerSheet(
+    entry: EntropyEntryEntity,
+    onPick: (TimeBucket) -> Unit,
+    onClearManual: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = { WindowInsets(0) },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = bottomInset + 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                "Wann erledigen?",
+                style = MaterialTheme.typography.titleLarge,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "\"${entry.title}\"",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 2,
+            )
+            Spacer(Modifier.height(4.dp))
+            // Vier Bucket-Optionen
+            TimeBucket.values().forEach { bucket ->
+                val isActive = entry.manualBucket == bucket ||
+                    (entry.manualBucket == null && entry.timeBucket == bucket)
+                BucketOptionRow(
+                    bucket = bucket,
+                    label = bucketLabelLong(bucket),
+                    description = bucketDescription(bucket),
+                    isActive = isActive,
+                    isManual = entry.manualBucket == bucket,
+                    onClick = { onPick(bucket); onClose() },
+                )
+            }
+            // Reset auf KI
+            if (entry.manualBucket != null) {
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { onClearManual(); onClose() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Psychology,
+                        contentDescription = null,
+                        tint = CosmosColors.AccentSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "KI entscheiden lassen",
+                        color = CosmosColors.AccentSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun BucketOptionRow(
+    bucket: TimeBucket,
+    label: String,
+    description: String,
+    isActive: Boolean,
+    isManual: Boolean,
+    onClick: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = bucketAccent(bucket)
+    val bg = if (isActive) accent.copy(alpha = 0.18f) else cosmos.glassBg
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = bucketIcon(bucket),
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary,
+            )
+        }
+        if (isActive) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = "aktiv",
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+private fun bucketLabelLong(bucket: TimeBucket): String = when (bucket) {
+    TimeBucket.HEUTE -> "Heute"
+    TimeBucket.MORGEN -> "Morgen"
+    TimeBucket.FREIBLOCK -> "Freiblock"
+    TimeBucket.SPAETER -> "Später"
+}
+
+private fun bucketDescription(bucket: TimeBucket): String = when (bucket) {
+    TimeBucket.HEUTE -> "max. 5 Eintraege — schwächste Aufgabe rückt nach Morgen"
+    TimeBucket.MORGEN -> "rückt morgen automatisch in Heute"
+    TimeBucket.FREIBLOCK -> "nächster freier Schichtblock"
+    TimeBucket.SPAETER -> "kein Datum — Sammelbecken"
 }
 
 /** Farbiger Kreis mit Material-Icon basierend auf der Entropie-Kategorie. */
@@ -1028,9 +1256,10 @@ private fun SeverityRainbowBar(severity: Int) {
 }
 
 @Composable
-private fun EntryMetaRow(entry: EntropyEntryEntity) {
+private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifier) {
     val cosmos = LocalCosmos.current
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -1038,8 +1267,7 @@ private fun EntryMetaRow(entry: EntropyEntryEntity) {
         val bucketLabel = when (entry.timeBucket) {
             de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "heute"
             de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "morgen"
-            de.frank.entropyreducer.domain.model.TimeBucket.DIESE_WOCHE -> "diese Woche"
-            de.frank.entropyreducer.domain.model.TimeBucket.DIESEN_MONAT -> "diesen Monat"
+            de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Freiblock"
             de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
         }
         val durationHint = entry.estimatedDurationMinutes?.let {

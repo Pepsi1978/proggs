@@ -17,7 +17,18 @@ enum class EntropyCategory {
 
 enum class EntryStatus { OFFEN, IN_ARBEIT, REDUZIERT, ARCHIVIERT }
 
-enum class TimeBucket { HEUTE, MORGEN, DIESE_WOCHE, DIESEN_MONAT, SPAETER }
+/**
+ * Zeit-Buckets fuer Aufgaben (Frank-Wunsch 2026-05-09):
+ *  - HEUTE: erscheint im HEUTE-Bucket, max 5 Eintraege sichtbar
+ *  - MORGEN: erscheint morgen automatisch im HEUTE (Tag-Rollover beim App-Start)
+ *  - FREIBLOCK: naechster freier Schicht-Block — passend fuer Schichtdienst
+ *  - SPAETER: kein konkretes Datum, sammelt alles was nicht dringend ist
+ *
+ * Frank kann jeden Eintrag manuell einem Bucket zuweisen (manualBucket-Feld
+ * in EntropyEntryEntity); ohne manuellen Override entscheidet die KI auf Basis
+ * von priorityScore + Schichtkalender + geschaetzter Dauer.
+ */
+enum class TimeBucket { HEUTE, MORGEN, FREIBLOCK, SPAETER }
 
 enum class EntrySource { NUTZER_MIC, NUTZER_TEXT, SHARE_SHEET, KI_ERKANNT, BIOMARKER_AUTO }
 
