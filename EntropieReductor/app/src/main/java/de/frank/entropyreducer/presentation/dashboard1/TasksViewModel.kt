@@ -69,6 +69,20 @@ data class TasksUiState(
     val lastBackupAtMs: Long = 0L,
     /** Ist Drive-Backup aktiviert? Wenn false wird die Statuszeile ausgeblendet. */
     val driveBackupEnabled: Boolean = false,
+    /**
+     * Status der automatischen Re-Bewertung aller offenen Aufgaben
+     * (Frank-Wunsch 2026-05-09 nach Aenderung der priorityScore-Doktrin).
+     * null = nicht aktiv. Pair = (fertig, gesamt) — zeigt einen kleinen
+     * Banner unter dem Titel "X von Y Aufgaben neu bewertet".
+     */
+    val rescoreProgress: RescoreProgress? = null,
+)
+
+@androidx.compose.runtime.Immutable
+data class RescoreProgress(
+    val done: Int,
+    val total: Int,
+    val failed: Int = 0,
 )
 
 private data class UiOnlyState(
@@ -99,18 +113,21 @@ class TasksViewModel @Inject constructor(
     private val uiOnlyFlow = MutableStateFlow(UiOnlyState())
     private val detailEntryIdFlow = MutableStateFlow<String?>(null)
     private val pendingMethodForFlow = MutableStateFlow<EntropyEntryEntity?>(null)
+    private val rescoreProgressFlow = MutableStateFlow<RescoreProgress?>(null)
 
     val state: StateFlow<TasksUiState> = combine(
         entries.getActive(),
         activeCategoriesFlow,
         uiOnlyFlow,
         combine(statusObserver.observe(), kiQuestions.currentQuestion, syncCoordinator.status) { b, q, s -> Triple(b, q, s) },
-        combine(detailEntryIdFlow, pendingMethodForFlow) { d, p -> d to p },
-    ) { list, cats, ui, statusTriple, detailPair ->
+        combine(detailEntryIdFlow, pendingMethodForFlow, rescoreProgressFlow) { d, p, r -> Triple(d, p, r) },
+    ) { list, cats, ui, statusTriple, detailTriple ->
         val breakdown = statusTriple.first
         val question = statusTriple.second
         val syncStatus = statusTriple.third
-        val (detailId, pendingMethod) = detailPair
+        val detailId = detailTriple.first
+        val pendingMethod = detailTriple.second
+        val rescore = detailTriple.third
         val filtered = if (cats.isEmpty()) list else list.filter { it.category in cats }
         // Aktive Eintraege (OFFEN + IN_ARBEIT) → Bucket-Gruppierung.
         // PERFORMANCE 2026-05-09: Sortierung nach priorityScore wird HIER vorberechnet
@@ -151,6 +168,7 @@ class TasksViewModel @Inject constructor(
             lastBackupAtMs = (syncStatus as? SyncStatus.Synced)?.atEpochMs
                 ?: secrets.driveLastBackupEpochMs,
             driveBackupEnabled = secrets.driveBackupEnabled && secrets.driveAccountEmail != null,
+            rescoreProgress = rescore,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), TasksUiState())
 
@@ -179,6 +197,88 @@ class TasksViewModel @Inject constructor(
         // der ViewModel lebt — bei App-Killing uebernimmt der init-Block beim
         // naechsten Oeffnen den Rollover.
         startDayChangeWatcher()
+        // Auto-Re-Score (Frank-Wunsch 2026-05-09): wenn die priorityScore-
+        // Doktrin sich geaendert hat (neue 5-Farben-Entropie-Reduktions-Skala),
+        // werden alle offenen Eintraege EINMALIG mit der neuen Logik bewertet.
+        // Marker liegt in EncryptedSecretsStore.lastRescoreVersionCode — sobald
+        // er den Ziel-VersionCode erreicht hat, laeuft der Auto-Re-Score nicht
+        // mehr. Frank kann jederzeit manuell rescoreAllOpenEntries() ausloesen.
+        maybeAutoRescoreOnDoctrineChange()
+    }
+
+    /**
+     * Triggert beim ViewModel-Start einmalig die Re-Bewertung aller offenen
+     * Aufgaben, wenn die priorityScore-Doktrin sich geaendert hat (Frank-Wunsch
+     * 2026-05-09 — neue 5-Farben-Skala basiert auf Entropie-Reduktion).
+     * Ueberspringt den Lauf still wenn:
+     *   - keine offenen Aufgaben da
+     *   - kein Gemini-Key gesetzt (wird beim naechsten Start mit Key getriggert)
+     *   - lastRescoreVersionCode bereits >= Ziel-VersionCode
+     */
+    private fun maybeAutoRescoreOnDoctrineChange() {
+        if (secrets.lastRescoreVersionCode >= RESCORE_DOCTRINE_VERSION) return
+        if (secrets.geminiApiKey.isNullOrBlank()) return
+        viewModelScope.launch {
+            val openCount = entries.getActive().first()
+                .count { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+            if (openCount == 0) {
+                // Keine Eintraege da — Marker trotzdem setzen damit der Trigger
+                // beim naechsten Start nicht erneut feuert.
+                secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
+                return@launch
+            }
+            android.util.Log.i(TAG, "Auto-Rescore startet — $openCount offene Eintraege werden mit neuer Doktrin neu bewertet")
+            rescoreAllOpenEntries(autoTriggered = true)
+        }
+    }
+
+    /**
+     * Bewertet alle offenen Eintraege (OFFEN + IN_ARBEIT) mit der aktuellen
+     * priorityScore-Doktrin neu. Sequentiell mit kurzer Pause zwischen den
+     * Gemini-Calls damit kein Rate-Limit ausgeloest wird. Status-Updates landen
+     * im rescoreProgressFlow → der TasksScreen zeigt einen Banner "X von Y
+     * Aufgaben neu bewertet".
+     *
+     * Robustes Error-Handling: Ein fehlgeschlagener Eintrag bricht die Schleife
+     * NICHT ab — Frank soll am Ende eine Liste haben in der die meisten neu
+     * bewertet sind. Fehlgeschlagene werden in failed gezaehlt.
+     */
+    fun rescoreAllOpenEntries(autoTriggered: Boolean = false) {
+        viewModelScope.launch {
+            val targets = entries.getActive().first()
+                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+            if (targets.isEmpty()) {
+                rescoreProgressFlow.value = null
+                return@launch
+            }
+            rescoreProgressFlow.value = RescoreProgress(done = 0, total = targets.size, failed = 0)
+            var done = 0
+            var failed = 0
+            for (entry in targets) {
+                process.rescoreExisting(entry).onFailure { ex ->
+                    failed++
+                    android.util.Log.w(TAG, "Rescore fuer ${entry.id} fehlgeschlagen: ${ex.message}")
+                }.onSuccess {
+                    done++
+                }
+                rescoreProgressFlow.value = RescoreProgress(done = done, total = targets.size, failed = failed)
+                // Sanfte Pause zwischen Calls — Gemini-API verkraftet schnelle Bursts,
+                // aber bei 50+ Eintraegen schont das die Quota und reduziert Hitze.
+                delay(200L)
+            }
+            // Marker setzen — auch wenn ein paar Eintraege fehlgeschlagen sind.
+            // Wenn Frank nochmal will, kann er den Knopf in den Settings nutzen.
+            if (autoTriggered) {
+                secrets.lastRescoreVersionCode = RESCORE_DOCTRINE_VERSION
+            }
+            android.util.Log.i(TAG, "Rescore fertig: $done erfolgreich, $failed fehlgeschlagen, total ${targets.size}")
+            // Banner noch 3 Sekunden stehen lassen damit Frank das Ergebnis sieht.
+            delay(3_000L)
+            rescoreProgressFlow.value = null
+            // Nach Re-Score Buckets neu verteilen — die neuen priorityScores
+            // koennten die Bucket-Verteilung beeinflussen.
+            autoBalanceBuckets()
+        }
     }
 
     /**
@@ -707,5 +807,17 @@ class TasksViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         if (recorder.isRecording()) recorder.discard()
+    }
+
+    companion object {
+        private const val TAG = "TasksViewModel"
+        /**
+         * versionCode bei dem die priorityScore-Doktrin zuletzt geaendert wurde.
+         * Wenn lastRescoreVersionCode (in EncryptedSecretsStore) kleiner ist,
+         * triggert der ViewModel-Init einen einmaligen Auto-Re-Score aller
+         * offenen Aufgaben. Beim naechsten Doktrin-Update bitte hier die neue
+         * versionCode-Nummer eintragen. Aktuell: 29 (App-Version 0.6.0).
+         */
+        private const val RESCORE_DOCTRINE_VERSION = 29
     }
 }
