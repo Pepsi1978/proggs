@@ -76,25 +76,22 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // VARIANT_LABEL erscheint im LaunchScreen (Frank-Wunsch 2026-05-09).
             buildConfigField("String", "VARIANT_LABEL", "\"Release Version\"")
-            resValue("string", "app_name", "Entropie Reduktor")
         }
-        // Frank-Wunsch 2026-05-09: Debug-Variante hat .slow Suffix und heisst
-        // 'Slow Entropie Reduktor' — eine zweite App auf dem Geraet, separater
-        // applicationId, separate Daten. Wird gelegentlich zum Debuggen
-        // installiert; alle Daten/Login muss Frank ueber Drive-Backup laden.
         debug {
-            applicationIdSuffix = ".slow"
+            applicationIdSuffix = ".debug"
             isMinifyEnabled = false
             buildConfigField("String", "VARIANT_LABEL", "\"Debugversion\"")
-            resValue("string", "app_name", "Slow Entropie Reduktor")
         }
-        // Frank-Wunsch 2026-05-09: Benchmark-Variante hat .debug Suffix —
-        // gleicher applicationId wie die existierende Debug-App auf Frank's
-        // Geraet. Beim Install ueberschreibt sie diese und uebernimmt ALLE
-        // Daten (gleicher applicationId = Android haelt die Daten). Wird zu
-        // Frank's Hauptapp namens 'Entropie Reduktor' im Performance-Modus.
+        // Frank-Wunsch 2026-05-09 (FINAL): Es gibt immer nur EINE App auf dem
+        // Geraet. Benchmark- und Debug-Variante haben den GLEICHEN
+        // applicationId (.debug Suffix), sodass eine die andere beim Install
+        // ueberschreibt und alle Daten/Keys/Backups erhalten bleiben (gleicher
+        // applicationId = Android haelt die Daten). Frank wechselt je nach
+        // Bedarf: Standard ist Debug (schneller Workflow), Performance wird
+        // bei Bedarf drueber installiert wenn fluessige Performance gewollt.
+        // KEINE separaten Apps (.slow, .bench) wegen Google-Cloud-Console-
+        // Konfiguration (OAuth-Code-10-Developer-Error fuer unregistrierte IDs).
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
@@ -102,7 +99,6 @@ android {
             isDebuggable = false
             matchingFallbacks += "release"
             buildConfigField("String", "VARIANT_LABEL", "\"Performance Version\"")
-            resValue("string", "app_name", "Entropie Reduktor")
         }
     }
 
