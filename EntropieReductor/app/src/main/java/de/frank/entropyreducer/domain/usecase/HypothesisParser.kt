@@ -40,12 +40,67 @@ class HypothesisParser @Inject constructor() {
         val narrative = raw
             .replace(HYPO_REGEX, "")
             .replace(MEMORY_REGEX, "")
+            .replace(UPDATE_REGEX, "")
             .lines()
             .joinToString("\n") { it.trimEnd() }
             .replace(Regex("\n{3,}"), "\n\n")
             .trim()
 
         return ParseResult(narrative, hypotheses, memorySuggestions)
+    }
+
+    data class HypothesisUpdate(
+        val title: String?,
+        val description: String?,
+        val rationale: String?,
+        val plannedDurationDays: Int?,
+    )
+
+    data class UpdateParseResult(
+        val narrative: String,
+        val update: HypothesisUpdate?,
+        val memorySuggestions: List<String>,
+    )
+
+    /**
+     * Parst die Antwort innerhalb einer Hypothesen-Diskussion. Erwartet optional einen
+     * [HYPOTHESEN-UPDATE]…[/HYPOTHESEN-UPDATE]-Block, der einzelne Felder neu setzen darf.
+     * Felder die nicht im Block stehen, bleiben in der Hypothese unveraendert.
+     */
+    fun parseUpdate(raw: String): UpdateParseResult {
+        val match = UPDATE_REGEX.find(raw)
+        val update = match?.let { parseSingleUpdate(it.groupValues[1]) }
+
+        val memorySuggestions = MEMORY_REGEX.findAll(raw)
+            .map { it.groupValues[1].trim() }
+            .filter { it.isNotEmpty() }
+            .toList()
+
+        val narrative = raw
+            .replace(UPDATE_REGEX, "")
+            .replace(MEMORY_REGEX, "")
+            .lines()
+            .joinToString("\n") { it.trimEnd() }
+            .replace(Regex("\n{3,}"), "\n\n")
+            .trim()
+
+        return UpdateParseResult(narrative, update, memorySuggestions)
+    }
+
+    private fun parseSingleUpdate(body: String): HypothesisUpdate? {
+        val title = FIELD_TITEL.find(body)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+        val desc = FIELD_BESCHREIBUNG.find(body)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+        val rationale = FIELD_BEGR.find(body)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+        val durationStr = FIELD_DAUER.find(body)?.groupValues?.get(1)?.trim()
+        val days = durationStr?.let { Regex("(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+            ?.coerceIn(1, 90)
+        if (title == null && desc == null && rationale == null && days == null) return null
+        return HypothesisUpdate(
+            title = title?.take(120),
+            description = desc,
+            rationale = rationale,
+            plannedDurationDays = days,
+        )
     }
 
     private fun parseSingleHypothesis(body: String): ParsedHypothesis? {
@@ -76,6 +131,10 @@ class HypothesisParser @Inject constructor() {
         private val MEMORY_REGEX = Regex(
             """\*{0,2}\[\s*MEMORY-VORSCHLAG\s*]\*{0,2}\s*:\s*\*{0,2}\s*(.+?)(?=\n|$)""",
             RegexOption.IGNORE_CASE,
+        )
+        private val UPDATE_REGEX = Regex(
+            """\*{0,2}\[\s*HYPOTHESEN-UPDATE\s*]\*{0,2}\s*(.*?)\s*\*{0,2}\[/\s*HYPOTHESEN-UPDATE\s*]\*{0,2}""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
         )
 
         // Felder innerhalb des Hypothesen-Blocks. Bis zur naechsten Feld-Bezeichnung

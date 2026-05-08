@@ -25,6 +25,8 @@ class EntryRepository @Inject constructor(
     fun getByBucket(bucket: TimeBucket): Flow<List<EntropyEntryEntity>> = dao.getByTimeBucket(bucket)
     fun getByCategory(cat: EntropyCategory): Flow<List<EntropyEntryEntity>> = dao.getByCategory(cat)
     fun countByStatus(status: EntryStatus): Flow<Int> = dao.countByStatus(status)
+    fun getRecentlyResolved(sinceMillis: Long): Flow<List<EntropyEntryEntity>> =
+        dao.getRecentlyResolved(sinceMillis = sinceMillis)
 
     suspend fun get(id: String): EntropyEntryEntity? = dao.getById(id)
 

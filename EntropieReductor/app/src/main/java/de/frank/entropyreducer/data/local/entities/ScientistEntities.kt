@@ -26,6 +26,15 @@ data class ScientistMessageEntity(
     val attachedHypothesisIds: List<String>,
 )
 
+@Entity(tableName = "hypothesis_messages")
+data class HypothesisMessageEntity(
+    @PrimaryKey val id: String,
+    val hypothesisId: String,
+    val role: ScientistRole,
+    val content: String,
+    val createdAt: Long,
+)
+
 @Entity(tableName = "hypotheses")
 data class HypothesisEntity(
     @PrimaryKey val id: String,

@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistSessionEntity
@@ -69,6 +70,21 @@ interface HypothesisDao {
 
     @Delete
     suspend fun delete(hypothesis: HypothesisEntity)
+}
+
+@Dao
+interface HypothesisMessageDao {
+    @Query("SELECT * FROM hypothesis_messages WHERE hypothesisId = :hypothesisId ORDER BY createdAt ASC")
+    fun getForHypothesis(hypothesisId: String): Flow<List<HypothesisMessageEntity>>
+
+    @Query("SELECT * FROM hypothesis_messages WHERE hypothesisId = :hypothesisId ORDER BY createdAt ASC")
+    suspend fun getForHypothesisOnce(hypothesisId: String): List<HypothesisMessageEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(message: HypothesisMessageEntity)
+
+    @Query("DELETE FROM hypothesis_messages WHERE hypothesisId = :hypothesisId")
+    suspend fun deleteForHypothesis(hypothesisId: String)
 }
 
 @Dao

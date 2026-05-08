@@ -30,6 +30,7 @@ object DatabaseModule {
     @Provides fun provideScientistSessionDao(db: AppDatabase) = db.scientistSessionDao()
     @Provides fun provideScientistMessageDao(db: AppDatabase) = db.scientistMessageDao()
     @Provides fun provideHypothesisDao(db: AppDatabase) = db.hypothesisDao()
+    @Provides fun provideHypothesisMessageDao(db: AppDatabase) = db.hypothesisMessageDao()
     @Provides fun provideInsightDao(db: AppDatabase) = db.insightDao()
     @Provides fun provideBiomarkerSnapshotDao(db: AppDatabase) = db.biomarkerSnapshotDao()
     @Provides fun provideSupplementLogDao(db: AppDatabase) = db.supplementLogDao()

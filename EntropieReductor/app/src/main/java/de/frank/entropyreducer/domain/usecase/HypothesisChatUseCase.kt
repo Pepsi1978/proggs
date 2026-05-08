@@ -3,19 +3,18 @@ package de.frank.entropyreducer.domain.usecase
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.dao.InsightDao
-import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
-import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GeminiContent
 import de.frank.entropyreducer.data.remote.GeminiGenerationConfig
 import de.frank.entropyreducer.data.remote.GeminiPart
 import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.repository.HypothesisMessageRepository
 import de.frank.entropyreducer.data.repository.HypothesisRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
-import de.frank.entropyreducer.data.repository.ScientistRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.domain.model.HypothesisStatus
@@ -27,16 +26,11 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
- * Eine Runde im Wissenschaftler-Dialog (Spec §12.4).
- *
- * Eingabe: aktuelle Session-ID + Nutzer-Text (oder null für den Kickoff in einer leeren Session).
- * - System-Prompt nach §7 + §12.4 zusammenbauen.
- * - Komplette Session-Historie als contents anhaengen (alternierend user/model).
- * - Antwort parsen: narrativer Text → in DB als ScientistMessage.KI;
- *   Hypothesen → als VORGESCHLAGEN persistieren und IDs an die Message haengen;
- *   MEMORY-VORSCHLAG-Zeilen → als MemoryEntryEntity (KI_VORSCHLAG, isActive=false).
+ * Eine Runde im Inline-Hypothesen-Dialog. Frank diskutiert mit dem Wissenschaftler innerhalb
+ * EINER Hypothese — der Verlauf ist getrennt vom globalen Forscher-Chat. Die KI darf die
+ * Hypothese hier auch anpassen (per [HYPOTHESEN-UPDATE]-Block).
  */
-class ScientistChatUseCase @Inject constructor(
+class HypothesisChatUseCase @Inject constructor(
     private val gemini: GeminiApi,
     private val secrets: EncryptedSecretsStore,
     private val settings: AppSettings,
@@ -46,40 +40,37 @@ class ScientistChatUseCase @Inject constructor(
     private val biomarkerDao: BiomarkerSnapshotDao,
     private val calendarDao: CalendarDayDao,
     private val insightDao: InsightDao,
-    private val scientist: ScientistRepository,
     private val hypotheses: HypothesisRepository,
+    private val hypothesisMessages: HypothesisMessageRepository,
     private val systemPromptBuilder: SystemPromptBuilder,
     private val hypothesisParser: HypothesisParser,
 ) {
 
-    /**
-     * Persistiert die Nutzer-Nachricht (falls nicht null), fragt Gemini, persistiert die KI-Antwort
-     * inkl. abgeleiteter Hypothesen + Memory-Vorschlaege. Gibt die KI-Message zurück.
-     */
     suspend operator fun invoke(
-        sessionId: String,
+        hypothesisId: String,
         userText: String?,
-    ): Result<ScientistMessageEntity> {
+    ): Result<HypothesisMessageEntity> {
         val key = secrets.geminiApiKey
             ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
         val model = settings.geminiModelFlow.first()
 
-        // 1. Nutzer-Message persistieren (sofern vorhanden)
+        val hypothesis = hypotheses.get(hypothesisId)
+            ?: return Result.failure(IllegalStateException("Hypothese nicht gefunden"))
+
+        // 1. Nutzer-Message persistieren
         if (!userText.isNullOrBlank()) {
-            scientist.insertMessage(
-                ScientistMessageEntity(
+            hypothesisMessages.insert(
+                HypothesisMessageEntity(
                     id = UUID.randomUUID().toString(),
-                    sessionId = sessionId,
+                    hypothesisId = hypothesisId,
                     role = ScientistRole.NUTZER,
                     content = userText.trim(),
                     createdAt = System.currentTimeMillis(),
-                    attachedHypothesisIds = emptyList(),
                 ),
             )
-            scientist.touchSession(sessionId)
         }
 
-        // 2. Kontext-Blocks für System-Prompt
+        // 2. Kontext laden — gleicher Tiefenkontext wie globaler Chat, plus diese Hypothese im Detail
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
         val activePrompts = prompts.getActive().first()
@@ -94,7 +85,7 @@ class ScientistChatUseCase @Inject constructor(
         val fourteenDaysAgo = System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000
         val recentlyResolved = entries.getRecentlyResolved(fourteenDaysAgo).first()
         val resolutionMethods = recentlyResolved
-            .mapNotNull { extractResolutionMethod(it.aiNotes) }
+            .mapNotNull { ScientistChatUseCase.extractResolutionMethod(it.aiNotes) }
             .take(10)
 
         val systemPrompt = systemPromptBuilder.build(
@@ -109,15 +100,23 @@ class ScientistChatUseCase @Inject constructor(
             activeHypotheses = activeHypotheses,
             tail = buildString {
                 appendLine(TAIL_INSTRUCTION.trim())
+                appendLine()
+                appendLine("## Diese Hypothese im Detail (worueber wir gerade sprechen)")
+                appendLine("Titel: ${hypothesis.title}")
+                appendLine("Beschreibung: ${hypothesis.description}")
+                appendLine("Begruendung: ${hypothesis.rationale}")
+                appendLine("Status: ${hypothesis.status.name}")
+                hypothesis.outcome?.let { appendLine("Ergebnis: ${it.name}") }
+                hypothesis.outcomeNotes?.let { appendLine("Ergebnis-Notiz: $it") }
+                appendLine()
                 if (activeEntries.isNotEmpty()) {
-                    appendLine()
-                    appendLine("## Aktive Eintraege (${activeEntries.size})")
-                    activeEntries.take(40).forEach {
+                    appendLine("## Aktive Eintraege (zum Querbezug)")
+                    activeEntries.take(20).forEach {
                         appendLine("- [${it.category.name} sev=${it.severity}] ${it.title}: ${it.description}")
                     }
+                    appendLine()
                 }
                 if (confirmedInsights.isNotEmpty()) {
-                    appendLine()
                     appendLine("## Bestaetigte Insights")
                     confirmedInsights.forEach {
                         appendLine("- ${it.title} (conf=${it.confidence}): ${it.description}")
@@ -126,22 +125,24 @@ class ScientistChatUseCase @Inject constructor(
             },
         )
 
-        // 3. Historie als contents (alternierend user/model)
-        val history = scientist.observeMessages(sessionId).first()
+        // 3. Konversations-Historie dieser Hypothese
+        val history = hypothesisMessages.getForHypothesis(hypothesisId)
         val contents = mutableListOf<GeminiContent>()
         history.forEach { msg ->
             val role = if (msg.role == ScientistRole.NUTZER) "user" else "model"
             contents += GeminiContent(role = role, parts = listOf(GeminiPart(msg.content)))
         }
-        if (history.isEmpty()) {
-            // Kickoff: trigger an Gemini, ohne sichtbare Nutzer-Nachricht.
-            contents += GeminiContent(
-                role = "user",
-                parts = listOf(GeminiPart(KICKOFF_TRIGGER)),
-            )
+        if (history.isEmpty() || (history.size == 1 && history.first().role == ScientistRole.NUTZER && userText.isNullOrBlank())) {
+            // Wenn die Hypothese gerade erst geoeffnet wurde, eroeffnet die KI das Gespraech.
+            if (history.isEmpty()) {
+                contents += GeminiContent(
+                    role = "user",
+                    parts = listOf(GeminiPart(KICKOFF_TRIGGER)),
+                )
+            }
         }
 
-        // 4. Aufruf
+        // 4. Gemini aufrufen
         return try {
             val response = gemini.generateContent(
                 model = model,
@@ -162,38 +163,24 @@ class ScientistChatUseCase @Inject constructor(
                 ?.trim()
                 ?: return Result.failure(IllegalStateException("Leere Antwort von Gemini"))
 
-            val parsed = hypothesisParser.parse(raw)
+            val parsed = hypothesisParser.parseUpdate(raw)
 
-            // 4a. Hypothesen persistieren
-            val now = System.currentTimeMillis()
-            val hypothesisIds = parsed.hypotheses.map { p ->
-                val id = UUID.randomUUID().toString()
-                val plannedStart = now
-                val plannedEnd = now + p.plannedDurationDays * 24L * 60 * 60 * 1000
-                hypotheses.upsert(
-                    HypothesisEntity(
-                        id = id,
-                        title = p.title,
-                        description = p.description,
-                        rationale = p.rationale,
-                        createdAt = now,
-                        plannedStartDate = plannedStart,
-                        plannedEndDate = plannedEnd,
-                        actualStartDate = null,
-                        actualEndDate = null,
-                        status = HypothesisStatus.VORGESCHLAGEN,
-                        outcome = null,
-                        outcomeNotes = null,
-                        biomarkerBeforeId = null,
-                        biomarkerAfterId = null,
-                        felltEntropyChange = null,
-                        relatedEntryIds = emptyList(),
-                    ),
+            // 4a. Optionales Hypothesen-Update anwenden
+            parsed.update?.let { update ->
+                val updated = hypothesis.copy(
+                    title = update.title ?: hypothesis.title,
+                    description = update.description ?: hypothesis.description,
+                    rationale = update.rationale ?: hypothesis.rationale,
+                    plannedEndDate = update.plannedDurationDays?.let { days ->
+                        (hypothesis.actualStartDate ?: hypothesis.plannedStartDate) +
+                            days * 24L * 60 * 60 * 1000
+                    } ?: hypothesis.plannedEndDate,
                 )
-                id
+                hypotheses.update(updated)
             }
 
-            // 4b. Memory-Vorschlaege persistieren
+            // 4b. Memory-Vorschlaege als KI_VORSCHLAG (isActive=false) persistieren
+            val now = System.currentTimeMillis()
             parsed.memorySuggestions.forEach { content ->
                 memories.upsert(
                     MemoryEntryEntity(
@@ -208,17 +195,15 @@ class ScientistChatUseCase @Inject constructor(
                 )
             }
 
-            // 4c. KI-Message speichern (Narrativ — Hypothesen-Karten werden anhand der IDs gerendert)
-            val msg = ScientistMessageEntity(
+            // 4c. KI-Message persistieren
+            val msg = HypothesisMessageEntity(
                 id = UUID.randomUUID().toString(),
-                sessionId = sessionId,
+                hypothesisId = hypothesisId,
                 role = ScientistRole.KI,
                 content = parsed.narrative.ifBlank { raw },
                 createdAt = now,
-                attachedHypothesisIds = hypothesisIds,
             )
-            scientist.insertMessage(msg)
-            scientist.touchSession(sessionId)
+            hypothesisMessages.insert(msg)
             Result.success(msg)
         } catch (t: Throwable) {
             Result.failure(t)
@@ -226,39 +211,29 @@ class ScientistChatUseCase @Inject constructor(
     }
 
     companion object {
-        /**
-         * Extrahiert die "Methode:"-Anteile aus dem aiNotes-Feld eines Eintrags.
-         * Format der Notiz: "Methode: <Text>" (kann angehaengt werden, daher mehrere
-         * "Methode:"-Vorkommen moeglich). Gibt den juengsten/letzten Methode-Text zurueck,
-         * oder null wenn keine "Methode:"-Markierung vorhanden ist.
-         */
-        internal fun extractResolutionMethod(aiNotes: String?): String? {
-            if (aiNotes.isNullOrBlank()) return null
-            val regex = Regex("""Methode:\s*(.+?)(?=\n\s*Methode:|$)""", RegexOption.DOT_MATCHES_ALL)
-            val matches = regex.findAll(aiNotes).map { it.groupValues[1].trim() }.toList()
-            return matches.lastOrNull()?.takeIf { it.isNotBlank() }?.take(300)
-        }
-
         private const val BASE_PROMPT = """
-Spezifische Aufgabe: Du arbeitest mit Frank im offenen Dialog. Dein Ziel in jedem Beitrag:
+Spezifische Aufgabe: Du diskutierst mit Frank EINE konkrete Hypothese im Detail. Dies ist eine fokussierte Diskussion innerhalb dieser Hypothese — kein neuer Hypothesen-Vorschlag.
 
+Dein Ziel:
 1. Reflektiere kurz, was Frank zuletzt gesagt hat (max. 2 Saetze).
-2. Formuliere optional eine oder mehrere konkrete neue Hypothesen oder Experimente, die Frank wahrscheinlich noch nicht ausprobiert hat. Markiere jede explizit als „[HYPOTHESE]" mit Titel, Beschreibung, Begruendung, vorgeschlagener Dauer in Tagen.
-3. Stelle EINE meta-intelligente Folgefrage — eine Frage, die dir neue Information über Frank erschliesst, die du noch nicht hast.
-4. Falls du erkennst, dass etwas Wahres dauerhaft Wert hat als Memory, kennzeichne es mit „[MEMORY-VORSCHLAG]: <Inhalt>".
+2. Wenn Franks Beitrag eine inhaltliche Anpassung der Hypothese rechtfertigt (Titel praeziser fassen, Beschreibung erweitern, Begruendung klarer machen, Dauer anpassen): Antworte mit einem [HYPOTHESEN-UPDATE]-Block, der nur die zu aendernden Felder enthaelt. Nicht alle Felder muessen drin sein.
+3. Stelle EINE meta-intelligente Folgefrage, die das Experiment scharfer/besser macht.
+4. Wenn Frank Wissen teilt das dauerhaft Wert hat: kennzeichne es mit [MEMORY-VORSCHLAG]: <Inhalt>.
+
+WICHTIG: Schlage hier KEINE neuen Hypothesen vor (kein [HYPOTHESE]-Block). Der Fokus ist diese eine Hypothese.
         """
         private const val TAIL_INSTRUCTION = """
-Format der Hypothese (innerhalb deiner Antwort):
-[HYPOTHESE]
-Titel: <kurz>
-Beschreibung: <2-3 Saetze>
-Begruendung: <1-2 Saetze, mit Bezug zu konkreten Eintraegen oder Biomarkern>
-Geplante Dauer: <Anzahl> Tage
-[/HYPOTHESE]
+Format des Updates (optional, nur wenn inhaltliche Anpassung sinnvoll ist):
+[HYPOTHESEN-UPDATE]
+Titel: <neu, falls geaendert>
+Beschreibung: <neu, falls geaendert>
+Begruendung: <neu, falls geaendert>
+Geplante Dauer: <Anzahl> Tage (falls geaendert)
+[/HYPOTHESEN-UPDATE]
 
-Sprache: Deutsch. Tonfall: neugierig, scharfsinnig, wertschaetzend. Keine Emojis. Reine Fliesstext-Absaetze ausserhalb der HYPOTHESE-Bloecke.
+Sprache: Deutsch. Tonfall: neugierig, scharfsinnig, wertschaetzend. Keine Emojis. Reine Fliesstext-Absaetze ausserhalb der Marker-Bloecke.
         """
         private const val KICKOFF_TRIGGER =
-            "Beginne die Session. Eroeffne mit einer scharfen Beobachtung aus den vorhandenen Eintraegen, Biomarkern oder Mustern und stelle deine erste meta-intelligente Frage. Optional eine erste Hypothese."
+            "Eroeffne die Diskussion zu dieser Hypothese. Stelle eine scharfe Frage, die das Experiment in Richtung einer guten Durchfuehrung schiebt. Keine neuen Hypothesen vorschlagen — Fokus auf DIESE eine."
     }
 }

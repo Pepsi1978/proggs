@@ -7,10 +7,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistSessionEntity
+import de.frank.entropyreducer.data.repository.HypothesisMessageRepository
 import de.frank.entropyreducer.data.repository.HypothesisRepository
+import de.frank.entropyreducer.data.repository.MemoryRepository
+import de.frank.entropyreducer.data.repository.ScientistQuestionRepository
 import de.frank.entropyreducer.data.repository.ScientistRepository
+import de.frank.entropyreducer.domain.kiquestion.GenerateScientistQuestionUseCase
+import de.frank.entropyreducer.domain.kiquestion.KiQuestion
+import de.frank.entropyreducer.domain.model.MemorySource
+import de.frank.entropyreducer.domain.usecase.HypothesisChatUseCase
 import de.frank.entropyreducer.domain.usecase.ScientistChatUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
@@ -36,6 +44,18 @@ data class ScientistUiState(
     val micState: MicState = MicState.IDLE,
     val processingMessage: String? = null,
     val errorMessage: String? = null,
+    // Inline-Hypothesen-Chat (Sheet pro Hypothese)
+    val activeHypothesisDetailId: String? = null,
+    val hypothesisDetail: HypothesisEntity? = null,
+    val hypothesisMessages: List<HypothesisMessageEntity> = emptyList(),
+    val hypothesisDraftText: String = "",
+    val hypothesisIsThinking: Boolean = false,
+    val hypothesisMicState: MicState = MicState.IDLE,
+    val hypothesisProcessingMessage: String? = null,
+    // Loesch-Dialog
+    val pendingDeleteHypothesisId: String? = null,
+    // Proaktive Forscher-Frage
+    val scientistQuestion: KiQuestion? = null,
 )
 
 @HiltViewModel
@@ -43,15 +63,24 @@ class ScientistViewModel @Inject constructor(
     application: Application,
     private val scientist: ScientistRepository,
     private val hypotheses: HypothesisRepository,
+    private val hypothesisMessages: HypothesisMessageRepository,
     private val chat: ScientistChatUseCase,
+    private val hypothesisChat: HypothesisChatUseCase,
     private val recorder: AudioRecorder,
     private val transcribe: TranscribeAudioUseCase,
     private val biomarkerDao: de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao,
+    private val scientistQuestions: ScientistQuestionRepository,
+    private val generateScientistQuestion: GenerateScientistQuestionUseCase,
+    private val memories: MemoryRepository,
 ) : AndroidViewModel(application) {
 
     private val currentSessionFlow = MutableStateFlow<String?>(null)
     private val draftFlow = MutableStateFlow("")
     private val uiOnlyFlow = MutableStateFlow(UiOnly())
+    private val hypothesisDetailIdFlow = MutableStateFlow<String?>(null)
+    private val hypothesisDraftFlow = MutableStateFlow("")
+    private val hypothesisUiFlow = MutableStateFlow(HypothesisUi())
+    private val pendingDeleteFlow = MutableStateFlow<String?>(null)
 
     private data class UiOnly(
         val isThinking: Boolean = false,
@@ -60,9 +89,54 @@ class ScientistViewModel @Inject constructor(
         val errorMessage: String? = null,
     )
 
+    private data class HypothesisUi(
+        val isThinking: Boolean = false,
+        val micState: MicState = MicState.IDLE,
+        val processingMessage: String? = null,
+    )
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val messagesFlow = currentSessionFlow.flatMapLatest { id ->
         if (id == null) flowOf(emptyList()) else scientist.observeMessages(id)
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val hypothesisMessagesFlow = hypothesisDetailIdFlow.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList()) else hypothesisMessages.observeForHypothesis(id)
+    }
+
+    private data class HypothesisBlock(
+        val detailId: String?,
+        val messages: List<HypothesisMessageEntity>,
+        val draftText: String,
+        val ui: HypothesisUi,
+    )
+
+    private data class GlobalChatBlock(
+        val draft: String,
+        val ui: UiOnly,
+        val pendingDeleteId: String?,
+        val hypothesisBlock: HypothesisBlock,
+        val scientistQuestion: KiQuestion?,
+    )
+
+    private val hypothesisBlockFlow: kotlinx.coroutines.flow.Flow<HypothesisBlock> = combine(
+        hypothesisDetailIdFlow,
+        hypothesisMessagesFlow,
+        hypothesisDraftFlow,
+        hypothesisUiFlow,
+    ) { detailId, messages, draft, ui ->
+        HypothesisBlock(detailId, messages, draft, ui)
+    }
+
+    private val globalChatBlockFlow: kotlinx.coroutines.flow.Flow<GlobalChatBlock> = combine(
+        draftFlow,
+        uiOnlyFlow,
+        pendingDeleteFlow,
+        hypothesisBlockFlow,
+        scientistQuestions.currentQuestion,
+    ) { draft, ui, pendingDel, hBlock, sciQ ->
+        GlobalChatBlock(draft, ui, pendingDel, hBlock, sciQ)
     }
 
     val state: StateFlow<ScientistUiState> = combine(
@@ -70,8 +144,8 @@ class ScientistViewModel @Inject constructor(
         currentSessionFlow,
         messagesFlow,
         hypotheses.observeAll(),
-        combine(draftFlow, uiOnlyFlow) { draft, ui -> draft to ui },
-    ) { sessions, currentId, msgs, allHyps, (draft, ui) ->
+        globalChatBlockFlow,
+    ) { sessions, currentId, msgs, allHyps, block ->
         val hypById = allHyps.associateBy { it.id }
         val byMsg = msgs.associate { msg ->
             msg.id to msg.attachedHypothesisIds.mapNotNull { hypById[it] }
@@ -81,19 +155,35 @@ class ScientistViewModel @Inject constructor(
             currentSessionId = currentId,
             messages = msgs,
             hypothesesByMessageId = byMsg,
-            draftText = draft,
-            isThinking = ui.isThinking,
-            micState = ui.micState,
-            processingMessage = ui.processingMessage,
-            errorMessage = ui.errorMessage,
+            draftText = block.draft,
+            isThinking = block.ui.isThinking,
+            micState = block.ui.micState,
+            processingMessage = block.ui.processingMessage,
+            errorMessage = block.ui.errorMessage,
+            activeHypothesisDetailId = block.hypothesisBlock.detailId,
+            hypothesisDetail = block.hypothesisBlock.detailId?.let { hypById[it] },
+            hypothesisMessages = block.hypothesisBlock.messages,
+            hypothesisDraftText = block.hypothesisBlock.draftText,
+            hypothesisIsThinking = block.hypothesisBlock.ui.isThinking,
+            hypothesisMicState = block.hypothesisBlock.ui.micState,
+            hypothesisProcessingMessage = block.hypothesisBlock.ui.processingMessage,
+            pendingDeleteHypothesisId = block.pendingDeleteId,
+            scientistQuestion = block.scientistQuestion,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ScientistUiState())
 
     init {
-        // Initial: erste verfuegbare Session waehlen oder eine neue starten.
         viewModelScope.launch {
             val sessions = scientist.observeActiveSessions().first()
             currentSessionFlow.value = sessions.firstOrNull()?.id ?: createSessionInternal()
+        }
+        // Beim Oeffnen des Forscher-Bereichs: pruefen, ob eine Forscher-Frage geladen werden soll.
+        viewModelScope.launch {
+            val current = scientistQuestions.currentQuestion.first()
+            val dismissedUntil = scientistQuestions.dismissedUntilMs.first()
+            if (current == null && System.currentTimeMillis() >= dismissedUntil) {
+                refreshScientistQuestion()
+            }
         }
     }
 
@@ -104,7 +194,6 @@ class ScientistViewModel @Inject constructor(
     fun newSession() {
         viewModelScope.launch {
             currentSessionFlow.value = createSessionInternal()
-            // Kickoff in der frischen Session ausloesen.
             triggerAi(userText = null)
         }
     }
@@ -113,7 +202,6 @@ class ScientistViewModel @Inject constructor(
         val id = currentSessionFlow.value ?: return
         viewModelScope.launch {
             scientist.getSession(id)?.let { scientist.archiveSession(it) }
-            // Naechste aktive Session waehlen
             val next = scientist.observeActiveSessions().first()
                 .firstOrNull { it.id != id }
             currentSessionFlow.value = next?.id ?: createSessionInternal()
@@ -131,7 +219,6 @@ class ScientistViewModel @Inject constructor(
         triggerAi(text)
     }
 
-    /** Kickoff der KI-Antwort nach dem ersten Oeffnen einer leeren Session. */
     fun maybeKickoff() {
         val id = currentSessionFlow.value ?: return
         viewModelScope.launch {
@@ -198,12 +285,6 @@ class ScientistViewModel @Inject constructor(
         uiOnlyFlow.value = uiOnlyFlow.value.copy(errorMessage = null)
     }
 
-    /** Markiert eine vorgeschlagene Hypothese als AKTIV mit den gewaehlten Daten.
-     *
-     *  Setzt biomarkerBeforeId aus dem aktuellsten Snapshot, sofern noch nicht
-     *  vorhanden — der ConfidenceCalculator (§16.6) braucht den Vor-Snapshot für
-     *  die HRV/Recovery-Delta-Berechnung beim spaeteren Insight-Update.
-     */
     fun startHypothesis(hypothesis: HypothesisEntity, plannedStartMs: Long) {
         viewModelScope.launch {
             val durationMs = hypothesis.plannedEndDate - hypothesis.plannedStartDate
@@ -217,6 +298,203 @@ class ScientistViewModel @Inject constructor(
                     biomarkerBeforeId = beforeId,
                 ),
             )
+        }
+    }
+
+    // ====== Inline-Hypothesen-Chat ======
+
+    fun openHypothesisDetail(hypothesisId: String) {
+        hypothesisDetailIdFlow.value = hypothesisId
+        // Beim Oeffnen einer leeren Diskussion eroeffnet der Wissenschaftler von selbst.
+        viewModelScope.launch {
+            val existing = hypothesisMessages.getForHypothesis(hypothesisId)
+            if (existing.isEmpty() && !hypothesisUiFlow.value.isThinking) {
+                triggerHypothesisAi(hypothesisId, userText = null)
+            }
+        }
+    }
+
+    fun closeHypothesisDetail() {
+        hypothesisDetailIdFlow.value = null
+        hypothesisDraftFlow.value = ""
+        // Aufnahme abbrechen falls noch laeuft, sonst koennte die Aufnahme im Hintergrund weiterlaufen.
+        if (recorder.isRecording() && hypothesisUiFlow.value.micState == MicState.RECORDING) {
+            runCatching {
+                recorder.discard()
+                RecordingService.stop(getApplication())
+            }
+            hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                micState = MicState.IDLE,
+                processingMessage = null,
+            )
+        }
+    }
+
+    fun setHypothesisDraft(text: String) {
+        hypothesisDraftFlow.value = text
+    }
+
+    fun sendInHypothesisChat() {
+        val id = hypothesisDetailIdFlow.value ?: return
+        val text = hypothesisDraftFlow.value.trim()
+        if (text.isBlank() || hypothesisUiFlow.value.isThinking) return
+        hypothesisDraftFlow.value = ""
+        triggerHypothesisAi(id, text)
+    }
+
+    fun onHypothesisMicClick() {
+        val app = getApplication<Application>()
+        // Globale Mic-Aufnahme darf nicht parallel laufen.
+        if (uiOnlyFlow.value.micState != MicState.IDLE) return
+        when (hypothesisUiFlow.value.micState) {
+            MicState.IDLE -> {
+                runCatching {
+                    recorder.start()
+                    RecordingService.start(app)
+                    hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                        micState = MicState.RECORDING,
+                        processingMessage = "Aufnahme laeuft …",
+                    )
+                }.onFailure { ex ->
+                    hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                        micState = MicState.IDLE,
+                    )
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        errorMessage = ex.message ?: "Aufnahme konnte nicht gestartet werden",
+                    )
+                }
+            }
+            MicState.RECORDING -> {
+                val file = recorder.stop()
+                RecordingService.stop(app)
+                if (file == null || !file.exists() || file.length() == 0L) {
+                    hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                        micState = MicState.IDLE,
+                        processingMessage = null,
+                    )
+                    return
+                }
+                hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                    micState = MicState.PROCESSING,
+                    processingMessage = "Transkribiere …",
+                )
+                viewModelScope.launch {
+                    transcribe(file).onSuccess { transcript ->
+                        hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                            micState = MicState.IDLE,
+                            processingMessage = null,
+                        )
+                        if (transcript.isNotBlank()) {
+                            hypothesisDraftFlow.value = (hypothesisDraftFlow.value + " " + transcript).trim()
+                        }
+                    }.onFailure { ex ->
+                        hypothesisUiFlow.value = hypothesisUiFlow.value.copy(
+                            micState = MicState.IDLE,
+                            processingMessage = null,
+                        )
+                        uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                            errorMessage = ex.message ?: "Transkription fehlgeschlagen",
+                        )
+                    }
+                }
+            }
+            MicState.PROCESSING -> Unit
+        }
+    }
+
+    private fun triggerHypothesisAi(hypothesisId: String, userText: String?) {
+        viewModelScope.launch {
+            hypothesisUiFlow.value = hypothesisUiFlow.value.copy(isThinking = true)
+            hypothesisChat(hypothesisId = hypothesisId, userText = userText).onFailure { ex ->
+                hypothesisUiFlow.value = hypothesisUiFlow.value.copy(isThinking = false)
+                uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                    errorMessage = ex.message ?: "Antwort vom Wissenschaftler fehlgeschlagen",
+                )
+            }.onSuccess {
+                hypothesisUiFlow.value = hypothesisUiFlow.value.copy(isThinking = false)
+            }
+        }
+    }
+
+    // ====== Hypothese loeschen ======
+
+    fun requestDeleteHypothesis(hypothesisId: String) {
+        pendingDeleteFlow.value = hypothesisId
+    }
+
+    fun dismissDeleteConfirmation() {
+        pendingDeleteFlow.value = null
+    }
+
+    fun confirmDeleteHypothesis() {
+        val id = pendingDeleteFlow.value ?: return
+        viewModelScope.launch {
+            val h = hypotheses.get(id)
+            if (h != null) {
+                // Wenn dies die gerade offene Hypothese ist: Sheet schliessen.
+                if (hypothesisDetailIdFlow.value == id) {
+                    hypothesisDetailIdFlow.value = null
+                    hypothesisDraftFlow.value = ""
+                }
+                hypotheses.delete(h)
+            }
+            pendingDeleteFlow.value = null
+        }
+    }
+
+    // ====== Proaktive Forscher-Frage ======
+
+    fun refreshScientistQuestion() {
+        viewModelScope.launch {
+            val previousText = scientistQuestions.currentQuestion.first()?.text
+            scientistQuestions.setCurrent(null)
+            try {
+                val q = generateScientistQuestion(avoidPreviousText = previousText)
+                scientistQuestions.setCurrent(q)
+            } catch (t: Throwable) {
+                android.util.Log.e("ScientistViewModel", "refreshScientistQuestion failed", t)
+            }
+        }
+    }
+
+    fun snoozeScientistQuestion() {
+        viewModelScope.launch { scientistQuestions.snoozeFor24Hours() }
+    }
+
+    /**
+     * Antwort auf die Forscher-Frage verarbeiten:
+     * 1) Frage + Antwort als MANUELL-Memory speichern (isActive=true, confidence=70).
+     * 2) Antwort zusaetzlich durch ProcessEntryUseCase laufen lassen — falls Frank
+     *    in der Antwort eine konkrete neue Aufgabe nennt, soll die in den Eintraegen
+     *    landen (Dedup gegen bestehende Eintraege).
+     * 3) Frage entfernen, dann naechste Frage anfordern.
+     */
+    fun submitScientistQuestionAnswer(answer: String) {
+        if (answer.isBlank()) return
+        viewModelScope.launch {
+            val currentQuestion = scientistQuestions.currentQuestion.first()
+            val questionText = currentQuestion?.text.orEmpty()
+            scientistQuestions.setCurrent(null)
+            try {
+                memories.upsert(
+                    de.frank.entropyreducer.data.local.entities.MemoryEntryEntity(
+                        id = UUID.randomUUID().toString(),
+                        content = if (questionText.isNotBlank()) {
+                            "Forscher-Frage des Moments — Frage: \"$questionText\" — Antwort von Frank: \"${answer.trim()}\""
+                        } else {
+                            "Frank's Antwort auf Forscher-Frage: \"${answer.trim()}\""
+                        },
+                        source = MemorySource.MANUELL,
+                        isActive = true,
+                        confidence = 70,
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis(),
+                    ),
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e("ScientistViewModel", "Memory speichern fehlgeschlagen", t)
+            }
+            refreshScientistQuestion()
         }
     }
 

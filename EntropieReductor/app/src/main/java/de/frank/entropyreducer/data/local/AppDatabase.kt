@@ -9,6 +9,7 @@ import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.GenieCodexDao
 import de.frank.entropyreducer.data.local.dao.HypothesisDao
+import de.frank.entropyreducer.data.local.dao.HypothesisMessageDao
 import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.local.dao.KiTriggerDao
 import de.frank.entropyreducer.data.local.dao.MemoryDao
@@ -22,6 +23,7 @@ import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
@@ -38,6 +40,7 @@ import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
         ScientistSessionEntity::class,
         ScientistMessageEntity::class,
         HypothesisEntity::class,
+        HypothesisMessageEntity::class,
         InsightEntity::class,
         BiomarkerSnapshotEntity::class,
         SupplementLogEntity::class,
@@ -46,7 +49,7 @@ import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
         KiTriggerEntity::class,
         GenieCodexVersionEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(EntropyTypeConverters::class)
@@ -57,6 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun scientistSessionDao(): ScientistSessionDao
     abstract fun scientistMessageDao(): ScientistMessageDao
     abstract fun hypothesisDao(): HypothesisDao
+    abstract fun hypothesisMessageDao(): HypothesisMessageDao
     abstract fun insightDao(): InsightDao
     abstract fun biomarkerSnapshotDao(): BiomarkerSnapshotDao
     abstract fun supplementLogDao(): SupplementLogDao

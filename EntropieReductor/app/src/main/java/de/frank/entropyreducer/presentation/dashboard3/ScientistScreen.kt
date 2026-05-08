@@ -21,10 +21,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Settings
@@ -33,9 +37,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Snackbar
@@ -43,6 +49,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,11 +67,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.domain.model.HypothesisStatus
 import de.frank.entropyreducer.domain.model.ScientistRole
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.KiQuestionCard
 import de.frank.entropyreducer.presentation.components.MarkdownView
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
@@ -159,12 +168,30 @@ fun ScientistScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    // Proaktive Forscher-Frage als erstes Item — sticky hat Compose nicht
+                    // direkt fuer LazyColumn-Header, aber als erstes Element scrollt sie mit
+                    // weg sobald Frank sich tiefer in die Diskussion einliest. Beim
+                    // Aktualisieren landet er per LaunchedEffect oben am letzten Eintrag,
+                    // die Frage ist dann ggf. weggescrollt — das ist gewollt.
+                    state.scientistQuestion?.let { question ->
+                        item(key = "scientist_question_${question.triggerKey}") {
+                            KiQuestionCard(
+                                question = question,
+                                onSubmitAnswer = vm::submitScientistQuestionAnswer,
+                                onSnooze = vm::snoozeScientistQuestion,
+                                onRefresh = vm::refreshScientistQuestion,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
+                    }
                     items(state.messages, key = { it.id }) { msg ->
                         when (msg.role) {
                             ScientistRole.KI -> KiBubble(
                                 message = msg,
                                 hypotheses = state.hypothesesByMessageId[msg.id].orEmpty(),
                                 onTryHypothesis = { hypothesisToStart = it },
+                                onOpenHypothesis = { vm.openHypothesisDetail(it.id) },
+                                onDeleteHypothesis = { vm.requestDeleteHypothesis(it.id) },
                             )
                             ScientistRole.NUTZER -> NutzerBubble(msg)
                         }
@@ -208,6 +235,49 @@ fun ScientistScreen(
             },
         )
     }
+
+    // Loesch-Confirm-Dialog
+    state.pendingDeleteHypothesisId?.let { _ ->
+        AlertDialog(
+            onDismissRequest = vm::dismissDeleteConfirmation,
+            title = { Text("Hypothese loeschen?") },
+            text = {
+                Text(
+                    "Die Hypothese und der gesamte Chat-Verlauf zu ihr werden dauerhaft entfernt. " +
+                        "Das laesst sich nicht rueckgaengig machen.",
+                    color = cosmos.textSecondary,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = vm::confirmDeleteHypothesis) {
+                    Text("Loeschen", color = CosmosColors.Critical)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = vm::dismissDeleteConfirmation) { Text("Abbrechen") }
+            },
+            containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        )
+    }
+
+    // Inline-Hypothesen-Detail-Sheet
+    state.hypothesisDetail?.let { h ->
+        HypothesisDetailSheet(
+            hypothesis = h,
+            messages = state.hypothesisMessages,
+            draft = state.hypothesisDraftText,
+            onDraftChange = vm::setHypothesisDraft,
+            isThinking = state.hypothesisIsThinking,
+            micState = state.hypothesisMicState,
+            onMicClick = {
+                if (micPerm.check()) vm.onHypothesisMicClick() else micPerm.request()
+            },
+            onSend = vm::sendInHypothesisChat,
+            onDismiss = vm::closeHypothesisDetail,
+            onTryHypothesis = { hypothesisToStart = h },
+            onDeleteHypothesis = { vm.requestDeleteHypothesis(h.id) },
+        )
+    }
 }
 
 @Composable
@@ -215,6 +285,8 @@ private fun KiBubble(
     message: ScientistMessageEntity,
     hypotheses: List<HypothesisEntity>,
     onTryHypothesis: (HypothesisEntity) -> Unit,
+    onOpenHypothesis: (HypothesisEntity) -> Unit,
+    onDeleteHypothesis: (HypothesisEntity) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -260,7 +332,12 @@ private fun KiBubble(
                     }
                     hypotheses.forEach { h ->
                         Spacer(Modifier.height(8.dp))
-                        HypothesisCardInChat(h, onTry = { onTryHypothesis(h) })
+                        HypothesisCardInChat(
+                            h = h,
+                            onTry = { onTryHypothesis(h) },
+                            onOpen = { onOpenHypothesis(h) },
+                            onDelete = { onDeleteHypothesis(h) },
+                        )
                     }
                 }
             }
@@ -291,7 +368,12 @@ private fun NutzerBubble(message: ScientistMessageEntity) {
 }
 
 @Composable
-private fun HypothesisCardInChat(h: HypothesisEntity, onTry: () -> Unit) {
+private fun HypothesisCardInChat(
+    h: HypothesisEntity,
+    onTry: () -> Unit,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val cosmos = LocalCosmos.current
     val isProposed = h.status == HypothesisStatus.VORGESCHLAGEN
     Box(
@@ -303,15 +385,32 @@ private fun HypothesisCardInChat(h: HypothesisEntity, onTry: () -> Unit) {
                 BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.40f)),
                 RoundedCornerShape(12.dp),
             )
+            // Karte ist klickbar — oeffnet den Inline-Detail-Chat dieser Hypothese.
+            // Loesch-Icon hat eigenen Click-Handler, daher kein Konflikt.
+            .clickable(onClick = onOpen)
             .padding(12.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "Hypothese",
-                color = CosmosColors.AccentPrimary,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Hypothese",
+                    color = CosmosColors.AccentPrimary,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "Hypothese loeschen",
+                        tint = cosmos.textSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
             Text(
                 text = h.title,
                 color = cosmos.textPrimary,
@@ -340,16 +439,22 @@ private fun HypothesisCardInChat(h: HypothesisEntity, onTry: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(4.dp))
-            if (isProposed) {
-                TextButton(onClick = onTry) {
-                    Text("Diese Hypothese ausprobieren", color = CosmosColors.AccentPrimary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isProposed) {
+                    TextButton(onClick = onTry) {
+                        Text("Ausprobieren", color = CosmosColors.AccentPrimary)
+                    }
+                } else {
+                    Text(
+                        text = "Status: ${h.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        color = CosmosColors.Success,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
-            } else {
-                Text(
-                    text = "Status: ${h.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                    color = CosmosColors.Success,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onOpen) {
+                    Text("Diskutieren", color = CosmosColors.AccentSecondary)
+                }
             }
         }
     }
@@ -547,6 +652,248 @@ private fun StartHypothesisDialog(
         },
         containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HypothesisDetailSheet(
+    hypothesis: HypothesisEntity,
+    messages: List<HypothesisMessageEntity>,
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    isThinking: Boolean,
+    micState: de.frank.entropyreducer.presentation.components.MicState,
+    onMicClick: () -> Unit,
+    onSend: () -> Unit,
+    onDismiss: () -> Unit,
+    onTryHypothesis: () -> Unit,
+    onDeleteHypothesis: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            // Kopf — Hypothese im Detail
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "Hypothese im Detail",
+                        color = CosmosColors.AccentPrimary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = hypothesis.title,
+                        color = cosmos.textPrimary,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                IconButton(onClick = onDeleteHypothesis) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "Hypothese loeschen",
+                        tint = CosmosColors.Critical,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            // Beschreibung + Begruendung + Status (kompakt, scrollbar wenn lang)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .background(cosmos.glassBg, RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+            ) {
+                if (hypothesis.description.isNotBlank()) {
+                    Text(
+                        text = hypothesis.description,
+                        color = cosmos.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (hypothesis.rationale.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Begruendung: ${hypothesis.rationale}",
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                val days = ((hypothesis.plannedEndDate - hypothesis.plannedStartDate) / TimeUnit.DAYS.toMillis(1))
+                    .toInt().coerceAtLeast(1)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Geplante Dauer: $days Tage  ·  Status: ${hypothesis.status.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (hypothesis.status == HypothesisStatus.VORGESCHLAGEN) {
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(onClick = onTryHypothesis) {
+                        Text("Ausprobieren", color = CosmosColors.AccentPrimary)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Diskussion",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Spacer(Modifier.height(4.dp))
+
+            // Verlauf der Diskussion zu dieser Hypothese
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(messages, key = { it.id }) { msg ->
+                    when (msg.role) {
+                        ScientistRole.KI -> HypothesisKiBubble(msg)
+                        ScientistRole.NUTZER -> HypothesisNutzerBubble(msg)
+                    }
+                }
+                if (isThinking) {
+                    item { ThinkingIndicator() }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Eingabe-Zeile (Mic + Text + Send) speziell fuer diese Hypothese
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
+                    .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+            ) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = onDraftChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Diskutiere diese Hypothese …", color = cosmos.textSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = cosmos.textPrimary,
+                        unfocusedTextColor = cosmos.textPrimary,
+                        focusedBorderColor = CosmosColors.AccentPrimary,
+                        unfocusedBorderColor = cosmos.glassBorder,
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    maxLines = 4,
+                )
+                Spacer(Modifier.width(6.dp))
+                IconButton(
+                    onClick = onMicClick,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING)
+                                CosmosColors.Critical.copy(alpha = 0.30f)
+                            else CosmosColors.AccentSecondary.copy(alpha = 0.20f),
+                        ),
+                ) {
+                    Icon(
+                        imageVector = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
+                            Icons.Outlined.Stop
+                        } else {
+                            Icons.Outlined.Mic
+                        },
+                        contentDescription = "Mikrofon (Hypothese)",
+                        tint = if (micState == de.frank.entropyreducer.presentation.components.MicState.RECORDING) {
+                            CosmosColors.Critical
+                        } else {
+                            CosmosColors.AccentSecondary
+                        },
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+                val canSend = draft.isNotBlank() && !isThinking
+                IconButton(
+                    onClick = onSend,
+                    enabled = canSend,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            if (canSend) CosmosColors.AccentPrimary
+                            else CosmosColors.AccentPrimary.copy(alpha = 0.30f),
+                        ),
+                ) {
+                    Icon(Icons.Outlined.Send, "Senden", tint = CosmosColors.BgDark)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun HypothesisKiBubble(message: HypothesisMessageEntity) {
+    val cosmos = LocalCosmos.current
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.weight(0.85f)) {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 14.dp))
+                    .background(cosmos.glassBg)
+                    .border(
+                        BorderStroke(1.dp, CosmosColors.AccentPrimary.copy(alpha = 0.30f)),
+                        RoundedCornerShape(topStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 14.dp),
+                    )
+                    .padding(10.dp),
+            ) {
+                MarkdownView(text = message.content)
+            }
+        }
+        Spacer(Modifier.weight(0.15f))
+    }
+}
+
+@Composable
+private fun HypothesisNutzerBubble(message: HypothesisMessageEntity) {
+    val cosmos = LocalCosmos.current
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Spacer(Modifier.weight(0.15f))
+        Box(
+            Modifier
+                .weight(0.85f)
+                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 4.dp, bottomEnd = 14.dp, bottomStart = 14.dp))
+                .background(CosmosColors.AccentSecondary.copy(alpha = 0.20f))
+                .padding(10.dp),
+        ) {
+            Text(
+                text = message.content,
+                color = cosmos.textPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
 }
 
 private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

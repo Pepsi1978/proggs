@@ -2,8 +2,12 @@ package de.frank.entropyreducer.domain.usecase
 
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,6 +34,8 @@ class SystemPromptBuilder @Inject constructor() {
         calendarTomorrow: CalendarDayEntity?,
         userPrompts: List<SavedPromptEntity>,
         tail: String? = null,
+        recentResolutionMethods: List<String> = emptyList(),
+        activeHypotheses: List<HypothesisEntity> = emptyList(),
     ): String = buildString {
         appendLine(basePrompt.trim())
         appendLine()
@@ -45,6 +51,25 @@ class SystemPromptBuilder @Inject constructor() {
         if (memories.isNotEmpty()) {
             appendLine("## Aktives Gedaechtnis")
             memories.forEach { m -> appendLine("- ${m.content.trim()}") }
+            appendLine()
+        }
+
+        if (recentResolutionMethods.isNotEmpty()) {
+            appendLine("## Bewaehrte Methoden des Nutzers (zuletzt erfolgreich angewandt)")
+            appendLine("Diese Methoden hat Frank in den letzten Wochen explizit als wirksam dokumentiert. Sie sind reale, gelebte Erfahrung — nicht Theorie. Beziehe sie aktiv in deine Hypothesen ein, vermeide Wiederholungs-Vorschlaege, baue darauf auf:")
+            recentResolutionMethods.forEach { method -> appendLine("- ${method.trim()}") }
+            appendLine()
+        }
+
+        if (activeHypotheses.isNotEmpty()) {
+            appendLine("## Laufende Experimente (gerade aktiv)")
+            appendLine("Diese Hypothesen testet Frank gerade — schlage keine Hypothese vor, die mit einem laufenden Experiment kollidiert oder es trivialerweise wiederholt:")
+            val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.").withZone(ZoneId.systemDefault())
+            activeHypotheses.forEach { h ->
+                val start = dateFormatter.format(Instant.ofEpochMilli(h.actualStartDate ?: h.plannedStartDate))
+                val end = dateFormatter.format(Instant.ofEpochMilli(h.plannedEndDate))
+                appendLine("- \"${h.title}\" ($start–$end): ${h.description}")
+            }
             appendLine()
         }
 
