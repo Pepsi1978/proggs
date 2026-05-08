@@ -28,6 +28,14 @@ class EntryRepository @Inject constructor(
     fun getRecentlyResolved(sinceMillis: Long): Flow<List<EntropyEntryEntity>> =
         dao.getRecentlyResolved(sinceMillis = sinceMillis)
 
+    /** Archivierte Eintraege fuer den Settings-Archiv-Bereich (Frank-Wunsch 2026-05-09). */
+    fun getArchived(): Flow<List<EntropyEntryEntity>> = dao.getArchived()
+
+    /** Alle REDUZIERT-Eintraege deren resolvedAt vor [beforeMillis] liegt — Kandidaten
+     *  fuer Auto-Archivierung. */
+    suspend fun getResolvedBefore(beforeMillis: Long): List<EntropyEntryEntity> =
+        dao.getResolvedBefore(beforeMillis = beforeMillis)
+
     suspend fun get(id: String): EntropyEntryEntity? = dao.getById(id)
 
     suspend fun upsert(entry: EntropyEntryEntity) {

@@ -30,6 +30,12 @@ interface EntropyEntryDao {
     @Query("SELECT * FROM entropy_entries WHERE status = :resolved AND resolvedAt >= :sinceMillis ORDER BY resolvedAt DESC")
     fun getRecentlyResolved(resolved: EntryStatus = EntryStatus.REDUZIERT, sinceMillis: Long): Flow<List<EntropyEntryEntity>>
 
+    @Query("SELECT * FROM entropy_entries WHERE status = :archived ORDER BY resolvedAt DESC, updatedAt DESC")
+    fun getArchived(archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
+
+    @Query("SELECT * FROM entropy_entries WHERE status = :resolved AND resolvedAt < :beforeMillis")
+    suspend fun getResolvedBefore(resolved: EntryStatus = EntryStatus.REDUZIERT, beforeMillis: Long): List<EntropyEntryEntity>
+
     @Query("SELECT * FROM entropy_entries WHERE status != :archived ORDER BY priorityScore DESC")
     fun getByPriorityDesc(archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
 

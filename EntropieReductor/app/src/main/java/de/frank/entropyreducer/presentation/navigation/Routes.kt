@@ -28,4 +28,5 @@ object Routes {
     const val SETTINGS_CODEX = "settings/codex"
     const val SETTINGS_EXPORT = "settings/export"
     const val SETTINGS_TRIGGERS = "settings/triggers"
+    const val SETTINGS_ARCHIVE = "settings/archive"
 }

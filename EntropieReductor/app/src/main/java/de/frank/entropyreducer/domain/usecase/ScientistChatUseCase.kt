@@ -96,6 +96,23 @@ class ScientistChatUseCase @Inject constructor(
         val resolutionMethods = recentlyResolved
             .mapNotNull { extractResolutionMethod(it.aiNotes) }
             .take(10)
+        // Archiv-Eintraege fuer Mustererkennung (Frank-Wunsch 2026-05-09): die
+        // letzten 50 archivierten Aufgaben mit ihrer Methode liefern dem Forscher
+        // Stoff fuer Hypothesen ueber wiederkehrende Aufgabentypen, dauerhaft
+        // wirksame Methoden und saisonale Verlaeufe.
+        val archivedEntries = entries.getArchived().first().take(50)
+        val archivedSummaries = archivedEntries.map { entry ->
+            val resolvedTime = entry.resolvedAt ?: entry.updatedAt
+            val dateLabel = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                .withZone(java.time.ZoneId.systemDefault())
+                .format(java.time.Instant.ofEpochMilli(resolvedTime))
+            SystemPromptBuilder.ArchivedMethodSummary(
+                title = entry.title,
+                category = entry.category.name,
+                method = extractResolutionMethod(entry.aiNotes) ?: "",
+                dateLabel = dateLabel,
+            )
+        }
 
         val systemPrompt = systemPromptBuilder.build(
             basePrompt = BASE_PROMPT,
@@ -106,6 +123,7 @@ class ScientistChatUseCase @Inject constructor(
             calendarTomorrow = calendarTomorrow,
             userPrompts = activePrompts,
             recentResolutionMethods = resolutionMethods,
+            archivedResolutionEntries = archivedSummaries,
             activeHypotheses = activeHypotheses,
             tail = buildString {
                 appendLine(TAIL_INSTRUCTION.trim())

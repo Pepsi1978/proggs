@@ -128,6 +128,33 @@ class TasksViewModel @Inject constructor(
         // Aufgaben sieht — nicht nur die top 5 in HEUTE (Frank-Reklamation
         // 2026-05-09: 12 Aufgaben da, nur 5 sichtbar).
         autoBalanceBuckets()
+        // Auto-Archivierung: erledigte Eintraege aelter als 14 Tage werden
+        // archiviert und verschwinden aus der Aufgabenliste. Sie sind weiter
+        // ueber den Settings-Archiv-Bereich erreichbar (Frank-Wunsch 2026-05-09).
+        autoArchiveOldResolved()
+    }
+
+    /**
+     * Verschiebt REDUZIERT-Eintraege deren resolvedAt mehr als 14 Tage alt ist
+     * auf Status ARCHIVIERT (Frank-Wunsch 2026-05-09). Damit verschwinden sie
+     * aus dem Aufgabenboard, bleiben aber im Settings-Archiv erreichbar — der
+     * Forscher kann sie weiterhin als Kontext nutzen um Muster zu erkennen.
+     */
+    private fun autoArchiveOldResolved() {
+        viewModelScope.launch {
+            val cutoffMs = System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000
+            val candidates = entries.getResolvedBefore(cutoffMs)
+            if (candidates.isEmpty()) return@launch
+            val now = System.currentTimeMillis()
+            candidates.forEach { e ->
+                entries.update(
+                    e.copy(
+                        status = EntryStatus.ARCHIVIERT,
+                        updatedAt = now,
+                    ),
+                )
+            }
+        }
     }
 
     /**

@@ -35,6 +35,7 @@ class SystemPromptBuilder @Inject constructor() {
         userPrompts: List<SavedPromptEntity>,
         tail: String? = null,
         recentResolutionMethods: List<String> = emptyList(),
+        archivedResolutionEntries: List<ArchivedMethodSummary> = emptyList(),
         activeHypotheses: List<HypothesisEntity> = emptyList(),
     ): String = buildString {
         appendLine(basePrompt.trim())
@@ -58,6 +59,16 @@ class SystemPromptBuilder @Inject constructor() {
             appendLine("## Bewaehrte Methoden des Nutzers (zuletzt erfolgreich angewandt)")
             appendLine("Diese Methoden hat Frank in den letzten Wochen explizit als wirksam dokumentiert. Sie sind reale, gelebte Erfahrung — nicht Theorie. Beziehe sie aktiv in deine Hypothesen ein, vermeide Wiederholungs-Vorschlaege, baue darauf auf:")
             recentResolutionMethods.forEach { method -> appendLine("- ${method.trim()}") }
+            appendLine()
+        }
+
+        if (archivedResolutionEntries.isNotEmpty()) {
+            appendLine("## Langzeit-Archiv (vergangene Entropie-Reduktionen)")
+            appendLine("Diese erledigten Aufgaben sind aelter als 14 Tage und liegen im Archiv. Nutze sie um Muster und Zusammenhaenge zu erkennen — wiederkehrende Aufgabentypen, dauerhaft wirksame Methoden, saisonale Verlaeufe. Pro Eintrag siehst du Aufgabe + Kategorie + die vom Nutzer eingesprochene Loesungsmethode:")
+            archivedResolutionEntries.forEach { e ->
+                appendLine("- [${e.category}] \"${e.title}\" (${e.dateLabel})")
+                if (e.method.isNotBlank()) appendLine("  → Methode: ${e.method.trim()}")
+            }
             appendLine()
         }
 
@@ -104,6 +115,18 @@ class SystemPromptBuilder @Inject constructor() {
             appendLine(it.trim())
         }
     }
+
+    /**
+     * Kompakte Repraesentation eines archivierten Eintrags fuer den Forscher-Prompt.
+     * Frank-Wunsch 2026-05-09: das Archiv liefert dem Forscher Stoff fuer
+     * Mustererkennung und neue Hypothesen.
+     */
+    data class ArchivedMethodSummary(
+        val title: String,
+        val category: String,
+        val method: String,
+        val dateLabel: String,
+    )
 
     companion object {
         const val GENIE_IDENTITY = """

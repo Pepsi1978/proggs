@@ -16,6 +16,7 @@ import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.domain.model.TimeBucket
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -54,7 +55,13 @@ class GenerateDailyBriefingUseCase @Inject constructor(
 
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
-        val activeEntries = entries.getActive().first().take(10)
+        // Frank-Wunsch 2026-05-09: Briefing soll sich AUSSCHLIESSLICH auf die 5 HEUTE-Aufgaben
+        // konzentrieren — nicht auf alle aktiven Eintraege. Andere Buckets (MORGEN, FREIBLOCK,
+        // SPAETER) sind fuer das Tagesbriefing irrelevant. autoBalanceBuckets sorgt dafuer dass
+        // der HEUTE-Bucket maximal 5 Eintraege haelt; das take(5) hier ist redundant aber sicher.
+        val todayEntries = entries.getByBucket(TimeBucket.HEUTE).first()
+            .sortedByDescending { it.priorityScore }
+            .take(5)
         val latestBiomarker = biomarkerDao.getLatest().first()
         val todayDay = calendarDao.getDay(today.toString()).first()
         val tomorrowDay = calendarDao.getDay(tomorrow.toString()).first()
@@ -77,7 +84,7 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             tail = TAIL_INSTRUCTION,
         )
 
-        val userPayload = buildUserPayload(activeEntries, latestBiomarker, todayDay, tomorrowDay, upcomingEvents)
+        val userPayload = buildUserPayload(todayEntries, latestBiomarker, todayDay, tomorrowDay, upcomingEvents)
 
         return try {
             val response = gemini.generateContent(
@@ -141,14 +148,16 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             }
         }
         appendLine()
-        appendLine("Top-Aufgaben (max 10, sortiert nach Prioritaet):")
+        appendLine("Heutige Aufgaben (HEUTE-Bucket, max 5, sortiert nach Prioritaet — alle anderen Buckets sind fuer das Briefing IRRELEVANT):")
         if (entries.isEmpty()) {
-            appendLine("(Keine offenen Aufgaben)")
+            appendLine("(Keine Aufgaben fuer heute eingeplant)")
         } else {
             entries.forEachIndexed { i, e ->
-                appendLine("${i + 1}. [${e.category}] ${e.title} (Prio ${e.priorityScore.toInt()})")
+                appendLine("${i + 1}. [${e.category}] ${e.title} (Prio ${e.priorityScore.toInt()}): ${e.description}")
             }
         }
+        appendLine()
+        appendLine("WICHTIG: Beziehe dich im Briefing AUSSCHLIESSLICH auf die oben genannten heutigen Aufgaben. Andere Aufgaben (Morgen, Freiblock, Spaeter) existieren — sind heute aber nicht relevant. Schweige darueber.")
     }
 
     private companion object {
@@ -160,9 +169,11 @@ Header, keine Listen. Maximum 7 Saetze.
 Inhaltsstruktur:
 1. Kontextueller Eroeffnungssatz (Schicht heute / Tageskontext).
 2. Biomarker-Verankerung (Recovery, HRV) — was bedeutet das für heute?
-3. Was sind heute die wichtigsten 2-3 Aufgaben und WARUM in dieser Reihenfolge?
+3. Was sind heute die wichtigsten 2-3 Aufgaben aus den HEUTE-Aufgaben und WARUM in dieser Reihenfolge? (NUR die explizit genannten heutigen Aufgaben — keine anderen.)
 4. Eine Hypothese oder Beobachtung — was koennte heute klappen?
 5. Abschliessender Satz: eine sanfte Frage oder ein Vertrauenshinweis.
+
+Sprich NIEMALS ueber Aufgaben, die nicht in der heutigen Liste stehen. Das Briefing ist ein Tagesfokus-Werkzeug, kein Wochenueberblick.
 """
         const val TAIL_INSTRUCTION = """
 Antworte ausschliesslich mit dem Briefing-Text. Keine Praeambel, kein Schluss-Disclaimer.

@@ -105,5 +105,10 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onBack = { nav.popBackStack(); Unit },
             )
         }
+        composable(Routes.SETTINGS_ARCHIVE) {
+            de.frank.entropyreducer.presentation.settings.archive.ArchiveScreen(
+                onBack = { nav.popBackStack(); Unit },
+            )
+        }
     }
 }

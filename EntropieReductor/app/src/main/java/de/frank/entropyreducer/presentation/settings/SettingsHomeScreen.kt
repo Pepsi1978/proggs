@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -160,6 +161,13 @@ private val sections = listOf(
         title = "KI-Trigger",
         subtitle = "Beobachte und genehmige automatische Trigger, die das Genie aus deinen Daten ableitet.",
         route = Routes.SETTINGS_TRIGGERS,
+    ),
+    SectionDef(
+        icon = Icons.Outlined.Inventory2,
+        accent = CosmosColors.AccentSecondary,
+        title = "Archiv",
+        subtitle = "Erledigte Aufgaben mit deiner Loesungsmethode — Quelle für den Forscher.",
+        route = Routes.SETTINGS_ARCHIVE,
     ),
     SectionDef(
         icon = Icons.Outlined.IosShare,
