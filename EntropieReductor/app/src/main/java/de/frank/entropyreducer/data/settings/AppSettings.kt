@@ -129,6 +129,12 @@ class AppSettings @Inject constructor(
         private val KEY_MONTHLY_REVIEW_AT = longPreferencesKey("monthly_review_at_ms")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
-        const val DEFAULT_GEMINI = "gemini-2.5-flash"
+        // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift
+        // bei jeder Neuinstallation (frischer DataStore = Fallback auf diesen Wert)
+        // und bei bestehenden Installationen wo der Nutzer das Modell nicht aktiv
+        // im Modell-Picker geaendert hat. Wer es einmal selbst umstellt, behaelt
+        // seine Auswahl ueber App-Updates hinweg — nur Neuinstallation oder Datenwipe
+        // setzt zurueck auf diesen Default.
+        const val DEFAULT_GEMINI = "gemini-3.1-flash-lite"
     }
 }
