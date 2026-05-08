@@ -671,6 +671,7 @@ private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
  * X-Achse, Tap-zu-Tooltip). Tap auf die ganze Card oeffnet den Detail-Screen
  * mit voller Zahlen-Liste (Frank-Wunsch 2026-05-08).
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun MetricHistoryCard(
     title: String,
