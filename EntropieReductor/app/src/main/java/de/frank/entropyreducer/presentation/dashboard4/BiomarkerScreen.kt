@@ -218,6 +218,84 @@ fun BiomarkerHostScreen(
                     onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
                 )
             }
+            // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08).
+            item {
+                MetricHistoryCard(
+                    title = "Atemfrequenz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = state.history.mapNotNull { snap ->
+                        snap.respiratoryRate?.let { snap.capturedAt to it }
+                    },
+                    unit = "Atemzüge/min",
+                    onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Schlafeffizienz",
+                    accent = CosmosColors.Success,
+                    points = state.history.mapNotNull { snap ->
+                        snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Schlafregelmäßigkeit",
+                    accent = CosmosColors.Success,
+                    points = state.history.mapNotNull { snap ->
+                        snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Schlafdefizit",
+                    accent = CosmosColors.Warning,
+                    points = state.history.mapNotNull { snap ->
+                        snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    unit = "min",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Sauerstoffsättigung",
+                    accent = CosmosColors.Success,
+                    points = state.history.mapNotNull { snap ->
+                        snap.spo2Percent?.let { snap.capturedAt to it }
+                    },
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SPO2) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Hauttemperatur",
+                    accent = CosmosColors.Warning,
+                    points = state.history.mapNotNull { snap ->
+                        snap.skinTempCelsius?.let { snap.capturedAt to it }
+                    },
+                    unit = "°C",
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Durchschnittliche Herzfrequenz",
+                    accent = CosmosColors.Critical,
+                    points = state.history.mapNotNull { snap ->
+                        snap.averageHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                    },
+                    unit = "bpm",
+                    onClick = { onOpenMetricDetail(MetricKey.AVG_HR) },
+                )
+            }
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
             // über die volle Historie.
             item { CorrelationCard(state) }
@@ -330,6 +408,16 @@ internal object MetricKey {
     const val SLEEP_AWAKE = "sleep_awake"
     const val SLEEP_DISTURBANCES = "sleep_disturbances"
     const val RECOVERY = "recovery"
+    // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08)
+    const val RESPIRATORY = "respiratory"
+    const val SLEEP_CONSISTENCY = "sleep_consistency"
+    const val SLEEP_EFFICIENCY = "sleep_efficiency"
+    const val SLEEP_NEED = "sleep_need"
+    const val SLEEP_DEBT = "sleep_debt"
+    const val SPO2 = "spo2"
+    const val SKIN_TEMP = "skin_temp"
+    const val AVG_HR = "avg_hr"
+    const val MAX_HR = "max_hr"
 }
 
 /**

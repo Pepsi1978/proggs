@@ -21,6 +21,16 @@ data class BiomarkerSnapshotEntity(
     val dayStrain: Double?,
     val dayKilojoules: Double?,
     val createdAt: Long,
+    // Frank-Wunsch 2026-05-08: alle Whoop-Werte die die API liefert.
+    val respiratoryRate: Double? = null,           // Atemfrequenz (Atemzuege/Minute)
+    val sleepConsistencyPercent: Int? = null,      // Schlafregelmaessigkeit %
+    val sleepEfficiencyPercent: Int? = null,       // Schlafeffizienz %
+    val sleepNeedMinutes: Int? = null,             // Schlafbedarf
+    val sleepDebtMinutes: Int? = null,             // Schlafdefizit
+    val spo2Percent: Double? = null,               // Sauerstoffsaettigung
+    val skinTempCelsius: Double? = null,           // Hauttemperatur
+    val averageHeartRate: Int? = null,             // Durchschnittliche Herzfrequenz
+    val maxHeartRate: Int? = null,                 // Max Herzfrequenz
 )
 
 @Entity(tableName = "supplement_logs")

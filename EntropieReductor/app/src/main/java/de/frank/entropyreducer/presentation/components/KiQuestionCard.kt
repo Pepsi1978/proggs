@@ -14,12 +14,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,17 +38,20 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
  * Kontextrelevante Frage der KI auf Dashboard 1 (Spec §10.4).
- * Soll-Design: Sparkle-Icon + Header-Pill, Frage als großer Text,
- * unten ein Mic-Kreis-Button (lila Glass-Hintergrund) + "Später"-Link rechts.
+ * Frank-Wunsch 2026-05-08: sichtbares Antwort-Feld + Whisper-Mic + Send-Button.
+ * Antwort wird durch submitAnswer-Callback an den ViewModel weitergereicht der
+ * sie deduplizierungs-aware verarbeitet (kein Doppel-Eintrag wenn Antwort eine
+ * existierende Aufgabe nennt).
  */
 @Composable
 fun KiQuestionCard(
     question: KiQuestion,
-    onMicAnswer: () -> Unit,
+    onSubmitAnswer: (String) -> Unit,
     onSnooze: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
+    var answer by remember(question.triggerKey) { mutableStateOf("") }
     GlassCard(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -66,29 +76,56 @@ fun KiQuestionCard(
                 color = cosmos.textPrimary,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
+            // Antwort-Feld + Whisper-Mic + Send (Frank-Wunsch 2026-05-08).
+            OutlinedTextField(
+                value = answer,
+                onValueChange = { answer = it },
+                placeholder = { Text("Tippe oder sprich deine Antwort …", color = cosmos.textSecondary) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = cosmos.textPrimary,
+                    unfocusedTextColor = cosmos.textPrimary,
+                    focusedBorderColor = CosmosColors.AccentSecondary,
+                    unfocusedBorderColor = cosmos.glassBorder,
+                ),
+                maxLines = 3,
+            )
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Mic-Kreis-Button (lila Glass)
-                Box(
+                WhisperMicButton(
+                    onTranscript = { transcript ->
+                        answer = if (answer.isBlank()) transcript else "$answer $transcript"
+                    },
+                    size = 44.dp,
+                )
+                Spacer(Modifier.width(8.dp))
+                IconButton(
+                    onClick = {
+                        if (answer.isNotBlank()) {
+                            onSubmitAnswer(answer)
+                            answer = ""
+                        }
+                    },
+                    enabled = answer.isNotBlank(),
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
-                        .clickable(onClick = onMicAnswer),
-                    contentAlignment = Alignment.Center,
+                        .background(
+                            if (answer.isNotBlank()) CosmosColors.AccentSecondary
+                            else CosmosColors.AccentSecondary.copy(alpha = 0.3f),
+                        ),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Mic,
-                        contentDescription = "Antworten",
-                        tint = CosmosColors.AccentSecondary,
-                        modifier = Modifier.size(20.dp),
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = "Antwort senden",
+                        tint = androidx.compose.ui.graphics.Color.White,
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                // "Später" als Text-Link
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = "Später",
                     style = MaterialTheme.typography.bodyMedium,

@@ -368,6 +368,79 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         extract = { it.recoveryScore?.toDouble() },
         format = { "%.0f %%".format(it) },
     )
+    // Phase 11 — neue Whoop-Felder (Frank-Wunsch 2026-05-08).
+    MetricKey.RESPIRATORY -> MetricSpec(
+        title = "Atemfrequenz",
+        unit = "Atemzüge/min",
+        accent = CosmosColors.AccentPrimary,
+        extract = { it.respiratoryRate },
+        format = { "%.1f".format(it) },
+    )
+    MetricKey.SLEEP_CONSISTENCY -> MetricSpec(
+        title = "Schlafregelmäßigkeit",
+        unit = "%",
+        accent = CosmosColors.Success,
+        extract = { it.sleepConsistencyPercent?.toDouble() },
+        format = { "%.0f %%".format(it) },
+    )
+    MetricKey.SLEEP_EFFICIENCY -> MetricSpec(
+        title = "Schlafeffizienz",
+        unit = "%",
+        accent = CosmosColors.Success,
+        extract = { it.sleepEfficiencyPercent?.toDouble() },
+        format = { "%.0f %%".format(it) },
+    )
+    MetricKey.SLEEP_NEED -> MetricSpec(
+        title = "Schlafbedarf",
+        unit = "min",
+        accent = CosmosColors.AccentSecondary,
+        extract = { it.sleepNeedMinutes?.toDouble() },
+        format = { v ->
+            val m = v.toInt()
+            "${m / 60}h ${(m % 60).toString().padStart(2, '0')}min"
+        },
+    )
+    MetricKey.SLEEP_DEBT -> MetricSpec(
+        title = "Schlafdefizit",
+        unit = "min",
+        accent = CosmosColors.Warning,
+        extract = { it.sleepDebtMinutes?.toDouble() },
+        format = { v ->
+            val m = v.toInt()
+            if (m == 0) "0 min"
+            else "${m / 60}h ${(m % 60).toString().padStart(2, '0')}min"
+        },
+        lowerIsBetter = true,
+    )
+    MetricKey.SPO2 -> MetricSpec(
+        title = "Sauerstoffsättigung",
+        unit = "%",
+        accent = CosmosColors.Success,
+        extract = { it.spo2Percent },
+        format = { "%.1f %%".format(it) },
+    )
+    MetricKey.SKIN_TEMP -> MetricSpec(
+        title = "Hauttemperatur",
+        unit = "°C",
+        accent = CosmosColors.Warning,
+        extract = { it.skinTempCelsius },
+        format = { "%.1f °C".format(it) },
+    )
+    MetricKey.AVG_HR -> MetricSpec(
+        title = "Durchschnittliche Herzfrequenz",
+        unit = "bpm",
+        accent = CosmosColors.Critical,
+        extract = { it.averageHeartRate?.toDouble() },
+        format = { "%.0f bpm".format(it) },
+        lowerIsBetter = true,
+    )
+    MetricKey.MAX_HR -> MetricSpec(
+        title = "Max. Herzfrequenz",
+        unit = "bpm",
+        accent = CosmosColors.Critical,
+        extract = { it.maxHeartRate?.toDouble() },
+        format = { "%.0f bpm".format(it) },
+    )
     else -> MetricSpec(
         title = "Unbekannt",
         unit = "",

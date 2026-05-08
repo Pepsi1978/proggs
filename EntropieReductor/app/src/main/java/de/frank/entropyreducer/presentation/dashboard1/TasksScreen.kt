@@ -175,9 +175,7 @@ fun TasksScreen(
                         item {
                             de.frank.entropyreducer.presentation.components.KiQuestionCard(
                                 question = q,
-                                onMicAnswer = {
-                                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
-                                },
+                                onSubmitAnswer = { answer -> vm.submitKiQuestionAnswer(answer) },
                                 onSnooze = vm::snoozeKiQuestion,
                             )
                         }

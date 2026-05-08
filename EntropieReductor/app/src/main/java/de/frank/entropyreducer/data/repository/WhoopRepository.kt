@@ -117,6 +117,10 @@ class WhoopRepository @Inject constructor(
         val sleepScore = sleep?.score
         val recoveryScore = recovery?.score
 
+        // Frank-Wunsch 2026-05-08: alle Whoop-Felder mappen die die API liefert.
+        val sleepNeed = sleepScore?.sleepNeeded
+        val sleepNeedMillis = sleepNeed?.baselineMilli
+        val sleepDebtMillis = sleepNeed?.needFromSleepDebtMilli
         return BiomarkerSnapshotEntity(
             id = "cycle-${cycle.id}",
             capturedAt = capturedAt,
@@ -133,6 +137,15 @@ class WhoopRepository @Inject constructor(
             dayStrain = cycle.score?.strain,
             dayKilojoules = cycle.score?.kilojoule,
             createdAt = System.currentTimeMillis(),
+            respiratoryRate = sleepScore?.respiratoryRate,
+            sleepConsistencyPercent = sleepScore?.sleepConsistencyPercentage?.toInt(),
+            sleepEfficiencyPercent = sleepScore?.sleepEfficiencyPercentage?.toInt(),
+            sleepNeedMinutes = sleepNeedMillis?.let { (it / 60_000L).toInt() },
+            sleepDebtMinutes = sleepDebtMillis?.let { (it / 60_000L).toInt() },
+            spo2Percent = recoveryScore?.spo2Percentage,
+            skinTempCelsius = recoveryScore?.skinTempCelsius,
+            averageHeartRate = cycle.score?.averageHeartRate?.toInt(),
+            maxHeartRate = cycle.score?.maxHeartRate?.toInt(),
         )
     }
 

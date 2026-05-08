@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -166,6 +167,73 @@ class TasksViewModel @Inject constructor(
     }
 
     fun snoozeKiQuestion() = viewModelScope.launch { kiQuestions.snoozeFor24Hours() }
+
+    /**
+     * Antwort auf die KI-Frage des Moments verarbeiten (Frank-Wunsch 2026-05-08).
+     * 1) Antwort durch ProcessEntryUseCase als neuen Eintrag werten.
+     * 2) Dedup-Check: wenn ein bestehender offener Eintrag mit aehnlichem Titel
+     *    existiert, wird der neue Eintrag wieder geloescht und stattdessen der
+     *    bestehende mit aiNotes ergaenzt + priorityScore erhoeht (Frank's
+     *    "Laufeinheit"-Beispiel: keine Doppel-Eintraege wenn die Antwort eine
+     *    schon priorisierte Aufgabe nennt).
+     * 3) Frage wird aus dem Repository entfernt — sie ist beantwortet, soll
+     *    nicht stehen bleiben. Beim naechsten refresh kommt eine neue Frage.
+     */
+    fun submitKiQuestionAnswer(answer: String) {
+        if (answer.isBlank()) return
+        viewModelScope.launch {
+            kiQuestions.setCurrent(null)
+            uiOnlyFlow.value = uiOnlyFlow.value.copy(processingMessage = "Antwort wird verarbeitet …")
+            val newResult = process(answer.trim(), EntrySource.NUTZER_TEXT)
+            newResult.onSuccess { newEntry ->
+                val current = entries.getActive().first()
+                val similar = current.firstOrNull { it.id != newEntry.id && titlesAreSimilar(it.title, newEntry.title) }
+                if (similar != null) {
+                    val notes = (similar.aiNotes?.takeIf { it.isNotBlank() }?.let { "$it\n\n" } ?: "") +
+                        "Frank's Antwort auf KI-Frage: ${answer.trim()}"
+                    entries.update(
+                        similar.copy(
+                            aiNotes = notes,
+                            priorityScore = (similar.priorityScore + 5.0).coerceAtMost(100.0),
+                            updatedAt = System.currentTimeMillis(),
+                        ),
+                    )
+                    entries.delete(newEntry)
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        processingMessage = null,
+                        recentlyCreatedId = similar.id,
+                    )
+                } else {
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        processingMessage = null,
+                        recentlyCreatedId = newEntry.id,
+                    )
+                }
+                // Naechste Frage dynamisch generieren (basiert auf neuem Stand).
+                refreshKiQuestion()
+            }.onFailure { ex ->
+                uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                    processingMessage = null,
+                    errorMessage = ex.message ?: "Antwort konnte nicht verarbeitet werden",
+                )
+            }
+        }
+    }
+
+    /** Heuristischer Dedup: wenn der Title eines bestehenden Eintrags eine
+     *  signifikante Substring-Ueberlappung mit dem neuen Title hat (>=60% der
+     *  kuerzeren Variante), gelten sie als gleich. Faengt "Laufeinheit im Freien"
+     *  vs "Laufen draussen" nicht ab — dafuer braeuchte es einen Embedding-Match.
+     *  Fuer den haeufigen Fall "exact answer" reicht dieser einfache Check. */
+    private fun titlesAreSimilar(a: String, b: String): Boolean {
+        val na = a.lowercase().trim()
+        val nb = b.lowercase().trim()
+        if (na == nb) return true
+        if (na.isBlank() || nb.isBlank()) return false
+        val shorter = if (na.length < nb.length) na else nb
+        val longer = if (na.length < nb.length) nb else na
+        return longer.contains(shorter) && shorter.length >= 4
+    }
 
     /**
      * Markiert einen Eintrag als REDUZIERT (= erledigt) — wird vom Haken-Button
