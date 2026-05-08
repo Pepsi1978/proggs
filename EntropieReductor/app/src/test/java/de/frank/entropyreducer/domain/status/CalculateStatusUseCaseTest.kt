@@ -31,15 +31,21 @@ class CalculateStatusUseCaseTest {
     }
 
     @Test fun `Volle Severity reduziert tasksScore auf null`() {
-        val entries = listOf(
-            entry(severity = 10, status = EntryStatus.OFFEN),
-            entry(severity = 10, status = EntryStatus.OFFEN),
-            entry(severity = 10, status = EntryStatus.OFFEN),
-            entry(severity = 10, status = EntryStatus.OFFEN),
-            entry(severity = 10, status = EntryStatus.OFFEN),
-        )
+        // Skala 2026-05-09: 100 Punkte Severity = 0%. Also 10 Eintraege x severity 10.
+        val entries = (1..10).map { entry(severity = 10, status = EntryStatus.OFFEN) }
         val result = useCase.calculate(entries, null, emptyList(), null)
         assertThat(result.tasksScore).isEqualTo(0)
+    }
+
+    @Test fun `Heute reduzierter Eintrag erhoeht tasksScore direkt`() {
+        // Mit neuer Skala (Frank-Reklamation 2026-05-09): jeder heute reduzierte
+        // Eintrag bringt +5 pro Severity-Punkt direkt ins tasksScore. Bei 5 OFFEN
+        // x severity 10 = Last 50 -> baseScore 50. Plus 1 reduzierter mit
+        // severity 10 = Bonus 50. Total 100 (geclippt).
+        val open = (1..5).map { entry(severity = 10, status = EntryStatus.OFFEN) }
+        val resolved = entry(severity = 10, status = EntryStatus.REDUZIERT, resolvedAt = System.currentTimeMillis())
+        val result = useCase.calculate(open + resolved, null, emptyList(), null)
+        assertThat(result.tasksScore).isAtLeast(80)
     }
 
     @Test fun `Frei-Tag mit erledigten Aufgaben gibt Bonus`() {

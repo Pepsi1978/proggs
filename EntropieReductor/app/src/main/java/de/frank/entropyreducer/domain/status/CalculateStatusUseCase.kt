@@ -36,7 +36,7 @@ class CalculateStatusUseCase @Inject constructor() {
             it.status == EntryStatus.REDUZIERT && isToday(it.resolvedAt)
         }
 
-        val tasksScore = computeTasksScore(openEntries)
+        val tasksScore = computeTasksScore(openEntries, resolvedToday)
         val contextScore = computeContextScore(todayCalendar, openEntries, resolvedToday)
         val biomarkerScore = computeBiomarkerScore(latestSnapshot, recentSnapshots)
 
@@ -66,16 +66,25 @@ class CalculateStatusUseCase @Inject constructor() {
 
     /* ---------------------------- Komponenten ---------------------------- */
 
-    private fun computeTasksScore(openEntries: List<EntropyEntryEntity>): Double {
-        if (openEntries.isEmpty()) return 100.0
+    private fun computeTasksScore(
+        openEntries: List<EntropyEntryEntity>,
+        resolvedToday: List<EntropyEntryEntity>,
+    ): Double {
+        // Frank-Reklamation 2026-05-09: 'Wenn ich Aufgaben erledige, bleibt der
+        // Gesamtwert auf 0%. Reduzierungen muessen sichtbar ins Total einfliessen.'
+        // Loesung: (a) Skala vergroessert (100 Punkte Severity = 0% statt 50),
+        // sodass viele kleine Aufgaben nicht sofort auf Null clippen,
+        // (b) jeder heute reduzierte Eintrag bringt einen DIREKTEN Bonus von
+        // +5 pro Severity-Punkt — unabhaengig von der Restlast. Damit sieht
+        // Frank bei jeder erledigten Aufgabe wie der Score nach oben springt.
         val openOpen = openEntries.filter { it.status == EntryStatus.OFFEN }
         val inWork = openEntries.filter { it.status == EntryStatus.IN_ARBEIT }
         val sumOpen = openOpen.sumOf { it.severity.toDouble() }
         val sumInWork = inWork.sumOf { it.severity.toDouble() } * 0.5 // halbe Last
         val totalLoad = sumOpen + sumInWork
-        // 50 Punkte Severity = Status 0; Skala linear, gedeckelt.
-        val score = 100.0 - (totalLoad / 50.0 * 100.0)
-        return score.coerceIn(0.0, 100.0)
+        val reduceBonus = resolvedToday.sumOf { it.severity.toDouble() } * 5.0
+        val baseScore = 100.0 - (totalLoad / 100.0 * 100.0)
+        return (baseScore + reduceBonus).coerceIn(0.0, 100.0)
     }
 
     private fun computeBiomarkerScore(
@@ -117,7 +126,18 @@ class CalculateStatusUseCase @Inject constructor() {
             ShiftCode.NACHTDIENST -> 45.0
             ShiftCode.UNBEKANNT -> 50.0
         }
-        val resolvedBonus = (resolvedToday.size * 8.0).coerceAtMost(20.0)
+        // Frank-Wunsch 2026-05-09: 'Aufgaben mit starker Prioritaet beendet werden
+        // sollten den Zustand viel staerker verbessern.' Vorher gab jede erledigte
+        // Aufgabe flache 8 Punkte (Cap 20) — egal ob banal oder topprior. Jetzt
+        // priorityScore-gewichtet:
+        //   priorityScore=100  ->  12 Punkte pro Aufgabe (max-Hebel)
+        //   priorityScore=50   ->   6 Punkte
+        //   priorityScore=20   ->   2.4 Punkte
+        // Cap auf 30 (vorher 20) damit drei Top-Prio-Aufgaben den Bonus voll
+        // ausschoepfen koennen.
+        val resolvedBonus = resolvedToday
+            .sumOf { (it.priorityScore / 100.0) * 12.0 }
+            .coerceAtMost(30.0)
         // Wenn an Frei-Tag noch viele Umgebungs-Eintraege offen sind, -15 Punkte.
         val unmatchedFrei = if (shift == ShiftCode.FREI) {
             openEntries.count { it.category.name == "UMGEBUNG" } * -3.0
