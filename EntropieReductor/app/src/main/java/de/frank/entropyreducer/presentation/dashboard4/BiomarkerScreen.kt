@@ -756,26 +756,48 @@ private fun MetricHistoryCard(
                     valueFormatter = valueFormatter,
                 )
                 if (avgLabel != null && diffLabel != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Ø $avgLabel",
-                            color = cosmos.textSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "·",
-                            color = cosmos.textSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = diffLabel,
-                            color = diffColor,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    Spacer(Modifier.height(12.dp))
+                    // Frank-Wunsch 2026-05-09 (Praezisierung): eigener abgegrenzter
+                    // Sub-Bereich innerhalb der Card rechts unten — gleiche Schriftgroesse
+                    // wie der Header-Wert oben, mit eigenem Akzent-Hintergrund damit es
+                    // sich klar vom Chart abhebt. Werte rechtsbuendig, Avg in der
+                    // Akzentfarbe der Card (anders als die graue Skalazahl der Y-Achse),
+                    // Diff in Gruen (positiv) oder Rot (negativ).
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accent.copy(alpha = 0.10f))
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.End,
+                        ) {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = "Ø",
+                                    color = cosmos.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(bottom = 2.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = avgLabel,
+                                    color = accent,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = diffLabel,
+                                color = diffColor,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }
