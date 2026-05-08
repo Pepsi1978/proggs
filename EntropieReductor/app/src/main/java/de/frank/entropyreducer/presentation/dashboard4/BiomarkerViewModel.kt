@@ -24,6 +24,7 @@ private data class StatusBundle(
     val lastWhoopSyncMs: Long,
 )
 
+@androidx.compose.runtime.Immutable
 data class BiomarkerUiState(
     val latest: BiomarkerSnapshotEntity? = null,
     /** VOLLSTAENDIGE Historie aller Whoop-Snapshots — nicht mehr auf 30 Tage limitiert

@@ -30,8 +30,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * State der Aufgaben-Ansicht.
+ * State der Aufgaben-Ansicht. @Immutable garantiert Compose dass equals()
+ * ausreichend ist — verhindert unnoetige Recompositions wenn der gleiche
+ * State-Wert erneut uebergeben wird (Frank-Wunsch 2026-05-09 Performance).
  */
+@androidx.compose.runtime.Immutable
 data class TasksUiState(
     val entriesByBucket: Map<TimeBucket, List<EntropyEntryEntity>> = emptyMap(),
     val activeCategories: Set<EntropyCategory> = emptySet(),

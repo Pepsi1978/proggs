@@ -36,6 +36,7 @@ enum class TrendRange(val days: Int, val label: String) {
     YEAR(365, "365 T"),
 }
 
+@androidx.compose.runtime.Immutable
 data class AnalysisUiState(
     val openCount: Int = 0,
     /** Eintraege mit priorityScore >= 80 — werden in der Big-Stat-Card als "kritisch" gezeigt. */

@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+@androidx.compose.runtime.Immutable
 data class ScientistUiState(
     val sessions: List<ScientistSessionEntity> = emptyList(),
     val currentSessionId: String? = null,
