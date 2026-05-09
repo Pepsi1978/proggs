@@ -108,17 +108,35 @@ public partial class PromptBoardPanel : Window
 
     /// <summary>
     /// Einzige PromptHistoryService-Instanz im Panel — teilt sich denselben
-    /// Pfad wie das OverlayWindow (LocalAppData\PromptBoard\history\), so
-    /// dass jeder Append vom Submit-Pfad sofort durch ein Re-Render hier
-    /// sichtbar wird.
+    /// Pfad UND denselben SemaphoreSlim-Lock wie das OverlayWindow ueber
+    /// den process-weiten VoiceServiceProvider. Frueher hatten beide
+    /// Klassen jeweils ein new() und damit getrennte Locks; bei sehr
+    /// schnellem Submit + Re-Render konnten parallele File.Move-Aufrufe
+    /// auf der prompt-history.tmp-Datei kollidieren. Mit einem einzigen
+    /// Service ist die Schreib-Lese-Sequenz garantiert serialisiert.
     /// </summary>
-    private readonly PromptHistoryService _historyService = new();
+    private readonly PromptHistoryService _historyService = VoiceServiceProvider.History;
 
     // ── Right-click panel drag state ──
     private bool _isDraggingPanel;
-    private System.Windows.Point _panelDragStartCursor;
+    // Cursor-Anker in absoluten Screen-Pixeln (Win32.GetCursorPos), NICHT
+    // ueber PointToScreen(e.GetPosition(this)). Der WPF-Pfad ist relativ
+    // zum Fenster-Origin — der Origin verschiebt sich aber waehrend des
+    // Drags, sodass der Anker laufend zerrissen wuerde und das Fenster
+    // dem Cursor mit wachsendem Versatz hinterherlaeuft. Mit absolutem
+    // Cursor-Anker (Win32) bleibt der Drag stabil.
+    private int _panelDragStartCursorX;
+    private int _panelDragStartCursorY;
     private double _panelDragStartLeft;
     private double _panelDragStartTop;
+    // DPI-Skalierungs-Faktoren beim Drag-Start. Win32.GetCursorPos liefert
+    // raw Geraetepixel; WPFs Window.Left/Top sind in DIPs. Bei 150% oder
+    // 200% Skalierung wuerde der Drag ohne Division zu schnell (Faktor 1.5
+    // bzw. 2). Erfassung beim Drag-Start damit ein DPI-Wechsel mitten im
+    // Drag (Cursor wandert ueber Monitor-Grenze) keine Sprungberechnung
+    // verursacht — der Fenster-Origin folgt immer dem Anker-Monitor.
+    private double _panelDragDpiX = 1.0;
+    private double _panelDragDpiY = 1.0;
 
     private List<Category> _categories = new();
     /// <summary>
@@ -280,10 +298,30 @@ public partial class PromptBoardPanel : Window
             if (hit is System.Windows.Controls.Button) return;  // any tab/button
             hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
         }
-        _isDraggingPanel        = true;
-        _panelDragStartCursor   = PointToScreen(e.GetPosition(this));
-        _panelDragStartLeft     = Left;
-        _panelDragStartTop      = Top;
+
+        // Anker in absoluten Screen-Pixeln nehmen — siehe Kommentar bei
+        // _panelDragStartCursorX. Wenn GetCursorPos fehlschlaegt (sehr
+        // selten, z.B. UAC-Wechsel mid-click), brechen wir den Drag
+        // sauber ab statt mit ungueltigen Werten weiterzumachen.
+        if (!Win32.GetCursorPos(out var startPt)) return;
+
+        _isDraggingPanel       = true;
+        _panelDragStartCursorX = startPt.X;
+        _panelDragStartCursorY = startPt.Y;
+        _panelDragStartLeft    = Left;
+        _panelDragStartTop     = Top;
+
+        // DPI-Skalierung des aktuellen Fensters einmalig erfassen.
+        // CompositionTarget kann theoretisch null sein bevor das Fenster
+        // gerendert wurde — Defensiv-Default 1.0 verhindert NaN-Werte
+        // im Drag. Dass sich der Faktor mid-Drag aendert (Cursor ueber
+        // Monitor-Grenze) ist OK: das Window folgt dem Anker-Monitor.
+        var src = PresentationSource.FromVisual(this);
+        _panelDragDpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+        _panelDragDpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+        if (_panelDragDpiX == 0) _panelDragDpiX = 1.0;
+        if (_panelDragDpiY == 0) _panelDragDpiY = 1.0;
+
         CaptureMouse();
         e.Handled = true;
     }
@@ -291,9 +329,14 @@ public partial class PromptBoardPanel : Window
     private void OnPanelMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
         if (!_isDraggingPanel) return;
-        var cur = PointToScreen(e.GetPosition(this));
-        Left = _panelDragStartLeft + (cur.X - _panelDragStartCursor.X);
-        Top  = _panelDragStartTop  + (cur.Y - _panelDragStartCursor.Y);
+        if (!Win32.GetCursorPos(out var cur)) return;
+
+        // Delta in Geraetepixeln durch DPI teilen — Result in DIPs, was
+        // Window.Left/Top erwartet. Gleicher Algorithmus wie im
+        // OverlayWindow.WndProc / WM_MOUSEMOVE.
+        Left = _panelDragStartLeft + (cur.X - _panelDragStartCursorX) / _panelDragDpiX;
+        Top  = _panelDragStartTop  + (cur.Y - _panelDragStartCursorY) / _panelDragDpiY;
+
         PanelDragged?.Invoke();
         _inputWindow?.FollowPanelDrag(this);
         _historyWindow?.FollowPanelDrag(this);

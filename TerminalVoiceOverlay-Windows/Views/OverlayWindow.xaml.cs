@@ -111,13 +111,14 @@ namespace TerminalVoiceOverlay.Views
         private IAlwaysOnPrefixService? _alwaysOnPrefix;
 
         /// <summary>
-        /// Service fuer die Prompt-Historie. Wird lazy beim ersten Submit
-        /// erzeugt — der Konstruktor legt nur die Ordnerstruktur an, kein
-        /// Netzwerk- oder DB-Zugriff. Die Historie ist eine reine JSON-Datei
-        /// in %LocalAppData%\PromptBoard\history\, also unabhaengig von
-        /// der Promptboard-SQLite-Datenbank.
+        /// Service fuer die Prompt-Historie — geteilte Instanz aus
+        /// VoiceServiceProvider, damit OverlayWindow und PromptBoardPanel
+        /// durch denselben SemaphoreSlim-Lock gehen wenn sie parallel
+        /// schreiben (Submit-Append) und lesen (ReloadHistory). Frueher
+        /// hatte jede Klasse ihren eigenen Service mit eigenem Lock —
+        /// File-Race war moeglich beim sehr schnellen Submit + Re-Render-Zyklus.
         /// </summary>
-        private readonly PromptHistoryService _historyService = new();
+        private readonly PromptHistoryService _historyService = VoiceServiceProvider.History;
 
         /// <summary>
         /// Drive-Sync der Historie. Lazy initialisiert — beim ersten Submit
