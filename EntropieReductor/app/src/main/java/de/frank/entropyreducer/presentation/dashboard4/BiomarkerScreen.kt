@@ -452,8 +452,14 @@ fun BiomarkerHostScreen(
                     lowerIsBetter = true,
                 )
             }
-            // Sport-Bereich — Frank-Wunsch 2026-05-09: alles was mit Sport zu tun
-            // hat in einem eigenen Bereich, mit T-Rex-3-Vermerk im Header.
+            // Sport-Bereich — Frank-Wunsch 2026-05-09: HERO-Card fuer letzten
+            // Lauf separat oberhalb der Trainings-Liste, nicht eingebettet.
+            item {
+                AmazfitLastTrainingHeroCard(
+                    workouts = state.amazfitWorkouts,
+                    onOpenDetail = onOpenTrainingDetail,
+                )
+            }
             item {
                 AmazfitTrainingsCard(
                     workouts = state.amazfitWorkouts,

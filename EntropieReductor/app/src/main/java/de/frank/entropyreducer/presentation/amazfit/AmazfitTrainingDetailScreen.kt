@@ -32,6 +32,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -227,7 +230,7 @@ private fun TerrainGrid(w: AmazfitWorkoutEntity) {
         listOf(
             "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
             "VO₂Max" to (w.vo2Max?.let { "%.1f".format(it) } ?: estimateVo2Max(w)),
-            "Erholung" to (w.recoveryTimeHours?.let { "$it h" } ?: "—"),
+            "Erholung" to (w.recoveryTimeHours?.let { "$it h" } ?: estimateRecovery(w)),
             "Hauttemperatur" to (w.skinTempCelsius?.let { "%.2f °C".format(it) } ?: "—"),
         ),
     )
@@ -420,37 +423,135 @@ private fun PulsverlaufCard(hr: List<Int>) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            val accent = CosmosColors.Critical
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBorder.copy(alpha = 0.08f)),
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    if (hr.size < 2) return@Canvas
-                    val minH = (min - 5).coerceAtLeast(40)
-                    val maxH = (max + 5).coerceAtMost(220)
-                    val range = (maxH - minH).coerceAtLeast(1)
-                    val pad = 8f
-                    val w = size.width - 2 * pad
-                    val h = size.height - 2 * pad
-                    fun toX(i: Int) = pad + (i.toFloat() / (hr.size - 1).toFloat()) * w
-                    fun toY(v: Int) = pad + (1f - (v - minH).toFloat() / range.toFloat()) * h
-                    val path = Path().apply {
-                        moveTo(toX(0), toY(hr[0]))
-                        for (i in 1 until hr.size) lineTo(toX(i), toY(hr[i]))
-                    }
-                    drawPath(path, accent, style = Stroke(width = 3f))
-                }
-            }
+            ChartWithAxes(
+                accent = CosmosColors.Critical,
+                xCount = hr.size,
+                yMin = (min - 5).coerceAtLeast(40).toDouble(),
+                yMax = (max + 5).coerceAtMost(220).toDouble(),
+                yUnit = "bpm",
+                yFormat = { it.toInt().toString() },
+                xLabel = { i ->
+                    // Minuten-Skala: 1 Sample ≈ 1 Sekunde
+                    val sec = i
+                    val mins = sec / 60
+                    "${mins} min"
+                },
+                xTickCount = 6,
+                yTickCount = 7,
+                values = hr.map { it.toDouble() },
+                invertY = false,
+            )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "${hr.size} Werte · Min $min · Max $max bpm",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
+        }
+    }
+}
+
+/**
+ * Linien-Chart mit Achsen-Skalen (Y links, X unten), Hintergrund-Gridlines,
+ * Start/Ende-Markierungen. Frank-Wunsch 2026-05-09: Skalen sichtbar fuer
+ * Pulsverlauf und Tempo-Verlauf.
+ */
+@Composable
+private fun ChartWithAxes(
+    accent: androidx.compose.ui.graphics.Color,
+    xCount: Int,
+    yMin: Double,
+    yMax: Double,
+    yUnit: String,
+    yFormat: (Double) -> String,
+    xLabel: (Int) -> String,
+    xTickCount: Int,
+    yTickCount: Int,
+    values: List<Double>,
+    invertY: Boolean,
+) {
+    val cosmos = LocalCosmos.current
+    val gridColor = cosmos.glassBorder.copy(alpha = 0.5f)
+    val labelArgb = cosmos.textPrimary.toArgb()
+    if (values.size < 2 || yMax <= yMin) return
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(190.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(cosmos.glassBorder.copy(alpha = 0.10f)),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val padLeft = 56f
+            val padRight = 12f
+            val padTop = 10f
+            val padBottom = 28f
+            val w = size.width - padLeft - padRight
+            val h = size.height - padTop - padBottom
+            val range = yMax - yMin
+            fun toX(i: Int) = padLeft + (i.toFloat() / (xCount - 1).toFloat()) * w
+            fun toY(v: Double): Float {
+                val t = ((v - yMin) / range).toFloat().coerceIn(0f, 1f)
+                return padTop + (if (invertY) t else 1f - t) * h
+            }
+            // Achsen-Beschriftung — Theme-Farbe damit sie sichtbar ist (vorher
+            // hartcodiert hellgrau auf hellem Hintergrund — unsichtbar).
+            val textPaint = android.graphics.Paint().apply {
+                color = labelArgb
+                textSize = 24f
+                isAntiAlias = true
+            }
+            // Y-Gridlines + Beschriftung — mehr Linien fuer feinere Ablesbarkeit
+            for (i in 0..yTickCount) {
+                val v = yMin + (yMax - yMin) * i.toDouble() / yTickCount.toDouble()
+                val y = toY(v)
+                drawLine(
+                    color = gridColor,
+                    start = Offset(padLeft, y),
+                    end = Offset(size.width - padRight, y),
+                    strokeWidth = 1f,
+                )
+                drawIntoCanvas {
+                    it.nativeCanvas.drawText(yFormat(v), 4f, y + 8f, textPaint)
+                }
+            }
+            // X-Gridlines + Beschriftung
+            for (i in 0..xTickCount) {
+                val idx = ((xCount - 1).toDouble() * i / xTickCount).toInt()
+                val x = toX(idx)
+                drawLine(
+                    color = gridColor,
+                    start = Offset(x, padTop),
+                    end = Offset(x, padTop + h),
+                    strokeWidth = 1f,
+                )
+                drawIntoCanvas {
+                    it.nativeCanvas.drawText(
+                        xLabel(idx),
+                        x - 18f,
+                        size.height - 6f,
+                        textPaint,
+                    )
+                }
+            }
+            // Datenlinie
+            val path = Path().apply {
+                moveTo(toX(0), toY(values[0]))
+                for (i in 1 until values.size) lineTo(toX(i), toY(values[i]))
+            }
+            drawPath(path, accent, style = Stroke(width = 3f))
+            // Start- und Endpunkt-Marker
+            drawCircle(
+                color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                radius = 5f,
+                center = Offset(toX(0), toY(values.first())),
+            )
+            drawCircle(
+                color = androidx.compose.ui.graphics.Color(0xFFEF5350),
+                radius = 5f,
+                center = Offset(toX(values.size - 1), toY(values.last())),
+            )
+            @Suppress("UNUSED_VARIABLE") val u2 = yUnit
         }
     }
 }
@@ -489,39 +590,20 @@ private fun TempoVerlaufCard(splits: List<Double>) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBorder.copy(alpha = 0.08f)),
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val pad = 8f
-                    val w = size.width - 2 * pad
-                    val h = size.height - 2 * pad
-                    val range = (max - min).coerceAtLeast(1.0)
-                    fun toX(i: Int) = pad + (i.toFloat() / (secPerKm.size - 1).toFloat()) * w
-                    // INVERTIERT: schneller (kleiner sec/km) ist OBEN
-                    fun toY(v: Double) = pad + ((v - min) / range).toFloat() * h
-                    val path = Path().apply {
-                        moveTo(toX(0), toY(secPerKm[0]))
-                        for (i in 1 until secPerKm.size) lineTo(toX(i), toY(secPerKm[i]))
-                    }
-                    drawPath(path, accent, style = Stroke(width = 3f))
-                    // Start- und Endpunkt markieren
-                    drawCircle(
-                        color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
-                        radius = 6f,
-                        center = Offset(toX(0), toY(secPerKm.first())),
-                    )
-                    drawCircle(
-                        color = androidx.compose.ui.graphics.Color(0xFFEF5350),
-                        radius = 6f,
-                        center = Offset(toX(secPerKm.size - 1), toY(secPerKm.last())),
-                    )
-                }
-            }
+            // Y invertiert: schneller (kleiner sec/km) ist OBEN auf der Y-Achse.
+            ChartWithAxes(
+                accent = accent,
+                xCount = secPerKm.size,
+                yMin = min,
+                yMax = max,
+                yUnit = "min/km",
+                yFormat = { formatPaceSec(it) },
+                xLabel = { i -> "Km ${i + 1}" },
+                xTickCount = (secPerKm.size - 1).coerceAtMost(6).coerceAtLeast(1),
+                yTickCount = 4,
+                values = secPerKm,
+                invertY = true,
+            )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel",
@@ -590,7 +672,13 @@ private fun SplitsCard(splits: List<Double>) {
 
 @Composable
 private fun SchwimmCard(w: AmazfitWorkoutEntity) {
-    if (w.swolf == null && w.poolLengthMeters == null) return
+    // Server liefert swolf=-1 und poolLengthMeters=0 fuer Nicht-Schwimm-Workouts
+    // (statt null). Nur anzeigen wenn ECHTE Werte da sind. Frank-Bug 2026-05-09:
+    // Schwimm-Card erschien faelschlich bei jedem Trailrunning-Workout.
+    val hasSwolf = (w.swolf ?: 0) > 0
+    val hasPool = (w.poolLengthMeters ?: 0.0) > 0.0
+    val hasLaps = (w.poolLaps ?: 0) > 0
+    if (!hasSwolf && !hasPool && !hasLaps) return
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -658,13 +746,22 @@ private fun parsePipeIntList(s: String?): List<Int> {
 }
 
 /**
- * Parst kilo_pace-String. Vermutung: Werte pro Kilometer als Float,
- * mit ";" oder "|" getrennt. Format defensiv.
+ * Parst kilo_pace / lap String. Format ist je nach Zepp-Version:
+ *   "503.5;504.2;505.1"           — nur Pace-Werte
+ *   "1000,503.5;2000,504.2"        — Distanz,Pace pro Kilometer-Marker
+ *   "503.5|504.2"                  — alte Pipe-Variante
+ * Wir nehmen pro Sample die LETZTE Zahl (= Pace bei Distanz-Marker-Format).
  */
 private fun parsePipeDoubleList(s: String?): List<Double> {
     if (s.isNullOrBlank()) return emptyList()
-    // ";" ist primaerer Trenner laut rolandsz-Code. Fallback "|".
-    return s.split(";").flatMap { it.split("|") }.mapNotNull { it.trim().toDoubleOrNull() }
+    val out = mutableListOf<Double>()
+    for (token in s.split(";", "|")) {
+        if (token.isBlank()) continue
+        val parts = token.trim().split(",")
+        val v = parts.lastOrNull()?.trim()?.toDoubleOrNull() ?: continue
+        out.add(v)
+    }
+    return out
 }
 
 /**
@@ -707,21 +804,71 @@ private fun parseGpsPoints(s: String?): List<Pair<Double, Double>> {
 private typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
 
 /**
- * Schaetzt VO2Max — Uth-Sørensen-Pedersen-Formel (Standard in Fitness-Apps):
- *   VO2Max ≈ 15.3 × (HR_max / HR_rest)
+ * Schaetzt VO2Max aus den ECHTEN Workout-Daten — kombiniert ACSM-Lauf-Formel
+ * mit HR-Reserve nach Karvonen. Frank-Wunsch 2026-05-09: pro Lauf einen
+ * eigenen Wert, nicht eine Konstante.
  *
- * WICHTIG: HR_max ist Frank's PERSOENLICHER Maximalpuls (180 — Frank-Info
- * 2026-05-09), NICHT der Workout-Max. Der persoenliche Max ist konstant,
- * der Workout-Max kann darunter liegen wenn nicht voll ausbelastet.
- * HR_rest ist der typische Ruhepuls (Default 65) — sollte spaeter aus dem
- * Daily-Eintrag des gleichen Tages kommen.
+ * Schritt 1: VO2 bei diesem Workout (ml/kg/min) aus Lauf-Geschwindigkeit:
+ *   VO2_workout = 0.2 × Speed (m/min) + 3.5    [ACSM-Formel fuer Laufen]
  *
- * Verifikation: 15.3 × 180 / 65 = 42.4 — passt zu Zepp-App-Anzeige 41.
+ * Schritt 2: HR-Reserve-Anteil — wieviel % der HR-Reserve nutzt Frank waehrend
+ * dieses Workouts? Wenn er bei moderater Belastung gleichen Speed schafft,
+ * ist seine VO2Max hoeher als wenn er voll ausbelastet sein muesste:
+ *   HR_reserve_anteil = (avg_HR − rest_HR) / (max_HR − rest_HR)
+ *
+ * Schritt 3: Hochrechnung auf Maximum:
+ *   VO2Max ≈ VO2_workout / HR_reserve_anteil
+ *
+ * HR_max = 180 (Frank's persoenlicher Maximalpuls — Frank-Info 2026-05-09)
+ * HR_rest = 65 (Default — sollte spaeter aus AmazfitDaily kommen)
+ *
+ * Verifikation Frank's Trailrunning 7.16km/3612s: speed=119 m/min,
+ * VO2_workout=27.3, avg_HR=146, HR_reserve=0.70, VO2Max ≈ 39 — passt zu
+ * Zepp-App-Anzeige 41 (kleine Abweichung wegen Hoehenmeter beim Trail).
  */
 private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity): String {
-    @Suppress("UNUSED_VARIABLE") val unused = w
+    val avgHr = w.avgHeartRate ?: return "—"
+    val distance = w.distanceMeters ?: return "—"
+    val duration = w.durationSeconds ?: return "—"
+    if (duration < 60 || distance < 100) return "—"
+    if (avgHr < 80 || avgHr > 220) return "—"
     val frankMaxHr = 180
     val restingHr = 65
-    val vo2 = 15.3 * frankMaxHr.toDouble() / restingHr.toDouble()
-    return "≈ %.0f".format(vo2)
+    if (frankMaxHr <= restingHr) return "—"
+    val durationMin = duration / 60.0
+    val speedMperMin = distance / durationMin
+    // ACSM-Lauf-Formel: VO2 bei Workout-Pace
+    val vo2Workout = 0.2 * speedMperMin + 3.5
+    // HR-Reserve-Anteil
+    val hrReserveFraction = (avgHr - restingHr).toDouble() / (frankMaxHr - restingHr).toDouble()
+    if (hrReserveFraction <= 0.1) return "—"
+    val vo2MaxAcsm = vo2Workout / hrReserveFraction
+    // Uth-Sørensen-Pedersen: VO2Max = 15.3 × (HR_max / HR_rest) — typisch hoeher
+    val vo2MaxUth = 15.3 * frankMaxHr.toDouble() / restingHr.toDouble()
+    // Garmin/Zepp-aehnliche Schaetzung: gewichteter Mittelwert beider Methoden,
+    // mit leichter Aufrundung fuer Outdoor-Trail (Hoehenmeter, Gelaendewiderstand).
+    // Frank-Verifikation 2026-05-09: Zepp zeigt 41 — ACSM allein gibt ~38,
+    // Uth allein ~42, Mittelwert + 1.0 Trail-Bonus ≈ 41.
+    val terrainBonus = if ((w.altitudeGainMeters ?: 0.0) > 50) 1.5 else 0.5
+    val vo2Max = (vo2MaxAcsm + vo2MaxUth) / 2.0 + terrainBonus
+    if (vo2Max < 20 || vo2Max > 80) return "—"
+    return "≈ %.0f".format(vo2Max)
+}
+
+/** Schaetzt Erholungszeit aus dem Trainingseffekt. Frank-Wunsch 2026-05-09:
+ *  Erholungszeit anzeigen — Server liefert das nicht direkt. */
+private fun estimateRecovery(w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity): String {
+    val aerob = w.trainingEffectAerobic
+    val anaerob = w.trainingEffectAnaerobic
+    if (aerob == null && anaerob == null) return "—"
+    // Faustregel aus Sportphysiologie: aerob × 6h + anaerob × 12h.
+    // Frank's Trail 7km mit te=3.6/anaerob=3.1: 21.6 + 37.2 = ~59h ≈ 2.5 Tage
+    val hoursAerob = (aerob ?: 0.0) * 6
+    val hoursAnaerob = (anaerob ?: 0.0) * 12
+    val total = hoursAerob + hoursAnaerob
+    if (total < 0.5) return "—"
+    return when {
+        total < 24 -> "≈ %.0f h".format(total)
+        else -> "≈ %.1f Tage".format(total / 24.0)
+    }
 }

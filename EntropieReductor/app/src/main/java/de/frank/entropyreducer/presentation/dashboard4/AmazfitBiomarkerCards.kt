@@ -81,6 +81,21 @@ internal fun AmazfitSectionHeader() {
  * Liste mit Sportart-Symbol + Distanz + Zeit + Pace + Puls. Tap auf eine Zeile
  * fuehrt zum Detail-Screen, "Alle anzeigen" oeffnet die volle Trainings-Liste.
  */
+/**
+ * EIGENE Hero-Card fuer den letzten Lauf — Frank-Wunsch 2026-05-09: separate
+ * "Blase" oberhalb der Trainings-Liste, nicht IN der Trainings-Card.
+ */
+@Composable
+internal fun AmazfitLastTrainingHeroCard(
+    workouts: List<AmazfitWorkoutEntity>,
+    onOpenDetail: (String) -> Unit,
+) {
+    val latest = workouts.firstOrNull() ?: return
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        LetzterLaufHero(w = latest, onOpenDetail = { onOpenDetail(latest.trackId) })
+    }
+}
+
 @Composable
 internal fun AmazfitTrainingsCard(
     workouts: List<AmazfitWorkoutEntity>,
@@ -88,8 +103,8 @@ internal fun AmazfitTrainingsCard(
     onOpenDetail: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val recent = workouts.take(5)
-    val latest = workouts.firstOrNull()
+    // Letzten ueberspringen — der ist in der separaten Hero-Card.
+    val rest = workouts.drop(1).take(5)
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -109,7 +124,7 @@ internal fun AmazfitTrainingsCard(
                 }
                 Spacer(Modifier.size(10.dp))
                 Text(
-                    text = "Sport (T-Rex 3)",
+                    text = "Frühere Trainings (T-Rex 3)",
                     style = MaterialTheme.typography.titleMedium,
                     color = cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
@@ -132,31 +147,22 @@ internal fun AmazfitTrainingsCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
+            } else if (rest.isEmpty()) {
+                Text(
+                    text = "Bisher nur das eine Training oben.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
             } else {
-                // HERO: letztes Training prominent mit Pattern-Layout.
-                if (latest != null) {
-                    LetzterLaufHero(
-                        w = latest,
-                        onOpenDetail = { onOpenDetail(latest.trackId) },
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = "Frühere Trainings",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = cosmos.textSecondary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                }
-                // Restliche kleinere Zeilen — letzten überspringen weil schon im Hero.
-                recent.drop(1).forEachIndexed { i, w ->
+                rest.forEachIndexed { i, w ->
                     if (i > 0) Spacer(Modifier.height(8.dp))
                     AmazfitWorkoutRow(workout = w, onClick = { onOpenDetail(w.trackId) })
                 }
-                if (workouts.size > recent.size) {
+                val remaining = workouts.size - 1 - rest.size
+                if (remaining > 0) {
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = "+ ${workouts.size - recent.size} weitere Trainings",
+                        text = "+ $remaining weitere Trainings",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier
