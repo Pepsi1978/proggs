@@ -2783,8 +2783,17 @@ namespace TerminalVoiceOverlay.Views
                 return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
 
             int msg = wParam.ToInt32();
-            var data = Marshal.PtrToStructure<NativeMethods.Win32.KBDLLHOOKSTRUCT>(lParam);
-            uint vk = data.vkCode;
+            // KBDLLHOOKSTRUCT.vkCode liegt als erstes Feld auf Offset 0 und ist
+            // ein uint (4 Byte). Frueher: Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam) —
+            // marshaled die KOMPLETTE Struct (vkCode + scanCode + flags + time +
+            // dwExtraInfo = 5 Felder, ~20-24 Byte) selbst dann, wenn nur vkCode
+            // gelesen wird. Bei systemweitem Hot-Path (10-20 Hook-Calls/s waehrend
+            // normaler Tipp-Geschwindigkeit, 24/7 im Hintergrund) summiert sich
+            // das ueber den Tag zu zehntausenden unnoetiger Marshal-Operationen.
+            // Marshal.ReadInt32 liest direkt 4 Byte am Offset 0 — keine Struct-
+            // Initialisierung, kein Reflection-basierter Layout-Lookup. Cast zu
+            // uint ist binaer identisch (Two's-complement-Layout).
+            uint vk = (uint)Marshal.ReadInt32(lParam, 0);
 
             // ── Alt+F11: Explorer am Release-Bundle-Pfad oeffnen ──
             // Einfacher Shortcut, kein Push-to-Talk. Pro Tastendruck genau
