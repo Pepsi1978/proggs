@@ -75,19 +75,88 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
+        /// Generations-Zaehler fuer Clipboard-Restore. Jeder Paste-Zyklus
+        /// erhoeht den Zaehler atomar; der spaeter geplante Restore-Task
+        /// merkt sich seine Generation und prueft beim Ausfuehren ob die
+        /// noch aktuell ist. Ist sie es nicht (= ein zweiter Paste hat
+        /// das Clipboard inzwischen ueberschrieben), fasst der Restore
+        /// das Clipboard NICHT mehr an — sonst wuerde er den frischen
+        /// Text mit dem alten Inhalt ueberschreiben und die zweite
+        /// Aufnahme ginge verloren. Direktive-3-Resilienz: thread-safe
+        /// per Interlocked, kein Lock noetig, kein Risiko fuer Deadlock.
+        /// </summary>
+        private static long _clipboardGen;
+
+        /// <summary>
+        /// Versucht eine Clipboard-Operation auf dem UI-Thread bis zu
+        /// <paramref name="maxAttempts"/> mal mit kurzem Backoff. WPFs
+        /// Clipboard-API wirft <c>System.Runtime.InteropServices.COMException</c>
+        /// (HRESULT 0x800401D0 — CLIPBRD_E_CANT_OPEN) wenn ein anderer
+        /// Process gerade das Clipboard offen hat (z.B. Excel beim
+        /// Kopieren, Browser beim DragDrop, Antivirus-Scanner). Frueher
+        /// fiel die App in dem Fall mit unhandled Exception aus dem
+        /// async-void-Handler — der Watchdog restartete still. Jetzt
+        /// schlucken wir die Exception nach max. 5 Versuchen und schreiben
+        /// einen Fehler ins Console-Log; der Voice-Submit-Flow merkt zwar
+        /// dass nichts gepastet wurde (durch das null-Result), aber die
+        /// App stuerzt nicht ab.
+        /// </summary>
+        private static bool TryRunOnUiThread(Action action, int maxAttempts = 5)
+        {
+            var app = Application.Current;
+            if (app is null) return false; // Application is shutting down
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    app.Dispatcher.Invoke(action);
+                    return true;
+                }
+                catch (System.Runtime.InteropServices.COMException ex)
+                    when (attempt < maxAttempts)
+                {
+                    // Backoff: 30, 60, 120, 240 ms — typische Clipboard-
+                    // Locks (Excel-Copy, Browser-DragDrop) sind binnen
+                    // 100 ms wieder offen.
+                    Thread.Sleep(30 * (1 << (attempt - 1)));
+                    Console.WriteLine($"Clipboard busy (attempt {attempt}/{maxAttempts}): {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Clipboard operation failed: {ex.GetType().Name}: {ex.Message}");
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Pastes text into the terminal via Clipboard + Ctrl+V.
         /// Ensures the terminal window is focused first.
         /// </summary>
         public static void PasteText(string text, IntPtr terminalHwnd, bool autoEnter = false)
         {
-            // Save previous clipboard content
+            // Generation-ID fuer diesen Paste-Zyklus. Wenn ein folgender
+            // Paste den Zaehler erhoeht, weiss der Restore-Task dass er
+            // nichts mehr machen darf.
+            long myGen = System.Threading.Interlocked.Increment(ref _clipboardGen);
+
+            // Save previous clipboard content. Mit Retry-Wrapper: ein
+            // gerade laufender Excel-Copy o.ae. wuerde sonst die App
+            // ueber unhandled COMException zum Watchdog-Restart zwingen.
             string? previousClipboard = null;
-            Application.Current.Dispatcher.Invoke(() =>
+            bool clipboardSet = TryRunOnUiThread(() =>
             {
                 if (Clipboard.ContainsText())
                     previousClipboard = Clipboard.GetText();
                 Clipboard.SetText(text);
             });
+            if (!clipboardSet)
+            {
+                Console.WriteLine("PasteText: Clipboard.SetText fehlgeschlagen — Paste uebersprungen.");
+                return;
+            }
 
             // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
             BringToForeground(terminalHwnd);
@@ -103,13 +172,21 @@ namespace TerminalVoiceOverlay.Services
                 SendKey(VK_RETURN);
             }
 
-            // Restore previous clipboard after paste completes
+            // Restore previous clipboard after paste completes — aber NUR
+            // wenn unsere Generation noch aktuell ist. Sonst hat ein
+            // anderer Paste das Clipboard schon mit frischen Inhalten
+            // ueberschrieben und wir wuerden den ueberholen.
             if (previousClipboard != null)
             {
                 var prev = previousClipboard;
                 Task.Delay(500).ContinueWith(_ =>
                 {
-                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(prev));
+                    if (System.Threading.Interlocked.Read(ref _clipboardGen) != myGen)
+                    {
+                        Console.WriteLine("Clipboard restore skipped — newer paste in flight.");
+                        return;
+                    }
+                    TryRunOnUiThread(() => Clipboard.SetText(prev));
                 });
             }
         }

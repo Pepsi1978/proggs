@@ -7,6 +7,14 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Per-Monitor DPI Awareness V2: bei aktivem UseWindowsForms muss
+         die High-DPI-Konfiguration ueber diese csproj-Property laufen, NICHT
+         ueber den Manifest-Block <dpiAwareness>. Sonst meldet der Compiler
+         WFAC010. WPF-Windows in derselben Application erben den Modus
+         automatisch ueber den Process-DPI-Awareness-Aufruf den der
+         WinForms-Startup-Pfad in App.OnStartup vor dem ersten WPF-Window
+         absetzt. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>TerminalVoiceOverlay</RootNamespace>
     <AssemblyName>TerminalVoiceOverlay</AssemblyName>
     <Product>Spracheingabe - Terminal</Product>

@@ -254,8 +254,23 @@ namespace TerminalVoiceOverlay.Views
         // Alt+F11 Explorer-Shortcut: Auto-Repeat-Schutz, damit pro Tastendruck
         // nur EIN Explorer-Fenster aufgeht — auch wenn Windows DOWN-Events mehrfach feuert.
         private bool _altF11Down = false;
-        private const string ReleaseBundleFolder =
-            @"C:\Users\barwa\proggs\BestJournalAndroid\app\build\outputs\bundle\release";
+        // Konfigurierbar via Umgebungsvariable TVO_RELEASE_BUNDLE_FOLDER —
+        // sonst Fallback auf den Standard-Pfad relativ zum User-Profile.
+        // Frueher hardcoded auf C:\Users\barwa\... — funktionierte nur fuer
+        // Frank, jeder andere Tester sah "Pfad nicht gefunden". Defensiv:
+        // Environment.GetEnvironmentVariable kann null liefern, wir nutzen
+        // string.IsNullOrWhiteSpace plus den abgeleiteten Default.
+        private static string ReleaseBundleFolder
+        {
+            get
+            {
+                var env = Environment.GetEnvironmentVariable("TVO_RELEASE_BUNDLE_FOLDER");
+                if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                return System.IO.Path.Combine(home,
+                    "proggs", "BestJournalAndroid", "app", "build", "outputs", "bundle", "release");
+            }
+        }
 
         // Alt+F12 Toggle (PRIMAERER PTT-Hotkey, gemappt auf G-HUB G5):
         // G-HUB unterstuetzt KEIN echtes Press/Release — alle Modi (Tap, Wiederholen
@@ -745,6 +760,16 @@ namespace TerminalVoiceOverlay.Views
         //   bevor das naechste 10ms-Delay startet — keine Ueberlappung moeglich
         // - Loslassen oder vom Button wegbewegen: Schleife stoppt sofort via CancellationToken
         private System.Threading.CancellationTokenSource? _xRepeatCts;
+        // Lock fuer Cancel/Dispose/Reassign-Race. Frueher konnte ein
+        // schneller Doppel-Klick die Sequenz "Cancel(), Dispose(), null,
+        // new()" zerschiessen wenn beide MouseDown-Handler im Mikrosekunden-
+        // Abstand feuerten — Ergebnis war eine ObjectDisposedException auf
+        // der Token-Property im Worst Case. Mit Lock laeuft jeder Klick
+        // serialisiert durch den kritischen Abschnitt. Direktive-3-
+        // Resilienz: Lock ist nur waehrend der CTS-Manipulation gehalten,
+        // der Background-Loop laeuft danach lockfrei mit dem captured
+        // Token weiter — kein Deadlock-Risiko.
+        private readonly object _xRepeatLock = new();
         private bool _xResetScheduled;      // verhindert mehrfaches Faerbe-Reset
 
         private void XButton_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -759,10 +784,20 @@ namespace TerminalVoiceOverlay.Views
             // minimal bewegt und WPF den Hover-State verliert.
             XButton.CaptureMouse();
 
-            // Vorherige Schleife sauber abbrechen, falls noch eine laeuft
-            _xRepeatCts?.Cancel();
-            _xRepeatCts = new System.Threading.CancellationTokenSource();
-            var token = _xRepeatCts.Token;
+            // Vorherige Schleife sauber abbrechen, alte CTS disposen,
+            // neue erstellen — alles unter einem Lock damit zwei rasche
+            // Klicks sich nicht in die Quere kommen.
+            System.Threading.CancellationToken token;
+            lock (_xRepeatLock)
+            {
+                if (_xRepeatCts is { } prev)
+                {
+                    try { prev.Cancel(); } catch { /* race-safe */ }
+                    try { prev.Dispose(); } catch { /* race-safe */ }
+                }
+                _xRepeatCts = new System.Threading.CancellationTokenSource();
+                token = _xRepeatCts.Token;
+            }
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
             hasPastedText = false;
 
@@ -799,8 +834,21 @@ namespace TerminalVoiceOverlay.Views
 
         private void StopXRepeat()
         {
-            _xRepeatCts?.Cancel();
-            _xRepeatCts = null;
+            // Cancel + Dispose unter dem gleichen Lock wie der Start-Pfad,
+            // damit ein zwischenzeitlicher Re-Start (zweiter MouseDown
+            // bevor StopXRepeat fertig ist) nicht eine bereits disposte
+            // CTS faengt. _xRepeatCts wird nach Cancel SOFORT genullt —
+            // der Background-Loop arbeitet mit seinem captured Token
+            // weiter, der von Cancel auf "cancellation requested" steht.
+            lock (_xRepeatLock)
+            {
+                if (_xRepeatCts is { } cts)
+                {
+                    try { cts.Cancel(); } catch { /* race-safe */ }
+                    try { cts.Dispose(); } catch { /* race-safe */ }
+                }
+                _xRepeatCts = null;
+            }
 
             // Nach kurzer Verzoegerung visueller Reset auf Rot
             if (_xResetScheduled) return;
@@ -808,11 +856,25 @@ namespace TerminalVoiceOverlay.Views
             _ = Task.Run(async () =>
             {
                 await Task.Delay(500);
-                Dispatcher.Invoke(() =>
+                // Defensiv: das Window kann inzwischen geschlossen sein
+                // (z.B. Tray-Beenden waehrend eines X-Klick-Restzustands).
+                // Ohne Pruefung wirft Dispatcher.Invoke nach Close eine
+                // TaskCanceledException → unhandled in unobservable Task.
+                try
                 {
-                    XButton.Background = BtnX;
-                    _xResetScheduled = false;
-                });
+                    if (Application.Current is { } app)
+                    {
+                        await app.Dispatcher.InvokeAsync(() =>
+                        {
+                            XButton.Background = BtnX;
+                            _xResetScheduled = false;
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"X-reset dispatch failed (window closed?): {ex.Message}");
+                }
             });
         }
 
@@ -1968,6 +2030,13 @@ namespace TerminalVoiceOverlay.Views
         /// fuer den Tipp-Flow. Bei Erfolg sehen Mac und Windows den
         /// neuesten Eintrag beim naechsten Start.
         /// </summary>
+        // Pro Session nur EINE Tray-Notification fuer Drive-Sync-Fehler —
+        // sonst wuerde Frank pro Voice-Submit eine neue Balloon sehen,
+        // was massiv stoert. Der Counter wird beim ersten erfolgreichen
+        // Sync zurueckgesetzt damit nach einem manuellen Re-Connect die
+        // naechste Token-Expiry wieder einmal angezeigt werden kann.
+        private static bool _driveSyncWarningShown;
+
         private async Task TryUploadHistoryAsync()
         {
             try
@@ -1980,6 +2049,9 @@ namespace TerminalVoiceOverlay.Views
                 }
                 await sync.UploadHistoryAsync(_historyService.HistoryFilePath);
                 LogHistorySync("OK: prompt-history.json uploaded to Drive.");
+                // Erfolgreich → Warnung zuruecksetzen damit ein zukuenftiger
+                // erneuter Token-Verlust wieder gemeldet wird.
+                _driveSyncWarningShown = false;
                 // Den sichtbaren Sync-Timestamp im Promtboard-Header
                 // aktualisieren — der Label zeigt damit auch
                 // Historie-Sync-Aktivitaet, nicht nur Promtboard-Backup.
@@ -1988,7 +2060,51 @@ namespace TerminalVoiceOverlay.Views
             catch (Exception ex)
             {
                 LogHistorySync($"FAIL: {ex.GetType().Name}: {ex.Message}");
+
+                // Frueher: stille Schluck-Aktion — Frank merkte tagelang
+                // nicht dass die Cloud-Historie veraltete (siehe Vorfall
+                // 2026-05-08, "TokenResponseException: invalid_grant").
+                // Jetzt: bei klassischen Auth-Fehlern eine einmalige Tray-
+                // Balloon mit konkreter Handlungsaufforderung. Nur einmal
+                // pro Session, sonst poppt es bei jedem Voice-Submit auf.
+                if (!_driveSyncWarningShown && IsDriveAuthFailure(ex))
+                {
+                    _driveSyncWarningShown = true;
+                    try
+                    {
+                        App.ShowTrayBalloon(
+                            "Drive-Sync nicht moeglich",
+                            "Der Google-Drive-Token ist abgelaufen oder widerrufen. Bitte im PromptBoard-Settings-Dialog (Stern-Button) neu verbinden, sonst werden Historie-Eintraege nicht mehr cloud-synchronisiert.",
+                            System.Windows.Forms.ToolTipIcon.Warning);
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        LogHistorySync($"FAIL: Tray-balloon failed: {notifyEx.Message}");
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// Erkennt typische Auth-Fehler die der Benutzer aktiv beheben
+        /// muss (Token widerrufen, abgelaufen, Client-ID falsch). Wir
+        /// pruefen am Typnamen statt an einer harten Type-Reference,
+        /// damit wir nicht von der Google-Apis-Library transitiv
+        /// abhaengen — Reflection-frei, kompakt, zukunftssicher gegen
+        /// Library-Updates die die Klasse umbenennen.
+        /// </summary>
+        private static bool IsDriveAuthFailure(Exception ex)
+        {
+            for (var current = ex; current is not null; current = current.InnerException)
+            {
+                string name = current.GetType().Name;
+                string msg = current.Message ?? string.Empty;
+                if (name.Contains("TokenResponseException", StringComparison.Ordinal)) return true;
+                if (msg.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase)) return true;
+                if (msg.Contains("Token has been expired", StringComparison.OrdinalIgnoreCase)) return true;
+                if (msg.Contains("revoked", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -2245,7 +2361,25 @@ namespace TerminalVoiceOverlay.Views
                 // Insert-Tooltip live aktualisieren: der Benutzer kann mit der
                 // Maus drueberfahren und sieht WELCHE Datei beim Insert eingefuegt
                 // wuerde. So merkt er auf einen Blick wenn der Pfad noch der alte ist.
-                InsertScreenshotButton.ToolTip = $"Letzten Screenshot einfügen: {filename}";
+                //
+                // Wichtig: WrapStringTooltips ersetzt die String-ToolTips im
+                // Constructor durch ToolTip-Objekte mit Position-Handler.
+                // Wuerden wir den ToolTip mit einem String UEBERSCHREIBEN,
+                // ginge die dynamische Positionierung fuer diesen Button
+                // verloren — der Tooltip wuerde wieder mitten ueberm Mic
+                // landen statt links neben dem Pillar. Stattdessen den
+                // Content des bestehenden ToolTip-Objekts updaten.
+                if (InsertScreenshotButton.ToolTip is System.Windows.Controls.ToolTip tt)
+                {
+                    tt.Content = $"Letzten Screenshot einfügen: {filename}";
+                }
+                else
+                {
+                    // Defensiver Fallback (sollte praktisch nie greifen,
+                    // weil WrapStringTooltips immer wrappt — aber falls
+                    // jemand spaeter den Tooltip in XAML loescht, kein Crash).
+                    InsertScreenshotButton.ToolTip = $"Letzten Screenshot einfügen: {filename}";
+                }
 
                 // Erfolgs-Flash: gruen 1.5 Sekunden, dann zurueck zu teal.
                 ScreenshotButton.Background = BtnSuccess;
@@ -2580,6 +2714,36 @@ namespace TerminalVoiceOverlay.Views
         }
 
         private IntPtr OnLowLevelKey(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            // KRITISCHER Hot-Path: dieser Callback wird systemweit auf
+            // JEDEN Tastendruck und -loslassen aufgerufen. Eine geworfene
+            // Exception wuerde Windows den Hook deinstallieren lassen —
+            // Frank merkt nur, dass PTT/Hotkeys plotzlich nicht mehr
+            // gehen, mit keinerlei Fehlermeldung. Der Top-Level-try/catch
+            // umschliesst den gesamten Body inkl. PtrToStructure (kann
+            // bei korruptem lParam werfen) und sorgt dafuer, dass im
+            // Worst Case der Tastendruck einfach durchgereicht wird statt
+            // dass der Hook stirbt. Direktive-3-Resilienz: kein Fix-
+            // induzierter Failure-Pfad — falls der Bug in nCode<0
+            // CallNextHookEx selbst liegt, faellt der catch-Pfad mit
+            // IntPtr.Zero zurueck und Windows nimmt das genauso an.
+            try
+            {
+                return OnLowLevelKeyImpl(nCode, wParam, lParam);
+            }
+            catch (Exception ex)
+            {
+                // Direkt loggen — wir sind nicht auf dem UI-Thread und
+                // duerfen keine Dispatcher-Operation (re-entrancy-Risiko
+                // bei Hook-Crash).
+                try { Console.WriteLine($"PTT hook crash (suppressed): {ex.GetType().Name}: {ex.Message}"); } catch { }
+                // Default: durchreichen damit die Tastatur funktioniert.
+                try { return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam); }
+                catch { return IntPtr.Zero; }
+            }
+        }
+
+        private IntPtr OnLowLevelKeyImpl(int nCode, IntPtr wParam, IntPtr lParam)
         {
             // nCode < 0 bedeutet "nicht verarbeiten, einfach weiterleiten"
             if (nCode < 0)
@@ -3086,6 +3250,23 @@ namespace TerminalVoiceOverlay.Views
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
             _hideDelayTimer.Stop();
+            _tooltipHoverTimer?.Stop();
+
+            // X-Repeat-Loop sauber stoppen falls er noch laeuft (z.B.
+            // Window-Close mitten waehrend Frank den X-Button haelt).
+            // Ohne diesen Cleanup wuerde der Background-Task weiter
+            // ClearLine ans Terminal schicken obwohl das Overlay schon
+            // weg ist. Lock fuer den Race mit StopXRepeat.
+            lock (_xRepeatLock)
+            {
+                if (_xRepeatCts is { } cts)
+                {
+                    try { cts.Cancel(); } catch { /* race-safe */ }
+                    try { cts.Dispose(); } catch { /* race-safe */ }
+                    _xRepeatCts = null;
+                }
+            }
+
             // Hook abbauen — sonst bleibt die DLL im Tastatur-Stack haengen
             // und alle Tastendruecke laufen weiter durch unseren Callback.
             if (_pttHookHandle != IntPtr.Zero)
@@ -3093,6 +3274,10 @@ namespace TerminalVoiceOverlay.Views
                 NativeMethods.Win32.UnhookWindowsHookEx(_pttHookHandle);
                 _pttHookHandle = IntPtr.Zero;
             }
+            // Delegate-Referenz freigeben damit die GC den Hook-Proc
+            // einsammeln kann sobald nichts mehr darauf zeigt.
+            _pttHookProc = null;
+
             _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _terminalWatcher.Dispose();
             _audioRecorder.Dispose();

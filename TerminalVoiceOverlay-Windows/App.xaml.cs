@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,9 +21,61 @@ namespace TerminalVoiceOverlay
         private NotifyIcon? _trayIcon;
         private OverlayWindow? _overlayWindow;
 
+        // Statische Instanz-Bruecke fuer App-uebergreifende Tray-
+        // Notifications. Notwendig weil _trayIcon privat ist und
+        // Aufrufer (z.B. OverlayWindow.TryUploadHistoryAsync) keinen
+        // direkten Zugriff haben. Wird im Constructor gesetzt — beim
+        // Watchdog-Mode bleibt sie null, dann sind ShowTrayBalloon-
+        // Aufrufe stille No-Ops (Watchdog hat ja gar kein Tray-Icon).
+        private static App? _instance;
+
+        public App()
+        {
+            _instance = this;
+        }
+
+        /// <summary>
+        /// Zeigt eine Tray-Balloon-Notification an. Wird vom OverlayWindow
+        /// aufgerufen wenn ein Drive-Sync-Fehler User-Aufmerksamkeit
+        /// braucht (z.B. invalid_grant nach abgelaufenem Refresh-Token).
+        /// Defensiv: jeder Schritt ist try/catch geschuetzt, ein
+        /// fehlendes Tray-Icon (Watchdog-Mode, oder vor SetupTrayIcon)
+        /// macht den Aufruf zum stille No-Op statt zum Crash. Wenn das
+        /// Tray-Icon irgendwann eine Visible=false-Bedingung hat, wird
+        /// die Balloon nicht angezeigt — kein Fehler.
+        /// </summary>
+        public static void ShowTrayBalloon(string title, string text, ToolTipIcon icon = ToolTipIcon.Warning)
+        {
+            try
+            {
+                var trayIcon = _instance?._trayIcon;
+                if (trayIcon is null) return;
+                trayIcon.BalloonTipTitle = title;
+                trayIcon.BalloonTipText  = text;
+                trayIcon.BalloonTipIcon  = icon;
+                trayIcon.ShowBalloonTip(8000);
+            }
+            catch (Exception ex)
+            {
+                LogCrash("ShowTrayBalloon", ex);
+            }
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Globale Exception-Sammler installieren BEVOR irgendein
+            // anderer Code laufen kann. Frueher wurden async-void- und
+            // background-Task-Exceptions still verschluckt — der Watchdog
+            // restartete und Frank sah keinen Hinweis auf den Bug. Jetzt
+            // wandert jede unbehandelte Exception in eine persistente
+            // crash.log, sortiert nach Quelle (Dispatcher, AppDomain,
+            // TaskScheduler). Direktive 3 Resilienz-Pruefung: der Logger
+            // selbst hat eine try/catch-Wand und schreibt atomar (Append
+            // mit File-System-Lock); ein Fehler im Logger blockiert nicht
+            // den Crash-Pfad.
+            InstallGlobalExceptionLogging();
 
             if (e.Args.Length > 0 && e.Args[0] == "--run")
             {
@@ -34,6 +87,77 @@ namespace TerminalVoiceOverlay
             {
                 // Watchdog mode: launch overlay and monitor it
                 RunWatchdog();
+            }
+        }
+
+        /// <summary>
+        /// Schreibt eine Crash-Log-Zeile in
+        /// <c>%LOCALAPPDATA%\PromptBoard\crash.log</c> und schluckt jeden
+        /// eigenen Fehler (Logger darf NIE crashen). Nutzt UTF-8-Append
+        /// damit Sonderzeichen aus deutschen Stack-Traces lesbar bleiben.
+        /// Bewusst KEIN externes Logging-Framework — eine .txt-Datei
+        /// genuegt fuer Frank und ist von Hand mit Notepad lesbar.
+        /// </summary>
+        private static void LogCrash(string source, Exception? ex, string? extraNote = null)
+        {
+            try
+            {
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PromptBoard");
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, "crash.log");
+                string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                string body = ex is null
+                    ? (extraNote ?? "(no exception, no note)")
+                    : $"{ex.GetType().FullName}: {ex.Message}\n{ex.StackTrace}";
+                if (!string.IsNullOrEmpty(extraNote))
+                    body = extraNote + "\n" + body;
+                File.AppendAllText(path,
+                    $"\n=== {ts}  [{source}] ===\n{body}\n",
+                    System.Text.Encoding.UTF8);
+            }
+            catch
+            {
+                // Logger darf nichts werfen — sonst wird ein
+                // Crash-im-Crash-Pfad zur Endlos-Schleife.
+            }
+        }
+
+        /// <summary>
+        /// Bindet ALLE bekannten Exception-Quellen an LogCrash an:
+        /// Dispatcher (UI-Thread), AppDomain (alle Threads),
+        /// TaskScheduler (unobservable async/Task-Exceptions). Jeder
+        /// Handler ist defensiv, schluckt seinen eigenen Fehler und
+        /// laesst den Original-Crash-Pfad weiterlaufen damit der
+        /// Watchdog wie gewohnt restartet — wir ergaenzen nur die
+        /// Sichtbarkeit, wir aendern das Crash-Verhalten nicht.
+        /// </summary>
+        private static void InstallGlobalExceptionLogging()
+        {
+            try
+            {
+                AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+                {
+                    LogCrash("AppDomain.UnhandledException",
+                        args.ExceptionObject as Exception,
+                        $"IsTerminating={args.IsTerminating}");
+                };
+
+                TaskScheduler.UnobservedTaskException += (sender, args) =>
+                {
+                    LogCrash("TaskScheduler.UnobservedTaskException", args.Exception,
+                        "Observed by handler — exception was about to be silently dropped");
+                    // Mark as observed damit der Prozess nicht zusaetzlich
+                    // wegen unobservable Task crasht — wir haben es ja
+                    // gerade geloggt.
+                    args.SetObserved();
+                };
+            }
+            catch (Exception setupEx)
+            {
+                LogCrash("InstallGlobalExceptionLogging", setupEx,
+                    "Setup of global handlers failed — only Dispatcher remains");
             }
         }
 
@@ -108,9 +232,17 @@ namespace TerminalVoiceOverlay
 
         private void StartOverlay(int watchdogPid)
         {
-            // Catch unhandled exceptions for logging
+            // Catch unhandled exceptions for logging. Frueher: nur
+            // Console.WriteLine — im Release-Build ohne Konsole still
+            // verschluckt. Jetzt: persistenter File-Log (crash.log) plus
+            // Console fuer den Dev-Pfad. e.Handled = false bleibt: der
+            // Watchdog soll wie gewohnt restarten — wir ergaenzen nur die
+            // Sichtbarkeit. Direktive-3-Resilienz-Pruefung: LogCrash hat
+            // try/catch-Wand und schluckt jeden eigenen Fehler, sodass
+            // der Crash-Pfad nie wegen Logging-Problemen blockiert.
             DispatcherUnhandledException += (_, e) =>
             {
+                LogCrash("Dispatcher.UnhandledException", e.Exception);
                 Console.WriteLine($"Unhandled exception: {e.Exception.Message}");
                 e.Handled = false; // Let it crash — watchdog will restart
             };
