@@ -10,13 +10,23 @@ if ($input_raw) {
     try { $obj = $input_raw | ConvertFrom-Json } catch { $obj = $null }
 }
 
-# Effort aus settings.json
-$effort = '?'
-try {
-    $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
-    $settings = Get-Content -Raw -Encoding UTF8 -Path $settingsPath | ConvertFrom-Json
-    if ($settings.effortLevel) { $effort = $settings.effortLevel }
-} catch { }
+# Effort: ZUERST aus Stdin (.effort.level) — das ist der LIVE-Session-Wert,
+# der von /effort low/medium/high/xhigh aktualisiert wird. settings.json haelt
+# nur den Default fuer den Session-Start. Frueher hat die Statusline NUR aus
+# settings.json gelesen und deshalb "HIGH" angezeigt obwohl die Session auf
+# "xhigh" stand (Frank-Bug-Report 2026-05-09 Abend).
+$effort = $null
+if ($obj -and $obj.effort -and $obj.effort.level) {
+    $effort = [string]$obj.effort.level
+}
+if (-not $effort) {
+    try {
+        $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
+        $settings = Get-Content -Raw -Encoding UTF8 -Path $settingsPath | ConvertFrom-Json
+        if ($settings.effortLevel) { $effort = [string]$settings.effortLevel }
+    } catch { }
+}
+if (-not $effort) { $effort = '?' }
 $effort_upper = $effort.ToUpper()
 
 # Felder
@@ -101,9 +111,10 @@ $R      = "$ESC[0m"
 
 # Effort-Farbe
 $EFFORT_COL = switch ($effort) {
-    'high'   { "$ESC[38;2;255;180;30m" }
-    'medium' { "$ESC[38;2;100;180;255m" }
-    'low'    { "$ESC[38;2;130;135;160m" }
+    'xhigh'  { "$ESC[38;2;255;90;220m" }   # Magenta — extra-hoch
+    'high'   { "$ESC[38;2;255;180;30m" }   # Gold
+    'medium' { "$ESC[38;2;100;180;255m" }  # Cyan
+    'low'    { "$ESC[38;2;130;135;160m" }  # Grau
     default  { "$ESC[38;2;130;135;160m" }
 }
 

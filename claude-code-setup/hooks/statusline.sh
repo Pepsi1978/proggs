@@ -4,11 +4,19 @@
 
 input=$(cat)
 
-# Effort aus settings.json
-settings="$HOME/.claude/settings.json"
-effort="?"
-if [ -f "$settings" ]; then
-    effort=$(jq -r '.effortLevel // "?"' "$settings" 2>/dev/null)
+# Effort: ZUERST aus Stdin (.effort.level) — das ist der LIVE-Session-Wert,
+# der von /effort low/medium/high/xhigh aktualisiert wird. settings.json haelt
+# nur den Default fuer den Session-Start. Frueher hat die Statusline NUR aus
+# settings.json gelesen und deshalb "HIGH" angezeigt obwohl die Session auf
+# "xhigh" stand (Frank-Bug-Report 2026-05-09 Abend).
+effort=$(echo "$input" | jq -r '.effort.level // empty' 2>/dev/null)
+if [ -z "$effort" ]; then
+    settings="$HOME/.claude/settings.json"
+    if [ -f "$settings" ]; then
+        effort=$(jq -r '.effortLevel // "?"' "$settings" 2>/dev/null)
+    else
+        effort="?"
+    fi
 fi
 effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
 
@@ -143,6 +151,7 @@ ICON_TIME="🕐"
 
 # Effort-Farbe nach Level
 case "$effort" in
+    xhigh)  EFFORT_COL='\033[38;2;255;90;220m' ;;   # Magenta — extra-hoch
     high)   EFFORT_COL='\033[38;2;255;180;30m' ;;   # Gold
     medium) EFFORT_COL='\033[38;2;100;180;255m' ;;  # Cyan
     low)    EFFORT_COL='\033[38;2;130;135;160m' ;;  # Grau
