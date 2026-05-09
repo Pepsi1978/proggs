@@ -430,7 +430,8 @@ public partial class PromptBoardPanel : Window
             var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
             var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
 
-            var categories = await categoryRepo.GetAllAsync();
+            // Nur Name wird gelesen — Summary-Variante ohne Prompts-JOIN.
+            var categories = await categoryRepo.GetAllSummaryAsync();
             int cleared = 0;
             foreach (var cat in categories)
             {
@@ -915,7 +916,10 @@ public partial class PromptBoardPanel : Window
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-            _categories = (await categoryRepo.GetAllAsync())
+            // Summary-Variante (ohne Prompts-Include) — RefreshAsync laedt
+            // direkt darunter eh _allPromptsCache via promptRepo.GetAllAsync,
+            // also waere der Categories-JOIN ueber Prompts doppelte Arbeit.
+            _categories = (await categoryRepo.GetAllSummaryAsync())
                 .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
                 .ToList();
             // Einmalige Migration: Jede Kategorie ohne Palette-Hex bekommt

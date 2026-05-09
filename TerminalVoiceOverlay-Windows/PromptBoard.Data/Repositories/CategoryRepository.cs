@@ -28,6 +28,19 @@ public sealed class CategoryRepository : ICategoryRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Category>> GetAllSummaryAsync(CancellationToken ct = default)
+    {
+        // Ohne Include — Aufrufer die nur die Tab-Metadaten (Name, Farbe,
+        // SortOrder) brauchen sparen pro Aufruf einen SQL-JOIN ueber alle
+        // Prompts. Bei N Prompts und M Kategorien: vorher liefert SQLite
+        // N+M Zeilen (JOIN-Auflistung), jetzt nur M.
+        return await _db.Categories
+            .AsNoTracking()
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Name)
+            .ToListAsync(ct);
+    }
+
     public Task<Category?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return _db.Categories
