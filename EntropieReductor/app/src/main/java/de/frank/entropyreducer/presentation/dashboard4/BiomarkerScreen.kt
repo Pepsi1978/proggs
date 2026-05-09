@@ -141,7 +141,7 @@ fun BiomarkerHostScreen(
                 )
             }
             item { DateSelectorBar(state, vm) }
-            item { GesamterholungCard(state) }
+            item { GesamterholungCard(state, onOpenMetricDetail) }
             item { KeyValueGrid(state, onOpenMetricDetail) }
 
             // Frank-Wunsch 2026-05-09 (Reorganisation): Reihenfolge ist jetzt
@@ -277,20 +277,12 @@ fun BiomarkerHostScreen(
                 // Schlafphasen-Card mit Stage-Bar + 4 Stage-Chips.
                 GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) }) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Schlafphasen",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = cosmos.textPrimary,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                text = "Details ▸",
-                                color = CosmosColors.AccentSecondary,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
+                        Text(
+                            text = "Schlafphasen",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cosmos.textPrimary,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         Spacer(Modifier.height(12.dp))
                         SleepStagesBar(
                             remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
@@ -748,14 +740,7 @@ private fun MetricHistoryCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(Modifier.width(10.dp))
                 }
-                Text(
-                    text = "Details ▸",
-                    color = accent,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
             }
             Spacer(Modifier.height(8.dp))
             if (points.isEmpty()) {
@@ -765,12 +750,16 @@ private fun MetricHistoryCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
+                // Frank-Wunsch 2026-05-09 (Abend): Tap auf den Chart oeffnet die
+                // Detail-Seite — kein Tooltip-Modus mehr, kein "Details ▸"-Hinweis
+                // im Header noetig. Der ganze Graph ist clickable.
                 InteractiveLineChart(
                     points = points,
                     accent = accent,
                     unit = unit,
                     lowerIsBetter = lowerIsBetter,
                     valueFormatter = valueFormatter,
+                    onClick = onClick,
                 )
                 if (avgLabel != null && diffLabel != null) {
                     Spacer(Modifier.height(12.dp))
@@ -932,7 +921,7 @@ private fun pearson(pairs: List<Pair<Double, Double>>): Double {
  * Layout: links Title + Status-Sub-Text + Erlaeuterung; rechts großer Recovery-Ring.
  */
 @Composable
-private fun GesamterholungCard(state: BiomarkerUiState) {
+private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     // Recovery vom AUSGEWAEHLTEN Tag, sonst latest.
     val score = (state.selectedSnapshot ?: state.latest)?.recoveryScore
@@ -943,7 +932,9 @@ private fun GesamterholungCard(state: BiomarkerUiState) {
         score >= 25 -> "Dein Körper braucht heute Schonung."
         else -> "Dein Körper ist erschoepft."
     }
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    // Frank-Wunsch 2026-05-09 (Abend): Tap auf den Recovery-Ring oeffnet die
+    // Recovery-Detail-Seite — wie alle anderen Charts im Biomarker-Bereich.
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenDetail(MetricKey.RECOVERY) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1008,20 +999,12 @@ private fun RestorativeSleepCard(
     }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Erholsamer Schlaf",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cosmos.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "Details ▸",
-                    color = color,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            Text(
+                text = "Erholsamer Schlaf",
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
@@ -1086,20 +1069,12 @@ private fun SkinTempDeltaCard(
     }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Hauttemperatur-Abweichung",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cosmos.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "Details ▸",
-                    color = color,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            Text(
+                text = "Hauttemperatur-Abweichung",
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(

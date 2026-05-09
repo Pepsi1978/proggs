@@ -65,6 +65,12 @@ fun InteractiveLineChart(
      *  der Tooltip in Stunden statt Minuten formatiert werden. Wenn null wird der
      *  Standard-Formatter `formatY` verwendet und die Einheit angehaengt. */
     valueFormatter: ((Double) -> String)? = null,
+    /** Frank-Wunsch 2026-05-09 (Abend): Tap auf den Chart soll die Detail-Seite
+     *  oeffnen — nicht mehr nur einen Tooltip auf dem Punkt zeigen. Wenn gesetzt,
+     *  ruft jede Tap-Geste sofort onClick() auf und der Tooltip-Modus ist deaktiviert.
+     *  So wird der ganze Graph durchklickbar, statt dass die innere pointerInput
+     *  die Klicks der umgebenden Card frisst. */
+    onClick: (() -> Unit)? = null,
 ) {
     val cosmos = LocalCosmos.current
     val safe = points.filter { it.second.isFinite() }.sortedBy { it.first }
@@ -141,13 +147,20 @@ fun InteractiveLineChart(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(height.dp)
-                    .pointerInput(safe) {
+                    .pointerInput(safe, onClick) {
                         detectTapGestures { tap ->
-                            // Index mit kleinster X-Distanz finden
-                            val w = size.width.toFloat()
-                            val stepX = if (safe.size <= 1) w else w / (safe.size - 1).toFloat()
-                            val idx = (tap.x / stepX).toInt().coerceIn(0, safe.size - 1)
-                            selectedIndex = idx
+                            if (onClick != null) {
+                                // Frank-Wunsch 2026-05-09 (Abend): Tap auf irgendeine
+                                // Stelle des Graphs oeffnet sofort die Detail-Seite.
+                                onClick()
+                            } else {
+                                // Fallback: alter Tooltip-Modus — Index mit kleinster
+                                // X-Distanz selektieren und Tooltip einblenden.
+                                val w = size.width.toFloat()
+                                val stepX = if (safe.size <= 1) w else w / (safe.size - 1).toFloat()
+                                val idx = (tap.x / stepX).toInt().coerceIn(0, safe.size - 1)
+                                selectedIndex = idx
+                            }
                         }
                     },
             ) {
