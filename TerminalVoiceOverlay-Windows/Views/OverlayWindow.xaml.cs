@@ -544,11 +544,29 @@ namespace TerminalVoiceOverlay.Views
             btn.MouseLeave += (_, _) => AnimateScale(btn, 1.0,  TimeSpan.FromMilliseconds(150));
         }
 
+        // Geteilte, eingefrorene EasingFunction fuer alle Hover-Scale-Animationen.
+        // Frueher: jede AnimateScale-Aufrufstelle (MouseEnter + MouseLeave auf
+        // 21 Buttons) allokierte eine neue QuadraticEase. Mit Freezable-Sharing
+        // wird die Easing-Berechnung ohne Cross-Thread-Notification-Overhead
+        // genutzt, und der Allocator sieht pro Hover-Event ein Objekt weniger.
+        // QuadraticEase ist DependencyObject + Freezable — `Freeze()` macht
+        // sie thread-safe und teilbar ueber alle Animations.
+        private static readonly QuadraticEase HoverEaseOut = CreateFrozenEase();
+        private static QuadraticEase CreateFrozenEase()
+        {
+            var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            ease.Freeze();
+            return ease;
+        }
+
         private static void AnimateScale(System.Windows.Controls.Button btn, double to, TimeSpan duration)
         {
-            var ease  = new QuadraticEase { EasingMode = EasingMode.EaseOut };
-            var animX = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
-            var animY = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
+            // EasingFunction wird statisch geteilt — siehe HoverEaseOut. Die
+            // DoubleAnimation-Objekte bleiben pro Aufruf neu, weil "to" und
+            // "duration" pro Aufruf unterschiedlich sein koennen (Enter zu
+            // 1.15, Leave zu 1.0).
+            var animX = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = HoverEaseOut };
+            var animY = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = HoverEaseOut };
 
             if (btn.RenderTransform is ScaleTransform st)
             {
