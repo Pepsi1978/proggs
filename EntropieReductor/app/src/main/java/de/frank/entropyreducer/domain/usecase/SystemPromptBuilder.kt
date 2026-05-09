@@ -3,6 +3,7 @@ package de.frank.entropyreducer.domain.usecase
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import java.time.Instant
@@ -37,6 +38,7 @@ class SystemPromptBuilder @Inject constructor() {
         recentResolutionMethods: List<String> = emptyList(),
         archivedResolutionEntries: List<ArchivedMethodSummary> = emptyList(),
         activeHypotheses: List<HypothesisEntity> = emptyList(),
+        confirmedInsights: List<InsightEntity> = emptyList(),
     ): String = buildString {
         appendLine(basePrompt.trim())
         appendLine()
@@ -52,6 +54,17 @@ class SystemPromptBuilder @Inject constructor() {
         if (memories.isNotEmpty()) {
             appendLine("## Aktives Gedaechtnis")
             memories.forEach { m -> appendLine("- ${m.content.trim()}") }
+            appendLine()
+        }
+
+        if (confirmedInsights.isNotEmpty()) {
+            appendLine("## Bestätigte Methoden im Insight-Board (wirken nachgewiesen entropie-reduzierend)")
+            appendLine("Diese Methoden hat Frank als wirksam bestätigt — sie haben hohe Konfidenz und sollen bei der Bewertung neuer Aufgaben mitberücksichtigt werden. Wenn eine neue Aufgabe durch eine dieser Methoden lösbar oder unterstützbar ist, erhöhe ihren priorityScore: +5 bis +20 abhängig von Konfidenz und Breite der Methode-Wirkung. Methoden die mehrere Kategorien gleichzeitig adressieren (Wellbeing-First-Hebel) wirken stärker und heben den Score deutlicher.")
+            confirmedInsights.forEach { i ->
+                val cats = (listOf(i.targetCategory) + i.additionalCategories).joinToString(", ") { it.name }
+                appendLine("- \"${i.title}\" [$cats] (Konfidenz ${i.confidence}%, ${i.successCount}/${i.attemptCount} Erfolge)")
+                if (i.description.isNotBlank()) appendLine("  → ${i.description.trim()}")
+            }
             appendLine()
         }
 

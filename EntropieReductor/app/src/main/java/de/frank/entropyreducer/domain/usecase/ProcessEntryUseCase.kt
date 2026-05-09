@@ -7,6 +7,7 @@ import de.frank.entropyreducer.data.remote.GeminiGenerationConfig
 import de.frank.entropyreducer.data.remote.GeminiPart
 import de.frank.entropyreducer.data.remote.GeminiRequest
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.repository.InsightRepository
 import de.frank.entropyreducer.data.repository.MemoryRepository
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.settings.AppSettings
@@ -32,6 +33,7 @@ class ProcessEntryUseCase @Inject constructor(
     private val memories: MemoryRepository,
     private val prompts: PromptRepository,
     private val entries: EntryRepository,
+    private val insights: InsightRepository,
     private val systemPromptBuilder: SystemPromptBuilder,
     private val json: Json,
 ) {
@@ -46,6 +48,11 @@ class ProcessEntryUseCase @Inject constructor(
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
         val activePrompts = prompts.getActive().first()
+        // Frank-Wunsch 2026-05-09: bestätigte Methoden des Insight Boards sollen
+        // die Prio-Berechnung neuer Aufgaben beeinflussen — z.B. Laufen aktiviert
+        // BDNF/NGF, baut mentale + körperliche + Schmerz-Entropie ab. Eine
+        // Aufgabe die durch eine bestätigte Methode lösbar ist bekommt höhere Prio.
+        val confirmed = insights.observeConfirmed().first()
 
         val systemPrompt = systemPromptBuilder.build(
             basePrompt = BASE_PROMPT,
@@ -56,6 +63,7 @@ class ProcessEntryUseCase @Inject constructor(
             calendarTomorrow = null,
             userPrompts = activePrompts,
             tail = TAIL_INSTRUCTION,
+            confirmedInsights = confirmed,
         )
 
         return try {
@@ -192,6 +200,7 @@ class ProcessEntryUseCase @Inject constructor(
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
         val activePrompts = prompts.getActive().first()
+        val confirmed = insights.observeConfirmed().first()
 
         val systemPrompt = systemPromptBuilder.build(
             basePrompt = RESCORE_BASE_PROMPT,
@@ -202,6 +211,7 @@ class ProcessEntryUseCase @Inject constructor(
             calendarTomorrow = null,
             userPrompts = activePrompts,
             tail = RESCORE_TAIL_INSTRUCTION,
+            confirmedInsights = confirmed,
         )
 
         val entrySummary = buildString {
@@ -412,6 +422,26 @@ WICHTIGE REGELN:
   stocken lassen ("oh, das ist wirklich wichtig"), nicht inflationaer
   sein. Realistisch sollten nur etwa 5-10 Prozent aller Eintraege im
   Rot-Bereich landen.
+
+- BESTAETIGTE-METHODEN-HEBEL (Frank-Wunsch 2026-05-09): Wenn die neue
+  Aufgabe durch eine bestaetigte Methode aus dem Insight-Board loesbar
+  oder unterstuetzbar ist (Match auf Title, Beschreibung oder Tags),
+  hebe priorityScore an:
+    - +5 bis +10 wenn die Methode eine einzelne Kategorie adressiert
+    - +10 bis +15 wenn die Methode 2 Kategorien adressiert (primary +
+      additional)
+    - +15 bis +20 wenn die Methode 3 oder mehr Kategorien gleichzeitig
+      adressiert (Wellbeing-First-Hebel — eine Methode die mental,
+      koerperlich, emotional und gesundheitlich gleichzeitig wirkt
+      ist sehr wertvoll und macht Aufgaben die sie nutzen koennen
+      hoch-prior).
+  Beispiel: bestaetigte Methode "Lauftraining" wirkt MENTAL (BDNF,
+  Klarheit) + KOERPERLICH (Ausdauer) + GESUNDHEITLICH (Symptom-
+  reduktion) + EMOTIONAL (Stimmung) — eine neue Aufgabe wie "regel-
+  maessig laufen gehen" oder "Lauftraining heute einbauen" bekommt
+  durch diesen Hebel +15 bis +20 Punkte. Begruendung in
+  priorityReason explizit erwaehnen ("durch bestaetigte Methode X
+  loesbar, mehrfach-kategorial").
 """
 
         private const val BASE_PROMPT =

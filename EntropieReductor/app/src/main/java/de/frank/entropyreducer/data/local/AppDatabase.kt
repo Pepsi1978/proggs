@@ -54,9 +54,15 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         GenieCodexVersionEntity::class,
         WhoopWorkoutEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
+// Version 9 (2026-05-09): InsightEntity erweitert um additionalCategories
+// (List<EntropyCategory>) und manualSource (Boolean). Frank-Wunsch: manuell
+// hinzugefuegte Methoden mit Mic + KI-Verbesserung, plus Mehrfach-Kategorien
+// pro Methode. fallbackToDestructiveMigration ist aktiv — alte Insights werden
+// geloescht; das ist akzeptabel weil das Insight Board sich aus Hypothesen-
+// Erfolgen wieder fuellt und manuelle Methoden bisher nicht existierten.
 @TypeConverters(EntropyTypeConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entropyEntryDao(): EntropyEntryDao

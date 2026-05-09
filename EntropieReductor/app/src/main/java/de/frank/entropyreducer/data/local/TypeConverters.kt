@@ -41,6 +41,22 @@ class EntropyTypeConverters {
     fun toCategory(s: String): EntropyCategory =
         runCatching { EntropyCategory.valueOf(s) }.getOrDefault(EntropyCategory.SONSTIGES)
 
+    // List<EntropyCategory> ↔ JSON-String. Frank-Wunsch 2026-05-09: Methoden im
+    // Insight Board sollen mehrere Kategorien tragen koennen (z.B. Laufen wirkt
+    // mental + koerperlich + emotional gleichzeitig). Speicherung als JSON-Array
+    // der Enum-Namen — robust gegen Reordering, identisch zur fromStringList-Strategie.
+    @TypeConverter
+    fun fromCategoryList(list: List<EntropyCategory>?): String =
+        if (list.isNullOrEmpty()) "[]" else json.encodeToString(listStringSerializer, list.map { it.name })
+
+    @TypeConverter
+    fun toCategoryList(value: String?): List<EntropyCategory> =
+        if (value.isNullOrBlank()) emptyList()
+        else runCatching {
+            json.decodeFromString(listStringSerializer, value)
+                .mapNotNull { name -> runCatching { EntropyCategory.valueOf(name) }.getOrNull() }
+        }.getOrDefault(emptyList())
+
     @TypeConverter
     fun fromStatus(c: EntryStatus): String = c.name
     @TypeConverter

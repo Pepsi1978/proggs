@@ -61,6 +61,13 @@ data class InsightEntity(
     val title: String,
     val description: String,
     val targetCategory: EntropyCategory,
+    // Frank-Wunsch 2026-05-09: Methoden koennen mehrere Kategorien gleichzeitig
+    // adressieren — Laufen wirkt z.B. mental + koerperlich + emotional. targetCategory
+    // bleibt die primaere (fuer DAO-Filter und Repertoire-Sortierung), additionalCategories
+    // listet die weiteren betroffenen Bereiche. Bestaetigte Methoden mit breiter
+    // Wirkung erhalten in ProcessEntryUseCase einen staerkeren Prio-Boost (siehe
+    // PRIORITY_DOCTRINE — Multi-Cat-Methoden = Wellbeing-First-Hebel).
+    val additionalCategories: List<EntropyCategory> = emptyList(),
     val confidence: Int,                     // 0..100
     val successCount: Int,
     val attemptCount: Int,
@@ -69,4 +76,8 @@ data class InsightEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val sourceHypothesisIds: List<String>,
+    // Frank-Wunsch 2026-05-09: Methoden koennen jetzt manuell hinzugefuegt werden
+    // (Mic + KI-Verbesserung). manualSource markiert solche Eintraege, damit sie
+    // beim Repertoire-Sort nicht durch Hypothesen-Aggregation ueberschrieben werden.
+    val manualSource: Boolean = false,
 )
