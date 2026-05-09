@@ -174,6 +174,17 @@ namespace TerminalVoiceOverlay
                 return;
             }
 
+            // Cross-Process-Signal fuer sauberen Shutdown. Manual-Reset
+            // damit das Set einmal sichtbar bleibt bis der Watchdog es
+            // sieht — nach dem Auto-Restart-Loop wird es zurueckgesetzt
+            // sodass der naechste Crash-Restart-Zyklus wieder normal
+            // funktioniert.
+            var cleanShutdown = new EventWaitHandle(
+                initialState: false,
+                mode: EventResetMode.ManualReset,
+                name: CleanShutdownEventName,
+                createdNew: out _);
+
             // No UI for the watchdog — keep alive via explicit shutdown mode
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -194,12 +205,20 @@ namespace TerminalVoiceOverlay
                     overlay.WaitForExit();
                     var exitCode = overlay.ExitCode;
 
-                    if (exitCode == 0)
+                    // Defense in depth: das Overlay setzt vor saubere
+                    // App.Shutdown(0) das Event. Wir pruefen BEIDES — Event
+                    // ODER Exit-Code — damit selbst bei Power-Loss oder
+                    // Race-Condition-Edge-Cases der Watchdog erkennt dass
+                    // ein bewusster Beenden-Klick im Tray ankam.
+                    bool cleanRequested = cleanShutdown.WaitOne(0);
+
+                    if (exitCode == 0 || cleanRequested)
                     {
                         // Normal shutdown (user clicked "Beenden") — stop watchdog too
-                        Console.WriteLine("Watchdog: overlay exited normally, stopping.");
+                        Console.WriteLine($"Watchdog: overlay exited cleanly (code={exitCode}, signaled={cleanRequested}), stopping.");
                         Dispatcher.Invoke(() => Shutdown());
                         GC.KeepAlive(mutex);
+                        GC.KeepAlive(cleanShutdown);
                         return;
                     }
 
@@ -329,16 +348,96 @@ namespace TerminalVoiceOverlay
             var menu = new ContextMenuStrip();
             menu.Items.Add("Overlay zeigen", null, (_, _) => _overlayWindow?.Show());
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Beenden", null, (_, _) =>
-            {
-                _trayIcon!.Visible = false;
-                _overlayWindow?.Close();
-                Environment.Exit(0); // Exit code 0 — watchdog stops cleanly
-            });
+            menu.Items.Add("Beenden", null, (_, _) => RequestCleanShutdown());
 
             _trayIcon.ContextMenuStrip = menu;
             _trayIcon.DoubleClick += (_, _) => _overlayWindow?.Show();
         }
+
+        /// <summary>
+        /// Sauberer Tray-Beenden-Pfad. Frueher: <c>Environment.Exit(0)</c> —
+        /// killte den Prozess SOFORT ohne dass <see cref="OnExit"/>,
+        /// <see cref="OverlayWindow.OnClosed"/> oder die IDisposable-Kette
+        /// liefen. Folgen: Tray-Icon blieb als Geist im System-Tray, EF
+        /// Core SQLite-WAL wurde nicht checkpointed (Risiko fuer
+        /// Bestaetigungspflicht-Recovery beim naechsten Start), Hooks
+        /// blieben theoretisch im Tastatur-Stack haengen.
+        ///
+        /// Jetzt: Shutdown-Token (named EventWaitHandle) signalisiert
+        /// dem Watchdog dass kein Restart noetig ist, dann Window
+        /// regulaer schliessen → OnClosed laeuft inkl. UnhookWindowsHookEx
+        /// → <see cref="Application.Shutdown(int)"/> mit Exit-Code 0 →
+        /// OnExit laeuft inkl. Tray-Disposal → Process beendet sauber.
+        /// Der Watchdog liest sowohl den Exit-Code (==0 → stop) als
+        /// auch das Event als Defense-in-Depth: bei Power-Loss waehrend
+        /// Shutdown koennte der Exit-Code nicht 0 sein, aber das Event
+        /// wurde bereits gesetzt.
+        ///
+        /// Direktive-3-Resilienz-Pruefung:
+        /// - Window.Close() ist async (Closing-Event darf cancelen) — aber
+        ///   das Overlay hat keinen Closing-Handler der cancelt, also
+        ///   schliesst es. Falls in Zukunft jemand einen Cancel-Handler
+        ///   einbaut, blockiert Shutdown — das ist gewolltes Verhalten.
+        /// - Application.Shutdown ist re-entrant-safe.
+        /// - Defensiver Fallback auf Environment.Exit(0) wenn die WPF-
+        ///   Pipeline aus irgendeinem Grund kaputt ist (z.B.
+        ///   Application.Current null nach OnExit-Reentrancy).
+        /// - Tray-Icon wird VOR Shutdown ausgeblendet damit es nicht
+        ///   1-2 Frames lang als Geist sichtbar ist waehrend OnExit
+        ///   laeuft.
+        /// </summary>
+        private void RequestCleanShutdown()
+        {
+            try
+            {
+                // Watchdog-IPC-Signal: bestehendes named Event setzen
+                // (vom Watchdog im RunWatchdog angelegt). OpenExisting
+                // wirft wenn das Event nicht da ist — dann sind wir im
+                // Stand-alone-Mode (ohne Watchdog), kein Signal noetig.
+                try
+                {
+                    using var ev = EventWaitHandle.OpenExisting(CleanShutdownEventName);
+                    ev.Set();
+                }
+                catch (WaitHandleCannotBeOpenedException)
+                {
+                    // Kein Watchdog-Event vorhanden — kein Problem,
+                    // dann wartet auch niemand darauf.
+                }
+
+                if (_trayIcon is { } tray)
+                {
+                    try { tray.Visible = false; } catch { /* tolerant */ }
+                }
+                _overlayWindow?.Close();
+
+                if (Application.Current is { } app)
+                {
+                    app.Shutdown(0);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogCrash("RequestCleanShutdown", ex,
+                    "Falling back to Environment.Exit(0) after clean-shutdown failure.");
+            }
+
+            // Last-Resort-Pfad falls Shutdown(0) fehlschlaegt — der
+            // alte Direktexit. Damit ist garantiert, dass Frank die App
+            // immer beenden kann; der Worst Case ist nur dass die
+            // saubere OnExit-Kette ausfaellt.
+            Environment.Exit(0);
+        }
+
+        /// <summary>
+        /// Event-Name fuer Watchdog-Overlay-IPC. Per-Session (kein
+        /// "Global\\"-Prefix), weil wir nur zwischen Watchdog und Overlay
+        /// derselben User-Session koordinieren — Cross-User-Synchronisation
+        /// ist ausdruecklich NICHT gewollt (jeder User hat seinen
+        /// eigenen Watchdog + Overlay).
+        /// </summary>
+        private const string CleanShutdownEventName = "TerminalVoiceOverlay-CleanShutdown";
 
         /// <summary>
         /// Pulls the newest Drive backup at launch and applies it if its
