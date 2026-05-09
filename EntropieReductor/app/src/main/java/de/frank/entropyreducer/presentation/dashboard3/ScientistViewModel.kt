@@ -22,6 +22,7 @@ import de.frank.entropyreducer.domain.usecase.HypothesisChatUseCase
 import de.frank.entropyreducer.domain.usecase.ScientistChatUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -177,7 +179,17 @@ class ScientistViewModel @Inject constructor(
             pendingDeleteHypothesisId = block.pendingDeleteId,
             scientistQuestion = block.scientistQuestion,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), ScientistUiState())
+    }
+        // Performance-Fix Loop 2.4: combine-Block macht hypById.associateBy +
+        // msgs.associate { ... mapNotNull { hypById[it] } }. Bei jedem Update
+        // einer der 5 Source-Flows (auch draftFlow → globalChatBlockFlow!)
+        // wurde das auf Main durchgerechnet. Bei einem Chat mit 50 Messages und
+        // 100 Hypothesen sind das pro Tastendruck 5000 Hashtable-Lookups +
+        // Map-Allokation — sichtbar als Tipp-Verzoegerung im Eingabefeld.
+        // .flowOn(Default) verlagert die Berechnung off-main, ScientistUiState
+        // (@Immutable) wird thread-safe an Main propagiert.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), ScientistUiState())
 
     init {
         viewModelScope.launch {

@@ -27,6 +27,7 @@ import de.frank.entropyreducer.presentation.launch.LaunchScreen
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -169,7 +170,16 @@ class StartupViewModel @Inject constructor(
             // Performance-Warmup: parallel zur Drive-Restore-Logik laeuft das
             // Repository-Warming. So sind beim ersten Tab-Klick alle DB-Queries
             // schon gecacht (Frank-Wunsch 2026-05-09 Performance).
-            viewModelScope.launch {
+            //
+            // Performance-Fix Loop 2.3: Beide launch-Bloecke explizit auf
+            // Dispatchers.IO. Vorher lief das auf viewModelScope-Default
+            // (Main.immediate). Innen werden EncryptedSharedPreferences gelesen
+            // (secrets.driveBackupEnabled, .driveAccountEmail, .calendarAccountEmail,
+            // oauth.loadWhoopAuthState), Room-Flows gesammelt (.first()) und
+            // mehrere WorkManager.enqueueUniquePeriodicWork-Setups gemacht — bei
+            // einem kalten App-Start ist das in Summe 50-200 ms Main-Thread-Last,
+            // sichtbar als Time-To-First-Frame-Verzoegerung.
+            viewModelScope.launch(Dispatchers.IO) {
                 runCatching {
                     // Eine .first() pro Repository = ein DB-Query, danach hat Room
                     // die Tabellen geladen und Connection-Pool ist warm.
@@ -181,7 +191,7 @@ class StartupViewModel @Inject constructor(
                     balanceBuckets()
                 }
             }
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 if (secrets.driveBackupEnabled && secrets.driveAccountEmail != null) {
                     runCatching { syncEntries.restoreFromDrive() }
                     // Nach dem Restore noch ein Backup, damit lokale Aenderungen,

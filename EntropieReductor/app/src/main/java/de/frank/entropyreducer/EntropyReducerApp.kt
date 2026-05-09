@@ -9,7 +9,10 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
+import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -36,6 +39,15 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var dataMigrator: InitialDataMigrator
+
+    // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
+    // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
+    // Callback aus dem Main-Thread herauszuholen — der Whoop-AuthState-Read trifft
+    // EncryptedSharedPreferences (Hardware-Keystore-Roundtrip + Disk-I/O), das war
+    // auf Main beim App-Foreground-Wechsel sichtbar.
+    @Inject
+    @ApplicationScope
+    lateinit var applicationScope: CoroutineScope
 
     /**
      * Frank-Wunsch 2026-05-09 (Abend): Datenrettung aus alter AppDatabase v9 in
@@ -69,10 +81,21 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
         // Whoop-Rate-Limit ist 60 req/min — selbst 50 Foreground-Wechsel/Tag sind
         // unkritisch, der Worker macht nur 3 paginierte API-Calls pro Sync.
+        //
+        // Performance-Fix Loop 2.1: oauth.loadWhoopAuthState() liest aus
+        // EncryptedSharedPreferences (Hardware-Keystore-Roundtrip + Disk-I/O) und
+        // parsed JSON — bisher synchron auf Main bei jedem onStart. Bei Frank's
+        // Foldable mit haeufigen Foreground-Wechseln war das ein sichtbarer
+        // Stutter im Resume-Pfad. applicationScope laeuft auf Dispatchers.IO,
+        // scheduler.runWhoopSyncNow() ruft thread-safe WorkManager.enqueueUniqueWork
+        // (REPLACE-Policy stellt sicher dass paralleler ON_START keine Doppel-
+        // Worker erzeugt).
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
-                if (oauth.loadWhoopAuthState().isAuthorized) {
-                    scheduler.runWhoopSyncNow()
+                applicationScope.launch {
+                    if (oauth.loadWhoopAuthState().isAuthorized) {
+                        scheduler.runWhoopSyncNow()
+                    }
                 }
             }
         })
