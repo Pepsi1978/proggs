@@ -80,17 +80,73 @@ cwd=$(shorten_path "$cwd_raw")
 # Bash-Schleifen + 20+ jq-Aufrufen brauchte 8.4s — Claude Code Statusline-Timeout
 # liegt bei ~3-5s, deshalb wurde die Statusline gar nicht mehr angezeigt. Diese
 # Version: 1 cat (Schreiben), 1 find (Cleanup), 1 jq-Aufruf (Lesen+MAX-Berechnung).
+#
+# ROBUSTHEITS-FIX (Frank-Bug-Report 2026-05-09 22:24): Statusline zeigte 1778368200%
+# bei 5h und 309% bei 7d. Root Cause: Eine State-Datei rate-limits-.json (mit LEERER
+# session_id) hatte verschobene Felder — five_h enthielt einen Unix-Timestamp,
+# seven_d eine UUID. Die MAX-Logik nahm diese Muellwerte ohne Plausibilitaetspruefung.
+# Fix nach Direktive 3 (Defense in Depth, Poka-Yoke Stufe 3):
+#   1. SCHREIB-GUARDS: keine leere/ungueltige session_id, Werte nur 0..100,
+#      plausibler Reset-Timestamp
+#   2. LESE-VALIDIERUNG: kaputte Files automatisch entfernt, jq filtert
+#      ungueltige Eintraege beim MAX-Pass
+#   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-my_state="$state_dir/rate-limits-$session_id.json"
 printf -v now_ts '%(%s)T' -1
 
-# 1. Aktuellen Input fuer DIESE Session schreiben — printf statt cat heredoc
-#    (printf ist Bash-builtin, kein Subprocess).
-if [ -n "$five_h_used_raw" ] && [ "$five_h_used_raw" != "null" ]; then
+# Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
+[ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
+
+# Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
+is_valid_pct() {
+    local v="$1"
+    { [ -z "$v" ] || [ "$v" = "null" ]; } && return 1
+    case "$v" in
+        ''|*[!0-9.]*) return 1 ;;
+    esac
+    local i="${v%.*}"
+    [ -z "$i" ] && return 1
+    [ "$i" -ge 0 ] 2>/dev/null && [ "$i" -le 100 ] 2>/dev/null
+}
+
+# Reset-Timestamp plausibel? (zwischen now-1h und now+6h, oder 0/leer = nicht gesetzt)
+is_valid_reset() {
+    local ts="$1"
+    { [ -z "$ts" ] || [ "$ts" = "null" ] || [ "$ts" = "0" ]; } && return 0
+    case "$ts" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$ts" -ge "$((now_ts - 3600))" ] 2>/dev/null && [ "$ts" -le "$((now_ts + 21600))" ] 2>/dev/null
+}
+
+# Session-ID-Format: nur a-z A-Z 0-9 _ - erlaubt — verhindert leere/Mull-IDs
+is_valid_sid() {
+    local sid="$1"
+    { [ -z "$sid" ] || [ "$sid" = "unknown" ]; } && return 1
+    case "$sid" in
+        *[!a-zA-Z0-9_-]*) return 1 ;;
+    esac
+    return 0
+}
+
+# 1. SCHREIBEN — nur wenn ALLE Werte plausibel sind (Schicht 1: Praeventiv).
+#    NIEMALS bei leerer/ungueltiger session_id schreiben (kein rate-limits-.json mehr).
+my_state="$state_dir/rate-limits-$session_id.json"
+if is_valid_sid "$session_id" \
+   && is_valid_pct "$five_h_used_raw" \
+   && { [ -z "$week_used_raw" ] || [ "$week_used_raw" = "null" ] || is_valid_pct "$week_used_raw"; } \
+   && is_valid_reset "${five_h_resets_raw:-0}"; then
+    seven_d_safe="${week_used_raw:-0}"
+    [ "$seven_d_safe" = "null" ] && seven_d_safe="0"
+    resets_safe="${five_h_resets_raw:-0}"
+    [ "$resets_safe" = "null" ] && resets_safe="0"
+    # Atomic write: tmp + mv (Schicht 3: Eliminierung von Half-Read)
+    tmp_state="$my_state.tmp"
     printf '{"ts_seen":%s,"session_id":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s}\n' \
-        "$now_ts" "$session_id" "$five_h_used_raw" "${five_h_resets_raw:-0}" "${week_used_raw:-0}" \
-        > "$my_state" 2>/dev/null
+        "$now_ts" "$session_id" "$five_h_used_raw" "$resets_safe" "$seven_d_safe" \
+        > "$tmp_state" 2>/dev/null \
+        && mv -f "$tmp_state" "$my_state" 2>/dev/null
 fi
 
 # 2. Cleanup: State-Files aelter als 24h. Nur ~jeder 600. Aufruf (also ca. alle
@@ -100,14 +156,23 @@ if [ $((now_ts % 600)) -lt 2 ]; then
     find "$state_dir" -name "rate-limits-*.json" -mmin +1440 -delete 2>/dev/null
 fi
 
-# 3. MAX-Logik in EINEM jq-Aufruf — slurp alle State-Files, finde aktuellsten
-#    resets_at, dann hoechsten five_h darin, dann hoechsten seven_d global.
+# 3. MAX-Logik in EINEM jq-Aufruf mit VALIDIERUNG — slurp alle State-Files,
+#    filter kaputte Eintraege (session_id leer/ungueltig, Werte nicht 0..100),
+#    dann finde aktuellsten resets_at und hoechsten five_h/seven_d darin.
+#    Schicht 2 (Reaktiv): falls trotz Schreib-Guards Mullwerte reinrutschen
+#    werden sie hier verworfen statt blind angezeigt zu werden.
 fresh=$(jq -sr '
-    if length == 0 then ""
+    map(select(
+        (.session_id // "" | tostring) != ""
+        and (.session_id | tostring | test("^[A-Za-z0-9_-]+$"))
+        and (.five_h | type == "number") and .five_h >= 0 and .five_h <= 100
+        and ((.seven_d == null) or ((.seven_d | type == "number") and .seven_d >= 0 and .seven_d <= 100))
+    )) as $valid |
+    if ($valid | length) == 0 then ""
     else
-        (map(.five_h_resets // 0) | max) as $maxR |
-        (map(select(.five_h_resets == $maxR)) | max_by(.five_h // 0)) as $bestF |
-        (map(.seven_d // 0) | max) as $bestS |
+        ($valid | map(.five_h_resets // 0) | max) as $maxR |
+        ($valid | map(select((.five_h_resets // 0) == $maxR)) | max_by(.five_h // 0)) as $bestF |
+        ($valid | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
@@ -140,6 +205,21 @@ fi
 [ -n "$five_h_used" ] && five_h_used=$(printf "%.0f" "$five_h_used" 2>/dev/null)
 [ -n "$week_used" ]   && week_used=$(printf "%.0f"   "$week_used"   2>/dev/null)
 [ -n "$ctx_remaining" ] && ctx_remaining=$(printf "%.0f" "$ctx_remaining" 2>/dev/null)
+
+# Letzter Schutzwall vor der Anzeige (Schicht 2: Reaktiv) — falls trotz aller
+# Validierung ein Mullwert durchschluepft, lieber 100% als 1.778.368.200% zeigen.
+clamp_pct() {
+    local v="$1"
+    [ -z "$v" ] && { echo ""; return; }
+    case "$v" in
+        ''|*[!0-9-]*) echo ""; return ;;
+    esac
+    [ "$v" -gt 100 ] 2>/dev/null && v=100
+    [ "$v" -lt 0   ] 2>/dev/null && v=0
+    echo "$v"
+}
+five_h_used=$(clamp_pct "$five_h_used")
+week_used=$(clamp_pct "$week_used")
 
 # Context-VERBRAUCH (= 100 - remaining)
 ctx_used=""

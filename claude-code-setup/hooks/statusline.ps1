@@ -88,62 +88,148 @@ if ($obj) {
 # Beim Reset (resets_at aendert sich) wird MAX nur innerhalb des aktuellsten
 # resets_at-Fensters gemacht — sonst wuerden alte hohe Werte aus dem letzten
 # Fenster die neuen niedrigen Werte verdecken. Identische Logik zu statusline.sh.
+#
+# ROBUSTHEITS-FIX (Frank-Bug-Report 2026-05-09 22:24): Statusline zeigte 1778368200%
+# bei 5h und 309% bei 7d. Root Cause: Eine State-Datei rate-limits-.json (mit LEERER
+# session_id) hatte verschobene Felder — five_h enthielt einen Unix-Timestamp,
+# seven_d eine UUID. Die MAX-Logik nahm diese Muellwerte ohne Plausibilitaetspruefung.
+# Fix nach Direktive 3 (Defense in Depth, Poka-Yoke Stufe 3):
+#   1. SCHREIB-GUARDS: kein Schreiben bei leerer session_id, kein Schreiben wenn
+#      five_h/seven_d ausserhalb 0..100, kein Schreiben wenn five_h_resets ein
+#      unplausibler Timestamp ist (muss zwischen now-1h und now+6h liegen)
+#   2. LESE-VALIDIERUNG: ungueltige JSON-Files werden GELOESCHT (nicht nur
+#      ignoriert), Werte ausserhalb 0..100 werden geclamped, Eintraege mit
+#      leerer/ungueltiger session_id werden geloescht
+#   3. ATOMIC WRITE: erst Temp-Datei, dann Move-Item — so kann die State-Datei
+#      nicht halb-geschrieben gelesen werden
+function Test-ValidPercent($v) {
+    if ($v -eq $null) { return $false }
+    try {
+        $n = [double]$v
+        return ($n -ge 0 -and $n -le 100)
+    } catch { return $false }
+}
+
+function Test-ValidResetTs($ts, $now) {
+    if ($ts -eq $null) { return $false }
+    try {
+        $n = [long]$ts
+        # Plausibel: zwischen "vor 1h" (Server-Clock-Drift) und "in 6h" (5h-Fenster + 1h Toleranz)
+        return ($n -ge ($now - 3600) -and $n -le ($now + 21600))
+    } catch { return $false }
+}
+
 try {
-    $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } else { 'unknown' }
+    $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } else { '' }
     $stateDir = Join-Path $env:USERPROFILE '.claude\state'
     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
-    $myState = Join-Path $stateDir "rate-limits-$sessionId.json"
     $nowTs = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
-    # 1. Aktuellen Input fuer DIESE Session schreiben
-    if ($five_h_used -ne $null) {
+    # 1. SCHREIBEN — nur wenn alle Werte plausibel sind (Schicht 1: Praeventiv).
+    #    NIEMALS bei leerer session_id schreiben (Datei rate-limits-.json verhindern).
+    $canWrite = ($sessionId -match '^[A-Za-z0-9_-]+$') -and `
+                (Test-ValidPercent $five_h_used) -and `
+                ((-not $week_used) -or (Test-ValidPercent $week_used)) -and `
+                ((-not $five_h_resets) -or $five_h_resets -eq 0 -or (Test-ValidResetTs $five_h_resets $nowTs))
+
+    if ($canWrite) {
+        $myState = Join-Path $stateDir "rate-limits-$sessionId.json"
+        $tmpState = "$myState.tmp"
         $payload = [ordered]@{
             ts_seen        = $nowTs
             session_id     = $sessionId
-            five_h         = $five_h_used
-            five_h_resets  = $five_h_resets
-            seven_d        = if ($week_used -ne $null) { $week_used } else { 0 }
+            five_h         = [int]$five_h_used
+            five_h_resets  = [long]$five_h_resets
+            seven_d        = if (Test-ValidPercent $week_used) { [int]$week_used } else { 0 }
         }
-        ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $myState -Encoding UTF8 -Force
+        # Atomic write: tmp + rename (Schicht 3: Eliminierung von Half-Read)
+        ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $tmpState -Encoding UTF8 -Force
+        Move-Item -Path $tmpState -Destination $myState -Force -ErrorAction SilentlyContinue
     }
 
     # 2. Cleanup: State-Files aelter als 24h loeschen — nur ~jeder 600. Aufruf
     #    (also ca. alle 10 Minuten bei refreshInterval=1) damit es nicht jeden
     #    Refresh kostet. Performance-kritisch (Frank-Bug-Report 2026-05-09 22:04).
+    #    Zusaetzlich: kaputte Files mit leerer session_id (rate-limits-.json) sofort entfernen.
     if (($nowTs % 600) -lt 2) {
         $cutoff = $nowTs - 86400
         Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue |
             Where-Object { $_.LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds -lt $cutoff } |
             Remove-Item -Force -ErrorAction SilentlyContinue
     }
+    # Defekte Files mit leerer session_id IMMER entfernen (Schicht 2: Reaktiv)
+    $emptyFile = Join-Path $stateDir 'rate-limits-.json'
+    if (Test-Path $emptyFile) { Remove-Item -Path $emptyFile -Force -ErrorAction SilentlyContinue }
 
-    # 3. MAX-Logik: aktuellsten resets_at finden, dann hoechsten five_h darin.
-    #    Alle State-Files in EINEM Pass lesen, dann in PowerShell aggregieren.
+    # 3. LESEN + VALIDIEREN: Alle State-Files lesen, kaputte loeschen, Werte clampen.
     $allEntries = @()
     Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
+        $f = $_.FullName
+        $entry = $null
         try {
-            $entry = Get-Content -Raw -Encoding UTF8 -Path $_.FullName | ConvertFrom-Json
-            $allEntries += $entry
-        } catch { }
+            $entry = Get-Content -Raw -Encoding UTF8 -Path $f | ConvertFrom-Json
+        } catch {
+            # Kaputtes JSON → Datei loeschen (Schicht 2: Reaktiv, Self-Healing)
+            Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
+            return
+        }
+        # Plausibilitaetspruefung pro Eintrag
+        if (-not $entry) {
+            Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
+            return
+        }
+        $sid = [string]$entry.session_id
+        if (-not $sid -or $sid -notmatch '^[A-Za-z0-9_-]+$') {
+            Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
+            return
+        }
+        if (-not (Test-ValidPercent $entry.five_h)) { return }  # Ueberspringen, nicht loeschen (koennte race-bedingt sein)
+        if (($entry.seven_d -ne $null) -and -not (Test-ValidPercent $entry.seven_d)) { return }
+        $resets = 0
+        try { $resets = [long]$entry.five_h_resets } catch { $resets = 0 }
+        if ($resets -ne 0 -and -not (Test-ValidResetTs $resets $nowTs)) {
+            $resets = 0  # Ungueltigen Timestamp ignorieren, aber Eintrag behalten
+        }
+        $allEntries += [PSCustomObject]@{
+            session_id    = $sid
+            five_h        = [int]$entry.five_h
+            seven_d       = if (Test-ValidPercent $entry.seven_d) { [int]$entry.seven_d } else { 0 }
+            five_h_resets = $resets
+        }
     }
 
     if ($allEntries.Count -gt 0) {
-        $maxResets = ($allEntries | ForEach-Object { [long]($_.five_h_resets) } | Measure-Object -Maximum).Maximum
+        $maxResets = ($allEntries | ForEach-Object { [long]$_.five_h_resets } | Measure-Object -Maximum).Maximum
         $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $maxResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            $freshFive = [int]$bestFive.five_h
-            $freshResets = [long]$bestFive.five_h_resets
-            $freshSession = [string]$bestFive.session_id
-            # 7d unabhaengig: hoechster Wert ueber alle Sessions
+            # 7d unabhaengig: hoechster Wert ueber alle Sessions (validiert)
             $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+
+            # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
+            $freshFive = [int]$bestFive.five_h
+            if ($freshFive -gt 100) { $freshFive = 100 }
+            if ($freshFive -lt 0)   { $freshFive = 0 }
+            if ($freshSeven -gt 100) { $freshSeven = 100 }
+            if ($freshSeven -lt 0)   { $freshSeven = 0 }
 
             $five_h_used = $freshFive
             $week_used = $freshSeven
-            $five_h_resets = $freshResets
+            $five_h_resets = [long]$bestFive.five_h_resets
         }
     }
 } catch { }
+
+# Letzter Schutzwall vor der Anzeige (Schicht 2: Reaktiv) — sollte nie noetig sein,
+# aber wenn doch ein Mullwert durchschluepft, lieber 100% als 1.778.368.200% zeigen.
+if ($five_h_used -ne $null) {
+    if ([double]$five_h_used -gt 100) { $five_h_used = 100 }
+    if ([double]$five_h_used -lt 0)   { $five_h_used = 0 }
+}
+if ($week_used -ne $null) {
+    if ([double]$week_used -gt 100) { $week_used = 100 }
+    if ([double]$week_used -lt 0)   { $week_used = 0 }
+}
 
 $ctx_used = $null
 if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
