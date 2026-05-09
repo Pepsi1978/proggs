@@ -8,9 +8,7 @@ import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.GenieCodexDao
-import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.local.dao.KiTriggerDao
-import de.frank.entropyreducer.data.local.dao.MemoryDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
@@ -19,9 +17,7 @@ import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
-import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
-import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
@@ -44,8 +40,6 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
     entities = [
         EntropyEntryEntity::class,
         SavedPromptEntity::class,
-        MemoryEntryEntity::class,
-        InsightEntity::class,
         BiomarkerSnapshotEntity::class,
         SupplementLogEntity::class,
         CalendarDayEntity::class,
@@ -54,21 +48,22 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         GenieCodexVersionEntity::class,
         WhoopWorkoutEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
+// Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
+// dieser DB ENTFERNT und in die ScientistDatabase verschoben. Frank-Wunsch:
+// schema-stabile Persistenz fuer Insights und Memories plus Drive-Backup.
+// Vor diesem Schritt laeuft InitialDataMigrator in EntropyReducerApp.onCreate
+// und kopiert vorhandene Daten aus der alten v9-Datei in die ScientistDatabase
+// BEVOR Room hier den destructive fallback ausfuehrt.
+//
 // Version 9 (2026-05-09): InsightEntity erweitert um additionalCategories
-// (List<EntropyCategory>) und manualSource (Boolean). Frank-Wunsch: manuell
-// hinzugefuegte Methoden mit Mic + KI-Verbesserung, plus Mehrfach-Kategorien
-// pro Methode. fallbackToDestructiveMigration ist aktiv — alte Insights werden
-// geloescht; das ist akzeptabel weil das Insight Board sich aus Hypothesen-
-// Erfolgen wieder fuellt und manuelle Methoden bisher nicht existierten.
+// und manualSource (siehe ScientistEntities.kt — Definition jetzt dort).
 @TypeConverters(EntropyTypeConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entropyEntryDao(): EntropyEntryDao
     abstract fun savedPromptDao(): SavedPromptDao
-    abstract fun memoryDao(): MemoryDao
-    abstract fun insightDao(): InsightDao
     abstract fun biomarkerSnapshotDao(): BiomarkerSnapshotDao
     abstract fun supplementLogDao(): SupplementLogDao
     abstract fun calendarDayDao(): CalendarDayDao

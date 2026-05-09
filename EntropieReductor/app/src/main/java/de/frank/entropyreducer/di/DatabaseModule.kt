@@ -47,12 +47,11 @@ object DatabaseModule {
     @Singleton
     fun provideScientistDatabase(@ApplicationContext ctx: Context): ScientistDatabase =
         Room.databaseBuilder(ctx, ScientistDatabase::class.java, ScientistDatabase.DB_NAME)
+            .addMigrations(ScientistDatabase.MIGRATION_1_2)
             .build()
 
     @Provides fun provideEntropyEntryDao(db: AppDatabase) = db.entropyEntryDao()
     @Provides fun provideSavedPromptDao(db: AppDatabase) = db.savedPromptDao()
-    @Provides fun provideMemoryDao(db: AppDatabase) = db.memoryDao()
-    @Provides fun provideInsightDao(db: AppDatabase) = db.insightDao()
     @Provides fun provideBiomarkerSnapshotDao(db: AppDatabase) = db.biomarkerSnapshotDao()
     @Provides fun provideSupplementLogDao(db: AppDatabase) = db.supplementLogDao()
     @Provides fun provideCalendarDayDao(db: AppDatabase) = db.calendarDayDao()
@@ -60,6 +59,11 @@ object DatabaseModule {
     @Provides fun provideKiTriggerDao(db: AppDatabase) = db.kiTriggerDao()
     @Provides fun provideGenieCodexDao(db: AppDatabase) = db.genieCodexDao()
     @Provides fun provideWhoopWorkoutDao(db: AppDatabase) = db.whoopWorkoutDao()
+
+    // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
+    // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.
+    @Provides fun provideMemoryDao(db: ScientistDatabase) = db.memoryDao()
+    @Provides fun provideInsightDao(db: ScientistDatabase) = db.insightDao()
 
     // Forscher-DAOs jetzt aus der ScientistDatabase — eigene Persistenz-Domaene.
     @Provides fun provideScientistSessionDao(db: ScientistDatabase) = db.scientistSessionDao()
