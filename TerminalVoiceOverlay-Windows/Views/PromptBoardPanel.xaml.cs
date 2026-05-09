@@ -32,6 +32,30 @@ namespace TerminalVoiceOverlay.Views;
 /// </summary>
 public partial class PromptBoardPanel : Window
 {
+    // ──────────────── Static frozen brushes (hot-path optimization) ────────────────
+    // Frueher: jede BuildPromptRow / BuildAlwaysOnCheckbox / RenderEmptyState legte pro
+    // Aufruf 1-5 neue, NICHT-eingefrorene SolidColorBrushes an — bei 50 Prompts und
+    // einem Re-Render pro Drag/Toggle/Edit/Add/Delete ergaben sich 6×50 = 300 unfrozene
+    // Brushes pro Render. Jeder unfrozen Brush bindet sich an WPFs Change-Notification-
+    // Pipeline (Cross-Thread-Sicherheit kostet auch wenn sie nicht genutzt wird).
+    // Jetzt: einmal beim App-Start eingefrorene statische Brushes; alle Rows teilen
+    // sich denselben Brush. Optisch identisch (gleiche RGB-Werte), kein Layout-Effekt.
+    private static SolidColorBrush FrozenBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+    private static readonly SolidColorBrush BrushTimestampGray   = FrozenBrush(0xAA, 0xAA, 0xAA); // BuildPromptRow timestamp
+    private static readonly SolidColorBrush BrushDarkFg          = FrozenBrush(0x1F, 0x1F, 0x1F); // Checkbox foreground / Filter active fg
+    private static readonly SolidColorBrush BrushGold            = FrozenBrush(0xFF, 0xD7, 0x00); // Always-on / Filter-active / DropTarget border
+    private static readonly SolidColorBrush BrushDarkBg          = FrozenBrush(0x2D, 0x2D, 0x2D); // Checkbox bg inactive / Cat tab inactive
+    private static readonly SolidColorBrush BrushMutedBorder     = FrozenBrush(0x8C, 0x8C, 0x8C); // Checkbox border inactive
+    private static readonly SolidColorBrush BrushEmptyStateFg    = FrozenBrush(0x9A, 0x9A, 0x9A); // RenderEmptyState text
+    private static readonly SolidColorBrush BrushHistoryInactive = FrozenBrush(0xCC, 0xCC, 0xCC); // History toggle inactive
+    private static readonly SolidColorBrush BrushSuccessGreen    = FrozenBrush(0x4C, 0xAF, 0x50); // ClearAllChecks
+    private static readonly SolidColorBrush BrushFilterInactiveBg = FrozenBrush(0x38, 0x38, 0x38); // Filter inactive
+
     public event Action<string>? PromptInsertRequested;
 
     /// <summary>
@@ -398,7 +422,7 @@ public partial class PromptBoardPanel : Window
         // Visuelles Feedback SOFORT setzen, damit der Klick ankommt — auch
         // wenn die DB-Operation ein paar hundert Millisekunden dauert.
         var originalBackground = BtnClearAllChecks.Background;
-        BtnClearAllChecks.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+        BtnClearAllChecks.Background = BrushSuccessGreen;
 
         try
         {
@@ -497,14 +521,14 @@ public partial class PromptBoardPanel : Window
     {
         if (_alwaysOnFilterMode)
         {
-            BtnFilterActiveOnly.Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
-            BtnFilterActiveOnly.Foreground = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x1F));
+            BtnFilterActiveOnly.Background = BrushGold;
+            BtnFilterActiveOnly.Foreground = BrushDarkFg;
             BtnFilterActiveOnly.ToolTip = "Filter aktiv — nur Prompts mit Haekchen sind sichtbar. Klick zeigt wieder alle.";
         }
         else
         {
-            BtnFilterActiveOnly.Background = new SolidColorBrush(Color.FromRgb(0x38, 0x38, 0x38));
-            BtnFilterActiveOnly.Foreground = new SolidColorBrush(Colors.White);
+            BtnFilterActiveOnly.Background = BrushFilterInactiveBg;
+            BtnFilterActiveOnly.Foreground = System.Windows.Media.Brushes.White;
             BtnFilterActiveOnly.ToolTip = "Nur aktivierte Prompts anzeigen — blendet alle Prompts ohne Haekchen aus. Erneuter Klick zeigt wieder alle.";
         }
     }
@@ -812,12 +836,12 @@ public partial class PromptBoardPanel : Window
         // gedaempfte Farbe wie die anderen Toolbar-Symbole.
         if (_historyWindowVisible)
         {
-            BtnHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+            BtnHistory.Foreground = BrushGold;
             BtnHistory.ToolTip    = "Prompt-Historie schliessen";
         }
         else
         {
-            BtnHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
+            BtnHistory.Foreground = BrushHistoryInactive;
             BtnHistory.ToolTip    = "Prompt-Historie";
         }
     }
@@ -1256,7 +1280,7 @@ public partial class PromptBoardPanel : Window
             bool isActive = btn.Tag is Guid id && _activeCategoryIds.Contains(id);
             btn.Background = isActive
                 ? new SolidColorBrush(catColor)
-                : new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D));
+                : BrushDarkBg;
         }
     }
 
@@ -1583,7 +1607,7 @@ public partial class PromptBoardPanel : Window
             {
                 Text = timestampText,
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA)),
+                Foreground = BrushTimestampGray,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(6, 0, 6, 0),
                 IsHitTestVisible = false, // click should fall through to the row
@@ -1777,7 +1801,7 @@ public partial class PromptBoardPanel : Window
             row.BorderThickness = new Thickness(0);
             return;
         }
-        row.BorderBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00));
+        row.BorderBrush = BrushGold;
         row.BorderThickness = above
             ? new Thickness(0, 2, 0, 0)
             : new Thickness(0, 0, 0, 2);
@@ -1873,15 +1897,11 @@ public partial class PromptBoardPanel : Window
             Width = 18,
             Height = 18,
             Content = prompt.IsAlwaysOn ? "✓" : "",
-            Foreground = new SolidColorBrush(Color.FromRgb(0x1F, 0x1F, 0x1F)),
+            Foreground = BrushDarkFg,
             FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Background = prompt.IsAlwaysOn
-                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00))
-                : new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D)),
-            BorderBrush = prompt.IsAlwaysOn
-                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x00))
-                : new SolidColorBrush(Color.FromRgb(0x8C, 0x8C, 0x8C)),
+            Background = prompt.IsAlwaysOn ? BrushGold : BrushDarkBg,
+            BorderBrush  = prompt.IsAlwaysOn ? BrushGold : BrushMutedBorder,
             BorderThickness = new Thickness(1.5),
             Padding = new Thickness(0),
             Cursor = Cursors.Hand,
@@ -1942,7 +1962,7 @@ public partial class PromptBoardPanel : Window
         PromptList.Children.Add(new TextBlock
         {
             Text = message,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0x9A)),
+            Foreground = BrushEmptyStateFg,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(4, 8, 4, 0),
