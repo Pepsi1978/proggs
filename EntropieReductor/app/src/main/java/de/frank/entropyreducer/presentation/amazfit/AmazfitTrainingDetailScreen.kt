@@ -639,11 +639,11 @@ private fun SplitsCard(splits: List<Double>) {
             // Pace-Werte koennen entweder als Sekunden pro Km oder als
             // Sekunden pro Meter gespeichert sein. Defensiv interpretieren:
             // Werte unter 50 sind vermutlich sec/m → mit 1000 multiplizieren.
-            val secPerKm = splits.map { if (it < 50.0) it * 1000.0 else it }
+            val secPerKm = splits.map { if (it < 50.0) it * 1000.0 else it }.filter { it > 0 }
+            if (secPerKm.isEmpty()) return@Column
             val maxPace = secPerKm.max()
-            val minPace = secPerKm.filter { it > 0 }.minOrNull() ?: 0.0
+            val minPace = secPerKm.min()
             secPerKm.forEachIndexed { idx, sec ->
-                if (sec <= 0) return@forEachIndexed
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(
                         text = "Km ${idx + 1}",
@@ -652,8 +652,18 @@ private fun SplitsCard(splits: List<Double>) {
                         modifier = Modifier.weight(0.18f),
                     )
                     Box(modifier = Modifier.weight(0.55f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(cosmos.glassBorder.copy(alpha = 0.18f))) {
+                        // Frank-Wunsch 2026-05-09: lange Bar = langsam, kurze Bar = schnell.
+                        // frac = 0 (schnellster Km, minPace) -> kleinster Balken
+                        // frac = 1 (langsamster Km, maxPace) -> voller Balken
                         val frac = if (maxPace > minPace) ((sec - minPace) / (maxPace - minPace)).coerceIn(0.0, 1.0).toFloat() else 0.5f
-                        Box(modifier = Modifier.fillMaxWidth(fraction = (1f - frac).coerceIn(0.05f, 1f)).height(10.dp).background(CosmosColors.Warning))
+                        // Farbverlauf: gruen (schnell) → orange (mittel) → rot (langsam)
+                        val barColor = lerpColor(
+                            androidx.compose.ui.graphics.Color(0xFF4CAF50), // gruen
+                            androidx.compose.ui.graphics.Color(0xFFFF9800), // orange
+                            androidx.compose.ui.graphics.Color(0xFFEF5350), // rot
+                            frac,
+                        )
+                        Box(modifier = Modifier.fillMaxWidth(fraction = frac.coerceIn(0.06f, 1f)).height(10.dp).background(barColor))
                     }
                     Text(
                         text = formatPace(sec),
@@ -665,6 +675,32 @@ private fun SplitsCard(splits: List<Double>) {
                 }
             }
         }
+    }
+}
+
+/** 3-Stop-Farbverlauf — gruen → orange → rot, t in [0,1]. */
+private fun lerpColor(
+    a: androidx.compose.ui.graphics.Color,
+    b: androidx.compose.ui.graphics.Color,
+    c: androidx.compose.ui.graphics.Color,
+    t: Float,
+): androidx.compose.ui.graphics.Color {
+    return if (t < 0.5f) {
+        val k = t * 2f
+        androidx.compose.ui.graphics.Color(
+            red = a.red + (b.red - a.red) * k,
+            green = a.green + (b.green - a.green) * k,
+            blue = a.blue + (b.blue - a.blue) * k,
+            alpha = 1f,
+        )
+    } else {
+        val k = (t - 0.5f) * 2f
+        androidx.compose.ui.graphics.Color(
+            red = b.red + (c.red - b.red) * k,
+            green = b.green + (c.green - b.green) * k,
+            blue = b.blue + (c.blue - b.blue) * k,
+            alpha = 1f,
+        )
     }
 }
 
@@ -826,6 +862,29 @@ private typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
  * VO2_workout=27.3, avg_HR=146, HR_reserve=0.70, VO2Max ≈ 39 — passt zu
  * Zepp-App-Anzeige 41 (kleine Abweichung wegen Hoehenmeter beim Trail).
  */
+/**
+ * Schaetzt VO2Max nach der ACSM-Formel mit HR-Reserve-Hochrechnung.
+ * Dies ist die wissenschaftlich anerkannte Methode (American College of
+ * Sports Medicine — Quelle ACSM Guidelines for Exercise Testing 11. Auflage)
+ * und wird auch von Garmin Firstbeat als Grundlage genutzt.
+ *
+ * Schritt 1 — VO2 bei diesem Workout (ml/kg/min):
+ *   VO2_workout = 0.2 × Speed (m/min) + 3.5    [ACSM-Lauf-Formel]
+ *
+ * Schritt 2 — HR-Reserve-Anteil (Karvonen):
+ *   HR_reserve_anteil = (avg_HR − rest_HR) / (max_HR − rest_HR)
+ *
+ * Schritt 3 — Hochrechnung auf Maximum:
+ *   VO2Max ≈ VO2_workout / HR_reserve_anteil
+ *
+ * Korrektur +2 (Frank-Empirie 2026-05-09): Frank's Zepp-App zeigt fuer den
+ * heutigen Lauf 41, reine ACSM gibt 38-39 — also +2 Konstante damit die
+ * absoluten Werte zu seinem Geraet passen. Die Variation zwischen Workouts
+ * bleibt korrekt, nur der Offset wird angeglichen.
+ *
+ * HR_max = 180 (Frank's persoenlicher Maximalpuls)
+ * HR_rest = 65 (Default — Frank's typischer Ruhepuls)
+ */
 private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity): String {
     val avgHr = w.avgHeartRate ?: return "—"
     val distance = w.distanceMeters ?: return "—"
@@ -837,20 +896,11 @@ private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.Amazfi
     if (frankMaxHr <= restingHr) return "—"
     val durationMin = duration / 60.0
     val speedMperMin = distance / durationMin
-    // ACSM-Lauf-Formel: VO2 bei Workout-Pace
     val vo2Workout = 0.2 * speedMperMin + 3.5
-    // HR-Reserve-Anteil
     val hrReserveFraction = (avgHr - restingHr).toDouble() / (frankMaxHr - restingHr).toDouble()
     if (hrReserveFraction <= 0.1) return "—"
     val vo2MaxAcsm = vo2Workout / hrReserveFraction
-    // Uth-Sørensen-Pedersen: VO2Max = 15.3 × (HR_max / HR_rest) — typisch hoeher
-    val vo2MaxUth = 15.3 * frankMaxHr.toDouble() / restingHr.toDouble()
-    // Garmin/Zepp-aehnliche Schaetzung: gewichteter Mittelwert beider Methoden,
-    // mit leichter Aufrundung fuer Outdoor-Trail (Hoehenmeter, Gelaendewiderstand).
-    // Frank-Verifikation 2026-05-09: Zepp zeigt 41 — ACSM allein gibt ~38,
-    // Uth allein ~42, Mittelwert + 1.0 Trail-Bonus ≈ 41.
-    val terrainBonus = if ((w.altitudeGainMeters ?: 0.0) > 50) 1.5 else 0.5
-    val vo2Max = (vo2MaxAcsm + vo2MaxUth) / 2.0 + terrainBonus
+    val vo2Max = vo2MaxAcsm + 2.0
     if (vo2Max < 20 || vo2Max > 80) return "—"
     return "≈ %.0f".format(vo2Max)
 }
