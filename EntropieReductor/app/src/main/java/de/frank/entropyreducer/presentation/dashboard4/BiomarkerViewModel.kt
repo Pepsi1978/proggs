@@ -3,8 +3,11 @@ package de.frank.entropyreducer.presentation.dashboard4
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
+import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
+import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
@@ -24,6 +27,21 @@ private data class StatusBundle(
     val breakdown: StatusBreakdown?,
     val lastWhoopSyncMs: Long,
     val selectedDate: java.time.LocalDate,
+)
+
+/** Whoop-Daten gebuendelt damit der outer combine() unter 5 Flows bleibt. */
+private data class WhoopBundle(
+    val latest: BiomarkerSnapshotEntity?,
+    val history: List<BiomarkerSnapshotEntity>,
+    val workouts: List<WhoopWorkoutEntity>,
+    val last30: List<BiomarkerSnapshotEntity>,
+)
+
+/** Amazfit-T-Rex-3-Daten gebuendelt — gleiche Idee wie StatusBundle. */
+private data class AmazfitBundle(
+    val latestDaily: AmazfitDailyEntity?,
+    val allDaily: List<AmazfitDailyEntity>,
+    val workouts: List<AmazfitWorkoutEntity>,
 )
 
 @androidx.compose.runtime.Immutable
@@ -60,11 +78,19 @@ data class BiomarkerUiState(
      *  Delta wird hier mit der eigenen Baseline berechnet. */
     val skinTempBaseline: Double? = null,
     val skinTempDelta: Double? = null,
+    /** Frank-Wunsch 2026-05-09: PAI/BioCharge/Hauttemperatur von der Amazfit T-Rex 3
+     *  als zusaetzliche Werte mit eigenem Quellen-Label in den Biomarker-Bereich. */
+    val amazfitDailyLatest: AmazfitDailyEntity? = null,
+    val amazfitDailyHistory: List<AmazfitDailyEntity> = emptyList(),
+    val amazfitDailyForSelectedDay: AmazfitDailyEntity? = null,
+    val amazfitWorkouts: List<AmazfitWorkoutEntity> = emptyList(),
+    val amazfitWorkoutsForSelectedDay: List<AmazfitWorkoutEntity> = emptyList(),
 )
 
 @HiltViewModel
 class BiomarkerViewModel @Inject constructor(
     private val repo: WhoopRepository,
+    private val amazfitRepo: AmazfitRepository,
     private val scheduler: BackgroundScheduler,
     statusObserver: StatusObserver,
     settings: AppSettings,
@@ -78,10 +104,17 @@ class BiomarkerViewModel @Inject constructor(
     private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
 
     val state: StateFlow<BiomarkerUiState> = combine(
-        repo.observeLatest(),
-        repo.observeAll(),
-        repo.observeWorkouts(),
-        repo.observeRange(thirtyDaysAgo, now),
+        combine(
+            repo.observeLatest(),
+            repo.observeAll(),
+            repo.observeWorkouts(),
+            repo.observeRange(thirtyDaysAgo, now),
+        ) { l, a, w, r30 -> WhoopBundle(l, a, w, r30) },
+        combine(
+            amazfitRepo.observeLatestDaily(),
+            amazfitRepo.observeAllDaily(),
+            amazfitRepo.observeAllWorkouts(),
+        ) { lD, aD, w -> AmazfitBundle(lD, aD, w) },
         combine(
             _refreshing,
             _message,
@@ -91,7 +124,11 @@ class BiomarkerViewModel @Inject constructor(
         ) { r, m, b, sync, sel ->
             StatusBundle(r, m, b, sync, sel)
         },
-    ) { latest, all, workouts, last30, status ->
+    ) { whoop, amazfit, status ->
+        val latest = whoop.latest
+        val all = whoop.history
+        val workouts = whoop.workouts
+        val last30 = whoop.last30
         val selDate = status.selectedDate
         // Snapshot für den gewählten Tag finden — wenn kein Snapshot für das
         // exakte Datum existiert, wird der nächste juengere Snapshot vor dem
@@ -105,6 +142,16 @@ class BiomarkerViewModel @Inject constructor(
         // Workouts fuer den gewaehlten Tag — Whoop liefert dateKey im UTC-Tag,
         // wir vergleichen lokal (Frank arbeitet in lokaler Zeit) per Bereichsfilter.
         val workoutsForDay = workouts
+            .filter { it.startMs in selStartMs until selEndMs }
+            .sortedBy { it.startMs }
+
+        // Amazfit-Tag-Eintrag fuer den gewaehlten Tag (per date-String matchen).
+        val selDateKey = selDate.toString()
+        val amazfitForDay = amazfit.allDaily.firstOrNull { it.date == selDateKey }
+            ?: if (selDate == java.time.LocalDate.now()) amazfit.latestDaily else null
+
+        // Amazfit-Workouts fuer den gewaehlten Tag.
+        val amazfitWorkoutsForDay = amazfit.workouts
             .filter { it.startMs in selStartMs until selEndMs }
             .sortedBy { it.startMs }
 
@@ -146,6 +193,11 @@ class BiomarkerViewModel @Inject constructor(
             restorativeSleepPercent = restorativePct,
             skinTempBaseline = baseline,
             skinTempDelta = skinTempDelta,
+            amazfitDailyLatest = amazfit.latestDaily,
+            amazfitDailyHistory = amazfit.allDaily,
+            amazfitDailyForSelectedDay = amazfitForDay,
+            amazfitWorkouts = amazfit.workouts,
+            amazfitWorkoutsForSelectedDay = amazfitWorkoutsForDay,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 

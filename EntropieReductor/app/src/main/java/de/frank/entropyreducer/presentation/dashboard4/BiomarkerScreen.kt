@@ -59,6 +59,8 @@ fun BiomarkerHostScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
     onOpenMetricDetail: (String) -> Unit = {},
+    onOpenTrainingDetail: (String) -> Unit = {},
+    onOpenAllTrainings: () -> Unit = {},
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -402,6 +404,64 @@ fun BiomarkerHostScreen(
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
             // über die volle Historie.
             item { CorrelationCard(state) }
+            // ============ T-Rex 3 / Amazfit-Block (Frank-Wunsch 2026-05-09) ============
+            // Zeigt PAI, BioCharge und Hauttemperatur aus der Amazfit T-Rex 3 als
+            // separate Cards mit "(T-Rex 3)"-Vermerk. Sport-Trainings erscheinen
+            // als Liste unten drunter mit Klick zum Detail-Screen.
+            item { AmazfitSectionHeader() }
+            item {
+                MetricHistoryCard(
+                    title = "PAI (T-Rex 3)",
+                    accent = CosmosColors.Warning,
+                    points = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.paiScore?.toDouble()?.let { d.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.paiScore?.toDouble()?.let { d.capturedAt to it }
+                    },
+                    unit = "",
+                    onClick = { onOpenMetricDetail("amazfit_pai") },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "BioCharge (T-Rex 3)",
+                    accent = CosmosColors.AccentSecondary,
+                    points = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.bioChargeScore?.toDouble()?.let { d.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.bioChargeScore?.toDouble()?.let { d.capturedAt to it }
+                    },
+                    unit = "",
+                    onClick = { onOpenMetricDetail("amazfit_biocharge") },
+                )
+            }
+            item {
+                MetricHistoryCard(
+                    title = "Hauttemperatur (T-Rex 3)",
+                    accent = CosmosColors.Warning,
+                    points = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.skinTempCelsius?.let { d.capturedAt to it }
+                    },
+                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
+                        d.skinTempCelsius?.let { d.capturedAt to it }
+                    },
+                    unit = "°C",
+                    onClick = { onOpenMetricDetail("amazfit_skin_temp") },
+                    lowerIsBetter = true,
+                )
+            }
+            // Sport-Bereich — Frank-Wunsch 2026-05-09: alles was mit Sport zu tun
+            // hat in einem eigenen Bereich, mit T-Rex-3-Vermerk im Header.
+            item {
+                AmazfitTrainingsCard(
+                    workouts = state.amazfitWorkouts,
+                    onOpenAll = onOpenAllTrainings,
+                    onOpenDetail = onOpenTrainingDetail,
+                )
+            }
+
             if (state.latest == null) {
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
