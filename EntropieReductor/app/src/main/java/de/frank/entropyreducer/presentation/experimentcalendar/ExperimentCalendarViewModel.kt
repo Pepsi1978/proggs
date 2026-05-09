@@ -10,11 +10,13 @@ import de.frank.entropyreducer.data.repository.HypothesisRepository
 import de.frank.entropyreducer.domain.model.HypothesisOutcome
 import de.frank.entropyreducer.domain.model.HypothesisStatus
 import de.frank.entropyreducer.domain.usecase.MatchInsightUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -112,7 +114,22 @@ class ExperimentCalendarViewModel @Inject constructor(
             showInsightPrompt = selection.insightPrompt,
             selectedDate = selection.selectedDate,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExperimentCalendarUiState())
+    }
+        // Performance-Fix Loop 3.2: Der combine-Block macht
+        //   - expandByDate(all): pro Hypothese Map-Builds ueber den ganzen
+        //     plannedStartDate..plannedEndDate-Span (potenziell wochenlang)
+        //   - events.groupBy { LocalDate.parse(it.date) }: 1 LocalDate.parse
+        //     pro Event
+        //   - days.associate { LocalDate.parse(entry.date) to entry.shiftCode }
+        //     ZWEI Mal: bei einem 1825-Tage-Range (5 Jahre) = bis zu 1825
+        //     LocalDate.parse-Calls PRO combine-Tick, JE associate-Call
+        // Ohne flowOn lief das auf Main bei jedem hypotheses-/events-/days-/
+        // anchor-/view-Update — sichtbar als Stutter beim Monatsblaettern und
+        // beim Ein-/Ausklappen einer Hypothese. Mit flowOn(Default) auf
+        // Default-Pool, ExperimentCalendarUiState wird thread-safe an Main
+        // propagiert.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExperimentCalendarUiState())
 
     fun setView(v: CalendarView) {
         viewFlow.value = v

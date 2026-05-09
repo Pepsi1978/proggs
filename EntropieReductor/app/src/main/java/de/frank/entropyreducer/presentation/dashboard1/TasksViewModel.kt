@@ -23,12 +23,14 @@ import de.frank.entropyreducer.domain.usecase.CalculateBucketsUseCase
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
 import de.frank.entropyreducer.presentation.components.MicState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -170,7 +172,19 @@ class TasksViewModel @Inject constructor(
             driveBackupEnabled = secrets.driveBackupEnabled && secrets.driveAccountEmail != null,
             rescoreProgress = rescore,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), TasksUiState())
+    }
+        // Performance-Fix Loop 3.1: Der combine-Block macht filter/groupBy/
+        // mapValues/sortedByDescending PLUS drei synchrone EncryptedSharedPreferences-
+        // Reads (secrets.driveLastBackupEpochMs, .driveBackupEnabled,
+        // .driveAccountEmail). Ohne flowOn lief das auf Main bei jedem combine-Tick
+        // (entries-Update, Status-Tick alle 5 Min, KI-Frage, Sync-Status).
+        // EncryptedSharedPreferences cached die entschluesselten Werte intern,
+        // aber jeder getString geht durch ConcurrentHashMap-Lookups + AES-SIV-
+        // Key-Decode. Mehrfach pro combine-Tick auf Main = Tipp-Latenz.
+        // .flowOn(Default) verlagert die Berechnung off-main, TasksUiState
+        // (@Immutable) wird thread-safe an Main propagiert.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), TasksUiState())
 
     init {
         // KI-Frage des Moments dynamisch generieren beim ViewModel-Start
