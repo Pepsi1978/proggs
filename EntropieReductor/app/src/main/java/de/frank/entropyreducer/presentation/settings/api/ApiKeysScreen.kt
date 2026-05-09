@@ -71,9 +71,11 @@ fun ApiKeysScreen(
     onBack: () -> Unit,
     vm: ApiKeysViewModel = hiltViewModel(),
     oauthVm: OAuthViewModel = hiltViewModel(),
+    zeppVm: ZeppApiViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
     val oauthState by oauthVm.state.collectAsState()
+    val zeppState by zeppVm.state.collectAsState()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "API-Schlüssel",
@@ -140,6 +142,7 @@ fun ApiKeysScreen(
                 )
             }
             item { WhoopOAuthCard(oauthVm, oauthState) }
+            item { AmazfitLoginCard(zeppVm, zeppState) }
             item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
@@ -629,5 +632,177 @@ private fun VoiceRow(
                 modifier = Modifier.size(18.dp),
             )
         }
+    }
+}
+
+/* ----------------- Amazfit / Zepp Login (T-Rex 3) ----------------- */
+
+@Composable
+private fun AmazfitLoginCard(vm: ZeppApiViewModel, state: ZeppApiUiState) {
+    val cosmos = LocalCosmos.current
+    var passwordHidden by remember { mutableStateOf(true) }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Amazfit T-Rex 3 (Zepp-Cloud)",
+                style = MaterialTheme.typography.titleMedium,
+                color = CosmosColors.Warning,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Verbinde dich mit deinem Zepp-Konto, um die Sport-Daten der T-Rex 3 " +
+                    "(Trainings, GPS-Tracks, Pace, Pulsverlauf) sowie PAI, BioCharge, " +
+                    "Hauttemperatur und SpO2 in den Biomarker-Bereich zu laden. E-Mail " +
+                    "und Passwort werden verschluesselt auf dem Geraet gespeichert.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.email,
+                onValueChange = vm::setEmail,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("E-Mail Adresse", color = cosmos.textSecondary) },
+                singleLine = true,
+                enabled = !state.connected && !state.busy,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.password,
+                onValueChange = vm::setPassword,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Passwort", color = cosmos.textSecondary) },
+                singleLine = true,
+                enabled = !state.connected && !state.busy,
+                visualTransformation = if (passwordHidden) {
+                    PasswordVisualTransformation()
+                } else {
+                    VisualTransformation.None
+                },
+                trailingIcon = {
+                    IconButton(onClick = { passwordHidden = !passwordHidden }) {
+                        Icon(
+                            imageVector = if (passwordHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                            contentDescription = if (passwordHidden) "Anzeigen" else "Verbergen",
+                            tint = cosmos.textSecondary,
+                        )
+                    }
+                },
+            )
+            Spacer(Modifier.height(8.dp))
+            // Region-Auswahl als Mini-Toggle (de2 / us2)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Region",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.padding(end = 12.dp),
+                )
+                listOf("de2" to "Europa", "us2" to "USA").forEach { (code, label) ->
+                    val selected = state.region == code
+                    androidx.compose.material3.AssistChip(
+                        onClick = { vm.setRegion(code) },
+                        label = { Text(label) },
+                        modifier = Modifier.padding(end = 6.dp),
+                        colors = androidx.compose.material3.AssistChipDefaults.assistChipColors(
+                            containerColor = if (selected) {
+                                CosmosColors.Warning.copy(alpha = 0.18f)
+                            } else {
+                                Color.Transparent
+                            },
+                            labelColor = if (selected) CosmosColors.Warning else cosmos.textPrimary,
+                        ),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.connected) {
+                    OutlinedButton(
+                        onClick = vm::runSync,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.busy,
+                    ) {
+                        if (state.busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = CosmosColors.Warning,
+                            )
+                            Spacer(Modifier.size(8.dp))
+                        }
+                        Text("Sync starten")
+                    }
+                    Button(
+                        onClick = vm::logout,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.busy,
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                    ) {
+                        Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Trennen")
+                    }
+                } else {
+                    Button(
+                        onClick = vm::login,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CosmosColors.Warning,
+                            contentColor = Color.Black,
+                        ),
+                    ) {
+                        if (state.busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.Black,
+                            )
+                            Spacer(Modifier.size(8.dp))
+                        } else {
+                            Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        Text("Verbinden")
+                    }
+                }
+            }
+            if (state.connected) {
+                Spacer(Modifier.height(8.dp))
+                ConnectionLabel(
+                    label = if (state.userId != null) "Verbunden (User ${state.userId})" else "Verbunden",
+                    color = CosmosColors.Success,
+                    icon = Icons.Outlined.CheckCircle,
+                )
+                if (state.lastSyncMs > 0) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Letzter Sync: " + formatRelativeTime(state.lastSyncMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+            }
+            state.message?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+        }
+    }
+}
+
+private fun formatRelativeTime(epochMs: Long): String {
+    val now = System.currentTimeMillis()
+    val diffSec = (now - epochMs) / 1_000L
+    return when {
+        diffSec < 60 -> "gerade eben"
+        diffSec < 3600 -> "vor ${diffSec / 60} Minuten"
+        diffSec < 86400 -> "vor ${diffSec / 3600} Stunden"
+        else -> "vor ${diffSec / 86400} Tagen"
     }
 }
