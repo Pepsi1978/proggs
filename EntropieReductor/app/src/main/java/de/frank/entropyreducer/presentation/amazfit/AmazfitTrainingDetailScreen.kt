@@ -66,9 +66,11 @@ fun AmazfitTrainingDetailScreen(
     // Parser auf Composable-Level (nicht in item-Lambda — dort kein @Composable-Context).
     val gps = remember(w?.gpsTrackJson) { parseGpsPoints(w?.gpsTrackJson) }
     val hr = remember(w?.heartRateSeriesJson) { parsePipeIntList(w?.heartRateSeriesJson) }
-    val splits = remember(w?.paceSeriesJson, w?.splitsJson) {
-        parsePipeDoubleList(w?.paceSeriesJson) + parsePipeDoubleList(w?.splitsJson)
-    }
+    // Splits = Km-Splits aus paceSeriesJson (~7-8 Werte pro Lauf, fuer Tabelle)
+    val splits = remember(w?.paceSeriesJson) { parsePipeDoubleList(w?.paceSeriesJson) }
+    // Tempo-Stream = hochaufgeloeste Sample-Liste aus paceStreamJson (~3000 Werte
+    // pro Lauf, fuer den fluessigen Tempo-Verlauf-Chart)
+    val tempoStream = remember(w?.paceStreamJson) { parsePaceStream(w?.paceStreamJson) }
 
     CosmosScaffold(
         title = workout?.sportName ?: "Training (T-Rex 3)",
@@ -98,7 +100,7 @@ fun AmazfitTrainingDetailScreen(
             item { TrainingseffektCard(w) }
             if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city) }
             if (hr.isNotEmpty()) item { PulsverlaufCard(hr) }
-            if (splits.isNotEmpty()) item { TempoVerlaufCard(splits) }
+            if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream) }
             if (splits.isNotEmpty()) item { SplitsCard(splits) }
             item { SchwimmCard(w) }
             item { Spacer(Modifier.height(40.dp)) }
@@ -229,9 +231,7 @@ private fun TerrainGrid(w: AmazfitWorkoutEntity) {
     StatsGrid(
         listOf(
             "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
-            "VO₂Max" to (w.vo2Max?.let { "%.1f".format(it) } ?: estimateVo2Max(w)),
-            "Erholung" to (w.recoveryTimeHours?.let { "$it h" } ?: estimateRecovery(w)),
-            "Hauttemperatur" to (w.skinTempCelsius?.let { "%.2f °C".format(it) } ?: "—"),
+            "VO₂Max" to (w.vo2Max?.let { formatVo2(it) } ?: estimateVo2Max(w)),
         ),
     )
 }
@@ -564,11 +564,13 @@ private fun ChartWithAxes(
  * Y-Achse INVERTIERT — niedrigere sec/km (= schneller) ist OBEN.
  */
 @Composable
-private fun TempoVerlaufCard(splits: List<Double>) {
+private fun TempoVerlaufCard(stream: List<Double>) {
     val cosmos = LocalCosmos.current
-    // Werte normalisieren: <50 ist sec/m → ×1000 = sec/km
-    val secPerKm = splits.map { if (it < 50.0) it * 1000.0 else it }.filter { it > 0 }
-    if (secPerKm.size < 2) return
+    // stream-Werte sind bereits in sec/km vom Parser. Stark schwankende Werte
+    // (z.B. an Pause-Phasen) ueber 1200 sec/km filtern damit der Chart nicht
+    // durch Outliers verzerrt wird.
+    val secPerKm = stream.filter { it in 150.0..1200.0 }
+    if (secPerKm.size < 10) return
     val avg = secPerKm.average()
     val min = secPerKm.min()
     val max = secPerKm.max()
@@ -652,18 +654,20 @@ private fun SplitsCard(splits: List<Double>) {
                         modifier = Modifier.weight(0.18f),
                     )
                     Box(modifier = Modifier.weight(0.55f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(cosmos.glassBorder.copy(alpha = 0.18f))) {
-                        // Frank-Wunsch 2026-05-09: lange Bar = langsam, kurze Bar = schnell.
-                        // frac = 0 (schnellster Km, minPace) -> kleinster Balken
-                        // frac = 1 (langsamster Km, maxPace) -> voller Balken
-                        val frac = if (maxPace > minPace) ((sec - minPace) / (maxPace - minPace)).coerceIn(0.0, 1.0).toFloat() else 0.5f
-                        // Farbverlauf: gruen (schnell) → orange (mittel) → rot (langsam)
+                        // Frank-Wunsch 2026-05-09 (zweite Iteration): laengster Bar
+                        // = 100% (langsamster Km), andere proportional davon.
+                        // Beispiel: maxPace 9:25 (565 sec/km) = 100% Bar,
+                        // 7:11 (431 sec/km) = 431/565 = 76% Bar.
+                        val frac = (sec / maxPace).toFloat().coerceIn(0.0f, 1.0f)
+                        // Farbverlauf relativ: gruen (schnellster) → rot (langsamster)
+                        val colorFrac = if (maxPace > minPace) ((sec - minPace) / (maxPace - minPace)).coerceIn(0.0, 1.0).toFloat() else 0.5f
                         val barColor = lerpColor(
-                            androidx.compose.ui.graphics.Color(0xFF4CAF50), // gruen
-                            androidx.compose.ui.graphics.Color(0xFFFF9800), // orange
-                            androidx.compose.ui.graphics.Color(0xFFEF5350), // rot
-                            frac,
+                            androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                            androidx.compose.ui.graphics.Color(0xFFFF9800),
+                            androidx.compose.ui.graphics.Color(0xFFEF5350),
+                            colorFrac,
                         )
-                        Box(modifier = Modifier.fillMaxWidth(fraction = frac.coerceIn(0.06f, 1f)).height(10.dp).background(barColor))
+                        Box(modifier = Modifier.fillMaxWidth(fraction = frac).height(10.dp).background(barColor))
                     }
                     Text(
                         text = formatPace(sec),
@@ -777,6 +781,31 @@ private fun parsePipeIntList(s: String?): List<Int> {
         sum += d
         // Plausibilitaetsfilter: HR zwischen 30 und 230
         if (sum in 30..230) out.add(sum)
+    }
+    return out
+}
+
+/**
+ * Parst den hochaufgeloesten Pace-Stream aus dem Detail-Endpoint
+ * `data.pace`. Format vermutlich "time_delta,pace_value;..." mit Werten in
+ * Sekunden pro Meter (gleiche Einheit wie avg_pace) — konvertiert auf
+ * Sekunden pro Kilometer durch ×1000. Defensiv: falls Werte gross genug
+ * sind (>50), schon sec/km, kein zusaetzliches Skalieren.
+ */
+private fun parsePaceStream(s: String?): List<Double> {
+    if (s.isNullOrBlank()) return emptyList()
+    val out = mutableListOf<Double>()
+    for (sample in s.split(";")) {
+        if (sample.isBlank()) continue
+        val parts = sample.split(",")
+        val v = parts.lastOrNull()?.trim()?.toDoubleOrNull() ?: continue
+        // Plausibilitaet: nur positive Werte, kein -1 / -2000000 (NO_VALUE-Marker
+        // aus rolandsz/exporters/base_exporter.py).
+        if (v <= 0 || v < -1000000) continue
+        // Skalierung: <50 → sec/m × 1000, >=50 → schon sec/km
+        val secPerKm = if (v < 50.0) v * 1000.0 else v
+        // Pace-Plausibilitaet: 150-1500 sec/km (2:30 bis 25:00 min/km)
+        if (secPerKm in 150.0..1500.0) out.add(secPerKm)
     }
     return out
 }
@@ -902,23 +931,9 @@ private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.Amazfi
     val vo2MaxAcsm = vo2Workout / hrReserveFraction
     val vo2Max = vo2MaxAcsm + 2.0
     if (vo2Max < 20 || vo2Max > 80) return "—"
-    return "≈ %.0f".format(vo2Max)
+    return "≈ ${formatVo2(vo2Max)}"
 }
 
-/** Schaetzt Erholungszeit aus dem Trainingseffekt. Frank-Wunsch 2026-05-09:
- *  Erholungszeit anzeigen — Server liefert das nicht direkt. */
-private fun estimateRecovery(w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity): String {
-    val aerob = w.trainingEffectAerobic
-    val anaerob = w.trainingEffectAnaerobic
-    if (aerob == null && anaerob == null) return "—"
-    // Faustregel aus Sportphysiologie: aerob × 6h + anaerob × 12h.
-    // Frank's Trail 7km mit te=3.6/anaerob=3.1: 21.6 + 37.2 = ~59h ≈ 2.5 Tage
-    val hoursAerob = (aerob ?: 0.0) * 6
-    val hoursAnaerob = (anaerob ?: 0.0) * 12
-    val total = hoursAerob + hoursAnaerob
-    if (total < 0.5) return "—"
-    return when {
-        total < 24 -> "≈ %.0f h".format(total)
-        else -> "≈ %.1f Tage".format(total / 24.0)
-    }
-}
+/** VO2Max mit deutschem Komma-Format — Frank-Wunsch 2026-05-09: "40,8" statt "41". */
+private fun formatVo2(v: Double): String =
+    "%.1f".format(v).replace(".", ",")

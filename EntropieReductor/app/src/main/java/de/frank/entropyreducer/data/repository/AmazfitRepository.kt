@@ -323,7 +323,7 @@ class AmazfitRepository @Inject constructor(
                 endMs = endMs,
                 durationSeconds = duration,
                 sportType = typeInt,
-                sportName = AmazfitSportNames.nameOf(typeInt),
+                sportName = AmazfitSportNames.nameOf(typeInt, s.source),
                 distanceMeters = s.distanceMeters?.toDoubleOrNull(),
                 avgPaceSecPerKm = avgPaceSecPerKm,
                 maxPaceSecPerKm = maxPaceSecPerKm,
@@ -359,8 +359,10 @@ class AmazfitRepository @Inject constructor(
         val workout = workoutDao.getById(trackId) ?: return@runCatching false
         val source = workout.source
             ?: return@runCatching false
-        // Cache-Hit: wenn GPS oder HR-Stream schon da, kein neuer Call.
-        if (!workout.gpsTrackJson.isNullOrBlank() || !workout.heartRateSeriesJson.isNullOrBlank()) {
+        // Cache-Hit nur wenn der HOCHAUFGELOESTE Pace-Stream da ist —
+        // existierende Workouts ohne paceStreamJson werden re-geladen damit
+        // der fluessige Tempo-Verlauf nachgeholt wird.
+        if (!workout.paceStreamJson.isNullOrBlank()) {
             return@runCatching false
         }
         val region = secrets.zeppRegion ?: "de2"
@@ -399,6 +401,7 @@ class AmazfitRepository @Inject constructor(
                 heartRateSeriesJson = data.heartRate,
                 paceSeriesJson = data.kiloPace,
                 splitsJson = data.lap,
+                paceStreamJson = data.pace,
             ),
         )
         true
@@ -621,72 +624,41 @@ class AmazfitRepository @Inject constructor(
  * wird die Liste erweitert.
  */
 /**
- * Sportart-Codes der Zepp-Cloud. Code 7 ist verifiziert per Frank-Live-Test 2026-05-09
- * (= Trailrunning). Die anderen Codes sind aus Community-Quellen — koennen falsch sein.
- * Bei falschem Mapping einfach hier korrigieren wenn Frank die echte Sportart sieht.
+ * Sportart-Bestimmung. Frank-Befund 2026-05-09 (zweite Iteration): das urspruengliche
+ * Code-zu-Name-Mapping aus Community-Quellen passt NICHT zu Frank's Zepp-Cloud-
+ * Version — Frank's Lauf-Workouts wurden faelschlich als "Bouldern" / "Curling" /
+ * "Triathlon" angezeigt.
+ *
+ * Korrekte Strategie:
+ * 1. Code 7 = Trailrunning (per Live-Test verifiziert)
+ * 2. Aus dem `source`-Prefix die Sportart-Familie ableiten:
+ *      "run.*"   → Laufen
+ *      "bike.*"  → Radfahren
+ *      "swim.*"  → Schwimmen
+ *      "walk.*"  → Walking
+ *      "hike.*"  → Wandern
+ * 3. Sonst: "Sport (Code N)" — neutraler Fallback statt geratene Sportart.
+ *
+ * Source-Beispiel aus Frank's Workout-Body: "run.8716545.huami.com" → Laufen.
  */
 internal object AmazfitSportNames {
-    private val MAP = mapOf(
-        1 to "Outdoor-Lauf",
-        2 to "Walking",
-        3 to "Wandern",
-        4 to "Bergsteigen",
-        5 to "Trail Running (alt)",
-        6 to "Outdoor-Radfahren",
-        7 to "Trailrunning", // verifiziert per Frank-Live-Test
-        8 to "Laufband",
-        9 to "Schwimmen Pool",
-        10 to "Schwimmen Freiwasser",
-        11 to "Klettern",
-        12 to "Bouldern",
-        13 to "Skifahren",
-        14 to "Snowboarden",
-        15 to "Eislaufen",
-        16 to "Yoga",
-        17 to "Pilates",
-        18 to "Tanzen",
-        19 to "Krafttraining",
-        20 to "Gymnastik",
-        21 to "HIIT",
-        22 to "Crosstrainer",
-        23 to "Rudergeraet",
-        24 to "Stepper",
-        25 to "Fussball",
-        26 to "Basketball",
-        27 to "Volleyball",
-        28 to "Tennis",
-        29 to "Tischtennis",
-        30 to "Badminton",
-        31 to "Squash",
-        32 to "Golf",
-        33 to "Boxen",
-        34 to "Kampfsport",
-        35 to "Frei",
-        36 to "Aerobic",
-        37 to "Stand-up-Paddling",
-        38 to "Kayaking",
-        39 to "Rudern draussen",
-        40 to "Reiten",
-        41 to "Fechten",
-        42 to "Tauchen",
-        43 to "Free Diving",
-        44 to "Surfen",
-        45 to "Skateboarding",
-        46 to "Inlineskaten",
-        47 to "Triathlon",
-        48 to "Parkour",
-        49 to "Bowling",
-        50 to "Darts",
-        51 to "Frisbee",
-        52 to "Curling",
-        53 to "Ski-Touring",
-        54 to "Schneeschuhwandern",
-        55 to "Bergradfahren",
-        60 to "Stretching",
-    )
-
-    fun nameOf(type: Int?): String =
-        if (type == null) "Unbekannt" else MAP[type] ?: "Sport (Code $type)"
+    fun nameOf(type: Int?, source: String? = null): String {
+        // Verifiziert per Frank-Live-Test:
+        if (type == 7) return "Trailrunning"
+        // Aus source-Prefix die Sportart ableiten — robuster als geratene Codes.
+        val srcPrefix = source?.substringBefore(".")?.lowercase()
+        when (srcPrefix) {
+            "run" -> return "Laufen"
+            "bike", "cycle", "cycling" -> return "Radfahren"
+            "swim", "swimming" -> return "Schwimmen"
+            "walk", "walking" -> return "Walking"
+            "hike", "hiking" -> return "Wandern"
+            "ski", "skiing" -> return "Skifahren"
+            "yoga" -> return "Yoga"
+            "strength" -> return "Krafttraining"
+        }
+        return if (type == null) "Unbekannt" else "Sport (Code $type)"
+    }
 }
 
 /**

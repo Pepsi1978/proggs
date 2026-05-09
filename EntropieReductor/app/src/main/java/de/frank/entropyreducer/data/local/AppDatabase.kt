@@ -56,7 +56,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         AmazfitDailyEntity::class,
         AmazfitWorkoutEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -185,6 +185,17 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN source TEXT")
                 db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN city TEXT")
+            }
+        }
+
+        /**
+         * Migration 13 -> 14: paceStreamJson Spalte fuer hochaufgeloeste
+         * Pace-Sample-Stream (~3000 Werte pro Workout) — Frank-Wunsch
+         * 2026-05-09 fuer fluessigen Tempo-Verlauf.
+         */
+        val MIGRATION_13_14: Migration = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN paceStreamJson TEXT")
             }
         }
     }

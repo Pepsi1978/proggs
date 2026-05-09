@@ -122,5 +122,9 @@ data class AmazfitWorkoutEntity(
     val source: String? = null,
     /** Stadt/Ort wo das Workout stattfand (z.B. "Moenchwinkel"). */
     val city: String? = null,
+    /** Hochaufgelöster Pace-Stream (~ein Sample pro Sekunde) aus dem
+     *  detail.json `pace`-Feld. Frank-Wunsch 2026-05-09: fluessiger Tempo-
+     *  Verlauf statt nur 7 Km-Splits. */
+    val paceStreamJson: String? = null,
     val createdAt: Long,
 )
