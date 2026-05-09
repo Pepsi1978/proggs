@@ -102,4 +102,17 @@ class AmazfitTrainingDetailViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Manueller Erneut-Laden-Trigger fuer den "Erneut laden"-Button im Detail-Screen.
+     * Umgeht den Cache (force=true) und zwingt einen frischen API-Call.
+     * Frank-Wunsch 2026-05-09: bei aelteren Trainings sollen die Detail-Daten
+     * nochmal nachgeladen werden koennen statt ewig zu fehlen.
+     */
+    fun reloadDetail() {
+        if (trackId.isBlank()) return
+        viewModelScope.launch {
+            repo.ensureWorkoutDetail(trackId, force = true)
+        }
+    }
 }

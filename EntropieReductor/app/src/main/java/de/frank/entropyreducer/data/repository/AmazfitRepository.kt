@@ -348,17 +348,31 @@ class AmazfitRepository @Inject constructor(
      *
      * Wird ON-DEMAND aufgerufen — wenn der Detail-Screen ein Training oeffnet —
      * statt beim grossen Sync (sonst: 288 Calls = lange + Rate-Limit).
-     * Cache-Hit wenn das Workout schon Detail-Daten hat (gpsTrackJson != null).
+     *
+     * Cache-Verhalten (Frank-Befund 2026-05-09):
+     *  - paceStreamJson NICHT null/blank → Cache-Hit, kein API-Call
+     *  - paceStreamJson = " " (Marker fuer "Server lieferte nichts") → max alle 6h erneut versuchen
+     *  - force=true → Cache ignorieren, immer neu laden
      */
-    suspend fun ensureWorkoutDetail(trackId: String): Result<Boolean> = runCatching {
+    suspend fun ensureWorkoutDetail(trackId: String, force: Boolean = false): Result<Boolean> = runCatching {
         val workout = workoutDao.getById(trackId) ?: return@runCatching false
         val source = workout.source
             ?: return@runCatching false
-        // Cache-Hit nur wenn der HOCHAUFGELOESTE Pace-Stream da ist —
-        // existierende Workouts ohne paceStreamJson werden re-geladen damit
-        // der fluessige Tempo-Verlauf nachgeholt wird.
-        if (!workout.paceStreamJson.isNullOrBlank()) {
-            return@runCatching false
+        // Cache-Logik: nicht jeder Detail-Open soll den Server quaelen, aber bei
+        // alten Trainings ohne Daten soll man trotzdem nochmal probieren koennen.
+        if (!force) {
+            val pace = workout.paceStreamJson
+            // Vollstaendiger Cache-Hit: echter Stream da → fertig.
+            if (!pace.isNullOrBlank() && pace != " ") {
+                return@runCatching false
+            }
+            // Marker-Hit (" "): Server hatte nichts. Max alle 6h erneut probieren.
+            if (pace == " ") {
+                val ageMs = System.currentTimeMillis() - (workout.createdAt)
+                if (ageMs < 6 * 60 * 60 * 1000L) {
+                    return@runCatching false
+                }
+            }
         }
         val region = secrets.zeppRegion ?: "de2"
         val appToken = auth.freshAppToken() ?: return@runCatching false
@@ -393,6 +407,8 @@ class AmazfitRepository @Inject constructor(
         // Frank-Bug 2026-05-09: Nicht mit null ueberschreiben falls der Server
         // fuer einzelne Felder bei aelteren Workouts nichts mehr liefert. Sonst
         // sind die einmal geladenen GPS/HR-Daten bei einem Re-Sync weg.
+        // createdAt wird auf "jetzt" aktualisiert damit der 6h-Cache-Check
+        // weiss wann zuletzt versucht wurde.
         workoutDao.upsert(
             workout.copy(
                 gpsTrackJson = data.longitudeLatitude?.takeIf { it.isNotBlank() } ?: workout.gpsTrackJson,
@@ -403,6 +419,7 @@ class AmazfitRepository @Inject constructor(
                 // Workout als "Detail geladen" gilt und kein Endlos-Reload entsteht.
                 paceStreamJson = data.pace?.takeIf { it.isNotBlank() }
                     ?: workout.paceStreamJson ?: " ",
+                createdAt = System.currentTimeMillis(),
             ),
         )
         true
@@ -625,40 +642,87 @@ class AmazfitRepository @Inject constructor(
  * wird die Liste erweitert.
  */
 /**
- * Sportart-Bestimmung. Frank-Befund 2026-05-09 (zweite Iteration): das urspruengliche
- * Code-zu-Name-Mapping aus Community-Quellen passt NICHT zu Frank's Zepp-Cloud-
- * Version — Frank's Lauf-Workouts wurden faelschlich als "Bouldern" / "Curling" /
- * "Triathlon" angezeigt.
+ * Sportart-Bestimmung — robust gegen falsche Code-Tabellen.
  *
- * Korrekte Strategie:
- * 1. Code 7 = Trailrunning (per Live-Test verifiziert)
- * 2. Aus dem `source`-Prefix die Sportart-Familie ableiten:
- *      "run.*"   → Laufen
- *      "bike.*"  → Radfahren
- *      "swim.*"  → Schwimmen
- *      "walk.*"  → Walking
- *      "hike.*"  → Wandern
- * 3. Sonst: "Sport (Code N)" — neutraler Fallback statt geratene Sportart.
+ * Frank-Befund 2026-05-09 (dritte Iteration): das urspruengliche Code-zu-Name-Mapping
+ * aus Community-Quellen war komplett falsch — Frank's Workouts wurden als "Bouldern" /
+ * "Curling" / "Triathlon" angezeigt obwohl er das nie gemacht hat.
+ *
+ * Recherche 2026-05-09 ueber Gadgetbridge-Quellcode (HuamiSportsActivityType.java,
+ * lokal aus dem Repo gelesen): Die Cloud-Sport-API verwendet ein anderes Mapping als
+ * die Bluetooth-Geraete-Steuerung. Selbst innerhalb der Cloud-API koennen Geraete-
+ * Versionen abweichen. Frank's "Code 7 = Trailrunning"-Live-Test widersprach sogar
+ * der offiziellen HuamiSportsActivityType-Tabelle (Code 7 = OpenWaterSwimming).
+ *
+ * Korrekte Strategie (2026-05-09 final):
+ *  1. SOURCE-PREFIX zuerst — am robustesten weil Zepp die Sportart-Familie selbst im
+ *     source-Identifier kodiert ("run.NNN.huami.com" → Laufen, immer korrekt).
+ *  2. Code-Map als Fallback wenn source fehlt — nur die in HuamiSportsActivityType
+ *     verifizierten Codes, sonst "Sport (Code N)" neutral.
+ *  3. KEINE geratenen Codes mehr — lieber neutral "Sport (Code N)" als faelschlich
+ *     "Bouldern" anzuzeigen. Frank kann eine Sportart-Liste pflegen sobald er
+ *     verifizierte Codes aus echten Workouts hat.
  *
  * Source-Beispiel aus Frank's Workout-Body: "run.8716545.huami.com" → Laufen.
  */
 internal object AmazfitSportNames {
+
+    /**
+     * Verifizierte Cloud-API-Codes aus Gadgetbridge HuamiSportsActivityType.java
+     * (Repository-Snapshot 2026-05-09). Diese Codes wurden vom Open-Source-Projekt
+     * empirisch aus echten Zepp-Cloud-Antworten extrahiert.
+     */
+    private val VERIFIED_CODES: Map<Int, String> = mapOf(
+        1 to "Laufen",                    // OutdoorRunning
+        2 to "Laufband",                  // Treadmill
+        3 to "Walking",                   // Walking
+        4 to "Radfahren",                 // Cycling (Outdoor)
+        5 to "Freies Training",           // Exercise / Free training
+        6 to "Schwimmen (Pool)",          // Swimming
+        7 to "Freiwasser-Schwimmen",      // OpenWaterSwimming (per Gadgetbridge)
+        8 to "Indoor-Radfahren",          // IndoorCycling
+        9 to "Crosstrainer",              // EllipticalTrainer
+        10 to "Klettern",                 // Climbing
+        15 to "Wandern",                  // OutdoorHiking
+        18 to "Fussball",                 // Soccer (0x12)
+        21 to "Seilspringen",             // JumpRope (0x15)
+        23 to "Rudermaschine",            // RowingMachine (0x17)
+        52 to "Krafttraining",            // StrengthTraining (0x34)
+        60 to "Yoga",                     // Yoga (0x3c)
+        78 to "Cricket",                  // Cricket (0x4e)
+        85 to "Basketball",               // Basketball (0x55)
+        89 to "Tischtennis",              // PingPong (0x59)
+        92 to "Badminton",                // Badminton (0x5c)
+    )
+
     fun nameOf(type: Int?, source: String? = null): String {
-        // Verifiziert per Frank-Live-Test:
-        if (type == 7) return "Trailrunning"
-        // Aus source-Prefix die Sportart ableiten — robuster als geratene Codes.
+        // Schritt 1: SOURCE-PREFIX hat Vorrang. Zepp kodiert die Sportart-Familie
+        // im source-Identifier ("run.NNN.huami.com"), das ist verlaesslich auch
+        // dann wenn der numerische type-Code von Geraet zu Geraet variiert.
         val srcPrefix = source?.substringBefore(".")?.lowercase()
         when (srcPrefix) {
             "run" -> return "Laufen"
+            "trailrun", "trail" -> return "Trailrunning"
             "bike", "cycle", "cycling" -> return "Radfahren"
+            "indoorbike", "indoorcycle" -> return "Indoor-Radfahren"
             "swim", "swimming" -> return "Schwimmen"
+            "openswim" -> return "Freiwasser-Schwimmen"
             "walk", "walking" -> return "Walking"
             "hike", "hiking" -> return "Wandern"
             "ski", "skiing" -> return "Skifahren"
             "yoga" -> return "Yoga"
             "strength" -> return "Krafttraining"
+            "treadmill" -> return "Laufband"
+            "elliptical" -> return "Crosstrainer"
+            "rowing" -> return "Rudern"
+            "climb", "climbing" -> return "Klettern"
         }
-        return if (type == null) "Unbekannt" else "Sport (Code $type)"
+        // Schritt 2: Code-Map als Fallback. Nur verifizierte Codes verwenden.
+        if (type != null) {
+            VERIFIED_CODES[type]?.let { return it }
+            return "Sport (Code $type)"
+        }
+        return "Unbekannt"
     }
 }
 
