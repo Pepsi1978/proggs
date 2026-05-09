@@ -464,9 +464,10 @@ public partial class PromptBoardPanel : Window
             Console.WriteLine($"ClearAllAlwaysOn failed: {ex.Message}");
         }
 
-        // Anzeige aktualisieren — die Haekchen-Visuals der einzelnen Zeilen
-        // muessen den neuen DB-Stand widerspiegeln.
-        await RenderPromptsAsync();
+        // RefreshAsync (nicht RenderPromptsAsync) — die DB-Schreibvorgaenge oben
+        // haben _allPromptsCache veraltet, RenderPromptsAsync allein wuerde die
+        // alten IsAlwaysOn-Flags weiter zeigen. Frank-Bug-Pattern 2026-05-09.
+        await RefreshAsync();
 
         // Eine Sekunde gruen halten, dann zurueck auf den Original-Hintergrund.
         await Task.Delay(1000);
@@ -2102,7 +2103,10 @@ public partial class PromptBoardPanel : Window
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await RenderPromptsAsync();
+        // RefreshAsync (nicht RenderPromptsAsync) — sonst zeigt der Render
+        // den alten _allPromptsCache und der neue Prompt erscheint erst nach
+        // dem naechsten Stern-Klick (Frank-Bug-Report 2026-05-09 23:35).
+        await RefreshAsync();
     }
 
     private async Task EditPromptAsync(Prompt prompt)
@@ -2140,7 +2144,9 @@ public partial class PromptBoardPanel : Window
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await RenderPromptsAsync();
+        // RefreshAsync — siehe AddPromptAsync. RenderPromptsAsync allein laesst
+        // den Cache stehen und der bearbeitete Prompt zeigt nicht die neuen Werte.
+        await RefreshAsync();
     }
 
     /// <summary>
@@ -2200,7 +2206,9 @@ public partial class PromptBoardPanel : Window
             MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        await RenderPromptsAsync();
+        // RefreshAsync — siehe AddPromptAsync. Der geloeschte Prompt steht sonst
+        // weiter im _allPromptsCache und ist erst nach Stern-Reopen weg.
+        await RefreshAsync();
     }
 
     private async Task ToggleAlwaysOnAsync(Prompt prompt)
@@ -2217,7 +2225,10 @@ public partial class PromptBoardPanel : Window
         {
             Console.WriteLine($"Toggle IsAlwaysOn failed: {ex.Message}");
         }
-        await RenderPromptsAsync();
+        // RefreshAsync — siehe AddPromptAsync. Toggle aendert IsAlwaysOn,
+        // der Cache muss neu geladen werden damit die Filter-Logik den neuen
+        // Wert sieht.
+        await RefreshAsync();
     }
 
     // ──────────────── Settings ────────────────
