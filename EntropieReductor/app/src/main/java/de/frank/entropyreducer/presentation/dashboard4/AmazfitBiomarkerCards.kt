@@ -278,8 +278,8 @@ private fun LetzterLaufHero(
                     modifier = Modifier.weight(1f),
                 )
                 MiniStat(
-                    label = "Höhe ↑",
-                    value = w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—",
+                    label = "VO₂Max",
+                    value = formatHeroVo2Max(w),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -389,28 +389,27 @@ internal fun AmazfitWorkoutRow(
                 }
             }
         }
-        if (workout.avgHeartRate != null || workout.maxHeartRate != null) {
+        // Frank-Wunsch 2026-05-09: in der Trainings-Liste statt Max-HR den
+        // VO2Max-Wert anzeigen — das ist der aussagekraeftigere Trainings-
+        // Indikator pro Lauf.
+        val vo2 = formatHeroVo2Max(workout)
+        if (vo2 != "—" || workout.avgHeartRate != null) {
             Column(horizontalAlignment = Alignment.End) {
                 workout.avgHeartRate?.let {
                     Text(
-                        text = "Ø $it",
+                        text = "Ø $it bpm",
                         color = CosmosColors.Critical,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                workout.maxHeartRate?.let {
+                if (vo2 != "—") {
                     Text(
-                        text = "Max $it",
+                        text = "VO₂ $vo2",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-                Text(
-                    text = "bpm",
-                    color = cosmos.textSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
             }
         }
     }
@@ -441,6 +440,28 @@ internal fun formatDuration(seconds: Long): String {
     val s = seconds % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s)
     else "%d:%02d".format(m, s)
+}
+
+/**
+ * VO2Max-Berechnung fuer Hero-MiniStat und Trainings-Liste — zentrale
+ * Formel damit Hero, Detail-Screen und Liste denselben Wert zeigen.
+ * Reine ACSM-Formel + HR-Reserve + Frank's empirische +2 Korrektur.
+ */
+internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity): String {
+    val avgHr = w.avgHeartRate ?: return "—"
+    val distance = w.distanceMeters ?: return "—"
+    val duration = w.durationSeconds ?: return "—"
+    if (duration < 60 || distance < 100 || avgHr < 80 || avgHr > 220) return "—"
+    val frankMaxHr = 180
+    val restingHr = 65
+    val durationMin = duration / 60.0
+    val speedMperMin = distance / durationMin
+    val vo2Workout = 0.2 * speedMperMin + 3.5
+    val hrReserve = (avgHr - restingHr).toDouble() / (frankMaxHr - restingHr).toDouble()
+    if (hrReserve <= 0.1) return "—"
+    val vo2Max = vo2Workout / hrReserve + 2.0
+    if (vo2Max < 20 || vo2Max > 80) return "—"
+    return "%.1f".format(vo2Max).replace(".", ",")
 }
 
 internal fun formatPace(secPerKm: Double): String {

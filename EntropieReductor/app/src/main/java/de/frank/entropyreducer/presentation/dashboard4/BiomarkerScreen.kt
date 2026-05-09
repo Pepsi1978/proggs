@@ -404,54 +404,11 @@ fun BiomarkerHostScreen(
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
             // über die volle Historie.
             item { CorrelationCard(state) }
-            // ============ T-Rex 3 / Amazfit-Block (Frank-Wunsch 2026-05-09) ============
-            // Zeigt PAI, BioCharge und Hauttemperatur aus der Amazfit T-Rex 3 als
-            // separate Cards mit "(T-Rex 3)"-Vermerk. Sport-Trainings erscheinen
-            // als Liste unten drunter mit Klick zum Detail-Screen.
-            item { AmazfitSectionHeader() }
-            item {
-                MetricHistoryCard(
-                    title = "PAI (T-Rex 3)",
-                    accent = CosmosColors.Warning,
-                    points = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.paiScore?.toDouble()?.let { d.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.paiScore?.toDouble()?.let { d.capturedAt to it }
-                    },
-                    unit = "",
-                    onClick = { onOpenMetricDetail("amazfit_pai") },
-                )
-            }
-            item {
-                MetricHistoryCard(
-                    title = "BioCharge (T-Rex 3)",
-                    accent = CosmosColors.AccentSecondary,
-                    points = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.bioChargeScore?.toDouble()?.let { d.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.bioChargeScore?.toDouble()?.let { d.capturedAt to it }
-                    },
-                    unit = "",
-                    onClick = { onOpenMetricDetail("amazfit_biocharge") },
-                )
-            }
-            item {
-                MetricHistoryCard(
-                    title = "Hauttemperatur (T-Rex 3)",
-                    accent = CosmosColors.Warning,
-                    points = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.skinTempCelsius?.let { d.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.amazfitDailyHistory.mapNotNull { d ->
-                        d.skinTempCelsius?.let { d.capturedAt to it }
-                    },
-                    unit = "°C",
-                    onClick = { onOpenMetricDetail("amazfit_skin_temp") },
-                    lowerIsBetter = true,
-                )
-            }
+            // T-Rex-3-Daily-Cards (PAI, BioCharge, Hauttemperatur) ENTFERNT
+            // 2026-05-09 (Frank-Befund): Diese Werte sind in der Zepp-Cloud-API
+            // nicht zugaenglich — die Endpoint-Probes lieferten alle 404. Plus
+            // Recherche bestaetigt: Hauttemperatur und Atemfrequenz sind nur
+            // on-device-Sensorwerte, keine Cloud-Synchronisation.
             // Sport-Bereich — Frank-Wunsch 2026-05-09: HERO-Card fuer letzten
             // Lauf separat oberhalb der Trainings-Liste, nicht eingebettet.
             item {

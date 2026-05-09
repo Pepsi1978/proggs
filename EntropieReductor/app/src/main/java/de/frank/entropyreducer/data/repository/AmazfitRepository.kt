@@ -117,16 +117,11 @@ class AmazfitRepository @Inject constructor(
             dailyDao.upsertAll(dailyEntities)
         }
 
-        // PAI + Stress ueber den verifizierten /events-Endpoint (Quelle:
-        // bentasker/zepp_to_influxdb). Plus BioCharge probieren mit
-        // eventType=BioChargeInfo (unbestaetigt).
-        try {
-            fetchEventBasedData(region, appToken, userId, from, today)
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            throw ce
-        } catch (t: Throwable) {
-            Log.w(TAG, "Events-Endpoint fehlgeschlagen (ignoriert): ${t::class.simpleName}: ${t.message}")
-        }
+        // PAI/BioCharge/Hauttemperatur-Endpoints ENTFERNT 2026-05-09:
+        // Frank-Befund nach mehreren Test-Iterationen — diese Werte sind in
+        // der Zepp-Cloud-API nicht zugaenglich (alle Probe-URLs lieferten 404).
+        // Die UI-Cards wurden ebenfalls entfernt damit keine leeren "—"-
+        // Eintraege im Biomarker-Bereich erscheinen.
 
         // Workouts holen (Summary)
         val workoutEntities = try {
@@ -395,13 +390,19 @@ class AmazfitRepository @Inject constructor(
         }
         val data = detail.data ?: return@runCatching false
         Log.i(TAG, "Workout-Detail OK fuer $trackId: gpsLen=${data.longitudeLatitude?.length ?: 0} hrLen=${data.heartRate?.length ?: 0} kiloPaceLen=${data.kiloPace?.length ?: 0}")
+        // Frank-Bug 2026-05-09: Nicht mit null ueberschreiben falls der Server
+        // fuer einzelne Felder bei aelteren Workouts nichts mehr liefert. Sonst
+        // sind die einmal geladenen GPS/HR-Daten bei einem Re-Sync weg.
         workoutDao.upsert(
             workout.copy(
-                gpsTrackJson = data.longitudeLatitude,
-                heartRateSeriesJson = data.heartRate,
-                paceSeriesJson = data.kiloPace,
-                splitsJson = data.lap,
-                paceStreamJson = data.pace,
+                gpsTrackJson = data.longitudeLatitude?.takeIf { it.isNotBlank() } ?: workout.gpsTrackJson,
+                heartRateSeriesJson = data.heartRate?.takeIf { it.isNotBlank() } ?: workout.heartRateSeriesJson,
+                paceSeriesJson = data.kiloPace?.takeIf { it.isNotBlank() } ?: workout.paceSeriesJson,
+                splitsJson = data.lap?.takeIf { it.isNotBlank() } ?: workout.splitsJson,
+                // Wenn data.pace immer null ist, Marker " " setzen damit das
+                // Workout als "Detail geladen" gilt und kein Endlos-Reload entsteht.
+                paceStreamJson = data.pace?.takeIf { it.isNotBlank() }
+                    ?: workout.paceStreamJson ?: " ",
             ),
         )
         true
