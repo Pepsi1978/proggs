@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
+import de.frank.entropyreducer.data.remote.zepp.ZeppApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -124,4 +125,51 @@ object NetworkModule {
     @Provides @Singleton
     fun provideWhoopApi(@Named("whoop") retrofit: Retrofit): WhoopApi =
         retrofit.create(WhoopApi::class.java)
+
+    /* ----- Zepp / Amazfit T-Rex 3 ----- */
+
+    /**
+     * Eigener OkHttp-Client fuer Zepp: Redirects MUESSEN ausgeschaltet sein,
+     * weil wir die Tokens aus dem Location-Header der 303-Antwort holen muessen.
+     * Wenn OkHttp den Redirect automatisch verfolgt, bekommen wir die Tokens nie.
+     */
+    @Provides
+    @Singleton
+    @Named("zepp")
+    fun provideZeppOkHttp(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+        if (BuildConfig.DEBUG) {
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.HEADERS
+                redactHeader("apptoken")
+                redactHeader("login_token")
+            }
+            builder.addInterceptor(logging)
+        }
+        return builder.build()
+    }
+
+    /**
+     * Retrofit fuer Zepp. baseUrl ist nur Platzhalter — wir nutzen @Url in jedem
+     * Aufruf damit dieselbe Retrofit-Instanz mit api-user-de2 und api-mifit-de2
+     * arbeiten kann.
+     */
+    @Provides
+    @Singleton
+    @Named("zepp")
+    fun provideZeppRetrofit(@Named("zepp") client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api-mifit.zepp.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideZeppApi(@Named("zepp") retrofit: Retrofit): ZeppApi =
+        retrofit.create(ZeppApi::class.java)
 }
