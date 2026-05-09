@@ -1,6 +1,12 @@
 package de.frank.entropyreducer.data.remote.drive
 
 import dagger.Lazy
+import de.frank.entropyreducer.data.local.dao.HypothesisDao
+import de.frank.entropyreducer.data.local.dao.HypothesisMessageDao
+import de.frank.entropyreducer.data.local.dao.InsightDao
+import de.frank.entropyreducer.data.local.dao.MemoryDao
+import de.frank.entropyreducer.data.local.dao.ScientistMessageDao
+import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import kotlinx.coroutines.CoroutineScope
@@ -43,12 +49,22 @@ sealed interface SyncStatus {
  *  - Nach erfolgreichem Upload prüfen wir, ob waehrenddessen eine neue
  *    Änderung kam. Wenn ja: noch ein Upload, weil der erste den neuen
  *    Stand noch nicht hatte.
+ *
+ * Frank-Wunsch 2026-05-09 (Abend): BackupPayload v2 enthaelt jetzt nicht nur
+ * Aufgaben sondern AUCH Insights, Memories, Hypothesen, Forscher-Sessions und
+ * Forscher-Messages. Vollstaendige Wiederherstellbarkeit nach Reinstall.
  */
 @Singleton
 class SyncCoordinator @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val backupManager: DriveBackupManager,
     private val entryRepoLazy: Lazy<EntryRepository>,
+    private val insightDaoLazy: Lazy<InsightDao>,
+    private val memoryDaoLazy: Lazy<MemoryDao>,
+    private val hypothesisDaoLazy: Lazy<HypothesisDao>,
+    private val scientistSessionDaoLazy: Lazy<ScientistSessionDao>,
+    private val scientistMessageDaoLazy: Lazy<ScientistMessageDao>,
+    private val hypothesisMessageDaoLazy: Lazy<HypothesisMessageDao>,
     private val json: Json,
 ) {
 
@@ -93,11 +109,28 @@ class SyncCoordinator @Inject constructor(
         uploadMutex.withLock {
             _status.value = SyncStatus.Running
             dirtyDuringUpload = false
+            // Frank-Wunsch 2026-05-09 (Abend): Vollstaendiger Snapshot ALLER
+            // wichtigen Wissens-Daten. Aufgaben (entries) plus alles was in
+            // ScientistDatabase persistent ist — Insights, Memories, Hypothesen,
+            // Forscher-Sessions, Forscher- und Hypothese-Messages.
             val entries = entryRepoLazy.get().getActive().first().map { it.toBackup() }
+            val insights = insightDaoLazy.get().getByConfidenceDesc().first().map { it.toBackup() }
+            val memories = memoryDaoLazy.get().getAll().first().map { it.toBackup() }
+            val hypotheses = hypothesisDaoLazy.get().getAll().first().map { it.toBackup() }
+            val sessions = scientistSessionDaoLazy.get().getAll().first().map { it.toBackup() }
+            val sessMessages = scientistMessageDaoLazy.get().getAll().map { it.toBackup() }
+            val hypMessages = hypothesisMessageDaoLazy.get().getAllOnce().map { it.toBackup() }
+
             val payload = BackupPayload(
-                version = 1,
+                version = 2,
                 exportedAt = System.currentTimeMillis(),
                 entries = entries,
+                insights = insights,
+                memories = memories,
+                hypotheses = hypotheses,
+                scientistSessions = sessions,
+                scientistMessages = sessMessages,
+                hypothesisMessages = hypMessages,
             )
             val text = json.encodeToString(BackupPayload.serializer(), payload)
             backupManager.upload(text)

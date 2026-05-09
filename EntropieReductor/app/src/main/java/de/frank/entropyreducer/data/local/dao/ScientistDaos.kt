@@ -89,6 +89,10 @@ interface HypothesisMessageDao {
     @Query("SELECT * FROM hypothesis_messages WHERE hypothesisId = :hypothesisId ORDER BY createdAt ASC")
     suspend fun getForHypothesisOnce(hypothesisId: String): List<HypothesisMessageEntity>
 
+    /** Frank-Wunsch 2026-05-09: Vollstaendiges Drive-Backup braucht alle Messages auf einmal. */
+    @Query("SELECT * FROM hypothesis_messages ORDER BY createdAt ASC")
+    suspend fun getAllOnce(): List<HypothesisMessageEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: HypothesisMessageEntity)
 

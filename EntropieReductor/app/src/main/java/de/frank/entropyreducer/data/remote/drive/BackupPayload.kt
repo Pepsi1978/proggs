@@ -1,24 +1,51 @@
 package de.frank.entropyreducer.data.remote.drive
 
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisEntity
+import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
+import de.frank.entropyreducer.data.local.entities.InsightEntity
+import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
+import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
+import de.frank.entropyreducer.data.local.entities.ScientistSessionEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
+import de.frank.entropyreducer.domain.model.HypothesisOutcome
+import de.frank.entropyreducer.domain.model.HypothesisStatus
+import de.frank.entropyreducer.domain.model.MemorySource
+import de.frank.entropyreducer.domain.model.ScientistRole
 import de.frank.entropyreducer.domain.model.TimeBucket
 import kotlinx.serialization.Serializable
 
 /**
  * Backup-Format für Drive (appDataFolder).
+ *
+ * Frank-Wunsch 2026-05-09 (Abend): Vollstaendiges Backup ALLER Daten — nicht nur
+ * Aufgaben (v1), sondern auch Insights, Memories, Hypothesen und Forscher-Sessions.
+ * Alles was in Frank's persoenlicher Wissens-Domaene liegt soll bei Reinstall
+ * wiederherstellbar sein.
+ *
  * version: erlaubt zukuenftige Schema-Evolution.
- * exportedAt: Zeitstempel des Exports — Restore prueft, ob das Drive-Backup
- *             juenger ist als der lokale Stand.
- * entries: alle EntropyEntries (auch ARCHIVIERTE) — vollstaendiger Snapshot.
+ *   1 = nur entries (Pre-2026-05-09)
+ *   2 = + insights, memories, hypotheses, scientistSessions, scientistMessages,
+ *       hypothesisMessages (2026-05-09 Abend)
+ *
+ * Beim Restore werden v1-Backups akzeptiert — die nicht-vorhandenen Listen
+ * defaulten auf emptyList(), die alten Aufgaben kommen zurueck, der Rest bleibt
+ * leer. Beim naechsten Sync nach Restore wird automatisch ein v2-Backup
+ * geschrieben das den vollen Stand enthaelt.
  */
 @Serializable
 data class BackupPayload(
-    val version: Int = 1,
+    val version: Int = 2,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
+    val insights: List<BackupInsight> = emptyList(),
+    val memories: List<BackupMemory> = emptyList(),
+    val hypotheses: List<BackupHypothesis> = emptyList(),
+    val scientistSessions: List<BackupScientistSession> = emptyList(),
+    val scientistMessages: List<BackupScientistMessage> = emptyList(),
+    val hypothesisMessages: List<BackupHypothesisMessage> = emptyList(),
 )
 
 @Serializable
@@ -46,6 +73,85 @@ data class BackupEntry(
     val manualBucketSetAt: Long? = null,
 )
 
+@Serializable
+data class BackupInsight(
+    val id: String,
+    val title: String,
+    val description: String,
+    val targetCategory: String,
+    val additionalCategories: List<String> = emptyList(),
+    val confidence: Int,
+    val successCount: Int,
+    val attemptCount: Int,
+    val avgBiomarkerImpact: String? = null,
+    val avgFeltImpact: Double? = null,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val sourceHypothesisIds: List<String> = emptyList(),
+    val manualSource: Boolean = false,
+)
+
+@Serializable
+data class BackupMemory(
+    val id: String,
+    val content: String,
+    val source: String,
+    val isActive: Boolean,
+    val confidence: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Serializable
+data class BackupHypothesis(
+    val id: String,
+    val title: String,
+    val description: String,
+    val rationale: String,
+    val createdAt: Long,
+    val plannedStartDate: Long,
+    val plannedEndDate: Long,
+    val actualStartDate: Long? = null,
+    val actualEndDate: Long? = null,
+    val status: String,
+    val outcome: String? = null,
+    val outcomeNotes: String? = null,
+    val biomarkerBeforeId: String? = null,
+    val biomarkerAfterId: String? = null,
+    val felltEntropyChange: Int? = null,
+    val relatedEntryIds: List<String> = emptyList(),
+)
+
+@Serializable
+data class BackupScientistSession(
+    val id: String,
+    val title: String,
+    val createdAt: Long,
+    val lastActiveAt: Long,
+    val isArchived: Boolean,
+)
+
+@Serializable
+data class BackupScientistMessage(
+    val id: String,
+    val sessionId: String,
+    val role: String,
+    val content: String,
+    val createdAt: Long,
+    val attachedHypothesisIds: List<String> = emptyList(),
+)
+
+@Serializable
+data class BackupHypothesisMessage(
+    val id: String,
+    val hypothesisId: String,
+    val role: String,
+    val content: String,
+    val createdAt: Long,
+)
+
+// ---------- Entity → Backup ----------
+
 fun EntropyEntryEntity.toBackup(): BackupEntry = BackupEntry(
     id = id,
     rawTranscript = rawTranscript,
@@ -69,6 +175,79 @@ fun EntropyEntryEntity.toBackup(): BackupEntry = BackupEntry(
     manualBucketSetAt = manualBucketSetAt,
 )
 
+fun InsightEntity.toBackup(): BackupInsight = BackupInsight(
+    id = id,
+    title = title,
+    description = description,
+    targetCategory = targetCategory.name,
+    additionalCategories = additionalCategories.map { it.name },
+    confidence = confidence,
+    successCount = successCount,
+    attemptCount = attemptCount,
+    avgBiomarkerImpact = avgBiomarkerImpact,
+    avgFeltImpact = avgFeltImpact,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    sourceHypothesisIds = sourceHypothesisIds,
+    manualSource = manualSource,
+)
+
+fun MemoryEntryEntity.toBackup(): BackupMemory = BackupMemory(
+    id = id,
+    content = content,
+    source = source.name,
+    isActive = isActive,
+    confidence = confidence,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+)
+
+fun HypothesisEntity.toBackup(): BackupHypothesis = BackupHypothesis(
+    id = id,
+    title = title,
+    description = description,
+    rationale = rationale,
+    createdAt = createdAt,
+    plannedStartDate = plannedStartDate,
+    plannedEndDate = plannedEndDate,
+    actualStartDate = actualStartDate,
+    actualEndDate = actualEndDate,
+    status = status.name,
+    outcome = outcome?.name,
+    outcomeNotes = outcomeNotes,
+    biomarkerBeforeId = biomarkerBeforeId,
+    biomarkerAfterId = biomarkerAfterId,
+    felltEntropyChange = felltEntropyChange,
+    relatedEntryIds = relatedEntryIds,
+)
+
+fun ScientistSessionEntity.toBackup(): BackupScientistSession = BackupScientistSession(
+    id = id,
+    title = title,
+    createdAt = createdAt,
+    lastActiveAt = lastActiveAt,
+    isArchived = isArchived,
+)
+
+fun ScientistMessageEntity.toBackup(): BackupScientistMessage = BackupScientistMessage(
+    id = id,
+    sessionId = sessionId,
+    role = role.name,
+    content = content,
+    createdAt = createdAt,
+    attachedHypothesisIds = attachedHypothesisIds,
+)
+
+fun HypothesisMessageEntity.toBackup(): BackupHypothesisMessage = BackupHypothesisMessage(
+    id = id,
+    hypothesisId = hypothesisId,
+    role = role.name,
+    content = content,
+    createdAt = createdAt,
+)
+
+// ---------- Backup → Entity ----------
+
 /**
  * Mapping fuer Bucket-Strings aus aelteren Backup-Versionen (Frank-Wunsch
  * 2026-05-09). DIESE_WOCHE und DIESEN_MONAT existieren nicht mehr — sie werden
@@ -85,13 +264,15 @@ private fun parseBucketCompat(name: String?): TimeBucket {
     }
 }
 
+private fun parseCategoryCompat(name: String): EntropyCategory =
+    runCatching { EntropyCategory.valueOf(name) }.getOrDefault(EntropyCategory.SONSTIGES)
+
 fun BackupEntry.toEntity(): EntropyEntryEntity = EntropyEntryEntity(
     id = id,
     rawTranscript = rawTranscript,
     title = title,
     description = description,
-    category = runCatching { EntropyCategory.valueOf(category) }
-        .getOrDefault(EntropyCategory.SONSTIGES),
+    category = parseCategoryCompat(category),
     severity = severity.coerceIn(1, 10),
     priorityScore = priorityScore.coerceIn(0.0, 100.0),
     priorityReason = priorityReason,
@@ -108,4 +289,78 @@ fun BackupEntry.toEntity(): EntropyEntryEntity = EntropyEntryEntity(
     biomarkerSnapshotId = biomarkerSnapshotId,
     manualBucket = manualBucket?.let { parseBucketCompat(it) },
     manualBucketSetAt = manualBucketSetAt,
+)
+
+fun BackupInsight.toEntity(): InsightEntity = InsightEntity(
+    id = id,
+    title = title,
+    description = description,
+    targetCategory = parseCategoryCompat(targetCategory),
+    additionalCategories = additionalCategories.map { parseCategoryCompat(it) }
+        .filter { it != parseCategoryCompat(targetCategory) }
+        .distinct(),
+    confidence = confidence.coerceIn(0, 100),
+    successCount = successCount,
+    attemptCount = attemptCount,
+    avgBiomarkerImpact = avgBiomarkerImpact,
+    avgFeltImpact = avgFeltImpact,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    sourceHypothesisIds = sourceHypothesisIds,
+    manualSource = manualSource,
+)
+
+fun BackupMemory.toEntity(): MemoryEntryEntity = MemoryEntryEntity(
+    id = id,
+    content = content,
+    source = runCatching { MemorySource.valueOf(source) }.getOrDefault(MemorySource.MANUELL),
+    isActive = isActive,
+    confidence = confidence.coerceIn(0, 100),
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+)
+
+fun BackupHypothesis.toEntity(): HypothesisEntity = HypothesisEntity(
+    id = id,
+    title = title,
+    description = description,
+    rationale = rationale,
+    createdAt = createdAt,
+    plannedStartDate = plannedStartDate,
+    plannedEndDate = plannedEndDate,
+    actualStartDate = actualStartDate,
+    actualEndDate = actualEndDate,
+    status = runCatching { HypothesisStatus.valueOf(status) }
+        .getOrDefault(HypothesisStatus.VORGESCHLAGEN),
+    outcome = outcome?.let { runCatching { HypothesisOutcome.valueOf(it) }.getOrNull() },
+    outcomeNotes = outcomeNotes,
+    biomarkerBeforeId = biomarkerBeforeId,
+    biomarkerAfterId = biomarkerAfterId,
+    felltEntropyChange = felltEntropyChange,
+    relatedEntryIds = relatedEntryIds,
+)
+
+fun BackupScientistSession.toEntity(): ScientistSessionEntity = ScientistSessionEntity(
+    id = id,
+    title = title,
+    createdAt = createdAt,
+    lastActiveAt = lastActiveAt,
+    isArchived = isArchived,
+)
+
+fun BackupScientistMessage.toEntity(): ScientistMessageEntity = ScientistMessageEntity(
+    id = id,
+    sessionId = sessionId,
+    role = runCatching { ScientistRole.valueOf(role) }.getOrDefault(ScientistRole.NUTZER),
+    content = content,
+    createdAt = createdAt,
+    attachedHypothesisIds = attachedHypothesisIds,
+)
+
+fun BackupHypothesisMessage.toEntity(): HypothesisMessageEntity = HypothesisMessageEntity(
+    id = id,
+    hypothesisId = hypothesisId,
+    role = runCatching { ScientistRole.valueOf(role) }.getOrDefault(ScientistRole.NUTZER),
+    content = content,
+    createdAt = createdAt,
 )
