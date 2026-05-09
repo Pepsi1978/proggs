@@ -3,6 +3,10 @@ package de.frank.entropyreducer.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import de.frank.entropyreducer.data.local.dao.AmazfitDailyDao
+import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.CalendarDayDao
 import de.frank.entropyreducer.data.local.dao.CalendarEventDao
@@ -12,6 +16,8 @@ import de.frank.entropyreducer.data.local.dao.KiTriggerDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
+import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
+import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.CalendarDayEntity
 import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
@@ -47,8 +53,10 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         KiTriggerEntity::class,
         GenieCodexVersionEntity::class,
         WhoopWorkoutEntity::class,
+        AmazfitDailyEntity::class,
+        AmazfitWorkoutEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -71,8 +79,85 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun kiTriggerDao(): KiTriggerDao
     abstract fun genieCodexDao(): GenieCodexDao
     abstract fun whoopWorkoutDao(): WhoopWorkoutDao
+    abstract fun amazfitDailyDao(): AmazfitDailyDao
+    abstract fun amazfitWorkoutDao(): AmazfitWorkoutDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
+
+        /**
+         * Migration 10 -> 11: Zwei neue Tabellen fuer die Amazfit T-Rex 3.
+         * Frank-Wunsch 2026-05-09: Sport-Daten + PAI/BioCharge/Hauttemperatur
+         * von der T-Rex 3 ohne Datenverlust an den bestehenden Whoop-Tabellen.
+         *
+         * - amazfit_daily: tagliche Werte (PAI, BioCharge, Hauttemperatur,
+         *   SpO2, Stress, Atmung, Schritte, Kalorien, HRV)
+         * - amazfit_workouts: Sport-Sessions (GPS-Track, Pulsverlauf, Splits,
+         *   Pace, Geschwindigkeit, VO2Max, Trainingseffekt, Hauttemperatur)
+         */
+        val MIGRATION_10_11: Migration = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS amazfit_daily (
+                        date TEXT NOT NULL PRIMARY KEY,
+                        capturedAt INTEGER NOT NULL,
+                        paiScore INTEGER,
+                        bioChargeScore INTEGER,
+                        skinTempCelsius REAL,
+                        spo2Percent REAL,
+                        stressScore INTEGER,
+                        respiratoryRate REAL,
+                        steps INTEGER,
+                        distanceMeters REAL,
+                        activeCalories REAL,
+                        activeMinutes INTEGER,
+                        restingHeartRate INTEGER,
+                        averageHeartRate INTEGER,
+                        hrvMs REAL,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS amazfit_workouts (
+                        trackId TEXT NOT NULL PRIMARY KEY,
+                        dateKey TEXT NOT NULL,
+                        startMs INTEGER NOT NULL,
+                        endMs INTEGER NOT NULL,
+                        durationSeconds INTEGER,
+                        sportType INTEGER,
+                        sportName TEXT,
+                        distanceMeters REAL,
+                        avgPaceSecPerKm REAL,
+                        maxPaceSecPerKm REAL,
+                        avgSpeedKmh REAL,
+                        maxSpeedKmh REAL,
+                        calories REAL,
+                        avgHeartRate INTEGER,
+                        maxHeartRate INTEGER,
+                        gpsTrackJson TEXT,
+                        heartRateSeriesJson TEXT,
+                        paceSeriesJson TEXT,
+                        splitsJson TEXT,
+                        altitudeGainMeters REAL,
+                        altitudeLossMeters REAL,
+                        trainingEffectAerobic REAL,
+                        trainingEffectAnaerobic REAL,
+                        vo2Max REAL,
+                        cadence INTEGER,
+                        strideLengthCm INTEGER,
+                        recoveryTimeHours INTEGER,
+                        skinTempCelsius REAL,
+                        swolf INTEGER,
+                        poolLaps INTEGER,
+                        poolLengthMeters REAL,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
     }
 }

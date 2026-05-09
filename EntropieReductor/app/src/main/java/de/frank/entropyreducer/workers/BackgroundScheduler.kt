@@ -55,6 +55,15 @@ class BackgroundScheduler @Inject constructor(
                 .setConstraints(constraints)
                 .build(),
         )
+        // Amazfit T-Rex 3 — Frank-Wunsch 2026-05-09: nightly Sync analog zu Whoop.
+        wm.enqueueUniquePeriodicWork(
+            AmazfitSyncWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<AmazfitSyncWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
     }
 
     /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */
@@ -274,6 +283,23 @@ class BackgroundScheduler @Inject constructor(
     fun cancelWhoopSync() {
         wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_PERIODIC)
         wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_ONESHOT)
+    }
+
+    /** Stoesst einen einmaligen Amazfit-Sync an (z.B. nach Login). */
+    fun runAmazfitSyncNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            AmazfitSyncWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<AmazfitSyncWorker>()
+                .setConstraints(constraints).build(),
+        )
+    }
+
+    fun cancelAmazfitSync() {
+        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_PERIODIC)
+        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
     /** Berechnet die Anzahl Minuten bis zum naechsten Vorkommen von [targetMinutes] (Tagesminuten). */

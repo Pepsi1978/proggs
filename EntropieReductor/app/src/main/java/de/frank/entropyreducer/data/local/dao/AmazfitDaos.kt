@@ -1,0 +1,76 @@
+package de.frank.entropyreducer.data.local.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
+import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * Tagliche Amazfit-Werte (PAI, BioCharge, Hauttemperatur, etc.).
+ * Pattern wie BiomarkerSnapshotDao — getLatest, getRange, getAll, upsert,
+ * deleteOlderThan. Frank-Wunsch 2026-05-09: alle Werte mit Quellen-Markierung.
+ */
+@Dao
+interface AmazfitDailyDao {
+    @Query("SELECT * FROM amazfit_daily ORDER BY capturedAt DESC LIMIT 1")
+    fun getLatest(): Flow<AmazfitDailyEntity?>
+
+    @Query("SELECT * FROM amazfit_daily ORDER BY capturedAt ASC")
+    fun getAll(): Flow<List<AmazfitDailyEntity>>
+
+    @Query("SELECT * FROM amazfit_daily WHERE capturedAt BETWEEN :from AND :to ORDER BY capturedAt ASC")
+    fun getRange(from: Long, to: Long): Flow<List<AmazfitDailyEntity>>
+
+    @Query("SELECT * FROM amazfit_daily WHERE date = :date")
+    suspend fun getByDate(date: String): AmazfitDailyEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: AmazfitDailyEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entities: List<AmazfitDailyEntity>)
+
+    @Query("DELETE FROM amazfit_daily WHERE capturedAt < :threshold")
+    suspend fun deleteOlderThan(threshold: Long)
+
+    @Query("DELETE FROM amazfit_daily")
+    suspend fun deleteAll()
+}
+
+/**
+ * Amazfit-Workouts (Sport-Sessions mit GPS-Track + Pulsverlauf + Splits).
+ * Frank-Wunsch 2026-05-09: kompletter Sport-Bereich als Unterbereich des
+ * Biomarker-Screens.
+ */
+@Dao
+interface AmazfitWorkoutDao {
+    @Query("SELECT * FROM amazfit_workouts ORDER BY startMs DESC")
+    fun observeAll(): Flow<List<AmazfitWorkoutEntity>>
+
+    @Query("SELECT * FROM amazfit_workouts WHERE startMs BETWEEN :from AND :to ORDER BY startMs DESC")
+    fun observeRange(from: Long, to: Long): Flow<List<AmazfitWorkoutEntity>>
+
+    @Query("SELECT * FROM amazfit_workouts WHERE dateKey = :dateKey ORDER BY startMs ASC")
+    fun observeByDateKey(dateKey: String): Flow<List<AmazfitWorkoutEntity>>
+
+    @Query("SELECT * FROM amazfit_workouts WHERE trackId = :trackId LIMIT 1")
+    suspend fun getById(trackId: String): AmazfitWorkoutEntity?
+
+    @Query("SELECT * FROM amazfit_workouts WHERE trackId = :trackId LIMIT 1")
+    fun observeById(trackId: String): Flow<AmazfitWorkoutEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(workout: AmazfitWorkoutEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(workouts: List<AmazfitWorkoutEntity>)
+
+    @Query("DELETE FROM amazfit_workouts WHERE startMs < :threshold")
+    suspend fun deleteOlderThan(threshold: Long)
+
+    @Query("DELETE FROM amazfit_workouts")
+    suspend fun deleteAll()
+}

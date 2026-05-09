@@ -25,6 +25,10 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, AppDatabase.DB_NAME)
+            // Frank-Wunsch 2026-05-09: saubere Migration fuer Amazfit-Tabellen
+            // (kein Datenverlust an bestehenden Whoop-Daten). destructiveFallback
+            // bleibt als Sicherheitsnetz fuer alle anderen unerwarteten Schemas.
+            .addMigrations(AppDatabase.MIGRATION_10_11)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -59,6 +63,8 @@ object DatabaseModule {
     @Provides fun provideKiTriggerDao(db: AppDatabase) = db.kiTriggerDao()
     @Provides fun provideGenieCodexDao(db: AppDatabase) = db.genieCodexDao()
     @Provides fun provideWhoopWorkoutDao(db: AppDatabase) = db.whoopWorkoutDao()
+    @Provides fun provideAmazfitDailyDao(db: AppDatabase) = db.amazfitDailyDao()
+    @Provides fun provideAmazfitWorkoutDao(db: AppDatabase) = db.amazfitWorkoutDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.
