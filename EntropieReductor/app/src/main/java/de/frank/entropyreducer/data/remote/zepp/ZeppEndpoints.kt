@@ -84,7 +84,10 @@ internal object ZeppEndpoints {
         "apptoken" to appToken,
         "lang" to language,
         "user-agent" to USER_AGENT,
-        "accept-encoding" to "gzip",
+        // KEIN accept-encoding-Header — wenn wir den selbst setzen, schaltet OkHttp
+        // die automatische gzip-Dekompression ab und unser JSON-Parser bekommt
+        // binaeren Bytemuell statt JSON. OkHttp setzt accept-encoding: gzip
+        // von alleine und dekomprimiert dann auch automatisch.
     )
 
     /** Header fuer Login-Schritt 1 (Token-Tausch mit verschluesseltem Body). */
