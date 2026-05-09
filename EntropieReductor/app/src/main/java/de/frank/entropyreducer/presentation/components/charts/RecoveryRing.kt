@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -42,14 +43,22 @@ fun RecoveryRing(
         animationSpec = tween(durationMillis = 800),
         label = "recoveryRing",
     )
-    val ringColor = when {
-        target >= 67 -> CosmosColors.Success
-        target >= 34 -> CosmosColors.Warning
-        else -> CosmosColors.Critical
+    // Performance-Fix Loop 4.3: ringColor + Brush sind reine Funktionen von target.
+    // Vorher wurde bei jedem Animations-Frame (60 fps × 800 ms tween = ~48 Frames)
+    // listOf+ringColor.copy+Brush.sweepGradient neu allokiert. Mit remember(target)
+    // bleiben sie ueber die Animation stabil; animated triggert nur das Canvas-Lambda.
+    val ringColor = remember(target) {
+        when {
+            target >= 67 -> CosmosColors.Success
+            target >= 34 -> CosmosColors.Warning
+            else -> CosmosColors.Critical
+        }
     }
-    val ringBrush = Brush.sweepGradient(
-        listOf(ringColor.copy(alpha = 0.4f), ringColor),
-    )
+    val ringBrush = remember(ringColor) {
+        Brush.sweepGradient(
+            listOf(ringColor.copy(alpha = 0.4f), ringColor),
+        )
+    }
 
     Box(
         modifier = modifier.size(diameter.dp),

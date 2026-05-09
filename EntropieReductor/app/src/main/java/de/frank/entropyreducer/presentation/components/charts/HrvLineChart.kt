@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,11 +36,23 @@ fun HrvLineChart(
     height: Int = 140,
 ) {
     val cosmos = LocalCosmos.current
-    val safe = values.filter { it.isFinite() }
-    val median = safe.takeIf { it.isNotEmpty() }?.sorted()?.let { it[it.size / 2] }
-    val min = safe.minOrNull() ?: 0.0
-    val max = safe.maxOrNull() ?: 1.0
-    val range = (max - min).takeIf { it > 0 } ?: 1.0
+    // Performance-Fix Loop 4.2: filter+sorted+min+max haengen nur von values ab.
+    // Vorher: bei jeder Recomposition wurden filter (Listen-Allokation), sorted
+    // (O(N log N) und Listen-Allokation), min, max neu berechnet. Bei 30-Tage-
+    // HRV-Werten sind das je vier separate Iterationen plus eine sortierte Kopie.
+    // Mit remember(values) wird das nur bei tatsaechlicher Aenderung neu gemacht.
+    val stats = remember(values) {
+        val safe = values.filter { it.isFinite() }
+        val median = safe.takeIf { it.isNotEmpty() }?.sorted()?.let { it[it.size / 2] }
+        val min = safe.minOrNull() ?: 0.0
+        val max = safe.maxOrNull() ?: 1.0
+        val range = (max - min).takeIf { it > 0 } ?: 1.0
+        ChartStats(safe = safe, median = median, min = min, max = max, range = range)
+    }
+    val safe = stats.safe
+    val median = stats.median
+    val min = stats.min
+    val range = stats.range
 
     Box(modifier = modifier.fillMaxWidth().height(height.dp)) {
         if (safe.isEmpty()) {
@@ -92,3 +105,14 @@ fun HrvLineChart(
         }
     }
 }
+
+/** Pre-computed Chart-Statistik fuer HrvLineChart — gehalten ueber Recomposition
+ *  durch remember(values) damit filter+sorted+min+max+range nur bei
+ *  Werte-Aenderung neu laufen, nicht bei jeder parent-getriggerten Recomposition. */
+private data class ChartStats(
+    val safe: List<Double>,
+    val median: Double?,
+    val min: Double,
+    val max: Double,
+    val range: Double,
+)

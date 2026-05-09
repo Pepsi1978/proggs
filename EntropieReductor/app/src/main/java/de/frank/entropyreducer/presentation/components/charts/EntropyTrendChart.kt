@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +64,16 @@ fun EntropyTrendChart(
             return@Box
         }
 
-        val maxValue = series.values.flatten().filter { it.isFinite() }.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
+        // Performance-Fix Loop 4.1: maxValue-Berechnung haengt nur von series ab.
+        // Vorher: bei jeder Recomposition (auch durch unstable series-Param ueber
+        // collectAsState getriggert) wurde flatten + filter + maxOrNull neu
+        // gemacht — bei einer Map mit 12 Kategorien × 365 Tagen sind das 4380
+        // Werte plus eine flatten-Liste-Allokation pro Recompose. Mit remember(series)
+        // wird nur bei tatsaechlicher Inhalts-Aenderung von series neu gerechnet.
+        val maxValue = remember(series) {
+            series.values.flatten().filter { it.isFinite() }
+                .maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
+        }
 
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
             val padX = 12f
