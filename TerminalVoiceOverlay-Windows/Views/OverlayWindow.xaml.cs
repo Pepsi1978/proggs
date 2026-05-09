@@ -2219,8 +2219,10 @@ namespace TerminalVoiceOverlay.Views
 
             try
             {
-                string pre = await _alwaysOnPrefix.BuildPreAsync();
-                string post = await _alwaysOnPrefix.BuildPostAsync();
+                // BuildBothAsync: ein einziger DB-Roundtrip statt zwei separaten
+                // (BuildPreAsync + BuildPostAsync). Spart pro Voice-Submit
+                // 1 Scope-Erstellung + 1 Repository-Resolve + 1 SQLite-Query.
+                var (pre, post) = await _alwaysOnPrefix.BuildBothAsync();
                 return (pre ?? string.Empty, post ?? string.Empty);
             }
             catch (Exception ex)

@@ -38,6 +38,48 @@ public sealed class AlwaysOnPrefixService : IAlwaysOnPrefixService
     public Task<string> BuildPostAsync(CancellationToken ct = default) =>
         BuildJoinedAsync(p => p.IsPostPrompt, "Post", ct);
 
+    /// <summary>
+    /// Optimiertes BuildBothAsync: liest die AlwaysOn-Liste EINMAL aus der DB
+    /// und filtert beide Sub-Listen (Pre + Post) in-memory. Frueher rief der
+    /// Voice-Submit-Pfad in OverlayWindow.BuildAlwaysOnWrappersAsync zwei
+    /// separate Methoden — beide oeffneten einen Scope, holten den Repository
+    /// und feuerten einen eigenen GetAllAlwaysOnAsync-Query auf SQLite. Bei
+    /// jeder Voice-Aufnahme also 2 DB-Roundtrips zwischen Whisper-Antwort und
+    /// Paste-Aktion. Mit BuildBothAsync ist es jetzt ein einziger Roundtrip.
+    /// </summary>
+    public async Task<(string Pre, string Post)> BuildBothAsync(CancellationToken ct = default)
+    {
+        using var scope = _root.CreateScope();
+        var prompts = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+        var alwaysOn = await prompts.GetAllAlwaysOnAsync(ct);
+        if (alwaysOn.Count == 0) return (string.Empty, string.Empty);
+
+        const string inlineSeparator = " ; ";
+
+        // Pre: alles mit IsPrePrompt ODER ohne beide Flags (Legacy-Default).
+        var preItems = alwaysOn
+            .Where(p => p.IsPrePrompt || (!p.IsPrePrompt && !p.IsPostPrompt))
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new PromptChainItem(p.Id, p.EffectiveText()))
+            .ToList();
+
+        var postItems = alwaysOn
+            .Where(p => p.IsPostPrompt)
+            .OrderBy(p => p.SortOrder)
+            .Select(p => new PromptChainItem(p.Id, p.EffectiveText()))
+            .ToList();
+
+        string pre  = preItems.Count  == 0 ? string.Empty : _builder.Build(preItems,  clicked: null, inlineSeparator);
+        string post = postItems.Count == 0 ? string.Empty : _builder.Build(postItems, clicked: null, inlineSeparator);
+
+        _logger.LogDebug(
+            "Always-on Both built: Pre={PreCount} prompts/{PreChars} chars, Post={PostCount}/{PostChars}.",
+            preItems.Count, pre.Length, postItems.Count, post.Length);
+
+        return (pre, post);
+    }
+
     private async Task<string> BuildJoinedAsync(
         Func<Prompt, bool> filter, string label, CancellationToken ct)
     {
