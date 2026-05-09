@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @androidx.compose.runtime.Immutable
@@ -79,11 +80,12 @@ class AmazfitTrainingsViewModel @Inject constructor(
 
 /**
  * State fuer den Detail-Screen eines einzelnen Workouts. Holt das Workout
- * per trackId aus SavedStateHandle.
+ * per trackId aus SavedStateHandle und triggert ON-DEMAND den Detail-API-Call
+ * (GPS-Track + Pulsverlauf + Pace pro km + Splits).
  */
 @HiltViewModel
 class AmazfitTrainingDetailViewModel @Inject constructor(
-    repo: AmazfitRepository,
+    private val repo: AmazfitRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val trackId: String = savedStateHandle["trackId"] ?: ""
@@ -91,4 +93,13 @@ class AmazfitTrainingDetailViewModel @Inject constructor(
     val workout: StateFlow<AmazfitWorkoutEntity?> = repo.observeWorkoutById(trackId)
         .map { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
+
+    init {
+        // Beim ersten Laden: Detail-Daten holen falls noch nicht in DB.
+        if (trackId.isNotBlank()) {
+            viewModelScope.launch {
+                repo.ensureWorkoutDetail(trackId)
+            }
+        }
+    }
 }

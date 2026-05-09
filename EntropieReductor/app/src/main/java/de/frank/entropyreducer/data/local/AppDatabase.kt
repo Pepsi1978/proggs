@@ -56,7 +56,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         AmazfitDailyEntity::class,
         AmazfitWorkoutEntity::class,
     ],
-    version = 11,
+    version = 13,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -157,6 +157,34 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent(),
                 )
+            }
+        }
+
+        /**
+         * Migration 11 -> 12: Schlaf-Felder in amazfit_daily ergaenzen.
+         * Frank-Wunsch 2026-05-09: Schlaf-Phasen aus dem Zepp-Summary mit anzeigen
+         * (slp_dp, slp_lt, slp_wk, slp_to). Plus Sleep-Score und Sleep-REM.
+         */
+        val MIGRATION_11_12: Migration = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepTotalMinutes INTEGER")
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepDeepMinutes INTEGER")
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepLightMinutes INTEGER")
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepWakeMinutes INTEGER")
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepRemMinutes INTEGER")
+                db.execSQL("ALTER TABLE amazfit_daily ADD COLUMN sleepScore INTEGER")
+            }
+        }
+
+        /**
+         * Migration 12 -> 13: amazfit_workouts.source + amazfit_workouts.city.
+         * Frank-Wunsch 2026-05-09: source ist Pflicht-Parameter fuer den
+         * Workout-Detail-Endpoint (GPS-Track + Pulsverlauf).
+         */
+        val MIGRATION_12_13: Migration = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN source TEXT")
+                db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN city TEXT")
             }
         }
     }

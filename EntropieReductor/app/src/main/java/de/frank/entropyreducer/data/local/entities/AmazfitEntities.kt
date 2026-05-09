@@ -45,6 +45,13 @@ data class AmazfitDailyEntity(
     val averageHeartRate: Int? = null,
     /** HRV (Herzraten-Variabilitaet) in ms — RMSSD. */
     val hrvMs: Double? = null,
+    /** Schlaf-Felder aus dem band_data-Summary (slp_*-Schluessel). */
+    val sleepTotalMinutes: Int? = null,
+    val sleepDeepMinutes: Int? = null,
+    val sleepLightMinutes: Int? = null,
+    val sleepWakeMinutes: Int? = null,
+    val sleepRemMinutes: Int? = null,
+    val sleepScore: Int? = null,
     val createdAt: Long,
 )
 
@@ -110,5 +117,10 @@ data class AmazfitWorkoutEntity(
     val poolLaps: Int? = null,
     /** Pool-Laenge in Metern (bei Schwimm-Workouts). */
     val poolLengthMeters: Double? = null,
+    /** source-Identifier (z.B. "run.8716545.huami.com") — Pflicht-Parameter fuer
+     *  den Workout-Detail-Endpoint. */
+    val source: String? = null,
+    /** Stadt/Ort wo das Workout stattfand (z.B. "Moenchwinkel"). */
+    val city: String? = null,
     val createdAt: Long,
 )

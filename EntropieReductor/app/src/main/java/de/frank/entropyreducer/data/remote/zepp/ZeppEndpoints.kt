@@ -43,17 +43,23 @@ internal object ZeppEndpoints {
     fun sportDetailUrl(region: String, trackId: String): String =
         "https://api-mifit-$region.zepp.com/v1/sport/run/detail.json?trackid=$trackId"
 
-    /** PAI-Score. */
-    fun paiUrl(region: String): String =
-        "https://api-mifit-$region.zepp.com/v1/data/pai_data.json"
+    /**
+     * Events-Endpoint — verifiziert via bentasker/zepp_to_influxdb. Nimmt
+     * `eventType` als Query-Parameter und liefert pro Tag/Range eine Liste
+     * von Events. Pflicht-Parameter: from + to als Epoch-Millisekunden,
+     * limit (max 1000), eventType.
+     */
+    fun eventsUrl(region: String, userId: String): String =
+        "https://api-mifit-$region.zepp.com/users/$userId/events"
 
-    /** Stress-Score. */
-    fun stressUrl(region: String): String =
-        "https://api-mifit-$region.zepp.com/v1/data/stress_data.json"
-
-    /** SpO2 (Blutsauerstoff). */
-    fun spo2Url(region: String): String =
-        "https://api-mifit-$region.zepp.com/v1/data/blood_oxygen_data.json"
+    /** Bekannte eventType-Werte (verifiziert + vermutet). */
+    object EventType {
+        const val PAI = "PaiHealthInfo"
+        const val STRESS_ALL_DAY = "all_day_stress"
+        const val STRESS_SINGLE = "single_stress"
+        // Vermutung — Frank's T-Rex 3 hat BioCharge erst seit Sept 2025.
+        const val BIOCHARGE = "BioChargeInfo"
+    }
 
     /** Devices — regionsneutral. */
     const val DEVICES_BASE = "https://api-mifit.zepp.com/"
@@ -103,6 +109,28 @@ internal object ZeppEndpoints {
         "x-hm-ekv" to "1",
         "content-type" to "application/x-www-form-urlencoded; charset=UTF-8",
         "accept-encoding" to "gzip",
+    )
+
+    /**
+     * Web-Variante der Daten-Header — basierend auf rolandsz/Mi-Fit-and-Zepp-
+     * workout-exporter (api.py). Imitiert eine Browser-GDPR-Export-Session
+     * statt der mobilen App. Theorie: Zepp erlaubt parallel zu einer Mobile-App-
+     * Sitzung eine Web-Sitzung — damit koennten wir das Single-Session-Problem
+     * umgehen das beim Sync mit den android_phone-Headern auftritt.
+     *
+     * Frank-Live-Test 2026-05-09 zeigte: Sync mit android_phone-Header wirft
+     * Frank's Hauptgeraet aus der Zepp-App. Ob Web-Header das aendert: muss
+     * empirisch getestet werden. Bei Erfolg: Daily- und Workout-Sync auf Web.
+     */
+    fun webDataHeaders(
+        appToken: String,
+        requestId: String,
+    ): Map<String, String> = mapOf(
+        "apptoken" to appToken,
+        "appPlatform" to "web",
+        "appname" to "com.xiaomi.hm.health",
+        "x-request-id" to requestId,
+        "user-agent" to "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
     )
 
     /** Header fuer Login-Schritt 2 (Access-Token gegen App-Token tauschen). */

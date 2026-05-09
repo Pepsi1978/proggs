@@ -63,7 +63,7 @@ fun AmazfitTrainingsScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Zurueck",
+                    contentDescription = "Zurück",
                     tint = cosmos.textPrimary,
                 )
             }

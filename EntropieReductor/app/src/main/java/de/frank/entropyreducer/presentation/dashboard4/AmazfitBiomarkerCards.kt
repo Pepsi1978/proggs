@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
@@ -88,6 +89,7 @@ internal fun AmazfitTrainingsCard(
 ) {
     val cosmos = LocalCosmos.current
     val recent = workouts.take(5)
+    val latest = workouts.firstOrNull()
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -131,7 +133,23 @@ internal fun AmazfitTrainingsCard(
                     color = cosmos.textSecondary,
                 )
             } else {
-                recent.forEachIndexed { i, w ->
+                // HERO: letztes Training prominent mit Pattern-Layout.
+                if (latest != null) {
+                    LetzterLaufHero(
+                        w = latest,
+                        onOpenDetail = { onOpenDetail(latest.trackId) },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Frühere Trainings",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = cosmos.textSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                // Restliche kleinere Zeilen — letzten überspringen weil schon im Hero.
+                recent.drop(1).forEachIndexed { i, w ->
                     if (i > 0) Spacer(Modifier.height(8.dp))
                     AmazfitWorkoutRow(workout = w, onClick = { onOpenDetail(w.trackId) })
                 }
@@ -148,6 +166,158 @@ internal fun AmazfitTrainingsCard(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Hero-Pattern für den letzten Lauf — Frank-Wunsch 2026-05-09:
+ * "schoenes Fenster mit allen Werten in Patterns".
+ * Sportart-Icon + Datum + T-Rex-3-Badge oben, dann Distanz und Dauer GROSS,
+ * darunter ein 2x2-Pattern mit Pace, Puls, Kalorien, Höhenmeter.
+ */
+@Composable
+private fun LetzterLaufHero(
+    w: AmazfitWorkoutEntity,
+    onOpenDetail: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = CosmosColors.Warning
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(accent.copy(alpha = 0.10f))
+            .clickable { onOpenDetail() }
+            .padding(14.dp),
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accent.copy(alpha = 0.22f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DirectionsRun,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Spacer(Modifier.size(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = w.sportName ?: "Sport",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = formatStartLabel(w.startMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(accent.copy(alpha = 0.22f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        text = "T-Rex 3",
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HeroBigStat(
+                    label = "Distanz",
+                    value = w.distanceMeters?.let { formatDistance(it) } ?: "—",
+                    accent = accent,
+                    modifier = Modifier.weight(1f),
+                )
+                HeroBigStat(
+                    label = "Dauer",
+                    value = w.durationSeconds?.let { formatDuration(it) } ?: "—",
+                    accent = accent,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            // 2x2-Pattern mit den wichtigsten weiteren Werten.
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniStat(
+                    label = "Ø Pace",
+                    value = w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—",
+                    modifier = Modifier.weight(1f),
+                )
+                MiniStat(
+                    label = "Ø Puls",
+                    value = w.avgHeartRate?.let { "$it bpm" } ?: "—",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MiniStat(
+                    label = "Kalorien",
+                    value = w.calories?.let { "%.0f kcal".format(it) } ?: "—",
+                    modifier = Modifier.weight(1f),
+                )
+                MiniStat(
+                    label = "Höhe ↑",
+                    value = w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroBigStat(
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+) {
+    val cosmos = LocalCosmos.current
+    Column(modifier = modifier) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+        Spacer(Modifier.height(2.dp))
+        Text(value, color = accent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
+    val cosmos = LocalCosmos.current
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(cosmos.glassBorder.copy(alpha = 0.15f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
@@ -272,5 +442,5 @@ internal fun formatPace(secPerKm: Double): String {
     val total = secPerKm.toInt()
     val m = total / 60
     val s = total % 60
-    return "%d:%02d /km".format(m, s)
+    return "%d:%02d min/km".format(m, s)
 }
