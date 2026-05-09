@@ -171,6 +171,26 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
+        /// Kuerzt einen String fuer Console/Logging auf maximal 30 Zeichen
+        /// plus Zeichen-Anzahl. Frueher loggten wir den vollstaendigen
+        /// Whisper-Output und Gemini-Output direkt in stdout — wenn
+        /// der Benutzer versehentlich Passwoerter, API-Tokens oder andere
+        /// sensible Daten einsprach, landeten die im persistierten Log.
+        /// Mit Preview-Format "vorne(20)…hinten(10) [N chars]" sieht Frank
+        /// genug zum Debuggen ob Whisper plausibel arbeitet, ohne dass
+        /// sensible Mitten verloren gehen koennen. Newlines werden zu
+        /// Spaces damit eine logische Zeile pro Logging-Eintrag bleibt.
+        /// </summary>
+        private static string SafeLogPreview(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return "<empty>";
+            string flat = text.Replace('\n', ' ').Replace('\r', ' ').Replace('\t', ' ');
+            int len = flat.Length;
+            if (len <= 30) return $"{flat} [{len} chars]";
+            return $"{flat.Substring(0, 20)}…{flat.Substring(len - 10)} [{len} chars]";
+        }
+
+        /// <summary>
         /// Schreibt eine Diagnose-Zeile in title-debug.log neben der
         /// Promptboard-Datenbank. Praktisch zum Erkennen warum die Historie-
         /// Titel manchmal nicht von Gemini kommen — wir loggen pro Submit
@@ -907,7 +927,7 @@ namespace TerminalVoiceOverlay.Views
                 try
                 {
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
-                    Console.WriteLine($"Transcript: {transcript}");
+                    Console.WriteLine($"Transcript: {SafeLogPreview(transcript)}");
                     lastRawTranscript = transcript;
                     // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
                     // damit der Benutzer per Profil-Klick im Nachhinein eine
@@ -922,7 +942,7 @@ namespace TerminalVoiceOverlay.Views
                         try
                         {
                             finalText = await activeGemini.CorrectTextAsync(transcript, _activeProfile);
-                            Console.WriteLine($"Corrected: {finalText}");
+                            Console.WriteLine($"Corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
                         {
@@ -1052,7 +1072,7 @@ namespace TerminalVoiceOverlay.Views
                 try
                 {
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
-                    Console.WriteLine($"BTW transcript: {transcript}");
+                    Console.WriteLine($"BTW transcript: {SafeLogPreview(transcript)}");
                     // Re-Correct-Cache fuer die BTW-Spur ebenfalls fuellen
                     _lastCorrectableRaw = transcript;
 
@@ -1064,7 +1084,7 @@ namespace TerminalVoiceOverlay.Views
                         try
                         {
                             finalText = await btwGemini.CorrectTextAsync(transcript, _activeProfile);
-                            Console.WriteLine($"BTW corrected: {finalText}");
+                            Console.WriteLine($"BTW corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
                         {
@@ -1162,7 +1182,7 @@ namespace TerminalVoiceOverlay.Views
                 await Task.Delay(100);
                 await TerminalController.PasteTextAsync(textToPaste, _terminalWatcher.ActiveTerminalHwnd);
                 hasPastedText = true;
-                Console.WriteLine($"Whisper raw text inserted: {textToPaste}");
+                Console.WriteLine($"Whisper raw text inserted: {SafeLogPreview(textToPaste)}");
             }
             finally
             {

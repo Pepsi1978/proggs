@@ -294,8 +294,34 @@ namespace TerminalVoiceOverlay
 
         // ── Overlay mode: the actual voice overlay with UI ──
 
+        // Single-Instance-Lock fuer den OVERLAY-Prozess. Watchdog und
+        // Overlay sind dieselbe .exe — beim Start mit `--run` kann jeder
+        // einen zweiten Overlay-Prozess von Hand triggern (CLI, Verknuep-
+        // fung, Task-Scheduler). Beide haetten dann ihren globalen LL-
+        // Tastatur-Hook installiert und jeden Tastendruck doppelt
+        // verarbeitet (PTT-Aufnahme zweimal, Hotkey-Paste zweimal). Das
+        // Mutex muss die Lebensdauer des Process haben — Field damit GC
+        // ihn nicht einsammelt waehrend wir die UI hochfahren.
+        private Mutex? _overlayInstanceMutex;
+
         private void StartOverlay(int watchdogPid)
         {
+            // Single-Instance-Check VOR allem anderen — sonst hat das
+            // zweite Overlay schon Audio-Geraete und Tastatur-Hooks
+            // angefasst, bevor wir ihn ausschalten koennen. Bei
+            // doppeltem Start beendet sich der spaetere Prozess sofort
+            // mit Exit-Code 0 → der Watchdog interpretiert das als
+            // "saubere Beendigung" und stoppt.
+            _overlayInstanceMutex = new Mutex(true, "TerminalVoiceOverlay-Overlay", out bool overlayCreated);
+            if (!overlayCreated)
+            {
+                Console.WriteLine("Overlay already running, exiting (single-instance lock).");
+                _overlayInstanceMutex.Dispose();
+                _overlayInstanceMutex = null;
+                Shutdown(0);
+                return;
+            }
+
             // Catch unhandled exceptions for logging. Frueher: nur
             // Console.WriteLine — im Release-Build ohne Konsole still
             // verschluckt. Jetzt: persistenter File-Log (crash.log) plus
