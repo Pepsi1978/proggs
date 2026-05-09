@@ -190,6 +190,21 @@ namespace TerminalVoiceOverlay
 
             Task.Run(() =>
             {
+                // Crash-Backoff-Counter. Zaehlt aufeinander folgende Crashes
+                // innerhalb eines kurzen Fensters (60 s). Frueher: starre 2s
+                // Pause, endlose Restarts auch bei dauerhaft kaputter App
+                // (z.B. korrupte DB, fehlende Native-DLL, OOM-Loop). Jetzt:
+                // exponentieller Backoff bis 60 s, plus harte Grenze bei
+                // 10 schnellen Crashes hintereinander — danach gibt der
+                // Watchdog auf und beendet sich. Frank sieht dann zumindest
+                // dass das Tray-Icon nicht mehr da ist und kann den Bug
+                // im crash.log nachlesen statt sich ueber blinkende Restart-
+                // Effekte zu wundern.
+                int consecutiveCrashes = 0;
+                DateTime lastCrashAt = DateTime.MinValue;
+                int[] backoffMs = { 2_000, 4_000, 8_000, 15_000, 30_000, 60_000 };
+                const int crashGiveUpThreshold = 10;
+
                 while (true)
                 {
                     // Find existing overlay or start a new one
@@ -222,9 +237,39 @@ namespace TerminalVoiceOverlay
                         return;
                     }
 
-                    // Crash or kill — wait and restart
-                    Console.WriteLine($"Watchdog: overlay exited with code {exitCode}, restarting in 2s...");
-                    Thread.Sleep(2000);
+                    // Crash or kill — Backoff-Counter aktualisieren. Wenn
+                    // der letzte Crash mehr als 60 s zurueckliegt, war die
+                    // App offensichtlich stabil dazwischen → Counter zurueck.
+                    var now = DateTime.UtcNow;
+                    if ((now - lastCrashAt).TotalSeconds > 60)
+                        consecutiveCrashes = 0;
+                    consecutiveCrashes++;
+                    lastCrashAt = now;
+
+                    if (consecutiveCrashes >= crashGiveUpThreshold)
+                    {
+                        // Geben auf — App ist offenkundig dauerhaft kaputt.
+                        // Tray-Notification waere schoen, aber der Watchdog
+                        // hat kein Tray-Icon (nur das Overlay hat eines).
+                        // Stattdessen einfach beenden: das Tray-Icon
+                        // verschwindet damit, Frank sieht es und kann im
+                        // crash.log nachlesen warum.
+                        LogCrash("Watchdog.GiveUp", null,
+                            $"Stopping after {consecutiveCrashes} consecutive crashes within 60s. Last exit code={exitCode}.");
+                        Console.WriteLine($"Watchdog: {consecutiveCrashes} consecutive crashes — giving up.");
+                        Dispatcher.Invoke(() => Shutdown());
+                        GC.KeepAlive(mutex);
+                        GC.KeepAlive(cleanShutdown);
+                        return;
+                    }
+
+                    // Exponentieller Backoff mit Hard-Cap bei 60 s. Index
+                    // entspricht (consecutiveCrashes - 1) damit der erste
+                    // Crash mit 2 s wartet wie zuvor.
+                    int idx = Math.Min(consecutiveCrashes - 1, backoffMs.Length - 1);
+                    int wait = backoffMs[idx];
+                    Console.WriteLine($"Watchdog: overlay exited with code {exitCode} (crash #{consecutiveCrashes}), restarting in {wait / 1000}s...");
+                    Thread.Sleep(wait);
                 }
             });
         }
