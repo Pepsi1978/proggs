@@ -1,6 +1,7 @@
 using System;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -119,8 +120,21 @@ public static class PromptBoardHost
             if (store.HasAnyValue())
                 return; // already migrated — SK file is the source of truth
 
-            var repo = scope.ServiceProvider.GetRequiredService<IAppSettingsRepository>();
-            var dbSettings = repo.GetAsync().GetAwaiter().GetResult();
+            // Frueher: repo.GetAsync().GetAwaiter().GetResult() — Sync-Over-Async
+            // mitten im synchronen Initialize-Pfad. Funktional unproblematisch
+            // weil kein UI-Thread-Dispatcher-Capture in den await-Continuations
+            // (EF Core SQLite nutzt ConfigureAwait(false) intern), aber Code-
+            // Smell und unnoetige Allocation einer Task + AwaiterPromise.
+            // Jetzt: direkter synchroner DbContext-Zugriff. AppSettings.FirstOrDefault
+            // (sync) statt FirstOrDefaultAsync; SaveChanges() statt SaveChangesAsync().
+            // Wenn noch keine Settings-Row existiert, gibt es auch nichts zu
+            // migrieren — early return (frueher legte AppSettingsRepository.GetAsync
+            // eine leere Row an, was die Migration trivialerweise verfehlte;
+            // gleiche Endbedingung jetzt ohne den Roundtrip).
+            var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+            var dbSettings = ctx.AppSettings.FirstOrDefault();
+            if (dbSettings is null) return;
+
             var hasDbSecrets =
                 !string.IsNullOrEmpty(dbSettings.GoogleClientId)
                 || !string.IsNullOrEmpty(dbSettings.GoogleClientSecret)
@@ -140,7 +154,7 @@ public static class PromptBoardHost
             dbSettings.GoogleClientSecret = null;
             dbSettings.GoogleOAuthRefreshToken = null;
             dbSettings.GoogleAccountEmail = null;
-            repo.UpdateAsync(dbSettings).GetAwaiter().GetResult();
+            ctx.SaveChanges();
         }
         catch
         {
