@@ -9,7 +9,21 @@ input=$(cat)
 # nur den Default fuer den Session-Start. Frueher hat die Statusline NUR aus
 # settings.json gelesen und deshalb "HIGH" angezeigt obwohl die Session auf
 # "xhigh" stand (Frank-Bug-Report 2026-05-09 Abend).
-effort=$(echo "$input" | jq -r '.effort.level // empty' 2>/dev/null)
+# Performance-Optimierung 2026-05-09 22:06: Alle Input-Felder in EINEM jq-Aufruf
+# parsen statt 8 separaten Subprocesses (auf Windows extrem teuer). Frueher 4.4s,
+# jetzt <1s. Felder werden tab-separiert ausgegeben und mit IFS=tab read gesplittet.
+parsed=$(echo "$input" | jq -r '[
+    .effort.level // "",
+    .model.display_name // .model.id // "?",
+    .workspace.current_dir // "",
+    .context_window.remaining_percentage // "",
+    .rate_limits.five_hour.used_percentage // "",
+    .rate_limits.five_hour.resets_at // "",
+    .rate_limits.seven_day.used_percentage // "",
+    .session_id // "unknown"
+] | @tsv' 2>/dev/null)
+IFS=$'\t' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw session_id <<< "$parsed"
+
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
     if [ -f "$settings" ]; then
@@ -18,12 +32,12 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
+effort_upper="${effort^^}"
 
-# JSON-Felder parsen
-# Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
-model=$(echo "$input" | jq -r '.model.display_name // .model.id // "?"')
-cwd_raw=$(echo "$input" | jq -r '.workspace.current_dir // empty' | sed "s|$HOME|~|g")
+# Home-Pfad zu ~ kuerzen ohne Subprocess
+case "$cwd_raw" in
+    "$HOME"*) cwd_raw="~${cwd_raw#$HOME}" ;;
+esac
 
 # Smart-truncate fuer den Ordner-Pfad (Variante B):
 # - <= 35 Zeichen: unveraendert
@@ -51,90 +65,65 @@ shorten_path() {
     fi
 }
 cwd=$(shorten_path "$cwd_raw")
-ctx_remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
-five_h_used_raw=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
-five_h_resets_raw=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
-week_used_raw=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage // empty')
-session_id=$(echo "$input"        | jq -r '.session_id // "unknown"')
+# Hinweis: ctx_remaining, five_h_used_raw, five_h_resets_raw, week_used_raw,
+# session_id wurden bereits oben in einem einzigen jq-Aufruf geparst.
 
 # Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
 # Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort der rate_limits.
-# Eine idle Session zeigt deshalb veraltete Werte (z.B. 27%) waehrend eine aktive
-# Session den aktuellen Wert (z.B. 55%) sieht. Frank arbeitet mit 4-5 parallelen
-# Sessions und sieht dann unterschiedliche Werte je nachdem in welche Session er guckt.
-# Die Konsole von Anthropic zeigt den globalen Wert.
+# Eine idle Session zeigt deshalb veraltete Werte. Frank arbeitet mit 4-5 parallelen
+# Sessions — Loesung: alle Sessions schreiben in ~/.claude/state/. Beim Anzeigen wird
+# der HOECHSTE Wert ueber alle Sessions genommen (rate_limits zaehlen im Fenster nur
+# hoch). Beim Reset (resets_at aendert sich) wird MAX nur innerhalb des aktuellsten
+# resets_at-Fensters gemacht.
 #
-# Loesung: Jede Session schreibt ihre letzten rate_limits in eine eigene State-Datei.
-# Beim Anzeigen wird ueber alle Sessions hinweg der HOECHSTE Wert genommen, weil
-# rate_limits im Fenster nur hochzaehlen — wer den hoechsten Wert sieht, hat den
-# juengsten Stand. Beim Reset (resets_at aendert sich) wird der MAX-Vergleich nur
-# innerhalb des aktuellsten resets_at-Fensters gemacht, sonst wuerden alte hohe
-# Werte aus dem letzten Fenster die neuen niedrigen Werte verdecken.
+# PERFORMANCE-KRITISCH (Frank-Bug-Report 2026-05-09 22:04): Vorherige Version mit
+# Bash-Schleifen + 20+ jq-Aufrufen brauchte 8.4s — Claude Code Statusline-Timeout
+# liegt bei ~3-5s, deshalb wurde die Statusline gar nicht mehr angezeigt. Diese
+# Version: 1 cat (Schreiben), 1 find (Cleanup), 1 jq-Aufruf (Lesen+MAX-Berechnung).
 state_dir="$HOME/.claude/state"
-mkdir -p "$state_dir" 2>/dev/null
+[ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
 my_state="$state_dir/rate-limits-$session_id.json"
-now_ts=$(date +%s)
+printf -v now_ts '%(%s)T' -1
 
-# 1. Aktuellen Input fuer DIESE Session schreiben (ohne Aenderungserkennung —
-#    wir nutzen MAX statt ts_changed). ts_seen bleibt fuer Cleanup wichtig.
+# 1. Aktuellen Input fuer DIESE Session schreiben — printf statt cat heredoc
+#    (printf ist Bash-builtin, kein Subprocess).
 if [ -n "$five_h_used_raw" ] && [ "$five_h_used_raw" != "null" ]; then
-    cat > "$my_state" 2>/dev/null <<JSON
-{"ts_seen":$now_ts,"session_id":"$session_id","five_h":$five_h_used_raw,"five_h_resets":${five_h_resets_raw:-0},"seven_d":${week_used_raw:-0}}
-JSON
+    printf '{"ts_seen":%s,"session_id":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s}\n' \
+        "$now_ts" "$session_id" "$five_h_used_raw" "${five_h_resets_raw:-0}" "${week_used_raw:-0}" \
+        > "$my_state" 2>/dev/null
 fi
 
-# 2. Cleanup: State-Files aelter als 24h (= 86400s) loeschen.
-for f in "$state_dir"/rate-limits-*.json; do
-    [ -f "$f" ] || continue
-    seen=$(jq -r '.ts_seen // 0' "$f" 2>/dev/null)
-    if [ "$((now_ts - seen))" -gt 86400 ] 2>/dev/null; then
-        rm -f "$f" 2>/dev/null
-    fi
-done
+# 2. Cleanup: State-Files aelter als 24h. Nur ~jeder 600. Aufruf (also ca. alle
+#    10 Minuten bei refreshInterval=1) — find ist teuer auf Windows Git Bash und
+#    der Cleanup ist nicht zeitkritisch.
+if [ $((now_ts % 600)) -lt 2 ]; then
+    find "$state_dir" -name "rate-limits-*.json" -mmin +1440 -delete 2>/dev/null
+fi
 
-# 3. MAX-Logik fuer 5h: Finde aktuellsten resets_at, dann hoechsten five_h
-#    innerhalb dieses Fensters. So gewinnt nach einem Reset der frische
-#    niedrige Wert, nicht der alte hohe vom letzten Fenster.
-max_resets=0
-for f in "$state_dir"/rate-limits-*.json; do
-    [ -f "$f" ] || continue
-    r=$(jq -r '.five_h_resets // 0' "$f" 2>/dev/null)
-    [ -z "$r" ] && r=0
-    if [ "$r" -gt "$max_resets" ] 2>/dev/null; then
-        max_resets=$r
-    fi
-done
+# 3. MAX-Logik in EINEM jq-Aufruf — slurp alle State-Files, finde aktuellsten
+#    resets_at, dann hoechsten five_h darin, dann hoechsten seven_d global.
+fresh=$(jq -sr '
+    if length == 0 then ""
+    else
+        (map(.five_h_resets // 0) | max) as $maxR |
+        (map(select(.five_h_resets == $maxR)) | max_by(.five_h // 0)) as $bestF |
+        (map(.seven_d // 0) | max) as $bestS |
+        "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")"
+    end
+' "$state_dir"/rate-limits-*.json 2>/dev/null)
 
-fresh_five=""
-fresh_resets=""
-fresh_session=""
-fresh_seven=""
-for f in "$state_dir"/rate-limits-*.json; do
-    [ -f "$f" ] || continue
-    r=$(jq -r '.five_h_resets // 0' "$f" 2>/dev/null)
-    if [ "$r" = "$max_resets" ]; then
-        v=$(jq -r '.five_h // 0' "$f" 2>/dev/null)
-        # Hoechsten 5h-Wert merken
-        cmp_v=$(printf "%.0f" "${v:-0}" 2>/dev/null)
-        cmp_fresh=$(printf "%.0f" "${fresh_five:-0}" 2>/dev/null)
-        if [ -z "$fresh_five" ] || [ "$cmp_v" -gt "$cmp_fresh" ] 2>/dev/null; then
-            fresh_five="$v"
-            fresh_resets="$r"
-            fresh_session=$(jq -r '.session_id // empty' "$f" 2>/dev/null)
-        fi
-    fi
-    # 7d unabhaengig: hoechster Wert ueber ALLE Sessions
-    sv=$(jq -r '.seven_d // 0' "$f" 2>/dev/null)
-    cmp_sv=$(printf "%.0f" "${sv:-0}" 2>/dev/null)
-    cmp_fseven=$(printf "%.0f" "${fresh_seven:-0}" 2>/dev/null)
-    if [ -z "$fresh_seven" ] || [ "$cmp_sv" -gt "$cmp_fseven" ] 2>/dev/null; then
-        fresh_seven="$sv"
-    fi
-done
+if [ -n "$fresh" ]; then
+    fresh_five="${fresh%%|*}"
+    rest="${fresh#*|}"
+    fresh_resets="${rest%%|*}"
+    rest="${rest#*|}"
+    fresh_seven="${rest%%|*}"
+    fresh_session="${rest#*|}"
+fi
 
 # 4. Wenn Cross-Session-Werte vorhanden sind: diese verwenden statt Input.
 from_other_session=""
-if [ -n "$fresh_five" ] && [ "$fresh_five" != "null" ]; then
+if [ -n "$fresh_five" ] && [ "$fresh_five" != "null" ] && [ "$fresh_five" != "0" ]; then
     five_h_used="$fresh_five"
     week_used="$fresh_seven"
     five_h_resets="$fresh_resets"
@@ -164,8 +153,7 @@ fi
 # nichts statt absurde "2.000.000h"-Countdowns.
 five_h_countdown=""
 if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
-    now=$(date +%s)
-    diff=$((five_h_resets - now))
+    diff=$((five_h_resets - now_ts))
     # 21600 = 6h Toleranz oberhalb der nominellen 5h-Fenstergrenze
     if [ "$diff" -gt 0 ] && [ "$diff" -le 21600 ]; then
         mins=$((diff / 60))
@@ -180,7 +168,7 @@ if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
 fi
 
 # Uhrzeit
-time=$(date +%H:%M)
+printf -v time '%(%H:%M)T' -1
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell

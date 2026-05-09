@@ -107,17 +107,18 @@ try {
         ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $myState -Encoding UTF8 -Force
     }
 
-    # 2. Cleanup: State-Files aelter als 24h loeschen
-    Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
-        try {
-            $entry = Get-Content -Raw -Encoding UTF8 -Path $_.FullName | ConvertFrom-Json
-            if ($entry.ts_seen -and ($nowTs - [long]$entry.ts_seen) -gt 86400) {
-                Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
-            }
-        } catch { }
+    # 2. Cleanup: State-Files aelter als 24h loeschen — nur ~jeder 600. Aufruf
+    #    (also ca. alle 10 Minuten bei refreshInterval=1) damit es nicht jeden
+    #    Refresh kostet. Performance-kritisch (Frank-Bug-Report 2026-05-09 22:04).
+    if (($nowTs % 600) -lt 2) {
+        $cutoff = $nowTs - 86400
+        Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTimeUtc.Subtract([DateTime]'1970-01-01').TotalSeconds -lt $cutoff } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    # 3. MAX-Logik: aktuellsten resets_at finden, dann hoechsten five_h darin
+    # 3. MAX-Logik: aktuellsten resets_at finden, dann hoechsten five_h darin.
+    #    Alle State-Files in EINEM Pass lesen, dann in PowerShell aggregieren.
     $allEntries = @()
     Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
         try {
