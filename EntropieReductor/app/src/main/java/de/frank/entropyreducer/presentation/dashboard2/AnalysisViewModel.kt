@@ -13,6 +13,7 @@ import de.frank.entropyreducer.domain.model.ShiftCode
 import de.frank.entropyreducer.domain.status.StatusBreakdown
 import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.domain.usecase.GenerateAnalysisUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -113,7 +115,13 @@ class AnalysisViewModel @Inject constructor(
             error = ui.error,
             statusBreakdown = breakdown,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), AnalysisUiState())
+    }
+        // Performance-Fix Loop 1.1: combine-Block macht reine Berechnung
+        // (computeTrendFromSnapshot, count, sumOf, groupingBy). Auf Default-
+        // Dispatcher verlagern, damit Main-Thread bei jedem Eintrag-/Status-Update
+        // nicht ueber die komplette aktive Liste iteriert.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), AnalysisUiState())
 
     init {
         // Cache aus den Settings holen, falls vorhanden
@@ -164,7 +172,16 @@ class AnalysisViewModel @Inject constructor(
     ): Pair<Map<EntropyCategory, List<Double>>, List<ShiftCode>> {
         val today = LocalDate.now()
         val from = today.minusDays(range.days.toLong() - 1)
-        val days = (0 until range.days).map { from.plusDays(it.toLong()) }
+        val days = ArrayList<LocalDate>(range.days)
+        // Performance-Fix Loop 1.1: HashMap<LocalDate, Int> statt days.indexOf(date)
+        // pro Eintrag. Vorher O(N×M) — bei 1000 Eintraegen × 365 Tagen waren das
+        // 365.000 LocalDate.equals-Vergleiche pro emit. Jetzt O(N+M) mit Hashtable.
+        val dayIndex = HashMap<LocalDate, Int>(range.days * 2)
+        for (i in 0 until range.days) {
+            val d = from.plusDays(i.toLong())
+            days += d
+            dayIndex[d] = i
+        }
 
         val shiftByDate = calendar.associate { it.date to it.shiftCode }
         val shifts = days.map { shiftByDate[it.toString()] ?: ShiftCode.UNBEKANNT }
@@ -172,12 +189,11 @@ class AnalysisViewModel @Inject constructor(
         val byCategory = mutableMapOf<EntropyCategory, MutableList<Double>>()
         EntropyCategory.values().forEach { byCategory[it] = MutableList(range.days) { 0.0 } }
 
+        val zone = ZoneId.systemDefault()
         active.forEach { e ->
-            val date = Instant.ofEpochMilli(e.createdAt).atZone(ZoneId.systemDefault()).toLocalDate()
-            val idx = days.indexOf(date)
-            if (idx >= 0) {
-                byCategory.getValue(e.category)[idx] += e.severity.toDouble()
-            }
+            val date = Instant.ofEpochMilli(e.createdAt).atZone(zone).toLocalDate()
+            val idx = dayIndex[date] ?: return@forEach
+            byCategory.getValue(e.category)[idx] += e.severity.toDouble()
         }
 
         val nonEmpty = byCategory
