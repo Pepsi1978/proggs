@@ -52,9 +52,100 @@ shorten_path() {
 }
 cwd=$(shorten_path "$cwd_raw")
 ctx_remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
-five_h_used=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
-five_h_resets=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
-week_used=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage // empty')
+five_h_used_raw=$(echo "$input"   | jq -r '.rate_limits.five_hour.used_percentage // empty')
+five_h_resets_raw=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
+week_used_raw=$(echo "$input"     | jq -r '.rate_limits.seven_day.used_percentage // empty')
+session_id=$(echo "$input"        | jq -r '.session_id // "unknown"')
+
+# Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
+# Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort der rate_limits.
+# Eine idle Session zeigt deshalb veraltete Werte (z.B. 27%) waehrend eine aktive
+# Session den aktuellen Wert (z.B. 55%) sieht. Frank arbeitet mit 4-5 parallelen
+# Sessions und sieht dann unterschiedliche Werte je nachdem in welche Session er guckt.
+# Die Konsole von Anthropic zeigt den globalen Wert.
+#
+# Loesung: Jede Session schreibt ihre letzten rate_limits in eine eigene State-Datei.
+# Beim Anzeigen wird ueber alle Sessions hinweg der HOECHSTE Wert genommen, weil
+# rate_limits im Fenster nur hochzaehlen — wer den hoechsten Wert sieht, hat den
+# juengsten Stand. Beim Reset (resets_at aendert sich) wird der MAX-Vergleich nur
+# innerhalb des aktuellsten resets_at-Fensters gemacht, sonst wuerden alte hohe
+# Werte aus dem letzten Fenster die neuen niedrigen Werte verdecken.
+state_dir="$HOME/.claude/state"
+mkdir -p "$state_dir" 2>/dev/null
+my_state="$state_dir/rate-limits-$session_id.json"
+now_ts=$(date +%s)
+
+# 1. Aktuellen Input fuer DIESE Session schreiben (ohne Aenderungserkennung —
+#    wir nutzen MAX statt ts_changed). ts_seen bleibt fuer Cleanup wichtig.
+if [ -n "$five_h_used_raw" ] && [ "$five_h_used_raw" != "null" ]; then
+    cat > "$my_state" 2>/dev/null <<JSON
+{"ts_seen":$now_ts,"session_id":"$session_id","five_h":$five_h_used_raw,"five_h_resets":${five_h_resets_raw:-0},"seven_d":${week_used_raw:-0}}
+JSON
+fi
+
+# 2. Cleanup: State-Files aelter als 24h (= 86400s) loeschen.
+for f in "$state_dir"/rate-limits-*.json; do
+    [ -f "$f" ] || continue
+    seen=$(jq -r '.ts_seen // 0' "$f" 2>/dev/null)
+    if [ "$((now_ts - seen))" -gt 86400 ] 2>/dev/null; then
+        rm -f "$f" 2>/dev/null
+    fi
+done
+
+# 3. MAX-Logik fuer 5h: Finde aktuellsten resets_at, dann hoechsten five_h
+#    innerhalb dieses Fensters. So gewinnt nach einem Reset der frische
+#    niedrige Wert, nicht der alte hohe vom letzten Fenster.
+max_resets=0
+for f in "$state_dir"/rate-limits-*.json; do
+    [ -f "$f" ] || continue
+    r=$(jq -r '.five_h_resets // 0' "$f" 2>/dev/null)
+    [ -z "$r" ] && r=0
+    if [ "$r" -gt "$max_resets" ] 2>/dev/null; then
+        max_resets=$r
+    fi
+done
+
+fresh_five=""
+fresh_resets=""
+fresh_session=""
+fresh_seven=""
+for f in "$state_dir"/rate-limits-*.json; do
+    [ -f "$f" ] || continue
+    r=$(jq -r '.five_h_resets // 0' "$f" 2>/dev/null)
+    if [ "$r" = "$max_resets" ]; then
+        v=$(jq -r '.five_h // 0' "$f" 2>/dev/null)
+        # Hoechsten 5h-Wert merken
+        cmp_v=$(printf "%.0f" "${v:-0}" 2>/dev/null)
+        cmp_fresh=$(printf "%.0f" "${fresh_five:-0}" 2>/dev/null)
+        if [ -z "$fresh_five" ] || [ "$cmp_v" -gt "$cmp_fresh" ] 2>/dev/null; then
+            fresh_five="$v"
+            fresh_resets="$r"
+            fresh_session=$(jq -r '.session_id // empty' "$f" 2>/dev/null)
+        fi
+    fi
+    # 7d unabhaengig: hoechster Wert ueber ALLE Sessions
+    sv=$(jq -r '.seven_d // 0' "$f" 2>/dev/null)
+    cmp_sv=$(printf "%.0f" "${sv:-0}" 2>/dev/null)
+    cmp_fseven=$(printf "%.0f" "${fresh_seven:-0}" 2>/dev/null)
+    if [ -z "$fresh_seven" ] || [ "$cmp_sv" -gt "$cmp_fseven" ] 2>/dev/null; then
+        fresh_seven="$sv"
+    fi
+done
+
+# 4. Wenn Cross-Session-Werte vorhanden sind: diese verwenden statt Input.
+from_other_session=""
+if [ -n "$fresh_five" ] && [ "$fresh_five" != "null" ]; then
+    five_h_used="$fresh_five"
+    week_used="$fresh_seven"
+    five_h_resets="$fresh_resets"
+    if [ "$fresh_session" != "$session_id" ] && [ -n "$fresh_session" ]; then
+        from_other_session="1"
+    fi
+else
+    five_h_used="$five_h_used_raw"
+    week_used="$week_used_raw"
+    five_h_resets="$five_h_resets_raw"
+fi
 
 # Prozent runden
 [ -n "$five_h_used" ] && five_h_used=$(printf "%.0f" "$five_h_used" 2>/dev/null)

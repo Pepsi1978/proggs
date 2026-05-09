@@ -80,6 +80,70 @@ if ($obj) {
     }
 }
 
+# Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
+# Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort. Eine idle
+# Session zeigt deshalb veraltete Werte. Loesung: alle Sessions schreiben in
+# ~/.claude/state/rate-limits-<session_id>.json. Beim Anzeigen wird der HOECHSTE
+# Wert ueber alle Sessions genommen (rate_limits zaehlen im Fenster nur hoch).
+# Beim Reset (resets_at aendert sich) wird MAX nur innerhalb des aktuellsten
+# resets_at-Fensters gemacht — sonst wuerden alte hohe Werte aus dem letzten
+# Fenster die neuen niedrigen Werte verdecken. Identische Logik zu statusline.sh.
+try {
+    $sessionId = if ($obj -and $obj.session_id) { [string]$obj.session_id } else { 'unknown' }
+    $stateDir = Join-Path $env:USERPROFILE '.claude\state'
+    if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
+    $myState = Join-Path $stateDir "rate-limits-$sessionId.json"
+    $nowTs = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+
+    # 1. Aktuellen Input fuer DIESE Session schreiben
+    if ($five_h_used -ne $null) {
+        $payload = [ordered]@{
+            ts_seen        = $nowTs
+            session_id     = $sessionId
+            five_h         = $five_h_used
+            five_h_resets  = $five_h_resets
+            seven_d        = if ($week_used -ne $null) { $week_used } else { 0 }
+        }
+        ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $myState -Encoding UTF8 -Force
+    }
+
+    # 2. Cleanup: State-Files aelter als 24h loeschen
+    Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            $entry = Get-Content -Raw -Encoding UTF8 -Path $_.FullName | ConvertFrom-Json
+            if ($entry.ts_seen -and ($nowTs - [long]$entry.ts_seen) -gt 86400) {
+                Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+            }
+        } catch { }
+    }
+
+    # 3. MAX-Logik: aktuellsten resets_at finden, dann hoechsten five_h darin
+    $allEntries = @()
+    Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            $entry = Get-Content -Raw -Encoding UTF8 -Path $_.FullName | ConvertFrom-Json
+            $allEntries += $entry
+        } catch { }
+    }
+
+    if ($allEntries.Count -gt 0) {
+        $maxResets = ($allEntries | ForEach-Object { [long]($_.five_h_resets) } | Measure-Object -Maximum).Maximum
+        $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $maxResets }
+        if ($candidates.Count -gt 0) {
+            $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
+            $freshFive = [int]$bestFive.five_h
+            $freshResets = [long]$bestFive.five_h_resets
+            $freshSession = [string]$bestFive.session_id
+            # 7d unabhaengig: hoechster Wert ueber alle Sessions
+            $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+
+            $five_h_used = $freshFive
+            $week_used = $freshSeven
+            $five_h_resets = $freshResets
+        }
+    }
+} catch { }
+
 $ctx_used = $null
 if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
 
@@ -87,8 +151,7 @@ if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
 # Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
 # kaputten Timestamp liefert (z.B. weit in der Zukunft), zeigen wir lieber
 # nichts statt absurde "2.000.000h"-Countdowns.
-# [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() statt [int][double]::Parse(...)
-# verhindert Year-2038-Ueberlauf und ist sauberer.
+# [long] statt [int] fuer $now verhindert Year-2038-Ueberlauf.
 $five_h_countdown = ''
 if ($five_h_resets -gt 0) {
     $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
