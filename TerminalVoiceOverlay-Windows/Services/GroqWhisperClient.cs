@@ -29,10 +29,16 @@ namespace TerminalVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
-            return await TranscribeWithRetry(wavFilePath, 0);
+            // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
+            // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
+            // Disk — bei 3 Retries und ~1 MB Audio entstehen 3 MB unnoetige
+            // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
+            // Sharing zwischen Versuchen sicher.
+            byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            return await TranscribeWithRetry(fileBytes, 0);
         }
 
-        private async Task<string> TranscribeWithRetry(string wavFilePath, int attempt)
+        private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt)
         {
             using var content = new MultipartFormDataContent();
 
@@ -44,8 +50,7 @@ namespace TerminalVoiceOverlay.Services
             content.Add(new StringContent("text"), "response_format");
             content.Add(new StringContent("0"), "temperature");
 
-            // Add file
-            var fileBytes = await File.ReadAllBytesAsync(wavFilePath);
+            // Add file (Bytes wurden vom Aufrufer einmalig geladen)
             var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(fileContent, "file", "recording.wav");
@@ -71,7 +76,7 @@ namespace TerminalVoiceOverlay.Services
             {
                 Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
-                return await TranscribeWithRetry(wavFilePath, attempt + 1);
+                return await TranscribeWithRetry(fileBytes, attempt + 1);
             }
 
             var errorBody = await response.Content.ReadAsStringAsync();

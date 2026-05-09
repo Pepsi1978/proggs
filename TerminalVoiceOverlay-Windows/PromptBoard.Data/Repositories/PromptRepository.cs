@@ -37,6 +37,15 @@ public sealed class PromptRepository : IPromptRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Prompt>> GetAllAsync(CancellationToken ct = default)
+    {
+        // Eine Roundtrip fuer alle Prompts. Sortierung uebernimmt der
+        // Aufrufer in-memory weil die UI sowieso pro Kategorie gruppiert.
+        return await _db.Prompts
+            .AsNoTracking()
+            .ToListAsync(ct);
+    }
+
     public async Task AddAsync(Prompt prompt, CancellationToken ct = default)
     {
         _db.Prompts.Add(prompt);

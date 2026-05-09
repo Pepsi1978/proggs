@@ -10,6 +10,71 @@ namespace TerminalVoiceOverlay.Services
     public static class TerminalController
     {
         /// <summary>
+        /// Async-Wrapper fuer <see cref="PasteText"/>: schiebt die
+        /// blockierenden Win32-Sleeps (BringToForeground 200 ms +
+        /// autoEnter-Wartezeit 300 ms) auf einen Background-Thread, damit
+        /// der UI-Thread waehrend einer Voice-Submit-Paste-Sequenz nicht
+        /// fuer bis zu ~530 ms eingefroren ist. Die Clipboard-Zugriffe
+        /// gehen weiterhin per Dispatcher.Invoke auf den UI-Thread —
+        /// das sind aber nur Millisekunden. Aufrufer sollte awaiten,
+        /// damit nachgelagerte Schritte (File.Delete des WAVs, State-
+        /// Reset) garantiert nach dem Paste laufen.
+        /// </summary>
+        public static Task PasteTextAsync(string text, IntPtr terminalHwnd, bool autoEnter = false)
+        {
+            return Task.Run(() => PasteText(text, terminalHwnd, autoEnter));
+        }
+
+        /// <summary>
+        /// Async-Wrapper fuer <see cref="ClearAllInput"/>: 5x Ctrl+U mit
+        /// 50 ms Pausen sind ohne Wrapper 250 ms UI-Block. Auf Background-
+        /// Thread bleibt die UI reaktiv waehrend der Eingabezeile frisch
+        /// gemacht wird (z.B. Profil-Re-Correct).
+        /// </summary>
+        public static Task ClearAllInputAsync(IntPtr terminalHwnd)
+        {
+            return Task.Run(() => ClearAllInput(terminalHwnd));
+        }
+
+        /// <summary>
+        /// Async-Wrapper fuer <see cref="ClearLine"/>: BringToForeground
+        /// macht Thread.Sleep(200) — UI bleibt sonst pro W-Button-Klick
+        /// 200 ms eingefroren.
+        /// </summary>
+        public static Task ClearLineAsync(IntPtr terminalHwnd)
+        {
+            return Task.Run(() => ClearLine(terminalHwnd));
+        }
+
+        /// <summary>
+        /// Async-Wrapper fuer <see cref="CopySelection"/>: gleicher
+        /// 200-ms-BringToForeground-Block wie alle Win32-Sequenzen, daher
+        /// von der UI fernhalten.
+        /// </summary>
+        public static Task CopySelectionAsync(IntPtr terminalHwnd)
+        {
+            return Task.Run(() => CopySelection(terminalHwnd));
+        }
+
+        /// <summary>
+        /// Async-Wrapper fuer <see cref="PasteClipboard"/>: gleiches
+        /// Argument wie bei CopySelectionAsync.
+        /// </summary>
+        public static Task PasteClipboardAsync(IntPtr terminalHwnd)
+        {
+            return Task.Run(() => PasteClipboard(terminalHwnd));
+        }
+
+        /// <summary>
+        /// Async-Wrapper fuer <see cref="PressReturn"/>: BringToForeground +
+        /// keybd_event sind synchron und kosten ~200 ms UI-Block.
+        /// </summary>
+        public static Task PressReturnAsync(IntPtr terminalHwnd)
+        {
+            return Task.Run(() => PressReturn(terminalHwnd));
+        }
+
+        /// <summary>
         /// Pastes text into the terminal via Clipboard + Ctrl+V.
         /// Ensures the terminal window is focused first.
         /// </summary>

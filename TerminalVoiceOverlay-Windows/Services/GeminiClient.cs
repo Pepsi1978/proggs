@@ -13,7 +13,18 @@ namespace TerminalVoiceOverlay.Services
         private readonly string _apiKey;
         private readonly string _model;
         private readonly string _thinkingLevel;
-        private readonly HttpClient _http;
+        // Geteilter HttpClient ueber alle GeminiClient-Instanzen. Pro Voice-
+        // Submit baut OverlayWindow eine neue GeminiClient-Instanz (weil der
+        // API-Key zentral aus dem PromptBoard-Settings-Dialog frisch gelesen
+        // wird). Mit einem privaten HttpClient pro Instanz wuerde jeder
+        // Voice-Submit eine neue Socket-Pool-Sitzung anlegen — bei vielen
+        // schnellen Aufnahmen drohen ausgehende TCP-Ports im TIME_WAIT-Zustand
+        // zu erschoepfen. Das HttpClient-Objekt selbst haelt keine Auth — die
+        // steckt in der URL pro Aufruf — also ist Sharing sicher.
+        private static readonly HttpClient SharedHttp = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(120)
+        };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 5;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000, 16000, 32000 };
@@ -105,7 +116,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
             _apiKey = apiKey;
             _model = model;
             _thinkingLevel = thinkingLevel;
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+            // HttpClient wird statisch geteilt (siehe SharedHttp).
         }
 
         /// Basis-Verzeichnis fuer alle Gemini-Korrektur-Prompts. Wird bei JEDEM
@@ -297,7 +308,7 @@ Der zu verarbeitende Whisper-Text folgt nun:
 
             var json = JsonSerializer.Serialize(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync(url, content);
+            var response = await SharedHttp.PostAsync(url, content);
             var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)

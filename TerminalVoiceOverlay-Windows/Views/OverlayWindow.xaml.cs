@@ -328,6 +328,15 @@ namespace TerminalVoiceOverlay.Views
         private readonly float[] _waveformBuffer = new float[WaveformBarCount];
         private readonly System.Windows.Shapes.Rectangle[] _waveformBars =
             new System.Windows.Shapes.Rectangle[WaveformBarCount];
+        // Sichtbarkeits-Spiegel fuer den Audio-Pegel-Listener. Wird von
+        // SetWaveformVisible auf dem UI-Thread gesetzt und von OnAudioLevelChanged
+        // auf dem NAudio-Thread gelesen — volatile reicht fuer einen
+        // Single-Writer/Single-Reader-Bool. Spart pro Audio-Buffer ein
+        // Dispatcher.BeginInvoke wenn die Welle ohnehin nicht sichtbar ist
+        // (z.B. waehrend BTW-Aufnahme): ohne Spiegel wuerden alle 100 ms
+        // ein Lambda + ein Marshall in die Dispatcher-Queue gepostet, nur
+        // damit das Lambda dann beim Visibility-Check direkt zurueckspringt.
+        private volatile bool _waveformVisibleFast;
 
         // ── Constructor ──
 
@@ -899,7 +908,10 @@ namespace TerminalVoiceOverlay.Views
                         // terminal. Applies regardless of auto-enter.
                         finalText = finalText + " ; ";
 
-                        TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                        // Async-Variante: blockiert nicht mehr UI fuer ~500ms
+                        // pro Voice-Submit (Win32 Sleeps laufen auf Background-
+                        // Thread).
+                        await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                         SetMicState(RecordingState.Success);
                         Console.WriteLine("Text inserted");
 
@@ -1012,7 +1024,7 @@ namespace TerminalVoiceOverlay.Views
                     else
                         finalText = btwMarker + finalText;
 
-                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                    await TerminalController.PasteTextAsync(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
 
@@ -1061,18 +1073,38 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
+        // Reentrancy-Guard fuer den W-Button. Vorher hielt Thread.Sleep den
+        // UI-Thread fuer 100 ms an — Doppelklicks waren dadurch unmoeglich.
+        // Nach dem Wechsel auf await Task.Delay koennte ein zweiter Klick
+        // waehrend des Wartens reinkommen und einen zweiten Paste ausloesen.
+        // Der Guard nullt lastRawTranscript SOFORT (statt am Ende), damit ein
+        // zweiter Klick beim if-Check oben rausfaellt.
+        private bool _whisperUndoBusy;
+
         /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
-        private void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
+        private async void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
         {
+            if (_whisperUndoBusy) return;
             if (lastRawTranscript == null) return;
 
-            TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
-            System.Threading.Thread.Sleep(100);
-            TerminalController.PasteText(lastRawTranscript, _terminalWatcher.ActiveTerminalHwnd);
-            hasPastedText = true;
-            Console.WriteLine($"Whisper raw text inserted: {lastRawTranscript}");
-
+            string textToPaste = lastRawTranscript;
             lastRawTranscript = null;
+            _whisperUndoBusy = true;
+            try
+            {
+                // Async-Pfad: ClearLine + PasteText laufen auf Background-Thread,
+                // UI bleibt reaktiv waehrend der Win32-Sleeps. Reentrancy-Guard
+                // _whisperUndoBusy verhindert Doppel-Klick.
+                await TerminalController.ClearLineAsync(_terminalWatcher.ActiveTerminalHwnd);
+                await Task.Delay(100);
+                await TerminalController.PasteTextAsync(textToPaste, _terminalWatcher.ActiveTerminalHwnd);
+                hasPastedText = true;
+                Console.WriteLine($"Whisper raw text inserted: {textToPaste}");
+            }
+            finally
+            {
+                _whisperUndoBusy = false;
+            }
         }
 
         /// <summary>G button — toggle Gemini on/off.
@@ -1378,6 +1410,16 @@ namespace TerminalVoiceOverlay.Views
         /// Buttons koennen feuern. Der Hit-Test hier ersetzt die WPF-
         /// Routing-Schicht fuer den Spezialfall der Profile-Tiles.
         /// </summary>
+        // Vorkompilierte Regex fuer das Profile-Button-Naming-Schema. Wird
+        // bei jedem Rechtsklick auf das Pillar im Hit-Test-Pfad benutzt;
+        // ohne Cache wuerde pro Klick eine frische Regex-Instanz inkl.
+        // Pattern-Compile entstehen.
+        private static readonly System.Text.RegularExpressions.Regex ProfileButtonNameRegex =
+            new System.Text.RegularExpressions.Regex(
+                @"^Profile(\d+)Button$",
+                System.Text.RegularExpressions.RegexOptions.Compiled
+                | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
         private int HitTestProfileTile()
         {
             if (!Win32.GetCursorPos(out var screenPt)) return 0;
@@ -1399,8 +1441,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 if (current is System.Windows.Controls.Button btn && !string.IsNullOrEmpty(btn.Name))
                 {
-                    var match = System.Text.RegularExpressions.Regex.Match(
-                        btn.Name, @"^Profile(\d+)Button$");
+                    var match = ProfileButtonNameRegex.Match(btn.Name);
                     if (match.Success &&
                         int.TryParse(match.Groups[1].Value, out int profileNum))
                     {
@@ -1513,9 +1554,9 @@ namespace TerminalVoiceOverlay.Views
                 // respektiert: ist der Enter-Toggle aktiv, wird die Frage
                 // direkt abgeschickt — sonst nur in die Befehlszeile kopiert.
                 var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-                TerminalController.ClearAllInput(hwnd);
+                await TerminalController.ClearAllInputAsync(hwnd);
                 await Task.Delay(120);
-                TerminalController.PasteText(corrected, hwnd, autoEnterEnabled);
+                await TerminalController.PasteTextAsync(corrected, hwnd, autoEnterEnabled);
 
                 hasPastedText = true;
                 Console.WriteLine($"Re-Correct ok ({corrected.Length} chars)");
@@ -1536,7 +1577,7 @@ namespace TerminalVoiceOverlay.Views
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
-        private void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
+        private async void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
             // Wenn das Prompt-Eingabefenster Text enthaelt, wird der Klick
             // als "Send"-Aktion interpretiert: Text einfuegen + Return druecken,
@@ -1571,8 +1612,10 @@ namespace TerminalVoiceOverlay.Views
                 hasPastedText = false;
                 Console.WriteLine("Auto-enter ON — firing Return");
 
-                // Fire a Return key press into the active terminal
-                TerminalController.PressReturn(_terminalWatcher.ActiveTerminalHwnd);
+                // Fire a Return key press into the active terminal — async,
+                // damit der 200-ms-BringToForeground-Block nicht den UI-Thread
+                // einfriert.
+                await TerminalController.PressReturnAsync(_terminalWatcher.ActiveTerminalHwnd);
             }
         }
 
@@ -1775,12 +1818,15 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        private void OnPromptPanelInsert(string text)
+        private async void OnPromptPanelInsert(string text)
         {
             if (string.IsNullOrEmpty(text)) return;
             try
             {
-                TerminalController.PasteText(text, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
+                // Sleeps. Alle Folgeschritte (Console-Log) sind nach await
+                // garantiert sequentiell.
+                await TerminalController.PasteTextAsync(text, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                 Console.WriteLine($"Panel prompt inserted: {text.Length} chars.");
             }
             catch (Exception ex)
@@ -1825,7 +1871,7 @@ namespace TerminalVoiceOverlay.Views
                 // Submit aus einem expliziten Enter-Button-Klick kommt.
                 bool effectiveAutoEnter = autoEnterEnabled || _forceReturnOnNextSubmit;
                 _forceReturnOnNextSubmit = false;
-                TerminalController.PasteText(final, _terminalWatcher.ActiveTerminalHwnd, effectiveAutoEnter);
+                await TerminalController.PasteTextAsync(final, _terminalWatcher.ActiveTerminalHwnd, effectiveAutoEnter);
                 Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={effectiveAutoEnter}).");
                 hasPastedText = !effectiveAutoEnter;
 
@@ -2048,14 +2094,16 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>C button — copy selected text via Ctrl+C.</summary>
-        private void BtnCopy_Click(object sender, RoutedEventArgs e)
+        private async void BtnCopy_Click(object sender, RoutedEventArgs e)
         {
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
 
             // Flash: gray for 2 s then back to blue
             CopyButton.Background = BtnIdle;
 
-            TerminalController.CopySelection(hwnd);
+            // Async: BringToForeground macht Thread.Sleep(200) — UI war
+            // sonst pro Klick 200 ms eingefroren.
+            await TerminalController.CopySelectionAsync(hwnd);
 
             _ = Task.Run(async () =>
             {
@@ -2068,14 +2116,15 @@ namespace TerminalVoiceOverlay.Views
 
         /// <summary>P button — paste clipboard content into command line via Ctrl+V.
         /// If auto-enter is enabled, sends Enter after paste.</summary>
-        private void BtnPaste_Click(object sender, RoutedEventArgs e)
+        private async void BtnPaste_Click(object sender, RoutedEventArgs e)
         {
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
 
             // Flash: gray for 2 s then back to purple
             PasteButton.Background = BtnIdle;
 
-            TerminalController.PasteClipboard(hwnd);
+            // Async-Variante: gleicher 200-ms-Block wie CopySelection.
+            await TerminalController.PasteClipboardAsync(hwnd);
             hasPastedText = true;
 
             if (autoEnterEnabled)
@@ -2235,7 +2284,7 @@ namespace TerminalVoiceOverlay.Views
         /// Robustheit: jeder Klick wird in screenshot.log protokolliert.
         /// Bei Erfolg blinkt der Button kurz gruen, bei Fehler 3 s rot.
         /// </summary>
-        private void BtnInsertScreenshot_Click(object sender, RoutedEventArgs e)
+        private async void BtnInsertScreenshot_Click(object sender, RoutedEventArgs e)
         {
             LogScreenshot("InsertScreenshotButton.Click handler ENTERED");
 
@@ -2274,7 +2323,9 @@ namespace TerminalVoiceOverlay.Views
             InsertScreenshotButton.Background = BtnIdle;
 
             var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-            TerminalController.PasteText(toPaste, hwnd, autoEnter: false);
+            // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
+            // Sleeps. Folgender Erfolgs-Flash und Logging laufen nach await.
+            await TerminalController.PasteTextAsync(toPaste, hwnd, autoEnter: false);
 
             LogScreenshot($"InsertScreenshot: PasteText OK for '{toPaste}'");
 
@@ -2415,15 +2466,20 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void OnAudioLevelChanged(float level)
         {
+            // Schneller Sichtbarkeits-Filter VOR dem Dispatcher-Marshall.
+            // Liest ein volatile bool, das SetWaveformVisible aktualisiert.
+            // Spart pro nicht-sichtbarem Buffer (z.B. BTW-Aufnahme: 10/s)
+            // ein Lambda + ein BeginInvoke in die UI-Queue.
+            if (!_waveformVisibleFast) return;
+
             // Marshall auf den UI-Thread — das Event kommt vom NAudio-
             // Buffer-Thread. BeginInvoke statt Invoke damit der Audio-
             // Thread nicht auf das UI-Rendering wartet.
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Welle nur aktualisieren wenn sie sichtbar ist — bei
-                // BTW-Aufnahme z.B. ist der Hauptmic-Button gar nicht
-                // im Recording-Modus, dann waere das Animieren reine
-                // Verschwendung.
+                // Doppel-Check auf dem UI-Thread (gegen die Race wo die
+                // Welle zwischen Pre-Filter und Dispatcher-Tick versteckt
+                // wurde). Wenn Welle weg: nichts tun.
                 if (WaveformCanvas == null || WaveformCanvas.Visibility != Visibility.Visible)
                     return;
 
@@ -2470,11 +2526,13 @@ namespace TerminalVoiceOverlay.Views
                 }
                 MicIcon.Visibility = Visibility.Collapsed;
                 WaveformCanvas.Visibility = Visibility.Visible;
+                _waveformVisibleFast = true;
             }
             else
             {
                 WaveformCanvas.Visibility = Visibility.Collapsed;
                 MicIcon.Visibility = Visibility.Visible;
+                _waveformVisibleFast = false;
             }
         }
 
@@ -2805,11 +2863,17 @@ namespace TerminalVoiceOverlay.Views
                             {
                                 _promptHotkeyDown[hotkeyNumber] = true;
                                 Console.WriteLine($"Hotkey: Strg+{hotkeyNumber} — paste prompt ({e.EffectiveText.Length} chars)");
-                                Dispatcher.BeginInvoke(new Action(() =>
+                                // Async-Variante: das urspruengliche sync PasteText
+                                // im Dispatcher-Lambda blockierte den UI-Thread fuer
+                                // ~500 ms pro Hotkey-Druck. PasteTextAsync verlagert
+                                // die Win32-Sleeps auf einen Background-Thread; das
+                                // Lambda wird async, der Dispatcher-Marshall bleibt
+                                // wie gehabt (Action ist mit async void kompatibel).
+                                Dispatcher.BeginInvoke(new Action(async () =>
                                 {
                                     try
                                     {
-                                        TerminalController.PasteText(
+                                        await TerminalController.PasteTextAsync(
                                             e.EffectiveText,
                                             _terminalWatcher.ActiveTerminalHwnd,
                                             autoEnterEnabled);

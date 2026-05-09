@@ -56,14 +56,20 @@ namespace TerminalVoiceOverlay.Services
         {
             if (hwnd == IntPtr.Zero) return;
 
+            // BeginInvoke statt Invoke: Dieser Callback laeuft auf dem
+            // System-weiten WinEvent-Hook-Thread. Synchron auf den UI-Thread
+            // zu warten staut bei beschaeftigtem UI alle System-Foreground-
+            // Events auf — Alt+Tab und Fenster-Wechsel werden global langsam.
+            // BeginInvoke postet asynchron und der Hook-Thread kehrt sofort
+            // zurueck. Reihenfolge bleibt erhalten (Dispatcher-Queue ist FIFO).
             if (IsTerminalWindow(hwnd))
             {
                 _lastTerminalHwnd = hwnd;
-                Application.Current?.Dispatcher.Invoke(() => TerminalActivated?.Invoke(hwnd));
+                Application.Current?.Dispatcher.BeginInvoke(() => TerminalActivated?.Invoke(hwnd));
             }
             else
             {
-                Application.Current?.Dispatcher.Invoke(() => TerminalDeactivated?.Invoke());
+                Application.Current?.Dispatcher.BeginInvoke(() => TerminalDeactivated?.Invoke());
             }
         }
 

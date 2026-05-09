@@ -809,8 +809,41 @@ public partial class PromptBoardPanel : Window
         Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, exStyle | Win32.WS_EX_NOACTIVATE | Win32.WS_EX_TOOLWINDOW);
     }
 
+    /// <summary>
+    /// Pro-Render-Cache fuer alle Prompts. Wird zu Beginn von RefreshAsync mit
+    /// einem einzigen GetAllAsync()-Roundtrip befuellt und an RenderPromptsAsync
+    /// + die HotkeyRegistry-Logik weitergereicht. Spart die alte N+1-Schleife
+    /// (eine Query pro Kategorie, mehrfach).
+    /// </summary>
+    private List<Prompt> _allPromptsCache = new();
+
+    /// <summary>
+    /// True wenn der aktuelle Cache durch einen DB-Fehler leer ist. In dem
+    /// Fall wird die HotkeyRegistry NICHT ueberschrieben — sie bleibt auf
+    /// dem letzten erfolgreichen Stand ("better stale than broken").
+    /// </summary>
+    private bool _allPromptsCacheStaleDueToError;
+
+    /// <summary>
+    /// Lookup von Kategorie-Id auf Kategorie. Wird nach jedem RefreshAsync
+    /// neu aufgebaut. Spart pro Row im Listen-Render einen
+    /// FirstOrDefault-Linear-Scan ueber _categories
+    /// (vorher O(N*K), jetzt O(N+K) gesamt).
+    /// </summary>
+    private Dictionary<Guid, Category> _categoryById = new();
+
+    /// <summary>
+    /// Cache fuer gefrorene SolidColorBrushes pro Kategorie. Frueher legte
+    /// RowBackgroundFor pro Row einen neuen unfrozen Brush an (50 Prompts =
+    /// 50 Brush-Allokationen pro Render). Mit Cache + Freeze() dispatched
+    /// WPF die Brushes ohne Threading-Check und kann sie ueber alle Rows
+    /// teilen.
+    /// </summary>
+    private readonly Dictionary<Guid, SolidColorBrush> _rowBrushCache = new();
+
     public async Task RefreshAsync()
     {
+        _allPromptsCacheStaleDueToError = false;
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
@@ -821,12 +854,31 @@ public partial class PromptBoardPanel : Window
             // Einmalige Migration: Jede Kategorie ohne Palette-Hex bekommt
             // einen zugewiesen, sodass die Farben kuenftig stabil sind.
             await EnsureCategoryColorsPersistedAsync(categoryRepo);
+
+            // Alle Prompts in EINEM Roundtrip laden — vorher wurden bis zu
+            // 3*N Queries pro Render abgesetzt (AlwaysOn-Scan,
+            // RenderPrompts pro Kategorie, HotkeyRegistry pro Kategorie).
+            // Bei 8 Kategorien sparte das vorher bis zu 24 DB-Roundtrips
+            // pro Tab-Klick.
+            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            _allPromptsCache = (await promptRepo.GetAllAsync()).ToList();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"PromptBoardPanel refresh failed: {ex.Message}");
             _categories = new List<Category>();
+            _allPromptsCache = new List<Prompt>();
+            _allPromptsCacheStaleDueToError = true;
         }
+
+        // Lookup-Tabellen aktualisieren — einmal pro Refresh, statt pro Row
+        // im spaeteren Render. Brush-Cache wird beim Refresh geleert, weil
+        // eine Kategorie ihre Farbe (BackgroundColorHex) im Edit-Dialog
+        // geaendert haben koennte und der gefrorene Brush sonst stale waere.
+        // Bei N Kategorien sind das N Brush-Allokationen pro Refresh — viel
+        // weniger als die alten N pro Row.
+        _categoryById = _categories.ToDictionary(c => c.Id);
+        _rowBrushCache.Clear();
 
         // Prune stale ids (a category deleted elsewhere) but keep every id the
         // user still has active.
@@ -835,28 +887,18 @@ public partial class PromptBoardPanel : Window
 
         // Erstauswahl-Modus: alle Kategorien mit mindestens einem Always-On-Prompt
         // werden in _activeCategoryIds eingetragen, damit ihre Tabs visuell als
-        // aktiv markiert sind. Die eigentliche Anzeige in RenderPromptsAsync
-        // filtert dann nochmal explizit nach IsAlwaysOn — die Tabs hier dienen
-        // also rein der Visualisierung "Diese Kategorien haben aktive Prompts".
+        // aktiv markiert sind. In-memory Filter ueber den frisch geladenen
+        // Cache — keine zusaetzliche DB-Roundtrip mehr.
         if (_alwaysOnFilterMode)
         {
-            try
+            foreach (var cat in _categories)
             {
-                using var scope = PromptBoardHost.Services.CreateScope();
-                var promptRepo =
-                    scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-                foreach (var cat in _categories)
+                bool hasAlwaysOn = false;
+                foreach (var p in _allPromptsCache)
                 {
-                    var prompts = await promptRepo.GetByCategoryAsync(cat.Id);
-                    if (prompts.Any(p => p.IsAlwaysOn))
-                    {
-                        _activeCategoryIds.Add(cat.Id);
-                    }
+                    if (p.CategoryId == cat.Id && p.IsAlwaysOn) { hasAlwaysOn = true; break; }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"AlwaysOn category scan failed: {ex.Message}");
+                if (hasAlwaysOn) _activeCategoryIds.Add(cat.Id);
             }
         }
 
@@ -880,8 +922,10 @@ public partial class PromptBoardPanel : Window
         // pro Kategorie, egal wie sie sortiert ist. Die einmalige Migration
         // in EnsureCategoryColorsPersistedAsync sorgt dafuer dass alle
         // Kategorien diesen Eintrag bekommen.
-        var cat = _categories.FirstOrDefault(c => c.Id == id);
-        if (cat is not null)
+        // Lookup ueber das in RefreshAsync gepflegte Dictionary statt
+        // FirstOrDefault — O(1) statt O(K) pro Aufruf, damit eine Render-
+        // Schleife mit N Rows ueber K Kategorien nicht O(N*K) wird.
+        if (_categoryById.TryGetValue(id, out var cat) && cat is not null)
         {
             int paletteIdx = Array.FindIndex(CategoryPaletteHex,
                 h => string.Equals(h, cat.BackgroundColorHex, StringComparison.OrdinalIgnoreCase));
@@ -924,12 +968,24 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private SolidColorBrush RowBackgroundFor(Guid categoryId)
     {
+        // Cache + Freeze — pro Kategorie wird der Mix-Brush einmal berechnet
+        // und gefroren. Frozen Brushes umgehen WPFs Threading-Pruefungen und
+        // koennen ueber alle Rows einer Kategorie geteilt werden statt pro
+        // Row eine neue Instanz zu allokieren. Wenn die Kategorie-Farbe sich
+        // aendert, faengt der naechste Vergleich der Hex-Quelle das auf —
+        // dann wird der Cache-Eintrag erneuert.
+        if (_rowBrushCache.TryGetValue(categoryId, out var cached) && cached is not null)
+            return cached;
+
         var c = ColorForCategory(categoryId);
         // Blend ~30% category color over a dark base.
         byte r = (byte)((c.R * 0.30) + (0x25 * 0.70));
         byte g = (byte)((c.G * 0.30) + (0x25 * 0.70));
         byte b = (byte)((c.B * 0.30) + (0x25 * 0.70));
-        return new SolidColorBrush(Color.FromRgb(r, g, b));
+        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        if (brush.CanFreeze) brush.Freeze();
+        _rowBrushCache[categoryId] = brush;
+        return brush;
     }
 
     // ──────────────── Rendering: categories ────────────────
@@ -1339,26 +1395,14 @@ public partial class PromptBoardPanel : Window
         // along so we can tint each row accordingly. Im Erstauswahl-Modus
         // werden zusaetzlich alle Prompts ohne Haekchen ausgefiltert, sodass
         // nur die Always-On-Prompts sichtbar sind.
+        // Filter aus dem Pro-Render-Cache (siehe RefreshAsync) — eine einzige
+        // Query reicht fuer alle Kategorien.
         var combined = new List<(Prompt prompt, Guid catId)>();
-        try
+        foreach (var p in _allPromptsCache)
         {
-            using var scope = PromptBoardHost.Services.CreateScope();
-            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-            foreach (var catId in _activeCategoryIds)
-            {
-                var prompts = await promptRepo.GetByCategoryAsync(catId);
-                foreach (var p in prompts)
-                {
-                    if (_alwaysOnFilterMode && !p.IsAlwaysOn) continue;
-                    combined.Add((p, catId));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Prompt load failed: {ex.Message}");
-            RenderEmptyState();
-            return;
+            if (!_activeCategoryIds.Contains(p.CategoryId)) continue;
+            if (_alwaysOnFilterMode && !p.IsAlwaysOn) continue;
+            combined.Add((p, p.CategoryId));
         }
 
         // Reihenfolge der Anzeige: erst alle Prompts der ersten aktiven
@@ -1393,34 +1437,25 @@ public partial class PromptBoardPanel : Window
         // all propagate without any extra plumbing. Only Prompts (not
         // AiImprovementPrompts) participate — the latter are meta-prompts
         // not meant to be pasted into a terminal.
-        var hotkeyEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
         // Walk the FULL set of prompts across ALL categories — not just
         // the currently visible ones — so a hotkey still fires when the
         // user has filtered the panel down to a single category.
-        try
+        // Quelle ist der bereits geladene Cache (siehe RefreshAsync).
+        // Wenn der Cache durch einen DB-Fehler leer ist, NICHT ueberschreiben
+        // — die alte Lookup-Tabelle bleibt aktiv ("better stale than broken").
+        if (!_allPromptsCacheStaleDueToError)
         {
-            using var scope = PromptBoardHost.Services.CreateScope();
-            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-            foreach (var cat in _categories)
+            var hotkeyEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
+            foreach (var p in _allPromptsCache)
             {
-                var all = await promptRepo.GetByCategoryAsync(cat.Id);
-                foreach (var p in all)
+                if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
                 {
-                    if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
-                    {
-                        hotkeyEntries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
-                            n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
-                    }
+                    hotkeyEntries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
+                        n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
                 }
             }
+            HotkeyRegistry.Replace(hotkeyEntries);
         }
-        catch (Exception ex)
-        {
-            // Lookup table stays at its previous state — better stale than
-            // broken. The user will see the discrepancy on the next render.
-            Console.WriteLine($"HotkeyRegistry rebuild failed: {ex.Message}");
-        }
-        HotkeyRegistry.Replace(hotkeyEntries);
     }
 
     private Border BuildPromptRow(Prompt prompt, Guid categoryId)
