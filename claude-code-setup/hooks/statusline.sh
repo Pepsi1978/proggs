@@ -21,7 +21,8 @@ fi
 effort_upper=$(echo "$effort" | tr '[:lower:]' '[:upper:]')
 
 # JSON-Felder parsen
-model=$(echo "$input" | jq -r '.model.display_name // "?"')
+# Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
+model=$(echo "$input" | jq -r '.model.display_name // .model.id // "?"')
 cwd_raw=$(echo "$input" | jq -r '.workspace.current_dir // empty' | sed "s|$HOME|~|g")
 
 # Smart-truncate fuer den Ordner-Pfad (Variante B):
@@ -66,12 +67,16 @@ if [ -n "$ctx_remaining" ]; then
     ctx_used=$((100 - ctx_remaining))
 fi
 
-# 5h Reset-Countdown
+# 5h Reset-Countdown — mit Plausibilitaetspruefung:
+# Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
+# kaputten Timestamp liefert (z.B. weit in der Zukunft), zeigen wir lieber
+# nichts statt absurde "2.000.000h"-Countdowns.
 five_h_countdown=""
 if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
     now=$(date +%s)
     diff=$((five_h_resets - now))
-    if [ "$diff" -gt 0 ]; then
+    # 21600 = 6h Toleranz oberhalb der nominellen 5h-Fenstergrenze
+    if [ "$diff" -gt 0 ] && [ "$diff" -le 21600 ]; then
         mins=$((diff / 60))
         if [ "$mins" -ge 60 ]; then
             h=$((mins / 60))
@@ -125,7 +130,10 @@ make_bar() {
         pct=0
     fi
     [ "$pct" -gt 100 ] && pct=100
-    local filled=$((pct / 10))
+    # Round half up: 35% -> 4 Bloecke, 34% -> 3 Bloecke. Konsistent zur ps1-Variante.
+    # Vorher: pct/10 (truncate) — sh und ps1 zeigten unterschiedlich viele Bloecke.
+    local filled=$(( (pct + 5) / 10 ))
+    [ "$filled" -gt 10 ] && filled=10
     local empty=$((10 - filled))
     local fpart=""
     local epart=""

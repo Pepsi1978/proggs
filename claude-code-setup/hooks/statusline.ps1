@@ -38,7 +38,12 @@ $five_h_resets = 0
 $week_used = $null
 
 if ($obj) {
-    if ($obj.model.display_name) { $model = $obj.model.display_name }
+    # Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
+    if ($obj.model.display_name) {
+        $model = [string]$obj.model.display_name
+    } elseif ($obj.model.id) {
+        $model = [string]$obj.model.id
+    }
     if ($obj.workspace.current_dir) {
         $cwd = $obj.workspace.current_dir
         $homeDir = $env:USERPROFILE
@@ -78,11 +83,18 @@ if ($obj) {
 $ctx_used = $null
 if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
 
+# 5h Reset-Countdown — mit Plausibilitaetspruefung:
+# Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
+# kaputten Timestamp liefert (z.B. weit in der Zukunft), zeigen wir lieber
+# nichts statt absurde "2.000.000h"-Countdowns.
+# [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() statt [int][double]::Parse(...)
+# verhindert Year-2038-Ueberlauf und ist sauberer.
 $five_h_countdown = ''
 if ($five_h_resets -gt 0) {
-    $now = [int][double]::Parse((Get-Date -UFormat %s))
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     $diff = $five_h_resets - $now
-    if ($diff -gt 0) {
+    # 21600 = 6h Toleranz oberhalb der nominellen 5h-Fenstergrenze
+    if ($diff -gt 0 -and $diff -le 21600) {
         $mins = [int]($diff / 60)
         if ($mins -ge 60) {
             $h = [int]($mins / 60); $m = $mins % 60
@@ -129,7 +141,10 @@ function Get-Bar($pct, $col) {
     if ($pct -eq $null) { $pct = 0 }
     if ($pct -gt 100) { $pct = 100 }
     if ($pct -lt 0) { $pct = 0 }
-    $filled = [int]($pct / 10)
+    # Round half up: 35% -> 4 Bloecke, 34% -> 3 Bloecke. Konsistent zur sh-Variante.
+    # Vorher: [int]($pct/10) machte banker's rounding und wich von sh ab.
+    $filled = [Math]::Floor(($pct + 5) / 10)
+    if ($filled -gt 10) { $filled = 10 }
     $empty = 10 - $filled
     return "${col}" + ('█' * $filled) + "${TRACK}" + ('░' * $empty) + "${R}"
 }
