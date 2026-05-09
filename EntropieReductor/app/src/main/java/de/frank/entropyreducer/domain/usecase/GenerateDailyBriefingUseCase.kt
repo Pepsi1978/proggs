@@ -156,16 +156,26 @@ class GenerateDailyBriefingUseCase @Inject constructor(
             }
         }
         appendLine()
-        appendLine("Heutige Aufgaben (HEUTE-Bucket, max 5, sortiert nach Prioritaet — alle anderen Buckets sind für das Briefing IRRELEVANT):")
+        appendLine("=== HEUTIGE AKTIVE AUFGABEN — DAS IST DIE GESAMTE LISTE FUER DAS BRIEFING ===")
         if (entries.isEmpty()) {
-            appendLine("(Keine Aufgaben für heute eingeplant)")
+            appendLine("(Keine aktiven Aufgaben fuer heute eingeplant — Frank hat heute kein offenes To-Do im HEUTE-Bucket. Mache das Briefing OHNE Aufgaben-Bezug.)")
         } else {
+            appendLine("Genau ${entries.size} aktive Aufgabe(n) im HEUTE-Bucket. KEINE weiteren existieren fuer dieses Briefing — alles andere wurde bewusst herausgefiltert (siehe Tabu-Liste unten).")
+            appendLine()
             entries.forEachIndexed { i, e ->
                 appendLine("${i + 1}. [${e.category}] ${e.title} (Prio ${e.priorityScore.toInt()}): ${e.description}")
             }
         }
         appendLine()
-        appendLine("WICHTIG: Beziehe dich im Briefing AUSSCHLIESSLICH auf die oben genannten heutigen Aufgaben. Andere Aufgaben (Morgen, Freiblock, Später) existieren — sind heute aber nicht relevant. Schweige darüber.")
+        appendLine("=== TABU-LISTE — ueber DIESE Inhalte schweigst du im Briefing absolut ===")
+        appendLine("- Aufgaben aus dem MORGEN-Bucket (auch wenn sie morgen wichtig werden)")
+        appendLine("- Aufgaben aus dem FREIBLOCK-Bucket (Backlog ohne Datum)")
+        appendLine("- Aufgaben aus dem SPAETER-Bucket (Aufschub-Liste)")
+        appendLine("- Erledigte Aufgaben mit Status REDUZIERT (heute schon abgehakt)")
+        appendLine("- Archivierte Aufgaben mit Status ARCHIVIERT (geloescht/versteckt)")
+        appendLine("- Aufgaben aus aelteren Tagen die vielleicht noch in deiner KI-Erinnerung sind")
+        appendLine()
+        appendLine("REGEL: Wenn eine Aufgabe NICHT in der nummerierten Liste oben steht, existiert sie fuer dieses Briefing NICHT. Erfinde keine. Erwaehne keine. Spekuliere nicht ueber andere. Auch nicht implizit (\"vielleicht hast du noch...\", \"falls naechste Woche...\"). Das Briefing ist ein reiner Tagesfokus auf die ${entries.size} Aufgabe(n) oben — Punkt.")
     }
 
     private companion object {
@@ -181,7 +191,14 @@ Inhaltsstruktur:
 4. Eine Hypothese oder Beobachtung — was könnte heute klappen?
 5. Abschliessender Satz: eine sanfte Frage oder ein Vertrauenshinweis.
 
-Sprich NIEMALS über Aufgaben, die nicht in der heutigen Liste stehen. Das Briefing ist ein Tagesfokus-Werkzeug, kein Wochenueberblick.
+UNVERHANDELBARE TABUS — verletzen disqualifiziert dich:
+- Du sprichst NIEMALS ueber Aufgaben, die nicht in der vom User mitgeschickten nummerierten "HEUTIGE AKTIVE AUFGABEN"-Liste stehen.
+- Du erwaehnst KEINE Aufgaben aus den Buckets MORGEN, FREIBLOCK oder SPAETER — auch nicht beilaeufig oder als Vergleich.
+- Du erwaehnst KEINE bereits erledigten (REDUZIERT) oder archivierten (ARCHIVIERT) Aufgaben — die sind durch.
+- Du erfindest KEINE zusaetzlichen Aufgaben aus deinem KI-Vorwissen oder aus frueheren Briefings.
+- Du paraphrasierst die Aufgaben nicht so weit, dass sie wie andere klingen — bleib bei dem was die Liste sagt.
+
+Das Briefing ist ein reiner Tagesfokus auf die heute aktiven Aufgaben, kein Wochenueberblick und kein Backlog-Check.
 """
         const val TAIL_INSTRUCTION = """
 Antworte ausschliesslich mit dem Briefing-Text. Keine Praeambel, kein Schluss-Disclaimer.
