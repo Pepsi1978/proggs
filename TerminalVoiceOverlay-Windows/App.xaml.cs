@@ -383,6 +383,79 @@ namespace TerminalVoiceOverlay
 
         private void MonitorWatchdog(int watchdogPid)
         {
+            // Frueher: 3-s-Polling-Loop mit Process.GetProcessById. Dabei wurde
+            // alle 3 s ein neues Process-Handle allokiert + sofort wieder
+            // verworfen, der Pool-Thread aufgeweckt und gleich wieder geparkt.
+            // Im Idle (App laeuft, Frank macht nichts) waren das ~28 800
+            // Wakeup-Zyklen pro Tag pro Overlay-Process — kostet zwar wenig
+            // CPU, aber Akku-Sensitivitaet auf Laptops und unnoetiger GC-Druck.
+            // Jetzt: Process.Exited-Event mit EnableRaisingEvents = true. Der
+            // OS-Kernel signalisiert uns den Watchdog-Tod ueber WaitForInputIdle/
+            // ProcessHandle, kein Polling noetig. Fallback bei Race: Wenn der
+            // Watchdog zwischen GetProcessById und EnableRaisingEvents stirbt,
+            // pruefen wir HasExited synchron und triggern Restart manuell.
+            Process? watchdog;
+            try
+            {
+                watchdog = Process.GetProcessById(watchdogPid);
+            }
+            catch
+            {
+                // Schon beim ersten Lookup tot — sofort restarten, keine Subscription noetig.
+                RestartWatchdog();
+                return;
+            }
+
+            try
+            {
+                watchdog.EnableRaisingEvents = true;
+                watchdog.Exited += (_, _) =>
+                {
+                    Console.WriteLine("Overlay: watchdog died, restarting...");
+                    RestartWatchdog();
+                    try { watchdog.Dispose(); } catch { /* tolerant */ }
+                };
+
+                // Race-Schutz: Watchdog kann zwischen GetProcessById und
+                // EnableRaisingEvents = true bereits gestorben sein. Dann feuert
+                // Exited NICHT mehr, daher manueller Check. HasExited liest
+                // GetExitCodeProcess — synchron und billig.
+                if (watchdog.HasExited)
+                {
+                    Console.WriteLine("Overlay: watchdog already dead at subscribe time, restarting...");
+                    RestartWatchdog();
+                    try { watchdog.Dispose(); } catch { /* tolerant */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Falls EnableRaisingEvents wider Erwarten wirft (z.B. Access
+                // Denied, weil Watchdog mit anderem Token laeuft): Fallback auf
+                // das alte Polling — besser als gar keine Watchdog-Ueberwachung.
+                LogCrash("MonitorWatchdog.Subscribe", ex,
+                    "Falling back to polling because event subscription failed.");
+                FallbackPolling(watchdogPid);
+            }
+        }
+
+        private static void RestartWatchdog()
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = Environment.ProcessPath!,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LogCrash("RestartWatchdog", ex);
+            }
+        }
+
+        private static void FallbackPolling(int watchdogPid)
+        {
             Task.Run(() =>
             {
                 while (true)
@@ -394,13 +467,8 @@ namespace TerminalVoiceOverlay
                     }
                     catch
                     {
-                        // Watchdog is gone — restart it
-                        Console.WriteLine("Overlay: watchdog died, restarting...");
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = Environment.ProcessPath!,
-                            UseShellExecute = true
-                        });
+                        Console.WriteLine("Overlay: watchdog died (fallback path), restarting...");
+                        RestartWatchdog();
                         break;
                     }
                 }

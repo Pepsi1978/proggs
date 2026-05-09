@@ -2583,6 +2583,15 @@ namespace TerminalVoiceOverlay.Views
         /// erste Mal eingeblendet wird, auch wenn noch keine Pegel-Events
         /// reingekommen sind.
         /// </summary>
+        // Geteilter Frozen-Brush fuer alle 14 Waveform-Striche. Frueher bekam
+        // jeder Strich ein eigenes new SolidColorBrush(...) ohne .Freeze() —
+        // jeder dieser 14 Brushes haengte sich an WPFs Change-Notification-
+        // Pipeline. Mit einem einzigen statischen, eingefrorenen Brush spart
+        // sich die Render-Ebene 14 Subscriptions, und die Brush selbst landet
+        // im gleichen Resource-Slot wie die anderen statischen Farbflaechen
+        // weiter oben in der Datei. Optisch identisch (gleicher RGB-Wert).
+        private static readonly SolidColorBrush WaveformBarFill = Brush("#1A1A1A");
+
         private void BuildWaveformBars()
         {
             if (WaveformCanvas == null) return;
@@ -2599,7 +2608,7 @@ namespace TerminalVoiceOverlay.Views
                     Height = WaveformMinH,
                     RadiusX = 1.0,
                     RadiusY = 1.0,
-                    Fill = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),  // Dark for contrast on yellow mic background
+                    Fill = WaveformBarFill,  // shared frozen brush — geteilt ueber alle 14 Striche
                 };
                 double x = startOffset + i * (WaveformBarWidth + WaveformBarSpacing);
                 System.Windows.Controls.Canvas.SetLeft(bar, x);
@@ -2644,8 +2653,11 @@ namespace TerminalVoiceOverlay.Views
                 float boosted = MathF.Min(1f, MathF.Sqrt(level) * 1.6f);
 
                 // Buffer nach links shiften, neuer Wert rechts rein.
-                for (int i = 0; i < WaveformBarCount - 1; i++)
-                    _waveformBuffer[i] = _waveformBuffer[i + 1];
+                // Array.Copy ueberlappenden Source/Dest ist ausdruecklich
+                // erlaubt und nutzt intern memmove — schneller und allokations-
+                // frei gegenueber der Hand-Schleife. Bei 10 Aufrufen/Sekunde
+                // waehrend einer Aufnahme summieren sich die Iterations-Kosten.
+                Array.Copy(_waveformBuffer, 1, _waveformBuffer, 0, WaveformBarCount - 1);
                 _waveformBuffer[WaveformBarCount - 1] = boosted;
 
                 // Strich-Hoehen aktualisieren.

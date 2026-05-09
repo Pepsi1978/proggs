@@ -13,7 +13,19 @@ namespace TerminalVoiceOverlay.Services
         private readonly string _model;
         private readonly string _language;
         private readonly string _url;
-        private readonly HttpClient _http;
+
+        // Statischer geteilter HttpClient. In dieser App wird der GroqWhisperClient
+        // aktuell pro Process nur einmal gebaut, daher ist Socket-Exhaustion
+        // KEIN konkretes Problem — aber: kuenftiges Settings-Reload (z.B. Wechsel
+        // des Whisper-Endpoints) wuerde mit per-instance HttpClient pro Reload
+        // einen neuen Socket-Pool aufmachen und alte Verbindungen erst nach
+        // TIME_WAIT freigeben. Statisch geteilt wie bei GeminiClient.SharedHttp
+        // ist die kanonische .NET-Loesung. Authorization-Header wird pro Request
+        // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
+        private static readonly HttpClient SharedHttp = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(180)
+        };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 3;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
@@ -24,7 +36,6 @@ namespace TerminalVoiceOverlay.Services
             _model = model;
             _language = language;
             _url = url;
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(180) };
         }
 
         public async Task<string> TranscribeAsync(string wavFilePath)
@@ -61,7 +72,7 @@ namespace TerminalVoiceOverlay.Services
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            var response = await _http.SendAsync(request);
+            var response = await SharedHttp.SendAsync(request);
             var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)

@@ -144,25 +144,55 @@ Der zu verarbeitende Whisper-Text folgt nun:
             _ => "gemini-correction-prompt-standard.txt"
         };
 
+        // Mtime-getriebener Cache fuer die Korrektur-Prompt-Dateien. Frueher
+        // las jeder Voice-Submit die Datei neu von Disk — bei OneDrive-
+        // Materialisierung oder Antivirus-Hooks kostete das messbar 5-50 ms
+        // Latenz vor dem eigentlichen Gemini-Call. Jetzt: erste Anfrage liest
+        // einmal, folgende Anfragen vergleichen nur den File.GetLastWriteTimeUtc-
+        // Zeitstempel (in-process, kein Disk-Read). Aenderungen an der Datei
+        // wirken weiter sofort — wir lesen neu sobald die mtime sich verschiebt.
+        // Direktive-3-Resilienz: thread-safe per ConcurrentDictionary, jeder
+        // Path hat seinen eigenen Eintrag; bei Datei-loescht-und-neu-erstellt
+        // ist die mtime des neuen Files anders, also wird automatisch geladen.
+        private sealed class CachedPrompt
+        {
+            public DateTime MtimeUtc;
+            public string? Text;
+        }
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, CachedPrompt> _promptCache
+            = new(StringComparer.OrdinalIgnoreCase);
+
+        private static string? ReadPromptFileCached(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return null;
+                var mtime = File.GetLastWriteTimeUtc(path);
+                if (_promptCache.TryGetValue(path, out var cached) && cached.MtimeUtc == mtime)
+                    return cached.Text;
+                var text = File.ReadAllText(path);
+                _promptCache[path] = new CachedPrompt { MtimeUtc = mtime, Text = text };
+                return text;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static string? LoadGeminiCorrectionPrompt(int profile)
         {
             try
             {
                 // 1) Profil-spezifische Datei
                 var profilePath = Path.Combine(GeminiPromptDir, ProfilePromptFileName(profile));
-                if (File.Exists(profilePath))
-                {
-                    var text = File.ReadAllText(profilePath);
-                    if (!string.IsNullOrWhiteSpace(text)) return text;
-                }
+                var text = ReadPromptFileCached(profilePath);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
 
                 // 2) Legacy-Fallback: alte Sammeldatei (vor Profil-Trennung)
                 var legacyPath = Path.Combine(GeminiPromptDir, "gemini-correction-prompt.txt");
-                if (File.Exists(legacyPath))
-                {
-                    var text = File.ReadAllText(legacyPath);
-                    if (!string.IsNullOrWhiteSpace(text)) return text;
-                }
+                text = ReadPromptFileCached(legacyPath);
+                if (!string.IsNullOrWhiteSpace(text)) return text;
 
                 return null;
             }

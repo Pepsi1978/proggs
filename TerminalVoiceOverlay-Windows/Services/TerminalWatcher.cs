@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Windows;
 using TerminalVoiceOverlay.NativeMethods;
@@ -12,6 +13,20 @@ namespace TerminalVoiceOverlay.Services
         private Win32.WinEventDelegate? _winEventDelegate;
         private IntPtr _hookHandle;
         private IntPtr _lastTerminalHwnd;
+
+        // PID -> (isTerminal, expiry). EVENT_SYSTEM_FOREGROUND feuert bei
+        // JEDEM Alt+Tab und jedem Mausklick auf ein anderes Top-Level-Window
+        // — bei aktivem Arbeiten zwischen Browser, Editor und Terminal kommen
+        // 10-50 Events pro Minute. Ohne Cache machte jeder Event einen
+        // Process.GetProcessById-Aufruf (OpenProcess + QueryFullProcessImageName
+        // + Dispose), je 0.5-1.5 ms inkl. Handle-Allokation. Mit 1-Sekunde-TTL
+        // hat Frank trotzdem sofortige Reaktion auf neu gestartete Terminals
+        // (er muss naemlich 1x in den neuen Prozess klicken — das ist die
+        // Cache-Miss-Latenz, der "alte" Prozess kommt aus dem Cache). PID-
+        // Reuse-Risiko: Windows recycelt PIDs nicht binnen 1 s, daher praktisch
+        // unsichtbar.
+        private static readonly ConcurrentDictionary<uint, (bool IsTerminal, long ExpiryTicks)> _pidCache = new();
+        private const long PidCacheTtlTicks = TimeSpan.TicksPerSecond * 1; // 1 s
 
         public event Action<IntPtr>? TerminalActivated;
         public event Action? TerminalDeactivated;
@@ -78,6 +93,16 @@ namespace TerminalVoiceOverlay.Services
             Win32.GetWindowThreadProcessId(hwnd, out uint pid);
             if (pid == 0) return false;
 
+            // Cache-Lookup. Treffer + nicht abgelaufen → direkt zurueck, kein
+            // Win32-Roundtrip. Cache-Miss-Pfad weiter unten erfasst auch das
+            // negative Ergebnis (NICHT-Terminal-Prozesse), denn Frank klickt
+            // primaer auf seinen Browser hin und her — das ist der haeufigste
+            // Pfad und profitiert am meisten vom Cache.
+            long now = DateTime.UtcNow.Ticks;
+            if (_pidCache.TryGetValue(pid, out var cached) && cached.ExpiryTicks > now)
+                return cached.IsTerminal;
+
+            bool isTerminal = false;
             try
             {
                 using var proc = Process.GetProcessById((int)pid);
@@ -85,15 +110,32 @@ namespace TerminalVoiceOverlay.Services
                 foreach (var target in _terminalProcessNames)
                 {
                     if (name.Equals(target, StringComparison.OrdinalIgnoreCase))
-                        return true;
+                    {
+                        isTerminal = true;
+                        break;
+                    }
                 }
             }
             catch
             {
-                // Process may have exited
+                // Process may have exited — Default-Fall: NICHT-Terminal.
             }
 
-            return false;
+            // Cache schreiben — auch negative Ergebnisse, denn die machen die
+            // Mehrheit der Foreground-Events aus. Sehr seltenes Wachstum: Pro
+            // einzigartiger PID 1 Eintrag bis Ablauf. Ein simpler Sweep beim
+            // Schreiben begrenzt Wachstum auf maximal ein paar hundert Eintraege
+            // selbst nach Stunden — kein dediziertes LRU noetig.
+            _pidCache[pid] = (isTerminal, now + PidCacheTtlTicks);
+            if (_pidCache.Count > 256)
+            {
+                foreach (var kv in _pidCache)
+                {
+                    if (kv.Value.ExpiryTicks <= now)
+                        _pidCache.TryRemove(kv.Key, out _);
+                }
+            }
+            return isTerminal;
         }
 
         public static Rect GetMonitorWorkArea(IntPtr hwnd)
