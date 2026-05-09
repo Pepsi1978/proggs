@@ -18,6 +18,12 @@ object Routes {
     const val BIOMARKER_DETAIL_PATTERN = "biomarker/detail/{metricKey}"
     fun biomarkerDetail(metricKey: String): String = "biomarker/detail/$metricKey"
 
+    // Amazfit T-Rex 3 Sport-Bereich (Frank-Wunsch 2026-05-09).
+    // Pfade unter Biomarker erreichbar via "Alle anzeigen" oder Klick auf Workout-Zeile.
+    const val AMAZFIT_TRAININGS = "amazfit/trainings"
+    const val AMAZFIT_TRAINING_DETAIL_PATTERN = "amazfit/trainings/{trackId}"
+    fun amazfitTrainingDetail(trackId: String): String = "amazfit/trainings/$trackId"
+
     // Settings-Stack
     const val SETTINGS_HOME = "settings"
     const val SETTINGS_API = "settings/api_keys"

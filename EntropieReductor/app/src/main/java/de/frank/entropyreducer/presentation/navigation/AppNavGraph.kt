@@ -12,6 +12,8 @@ import androidx.navigation.navArgument
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
 import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
+import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
+import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalendarScreen
@@ -81,6 +83,26 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onOpenMetricDetail = { metricKey ->
                     nav.navigate(Routes.biomarkerDetail(metricKey))
                 },
+                onOpenTrainingDetail = { trackId ->
+                    nav.navigate(Routes.amazfitTrainingDetail(trackId))
+                },
+                onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
+            )
+        }
+        composable(Routes.AMAZFIT_TRAININGS) {
+            AmazfitTrainingsScreen(
+                onBack = { nav.popBackStack(); Unit },
+                onOpenDetail = { trackId ->
+                    nav.navigate(Routes.amazfitTrainingDetail(trackId))
+                },
+            )
+        }
+        composable(
+            route = Routes.AMAZFIT_TRAINING_DETAIL_PATTERN,
+            arguments = listOf(navArgument("trackId") { type = NavType.StringType }),
+        ) {
+            AmazfitTrainingDetailScreen(
+                onBack = { nav.popBackStack(); Unit },
             )
         }
         composable(
