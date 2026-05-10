@@ -68,6 +68,32 @@ class AmazfitRepository @Inject constructor(
     fun observeWorkoutById(trackId: String): Flow<AmazfitWorkoutEntity?> =
         workoutDao.observeById(trackId)
 
+    /**
+     * Korrigiert bestehende Workout-Eintraege deren sportName auf einer veralteten
+     * Mapping-Logik basiert. Frank-Wunsch 2026-05-10: Die T-Rex 3 sendet ALLE
+     * Workouts mit source="run.NNN.huami.com", was den source-Prefix-Check als
+     * primaeres Sportart-Signal unbrauchbar macht. Frueher gespeicherte Workouts
+     * mit Code 7 (Trailrunning), 12 (Crosstrainer) oder 52 (Krafttraining) wurden
+     * deshalb faelschlich als "Laufen" gespeichert.
+     *
+     * Diese Migration laeuft idempotent — `updateSportNameByType` aktualisiert nur
+     * Zeilen wo der Name aktuell abweicht. Bei wiederholten Aufrufen passiert
+     * nichts (0 Zeilen geaendert). Wird beim App-Start einmal in
+     * EntropyReducerApp.onCreate via applicationScope gestartet.
+     *
+     * @return Anzahl korrigierter Zeilen (Summe ueber alle Override-Codes)
+     */
+    suspend fun applyFrankSportOverrides(): Int {
+        var changed = 0
+        AmazfitSportNames.frankOverrides().forEach { (code, name) ->
+            changed += workoutDao.updateSportNameByType(code, name)
+        }
+        if (changed > 0) {
+            Log.i("AmazfitRepo", "Frank-Sport-Overrides angewendet: $changed Zeilen korrigiert")
+        }
+        return changed
+    }
+
     /** Manueller Auslöser: synchronisiert die letzten [days] Tage. */
     suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatching {
         var appToken = auth.freshAppToken()
@@ -679,10 +705,16 @@ internal object AmazfitSportNames {
         4 to "Radfahren",                 // Cycling (Outdoor)
         5 to "Freies Training",           // Exercise / Free training
         6 to "Schwimmen (Pool)",          // Swimming
-        7 to "Freiwasser-Schwimmen",      // OpenWaterSwimming (per Gadgetbridge)
+        7 to "Trailrunning",              // Frank-Befund 2026-05-10: T-Rex 3 sendet
+                                          // Code 7 fuer Trailrunning (23 Workouts in
+                                          // Frank's DB). Gadgetbridge sagt OpenWaterSwimming —
+                                          // die T-Rex 3 weicht hier ab.
         8 to "Indoor-Radfahren",          // IndoorCycling
         9 to "Crosstrainer",              // EllipticalTrainer
         10 to "Klettern",                 // Climbing
+        12 to "Crosstrainer",             // Frank-Befund 2026-05-10: T-Rex 3 sendet
+                                          // Code 12 fuer Crosstrainer (haeufigster Code,
+                                          // 132 Workouts in Frank's DB)
         15 to "Wandern",                  // OutdoorHiking
         18 to "Fussball",                 // Soccer (0x12)
         21 to "Seilspringen",             // JumpRope (0x15)
@@ -695,10 +727,49 @@ internal object AmazfitSportNames {
         92 to "Badminton",                // Badminton (0x5c)
     )
 
+    /**
+     * Frank-bestaetigte Override-Codes (T-Rex 3 spezifisch, Stand 2026-05-10).
+     *
+     * Hintergrund: Die T-Rex 3 sendet ALLE Workouts mit source="run.NNN.huami.com"
+     * (NNN = Geraete-ID, nicht Sportart). Das macht den source-Prefix als primaeres
+     * Sportart-Signal unbrauchbar — er liefert immer "Laufen", auch fuer Crosstrainer
+     * oder Krafttraining.
+     *
+     * Diese Codes hat Frank manuell gegen seine Trainings-Erinnerung verifiziert
+     * (15.04.2026 18:15 = Crosstrainer mit Code 12; 14.03.2026 16:27 = Krafttraining
+     * mit Code 52). Sie werden VOR dem source-Prefix-Check angewendet, sodass der
+     * generische "run."-Prefix sie nicht ueberstimmen kann.
+     *
+     * Andere unbekannte T-Rex-3-Codes (16, 22, 24, 47, 57, 66) bleiben ohne Override —
+     * dort wird der bisherige Pfad genutzt (source-Prefix oder "Sport (Code N)"),
+     * bis Frank die Sportart bestaetigt.
+     */
+    private val FRANK_VERIFIED_OVERRIDES: Map<Int, String> = mapOf(
+        7 to "Trailrunning",   // Frank-Befund 2026-05-10 (Live-Test 2026-05-09)
+        12 to "Crosstrainer",  // Frank-Befund 15.04.2026 (132 historische Workouts)
+        52 to "Krafttraining", // Frank-Befund 14.03.2026
+    )
+
+    /**
+     * Liefert die Frank-bestaetigten Code-Overrides fuer DB-Migrationen.
+     * Wird von [AmazfitRepository.applyFrankSportOverrides] genutzt um bestehende
+     * Workout-Eintraege mit faelschlich gespeicherten Namen ("Laufen" statt
+     * Crosstrainer/Krafttraining) zu korrigieren.
+     */
+    fun frankOverrides(): Map<Int, String> = FRANK_VERIFIED_OVERRIDES
+
     fun nameOf(type: Int?, source: String? = null): String {
-        // Schritt 1: SOURCE-PREFIX hat Vorrang. Zepp kodiert die Sportart-Familie
-        // im source-Identifier ("run.NNN.huami.com"), das ist verlaesslich auch
-        // dann wenn der numerische type-Code von Geraet zu Geraet variiert.
+        // Schritt 0: Frank-Override-Codes — diese stehen UEBER dem source-Prefix,
+        // weil die T-Rex 3 fuer ALLE Sportarten den gleichen "run.*"-Prefix sendet.
+        // Frank hat diese Codes manuell verifiziert; sie sind das verlaesslichste
+        // Signal fuer die Sportart (Frank-Befund 2026-05-10).
+        if (type != null) {
+            FRANK_VERIFIED_OVERRIDES[type]?.let { return it }
+        }
+        // Schritt 1: SOURCE-PREFIX als zweite Wahl. Bei Geraeten die keine generische
+        // run.*-Source senden (alte Amazfit-Modelle, andere Hersteller) ist der
+        // Prefix verlaesslich — daher bleibt diese Logik fuer Codes erhalten, die
+        // noch nicht im Override stehen.
         val srcPrefix = source?.substringBefore(".")?.lowercase()
         when (srcPrefix) {
             "run" -> return "Laufen"

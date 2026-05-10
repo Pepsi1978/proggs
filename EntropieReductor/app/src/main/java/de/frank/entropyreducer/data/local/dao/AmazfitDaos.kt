@@ -73,4 +73,18 @@ interface AmazfitWorkoutDao {
 
     @Query("DELETE FROM amazfit_workouts")
     suspend fun deleteAll()
+
+    /**
+     * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur dort
+     * wo der Name aktuell abweicht (idempotent, kein No-Op-UPDATE wenn schon korrekt).
+     * Frank-Wunsch 2026-05-10: Migration fuer T-Rex-3-Codes 12 (Crosstrainer) und
+     * 52 (Krafttraining) — beide wurden frueher faelschlich als "Laufen" gespeichert
+     * weil der source-Prefix "run.huami.com" auf der T-Rex 3 generisch fuer alle
+     * Sportarten ist. Gibt die Anzahl geaenderter Zeilen zurueck.
+     */
+    @Query(
+        "UPDATE amazfit_workouts SET sportName = :sportName " +
+            "WHERE sportType = :sportType AND sportName != :sportName",
+    )
+    suspend fun updateSportNameByType(sportType: Int, sportName: String): Int
 }

@@ -9,6 +9,7 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
+import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var dataMigrator: InitialDataMigrator
+
+    @Inject
+    lateinit var amazfitRepository: AmazfitRepository
 
     // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
     // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
@@ -77,6 +81,16 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // dabei laeuft MIGRATION_1_2 und legt die neuen Tabellen an.
         dataMigrator.writeRescuedData(rescuedData)
         rescuedData = null
+
+        // Frank-Wunsch 2026-05-10: T-Rex-3-Sport-Mapping korrigieren. Bestehende
+        // Workouts mit Code 7 (Trailrunning), 12 (Crosstrainer) oder 52 (Krafttraining)
+        // wurden frueher faelschlich als "Laufen" gespeichert weil die T-Rex 3 fuer
+        // alle Sportarten den gleichen source="run.NNN.huami.com" sendet. Migration
+        // ist idempotent — bei wiederholten Starts kein Effekt mehr.
+        applicationScope.launch {
+            runCatching { amazfitRepository.applyFrankSportOverrides() }
+                .onFailure { android.util.Log.w("EntropyReducerApp", "Sport-Override-Migration fehlgeschlagen", it) }
+        }
 
         // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
         // Whoop-Rate-Limit ist 60 req/min — selbst 50 Foreground-Wechsel/Tag sind
