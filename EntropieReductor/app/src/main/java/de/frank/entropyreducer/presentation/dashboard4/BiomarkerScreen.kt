@@ -71,6 +71,7 @@ fun BiomarkerHostScreen(
     onOpenMetricDetail: (String) -> Unit = {},
     onOpenTrainingDetail: (String) -> Unit = {},
     onOpenAllTrainings: () -> Unit = {},
+    onOpenOuraDetail: (String) -> Unit = {},
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -239,6 +240,7 @@ fun BiomarkerHostScreen(
                             onOpenMetricDetail = onOpenMetricDetail,
                             onOpenTrainingDetail = onOpenTrainingDetail,
                             onOpenAllTrainings = onOpenAllTrainings,
+                            onOpenOuraDetail = onOpenOuraDetail,
                             weightState = weightState,
                             onRequestWeightPermission = onRequestWeightPermission,
                         )
@@ -1246,6 +1248,7 @@ private fun BiomarkerCardForId(
     onOpenMetricDetail: (String) -> Unit,
     onOpenTrainingDetail: (String) -> Unit,
     onOpenAllTrainings: () -> Unit,
+    onOpenOuraDetail: (String) -> Unit = {},
     weightState: WeightState = WeightState(),
     onRequestWeightPermission: () -> Unit = {},
 ) {
@@ -1507,25 +1510,25 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.OURA_READINESS -> OuraReadinessCard(
                 readiness = state.ouraReadinessForSelectedDay,
                 history = state.ouraReadinessHistory,
-                onClick = { /* Detail-Screen kommt in Etappe E */ },
+                onClick = { onOpenOuraDetail(OuraMetricKey.READINESS) },
             )
 
             BiomarkerCardId.OURA_SLEEP_SCORE -> OuraSleepScoreCard(
                 sleep = state.ouraSleepForSelectedDay,
                 history = state.ouraSleepHistory,
-                onClick = { /* Detail-Screen kommt in Etappe E */ },
+                onClick = { onOpenOuraDetail(OuraMetricKey.SLEEP_SCORE) },
             )
 
             BiomarkerCardId.OURA_ACTIVITY -> OuraActivityCard(
                 activity = state.ouraActivityForSelectedDay,
                 history = state.ouraActivityHistory,
-                onClick = { /* Detail-Screen kommt in Etappe E */ },
+                onClick = { onOpenOuraDetail(OuraMetricKey.ACTIVITY) },
             )
 
             BiomarkerCardId.OURA_RESILIENCE -> OuraResilienceCard(
                 resilience = state.ouraResilienceForSelectedDay,
                 history = state.ouraResilienceHistory,
-                onClick = { /* Detail-Screen kommt in Etappe E */ },
+                onClick = { onOpenOuraDetail(OuraMetricKey.RESILIENCE) },
             )
 
             // Sleep-Detail bleibt im when fuer Backward-Compat — ist aber NICHT

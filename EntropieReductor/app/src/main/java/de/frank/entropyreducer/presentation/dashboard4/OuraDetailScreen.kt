@@ -1,0 +1,360 @@
+package de.frank.entropyreducer.presentation.dashboard4
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.theme.CosmosColors
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
+
+/**
+ * Oura-Ring-Detail-Screen pro Metrik (Frank-Wunsch 2026-05-10, Etappe F).
+ *
+ * Zeigt fuer einen der vier Oura-Werte (Readiness, Schlaf-Score, Aktivität,
+ * Resilienz) die komplette Historie als interaktiver Verlauf:
+ *  - Header mit aktuellem Wert + Plus/Minus zum 30-Tage-Mittel
+ *  - Range-Switcher 7T / 30T / 90T / Alle
+ *  - Grosser Verlaufs-Balkenchart der gefilterten Werte
+ *  - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum Vortag
+ *
+ * Frank-Vorgabe: 30-Tage-Schnitt ist die Vergleichsbasis fuer das Plus/Minus.
+ */
+object OuraMetricKey {
+    const val READINESS = "oura_readiness"
+    const val SLEEP_SCORE = "oura_sleep_score"
+    const val ACTIVITY = "oura_activity"
+    const val RESILIENCE = "oura_resilience"
+}
+
+@Composable
+fun OuraDetailScreen(
+    metricKey: String,
+    onBack: () -> Unit,
+    vm: BiomarkerViewModel = hiltViewModel(),
+) {
+    val state by vm.state.collectAsState()
+    val cosmos = LocalCosmos.current
+
+    val title = when (metricKey) {
+        OuraMetricKey.READINESS -> "Readiness"
+        OuraMetricKey.SLEEP_SCORE -> "Schlaf-Score"
+        OuraMetricKey.ACTIVITY -> "Aktivität"
+        OuraMetricKey.RESILIENCE -> "Resilienz"
+        else -> "Oura"
+    }
+
+    // Historie auf einheitliches Format (day, score) abbilden — Resilience nutzt
+    // den Rang 0..4, Score-Karten den 0..100-Score.
+    val allPoints: List<Pair<String, Double>> = when (metricKey) {
+        OuraMetricKey.READINESS -> state.ouraReadinessHistory.mapNotNull {
+            it.score?.let { s -> it.day to s.toDouble() }
+        }
+        OuraMetricKey.SLEEP_SCORE -> state.ouraSleepHistory.mapNotNull {
+            it.score?.let { s -> it.day to s.toDouble() }
+        }
+        OuraMetricKey.ACTIVITY -> state.ouraActivityHistory.mapNotNull {
+            it.score?.let { s -> it.day to s.toDouble() }
+        }
+        OuraMetricKey.RESILIENCE -> state.ouraResilienceHistory.mapNotNull {
+            levelToRank(it.level)?.let { r -> it.day to r }
+        }
+        else -> emptyList()
+    }
+    val maxValue = if (metricKey == OuraMetricKey.RESILIENCE) 4.0 else 100.0
+    val unit = if (metricKey == OuraMetricKey.RESILIENCE) "" else " /100"
+
+    var range by remember { mutableStateOf(DetailRangeOura.THIRTY) }
+    val cutoffDays = when (range) {
+        DetailRangeOura.SEVEN -> 7
+        DetailRangeOura.THIRTY -> 30
+        DetailRangeOura.NINETY -> 90
+        DetailRangeOura.ALL -> Int.MAX_VALUE
+    }
+    val filtered = allPoints.takeLast(cutoffDays)
+    val values = filtered.map { it.second }
+    val minV = values.minOrNull()
+    val maxV = values.maxOrNull()
+    val avgV = values.takeIf { it.isNotEmpty() }?.average()
+    val current = allPoints.lastOrNull()?.second
+
+    // 30-Tage-Mittel als Vergleichsbasis fuer den Trend.
+    val last30 = allPoints.takeLast(30).map { it.second }
+    val avg30 = last30.takeIf { it.isNotEmpty() }?.average()
+    val trendDelta = if (current != null && avg30 != null) current - avg30 else null
+
+    CosmosScaffold(
+        title = title,
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
+            }
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item { OuraDetailHeader(title = title, current = current, unit = unit, trendDelta = trendDelta, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+            item { OuraRangeSwitcher(current = range, onChange = { range = it }) }
+            if (filtered.isNotEmpty()) {
+                item { OuraStatsRow(min = minV, max = maxV, avg = avgV, count = values.size, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+                item { OuraVerlaufsChart(points = filtered, accent = pickAccent(metricKey, current), maxValue = maxValue, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+                item {
+                    Text(
+                        text = "Alle Werte",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+                items(filtered.reversed()) { (day, value) ->
+                    OuraValueRow(day = day, value = value, isResilience = metricKey == OuraMetricKey.RESILIENCE)
+                }
+            } else {
+                item {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Noch keine Daten in diesem Zeitraum.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cosmos.textSecondary,
+                        )
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(40.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun OuraDetailHeader(
+    title: String,
+    current: Double?,
+    unit: String,
+    trendDelta: Double?,
+    isResilience: Boolean,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = if (isResilience) {
+        levelToColorFromRank(current, cosmos.textSecondary)
+    } else {
+        scoreColor(current?.toInt())
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = if (current == null) "—" else if (isResilience) levelToGerman(rankToLevel(current)) else current.toInt().toString(),
+                    color = accent,
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (current != null && !isResilience) {
+                    Text(
+                        unit,
+                        color = accent,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 6.dp, bottom = 6.dp),
+                    )
+                }
+            }
+            if (trendDelta != null) {
+                Spacer(Modifier.height(8.dp))
+                val trendColor = when {
+                    trendDelta > 0.5 -> CosmosColors.Success
+                    trendDelta < -0.5 -> CosmosColors.Critical
+                    else -> CosmosColors.AccentPrimary
+                }
+                val trendLabel = when {
+                    trendDelta > 0.5 -> "besser als 30-Tage-Mittel"
+                    trendDelta < -0.5 -> "schlechter als 30-Tage-Mittel"
+                    else -> "wie 30-Tage-Mittel"
+                }
+                Text(
+                    text = "${"%+.1f".format(trendDelta)} — $trendLabel",
+                    color = trendColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OuraRangeSwitcher(current: DetailRangeOura, onChange: (DetailRangeOura) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        DetailRangeOura.entries.forEach { r ->
+            FilterChip(
+                selected = current == r,
+                onClick = { onChange(r) },
+                label = { Text(r.label) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = CosmosColors.Success.copy(alpha = 0.2f),
+                    selectedLabelColor = CosmosColors.Success,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OuraStatsRow(
+    min: Double?,
+    max: Double?,
+    avg: Double?,
+    count: Int,
+    isResilience: Boolean,
+) {
+    val cosmos = LocalCosmos.current
+    val format: (Double) -> String = if (isResilience) {
+        { levelToGerman(rankToLevel(it)) }
+    } else {
+        { it.toInt().toString() }
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            StatCol("Mittel", avg?.let(format) ?: "—")
+            StatCol("Min", min?.let(format) ?: "—")
+            StatCol("Max", max?.let(format) ?: "—")
+            StatCol("Werte", count.toString())
+        }
+    }
+}
+
+@Composable
+private fun StatCol(label: String, value: String) {
+    val cosmos = LocalCosmos.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/**
+ * Verlaufs-Balkenchart fuer den Detail-Screen. Hoehe der Balken proportional
+ * zum Wert, gefuellt mit Akzentfarbe. Anders als die Mini-Balken auf der Karte
+ * ist hier mehr Platz fuer Y-Achsen-Beschriftung und Datums-Labels.
+ */
+@Composable
+private fun OuraVerlaufsChart(
+    points: List<Pair<String, Double>>,
+    accent: Color,
+    maxValue: Double,
+    isResilience: Boolean,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("Verlauf", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().height(140.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                points.forEach { (_, v) ->
+                    val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height((140.dp * frac).coerceAtLeast(2.dp))
+                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                            .background(accent.copy(alpha = 0.7f)),
+                    )
+                }
+            }
+            // Datums-Labels alle 5 Tage damit's nicht ueberladen wirkt.
+            Spacer(Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                val first = points.firstOrNull()?.first ?: ""
+                val last = points.lastOrNull()?.first ?: ""
+                Text(shortDate(first), style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+                Text(shortDate(last), style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OuraValueRow(day: String, value: Double, isResilience: Boolean) {
+    val cosmos = LocalCosmos.current
+    val display = if (isResilience) levelToGerman(rankToLevel(value)) else value.toInt().toString()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(shortDate(day), style = MaterialTheme.typography.bodyMedium, color = cosmos.textSecondary, modifier = Modifier.weight(1f))
+        Text(display, style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun pickAccent(metricKey: String, current: Double?): Color =
+    if (metricKey == OuraMetricKey.RESILIENCE) {
+        levelToColorFromRank(current, CosmosColors.AccentPrimary)
+    } else {
+        scoreColor(current?.toInt())
+    }
+
+private fun levelToColorFromRank(rank: Double?, fallback: Color): Color =
+    levelToColor(rankToLevel(rank), fallback)
+
+private fun rankToLevel(rank: Double?): String? = when (rank?.toInt()) {
+    0 -> "limited"
+    1 -> "adequate"
+    2 -> "solid"
+    3 -> "strong"
+    4 -> "exceptional"
+    else -> null
+}
+
+private fun shortDate(day: String): String =
+    if (day.length == 10) "${day.substring(8, 10)}.${day.substring(5, 7)}" else day
+
+private enum class DetailRangeOura(val label: String) {
+    SEVEN("7T"),
+    THIRTY("30T"),
+    NINETY("90T"),
+    ALL("Alle"),
+}

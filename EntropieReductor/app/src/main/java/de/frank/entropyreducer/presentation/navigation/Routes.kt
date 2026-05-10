@@ -18,6 +18,12 @@ object Routes {
     const val BIOMARKER_DETAIL_PATTERN = "biomarker/detail/{metricKey}"
     fun biomarkerDetail(metricKey: String): String = "biomarker/detail/$metricKey"
 
+    // Oura-Ring-Detail-Screen pro Metrik (Frank-Wunsch 2026-05-10).
+    // Pfad: biomarker/oura/{metricKey} mit metricKey aus
+    // OuraMetricKey.READINESS / SLEEP_SCORE / ACTIVITY / RESILIENCE.
+    const val OURA_DETAIL_PATTERN = "biomarker/oura/{metricKey}"
+    fun ouraDetail(metricKey: String): String = "biomarker/oura/$metricKey"
+
     // Amazfit T-Rex 3 Sport-Bereich (Frank-Wunsch 2026-05-09).
     // Pfade unter Biomarker erreichbar via "Alle anzeigen" oder Klick auf Workout-Zeile.
     const val AMAZFIT_TRAININGS = "amazfit/trainings"

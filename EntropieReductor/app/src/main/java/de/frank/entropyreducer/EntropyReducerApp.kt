@@ -10,6 +10,7 @@ import dagger.hilt.android.HiltAndroidApp
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.repository.AmazfitRepository
+import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +44,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var amazfitRepository: AmazfitRepository
+
+    @Inject
+    lateinit var ouraRepository: OuraRepository
 
     // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
     // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
@@ -109,6 +113,23 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 applicationScope.launch {
                     if (oauth.loadWhoopAuthState().isAuthorized) {
                         scheduler.runWhoopSyncNow()
+                    }
+                }
+                // Frank-Wunsch 2026-05-10: bei jedem App-Start auch Amazfit
+                // und Oura synchronisieren. Amazfit laeuft ueber den Worker
+                // (kennt den Token-Status selbst). Oura nutzt den Repository
+                // direkt — wenn kein Token gespeichert ist, wirft syncLastDays
+                // eine IllegalStateException die wir hier still verschlucken.
+                applicationScope.launch {
+                    runCatching { scheduler.runAmazfitSyncNow() }
+                }
+                applicationScope.launch {
+                    if (ouraRepository.isTokenConfigured()) {
+                        // Folgesync zieht 7 Tage zurueck — reicht um neue Werte
+                        // zu holen und ist schnell. Der initiale 365-Tage-Pull
+                        // passiert nur beim ersten Token-Speichern.
+                        runCatching { ouraRepository.syncLastDays(7) }
+                            .onFailure { android.util.Log.w("EntropyReducerApp", "Oura-Foreground-Sync fehlgeschlagen", it) }
                     }
                 }
             }
