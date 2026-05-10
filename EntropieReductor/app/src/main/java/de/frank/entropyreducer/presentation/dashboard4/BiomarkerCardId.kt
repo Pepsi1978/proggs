@@ -123,6 +123,9 @@ object BiomarkerCardId {
         OURA_SLEEP_SCORE,
         OURA_ACTIVITY,
         OURA_RESILIENCE,
-        OURA_SLEEP_DETAIL,
+        // OURA_SLEEP_DETAIL bewusst NICHT mehr in der Werks-Reihenfolge —
+        // Frank-Vorgabe 2026-05-10: vertraut fuer Schlafphasen nur Whoop.
+        // Konstante bleibt erhalten (Backward-Compat fuer User die die Karte
+        // schon hatten), wird aber bei Erstinstall nicht mehr angezeigt.
     )
 }

@@ -110,6 +110,13 @@ data class BiomarkerUiState(
     val ouraActivityForSelectedDay: OuraActivityEntity? = null,
     val ouraResilienceForSelectedDay: OuraResilienceEntity? = null,
     val ouraSleepDetailsForSelectedDay: List<OuraSleepDetailEntity> = emptyList(),
+    /** Oura-Historie sortiert nach Tag aufsteigend (aelteste zuerst). Wird fuer die
+     *  Mini-Verlaufsbalken und die Plus/Minus-Anzeige zum 30-Tage-Mittel auf den
+     *  Karten gebraucht. Frank-Wunsch 2026-05-10 (Etappe D). */
+    val ouraReadinessHistory: List<OuraReadinessEntity> = emptyList(),
+    val ouraSleepHistory: List<OuraDailySleepEntity> = emptyList(),
+    val ouraActivityHistory: List<OuraActivityEntity> = emptyList(),
+    val ouraResilienceHistory: List<OuraResilienceEntity> = emptyList(),
 )
 
 /**
@@ -358,6 +365,10 @@ class BiomarkerViewModel @Inject constructor(
             ouraActivityForSelectedDay = ouraActivityForDay,
             ouraResilienceForSelectedDay = ouraResilienceForDay,
             ouraSleepDetailsForSelectedDay = ouraSleepDetailsForDay,
+            ouraReadinessHistory = oura.readiness.sortedBy { it.day },
+            ouraSleepHistory = oura.dailySleep.sortedBy { it.day },
+            ouraActivityHistory = oura.activity.sortedBy { it.day },
+            ouraResilienceHistory = oura.resilience.sortedBy { it.day },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 

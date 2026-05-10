@@ -1503,30 +1503,36 @@ private fun BiomarkerCardForId(
                 onOpenDetail = onOpenTrainingDetail,
             )
 
-            // Oura-Ring-Karten (Frank-Wunsch 2026-05-10).
+            // Oura-Ring-Karten (Frank-Wunsch 2026-05-10, Etappe D mit Historie).
             BiomarkerCardId.OURA_READINESS -> OuraReadinessCard(
                 readiness = state.ouraReadinessForSelectedDay,
-                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+                history = state.ouraReadinessHistory,
+                onClick = { /* Detail-Screen kommt in Etappe E */ },
             )
 
             BiomarkerCardId.OURA_SLEEP_SCORE -> OuraSleepScoreCard(
                 sleep = state.ouraSleepForSelectedDay,
-                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+                history = state.ouraSleepHistory,
+                onClick = { /* Detail-Screen kommt in Etappe E */ },
             )
 
             BiomarkerCardId.OURA_ACTIVITY -> OuraActivityCard(
                 activity = state.ouraActivityForSelectedDay,
-                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+                history = state.ouraActivityHistory,
+                onClick = { /* Detail-Screen kommt in Etappe E */ },
             )
 
             BiomarkerCardId.OURA_RESILIENCE -> OuraResilienceCard(
                 resilience = state.ouraResilienceForSelectedDay,
-                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+                history = state.ouraResilienceHistory,
+                onClick = { /* Detail-Screen kommt in Etappe E */ },
             )
 
+            // Sleep-Detail bleibt im when fuer Backward-Compat — ist aber NICHT
+            // mehr in DEFAULT_ORDER (Frank vertraut nur Whoop fuer Schlafphasen).
             BiomarkerCardId.OURA_SLEEP_DETAIL -> OuraSleepDetailCard(
                 sleepDetails = state.ouraSleepDetailsForSelectedDay,
-                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+                onClick = { },
             )
 
             else -> {

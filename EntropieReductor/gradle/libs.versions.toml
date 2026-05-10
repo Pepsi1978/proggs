@@ -28,7 +28,7 @@ playServicesAuth = "21.3.0"
 credentials = "1.5.0-alpha06"
 googleId = "1.1.1"
 reorderable = "2.4.0"
-healthConnect = "1.1.0-rc02"
+healthConnect = "1.1.0-alpha07"
 
 [libraries]
 # Compose BOM
