@@ -68,6 +68,7 @@ class SyncCoordinator @Inject constructor(
     private val hypothesisMessageDaoLazy: Lazy<HypothesisMessageDao>,
     private val cardOrderRepoLazy: Lazy<BiomarkerCardOrderRepository>,
     private val healthConnectValueDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
+    private val amazfitWorkoutDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao>,
     private val json: Json,
 ) {
 
@@ -133,9 +134,18 @@ class SyncCoordinator @Inject constructor(
             val hcValues = healthConnectValueDaoLazy.get().getAll().map {
                 BackupHealthConnectValue(metric = it.metric, timestampMs = it.timestampMs, value = it.value)
             }
+            // Frank-Wunsch 2026-05-11: Cross-Device-Sicherung aller Sport-Trainings
+            // inkl. Detail-Streams (GPS, Pulsverlauf, Tempoverlauf, Splits). Zepp
+            // loescht serverseitig nach ~30 Tagen — durch das Backup bleiben die
+            // Daten fuer immer erhalten und das Restore auf dem S23 Ultra braucht
+            // keinen Zepp-API-Call mehr (kein Re-Login, kein Kicken aus der
+            // Zepp-Handy-App).
+            val amazfitWorkouts = amazfitWorkoutDaoLazy.get()
+                .observeAll().first()
+                .map { it.toBackup() }
 
             val payload = BackupPayload(
-                version = 4,
+                version = 5,
                 exportedAt = System.currentTimeMillis(),
                 entries = entries,
                 insights = insights,
@@ -146,6 +156,7 @@ class SyncCoordinator @Inject constructor(
                 hypothesisMessages = hypMessages,
                 biomarkerCardOrder = cardOrder,
                 healthConnectValues = hcValues,
+                amazfitWorkouts = amazfitWorkouts,
             )
             val text = json.encodeToString(BackupPayload.serializer(), payload)
             backupManager.upload(text)

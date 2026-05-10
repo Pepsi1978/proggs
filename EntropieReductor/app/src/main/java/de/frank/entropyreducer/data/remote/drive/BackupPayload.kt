@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.data.remote.drive
 
+import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
@@ -33,15 +34,21 @@ import kotlinx.serialization.Serializable
  *       (Frank-Wunsch 2026-05-10): die Position auf dem Biomarker-Screen wird
  *       jetzt mitgesichert, damit ein Wechsel auf ein neues Handy die exakt
  *       gleiche Anordnung wiederherstellt.
+ *   5 = + amazfitWorkouts — Sport-Sessions inkl. Detail-Daten (GPS-Track,
+ *       Pulsverlauf, Tempoverlauf, Splits) als Cross-Device-Sicherung.
+ *       Frank-Wunsch 2026-05-11: Zepp loescht Detail-Daten serverseitig nach
+ *       ~30 Tagen — durch das Backup bleiben sie fuer immer erhalten und
+ *       koennen auf dem S23 Ultra ohne API-Call wiederhergestellt werden
+ *       (kein Re-Login, Zepp-Handy-App bleibt stabil eingeloggt).
  *
- * Beim Restore werden v1- und v2-Backups akzeptiert — die nicht-vorhandenen Listen
- * defaulten auf emptyList(), die alten Aufgaben kommen zurueck, der Rest bleibt
- * leer. Beim naechsten Sync nach Restore wird automatisch ein v3-Backup
+ * Beim Restore werden alle vorherigen Versionen akzeptiert — die nicht-vorhandenen
+ * Listen defaulten auf emptyList(), die alten Aufgaben kommen zurueck, der Rest
+ * bleibt leer. Beim naechsten Sync nach Restore wird automatisch ein v5-Backup
  * geschrieben das den vollen Stand enthaelt.
  */
 @Serializable
 data class BackupPayload(
-    val version: Int = 4,
+    val version: Int = 5,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -68,6 +75,16 @@ data class BackupPayload(
      * weiterhin lesbar bleiben.
      */
     val healthConnectValues: List<BackupHealthConnectValue> = emptyList(),
+    /**
+     * Schema v5 (Frank-Wunsch 2026-05-11): Cross-Device-Sicherung der gesamten
+     * Sport-Trainings inklusive der teuren Detail-Streams (GPS-Track, Puls-,
+     * Tempo-, Pace-Verlauf, Splits). Zepp-Cloud loescht diese Detail-Daten nach
+     * ~30 Tagen serverseitig — durch das Backup haben wir sie fuer immer.
+     * Beim Restore auf einem zweiten Geraet entfaellt der API-Call zu Zepp
+     * komplett: kein Re-Login, kein Token-Konflikt mit der Zepp-Handy-App.
+     * Default = emptyList damit aeltere Backups (v1-v4) weiterhin lesbar bleiben.
+     */
+    val amazfitWorkouts: List<BackupAmazfitWorkout> = emptyList(),
 )
 
 @Serializable
@@ -75,6 +92,50 @@ data class BackupHealthConnectValue(
     val metric: String,
     val timestampMs: Long,
     val value: Double,
+)
+
+/**
+ * Vollstaendige Snapshot-Repraesentation eines Amazfit/Zepp-Workouts inkl.
+ * aller Detail-Streams. Felder 1:1 wie in AmazfitWorkoutEntity — bei Schema-
+ * Erweiterungen der Entity muessen die neuen Felder hier ergaenzt werden.
+ */
+@Serializable
+data class BackupAmazfitWorkout(
+    val trackId: String,
+    val dateKey: String,
+    val startMs: Long,
+    val endMs: Long,
+    val durationSeconds: Long? = null,
+    val sportType: Int? = null,
+    val sportName: String? = null,
+    val distanceMeters: Double? = null,
+    val avgPaceSecPerKm: Double? = null,
+    val maxPaceSecPerKm: Double? = null,
+    val avgSpeedKmh: Double? = null,
+    val maxSpeedKmh: Double? = null,
+    val calories: Double? = null,
+    val avgHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
+    val gpsTrackJson: String? = null,
+    val heartRateSeriesJson: String? = null,
+    val paceSeriesJson: String? = null,
+    val splitsJson: String? = null,
+    val altitudeGainMeters: Double? = null,
+    val altitudeLossMeters: Double? = null,
+    val trainingEffectAerobic: Double? = null,
+    val trainingEffectAnaerobic: Double? = null,
+    val vo2Max: Double? = null,
+    val cadence: Int? = null,
+    val strideLengthCm: Int? = null,
+    val recoveryTimeHours: Int? = null,
+    val skinTempCelsius: Double? = null,
+    val swolf: Int? = null,
+    val poolLaps: Int? = null,
+    val poolLengthMeters: Double? = null,
+    val source: String? = null,
+    val city: String? = null,
+    val paceStreamJson: String? = null,
+    val createdAt: Long,
 )
 
 @Serializable
@@ -275,6 +336,44 @@ fun HypothesisMessageEntity.toBackup(): BackupHypothesisMessage = BackupHypothes
     createdAt = createdAt,
 )
 
+fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout = BackupAmazfitWorkout(
+    trackId = trackId,
+    dateKey = dateKey,
+    startMs = startMs,
+    endMs = endMs,
+    durationSeconds = durationSeconds,
+    sportType = sportType,
+    sportName = sportName,
+    distanceMeters = distanceMeters,
+    avgPaceSecPerKm = avgPaceSecPerKm,
+    maxPaceSecPerKm = maxPaceSecPerKm,
+    avgSpeedKmh = avgSpeedKmh,
+    maxSpeedKmh = maxSpeedKmh,
+    calories = calories,
+    avgHeartRate = avgHeartRate,
+    maxHeartRate = maxHeartRate,
+    gpsTrackJson = gpsTrackJson,
+    heartRateSeriesJson = heartRateSeriesJson,
+    paceSeriesJson = paceSeriesJson,
+    splitsJson = splitsJson,
+    altitudeGainMeters = altitudeGainMeters,
+    altitudeLossMeters = altitudeLossMeters,
+    trainingEffectAerobic = trainingEffectAerobic,
+    trainingEffectAnaerobic = trainingEffectAnaerobic,
+    vo2Max = vo2Max,
+    cadence = cadence,
+    strideLengthCm = strideLengthCm,
+    recoveryTimeHours = recoveryTimeHours,
+    skinTempCelsius = skinTempCelsius,
+    swolf = swolf,
+    poolLaps = poolLaps,
+    poolLengthMeters = poolLengthMeters,
+    source = source,
+    city = city,
+    paceStreamJson = paceStreamJson,
+    createdAt = createdAt,
+)
+
 // ---------- Backup → Entity ----------
 
 /**
@@ -391,5 +490,43 @@ fun BackupHypothesisMessage.toEntity(): HypothesisMessageEntity = HypothesisMess
     hypothesisId = hypothesisId,
     role = runCatching { ScientistRole.valueOf(role) }.getOrDefault(ScientistRole.NUTZER),
     content = content,
+    createdAt = createdAt,
+)
+
+fun BackupAmazfitWorkout.toEntity(): AmazfitWorkoutEntity = AmazfitWorkoutEntity(
+    trackId = trackId,
+    dateKey = dateKey,
+    startMs = startMs,
+    endMs = endMs,
+    durationSeconds = durationSeconds,
+    sportType = sportType,
+    sportName = sportName,
+    distanceMeters = distanceMeters,
+    avgPaceSecPerKm = avgPaceSecPerKm,
+    maxPaceSecPerKm = maxPaceSecPerKm,
+    avgSpeedKmh = avgSpeedKmh,
+    maxSpeedKmh = maxSpeedKmh,
+    calories = calories,
+    avgHeartRate = avgHeartRate,
+    maxHeartRate = maxHeartRate,
+    gpsTrackJson = gpsTrackJson,
+    heartRateSeriesJson = heartRateSeriesJson,
+    paceSeriesJson = paceSeriesJson,
+    splitsJson = splitsJson,
+    altitudeGainMeters = altitudeGainMeters,
+    altitudeLossMeters = altitudeLossMeters,
+    trainingEffectAerobic = trainingEffectAerobic,
+    trainingEffectAnaerobic = trainingEffectAnaerobic,
+    vo2Max = vo2Max,
+    cadence = cadence,
+    strideLengthCm = strideLengthCm,
+    recoveryTimeHours = recoveryTimeHours,
+    skinTempCelsius = skinTempCelsius,
+    swolf = swolf,
+    poolLaps = poolLaps,
+    poolLengthMeters = poolLengthMeters,
+    source = source,
+    city = city,
+    paceStreamJson = paceStreamJson,
     createdAt = createdAt,
 )

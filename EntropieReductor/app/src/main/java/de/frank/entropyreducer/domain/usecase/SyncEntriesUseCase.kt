@@ -42,6 +42,7 @@ class SyncEntriesUseCase @Inject constructor(
     private val hypothesisMessageDao: HypothesisMessageDao,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
     private val healthConnectValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
+    private val amazfitWorkoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     private val secrets: EncryptedSecretsStore,
     private val json: Json,
 ) {
@@ -180,6 +181,33 @@ class SyncEntriesUseCase @Inject constructor(
             }
             healthConnectValueDao.upsertAll(entities)
             inserted += entities.size
+        }
+
+        // --- Amazfit-Workouts inkl. Detail-Streams (v5+, Frank-Wunsch 2026-05-11) ---
+        // Cross-Device-Restore: Trainings vom Fold 6 landen ueber das Backup
+        // direkt auf dem S23 Ultra — KEIN Zepp-API-Call noetig, kein Re-Login,
+        // kein Kicken aus der Zepp-Handy-App. Detail-Bewahrung wie beim Sync-Fix:
+        // Wenn das lokale Geraet bereits Detail-Felder hat die im Backup leer
+        // sind, bleiben die lokalen Daten erhalten. So gewinnt der NEUERE Stand
+        // immer — egal ob er aus dem Backup oder vom lokalen Sync kam.
+        if (payload.amazfitWorkouts.isNotEmpty()) {
+            val merged = payload.amazfitWorkouts.map { backupWorkout ->
+                val freshFromBackup = backupWorkout.toEntity()
+                val existing = amazfitWorkoutDao.getById(freshFromBackup.trackId)
+                if (existing == null) {
+                    freshFromBackup
+                } else {
+                    freshFromBackup.copy(
+                        gpsTrackJson = freshFromBackup.gpsTrackJson ?: existing.gpsTrackJson,
+                        heartRateSeriesJson = freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        paceSeriesJson = freshFromBackup.paceSeriesJson ?: existing.paceSeriesJson,
+                        paceStreamJson = freshFromBackup.paceStreamJson ?: existing.paceStreamJson,
+                        splitsJson = freshFromBackup.splitsJson ?: existing.splitsJson,
+                    )
+                }
+            }
+            amazfitWorkoutDao.upsertAll(merged)
+            inserted += merged.size
         }
 
         driveSession.end()
