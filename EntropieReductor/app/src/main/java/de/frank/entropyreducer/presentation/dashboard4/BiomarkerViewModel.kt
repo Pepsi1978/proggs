@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.health.HealthConnectManager
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
@@ -144,6 +145,7 @@ class BiomarkerViewModel @Inject constructor(
     private val ouraRepo: OuraRepository,
     private val scheduler: BackgroundScheduler,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
+    private val syncCoordinator: SyncCoordinator,
     private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
     settings: AppSettings,
@@ -199,17 +201,31 @@ class BiomarkerViewModel @Inject constructor(
     /**
      * Speichert die neue Reihenfolge nach jedem Drag & Drop. Wird vom Screen
      * im onMove-Callback der reorderable LazyColumn aufgerufen.
+     *
+     * Frank-Wunsch 2026-05-10: Nach jedem Reorder soll automatisch ein
+     * Drive-Backup-Sync laufen. requestSync() ist debounced (1500 ms) — wenn
+     * Frank schnell mehrere Karten hintereinander verschiebt, wird das zu einem
+     * einzigen Upload zusammengefasst statt 5x hochzuladen. Wenn Drive-Backup
+     * deaktiviert oder kein Konto verbunden ist, ist requestSync() ein No-Op.
      */
     fun saveCardOrder(newOrder: List<String>) {
-        viewModelScope.launch { cardOrderRepo.saveOrder(newOrder) }
+        viewModelScope.launch {
+            cardOrderRepo.saveOrder(newOrder)
+            syncCoordinator.requestSync()
+        }
     }
 
     /**
      * Setzt die Reihenfolge auf die Werks-Einstellung zurueck. Wird vom
      * Settings-Menue oder einem Long-Press-Hold-Reset-Knopf ausgeloest.
+     * Auch hier triggern wir einen Drive-Sync, damit der Reset auf anderen
+     * Geraeten durchschlaegt.
      */
     fun resetCardOrder() {
-        viewModelScope.launch { cardOrderRepo.resetToDefault() }
+        viewModelScope.launch {
+            cardOrderRepo.resetToDefault()
+            syncCoordinator.requestSync()
+        }
     }
 
     private val now = System.currentTimeMillis()
