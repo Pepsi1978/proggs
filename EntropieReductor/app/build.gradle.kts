@@ -57,8 +57,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 35
-        versionCode = 45
-        versionName = "0.8.1"
+        versionCode = 46
+        versionName = "0.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -220,6 +220,9 @@ dependencies {
 
     // Reorderable LazyColumn (Drag & Drop fuer Biomarker-Karten — Frank-Wunsch 2026-05-10)
     implementation(libs.reorderable)
+
+    // Health Connect — liest Gewicht aus der Zepp-App-Bruecke (Frank-Wunsch 2026-05-10)
+    implementation(libs.health.connect.client)
 
     // Pruefe Internet-Konnektivitaet
     implementation(libs.core.ktx)

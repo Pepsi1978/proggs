@@ -59,6 +59,13 @@ object BiomarkerCardId {
     const val AMAZFIT_LAST_HERO = "amazfit_last_hero"
     const val AMAZFIT_TRAININGS = "amazfit_trainings"
 
+    // Oura-Ring-Block (Frank-Wunsch 2026-05-10)
+    const val OURA_READINESS = "oura_readiness"
+    const val OURA_SLEEP_SCORE = "oura_sleep_score"
+    const val OURA_ACTIVITY = "oura_activity"
+    const val OURA_RESILIENCE = "oura_resilience"
+    const val OURA_SLEEP_DETAIL = "oura_sleep_detail"
+
     /**
      * Werks-Reihenfolge — entspricht dem urspruenglichen Layout vor dem
      * Drag & Drop-Feature. Wird verwendet wenn der Benutzer noch keine
@@ -107,5 +114,10 @@ object BiomarkerCardId {
         CORRELATION,
         AMAZFIT_LAST_HERO,
         AMAZFIT_TRAININGS,
+        OURA_READINESS,
+        OURA_SLEEP_SCORE,
+        OURA_ACTIVITY,
+        OURA_RESILIENCE,
+        OURA_SLEEP_DETAIL,
     )
 }

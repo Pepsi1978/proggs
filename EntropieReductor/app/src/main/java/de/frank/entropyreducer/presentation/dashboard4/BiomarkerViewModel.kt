@@ -6,9 +6,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.data.local.entities.OuraActivityEntity
+import de.frank.entropyreducer.data.local.entities.OuraDailySleepEntity
+import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
+import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
+import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
+import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
@@ -43,6 +49,17 @@ private data class AmazfitBundle(
     val latestDaily: AmazfitDailyEntity?,
     val allDaily: List<AmazfitDailyEntity>,
     val workouts: List<AmazfitWorkoutEntity>,
+)
+
+/** Oura-Ring-Daten gebuendelt (Frank-Wunsch 2026-05-10). Fuenf Listen,
+ *  pro Endpunkt eine. Latest und Selected-Day werden im inner-combine
+ *  daraus abgeleitet. */
+private data class OuraBundle(
+    val readiness: List<OuraReadinessEntity>,
+    val dailySleep: List<OuraDailySleepEntity>,
+    val activity: List<OuraActivityEntity>,
+    val resilience: List<OuraResilienceEntity>,
+    val sleepDetail: List<OuraSleepDetailEntity>,
 )
 
 @androidx.compose.runtime.Immutable
@@ -86,12 +103,19 @@ data class BiomarkerUiState(
     val amazfitDailyForSelectedDay: AmazfitDailyEntity? = null,
     val amazfitWorkouts: List<AmazfitWorkoutEntity> = emptyList(),
     val amazfitWorkoutsForSelectedDay: List<AmazfitWorkoutEntity> = emptyList(),
+    /** Oura-Ring-Daten fuer den aktuell ausgewaehlten Tag (Frank-Wunsch 2026-05-10). */
+    val ouraReadinessForSelectedDay: OuraReadinessEntity? = null,
+    val ouraSleepForSelectedDay: OuraDailySleepEntity? = null,
+    val ouraActivityForSelectedDay: OuraActivityEntity? = null,
+    val ouraResilienceForSelectedDay: OuraResilienceEntity? = null,
+    val ouraSleepDetailsForSelectedDay: List<OuraSleepDetailEntity> = emptyList(),
 )
 
 @HiltViewModel
 class BiomarkerViewModel @Inject constructor(
     private val repo: WhoopRepository,
     private val amazfitRepo: AmazfitRepository,
+    private val ouraRepo: OuraRepository,
     private val scheduler: BackgroundScheduler,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
     statusObserver: StatusObserver,
@@ -142,6 +166,13 @@ class BiomarkerViewModel @Inject constructor(
             amazfitRepo.observeAllWorkouts(),
         ) { lD, aD, w -> AmazfitBundle(lD, aD, w) },
         combine(
+            ouraRepo.observeReadiness(),
+            ouraRepo.observeDailySleep(),
+            ouraRepo.observeActivity(),
+            ouraRepo.observeResilience(),
+            ouraRepo.observeSleepDetails(),
+        ) { r, s, a, res, sd -> OuraBundle(r, s, a, res, sd) },
+        combine(
             _refreshing,
             _message,
             statusObserver.observe(),
@@ -150,7 +181,7 @@ class BiomarkerViewModel @Inject constructor(
         ) { r, m, b, sync, sel ->
             StatusBundle(r, m, b, sync, sel)
         },
-    ) { whoop, amazfit, status ->
+    ) { whoop, amazfit, oura, status ->
         val latest = whoop.latest
         val all = whoop.history
         val workouts = whoop.workouts
@@ -180,6 +211,47 @@ class BiomarkerViewModel @Inject constructor(
         val amazfitWorkoutsForDay = amazfit.workouts
             .filter { it.startMs in selStartMs until selEndMs }
             .sortedBy { it.startMs }
+
+        // Oura-Daten fuer den gewaehlten Tag — Tagesschluessel ist YYYY-MM-DD.
+        // Bei "Heute" Fallback auf den juengsten Eintrag falls Sync noch nicht
+        // durchgelaufen ist (Oura-Cloud hat Sync-Delay 40-50 Min nach Ring-Sync).
+        val ouraReadinessForDay = oura.readiness.firstOrNull { it.day == selDateKey }
+            ?: if (selDate == java.time.LocalDate.now()) {
+                oura.readiness.maxByOrNull { it.day }
+            } else {
+                null
+            }
+        val ouraSleepForDay = oura.dailySleep.firstOrNull { it.day == selDateKey }
+            ?: if (selDate == java.time.LocalDate.now()) {
+                oura.dailySleep.maxByOrNull { it.day }
+            } else {
+                null
+            }
+        val ouraActivityForDay = oura.activity.firstOrNull { it.day == selDateKey }
+            ?: if (selDate == java.time.LocalDate.now()) {
+                oura.activity.maxByOrNull { it.day }
+            } else {
+                null
+            }
+        val ouraResilienceForDay = oura.resilience.firstOrNull { it.day == selDateKey }
+            ?: if (selDate == java.time.LocalDate.now()) {
+                oura.resilience.maxByOrNull { it.day }
+            } else {
+                null
+            }
+        val ouraSleepDetailsForDay = oura.sleepDetail.filter { it.day == selDateKey }
+            .ifEmpty {
+                if (selDate == java.time.LocalDate.now()) {
+                    val latestDay = oura.sleepDetail.maxByOrNull { it.day }?.day
+                    if (latestDay != null) {
+                        oura.sleepDetail.filter { it.day == latestDay }
+                    } else {
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
+            }
 
         // Eigenberechnung — Erholsamer Schlaf %: (REM + Tiefschlaf) / Zeit im Bett.
         // Zeit im Bett = REM + Tiefschlaf + Leichtschlaf + Wach. So berechnet
@@ -226,6 +298,11 @@ class BiomarkerViewModel @Inject constructor(
             amazfitDailyForSelectedDay = amazfitForDay,
             amazfitWorkouts = amazfit.workouts,
             amazfitWorkoutsForSelectedDay = amazfitWorkoutsForDay,
+            ouraReadinessForSelectedDay = ouraReadinessForDay,
+            ouraSleepForSelectedDay = ouraSleepForDay,
+            ouraActivityForSelectedDay = ouraActivityForDay,
+            ouraResilienceForSelectedDay = ouraResilienceForDay,
+            ouraSleepDetailsForSelectedDay = ouraSleepDetailsForDay,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
 

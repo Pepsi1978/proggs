@@ -1481,6 +1481,32 @@ private fun BiomarkerCardForId(
                 onOpenDetail = onOpenTrainingDetail,
             )
 
+            // Oura-Ring-Karten (Frank-Wunsch 2026-05-10).
+            BiomarkerCardId.OURA_READINESS -> OuraReadinessCard(
+                readiness = state.ouraReadinessForSelectedDay,
+                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+            )
+
+            BiomarkerCardId.OURA_SLEEP_SCORE -> OuraSleepScoreCard(
+                sleep = state.ouraSleepForSelectedDay,
+                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+            )
+
+            BiomarkerCardId.OURA_ACTIVITY -> OuraActivityCard(
+                activity = state.ouraActivityForSelectedDay,
+                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+            )
+
+            BiomarkerCardId.OURA_RESILIENCE -> OuraResilienceCard(
+                resilience = state.ouraResilienceForSelectedDay,
+                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+            )
+
+            BiomarkerCardId.OURA_SLEEP_DETAIL -> OuraSleepDetailCard(
+                sleepDetails = state.ouraSleepDetailsForSelectedDay,
+                onClick = { /* Detail-Screen kommt in einer spaeteren Etappe */ },
+            )
+
             else -> {
                 // Unbekannte Card-ID — stille leere Box. Defense-in-Depth gegen
                 // Datenmuell aus dem DataStore (Repository filtert eigentlich schon).
