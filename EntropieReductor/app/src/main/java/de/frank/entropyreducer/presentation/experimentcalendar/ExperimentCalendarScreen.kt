@@ -243,6 +243,27 @@ private fun HeaderRow(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
     }
 }
 
+/**
+ * Performance-Audit E3 (2026-05-10): Vorberechneter Datenzustand fuer eine
+ * Kalender-Zelle. Wird einmal pro Recompose-Trigger in remember(...) erstellt,
+ * statt 4 Map-Lookups + 1 Lambda pro Zelle pro Recomposition.
+ *
+ * @Immutable macht die Klasse fuer Compose stable — DayCell wird damit
+ * skippable wenn sich die einzelne Zelle nicht aendert.
+ */
+@androidx.compose.runtime.Immutable
+private data class DayCellState(
+    val date: LocalDate,
+    val items: List<HypothesisEntity>,
+    val events: List<de.frank.entropyreducer.data.local.entities.CalendarEventEntity>,
+    val shift: de.frank.entropyreducer.domain.model.ShiftCode?,
+    val shiftRaw: String?,
+    val isCurrentMonth: Boolean,
+    val isToday: Boolean,
+)
+
+private val WEEKDAY_LABELS: List<String> = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
 @Composable
 private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarViewModel) {
     val cosmos = LocalCosmos.current
@@ -250,10 +271,32 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
     val month = YearMonth.from(state.anchorDate)
     val today = LocalDate.now()
 
+    // Performance-Audit E3 (2026-05-10): 42 DayCellState-Objekte einmalig
+    // vorberechnen. Vorher liefen 42 × 4 = 168 Map-Lookups pro Recomposition.
+    // Jetzt nur bei tatsaechlicher State-/Grid-/Monat-/Heute-Aenderung.
+    val dayStates = remember(grid, month, today, state.hypothesesByDate, state.eventsByDate, state.shiftByDate, state.shiftRawByDate) {
+        grid.map { date ->
+            DayCellState(
+                date = date,
+                items = state.hypothesesByDate[date].orEmpty(),
+                events = state.eventsByDate[date].orEmpty(),
+                shift = state.shiftByDate[date],
+                shiftRaw = state.shiftRawByDate[date],
+                isCurrentMonth = YearMonth.from(date) == month,
+                isToday = date == today,
+            )
+        }
+    }
+    // Performance-Audit E3 (2026-05-10): Map<LocalDate, () -> Unit> mit fertigen
+    // Click-Lambdas. Vorher 42 neue Lambdas pro MonthView-Recomposition.
+    val onClickByDate: Map<LocalDate, () -> Unit> = remember(vm, grid) {
+        grid.associateWith { date -> { vm.selectDay(date) } }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Wochentag-Header
         Row {
-            listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So").forEach { wd ->
+            WEEKDAY_LABELS.forEach { wd ->
                 Text(
                     text = wd,
                     color = cosmos.textSecondary,
@@ -267,24 +310,19 @@ private fun MonthView(state: ExperimentCalendarUiState, vm: ExperimentCalendarVi
         for (row in 0 until 6) {
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (col in 0 until 7) {
-                    val date = grid[row * 7 + col]
-                    val inMonth = YearMonth.from(date) == month
-                    val items = state.hypothesesByDate[date].orEmpty()
-                    val events = state.eventsByDate[date].orEmpty()
-                    val shift = state.shiftByDate[date]
-                    val shiftRaw = state.shiftRawByDate[date]
+                    val cell = dayStates[row * 7 + col]
                     DayCell(
-                        date = date,
-                        items = items,
-                        events = events,
-                        shift = shift,
-                        shiftRaw = shiftRaw,
-                        isCurrentMonth = inMonth,
-                        isToday = date == today,
+                        date = cell.date,
+                        items = cell.items,
+                        events = cell.events,
+                        shift = cell.shift,
+                        shiftRaw = cell.shiftRaw,
+                        isCurrentMonth = cell.isCurrentMonth,
+                        isToday = cell.isToday,
                         // Tap auf JEDEN Tag oeffnet das Tag-Detail-Sheet —
                         // egal ob Hypothesen, Events oder nur Schicht. Frank
                         // konnte vorher leere Tage gar nicht antippen.
-                        onClick = { vm.selectDay(date) },
+                        onClick = onClickByDate[cell.date] ?: {},
                         modifier = Modifier.weight(1f).height(78.dp),
                     )
                 }
