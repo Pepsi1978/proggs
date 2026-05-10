@@ -110,7 +110,45 @@ foreach ($pattern in $shellUpdates) {
 
 if ($cmd -match '>\s*.*settings\.json' -or $cmd -match 'echo.*>.*settings\.json') {
     Write-Output "WARNING: Schreibzugriff auf settings.json per Bash erkannt. config-guard prueft danach."
-    exit 0
+}
+
+# ============================================================
+# PART 5: Hook-Exit0-Guard (ex hook-exit0-guard.ps1, konsolidiert 2026-05-10)
+# Loop-3 ESK-4: vermeidet 2. PowerShell-Spawn bei jedem Bash-Call.
+# Triggert nur auf 'git commit', prueft staged Hook-Dateien auf exit 0.
+# ============================================================
+
+if ($cmd -match 'git commit') {
+    try {
+        $staged = git -C "$env:USERPROFILE\proggs" diff --cached --name-only 2>$null
+        if ($staged) {
+            $hookFiles = $staged | Where-Object { $_ -match '\.(ps1|sh)$' -and $_ -match 'hook' }
+            if ($hookFiles) {
+                $problems = @()
+                foreach ($file in $hookFiles) {
+                    $fullPath = Join-Path "$env:USERPROFILE\proggs" $file
+                    if (-not (Test-Path $fullPath)) { continue }
+                    $content = Get-Content $fullPath -Raw -ErrorAction SilentlyContinue
+                    if (-not $content) { continue }
+                    if ($content -notmatch 'exit\s+0\s*$') { $problems += $file }
+                    if ($file -match 'session|auto-sync|invariant') {
+                        if ($content -match 'exit\s+1') {
+                            $problems += "$file (contains exit 1 — forbidden in SessionStart hooks!)"
+                        }
+                    }
+                }
+                if ($problems.Count -gt 0) {
+                    $list = $problems -join "`n  - "
+                    $msg = "Hook-Exit0-Guard: WARNUNG — folgende Hook-Dateien haben kein 'exit 0' am Ende:`n  - $list`nBitte 'exit 0' am Ende jeder Hook-Datei hinzufuegen!"
+                    Write-Output $msg
+                    Write-Host $msg
+                    try { Hook-LogWarn "Hook files missing exit 0: $($problems -join ', ')" } catch { }
+                }
+            }
+        }
+    } catch {
+        try { Hook-LogWarn "bash-guard part5 (exit0-check): $_" } catch { }
+    }
 }
 
 exit 0

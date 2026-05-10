@@ -118,7 +118,49 @@ check_shell_updates() {
 check_settings_write() {
     if echo "$cmd" | grep -qE '>[[:space:]]*.*settings\.json' 2>/dev/null; then
         echo "WARNING: Schreibzugriff auf settings.json per Bash erkannt. config-guard prueft danach."
-        exit 0
+    fi
+}
+
+# ============================================================
+# PART 5: Hook-Exit0-Guard (ex hook-exit0-guard.sh, konsolidiert 2026-05-10)
+# Loop-3 ESK-4: vermeidet 2. Bash-Spawn bei jedem Bash-Call.
+# Triggert nur auf 'git commit', prueft staged Hook-Dateien auf exit 0.
+# ============================================================
+
+check_exit0_guard() {
+    if ! echo "$cmd" | grep -q 'git commit' 2>/dev/null; then return 0; fi
+
+    local repo_dir="$HOME/proggs"
+    local staged
+    staged=$(git -C "$repo_dir" diff --cached --name-only 2>/dev/null || true)
+    [ -z "$staged" ] && return 0
+
+    local hook_files
+    hook_files=$(echo "$staged" | grep -E '\.(ps1|sh)$' | grep -i 'hook' || true)
+    [ -z "$hook_files" ] && return 0
+
+    local problems=""
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        local full_path="$repo_dir/$file"
+        [ ! -f "$full_path" ] && continue
+
+        if ! tail -5 "$full_path" | grep -qE '^exit[[:space:]]+0'; then
+            problems="$problems\n  - $file"
+        fi
+
+        if echo "$file" | grep -qiE '(session|auto-sync|invariant)'; then
+            if grep -qE 'exit[[:space:]]+1' "$full_path"; then
+                problems="$problems\n  - $file (contains exit 1 — forbidden in SessionStart hooks!)"
+            fi
+        fi
+    done <<< "$hook_files"
+
+    if [ -n "$problems" ]; then
+        local msg="Hook-Exit0-Guard: WARNUNG — folgende Hook-Dateien haben kein 'exit 0' am Ende:$problems\nBitte 'exit 0' am Ende jeder Hook-Datei hinzufuegen!"
+        echo -e "$msg"
+        echo -e "$msg" >&2
+        hook_log_warn "Hook files missing exit 0:$problems" 2>/dev/null || true
     fi
 }
 
@@ -127,5 +169,6 @@ check_dangerous
 check_forbidden
 check_shell_updates
 check_settings_write
+check_exit0_guard
 
 exit 0

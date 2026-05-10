@@ -19,17 +19,17 @@ if (-not (Test-Path $tsxExe)) {
     $tsxArgs = @()
 }
 
-# Ensure dependencies are installed
+# Ensure dependencies are installed (async — non-blocking)
+# If node_modules is missing, kick off npm install in background and skip reindex this session.
+# Next SessionStart will find node_modules and run reindex normally.
 $nodeModules = Join-Path $mcpDir "node_modules"
 if (-not (Test-Path $nodeModules)) {
-    $npmProc = Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow -PassThru
-    if ($npmProc) {
-        $npmProc.WaitForExit(120000)
-        if ($npmProc.ExitCode -ne 0) {
-            Write-Output "Reindex-Hook: npm install failed (exit $($npmProc.ExitCode))"
-            exit 0
-        }
-    }
+    Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow `
+        -RedirectStandardOutput (Join-Path $env:TEMP "reindex-npm-stdout.log") `
+        -RedirectStandardError (Join-Path $env:TEMP "reindex-npm-stderr.log") `
+        -ErrorAction SilentlyContinue
+    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') npm install gestartet (async). Reindex laeuft beim naechsten Session-Start." | Out-File "$env:TEMP\reindex-npm-install-flag.log" -Encoding UTF8
+    exit 0
 }
 
 # Auto-start Ollama if not running
@@ -58,37 +58,41 @@ try {
     }
 } catch {}
 
-# Run incremental reindex via session-reindex.ts
+# Run incremental reindex via session-reindex.ts (TRULY ASYNC — non-blocking)
+# Hook returns immediately; reindex completes in background.
+# Lock-file pattern prevents parallel reindex processes from concurrent sessions.
+$dbDir   = Join-Path $rootDir ".code-search"
+$lockFile = Join-Path $dbDir ".reindex.lock"
+$logFile  = Join-Path $dbDir "reindex.log"
+$maxLockAgeSec = 1800  # 30 minutes
+
+if (-not (Test-Path $dbDir)) {
+    New-Item -ItemType Directory -Path $dbDir -Force | Out-Null
+}
+
+# Stale-lock detection
+if (Test-Path $lockFile) {
+    $lockAge = (Get-Date) - (Get-Item $lockFile).LastWriteTime
+    if ($lockAge.TotalSeconds -lt $maxLockAgeSec) {
+        # Reindex already running (or just finished) — skip
+        exit 0
+    }
+    # Stale lock — overwrite
+    Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+}
+
 try {
     $reindexScript = Join-Path $mcpDir "src\session-reindex.ts"
     $allArgs = $tsxArgs + @($reindexScript, $rootDir)
-    $process = Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -NoNewWindow -PassThru -RedirectStandardOutput (Join-Path $env:TEMP "reindex-stdout.log") -RedirectStandardError (Join-Path $env:TEMP "reindex-stderr.log")
-    if ($process) {
-        $completed = $process.WaitForExit(300000)  # 5 minute timeout
-        if (-not $completed) {
-            $process.Kill()
-            Write-Output "Reindex-Hook: TIMEOUT nach 300s — Prozess beendet."
-            exit 0
-        }
-    }
-
-    if ($process.ExitCode -eq 0) {
-        $stdout = Get-Content (Join-Path $env:TEMP "reindex-stdout.log") -Raw -ErrorAction SilentlyContinue
-        Write-Output "Reindex-Hook: $stdout"
-        # C1 (ported from Gemini): Write index summary to whiteboard
-        try {
-            . "$PSScriptRoot/whiteboard-insert.ps1"
-            $files = if ($stdout -match '(\d+)\s*files') { $Matches[1] } else { "?" }
-            $chunks = if ($stdout -match '(\d+)\s*chunks') { $Matches[1] } else { "?" }
-            $ts = Get-Date -Format "yyyy-MM-dd HH:mm"
-            Replace-WhiteboardEntry -Section "Performance & Optimierung" -MatchPattern "Code-Suche Index" -Entry "- **[$ts] Code-Suche Index:** $files Dateien, $chunks Chunks indexiert."
-        } catch { }
-    } else {
-        $stderr = Get-Content (Join-Path $env:TEMP "reindex-stderr.log") -Raw -ErrorAction SilentlyContinue
-        Write-Output "Reindex-Hook: FEHLER (exit $($process.ExitCode)): $stderr"
-    }
+    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File $lockFile -Encoding UTF8
+    # Detached: no -Wait, no WaitForExit, hook exits immediately while child keeps running.
+    Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -WindowStyle Hidden `
+        -RedirectStandardOutput $logFile `
+        -RedirectStandardError (Join-Path $dbDir "reindex.err") `
+        -ErrorAction SilentlyContinue
 } catch {
-    Write-Output "Reindex-Hook: EXCEPTION — $($_.Exception.Message)"
+    Write-Output "Reindex-Hook: EXCEPTION beim Async-Start — $($_.Exception.Message)"
+    Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
 }
 
 exit 0

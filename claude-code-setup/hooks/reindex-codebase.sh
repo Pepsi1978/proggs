@@ -31,9 +31,13 @@ if [ ! -f "$REINDEX_SCRIPT" ]; then
     exit 0
 fi
 
-# Ensure dependencies are installed
+# Ensure dependencies are installed (async — non-blocking)
+# If node_modules missing, kick off npm install in background and skip reindex this session.
+# Next SessionStart will find node_modules and run reindex normally.
 if [ ! -d "$MCP_DIR/node_modules/better-sqlite3" ]; then
-    npm install --prefix "$MCP_DIR" 2>/dev/null
+    nohup npm install --prefix "$MCP_DIR" > /dev/null 2>&1 &
+    disown $! 2>/dev/null || true
+    exit 0
 fi
 
 # Auto-start Ollama if not running
