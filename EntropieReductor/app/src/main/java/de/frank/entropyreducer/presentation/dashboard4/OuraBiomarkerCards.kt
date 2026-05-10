@@ -94,6 +94,7 @@ internal fun OuraReadinessCard(
                 formatLabel = { "%.0f".format(it) },
                 colorFor = { scoreColor(it.toInt()) },
             )
+            ThirtyDayAverageLabel(values = last30Scores.map { it.toDouble() })
         }
     }
 }
@@ -121,6 +122,7 @@ internal fun OuraSleepScoreCard(
                 formatLabel = { "%.0f".format(it) },
                 colorFor = { scoreColor(it.toInt()) },
             )
+            ThirtyDayAverageLabel(values = last30Scores.map { it.toDouble() })
         }
     }
 }
@@ -447,6 +449,36 @@ private fun StatChip(label: String, value: String) {
     Column {
         Text(value, style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary)
         Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
+    }
+}
+
+/**
+ * Kleine Zeile direkt unter dem Mini-Verlaufschart die den 30-Tage-Mittelwert
+ * der Werte anzeigt — Frank-Vorgabe 2026-05-10: 'unter den Balken bitte da
+ * noch den Durchschnittwert anzeigen lassen fuer 30 Tage'. Der Mittelwert
+ * bekommt die gleiche Score-Farbe wie der Wert selbst (>=80 gruen, 60-79 gelb,
+ * <60 rot) damit Frank auf einen Blick sieht ob sein 30-Tage-Schnitt im
+ * 'guten' Bereich liegt.
+ */
+@Composable
+private fun ThirtyDayAverageLabel(values: List<Double>) {
+    val cosmos = LocalCosmos.current
+    if (values.size < 2) return
+    val avg = values.average()
+    val avgColor = scoreColor(avg.toInt())
+    Spacer(Modifier.height(6.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "30-Tage-Mittel: ",
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
+        Text(
+            text = "%.0f".format(avg),
+            style = MaterialTheme.typography.labelMedium,
+            color = avgColor,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

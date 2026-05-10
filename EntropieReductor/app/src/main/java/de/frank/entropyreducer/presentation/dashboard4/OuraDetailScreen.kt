@@ -131,7 +131,7 @@ fun OuraDetailScreen(
             item { OuraRangeSwitcher(current = range, onChange = { range = it }) }
             if (filtered.isNotEmpty()) {
                 item { OuraStatsRow(min = minV, max = maxV, avg = avgV, count = values.size, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
-                item { OuraVerlaufsChart(points = filtered, accent = pickAccent(metricKey, current), maxValue = maxValue, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
+                item { OuraVerlaufsChart(points = filtered, colorFor = colorForBar(metricKey), maxValue = maxValue) }
                 item {
                     Text(
                         text = "Alle Werte",
@@ -272,15 +272,16 @@ private fun StatCol(label: String, value: String) {
 
 /**
  * Verlaufs-Balkenchart fuer den Detail-Screen. Hoehe der Balken proportional
- * zum Wert, gefuellt mit Akzentfarbe. Anders als die Mini-Balken auf der Karte
- * ist hier mehr Platz fuer Y-Achsen-Beschriftung und Datums-Labels.
+ * zum Wert. Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine eigene Farbe
+ * abhaengig vom Wert (gleiche 80/60-Schwellen wie auf der Karte). `colorFor`
+ * mappt einen Balkenwert auf seine Farbe. Damit zeigt der ganze Verlauf auf
+ * einen Blick wo gute (gruen), mittlere (gelb) und schwache (rot) Tage waren.
  */
 @Composable
 private fun OuraVerlaufsChart(
     points: List<Pair<String, Double>>,
-    accent: Color,
+    colorFor: (Double) -> Color,
     maxValue: Double,
-    isResilience: Boolean,
 ) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -299,7 +300,7 @@ private fun OuraVerlaufsChart(
                             .weight(1f)
                             .height((140.dp * frac).coerceAtLeast(2.dp))
                             .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
-                            .background(accent.copy(alpha = 0.7f)),
+                            .background(colorFor(v).copy(alpha = 0.85f)),
                     )
                 }
             }
@@ -335,6 +336,29 @@ private fun pickAccent(metricKey: String, current: Double?): Color =
         levelToColorFromRank(current, CosmosColors.AccentPrimary)
     } else {
         scoreColor(current?.toInt())
+    }
+
+/**
+ * Farbgebung pro Balken im Verlaufs-Chart (Frank-Vorgabe 2026-05-10): jeder
+ * Balken bekommt seine eigene Farbe abhaengig vom Wert.
+ *  - Score-Karten (Readiness, Schlaf-Score, Aktivität): scoreColor mit
+ *    80/60-Schwellen (>=80 gruen, 60-79 gelb, <60 rot).
+ *  - Resilienz: Rang-Mapping (0=rot, 1=gelb, 2=blau, 3-4=gruen) wie auf der
+ *    Karte selbst.
+ */
+private fun colorForBar(metricKey: String): (Double) -> Color =
+    if (metricKey == OuraMetricKey.RESILIENCE) {
+        { rank ->
+            when (rank.toInt()) {
+                0 -> CosmosColors.Critical
+                1 -> CosmosColors.Warning
+                2 -> CosmosColors.AccentPrimary
+                3, 4 -> CosmosColors.Success
+                else -> CosmosColors.AccentPrimary
+            }
+        }
+    } else {
+        { v -> scoreColor(v.toInt()) }
     }
 
 private fun levelToColorFromRank(rank: Double?, fallback: Color): Color =
