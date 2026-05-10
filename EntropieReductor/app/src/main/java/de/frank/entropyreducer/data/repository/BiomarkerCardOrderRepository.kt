@@ -78,16 +78,44 @@ class BiomarkerCardOrderRepository @Inject constructor(
 
     /**
      * Verschmilzt die gespeicherte Reihenfolge mit der aktuellen Default-Liste:
-     * - Bekannte gespeicherte IDs in ihrer Reihenfolge zuerst
-     * - Neue Default-IDs (die in der gespeicherten Liste fehlen) ans Ende
+     * - Bekannte gespeicherte IDs behalten ihre vom Benutzer gewaehlte Reihenfolge
+     * - Neue Default-IDs werden an ihrer DEFAULT-Nachbarposition eingefuegt,
+     *   nicht stumpf ans Ende — sonst landen z.B. neue Mini-Karten weit unten
+     *   in der Liste statt bei den anderen Mini-Karten oben (Frank-Befund 2026-05-10).
      * - IDs aus dem gespeicherten String die nicht mehr existieren werden
-     *   herausgefiltert
+     *   herausgefiltert.
+     *
+     * Algorithmus fuer "neue ID einfuegen":
+     *  1. Default-Index der neuen ID bestimmen.
+     *  2. Vom Default-Index nach hinten den naechsten Vorgaenger suchen, der
+     *     bereits in validSaved steht.
+     *  3. Neue ID direkt nach diesem Vorgaenger einfuegen. Wenn kein Vorgaenger
+     *     existiert (neue ID war erste in DEFAULT_ORDER), an Position 0 setzen.
      */
     private fun mergeWithDefaults(saved: List<String>): List<String> {
         if (saved.isEmpty()) return BiomarkerCardId.DEFAULT_ORDER
-        val validSaved = saved.filter { it in BiomarkerCardId.DEFAULT_ORDER }.distinct()
+        val validSaved = saved.filter { it in BiomarkerCardId.DEFAULT_ORDER }
+            .distinct()
+            .toMutableList()
         val missing = BiomarkerCardId.DEFAULT_ORDER.filterNot { it in validSaved }
-        return validSaved + missing
+        for (newId in missing) {
+            val defaultIdx = BiomarkerCardId.DEFAULT_ORDER.indexOf(newId)
+            var insertAfter: String? = null
+            for (i in (defaultIdx - 1) downTo 0) {
+                val prevId = BiomarkerCardId.DEFAULT_ORDER[i]
+                if (prevId in validSaved) {
+                    insertAfter = prevId
+                    break
+                }
+            }
+            if (insertAfter == null) {
+                validSaved.add(0, newId)
+            } else {
+                val insertIdx = validSaved.indexOf(insertAfter) + 1
+                validSaved.add(insertIdx, newId)
+            }
+        }
+        return validSaved
     }
 
     private companion object {
