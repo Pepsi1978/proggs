@@ -228,15 +228,9 @@ class AmazfitRepository @Inject constructor(
             val date = day.date ?: return@mapNotNull null
             val capturedAt = parseDateAtMidnight(date) ?: return@mapNotNull null
             val parsed = parseSummaryJson(day.summary)
-            // DIAGNOSE-SONDE Frank-Live-Test 2026-05-09: einmal die echten Schluessel
-            // loggen damit wir sehen welche Feldnamen Zepp wirklich verwendet (z.B.
-            // "stp" statt "steps", "slp.lt" statt "sleep_light"). Wird nur fuer den
-            // ersten geparsten Tag geloggt um Logcat nicht zu fluten.
-            if (loggedSummaryOnce.compareAndSet(false, true) && parsed.isNotEmpty()) {
-                val keys = parsed.keys.sorted().joinToString(", ")
-                Log.i(TAG, "PARSER-PROBE date=$date keys=[$keys]")
-                Log.i(TAG, "PARSER-PROBE raw=${day.summary?.take(400)}")
-            }
+            // PARSER-PROBE-Diagnose-Sonde entfernt (Loop 1 Performance-Audit
+            // 2026-05-10): Datenschutz (Zepp-Rohdaten im Logcat) + ungenutzte
+            // String-Allokation. Field-Namen sind unten dokumentiert.
             // Echte Zepp-Schluesselnamen aus Live-Sonde 2026-05-09:
             //   stp_ttl/ttl  = Schritte gesamt
             //   stp_dis/dis  = Distanz in Metern
@@ -313,13 +307,9 @@ class AmazfitRepository @Inject constructor(
                 return emptyList()
             }
         val items = resp.data?.summary ?: return emptyList()
-        // DIAGNOSE-SONDE: einmal das erste Workout-Item komplett loggen damit wir
-        // sehen welche type-Codes und Felder Zepp wirklich liefert.
-        if (loggedWorkoutOnce.compareAndSet(false, true) && items.isNotEmpty()) {
-            val first = items.first()
-            Log.i(TAG, "WORKOUT-PROBE first=$first")
-            Log.i(TAG, "WORKOUT-PROBE bodyPreview=${bodyString.take(800)}")
-        }
+        // WORKOUT-PROBE-Diagnose-Sonde entfernt (Loop 1 Performance-Audit
+        // 2026-05-10): Datenschutz (Workout-Rohdaten + GPS im Logcat) +
+        // 800-Zeichen-String-Allokation pro Sync.
         return items.mapNotNull { s ->
             val trackId = s.trackId ?: return@mapNotNull null
             // Zepp-Server liefert numerische Felder als Strings — defensiv parsen.
@@ -497,8 +487,9 @@ class AmazfitRepository @Inject constructor(
                 )
                 val status = resp.code()
                 val body = runCatching { resp.body()?.string() ?: resp.errorBody()?.string() }.getOrNull()
-                val preview = body?.take(500)?.replace("\n", " ")
-                Log.i(TAG, "EVENTS label=$label eventType=$eventType status=$status bodyLen=${body?.length ?: 0} preview=$preview")
+                // EVENTS-preview-Log entfernt (Loop 1 Performance-Audit 2026-05-10):
+                // 3x pro Sync eager 500-Zeichen take + replace ohne BuildConfig.DEBUG-
+                // Guard. Datenschutz (Zepp-Event-Rohdaten im Logcat) + Heap-Allokation.
                 if (status in 200..299) body else null
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 throw ce
@@ -655,9 +646,6 @@ class AmazfitRepository @Inject constructor(
             isLenient = true
             coerceInputValues = true
         }
-        // Diagnose-Flag: einmaliges Loggen der echten Zepp-Schluessel im Summary.
-        private val loggedSummaryOnce = java.util.concurrent.atomic.AtomicBoolean(false)
-        private val loggedWorkoutOnce = java.util.concurrent.atomic.AtomicBoolean(false)
     }
 }
 

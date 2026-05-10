@@ -8,10 +8,12 @@ import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
+import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.MemorySource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -53,16 +55,26 @@ import javax.inject.Singleton
 class InitialDataMigrator @Inject constructor(
     @ApplicationContext private val context: Context,
     private val scientistDb: ScientistDatabase,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    /**
+     * Performance-Fix Loop 1 (2026-05-10): Vorher lief der Schreibvorgang in
+     * runBlocking{} auf dem Main-Thread (App.onCreate). Bei 50-200 geretteten
+     * Eintraegen + kalter Room-DB blockierte das den Main-Thread 80-300 ms,
+     * im Worst-Case ANR-Risiko. Jetzt async ueber ApplicationScope (Dispatchers.IO,
+     * SupervisorJob). Das KEY_DONE-Flag wird erst NACH den DAO-Upserts gesetzt —
+     * ein Process-Kill mid-write fuehrt also zu einem erneuten Versuch beim
+     * naechsten Start (sofern die alte DB-Datei noch existiert).
+     */
     fun writeRescuedData(rescued: RescuedData?) {
         if (rescued == null) return
         if (prefs.getBoolean(KEY_DONE, false)) return
 
-        runBlocking {
+        applicationScope.launch {
             withContext(Dispatchers.IO) {
                 runCatching {
                     if (rescued.insights.isNotEmpty() || rescued.memories.isNotEmpty()) {
@@ -75,10 +87,10 @@ class InitialDataMigrator @Inject constructor(
                         rescued.insights.forEach { scientistDb.insightDao().upsert(it) }
                         rescued.memories.forEach { scientistDb.memoryDao().upsert(it) }
                     }
+                    prefs.edit { putBoolean(KEY_DONE, true) }
                 }.onFailure { ex ->
-                    Log.w(TAG, "Migration write fehlgeschlagen", ex)
+                    Log.w(TAG, "Migration write fehlgeschlagen — wird beim naechsten Start erneut versucht", ex)
                 }
-                prefs.edit { putBoolean(KEY_DONE, true) }
             }
         }
     }
