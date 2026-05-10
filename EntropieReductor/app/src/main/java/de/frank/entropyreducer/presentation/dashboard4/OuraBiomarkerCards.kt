@@ -453,30 +453,31 @@ private fun StatChip(label: String, value: String) {
 }
 
 /**
- * Kleine Zeile direkt unter dem Mini-Verlaufschart die den 30-Tage-Mittelwert
+ * Kleine Zeile direkt unter dem Mini-Verlaufschart die den 30-Tage-Durchschnitt
  * der Werte anzeigt — Frank-Vorgabe 2026-05-10: 'unter den Balken bitte da
- * noch den Durchschnittwert anzeigen lassen fuer 30 Tage'. Der Mittelwert
- * bekommt die gleiche Score-Farbe wie der Wert selbst (>=80 gruen, 60-79 gelb,
- * <60 rot) damit Frank auf einen Blick sieht ob sein 30-Tage-Schnitt im
- * 'guten' Bereich liegt.
+ * noch den Durchschnittwert anzeigen lassen fuer 30 Tage' und die Zahl 'als
+ * schwarze Zahl, egal was der Durchschnitt'. Schwarz bedeutet hier
+ * cosmos.textPrimary (also der App-Standardtext, im Dark-Mode hell statt
+ * schwarz — der hoechste Kontrast zum Karten-Hintergrund). Frank's
+ * Begruendung war dass keine Farbinterpretation noetig sein soll — die Zahl
+ * steht einfach da als Zahl.
  */
 @Composable
 private fun ThirtyDayAverageLabel(values: List<Double>) {
     val cosmos = LocalCosmos.current
     if (values.size < 2) return
     val avg = values.average()
-    val avgColor = scoreColor(avg.toInt())
     Spacer(Modifier.height(6.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "30-Tage-Mittel: ",
+            text = "30-Tage-Durchschnitt: ",
             style = MaterialTheme.typography.labelSmall,
             color = cosmos.textSecondary,
         )
         Text(
             text = "%.0f".format(avg),
             style = MaterialTheme.typography.labelMedium,
-            color = avgColor,
+            color = cosmos.textPrimary,
             fontWeight = FontWeight.SemiBold,
         )
     }

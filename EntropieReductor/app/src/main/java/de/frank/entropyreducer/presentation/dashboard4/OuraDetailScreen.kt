@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -131,7 +132,14 @@ fun OuraDetailScreen(
             item { OuraRangeSwitcher(current = range, onChange = { range = it }) }
             if (filtered.isNotEmpty()) {
                 item { OuraStatsRow(min = minV, max = maxV, avg = avgV, count = values.size, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
-                item { OuraVerlaufsChart(points = filtered, colorFor = colorForBar(metricKey), maxValue = maxValue) }
+                item {
+                    OuraVerlaufsChart(
+                        points = filtered,
+                        colorFor = colorForBar(metricKey),
+                        maxValue = maxValue,
+                        yLabels = yAxisLabelsFor(metricKey, maxValue),
+                    )
+                }
                 item {
                     Text(
                         text = "Alle Werte",
@@ -282,29 +290,48 @@ private fun OuraVerlaufsChart(
     points: List<Pair<String, Double>>,
     colorFor: (Double) -> Color,
     maxValue: Double,
+    yLabels: List<String>,
 ) {
     val cosmos = LocalCosmos.current
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text("Verlauf", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().height(140.dp),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                points.forEach { (_, v) ->
-                    val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height((140.dp * frac).coerceAtLeast(2.dp))
-                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
-                            .background(colorFor(v).copy(alpha = 0.85f)),
-                    )
+            // Chart-Bereich: Y-Achsen-Beschriftung links, Balken rechts.
+            // Beide haben dieselbe feste Hoehe damit Achsen-Labels und Balken
+            // bottom-aligned bleiben. Frank-Vorgabe 2026-05-10: Y-Achse damit
+            // sichtbar ist welcher Wert ein Balken anzeigt.
+            Row(modifier = Modifier.fillMaxWidth().height(140.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxHeight().padding(end = 6.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    yLabels.forEach { lbl ->
+                        Text(
+                            text = lbl,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = cosmos.textSecondary,
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    points.forEach { (_, v) ->
+                        val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height((140.dp * frac).coerceAtLeast(2.dp))
+                                .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                                .background(colorFor(v).copy(alpha = 0.85f)),
+                        )
+                    }
                 }
             }
-            // Datums-Labels alle 5 Tage damit's nicht ueberladen wirkt.
+            // Datums-Labels nur am Anfang und Ende damit's nicht ueberladen wirkt.
             Spacer(Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 val first = points.firstOrNull()?.first ?: ""
@@ -336,6 +363,20 @@ private fun pickAccent(metricKey: String, current: Double?): Color =
         levelToColorFromRank(current, CosmosColors.AccentPrimary)
     } else {
         scoreColor(current?.toInt())
+    }
+
+/**
+ * Y-Achsen-Beschriftungen fuer den Verlaufs-Chart (Frank-Vorgabe 2026-05-10).
+ * Werden von oben nach unten ausgegeben (hoechster Wert oben). Score-Karten
+ * nutzen 100/75/50/25/0, Resilienz nutzt 4/3/2/1/0 (Rang-Skala).
+ */
+private fun yAxisLabelsFor(metricKey: String, maxValue: Double): List<String> =
+    if (metricKey == OuraMetricKey.RESILIENCE) {
+        listOf("4", "3", "2", "1", "0")
+    } else {
+        // 5 Stufen gleichmaessig verteilt zwischen 0 und maxValue (typisch 100).
+        val step = maxValue / 4.0
+        (4 downTo 0).map { i -> (i * step).toInt().toString() }
     }
 
 /**
