@@ -801,9 +801,9 @@ private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
         today -> "Heute"
         today.minusDays(1) -> "Gestern"
         today.minusDays(2) -> "Vorgestern"
-        else -> selDate.format(
-            java.time.format.DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", java.util.Locale.GERMANY),
-        )
+        // Performance-Audit Loop 2 (2026-05-10): Top-level Formatter (DATE_SELECTOR_FMT)
+        // statt Allokation pro Recomposition.
+        else -> selDate.format(DATE_SELECTOR_FMT)
     }
     val isToday = selDate == today
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -1262,6 +1262,15 @@ private fun SkinTempDeltaCard(
     )
 }
 
+// Performance-Audit Loop 2 (2026-05-10): top-level DateTimeFormatter statt
+// Allokation pro formatRelativeSyncTime-Aufruf. DateTimeFormatter ist thread-safe.
+private val SYNC_TIME_FMT: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+private val SYNC_DATE_FMT: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("d.M. HH:mm")
+private val DATE_SELECTOR_FMT: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", java.util.Locale.GERMANY)
+
 private fun formatRelativeSyncTime(syncMs: Long): String {
     if (syncMs <= 0L) return "noch nie"
     val now = System.currentTimeMillis()
@@ -1275,12 +1284,10 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
             val nowInstant = java.time.Instant.ofEpochMilli(now)
                 .atZone(java.time.ZoneId.systemDefault())
             val sameDay = syncInstant.toLocalDate() == nowInstant.toLocalDate()
-            val timeFmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
             if (sameDay) {
-                "heute ${syncInstant.format(timeFmt)}"
+                "heute ${syncInstant.format(SYNC_TIME_FMT)}"
             } else {
-                val dateFmt = java.time.format.DateTimeFormatter.ofPattern("d.M. HH:mm")
-                syncInstant.format(dateFmt)
+                syncInstant.format(SYNC_DATE_FMT)
             }
         }
     }
@@ -1655,8 +1662,12 @@ private fun BiomarkerCardForId(
 @Composable
 private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgHrv = state.history30Days.mapNotNull { it.hrvMs }
-        .takeIf { it.isNotEmpty() }?.average()
+    // Performance-Audit Loop 2 (2026-05-10): mapNotNull+average in
+    // remember(state.history30Days) statt pro Recomposition (z.B. Scroll im
+    // LazyVerticalGrid). 4x in dieser Datei (HRV/RHR/SleepTotal/SleepPerformance).
+    val avgHrv = remember(state.history30Days) {
+        state.history30Days.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
+    }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "HRV",
@@ -1671,8 +1682,9 @@ private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
 @Composable
 private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgRhr = state.history30Days.mapNotNull { it.restingHeartRate }
-        .takeIf { it.isNotEmpty() }?.average()
+    val avgRhr = remember(state.history30Days) {
+        state.history30Days.mapNotNull { it.restingHeartRate }.takeIf { it.isNotEmpty() }?.average()
+    }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Herzfrequenz",
@@ -1688,8 +1700,9 @@ private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
 @Composable
 private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgSleep = state.history30Days.mapNotNull { it.sleepTotalMinutes }
-        .takeIf { it.isNotEmpty() }?.average()
+    val avgSleep = remember(state.history30Days) {
+        state.history30Days.mapNotNull { it.sleepTotalMinutes }.takeIf { it.isNotEmpty() }?.average()
+    }
     val sleepMin = latest?.sleepTotalMinutes ?: 0
     val sleepLabel = if (sleepMin == 0) {
         "—"
@@ -1710,8 +1723,9 @@ private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -
 @Composable
 private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgSleepPerf = state.history30Days.mapNotNull { it.sleepPerformance }
-        .takeIf { it.isNotEmpty() }?.average()
+    val avgSleepPerf = remember(state.history30Days) {
+        state.history30Days.mapNotNull { it.sleepPerformance }.takeIf { it.isNotEmpty() }?.average()
+    }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Performance",

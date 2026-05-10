@@ -125,23 +125,30 @@ fun HealthConnectDetailScreen(
     // 30 Tage reichen fuer den Default-Range. Fuer 90T / Alle laden wir on-demand
     // hier nicht nach (wuerde ein eigenes ViewModel-Feld brauchen) — Frank kriegt
     // die letzten 30 Tage als Default und kann das spaeter erweitern.
-    val history: List<Pair<Long, Double>> = when (metricKey) {
-        HealthConnectMetricKey.WEIGHT -> weight.history30d
-        HealthConnectMetricKey.BODY_FAT -> weight.bodyFatHistory30d
-        HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
-        HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
-        HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
-        HealthConnectMetricKey.MUSCLE_MASS -> {
-            // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
-            // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
-            val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
-            weight.leanBodyMassHistory30d.map { (ts, lean) ->
-                val bone = boneByMs[ts]
-                    ?: weight.boneMassHistory30d.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
-                ts to (if (bone != null) lean - bone else lean)
+    //
+    // Performance-Audit Loop 2 (2026-05-10): when-Block + .associate + .map werden
+    // einmalig in remember(metricKey, weight) berechnet statt bei jeder Recomposition
+    // (z.B. bei Range-Filter-Click). Bei MUSCLE_MASS sparen wir O(N) Map-Aufbau +
+    // O(M) List-Transform pro Recomposition.
+    val history: List<Pair<Long, Double>> = remember(metricKey, weight) {
+        when (metricKey) {
+            HealthConnectMetricKey.WEIGHT -> weight.history30d
+            HealthConnectMetricKey.BODY_FAT -> weight.bodyFatHistory30d
+            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
+            HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
+            HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
+            HealthConnectMetricKey.MUSCLE_MASS -> {
+                // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
+                // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
+                val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
+                weight.leanBodyMassHistory30d.map { (ts, lean) ->
+                    val bone = boneByMs[ts]
+                        ?: weight.boneMassHistory30d.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
+                    ts to (if (bone != null) lean - bone else lean)
+                }
             }
+            else -> emptyList()
         }
-        else -> emptyList()
     }
     val latest: Double? = when (metricKey) {
         HealthConnectMetricKey.WEIGHT -> weight.latestKg
@@ -179,12 +186,29 @@ fun HealthConnectDetailScreen(
     }
     val cutoffMs = if (cutoffDays == Int.MAX_VALUE) 0L
         else System.currentTimeMillis() - cutoffDays.toLong() * 24L * 60L * 60L * 1000L
-    val filtered = history.filter { it.first >= cutoffMs }
-    val values = filtered.map { it.second }
-    val minV = values.minOrNull()
-    val maxV = values.maxOrNull()
-    val avgV = values.takeIf { it.isNotEmpty() }?.average()
-    val latestTs = history.maxByOrNull { it.first }?.first
+    // Performance-Audit Loop 2 (2026-05-10): 6 Listenoperationen pro Recomposition
+    // ueber bis zu 200 Datenpunkten — jetzt einmalig in remember(history, cutoffMs).
+    val stats = remember(history, cutoffMs) {
+        val filteredList = history.filter { it.first >= cutoffMs }
+        val valuesList = filteredList.map { it.second }
+        DetailStats(
+            filtered = filteredList,
+            values = valuesList,
+            minV = valuesList.minOrNull(),
+            maxV = valuesList.maxOrNull(),
+            avgV = valuesList.takeIf { it.isNotEmpty() }?.average(),
+            latestTs = history.maxByOrNull { it.first }?.first,
+        )
+    }
+    val filtered = stats.filtered
+    val values = stats.values
+    val minV = stats.minV
+    val maxV = stats.maxV
+    val avgV = stats.avgV
+    val latestTs = stats.latestTs
+    // Performance-Audit Loop 2 (2026-05-10): sortedByDescending in
+    // remember(filtered) statt pro Recomposition. key = it.first im items{}.
+    val sortedItems = remember(filtered) { filtered.sortedByDescending { it.first } }
 
     CosmosScaffold(
         title = spec.title,
@@ -269,7 +293,7 @@ fun HealthConnectDetailScreen(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-                items(filtered.sortedByDescending { it.first }) { (ts, value) ->
+                items(sortedItems, key = { it.first }) { (ts, value) ->
                     HcValueRow(
                         timestampMs = ts,
                         value = value,
@@ -480,7 +504,26 @@ private fun HcValueRow(
     }
 }
 
-private fun formatHcDate(ms: Long): String {
-    val fmt = SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
-    return fmt.format(Date(ms))
+/**
+ * Vorberechnete Filter-Statistik fuer den HealthConnect-Detail-Screen.
+ * Performance-Audit Loop 2 (2026-05-10): bundelt 6 Listenoperationen die
+ * sonst pro Recomposition ueber bis zu 200 Datenpunkten liefen.
+ */
+private data class DetailStats(
+    val filtered: List<Pair<Long, Double>>,
+    val values: List<Double>,
+    val minV: Double?,
+    val maxV: Double?,
+    val avgV: Double?,
+    val latestTs: Long?,
+)
+
+// Performance-Audit Loop 2 (2026-05-10): SimpleDateFormat ist nicht thread-safe,
+// aber teuer zu allokieren (Pattern-Kompilierung + Locale-Lookup). ThreadLocal
+// gibt jedem Thread eine eigene Instanz — keine Allokation pro Listenzeile mehr.
+private val HC_DATE_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+    SimpleDateFormat("dd.MM.yyyy", Locale.GERMAN)
 }
+
+private fun formatHcDate(ms: Long): String =
+    HC_DATE_FMT.get()!!.format(Date(ms))
