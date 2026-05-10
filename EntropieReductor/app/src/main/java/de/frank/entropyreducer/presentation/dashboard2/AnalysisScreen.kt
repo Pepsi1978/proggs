@@ -130,7 +130,7 @@ fun AnalysisScreen(
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                     Spacer(Modifier.weight(1f))
-                                    TrendRange.values().forEach { r ->
+                                    ALL_TREND_RANGES.forEach { r ->
                                         FilterChip(
                                             selected = state.trendRange == r,
                                             onClick = { vm.setRange(r) },
@@ -377,6 +377,10 @@ private fun TrendTile(deltaPct: Int, modifier: Modifier = Modifier) {
 }
 
 private val FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM. HH:mm")
+
+// Performance-Audit Loop 6 (2026-05-10): TrendRange-Werte als top-level
+// statt enum.values()-Array-Allokation pro Recomposition.
+private val ALL_TREND_RANGES: List<TrendRange> = TrendRange.entries.toList()
 
 private fun formatTimestamp(ms: Long): String {
     if (ms == 0L) return "—"
