@@ -98,6 +98,12 @@ fun BiomarkerHostScreen(
                     .getReadPermission(androidx.health.connect.client.records.BodyFatRecord::class),
                 androidx.health.connect.client.permission.HealthPermission
                     .getReadPermission(androidx.health.connect.client.records.LeanBodyMassRecord::class),
+                // Frank-Befund 2026-05-10: ohne History-Permission begrenzt sich
+                // die Lese-Reichweite auf 30 Tage — Frank's letzte Wiegung war
+                // aber im Januar, also ueber 100 Tage her. Konstanten-Name in
+                // der aktuellen Lib-Version (alpha07) noch nicht verfuegbar,
+                // daher direkt der Plattform-String.
+                "android.permission.health.READ_HEALTH_DATA_HISTORY",
             ),
         )
     }

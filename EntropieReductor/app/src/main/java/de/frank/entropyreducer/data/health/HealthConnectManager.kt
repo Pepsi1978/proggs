@@ -47,12 +47,28 @@ class HealthConnectManager @Inject constructor(
     )
 
     /**
+     * Frank-Befund 2026-05-10: Ohne PERMISSION_READ_HEALTH_DATA_HISTORY ist die
+     * Lese-Reichweite auf die letzten 30 Tage begrenzt — was bei seltenen
+     * Wiegungen (Frank's letzte Messung vom 14. Januar) bedeutet, dass alle
+     * Read-Methoden 0 records zurueckgeben. Diese Permission hebt das 30-Tage-
+     * Limit auf.
+     */
+    private val historyPermission: Set<String> = setOf(
+        // Frank-Befund 2026-05-10: PERMISSION_READ_HEALTH_DATA_HISTORY-Konstante
+        // existiert in der aktuellen Health-Connect-Client-Version (1.1.0-alpha07)
+        // noch nicht. Wir nutzen direkt den Permission-String aus der Android-
+        // Plattform — der ist seit Android 14 stabil.
+        "android.permission.health.READ_HEALTH_DATA_HISTORY",
+    )
+
+    /**
      * Komplette Set aller noetigen READ-Permissions — wird beim einmaligen
      * Permission-Request an den ActivityResultContract uebergeben, damit Frank
-     * mit einem Klick alle drei Berechtigungen erteilen kann.
+     * mit einem Klick alle Berechtigungen erteilen kann (drei Datentypen +
+     * History-Zugriff).
      */
     private val allReadPermissions: Set<String> =
-        weightPermissions + bodyFatPermissions + leanBodyMassPermissions
+        weightPermissions + bodyFatPermissions + leanBodyMassPermissions + historyPermission
 
     /** Health Connect ist auf dem Geraet verfuegbar (App installiert oder Modul aktiv). */
     fun isAvailable(): Boolean {
@@ -82,6 +98,25 @@ class HealthConnectManager @Inject constructor(
         val c = client() ?: return false
         val granted = c.permissionController.getGrantedPermissions()
         return granted.containsAll(leanBodyMassPermissions)
+    }
+
+    /** Pruefen ob READ_HEALTH_DATA_HISTORY erteilt ist (Frank-Befund 2026-05-10). */
+    suspend fun hasHistoryReadPermission(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(historyPermission)
+    }
+
+    /**
+     * Pruefen ob ALLE noetigen Permissions erteilt sind: Weight + BodyFat +
+     * LeanBodyMass + History. Wenn auch nur eine fehlt, liefert die Lese-
+     * Schicht entweder 0 records (Datentyp-Permission fehlt) oder ein limitiertes
+     * 30-Tage-Fenster (History-Permission fehlt).
+     */
+    suspend fun hasAllReadPermissions(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(allReadPermissions)
     }
 
     /**

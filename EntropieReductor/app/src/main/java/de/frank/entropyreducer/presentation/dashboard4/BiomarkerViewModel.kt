@@ -196,7 +196,9 @@ class BiomarkerViewModel @Inject constructor(
      */
     fun refreshWeight() {
         viewModelScope.launch {
+            android.util.Log.i("BiomarkerVM", "refreshWeight() called")
             val available = healthConnect.isAvailable()
+            android.util.Log.i("BiomarkerVM", "  HC available=$available")
             if (!available) {
                 _weight.value = WeightState(healthConnectAvailable = false)
                 return@launch
@@ -204,16 +206,19 @@ class BiomarkerViewModel @Inject constructor(
             val weightOk = healthConnect.hasWeightReadPermission()
             val bodyFatOk = healthConnect.hasBodyFatReadPermission()
             val leanOk = healthConnect.hasLeanBodyMassReadPermission()
-            // permissionGranted = ALLE drei erteilt. Wenn Frank in der Permission-
-            // Sheet eine ablehnt, faellt der Block hierher und die Karten zeigen
-            // "Tippen" damit er den Flow nochmal starten kann.
-            if (!(weightOk && bodyFatOk && leanOk)) {
+            val historyOk = healthConnect.hasHistoryReadPermission()
+            android.util.Log.i("BiomarkerVM", "  permissions: weight=$weightOk bodyFat=$bodyFatOk lean=$leanOk history=$historyOk")
+            // permissionGranted = ALLE noetigen erteilt (drei Datentypen + History).
+            // Ohne History-Permission lesen wir nur 30 Tage zurueck — bei seltenen
+            // Wiegungen ist das oft leer (Frank-Befund 2026-05-10).
+            if (!(weightOk && bodyFatOk && leanOk && historyOk)) {
                 _weight.value = WeightState(
                     healthConnectAvailable = true,
                     permissionGranted = false,
                 )
                 return@launch
             }
+            android.util.Log.i("BiomarkerVM", "  alle permissions ok — lese Werte ...")
             // Loading-State setzen damit die Karten einen Spinner zeigen koennen
             _weight.value = _weight.value.copy(isLoading = true)
             val latestKg = healthConnect.readLatestWeightKg()
