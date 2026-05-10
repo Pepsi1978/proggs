@@ -1618,6 +1618,15 @@ private fun RescoreBanner(progress: RescoreProgress) {
     }
 }
 
+// Performance-Audit Loop 5 (2026-05-10): SimpleDateFormat ist nicht thread-safe,
+// aber teuer. ThreadLocal pro Pattern statt Allokation pro Aufruf.
+private val BACKUP_TIME_TODAY_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+    SimpleDateFormat("HH:mm", Locale.GERMAN)
+}
+private val BACKUP_TIME_OLDER_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+    SimpleDateFormat("dd.MM. HH:mm", Locale.GERMAN)
+}
+
 /** Formatiert einen Epoch-ms-Zeitstempel in "HH:mm" (heute) oder "dd.MM. HH:mm" (sonst). */
 private fun formatBackupTime(epochMs: Long): String {
     val now = System.currentTimeMillis()
@@ -1631,6 +1640,6 @@ private fun formatBackupTime(epochMs: Long): String {
             set(java.util.Calendar.MILLISECOND, 0)
         }.timeInMillis
     }
-    val pattern = if (epochMs >= today0) "HH:mm" else "dd.MM. HH:mm"
-    return SimpleDateFormat(pattern, Locale.GERMAN).format(Date(epochMs))
+    val fmt = if (epochMs >= today0) BACKUP_TIME_TODAY_FMT.get()!! else BACKUP_TIME_OLDER_FMT.get()!!
+    return fmt.format(Date(epochMs))
 }
