@@ -200,6 +200,29 @@ class EncryptedSecretsStore @Inject constructor(
         prefs.edit().clear().apply()
     }
 
+    /**
+     * Performance-Audit Loop 4 (2026-05-10): Atomare Batch-Edits beim Logout.
+     * Vorher fuehrten 4 separate Property-Setter zu 4× Keystore-Roundtrip + 4×
+     * Disk-Write. Jetzt 1× Batch-Transaktion.
+     */
+    fun clearGoogleAuthState() {
+        prefs.edit()
+            .remove(KEY_GOOGLE_ACCESS)
+            .remove(KEY_GOOGLE_REFRESH)
+            .remove(KEY_GOOGLE_EXPIRY)
+            .remove(KEY_GOOGLE_AUTH_STATE)
+            .apply()
+    }
+
+    fun clearWhoopAuthState() {
+        prefs.edit()
+            .remove(KEY_WHOOP_ACCESS)
+            .remove(KEY_WHOOP_REFRESH)
+            .remove(KEY_WHOOP_EXPIRY)
+            .remove(KEY_WHOOP_AUTH_STATE)
+            .apply()
+    }
+
     companion object {
         private const val FILE_NAME = "encrypted_secrets"
         private const val KEY_GROQ = "groq_api_key"

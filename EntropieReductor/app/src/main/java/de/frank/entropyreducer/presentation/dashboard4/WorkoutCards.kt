@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -301,14 +302,18 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
 @Composable
 private fun HrZonesSection(workout: WhoopWorkoutEntity) {
     val cosmos = LocalCosmos.current
-    val zones = listOf(
-        ZoneInfo("Z0", "Ruhe", workout.zoneZeroMilli ?: 0L, ZONE0_COLOR),
-        ZoneInfo("Z1", "Sehr leicht", workout.zoneOneMilli ?: 0L, ZONE1_COLOR),
-        ZoneInfo("Z2", "Leicht", workout.zoneTwoMilli ?: 0L, ZONE2_COLOR),
-        ZoneInfo("Z3", "Mittel", workout.zoneThreeMilli ?: 0L, ZONE3_COLOR),
-        ZoneInfo("Z4", "Hart", workout.zoneFourMilli ?: 0L, ZONE4_COLOR),
-        ZoneInfo("Z5", "Maximum", workout.zoneFiveMilli ?: 0L, ZONE5_COLOR),
-    )
+    // Performance-Audit Loop 4 (2026-05-10): Zones-Liste in remember(workout) statt
+    // pro Recomposition (vorher 6 ZoneInfo-Allokationen + chunked-Sub-Listen).
+    val zones = remember(workout) {
+        listOf(
+            ZoneInfo("Z0", "Ruhe", workout.zoneZeroMilli ?: 0L, ZONE0_COLOR),
+            ZoneInfo("Z1", "Sehr leicht", workout.zoneOneMilli ?: 0L, ZONE1_COLOR),
+            ZoneInfo("Z2", "Leicht", workout.zoneTwoMilli ?: 0L, ZONE2_COLOR),
+            ZoneInfo("Z3", "Mittel", workout.zoneThreeMilli ?: 0L, ZONE3_COLOR),
+            ZoneInfo("Z4", "Hart", workout.zoneFourMilli ?: 0L, ZONE4_COLOR),
+            ZoneInfo("Z5", "Maximum", workout.zoneFiveMilli ?: 0L, ZONE5_COLOR),
+        )
+    }
     val total = zones.sumOf { it.millis }.coerceAtLeast(1)
 
     Column {

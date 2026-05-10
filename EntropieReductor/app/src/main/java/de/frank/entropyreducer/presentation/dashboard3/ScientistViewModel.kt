@@ -3,6 +3,7 @@ package de.frank.entropyreducer.presentation.dashboard3
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.audio.AudioRecorder
 import de.frank.entropyreducer.data.audio.RecordingService
@@ -79,6 +80,7 @@ class ScientistViewModel @Inject constructor(
     private val scientistQuestions: ScientistQuestionRepository,
     private val generateScientistQuestion: GenerateScientistQuestionUseCase,
     private val memories: MemoryRepository,
+    private val scientistDatabase: de.frank.entropyreducer.data.local.ScientistDatabase,
 ) : AndroidViewModel(application) {
 
     private val currentSessionFlow = MutableStateFlow<String?>(null)
@@ -492,19 +494,24 @@ class ScientistViewModel @Inject constructor(
                 // - Wenn mehrere drin sind: nur die ID rauswerfen, Message bleibt erhalten
                 //   (Frank's Aussage zielt auf den haeufigen Fall 1-Hypothese-pro-Message;
                 //   beim seltenen Mehrfach-Fall ist Message-Erhalt sicherer).
+                // Performance-Audit Loop 4 (2026-05-10): atomare Transaktion ueber
+                // alle Message-Mutationen + Hypothesen-Delete. Vorher konnte ein
+                // Process-Kill mid-loop orphaned Message-Referenzen hinterlassen.
                 runCatching {
-                    val all = scientist.getAllMessages()
-                    all.filter { it.attachedHypothesisIds.contains(id) }.forEach { msg ->
-                        if (msg.attachedHypothesisIds.size <= 1) {
-                            scientist.deleteMessageById(msg.id)
-                        } else {
-                            scientist.updateMessage(
-                                msg.copy(attachedHypothesisIds = msg.attachedHypothesisIds - id),
-                            )
+                    scientistDatabase.withTransaction {
+                        val all = scientist.getAllMessages()
+                        all.filter { it.attachedHypothesisIds.contains(id) }.forEach { msg ->
+                            if (msg.attachedHypothesisIds.size <= 1) {
+                                scientist.deleteMessageById(msg.id)
+                            } else {
+                                scientist.updateMessage(
+                                    msg.copy(attachedHypothesisIds = msg.attachedHypothesisIds - id),
+                                )
+                            }
                         }
+                        hypotheses.delete(h)
                     }
                 }
-                hypotheses.delete(h)
             }
             pendingDeleteFlow.value = null
         }
