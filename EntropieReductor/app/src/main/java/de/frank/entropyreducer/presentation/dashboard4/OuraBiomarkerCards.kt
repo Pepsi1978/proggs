@@ -325,8 +325,11 @@ private fun ScoreWithTrend(
 }
 
 /**
- * Plus/Minus-Badge mit Farbe und Vergleichstext (besser/schlechter/neutral).
- * Frank-Vorgabe: gruen wenn besser, rot wenn schlechter.
+ * Plus/Minus-Badge mit Farbe. Frank-Vorgabe 2026-05-10: ohne zusaetzlichen
+ * Beschreibungstext darunter — die '30-Tage-Durchschnitt: 75'-Zeile am Ende
+ * der Karte erklaert sich selbst, also keine Doppel-Information. Plus
+ * (gruen) wenn Wert ueber 30-Tage-Mittel, Minus (rot) wenn drunter, blau
+ * bei kaum Aenderung (innerhalb +/-0.5).
  */
 @Composable
 private fun TrendBadge(delta: Double, formatter: (Double) -> String) {
@@ -335,36 +338,18 @@ private fun TrendBadge(delta: Double, formatter: (Double) -> String) {
         delta < -0.5 -> CosmosColors.Critical
         else -> CosmosColors.AccentPrimary
     }
-    val label = when {
-        delta > 0.5 -> "besser"
-        delta < -0.5 -> "schlechter"
-        else -> "neutral"
-    }
-    Column(horizontalAlignment = Alignment.End) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(color.copy(alpha = 0.18f))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        ) {
-            Text(
-                text = formatter(delta),
-                style = MaterialTheme.typography.labelMedium,
-                color = color,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.18f))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
         Text(
-            text = "vs. 30-Tage-Mittel",
-            style = MaterialTheme.typography.labelSmall,
+            text = formatter(delta),
+            style = MaterialTheme.typography.labelMedium,
             color = color,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

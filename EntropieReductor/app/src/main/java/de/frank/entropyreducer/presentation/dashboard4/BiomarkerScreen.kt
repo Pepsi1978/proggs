@@ -1121,8 +1121,13 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(2.dp))
+                    // Frank-Vorgabe 2026-05-10: hinter 'vs. 30-Tage-Mittel'
+                    // den konkreten Mittelwert anzeigen — sonst weiss Frank nicht
+                    // gegen welchen Vergleichswert das Delta gerechnet ist.
+                    val avgLabel = avgRecovery?.let { "vs. 30-Tage-Mittel: ${it.toInt()}" }
+                        ?: "vs. 30-Tage-Mittel"
                     Text(
-                        text = "vs. 30-Tage-Mittel",
+                        text = avgLabel,
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
                     )
