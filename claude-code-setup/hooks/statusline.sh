@@ -12,6 +12,11 @@ input=$(cat)
 # Performance-Optimierung 2026-05-09 22:06: Alle Input-Felder in EINEM jq-Aufruf
 # parsen statt 8 separaten Subprocesses (auf Windows extrem teuer). Frueher 4.4s,
 # jetzt <1s. Felder werden tab-separiert ausgegeben und mit IFS=tab read gesplittet.
+# Trenner ist "\x1f" (ASCII Unit Separator) — nicht-whitespace, kommt in keinem
+# realen Wert vor. Frueher Tab via IFS=$'\t': bash read faltet aufeinanderfolgende
+# Whitespace-IFS-Zeichen zu EINEM Trenner, was bei leeren rate_limits-Feldern alle
+# folgenden Felder verschoben hat. session_id landete dann in five_h_used,
+# transcript_path war leer, fresh-session-Erkennung schlug fehl.
 parsed=$(echo "$input" | jq -r '[
     .effort.level // "",
     .model.display_name // .model.id // "?",
@@ -20,9 +25,10 @@ parsed=$(echo "$input" | jq -r '[
     .rate_limits.five_hour.used_percentage // "",
     .rate_limits.five_hour.resets_at // "",
     .rate_limits.seven_day.used_percentage // "",
-    .session_id // "unknown"
-] | @tsv' 2>/dev/null)
-IFS=$'\t' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw session_id <<< "$parsed"
+    .session_id // "unknown",
+    .transcript_path // ""
+] | join("")' 2>/dev/null)
+IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw session_id transcript_path <<< "$parsed"
 
 if [ -z "$effort" ]; then
     settings="$HOME/.claude/settings.json"
@@ -222,9 +228,30 @@ five_h_used=$(clamp_pct "$five_h_used")
 week_used=$(clamp_pct "$week_used")
 
 # Context-VERBRAUCH (= 100 - remaining)
+# Frank-Bug-Report 2026-05-10 abend: Nach /clear oder Session-Start zeigt Claude
+# Code in stdin noch den ALTEN context_window.remaining_percentage aus der letzten
+# API-Antwort (z.B. 99% obwohl gerade gecleart). Erst nach dem ersten neuen API-
+# Call wird der Wert aktualisiert. Fix: Wenn das Transcript-File sehr klein ist
+# (frische Session), ueberschreiben wir ctx_used mit 0 — sobald Claude Code echte
+# Werte liefert, uebernehmen wir die. Schwelle 8 Zeilen = grob 1-2 Turns.
 ctx_used=""
 if [ -n "$ctx_remaining" ]; then
     ctx_used=$((100 - ctx_remaining))
+fi
+# Fallback: wenn transcript_path leer ist, aus session_id + cwd_raw rekonstruieren.
+# Convention: ~/.claude/projects/<encoded-dir>/<session_id>.jsonl
+# encoded-dir: jedes Nicht-Alphanum durch "-" ersetzen.
+if [ -z "$transcript_path" ] && [ -n "$session_id" ] && [ "$session_id" != "unknown" ]; then
+    cwd_for_path="${cwd_raw/#\~/$HOME}"
+    encoded_dir=$(echo "$cwd_for_path" | sed 's/[^A-Za-z0-9]/-/g')
+    candidate="$HOME/.claude/projects/$encoded_dir/$session_id.jsonl"
+    [ -f "$candidate" ] && transcript_path="$candidate"
+fi
+if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    transcript_lines=$(wc -l < "$transcript_path" 2>/dev/null || echo 0)
+    if [ "$transcript_lines" -lt 8 ] 2>/dev/null; then
+        ctx_used=0
+    fi
 fi
 
 # 5h Reset-Countdown — mit Plausibilitaetspruefung:

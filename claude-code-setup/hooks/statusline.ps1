@@ -36,6 +36,7 @@ $ctx_remaining = $null
 $five_h_used = $null
 $five_h_resets = 0
 $week_used = $null
+$transcript_path = ''
 
 if ($obj) {
     # Modell-Fallback: display_name → id → "?" (CLI liefert manchmal nur id)
@@ -77,6 +78,9 @@ if ($obj) {
     }
     if ($obj.rate_limits.seven_day.used_percentage -ne $null) {
         $week_used = [int][Math]::Round($obj.rate_limits.seven_day.used_percentage)
+    }
+    if ($obj.transcript_path) {
+        $transcript_path = [string]$obj.transcript_path
     }
 }
 
@@ -233,6 +237,37 @@ if ($week_used -ne $null) {
 
 $ctx_used = $null
 if ($ctx_remaining -ne $null) { $ctx_used = 100 - $ctx_remaining }
+# Frank-Bug-Report 2026-05-10 abend: Nach /clear oder Session-Start zeigt Claude
+# Code in stdin noch den ALTEN context_window.remaining_percentage aus der letzten
+# API-Antwort (z.B. 99% obwohl gerade gecleart). Erst nach dem ersten neuen API-
+# Call wird der Wert aktualisiert. Fix: Wenn das Transcript-File sehr klein ist
+# (frische Session), ueberschreiben wir ctx_used mit 0 — sobald Claude Code echte
+# Werte liefert, uebernehmen wir die. Schwelle 8 Zeilen = grob 1-2 Turns.
+# Fallback: wenn transcript_path leer ist, aus session_id + cwd rekonstruieren.
+# Convention: ~/.claude/projects/<encoded-dir>/<session_id>.jsonl
+# encoded-dir: jedes Nicht-Alphanum durch "-" ersetzen.
+if (-not $transcript_path -and $obj -and $obj.session_id -and $obj.workspace.current_dir) {
+    $sid = [string]$obj.session_id
+    if ($sid -match '^[A-Za-z0-9_-]+$') {
+        $rawDir = [string]$obj.workspace.current_dir
+        $encodedDir = ($rawDir -replace '[^A-Za-z0-9]', '-')
+        $candidate = Join-Path $env:USERPROFILE ".claude\projects\$encodedDir\$sid.jsonl"
+        if (Test-Path -LiteralPath $candidate) { $transcript_path = $candidate }
+    }
+}
+if ($transcript_path -and (Test-Path -LiteralPath $transcript_path)) {
+    try {
+        $lineCount = 0
+        $reader = [System.IO.File]::OpenText($transcript_path)
+        try {
+            while ($reader.ReadLine() -ne $null) {
+                $lineCount++
+                if ($lineCount -ge 8) { break }
+            }
+        } finally { $reader.Close() }
+        if ($lineCount -lt 8) { $ctx_used = 0 }
+    } catch { }
+}
 
 # 5h Reset-Countdown — mit Plausibilitaetspruefung:
 # Realistische Werte sind 0..18000 Sekunden (5h). Wenn der Server mal einen
