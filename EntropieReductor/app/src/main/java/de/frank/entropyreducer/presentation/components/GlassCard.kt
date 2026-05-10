@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,9 +39,23 @@ fun GlassCard(
     val cosmos = LocalCosmos.current
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
     val borderStroke = remember(cosmos.glassBorder) { BorderStroke(1.dp, cosmos.glassBorder) }
-    // Frank-Wunsch 2026-05-10: optionale Bucket-Toenung als zweiter Layer ueber
-    // dem glassBg — der Glas-Look bleibt erhalten, der Tint mischt sich darueber.
-    val tintModifier = if (tintColor != null) Modifier.background(tintColor, shape) else Modifier
+    // Frank-Wunsch 2026-05-10 (zweite Iteration): Bucket-Toenung NICHT mehr als
+    // gleichmaessige Flaeche, sondern als diagonaler Verlauf von OBEN-LINKS
+    // (transparent — glassBg scheint hell durch) nach UNTEN-RECHTS (volle Toenung).
+    // Damit ist das Orange/Gelb/Gruen/Blau in der oberen Card-Haelfte praktisch
+    // unsichtbar und nur unten rechts schwach erkennbar — die Karten wirken viel
+    // heller und der Tint stoert nicht mehr. Offset.Zero = top-left,
+    // Offset.Infinite wird auf die Box-Groesse gemappt = bottom-right.
+    val tintBrush = remember(tintColor) {
+        tintColor?.let { color ->
+            Brush.linearGradient(
+                colors = listOf(Color.Transparent, color),
+                start = Offset.Zero,
+                end = Offset.Infinite,
+            )
+        }
+    }
+    val tintModifier = if (tintBrush != null) Modifier.background(tintBrush, shape) else Modifier
     Box(
         modifier = modifier
             .background(cosmos.glassBg, shape)

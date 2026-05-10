@@ -969,8 +969,12 @@ private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
 
 /**
  * Liefert die ganz leichte Hintergrund-Toenung der Aufgabenkarte je nach Bucket
- * (Frank-Wunsch 2026-05-10). Im Hellmodus etwas kraeftiger, weil der weisse
- * glassBg sonst die Toenung schluckt; im Dunkelmodus ganz dezent.
+ * (Frank-Wunsch 2026-05-10, zweite Iteration). GlassCard rendert die Farbe als
+ * Linear-Gradient von oben-links (transparent) nach unten-rechts (voller Tint).
+ * Frank wollte das Orange/Gelb/Gruen/Blau dezenter — daher hier zusaetzlich der
+ * Endwert-Alpha um ~25% reduziert (light: 0.18→0.14, dark: 0.12→0.10).
+ * Zusammen mit dem Verlauf wirkt das Orange jetzt sehr zurueckhaltend und nur
+ * in der unteren rechten Card-Ecke schwach erkennbar.
  *  - HEUTE      = Orange-Stich
  *  - MORGEN     = Gelb-Stich
  *  - FREIBLOCK  = Gruen-Stich
@@ -983,7 +987,7 @@ private fun bucketCardTint(bucket: TimeBucket, isDark: Boolean): Color {
         TimeBucket.FREIBLOCK -> CosmosColors.BucketFreiblockTint
         TimeBucket.SPAETER -> CosmosColors.BucketSpaeterTint
     }
-    return base.copy(alpha = if (isDark) 0.12f else 0.18f)
+    return base.copy(alpha = if (isDark) 0.10f else 0.14f)
 }
 
 @Composable
