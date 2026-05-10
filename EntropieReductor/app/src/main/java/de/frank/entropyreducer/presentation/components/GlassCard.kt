@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -30,14 +31,19 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 20.dp,
     contentPadding: Dp = 16.dp,
+    tintColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
     val borderStroke = remember(cosmos.glassBorder) { BorderStroke(1.dp, cosmos.glassBorder) }
+    // Frank-Wunsch 2026-05-10: optionale Bucket-Toenung als zweiter Layer ueber
+    // dem glassBg — der Glas-Look bleibt erhalten, der Tint mischt sich darueber.
+    val tintModifier = if (tintColor != null) Modifier.background(tintColor, shape) else Modifier
     Box(
         modifier = modifier
             .background(cosmos.glassBg, shape)
+            .then(tintModifier)
             .border(borderStroke, shape)
             .padding(contentPadding),
     ) {

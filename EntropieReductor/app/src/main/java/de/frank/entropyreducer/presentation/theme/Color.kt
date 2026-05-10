@@ -42,14 +42,27 @@ object CosmosColors {
     val StatusGreen = Color(0xFF22C55E)           // 80-100
 
     // Prioritaets-Farbskala fuer die Prio-Zahl auf den Aufgabenkarten.
-    // Hohe Werte = wichtig = warm (Rot/Orange), niedrige Werte = unwichtig = kuehl (Blau/Gruen).
+    // Hohe Werte = wichtig = warm (Rot/Orange), niedrige Werte = unwichtig = kuehl (Gruen/Blau).
     // Hinweis: Diese Skala ist BEWUSST anders herum als StatusRed/Green oben — beim Schweregrad
     // ist Rot schlecht, bei der Prio-Zahl ist Rot wichtig.
+    // Frank-Wunsch 2026-05-10: geringste Prio ist Blau (kuehlste Farbe), Gruen liegt davor.
     val PriorityRed = Color(0xFFEF4444)           // 80-100  (sehr wichtig)
     val PriorityOrange = Color(0xFFFB923C)        // 60-80
     val PriorityYellow = Color(0xFFFBBF24)        // 40-60
-    val PriorityBlue = Color(0xFF60A5FA)          // 20-40
-    val PriorityGreen = Color(0xFF22C55E)         // 0-20    (geringste Prio)
+    val PriorityGreen = Color(0xFF22C55E)         // 20-40
+    val PriorityBlue = Color(0xFF60A5FA)          // 0-20    (geringste Prio)
+
+    // Bucket-Toenung fuer Aufgabenkarten (Frank-Wunsch 2026-05-10).
+    // Volle Saettigung — die Alpha wird beim Anwenden gesetzt (siehe bucketCardTint
+    // in TasksScreen.kt), damit die Toenung in beiden Modi nur "ganz leicht" ist.
+    //  - HEUTE      = Orange (warm, dringend)
+    //  - MORGEN     = Gelb (vorbereitend)
+    //  - FREIBLOCK  = Gruen (Schichtblock, ruhig)
+    //  - SPAETER    = Blau (kuehl, kein Datum)
+    val BucketHeuteTint = Color(0xFFFB923C)
+    val BucketMorgenTint = Color(0xFFFBBF24)
+    val BucketFreiblockTint = Color(0xFF22C55E)
+    val BucketSpaeterTint = Color(0xFF60A5FA)
 
     // Kategorie-Farben
     val CatPhysical = Color(0xFFF87171)

@@ -753,20 +753,20 @@ private fun severityLabel(severity: Int): String = when {
 
 /**
  * Mappt einen priorityScore (0.0-100.0) auf eine Farbe fuer die grosse Prio-Zahl
- * auf der Aufgabenkarte. Skala (Frank-Wunsch 2026-05-09):
+ * auf der Aufgabenkarte. Skala (Frank-Wunsch 2026-05-10):
  *   80-100 -> Rot       (sehr wichtig)
  *   60-80  -> Orange
  *   40-60  -> Gelb
- *   20-40  -> Blau
- *    0-20  -> Gruen     (geringste Prio)
+ *   20-40  -> Gruen
+ *    0-20  -> Blau      (geringste Prio — kuehlste Farbe)
  * Achtung: Bewusst andersherum als die Severity-Bar (dort ist Rot schlecht).
  */
 private fun priorityColor(score: Double): Color = when {
     score >= 80.0 -> CosmosColors.PriorityRed
     score >= 60.0 -> CosmosColors.PriorityOrange
     score >= 40.0 -> CosmosColors.PriorityYellow
-    score >= 20.0 -> CosmosColors.PriorityBlue
-    else -> CosmosColors.PriorityGreen
+    score >= 20.0 -> CosmosColors.PriorityGreen
+    else -> CosmosColors.PriorityBlue
 }
 
 @Composable
@@ -967,6 +967,25 @@ private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
     TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
 }
 
+/**
+ * Liefert die ganz leichte Hintergrund-Toenung der Aufgabenkarte je nach Bucket
+ * (Frank-Wunsch 2026-05-10). Im Hellmodus etwas kraeftiger, weil der weisse
+ * glassBg sonst die Toenung schluckt; im Dunkelmodus ganz dezent.
+ *  - HEUTE      = Orange-Stich
+ *  - MORGEN     = Gelb-Stich
+ *  - FREIBLOCK  = Gruen-Stich
+ *  - SPAETER    = Blau-Stich
+ */
+private fun bucketCardTint(bucket: TimeBucket, isDark: Boolean): Color {
+    val base = when (bucket) {
+        TimeBucket.HEUTE -> CosmosColors.BucketHeuteTint
+        TimeBucket.MORGEN -> CosmosColors.BucketMorgenTint
+        TimeBucket.FREIBLOCK -> CosmosColors.BucketFreiblockTint
+        TimeBucket.SPAETER -> CosmosColors.BucketSpaeterTint
+    }
+    return base.copy(alpha = if (isDark) 0.12f else 0.18f)
+}
+
 @Composable
 private fun EntropyEntryCard(
     entry: EntropyEntryEntity,
@@ -984,6 +1003,11 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
+    // Frank-Wunsch 2026-05-10: Karten-Hintergrund je nach Bucket dezent toenen,
+    // damit Frank auf einen Blick sieht in welchem Bucket eine Aufgabe steckt.
+    // Wird auch bei verschobenen Karten reaktiv neu berechnet, weil entry.timeBucket
+    // bei jedem Bucket-Wechsel im DB-State frisch geliefert wird.
+    val bucketTint = bucketCardTint(entry.timeBucket, cosmos.isDark)
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -992,6 +1016,7 @@ private fun EntropyEntryCard(
                 alpha = cardAlpha
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
+        tintColor = bucketTint,
     ) {
         Column {
             // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
