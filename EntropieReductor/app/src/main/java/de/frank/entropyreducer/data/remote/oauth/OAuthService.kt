@@ -259,7 +259,12 @@ class OAuthService @Inject constructor(
         val needsRefresh = state.needsTokenRefresh
         val scope = state.scope
         val clientId = secrets.whoopClientId
-        Log.i(TAG, "Whoop-Refresh-Vorbereitung: clientId-Länge=${clientId?.length ?: 0}, secret-Länge=${clientSecret.length}, refreshToken-Länge=${rt?.length ?: 0}, accessToken-Länge=${at?.length ?: 0}, scope='$scope', expiryDeltaMs=$expiryDeltaMs, needsTokenRefresh=$needsRefresh")
+        // Performance-Audit Loop 1 (2026-05-10): Eager 7-Feld-Interpolation pro
+        // Token-Refresh entfernt. Token-Refresh laeuft 1x/Stunde — pro Aufruf wurde
+        // ein 200-Zeichen-String allokiert nur fuer Logcat. Knappe Form unter Guard.
+        if (de.frank.entropyreducer.BuildConfig.DEBUG) {
+            Log.d(TAG, "Whoop-Refresh: needsRefresh=$needsRefresh expiryDeltaMs=$expiryDeltaMs")
+        }
         if (rt.isNullOrBlank()) {
             Log.e(TAG, "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.")
             // Frank's Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh

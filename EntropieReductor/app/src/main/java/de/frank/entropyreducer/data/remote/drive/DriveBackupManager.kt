@@ -33,7 +33,11 @@ class DriveBackupManager @Inject constructor(
     private val fileName = "entropy_reducer_entries_v1.json"
 
     suspend fun upload(jsonContent: String): Result<Unit> = withContext(Dispatchers.IO) {
-        Log.d(TAG, "upload() start, payloadBytes=${jsonContent.toByteArray(Charsets.UTF_8).size}")
+        // Performance-Audit Loop 1 (2026-05-10): toByteArray() auf 100-500 KB JSON
+        // nur fuers Logging entfernt — String.length ist O(1) ohne Allokation.
+        // Backup laeuft nach JEDER App-Mutation (1500 ms Debounce in SyncCoordinator),
+        // Allokation war signifikant.
+        Log.d(TAG, "upload() start, payloadChars=${jsonContent.length}")
         runUploadWithRetry(jsonContent, retryOn401 = true)
     }
 
