@@ -90,9 +90,9 @@ internal fun OuraReadinessCard(
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
                 values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
-                accent = color,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
+                colorFor = { scoreColor(it.toInt()) },
             )
         }
     }
@@ -117,9 +117,9 @@ internal fun OuraSleepScoreCard(
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
                 values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
-                accent = color,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
+                colorFor = { scoreColor(it.toInt()) },
             )
         }
     }
@@ -151,9 +151,9 @@ internal fun OuraActivityCard(
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
                 values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
-                accent = color,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
+                colorFor = { scoreColor(it.toInt()) },
             )
         }
     }
@@ -203,7 +203,6 @@ internal fun OuraResilienceCard(
                 Spacer(Modifier.height(10.dp))
                 HistoryMiniChartWithLabels(
                     values = rankValues,
-                    accent = color,
                     maxValue = 4.0,
                     formatLabel = { v ->
                         when (v.toInt()) {
@@ -213,6 +212,17 @@ internal fun OuraResilienceCard(
                             3 -> "St"
                             4 -> "X"
                             else -> "—"
+                        }
+                    },
+                    // Rang-basierte Farbgebung pro Balken: 0=rot, 1=gelb,
+                    // 2=blau, 3-4=gruen — wie die levelToColor-Skala.
+                    colorFor = { rank ->
+                        when (rank.toInt()) {
+                            0 -> CosmosColors.Critical
+                            1 -> CosmosColors.Warning
+                            2 -> CosmosColors.AccentPrimary
+                            3, 4 -> CosmosColors.Success
+                            else -> color
                         }
                     },
                 )
@@ -358,18 +368,25 @@ private fun TrendBadge(delta: Double, formatter: (Double) -> String) {
 }
 
 /**
- * Mini-Balkenchart der letzten Werte mit Beschriftung IN/UNTER jedem Balken.
- * Frank-Vorgabe 2026-05-10: Werte in den Balken-Bereich schreiben statt
- * separater 3-Tage-Liste.
+ * Mini-Balkenchart der letzten Werte mit Beschriftung UNTER jedem Balken.
+ *
+ * Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine EIGENE Farbe abhaengig
+ * vom Wert dieses Balkens. Bei den Score-Karten (Readiness, Schlaf-Score,
+ * Aktivität) heisst das: ein Balken mit 85 ist gruen, einer mit 70 gelb, einer
+ * mit 55 rot — der ganze Verlauf zeigt also auf einen Blick wo gute und wo
+ * schlechte Tage waren. `colorFor` mappt einen einzelnen Balkenwert auf seine
+ * Farbe. Bei Resilienz/Levels wird einfach immer dieselbe Farbe zurueckgegeben.
+ *
+ * Auch der Wert-Text unter dem Balken nimmt diese Farbe damit Balken und Zahl
+ * zusammenpassen.
  */
 @Composable
 private fun HistoryMiniChartWithLabels(
     values: List<Double>,
-    accent: Color,
     maxValue: Double,
     formatLabel: (Double) -> String,
+    colorFor: (Double) -> Color,
 ) {
-    val cosmos = LocalCosmos.current
     if (values.isEmpty()) return
     val padded = values.takeLast(7)
     Row(
@@ -384,6 +401,7 @@ private fun HistoryMiniChartWithLabels(
             Box(modifier = Modifier.weight(1f).height(54.dp))
         }
         padded.forEach { v ->
+            val barColor = colorFor(v)
             val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
             Column(
                 modifier = Modifier.weight(1f),
@@ -395,13 +413,13 @@ private fun HistoryMiniChartWithLabels(
                         .fillMaxWidth()
                         .height((40.dp * frac).coerceAtLeast(2.dp))
                         .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                        .background(accent.copy(alpha = 0.7f)),
+                        .background(barColor.copy(alpha = 0.85f)),
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = formatLabel(v),
                     style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
+                    color = barColor,
                     fontWeight = FontWeight.Medium,
                 )
             }
