@@ -39,19 +39,20 @@ fun GlassCard(
     val cosmos = LocalCosmos.current
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
     val borderStroke = remember(cosmos.glassBorder) { BorderStroke(1.dp, cosmos.glassBorder) }
-    // Frank-Wunsch 2026-05-10 (zweite Iteration): Bucket-Toenung NICHT mehr als
-    // gleichmaessige Flaeche, sondern als diagonaler Verlauf von OBEN-LINKS
-    // (transparent — glassBg scheint hell durch) nach UNTEN-RECHTS (volle Toenung).
-    // Damit ist das Orange/Gelb/Gruen/Blau in der oberen Card-Haelfte praktisch
-    // unsichtbar und nur unten rechts schwach erkennbar — die Karten wirken viel
-    // heller und der Tint stoert nicht mehr. Offset.Zero = top-left,
-    // Offset.Infinite wird auf die Box-Groesse gemappt = bottom-right.
+    // Frank-Wunsch 2026-05-10 (dritte Iteration): Verlauf-Richtung umgedreht —
+    // Toenung ist jetzt OBEN RECHTS am staerksten, nach UNTEN LINKS verblasst sie
+    // zu transparent. Frank wollte den Farbeffekt OBEN sehen (nicht unten), damit
+    // beim Blick auf die Card der Farbton (Rosa/Gelb/Gruen/Blau) sofort klar ist.
+    //
+    // Gradient-Achse: bottom-left (transparent) → top-right (volle Toenung).
+    // Compose mappt Float.POSITIVE_INFINITY auf die jeweilige Box-Dimension, also
+    // (0f, ∞) = bottom-left und (∞, 0f) = top-right.
     val tintBrush = remember(tintColor) {
         tintColor?.let { color ->
             Brush.linearGradient(
                 colors = listOf(Color.Transparent, color),
-                start = Offset.Zero,
-                end = Offset.Infinite,
+                start = Offset(0f, Float.POSITIVE_INFINITY),
+                end = Offset(Float.POSITIVE_INFINITY, 0f),
             )
         }
     }

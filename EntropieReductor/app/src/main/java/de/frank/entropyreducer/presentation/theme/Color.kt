@@ -55,11 +55,13 @@ object CosmosColors {
     // Bucket-Toenung fuer Aufgabenkarten (Frank-Wunsch 2026-05-10).
     // Volle Saettigung — die Alpha wird beim Anwenden gesetzt (siehe bucketCardTint
     // in TasksScreen.kt), damit die Toenung in beiden Modi nur "ganz leicht" ist.
-    //  - HEUTE      = Orange (warm, dringend)
+    //  - HEUTE      = Rosa/Pink (Frank-Aenderung 2026-05-10: vorher Orange,
+    //                 unterschied sich aber zu wenig vom Gelb der Morgen-Karten;
+    //                 Rosa bleibt warm/dringend, ist aber klar abgegrenzt)
     //  - MORGEN     = Gelb (vorbereitend)
     //  - FREIBLOCK  = Gruen (Schichtblock, ruhig)
     //  - SPAETER    = Blau (kuehl, kein Datum)
-    val BucketHeuteTint = Color(0xFFFB923C)
+    val BucketHeuteTint = Color(0xFFF472B6) // Tailwind pink-400 — klar von Gelb unterschieden
     val BucketMorgenTint = Color(0xFFFBBF24)
     val BucketFreiblockTint = Color(0xFF22C55E)
     val BucketSpaeterTint = Color(0xFF60A5FA)
