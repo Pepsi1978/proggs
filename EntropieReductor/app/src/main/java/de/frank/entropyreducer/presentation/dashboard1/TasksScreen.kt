@@ -260,7 +260,7 @@ fun TasksScreen(
                         // PERFORMANCE 2026-05-09: Sortierung+Filter laufen jetzt im
                         // ViewModel (TasksViewModel.kt), nicht mehr hier — die Lists
                         // sind beim Eintreffen schon sortiert und gefiltert.
-                        TimeBucket.values().forEach { bucket ->
+                        ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
                             if (list.isNotEmpty()) {
                                 item(
@@ -1617,6 +1617,10 @@ private fun RescoreBanner(progress: RescoreProgress) {
         }
     }
 }
+
+// Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array
+// pro Recomposition. TimeBucket wird in zwei verschiedenen Tab-Reihen iteriert.
+private val ALL_TIME_BUCKETS: List<TimeBucket> = TimeBucket.entries.toList()
 
 // Performance-Audit Loop 5 (2026-05-10): SimpleDateFormat ist nicht thread-safe,
 // aber teuer. ThreadLocal pro Pattern statt Allokation pro Aufruf.

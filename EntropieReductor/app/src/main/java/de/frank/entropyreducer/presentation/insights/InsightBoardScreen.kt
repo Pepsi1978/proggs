@@ -75,6 +75,9 @@ import de.frank.entropyreducer.presentation.theme.label
  * Frank-Wunsch 2026-05-09: Plus-Button rechts oben oeffnet ein Sheet zum
  * manuellen Hinzufuegen einer bestaetigten Methode per Mic + KI-Politur.
  */
+// Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array.
+private val ALL_ENTROPY_CATEGORIES: List<EntropyCategory> = EntropyCategory.entries.toList()
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InsightBoardScreen(
@@ -406,7 +409,7 @@ private fun InsightDetailContent(
                 EntropyCategoryPill(category = insight.targetCategory)
             }
             DropdownMenu(expanded = categoryMenu, onDismissRequest = { categoryMenu = false }) {
-                EntropyCategory.values().forEach { c ->
+                ALL_ENTROPY_CATEGORIES.forEach { c ->
                     DropdownMenuItem(
                         text = { Text(c.label()) },
                         onClick = {
@@ -641,7 +644,7 @@ private fun AddMethodSheet(
                         EntropyCategoryPill(category = state.primaryCategory)
                     }
                     DropdownMenu(expanded = primaryMenu, onDismissRequest = { primaryMenu = false }) {
-                        EntropyCategory.values().forEach { c ->
+                        ALL_ENTROPY_CATEGORIES.forEach { c ->
                             DropdownMenuItem(
                                 text = { Text(c.label()) },
                                 onClick = {

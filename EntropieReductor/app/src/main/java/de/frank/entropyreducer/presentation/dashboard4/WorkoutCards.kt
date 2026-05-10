@@ -164,10 +164,11 @@ private fun WorkoutItem(workout: WhoopWorkoutEntity) {
     } else {
         "$durationMin min"
     }
-    val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+    // Performance-Audit Loop 8 (2026-05-10): Top-level WORKOUT_CARDS_TIME_FMT
+    // statt Allokation pro Recomposition.
     val zone = ZoneId.systemDefault()
-    val startStr = Instant.ofEpochMilli(workout.startMs).atZone(zone).format(timeFmt)
-    val endStr = Instant.ofEpochMilli(workout.endMs).atZone(zone).format(timeFmt)
+    val startStr = Instant.ofEpochMilli(workout.startMs).atZone(zone).format(WORKOUT_CARDS_TIME_FMT)
+    val endStr = Instant.ofEpochMilli(workout.endMs).atZone(zone).format(WORKOUT_CARDS_TIME_FMT)
 
     Column {
         // Header
@@ -449,6 +450,10 @@ private fun iconFor(key: SportIcon): ImageVector = when (key) {
 }
 
 // Whoop-typische Zonen-Farben — Intensitaet von ruhig (gruen) zu maximal (rot).
+// Performance-Audit Loop 8 (2026-05-10): Top-level Formatter — DateTimeFormatter
+// ist thread-safe per java.time-API-Garantie.
+private val WORKOUT_CARDS_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 private val ZONE0_COLOR = Color(0xFF8E9AA8)  // grau (Recovery)
 private val ZONE1_COLOR = Color(0xFF34D399)  // gruen
 private val ZONE2_COLOR = Color(0xFF60A5FA)  // blau

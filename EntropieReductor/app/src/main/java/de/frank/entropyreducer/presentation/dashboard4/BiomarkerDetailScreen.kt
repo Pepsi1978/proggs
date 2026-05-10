@@ -102,7 +102,7 @@ fun BiomarkerDetailScreen(
             item {
                 // Range-Switcher
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DetailRange.values().forEach { r ->
+                    ALL_DETAIL_RANGES.forEach { r ->
                         FilterChip(
                             selected = range == r,
                             onClick = { range = r },
@@ -473,6 +473,10 @@ private enum class DetailRange(val label: String) {
     NINETY("90T"),
     ALL("Alle"),
 }
+
+// Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-
+// Allokation pro Recomposition.
+private val ALL_DETAIL_RANGES: List<DetailRange> = DetailRange.entries.toList()
 
 private val DATE_FORMAT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", Locale.GERMANY)

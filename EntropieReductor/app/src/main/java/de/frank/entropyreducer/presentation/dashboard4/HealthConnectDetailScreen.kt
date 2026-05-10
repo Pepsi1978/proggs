@@ -388,13 +388,16 @@ private fun HcDetailHeader(
 
 private enum class HcDetailRange { SEVEN, THIRTY, NINETY, ALL }
 
+// Performance-Audit Loop 8 (2026-05-10): Top-level Liste statt .values()-Array.
+private val ALL_HC_DETAIL_RANGES: List<HcDetailRange> = HcDetailRange.entries.toList()
+
 @Composable
 private fun HcRangeSwitcher(current: HcDetailRange, onChange: (HcDetailRange) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        HcDetailRange.values().forEach { range ->
+        ALL_HC_DETAIL_RANGES.forEach { range ->
             val label = when (range) {
                 HcDetailRange.SEVEN -> "7T"
                 HcDetailRange.THIRTY -> "30T"
