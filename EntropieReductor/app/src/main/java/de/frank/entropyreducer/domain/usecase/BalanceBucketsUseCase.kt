@@ -54,14 +54,24 @@ class BalanceBucketsUseCase @Inject constructor(
         )
         val placement = mutableMapOf<String, TimeBucket>()
 
-        // Pass 1: Manuelle Eintraege belegen ihre Wunsch-Buckets (mit Limit)
+        // Pass 1: Manuelle Eintraege belegen ihre Wunsch-Buckets (mit Limit).
+        //
+        // Bugfix (Frank-Befund 2026-05-10): SPAETER hat kein Limit, wurde aber in
+        // dieser Schleife uebersprungen. Ergebnis: manuelle SPAETER-Eintraege
+        // landeten im Pool und wurden in Pass 2 in HEUTE/MORGEN reingefuellt —
+        // Franks "in Spaeter sortieren"-Geste hatte keinen Effekt.
+        // Fix: SPAETER ebenfalls in Pass 1 platzieren, aber unbegrenzt (kein cap).
         for (bucket in orderedBuckets) {
-            if (bucket == TimeBucket.SPAETER) continue
-            val cap = capacityLeft[bucket] ?: 0
             val candidates = byPrio.filter { it.manualBucket == bucket }
-            val placed = candidates.take(cap)
-            placed.forEach { placement[it.id] = bucket }
-            capacityLeft[bucket] = cap - placed.size
+            if (bucket == TimeBucket.SPAETER) {
+                // Unbegrenzte Kapazitaet — alle manuellen SPAETER-Wuensche akzeptieren.
+                candidates.forEach { placement[it.id] = bucket }
+            } else {
+                val cap = capacityLeft[bucket] ?: 0
+                val placed = candidates.take(cap)
+                placed.forEach { placement[it.id] = bucket }
+                capacityLeft[bucket] = cap - placed.size
+            }
         }
 
         // Pass 2: AI-Pool + verdraengte Manuelle fuellen freie Slots auf
