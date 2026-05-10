@@ -72,10 +72,12 @@ fun ApiKeysScreen(
     vm: ApiKeysViewModel = hiltViewModel(),
     oauthVm: OAuthViewModel = hiltViewModel(),
     zeppVm: ZeppApiViewModel = hiltViewModel(),
+    ouraVm: OuraApiViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
     val oauthState by oauthVm.state.collectAsState()
     val zeppState by zeppVm.state.collectAsState()
+    val ouraState by ouraVm.state.collectAsState()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "API-Schlüssel",
@@ -143,6 +145,7 @@ fun ApiKeysScreen(
             }
             item { WhoopOAuthCard(oauthVm, oauthState) }
             item { AmazfitLoginCard(zeppVm, zeppState) }
+            item { OuraApiCard(ouraVm, ouraState) }
             item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
@@ -804,5 +807,138 @@ private fun formatRelativeTime(epochMs: Long): String {
         diffSec < 3600 -> "vor ${diffSec / 60} Minuten"
         diffSec < 86400 -> "vor ${diffSec / 3600} Stunden"
         else -> "vor ${diffSec / 86400} Tagen"
+    }
+}
+
+/* ----------------- Oura Ring (Personal Access Token) ----------------- */
+
+@Composable
+private fun OuraApiCard(vm: OuraApiViewModel, state: OuraApiUiState) {
+    val cosmos = LocalCosmos.current
+    var hidden by remember { mutableStateOf(true) }
+    val accent = CosmosColors.AccentPrimary
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Oura Ring",
+                style = MaterialTheme.typography.titleMedium,
+                color = accent,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Verbinde deinen Oura Ring fuer Readiness-Score, Schlafqualitaet, " +
+                    "Aktivitaet, Resilienz und detaillierte Schlafphasen. Erstelle einen " +
+                    "Personal Access Token unter cloud.ouraring.com/personal-access-tokens " +
+                    "und fuege ihn hier ein. Der Token wird verschluesselt auf dem Geraet " +
+                    "gespeichert.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.tokenInput,
+                onValueChange = vm::setToken,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Personal Access Token", color = cosmos.textSecondary) },
+                visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
+                singleLine = true,
+                enabled = !state.busy,
+                trailingIcon = {
+                    IconButton(onClick = { hidden = !hidden }) {
+                        Icon(
+                            imageVector = if (hidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                            contentDescription = if (hidden) "Anzeigen" else "Verbergen",
+                            tint = cosmos.textSecondary,
+                        )
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedTextColor = cosmos.textPrimary,
+                    unfocusedTextColor = cosmos.textPrimary,
+                    cursorColor = accent,
+                    focusedIndicatorColor = accent,
+                    unfocusedIndicatorColor = cosmos.glassBorder,
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.tokenSaved) {
+                    OutlinedButton(
+                        onClick = vm::runSync,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.busy,
+                    ) {
+                        if (state.busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = accent,
+                            )
+                            Spacer(Modifier.size(8.dp))
+                        }
+                        Text("Sync starten")
+                    }
+                    Button(
+                        onClick = vm::disconnect,
+                        modifier = Modifier.weight(1f),
+                        enabled = !state.busy,
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                    ) {
+                        Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Trennen")
+                    }
+                } else {
+                    Button(
+                        onClick = vm::saveAndConnect,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accent,
+                            contentColor = Color.Black,
+                        ),
+                    ) {
+                        if (state.busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.Black,
+                            )
+                            Spacer(Modifier.size(8.dp))
+                        } else {
+                            Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        Text("Verbinden")
+                    }
+                }
+            }
+            if (state.tokenSaved) {
+                Spacer(Modifier.height(8.dp))
+                ConnectionLabel(
+                    label = "Verbunden",
+                    color = CosmosColors.Success,
+                    icon = Icons.Outlined.CheckCircle,
+                )
+                if (state.lastSyncMs > 0) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Letzter Sync: " + formatRelativeTime(state.lastSyncMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+            }
+            state.message?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+        }
     }
 }
