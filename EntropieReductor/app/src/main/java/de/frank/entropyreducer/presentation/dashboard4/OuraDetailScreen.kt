@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -150,7 +151,12 @@ fun OuraDetailScreen(
                     )
                 }
                 items(filtered.reversed()) { (day, value) ->
-                    OuraValueRow(day = day, value = value, isResilience = metricKey == OuraMetricKey.RESILIENCE)
+                    OuraValueRow(
+                        day = day,
+                        value = value,
+                        isResilience = metricKey == OuraMetricKey.RESILIENCE,
+                        average = avgV,
+                    )
                 }
             } else {
                 item {
@@ -314,20 +320,39 @@ private fun OuraVerlaufsChart(
                         )
                     }
                 }
-                Row(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    points.forEach { (_, v) ->
-                        val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height((140.dp * frac).coerceAtLeast(2.dp))
-                                .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
-                                .background(colorFor(v).copy(alpha = 0.85f)),
-                        )
+                // Box mit zwei Layern: Hilfslinien im Hintergrund, Balken davor.
+                // Frank-Vorgabe 2026-05-10: Linien auf Hoehe 0/25/50/75/100 damit
+                // erkennbar ist 'da verlaeuft 50, da 75'. Linien sind sehr dezent
+                // (alpha 0.35) damit die farbigen Balken im Vordergrund bleiben.
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        repeat(5) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(cosmos.glassBorder.copy(alpha = 0.55f)),
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        points.forEach { (_, v) ->
+                            val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height((140.dp * frac).coerceAtLeast(2.dp))
+                                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                                    .background(colorFor(v).copy(alpha = 0.85f)),
+                            )
+                        }
                     }
                 }
             }
@@ -344,9 +369,25 @@ private fun OuraVerlaufsChart(
 }
 
 @Composable
-private fun OuraValueRow(day: String, value: Double, isResilience: Boolean) {
+private fun OuraValueRow(day: String, value: Double, isResilience: Boolean, average: Double?) {
     val cosmos = LocalCosmos.current
     val display = if (isResilience) levelToGerman(rankToLevel(value)) else value.toInt().toString()
+    // Abweichung zum Bereichs-Durchschnitt (Frank-Vorgabe 2026-05-10): pro
+    // Tageswert ein '+5'-Plus-Wert in gruen wenn besser als der Schnitt, oder
+    // '-3' in rot wenn schlechter. Nur fuer Readiness und Schlaf-Score
+    // (Score-Skala) — bei Resilienz ueberspringen weil Levels nicht sauber
+    // als Plus/Minus-Differenz abbildbar sind.
+    val deviation: Pair<String, Color>? = if (!isResilience && average != null) {
+        val delta = value - average
+        val rounded = delta.toInt()
+        if (rounded == 0) {
+            "±0" to cosmos.textSecondary
+        } else if (rounded > 0) {
+            "+$rounded" to CosmosColors.Success
+        } else {
+            "$rounded" to CosmosColors.Critical
+        }
+    } else null
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -355,6 +396,15 @@ private fun OuraValueRow(day: String, value: Double, isResilience: Boolean) {
     ) {
         Text(shortDate(day), style = MaterialTheme.typography.bodyMedium, color = cosmos.textSecondary, modifier = Modifier.weight(1f))
         Text(display, style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+        if (deviation != null) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = deviation.first,
+                style = MaterialTheme.typography.bodyMedium,
+                color = deviation.second,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
