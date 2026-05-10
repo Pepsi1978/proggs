@@ -59,6 +59,7 @@ import de.frank.entropyreducer.data.remote.tts.GoogleTtsVoice
 import de.frank.entropyreducer.data.remote.tts.VoiceGender
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.settings.drive.DriveBackupSection
 import de.frank.entropyreducer.presentation.settings.ApiKeysUiState
 import de.frank.entropyreducer.presentation.settings.ApiKeysViewModel
 import de.frank.entropyreducer.presentation.settings.ConnectionStatus
@@ -99,6 +100,10 @@ fun ApiKeysScreen(
                     color = cosmos.textSecondary,
                 )
             }
+            // Frank-Wunsch 2026-05-10: Google-Drive-Backup gehoert thematisch zu allen
+            // Login/API-relevanten Bereichen — nicht unter Datenexport. Daher ganz oben
+            // direkt nach dem Intro-Text.
+            item { DriveBackupSection() }
             item {
                 ApiKeyCard(
                     title = "Groq API Key",
