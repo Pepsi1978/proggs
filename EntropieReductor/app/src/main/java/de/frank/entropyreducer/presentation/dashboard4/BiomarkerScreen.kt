@@ -150,15 +150,9 @@ fun BiomarkerHostScreen(
         // (Default) auf 44dp und damit die Luft unter dem Titel von ~18dp auf ~8dp.
         compactHeader = true,
     ) { padding ->
-        // Frank-Wunsch 2026-05-09: alle Verlaufs-Charts zeigen nur die letzten 70 Tage.
-        // Aeltere Daten bleiben in der DB erhalten und sind im Detail-Screen sichtbar
-        // (state.history bleibt komplett, nur die Chart-Cards filtern hier).
-        // Performance: Filter nur neu berechnen wenn sich state.history aendert —
-        // nicht bei jedem unrelated state-Update (z.B. lastWhoopSyncMs).
-        val historyLast70 = androidx.compose.runtime.remember(state.history) {
-            val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
-            state.history.filter { it.capturedAt >= seventyDaysAgoMs }
-        }
+        // Performance-Audit E1 (2026-05-10): historyLast70-Berechnung jetzt im VM
+        // (siehe buildChartData in BiomarkerViewModel). Chart-Cards lesen die Maps
+        // aus state.chartData — keine lokale 70-Tage-Filter-Berechnung mehr.
 
         // Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten.
         // Lokale Liste fuer sofortiges UI-Feedback waehrend des Ziehens. Wird bei jedem
@@ -273,7 +267,6 @@ fun BiomarkerHostScreen(
                         BiomarkerCardForId(
                             id = id,
                             state = state,
-                            historyLast70 = historyLast70,
                             onOpenMetricDetail = onOpenMetricDetail,
                             onOpenTrainingDetail = onOpenTrainingDetail,
                             onOpenAllTrainings = onOpenAllTrainings,
@@ -294,12 +287,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
                     accent = CosmosColors.AccentPrimary,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.hrvMs?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.hrvMs?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
                     unit = "ms",
                     onClick = { onOpenMetricDetail(MetricKey.HRV) },
                 )
@@ -308,12 +297,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Ruhepuls",
                     accent = CosmosColors.Critical,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
                     unit = "bpm",
                     onClick = { onOpenMetricDetail(MetricKey.RHR) },
                     lowerIsBetter = true,
@@ -327,12 +312,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Atemfrequenz",
                     accent = CosmosColors.AccentPrimary,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.respiratoryRate?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.respiratoryRate?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
                     unit = "/min",
                     onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
                     lowerIsBetter = true,
@@ -342,12 +323,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Sauerstoffsättigung",
                     accent = CosmosColors.Success,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.spo2Percent?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.spo2Percent?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SPO2) },
                 )
@@ -356,12 +333,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Hauttemperatur",
                     accent = CosmosColors.Warning,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.skinTempCelsius?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.skinTempCelsius?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
                     unit = "°C",
                     onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                     lowerIsBetter = true,
@@ -381,12 +354,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlaf-Performance",
                     accent = CosmosColors.Success,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
                 )
@@ -396,12 +365,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafdauer",
                     accent = CosmosColors.AccentSecondary,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
                     unit = "min",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
                     valueFormatter = SLEEP_HOUR_FORMAT,
@@ -451,12 +416,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafeffizienz",
                     accent = CosmosColors.Success,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
                 )
@@ -465,12 +426,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Schlafregelmäßigkeit",
                     accent = CosmosColors.Success,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
                     unit = "%",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
                 )
@@ -480,12 +437,8 @@ fun BiomarkerHostScreen(
                     lowerIsBetter = true,
                     title = "Schlafdefizit",
                     accent = CosmosColors.Warning,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
                     unit = "min",
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
                 )
@@ -523,12 +476,8 @@ fun BiomarkerHostScreen(
                 MetricHistoryCard(
                     title = "Belastung",
                     accent = CosmosColors.Warning,
-                    points = historyLast70.mapNotNull { snap ->
-                        snap.dayStrain?.let { snap.capturedAt to it }
-                    },
-                    fullHistoryPoints = state.history.mapNotNull { snap ->
-                        snap.dayStrain?.let { snap.capturedAt to it }
-                    },
+                    points = state.chartData.pointsLast70["strain"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
                     unit = "",
                     onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
                 )
@@ -1327,7 +1276,6 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
 private fun BiomarkerCardForId(
     id: String,
     state: BiomarkerUiState,
-    historyLast70: List<de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity>,
     onOpenMetricDetail: (String) -> Unit,
     onOpenTrainingDetail: (String) -> Unit,
     onOpenAllTrainings: () -> Unit,
@@ -1383,12 +1331,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.HRV -> MetricHistoryCard(
                 title = "HRV-Verlauf",
                 accent = CosmosColors.AccentPrimary,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.hrvMs?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.hrvMs?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
                 unit = "ms",
                 onClick = { onOpenMetricDetail(MetricKey.HRV) },
             )
@@ -1396,12 +1340,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.RHR -> MetricHistoryCard(
                 title = "Ruhepuls",
                 accent = CosmosColors.Critical,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
                 unit = "bpm",
                 onClick = { onOpenMetricDetail(MetricKey.RHR) },
                 lowerIsBetter = true,
@@ -1410,12 +1350,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.RESPIRATORY -> MetricHistoryCard(
                 title = "Atemfrequenz",
                 accent = CosmosColors.AccentPrimary,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.respiratoryRate?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.respiratoryRate?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
                 unit = "/min",
                 onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
                 lowerIsBetter = true,
@@ -1424,12 +1360,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SPO2 -> MetricHistoryCard(
                 title = "Sauerstoffsättigung",
                 accent = CosmosColors.Success,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.spo2Percent?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.spo2Percent?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
                 unit = "%",
                 onClick = { onOpenMetricDetail(MetricKey.SPO2) },
             )
@@ -1437,12 +1369,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SKIN_TEMP -> MetricHistoryCard(
                 title = "Hauttemperatur",
                 accent = CosmosColors.Warning,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.skinTempCelsius?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.skinTempCelsius?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
                 unit = "°C",
                 onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                 lowerIsBetter = true,
@@ -1457,12 +1385,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_PERFORMANCE -> MetricHistoryCard(
                 title = "Schlaf-Performance",
                 accent = CosmosColors.Success,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
                 unit = "%",
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
             )
@@ -1470,12 +1394,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_TOTAL -> MetricHistoryCard(
                 title = "Schlafdauer",
                 accent = CosmosColors.AccentSecondary,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
                 unit = "min",
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
                 valueFormatter = SLEEP_HOUR_FORMAT,
@@ -1514,25 +1434,17 @@ private fun BiomarkerCardForId(
             }
 
             BiomarkerCardId.SLEEP_RESTORATIVE -> RestorativeSleepCard(
+                // Performance-Audit E1 (2026-05-10): 30d-Avg jetzt im VM vorberechnet.
                 percent = state.restorativeSleepPercent,
-                avgPercent = state.history30Days.mapNotNull { snap ->
-                    val total = snap.sleepTotalMinutes ?: return@mapNotNull null
-                    val rem = snap.sleepRemMinutes ?: return@mapNotNull null
-                    val deep = snap.sleepDeepMinutes ?: return@mapNotNull null
-                    if (total > 0) (rem + deep).toDouble() / total * 100.0 else null
-                }.takeIf { it.isNotEmpty() }?.average(),
+                avgPercent = state.chartData.restorativeSleepAvg30dPercent,
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
             )
 
             BiomarkerCardId.SLEEP_EFFICIENCY -> MetricHistoryCard(
                 title = "Schlafeffizienz",
                 accent = CosmosColors.Success,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
                 unit = "%",
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
             )
@@ -1540,12 +1452,8 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.SLEEP_CONSISTENCY -> MetricHistoryCard(
                 title = "Schlafregelmäßigkeit",
                 accent = CosmosColors.Success,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
                 unit = "%",
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
             )
@@ -1554,54 +1462,29 @@ private fun BiomarkerCardForId(
                 lowerIsBetter = true,
                 title = "Schlafdefizit",
                 accent = CosmosColors.Warning,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
                 unit = "min",
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
             )
 
-            BiomarkerCardId.KILOJOULES -> {
-                // Tagesumsatz schliesst den heutigen Tag aus weil der Wert sich
-                // ueber den Tag aufbaut. Andere Metriken sind morgens schon final.
-                // Performance-Audit Loop 3 (2026-05-10): Tagesstart aendert sich
-                // innerhalb einer App-Session nicht — remember{} ohne Key reicht.
-                val todayStartMs = remember {
-                    java.time.LocalDate.now()
-                        .atStartOfDay(java.time.ZoneId.systemDefault())
-                        .toInstant().toEpochMilli()
-                }
-                MetricHistoryCard(
-                    title = "Tagesumsatz",
-                    accent = CosmosColors.AccentPrimary,
-                    points = historyLast70
-                        .filter { it.capturedAt < todayStartMs }
-                        .mapNotNull { snap ->
-                            // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
-                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
-                        },
-                    fullHistoryPoints = state.history
-                        .filter { it.capturedAt < todayStartMs }
-                        .mapNotNull { snap ->
-                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
-                        },
-                    unit = "kcal",
-                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
-                )
-            }
+            BiomarkerCardId.KILOJOULES -> MetricHistoryCard(
+                // Performance-Audit E1 (2026-05-10): Today-Filter + kJ→kcal-Umrechnung
+                // jetzt im VM vorberechnet (buildChartData). Tagesstart wird einmal pro
+                // combine-Emission ermittelt — der lokale remember{} entfaellt damit.
+                title = "Tagesumsatz",
+                accent = CosmosColors.AccentPrimary,
+                points = state.chartData.pointsLast70["kilojoules"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["kilojoules"] ?: emptyList(),
+                unit = "kcal",
+                onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
+            )
 
             BiomarkerCardId.STRAIN -> MetricHistoryCard(
                 title = "Belastung",
                 accent = CosmosColors.Warning,
-                points = historyLast70.mapNotNull { snap ->
-                    snap.dayStrain?.let { snap.capturedAt to it }
-                },
-                fullHistoryPoints = state.history.mapNotNull { snap ->
-                    snap.dayStrain?.let { snap.capturedAt to it }
-                },
+                points = state.chartData.pointsLast70["strain"] ?: emptyList(),
+                fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
                 unit = "",
                 onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
             )

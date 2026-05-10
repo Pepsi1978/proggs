@@ -138,6 +138,28 @@ data class BiomarkerUiState(
     val ouraSleepHistory: List<OuraDailySleepEntity> = emptyList(),
     val ouraActivityHistory: List<OuraActivityEntity> = emptyList(),
     val ouraResilienceHistory: List<OuraResilienceEntity> = emptyList(),
+    /** Performance-Audit E1 (2026-05-10): vorberechnete Chart-Punkte pro Metric-Key.
+     *  Frueher liefen die mapNotNull-Ketten pro Recomposition von BiomarkerCardForId
+     *  (~22 Ketten, jede O(N) ueber bis zu 365 Datenpunkte) — jetzt einmalig im VM. */
+    val chartData: BiomarkerChartData = BiomarkerChartData(),
+)
+
+/**
+ * Vorberechneter Cache aller Chart-Punkte fuer den Biomarker-Screen.
+ *
+ * - `pointsLast70`: Last 70 Tage Slice — was die Chart-Cards in der normalen Ansicht zeigen.
+ * - `fullPoints`: vollstaendige Historie — was die MetricHistoryCard fuer Average/Trendlinie nutzt.
+ * - Keys sind `MetricKey`-Konstanten (HRV, RHR, SLEEP_TOTAL, ...).
+ * - `restorativeSleepAvg30dPercent`: 30-Tage-Schnitt fuer die RestorativeSleepCard.
+ *
+ * @Immutable damit Compose den ganzen Cache als stable behandelt — dadurch wird
+ * BiomarkerCardForId skippable wenn sich der Cache nicht aendert.
+ */
+@androidx.compose.runtime.Immutable
+data class BiomarkerChartData(
+    val pointsLast70: Map<String, List<Pair<Long, Double>>> = emptyMap(),
+    val fullPoints: Map<String, List<Pair<Long, Double>>> = emptyMap(),
+    val restorativeSleepAvg30dPercent: Double? = null,
 )
 
 /**
@@ -497,6 +519,21 @@ class BiomarkerViewModel @Inject constructor(
             selSnap.skinTempCelsius - baseline
         } else null
 
+        // Performance-Audit E1 (2026-05-10): vorberechnete Chart-Punkte pro Metric-Key.
+        // Frueher liefen ~22 mapNotNull-Ketten pro Recomposition von BiomarkerCardForId.
+        // Jetzt einmalig hier im combine{} (laeuft auf Dispatchers.Default).
+        val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
+        val last70Slice = all.filter { it.capturedAt >= seventyDaysAgoMs }
+        val todayStartMs = java.time.LocalDate.now()
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
+        val chartData = buildChartData(
+            historyLast70 = last70Slice,
+            fullHistory = all,
+            history30Days = last30,
+            todayStartMs = todayStartMs,
+        )
+
         BiomarkerUiState(
             latest = latest,
             history = all,
@@ -529,6 +566,7 @@ class BiomarkerViewModel @Inject constructor(
             ouraSleepHistory = oura.dailySleep.sortedBy { it.day },
             ouraActivityHistory = oura.activity.sortedBy { it.day },
             ouraResilienceHistory = oura.resilience.sortedBy { it.day },
+            chartData = chartData,
         )
     }
         // Performance-Audit Loop 1 (2026-05-10): combine{} enthaelt 30+ filter/sortedBy/
@@ -620,4 +658,71 @@ class BiomarkerViewModel @Inject constructor(
     }
 
     fun clearMessage() { _message.value = null }
+}
+
+/**
+ * Performance-Audit E1 (2026-05-10): vorberechneter Chart-Daten-Cache fuer den
+ * Biomarker-Screen. Frueher liefen ~22 mapNotNull-Ketten pro Recomposition von
+ * BiomarkerCardForId. Jetzt einmalig hier, ausgeloest nur bei tatsaechlicher
+ * Aenderung des state.history (laeuft auf Dispatchers.Default via flowOn).
+ *
+ * Keys sind die String-Konstanten aus `de.frank.entropyreducer.presentation.dashboard4.MetricKey`
+ * (HRV, RHR, RESPIRATORY, SPO2, SKIN_TEMP, SLEEP_PERF, SLEEP_TOTAL, SLEEP_EFFICIENCY,
+ * SLEEP_CONSISTENCY, SLEEP_DEBT, KILOJOULES, STRAIN).
+ */
+private fun buildChartData(
+    historyLast70: List<BiomarkerSnapshotEntity>,
+    fullHistory: List<BiomarkerSnapshotEntity>,
+    history30Days: List<BiomarkerSnapshotEntity>,
+    todayStartMs: Long,
+): BiomarkerChartData {
+    // Liste aller Metric-Extractor-Paare. Jeder Extractor liest einen Wert aus dem
+    // Snapshot und liefert ihn als Double (oder null). Reihenfolge ist irrelevant.
+    val extractors: List<Pair<String, (BiomarkerSnapshotEntity) -> Double?>> = listOf(
+        "hrv" to { it.hrvMs },
+        "rhr" to { it.restingHeartRate?.toDouble() },
+        "respiratory" to { it.respiratoryRate },
+        "spo2" to { it.spo2Percent },
+        "skin_temp" to { it.skinTempCelsius },
+        "sleep_perf" to { it.sleepPerformance?.toDouble() },
+        "sleep_total" to { it.sleepTotalMinutes?.toDouble() },
+        "sleep_efficiency" to { it.sleepEfficiencyPercent?.toDouble() },
+        "sleep_consistency" to { it.sleepConsistencyPercent?.toDouble() },
+        "sleep_debt" to { it.sleepDebtMinutes?.toDouble() },
+        "strain" to { it.dayStrain },
+    )
+
+    val pointsLast70 = mutableMapOf<String, List<Pair<Long, Double>>>()
+    val fullPoints = mutableMapOf<String, List<Pair<Long, Double>>>()
+    for ((key, extractor) in extractors) {
+        pointsLast70[key] = historyLast70.mapNotNull { snap ->
+            extractor(snap)?.let { snap.capturedAt to it }
+        }
+        fullPoints[key] = fullHistory.mapNotNull { snap ->
+            extractor(snap)?.let { snap.capturedAt to it }
+        }
+    }
+
+    // KILOJOULES braucht zusaetzlich Today-Filter (Tag baut sich auf, heute = unvollstaendig)
+    // und Whoop-kJ → kcal Umrechnung (Faktor 4.184).
+    pointsLast70["kilojoules"] = historyLast70
+        .filter { it.capturedAt < todayStartMs }
+        .mapNotNull { snap -> snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) } }
+    fullPoints["kilojoules"] = fullHistory
+        .filter { it.capturedAt < todayStartMs }
+        .mapNotNull { snap -> snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) } }
+
+    // Erholsamer Schlaf 30-Tage-Schnitt (RestorativeSleepCard).
+    val restorativeAvg = history30Days.mapNotNull { snap ->
+        val total = snap.sleepTotalMinutes ?: return@mapNotNull null
+        val rem = snap.sleepRemMinutes ?: return@mapNotNull null
+        val deep = snap.sleepDeepMinutes ?: return@mapNotNull null
+        if (total > 0) (rem + deep).toDouble() / total * 100.0 else null
+    }.takeIf { it.isNotEmpty() }?.average()
+
+    return BiomarkerChartData(
+        pointsLast70 = pointsLast70,
+        fullPoints = fullPoints,
+        restorativeSleepAvg30dPercent = restorativeAvg,
+    )
 }
