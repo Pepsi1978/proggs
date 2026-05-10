@@ -347,6 +347,10 @@ namespace TerminalVoiceOverlay.Views
         // bleibt sichtbar. Praktisch um z.B. einen Screenshot von einer
         // anderen App zu machen, ohne das Pillar zu verlieren.
         private readonly DispatcherTimer _hideDelayTimer;
+        // Sorgt periodisch dafuer, dass die Pille im Z-Order ganz oben bleibt
+        // — auch waehrend langer Aufnahmen mit Fensterwechsel, wo Desktop-
+        // Widgets sonst die Pille verdraengen koennen (Bugfix 2026-05-10).
+        private readonly DispatcherTimer _topmostAssertTimer;
         private bool _pulseBright    = false;
         private bool _btwPulseBright = false;
 
@@ -438,6 +442,24 @@ namespace TerminalVoiceOverlay.Views
                 _hideDelayTimer.Stop();
                 HideOverlayNow();
             };
+
+            // ── Topmost-Reassert-Timer (Bugfix 2026-05-10) ──
+            // WPF Topmost="True" ist "best-effort": andere Topmost-Fenster
+            // (Desktop-Widgets, Pop-ups, immer-im-Vordergrund-Apps) koennen
+            // die Pille im Z-Order nach hinten draengen — besonders bei
+            // langen Aufnahmen + haeufigem Fensterwechsel. Der Hide-Pfad in
+            // OnTerminalActivated greift hier nicht, weil die Pille
+            // waehrend einer Aufnahme sichtbar bleibt und der Show()-Branch
+            // uebersprungen wird.
+            //
+            // Loesung: Alle 2,5 s die Pille (und sichtbare Children) per
+            // SetWindowPos(HWND_TOPMOST, NOMOVE|NOSIZE|NOACTIVATE) zurueck
+            // auf absolute Topmost-Position kicken. NOACTIVATE verhindert,
+            // dass die Pille dabei den Fokus klaut. Kein Sichtbarwerden,
+            // kein Aufflackern, kein Klau von Tastatur-Fokus — nur Z-Order.
+            _topmostAssertTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
+            _topmostAssertTimer.Tick += (_, _) => ReassertTopmostIfVisible();
+            _topmostAssertTimer.Start();
 
             // ── Initial button colours ──
             // G-button is on by default — falls back to Whisper-raw if no Gemini API key.
@@ -736,6 +758,50 @@ namespace TerminalVoiceOverlay.Views
                 // dem Terminal erscheinen, niemals ueber Chrome o.ae.
                 _promptPanel?.ShowTransientChildrenIfNeeded();
             }
+
+            // KRITISCH (Bugfix 2026-05-10): Auch wenn die Pille bereits sichtbar
+            // war (z.B. waehrend einer laufenden Aufnahme), MUSS sie hier
+            // aktiv zurueck nach ganz oben im Z-Order — sonst bleibt sie
+            // hinter Desktop-Widgets, die ebenfalls Topmost sind.
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Drueckt das Overlay (und sichtbare Promptboard-Children) per
+        /// SetWindowPos(HWND_TOPMOST) zurueck auf die absolute Topmost-
+        /// Position im Z-Order. WPF's Topmost=True allein reicht nicht: bei
+        /// langen Aufnahmen mit haeufigem Fensterwechsel verliert die Pille
+        /// sonst gegen andere Topmost-Fenster (Desktop-Widgets, Pop-ups).
+        ///
+        /// SWP_NOACTIVATE ist entscheidend: die Pille soll NICHT den
+        /// Tastatur-Fokus klauen — sie schiebt sich nur visuell vor andere
+        /// Fenster. SWP_NOMOVE/NOSIZE behalten Position und Groesse bei.
+        /// </summary>
+        private void ReassertTopmostIfVisible()
+        {
+            try
+            {
+                ForceTopmost(this);
+                if (_promptPanel is { IsVisible: true } pp) ForceTopmost(pp);
+                if (_promptPanel?.InputWindow is { IsVisible: true } iw) ForceTopmost(iw);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReassertTopmost: {ex.Message}");
+            }
+        }
+
+        private static void ForceTopmost(Window w)
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            NativeMethods.Win32.SetWindowPos(
+                hwnd,
+                NativeMethods.Win32.HWND_TOPMOST,
+                0, 0, 0, 0,
+                NativeMethods.Win32.SWP_NOMOVE
+                | NativeMethods.Win32.SWP_NOSIZE
+                | NativeMethods.Win32.SWP_NOACTIVATE);
         }
 
         private void OnTerminalDeactivated()
@@ -3312,6 +3378,7 @@ namespace TerminalVoiceOverlay.Views
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
             _hideDelayTimer.Stop();
+            _topmostAssertTimer.Stop();
             _tooltipHoverTimer?.Stop();
 
             // X-Repeat-Loop sauber stoppen falls er noch laeuft (z.B.

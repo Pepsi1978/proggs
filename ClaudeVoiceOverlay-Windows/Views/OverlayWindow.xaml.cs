@@ -64,6 +64,10 @@ namespace ClaudeVoiceOverlay.Views
         private readonly DispatcherTimer _pulseTimer;
         private readonly DispatcherTimer _btwPulseTimer;
         private readonly DispatcherTimer _resetTimer;
+        // Drueckt die Pille periodisch zurueck nach ganz oben im Z-Order —
+        // sonst verdraengen Desktop-Widgets sie bei langen Aufnahmen mit
+        // Fensterwechsel (Bugfix 2026-05-10, parallel zum Terminal-Projekt).
+        private readonly DispatcherTimer _topmostAssertTimer;
         private bool _pulseBright    = false;
         private bool _btwPulseBright = false;
 
@@ -118,6 +122,16 @@ namespace ClaudeVoiceOverlay.Views
                 _resetTimer.Stop();
                 SetMicState(RecordingState.Idle);
             };
+
+            // ── Topmost-Reassert-Timer (Bugfix 2026-05-10) ──
+            // WPF Topmost="True" verliert bei langen Aufnahmen + haeufigem
+            // Fensterwechsel gegen andere Topmost-Fenster (Desktop-Widgets,
+            // Pop-ups). Alle 2,5 s die Pille per SetWindowPos(HWND_TOPMOST,
+            // NOACTIVATE) zurueck nach ganz oben kicken — ohne Fokus zu
+            // klauen, ohne Position zu aendern.
+            _topmostAssertTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2500) };
+            _topmostAssertTimer.Tick += (_, _) => ReassertTopmostIfVisible();
+            _topmostAssertTimer.Start();
 
             // ── Initial button colours ──
             // G-button is on by default — falls back to Whisper-raw if no Gemini API key.
@@ -223,6 +237,36 @@ namespace ClaudeVoiceOverlay.Views
             {
                 Show();
                 Console.WriteLine("Overlay: visible (app active)");
+            }
+
+            // KRITISCH (Bugfix 2026-05-10): Auch wenn die Pille bereits sichtbar
+            // war (z.B. waehrend laufender Aufnahme), muss sie aktiv zurueck
+            // nach ganz oben — sonst bleibt sie hinter Desktop-Widgets.
+            ReassertTopmostIfVisible();
+        }
+
+        /// <summary>
+        /// Kickt die Pille per SetWindowPos(HWND_TOPMOST, NOACTIVATE) auf die
+        /// absolute Topmost-Position im Z-Order zurueck. WPF Topmost=True
+        /// allein reicht nicht: bei langen Aufnahmen mit Fensterwechsel
+        /// verdraengen andere Topmost-Fenster die Pille sonst.
+        /// </summary>
+        private void ReassertTopmostIfVisible()
+        {
+            try
+            {
+                if (!IsVisible) return;
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero) return;
+                Win32.SetWindowPos(
+                    hwnd,
+                    Win32.HWND_TOPMOST,
+                    0, 0, 0, 0,
+                    Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ReassertTopmost: {ex.Message}");
             }
         }
 
@@ -798,6 +842,7 @@ namespace ClaudeVoiceOverlay.Views
             _pulseTimer.Stop();
             _btwPulseTimer.Stop();
             _resetTimer.Stop();
+            _topmostAssertTimer.Stop();
             _audioRecorder.LevelChanged -= OnAudioLevelChanged;
             _appWatcher.Dispose();
             _audioRecorder.Dispose();
