@@ -16,6 +16,7 @@ import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
 import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
+import de.frank.entropyreducer.presentation.dashboard4.HealthConnectDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.OuraDetailScreen
 import de.frank.entropyreducer.presentation.experimentcalendar.ExperimentCalendarScreen
 import de.frank.entropyreducer.presentation.insights.InsightBoardScreen
@@ -91,6 +92,9 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onOpenOuraDetail = { metricKey ->
                     nav.navigate(Routes.ouraDetail(metricKey))
                 },
+                onOpenHealthConnectDetail = { metricKey ->
+                    nav.navigate(Routes.healthConnectDetail(metricKey))
+                },
             )
         }
         composable(Routes.AMAZFIT_TRAININGS) {
@@ -125,6 +129,16 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         ) { backStackEntry ->
             val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
             OuraDetailScreen(
+                metricKey = metricKey,
+                onBack = { nav.popBackStack(); Unit },
+            )
+        }
+        composable(
+            route = Routes.HC_DETAIL_PATTERN,
+            arguments = listOf(navArgument("metricKey") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
+            HealthConnectDetailScreen(
                 metricKey = metricKey,
                 onBack = { nav.popBackStack(); Unit },
             )

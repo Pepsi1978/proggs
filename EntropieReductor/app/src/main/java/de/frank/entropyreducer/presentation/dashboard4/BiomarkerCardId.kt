@@ -34,6 +34,11 @@ object BiomarkerCardId {
     // Smart-Scales liefern beides zusammen mit dem Gewicht.
     const val MINI_BODY_FAT = "mini_body_fat"
     const val MINI_LEAN_BODY_MASS = "mini_lean_body_mass"
+    // Koerperwasser + Knochenmasse (Frank-Wunsch 2026-05-10, zweite Iteration —
+    // analog zu "Muskelmasse" denkt: Health Connect hat keinen direkten
+    // Muscle-Mass-Datentyp, aber Wasser und Knochen sind verfuegbar).
+    const val MINI_BODY_WATER = "mini_body_water"
+    const val MINI_BONE_MASS = "mini_bone_mass"
 
     // Herzfrequenz-Block
     const val HRV = "hrv"
@@ -97,6 +102,8 @@ object BiomarkerCardId {
         MINI_WEIGHT,
         MINI_BODY_FAT,
         MINI_LEAN_BODY_MASS,
+        MINI_BODY_WATER,
+        MINI_BONE_MASS,
     )
 
     val DEFAULT_ORDER: List<String> = listOf(
@@ -108,6 +115,8 @@ object BiomarkerCardId {
         MINI_WEIGHT,
         MINI_BODY_FAT,
         MINI_LEAN_BODY_MASS,
+        MINI_BODY_WATER,
+        MINI_BONE_MASS,
         HRV,
         RHR,
         RESPIRATORY,

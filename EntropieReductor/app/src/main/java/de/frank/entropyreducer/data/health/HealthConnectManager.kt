@@ -6,6 +6,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
+import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -45,6 +47,12 @@ class HealthConnectManager @Inject constructor(
     private val leanBodyMassPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(LeanBodyMassRecord::class),
     )
+    private val bodyWaterMassPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BodyWaterMassRecord::class),
+    )
+    private val boneMassPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BoneMassRecord::class),
+    )
 
     /**
      * Frank-Befund 2026-05-10: Ohne PERMISSION_READ_HEALTH_DATA_HISTORY ist die
@@ -68,7 +76,8 @@ class HealthConnectManager @Inject constructor(
      * History-Zugriff).
      */
     private val allReadPermissions: Set<String> =
-        weightPermissions + bodyFatPermissions + leanBodyMassPermissions + historyPermission
+        weightPermissions + bodyFatPermissions + leanBodyMassPermissions +
+            bodyWaterMassPermissions + boneMassPermissions + historyPermission
 
     /** Health Connect ist auf dem Geraet verfuegbar (App installiert oder Modul aktiv). */
     fun isAvailable(): Boolean {
@@ -98,6 +107,18 @@ class HealthConnectManager @Inject constructor(
         val c = client() ?: return false
         val granted = c.permissionController.getGrantedPermissions()
         return granted.containsAll(leanBodyMassPermissions)
+    }
+
+    suspend fun hasBodyWaterMassReadPermission(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(bodyWaterMassPermissions)
+    }
+
+    suspend fun hasBoneMassReadPermission(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(boneMassPermissions)
     }
 
     /** Pruefen ob READ_HEALTH_DATA_HISTORY erteilt ist (Frank-Befund 2026-05-10). */
@@ -273,6 +294,89 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun averageLeanBodyMassKg(days: Int = 30): Double? {
         val history = readLeanBodyMassHistory(days)
+        return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+    }
+
+    // ---------- Koerperwasser ----------
+
+    /**
+     * Letzte Koerperwasser-Masse in kg. Bei Smart-Scales typischerweise zusammen
+     * mit Gewicht und Koerperfett geschrieben — Frank-Wunsch 2026-05-10.
+     */
+    suspend fun readLatestBodyWaterMassKg(): Double? = runCatching {
+        val c = client() ?: return@runCatching null
+        if (!hasBodyWaterMassReadPermission()) return@runCatching null
+        val end = Instant.now()
+        val start = end.minusSeconds(365L * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BodyWaterMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+            ),
+        )
+        Log.d(TAG, "BodyWaterMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        response.records.firstOrNull()?.mass?.inKilograms
+    }.onFailure { Log.w(TAG, "readLatestBodyWaterMassKg failed", it) }.getOrNull()
+
+    suspend fun readBodyWaterMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        if (!hasBodyWaterMassReadPermission()) return@runCatching emptyList()
+        val end = Instant.now()
+        val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BodyWaterMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ),
+        )
+        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+    }.onFailure { Log.w(TAG, "readBodyWaterMassHistory failed", it) }.getOrDefault(emptyList())
+
+    suspend fun averageBodyWaterMassKg(days: Int = 30): Double? {
+        val history = readBodyWaterMassHistory(days)
+        return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+    }
+
+    // ---------- Knochenmasse ----------
+
+    /** Letzte Knochenmasse in kg. Bei vielen Smart-Scales als Body-Composition-Wert dabei. */
+    suspend fun readLatestBoneMassKg(): Double? = runCatching {
+        val c = client() ?: return@runCatching null
+        if (!hasBoneMassReadPermission()) return@runCatching null
+        val end = Instant.now()
+        val start = end.minusSeconds(365L * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BoneMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+            ),
+        )
+        Log.d(TAG, "BoneMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        response.records.firstOrNull()?.mass?.inKilograms
+    }.onFailure { Log.w(TAG, "readLatestBoneMassKg failed", it) }.getOrNull()
+
+    suspend fun readBoneMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        if (!hasBoneMassReadPermission()) return@runCatching emptyList()
+        val end = Instant.now()
+        val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BoneMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ),
+        )
+        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+    }.onFailure { Log.w(TAG, "readBoneMassHistory failed", it) }.getOrDefault(emptyList())
+
+    suspend fun averageBoneMassKg(days: Int = 30): Double? {
+        val history = readBoneMassHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
 

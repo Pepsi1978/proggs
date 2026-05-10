@@ -150,6 +150,14 @@ data class WeightState(
     val latestLeanBodyMassKg: Double? = null,
     val avg30dLeanBodyMassKg: Double? = null,
     val leanBodyMassHistory30d: List<Pair<Long, Double>> = emptyList(),
+    /** Koerperwasser in kg (Frank-Wunsch 2026-05-10). */
+    val latestBodyWaterMassKg: Double? = null,
+    val avg30dBodyWaterMassKg: Double? = null,
+    val bodyWaterMassHistory30d: List<Pair<Long, Double>> = emptyList(),
+    /** Knochenmasse in kg. */
+    val latestBoneMassKg: Double? = null,
+    val avg30dBoneMassKg: Double? = null,
+    val boneMassHistory30d: List<Pair<Long, Double>> = emptyList(),
     /** Zeitstempel des letzten erfolgreichen Reads — fuer User-Feedback bei Tap-Refresh. */
     val lastReadAtMs: Long = 0L,
     /** True waehrend gerade gelesen wird (zeigt einen Spinner auf der Karte). */
@@ -206,12 +214,14 @@ class BiomarkerViewModel @Inject constructor(
             val weightOk = healthConnect.hasWeightReadPermission()
             val bodyFatOk = healthConnect.hasBodyFatReadPermission()
             val leanOk = healthConnect.hasLeanBodyMassReadPermission()
+            val waterOk = healthConnect.hasBodyWaterMassReadPermission()
+            val boneOk = healthConnect.hasBoneMassReadPermission()
             val historyOk = healthConnect.hasHistoryReadPermission()
-            android.util.Log.i("BiomarkerVM", "  permissions: weight=$weightOk bodyFat=$bodyFatOk lean=$leanOk history=$historyOk")
-            // permissionGranted = ALLE noetigen erteilt (drei Datentypen + History).
+            android.util.Log.i("BiomarkerVM", "  permissions: weight=$weightOk bodyFat=$bodyFatOk lean=$leanOk water=$waterOk bone=$boneOk history=$historyOk")
+            // permissionGranted = ALLE noetigen erteilt (5 Datentypen + History).
             // Ohne History-Permission lesen wir nur 30 Tage zurueck — bei seltenen
             // Wiegungen ist das oft leer (Frank-Befund 2026-05-10).
-            if (!(weightOk && bodyFatOk && leanOk && historyOk)) {
+            if (!(weightOk && bodyFatOk && leanOk && waterOk && boneOk && historyOk)) {
                 _weight.value = WeightState(
                     healthConnectAvailable = true,
                     permissionGranted = false,
@@ -230,6 +240,12 @@ class BiomarkerViewModel @Inject constructor(
             val latestLean = healthConnect.readLatestLeanBodyMassKg()
             val avgLean = healthConnect.averageLeanBodyMassKg(30)
             val historyLean = healthConnect.readLeanBodyMassHistory(30)
+            val latestWater = healthConnect.readLatestBodyWaterMassKg()
+            val avgWater = healthConnect.averageBodyWaterMassKg(30)
+            val historyWater = healthConnect.readBodyWaterMassHistory(30)
+            val latestBone = healthConnect.readLatestBoneMassKg()
+            val avgBone = healthConnect.averageBoneMassKg(30)
+            val historyBone = healthConnect.readBoneMassHistory(30)
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
@@ -242,6 +258,12 @@ class BiomarkerViewModel @Inject constructor(
                 latestLeanBodyMassKg = latestLean,
                 avg30dLeanBodyMassKg = avgLean,
                 leanBodyMassHistory30d = historyLean,
+                latestBodyWaterMassKg = latestWater,
+                avg30dBodyWaterMassKg = avgWater,
+                bodyWaterMassHistory30d = historyWater,
+                latestBoneMassKg = latestBone,
+                avg30dBoneMassKg = avgBone,
+                boneMassHistory30d = historyBone,
                 lastReadAtMs = System.currentTimeMillis(),
                 isLoading = false,
             )
