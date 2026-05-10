@@ -311,6 +311,7 @@ fun BiomarkerHostScreen(
             // Eigenberechnung — Hauttemperatur-Abweichung gegenueber 30-Tage-Baseline.
             item {
                 SkinTempDeltaCard(
+                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
                     delta = state.skinTempDelta,
                     onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                 )
@@ -1144,38 +1145,34 @@ private fun RestorativeSleepCard(
  */
 @Composable
 private fun SkinTempDeltaCard(
+    currentValue: Double?,
     delta: Double?,
     onClick: () -> Unit,
 ) {
-    // Frank-Wunsch 2026-05-10: 1:1 wie die anderen Mini-Karten (HRV, Schlaf,
-    // Performance, Herzfrequenz) — gleiche MetricMiniCard mit Label + Wert,
-    // ABER ohne Delta-Zeile und ohne Footnote (Frank: "da machst du einfach
-    // nur Hauttemperatur"). Wert ist farbig (statt textPrimary):
-    //  - delta < 0 (kuehler als Schnitt)  -> Gruen  (gut)
-    //  - delta > 0 (waermer als Schnitt)  -> Rot    (Stress/Krankheits-Signal)
-    val cosmos = LocalCosmos.current
-    val valueColor = when {
-        delta == null -> cosmos.textSecondary
-        delta < 0 -> CosmosColors.Success
-        delta > 0 -> CosmosColors.Critical
-        else -> cosmos.textSecondary
-    }
+    // Frank-Wunsch 2026-05-10 (vierte Praezisierung): EXAKT die gleiche Standard-
+    // Groesse wie alle anderen Mini-Karten — also auch hier Label + Wert + Delta
+    // + Footnote. Vorherige Variante "nur Label + Wert" war optisch kuerzer als
+    // die Restorative-Karte und Frank wollte beide identisch hoch haben.
+    // Wert = aktueller Hauttemperatur-Messwert (z.B. 36.42 °C),
+    // Delta = Abweichung vom 30-Tage-Schnitt (z.B. +0.34 °C / −0.12 °C),
+    // Footnote = "vs. 30-Tage-Mittel".
+    // Bei Hauttemperatur ist NIEDRIGER besser (Whoop-Doktrin), daher
+    // deltaPositive = (delta < 0).
     val sign = when {
         delta == null -> ""
         delta >= 0 -> "+"
         else -> "−"
     }
     val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
-    val valueText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—"
+    val deltaText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else ""
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Hauttemperatur",
-        value = valueText,
-        delta = "",
-        deltaPositive = false,
-        footnote = "",
+        value = currentValue?.let { "${"%.2f".format(it)} °C" } ?: "—",
+        delta = deltaText,
+        deltaPositive = (delta ?: 0.0) < 0.0,
+        footnote = "vs. 30-Tage-Mittel",
         onClick = onClick,
-        valueColor = valueColor,
     )
 }
 
@@ -1314,6 +1311,7 @@ private fun BiomarkerCardForId(
             )
 
             BiomarkerCardId.SKIN_TEMP_DELTA -> SkinTempDeltaCard(
+                currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
                 delta = state.skinTempDelta,
                 onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
             )
