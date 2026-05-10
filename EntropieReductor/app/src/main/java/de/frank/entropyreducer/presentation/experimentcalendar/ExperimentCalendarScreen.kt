@@ -169,10 +169,16 @@ fun ExperimentCalendarScreen(
     }
 }
 
+// Performance-Audit Loop 7 (2026-05-10): Enum-Listen als top-level statt
+// .values()-Array-Allokation pro Recomposition.
+private val ALL_CALENDAR_VIEWS: List<CalendarView> = CalendarView.entries.toList()
+private val ALL_HYPOTHESIS_STATUSES: List<HypothesisStatus> = HypothesisStatus.entries.toList()
+private val ALL_HYPOTHESIS_OUTCOMES: List<HypothesisOutcome> = HypothesisOutcome.entries.toList()
+
 @Composable
 private fun ViewSwitcher(current: CalendarView, onSelect: (CalendarView) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        CalendarView.values().forEach { v ->
+        ALL_CALENDAR_VIEWS.forEach { v ->
             FilterChip(
                 selected = current == v,
                 onClick = { onSelect(v) },
@@ -567,7 +573,7 @@ private fun HypothesisDetailContent(
         // Status
         Text("Status", color = cosmos.textSecondary, style = MaterialTheme.typography.labelMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            HypothesisStatus.values().forEach { st ->
+            ALL_HYPOTHESIS_STATUSES.forEach { st ->
                 FilterChip(
                     selected = hypothesis.status == st,
                     onClick = { onSetStatus(st) },
@@ -579,7 +585,7 @@ private fun HypothesisDetailContent(
         // Outcome
         Text("Outcome", color = cosmos.textSecondary, style = MaterialTheme.typography.labelMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            HypothesisOutcome.values().forEach { oc ->
+            ALL_HYPOTHESIS_OUTCOMES.forEach { oc ->
                 FilterChip(
                     selected = hypothesis.outcome == oc,
                     onClick = { onSetOutcome(oc) },
