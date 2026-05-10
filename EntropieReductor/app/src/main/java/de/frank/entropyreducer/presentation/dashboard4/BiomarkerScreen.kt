@@ -312,8 +312,6 @@ fun BiomarkerHostScreen(
             item {
                 SkinTempDeltaCard(
                     delta = state.skinTempDelta,
-                    baseline = state.skinTempBaseline,
-                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
                     onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
                 )
             }
@@ -380,8 +378,12 @@ fun BiomarkerHostScreen(
             item {
                 RestorativeSleepCard(
                     percent = state.restorativeSleepPercent,
-                    remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
-                    deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                    avgPercent = state.history30Days.mapNotNull { snap ->
+                        val total = snap.sleepTotalMinutes ?: return@mapNotNull null
+                        val rem = snap.sleepRemMinutes ?: return@mapNotNull null
+                        val deep = snap.sleepDeepMinutes ?: return@mapNotNull null
+                        if (total > 0) (rem + deep).toDouble() / total * 100.0 else null
+                    }.takeIf { it.isNotEmpty() }?.average(),
                     onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
                 )
             }
@@ -654,6 +656,7 @@ private fun MetricMiniCard(
     deltaPositive: Boolean,
     footnote: String,
     onClick: (() -> Unit)? = null,
+    valueColor: androidx.compose.ui.graphics.Color? = null,
 ) {
     val cosmos = LocalCosmos.current
     val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
@@ -662,13 +665,20 @@ private fun MetricMiniCard(
         Column {
             Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
             Spacer(Modifier.height(2.dp))
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = cosmos.textPrimary)
+            Text(
+                value,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = valueColor ?: cosmos.textPrimary,
+            )
             if (delta.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(delta, color = deltaColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
             }
-            Spacer(Modifier.height(2.dp))
-            Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+            if (footnote.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
@@ -1031,6 +1041,14 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
         score >= 25 -> "Dein Körper braucht heute Schonung."
         else -> "Dein Körper ist erschoepft."
     }
+    // Frank-Wunsch 2026-05-10: Delta vs. 30-Tage-Mittel direkt unter dem Status,
+    // damit Frank sofort sieht ob die heutige Erholung ueber oder unter dem
+    // persoenlichen Schnitt liegt — gleicher Stil wie bei den Mini-Karten.
+    val avgRecovery = state.history30Days.mapNotNull { it.recoveryScore }
+        .takeIf { it.isNotEmpty() }?.average()
+    val deltaText = formatDelta(score?.toDouble(), avgRecovery, "")
+    val deltaPositive = (score?.toDouble() ?: 0.0) > (avgRecovery ?: 0.0)
+    val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
     // Frank-Wunsch 2026-05-09 (Abend): Tap auf den Recovery-Ring oeffnet die
     // Recovery-Detail-Seite — wie alle anderen Charts im Biomarker-Bereich.
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onOpenDetail(MetricKey.RECOVERY) }) {
@@ -1048,6 +1066,21 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textSecondary,
                 )
+                if (deltaText.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = deltaText.trim(),
+                        color = deltaColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "vs. 30-Tage-Mittel",
+                        color = cosmos.textSecondary,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "Erholung basiert auf mehreren Biomarkern und Trends.",
@@ -1084,37 +1117,22 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
 @Composable
 private fun RestorativeSleepCard(
     percent: Double?,
-    remMinutes: Int?,
-    deepMinutes: Int?,
+    avgPercent: Double?,
     onClick: () -> Unit,
 ) {
-    // Frank-Wunsch 2026-05-10: kompakt wie die Mini-Karten oben (HRV, Schlaf,
-    // Performance, Herzfrequenz). Nur Label + Prozentwert in Farbe — keine
-    // REM/Tiefschlaf-Aufschluesselung, kein Erklaertext.
-    val cosmos = LocalCosmos.current
-    val color = when {
-        percent == null -> cosmos.textSecondary
-        percent >= 50 -> CosmosColors.Success
-        percent >= 35 -> CosmosColors.AccentPrimary
-        percent >= 25 -> CosmosColors.Warning
-        else -> CosmosColors.Critical
-    }
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-        Column {
-            Text(
-                text = "Erholsamer Schlaf",
-                style = MaterialTheme.typography.labelMedium,
-                color = cosmos.textSecondary,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = percent?.let { "${"%.0f".format(it)} %" } ?: "—",
-                color = color,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
+    // Frank-Wunsch 2026-05-10: 1:1 wie die anderen Mini-Karten (HRV, Schlaf,
+    // Performance, Herzfrequenz) — gleiche MetricMiniCard mit Label + Wert +
+    // Delta vs. 30-Tage-Mittel + Footnote. Hoeherer Restorative-Anteil ist
+    // besser, daher deltaPositive bei percent > avgPercent.
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "Erholsamer Schlaf",
+        value = percent?.let { "${"%.0f".format(it)} %" } ?: "—",
+        delta = formatDelta(percent, avgPercent, "%"),
+        deltaPositive = (percent ?: 0.0) > (avgPercent ?: 0.0),
+        footnote = "vs. 30-Tage-Mittel",
+        onClick = onClick,
+    )
 }
 
 /**
@@ -1127,18 +1145,16 @@ private fun RestorativeSleepCard(
 @Composable
 private fun SkinTempDeltaCard(
     delta: Double?,
-    baseline: Double?,
-    currentValue: Double?,
     onClick: () -> Unit,
 ) {
-    // Frank-Wunsch 2026-05-10: kompakt wie die Mini-Karten oben (HRV, Schlaf,
-    // Performance, Herzfrequenz). Nur Label + Abweichungswert in Farbe — keine
-    // Aktuell/Baseline-Aufschluesselung, kein Erklaertext.
-    // Farb-Logik (Frank-Wunsch 2026-05-10):
-    //  - Wert UNTER dem 30-Tage-Schnitt (delta < 0)  -> Gruen  (gut, kuehler)
-    //  - Wert UEBER dem 30-Tage-Schnitt (delta > 0)  -> Rot    (Stress/Krankheits-Signal)
+    // Frank-Wunsch 2026-05-10: 1:1 wie die anderen Mini-Karten (HRV, Schlaf,
+    // Performance, Herzfrequenz) — gleiche MetricMiniCard mit Label + Wert,
+    // ABER ohne Delta-Zeile und ohne Footnote (Frank: "da machst du einfach
+    // nur Hauttemperatur"). Wert ist farbig (statt textPrimary):
+    //  - delta < 0 (kuehler als Schnitt)  -> Gruen  (gut)
+    //  - delta > 0 (waermer als Schnitt)  -> Rot    (Stress/Krankheits-Signal)
     val cosmos = LocalCosmos.current
-    val color = when {
+    val valueColor = when {
         delta == null -> cosmos.textSecondary
         delta < 0 -> CosmosColors.Success
         delta > 0 -> CosmosColors.Critical
@@ -1150,22 +1166,17 @@ private fun SkinTempDeltaCard(
         else -> "−"
     }
     val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-        Column {
-            Text(
-                text = "Hauttemperatur",
-                style = MaterialTheme.typography.labelMedium,
-                color = cosmos.textSecondary,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—",
-                color = color,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
+    val valueText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—"
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "Hauttemperatur",
+        value = valueText,
+        delta = "",
+        deltaPositive = false,
+        footnote = "",
+        onClick = onClick,
+        valueColor = valueColor,
+    )
 }
 
 private fun formatRelativeSyncTime(syncMs: Long): String {
@@ -1304,8 +1315,6 @@ private fun BiomarkerCardForId(
 
             BiomarkerCardId.SKIN_TEMP_DELTA -> SkinTempDeltaCard(
                 delta = state.skinTempDelta,
-                baseline = state.skinTempBaseline,
-                currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
                 onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
             )
 
@@ -1370,8 +1379,12 @@ private fun BiomarkerCardForId(
 
             BiomarkerCardId.SLEEP_RESTORATIVE -> RestorativeSleepCard(
                 percent = state.restorativeSleepPercent,
-                remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
-                deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                avgPercent = state.history30Days.mapNotNull { snap ->
+                    val total = snap.sleepTotalMinutes ?: return@mapNotNull null
+                    val rem = snap.sleepRemMinutes ?: return@mapNotNull null
+                    val deep = snap.sleepDeepMinutes ?: return@mapNotNull null
+                    if (total > 0) (rem + deep).toDouble() / total * 100.0 else null
+                }.takeIf { it.isNotEmpty() }?.average(),
                 onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
             )
 
