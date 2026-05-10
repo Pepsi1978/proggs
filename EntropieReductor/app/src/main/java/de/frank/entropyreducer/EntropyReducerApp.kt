@@ -124,14 +124,14 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         scheduler.runWhoopSyncNow()
                     }
                 }
-                // Frank-Wunsch 2026-05-10: bei jedem App-Start auch Amazfit
-                // und Oura synchronisieren. Amazfit laeuft ueber den Worker
-                // (kennt den Token-Status selbst). Oura nutzt den Repository
-                // direkt — wenn kein Token gespeichert ist, wirft syncLastDays
-                // eine IllegalStateException die wir hier still verschlucken.
-                applicationScope.launch {
-                    runCatching { scheduler.runAmazfitSyncNow() }
-                }
+                // Frank-Wunsch 2026-05-11: Amazfit/Zepp wird NICHT mehr automatisch
+                // beim App-Start synchronisiert. Grund: jeder Re-Login zur Zepp-
+                // Cloud invalidiert den Token der Zepp-App auf dem Handy — Frank
+                // wurde dort staendig rausgeworfen. Zepp-Sync laeuft jetzt nur
+                // noch ueber den manuellen "Aktualisieren"-Knopf im Biomarker-
+                // Bildschirm (BiomarkerViewModel.refreshNow). Andere APIs (Whoop,
+                // Oura, Health Connect) sind nicht betroffen — die haben das
+                // Single-Token-Problem nicht.
                 applicationScope.launch {
                     if (ouraRepository.isTokenConfigured()) {
                         // Folgesync zieht 7 Tage zurueck — reicht um neue Werte

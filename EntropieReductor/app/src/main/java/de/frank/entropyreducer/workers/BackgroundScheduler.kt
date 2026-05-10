@@ -31,6 +31,14 @@ class BackgroundScheduler @Inject constructor(
 
     /** Plant Calendar + Whoop nightly um 04:30 lokaler Zeit. */
     fun ensureNightlyJobs() {
+        // Frank-Wunsch 2026-05-11: Amazfit/Zepp ist KEIN nightly Job mehr — Zepp
+        // erlaubt nur einen aktiven App-Token pro Account, jeder Re-Login wirft
+        // die Zepp-App auf Frank's Handy raus. Zepp wird ab jetzt ausschliesslich
+        // ueber den manuellen Refresh-Knopf im Biomarker-Bildschirm getriggert.
+        // Hier explizit den evtl. noch aus alten Builds in WorkManager liegenden
+        // Periodic-Job loeschen (sonst laeuft er weiter, auch nach App-Update).
+        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_PERIODIC)
+
         val targetMinutes = 4 * 60 + 30 // 04:30
         val initialDelayMinutes = minutesUntil(targetMinutes)
 
@@ -51,15 +59,6 @@ class BackgroundScheduler @Inject constructor(
             WhoopSyncWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
             PeriodicWorkRequestBuilder<WhoopSyncWorker>(24, TimeUnit.HOURS)
-                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build(),
-        )
-        // Amazfit T-Rex 3 — Frank-Wunsch 2026-05-09: nightly Sync analog zu Whoop.
-        wm.enqueueUniquePeriodicWork(
-            AmazfitSyncWorker.UNIQUE_NAME_PERIODIC,
-            ExistingPeriodicWorkPolicy.UPDATE,
-            PeriodicWorkRequestBuilder<AmazfitSyncWorker>(24, TimeUnit.HOURS)
                 .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build(),
