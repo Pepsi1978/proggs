@@ -17,8 +17,13 @@
     <!-- WorkManager / Hintergrund-Sync -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Health Connect (Frank-Wunsch 2026-05-10): Gewicht aus Zepp-Bridge lesen -->
+    <!-- Health Connect (Frank-Wunsch 2026-05-10): Gewicht + Koerperfett + Magermasse
+         aus Zepp-Bridge lesen. Alle drei muessen im Manifest deklariert sein —
+         sonst weist Android den Permission-Request stillschweigend zurueck und
+         die Permission-Activity finished sofort ohne Dialog. -->
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS" />
 
     <!-- Sichtbarkeit von Health Connect ab Android 14 (Pflicht-Query) -->
     <queries>
