@@ -303,7 +303,9 @@ function analyzeTranscript(path: string): SessionMetrics {
 	const efficiency = Math.min(toolCalls / Math.max(totalTurns, 1), 1.0);
 	const qualityDim = (score / 10) * 40; // 0-40: core quality (most important)
 	const efficiencyDim = efficiency * 20; // 0-20: tool usage efficiency
-	const intelDim = (hadIntelligenceSuggestion ? 15 : 0) + Math.min(intelligenceSuggestionCount, 3) * 5; // 0-30: intelligence suggestions
+	const intelDim =
+		(hadIntelligenceSuggestion ? 15 : 0) +
+		Math.min(intelligenceSuggestionCount, 3) * 5; // 0-30: intelligence suggestions
 	const selfObsDim = hadSelfObservation ? 5 : 0; // 0-5: self-observation
 	const metaDim = metaIntelligenceLevel * 2.5; // 0-5: meta-intelligence (system improvements)
 	const rawIq = qualityDim + efficiencyDim + intelDim + selfObsDim + metaDim;
@@ -506,22 +508,28 @@ function main(): void {
 		if (!validateMetrics(metrics, transcript!)) {
 			process.exit(0);
 		}
-		// M1/B4: Deduplication — only write if session_id changed or turns increased by >5
+		// M1/B4 (2026-05-10): Deduplication — search last 10 lines for SAME session_id (exact match).
+		// Old impl checked only lastLine, which fails when interleaved .ps1 entries (no session_id) sit
+		// between .ts writes — see R7 diagnosis 2026-05-10 (duplicate abb76d7b 2026-04-04 + 2026-04-12).
+		// Challenger 2026-05-10: removed "similar turns" tolerance — different sessions can have similar
+		// turn counts and would be incorrectly deduplicated. Exact session_id match is the correct unique key.
 		if (existsSync(SCORES_FILE)) {
 			const lines = readFileSync(SCORES_FILE, "utf-8").trim().split("\n");
-			const lastLine = lines[lines.length - 1];
-			if (lastLine) {
+			for (let i = lines.length - 1; i >= Math.max(0, lines.length - 10); i--) {
+				const line = lines[i];
+				if (!line) continue;
 				try {
-					const last = JSON.parse(lastLine);
-					if (
-						last.session_id === metrics.session_id &&
-						Math.abs(metrics.total_turns - last.total_turns) <= 5
-					) {
-						// Same session, turns barely changed — skip duplicate write
-						process.exit(0);
+					const last = JSON.parse(line);
+					if (last.session_id && last.session_id === metrics.session_id) {
+						// Same session already scored — skip duplicate write entirely.
+						// If turns increased significantly (>5), allow update by writing anyway.
+						if (Math.abs((last.total_turns ?? 0) - metrics.total_turns) <= 5) {
+							process.exit(0);
+						}
+						break; // significant change — fall through to write new entry
 					}
 				} catch {
-					/* parse error — write anyway */
+					/* malformed line (e.g. .ps1 old-format entry) — keep searching */
 				}
 			}
 		}

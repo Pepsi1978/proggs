@@ -92,47 +92,47 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Root Cause:** CLAUDE.md enthielt "NIEMALS unter 95" — das war veraltet. Der Benutzer hat klargestellt: 85 ist der korrekte Dauerwert
 **Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
 **Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
-- **[2026-04-15 22:18] subagent-failure**: Stop-Hook Endlosschleife: Der stop-hook-feedback Hook wird wiederholt getriggert obwohl kein Subagent abgeschlossen hat. Symptom: Hook fragt nach Subagent-Zusammenfassung, aber kein Subagent war aktiv (background agent a3fc6105e636cb4e4 aus vorheriger Session nie zurueckgekehrt). Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent in dieser Konversation gestartet und beendet wurde -- er triggert bei jedem Stop-Event blind. Betroffene Dateien: ~/.claude/hooks/ (stop-hook oder subagent-stop-hook). Fix: Hook soll nur triggern wenn in der aktuellen Konversation tatsaechlich ein Agent-Tool-Call stattgefunden hat (z.B. durch Pruefen ob conversation.json SubagentStop-Events enthaelt).
-- **[2026-04-15 22:18] subagent-failure**: ENDLOSSCHLEIFE im stop-hook: Der SubagentStop-Hook triggert wiederholt (12+ mal) in einer Session ohne aktive Subagents. Symptom: Hook fragt nach Subagent-Zusammenfassung obwohl kein Agent-Tool-Call in dieser Konversation stattfand. Background-Agent a3fc6105e636cb4e4 aus vorheriger Session ist nie zurueckgekehrt. Root Cause: Hook hat keine Pruefung ob tatsaechlich ein SubagentStop-Event in der aktuellen Session aufgetreten ist -- er evaluiert den Stop-Event-Kontext falsch oder bekommt ein falsches Signal. Betroffene Dateien: ~/.claude/hooks/ (subagent-stop Hook, vermutlich subagent-writeback.ps1 oder aehnlich). Fix-Vorschlag: Hook soll am Anfang pruefen ob ein echtes SubagentStop-Event vorliegt (z.B. ob der Hook-Input tatsaechlich einen subagent_id-Parameter enthaelt). Falls kein subagent_id im Input: sofort exit 0 ohne weitere Verarbeitung.
-- **[2026-04-15 22:30] subagent-failure**: ENDLOSSCHLEIFE Stop-Hook: Der SubagentStop/Stop-Hook in ~/.claude/hooks/ feuert bei JEDER Assistenten-Antwort (50+ mal) auch wenn KEIN Subagent abgeschlossen hat. Symptom: Hook-Feedback erscheint als User-Message nach jeder Assistant-Response, Text lautet A subagent just finished. Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent-Completion-Event vorliegt (kein gueltiges subagent_id im Input). Stattdessen feuert er auf jeden Stop-Event. Betroffene Datei: ~/.claude/hooks/ (SubagentStop oder Stop Hook, vermutlich subagent-stop.ps1 oder stop-hook.ps1). Konkreter Fix: Am Anfang des Hooks pruefen ob der Input-Parameter subagent_id nicht leer ist. Falls leer oder nicht vorhanden: sofort exit 0 ohne weitere Verarbeitung. PowerShell-Beispiel: $input = $env:CLAUDE_TOOL_INPUT | ConvertFrom-Json; if (-not $input.subagent_id) { exit 0 }. Alternativ: Hook nur fuer SubagentStop-Event registrieren (nicht fuer Stop-Event) falls er beide Events abfaengt.
 
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
+<!-- ARCHIV (2026-05-10, /self-improve Thorough): 3 SubagentStop-Endlosschleife-Eintraege (2026-04-15 22:18, 22:18, 22:30) — GEFIXT 2026-04-20 durch Compound Effect #5: agent_id-Guard in memory-watchdog.ps1+.sh und writeback-enforcer.ps1+.sh + neue Regel hook-input-validation.md. Hook feuert nur noch bei echten SubagentStop-Events. Fehlerklasse durch Poka-Yoke Stufe 3 eliminiert. Siehe Forschung & Intelligence #5 fuer Beweiskette. -->
+<!-- ARCHIV (2026-05-10): 1x StopFailure Rate-Limit (b6155c28, macOS, "resets 10am") — temporaer, kein dauerhaftes Problem -->
+
 ### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
-<<<<<<< Updated upstream
-### 2026-04-27 12:53 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-04-27 12:57 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-04-27 16:20 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-04-27 17:04 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-04-27 17:51 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-04-27 18:15 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-04-28 14:29 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 12:22 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 13:58 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 14:47 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high) — Status: AUTO-GEFIXT
-### 2026-05-07 14:48 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 14:52 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 15:04 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 15:04 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high) — Status: AUTO-GEFIXT
-### 2026-05-07 16:45 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-07 17:15 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-07 17:15 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 17:26 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 18:58 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-05-07 20:13 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 20:13 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
-### 2026-05-07 21:41 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
-### 2026-05-07 22:16 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-||||||| Stash base
-=======
-### 2026-04-23 14:22 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
-### 2026-04-23 14:29 — StopFailure: API/Rate-Limit Error — Status: OFFEN
->>>>>>> Stashed changes
-### 2026-05-08 13:27 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
-### 2026-05-08 13:27 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
+
+<!-- ARCHIV (2026-05-10, /self-improve Thorough): 35 Spam-Eintraege archiviert: -->
+<!--   - 30x startup-checks.ps1 Speicherplatz 95-96% (2026-04-27 bis 2026-05-10) — Disk-Spam — Root Cause: 96% Speicher dauerhaft, Spam-Filter im Hook fehlt -->
+<!--   - 1x bash-guard.ps1 rm -rf blockiert (2026-04-27) — erwartetes Verhalten -->
+<!--   - 6x session-guard.ps1 effortLevel-Reset (2026-05-07/08/10) — erwartetes Verhalten bei /clear oder Startup -->
+<!--   - 3x memory-watchdog.ps1 Write-Back AUTO-LOGGED (2026-05-07) — informativ, agent_id-Guard greift wenn echter Subagent fehlt -->
+<!--   - 2x StopFailure API/Rate-Limit (2026-04-23, 2026-05-10) — temporaer -->
+<!--   - 3x auto-sync.ps1 Merge-Konflikt (2026-04-23, 2026-05-08, 2026-05-10) — siehe aktiven Eintrag unten -->
+
+### 2026-05-10 — Hook: startup-checks.ps1 — Disk-Spam (30 Eintraege/Woche)
+**Quelle:** Hook startup-checks.ps1 (Windows)
+**Symptom:** Bei jeder Session erscheinen 5-12 disk-guard-Eintraege "Speicherplatz KRITISCH bei 95-96%"
+**Ursache:** Hook hat keinen Spam-Filter — schreibt bei jedem Lauf (alle 5 Min) einen neuen Whiteboard-Eintrag, auch wenn Wert sich nicht geaendert hat. Zusaetzlich: Disk dauerhaft >95% — Hauptursache muss bereinigt werden, nicht nur Symptom.
+**Betroffene Dateien:** ~/.claude/hooks/startup-checks.ps1, claude-code-setup/hooks/startup-checks.ps1
+**Reproduktion:** Mehrere /clear hintereinander oder Sessions starten — fuer jeden Lauf 1 Eintrag.
+**Fix-Vorschlag:** (1) Hook implementiert Cooldown: max 1 Eintrag pro Tag fuer den gleichen Disk-%-Wert. (2) Disk bereinigen: Temp-Dateien, alte Logs, ggf. node_modules-Caches. (3) `~/.claude/scripts/disk-cleanup.ps1` als manueller Aufruf bauen.
+**Status:** OFFEN — wird in dieser Self-Improve-Session in Stufe 3 angegangen
+
+### 2026-05-10 — Hook: auto-sync.ps1 — Merge-Konflikt seit 3 Tagen
+**Quelle:** Hook auto-sync.ps1 (Windows)
+**Symptom:** "git pull --rebase fehlgeschlagen (Merge-Konflikt?)" — 3 Vorkommen: 2026-05-08 13:27, 2026-05-10 17:01
+**Ursache:** Parallele Sessions auf Windows + macOS schreiben gleichzeitig in MEMORY.md → Merge-Konflikt-Marker bleiben in der Datei stehen → naechster Pull schlaegt fehl. Konkret war ein Konflikt von 2026-04-23 (Updated upstream/Stash base/Stashed changes) bis heute UNGELOEST in der Datei.
+**Betroffene Dateien:** .claude/agent-memory/shared/MEMORY.md (Konflikt-Marker), ~/.claude/hooks/auto-sync.ps1 (sollte erkennen und blocken/melden statt still rebase-fehler)
+**Reproduktion:** Konflikt erzeugen durch zwei parallele Whiteboard-Inserts auf verschiedenen Plattformen.
+**Fix-Vorschlag:** (1) Konflikt-Marker entfernt 2026-05-10 (manuell). (2) auto-sync.ps1 erweitern: vor pull pruefen ob Datei Konflikt-Marker enthaelt → wenn ja, lautstark melden statt still scheitern. (3) Whiteboard-Insert mit File-Lock absichern (Mutex auf .lock-Datei) damit parallele Inserts serialisiert werden.
+**Status:** TEILWEISE GEFIXT (Konflikt entfernt 2026-05-10) — Praevention noch offen
+
+### 2026-05-10 19:29 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:30 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:30 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:31 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:32 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:33 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 19:35 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -179,30 +179,30 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-04-20 (aktualisiert durch /self-improve Thorough auf Windows)
+**Stand:** 2026-05-10 (aktualisiert durch /self-improve Thorough auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.114**, Opus 4.6 (1M context)
-- **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
-- **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
-- **Effort Level:** high (Standard seit 2026-04-12), Medium/Low per /effort medium oder /effort low
-- **AUTOCOMPACT:** 85 (korrigiert 2026-04-12, ist der dauerhafte Standard)
-- **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.138** (war v2.1.114 im Whiteboard — 24 Versionen veraltet!), Opus 4.7 (1M context, neuer Default seit April)
+- **Sprachen:** Rust 1.94.0 (1 Minor hinter, CVE-2026-33055/33056), Go 1.26.2 (1 Patch hinter), Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12 (1 Patch hinter), Bun 1.3.11 (2 Patch hinter), Node.js v24.15.0 (LTS aktuell)
+- **Effort Level:** high (Standard seit 2026-04-12). Manuelle Aenderung bleibt bis Session-Ende erhalten (CLAUDE.md-Update 2026-05-08).
+- **AUTOCOMPACT:** 85 (dauerhafter Standard)
+- **worktree.baseRef:** "fresh" (NEU 2026-05-10) — schuetzt vor unpushed Commits in Worktrees
+- **Quality Gate:** quality-gate Agent (test+review+optimize parallel)
 - **Agents:** 29+ aktiv
-- **Hooks:** 46+ PS1, 46+ SH. Backup-Drift bei 13 Hooks (env-checker 12.04)
+- **Hooks:** 46+ PS1, 46+ SH. Cross-Platform-Paritaet: 2026-05-10 startup-checks.sh nachgezogen (Disk-Cooldown).
 - **Rules:** 57+ in ~/.claude/rules/
 - **Plugins:** 88+ installiert
-- **Session-Scorer:** v4 — schreibt iq_score (0-100) basierend auf efficiency+quality+duration
+- **Session-Scorer:** v4 — Dedup-Bug 2026-05-10 GEFIXT (R7-Diagnose: Loop ueber letzte 10 Lines statt nur lastLine; reines session_id-Matching ohne "similar turns"-Toleranz nach Challenger-Review)
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Sicherheit:** Claude Code v2.1.104 (alle bekannten CVEs gepatcht inkl. CVE-2026-35021). Neues Risiko: Axios Supply-Chain-Kompromittierung (04.2026), mcp-remote CVE-2025-6514 pruefen.
-- **Speicherplatz (Windows):** Stabil, >80% frei
+- **Sicherheit:** Claude Code v2.1.138 (alle bekannten CVEs gepatcht inkl. CVE-2026-35021/35603/21852, MCP-Stdio-Injection, OAuth-Token-Theft via .claude.json). NEU offen: Axios npm Supply-Chain (NK-Attribution, April 2026) — npm audit in PromptBoard + VoiceOverlay-Projekten DRINGEND. Comment-and-Control Prompt Injection 2.0 (Mai 2026, Microsoft Research) — Parry-Scanner aktiv halten.
+- **Speicherplatz (Windows):** **96% belegt, nur 35.5GB frei (KRITISCH)** — Hauptverbraucher: ~/.claude/projects 4.9G (Session-Transcripts, cleanupPeriodDays=99999 in settings.json verhindert Auto-Cleanup), ~/.claude/plugins 1.3G, BestJournalAndroid 3.5G, BestJournalFrank 2.1G. Disk-Cooldown im startup-checks-Hook verhindert nur Spam, nicht das Grundproblem.
 - **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
-- **Evolution-Analyst (2026-04-12):** Quality 8.7-8.8 (PLATEAU), Meta-Intelligence KRITISCH (14 Warnings ohne Vorschlaege auf macOS), Corrections fast null
-- **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
-- **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
-- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **[2026-04-20 10:24] env-checker**: Gesamtstatus GELB — 3 Probleme: (1) 10 SH-Hooks ohne PS1-Gegenstueck (disk-guard, doctor-lite, mcp-auth-check, mirror-check, path-health-check, safety-gate, semantic-search-check, session-cleanup, session-score, silent-corrector), (2) 20 winget-Updates verfuegbar (gh, go, node, bun, python, ollama, vscode u.a.), (3) Claude Desktop 1.1617 veraltet. Claude Code v2.1.114 aktuell. Backup-Drift OK. Settings korrekt.
-- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,dotnet,ffmpeg,fzf,gh,giflib,go,harfbuzz,htop,libmpc,libnghttp2,libngtcp2,libomp,libpng,node,ollama,openssl@3,powershell,
+- **Evolution-Analyst (2026-05-10):** Quality 8.72→8.74 PLATEAU. Meta-Intelligence KRITISCH bei 10% (Schwelle 20%). Intelligence-Vorschlaege bei 40% (Pflicht 70%). Compound Effect Pause: 20 Tage seit #6 (2026-04-20). Session-Scorer Duplikat-Bug verfaelschte die Messung — nach Fix erneute Messung in 5 Sessions noetig.
+- **Letzter Compound Effect:** #6 (2026-04-20) — Sechster Effect, 12 Verbesserungen in einer Session via Entscheidungsliste-Workflow.
+- **Cross-Platform:** Beide Plattformen synchron. macOS-Stand wird beim naechsten Mac-Start aufgeholt.
+- **[2026-05-10 19:30] /self-improve Thorough**: Lauf abgeschlossen — Merge-Konflikt MEMORY.md gefixt, 35 Spam-Eintraege archiviert, 3 Stop-Hook-Stale-Eintraege als GEFIXT markiert (Compound Effect #5), session-scorer.ts Dedup-Fix umgesetzt, startup-checks Cooldown gestuft (.ps1+.sh), worktree.baseRef:"fresh" eingetragen, R8-Findings (Anthropic Dreaming, Darwin Goedel Machine, ARISE, Outcomes/Grader) in Forschung.md ergaenzt.
+- **Pending Admin Updates:** Rust 1.94→1.95 (CVE!), Go 1.26.2→1.26.3, Bun 1.3.11→1.3.13, Python 3.13.12→3.13.13, Kotlin 2.3.20→2.3.21 — werden NACH Self-Improve in eigener Wartungs-Session umgesetzt (Shell-Update-Regel: niemals waehrend laufender Arbeit).
+- **[2026-05-10 19:22] evolution-analyst**: PLATEAU (8.72→8.74, +0.02): Qualitaet stabil aber Meta-Intelligence KRITISCH (10% self-improving, 40% Vorschlaege) — groesste Schwaeche ist fehlendes 7. Compound-Effect seit 3 Wochen und 6 unumgesetzte UMZUSETZEN-Forschungseintraege (SICA, MAR, TraceCoder, When-To-Verify, KGCompass, Fault-Localization) die alle >30 Tage alt sind.
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -212,6 +212,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **[2026-04-04 17:15] code-reviewer**: Fix-Pruefung Runde 2: experience-and-trajectory.md fehlt Defense-in-Depth + AutoRefine/ACE Abschnitt; codified-context.md Defense-in-Depth Schicht 2+3 dupliziert; self-observation.md PASS; development-phases.md PASS
 - **[2026-04-04 17:18] code-reviewer**: Runde 3 Review: 2 funktionale Luecken gefunden in self-observation.md — Drift-Detektor fehlt ~10-Tool-Calls-Frequenz, Score-Tabelle fehlt Mittenwert 3(ok)
 - **[2026-04-04 17:21] code-reviewer**: PASS: Finale Verifikation Runde 4 — alle 4 Dateien vollstaendig. Alle funktionalen Inhalte vorhanden: 4 Tracker, Score-Tabelle, Hyperagent-Trigger, Compound-Gains, 4 Speicher, 3 Muster-Typen, Phasen-Anzeige, Session-Template, Verbotene Spruenge, korrigierte Dateinamen in codified-context.
+- **[2026-05-10 19:41] unknown**: (no findings)
 ## Erkenntnisse aus Tests
 <!-- Writer: tester Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -362,6 +363,10 @@ _Noch keine Eintraege._
 - **[2026-04-20 10:28] researcher**: R2 Plugin-Recherche April 2026: TOP 3 neue Claude-Code-Plugins: 1) agnix (agent-sh/agnix) — Linter/LSP fuer CLAUDE.md, Hooks, Skills, MCP mit 399 Regeln, IDE-Integration, autofixes; 2) agentsys (agent-sh/agentsys) — 19 Plugins, 47 Agents, 40 Skills, Multi-Platform; 3) macos-toolkit (lu-zhengda/macos-toolkit) — Disk-Cleanup, Netzwerk, Security-Audit fuer macOS. WARNUNG: MemPalace (42k gekaufte Stars, ChromaDB-Wrapper, MCP-stdout-Bug) — NICHT installieren.
 - **[2026-04-21 11:10] researcher**: Rechtsrecherche Maerz-April 2026: 5 aktive Abmahnrisiken fuer Android-Apps: (1) BFSG-Abmahnwelle aktiv seit Feb 2026 (Kanzlei MK Berlin, ~2700 EUR/Fall), (2) BGH 27.03.2025 I ZR 186/17: DSGVO-Verstoesse durch Wettbewerber abmahnbar (Art.12/13/9 als UWG-Marktverhaltensregeln), (3) OLG Jena 02.03.2026 Az.3U31/25: Meta-Tracking ohne Einwilligung = 3000 EUR Schadensersatz, (4) Widerrufsbutton-Pflicht ab 19.06.2026 Paragraph 356a BGB fuer Abo-Apps, (5) Google Play Policy-Update ab 15.04.2026 (Contacts, Location, Health-Data, News-Declaration). BGH-Vorlage Google Fonts an EuGH haengig (BGH VI ZR 258/24, 28.08.2025), kein EuGH-Urteil bisher. KI-Kennzeichnungspflicht ab 02.08.2026 AI Act Art.50. Fuer reine Tagebuch-App ohne Tracking/Abo/Kontakte: Risiko insgesamt niedrig bis mittel.
 - **[2026-04-27 12:28] Cross-CLI Delta:** Codex(3) neue Commits — Bruecke starten fuer Details.
+- **[2026-05-10 19:36] researcher**: Claude Code v2.1.114→v2.1.138: HOOKS erhalten jetzt effort.level + $CLAUDE_EFFORT + type:mcp_tool; NEUE SLASH COMMANDS: /ultrareview, /recap, /usage; NEUE SETTINGS: worktree.baseRef, channelsEnabled, alwaysLoad MCP, disableSkillShellExecution; WINDOWS: Git Bash ab v2.1.120 nicht mehr Pflicht; MODELLE: claude-opus-4-7 neuer Default; PLUGINS: .zip + --plugin-url neu. Neueste Version: v2.1.138 (2026-05-09).
+- **[2026-05-10 19:37] researcher**: Multi-Agent Mai 2026: Cursor 3 /multitask + Tiled Agents Window fuehrt; Hierarchical (Planner+Worker+Judge) dominiert ueber Mesh bei 5+ Agents; 3-Tier-Routing spart 51-75% Kosten (Haiku=Grep/Nav $1/MTok, Sonnet=Code $3, Opus=Arch $5); MAS-FIRE Closed-Loop neutralisiert 40% mehr Faults als Linear-Workflow; Debate-Loop Template: MAX_ROUNDS 3-5 + AGREED-Token als Stop; Sequentielles Sampling schlaegt paralleles Self-Consistency in 95.6% der Configs; Anthropic Managed Agents (Dreaming/Outcomes) in public beta.
+- **[2026-05-10 19:38] intelligence-researcher**: 6 Findings: DGM Open-Ended Evolution (Score 17/20, SOFORT), Anthropic Dreaming (Score 18/20, SOFORT), ARISE Graph-Fault-Localization (Score 16/20, SOFORT), Outcomes/Grader-Loop (Score 16/20, SOFORT), Self-Organizing MAS Continuous Dev (Score 14/20, SPAETER), AlphaEvolve OpenEvolve API (Score 15/20, SPAETER) — Compound Effect Durchbruch: Dreaming ist direkter Drop-in fuer unser MEMORY.md-Self-Improve-System
+- **[2026-05-10 19:38] researcher**: Kreative Verbesserungen Claude-Code-Harness: 1) Verifiable-Outcome-Gate statt timer-basiertem self-improve (RLVR-Pattern arxiv 2601.22607); 2) Strukturiertes versioniertes Memory Memstate-Pattern 92% vs 17% Recall; 3) Radikale Vereinfachung Vercel-Case 80% Tools geloescht Success 80->100% Speed 3.5x; 4) Ebbinghaus-Forgetting-Curve fuer experience-store.jsonl; 5) Intrinsic Metacognition: Hooks sind EXTRINSIC human-designed loops - Geheimwaffe Agent entscheidet SELBST wann er sich verbessert.
 ---
 
 - **[2026-04-20] KGCompass Repository-Wissensgraph** - Status: UMZUSETZEN | arXiv 2503.21710
@@ -386,6 +391,36 @@ _Noch keine Eintraege._
 
 - **[2026-04-20 R1] Claude Code v2.1.108/109/110** - Status: BESTAETIGT
   /recap (Session-Kontext-Wiederherstellung), ENABLE_PROMPT_CACHING_1H, PermissionDenied-Event, PreCompact kann blocken, Opus 4.7 (+35% Token), Sonnet 4+Opus 4 Deprecation 15.06.2026.
+
+- **[2026-05-10 R8] Anthropic Dreaming — Cross-Session Memory Curation (Score: 18/20)** | Quelle: claude.com/blog/new-in-claude-managed-agents
+  Status: UMZUSETZEN | Aufwand: 2h
+  Anthropic hat am 06.05.2026 "Dreaming" als Research Preview eingefuehrt: Separater Prozess konsolidiert Memory automatisch (merged Duplikate, entfernt veraltete, extrahiert Muster, schreibt Playbooks). Adaptierbar als eigenstaendiger "dreaming-agent" der MEMORY.md + session-scores.jsonl reviewt. Loest direkt das Meta-Intelligence-Problem (10% statt 20%).
+
+- **[2026-05-10 R8] Anthropic Outcomes/Grader-Loop (Score: 16/20)** | Quelle: platform.claude.com/cookbook/managed-agents-cma-verify-with-outcome-grader
+  Status: UMZUSETZEN | Aufwand: 30 Min
+  Zweiter Agent (Grader) bewertet Output anhand Rubrik in EIGENEM Kontextfenster — nicht beeinflusst vom Reasoning-Prozess. +10 Prozentpunkte Erfolgsrate intern. Direkt anwendbar: quality-gate um Rubrik-Sektion erweitern, code-reviewer bekommt Rubrik + Output, nicht den Reasoning-Prozess.
+
+- **[2026-05-10 R8] Darwin Goedel Machine — Evolutionaere Selbstmodifikation (Score: 17/20)** | Quelle: arxiv.org/abs/2505.22954, sakana.ai/dgm
+  Status: UMZUSETZEN | Aufwand: 1d
+  Agent verbessert nicht nur seinen Code, sondern den Code seiner Verbesserungs-Logik. Archiv aus Agent-Varianten + Evolution. SWE-bench 20%→50%. Adaption: self-improve-cache als Evolutions-Archiv nutzen, nicht nur als TTL-Cache. Direkte Antwort auf Compound-Effect-Stagnation seit 2026-04-20.
+
+- **[2026-05-10 R8] ARISE — Multi-Granularitaets-Program-Graph (Score: 16/20)** | Quelle: arxiv.org/abs/2605.03117
+  Status: UMZUSETZEN | Aufwand: 2h
+  Repository als File→Function→Statement-Graph mit Data-Flow-Slicing als Tool. +17 Pkt Function Recall@1. Schliesst zwei alte UMZUSETZEN-Findings (KGCompass + Fault-Localization-Context) in einem Schritt. Adaption: debugger-Agent um Data-Flow-Slice-Heuristik erweitern.
+
+- **[2026-05-10 R6] Verifiable-Outcome-Gate als Compound-Trigger** | Quelle: arxiv 2601.22607 (RLVR for Tool-Using Agents)
+  Status: UMZUSETZEN | Aufwand: 2h
+  /self-improve laeuft heute timer-basiert — Compound-Effect stagniert weil Trigger nicht an Qualitaetssignale gebunden. Idee: PostToolUseFailure + Stop Hook zaehlt Fehler-Cluster, bei >3 Fehler gleicher Klasse in 48h automatischer /self-improve-Trigger. Dieses Pattern verdreifachte Verbesserungsrate in Coding-Agents.
+
+- **[2026-05-10 R6] SQLite-Memory statt JSONL-Vektoren (Score: hoch)** | Quelle: Memstate-Benchmark 2026
+  Status: UMZUSETZEN | Aufwand: 1d
+  bug-cases.jsonl + experience-store.jsonl auf SQLite umstellen. Memstate-Benchmark zeigt: strukturiertes Memory 92% Fact-Recall vs. JSONL-Vektoren 17% (Faktor 5.3). symptom_hash + Exact-Match statt Fuzzy-Suche. Versionierung statt stilles Ueberschreiben.
+
+- **[2026-05-10 R3] Sequential beats Parallel Self-Consistency (arXiv 2511.02309)** — Status: BESTAETIGT
+  Sequentiell schlaegt Parallel in 95.6% der Konfigurationen, +46.7% Accuracy. Konsequenz: Bei DERSELBEN Aufgabe besser sequentiell mit Kontext-Uebergabe als blind parallel. Parallele Agents bleiben sinnvoll fuer UNABHAENGIGE Teilaufgaben.
+
+- **[2026-05-10 R5] OAuth Token Interception via ~/.claude.json** — Status: BEOBACHTEN, kein Patch
+  Mitiga Research, 2026-05-07. npm postinstall-Hook ueberschreibt MCP-Endpoints, faengt OAuth-Tokens fuer Jira/GitHub/Confluence ab. Anthropic-Response: "Out of scope". Aktion: ~/.claude.json regelmaessig pruefen, keine wildfremden npm-Pakete ohne Pruefung.
 
 ## Meta-Intelligenz & Selbstverbesserung
 <!-- Automatisch befuellt von: session-scorer (intelligence-checker), session-autopsy (closed-loop) -->

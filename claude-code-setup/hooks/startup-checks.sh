@@ -41,10 +41,25 @@ check_disk_space() {
 
     if [ "$usage_pct" -ge 95 ] 2>/dev/null; then
         warnings+=("Speicherplatz KRITISCH: ${usage_pct}% belegt, nur ${free_gb}GB frei!")
-        # Log to whiteboard
-        if type insert_whiteboard_entry >/dev/null 2>&1; then
+        # Cooldown 2026-05-10: gestufte Eskalation gegen Spam
+        #   95-96% → max 1 Eintrag pro Tag (24h)
+        #   97-98% → max 1 Eintrag pro 4h
+        #   99%+ → bei jedem Lauf
+        cooldown_file="$HOME/.claude/.disk-warn-last"
+        should_log=1
+        if [ "$usage_pct" -lt 99 ] && [ -f "$cooldown_file" ]; then
+            now=$(date +%s)
+            mtime=$(stat -f %m "$cooldown_file" 2>/dev/null || stat -c %Y "$cooldown_file" 2>/dev/null)
+            if [ -n "$mtime" ]; then
+                hours_since=$(( (now - mtime) / 3600 ))
+                if [ "$usage_pct" -le 96 ] && [ "$hours_since" -lt 24 ]; then should_log=0; fi
+                if [ "$usage_pct" -le 98 ] && [ "$usage_pct" -ge 97 ] && [ "$hours_since" -lt 4 ]; then should_log=0; fi
+            fi
+        fi
+        if [ "$should_log" -eq 1 ] && type insert_whiteboard_entry >/dev/null 2>&1; then
             entry="### $(date '+%Y-%m-%d %H:%M') — Hook: startup-checks.sh — Speicherplatz KRITISCH bei ${usage_pct}%"
             insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" 2>/dev/null || true
+            echo "$usage_pct" > "$cooldown_file" 2>/dev/null || true
         fi
     elif [ "$usage_pct" -ge 90 ] 2>/dev/null; then
         warnings+=("Speicherplatz bei ${usage_pct}% — ${free_gb}GB frei (Achtung)")

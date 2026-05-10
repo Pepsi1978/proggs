@@ -127,6 +127,43 @@ Wird von /self-improve Stufe 0b und Stufe 5C gelesen und ausgewertet.
 - **Beschreibung:** Aufgaben-Klassifikation simple (Haiku) / medium (Sonnet) / hard (Opus). Datenbasiert statt statisch. Laut Forschung: 58% Kostenersparnis bei kaum Qualitaetsverlust.
 - **Status:** EVALUIERT — Erweiterung der Speed-Tiers in CLAUDE.md (Prompt-Anpassung in coder-Agent)
 
+### [2026-05-10] Anthropic Dreaming — Cross-Session Memory Curation
+- **Quelle:** claude.com/blog/new-in-claude-managed-agents (06.05.2026)
+- **Beschreibung:** Anthropic hat ein offizielles "Dreaming"-Pattern eingefuehrt: separater Prozess konsolidiert Memory automatisch — merged Duplikate, entfernt veraltete Eintraege, extrahiert wiederkehrende Muster, schreibt Playbooks. Plaintext, keine Modellgewichte.
+- **Status:** UMZUSETZEN — Adaptierbar als eigenstaendiger "dreaming-agent" der MEMORY.md + session-scores.jsonl reviewt (2h). Loest direkt das Meta-Intelligence-Problem (aktuell 10%, Schwelle 20%).
+
+### [2026-05-10] Anthropic Outcomes/Grader-Loop
+- **Quelle:** platform.claude.com/cookbook/managed-agents-cma-verify-with-outcome-grader
+- **Beschreibung:** Zweiter Agent (Grader) bewertet Output anhand Rubrik in EIGENEM Kontextfenster — nicht beeinflusst vom Reasoning-Prozess des Writer-Agents. +10 Prozentpunkte Erfolgsrate intern. Verhindert Halo-Effekte im Review.
+- **Status:** UMZUSETZEN — quality-gate um Rubrik-Sektion erweitern, code-reviewer bekommt Rubrik + Output (30 Min).
+
+### [2026-05-10] Darwin Goedel Machine — Evolutionaere Selbstmodifikation (arXiv 2505.22954)
+- **Quelle:** sakana.ai/dgm + arxiv.org/abs/2505.22954
+- **Beschreibung:** Agent verbessert nicht nur seinen Code, sondern auch den Code seiner Verbesserungs-Logik. Archiv aus Agent-Varianten, Parent-Auswahl, Variantenerzeugung. SWE-bench 20%→50%, Polyglot 14%→30%.
+- **Status:** UMZUSETZEN — self-improve-cache als Evolutions-Archiv nutzen statt nur TTL-Cache. Direkte Antwort auf 20-Tage-Compound-Effect-Stagnation (1d).
+
+### [2026-05-10] ARISE — Multi-Granularitaets-Program-Graph (arXiv 2605.03117)
+- **Quelle:** arxiv.org/abs/2605.03117
+- **Beschreibung:** Repository als File→Function→Statement-Graph mit Data-Flow-Slicing als direkter API-Call. +17 Pkt Function Recall@1, +15 Pkt Line Recall@1. Schliesst KGCompass + Fault-Localization-Context Findings in einem Schritt.
+- **Status:** UMZUSETZEN — debugger-Agent um Data-Flow-Slice-Heuristik erweitern (2h).
+
+### [2026-05-10] Verifiable-Outcome-Gate als Compound-Trigger (arXiv 2601.22607)
+- **Quelle:** arxiv.org/abs/2601.22607 (RLVR for Tool-Using Agents)
+- **Beschreibung:** /self-improve laeuft heute timer-basiert — falsch. Pattern aus Immunsystem: Trigger an verifizierbare Qualitaetssignale binden, nicht an Zeit. >3 Fehler gleicher Klasse in 48h = automatischer /self-improve-Trigger. Dieses Pattern verdreifachte Verbesserungsrate in Coding-Agents.
+- **Status:** UMZUSETZEN — PostToolUseFailure + Stop Hook + Pheromon-Schreiben in MEMORY.md (2h).
+
+### [2026-05-10] SQLite-Memory statt JSONL-Vektoren
+- **Quelle:** Memstate-Benchmark 2026
+- **Beschreibung:** bug-cases.jsonl + experience-store.jsonl auf SQLite umstellen. Strukturiertes Memory: 92% Fact-Recall vs. JSONL-Vektoren 17% (Faktor 5.3). symptom_hash + Exact-Match. Versionierung statt stilles Ueberschreiben.
+- **Status:** UMZUSETZEN — neuer Hook fuer Build-Fehler-Lookup vor jedem Build (1d).
+
+## Compound Effect Erfolge
+<!-- Dokumentation der exponentiellen Verbesserungskette -->
+
+### [2026-05-10] Detektor-Reparatur → Selbstbeobachtung wird wieder messbar
+Kette: Evolution-Analyst meldet Meta-Intelligence-Kollaps (10%) → R7 Focus-Researcher findet Session-Scorer-Duplikat-Bug (lastLine-Pruefung scheitert bei interleaved .ps1-Eintraegen) → Challenger korrigiert Fix-Vorschlag (kein "similar turns", reine session_id-Match) → 3 Stale-OFFEN-Eintraege durch Compound Effect #5 als GEFIXT identifiziert → Whiteboard-Systemzustand auf 2026-05-10 aktualisiert (war 3 Wochen veraltet) → Forschung.md mit 6 neuen UMZUSETZEN-Findings ergaenzt.
+**Ergebnis:** Detektor wieder funktional. Naechste 5 Sessions liefern wieder valide Meta-Intelligence-Daten. Voraussetzung fuer Compound Effect #7+.
+
 ## Abgeleitete Intelligenz-Vorschlaege
 <!-- Konkrete Aktionen die aus der Forschung abgeleitet wurden -->
 

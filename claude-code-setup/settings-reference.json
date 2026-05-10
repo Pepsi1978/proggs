@@ -19,6 +19,14 @@
   },
   "model": "opus[1m]",
   "enableAllProjectMcpServers": true,
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".cache",
+      ".gradle",
+      "build"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -432,14 +440,6 @@
           }
         ]
       }
-    ]
-  },
-  "worktree": {
-    "symlinkDirectories": [
-      "node_modules",
-      ".cache",
-      ".gradle",
-      "build"
     ]
   },
   "statusLine": {

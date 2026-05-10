@@ -34,10 +34,27 @@ function Check-DiskSpace {
 
         if ($usagePct -ge 95) {
             $script:warnings += "Speicherplatz KRITISCH: ${usagePct}% belegt, nur ${freeGB}GB frei!"
-            try {
-                $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei ${usagePct}%"
-                Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
-            } catch { }
+            # Cooldown 2026-05-10: gestufte Eskalation gegen Spam (war: 30 Eintraege/Woche)
+            #   95-96% → max 1 Eintrag pro Tag
+            #   97-98% → max 1 Eintrag pro 4h
+            #   99%+ → bei jedem Lauf
+            $cooldownFile = Join-Path $env:USERPROFILE ".claude\.disk-warn-last"
+            $shouldLog = $true
+            if ($usagePct -lt 99 -and (Test-Path $cooldownFile)) {
+                try {
+                    $lastWrite = Get-Item $cooldownFile -ErrorAction Stop
+                    $hoursSince = ((Get-Date) - $lastWrite.LastWriteTime).TotalHours
+                    if ($usagePct -le 96 -and $hoursSince -lt 24) { $shouldLog = $false }
+                    elseif ($usagePct -le 98 -and $hoursSince -lt 4) { $shouldLog = $false }
+                } catch { }
+            }
+            if ($shouldLog) {
+                try {
+                    $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei ${usagePct}%"
+                    Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+                    Set-Content -Path $cooldownFile -Value $usagePct -ErrorAction SilentlyContinue
+                } catch { }
+            }
         } elseif ($usagePct -ge 90) {
             $script:warnings += "Speicherplatz bei ${usagePct}% — ${freeGB}GB frei (Achtung)"
         } else {
