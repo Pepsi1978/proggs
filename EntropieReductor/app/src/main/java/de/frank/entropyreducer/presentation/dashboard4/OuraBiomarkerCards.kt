@@ -434,11 +434,18 @@ private fun StatChip(label: String, value: String) {
 
 /* --------------------- Reine Funktionen (kein @Composable) --------------------- */
 
+/**
+ * Farb-Skala fuer Score-Karten (Readiness, Schlaf-Score, Aktivität).
+ * Frank-Vorgabe 2026-05-10: drei Stufen.
+ *   - 80 oder mehr: gruen (Success)
+ *   - 60 bis 79:    gelb (Warning)
+ *   - unter 60:     rot (Critical)
+ * Resilienz nutzt eine eigene Logik (levelToColor), keine Score-Skala.
+ */
 internal fun scoreColor(score: Int?): Color = when {
     score == null -> CosmosColors.AccentPrimary
-    score >= 85 -> CosmosColors.Success
-    score >= 70 -> CosmosColors.AccentPrimary
-    score >= 50 -> CosmosColors.Warning
+    score >= 80 -> CosmosColors.Success
+    score >= 60 -> CosmosColors.Warning
     else -> CosmosColors.Critical
 }
 
