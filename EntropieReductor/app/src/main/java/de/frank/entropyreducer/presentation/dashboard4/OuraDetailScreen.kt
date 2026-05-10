@@ -394,10 +394,24 @@ private fun OuraValueRow(day: String, value: Double, isResilience: Boolean, aver
             .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(shortDate(day), style = MaterialTheme.typography.bodyMedium, color = cosmos.textSecondary, modifier = Modifier.weight(1f))
-        Text(display, style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+        // Frank-Vorgabe 2026-05-10: Datum, Wert und Abweichung direkt nebeneinander
+        // links, NICHT rechtsbuendig. Datum bekommt eine feste Breite damit die
+        // Spalten ordentlich uebereinander stehen, dann der Wert daneben, dann
+        // die Abweichung. Rechter Bereich bleibt leer.
+        Text(
+            text = shortDate(day),
+            style = MaterialTheme.typography.bodyMedium,
+            color = cosmos.textSecondary,
+            modifier = Modifier.width(56.dp),
+        )
+        Text(
+            text = display,
+            style = MaterialTheme.typography.bodyMedium,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(48.dp),
+        )
         if (deviation != null) {
-            Spacer(Modifier.width(10.dp))
             Text(
                 text = deviation.first,
                 style = MaterialTheme.typography.bodyMedium,
