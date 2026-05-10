@@ -177,7 +177,11 @@ fun HealthConnectDetailScreen(
         else -> null
     }
 
-    var range by remember { mutableStateOf(HcDetailRange.THIRTY) }
+    // Frank-Wunsch 2026-05-10 abend: Default-Filter "Alle" statt "30T", damit
+    // der ganze HC-Verlauf sofort sichtbar ist. 30T war frueher der Default
+    // weil HC ohne PERMISSION_READ_HEALTH_DATA_HISTORY nur 30 Tage lieferte —
+    // mit erteilter Permission ist diese Begrenzung weg.
+    var range by remember { mutableStateOf(HcDetailRange.ALL) }
     val cutoffDays = when (range) {
         HcDetailRange.SEVEN -> 7
         HcDetailRange.THIRTY -> 30
