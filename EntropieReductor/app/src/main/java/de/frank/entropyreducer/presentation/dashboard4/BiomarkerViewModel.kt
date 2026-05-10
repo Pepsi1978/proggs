@@ -325,6 +325,14 @@ class BiomarkerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Liefert das Set ALLER Health-Connect-Permission-Strings, die beim
+     * Permission-Dialog angefordert werden sollen. Frank-Wunsch 2026-05-10:
+     * prophylaktisch ALLE Datentypen erlauben damit zukuenftige Plugins ohne
+     * erneuten Permission-Flow auskommen.
+     */
+    fun allHealthConnectPermissions(): Set<String> = healthConnect.requiredReadPermissions()
+
     private val now = System.currentTimeMillis()
     private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
 

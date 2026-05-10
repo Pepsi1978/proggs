@@ -65,6 +65,61 @@ class HealthConnectManager @Inject constructor(
     )
 
     /**
+     * Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
+     * Permissions prophylaktisch anfragen, damit zukuenftige Plugins/Karten in
+     * der App ohne erneuten Permission-Dialog auskommen. Health Connect normalisiert
+     * unbekannte Permissions weg — wenn ein Datentyp in einer alten HC-Version
+     * nicht existiert, wird der Eintrag stillschweigend ignoriert.
+     *
+     * Plattform-Strings statt Library-Konstanten, weil manche (z.B. SkinTemperature,
+     * IN_BACKGROUND) erst in spaeteren androidx.health.connect-Releases als
+     * Konstanten verfuegbar sind. Die Strings sind aber seit Android 14 stabil.
+     *
+     * Liste deckt alles aus android.health.connect.HealthPermissions ab — Activity,
+     * Body Composition, Vitals, Heart, Sleep, Nutrition, Cycle Tracking. Frank
+     * will damit ein generisches "alle Health-Connect-Daten lesen"-Recht.
+     */
+    private val additionalReadPermissions: Set<String> = setOf(
+        // Activity
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_ELEVATION_GAINED",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_EXERCISE_ROUTES",
+        "android.permission.health.READ_FLOORS_CLIMBED",
+        "android.permission.health.READ_POWER",
+        "android.permission.health.READ_SPEED",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_WHEELCHAIR_PUSHES",
+        // Heart & Vitals
+        "android.permission.health.READ_BLOOD_GLUCOSE",
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.READ_BODY_TEMPERATURE",
+        "android.permission.health.READ_BASAL_BODY_TEMPERATURE",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_SKIN_TEMPERATURE",
+        // Sleep
+        "android.permission.health.READ_SLEEP",
+        // Nutrition
+        "android.permission.health.READ_HYDRATION",
+        "android.permission.health.READ_NUTRITION",
+        // Cycle Tracking
+        "android.permission.health.READ_CERVICAL_MUCUS",
+        "android.permission.health.READ_INTERMENSTRUAL_BLEEDING",
+        "android.permission.health.READ_MENSTRUATION",
+        "android.permission.health.READ_OVULATION_TEST",
+        "android.permission.health.READ_SEXUAL_ACTIVITY",
+        // Background Read — erlaubt Hintergrund-Lesen ohne offene App
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
+    )
+
+    /**
      * Frank-Befund 2026-05-10: Ohne PERMISSION_READ_HEALTH_DATA_HISTORY ist die
      * Lese-Reichweite auf die letzten 30 Tage begrenzt — was bei seltenen
      * Wiegungen (Frank's letzte Messung vom 14. Januar) bedeutet, dass alle
@@ -88,7 +143,8 @@ class HealthConnectManager @Inject constructor(
     private val allReadPermissions: Set<String> =
         weightPermissions + bodyFatPermissions + leanBodyMassPermissions +
             bodyWaterMassPermissions + boneMassPermissions +
-            heightPermissions + basalMetabolicRatePermissions + historyPermission
+            heightPermissions + basalMetabolicRatePermissions +
+            additionalReadPermissions + historyPermission
 
     /** Health Connect ist auf dem Geraet verfuegbar (App installiert oder Modul aktiv). */
     fun isAvailable(): Boolean {

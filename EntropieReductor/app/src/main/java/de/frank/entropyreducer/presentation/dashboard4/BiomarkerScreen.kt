@@ -91,30 +91,11 @@ fun BiomarkerHostScreen(
             .createRequestPermissionResultContract(),
     ) { _ -> vm.refreshWeight() }
     val onRequestWeightPermission: () -> Unit = {
-        weightPermissionLauncher.launch(
-            setOf(
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.WeightRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.BodyFatRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.LeanBodyMassRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.BodyWaterMassRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.BoneMassRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.HeightRecord::class),
-                androidx.health.connect.client.permission.HealthPermission
-                    .getReadPermission(androidx.health.connect.client.records.BasalMetabolicRateRecord::class),
-                // Frank-Befund 2026-05-10: ohne History-Permission begrenzt sich
-                // die Lese-Reichweite auf 30 Tage — Frank's letzte Wiegung war
-                // aber im Januar, also ueber 100 Tage her. Konstanten-Name in
-                // der aktuellen Lib-Version (alpha07) noch nicht verfuegbar,
-                // daher direkt der Plattform-String.
-                "android.permission.health.READ_HEALTH_DATA_HISTORY",
-            ),
-        )
+        // Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
+        // Permissions in einem Rutsch anfordern, damit zukuenftige Plugins ohne
+        // erneuten Permission-Dialog auskommen. Die Liste kommt direkt aus dem
+        // HealthConnectManager — eine zentrale Stelle, kein Inline-Boilerplate.
+        weightPermissionLauncher.launch(vm.allHealthConnectPermissions())
     }
     // Frank-Wunsch 2026-05-10: Tap auf eine Health-Connect-Mini-Karte triggert
     // einen Refresh des letzten Werts. Wenn Permission fehlt, soll stattdessen
