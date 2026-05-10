@@ -47,12 +47,15 @@ private data class SyncTimes(
     val healthConnect: Long,
 )
 
-/** Whoop-Daten gebuendelt damit der outer combine() unter 5 Flows bleibt. */
+/** Whoop-Daten gebuendelt damit der outer combine() unter 5 Flows bleibt.
+ *  last30 wird NICHT als Flow eingebunden, sondern in der Transform-Lambda
+ *  aus history mit dem aktuellen System.currentTimeMillis() abgeleitet —
+ *  sonst friert das 30-Tage-Fenster auf den Konstrukturzeitpunkt ein und
+ *  wird stale wenn die App ueber Mitternacht offen bleibt. */
 private data class WhoopBundle(
     val latest: BiomarkerSnapshotEntity?,
     val history: List<BiomarkerSnapshotEntity>,
     val workouts: List<WhoopWorkoutEntity>,
-    val last30: List<BiomarkerSnapshotEntity>,
 )
 
 /** Amazfit-T-Rex-3-Daten gebuendelt — gleiche Idee wie StatusBundle. */
@@ -339,16 +342,12 @@ class BiomarkerViewModel @Inject constructor(
      */
     fun openHealthConnectPermissionsEditor() = healthConnect.openAppPermissionsInHealthConnect()
 
-    private val now = System.currentTimeMillis()
-    private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
-
     val state: StateFlow<BiomarkerUiState> = combine(
         combine(
             repo.observeLatest(),
             repo.observeAll(),
             repo.observeWorkouts(),
-            repo.observeRange(thirtyDaysAgo, now),
-        ) { l, a, w, r30 -> WhoopBundle(l, a, w, r30) },
+        ) { l, a, w -> WhoopBundle(l, a, w) },
         combine(
             amazfitRepo.observeLatestDaily(),
             amazfitRepo.observeAllDaily(),
@@ -379,7 +378,11 @@ class BiomarkerViewModel @Inject constructor(
         val latest = whoop.latest
         val all = whoop.history
         val workouts = whoop.workouts
-        val last30 = whoop.last30
+        // 30-Tage-Slice pro Emission frisch berechnen — verhindert stale
+        // Fenster wenn die App ueber Mitternacht offen bleibt.
+        val nowMs = System.currentTimeMillis()
+        val thirtyDaysAgoMs = nowMs - 30L * 24 * 60 * 60 * 1000
+        val last30 = all.filter { it.capturedAt in thirtyDaysAgoMs..nowMs }
         val selDate = status.selectedDate
         // Snapshot für den gewählten Tag finden — wenn kein Snapshot für das
         // exakte Datum existiert, wird der nächste juengere Snapshot vor dem
@@ -570,7 +573,19 @@ class BiomarkerViewModel @Inject constructor(
                 },
                 onFailure = { parts.add("Oura ✗") },
             )
-            parts.add("HC ✓")
+            // Health Connect: refreshWeight() oben laeuft fire-and-forget in
+            // einem eigenen viewModelScope.launch. Status hier ehrlich aus
+            // dem aktuell sichtbaren Permission/Availability-Stand ableiten —
+            // statt wie frueher unconditional "HC ✓" anzuhaengen, was bei
+            // fehlender Permission oder unverfuegbarem HC eine Falschmeldung
+            // war. Bei "↻" weiss Frank dass HC angestossen wurde, aber das
+            // tatsaechliche Ergebnis kommt ueber den weight-StateFlow rein.
+            val hcStatus = when {
+                !healthConnect.isAvailable() -> "HC —"
+                !_weight.value.permissionGranted -> "HC ✗ (Permission)"
+                else -> "HC ↻"
+            }
+            parts.add(hcStatus)
             _message.value = "Sync fertig: " + parts.joinToString(" · ")
         }
     }
