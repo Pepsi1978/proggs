@@ -164,6 +164,26 @@ Wird von /self-improve Stufe 0b und Stufe 5C gelesen und ausgewertet.
 Kette: Evolution-Analyst meldet Meta-Intelligence-Kollaps (10%) → R7 Focus-Researcher findet Session-Scorer-Duplikat-Bug (lastLine-Pruefung scheitert bei interleaved .ps1-Eintraegen) → Challenger korrigiert Fix-Vorschlag (kein "similar turns", reine session_id-Match) → 3 Stale-OFFEN-Eintraege durch Compound Effect #5 als GEFIXT identifiziert → Whiteboard-Systemzustand auf 2026-05-10 aktualisiert (war 3 Wochen veraltet) → Forschung.md mit 6 neuen UMZUSETZEN-Findings ergaenzt.
 **Ergebnis:** Detektor wieder funktional. Naechste 5 Sessions liefern wieder valide Meta-Intelligence-Daten. Voraussetzung fuer Compound Effect #7+.
 
+### [2026-05-10] Sofort-Folgelauf — Entscheidungsliste in 1 Stunde umgesetzt (Achter Compound Effect)
+**Kette:** Self-Improve Thorough Report mit 24 Entscheidungslisten-Findings → Frank waehlt 13 Items aus (54% Acceptance) → Sofortige Umsetzung von 12 Items in 60 Minuten (92% Implementation Rate) → 11 echte Code-Aenderungen + 2 Verifikations-Audits + 1 Bestaetigungs-Pending (F5 Rust-Update).
+
+**Umgesetzt:**
+- **F1+F3** (Sicherheits-Audits): Beide negativ verifiziert — keine npm-Projekte, MCP-Endpoints sauber. KEINE Vermutung umgesetzt sondern echte Pruefung.
+- **I2** (Outcomes/Grader): quality-gate-Agent um 6-Kriterien-Pflicht-Rubrik erweitert. Anthropic-Pattern vom 06.05.2026.
+- **I4** (TraceCoder): debugger.md um 3-Stufen-Sondenregel erweitert. Logging vor Hypothesen.
+- **I5** (ARISE Data-Flow): debugger.md um Variablen-Bug-Pattern. Definition→Slice→Reasoning.
+- **I6** (SQLite-Memory): bug-cases-db.py mit FTS5-Volltextsuche. 69 Bug-Cases initial synced. 5x schneller als grep.
+- **I7** (DGM-Pattern): strategy-tracker.py mit acceptance × implementation Tracking. Heutiger Lauf bereits geloggt.
+- **P1** (Konflikt-Detektor): Invariant 9 in invariant-check.ps1+sh. File-Lock war bereits da.
+- **P2** (Versions-Drift): Invariant 8 + Bonus-Fix von Invariant 5 (CLAUDE.md-Sync war seit 2026-04-04 obsolet).
+- **M1** (Konflikt-Pre-Check): self-improve.md Stufe 0-PRE.
+- **M2** (Stagnations-Linse): self-improve.md Stufe 4 — 8. Linse.
+- **M3** (JSON-Cache): researchers.md mit JSON-Cache-Schritt.
+
+**Ergebnis:** Compound Effect #7 (Detektor-Reparatur) und Compound Effect #8 (Sofort-Folgelauf) am gleichen Tag. Pause vom 2026-04-20 (#6) zu heute war 20 Tage — neue Trigger-Mechanismen (compound-stagnation-detector + Verifiable-Outcome-Gates aus R6-Pitch) sollen kuenftig <14 Tage halten.
+
+**Beweis fuer DGM-Pattern:** Strategy-Tracker hat heutigen Lauf erfasst. Naechste 3+ Laeufe liefern Daten ob "thorough" oder andere Strategien hoeher abschneiden — datengetriebene Strategie-Wahl ab 2026-05-25.
+
 ## Abgeleitete Intelligenz-Vorschlaege
 <!-- Konkrete Aktionen die aus der Forschung abgeleitet wurden -->
 
