@@ -48,6 +48,10 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * Frank-Wunsch 2026-05-09: ein eigener Sport-Bereich der nur fuer Sport da ist —
  * mit T-Rex-3-Vermerk damit klar ist woher die Werte kommen.
  */
+// Performance-Audit Loop 3 (2026-05-10): Range-Liste als top-level val statt
+// listOf(...)-Allokation pro Recomposition.
+private val ALL_RANGES: List<Range> = listOf(Range.LAST_30, Range.LAST_90, Range.LAST_365, Range.ALL)
+
 @Composable
 fun AmazfitTrainingsScreen(
     onBack: () -> Unit,
@@ -117,7 +121,7 @@ fun AmazfitTrainingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
                 ) {
-                    items(items = listOf(Range.LAST_30, Range.LAST_90, Range.LAST_365, Range.ALL)) { range ->
+                    items(items = ALL_RANGES, key = { it.name }) { range ->
                         val selected = state.rangeFilter == range
                         AssistChip(
                             onClick = { vm.setRange(range) },
@@ -158,7 +162,7 @@ fun AmazfitTrainingsScreen(
                                 ),
                             )
                         }
-                        items(state.availableSports) { (type, name) ->
+                        items(state.availableSports, key = { it.first }) { (type, name) ->
                             val selected = state.sportFilter == type
                             AssistChip(
                                 onClick = { vm.setSport(type) },

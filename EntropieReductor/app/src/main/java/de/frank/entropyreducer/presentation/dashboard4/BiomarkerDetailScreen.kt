@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -169,9 +170,10 @@ fun BiomarkerDetailScreen(
                 )
             }
             // Werte-Liste (juengster zuerst). Mit Delta zum Vortag.
+            // Performance-Audit Loop 3 (2026-05-10): sortedByDescending pro
+            // Recomposition vermeiden + key=ts fuer strukturelles Diffing der Items.
             val sortedDescending = pointsAll.sortedByDescending { it.first }
-            items(sortedDescending.size) { idx ->
-                val (ts, value) = sortedDescending[idx]
+            itemsIndexed(sortedDescending, key = { _, (ts, _) -> ts }) { idx, (ts, value) ->
                 val previousValue = sortedDescending.getOrNull(idx + 1)?.second
                 ValueRow(
                     timestamp = ts,
