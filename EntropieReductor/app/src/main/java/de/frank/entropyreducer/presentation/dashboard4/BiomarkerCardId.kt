@@ -69,13 +69,17 @@ object BiomarkerCardId {
      * Set aller IDs die als kleine Mini-Karten im 2-Spalten-Grid gerendert werden
      * (span = 1). Alle anderen IDs nehmen die volle Breite ein (span = 2). Frank-
      * Wunsch 2026-05-10: HRV/RHR/Schlaf/Performance koennen sich auch untereinander
-     * tauschen, daher sind das die einzigen 4 Spalten-Karten.
+     * tauschen — und seit dem Mini-Karten-Umbau gehoeren auch Erholsamer Schlaf
+     * und Hauttemperatur-Delta hier rein, damit sie als halbe Spalte (nicht volle
+     * Breite) gerendert werden.
      */
     val MINI_CARD_IDS: Set<String> = setOf(
         MINI_HRV,
         MINI_RHR,
         MINI_SLEEP_TOTAL,
         MINI_SLEEP_PERFORMANCE,
+        SLEEP_RESTORATIVE,
+        SKIN_TEMP_DELTA,
     )
 
     val DEFAULT_ORDER: List<String> = listOf(
