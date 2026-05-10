@@ -26,7 +26,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -220,10 +223,15 @@ class BiomarkerViewModel @Inject constructor(
      * weiterhin false sein und die Karten zeigen "Tippen".
      */
     fun refreshWeight() {
-        viewModelScope.launch {
-            android.util.Log.i("BiomarkerVM", "refreshWeight() called")
+        viewModelScope.launch(Dispatchers.IO) {
+            // Performance-Audit Loop 1 (2026-05-10): vorher 15 sequenzielle HC-Reads
+            // ohne expliziten IO-Dispatcher — Binder-IPC zur HealthData-App fuer jeden
+            // Read auf dem Caller-Dispatcher (oft Main). 150-750 ms Main-Block bei
+            // langsamen IPC. Jetzt: Dispatchers.IO + alle 15 unabhaengigen Reads
+            // parallel via async/await.
+            // Debug-Logs (Frank-Live-Test) entfernt — Datenschutz + ungenutzte
+            // String-Interpolation in Hot Path.
             val available = healthConnect.isAvailable()
-            android.util.Log.i("BiomarkerVM", "  HC available=$available")
             if (!available) {
                 _weight.value = WeightState(healthConnectAvailable = false)
                 return@launch
@@ -234,7 +242,6 @@ class BiomarkerViewModel @Inject constructor(
             val waterOk = healthConnect.hasBodyWaterMassReadPermission()
             val boneOk = healthConnect.hasBoneMassReadPermission()
             val historyOk = healthConnect.hasHistoryReadPermission()
-            android.util.Log.i("BiomarkerVM", "  permissions: weight=$weightOk bodyFat=$bodyFatOk lean=$leanOk water=$waterOk bone=$boneOk history=$historyOk")
             // permissionGranted = ALLE noetigen erteilt (5 Datentypen + History).
             // Ohne History-Permission lesen wir nur 30 Tage zurueck — bei seltenen
             // Wiegungen ist das oft leer (Frank-Befund 2026-05-10).
@@ -245,24 +252,39 @@ class BiomarkerViewModel @Inject constructor(
                 )
                 return@launch
             }
-            android.util.Log.i("BiomarkerVM", "  alle permissions ok — lese Werte ...")
             // Loading-State setzen damit die Karten einen Spinner zeigen koennen
             _weight.value = _weight.value.copy(isLoading = true)
-            val latestKg = healthConnect.readLatestWeightKg()
-            val avgKg = healthConnect.averageWeightKg(730)
-            val historyKg = healthConnect.readWeightHistory(730)
-            val latestBf = healthConnect.readLatestBodyFatPercent()
-            val avgBf = healthConnect.averageBodyFatPercent(730)
-            val historyBf = healthConnect.readBodyFatHistory(730)
-            val latestLean = healthConnect.readLatestLeanBodyMassKg()
-            val avgLean = healthConnect.averageLeanBodyMassKg(730)
-            val historyLean = healthConnect.readLeanBodyMassHistory(730)
-            val latestWater = healthConnect.readLatestBodyWaterMassKg()
-            val avgWater = healthConnect.averageBodyWaterMassKg(730)
-            val historyWater = healthConnect.readBodyWaterMassHistory(730)
-            val latestBone = healthConnect.readLatestBoneMassKg()
-            val avgBone = healthConnect.averageBoneMassKg(730)
-            val historyBone = healthConnect.readBoneMassHistory(730)
+            // Alle 15 HC-Reads parallel — sie sind unabhaengig voneinander.
+            val latestKgD = async { healthConnect.readLatestWeightKg() }
+            val avgKgD = async { healthConnect.averageWeightKg(730) }
+            val historyKgD = async { healthConnect.readWeightHistory(730) }
+            val latestBfD = async { healthConnect.readLatestBodyFatPercent() }
+            val avgBfD = async { healthConnect.averageBodyFatPercent(730) }
+            val historyBfD = async { healthConnect.readBodyFatHistory(730) }
+            val latestLeanD = async { healthConnect.readLatestLeanBodyMassKg() }
+            val avgLeanD = async { healthConnect.averageLeanBodyMassKg(730) }
+            val historyLeanD = async { healthConnect.readLeanBodyMassHistory(730) }
+            val latestWaterD = async { healthConnect.readLatestBodyWaterMassKg() }
+            val avgWaterD = async { healthConnect.averageBodyWaterMassKg(730) }
+            val historyWaterD = async { healthConnect.readBodyWaterMassHistory(730) }
+            val latestBoneD = async { healthConnect.readLatestBoneMassKg() }
+            val avgBoneD = async { healthConnect.averageBoneMassKg(730) }
+            val historyBoneD = async { healthConnect.readBoneMassHistory(730) }
+            val latestKg = latestKgD.await()
+            val avgKg = avgKgD.await()
+            val historyKg = historyKgD.await()
+            val latestBf = latestBfD.await()
+            val avgBf = avgBfD.await()
+            val historyBf = historyBfD.await()
+            val latestLean = latestLeanD.await()
+            val avgLean = avgLeanD.await()
+            val historyLean = historyLeanD.await()
+            val latestWater = latestWaterD.await()
+            val avgWater = avgWaterD.await()
+            val historyWater = historyWaterD.await()
+            val latestBone = latestBoneD.await()
+            val avgBone = avgBoneD.await()
+            val historyBone = historyBoneD.await()
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
@@ -508,7 +530,14 @@ class BiomarkerViewModel @Inject constructor(
             ouraActivityHistory = oura.activity.sortedBy { it.day },
             ouraResilienceHistory = oura.resilience.sortedBy { it.day },
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), BiomarkerUiState())
+    }
+        // Performance-Audit Loop 1 (2026-05-10): combine{} enthaelt 30+ filter/sortedBy/
+        // mapNotNull-Operationen ueber 365-Tage-Listen. Ohne flowOn liefen die auf dem
+        // Collector-Dispatcher (Main bei stateIn(viewModelScope)). Bei jedem Sync oder
+        // Selected-Date-Wechsel war das ein sichtbarer Frame-Drop. Default-Dispatcher
+        // ist der richtige fuer CPU-bound Arbeit (sortedBy/filter).
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BiomarkerUiState())
 
     fun selectDate(date: java.time.LocalDate) {
         _selectedDate.value = date
