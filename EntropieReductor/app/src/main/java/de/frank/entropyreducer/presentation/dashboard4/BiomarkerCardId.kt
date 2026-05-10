@@ -120,8 +120,10 @@ object BiomarkerCardId {
         MINI_BODY_FAT,
         MINI_LEAN_BODY_MASS,
         MINI_MUSCLE_MASS,
-        MINI_BODY_WATER,
-        MINI_BONE_MASS,
+        // MINI_BODY_WATER + MINI_BONE_MASS bewusst NICHT mehr in der Werks-Reihenfolge —
+        // Frank-Vorgabe 2026-05-10: 'Wasser und Knochen interessieren mich ueberhaupt nicht'.
+        // Konstanten bleiben erhalten (Backward-Compat) — HIDDEN_CARD_IDS unten filtert
+        // sie zusaetzlich aus bereits gespeicherten Drag&Drop-Reihenfolgen heraus.
         HRV,
         RHR,
         RESPIRATORY,
@@ -166,5 +168,7 @@ object BiomarkerCardId {
     val HIDDEN_CARD_IDS: Set<String> = setOf(
         OURA_ACTIVITY,
         OURA_SLEEP_DETAIL,
+        MINI_BODY_WATER,
+        MINI_BONE_MASS,
     )
 }

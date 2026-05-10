@@ -74,11 +74,13 @@ fun ApiKeysScreen(
     oauthVm: OAuthViewModel = hiltViewModel(),
     zeppVm: ZeppApiViewModel = hiltViewModel(),
     ouraVm: OuraApiViewModel = hiltViewModel(),
+    healthConnectVm: HealthConnectApiViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
     val oauthState by oauthVm.state.collectAsState()
     val zeppState by zeppVm.state.collectAsState()
     val ouraState by ouraVm.state.collectAsState()
+    val healthConnectState by healthConnectVm.state.collectAsState()
     val cosmos = LocalCosmos.current
     CosmosScaffold(
         title = "API-Schlüssel",
@@ -153,6 +155,7 @@ fun ApiKeysScreen(
             item { WhoopOAuthCard(oauthVm, oauthState) }
             item { AmazfitLoginCard(zeppVm, zeppState) }
             item { OuraApiCard(ouraVm, ouraState) }
+            item { HealthConnectApiCard(healthConnectVm, healthConnectState) }
             item {
                 Text(
                     text = "Deine API-Schlüssel werden mit AES-256-GCM auf deinem Gerät verschluesselt.",
@@ -934,6 +937,86 @@ private fun OuraApiCard(vm: OuraApiViewModel, state: OuraApiUiState) {
                         text = "Letzter Sync: " + formatRelativeTime(state.lastSyncMs),
                         style = MaterialTheme.typography.labelSmall,
                         color = cosmos.textSecondary,
+                    )
+                }
+            }
+            state.message?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+        }
+    }
+}
+
+/* ----------------- Health Connect (Gewicht, Koerperfett, Magermasse) ----------------- */
+
+@Composable
+private fun HealthConnectApiCard(
+    vm: HealthConnectApiViewModel,
+    state: HealthConnectApiUiState,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = CosmosColors.Success
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.health.connect.client.PermissionController
+            .createRequestPermissionResultContract(),
+    ) { granted ->
+        vm.refresh()
+        val needed = vm.requiredPermissions()
+        val allOk = granted.containsAll(needed)
+        vm.setMessage(
+            if (allOk) "Alle Berechtigungen erteilt — Werte werden beim naechsten Refresh geladen."
+            else "Nur ${granted.intersect(needed).size} von ${needed.size} Berechtigungen erteilt.",
+        )
+    }
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Health Connect",
+                style = MaterialTheme.typography.titleMedium,
+                color = accent,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Liest dein Gewicht, Koerperfett und die Magermasse aus Health Connect — " +
+                    "die Zepp-App synchronisiert die Werte deiner Amazfit Smart Scale dort hin. " +
+                    "In Zepp musst du dazu unter Profil → 3rd Party Account Linking → Health " +
+                    "Connect die Schreibrechte einschalten.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            if (!state.available) {
+                Text(
+                    text = "Health Connect ist auf diesem Geraet nicht verfuegbar.",
+                    color = CosmosColors.Critical,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else {
+                val statusText = if (state.allGranted) "Alle Berechtigungen erteilt"
+                else "${state.grantedCount} von ${state.totalCount} Berechtigungen erteilt"
+                val statusColor = if (state.allGranted) accent else CosmosColors.Warning
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.Button(
+                    onClick = { launcher.launch(vm.requiredPermissions()) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = accent,
+                    ),
+                ) {
+                    Text(
+                        text = if (state.allGranted) "Berechtigungen erneut bestaetigen"
+                        else "Berechtigungen erteilen",
                     )
                 }
             }

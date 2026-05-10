@@ -166,6 +166,15 @@ class HealthConnectManager @Inject constructor(
      */
     fun requiredReadPermissions(): Set<String> = allReadPermissions
 
+    /**
+     * Liefert ALLE aktuell erteilten Permissions. Wird vom API-Settings-Screen
+     * genutzt um "X von Y erteilt" anzuzeigen (Frank-Wunsch 2026-05-10).
+     */
+    suspend fun allGrantedPermissions(): Set<String> {
+        val c = client() ?: return emptySet()
+        return c.permissionController.getGrantedPermissions()
+    }
+
     // ---------- Gewicht ----------
 
     /**
@@ -199,7 +208,7 @@ class HealthConnectManager @Inject constructor(
      * Gewichts-Verlauf der letzten N Tage als (timestampMs, kg)-Paare,
      * aufsteigend sortiert. Leer wenn Permission fehlt oder keine Daten.
      */
-    suspend fun readWeightHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+    suspend fun readWeightHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
         if (!hasWeightReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
@@ -215,7 +224,7 @@ class HealthConnectManager @Inject constructor(
     }.onFailure { Log.w(TAG, "readWeightHistory failed", it) }.getOrDefault(emptyList())
 
     /** Durchschnitt der letzten N Tage (oder null wenn keine Daten). */
-    suspend fun averageWeightKg(days: Int = 30): Double? {
+    suspend fun averageWeightKg(days: Int = 730): Double? {
         val history = readWeightHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
@@ -245,7 +254,7 @@ class HealthConnectManager @Inject constructor(
     }.onFailure { Log.w(TAG, "readLatestBodyFatPercent failed", it) }.getOrNull()
 
     /** Koerperfett-Verlauf der letzten N Tage. */
-    suspend fun readBodyFatHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+    suspend fun readBodyFatHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
         if (!hasBodyFatReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
@@ -260,7 +269,7 @@ class HealthConnectManager @Inject constructor(
         response.records.map { it.time.toEpochMilli() to it.percentage.value }
     }.onFailure { Log.w(TAG, "readBodyFatHistory failed", it) }.getOrDefault(emptyList())
 
-    suspend fun averageBodyFatPercent(days: Int = 30): Double? {
+    suspend fun averageBodyFatPercent(days: Int = 730): Double? {
         val history = readBodyFatHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
@@ -288,7 +297,7 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Log.w(TAG, "readLatestLeanBodyMassKg failed", it) }.getOrNull()
 
-    suspend fun readLeanBodyMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+    suspend fun readLeanBodyMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
         if (!hasLeanBodyMassReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
@@ -303,7 +312,7 @@ class HealthConnectManager @Inject constructor(
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Log.w(TAG, "readLeanBodyMassHistory failed", it) }.getOrDefault(emptyList())
 
-    suspend fun averageLeanBodyMassKg(days: Int = 30): Double? {
+    suspend fun averageLeanBodyMassKg(days: Int = 730): Double? {
         val history = readLeanBodyMassHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
@@ -331,7 +340,7 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Log.w(TAG, "readLatestBodyWaterMassKg failed", it) }.getOrNull()
 
-    suspend fun readBodyWaterMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+    suspend fun readBodyWaterMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
         if (!hasBodyWaterMassReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
@@ -346,7 +355,7 @@ class HealthConnectManager @Inject constructor(
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Log.w(TAG, "readBodyWaterMassHistory failed", it) }.getOrDefault(emptyList())
 
-    suspend fun averageBodyWaterMassKg(days: Int = 30): Double? {
+    suspend fun averageBodyWaterMassKg(days: Int = 730): Double? {
         val history = readBodyWaterMassHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
@@ -371,7 +380,7 @@ class HealthConnectManager @Inject constructor(
         response.records.firstOrNull()?.mass?.inKilograms
     }.onFailure { Log.w(TAG, "readLatestBoneMassKg failed", it) }.getOrNull()
 
-    suspend fun readBoneMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+    suspend fun readBoneMassHistory(days: Int = 730): List<Pair<Long, Double>> = runCatching {
         val c = client() ?: return@runCatching emptyList()
         if (!hasBoneMassReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
@@ -386,7 +395,7 @@ class HealthConnectManager @Inject constructor(
         response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
     }.onFailure { Log.w(TAG, "readBoneMassHistory failed", it) }.getOrDefault(emptyList())
 
-    suspend fun averageBoneMassKg(days: Int = 30): Double? {
+    suspend fun averageBoneMassKg(days: Int = 730): Double? {
         val history = readBoneMassHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }

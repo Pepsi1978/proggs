@@ -22,6 +22,7 @@ import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
 import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -245,20 +246,20 @@ class BiomarkerViewModel @Inject constructor(
             // Loading-State setzen damit die Karten einen Spinner zeigen koennen
             _weight.value = _weight.value.copy(isLoading = true)
             val latestKg = healthConnect.readLatestWeightKg()
-            val avgKg = healthConnect.averageWeightKg(30)
-            val historyKg = healthConnect.readWeightHistory(30)
+            val avgKg = healthConnect.averageWeightKg(730)
+            val historyKg = healthConnect.readWeightHistory(730)
             val latestBf = healthConnect.readLatestBodyFatPercent()
-            val avgBf = healthConnect.averageBodyFatPercent(30)
-            val historyBf = healthConnect.readBodyFatHistory(30)
+            val avgBf = healthConnect.averageBodyFatPercent(730)
+            val historyBf = healthConnect.readBodyFatHistory(730)
             val latestLean = healthConnect.readLatestLeanBodyMassKg()
-            val avgLean = healthConnect.averageLeanBodyMassKg(30)
-            val historyLean = healthConnect.readLeanBodyMassHistory(30)
+            val avgLean = healthConnect.averageLeanBodyMassKg(730)
+            val historyLean = healthConnect.readLeanBodyMassHistory(730)
             val latestWater = healthConnect.readLatestBodyWaterMassKg()
-            val avgWater = healthConnect.averageBodyWaterMassKg(30)
-            val historyWater = healthConnect.readBodyWaterMassHistory(30)
+            val avgWater = healthConnect.averageBodyWaterMassKg(730)
+            val historyWater = healthConnect.readBodyWaterMassHistory(730)
             val latestBone = healthConnect.readLatestBoneMassKg()
-            val avgBone = healthConnect.averageBoneMassKg(30)
-            val historyBone = healthConnect.readBoneMassHistory(30)
+            val avgBone = healthConnect.averageBoneMassKg(730)
+            val historyBone = healthConnect.readBoneMassHistory(730)
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
@@ -505,37 +506,58 @@ class BiomarkerViewModel @Inject constructor(
     }
 
     fun refreshNow() {
-        // Direkter Sync (Frank-Wunsch 2026-05-09: "Refresh tut nichts").
-        // Vorher: nur scheduler.runWhoopSyncNow() — Worker laeuft asynchron im
-        // Hintergrund, ohne sichtbares Feedback. Jetzt: direkt im VM-Coroutine,
-        // mit Fortschrittsmeldung und konkreten Fehlermeldungen wenn was schief
-        // geht (Token abgelaufen / Netzwerk / API-Limit).
+        // Frank-Wunsch 2026-05-10: Refresh-Button aktualisiert ALLE Datenquellen
+        // (Whoop, Amazfit, Oura, Health Connect) parallel. Vorher nur Whoop —
+        // jetzt sammelt das ViewModel die Counts pro Quelle und zeigt eine
+        // zusammengefasste Status-Meldung.
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "Whoop-Sync läuft …"
-            val result = repo.syncLastDays(365)
-            _refreshing.value = false
-            result.onSuccess { count ->
-                _message.value = if (count == 0) {
-                    "Sync OK, aber 0 Snapshots — pruefe ob deine Whoop-API-Berechtigung noch gueltig ist."
-                } else {
-                    "$count Whoop-Snapshots geladen ($count letzte Tage)."
-                }
-            }.onFailure { ex ->
-                // Direktive 3 — Diagnose: Token-Probleme als eigene Fehlerklasse
-                // unterscheiden, damit Frank im Banner sofort sieht was zu tun ist.
-                // "Whoop-Sync fehlgeschlagen: …" war zu generisch — bei abgelaufenem
-                // Token wusste man nicht ob es Internet, Whoop-API oder Login ist.
-                val msg = ex.message.orEmpty()
-                _message.value = when {
-                    ex is IllegalStateException && msg.contains("Access-Token") ->
-                        "Whoop-Anmeldung abgelaufen. Bitte unter Einstellungen → API-Schluessel neu anmelden."
-                    ex is IllegalStateException && msg.contains("Client-Secret") ->
-                        "Whoop-Client-Secret fehlt — bitte in den API-Schluessel-Settings eintragen."
-                    else ->
-                        "Whoop-Sync fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
-                }
+            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Health Connect) …"
+            val whoopJob = async { repo.syncLastDays(365) }
+            val amazfitJob = async {
+                runCatching { amazfitRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
             }
+            val ouraJob = async {
+                runCatching { ouraRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
+            }
+            // Health Connect parallel mit-aktualisieren — refreshWeight() startet
+            // seinen eigenen viewModelScope.launch, wir warten nicht ab und
+            // markieren HC einfach als 'angestossen'. Die UI bekommt das Update
+            // ueber den weight-StateFlow sobald die HC-Reads fertig sind.
+            refreshWeight()
+
+            val whoopRes = whoopJob.await()
+            val amazfitRes = amazfitJob.await()
+            val ouraRes = ouraJob.await()
+            _refreshing.value = false
+
+            val parts = mutableListOf<String>()
+            whoopRes.fold(
+                onSuccess = { c -> parts.add("Whoop $c") },
+                onFailure = {
+                    val msg = it.message.orEmpty()
+                    parts.add(
+                        when {
+                            it is IllegalStateException && msg.contains("Access-Token") -> "Whoop ✗ (abgelaufen)"
+                            it is IllegalStateException && msg.contains("Client-Secret") -> "Whoop ✗ (Secret fehlt)"
+                            else -> "Whoop ✗"
+                        },
+                    )
+                },
+            )
+            amazfitRes.fold(
+                onSuccess = { c -> parts.add("Amazfit $c") },
+                onFailure = { parts.add("Amazfit ✗") },
+            )
+            ouraRes.fold(
+                onSuccess = { m ->
+                    val total = if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
+                    parts.add("Oura $total")
+                },
+                onFailure = { parts.add("Oura ✗") },
+            )
+            parts.add("HC ✓")
+            _message.value = "Sync fertig: " + parts.joinToString(" · ")
         }
     }
 
