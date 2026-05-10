@@ -169,7 +169,35 @@ class AmazfitRepository @Inject constructor(
             emptyList()
         }
         if (workoutEntities.isNotEmpty()) {
-            workoutDao.upsertAll(workoutEntities)
+            // Frank-Bug 2026-05-11: Der Workout-Summary-Endpoint liefert KEINE
+            // Detail-Felder (GPS-Track, Pulsverlauf, Tempoverlauf, Splits) — die
+            // kommen erst beim ON-DEMAND-Aufruf von ensureWorkoutDetail. Wenn
+            // wir hier direkt mit upsertAll (REPLACE-Strategie) schreiben, werden
+            // bereits geladene Detail-Felder mit null UEBERSCHRIEBEN — Frank's
+            // muehsam nachgeladene Pulsdiagramme, GPS-Tracks und Tempoverlaeufe
+            // sind nach JEDEM Sync weg. Gleiche Bug-Klasse wie der ensureWorkout-
+            // Detail-Bug von 2026-05-09 — damals wurde nur dort gefixt, hier nicht.
+            // Jetzt: Existierende Eintraege lesen und Detail-Felder bewahren.
+            val merged = workoutEntities.map { fresh ->
+                val existing = workoutDao.getById(fresh.trackId)
+                if (existing == null) {
+                    fresh
+                } else {
+                    fresh.copy(
+                        gpsTrackJson = existing.gpsTrackJson ?: fresh.gpsTrackJson,
+                        heartRateSeriesJson = existing.heartRateSeriesJson ?: fresh.heartRateSeriesJson,
+                        paceSeriesJson = existing.paceSeriesJson ?: fresh.paceSeriesJson,
+                        paceStreamJson = existing.paceStreamJson ?: fresh.paceStreamJson,
+                        splitsJson = existing.splitsJson ?: fresh.splitsJson,
+                        // createdAt vom alten Eintrag uebernehmen damit der 6h-
+                        // Detail-Cache-Check (in ensureWorkoutDetail) korrekt
+                        // bleibt — sonst wuerde jeder Summary-Sync den Cache-
+                        // Timer zuruecksetzen.
+                        createdAt = existing.createdAt,
+                    )
+                }
+            }
+            workoutDao.upsertAll(merged)
         }
 
         val syncTs = System.currentTimeMillis()
