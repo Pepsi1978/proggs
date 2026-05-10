@@ -42,7 +42,7 @@ tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFr
 
 android {
     namespace = "de.frank.entropyreducer"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         getByName("debug") {
@@ -56,9 +56,9 @@ android {
     defaultConfig {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 60
-        versionName = "0.9.14"
+        targetSdk = 36
+        versionCode = 61
+        versionName = "0.9.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
