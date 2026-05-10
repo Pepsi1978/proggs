@@ -94,13 +94,19 @@ class BackgroundScheduler @Inject constructor(
         )
     }
 
-    /** Plant die KI-Frage-des-Moments-Pruefung alle 30 Minuten. */
+    /** Plant die KI-Frage-des-Moments-Pruefung alle 30 Minuten.
+     *  Performance-Audit Loop 1 (2026-05-10): BatteryNotLow-Constraint hinzu —
+     *  KI-Fragen sind nicht zeitkritisch, sollten bei <15% Akku pausieren. */
     fun ensureKiQuestionJob() {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
         wm.enqueueUniquePeriodicWork(
             KiQuestionWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
             PeriodicWorkRequestBuilder<KiQuestionWorker>(30, TimeUnit.MINUTES)
                 .setInitialDelay(2, TimeUnit.MINUTES)
+                .setConstraints(constraints)
                 .build(),
         )
     }
@@ -119,8 +125,12 @@ class BackgroundScheduler @Inject constructor(
      * so deckt eine einzelne Schedule-Konfiguration alle Schichtfenster ab.
      */
     fun ensureDailyBriefingJob() {
+        // Performance-Audit Loop 1 (2026-05-10): BatteryNotLow ergaenzt —
+        // Briefing kann 90 min warten bis Akku >15% ist (Ladegeraet).
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
         wm.enqueueUniquePeriodicWork(
             DailyBriefingWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
@@ -242,11 +252,18 @@ class BackgroundScheduler @Inject constructor(
                 .build(),
         )
         // Trigger-Polling — alle 15 Min Bedingungen aktiver Trigger prüfen.
+        // Performance-Audit Loop 1 (2026-05-10): BatteryNotLow ergaenzt —
+        // Trigger-Polling ist nicht zeitkritisch und nur lokal (kein Netz),
+        // bei <15% Akku duerfen Vorschlaege spaeter erscheinen.
+        val triggerPollingConstraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
         wm.enqueueUniquePeriodicWork(
             TriggerPollingWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
             PeriodicWorkRequestBuilder<TriggerPollingWorker>(15, TimeUnit.MINUTES)
                 .setInitialDelay(7, TimeUnit.MINUTES)
+                .setConstraints(triggerPollingConstraints)
                 .build(),
         )
     }
