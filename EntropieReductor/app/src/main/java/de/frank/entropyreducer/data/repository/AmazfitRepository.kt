@@ -192,16 +192,65 @@ class AmazfitRepository @Inject constructor(
                 if (existing == null) {
                     fresh
                 } else {
+                    // Frank-Wunsch 2026-05-11 (zweite Iteration): Belt-and-Suspenders
+                    // Schutz fuer ALLE Felder ausser vo2Max. Pattern: 'fresh wins
+                    // if not null, existing als Fallback'. Wenn der Server irgendwann
+                    // null fuer ein Feld liefert (API-Bug, Server-Ausfall, geloeschte
+                    // Detail-Daten), bleibt der lokale Wert erhalten. Updates kommen
+                    // aber normal durch — wenn Zepp eine Distanz korrigiert oder Pace
+                    // praeziser berechnet, gewinnt der frische Wert.
+                    //
+                    // vo2Max ist EXPLIZIT ausgenommen — wird im UI live durch
+                    // estimateVo2Max() aus avgSpeedKmh + avgHeartRate berechnet
+                    // (AmazfitTrainingDetailScreen.kt:252, ACSM-Lauf-Formel). Da
+                    // die Eingaben dieser Formel hier geschuetzt sind, ist vo2Max
+                    // immer ableitbar — der DB-Wert ist nur ein optionaler Cache
+                    // und darf ruhig auf null fallen.
+                    //
+                    // createdAt bleibt auf existing damit der 6h-Detail-Cache-Check
+                    // (in ensureWorkoutDetail) korrekt bleibt — sonst wuerde jeder
+                    // Summary-Sync den Cache-Timer zuruecksetzen.
                     fresh.copy(
-                        gpsTrackJson = existing.gpsTrackJson ?: fresh.gpsTrackJson,
-                        heartRateSeriesJson = existing.heartRateSeriesJson ?: fresh.heartRateSeriesJson,
-                        paceSeriesJson = existing.paceSeriesJson ?: fresh.paceSeriesJson,
-                        paceStreamJson = existing.paceStreamJson ?: fresh.paceStreamJson,
-                        splitsJson = existing.splitsJson ?: fresh.splitsJson,
-                        // createdAt vom alten Eintrag uebernehmen damit der 6h-
-                        // Detail-Cache-Check (in ensureWorkoutDetail) korrekt
-                        // bleibt — sonst wuerde jeder Summary-Sync den Cache-
-                        // Timer zuruecksetzen.
+                        // Identifier + Zeitstempel — sollten gleich bleiben, fresh
+                        // gewinnt falls Zepp je korrekturen liefert
+                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
+                        sportType = fresh.sportType ?: existing.sportType,
+                        sportName = fresh.sportName ?: existing.sportName,
+                        // Summary-Metriken
+                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
+                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
+                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
+                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
+                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
+                        calories = fresh.calories ?: existing.calories,
+                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
+                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
+                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
+                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
+                        trainingEffectAerobic = fresh.trainingEffectAerobic ?: existing.trainingEffectAerobic,
+                        trainingEffectAnaerobic = fresh.trainingEffectAnaerobic ?: existing.trainingEffectAnaerobic,
+                        // vo2Max bewusst NICHT geschuetzt (Frank-Wunsch) — wird im UI
+                        // berechnet, fresh.vo2Max ist meist null, das ist OK
+                        cadence = fresh.cadence ?: existing.cadence,
+                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
+                        recoveryTimeHours = fresh.recoveryTimeHours ?: existing.recoveryTimeHours,
+                        skinTempCelsius = fresh.skinTempCelsius ?: existing.skinTempCelsius,
+                        // Schwimm-spezifische Felder
+                        swolf = fresh.swolf ?: existing.swolf,
+                        poolLaps = fresh.poolLaps ?: existing.poolLaps,
+                        poolLengthMeters = fresh.poolLengthMeters ?: existing.poolLengthMeters,
+                        // Metadaten
+                        source = fresh.source ?: existing.source,
+                        city = fresh.city ?: existing.city,
+                        // Detail-Streams (frueher der einzige Schutz, jetzt Teil des
+                        // gesamten Belt-and-Suspenders-Patterns) — fresh hat sie nie
+                        // weil Summary-Endpoint sie nicht liefert, existing gewinnt
+                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
+                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
+                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
+                        splitsJson = fresh.splitsJson ?: existing.splitsJson,
+                        // createdAt: existing wins fuer den 6h-Detail-Cache-Timer
                         createdAt = existing.createdAt,
                     )
                 }
