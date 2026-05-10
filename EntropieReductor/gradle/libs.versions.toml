@@ -27,6 +27,7 @@ googleDrive = "v3-rev20241206-2.0.0"
 playServicesAuth = "21.3.0"
 credentials = "1.5.0-alpha06"
 googleId = "1.1.1"
+reorderable = "2.4.0"
 
 [libraries]
 # Compose BOM
@@ -103,6 +104,9 @@ play-services-auth = { group = "com.google.android.gms", name = "play-services-a
 credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 credentials-play = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
+
+# Reorderable LazyColumn (Drag & Drop fuer Biomarker-Karten — Frank-Wunsch 2026-05-10)
+reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -8,6 +8,7 @@ import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.repository.AmazfitRepository
+import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.status.StatusBreakdown
@@ -92,6 +93,7 @@ class BiomarkerViewModel @Inject constructor(
     private val repo: WhoopRepository,
     private val amazfitRepo: AmazfitRepository,
     private val scheduler: BackgroundScheduler,
+    private val cardOrderRepo: BiomarkerCardOrderRepository,
     statusObserver: StatusObserver,
     settings: AppSettings,
 ) : ViewModel() {
@@ -99,6 +101,30 @@ class BiomarkerViewModel @Inject constructor(
     private val _refreshing = MutableStateFlow(false)
     private val _message = MutableStateFlow<String?>(null)
     private val _selectedDate = MutableStateFlow(java.time.LocalDate.now())
+
+    /**
+     * Aktuelle Reihenfolge der Biomarker-Karten (Frank-Wunsch 2026-05-10).
+     * Wird vom Screen via collectAsState() beobachtet. Neu hinzugefuegte Karten
+     * (z.B. nach App-Update) werden vom Repository automatisch ans Ende angehaengt.
+     */
+    val cardOrder: StateFlow<List<String>> = cardOrderRepo.orderedCardIds
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BiomarkerCardId.DEFAULT_ORDER)
+
+    /**
+     * Speichert die neue Reihenfolge nach jedem Drag & Drop. Wird vom Screen
+     * im onMove-Callback der reorderable LazyColumn aufgerufen.
+     */
+    fun saveCardOrder(newOrder: List<String>) {
+        viewModelScope.launch { cardOrderRepo.saveOrder(newOrder) }
+    }
+
+    /**
+     * Setzt die Reihenfolge auf die Werks-Einstellung zurueck. Wird vom
+     * Settings-Menue oder einem Long-Press-Hold-Reset-Knopf ausgeloest.
+     */
+    fun resetCardOrder() {
+        viewModelScope.launch { cardOrderRepo.resetToDefault() }
+    }
 
     private val now = System.currentTimeMillis()
     private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000

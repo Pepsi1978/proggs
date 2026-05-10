@@ -218,6 +218,9 @@ dependencies {
     implementation(libs.credentials.play)
     implementation(libs.google.id)
 
+    // Reorderable LazyColumn (Drag & Drop fuer Biomarker-Karten — Frank-Wunsch 2026-05-10)
+    implementation(libs.reorderable)
+
     // Pruefe Internet-Konnektivitaet
     implementation(libs.core.ktx)
 

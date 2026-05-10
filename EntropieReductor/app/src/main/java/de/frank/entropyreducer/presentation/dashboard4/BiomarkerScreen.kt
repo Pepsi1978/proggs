@@ -11,9 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -23,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +72,7 @@ fun BiomarkerHostScreen(
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val cardOrder by vm.cardOrder.collectAsState()
     val cosmos = LocalCosmos.current
     val themeVm: ThemeViewModel = hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsState()
@@ -111,7 +120,32 @@ fun BiomarkerHostScreen(
             val seventyDaysAgoMs = System.currentTimeMillis() - 70L * 24 * 60 * 60 * 1000
             state.history.filter { it.capturedAt >= seventyDaysAgoMs }
         }
+
+        // Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten.
+        // Lokale Liste fuer sofortiges UI-Feedback waehrend des Ziehens. Wird bei jedem
+        // Reorder upgedatet und gleichzeitig in den DataStore persistiert.
+        var localOrder by remember(cardOrder) { mutableStateOf(cardOrder) }
+        val lazyListState = rememberLazyListState()
+        val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+            // Wir reordern anhand der String-Keys, nicht der LazyList-Indizes.
+            // So koennen Header-Items (ohne String-Key) sicher dazwischen liegen
+            // ohne die Berechnung zu verfaelschen.
+            val fromKey = from.key as? String
+            val toKey = to.key as? String
+            if (fromKey != null && toKey != null && fromKey != toKey) {
+                val fromIdx = localOrder.indexOf(fromKey)
+                val toIdx = localOrder.indexOf(toKey)
+                if (fromIdx >= 0 && toIdx >= 0) {
+                    localOrder = localOrder.toMutableList().apply {
+                        add(toIdx, removeAt(fromIdx))
+                    }
+                    vm.saveCardOrder(localOrder)
+                }
+            }
+        }
+
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier.fillMaxSize().padding(padding),
             // Frank-Wunsch 2026-05-09: top auf 0 damit der Sync-Zeitstempel direkt
             // an die jetzt kompakte TopAppBar anschliesst (~8dp natuerliche Luft
@@ -124,7 +158,7 @@ fun BiomarkerHostScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
+            item("hdr_sync") {
                 // Frank-Wunsch 2026-05-09: kleine Info-Zeile direkt unter dem
                 // Header die zeigt wann zuletzt erfolgreich mit Whoop synchronisiert
                 // wurde. Hilft Frank zu sehen ob die Daten frisch sind oder ob der
@@ -136,27 +170,62 @@ fun BiomarkerHostScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            item {
+            item("hdr_status") {
                 StatusBar(
                     percent = state.statusBreakdown?.total ?: 0,
                     breakdown = state.statusBreakdown,
                 )
             }
-            item { DateSelectorBar(state, vm) }
-            item { GesamterholungCard(state, onOpenMetricDetail) }
-            item { KeyValueGrid(state, onOpenMetricDetail) }
+            item("hdr_date") { DateSelectorBar(state, vm) }
 
-            // Frank-Wunsch 2026-05-09 (Reorganisation): Reihenfolge ist jetzt
-            // 1. HRV → Ruhepuls (Herzfrequenz)
-            // 2. Atemfrequenz → SpO2 → Hauttemperatur → Hauttemperatur-Delta (Körper)
-            // 3. Schlaf-Performance → Schlafdauer → Schlafphasen → Erholsamer Schlaf
-            //    → Schlafeffizienz → Schlafregelmaessigkeit → Schlafdefizit (Schlaf)
-            // 4. Tagesumsatz → Belastung → Workouts (Aktivitaet)
-            // 5. Korrelation HRV ↔ Schlafdauer (Analyse)
-            // Frank-Wunsch 2026-05-09 (Update): Durchschnittliche Tages-Herzfrequenz
-            // wurde entfernt — Ruhepuls reicht. Avg/Max-HR bleiben pro Workout drin.
-
-            // ============ Herzfrequenz-Block ============
+            // ============ VERSCHIEBBARE KARTEN (Frank-Wunsch 2026-05-10) ============
+            // Drag & Drop fuer alle Daten-Karten — Reihenfolge wird im DataStore
+            // (BiomarkerCardOrderRepository) persistiert. Neue Karten in spaeteren
+            // App-Versionen werden automatisch ans Ende angehaengt. Frank kann mit
+            // dem Drag-Handle-Symbol oben rechts auf jeder Karte die Reihenfolge frei
+            // anpassen — Long-Press auf das Symbol startet das Verschieben.
+            // Default-Reihenfolge bei Erstinstallation (BiomarkerCardId.DEFAULT_ORDER):
+            //   HRV → Ruhepuls (Herzfrequenz)
+            //   Atemfrequenz → SpO2 → Hauttemperatur → Hauttemperatur-Delta (Koerper)
+            //   Schlaf-Performance → Schlafdauer → Schlafphasen → Erholsamer Schlaf
+            //     → Schlafeffizienz → Schlafregelmaessigkeit → Schlafdefizit (Schlaf)
+            //   Tagesumsatz → Belastung → Workouts (Aktivitaet)
+            //   Korrelation HRV ↔ Schlafdauer (Analyse)
+            //   Amazfit-Hero + Amazfit-Trainings (T-Rex 3)
+            items(localOrder, key = { it }) { id ->
+                ReorderableItem(reorderState, key = id) { _ ->
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        BiomarkerCardForId(
+                            id = id,
+                            state = state,
+                            historyLast70 = historyLast70,
+                            onOpenMetricDetail = onOpenMetricDetail,
+                            onOpenTrainingDetail = onOpenTrainingDetail,
+                            onOpenAllTrainings = onOpenAllTrainings,
+                        )
+                        // Drag-Handle oben rechts — Long-Press startet das Ziehen.
+                        // Halbtransparent damit es den Card-Inhalt nicht ueberlagert.
+                        IconButton(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 4.dp, end = 4.dp)
+                                .longPressDraggableHandle(),
+                            onClick = { /* Drag-only, kein Tap-Handling */ },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DragHandle,
+                                contentDescription = "Karte verschieben",
+                                tint = cosmos.textSecondary.copy(alpha = 0.55f),
+                            )
+                        }
+                    }
+                }
+            }
+            // ============ ENDE VERSCHIEBBARE KARTEN ============
+            // Alter, fest-verdrahteter Block ist jetzt in BiomarkerCardForId verlagert.
+            // Falls Build fehlschlaegt: Block weiter unten ist auskommentiert.
+            /*
+            // ============ Herzfrequenz-Block (LEGACY — siehe BiomarkerCardForId) ============
             item {
                 MetricHistoryCard(
                     title = "HRV-Verlauf",
@@ -424,9 +493,11 @@ fun BiomarkerHostScreen(
                     onOpenDetail = onOpenTrainingDetail,
                 )
             }
+            */
+            // ============ ENDE LEGACY-BLOCK ============
 
             if (state.latest == null) {
-                item {
+                item("ft_empty") {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
                             Text(
@@ -446,13 +517,13 @@ fun BiomarkerHostScreen(
                 }
             }
             state.message?.let { msg ->
-                item {
+                item("ft_msg") {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Text(msg, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
                     }
                 }
             }
-            item { Spacer(Modifier.height(80.dp)) }
+            item("ft_spacer") { Spacer(Modifier.height(80.dp)) }
         }
     }
 }
@@ -1155,6 +1226,285 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
             } else {
                 val dateFmt = java.time.format.DateTimeFormatter.ofPattern("d.M. HH:mm")
                 syncInstant.format(dateFmt)
+            }
+        }
+    }
+}
+
+/**
+ * Verschiebbare Biomarker-Karte fuer eine gegebene Card-ID.
+ *
+ * Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten. Diese Composable
+ * ist die Bruecke zwischen der Card-ID (String aus [BiomarkerCardId]) und der
+ * konkreten UI. Nutzt die bereits vorhandenen privaten Composables
+ * (MetricHistoryCard, GesamterholungCard, KeyValueGrid, SkinTempDeltaCard,
+ * RestorativeSleepCard, CorrelationCard, AmazfitLastTrainingHeroCard,
+ * AmazfitTrainingsCard, WorkoutsForDayCard) und entscheidet anhand der ID
+ * welche Card gerendert wird.
+ *
+ * Wird umschlossen von einer Column damit Multi-Element-Cards (z.B. KeyValueGrid
+ * mit zwei Rows + Spacer) korrekt vertikal anordnen — sonst wuerde der aeussere
+ * Box im LazyColumn-Item die Children stapeln statt untereinander.
+ *
+ * Wenn eine ID nicht bekannt ist (Schutz vor Datenmuell aus dem DataStore):
+ * stille leere Box. Das Repository filtert solche IDs eigentlich raus, aber
+ * Defense-in-Depth.
+ */
+@Composable
+private fun BiomarkerCardForId(
+    id: String,
+    state: BiomarkerUiState,
+    historyLast70: List<de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity>,
+    onOpenMetricDetail: (String) -> Unit,
+    onOpenTrainingDetail: (String) -> Unit,
+    onOpenAllTrainings: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    Column(modifier = Modifier.fillMaxWidth()) {
+        when (id) {
+            BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
+
+            BiomarkerCardId.KEY_VALUE_GRID -> KeyValueGrid(state, onOpenMetricDetail)
+
+            BiomarkerCardId.HRV -> MetricHistoryCard(
+                title = "HRV-Verlauf",
+                accent = CosmosColors.AccentPrimary,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.hrvMs?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.hrvMs?.let { snap.capturedAt to it }
+                },
+                unit = "ms",
+                onClick = { onOpenMetricDetail(MetricKey.HRV) },
+            )
+
+            BiomarkerCardId.RHR -> MetricHistoryCard(
+                title = "Ruhepuls",
+                accent = CosmosColors.Critical,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.restingHeartRate?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "bpm",
+                onClick = { onOpenMetricDetail(MetricKey.RHR) },
+                lowerIsBetter = true,
+            )
+
+            BiomarkerCardId.RESPIRATORY -> MetricHistoryCard(
+                title = "Atemfrequenz",
+                accent = CosmosColors.AccentPrimary,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.respiratoryRate?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.respiratoryRate?.let { snap.capturedAt to it }
+                },
+                unit = "/min",
+                onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
+                lowerIsBetter = true,
+            )
+
+            BiomarkerCardId.SPO2 -> MetricHistoryCard(
+                title = "Sauerstoffsättigung",
+                accent = CosmosColors.Success,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.spo2Percent?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.spo2Percent?.let { snap.capturedAt to it }
+                },
+                unit = "%",
+                onClick = { onOpenMetricDetail(MetricKey.SPO2) },
+            )
+
+            BiomarkerCardId.SKIN_TEMP -> MetricHistoryCard(
+                title = "Hauttemperatur",
+                accent = CosmosColors.Warning,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.skinTempCelsius?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.skinTempCelsius?.let { snap.capturedAt to it }
+                },
+                unit = "°C",
+                onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                lowerIsBetter = true,
+            )
+
+            BiomarkerCardId.SKIN_TEMP_DELTA -> SkinTempDeltaCard(
+                delta = state.skinTempDelta,
+                baseline = state.skinTempBaseline,
+                currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
+                onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+            )
+
+            BiomarkerCardId.SLEEP_PERFORMANCE -> MetricHistoryCard(
+                title = "Schlaf-Performance",
+                accent = CosmosColors.Success,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.sleepPerformance?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "%",
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
+            )
+
+            BiomarkerCardId.SLEEP_TOTAL -> MetricHistoryCard(
+                title = "Schlafdauer",
+                accent = CosmosColors.AccentSecondary,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.sleepTotalMinutes?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "min",
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                valueFormatter = SLEEP_HOUR_FORMAT,
+            )
+
+            BiomarkerCardId.SLEEP_STAGES -> {
+                // Schlafphasen-Card mit Stage-Bar + 4 Stage-Chips.
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                ) {
+                    Column {
+                        Text(
+                            text = "Schlafphasen",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cosmos.textPrimary,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        SleepStagesBar(
+                            remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
+                            deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                            lightMinutes = (state.selectedSnapshot ?: state.latest)?.sleepLightMinutes,
+                            awakeMinutes = (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SleepStageChip("REM", CosmosColors.AccentSecondary) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
+                            SleepStageChip("Tief", CosmosColors.AccentPrimary) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
+                            SleepStageChip("Leicht", CosmosColors.Warning) { onOpenMetricDetail(MetricKey.SLEEP_LIGHT) }
+                            SleepStageChip("Wach", CosmosColors.Critical) { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) }
+                        }
+                    }
+                }
+            }
+
+            BiomarkerCardId.SLEEP_RESTORATIVE -> RestorativeSleepCard(
+                percent = state.restorativeSleepPercent,
+                remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
+                deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
+            )
+
+            BiomarkerCardId.SLEEP_EFFICIENCY -> MetricHistoryCard(
+                title = "Schlafeffizienz",
+                accent = CosmosColors.Success,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.sleepEfficiencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "%",
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
+            )
+
+            BiomarkerCardId.SLEEP_CONSISTENCY -> MetricHistoryCard(
+                title = "Schlafregelmäßigkeit",
+                accent = CosmosColors.Success,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.sleepConsistencyPercent?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "%",
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
+            )
+
+            BiomarkerCardId.SLEEP_DEBT -> MetricHistoryCard(
+                lowerIsBetter = true,
+                title = "Schlafdefizit",
+                accent = CosmosColors.Warning,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.sleepDebtMinutes?.toDouble()?.let { snap.capturedAt to it }
+                },
+                unit = "min",
+                onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
+            )
+
+            BiomarkerCardId.KILOJOULES -> {
+                // Tagesumsatz schliesst den heutigen Tag aus weil der Wert sich
+                // ueber den Tag aufbaut. Andere Metriken sind morgens schon final.
+                val todayStartMs = java.time.LocalDate.now()
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant().toEpochMilli()
+                MetricHistoryCard(
+                    title = "Tagesumsatz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = historyLast70
+                        .filter { it.capturedAt < todayStartMs }
+                        .mapNotNull { snap ->
+                            // Whoop liefert kJ, Anzeige in kcal (Faktor 4.184).
+                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
+                        },
+                    fullHistoryPoints = state.history
+                        .filter { it.capturedAt < todayStartMs }
+                        .mapNotNull { snap ->
+                            snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) }
+                        },
+                    unit = "kcal",
+                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
+                )
+            }
+
+            BiomarkerCardId.STRAIN -> MetricHistoryCard(
+                title = "Belastung",
+                accent = CosmosColors.Warning,
+                points = historyLast70.mapNotNull { snap ->
+                    snap.dayStrain?.let { snap.capturedAt to it }
+                },
+                fullHistoryPoints = state.history.mapNotNull { snap ->
+                    snap.dayStrain?.let { snap.capturedAt to it }
+                },
+                unit = "",
+                onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
+            )
+
+            BiomarkerCardId.WORKOUTS_FOR_DAY -> WorkoutsForDayCard(
+                workouts = state.workoutsForSelectedDay,
+            )
+
+            BiomarkerCardId.CORRELATION -> CorrelationCard(state)
+
+            BiomarkerCardId.AMAZFIT_LAST_HERO -> AmazfitLastTrainingHeroCard(
+                workouts = state.amazfitWorkouts,
+                onOpenDetail = onOpenTrainingDetail,
+            )
+
+            BiomarkerCardId.AMAZFIT_TRAININGS -> AmazfitTrainingsCard(
+                workouts = state.amazfitWorkouts,
+                onOpenAll = onOpenAllTrainings,
+                onOpenDetail = onOpenTrainingDetail,
+            )
+
+            else -> {
+                // Unbekannte Card-ID — stille leere Box. Defense-in-Depth gegen
+                // Datenmuell aus dem DataStore (Repository filtert eigentlich schon).
             }
         }
     }
