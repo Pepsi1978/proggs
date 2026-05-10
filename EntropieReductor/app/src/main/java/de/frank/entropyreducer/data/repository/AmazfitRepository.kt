@@ -55,6 +55,7 @@ class AmazfitRepository @Inject constructor(
     private val api: ZeppApi,
     private val auth: ZeppAuthService,
     private val secrets: EncryptedSecretsStore,
+    private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -162,7 +163,11 @@ class AmazfitRepository @Inject constructor(
             workoutDao.upsertAll(workoutEntities)
         }
 
-        secrets.zeppLastSyncEpochMs = System.currentTimeMillis()
+        val syncTs = System.currentTimeMillis()
+        secrets.zeppLastSyncEpochMs = syncTs
+        // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den
+        // 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
+        appSettings.setLastAmazfitSync(syncTs)
         Log.i(
             TAG,
             "Amazfit-Sync: ${dailyEntities.size} Daily-Eintraege + ${workoutEntities.size} Workouts geschrieben",

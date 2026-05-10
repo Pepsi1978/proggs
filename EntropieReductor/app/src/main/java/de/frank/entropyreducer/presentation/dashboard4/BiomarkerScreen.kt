@@ -221,7 +221,18 @@ fun BiomarkerHostScreen(
                 // wurde. Hilft Frank zu sehen ob die Daten frisch sind oder ob der
                 // Sync klemmt — ohne in die Settings gehen zu muessen.
                 Text(
-                    text = "Zuletzt synchronisiert: ${formatRelativeSyncTime(state.lastWhoopSyncMs)}",
+                    // Frank-Wunsch 2026-05-10: Header zeigt das ALTESTE der vier
+                    // Sync-Zeitstempel — also den Zeitpunkt zu dem wirklich ALLE
+                    // Quellen aktuell waren. Wenn eine Quelle noch nie gesynced
+                    // wurde (0L), wird sie ignoriert; wenn alle 0 sind, "noch nie".
+                    text = "Zuletzt synchronisiert: ${formatRelativeSyncTime(
+                        listOfNotNull(
+                            state.lastWhoopSyncMs.takeIf { it > 0L },
+                            state.lastOuraSyncMs.takeIf { it > 0L },
+                            state.lastAmazfitSyncMs.takeIf { it > 0L },
+                            state.lastHealthConnectSyncMs.takeIf { it > 0L },
+                        ).minOrNull() ?: 0L,
+                    )}",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                     modifier = Modifier.fillMaxWidth(),

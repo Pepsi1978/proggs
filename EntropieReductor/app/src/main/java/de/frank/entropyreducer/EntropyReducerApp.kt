@@ -9,8 +9,10 @@ import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import de.frank.entropyreducer.data.local.InitialDataMigrator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
+import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
+import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.di.ApplicationScope
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +49,12 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var ouraRepository: OuraRepository
+
+    @Inject
+    lateinit var healthConnect: HealthConnectManager
+
+    @Inject
+    lateinit var appSettings: AppSettings
 
     // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
     // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
@@ -131,6 +139,24 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         runCatching { ouraRepository.syncLastDays(7) }
                             .onFailure { android.util.Log.w("EntropyReducerApp", "Oura-Foreground-Sync fehlgeschlagen", it) }
                     }
+                }
+                // Frank-Wunsch 2026-05-10: bei jedem App-Start auch Health
+                // Connect refreshen — Smart-Scale-Werte koennen sich aendern
+                // ohne dass die App im Vordergrund war. Schreibt nach
+                // erfolgreichem Read den Sync-Zeitstempel in AppSettings,
+                // damit der "Zuletzt synchronisiert"-Header alle vier Quellen
+                // (Whoop, Oura, Amazfit, HealthConnect) reflektiert.
+                applicationScope.launch {
+                    runCatching {
+                        if (healthConnect.isAvailable() && healthConnect.hasWeightReadPermission()) {
+                            // Trigger-Read damit Health Connect den juengsten
+                            // Wert bereitstellt — wir verwerfen das Result hier,
+                            // der naechste BiomarkerViewModel.refreshWeight liest
+                            // ohnehin die volle Reihe.
+                            healthConnect.readLatestWeightKg()
+                            appSettings.setLastHealthConnectSync(System.currentTimeMillis())
+                        }
+                    }.onFailure { android.util.Log.w("EntropyReducerApp", "HealthConnect-Foreground-Sync fehlgeschlagen", it) }
                 }
             }
         })

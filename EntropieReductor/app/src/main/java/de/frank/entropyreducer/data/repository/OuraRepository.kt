@@ -51,6 +51,7 @@ class OuraRepository @Inject constructor(
     private val personalInfoDao: OuraPersonalInfoDao,
     private val api: OuraApi,
     private val secrets: EncryptedSecretsStore,
+    private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
 ) {
 
     fun observeReadiness(): Flow<List<OuraReadinessEntity>> = readinessDao.getAll()
@@ -160,6 +161,9 @@ class OuraRepository @Inject constructor(
         val sleepDetailCount = pullSleepDetail(auth, startDate, endDate, now)
 
         secrets.ouraLastSyncEpochMs = now
+        // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den
+        // 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
+        appSettings.setLastOuraSync(now)
         Log.i(
             TAG,
             "Oura Sync fertig: readiness=$readinessCount, sleepDay=$sleepDayCount, " +

@@ -38,6 +38,12 @@ class AppSettings @Inject constructor(
     val lastWhoopSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_WHOOP_SYNC] ?: 0L }
     /** Letzter erfolgreicher Calendar-Sync (Epoch-Millisekunden). */
     val lastCalendarSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CALENDAR_SYNC] ?: 0L }
+    /** Frank-Wunsch 2026-05-10: Pro Biomarker-Quelle eigener Sync-Zeitstempel —
+     *  damit der Header "Zuletzt synchronisiert" das ALTESTE Sync-Datum aller
+     *  vier Quellen anzeigen kann (= "ist alles aktuell?"-Zeitpunkt). */
+    val lastOuraSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_OURA_SYNC] ?: 0L }
+    val lastAmazfitSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_AMAZFIT_SYNC] ?: 0L }
+    val lastHealthConnectSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_HEALTH_CONNECT_SYNC] ?: 0L }
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
@@ -82,6 +88,9 @@ class AppSettings @Inject constructor(
 
     suspend fun setLastWhoopSync(value: Long) = ds.edit { it[KEY_LAST_WHOOP_SYNC] = value }
     suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
+    suspend fun setLastOuraSync(value: Long) = ds.edit { it[KEY_LAST_OURA_SYNC] = value }
+    suspend fun setLastAmazfitSync(value: Long) = ds.edit { it[KEY_LAST_AMAZFIT_SYNC] = value }
+    suspend fun setLastHealthConnectSync(value: Long) = ds.edit { it[KEY_LAST_HEALTH_CONNECT_SYNC] = value }
     suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
 
     suspend fun setCachedAnalysis(markdown: String, atMs: Long) = ds.edit {
@@ -116,6 +125,9 @@ class AppSettings @Inject constructor(
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
+        private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
+        private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
+        private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")

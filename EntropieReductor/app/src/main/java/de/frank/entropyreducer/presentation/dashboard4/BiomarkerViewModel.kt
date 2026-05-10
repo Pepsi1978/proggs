@@ -38,6 +38,14 @@ private data class StatusBundle(
     val selectedDate: java.time.LocalDate,
 )
 
+/** Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den
+ *  'Zuletzt synchronisiert'-Header. Pro Biomarker-Quelle eigener Wert. */
+private data class SyncTimes(
+    val oura: Long,
+    val amazfit: Long,
+    val healthConnect: Long,
+)
+
 /** Whoop-Daten gebuendelt damit der outer combine() unter 5 Flows bleibt. */
 private data class WhoopBundle(
     val latest: BiomarkerSnapshotEntity?,
@@ -84,6 +92,11 @@ data class BiomarkerUiState(
      *  0 = noch nie erfolgreich gesynced. Frank-Wunsch 2026-05-09:
      *  „Zuletzt synchronisiert"-Zeile als kleine Info unter dem Header. */
     val lastWhoopSyncMs: Long = 0L,
+    /** Frank-Wunsch 2026-05-10: pro Biomarker-Quelle eigener Zeitstempel,
+     *  damit der Header das Minimum aller vier (= "alles aktuell"-Zeitpunkt) zeigt. */
+    val lastOuraSyncMs: Long = 0L,
+    val lastAmazfitSyncMs: Long = 0L,
+    val lastHealthConnectSyncMs: Long = 0L,
     /** Alle Whoop-Workouts, juengste zuerst (Frank-Wunsch 2026-05-09: kompletter
      *  Workout-Bereich mit Sportart, Strain, HR-Zonen). UI gruppiert nach Tag. */
     val workouts: List<WhoopWorkoutEntity> = emptyList(),
@@ -174,7 +187,7 @@ class BiomarkerViewModel @Inject constructor(
     private val syncCoordinator: SyncCoordinator,
     private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
-    settings: AppSettings,
+    private val settings: AppSettings,
 ) : ViewModel() {
 
     private val _refreshing = MutableStateFlow(false)
@@ -267,6 +280,9 @@ class BiomarkerViewModel @Inject constructor(
                 lastReadAtMs = System.currentTimeMillis(),
                 isLoading = false,
             )
+            // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer
+            // den 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
+            settings.setLastHealthConnectSync(System.currentTimeMillis())
         }
     }
 
@@ -339,7 +355,12 @@ class BiomarkerViewModel @Inject constructor(
         ) { r, m, b, sync, sel ->
             StatusBundle(r, m, b, sync, sel)
         },
-    ) { whoop, amazfit, oura, status ->
+        combine(
+            settings.lastOuraSyncMsFlow,
+            settings.lastAmazfitSyncMsFlow,
+            settings.lastHealthConnectSyncMsFlow,
+        ) { o, a, h -> SyncTimes(o, a, h) },
+    ) { whoop, amazfit, oura, status, syncTimes ->
         val latest = whoop.latest
         val all = whoop.history
         val workouts = whoop.workouts
@@ -446,6 +467,9 @@ class BiomarkerViewModel @Inject constructor(
             message = status.message,
             statusBreakdown = status.breakdown,
             lastWhoopSyncMs = status.lastWhoopSyncMs,
+            lastOuraSyncMs = syncTimes.oura,
+            lastAmazfitSyncMs = syncTimes.amazfit,
+            lastHealthConnectSyncMs = syncTimes.healthConnect,
             workouts = workouts,
             workoutsForSelectedDay = workoutsForDay,
             restorativeSleepPercent = restorativePct,
