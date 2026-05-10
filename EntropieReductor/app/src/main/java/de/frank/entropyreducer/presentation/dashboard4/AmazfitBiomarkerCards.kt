@@ -415,18 +415,24 @@ internal fun AmazfitWorkoutRow(
     }
 }
 
+// Performance-Audit Loop 3 (2026-05-10): top-level Formatter (DateTimeFormatter
+// ist thread-safe per java.time-API-Garantie). Vorher 2x Allokation pro
+// formatStartLabel-Aufruf — bei 5 Workout-Zeilen × Recompositions = 10/s.
+private val WORKOUT_TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val WORKOUT_DATE_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE dd.MM. · HH:mm", Locale.GERMANY)
+
 internal fun formatStartLabel(startMs: Long): String {
     val zone = ZoneId.systemDefault()
     val zdt = Instant.ofEpochMilli(startMs).atZone(zone)
     val today = java.time.LocalDate.now(zone)
     val date = zdt.toLocalDate()
-    val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
-    val time = zdt.format(timeFmt)
+    val time = zdt.format(WORKOUT_TIME_FMT)
     return when (date) {
         today -> "Heute · $time"
         today.minusDays(1) -> "Gestern · $time"
         today.minusDays(2) -> "Vorgestern · $time"
-        else -> zdt.format(DateTimeFormatter.ofPattern("EEE dd.MM. · HH:mm", Locale.GERMANY))
+        else -> zdt.format(WORKOUT_DATE_FMT)
     }
 }
 

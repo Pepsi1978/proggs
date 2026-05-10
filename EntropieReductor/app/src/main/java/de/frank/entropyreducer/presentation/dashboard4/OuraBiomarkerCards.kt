@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,7 +82,14 @@ internal fun OuraReadinessCard(
     val cosmos = LocalCosmos.current
     val score = readiness?.score
     val color = scoreColor(score)
-    val last30Scores = history.takeLast(30).mapNotNull { it.score }
+    // Performance-Audit Loop 3 (2026-05-10): takeLast/mapNotNull in remember.
+    val historyAggregates = remember(history) {
+        val last30 = history.takeLast(30).mapNotNull { it.score }
+        val last7Doubles = history.takeLast(7).mapNotNull { it.score?.toDouble() }
+        last30 to last7Doubles
+    }
+    val last30Scores = historyAggregates.first
+    val last7Scores = historyAggregates.second
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             CardHeader(title = "Readiness", color = cosmos.textPrimary)
@@ -89,7 +97,7 @@ internal fun OuraReadinessCard(
             ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Scores.map { it.toDouble() })
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
-                values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
+                values = last7Scores,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
                 colorFor = { scoreColor(it.toInt()) },

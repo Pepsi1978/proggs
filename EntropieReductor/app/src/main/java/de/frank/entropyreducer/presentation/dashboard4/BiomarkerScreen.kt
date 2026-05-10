@@ -888,8 +888,12 @@ private fun MetricHistoryCard(
     // Abweichung des aktuellen Werts vom Durchschnitt. Plus = gruen, Minus = rot.
     // Frank-Praezisierung 2026-05-09: Durchschnitt MUSS ueber die volle Historie
     // berechnet werden — nicht nur ueber das Chart-Fenster.
+    // Performance-Audit Loop 3 (2026-05-10): avg in remember(...) — vorher pro
+    // Recomposition O(N) Scan ueber die volle Historie (bis 365 Datenpunkte).
     val avgSource = fullHistoryPoints ?: points
-    val avg = avgSource.map { it.second }.takeIf { it.isNotEmpty() }?.average()
+    val avg = remember(avgSource) {
+        avgSource.map { it.second }.takeIf { it.isNotEmpty() }?.average()
+    }
     val diff = if (latestValue != null && avg != null) latestValue - avg else null
     val avgLabel = avg?.let { v ->
         valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
@@ -1045,13 +1049,18 @@ private val SLEEP_HOUR_FORMAT: (Double) -> String = { mins ->
 @Composable
 private fun CorrelationCard(state: BiomarkerUiState) {
     val cosmos = LocalCosmos.current
-    // Nutzt VOLLE Historie damit die Korrelation mehr Datenpunkte hat.
-    val pairs = state.history.mapNotNull { snap ->
-        val hrv = snap.hrvMs ?: return@mapNotNull null
-        val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
-        hrv to sleep.toDouble()
+    // Performance-Audit Loop 3 (2026-05-10): Pearson-Pairs in remember(state.history)
+    // statt pro Recomposition. Bei 200+ Datenpunkten signifikanter Allokationsschutz.
+    val pairsAndR = remember(state.history) {
+        val pairs = state.history.mapNotNull { snap ->
+            val hrv = snap.hrvMs ?: return@mapNotNull null
+            val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
+            hrv to sleep.toDouble()
+        }
+        pairs to (if (pairs.size >= 3) pearson(pairs) else null)
     }
-    val r = if (pairs.size >= 3) pearson(pairs) else null
+    val pairs = pairsAndR.first
+    val r = pairsAndR.second
     val (label, color) = when {
         r == null -> "Nicht genug Daten" to cosmos.textSecondary
         r >= 0.5 -> "Starke positive Korrelation" to CosmosColors.Success
@@ -1126,8 +1135,10 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
     // Frank-Wunsch 2026-05-10: Delta vs. 30-Tage-Mittel direkt unter dem Status,
     // damit Frank sofort sieht ob die heutige Erholung ueber oder unter dem
     // persoenlichen Schnitt liegt — gleicher Stil wie bei den Mini-Karten.
-    val avgRecovery = state.history30Days.mapNotNull { it.recoveryScore }
-        .takeIf { it.isNotEmpty() }?.average()
+    // Performance-Audit Loop 3 (2026-05-10): mapNotNull+average in remember.
+    val avgRecovery = remember(state.history30Days) {
+        state.history30Days.mapNotNull { it.recoveryScore }.takeIf { it.isNotEmpty() }?.average()
+    }
     val deltaText = formatDelta(score?.toDouble(), avgRecovery, "")
     val deltaPositive = (score?.toDouble() ?: 0.0) > (avgRecovery ?: 0.0)
     val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
@@ -1556,9 +1567,13 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.KILOJOULES -> {
                 // Tagesumsatz schliesst den heutigen Tag aus weil der Wert sich
                 // ueber den Tag aufbaut. Andere Metriken sind morgens schon final.
-                val todayStartMs = java.time.LocalDate.now()
-                    .atStartOfDay(java.time.ZoneId.systemDefault())
-                    .toInstant().toEpochMilli()
+                // Performance-Audit Loop 3 (2026-05-10): Tagesstart aendert sich
+                // innerhalb einer App-Session nicht — remember{} ohne Key reicht.
+                val todayStartMs = remember {
+                    java.time.LocalDate.now()
+                        .atStartOfDay(java.time.ZoneId.systemDefault())
+                        .toInstant().toEpochMilli()
+                }
                 MetricHistoryCard(
                     title = "Tagesumsatz",
                     accent = CosmosColors.AccentPrimary,
