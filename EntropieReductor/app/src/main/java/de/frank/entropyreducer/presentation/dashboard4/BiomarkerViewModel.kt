@@ -70,9 +70,9 @@ data class BiomarkerUiState(
     val workouts: List<WhoopWorkoutEntity> = emptyList(),
     /** Workouts des aktuell ausgewaehlten Tages — sortiert nach Startzeit aufsteigend. */
     val workoutsForSelectedDay: List<WhoopWorkoutEntity> = emptyList(),
-    /** Eigenberechnung — Erholsamer Schlaf in % = (REM + Tiefschlaf) / Gesamtschlaf.
-     *  Whoop's eigenes Restorative-Sleep-Feature ist nicht ueber die API abrufbar,
-     *  aber die Formel ergibt sehr nahe Werte (Frank-Recherche 2026-05-09). */
+    /** Eigenberechnung — Erholsamer Schlaf in % = (REM + Tiefschlaf) / Zeit im Bett.
+     *  Zeit im Bett = REM + Tiefschlaf + Leichtschlaf + Wach (alle Phasen zusammen).
+     *  So berechnet Whoop den Wert — Frank-Vorgabe 2026-05-10 (91,9% Whoop-Referenz). */
     val restorativeSleepPercent: Double? = null,
     /** Eigenberechnung — Hauttemperatur-Abweichung gegenueber dem 30-Tage-Schnitt
      *  vor dem ausgewaehlten Tag. Whoop liefert nur den Absolutwert in °C, das
@@ -181,14 +181,16 @@ class BiomarkerViewModel @Inject constructor(
             .filter { it.startMs in selStartMs until selEndMs }
             .sortedBy { it.startMs }
 
-        // Eigenberechnung — Erholsamer Schlaf %: (REM + Tiefschlaf) / Gesamtschlaf.
-        // Wachzeit zaehlt NICHT zum Gesamtschlaf — nur die echten Schlafphasen.
+        // Eigenberechnung — Erholsamer Schlaf %: (REM + Tiefschlaf) / Zeit im Bett.
+        // Zeit im Bett = REM + Tiefschlaf + Leichtschlaf + Wach. So berechnet
+        // Whoop den Wert (Frank-Vorgabe 2026-05-10, Whoop-Referenz 91,9%).
         val rem = selSnap?.sleepRemMinutes ?: 0
         val deep = selSnap?.sleepDeepMinutes ?: 0
         val light = selSnap?.sleepLightMinutes ?: 0
-        val totalSleep = rem + deep + light
-        val restorativePct = if (totalSleep > 0) {
-            (rem + deep).toDouble() / totalSleep.toDouble() * 100.0
+        val awake = selSnap?.sleepAwakeMinutes ?: 0
+        val timeInBed = rem + deep + light + awake
+        val restorativePct = if (timeInBed > 0) {
+            (rem + deep).toDouble() / timeInBed.toDouble() * 100.0
         } else null
 
         // Eigenberechnung — Hauttemperatur-Delta. Baseline = Mittel der letzten

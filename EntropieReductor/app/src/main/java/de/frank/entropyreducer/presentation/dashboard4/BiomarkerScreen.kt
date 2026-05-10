@@ -1102,7 +1102,7 @@ private fun RestorativeSleepCard(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = percent?.let { "%.0f".format(it) } ?: "—",
+                    text = percent?.let { "%.1f".format(it) } ?: "—",
                     color = color,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
@@ -1125,7 +1125,7 @@ private fun RestorativeSleepCard(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Anteil von REM und Tiefschlaf am gesamten Schlaf — die regenerativen Phasen.",
+                text = "Anteil von REM und Tiefschlaf an der gesamten Zeit im Bett — die regenerativen Phasen.",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )

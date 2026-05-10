@@ -443,10 +443,11 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
             val rem = snap.sleepRemMinutes ?: 0
             val deep = snap.sleepDeepMinutes ?: 0
             val light = snap.sleepLightMinutes ?: 0
-            val total = rem + deep + light
-            if (total > 0) (rem + deep).toDouble() / total.toDouble() * 100.0 else null
+            val awake = snap.sleepAwakeMinutes ?: 0
+            val timeInBed = rem + deep + light + awake
+            if (timeInBed > 0) (rem + deep).toDouble() / timeInBed.toDouble() * 100.0 else null
         },
-        format = { "%.0f %%".format(it) },
+        format = { "%.1f %%".format(it) },
     )
     MetricKey.SLEEP_CYCLES -> MetricSpec(
         title = "Schlafzyklen",
