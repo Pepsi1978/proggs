@@ -246,28 +246,37 @@ class BiomarkerViewModel @Inject constructor(
      */
     fun refreshWeight() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Performance-Audit Loop 1 (2026-05-10): vorher 15 sequenzielle HC-Reads
-            // ohne expliziten IO-Dispatcher — Binder-IPC zur HealthData-App fuer jeden
-            // Read auf dem Caller-Dispatcher (oft Main). 150-750 ms Main-Block bei
-            // langsamen IPC. Jetzt: Dispatchers.IO + alle 15 unabhaengigen Reads
-            // parallel via async/await.
-            // Debug-Logs (Frank-Live-Test) entfernt — Datenschutz + ungenutzte
-            // String-Interpolation in Hot Path.
+            // Performance-Audit Loop 1 (2026-05-10): 15 parallele HC-Reads auf IO.
+            //
+            // BUGFIX (Frank-Befund 2026-05-10 abend, S23 Ultra): Wenn IRGENDEINER der
+            // 15 async-Reads warf (z.B. SecurityException weil eine Permission auf
+            // dem Geraet anders eingestuft wird, oder ein Read fuer 730 Tage die
+            // Plattform-Grenze ueberschreitet), brach die gesamte Coroutine VOR der
+            // _weight.value = WeightState(...) Zeile ab. UI blieb im isLoading=true
+            // Zustand und Frank dachte "Aktualisieren-Button macht nichts".
+            //
+            // Fix: jeden Read in runCatching wrappen. Exception → null bzw. emptyList()
+            // als Default, plus debug-Log. WeightState wird IMMER gesetzt.
+            val tag = "BiomarkerVM"
+            android.util.Log.i(tag, "refreshWeight() start")
             val available = healthConnect.isAvailable()
             if (!available) {
+                android.util.Log.i(tag, "refreshWeight: HC NOT available")
                 _weight.value = WeightState(healthConnectAvailable = false)
                 return@launch
             }
-            val weightOk = healthConnect.hasWeightReadPermission()
-            val bodyFatOk = healthConnect.hasBodyFatReadPermission()
-            val leanOk = healthConnect.hasLeanBodyMassReadPermission()
-            val waterOk = healthConnect.hasBodyWaterMassReadPermission()
-            val boneOk = healthConnect.hasBoneMassReadPermission()
-            val historyOk = healthConnect.hasHistoryReadPermission()
-            // permissionGranted = ALLE noetigen erteilt (5 Datentypen + History).
-            // Ohne History-Permission lesen wir nur 30 Tage zurueck — bei seltenen
-            // Wiegungen ist das oft leer (Frank-Befund 2026-05-10).
+            val weightOk = runCatching { healthConnect.hasWeightReadPermission() }.getOrDefault(false)
+            val bodyFatOk = runCatching { healthConnect.hasBodyFatReadPermission() }.getOrDefault(false)
+            val leanOk = runCatching { healthConnect.hasLeanBodyMassReadPermission() }.getOrDefault(false)
+            val waterOk = runCatching { healthConnect.hasBodyWaterMassReadPermission() }.getOrDefault(false)
+            val boneOk = runCatching { healthConnect.hasBoneMassReadPermission() }.getOrDefault(false)
+            val historyOk = runCatching { healthConnect.hasHistoryReadPermission() }.getOrDefault(false)
+            android.util.Log.i(
+                tag,
+                "refreshWeight perms: weight=$weightOk bf=$bodyFatOk lean=$leanOk water=$waterOk bone=$boneOk hist=$historyOk",
+            )
             if (!(weightOk && bodyFatOk && leanOk && waterOk && boneOk && historyOk)) {
+                android.util.Log.w(tag, "refreshWeight: nicht alle Permissions erteilt — Karten zeigen 'Tippen'")
                 _weight.value = WeightState(
                     healthConnectAvailable = true,
                     permissionGranted = false,
@@ -276,22 +285,30 @@ class BiomarkerViewModel @Inject constructor(
             }
             // Loading-State setzen damit die Karten einen Spinner zeigen koennen
             _weight.value = _weight.value.copy(isLoading = true)
-            // Alle 15 HC-Reads parallel — sie sind unabhaengig voneinander.
-            val latestKgD = async { healthConnect.readLatestWeightKg() }
-            val avgKgD = async { healthConnect.averageWeightKg(730) }
-            val historyKgD = async { healthConnect.readWeightHistory(730) }
-            val latestBfD = async { healthConnect.readLatestBodyFatPercent() }
-            val avgBfD = async { healthConnect.averageBodyFatPercent(730) }
-            val historyBfD = async { healthConnect.readBodyFatHistory(730) }
-            val latestLeanD = async { healthConnect.readLatestLeanBodyMassKg() }
-            val avgLeanD = async { healthConnect.averageLeanBodyMassKg(730) }
-            val historyLeanD = async { healthConnect.readLeanBodyMassHistory(730) }
-            val latestWaterD = async { healthConnect.readLatestBodyWaterMassKg() }
-            val avgWaterD = async { healthConnect.averageBodyWaterMassKg(730) }
-            val historyWaterD = async { healthConnect.readBodyWaterMassHistory(730) }
-            val latestBoneD = async { healthConnect.readLatestBoneMassKg() }
-            val avgBoneD = async { healthConnect.averageBoneMassKg(730) }
-            val historyBoneD = async { healthConnect.readBoneMassHistory(730) }
+            // Alle 15 HC-Reads parallel + defensiv mit runCatching. Jeder Read kann
+            // einzeln scheitern ohne dass die anderen ausbleiben und ohne dass die
+            // UI im isLoading-Zustand stecken bleibt.
+            suspend fun <T> safeAsync(label: String, default: T, block: suspend () -> T): kotlinx.coroutines.Deferred<T> =
+                async {
+                    runCatching { block() }
+                        .onFailure { android.util.Log.w(tag, "HC-Read '$label' fehlgeschlagen", it) }
+                        .getOrDefault(default)
+                }
+            val latestKgD = safeAsync("latestKg", null as Double?) { healthConnect.readLatestWeightKg() }
+            val avgKgD = safeAsync("avgKg", null as Double?) { healthConnect.averageWeightKg(730) }
+            val historyKgD = safeAsync("historyKg", emptyList<Pair<Long, Double>>()) { healthConnect.readWeightHistory(730) }
+            val latestBfD = safeAsync("latestBf", null as Double?) { healthConnect.readLatestBodyFatPercent() }
+            val avgBfD = safeAsync("avgBf", null as Double?) { healthConnect.averageBodyFatPercent(730) }
+            val historyBfD = safeAsync("historyBf", emptyList<Pair<Long, Double>>()) { healthConnect.readBodyFatHistory(730) }
+            val latestLeanD = safeAsync("latestLean", null as Double?) { healthConnect.readLatestLeanBodyMassKg() }
+            val avgLeanD = safeAsync("avgLean", null as Double?) { healthConnect.averageLeanBodyMassKg(730) }
+            val historyLeanD = safeAsync("historyLean", emptyList<Pair<Long, Double>>()) { healthConnect.readLeanBodyMassHistory(730) }
+            val latestWaterD = safeAsync("latestWater", null as Double?) { healthConnect.readLatestBodyWaterMassKg() }
+            val avgWaterD = safeAsync("avgWater", null as Double?) { healthConnect.averageBodyWaterMassKg(730) }
+            val historyWaterD = safeAsync("historyWater", emptyList<Pair<Long, Double>>()) { healthConnect.readBodyWaterMassHistory(730) }
+            val latestBoneD = safeAsync("latestBone", null as Double?) { healthConnect.readLatestBoneMassKg() }
+            val avgBoneD = safeAsync("avgBone", null as Double?) { healthConnect.averageBoneMassKg(730) }
+            val historyBoneD = safeAsync("historyBone", emptyList<Pair<Long, Double>>()) { healthConnect.readBoneMassHistory(730) }
             val latestKg = latestKgD.await()
             val avgKg = avgKgD.await()
             val historyKg = historyKgD.await()
@@ -307,6 +324,10 @@ class BiomarkerViewModel @Inject constructor(
             val latestBone = latestBoneD.await()
             val avgBone = avgBoneD.await()
             val historyBone = historyBoneD.await()
+            android.util.Log.i(
+                tag,
+                "refreshWeight done: latestKg=$latestKg latestBf=$latestBf historyKgCount=${historyKg.size}",
+            )
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
