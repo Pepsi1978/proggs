@@ -120,12 +120,16 @@ class ZeppAuthService @Inject constructor(
 
     /* =================================== privat =================================== */
 
+    // Performance-Audit Loop 2 (2026-05-10): doLogin enthaelt AES-CBC-Verschluesselung
+    // (ZeppCrypto.encryptLoginPayload — Cipher.getInstance + init + doFinal). JCA-Operationen
+    // sind synchron CPU/Keystore. Wrapper mit Dispatchers.IO stellt sicher dass sie nicht auf
+    // Main-Thread laufen wenn der Aufrufer von dort kommt.
     private suspend fun doLogin(
         email: String,
         password: String,
         region: String,
         deviceId: String,
-    ) {
+    ): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         // Stufe 1 — Token-Tausch
         val step1Body = ZeppCrypto.urlEncodeForm(
             listOf(

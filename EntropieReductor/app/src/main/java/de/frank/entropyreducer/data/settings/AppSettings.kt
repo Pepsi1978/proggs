@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,25 +48,31 @@ class AppSettings @Inject constructor(
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
+    // Performance-Audit Loop 2 (2026-05-10): distinctUntilChanged auf alle
+    // Markdown-Flows. Vorher emittierte ds.data bei jeder beliebigen DataStore-
+    // Schreiboperation einen neuen Wert auf ALLEN map-Flows — ein Sync-Timestamp-
+    // Update auf KEY_LAST_OURA_SYNC triggerte z.B. eine Re-Emission auf
+    // dailyBriefingTextFlow mit dem identischen 2-10 KB Markdown. Mit
+    // distinctUntilChanged emittiert nur der wirklich geaenderte Flow.
     /** Zwischengespeicherte Markdown-Analyse aus Dashboard 2 (Spec §11.1.7). */
-    val cachedAnalysisMarkdownFlow: Flow<String> = ds.data.map { it[KEY_CACHED_ANALYSIS] ?: "" }
-    val cachedAnalysisAtMsFlow: Flow<Long> = ds.data.map { it[KEY_CACHED_ANALYSIS_AT] ?: 0L }
+    val cachedAnalysisMarkdownFlow: Flow<String> = ds.data.map { it[KEY_CACHED_ANALYSIS] ?: "" }.distinctUntilChanged()
+    val cachedAnalysisAtMsFlow: Flow<Long> = ds.data.map { it[KEY_CACHED_ANALYSIS_AT] ?: 0L }.distinctUntilChanged()
     /** Letzte Genie-Codex-Synthese (Epoch-Millisekunden). */
-    val lastCodexSyntheseMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CODEX_SYNTHESE] ?: 0L }
+    val lastCodexSyntheseMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CODEX_SYNTHESE] ?: 0L }.distinctUntilChanged()
 
     /** Aktuelles Tagesbriefing (Markdown). Wird vom DailyBriefingWorker geschrieben. */
-    val dailyBriefingTextFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_TEXT] ?: "" }
+    val dailyBriefingTextFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_TEXT] ?: "" }.distinctUntilChanged()
     /** Datum des aktuellen Tagesbriefings im ISO-Format (yyyy-MM-dd). Leer wenn keins. */
-    val dailyBriefingDateFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_DATE] ?: "" }
+    val dailyBriefingDateFlow: Flow<String> = ds.data.map { it[KEY_DAILY_BRIEFING_DATE] ?: "" }.distinctUntilChanged()
     /** Zeitstempel der letzten Generierung des Tagesbriefings (Epoch-Millisekunden). */
-    val dailyBriefingGeneratedAtMsFlow: Flow<Long> = ds.data.map { it[KEY_DAILY_BRIEFING_AT] ?: 0L }
+    val dailyBriefingGeneratedAtMsFlow: Flow<Long> = ds.data.map { it[KEY_DAILY_BRIEFING_AT] ?: 0L }.distinctUntilChanged()
 
     /** Letzter Wochenrueckblick (Markdown), gespeichert vom WeeklyReviewWorker. */
-    val lastWeeklyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_WEEKLY_REVIEW_TEXT] ?: "" }
-    val lastWeeklyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_WEEKLY_REVIEW_AT] ?: 0L }
+    val lastWeeklyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_WEEKLY_REVIEW_TEXT] ?: "" }.distinctUntilChanged()
+    val lastWeeklyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_WEEKLY_REVIEW_AT] ?: 0L }.distinctUntilChanged()
     /** Letzter Monatsrueckblick (Markdown). */
-    val lastMonthlyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_MONTHLY_REVIEW_TEXT] ?: "" }
-    val lastMonthlyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_MONTHLY_REVIEW_AT] ?: 0L }
+    val lastMonthlyReviewTextFlow: Flow<String> = ds.data.map { it[KEY_MONTHLY_REVIEW_TEXT] ?: "" }.distinctUntilChanged()
+    val lastMonthlyReviewAtMsFlow: Flow<Long> = ds.data.map { it[KEY_MONTHLY_REVIEW_AT] ?: 0L }.distinctUntilChanged()
 
     /**
      * Theme-Modus als Flow. Default: SYSTEM (folgt der Hell-/Dunkel-Einstellung

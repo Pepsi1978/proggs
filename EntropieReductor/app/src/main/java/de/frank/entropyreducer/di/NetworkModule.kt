@@ -1,9 +1,11 @@
 package de.frank.entropyreducer.di
 
+import android.content.Context
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.BuildConfig
 import de.frank.entropyreducer.data.remote.GeminiApi
@@ -14,10 +16,12 @@ import de.frank.entropyreducer.data.remote.oura.OuraApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.zepp.ZeppApi
 import kotlinx.serialization.json.Json
+import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -36,11 +40,21 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(): OkHttpClient {
+    fun provideOkHttp(@ApplicationContext context: Context): OkHttpClient {
+        // Performance-Audit Loop 2 (2026-05-10): HTTP-Cache 10 MB — vorher hatten
+        // alle Clients keinen Cache, jeder Sync-Zyklus aller 4 Biomarker-Quellen
+        // schickte vollstaendige HTTP-Requests an externe APIs auch wenn die Daten
+        // sich nicht geaendert haben. Mit Cache profitieren konfigurierbare Endpunkte
+        // (mit Cache-Control/ETag/Last-Modified) automatisch — Anbieter ohne
+        // Caching-Header werden weiterhin live abgefragt (kein Verhaltens-Bruch).
+        val httpCacheDir = File(context.cacheDir, "http_cache")
+        val httpCache = Cache(httpCacheDir, 10L * 1024 * 1024) // 10 MB
         val builder = OkHttpClient.Builder()
+            .cache(httpCache)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(90, TimeUnit.SECONDS) // Sicherheitsnetz fuer haengende Calls
         if (BuildConfig.DEBUG) {
             // SICHERHEIT: API-Keys NIEMALS ins Logcat schreiben — auch nicht im Debug-Build.
             // redactHeader() ist die offizielle OkHttp-Mechanik dafuer.
