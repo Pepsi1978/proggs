@@ -789,6 +789,7 @@ fun SettingsScreen(
                                 com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
                                 com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
                                 com.entropyjournal.ui.theme.AppTheme.Cosmos -> "Cosmos"
+                                com.entropyjournal.ui.theme.AppTheme.Aurora -> "Aurora"
                             }
 
                         ExposedDropdownMenuBox(
@@ -839,6 +840,7 @@ fun SettingsScreen(
                                             com.entropyjournal.ui.theme.AppTheme.Nord -> "Polarnacht"
                                             com.entropyjournal.ui.theme.AppTheme.Gruvbox -> "Bernstein"
                                             com.entropyjournal.ui.theme.AppTheme.Cosmos -> "Cosmos"
+                                            com.entropyjournal.ui.theme.AppTheme.Aurora -> "Aurora"
                                         }
                                     DropdownMenuItem(
                                         text = {
@@ -3124,7 +3126,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.19.4",
+                            "Entropy Journal V0.19.5",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

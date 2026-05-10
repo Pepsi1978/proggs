@@ -147,3 +147,40 @@ val ERBgDarkGlass = Color(0xFF1D212C)             // Standard-Surface (Cards)
 val ERBgDarkGlassElevated = Color(0xFF272B36)     // Elevated-Surface (Hover/Dialog)
 val ERBgLightGlass = Color(0xFFFDFDFE)            // Standard-Surface Light
 val ERBgLightGlassElevated = Color(0xFFEEF2F9)    // Elevated-Surface Light
+
+// ─── Aurora ─────────────────────────────────────────────────────────────────
+// Pastel-Aquarell-Theme: weicher 3-Stop-Diagonalgradient als Vollbild-Hintergrund,
+// weisse Glasmorphismus-Cards, gedaempftes Smaragdgruen als Hauptakzent.
+// Inspiriert von den Referenzbildern (Frank 2026-05-10).
+
+// Light-Gradient-Stops (Top-Left → Mid → Bottom-Right)
+val AuroraLightGradientStart = Color(0xFFD8EDDF)   // blasses Mintgruen
+val AuroraLightGradientMid = Color(0xFFE2D6F0)     // weiches Lavendel
+val AuroraLightGradientEnd = Color(0xFFF2DDE8)     // gedaempftes Rosa
+
+// Dark-Gradient-Stops (gleiche Stimmung, Nachthimmel-Toene)
+val AuroraDarkGradientStart = Color(0xFF1A2B2F)    // Tiefblaugruen
+val AuroraDarkGradientMid = Color(0xFF2A1F3B)      // gedaempftes Indigo
+val AuroraDarkGradientEnd = Color(0xFF3B1F2E)      // dunkles Bordeaux
+
+// Akzente (gemeinsam fuer Light + Dark, leicht variierte Helligkeit)
+val AuroraEmeraldLight = Color(0xFF1F8E5A)         // Primary Light — Smaragd
+val AuroraEmeraldDark = Color(0xFF7DD3A4)          // Primary Dark — helleres Mint
+val AuroraLavenderLight = Color(0xFF7A6BB8)        // Secondary Light — Lavendel-Lila
+val AuroraLavenderDark = Color(0xFFB5A8E8)         // Secondary Dark — weicher Lavendel
+val AuroraHoneyLight = Color(0xFFE8B547)           // Tertiary Light — Honiggelb (Timeline-Knoten)
+val AuroraHoneyDark = Color(0xFFF0C76A)            // Tertiary Dark — warmes Honig
+
+// Cards + Text Light
+val AuroraCardLight = Color(0xFFFFFFFF)            // weiss deckend (Cards heben sich vom Gradient ab)
+val AuroraCardElevatedLight = Color(0xFFF8F9FB)    // minimal grau-weisser Schimmer
+val AuroraTextPrimaryLight = Color(0xFF1F2733)     // tiefes Anthrazit
+val AuroraTextSecondaryLight = Color(0xFF5C6470)   // warmes Grau
+val AuroraOutlineLight = Color(0xFFD8DBE2)         // sanfter Kartenrand
+
+// Cards + Text Dark
+val AuroraCardDark = Color(0xFF2C2435)             // glasiges dunkles Lila
+val AuroraCardElevatedDark = Color(0xFF382E45)     // erhoehte Variante
+val AuroraTextPrimaryDark = Color(0xFFE8EBF2)      // sanftes Creme
+val AuroraTextSecondaryDark = Color(0xFFA8AEB8)    // gedaempftes Beige-Grau
+val AuroraOutlineDark = Color(0xFF4A3F58)          // dezenter Lila-Rand

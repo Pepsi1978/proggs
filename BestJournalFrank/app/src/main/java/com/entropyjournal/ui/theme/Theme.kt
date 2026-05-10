@@ -226,12 +226,16 @@ fun EntropyJournalTheme(
             AppTheme.Gruvbox -> if (darkTheme) GruvboxDarkScheme else GruvboxLightScheme
             AppTheme.Cosmos -> if (darkTheme) CosmosDarkScheme else CosmosLightScheme
             AppTheme.Neutral -> if (darkTheme) NeutralDarkScheme else NeutralLightScheme
+            AppTheme.Aurora -> if (darkTheme) AuroraDarkScheme else AuroraLightScheme
         }
 
     // Cosmos-Theme: 1:1 wie EntropieReductor — radialer (Dark) bzw. vertikaler (Light)
     // Background-Brush als Box-Wrapper, plus transparente StatusBar/NavBar.
+    // Aurora-Theme: gleicher Mechanismus, aber mit 3-Stop-Diagonalgradient (Pastel-Aquarell).
     val isCosmos = appTheme == AppTheme.Cosmos
-    if (isCosmos) {
+    val isAurora = appTheme == AppTheme.Aurora
+    val needsTransparentSystemBars = isCosmos || isAurora
+    if (needsTransparentSystemBars) {
         val view = LocalView.current
         if (!view.isInEditMode) {
             SideEffect {
@@ -268,14 +272,41 @@ fun EntropyJournalTheme(
             null
         }
 
+    // Aurora: 3-Stop Linear-Gradient von oben-links nach unten-rechts.
+    // Light = pastellig (Mint → Lavendel → Rosa), Dark = Nachthimmel (Tiefblaugruen → Indigo → Bordeaux).
+    val auroraBrush: Brush? =
+        if (isAurora) {
+            if (darkTheme) {
+                Brush.linearGradient(
+                    0f to AuroraDarkGradientStart,
+                    0.5f to AuroraDarkGradientMid,
+                    1f to AuroraDarkGradientEnd,
+                    start = Offset.Zero,
+                    end = Offset.Infinite,
+                )
+            } else {
+                Brush.linearGradient(
+                    0f to AuroraLightGradientStart,
+                    0.5f to AuroraLightGradientMid,
+                    1f to AuroraLightGradientEnd,
+                    start = Offset.Zero,
+                    end = Offset.Infinite,
+                )
+            }
+        } else {
+            null
+        }
+
+    val backgroundBrush: Brush? = cosmosBrush ?: auroraBrush
+
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
             shapes = AppShapes,
             content = {
-                if (cosmosBrush != null) {
-                    Box(modifier = Modifier.fillMaxSize().background(cosmosBrush)) {
+                if (backgroundBrush != null) {
+                    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
                         content()
                     }
                 } else {

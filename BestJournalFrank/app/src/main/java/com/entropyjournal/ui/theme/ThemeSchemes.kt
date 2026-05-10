@@ -376,3 +376,78 @@ val CosmosLightScheme: ColorScheme =
         outline = Color(0xFF374151),
         outlineVariant = ERGlassLightBorder,
     )
+
+// ─── Aurora ─────────────────────────────────────────────────────────────────
+// Pastel-Aquarell-Theme — Hintergrund kommt aus einem Vollbild-Brush in Theme.kt,
+// background/surface verhalten sich aehnlich wie Cosmos (deckend-weiss bzw. dunkel,
+// aber der Brush ueberlagert sie als Box-Background).
+val AuroraLightScheme: ColorScheme =
+    lightColorScheme(
+        primary = AuroraEmeraldLight,
+        onPrimary = Color.White,
+        primaryContainer = Color(0xFFCDEEDD),       // hellgruener Container
+        onPrimaryContainer = Color(0xFF0F4029),
+        secondary = AuroraLavenderLight,
+        onSecondary = Color.White,
+        secondaryContainer = Color(0xFFE6E0F5),     // hellvioletter Container
+        onSecondaryContainer = Color(0xFF2D2455),
+        tertiary = AuroraHoneyLight,
+        onTertiary = Color(0xFF3D2A00),
+        tertiaryContainer = Color(0xFFFAEBC8),
+        onTertiaryContainer = Color(0xFF4A3300),
+        error = Color(0xFFD96A6A),
+        onError = Color.White,
+        errorContainer = Color(0xFFFFE3E3),
+        onErrorContainer = Color(0xFF7A1F1F),
+        // background wird vom Aurora-Brush in Theme.kt komplett ueberdeckt — wir
+        // setzen aber trotzdem die Mid-Stop-Farbe, damit beim allerersten Frame
+        // (bevor der Brush rendert) kein Flash entsteht.
+        background = AuroraLightGradientMid,
+        onBackground = AuroraTextPrimaryLight,
+        surface = AuroraCardLight,
+        onSurface = AuroraTextPrimaryLight,
+        surfaceVariant = AuroraCardElevatedLight,
+        onSurfaceVariant = AuroraTextSecondaryLight,
+        surfaceContainerLowest = AuroraCardLight,
+        surfaceContainerLow = AuroraCardLight,
+        surfaceContainer = AuroraCardLight,
+        surfaceContainerHigh = AuroraCardElevatedLight,
+        surfaceContainerHighest = AuroraCardElevatedLight,
+        outline = AuroraOutlineLight,
+        outlineVariant = Color(0xFFEAECEF),
+        surfaceTint = AuroraCardLight,
+    )
+
+val AuroraDarkScheme: ColorScheme =
+    darkColorScheme(
+        primary = AuroraEmeraldDark,
+        onPrimary = Color(0xFF0F1F18),
+        primaryContainer = Color(0xFF1F4D38),
+        onPrimaryContainer = Color(0xFFCDEEDD),
+        secondary = AuroraLavenderDark,
+        onSecondary = Color(0xFF1B1429),
+        secondaryContainer = Color(0xFF3D3157),
+        onSecondaryContainer = Color(0xFFE6E0F5),
+        tertiary = AuroraHoneyDark,
+        onTertiary = Color(0xFF2C1F00),
+        tertiaryContainer = Color(0xFF54421A),
+        onTertiaryContainer = Color(0xFFFAEBC8),
+        error = Color(0xFFE89898),
+        onError = Color(0xFF2F0F0F),
+        errorContainer = Color(0xFF5A2424),
+        onErrorContainer = Color(0xFFFFE3E3),
+        background = AuroraDarkGradientMid,
+        onBackground = AuroraTextPrimaryDark,
+        surface = AuroraCardDark,
+        onSurface = AuroraTextPrimaryDark,
+        surfaceVariant = AuroraCardElevatedDark,
+        onSurfaceVariant = AuroraTextSecondaryDark,
+        surfaceContainerLowest = AuroraCardDark,
+        surfaceContainerLow = AuroraCardDark,
+        surfaceContainer = AuroraCardDark,
+        surfaceContainerHigh = AuroraCardElevatedDark,
+        surfaceContainerHighest = AuroraCardElevatedDark,
+        outline = AuroraOutlineDark,
+        outlineVariant = Color(0x33B5A8E8),
+        surfaceTint = AuroraCardDark,
+    )
