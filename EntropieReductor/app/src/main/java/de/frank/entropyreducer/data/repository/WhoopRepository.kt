@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.remote.whoop.WhoopSleep
 import de.frank.entropyreducer.data.remote.whoop.WhoopSportNames
 import de.frank.entropyreducer.data.remote.whoop.WhoopWorkout
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import retrofit2.HttpException
@@ -63,7 +64,7 @@ class WhoopRepository @Inject constructor(
      * Obergrenze für den taeglichen Sync. Für den ersten Full-Sync existiert
      * syncFullHistory() die bis 2018 zurück zieht (Whoop-Gruendungs-Jahr).
      */
-    suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatching {
+    suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatchingCancellable {
         val token = oauth.freshWhoopAccessToken()
             ?: throw IllegalStateException("Kein Whoop-Access-Token — bitte erneut anmelden.")
 
@@ -133,7 +134,7 @@ class WhoopRepository @Inject constructor(
      * angestossen damit ALLE jemals erfassten Daten in der lokalen DB landen.
      * Danach reichen die taeglichen 365-Tage-Syncs.
      */
-    suspend fun syncFullHistory(): Result<Int> = runCatching {
+    suspend fun syncFullHistory(): Result<Int> = runCatchingCancellable {
         val today = OffsetDateTime.now(ZoneOffset.UTC)
         val startOfWhoop = today.toLocalDate().minusYears(7) // ~2018
         val days = java.time.temporal.ChronoUnit.DAYS.between(startOfWhoop, today.toLocalDate()).toInt()

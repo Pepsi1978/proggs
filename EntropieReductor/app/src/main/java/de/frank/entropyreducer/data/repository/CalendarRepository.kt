@@ -10,6 +10,7 @@ import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.calendar.ShiftCodeParser
 import de.frank.entropyreducer.domain.model.ShiftCode
+import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
@@ -54,7 +55,7 @@ class CalendarRepository @Inject constructor(
      * Synchronisiert das Standard-Fenster (-30 / +30 Tage) und schreibt CalendarDay-Eintraege.
      * Liefert die Anzahl gesyncter Tage zurück.
      */
-    suspend fun syncDefaultWindow(): Result<Int> = runCatching {
+    suspend fun syncDefaultWindow(): Result<Int> = runCatchingCancellable {
         val token = session.freshToken()
 
         val today = LocalDate.now()

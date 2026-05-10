@@ -20,6 +20,7 @@ import de.frank.entropyreducer.data.remote.oura.OuraDailyResilience
 import de.frank.entropyreducer.data.remote.oura.OuraDailySleep
 import de.frank.entropyreducer.data.remote.oura.OuraSleep
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.Flow
 import retrofit2.HttpException
 import java.time.LocalDate
@@ -126,7 +127,7 @@ class OuraRepository @Inject constructor(
      * Initial-Sync. Folgesyncs ueberschreiben bestehende Tage idempotent
      * (REPLACE-onConflict).
      */
-    suspend fun syncLastDays(days: Int = 365): Result<Map<String, Int>> = runCatching {
+    suspend fun syncLastDays(days: Int = 365): Result<Map<String, Int>> = runCatchingCancellable {
         val token = secrets.ouraPersonalAccessToken
             ?: throw IllegalStateException("Kein Oura-Token. Bitte unter Einstellungen → API einen Personal Access Token eintragen.")
         val auth = "Bearer $token"

@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.remote.zepp.ZeppBandDataResponse
 import de.frank.entropyreducer.data.remote.zepp.ZeppEndpoints
 import de.frank.entropyreducer.data.remote.zepp.ZeppWorkoutHistoryResponse
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -96,7 +97,7 @@ class AmazfitRepository @Inject constructor(
     }
 
     /** Manueller Auslöser: synchronisiert die letzten [days] Tage. */
-    suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatching {
+    suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatchingCancellable {
         var appToken = auth.freshAppToken()
             ?: throw IllegalStateException("Kein Zepp-App-Token — bitte erneut anmelden.")
         val userId = secrets.zeppUserId
