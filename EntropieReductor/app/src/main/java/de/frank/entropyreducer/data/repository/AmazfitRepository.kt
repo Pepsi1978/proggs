@@ -60,6 +60,15 @@ class AmazfitRepository @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val appDatabase: AppDatabase,
+    /**
+     * Frank-Wunsch 2026-05-11: Nach jedem Sync und nach jedem Detail-Reload
+     * automatisch ein Drive-Backup ausloesen — gleiches Pattern wie bei
+     * HealthConnect-Updates (siehe BiomarkerViewModel.refreshWeight). Lazy
+     * weil SyncCoordinator selbst Repositories nutzt — vermeidet zirkulaere
+     * Init-Reihenfolge bei Hilt. requestSync() ist debounced (1500 ms) und
+     * ein No-Op wenn Drive-Backup deaktiviert oder kein Konto verbunden ist.
+     */
+    private val syncCoordinatorLazy: dagger.Lazy<de.frank.entropyreducer.data.remote.drive.SyncCoordinator>,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -209,6 +218,14 @@ class AmazfitRepository @Inject constructor(
             TAG,
             "Amazfit-Sync: ${dailyEntities.size} Daily-Eintraege + ${workoutEntities.size} Workouts geschrieben",
         )
+        // Frank-Wunsch 2026-05-11: Wenn neue Trainings reinkamen, sofort Drive-
+        // Backup ausloesen — gleicher Pattern wie HealthConnect-Updates. Damit
+        // hat das andere Geraet (S23 Ultra) beim naechsten Restore garantiert
+        // den frischen Stand inkl. neuer Detail-Streams. Debounced (1500ms),
+        // No-Op wenn Backup deaktiviert.
+        if (workoutEntities.isNotEmpty() || dailyEntities.isNotEmpty()) {
+            syncCoordinatorLazy.get().requestSync()
+        }
         dailyEntities.size + workoutEntities.size
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
@@ -480,6 +497,12 @@ class AmazfitRepository @Inject constructor(
                 createdAt = System.currentTimeMillis(),
             ),
         )
+        // Frank-Wunsch 2026-05-11: Detail-Daten wandern direkt ins Drive-Backup,
+        // damit die teuren Streams (GPS, Pulsverlauf, Tempoverlauf, Splits)
+        // sofort cross-device verfuegbar sind. Debounced (1500ms) — wenn Frank
+        // mehrere Trainings hintereinander oeffnet wird das zu einem Upload
+        // zusammengefasst.
+        syncCoordinatorLazy.get().requestSync()
         true
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
