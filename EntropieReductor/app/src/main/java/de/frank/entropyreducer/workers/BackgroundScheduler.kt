@@ -251,24 +251,33 @@ class BackgroundScheduler @Inject constructor(
         )
     }
 
-    /** Stoesst einen einmaligen Calendar-Sync an (z.B. nach Sign-In). */
+    /** Stoesst einen einmaligen Calendar-Sync an (z.B. nach Sign-In oder App-Start).
+     *  KEEP statt REPLACE: wenn StartupViewModel und ProcessLifecycleObserver beide
+     *  beim ersten App-Start triggern, gewinnt der erste — der zweite wird ohne
+     *  Cancellation ignoriert. WorkManager 10-Min-Stop-Timeout fangt haengende
+     *  Syncs ohnehin ab. */
     fun runCalendarSyncNow() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED).build()
         wm.enqueueUniqueWork(
             CalendarSyncWorker.UNIQUE_NAME_ONESHOT,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<CalendarSyncWorker>()
                 .setConstraints(constraints).build(),
         )
     }
 
+    /** Stoesst einen einmaligen Whoop-Sync an. KEEP statt REPLACE — siehe
+     *  runCalendarSyncNow. Verhindert die Doppel-Trigger-Race zwischen
+     *  StartupViewModel.init und ProcessLifecycleObserver.onStart, die in
+     *  Loop-1-Logcat zu 'Worker A startet → cancelled → Worker B startet'
+     *  gefuehrt hat (Token-Refresh + 3 API-Calls verschwendet). */
     fun runWhoopSyncNow() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED).build()
         wm.enqueueUniqueWork(
             WhoopSyncWorker.UNIQUE_NAME_ONESHOT,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<WhoopSyncWorker>()
                 .setConstraints(constraints).build(),
         )
@@ -285,13 +294,14 @@ class BackgroundScheduler @Inject constructor(
         wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
-    /** Stoesst einen einmaligen Amazfit-Sync an (z.B. nach Login). */
+    /** Stoesst einen einmaligen Amazfit-Sync an (z.B. nach Login oder App-Start).
+     *  KEEP statt REPLACE — siehe runCalendarSyncNow. */
     fun runAmazfitSyncNow() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED).build()
         wm.enqueueUniqueWork(
             AmazfitSyncWorker.UNIQUE_NAME_ONESHOT,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<AmazfitSyncWorker>()
                 .setConstraints(constraints).build(),
         )
