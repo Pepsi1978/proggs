@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.data.health
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
@@ -221,6 +222,42 @@ class HealthConnectManager @Inject constructor(
      * Klick alle drei Berechtigungen erteilen kann.
      */
     fun requiredReadPermissions(): Set<String> = allReadPermissions
+
+    /**
+     * Frank-Wunsch 2026-05-10: Permissions im Nachhinein bearbeiten — einzelne
+     * zurueckziehen. Der Plattform-Intent
+     * "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS" oeffnet die
+     * Health-Connect-spezifische Permission-UI fuer unsere App, in der jeder
+     * Datentyp einzeln togglebar ist.
+     *
+     * Fallback bei nicht-aufgeloestem Intent (alte HC-Versionen): die Health-
+     * Connect-Hauptseite (HEALTH_HOME_SETTINGS). Von dort kann Frank sich manuell
+     * in 'Apps und Daten' navigieren und unsere App finden.
+     *
+     * Drittes Fallback: System-App-Settings als universellster Fallback.
+     */
+    fun openAppPermissionsInHealthConnect() {
+        val pkg = context.packageName
+        val candidates = listOf(
+            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+                .putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            Intent("android.health.connect.action.HEALTH_HOME_SETTINGS")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(android.net.Uri.fromParts("package", pkg, null))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        for (intent in candidates) {
+            if (runCatching { context.startActivity(intent) }.isSuccess) {
+                Log.i(TAG, "Permissions-Editor geoeffnet via ${intent.action}")
+                return
+            }
+        }
+        Log.w(TAG, "Kein Permissions-Editor-Intent funktionierte — alle Fallbacks haben fehlgeschlagen")
+    }
 
     /**
      * Liefert ALLE aktuell erteilten Permissions. Wird vom API-Settings-Screen

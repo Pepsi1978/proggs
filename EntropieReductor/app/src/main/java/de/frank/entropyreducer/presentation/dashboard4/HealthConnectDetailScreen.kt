@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -193,6 +194,17 @@ fun HealthConnectDetailScreen(
             }
         },
         actions = {
+            // Frank-Wunsch 2026-05-10: Einzelne Permissions im Nachhinein
+            // bearbeiten koennen. Dieser Button oeffnet die Health-Connect-
+            // spezifische Permissions-UI fuer unsere App (mit Fallbacks bei
+            // alten HC-Versionen, siehe HealthConnectManager).
+            IconButton(onClick = vm::openHealthConnectPermissionsEditor) {
+                Icon(
+                    imageVector = Icons.Outlined.Tune,
+                    contentDescription = "Berechtigungen verwalten",
+                    tint = cosmos.textPrimary,
+                )
+            }
             IconButton(onClick = vm::refreshWeight) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,

@@ -333,6 +333,12 @@ class BiomarkerViewModel @Inject constructor(
      */
     fun allHealthConnectPermissions(): Set<String> = healthConnect.requiredReadPermissions()
 
+    /**
+     * Frank-Wunsch 2026-05-10: Im Nachhinein einzelne HC-Permissions zurueckziehen
+     * koennen. Oeffnet die Health-Connect-spezifische Permissions-UI fuer unsere App.
+     */
+    fun openHealthConnectPermissionsEditor() = healthConnect.openAppPermissionsInHealthConnect()
+
     private val now = System.currentTimeMillis()
     private val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000
 

@@ -102,6 +102,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
 ### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
+<<<<<<< Updated upstream
 ### 2026-04-27 12:53 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 12:57 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-04-27 16:20 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
@@ -125,6 +126,13 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-07 20:13 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
 ### 2026-05-07 21:41 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 95%
 ### 2026-05-07 22:16 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+||||||| Stash base
+=======
+### 2026-04-23 14:22 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
+### 2026-04-23 14:29 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+>>>>>>> Stashed changes
+### 2026-05-08 13:27 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-08 13:27 — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -226,7 +234,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-05-07 21:41] Code-Suche Index:** 31 Dateien, 163 Chunks indexiert.
+- **[2026-05-08 13:27] Code-Suche Index:** 10 Dateien, 100 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
