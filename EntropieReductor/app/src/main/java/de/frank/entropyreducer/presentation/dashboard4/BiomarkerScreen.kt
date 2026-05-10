@@ -1088,6 +1088,9 @@ private fun RestorativeSleepCard(
     deepMinutes: Int?,
     onClick: () -> Unit,
 ) {
+    // Frank-Wunsch 2026-05-10: kompakt wie die Mini-Karten oben (HRV, Schlaf,
+    // Performance, Herzfrequenz). Nur Label + Prozentwert in Farbe — keine
+    // REM/Tiefschlaf-Aufschluesselung, kein Erklaertext.
     val cosmos = LocalCosmos.current
     val color = when {
         percent == null -> cosmos.textSecondary
@@ -1100,39 +1103,15 @@ private fun RestorativeSleepCard(
         Column {
             Text(
                 text = "Erholsamer Schlaf",
-                style = MaterialTheme.typography.titleMedium,
-                color = cosmos.textPrimary,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = percent?.let { "%.1f".format(it) } ?: "—",
-                    color = color,
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = if (percent != null) " %" else "",
-                    color = color,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (remMinutes != null && deepMinutes != null) {
-                    "REM ${remMinutes} min · Tiefschlaf ${deepMinutes} min"
-                } else "Noch keine Schlafdaten",
+                style = MaterialTheme.typography.labelMedium,
                 color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = "Anteil von REM und Tiefschlaf an der gesamten Zeit im Bett — die regenerativen Phasen.",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
+                text = percent?.let { "${"%.0f".format(it)} %" } ?: "—",
+                color = color,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
@@ -1152,61 +1131,38 @@ private fun SkinTempDeltaCard(
     currentValue: Double?,
     onClick: () -> Unit,
 ) {
+    // Frank-Wunsch 2026-05-10: kompakt wie die Mini-Karten oben (HRV, Schlaf,
+    // Performance, Herzfrequenz). Nur Label + Abweichungswert in Farbe — keine
+    // Aktuell/Baseline-Aufschluesselung, kein Erklaertext.
+    // Farb-Logik (Frank-Wunsch 2026-05-10):
+    //  - Wert UNTER dem 30-Tage-Schnitt (delta < 0)  -> Gruen  (gut, kuehler)
+    //  - Wert UEBER dem 30-Tage-Schnitt (delta > 0)  -> Rot    (Stress/Krankheits-Signal)
     val cosmos = LocalCosmos.current
-    val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
     val color = when {
         delta == null -> cosmos.textSecondary
-        absDelta >= 1.0 -> CosmosColors.Critical
-        absDelta >= 0.5 -> CosmosColors.Warning
-        absDelta >= 0.2 -> CosmosColors.AccentPrimary
-        else -> CosmosColors.Success
+        delta < 0 -> CosmosColors.Success
+        delta > 0 -> CosmosColors.Critical
+        else -> cosmos.textSecondary
     }
     val sign = when {
         delta == null -> ""
         delta >= 0 -> "+"
         else -> "−"
     }
+    val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Text(
-                text = "Hauttemperatur-Abweichung",
-                style = MaterialTheme.typography.titleMedium,
-                color = cosmos.textPrimary,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = if (delta != null) "$sign${"%.2f".format(absDelta)}" else "—",
-                    color = color,
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = if (delta != null) " °C" else "",
-                    color = color,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (currentValue != null && baseline != null) {
-                    "Aktuell ${"%.2f".format(currentValue)}°C · Baseline ${"%.2f".format(baseline)}°C"
-                } else if (baseline == null) {
-                    "Baseline laeuft noch — mindestens 7 Naechte Verlauf benoetigt"
-                } else "Noch keine Hauttemperatur erfasst"
-            ,
+                text = "Hauttemperatur",
+                style = MaterialTheme.typography.labelMedium,
                 color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = "Gleitender 30-Tage-Schnitt als persoenliche Baseline. " +
-                    "Grosse Abweichungen koennen auf Krankheit, Stress oder Zyklus deuten.",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
+                text = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—",
+                color = color,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
