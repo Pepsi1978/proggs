@@ -43,6 +43,7 @@ import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
+import androidx.compose.material.icons.outlined.Tune
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
@@ -111,6 +112,18 @@ fun BiomarkerHostScreen(
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
                     contentDescription = "Whoop-Sync starten",
+                    tint = cosmos.textPrimary,
+                )
+            }
+            // Frank-Wunsch 2026-05-10 (zweite Iteration): direkter Zugang zu
+            // Health Connect aus dem Biomarker-Header — auch wenn alle Mini-
+            // Karten "Tippen" zeigen (= Permissions noch nicht vollstaendig
+            // erteilt). Frank kann hier in HC navigieren und einzelne Permissions
+            // togglen / die fehlende 'Vergangene Daten'-Permission aktivieren.
+            IconButton(onClick = vm::openHealthConnectPermissionsEditor) {
+                Icon(
+                    imageVector = Icons.Outlined.Tune,
+                    contentDescription = "Health Connect öffnen",
                     tint = cosmos.textPrimary,
                 )
             }

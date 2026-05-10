@@ -238,13 +238,19 @@ class HealthConnectManager @Inject constructor(
      */
     fun openAppPermissionsInHealthConnect() {
         val pkg = context.packageName
+        // Frank-Befund 2026-05-10 (zweite Iteration): MANAGE_HEALTH_PERMISSIONS
+        // mit EXTRA_PACKAGE_NAME funktionierte nicht zuverlaessig — Frank landete
+        // in einem 'X von Y erteilt'-Status-Screen ohne Edit-Moeglichkeit. Daher
+        // jetzt HEALTH_HOME_SETTINGS zuerst (robust auf Android 14+ und Samsung
+        // One UI), Frank navigiert von dort selbst zu 'App-Berechtigungen' →
+        // Entropie Reduktor und kann jeden Toggle einzeln editieren.
         val candidates = listOf(
-            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
-                .putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
+            Intent("android.health.connect.action.HEALTH_HOME_SETTINGS")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            Intent("android.health.connect.action.HEALTH_HOME_SETTINGS")
+            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+                .putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(android.net.Uri.fromParts("package", pkg, null))
