@@ -73,7 +73,37 @@ fun InteractiveLineChart(
     onClick: (() -> Unit)? = null,
 ) {
     val cosmos = LocalCosmos.current
-    val safe = points.filter { it.second.isFinite() }.sortedBy { it.first }
+    // Performance-Audit Loop 1 (2026-05-10): alle CPU-/Allokations-intensiven
+    // Berechnungen ueber `points` in remember(points) vorberechnen, damit sie
+    // nicht bei jeder Recomposition (z.B. durch animateXxxAsState) neu laufen.
+    val derived = remember(points) {
+        val safeList = points.filter { it.second.isFinite() }.sortedBy { it.first }
+        if (safeList.isEmpty()) ChartDerived.EMPTY
+        else {
+            val minVal = safeList.minOf { it.second }
+            val maxVal = safeList.maxOf { it.second }
+            val range = (maxVal - minVal).coerceAtLeast(1.0)
+            val rawValues = safeList.map { it.second }
+            val smaList = computeSma(rawValues, window = 14)
+            val smaSlopeVal = if (smaList.size >= 2) linearSlope(smaList) else 0.0
+            // Lineare Regression einmalig vorberechnen — frueher im Canvas-Lambda
+            val rawSlopeVal = if (safeList.size >= 2) linearSlope(rawValues) else 0.0
+            val rawMeanVal = if (rawValues.isNotEmpty()) rawValues.average() else 0.0
+            val xMeanVal = (safeList.size - 1) / 2.0
+            val interceptVal = rawMeanVal - rawSlopeVal * xMeanVal
+            ChartDerived(
+                safe = safeList,
+                minY = minVal,
+                maxY = maxVal,
+                rangeY = range,
+                sma = smaList,
+                smaSlope = smaSlopeVal,
+                rawSlope = rawSlopeVal,
+                intercept = interceptVal,
+            )
+        }
+    }
+    val safe = derived.safe
     if (safe.isEmpty()) {
         Text(
             text = "Keine Daten — sync dein Whoop-Armband.",
@@ -82,21 +112,16 @@ fun InteractiveLineChart(
         )
         return
     }
-    val minY = safe.minOf { it.second }
-    val maxY = safe.maxOf { it.second }
-    val rangeY = (maxY - minY).coerceAtLeast(1.0)
-    val firstDate = Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate()
-    val lastDate = Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate()
+    val minY = derived.minY
+    val maxY = derived.maxY
+    val rangeY = derived.rangeY
+    val firstDate = remember(safe) { Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate() }
+    val lastDate = remember(safe) { Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate() }
 
-    // Frank-Wunsch 2026-05-09: detailliertere Y-Achse — 5 Werte statt 3
-    // (Min, 25%, Mitte, 75%, Max) damit man Werte besser ablesen kann.
-    val yLabels = listOf(
-        maxY,
-        minY + rangeY * 0.75,
-        minY + rangeY * 0.5,
-        minY + rangeY * 0.25,
-        minY,
-    )
+    // 5 Y-Achsen-Werte (Min, 25%, Mitte, 75%, Max) ebenfalls cachen.
+    val yLabels = remember(minY, maxY, rangeY) {
+        listOf(maxY, minY + rangeY * 0.75, minY + rangeY * 0.5, minY + rangeY * 0.25, minY)
+    }
 
     // Werte-Formatter: wenn extern gesetzt (z.B. fuer Schlafstunden) verwenden,
     // sonst Standard formatY + Einheit anhaengen.
@@ -104,21 +129,24 @@ fun InteractiveLineChart(
         formatY(v) + if (unit.isNotBlank()) " $unit" else ""
     }
 
-    // Frank-Wunsch 2026-05-09: 14-Tage-SMA + lineare Regression als Trendlinie.
-    // SMA glaettet Tagesausreisser, Slope der Regression entscheidet die Farbe:
-    // semantisch "Verbesserung = grün" — bei lowerIsBetter wird der Slope invertiert.
-    val sma = computeSma(safe.map { it.second }, window = 14)
-    val smaSlope = if (sma.size >= 2) linearSlope(sma) else 0.0
+    val sma = derived.sma
+    val smaSlope = derived.smaSlope
     val semanticSlope = if (lowerIsBetter) -smaSlope else smaSlope
-    // Frank-Wunsch 2026-05-09 Update: Epsilon entfernt — jede fallende Linie soll
-    // rot sein, jede steigende gruen, auch bei minimalen Slopes. Vorher hat ein
-    // Epsilon=0.1% des Wertebereichs leichte Trends als 'neutral' eingestuft, was
-    // viele real-fallende Linien schwarz/grau gefaerbt hat.
     val trendColor = when {
         semanticSlope > 0.0 -> CosmosColors.Success
         semanticSlope < 0.0 -> CosmosColors.Critical
         else -> cosmos.textSecondary
     }
+    // Lineare Regression: Slope wird im Composable-Scope verwendet,
+    // Berechnung jetzt in derived.
+    val rawSemanticSlope = if (lowerIsBetter) -derived.rawSlope else derived.rawSlope
+    val rawTrendColor = when {
+        rawSemanticSlope > 0.0 -> CosmosColors.Success
+        rawSemanticSlope < 0.0 -> CosmosColors.Critical
+        else -> cosmos.textSecondary
+    }
+    // PathEffect einmalig allokieren — vorher 5x pro Frame im Canvas-Lambda.
+    val gridDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(6f, 6f)) }
 
     var selectedIndex by remember(safe.size) { mutableStateOf<Int?>(null) }
 
@@ -167,16 +195,20 @@ fun InteractiveLineChart(
                 val w = size.width
                 val h = size.height
                 val gridColor = cosmos.glassBorder
-                // Horizontale Hilfslinien (5 Stueck — passt zu den 5 Y-Labels)
-                listOf(0f, h * 0.25f, h * 0.5f, h * 0.75f, h).forEach { y ->
-                    drawLine(
-                        color = gridColor.copy(alpha = 0.3f),
-                        start = Offset(0f, y),
-                        end = Offset(w, y),
-                        strokeWidth = 1f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
-                    )
-                }
+                // Horizontale Hilfslinien (5 Stueck — passt zu den 5 Y-Labels).
+                // Performance-Fix Loop 1 (2026-05-10): Y-Ticks als FloatArray statt
+                // listOf-Allokation pro Frame. PathEffect via remember oben einmalig.
+                val tick0 = 0f
+                val tick25 = h * 0.25f
+                val tick50 = h * 0.5f
+                val tick75 = h * 0.75f
+                val tick100 = h
+                val gridLineColor = gridColor.copy(alpha = 0.3f)
+                drawLine(gridLineColor, Offset(0f, tick0), Offset(w, tick0), 1f, pathEffect = gridDashEffect)
+                drawLine(gridLineColor, Offset(0f, tick25), Offset(w, tick25), 1f, pathEffect = gridDashEffect)
+                drawLine(gridLineColor, Offset(0f, tick50), Offset(w, tick50), 1f, pathEffect = gridDashEffect)
+                drawLine(gridLineColor, Offset(0f, tick75), Offset(w, tick75), 1f, pathEffect = gridDashEffect)
+                drawLine(gridLineColor, Offset(0f, tick100), Offset(w, tick100), 1f, pathEffect = gridDashEffect)
                 // Datenlinie + Punkte
                 if (safe.size >= 2) {
                     val stepX = w / (safe.size - 1).toFloat()
@@ -219,16 +251,11 @@ fun InteractiveLineChart(
                 // generell über den gesamten Blockverlauf". Dicker als die SMA-
                 // Linie damit sie als Primaer-Trend dominant ist.
                 if (safe.size >= 2) {
-                    val rawSlope = linearSlope(safe.map { it.second })
-                    val rawMean = safe.map { it.second }.average()
-                    val xMean = (safe.size - 1) / 2.0
-                    val intercept = rawMean - rawSlope * xMean
-                    val rawSemanticSlope = if (lowerIsBetter) -rawSlope else rawSlope
-                    val rawTrendColor = when {
-                        rawSemanticSlope > 0.0 -> CosmosColors.Success
-                        rawSemanticSlope < 0.0 -> CosmosColors.Critical
-                        else -> cosmos.textSecondary
-                    }
+                    // Performance-Fix Loop 1 (2026-05-10): rawSlope, rawMean, xMean,
+                    // intercept werden in remember(points) vorberechnet (siehe oben).
+                    // Hier nur noch die Pixel-Koordinaten ableiten.
+                    val intercept = derived.intercept
+                    val rawSlope = derived.rawSlope
                     val stepXLin = w / (safe.size - 1).toFloat()
                     val yStart = h - ((intercept - minY) / rangeY * h).toFloat()
                     val yEnd = h - ((intercept + rawSlope * (safe.size - 1) - minY) / rangeY * h).toFloat()
@@ -321,6 +348,36 @@ private val SHORT_DATE: DateTimeFormatter =
  *
  * Frank-Wunsch 2026-05-09: 14-Tage-Glaettung als Trendlinien-Basis.
  */
+/**
+ * Vorberechnete Chart-Daten — Performance-Audit Loop 1 (2026-05-10).
+ * Wird einmalig in remember(points) berechnet statt bei jeder Recomposition
+ * neu. Sa fe ist die gefilterte+sortierte Punktliste, sma die 14-Tage-
+ * Glaettung, intercept+slope die lineare Regression.
+ */
+private data class ChartDerived(
+    val safe: List<Pair<Long, Double>>,
+    val minY: Double,
+    val maxY: Double,
+    val rangeY: Double,
+    val sma: List<Double>,
+    val smaSlope: Double,
+    val rawSlope: Double,
+    val intercept: Double,
+) {
+    companion object {
+        val EMPTY = ChartDerived(
+            safe = emptyList(),
+            minY = 0.0,
+            maxY = 0.0,
+            rangeY = 1.0,
+            sma = emptyList(),
+            smaSlope = 0.0,
+            rawSlope = 0.0,
+            intercept = 0.0,
+        )
+    }
+}
+
 private fun computeSma(values: List<Double>, window: Int): List<Double> {
     if (values.size < window) return emptyList()
     val out = ArrayList<Double>(values.size - window + 1)

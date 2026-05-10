@@ -75,6 +75,11 @@ fun EntropyTrendChart(
                 .maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
         }
 
+        // Performance-Audit Loop 1 (2026-05-10): Path-Objekt einmalig allokieren
+        // statt N-mal pro Frame (frueher pro Kategorie ein neuer Path → bei 12
+        // Kategorien × 60 fps = 720 Path-Allokationen/s). Wird im Lambda per
+        // path.reset() vor jedem Trace zurueckgesetzt.
+        val sharedPath = remember { Path() }
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
             val padX = 12f
             val padY = 12f
@@ -101,18 +106,18 @@ fun EntropyTrendChart(
                 }
             }
 
-            // 2. Linien je Kategorie
+            // 2. Linien je Kategorie — sharedPath wird pro Kategorie reset.
             series.forEach { (cat, values) ->
                 if (values.isEmpty()) return@forEach
-                val path = Path()
+                sharedPath.reset()
                 val stepX = if (values.size > 1) w / (values.size - 1) else w
                 values.forEachIndexed { idx, v ->
                     val x = padX + idx * stepX
                     val y = padY + h - ((v / maxValue) * h).toFloat()
-                    if (idx == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    if (idx == 0) sharedPath.moveTo(x, y) else sharedPath.lineTo(x, y)
                 }
                 drawPath(
-                    path = path,
+                    path = sharedPath,
                     color = cat.color(),
                     style = Stroke(width = 2.5f),
                 )

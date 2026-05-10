@@ -65,6 +65,10 @@ fun HrvLineChart(
             return@Box
         }
 
+        // Performance-Audit Loop 1 (2026-05-10): Path + PathEffect einmalig
+        // allokieren statt 60x/Sekunde im Canvas-Lambda.
+        val dataPath = remember { Path() }
+        val medianDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(8f, 8f)) }
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
             val padding = 12f
             val w = size.width - padding * 2
@@ -79,12 +83,13 @@ fun HrvLineChart(
                     start = Offset(padding, y),
                     end = Offset(padding + w, y),
                     strokeWidth = 1.5f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)),
+                    pathEffect = medianDashEffect,
                 )
             }
 
-            // Datenpfad
-            val path = Path()
+            // Datenpfad — sharedPath wird pro Frame zurueckgesetzt
+            dataPath.reset()
+            val path = dataPath
             safe.forEachIndexed { idx, v ->
                 val x = padding + idx * stepX
                 val y = padding + h - ((v - min) / range * h).toFloat()
