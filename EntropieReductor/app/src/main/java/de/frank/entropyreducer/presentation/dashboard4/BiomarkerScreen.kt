@@ -10,15 +10,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -125,11 +126,15 @@ fun BiomarkerHostScreen(
         // Lokale Liste fuer sofortiges UI-Feedback waehrend des Ziehens. Wird bei jedem
         // Reorder upgedatet und gleichzeitig in den DataStore persistiert.
         var localOrder by remember(cardOrder) { mutableStateOf(cardOrder) }
-        val lazyListState = rememberLazyListState()
-        val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-            // Wir reordern anhand der String-Keys, nicht der LazyList-Indizes.
-            // So koennen Header-Items (ohne String-Key) sicher dazwischen liegen
-            // ohne die Berechnung zu verfaelschen.
+
+        // 2-Spalten-Grid: Mini-Karten (HRV, Ruhepuls, Schlaf, Performance) belegen
+        // je 1 Spalte, alle anderen die volle Breite. Frank-Wunsch 2026-05-10:
+        // Mini-Karten sollen sich auch UNTEREINANDER tauschen lassen (z.B. HRV ↔ Performance).
+        val lazyGridState = rememberLazyGridState()
+        val reorderState = rememberReorderableLazyGridState(lazyGridState) { from, to ->
+            // Reorder anhand der String-Keys, nicht der LazyGrid-Indizes — damit
+            // Header-Items mit eigenen String-Keys (hdr_*) zwischen den verschiebbaren
+            // Karten ignoriert werden koennen (die sind nicht in localOrder).
             val fromKey = from.key as? String
             val toKey = to.key as? String
             if (fromKey != null && toKey != null && fromKey != toKey) {
@@ -144,8 +149,9 @@ fun BiomarkerHostScreen(
             }
         }
 
-        LazyColumn(
-            state = lazyListState,
+        LazyVerticalGrid(
+            state = lazyGridState,
+            columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize().padding(padding),
             // Frank-Wunsch 2026-05-09: top auf 0 damit der Sync-Zeitstempel direkt
             // an die jetzt kompakte TopAppBar anschliesst (~8dp natuerliche Luft
@@ -157,8 +163,9 @@ fun BiomarkerHostScreen(
                 bottom = 16.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item("hdr_sync") {
+            item("hdr_sync", span = { GridItemSpan(2) }) {
                 // Frank-Wunsch 2026-05-09: kleine Info-Zeile direkt unter dem
                 // Header die zeigt wann zuletzt erfolgreich mit Whoop synchronisiert
                 // wurde. Hilft Frank zu sehen ob die Daten frisch sind oder ob der
@@ -170,13 +177,13 @@ fun BiomarkerHostScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            item("hdr_status") {
+            item("hdr_status", span = { GridItemSpan(2) }) {
                 StatusBar(
                     percent = state.statusBreakdown?.total ?: 0,
                     breakdown = state.statusBreakdown,
                 )
             }
-            item("hdr_date") { DateSelectorBar(state, vm) }
+            item("hdr_date", span = { GridItemSpan(2) }) { DateSelectorBar(state, vm) }
 
             // ============ VERSCHIEBBARE KARTEN (Frank-Wunsch 2026-05-10) ============
             // Drag & Drop fuer alle Daten-Karten — Reihenfolge wird im DataStore
@@ -192,9 +199,22 @@ fun BiomarkerHostScreen(
             //   Tagesumsatz → Belastung → Workouts (Aktivitaet)
             //   Korrelation HRV ↔ Schlafdauer (Analyse)
             //   Amazfit-Hero + Amazfit-Trainings (T-Rex 3)
-            items(localOrder, key = { it }) { id ->
+            items(
+                items = localOrder,
+                key = { it },
+                span = { id ->
+                    if (id in BiomarkerCardId.MINI_CARD_IDS) GridItemSpan(1) else GridItemSpan(2)
+                },
+            ) { id ->
                 ReorderableItem(reorderState, key = id) { _ ->
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    // Frank-Wunsch 2026-05-10: KEIN sichtbares Drag-Handle mehr — die
+                    // ganze Karte ist long-press-draggable. Tap auf die Karte oeffnet
+                    // weiterhin den Detail-Screen (Compose unterscheidet Tap vs. Long-Press).
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .longPressDraggableHandle(),
+                    ) {
                         BiomarkerCardForId(
                             id = id,
                             state = state,
@@ -203,21 +223,6 @@ fun BiomarkerHostScreen(
                             onOpenTrainingDetail = onOpenTrainingDetail,
                             onOpenAllTrainings = onOpenAllTrainings,
                         )
-                        // Drag-Handle oben rechts — Long-Press startet das Ziehen.
-                        // Halbtransparent damit es den Card-Inhalt nicht ueberlagert.
-                        IconButton(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 4.dp, end = 4.dp)
-                                .longPressDraggableHandle(),
-                            onClick = { /* Drag-only, kein Tap-Handling */ },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DragHandle,
-                                contentDescription = "Karte verschieben",
-                                tint = cosmos.textSecondary.copy(alpha = 0.55f),
-                            )
-                        }
                     }
                 }
             }
@@ -497,7 +502,7 @@ fun BiomarkerHostScreen(
             // ============ ENDE LEGACY-BLOCK ============
 
             if (state.latest == null) {
-                item("ft_empty") {
+                item("ft_empty", span = { GridItemSpan(2) }) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
                             Text(
@@ -517,13 +522,13 @@ fun BiomarkerHostScreen(
                 }
             }
             state.message?.let { msg ->
-                item("ft_msg") {
+                item("ft_msg", span = { GridItemSpan(2) }) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Text(msg, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
                     }
                 }
             }
-            item("ft_spacer") { Spacer(Modifier.height(80.dp)) }
+            item("ft_spacer", span = { GridItemSpan(2) }) { Spacer(Modifier.height(80.dp)) }
         }
     }
 }
@@ -1264,7 +1269,14 @@ private fun BiomarkerCardForId(
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
 
-            BiomarkerCardId.KEY_VALUE_GRID -> KeyValueGrid(state, onOpenMetricDetail)
+            // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
+            // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
+            // unabhaengig voneinander verschoben werden koennen. Frueher waren sie
+            // ein festes 2x2-Grid (KEY_VALUE_GRID).
+            BiomarkerCardId.MINI_HRV -> MiniHrvCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_SLEEP_PERFORMANCE -> MiniSleepPerformanceCard(state, onOpenMetricDetail)
 
             BiomarkerCardId.HRV -> MetricHistoryCard(
                 title = "HRV-Verlauf",
@@ -1508,4 +1520,86 @@ private fun BiomarkerCardForId(
             }
         }
     }
+}
+
+/**
+ * Mini-Karten (Frank-Wunsch 2026-05-10) — die vier kleinen 1-Spalten-Karten oben
+ * im Biomarker-Screen mit HRV, Ruhepuls, Schlaf und Schlaf-Performance. Frueher
+ * waren sie als festes 2x2-Grid (KeyValueGrid) zusammengebaut, jetzt sind es vier
+ * unabhaengige verschiebbare Items im LazyVerticalGrid. Frank wollte HRV nach rechts
+ * neben Ruhepuls schieben oder runter zu Performance tauschen — das geht nur wenn
+ * jede Mini-Card eine eigene reorderable Identitaet hat.
+ *
+ * Die Logik (Wert + 30-Tage-Mittel + Delta + Footnote) ist identisch zur bisherigen
+ * KeyValueGrid-Implementierung — nur eben pro Karte einzeln.
+ */
+@Composable
+private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
+    val latest = state.selectedSnapshot ?: state.latest
+    val avgHrv = state.history30Days.mapNotNull { it.hrvMs }
+        .takeIf { it.isNotEmpty() }?.average()
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "HRV",
+        value = latest?.hrvMs?.let { "${"%.0f".format(it)} ms" } ?: "—",
+        delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
+        deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
+        footnote = "vs. 30-Tage-Mittel",
+        onClick = { onOpenDetail(MetricKey.HRV) },
+    )
+}
+
+@Composable
+private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
+    val latest = state.selectedSnapshot ?: state.latest
+    val avgRhr = state.history30Days.mapNotNull { it.restingHeartRate }
+        .takeIf { it.isNotEmpty() }?.average()
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "Herzfrequenz",
+        value = latest?.restingHeartRate?.let { "$it bpm" } ?: "—",
+        delta = formatDelta(latest?.restingHeartRate?.toDouble(), avgRhr, "bpm"),
+        // Bei RHR ist NIEDRIGER besser — Pfeil-Logik invertiert.
+        deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
+        footnote = "vs. 30-Tage-Mittel",
+        onClick = { onOpenDetail(MetricKey.RHR) },
+    )
+}
+
+@Composable
+private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
+    val latest = state.selectedSnapshot ?: state.latest
+    val avgSleep = state.history30Days.mapNotNull { it.sleepTotalMinutes }
+        .takeIf { it.isNotEmpty() }?.average()
+    val sleepMin = latest?.sleepTotalMinutes ?: 0
+    val sleepLabel = if (sleepMin == 0) {
+        "—"
+    } else {
+        "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
+    }
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "Schlaf",
+        value = sleepLabel,
+        delta = formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
+        deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
+        footnote = "vs. 30-Tage-Mittel",
+        onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
+    )
+}
+
+@Composable
+private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
+    val latest = state.selectedSnapshot ?: state.latest
+    val avgSleepPerf = state.history30Days.mapNotNull { it.sleepPerformance }
+        .takeIf { it.isNotEmpty() }?.average()
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "Performance",
+        value = latest?.sleepPerformance?.let { "$it %" } ?: "—",
+        delta = formatDelta(latest?.sleepPerformance?.toDouble(), avgSleepPerf, "%"),
+        deltaPositive = (latest?.sleepPerformance?.toDouble() ?: 0.0) > (avgSleepPerf ?: 0.0),
+        footnote = "vs. 30-Tage-Mittel",
+        onClick = { onOpenDetail(MetricKey.SLEEP_PERF) },
+    )
 }

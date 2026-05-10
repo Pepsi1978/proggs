@@ -18,7 +18,15 @@ package de.frank.entropyreducer.presentation.dashboard4
  */
 object BiomarkerCardId {
     const val GESAMTERHOLUNG = "gesamterholung"
-    const val KEY_VALUE_GRID = "key_value_grid"
+
+    // Mini-Cards (Frank-Wunsch 2026-05-10): einzelne Mini-Karten im 2-Spalten-Grid,
+    // die unabhaengig voneinander verschoben werden koennen. Frueher waren sie zu
+    // einem festen 2x2-Grid (KEY_VALUE_GRID) zusammengefasst — jetzt sind es vier
+    // eigenstaendige Items mit span=1, die in einem LazyVerticalGrid liegen.
+    const val MINI_HRV = "mini_hrv"
+    const val MINI_RHR = "mini_rhr"
+    const val MINI_SLEEP_TOTAL = "mini_sleep_total"
+    const val MINI_SLEEP_PERFORMANCE = "mini_sleep_performance"
 
     // Herzfrequenz-Block
     const val HRV = "hrv"
@@ -57,9 +65,25 @@ object BiomarkerCardId {
      * eigene Reihenfolge gespeichert hat oder "Reihenfolge zuruecksetzen"
      * waehlt.
      */
+    /**
+     * Set aller IDs die als kleine Mini-Karten im 2-Spalten-Grid gerendert werden
+     * (span = 1). Alle anderen IDs nehmen die volle Breite ein (span = 2). Frank-
+     * Wunsch 2026-05-10: HRV/RHR/Schlaf/Performance koennen sich auch untereinander
+     * tauschen, daher sind das die einzigen 4 Spalten-Karten.
+     */
+    val MINI_CARD_IDS: Set<String> = setOf(
+        MINI_HRV,
+        MINI_RHR,
+        MINI_SLEEP_TOTAL,
+        MINI_SLEEP_PERFORMANCE,
+    )
+
     val DEFAULT_ORDER: List<String> = listOf(
         GESAMTERHOLUNG,
-        KEY_VALUE_GRID,
+        MINI_HRV,
+        MINI_RHR,
+        MINI_SLEEP_TOTAL,
+        MINI_SLEEP_PERFORMANCE,
         HRV,
         RHR,
         RESPIRATORY,
