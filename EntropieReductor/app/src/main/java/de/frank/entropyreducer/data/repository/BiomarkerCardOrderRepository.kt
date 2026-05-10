@@ -53,6 +53,18 @@ class BiomarkerCardOrderRepository @Inject constructor(
     }
 
     /**
+     * Liefert die ROHE gespeicherte Reihenfolge ohne Merge mit DEFAULT_ORDER.
+     * Wird vom Drive-Backup (Frank-Wunsch 2026-05-10) genutzt, damit nur die
+     * User-Anpassungen gesichert werden — wenn der Benutzer noch nichts
+     * verschoben hat (DataStore leer), wird auch eine leere Liste gesichert,
+     * was beim Restore nichts ueberschreibt.
+     */
+    val rawSavedOrder: Flow<List<String>> = context.biomarkerCardOrderStore.data.map { prefs ->
+        val raw = prefs[KEY_ORDER]
+        raw?.split('|')?.filter { it.isNotBlank() }.orEmpty()
+    }
+
+    /**
      * Speichert eine neue Reihenfolge. Wird vom ViewModel nach jedem Reorder
      * aufgerufen. Filtert IDs heraus die nicht in [BiomarkerCardId.DEFAULT_ORDER]
      * stehen (Sicherheits-Check gegen Datenmuell).

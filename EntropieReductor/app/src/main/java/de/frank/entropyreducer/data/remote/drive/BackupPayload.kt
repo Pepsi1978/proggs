@@ -29,15 +29,19 @@ import kotlinx.serialization.Serializable
  *   1 = nur entries (Pre-2026-05-09)
  *   2 = + insights, memories, hypotheses, scientistSessions, scientistMessages,
  *       hypothesisMessages (2026-05-09 Abend)
+ *   3 = + biomarkerCardOrder — die Drag&Drop-Reihenfolge der Biomarker-Karten
+ *       (Frank-Wunsch 2026-05-10): die Position auf dem Biomarker-Screen wird
+ *       jetzt mitgesichert, damit ein Wechsel auf ein neues Handy die exakt
+ *       gleiche Anordnung wiederherstellt.
  *
- * Beim Restore werden v1-Backups akzeptiert — die nicht-vorhandenen Listen
+ * Beim Restore werden v1- und v2-Backups akzeptiert — die nicht-vorhandenen Listen
  * defaulten auf emptyList(), die alten Aufgaben kommen zurueck, der Rest bleibt
- * leer. Beim naechsten Sync nach Restore wird automatisch ein v2-Backup
+ * leer. Beim naechsten Sync nach Restore wird automatisch ein v3-Backup
  * geschrieben das den vollen Stand enthaelt.
  */
 @Serializable
 data class BackupPayload(
-    val version: Int = 2,
+    val version: Int = 3,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -46,6 +50,14 @@ data class BackupPayload(
     val scientistSessions: List<BackupScientistSession> = emptyList(),
     val scientistMessages: List<BackupScientistMessage> = emptyList(),
     val hypothesisMessages: List<BackupHypothesisMessage> = emptyList(),
+    /**
+     * Drag&Drop-Reihenfolge der Biomarker-Karten als pipe-separierte Liste der
+     * Card-IDs (siehe BiomarkerCardId). Leer = User hat noch nichts verschoben,
+     * Standard-Reihenfolge gilt. Beim Restore wird die Liste in den lokalen
+     * BiomarkerCardOrderRepository.saveOrder() eingespielt — ungueltige IDs
+     * (aus aelteren App-Versionen) werden dort automatisch herausgefiltert.
+     */
+    val biomarkerCardOrder: List<String> = emptyList(),
 )
 
 @Serializable

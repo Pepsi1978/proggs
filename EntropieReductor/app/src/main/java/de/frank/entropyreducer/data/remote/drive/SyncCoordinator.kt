@@ -7,6 +7,7 @@ import de.frank.entropyreducer.data.local.dao.InsightDao
 import de.frank.entropyreducer.data.local.dao.MemoryDao
 import de.frank.entropyreducer.data.local.dao.ScientistMessageDao
 import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
+import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import kotlinx.coroutines.CoroutineScope
@@ -65,6 +66,7 @@ class SyncCoordinator @Inject constructor(
     private val scientistSessionDaoLazy: Lazy<ScientistSessionDao>,
     private val scientistMessageDaoLazy: Lazy<ScientistMessageDao>,
     private val hypothesisMessageDaoLazy: Lazy<HypothesisMessageDao>,
+    private val cardOrderRepoLazy: Lazy<BiomarkerCardOrderRepository>,
     private val json: Json,
 ) {
 
@@ -120,9 +122,15 @@ class SyncCoordinator @Inject constructor(
             val sessions = scientistSessionDaoLazy.get().getAll().first().map { it.toBackup() }
             val sessMessages = scientistMessageDaoLazy.get().getAll().map { it.toBackup() }
             val hypMessages = hypothesisMessageDaoLazy.get().getAllOnce().map { it.toBackup() }
+            // Frank-Wunsch 2026-05-10: Drag&Drop-Reihenfolge der Biomarker-Karten
+            // mit ins Backup. Wir nehmen die ROHE gespeicherte Liste — nicht die
+            // gemergte — damit nur User-Anpassungen gesichert werden, nicht die
+            // automatisch angehaengte DEFAULT_ORDER. Leere Liste = User hat nichts
+            // verschoben, beim Restore passiert dann auch nichts.
+            val cardOrder = cardOrderRepoLazy.get().rawSavedOrder.first()
 
             val payload = BackupPayload(
-                version = 2,
+                version = 3,
                 exportedAt = System.currentTimeMillis(),
                 entries = entries,
                 insights = insights,
@@ -131,6 +139,7 @@ class SyncCoordinator @Inject constructor(
                 scientistSessions = sessions,
                 scientistMessages = sessMessages,
                 hypothesisMessages = hypMessages,
+                biomarkerCardOrder = cardOrder,
             )
             val text = json.encodeToString(BackupPayload.serializer(), payload)
             backupManager.upload(text)

@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.remote.drive.DriveRestoreManager
 import de.frank.entropyreducer.data.remote.drive.DriveSession
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.drive.toEntity
+import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import kotlinx.coroutines.flow.first
@@ -39,6 +40,7 @@ class SyncEntriesUseCase @Inject constructor(
     private val scientistSessionDao: ScientistSessionDao,
     private val scientistMessageDao: ScientistMessageDao,
     private val hypothesisMessageDao: HypothesisMessageDao,
+    private val cardOrderRepo: BiomarkerCardOrderRepository,
     private val secrets: EncryptedSecretsStore,
     private val json: Json,
 ) {
@@ -148,6 +150,16 @@ class SyncEntriesUseCase @Inject constructor(
                     inserted++
                 }
             }
+        }
+
+        // --- Biomarker-Card-Order (v3+, Frank-Wunsch 2026-05-10) ---
+        // Drag&Drop-Reihenfolge des Biomarker-Screens wiederherstellen. Leere
+        // Liste = User hatte beim Backup nichts verschoben — dann nichts machen
+        // (die lokale Reihenfolge bleibt unangetastet). saveOrder() filtert
+        // ungueltige IDs (aus aelteren App-Versionen) automatisch heraus.
+        if (payload.biomarkerCardOrder.isNotEmpty()) {
+            cardOrderRepo.saveOrder(payload.biomarkerCardOrder)
+            updated++
         }
 
         driveSession.end()
