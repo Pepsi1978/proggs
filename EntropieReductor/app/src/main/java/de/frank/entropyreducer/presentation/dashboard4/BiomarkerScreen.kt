@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +45,7 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
 import androidx.compose.material.icons.outlined.Tune
-import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
+import de.frank.entropyreducer.presentation.components.IsolatedThemeToggleIcon
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -76,17 +77,21 @@ fun BiomarkerHostScreen(
     onOpenHealthConnectDetail: (String) -> Unit = {},
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
-    val state by vm.state.collectAsState()
-    val cardOrder by vm.cardOrder.collectAsState()
+    // Performance-Audit E2 (2026-05-10): collectAsStateWithLifecycle statt
+    // collectAsState — Flow-Subscription pausiert wenn die UI im Hintergrund ist
+    // (Lifecycle < STARTED). Spart CPU/Akku bei Tab-Wechseln und Sperrbildschirm.
+    val state by vm.state.collectAsStateWithLifecycle()
+    val cardOrder by vm.cardOrder.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
-    val themeVm: ThemeViewModel = hiltViewModel()
-    val themeMode by themeVm.themeMode.collectAsState()
+    // themeVm + themeMode wurden hier oben gelesen — bei jedem Theme-Toggle
+    // rekomponierte der ganze Screen. Jetzt liest IsolatedThemeToggleIcon den
+    // Flow SELBST → nur das Toggle-Icon rekomponiert.
 
     // Health-Connect-Daten (Frank-Wunsch 2026-05-10): separater State + Launcher
     // fuer den Permission-Dialog. Permission gilt fuer Weight + BodyFat +
     // LeanBodyMass — alle drei werden in einem Klick angefordert. Nach
     // erfolgreichem Grant lesen wir alle Werte neu.
-    val weightState by vm.weight.collectAsState()
+    val weightState by vm.weight.collectAsStateWithLifecycle()
     val weightPermissionLauncher = rememberLauncherForActivityResult(
         contract = androidx.health.connect.client.PermissionController
             .createRequestPermissionResultContract(),
@@ -107,7 +112,7 @@ fun BiomarkerHostScreen(
     CosmosScaffold(
         title = "Biomarker",
         actions = {
-            ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
+            IsolatedThemeToggleIcon()
             IconButton(onClick = vm::refreshNow) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,

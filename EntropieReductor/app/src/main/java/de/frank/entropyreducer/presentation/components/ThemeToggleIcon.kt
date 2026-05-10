@@ -7,8 +7,26 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.data.settings.ThemeMode
+import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+
+/**
+ * Performance-Audit E2 (2026-05-10): Isoliert lesende Variante. Liest themeMode
+ * SELBST via hiltViewModel() — der Aufrufer sieht den State nicht und rekomponiert
+ * nicht bei Theme-Toggle. Dadurch wird BiomarkerHostScreen unabhaengig von
+ * Theme-Aenderungen — nur dieses Composable rekomponiert.
+ */
+@Composable
+fun IsolatedThemeToggleIcon(
+    themeVm: ThemeViewModel = hiltViewModel(),
+) {
+    val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
+    ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
+}
 
 /**
  * Hell-/Dunkel-Toggle wie in BestJournalAndroid: zyklisch durch
