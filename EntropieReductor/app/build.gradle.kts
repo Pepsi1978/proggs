@@ -131,6 +131,13 @@ android {
         buildConfig = true
     }
 
+    // Lint-Baseline (E2-Audit 2026-05-10): unterdrueckt 2 False-Positives aus
+    // google-http-client-1.45.0.jar (MockHttpTransport-Klasse, in unserem Code
+    // nirgendwo verkabelt). Siehe lint-baseline.xml fuer Audit-Details.
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
