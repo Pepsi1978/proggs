@@ -13,6 +13,12 @@ import de.frank.entropyreducer.data.local.dao.CalendarEventDao
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.dao.GenieCodexDao
 import de.frank.entropyreducer.data.local.dao.KiTriggerDao
+import de.frank.entropyreducer.data.local.dao.OuraActivityDao
+import de.frank.entropyreducer.data.local.dao.OuraDailySleepDao
+import de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao
+import de.frank.entropyreducer.data.local.dao.OuraReadinessDao
+import de.frank.entropyreducer.data.local.dao.OuraResilienceDao
+import de.frank.entropyreducer.data.local.dao.OuraSleepDetailDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
@@ -24,6 +30,12 @@ import de.frank.entropyreducer.data.local.entities.CalendarEventEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.GenieCodexVersionEntity
 import de.frank.entropyreducer.data.local.entities.KiTriggerEntity
+import de.frank.entropyreducer.data.local.entities.OuraActivityEntity
+import de.frank.entropyreducer.data.local.entities.OuraDailySleepEntity
+import de.frank.entropyreducer.data.local.entities.OuraPersonalInfoEntity
+import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
+import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
+import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
@@ -55,8 +67,14 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         WhoopWorkoutEntity::class,
         AmazfitDailyEntity::class,
         AmazfitWorkoutEntity::class,
+        OuraReadinessEntity::class,
+        OuraDailySleepEntity::class,
+        OuraActivityEntity::class,
+        OuraResilienceEntity::class,
+        OuraSleepDetailEntity::class,
+        OuraPersonalInfoEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -81,6 +99,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun whoopWorkoutDao(): WhoopWorkoutDao
     abstract fun amazfitDailyDao(): AmazfitDailyDao
     abstract fun amazfitWorkoutDao(): AmazfitWorkoutDao
+    abstract fun ouraReadinessDao(): OuraReadinessDao
+    abstract fun ouraDailySleepDao(): OuraDailySleepDao
+    abstract fun ouraActivityDao(): OuraActivityDao
+    abstract fun ouraResilienceDao(): OuraResilienceDao
+    abstract fun ouraSleepDetailDao(): OuraSleepDetailDao
+    abstract fun ouraPersonalInfoDao(): OuraPersonalInfoDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -196,6 +220,137 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_13_14: Migration = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN paceStreamJson TEXT")
+            }
+        }
+
+        /**
+         * Migration 14 -> 15: Sechs neue Tabellen fuer den Oura Ring (Frank-Wunsch
+         * 2026-05-10). Anbindung als dritte Datenquelle neben Whoop und Amazfit.
+         * KEIN ALTER auf bestehende Tabellen — reine Erweiterung, daher risikofrei
+         * fuer alle bisherigen Daten.
+         *
+         * - oura_daily_readiness: Tages-Readiness-Score + Hauttemperatur-Abweichung
+         * - oura_daily_sleep:     Tages-Sleep-Score mit 7 Contributors
+         * - oura_daily_activity:  Tages-Activity-Score, Schritte, Kalorien
+         * - oura_daily_resilience: Tages-Resilience-Level + Sub-Faktoren
+         * - oura_sleep_detail:    Detaillierte Schlaf-Sessions mit Phasen alle 5 Min
+         * - oura_personal_info:   Stammdaten als Single-Row (id = 1)
+         */
+        val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_daily_readiness (
+                        day TEXT NOT NULL PRIMARY KEY,
+                        capturedAt INTEGER NOT NULL,
+                        score INTEGER,
+                        temperatureDeviation REAL,
+                        temperatureTrendDeviation REAL,
+                        activityBalance INTEGER,
+                        bodyTemperature INTEGER,
+                        hrvBalance INTEGER,
+                        previousDayActivity INTEGER,
+                        previousNight INTEGER,
+                        recoveryIndex INTEGER,
+                        restingHeartRate INTEGER,
+                        sleepBalance INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_daily_sleep (
+                        day TEXT NOT NULL PRIMARY KEY,
+                        capturedAt INTEGER NOT NULL,
+                        score INTEGER,
+                        deepSleepScore INTEGER,
+                        efficiencyScore INTEGER,
+                        latencyScore INTEGER,
+                        remSleepScore INTEGER,
+                        restfulnessScore INTEGER,
+                        timingScore INTEGER,
+                        totalSleepScore INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_daily_activity (
+                        day TEXT NOT NULL PRIMARY KEY,
+                        capturedAt INTEGER NOT NULL,
+                        score INTEGER,
+                        activeCalories INTEGER,
+                        totalCalories INTEGER,
+                        targetCalories INTEGER,
+                        steps INTEGER,
+                        walkingDistanceMeters INTEGER,
+                        highActivitySeconds INTEGER,
+                        mediumActivitySeconds INTEGER,
+                        lowActivitySeconds INTEGER,
+                        nonWearSeconds INTEGER,
+                        restingSeconds INTEGER,
+                        sedentarySeconds INTEGER,
+                        inactivityAlerts INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_daily_resilience (
+                        day TEXT NOT NULL PRIMARY KEY,
+                        capturedAt INTEGER NOT NULL,
+                        level TEXT,
+                        sleepRecovery REAL,
+                        daytimeRecovery REAL,
+                        stress REAL,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_sleep_detail (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        day TEXT NOT NULL,
+                        capturedAt INTEGER NOT NULL,
+                        bedtimeStart TEXT,
+                        bedtimeEnd TEXT,
+                        type TEXT,
+                        totalSleepSeconds INTEGER,
+                        timeInBedSeconds INTEGER,
+                        awakeSeconds INTEGER,
+                        lightSeconds INTEGER,
+                        deepSeconds INTEGER,
+                        remSeconds INTEGER,
+                        efficiency INTEGER,
+                        latencySeconds INTEGER,
+                        restlessPeriods INTEGER,
+                        averageBreath REAL,
+                        averageHeartRate REAL,
+                        averageHrv INTEGER,
+                        lowestHeartRate INTEGER,
+                        sleepPhase5Min TEXT,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS oura_personal_info (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        ouraUserId TEXT,
+                        age INTEGER,
+                        weightKg REAL,
+                        heightMeters REAL,
+                        biologicalSex TEXT,
+                        email TEXT,
+                        capturedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
             }
         }
     }

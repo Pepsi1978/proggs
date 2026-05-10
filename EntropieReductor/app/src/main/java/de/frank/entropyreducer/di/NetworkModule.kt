@@ -10,6 +10,7 @@ import de.frank.entropyreducer.data.remote.GeminiApi
 import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
+import de.frank.entropyreducer.data.remote.oura.OuraApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.zepp.ZeppApi
 import kotlinx.serialization.json.Json
@@ -172,4 +173,20 @@ object NetworkModule {
     @Provides @Singleton
     fun provideZeppApi(@Named("zepp") retrofit: Retrofit): ZeppApi =
         retrofit.create(ZeppApi::class.java)
+
+    /* ----- Oura Ring (Personal Access Token) ----- */
+
+    @Provides
+    @Singleton
+    @Named("oura")
+    fun provideOuraRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api.ouraring.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun provideOuraApi(@Named("oura") retrofit: Retrofit): OuraApi =
+        retrofit.create(OuraApi::class.java)
 }

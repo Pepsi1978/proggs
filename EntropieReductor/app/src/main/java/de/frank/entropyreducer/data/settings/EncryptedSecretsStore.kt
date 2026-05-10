@@ -151,6 +151,19 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_ZEPP_LAST_SYNC, 0L)
         set(value) { prefs.edit().putLong(KEY_ZEPP_LAST_SYNC, value).apply() }
 
+    // Oura Ring — Frank-Wunsch 2026-05-10. Personal Access Token aus
+    // https://cloud.ouraring.com/personal-access-tokens. Single-User-Token,
+    // kein OAuth-Flow noetig, kein Ablauf. Wird als Bearer-Header bei jedem
+    // Daten-Request mitgesendet.
+    var ouraPersonalAccessToken: String?
+        get() = prefs.getString(KEY_OURA_PAT, null)
+        set(value) { prefs.edit().putString(KEY_OURA_PAT, value).apply() }
+
+    /** Zeitstempel der letzten erfolgreichen Oura-Synchronisation (ms). */
+    var ouraLastSyncEpochMs: Long
+        get() = prefs.getLong(KEY_OURA_LAST_SYNC, 0L)
+        set(value) { prefs.edit().putLong(KEY_OURA_LAST_SYNC, value).apply() }
+
     /** Account-Mailadresse für Drive-Backup. Wird beim Sign-In gesetzt. */
     var driveAccountEmail: String?
         get() = prefs.getString(KEY_DRIVE_ACCOUNT, null)
@@ -218,5 +231,8 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_ZEPP_USER_ID = "zepp_user_id"
         private const val KEY_ZEPP_DEVICE_ID = "zepp_device_id"
         private const val KEY_ZEPP_LAST_SYNC = "zepp_last_sync_ms"
+        // Oura Ring
+        private const val KEY_OURA_PAT = "oura_personal_access_token"
+        private const val KEY_OURA_LAST_SYNC = "oura_last_sync_ms"
     }
 }
