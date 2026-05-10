@@ -50,11 +50,50 @@ EIN Agent mit vollem Kontext + Judge-Review produziert tiefere Einsichten bei gl
 Strategie nennen. Wenn die Klassifikation unklar ist (z.B. 4 Dateien aber kritische Infrastruktur):
 auf HIGH eskalieren statt auf LOW absteigen.
 
+## Outcomes-Rubric (PFLICHT — Anthropic Outcomes/Grader-Pattern, 2026-05-10)
+
+Quelle: platform.claude.com/cookbook/managed-agents-cma-verify-with-outcome-grader (06.05.2026).
++10 Prozentpunkte Erfolgsrate intern bei Anthropic durch dieses Pattern.
+
+**Vor dem Spawnen der Sub-Agents** definiere die Rubrik EXPLIZIT — sie wird DIREKT an
+code-reviewer und Judge weitergegeben. Sie wird NICHT vom Reasoning des coders beeinflusst,
+weil sie unabhaengig vor der Code-Lesung formuliert wird.
+
+**Pflicht-Rubrik (alle 6 Kriterien — pro Aenderung anpassbar):**
+
+| Kriterium | Was wird bewertet | Gewicht |
+|-----------|-------------------|---------|
+| Korrektheit | Tut der Code was er soll? Gibt es logische Fehler? | 25% |
+| Sicherheit | Injection? Ungeschuetzte Secrets? Fehlende Validierung an System-Grenzen? | 20% |
+| Direktive #3 | Funktionalitaet erhalten? Defense in Depth? Keine entfernten Features? | 20% |
+| Effizienz | Performance-Probleme? Unnoetige Komplexitaet? Token-Verbrauch? | 15% |
+| Lesbarkeit | Verstaendlich? Wartbar? Keine ueberfluessigen Abstraktionen? | 10% |
+| Konvention | Folgt CLAUDE.md, Whiteboard-Regeln, Cross-Platform-Pflicht? | 10% |
+
+**Rubrik im Prompt an code-reviewer einbauen:**
+```
+"Bewerte diese Aenderung gegen folgende Rubrik:
+[Rubrik einsetzen]
+Pro Kriterium: 1 Satz Befund + Note 1-5. Abschluss: Gesamt-Punktzahl."
+```
+
+**Rubrik im Prompt an Judge einbauen (nach MAR):**
+```
+"Bewerte das Gesamtergebnis (tester + code-reviewer + optimizer + MAR) gegen die Rubrik.
+WICHTIG: Du siehst NICHT das Reasoning des coders, NUR die Outputs der 3 Sub-Agents.
+Das verhindert Halo-Effekte. Pro Kriterium: Note 1-5 + 1 Satz Begruendung."
+```
+
+**Wann Rubrik weglassen / vereinfachen:**
+- LOW-Komplexitaet (siehe naechste Sektion): nur Korrektheit + Sicherheit pruefen
+- HIGH-Komplexitaet: zusaetzlich Risk-Bewertung (Was passiert bei Regression?)
+
 ## Your Process
 
 1. **Understand the change**: Read the recently modified files (use `git diff` or file list from your prompt)
-2. **Classify complexity** (siehe oben) — bei HIGH: abweichende Sub-Agent-Strategie waehlen
-3. **Spawn 3 agents IN PARALLEL** (one message, three Agent tool calls) — bei HIGH nur 1 Deep-Verify-Agent:
+2. **Define Rubric** (siehe oben Outcomes-Rubric — PFLICHT vor jedem Spawn): formuliere die 6 Kriterien fuer DIESE Aenderung konkret
+3. **Classify complexity** (siehe Sektion "Complexity Classification"): bei HIGH abweichende Sub-Agent-Strategie
+4. **Spawn 3 agents IN PARALLEL** (one message, three Agent tool calls, JEDER bekommt die Rubrik) — bei HIGH nur 1 Deep-Verify-Agent:
 
 ```
 Agent 1 (tester): "Build and test the following changes: [files]. Run the appropriate build command and test suite. Report: build status, test results, any failures."

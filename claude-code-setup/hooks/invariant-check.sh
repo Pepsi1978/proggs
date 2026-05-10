@@ -73,14 +73,41 @@ if [ -f "$WHITEBOARD" ]; then
     fi
 fi
 
-# --- Invariant 5: CLAUDE.md Sync ---
-CLAUDE_REPO="$HOME/proggs/CLAUDE.md"
+# --- Invariant 5: ~/CLAUDE.md darf NICHT existieren (Geloescht 2026-04-04) ---
+# Frueher wurde Sync zwischen ~/proggs/CLAUDE.md und ~/CLAUDE.md geprueft.
+# Seit 2026-04-04 gibt es keine ~/CLAUDE.md mehr (Duplikat entfernt fuer Token-Ersparnis).
 CLAUDE_HOME="$HOME/CLAUDE.md"
-if [ -f "$CLAUDE_REPO" ] && [ -f "$CLAUDE_HOME" ]; then
-    hash_repo=$(shasum -a 256 "$CLAUDE_REPO" | cut -d' ' -f1)
-    hash_home=$(shasum -a 256 "$CLAUDE_HOME" | cut -d' ' -f1)
-    if [ "$hash_repo" != "$hash_home" ]; then
-        violations+=("CLAUDE.MD: Repo-Version und Home-Version sind NICHT synchron!")
+if [ -f "$CLAUDE_HOME" ]; then
+    violations+=("CLAUDE.MD: ~/CLAUDE.md existiert wieder — sollte nicht da sein (geloescht 2026-04-04). Bitte loeschen.")
+fi
+
+# --- Invariant 6: Heartbeat-Status ---
+HEARTBEAT_STATUS="$HOME/.claude/heartbeat-status.json"
+if [ -f "$HEARTBEAT_STATUS" ]; then
+    hb_status=$(python3 -c "import json; print(json.load(open('$HEARTBEAT_STATUS')).get('status',''))" 2>/dev/null)
+    if [ "$hb_status" = "CRITICAL" ]; then
+        violations+=("HEARTBEAT: KRITISCHE Probleme zwischen Sessions erkannt!")
+    fi
+fi
+
+# --- Invariant 8: Whiteboard-Versions-Drift (P2, 2026-05-10) ---
+# Prueft ob die im Whiteboard vermerkte Claude-Code-Version mit der lokalen uebereinstimmt.
+# Verhindert dass Whiteboard 24 Versionen drifftet (entdeckt 2026-05-10: v2.1.114 im
+# Whiteboard, v2.1.138 lokal — 24 Versionen unbemerkt).
+if [ -f "$WHITEBOARD" ]; then
+    wb_version=$(grep -oE 'Claude Code\s*\*?\*?\s*v[0-9]+\.[0-9]+\.[0-9]+' "$WHITEBOARD" | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+    local_version=$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    if [ -n "$wb_version" ] && [ -n "$local_version" ] && [ "$wb_version" != "$local_version" ]; then
+        violations+=("WHITEBOARD-VERSIONS-DRIFT: Stand sagt v${wb_version}, lokal lauft v${local_version} — Systemzustand aktualisieren!")
+    fi
+fi
+
+# --- Invariant 9: Merge-Konflikt-Marker in MEMORY.md (P1, 2026-05-10) ---
+# Heute entdeckt: Merge-Konflikt-Marker koennen 17+ Tage ungeloest in MEMORY.md liegen
+# und das ganze System verfaelschen. Beim SessionStart sofort lautstark warnen.
+if [ -f "$WHITEBOARD" ]; then
+    if grep -qE '<<<<<<< (Updated upstream|HEAD)|>>>>>>> Stashed changes|\|\|\|\|\|\|\| Stash base' "$WHITEBOARD"; then
+        violations+=("WHITEBOARD-KONFLIKT: MEMORY.md enthaelt Merge-Konflikt-Marker — SOFORT manuell aufloesen!")
     fi
 fi
 

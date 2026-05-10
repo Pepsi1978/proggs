@@ -69,6 +69,24 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
 - "Forschung & Intelligence" — thematisch
 - "Regeln & Konventionen" — Systemweite Regeln
 
+## Neue Tools seit 2026-05-10 (Hilfsskripte fuer Self-Improve)
+
+**I6 — SQLite-Memory fuer bug-cases** (`~/.claude/scripts/bug-cases-db.py`):
+- `python3 ~/.claude/scripts/bug-cases-db.py sync` — Synchronisiert bug-cases.jsonl → bug-cases.db
+- `python3 ~/.claude/scripts/bug-cases-db.py lookup "<text>"` — Volltext-Suche (FTS5)
+- `python3 ~/.claude/scripts/bug-cases-db.py hash-lookup "<text>"` — Exact symptom-hash match
+- DB liegt unter `~/proggs/.claude/agent-memory/shared/bug-cases.db` — wird ins Repo committed
+- Nutzen: 5x schnellerer Bug-Lookup vs. Grep auf JSONL
+- WICHTIG: Bei jedem /self-improve in Stufe 6 einmal `sync` aufrufen damit DB aktuell bleibt
+
+**I7 — Strategie-Tracking fuer DGM-Pattern** (`~/.claude/scripts/strategy-tracker.py`):
+- `python3 ~/.claude/scripts/strategy-tracker.py log <date> <strategy> <total> <accepted> <implemented>` — Logged Lauf
+- `python3 ~/.claude/scripts/strategy-tracker.py history` — Strategie-Statistik aller Laeufe
+- `python3 ~/.claude/scripts/strategy-tracker.py best-strategy` — Empfehlung fuer naechsten Lauf
+- Daten in `~/.claude/self-improve-cache/strategies.json` (lokal, nicht ueber Git)
+- Nach jedem /self-improve-Lauf: `log` aufrufen mit User-Acceptance-Zahlen aus der Entscheidungsliste
+- Ab 3+ Runs: `best-strategy` zeigt welche Strategie historisch erfolgreichster war (acceptance × implementation)
+
 ## Core Rules
 
 - NEVER run hidden (no `run_in_background`, no silent subagents). User reads EVERYTHING.
@@ -138,6 +156,21 @@ Windows: Use `pwsh` for complex commands (write temp `.ps1` files).
 ## Stufe 0: META-CHECK (NEW v5.1)
 
 **Schritt 0: Whiteboard + Forschung.md komplett lesen (PFLICHT vor allem anderen).**
+
+**0-PRE: Merge-Konflikt-Pre-Check (M1, NEU 2026-05-10 — KRITISCH, ZUERST):**
+Vor jedem Lesen von MEMORY.md auf Konflikt-Marker pruefen. Heute (2026-05-10) entdeckt:
+ein 17 Tage ungeloester Konflikt verfaelschte das ganze System. Die invariant-check-
+Hooks pruefen das beim SessionStart, aber /self-improve sollte es UNABHAENGIG nochmal
+pruefen — falls der Hook deaktiviert ist oder die Datei nach SessionStart geaendert wurde.
+```
+grep -lE '<<<<<<< (Updated upstream|HEAD)|>>>>>>> Stashed changes|\|\|\|\|\|\|\| Stash base' \
+  ~/proggs/.claude/agent-memory/shared/MEMORY.md \
+  ~/proggs/CLAUDE.md \
+  ~/proggs/.mcp.json 2>/dev/null
+```
+Wenn Treffer: SOFORT abbrechen mit lautstarker Warnung an User. Konflikt-Marker MUESSEN
+manuell aufgeloest werden bevor /self-improve weiterlaufen darf — sonst wird das ganze
+System auf verfaelschten Daten arbeiten.
 
 **0a) Whiteboard lesen:**
 Lese `.claude/agent-memory/shared/MEMORY.md` vollstaendig und erstelle eine kompakte Zusammenfassung:
@@ -386,7 +419,7 @@ Core principle: **DISCOVER → EXPLAIN → BUILD → TEACH.**
 Non-Programmer Rule: Plain German, analogies, concrete scenarios.
 6 Thinking Lenses + Performance Benchmark Lens (NEW v5.0).
 
-Die 6+1 Denk-Linsen:
+Die 7+1 Denk-Linsen:
 1. **Biologische Linse** — Wie loest die Natur dieses Problem? (Schwarmintelligenz, Evolution, Immunsystem)
 2. **Oekonmische Linse** — Was kostet es? Was spart es? ROI-Rechnung.
 3. **Sicherheits-Linse** — Was kann schiefgehen? Worst-Case-Analyse.
@@ -394,6 +427,12 @@ Die 6+1 Denk-Linsen:
 5. **Zukunfts-Linse** — Wo steht dieses System in 6 Monaten? Skalierbarkeit.
 6. **Eleganz-Linse** — Gibt es eine einfachere Loesung? Weniger Teile, weniger Komplexität.
 7. **Performance-Linse** (Benchmark) — Messbare Verbesserung: tokens, Zeit, Qualitaet.
+8. **Stagnations-Linse** (M2, NEU 2026-05-10) — Wann hat das System zuletzt strukturell gelernt? Wo blockiert es sich selbst? Wo kommt der naechste Compound Effect her?
+   - PFLICHT-Frage 1: Letzter dokumentierter Compound Effect — wieviele Tage her?
+   - PFLICHT-Frage 2: Falls >14 Tage: WARUM keine Verbesserung? Detektor kaputt? Trigger fehlt? Kein echter Bedarf?
+   - PFLICHT-Frage 3: Welcher konkrete Mechanismus wuerde den naechsten Compound Effect ausloesen?
+   - Beispiel-Antwort 2026-05-10: "20 Tage seit #6. Ursache: Detektor (Session-Scorer) war 4 Wochen kaputt, niemand merkte es. Mechanismus: compound-stagnation-detector.ps1+sh als SessionStart-Hook + Verifiable-Outcome-Gate (R6-Pitch)."
+   - Diese Linse wurde aus dem 6. Compound Effect 2026-04-20 abgeleitet: Stagnations-Diagnose ist eigene Disziplin.
 
 **Performance Research (The Benchmark — NEW v5.0):**
 Goal: **Maximum quality at minimum token cost at maximum speed.**

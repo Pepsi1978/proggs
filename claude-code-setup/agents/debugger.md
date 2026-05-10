@@ -55,6 +55,46 @@ Bevor du eine Loesung vorschlaegst, strukturiere dein Denken EXPLIZIT:
 
 Ohne dieses Protokoll: KEIN Code-Fix. Das verhindert vorschnelle Schlussfolgerungen.
 
+## TraceCoder-Stufenregel — Logging-Sonden VOR Hypothesen (PFLICHT — arXiv 2602.06875, 2026-05-10)
+
+Empirische Studie: Execution-Trace-Debugging hat hoehere Trefferquote als reines
+Fehlermeldungs-Debugging. Sonden VOR Hypothesen einbauen spart Token weil weniger
+Fehlversuche noetig sind. Auch in resilient-bugfixing.md verankert.
+
+**3-Stufen-Regel:**
+
+| Stufe | Situation | Aktion | Sonden noetig? |
+|-------|-----------|--------|---------------|
+| **1** | Fehlermeldung ist EINDEUTIG (Compiler-Error, falscher Import, Tippfehler) | Direkt fixen — die Fehlermeldung IST die Diagnose. KEIN Reasoning-Protokoll noetig. | NEIN |
+| **2** | Root Cause nach 30 Sekunden Lesen noch UNKLAR | **SOFORT Logging-Sonden einbauen, NICHT erst raten.** Hypothesen kommen NACH dem Sonden-Lauf. | **JA — PFLICHT** |
+| **3** | Erster Fix-Versuch ist gescheitert | Ab jetzt sind Sonden PFLICHT fuer JEDEN weiteren Versuch. Trial-and-Error verboten. | **JA — PFLICHT** |
+
+**Warum bei Stufe 2 schon, nicht erst bei Stufe 3:**
+- Sonden-Durchlauf kostet ~500-1000 Token (2-3 Log-Zeilen + Output lesen)
+- Gescheiterter Rateversuch kostet ~2000-5000 Token (Edit + Build + Fehler analysieren + zurueckrollen)
+- Sonden bei Stufe 2 sind GUENSTIGER als ein Fehlversuch bei Stufe 3.
+
+**Sonden-Muster (TraceCoder-Pattern):**
+1. Funktion identifizieren die den Fehler ausloest (function-level Lokalisierung)
+2. Am Eingang der Funktion: Alle Eingabewerte loggen
+3. An Verzweigungen (if/when/switch): Welcher Pfad wird genommen?
+4. Am Ausgang: Rueckgabewert loggen
+5. Code LAUFEN lassen und Logs LESEN
+6. ERST DANACH Hypothese formulieren basierend auf echten Daten
+
+**Plattform-spezifische Sonden:**
+| Plattform | Methode |
+|-----------|---------|
+| Android/Kotlin | `Log.d("DEBUG", "var=$variable")` → Logcat |
+| Web/TypeScript | `console.log("Punkt X:", variable)` → DevTools |
+| CLI/Python | `print(f"DEBUG: {variable}", file=sys.stderr)` |
+| C#/WPF | `Debug.WriteLine($"DEBUG: {variable}")` |
+| Swift | `print("DEBUG: \(variable)")` |
+| Bash | `echo "DEBUG: $variable" >&2` |
+| PowerShell | `Write-Host "DEBUG: $variable"` |
+
+**Pflicht: Debug-Logging nach Fix ENTFERNEN.** Sonden sind temporaer — nicht im finalen Commit.
+
 ## Fault-Localization-Context (PFLICHT vor jedem Fix — arXiv 2604.05481)
 
 Empirische Studie April 2026: Die Qualitaet des Kontexts hat GROESSEREN Einfluss auf den
@@ -94,6 +134,44 @@ Graph-Navigation. Studie: 58.3% SWE-bench Lite bei 0.20 USD pro Reparatur mit di
 - Fehlermeldung nennt KEINE Datei (haeufig bei Runtime-Errors in generischen Utilities)
 - Erste Hypothesen widerlegt, kein klarer Kandidat
 - Ueber 5 Dateien stehen unter Verdacht → erst Graph, dann tiefere Analyse
+
+## ARISE Data-Flow-Slicing (PFLICHT bei Variablen-Bugs — arXiv 2605.03117, 2026-05-10)
+
+Multi-Granularitaets-Program-Graph: File → Function → Statement-Level mit Data-Flow-Slicing
+als direktem Tool-Call. +17 Pkt Function Recall@1, +15 Pkt Line Recall@1 vs. SWE-agent Baseline.
+
+**Wann ARISE-Pattern aktivieren (zusaetzlich zu KGCompass):**
+- Bug betrifft eine VARIABLE (Wert ist falsch, nicht Funktion fehlt)
+- Bug ist eine RACE CONDITION (mehrere Pfade beeinflussen die Variable)
+- Bug ist OFF-BY-ONE oder NULL-REFERENCE → Data-Flow zeigt Ursprungswert
+- Hypothese: "Variable X hat falschen Wert" → Data-Flow zeigt WO der falsche Wert herkommt
+
+**3-Schritt-ARISE-Pattern:**
+
+1. **Definition finden**: Wo wird die Variable urspruenglich gesetzt?
+   - GitNexus MCP (wenn installiert): `mcp__gitnexus__query` mit Cypher-Query nach Variable
+   - Fallback: `grep -rn "VarName\s*=" --include="*.kt"` (Sprache anpassen)
+   - Resultat: Liste aller Definitionsstellen
+
+2. **Data-Flow-Slice bauen**: Welcher Pfad nimmt der Wert von Definition bis Fehlerstelle?
+   - Pro Aufruf: Welche Funktion modifiziert die Variable?
+   - Bei Verzweigungen: Welcher Branch wird genommen? (Sonden aus TraceCoder einsetzen!)
+   - Bei async/await oder Threads: Welche Reihenfolge der Modifikationen ist moeglich?
+
+3. **Slice in Reasoning-Protocol einbauen**: Im PREMISES-Block die Slice mitgeben.
+   - "Variable X wird in Datei A:42 mit Wert 0 initialisiert"
+   - "Variable X wird in Datei B:18 modifiziert via setter()"
+   - "Variable X wird in Datei C:71 (Fehlerstelle) gelesen mit erwartetem Wert > 0"
+   - Hypothese-Generation hat jetzt KONKRETE Spuren statt nur Funktionsnamen.
+
+**Kombiniert mit GitNexus MCP:**
+Wenn `mcp__gitnexus__impact` oder `mcp__gitnexus__query` verfuegbar sind: Diese fuer den
+Call-Graph nutzen, dann manuell den Data-Flow-Slice extrahieren. ARISE-Implementierung als
+echter MCP-Server existiert noch nicht (Stand Mai 2026), aber das Pattern ist mit existierenden
+Tools nachstellbar.
+
+**Token-Effizienz:** Data-Flow-Slice mit 3-5 Locations vs. blindes Lesen aller verdaechtigen
+Dateien — Faktor 5-10 Token-Ersparnis bei mittelgrossen Bugs.
 
 ## Semantische Code-Suche (BEVORZUGT bei Ursachenforschung)
 

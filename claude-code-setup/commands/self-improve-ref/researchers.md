@@ -106,6 +106,39 @@ REGELN:
 extrahieren und in eine Gesamtliste zusammenfuehren. Doppelte Findings (gleicher Titel)
 entfernen. Die Gesamtliste wird zur Entscheidungsliste im Report.
 
+**JSON-Cache (M3, NEU 2026-05-10 — DGM-Vorbereitung):**
+Zusaetzlich zum Markdown-Cache (R*_*.md) wird der JSON-Block jedes Researchers als
+strukturierte Datei in `~/.claude/self-improve-cache/R*_findings.json` gespeichert.
+Format:
+```json
+{
+  "researcher": "R1",
+  "run_date": "2026-05-10",
+  "findings": [...],  // array of findings als JSON-Objekte
+  "session_id": "abc123"  // fuer DGM-Strategie-Verkettung
+}
+```
+Vorteil: Naechster /self-improve-Lauf kann diese Dateien maschinenlesbar einlesen
+und Trends erkennen ("Welche Findings hatten in letzten 3 Laeufen Empfehlung JA aber
+sind noch nicht umgesetzt?"). Das ist die Datengrundlage fuer den DGM-Pattern (I7) —
+Selbstmodifikation auf Basis vorheriger Erfolge.
+
+**Schreibweise (Bash):**
+```bash
+# Im /self-improve Skill nach jedem Researcher:
+echo "$json_block" | jq '.' > ~/.claude/self-improve-cache/R${N}_findings.json
+```
+
+**Schreibweise (PowerShell):**
+```powershell
+$json_block | ConvertFrom-Json | ConvertTo-Json -Depth 10 |
+    Set-Content "$env:USERPROFILE\.claude\self-improve-cache\R${N}_findings.json" -Encoding UTF8
+```
+
+**Compatibility:** Der Markdown-Cache (R*_plugins.md, R*_security.md, etc.) bleibt parallel
+erhalten fuer menschliche Lesbarkeit. JSON dient ausschliesslich der maschinellen
+Auswertung durch zukuenftige Self-Improve-Laeufe.
+
 ## Researcher Templates
 
 **MANDATORY: Spawn ALL active researchers in ONE message block.**

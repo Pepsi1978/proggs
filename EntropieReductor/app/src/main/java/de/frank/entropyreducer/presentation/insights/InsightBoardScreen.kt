@@ -172,7 +172,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
         if (items.isEmpty()) {
             item("empty-${sectionKey.name}") { EmptySection() }
         } else {
-            items(items, key = { it.id }) { insight ->
+            // Performance-Audit Loop 2 (2026-05-10): contentType ergaenzt —
+            // alle Insight-Karten haben aktuell denselben Typ; bei kuenftigen
+            // Sub-Typen sind die Slots schon korrekt klassifiziert.
+            items(items, key = { it.id }, contentType = { "insight" }) { insight ->
                 InsightCard(insight, onClick = { vm.open(insight) })
             }
         }

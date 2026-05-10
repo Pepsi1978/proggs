@@ -191,7 +191,10 @@ fun ScientistScreen(
                         )
                     }
                 }
-                items(state.messages, key = { it.id }) { msg ->
+                // Performance-Audit Loop 2 (2026-05-10): contentType ergaenzt —
+                // unterschiedliche Bubble-Typen (KI vs USER) duerfen sonst Compose-
+                // Slot-Reuse durcheinanderbringen.
+                items(state.messages, key = { it.id }, contentType = { it.role }) { msg ->
                     when (msg.role) {
                         ScientistRole.KI -> KiBubble(
                             message = msg,

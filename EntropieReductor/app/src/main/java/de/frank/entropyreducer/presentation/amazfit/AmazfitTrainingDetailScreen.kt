@@ -365,6 +365,9 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
             // Box mit Seitenverhältnis 16:9 normalisiert. Nord ist oben.
             val accent = CosmosColors.Warning
             val borderColor = cosmos.glassBorder.copy(alpha = 0.3f)
+            // Performance-Audit Loop 2 (2026-05-10): Pfad einmalig allokieren
+            // statt pro Frame. Wird im Lambda mit reset() wiederverwendet.
+            val gpsPath = remember { androidx.compose.ui.graphics.Path() }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -385,13 +388,15 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     val h = size.height - 2 * pad
                     fun toX(lon: Double) = pad + ((lon - minLon) / lonRange * w).toFloat()
                     fun toY(lat: Double) = pad + ((maxLat - lat) / latRange * h).toFloat()
-                    val path = Path().apply {
-                        moveTo(toX(points[0].second), toY(points[0].first))
-                        for (p in points.drop(1)) {
-                            lineTo(toX(p.second), toY(p.first))
-                        }
+                    // Performance-Audit Loop 2 (2026-05-10): Path-Allokation pro
+                    // Frame eliminiert. Path-Pfad wird durch Reset+moveTo+lineTo
+                    // wiederverwendet — gleiches Pixel-Output ohne GC-Druck.
+                    gpsPath.reset()
+                    gpsPath.moveTo(toX(points[0].second), toY(points[0].first))
+                    for (p in points.drop(1)) {
+                        gpsPath.lineTo(toX(p.second), toY(p.first))
                     }
-                    drawPath(path, accent, style = Stroke(width = 4f))
+                    drawPath(gpsPath, accent, style = Stroke(width = 4f))
                     // Start-Punkt grün, End-Punkt rot
                     drawCircle(
                         color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
@@ -492,6 +497,9 @@ private fun ChartWithAxes(
     val gridColor = cosmos.glassBorder.copy(alpha = 0.5f)
     val labelArgb = cosmos.textPrimary.toArgb()
     if (values.size < 2 || yMax <= yMin) return
+    // Performance-Audit Loop 2 (2026-05-10): Pfad einmalig allokieren statt
+    // pro Frame.
+    val seriesPath = remember { Path() }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -552,11 +560,11 @@ private fun ChartWithAxes(
                     )
                 }
             }
-            // Datenlinie
-            val path = Path().apply {
-                moveTo(toX(0), toY(values[0]))
-                for (i in 1 until values.size) lineTo(toX(i), toY(values[i]))
-            }
+            // Datenlinie — wiederverwendeter Pfad (Loop 2 Perf-Fix)
+            seriesPath.reset()
+            seriesPath.moveTo(toX(0), toY(values[0]))
+            for (i in 1 until values.size) seriesPath.lineTo(toX(i), toY(values[i]))
+            val path = seriesPath
             drawPath(path, accent, style = Stroke(width = 3f))
             // Start- und Endpunkt-Marker
             drawCircle(

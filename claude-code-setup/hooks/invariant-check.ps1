@@ -77,15 +77,13 @@ if ($content -match 'Stand:\s*(\d{4}-\d{2}-\d{2})') {
     } catch {}
 }
 
-# --- Invariant 5: CLAUDE.md Sync ---
-$claudeRepo = Join-Path $env:USERPROFILE "proggs\CLAUDE.md"
+# --- Invariant 5: CLAUDE.md im Home darf NICHT existieren (Geloescht 2026-04-04) ---
+# Frueher wurde Sync zwischen ~/proggs/CLAUDE.md und ~/CLAUDE.md geprueft.
+# Seit 2026-04-04 gibt es keine ~/CLAUDE.md mehr (Duplikat entfernt fuer Token-Ersparnis).
+# Wenn ~/CLAUDE.md wieder auftaucht: Warnung — wahrscheinlich versehentlich erstellt.
 $claudeHome = Join-Path $env:USERPROFILE "CLAUDE.md"
-if ((Test-Path $claudeRepo) -and (Test-Path $claudeHome)) {
-    $hashRepo = (Get-FileHash $claudeRepo -Algorithm SHA256).Hash
-    $hashHome = (Get-FileHash $claudeHome -Algorithm SHA256).Hash
-    if ($hashRepo -ne $hashHome) {
-        $violations += "CLAUDE.MD: Repo-Version und Home-Version sind NICHT synchron!"
-    }
+if (Test-Path $claudeHome) {
+    $violations += "CLAUDE.MD: ~/CLAUDE.md existiert wieder — sollte nicht da sein (geloescht 2026-04-04). Bitte loeschen."
 }
 
 # --- Invariant 6: Heartbeat-Status ---
@@ -121,6 +119,42 @@ if (Test-Path $settingsMain) {
             $violations += "HOOKS-SCHEMA: $fixCount Hook(s) mit type:prompt+command statt type:command gefunden und AUTO-REPARIERT!"
         }
     } catch {}
+}
+
+# --- Invariant 8: Whiteboard-Versions-Drift (P2, 2026-05-10) ---
+# Prueft ob "Stand: YYYY-MM-DD" in MEMORY.md aelter als 7 Tage UND ob die dort vermerkte
+# Claude-Code-Version mit der lokalen Version uebereinstimmt. Verhindert dass Whiteboard
+# 24 Versionen drifftet (wie heute entdeckt: v2.1.114 im Whiteboard, v2.1.138 lokal).
+if ($content) {
+    # Suche nach Versions-Angabe im Systemzustand-Block
+    if ($content -match 'Claude Code\s*\*?\*?\s*v(\d+\.\d+\.\d+)') {
+        $whiteboardVersion = $Matches[1]
+        try {
+            $localVersionRaw = (claude --version 2>$null) -join " "
+            if ($localVersionRaw -match '(\d+\.\d+\.\d+)') {
+                $localVersion = $Matches[1]
+                if ($whiteboardVersion -ne $localVersion) {
+                    $violations += "WHITEBOARD-VERSIONS-DRIFT: Stand sagt v$whiteboardVersion, lokal lauft v$localVersion — Systemzustand aktualisieren!"
+                }
+            }
+        } catch {
+            # claude --version nicht verfuegbar — silent skip
+        }
+    }
+}
+
+# --- Invariant 9: Merge-Konflikt-Marker in MEMORY.md (P1, 2026-05-10) ---
+# Heute entdeckt: Merge-Konflikt-Marker ("<<<<<<< Updated upstream") koennen 17+ Tage
+# ungeloest in MEMORY.md liegen und das ganze System verfaelschen. Beim SessionStart
+# sofort lautstark warnen — nicht nur per auto-sync.ps1 silent rebase-Versuch.
+if ($content) {
+    $conflictPatterns = @('<<<<<<< Updated upstream', '<<<<<<< HEAD', '>>>>>>> Stashed changes', '\|\|\|\|\|\|\| Stash base')
+    foreach ($pattern in $conflictPatterns) {
+        if ($content -match [regex]::Escape($pattern)) {
+            $violations += "WHITEBOARD-KONFLIKT: MEMORY.md enthaelt Merge-Konflikt-Marker '$pattern' — SOFORT manuell aufloesen!"
+            break  # Eine Meldung reicht — Marker kommen meist im Buendel
+        }
+    }
 }
 
 # --- Output ---
