@@ -60,6 +60,7 @@ object HealthConnectMetricKey {
     const val LEAN_BODY_MASS = "hc_lean_body_mass"
     const val BODY_WATER = "hc_body_water"
     const val BONE_MASS = "hc_bone_mass"
+    const val MUSCLE_MASS = "hc_muscle_mass"
 }
 
 private data class HcMetricSpec(
@@ -100,6 +101,12 @@ private fun specFor(metricKey: String): HcMetricSpec = when (metricKey) {
         accent = CosmosColors.AccentPrimary,
         lowerIsBetter = false,
     )
+    HealthConnectMetricKey.MUSCLE_MASS -> HcMetricSpec(
+        title = "Muskelmasse",
+        unit = "kg",
+        accent = CosmosColors.Success,
+        lowerIsBetter = false,
+    )
     else -> HcMetricSpec("Health Connect", "", CosmosColors.AccentPrimary, false)
 }
 
@@ -123,6 +130,16 @@ fun HealthConnectDetailScreen(
         HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
         HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
         HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
+        HealthConnectMetricKey.MUSCLE_MASS -> {
+            // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
+            // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
+            val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
+            weight.leanBodyMassHistory30d.map { (ts, lean) ->
+                val bone = boneByMs[ts]
+                    ?: weight.boneMassHistory30d.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
+                ts to (if (bone != null) lean - bone else lean)
+            }
+        }
         else -> emptyList()
     }
     val latest: Double? = when (metricKey) {
@@ -131,6 +148,11 @@ fun HealthConnectDetailScreen(
         HealthConnectMetricKey.LEAN_BODY_MASS -> weight.latestLeanBodyMassKg
         HealthConnectMetricKey.BODY_WATER -> weight.latestBodyWaterMassKg
         HealthConnectMetricKey.BONE_MASS -> weight.latestBoneMassKg
+        HealthConnectMetricKey.MUSCLE_MASS -> {
+            val lean = weight.latestLeanBodyMassKg
+            val bone = weight.latestBoneMassKg
+            if (lean == null) null else if (bone != null) lean - bone else lean
+        }
         else -> null
     }
     val avg30: Double? = when (metricKey) {
@@ -139,6 +161,11 @@ fun HealthConnectDetailScreen(
         HealthConnectMetricKey.LEAN_BODY_MASS -> weight.avg30dLeanBodyMassKg
         HealthConnectMetricKey.BODY_WATER -> weight.avg30dBodyWaterMassKg
         HealthConnectMetricKey.BONE_MASS -> weight.avg30dBoneMassKg
+        HealthConnectMetricKey.MUSCLE_MASS -> {
+            val avgLean = weight.avg30dLeanBodyMassKg
+            val avgBone = weight.avg30dBoneMassKg
+            if (avgLean == null) null else if (avgBone != null) avgLean - avgBone else avgLean
+        }
         else -> null
     }
 

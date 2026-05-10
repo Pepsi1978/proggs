@@ -103,6 +103,10 @@ fun BiomarkerHostScreen(
                     .getReadPermission(androidx.health.connect.client.records.BodyWaterMassRecord::class),
                 androidx.health.connect.client.permission.HealthPermission
                     .getReadPermission(androidx.health.connect.client.records.BoneMassRecord::class),
+                androidx.health.connect.client.permission.HealthPermission
+                    .getReadPermission(androidx.health.connect.client.records.HeightRecord::class),
+                androidx.health.connect.client.permission.HealthPermission
+                    .getReadPermission(androidx.health.connect.client.records.BasalMetabolicRateRecord::class),
                 // Frank-Befund 2026-05-10: ohne History-Permission begrenzt sich
                 // die Lese-Reichweite auf 30 Tage — Frank's letzte Wiegung war
                 // aber im Januar, also ueber 100 Tage her. Konstanten-Name in
@@ -708,13 +712,35 @@ private fun MetricMiniCard(
     footnote: String,
     onClick: (() -> Unit)? = null,
     valueColor: androidx.compose.ui.graphics.Color? = null,
+    /**
+     * Optionaler Suffix der NEBEN dem Label steht (z.B. Datum des letzten Werts).
+     * Frank-Wunsch 2026-05-10: "Gewicht  14.01." statt Datum unten in Footnote.
+     * Wird subtil in textSecondary-Farbe und kleiner Schrift gerendert.
+     */
+    labelSuffix: String? = null,
 ) {
     val cosmos = LocalCosmos.current
     val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
     val cardModifier = if (onClick != null) modifier.clickable { onClick() } else modifier
     GlassCard(modifier = cardModifier) {
         Column {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
+            if (labelSuffix.isNullOrBlank()) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = cosmos.textSecondary,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = labelSuffix,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary.copy(alpha = 0.7f),
+                    )
+                }
+            }
             Spacer(Modifier.height(2.dp))
             Text(
                 value,
@@ -1316,6 +1342,11 @@ private fun BiomarkerCardForId(
                 onRequestPermission = onRequestWeightPermission,
                 onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BONE_MASS) },
             )
+            BiomarkerCardId.MINI_MUSCLE_MASS -> MiniMuscleMassCard(
+                weight = weightState,
+                onRequestPermission = onRequestWeightPermission,
+                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.MUSCLE_MASS) },
+            )
 
             // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
@@ -1803,6 +1834,57 @@ private fun MiniBoneMassCard(
 }
 
 /**
+ * Muskelmasse-Karte (Frank-Wunsch 2026-05-10): Health Connect hat keinen direkten
+ * Muscle-Mass-Datentyp. Wir naehern an: Muskelmasse ≈ Magermasse - Knochenmasse.
+ * (Magermasse = Muskeln + Wasser + Knochen + Organe → minus Knochen = Muskel + Wasser + Organe.)
+ * Wenn Knochenmasse fehlt, fallback auf reine Magermasse.
+ *
+ * History-Berechnung erfolgt punktweise zwischen den Werten gleicher Zeitstempel.
+ */
+@Composable
+private fun MiniMuscleMassCard(
+    weight: WeightState,
+    onRequestPermission: () -> Unit,
+    onClick: () -> Unit,
+) {
+    val latest = computeMuscleMass(weight.latestLeanBodyMassKg, weight.latestBoneMassKg)
+    val avg = computeMuscleMass(weight.avg30dLeanBodyMassKg, weight.avg30dBoneMassKg)
+    val history = computeMuscleMassHistory(weight.leanBodyMassHistory30d, weight.boneMassHistory30d)
+    HealthConnectMiniCard(
+        weight = weight,
+        label = "Muskel",
+        latest = latest,
+        avg = avg,
+        history = history,
+        unit = "kg",
+        valueFormatter = { "${"%.1f".format(it)} kg" },
+        deltaPositive = (latest ?: 0.0) > (avg ?: 0.0),
+        onRequestPermission = onRequestPermission,
+        onClick = onClick,
+    )
+}
+
+private fun computeMuscleMass(leanKg: Double?, boneKg: Double?): Double? {
+    if (leanKg == null) return null
+    return if (boneKg != null) leanKg - boneKg else leanKg
+}
+
+private fun computeMuscleMassHistory(
+    leanHistory: List<Pair<Long, Double>>,
+    boneHistory: List<Pair<Long, Double>>,
+): List<Pair<Long, Double>> {
+    if (leanHistory.isEmpty()) return emptyList()
+    // Zu jedem LeanBodyMass-Zeitstempel den naechsten Bone-Wert finden (gleicher
+    // Tag oder fallback). Wenn kein Bone-Wert da ist, nutzen wir lean direkt.
+    val boneByMs = boneHistory.associate { it.first to it.second }
+    return leanHistory.map { (ts, lean) ->
+        val bone = boneByMs[ts]
+            ?: boneHistory.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
+        ts to (if (bone != null) lean - bone else lean)
+    }
+}
+
+/**
  * Gemeinsame Implementierung der Health-Connect-Mini-Karten (Gewicht, Koerperfett,
  * Magermasse, Wasser, Knochen). Frank-Wunsch 2026-05-10 (zweite Iteration):
  *  - Tap im "Wert vorhanden"-Zustand oeffnet Detail-Screen mit History (analog
@@ -1875,19 +1957,20 @@ private fun HealthConnectMiniCard(
             } else {
                 ""
             }
-            // Frank-Wunsch 2026-05-10: Datum des letzten Werts in der Footnote
-            // damit Frank auf einen Blick sieht wie alt der Wert ist.
+            // Frank-Wunsch 2026-05-10 (zweite Iteration): Datum NEBEN dem Label,
+            // nicht in der Footnote. So sieht Frank auf einen Blick wie alt der
+            // Wert ist ohne nach unten gucken zu muessen.
             val lastTs = history.maxByOrNull { it.first }?.first
-            val datePart = lastTs?.let { "vom ${formatMiniDate(it)}" }
-            val footnote = listOfNotNull(datePart, "vs. 30-Tage").joinToString(" · ")
+            val labelSuffix = lastTs?.let { formatMiniDate(it) }
             MetricMiniCard(
                 modifier = Modifier.fillMaxWidth(),
                 label = label,
                 value = valueFormatter(latest),
                 delta = deltaText,
                 deltaPositive = deltaPositive,
-                footnote = footnote,
+                footnote = "vs. 30-Tage-Mittel",
                 onClick = onClick,
+                labelSuffix = labelSuffix,
             )
         }
     }

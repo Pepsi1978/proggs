@@ -5,9 +5,11 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
+import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -53,6 +55,14 @@ class HealthConnectManager @Inject constructor(
     private val boneMassPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(BoneMassRecord::class),
     )
+    // Frank-Wunsch 2026-05-10 (zweite Iteration): zusaetzliche Permissions damit
+    // zukuenftige Erweiterungen ohne erneuten Permission-Dialog auskommen.
+    private val heightPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(HeightRecord::class),
+    )
+    private val basalMetabolicRatePermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
+    )
 
     /**
      * Frank-Befund 2026-05-10: Ohne PERMISSION_READ_HEALTH_DATA_HISTORY ist die
@@ -77,7 +87,8 @@ class HealthConnectManager @Inject constructor(
      */
     private val allReadPermissions: Set<String> =
         weightPermissions + bodyFatPermissions + leanBodyMassPermissions +
-            bodyWaterMassPermissions + boneMassPermissions + historyPermission
+            bodyWaterMassPermissions + boneMassPermissions +
+            heightPermissions + basalMetabolicRatePermissions + historyPermission
 
     /** Health Connect ist auf dem Geraet verfuegbar (App installiert oder Modul aktiv). */
     fun isAvailable(): Boolean {

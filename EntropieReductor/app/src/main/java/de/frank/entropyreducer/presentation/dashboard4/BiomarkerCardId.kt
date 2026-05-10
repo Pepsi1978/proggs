@@ -39,6 +39,9 @@ object BiomarkerCardId {
     // Muscle-Mass-Datentyp, aber Wasser und Knochen sind verfuegbar).
     const val MINI_BODY_WATER = "mini_body_water"
     const val MINI_BONE_MASS = "mini_bone_mass"
+    // Muskelmasse: berechnet als LeanBodyMass - BoneMass (Annaeherung). Wenn
+    // BoneMass null ist, fallback auf LeanBodyMass.
+    const val MINI_MUSCLE_MASS = "mini_muscle_mass"
 
     // Herzfrequenz-Block
     const val HRV = "hrv"
@@ -104,6 +107,7 @@ object BiomarkerCardId {
         MINI_LEAN_BODY_MASS,
         MINI_BODY_WATER,
         MINI_BONE_MASS,
+        MINI_MUSCLE_MASS,
     )
 
     val DEFAULT_ORDER: List<String> = listOf(
@@ -115,6 +119,7 @@ object BiomarkerCardId {
         MINI_WEIGHT,
         MINI_BODY_FAT,
         MINI_LEAN_BODY_MASS,
+        MINI_MUSCLE_MASS,
         MINI_BODY_WATER,
         MINI_BONE_MASS,
         HRV,
