@@ -55,6 +55,10 @@ import java.time.format.DateTimeFormatter
  * und besonders die eingesprochene Loesungsmethode aus aiNotes — denn das ist
  * der Kern: wie wurde die Entropie gesenkt?
  */
+// Performance-Audit Loop 9 (2026-05-10): Top-level Formatter, thread-safe.
+private val ARCHIVE_DATE_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
+
 @Composable
 fun ArchiveScreen(
     onBack: () -> Unit,
@@ -196,10 +200,10 @@ private fun ArchiveEntryCard(
 ) {
     val cosmos = LocalCosmos.current
     val catColor = entry.category.color()
+    // Performance-Audit Loop 9 (2026-05-10): Top-level Formatter statt
+    // Allokation pro Item beim Scrollen durch das Archiv.
     val resolvedDate = (entry.resolvedAt ?: entry.updatedAt).let {
-        DateTimeFormatter.ofPattern("dd.MM.yyyy")
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.ofEpochMilli(it))
+        ARCHIVE_DATE_FMT.format(Instant.ofEpochMilli(it))
     }
     // Methode aus aiNotes extrahieren — Format ist "Methode: <text>" oder
     // mehrzeilig mit "Methode:" als Marker. Wenn nichts gefunden, zeige aiNotes

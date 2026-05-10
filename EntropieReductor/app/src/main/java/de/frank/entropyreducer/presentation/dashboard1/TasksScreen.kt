@@ -1217,7 +1217,7 @@ private fun BucketPickerSheet(
             )
             Spacer(Modifier.height(4.dp))
             // Vier Bucket-Optionen
-            TimeBucket.values().forEach { bucket ->
+            ALL_TIME_BUCKETS.forEach { bucket ->
                 val isActive = entry.manualBucket == bucket ||
                     (entry.manualBucket == null && entry.timeBucket == bucket)
                 BucketOptionRow(

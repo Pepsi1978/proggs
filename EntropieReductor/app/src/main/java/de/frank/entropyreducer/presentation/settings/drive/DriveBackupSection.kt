@@ -239,8 +239,12 @@ private fun StatusBanner(message: String, onDismiss: () -> Unit) {
     }
 }
 
+// Performance-Audit Loop 9 (2026-05-10): ThreadLocal SimpleDateFormat.
+private val DRIVE_BACKUP_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+    SimpleDateFormat("dd.MM. HH:mm", Locale.GERMAN)
+}
+
 private fun formatTimestamp(ms: Long): String {
     if (ms == 0L) return "—"
-    val format = SimpleDateFormat("dd.MM. HH:mm", Locale.GERMAN)
-    return format.format(Date(ms))
+    return DRIVE_BACKUP_FMT.get()!!.format(Date(ms))
 }

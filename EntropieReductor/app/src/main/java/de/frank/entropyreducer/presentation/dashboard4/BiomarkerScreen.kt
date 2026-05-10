@@ -2010,7 +2010,11 @@ private fun HealthConnectMiniCard(
     }
 }
 
-private fun formatMiniDate(ms: Long): String {
-    val fmt = java.text.SimpleDateFormat("dd.MM.", java.util.Locale.GERMAN)
-    return fmt.format(java.util.Date(ms))
+// Performance-Audit Loop 9 (2026-05-10): ThreadLocal SimpleDateFormat statt
+// Allokation pro Aufruf in jedem Mini-Card-Format.
+private val MINI_DATE_FMT: ThreadLocal<java.text.SimpleDateFormat> = ThreadLocal.withInitial {
+    java.text.SimpleDateFormat("dd.MM.", java.util.Locale.GERMAN)
 }
+
+private fun formatMiniDate(ms: Long): String =
+    MINI_DATE_FMT.get()!!.format(java.util.Date(ms))
