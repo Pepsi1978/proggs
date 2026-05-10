@@ -80,8 +80,10 @@ fun BiomarkerHostScreen(
     val themeVm: ThemeViewModel = hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsState()
 
-    // Health-Connect-Gewicht (Frank-Wunsch 2026-05-10): separater State + Launcher
-    // fuer den Permission-Dialog. Nach erfolgreichem Grant lesen wir die Werte neu.
+    // Health-Connect-Daten (Frank-Wunsch 2026-05-10): separater State + Launcher
+    // fuer den Permission-Dialog. Permission gilt fuer Weight + BodyFat +
+    // LeanBodyMass — alle drei werden in einem Klick angefordert. Nach
+    // erfolgreichem Grant lesen wir alle Werte neu.
     val weightState by vm.weight.collectAsState()
     val weightPermissionLauncher = rememberLauncherForActivityResult(
         contract = androidx.health.connect.client.PermissionController
@@ -92,9 +94,18 @@ fun BiomarkerHostScreen(
             setOf(
                 androidx.health.connect.client.permission.HealthPermission
                     .getReadPermission(androidx.health.connect.client.records.WeightRecord::class),
+                androidx.health.connect.client.permission.HealthPermission
+                    .getReadPermission(androidx.health.connect.client.records.BodyFatRecord::class),
+                androidx.health.connect.client.permission.HealthPermission
+                    .getReadPermission(androidx.health.connect.client.records.LeanBodyMassRecord::class),
             ),
         )
     }
+    // Frank-Wunsch 2026-05-10: Tap auf eine Health-Connect-Mini-Karte triggert
+    // einen Refresh des letzten Werts. Wenn Permission fehlt, soll stattdessen
+    // der Permission-Dialog kommen — die Karten-Logik unten entscheidet je nach
+    // weightState welcher der beiden Handler greift.
+    val onRefreshHealthConnect: () -> Unit = { vm.refreshWeight() }
 
     CosmosScaffold(
         title = "Biomarker",
@@ -143,7 +154,13 @@ fun BiomarkerHostScreen(
         // Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten.
         // Lokale Liste fuer sofortiges UI-Feedback waehrend des Ziehens. Wird bei jedem
         // Reorder upgedatet und gleichzeitig in den DataStore persistiert.
-        var localOrder by remember(cardOrder) { mutableStateOf(cardOrder) }
+        // Frank-Vorgabe 2026-05-10: ausgeblendete Karten (HIDDEN_CARD_IDS) werden
+        // hier ausgefiltert — sie tauchen nicht mehr im LazyGrid auf, auch wenn
+        // sie noch in der persistierten Reihenfolge stehen. Damit verschwinden
+        // OURA_ACTIVITY und OURA_SLEEP_DETAIL automatisch ueberall.
+        var localOrder by remember(cardOrder) {
+            mutableStateOf(cardOrder.filterNot { it in BiomarkerCardId.HIDDEN_CARD_IDS })
+        }
 
         // 2-Spalten-Grid: Mini-Karten (HRV, Ruhepuls, Schlaf, Performance) belegen
         // je 1 Spalte, alle anderen die volle Breite. Frank-Wunsch 2026-05-10:
@@ -243,6 +260,7 @@ fun BiomarkerHostScreen(
                             onOpenOuraDetail = onOpenOuraDetail,
                             weightState = weightState,
                             onRequestWeightPermission = onRequestWeightPermission,
+                            onRefreshHealthConnect = onRefreshHealthConnect,
                         )
                     }
                 }
@@ -1251,12 +1269,27 @@ private fun BiomarkerCardForId(
     onOpenOuraDetail: (String) -> Unit = {},
     weightState: WeightState = WeightState(),
     onRequestWeightPermission: () -> Unit = {},
+    onRefreshHealthConnect: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     Column(modifier = Modifier.fillMaxWidth()) {
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
-            BiomarkerCardId.MINI_WEIGHT -> MiniWeightCard(weightState, onRequestWeightPermission)
+            BiomarkerCardId.MINI_WEIGHT -> MiniWeightCard(
+                weight = weightState,
+                onRequestPermission = onRequestWeightPermission,
+                onRefresh = onRefreshHealthConnect,
+            )
+            BiomarkerCardId.MINI_BODY_FAT -> MiniBodyFatCard(
+                weight = weightState,
+                onRequestPermission = onRequestWeightPermission,
+                onRefresh = onRefreshHealthConnect,
+            )
+            BiomarkerCardId.MINI_LEAN_BODY_MASS -> MiniLeanBodyMassCard(
+                weight = weightState,
+                onRequestPermission = onRequestWeightPermission,
+                onRefresh = onRefreshHealthConnect,
+            )
 
             // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
@@ -1642,12 +1675,92 @@ private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (Str
  * sehen — daher deltaPositive = (latestKg < avg30dKg).
  */
 @Composable
-private fun MiniWeightCard(weight: WeightState, onRequestPermission: () -> Unit) {
+private fun MiniWeightCard(
+    weight: WeightState,
+    onRequestPermission: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    HealthConnectMiniCard(
+        weight = weight,
+        label = "Gewicht",
+        latest = weight.latestKg,
+        avg = weight.avg30dKg,
+        unit = "kg",
+        valueFormatter = { "${"%.1f".format(it)} kg" },
+        // Bei Gewicht: niedriger als Schnitt = positiv (Diaet-Phase). Frank-Vorgabe.
+        deltaPositive = (weight.latestKg ?: 0.0) < (weight.avg30dKg ?: 0.0),
+        onRequestPermission = onRequestPermission,
+        onRefresh = onRefresh,
+    )
+}
+
+@Composable
+private fun MiniBodyFatCard(
+    weight: WeightState,
+    onRequestPermission: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    HealthConnectMiniCard(
+        weight = weight,
+        label = "Körperfett",
+        latest = weight.latestBodyFatPercent,
+        avg = weight.avg30dBodyFatPercent,
+        unit = "%",
+        valueFormatter = { "${"%.1f".format(it)} %" },
+        // Bei Koerperfett ist niedriger besser — gleiche Logik wie Gewicht.
+        deltaPositive = (weight.latestBodyFatPercent ?: 0.0) < (weight.avg30dBodyFatPercent ?: 0.0),
+        onRequestPermission = onRequestPermission,
+        onRefresh = onRefresh,
+    )
+}
+
+@Composable
+private fun MiniLeanBodyMassCard(
+    weight: WeightState,
+    onRequestPermission: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    HealthConnectMiniCard(
+        weight = weight,
+        label = "Magermasse",
+        latest = weight.latestLeanBodyMassKg,
+        avg = weight.avg30dLeanBodyMassKg,
+        unit = "kg",
+        valueFormatter = { "${"%.1f".format(it)} kg" },
+        // Bei Magermasse: HOEHER als Schnitt = positiv (Muskelaufbau).
+        deltaPositive = (weight.latestLeanBodyMassKg ?: 0.0) > (weight.avg30dLeanBodyMassKg ?: 0.0),
+        onRequestPermission = onRequestPermission,
+        onRefresh = onRefresh,
+    )
+}
+
+/**
+ * Gemeinsame Implementierung der drei Health-Connect-Mini-Karten (Gewicht,
+ * Koerperfett, Magermasse). Frank-Wunsch 2026-05-10:
+ *  - Bei nicht verfuegbarem Health Connect: "—" + Hinweis-Footnote
+ *  - Bei fehlender Permission: "Tippen" + Tap startet Permission-Dialog
+ *  - Bei vorhandener Permission + isLoading: Spinner / "lade …"
+ *  - Bei vorhandener Permission + Wert: Wert + Delta zum 30-Tage-Mittel,
+ *    Tap triggert sofortigen Refresh (onRefresh)
+ *  - Bei vorhandener Permission ohne Wert: "—" + Tap = Refresh (vielleicht hilft's)
+ */
+@Composable
+private fun HealthConnectMiniCard(
+    weight: WeightState,
+    label: String,
+    latest: Double?,
+    avg: Double?,
+    unit: String,
+    valueFormatter: (Double) -> String,
+    deltaPositive: Boolean,
+    onRequestPermission: () -> Unit,
+    onRefresh: () -> Unit,
+) {
     when {
         !weight.healthConnectAvailable -> {
             MetricMiniCard(
                 modifier = Modifier.fillMaxWidth(),
-                label = "Gewicht",
+                label = label,
                 value = "—",
                 delta = "",
                 deltaPositive = false,
@@ -1657,7 +1770,7 @@ private fun MiniWeightCard(weight: WeightState, onRequestPermission: () -> Unit)
         !weight.permissionGranted -> {
             MetricMiniCard(
                 modifier = Modifier.fillMaxWidth(),
-                label = "Gewicht",
+                label = label,
                 value = "Tippen",
                 delta = "",
                 deltaPositive = false,
@@ -1665,23 +1778,44 @@ private fun MiniWeightCard(weight: WeightState, onRequestPermission: () -> Unit)
                 onClick = onRequestPermission,
             )
         }
+        weight.isLoading -> {
+            MetricMiniCard(
+                modifier = Modifier.fillMaxWidth(),
+                label = label,
+                value = "…",
+                delta = "",
+                deltaPositive = false,
+                footnote = "lade aus Health Connect …",
+            )
+        }
+        latest == null -> {
+            // Permission da aber keine Daten — Tap als Refresh-Versuch.
+            MetricMiniCard(
+                modifier = Modifier.fillMaxWidth(),
+                label = label,
+                value = "—",
+                delta = "",
+                deltaPositive = false,
+                footnote = "Noch keine Daten — tippen zum Aktualisieren",
+                onClick = onRefresh,
+            )
+        }
         else -> {
-            val latest = weight.latestKg
-            val avg = weight.avg30dKg
-            val deltaText = if (latest != null && avg != null) {
+            val deltaText = if (avg != null) {
                 val diff = latest - avg
                 val sign = if (diff >= 0) "+" else "−"
-                "$sign${"%.1f".format(kotlin.math.abs(diff))} kg"
+                "$sign${"%.1f".format(kotlin.math.abs(diff))} $unit"
             } else {
                 ""
             }
             MetricMiniCard(
                 modifier = Modifier.fillMaxWidth(),
-                label = "Gewicht",
-                value = latest?.let { "${"%.1f".format(it)} kg" } ?: "—",
+                label = label,
+                value = valueFormatter(latest),
                 delta = deltaText,
-                deltaPositive = (latest ?: 0.0) < (avg ?: 0.0),
-                footnote = "vs. 30-Tage-Mittel",
+                deltaPositive = deltaPositive,
+                footnote = "vs. 30-Tage-Mittel · tippen zum Aktualisieren",
+                onClick = onRefresh,
             )
         }
     }

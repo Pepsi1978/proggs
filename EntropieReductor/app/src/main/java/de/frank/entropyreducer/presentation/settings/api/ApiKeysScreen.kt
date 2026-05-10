@@ -102,8 +102,10 @@ fun ApiKeysScreen(
             }
             // Frank-Wunsch 2026-05-10: Google-Drive-Backup gehoert thematisch zu allen
             // Login/API-relevanten Bereichen — nicht unter Datenexport. Daher ganz oben
-            // direkt nach dem Intro-Text.
+            // direkt nach dem Intro-Text. Google Calendar gleich darunter (zweiter
+            // Frank-Wunsch 2026-05-10) — beide Google-Logins beieinander.
             item { DriveBackupSection() }
+            item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 ApiKeyCard(
                     title = "Groq API Key",
@@ -151,7 +153,6 @@ fun ApiKeysScreen(
             item { WhoopOAuthCard(oauthVm, oauthState) }
             item { AmazfitLoginCard(zeppVm, zeppState) }
             item { OuraApiCard(ouraVm, ouraState) }
-            item { GoogleCalendarOAuthCard(oauthVm, oauthState) }
             item {
                 Text(
                     text = "Deine API-Schlüssel werden mit AES-256-GCM auf deinem Gerät verschluesselt.",

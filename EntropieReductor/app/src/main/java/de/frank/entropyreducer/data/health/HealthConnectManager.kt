@@ -1,9 +1,12 @@
 package de.frank.entropyreducer.data.health
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -13,25 +16,43 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Health-Connect-Bruecke fuer Gewichts-Daten (Frank-Wunsch 2026-05-10).
+ * Health-Connect-Bruecke fuer Body-Daten aus Zepp (Frank-Wunsch 2026-05-10).
  *
- * Die Zepp-App synct seit Januar 2025 ihre Gewichtsdaten ueber Health Connect
- * weiter an andere Apps. Wenn Frank in der Zepp-App den Health-Connect-Sync
- * eingeschaltet hat, koennen wir hier nur-lesend auf den Wert zugreifen — ohne
- * eigenen Cloud-Auth, ohne Reverse-Engineering von Endpoints.
+ * Die Zepp-App synct seit Januar 2025 Gewicht/Koerperfett/Magermasse ueber
+ * Health Connect weiter an andere Apps. Wenn Frank in der Zepp-App den
+ * Health-Connect-Sync eingeschaltet hat, koennen wir hier nur-lesend auf die
+ * Werte zugreifen — ohne eigenen Cloud-Auth, ohne Reverse-Engineering von
+ * Endpoints.
  *
  * Was diese Klasse NICHT macht:
- *  - Schreibt nichts nach Health Connect (nur READ_WEIGHT-Permission noetig)
+ *  - Schreibt nichts nach Health Connect (nur READ-Permissions noetig)
  *  - Speichert nichts in der App-DB (das macht der Aufrufer wenn gewollt)
  *  - Triggert keinen Sync auf der Zepp-Seite (das macht die Zepp-App selbst)
+ *
+ * Frank-Iteration 2026-05-10: BodyFat + LeanBodyMass dazu, weil die Smart-Scale
+ * der T-Rex 3 / der Zepp-Gewichtsmessgeraete diese Werte ebenfalls liefert.
  */
 @Singleton
 class HealthConnectManager @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    private val readPermissions: Set<String> = setOf(
+    private val weightPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(WeightRecord::class),
     )
+    private val bodyFatPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(BodyFatRecord::class),
+    )
+    private val leanBodyMassPermissions: Set<String> = setOf(
+        HealthPermission.getReadPermission(LeanBodyMassRecord::class),
+    )
+
+    /**
+     * Komplette Set aller noetigen READ-Permissions — wird beim einmaligen
+     * Permission-Request an den ActivityResultContract uebergeben, damit Frank
+     * mit einem Klick alle drei Berechtigungen erteilen kann.
+     */
+    private val allReadPermissions: Set<String> =
+        weightPermissions + bodyFatPermissions + leanBodyMassPermissions
 
     /** Health Connect ist auf dem Geraet verfuegbar (App installiert oder Modul aktiv). */
     fun isAvailable(): Boolean {
@@ -46,27 +67,53 @@ class HealthConnectManager @Inject constructor(
     suspend fun hasWeightReadPermission(): Boolean {
         val c = client() ?: return false
         val granted = c.permissionController.getGrantedPermissions()
-        return granted.containsAll(readPermissions)
+        return granted.containsAll(weightPermissions)
+    }
+
+    /** Pruefen ob die READ_BODY_FAT-Permission schon erteilt ist. */
+    suspend fun hasBodyFatReadPermission(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(bodyFatPermissions)
+    }
+
+    /** Pruefen ob die READ_LEAN_BODY_MASS-Permission schon erteilt ist. */
+    suspend fun hasLeanBodyMassReadPermission(): Boolean {
+        val c = client() ?: return false
+        val granted = c.permissionController.getGrantedPermissions()
+        return granted.containsAll(leanBodyMassPermissions)
     }
 
     /**
-     * Liefert den ActivityResultContract zum Anfordern der Permission. Aufrufer
+     * Liefert den ActivityResultContract zum Anfordern der Permissions. Aufrufer
      * (z.B. Activity oder Composable mit rememberLauncherForActivityResult)
-     * uebergibt das Set [readPermissions] und bekommt zurueck welche
+     * uebergibt das Set [allReadPermissions] und bekommt zurueck welche
      * Permissions tatsaechlich erteilt wurden.
      */
     fun requestPermissionsContract() = PermissionController.createRequestPermissionResultContract()
 
-    fun requiredReadPermissions(): Set<String> = readPermissions
+    /**
+     * ALLE Permissions die wir lesen koennen (Weight + BodyFat + LeanBodyMass).
+     * Wird beim einmaligen Permission-Request uebergeben damit Frank mit einem
+     * Klick alle drei Berechtigungen erteilen kann.
+     */
+    fun requiredReadPermissions(): Set<String> = allReadPermissions
+
+    // ---------- Gewicht ----------
 
     /**
-     * Letzter Gewichts-Wert in kg (oder null wenn noch nichts vorhanden bzw.
-     * Permission fehlt). Liest die letzten 365 Tage und nimmt den juengsten
-     * Eintrag.
+     * Letzter Gewichts-Wert in kg. null wenn:
+     *  - Health Connect nicht verfuegbar
+     *  - READ_WEIGHT-Permission nicht erteilt
+     *  - Keine Records in den letzten 365 Tagen
+     *  - Lese-Fehler (z.B. wenn Health Connect kurz nicht erreichbar war)
+     *
+     * Bei Lese-Fehlern wird gelogged statt zu werfen — die UI kriegt einfach
+     * null zurueck und zeigt den Strich.
      */
-    suspend fun readLatestWeightKg(): Double? {
-        val c = client() ?: return null
-        if (!hasWeightReadPermission()) return null
+    suspend fun readLatestWeightKg(): Double? = runCatching {
+        val c = client() ?: return@runCatching null
+        if (!hasWeightReadPermission()) return@runCatching null
         val end = Instant.now()
         val start = end.minusSeconds(365L * 24 * 60 * 60)
         val response = c.readRecords(
@@ -77,16 +124,17 @@ class HealthConnectManager @Inject constructor(
                 pageSize = 1,
             ),
         )
-        return response.records.firstOrNull()?.weight?.inKilograms
-    }
+        Log.d(TAG, "Weight read: ${response.records.size} records, latest=${response.records.firstOrNull()?.weight?.inKilograms}")
+        response.records.firstOrNull()?.weight?.inKilograms
+    }.onFailure { Log.w(TAG, "readLatestWeightKg failed", it) }.getOrNull()
 
     /**
      * Gewichts-Verlauf der letzten N Tage als (timestampMs, kg)-Paare,
      * aufsteigend sortiert. Leer wenn Permission fehlt oder keine Daten.
      */
-    suspend fun readWeightHistory(days: Int = 30): List<Pair<Long, Double>> {
-        val c = client() ?: return emptyList()
-        if (!hasWeightReadPermission()) return emptyList()
+    suspend fun readWeightHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        if (!hasWeightReadPermission()) return@runCatching emptyList()
         val end = Instant.now()
         val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
         val response = c.readRecords(
@@ -96,12 +144,104 @@ class HealthConnectManager @Inject constructor(
                 ascendingOrder = true,
             ),
         )
-        return response.records.map { it.time.toEpochMilli() to it.weight.inKilograms }
-    }
+        response.records.map { it.time.toEpochMilli() to it.weight.inKilograms }
+    }.onFailure { Log.w(TAG, "readWeightHistory failed", it) }.getOrDefault(emptyList())
 
     /** Durchschnitt der letzten N Tage (oder null wenn keine Daten). */
     suspend fun averageWeightKg(days: Int = 30): Double? {
         val history = readWeightHistory(days)
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+    }
+
+    // ---------- Koerperfett ----------
+
+    /**
+     * Letzter Koerperfett-Wert in Prozent (0-100). null bei fehlender Permission
+     * oder fehlenden Daten. Smart-Scales in Verbindung mit Zepp liefern das
+     * normalerweise mit jeder Wiegung.
+     */
+    suspend fun readLatestBodyFatPercent(): Double? = runCatching {
+        val c = client() ?: return@runCatching null
+        if (!hasBodyFatReadPermission()) return@runCatching null
+        val end = Instant.now()
+        val start = end.minusSeconds(365L * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BodyFatRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+            ),
+        )
+        Log.d(TAG, "BodyFat read: ${response.records.size} records, latest=${response.records.firstOrNull()?.percentage?.value}")
+        response.records.firstOrNull()?.percentage?.value
+    }.onFailure { Log.w(TAG, "readLatestBodyFatPercent failed", it) }.getOrNull()
+
+    /** Koerperfett-Verlauf der letzten N Tage. */
+    suspend fun readBodyFatHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        if (!hasBodyFatReadPermission()) return@runCatching emptyList()
+        val end = Instant.now()
+        val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = BodyFatRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ),
+        )
+        response.records.map { it.time.toEpochMilli() to it.percentage.value }
+    }.onFailure { Log.w(TAG, "readBodyFatHistory failed", it) }.getOrDefault(emptyList())
+
+    suspend fun averageBodyFatPercent(days: Int = 30): Double? {
+        val history = readBodyFatHistory(days)
+        return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+    }
+
+    // ---------- Magermasse ----------
+
+    /**
+     * Letzte Magermasse (Lean Body Mass) in kg. Bei vielen Smart-Scales sind das
+     * die Muskelmasse + Wassergehalt + Knochen — also alles ausser Fett.
+     */
+    suspend fun readLatestLeanBodyMassKg(): Double? = runCatching {
+        val c = client() ?: return@runCatching null
+        if (!hasLeanBodyMassReadPermission()) return@runCatching null
+        val end = Instant.now()
+        val start = end.minusSeconds(365L * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = LeanBodyMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+                pageSize = 1,
+            ),
+        )
+        Log.d(TAG, "LeanBodyMass read: ${response.records.size} records, latest=${response.records.firstOrNull()?.mass?.inKilograms}")
+        response.records.firstOrNull()?.mass?.inKilograms
+    }.onFailure { Log.w(TAG, "readLatestLeanBodyMassKg failed", it) }.getOrNull()
+
+    suspend fun readLeanBodyMassHistory(days: Int = 30): List<Pair<Long, Double>> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        if (!hasLeanBodyMassReadPermission()) return@runCatching emptyList()
+        val end = Instant.now()
+        val start = end.minusSeconds(days.toLong() * 24 * 60 * 60)
+        val response = c.readRecords(
+            ReadRecordsRequest(
+                recordType = LeanBodyMassRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = true,
+            ),
+        )
+        response.records.map { it.time.toEpochMilli() to it.mass.inKilograms }
+    }.onFailure { Log.w(TAG, "readLeanBodyMassHistory failed", it) }.getOrDefault(emptyList())
+
+    suspend fun averageLeanBodyMassKg(days: Int = 30): Double? {
+        val history = readLeanBodyMassHistory(days)
+        return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
+    }
+
+    private companion object {
+        const val TAG = "HealthConnectMgr"
     }
 }

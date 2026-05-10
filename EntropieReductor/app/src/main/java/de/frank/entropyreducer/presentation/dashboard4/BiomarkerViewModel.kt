@@ -132,10 +132,28 @@ data class BiomarkerUiState(
 @androidx.compose.runtime.Immutable
 data class WeightState(
     val healthConnectAvailable: Boolean = false,
+    /**
+     * True wenn ALLE drei Permissions (Weight, BodyFat, LeanBodyMass) erteilt
+     * sind. Wird vom Permission-Launcher in einem Rutsch angefordert — wenn
+     * Frank nur Weight erlaubt aber nicht BodyFat, ist das hier false. Damit
+     * stoppt Frank's Tap-to-Refresh-Loop und zeigt stattdessen einen Hinweis.
+     */
     val permissionGranted: Boolean = false,
     val latestKg: Double? = null,
     val avg30dKg: Double? = null,
     val history30d: List<Pair<Long, Double>> = emptyList(),
+    /** Frank-Wunsch 2026-05-10: Koerperfett aus Health Connect (Smart-Scale via Zepp). */
+    val latestBodyFatPercent: Double? = null,
+    val avg30dBodyFatPercent: Double? = null,
+    val bodyFatHistory30d: List<Pair<Long, Double>> = emptyList(),
+    /** Magermasse — alles ausser Fett (Muskeln + Wasser + Knochen). */
+    val latestLeanBodyMassKg: Double? = null,
+    val avg30dLeanBodyMassKg: Double? = null,
+    val leanBodyMassHistory30d: List<Pair<Long, Double>> = emptyList(),
+    /** Zeitstempel des letzten erfolgreichen Reads — fuer User-Feedback bei Tap-Refresh. */
+    val lastReadAtMs: Long = 0L,
+    /** True waehrend gerade gelesen wird (zeigt einen Spinner auf der Karte). */
+    val isLoading: Boolean = false,
 )
 
 @HiltViewModel
@@ -164,7 +182,18 @@ class BiomarkerViewModel @Inject constructor(
         viewModelScope.launch { refreshWeight() }
     }
 
-    /** Liest Gewicht aus Health Connect. Ruft die Pruefungen + Reads sequentiell auf. */
+    /**
+     * Liest Gewicht, Koerperfett und Magermasse aus Health Connect. Setzt
+     * waehrend des Lesens [WeightState.isLoading] = true damit die UI einen
+     * Spinner anzeigen kann.
+     *
+     * Frank-Wunsch 2026-05-10: Tap auf eine Mini-Karte ruft genau diese
+     * Methode auf — sofortiges Refresh ohne in die Settings zu gehen. Wenn
+     * Permission fehlt, zeigt der Karten-Tap stattdessen einen Permission-
+     * Dialog (siehe Screen-Logik). Permission gilt fuer ALLE drei Records
+     * gleichzeitig — wenn Frank nur eine Permission erteilt, wird permissionGranted
+     * weiterhin false sein und die Karten zeigen "Tippen".
+     */
     fun refreshWeight() {
         viewModelScope.launch {
             val available = healthConnect.isAvailable()
@@ -172,20 +201,44 @@ class BiomarkerViewModel @Inject constructor(
                 _weight.value = WeightState(healthConnectAvailable = false)
                 return@launch
             }
-            val granted = healthConnect.hasWeightReadPermission()
-            if (!granted) {
-                _weight.value = WeightState(healthConnectAvailable = true, permissionGranted = false)
+            val weightOk = healthConnect.hasWeightReadPermission()
+            val bodyFatOk = healthConnect.hasBodyFatReadPermission()
+            val leanOk = healthConnect.hasLeanBodyMassReadPermission()
+            // permissionGranted = ALLE drei erteilt. Wenn Frank in der Permission-
+            // Sheet eine ablehnt, faellt der Block hierher und die Karten zeigen
+            // "Tippen" damit er den Flow nochmal starten kann.
+            if (!(weightOk && bodyFatOk && leanOk)) {
+                _weight.value = WeightState(
+                    healthConnectAvailable = true,
+                    permissionGranted = false,
+                )
                 return@launch
             }
-            val latest = healthConnect.readLatestWeightKg()
-            val avg = healthConnect.averageWeightKg(30)
-            val history = healthConnect.readWeightHistory(30)
+            // Loading-State setzen damit die Karten einen Spinner zeigen koennen
+            _weight.value = _weight.value.copy(isLoading = true)
+            val latestKg = healthConnect.readLatestWeightKg()
+            val avgKg = healthConnect.averageWeightKg(30)
+            val historyKg = healthConnect.readWeightHistory(30)
+            val latestBf = healthConnect.readLatestBodyFatPercent()
+            val avgBf = healthConnect.averageBodyFatPercent(30)
+            val historyBf = healthConnect.readBodyFatHistory(30)
+            val latestLean = healthConnect.readLatestLeanBodyMassKg()
+            val avgLean = healthConnect.averageLeanBodyMassKg(30)
+            val historyLean = healthConnect.readLeanBodyMassHistory(30)
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
-                latestKg = latest,
-                avg30dKg = avg,
-                history30d = history,
+                latestKg = latestKg,
+                avg30dKg = avgKg,
+                history30d = historyKg,
+                latestBodyFatPercent = latestBf,
+                avg30dBodyFatPercent = avgBf,
+                bodyFatHistory30d = historyBf,
+                latestLeanBodyMassKg = latestLean,
+                avg30dLeanBodyMassKg = avgLean,
+                leanBodyMassHistory30d = historyLean,
+                lastReadAtMs = System.currentTimeMillis(),
+                isLoading = false,
             )
         }
     }

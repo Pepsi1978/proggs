@@ -30,6 +30,10 @@ object BiomarkerCardId {
 
     // Gewicht aus Health Connect (Zepp-Bridge, Frank-Wunsch 2026-05-10)
     const val MINI_WEIGHT = "mini_weight"
+    // Koerperfett + Magermasse aus Health Connect (Frank-Wunsch 2026-05-10).
+    // Smart-Scales liefern beides zusammen mit dem Gewicht.
+    const val MINI_BODY_FAT = "mini_body_fat"
+    const val MINI_LEAN_BODY_MASS = "mini_lean_body_mass"
 
     // Herzfrequenz-Block
     const val HRV = "hrv"
@@ -91,6 +95,8 @@ object BiomarkerCardId {
         SLEEP_RESTORATIVE,
         SKIN_TEMP_DELTA,
         MINI_WEIGHT,
+        MINI_BODY_FAT,
+        MINI_LEAN_BODY_MASS,
     )
 
     val DEFAULT_ORDER: List<String> = listOf(
@@ -100,6 +106,8 @@ object BiomarkerCardId {
         MINI_SLEEP_TOTAL,
         MINI_SLEEP_PERFORMANCE,
         MINI_WEIGHT,
+        MINI_BODY_FAT,
+        MINI_LEAN_BODY_MASS,
         HRV,
         RHR,
         RESPIRATORY,
@@ -121,11 +129,28 @@ object BiomarkerCardId {
         AMAZFIT_TRAININGS,
         OURA_READINESS,
         OURA_SLEEP_SCORE,
-        OURA_ACTIVITY,
         OURA_RESILIENCE,
+        // OURA_ACTIVITY bewusst NICHT mehr in der Werks-Reihenfolge —
+        // Frank-Vorgabe 2026-05-10: 'brauche ich nicht da, vielen Dank'.
+        // Konstante bleibt erhalten (Backward-Compat fuer User die die Karte
+        // schon hatten). HIDDEN_CARD_IDS unten filtert sie zusaetzlich aus
+        // bestehenden Drag&Drop-Reihenfolgen heraus, damit sie wirklich
+        // ueberall verschwindet — auch bei Frank's bereits gespeicherter Order.
         // OURA_SLEEP_DETAIL bewusst NICHT mehr in der Werks-Reihenfolge —
         // Frank-Vorgabe 2026-05-10: vertraut fuer Schlafphasen nur Whoop.
         // Konstante bleibt erhalten (Backward-Compat fuer User die die Karte
         // schon hatten), wird aber bei Erstinstall nicht mehr angezeigt.
+    )
+
+    /**
+     * Karten-IDs die der Screen ueberall ausblenden soll, auch wenn sie noch
+     * in der gespeicherten Drag&Drop-Reihenfolge auftauchen. Frank-Vorgabe
+     * 2026-05-10: nachtraegliche Entfernung der Oura-Activity- und
+     * Oura-SleepDetail-Karten ohne dass Frank manuell die Reihenfolge
+     * zuruecksetzen muss.
+     */
+    val HIDDEN_CARD_IDS: Set<String> = setOf(
+        OURA_ACTIVITY,
+        OURA_SLEEP_DETAIL,
     )
 }
