@@ -74,7 +74,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         OuraSleepDetailEntity::class,
         OuraPersonalInfoEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -351,6 +351,31 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent(),
                 )
+            }
+        }
+
+        /**
+         * Schema 15 -> 16 (Performance-Audit Loop 1, 2026-05-10):
+         * Indizes auf Spalten die in WHERE/ORDER BY oft gefiltert werden, um Full-
+         * Table-Scans zu vermeiden. biomarker_snapshots.capturedAt wird in den
+         * Range-Queries des Dashboard-4-ViewModels permanent gefiltert; whoop_workouts
+         * und amazfit_workouts werden nach startMs und dateKey gefiltert; amazfit_daily
+         * nach capturedAt; oura_sleep_detail nach day. Ohne diese Indizes laufen die
+         * Queries als Full Scan, was bei 365+ Tagen Daten messbar Recompositions
+         * verzoegert.
+         *
+         * IF NOT EXISTS schuetzt vor doppelter Anlage. Index-Namen folgen dem Room-
+         * Konvention "index_<table>_<column>".
+         */
+        val MIGRATION_15_16: Migration = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_biomarker_snapshots_capturedAt ON biomarker_snapshots(capturedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_whoop_workouts_startMs ON whoop_workouts(startMs)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_whoop_workouts_dateKey ON whoop_workouts(dateKey)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_daily_capturedAt ON amazfit_daily(capturedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_startMs ON amazfit_workouts(startMs)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_dateKey ON amazfit_workouts(dateKey)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_oura_sleep_detail_day ON oura_sleep_detail(day)")
             }
         }
     }

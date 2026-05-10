@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.repository
 
 import android.util.Log
+import androidx.room.withTransaction
+import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.dao.AmazfitDailyDao
 import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
@@ -57,6 +59,7 @@ class AmazfitRepository @Inject constructor(
     private val auth: ZeppAuthService,
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
+    private val appDatabase: AppDatabase,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -86,9 +89,14 @@ class AmazfitRepository @Inject constructor(
      * @return Anzahl korrigierter Zeilen (Summe ueber alle Override-Codes)
      */
     suspend fun applyFrankSportOverrides(): Int {
+        // Performance-Audit Loop 1 (2026-05-10): Atomare Transaktion ueber alle
+        // Override-Updates. Vorher: N separate Commits — bei Process-Kill mid-update
+        // partielle Korrektur. Jetzt 1 Commit fuer alle Overrides.
         var changed = 0
-        AmazfitSportNames.frankOverrides().forEach { (code, name) ->
-            changed += workoutDao.updateSportNameByType(code, name)
+        appDatabase.withTransaction {
+            AmazfitSportNames.frankOverrides().forEach { (code, name) ->
+                changed += workoutDao.updateSportNameByType(code, name)
+            }
         }
         if (changed > 0) {
             Log.i("AmazfitRepo", "Frank-Sport-Overrides angewendet: $changed Zeilen korrigiert")

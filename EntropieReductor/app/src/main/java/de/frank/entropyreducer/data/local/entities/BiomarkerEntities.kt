@@ -1,10 +1,14 @@
 package de.frank.entropyreducer.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import de.frank.entropyreducer.domain.model.StackType
 
-@Entity(tableName = "biomarker_snapshots")
+@Entity(
+    tableName = "biomarker_snapshots",
+    indices = [Index("capturedAt")],
+)
 data class BiomarkerSnapshotEntity(
     @PrimaryKey val id: String,
     val capturedAt: Long,
@@ -47,7 +51,10 @@ data class BiomarkerSnapshotEntity(
  *  - `sportId` + `sportName`: Whoop-Sport-ID + lesbarer deutscher Name (z.B. "Krafttraining")
  *  - `zoneZeroMilli`..`zoneFiveMilli`: Aufenthaltsdauer in den 6 Herzfrequenz-Zonen in ms
  */
-@Entity(tableName = "whoop_workouts")
+@Entity(
+    tableName = "whoop_workouts",
+    indices = [Index("startMs"), Index("dateKey")],
+)
 data class WhoopWorkoutEntity(
     @PrimaryKey val id: String,
     val dateKey: String,

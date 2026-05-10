@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
@@ -98,7 +99,10 @@ data class OuraResilienceEntity(
  * fuer Tag-Filter. `sleepPhase5Min` ist eine Zeichenkette wie "44443322..."
  * mit einem Zeichen pro 5-Min-Intervall: 1=Tief, 2=Leicht, 3=REM, 4=Wach.
  */
-@Entity(tableName = "oura_sleep_detail")
+@Entity(
+    tableName = "oura_sleep_detail",
+    indices = [Index("day")],
+)
 data class OuraSleepDetailEntity(
     @PrimaryKey val id: String,
     val day: String,

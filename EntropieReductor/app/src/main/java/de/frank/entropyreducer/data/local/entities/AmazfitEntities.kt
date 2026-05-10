@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
@@ -15,7 +16,10 @@ import androidx.room.PrimaryKey
  * `date` ist der Tagesschluessel im Format "YYYY-MM-DD" (lokale Zeit) und Primaerschluessel
  * — pro Tag ein Eintrag, bei einem zweiten Sync wird der Eintrag aktualisiert.
  */
-@Entity(tableName = "amazfit_daily")
+@Entity(
+    tableName = "amazfit_daily",
+    indices = [Index("capturedAt")],
+)
 data class AmazfitDailyEntity(
     @PrimaryKey val date: String,
     val capturedAt: Long,
@@ -66,7 +70,10 @@ data class AmazfitDailyEntity(
  * `trackId` ist der Zepp-eigene eindeutige Identifier des Trainings, vom Server
  * geliefert — wird als Primaerschluessel genutzt damit Re-Syncs idempotent sind.
  */
-@Entity(tableName = "amazfit_workouts")
+@Entity(
+    tableName = "amazfit_workouts",
+    indices = [Index("startMs"), Index("dateKey")],
+)
 data class AmazfitWorkoutEntity(
     @PrimaryKey val trackId: String,
     val dateKey: String,

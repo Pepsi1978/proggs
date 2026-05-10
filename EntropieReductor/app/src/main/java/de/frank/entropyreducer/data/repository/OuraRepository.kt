@@ -21,7 +21,10 @@ import de.frank.entropyreducer.data.remote.oura.OuraDailySleep
 import de.frank.entropyreducer.data.remote.oura.OuraSleep
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
+import androidx.room.withTransaction
+import de.frank.entropyreducer.data.local.AppDatabase
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import retrofit2.HttpException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -53,26 +56,32 @@ class OuraRepository @Inject constructor(
     private val api: OuraApi,
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
+    private val appDatabase: AppDatabase,
 ) {
 
-    fun observeReadiness(): Flow<List<OuraReadinessEntity>> = readinessDao.getAll()
-    fun observeLatestReadiness(): Flow<OuraReadinessEntity?> = readinessDao.getLatest()
+    // Performance-Audit Loop 1 (2026-05-10): distinctUntilChanged auf alle Oura-Flows.
+    // Room emittiert bei jedem Schreibzugriff auf die Tabelle einen neuen Flow-Wert,
+    // auch wenn sich die Daten fuer den konkreten Query nicht geaendert haben. Bei
+    // einem Oura-Sync ueber 6 Tabellen wuerden ohne diesen Filter bis zu 6x N
+    // Recompositions in BiomarkerViewModel.combine ausgeloest werden statt 1.
+    fun observeReadiness(): Flow<List<OuraReadinessEntity>> = readinessDao.getAll().distinctUntilChanged()
+    fun observeLatestReadiness(): Flow<OuraReadinessEntity?> = readinessDao.getLatest().distinctUntilChanged()
 
-    fun observeDailySleep(): Flow<List<OuraDailySleepEntity>> = sleepDayDao.getAll()
-    fun observeLatestDailySleep(): Flow<OuraDailySleepEntity?> = sleepDayDao.getLatest()
+    fun observeDailySleep(): Flow<List<OuraDailySleepEntity>> = sleepDayDao.getAll().distinctUntilChanged()
+    fun observeLatestDailySleep(): Flow<OuraDailySleepEntity?> = sleepDayDao.getLatest().distinctUntilChanged()
 
-    fun observeActivity(): Flow<List<OuraActivityEntity>> = activityDao.getAll()
-    fun observeLatestActivity(): Flow<OuraActivityEntity?> = activityDao.getLatest()
+    fun observeActivity(): Flow<List<OuraActivityEntity>> = activityDao.getAll().distinctUntilChanged()
+    fun observeLatestActivity(): Flow<OuraActivityEntity?> = activityDao.getLatest().distinctUntilChanged()
 
-    fun observeResilience(): Flow<List<OuraResilienceEntity>> = resilienceDao.getAll()
-    fun observeLatestResilience(): Flow<OuraResilienceEntity?> = resilienceDao.getLatest()
+    fun observeResilience(): Flow<List<OuraResilienceEntity>> = resilienceDao.getAll().distinctUntilChanged()
+    fun observeLatestResilience(): Flow<OuraResilienceEntity?> = resilienceDao.getLatest().distinctUntilChanged()
 
-    fun observeSleepDetails(): Flow<List<OuraSleepDetailEntity>> = sleepDetailDao.getAll()
-    fun observeLatestSleepDetail(): Flow<OuraSleepDetailEntity?> = sleepDetailDao.getLatest()
+    fun observeSleepDetails(): Flow<List<OuraSleepDetailEntity>> = sleepDetailDao.getAll().distinctUntilChanged()
+    fun observeLatestSleepDetail(): Flow<OuraSleepDetailEntity?> = sleepDetailDao.getLatest().distinctUntilChanged()
     fun observeSleepDetailsForDay(day: String): Flow<List<OuraSleepDetailEntity>> =
-        sleepDetailDao.getByDay(day)
+        sleepDetailDao.getByDay(day).distinctUntilChanged()
 
-    fun observePersonalInfo(): Flow<OuraPersonalInfoEntity?> = personalInfoDao.observe()
+    fun observePersonalInfo(): Flow<OuraPersonalInfoEntity?> = personalInfoDao.observe().distinctUntilChanged()
 
     /** True wenn ein Personal Access Token hinterlegt ist. */
     fun isTokenConfigured(): Boolean = !secrets.ouraPersonalAccessToken.isNullOrBlank()
@@ -80,14 +89,20 @@ class OuraRepository @Inject constructor(
     /**
      * Loescht ALLE lokalen Oura-Daten plus Token. Wird beim Trennen-Button im
      * Settings-Screen aufgerufen.
+     *
+     * Performance-Audit Loop 1 (2026-05-10): Atomare Transaktion ueber alle 6 DAO-
+     * Loesch-Operationen. Vorher: 6 separate Commits — bei Process-Kill mid-clear
+     * inkonsistenter DB-Zustand (einige Tabellen leer, andere noch gefuellt).
      */
     suspend fun clearAll() {
-        readinessDao.deleteAll()
-        sleepDayDao.deleteAll()
-        activityDao.deleteAll()
-        resilienceDao.deleteAll()
-        sleepDetailDao.deleteAll()
-        personalInfoDao.deleteAll()
+        appDatabase.withTransaction {
+            readinessDao.deleteAll()
+            sleepDayDao.deleteAll()
+            activityDao.deleteAll()
+            resilienceDao.deleteAll()
+            sleepDetailDao.deleteAll()
+            personalInfoDao.deleteAll()
+        }
         secrets.ouraPersonalAccessToken = null
         secrets.ouraLastSyncEpochMs = 0L
     }
