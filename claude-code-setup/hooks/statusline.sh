@@ -104,6 +104,21 @@ printf -v now_ts '%(%s)T' -1
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
 
+# Account-Fingerprint (Frank-Bug-Report 2026-05-10): Nach Account-Wechsel
+# (Logout/Login mit anderem Account) zeigte die Statusline noch die rate_limits
+# vom alten Account, weil alte State-Files mit hohen Werten ueberlebten und im
+# MAX-Pass gewonnen haben. Fix: Hash der credentials.json als Fingerprint in
+# jedes State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN
+# Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
+# naechsten Cleanup geloescht). Wenn kein sha256sum verfuegbar oder Credentials
+# fehlen: Fingerprint = "default" (Verhalten wie vorher, kein Regression).
+account_fp="default"
+cred_file="$HOME/.claude/.credentials.json"
+if [ -f "$cred_file" ] && command -v sha256sum >/dev/null 2>&1; then
+    account_fp=$(sha256sum "$cred_file" 2>/dev/null | cut -c1-16)
+    [ -z "$account_fp" ] && account_fp="default"
+fi
+
 # Plausibilitaet: Prozent muss 0..100 sein (nur Ziffern + optional . — keine UUIDs)
 is_valid_pct() {
     local v="$1"
@@ -149,8 +164,8 @@ if is_valid_sid "$session_id" \
     [ "$resets_safe" = "null" ] && resets_safe="0"
     # Atomic write: tmp + mv (Schicht 3: Eliminierung von Half-Read)
     tmp_state="$my_state.tmp"
-    printf '{"ts_seen":%s,"session_id":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s}\n' \
-        "$now_ts" "$session_id" "$five_h_used_raw" "$resets_safe" "$seven_d_safe" \
+    printf '{"ts_seen":%s,"session_id":"%s","account_fp":"%s","five_h":%s,"five_h_resets":%s,"seven_d":%s}\n' \
+        "$now_ts" "$session_id" "$account_fp" "$five_h_used_raw" "$resets_safe" "$seven_d_safe" \
         > "$tmp_state" 2>/dev/null \
         && mv -f "$tmp_state" "$my_state" 2>/dev/null
 fi
@@ -160,19 +175,34 @@ fi
 #    der Cleanup ist nicht zeitkritisch.
 if [ $((now_ts % 600)) -lt 2 ]; then
     find "$state_dir" -name "rate-limits-*.json" -mmin +1440 -delete 2>/dev/null
+    # Zusaetzlich: Files von fremden Accounts (anderer Fingerprint) sofort weg —
+    # nicht erst nach 24h. Sonst zeigt nach Account-Wechsel die alte Anzeige.
+    if [ "$account_fp" != "default" ]; then
+        for f in "$state_dir"/rate-limits-*.json; do
+            [ -f "$f" ] || continue
+            file_fp=$(jq -r '.account_fp // ""' "$f" 2>/dev/null)
+            if [ -n "$file_fp" ] && [ "$file_fp" != "$account_fp" ]; then
+                rm -f "$f" 2>/dev/null
+            fi
+        done
+    fi
 fi
 
 # 3. MAX-Logik in EINEM jq-Aufruf mit VALIDIERUNG — slurp alle State-Files,
-#    filter kaputte Eintraege (session_id leer/ungueltig, Werte nicht 0..100),
+#    filter kaputte Eintraege (session_id leer/ungueltig, Werte nicht 0..100,
+#    Account-Fingerprint passt nicht zum aktuellen Account),
 #    dann finde aktuellsten resets_at und hoechsten five_h/seven_d darin.
 #    Schicht 2 (Reaktiv): falls trotz Schreib-Guards Mullwerte reinrutschen
 #    werden sie hier verworfen statt blind angezeigt zu werden.
-fresh=$(jq -sr '
+#    Account-Filter: wenn account_fp im File leer ist (alte Files vor dem Fix),
+#    wird er akzeptiert — sonst muss er exakt zum aktuellen passen.
+fresh=$(jq -sr --arg fp "$account_fp" '
     map(select(
         (.session_id // "" | tostring) != ""
         and (.session_id | tostring | test("^[A-Za-z0-9_-]+$"))
         and (.five_h | type == "number") and .five_h >= 0 and .five_h <= 100
         and ((.seven_d == null) or ((.seven_d | type == "number") and .seven_d >= 0 and .seven_d <= 100))
+        and ((.account_fp // "") == "" or (.account_fp // "") == $fp)
     )) as $valid |
     if ($valid | length) == 0 then ""
     else

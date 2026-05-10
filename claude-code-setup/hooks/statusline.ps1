@@ -129,6 +129,24 @@ try {
     if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
     $nowTs = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 
+    # Account-Fingerprint (Frank-Bug-Report 2026-05-10): Nach Account-Wechsel
+    # (Logout/Login mit anderem Account) zeigte die Statusline noch die rate_limits
+    # vom alten Account, weil alte State-Files mit hohen Werten ueberlebten und im
+    # MAX-Pass gewonnen haben. Fix: Hash der credentials.json als Fingerprint in
+    # jedes State-File schreiben. Beim Lesen werden nur Files mit dem AKTUELLEN
+    # Fingerprint beruecksichtigt — alte Account-Files werden ignoriert (und beim
+    # naechsten Cleanup geloescht).
+    $accountFp = 'default'
+    $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
+    if (Test-Path $credFile) {
+        try {
+            $hashObj = Get-FileHash -Path $credFile -Algorithm SHA256 -ErrorAction Stop
+            if ($hashObj -and $hashObj.Hash) {
+                $accountFp = $hashObj.Hash.Substring(0, 16).ToLower()
+            }
+        } catch { $accountFp = 'default' }
+    }
+
     # 1. SCHREIBEN — nur wenn alle Werte plausibel sind (Schicht 1: Praeventiv).
     #    NIEMALS bei leerer session_id schreiben (Datei rate-limits-.json verhindern).
     $canWrite = ($sessionId -match '^[A-Za-z0-9_-]+$') -and `
@@ -142,6 +160,7 @@ try {
         $payload = [ordered]@{
             ts_seen        = $nowTs
             session_id     = $sessionId
+            account_fp     = $accountFp
             five_h         = [int]$five_h_used
             five_h_resets  = [long]$five_h_resets
             seven_d        = if (Test-ValidPercent $week_used) { [int]$week_used } else { 0 }
@@ -164,6 +183,21 @@ try {
     # Defekte Files mit leerer session_id IMMER entfernen (Schicht 2: Reaktiv)
     $emptyFile = Join-Path $stateDir 'rate-limits-.json'
     if (Test-Path $emptyFile) { Remove-Item -Path $emptyFile -Force -ErrorAction SilentlyContinue }
+
+    # Account-Wechsel-Cleanup: Files mit fremdem Fingerprint sofort loeschen,
+    # nicht erst nach 24h. Ohne diesen Schritt zeigt die Statusline nach Logout/Login
+    # noch die rate_limits des alten Accounts (Frank-Bug-Report 2026-05-10).
+    if ($accountFp -ne 'default') {
+        Get-ChildItem -Path $stateDir -Filter 'rate-limits-*.json' -ErrorAction SilentlyContinue | ForEach-Object {
+            $f = $_.FullName
+            try {
+                $entryFp = (Get-Content -Raw -Encoding UTF8 -Path $f | ConvertFrom-Json).account_fp
+                if ($entryFp -and $entryFp -ne $accountFp) {
+                    Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
+                }
+            } catch { }
+        }
+    }
 
     # 3. LESEN + VALIDIEREN: Alle State-Files lesen, kaputte loeschen, Werte clampen.
     $allEntries = @()
@@ -189,6 +223,10 @@ try {
         }
         if (-not (Test-ValidPercent $entry.five_h)) { return }  # Ueberspringen, nicht loeschen (koennte race-bedingt sein)
         if (($entry.seven_d -ne $null) -and -not (Test-ValidPercent $entry.seven_d)) { return }
+        # Account-Filter: alte Files ohne account_fp werden akzeptiert (Migrations-Toleranz),
+        # aber Files mit anderem Fingerprint werden ignoriert.
+        $entryFp = if ($entry.PSObject.Properties['account_fp']) { [string]$entry.account_fp } else { '' }
+        if ($entryFp -and $entryFp -ne $accountFp) { return }
         $resets = 0
         try { $resets = [long]$entry.five_h_resets } catch { $resets = 0 }
         if ($resets -ne 0 -and -not (Test-ValidResetTs $resets $nowTs)) {
