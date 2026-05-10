@@ -158,8 +158,19 @@ if is_valid_sid "$session_id" \
    && is_valid_pct "$five_h_used_raw" \
    && { [ -z "$week_used_raw" ] || [ "$week_used_raw" = "null" ] || is_valid_pct "$week_used_raw"; } \
    && is_valid_reset "${five_h_resets_raw:-0}"; then
-    seven_d_safe="${week_used_raw:-0}"
-    [ "$seven_d_safe" = "null" ] && seven_d_safe="0"
+    # 7d-Wert: Wenn API in dieser Antwort einen gueltigen Wert liefert -> nehmen.
+    # Wenn API keinen Wert liefert (leer/null), den existierenden 7d-Wert aus dem
+    # eigenen State-File behalten — sonst wuerde ein API-Call ohne seven_day-Feld
+    # den 7d-Wert auf 0 zuruecksetzen, was bei MAX-Aggregation den echten hoeheren
+    # Wert anderer Sessions plattmachen koennte (Frank-Bug-Report 2026-05-10 abend).
+    if [ -n "$week_used_raw" ] && [ "$week_used_raw" != "null" ]; then
+        seven_d_safe="$week_used_raw"
+    elif [ -f "$my_state" ]; then
+        seven_d_safe=$(jq -r '.seven_d // 0' "$my_state" 2>/dev/null)
+        [ -z "$seven_d_safe" ] || [ "$seven_d_safe" = "null" ] && seven_d_safe="0"
+    else
+        seven_d_safe="0"
+    fi
     resets_safe="${five_h_resets_raw:-0}"
     [ "$resets_safe" = "null" ] && resets_safe="0"
     # Atomic write: tmp + mv (Schicht 3: Eliminierung von Half-Read)

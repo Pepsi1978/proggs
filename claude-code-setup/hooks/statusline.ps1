@@ -157,13 +157,29 @@ try {
     if ($canWrite) {
         $myState = Join-Path $stateDir "rate-limits-$sessionId.json"
         $tmpState = "$myState.tmp"
+        # 7d-Wert: Wenn API in dieser Antwort einen gueltigen Wert liefert -> nehmen.
+        # Wenn API keinen Wert liefert (leer/null), den existierenden 7d-Wert aus dem
+        # eigenen State-File behalten — sonst wuerde ein API-Call ohne seven_day-Feld
+        # den 7d-Wert auf 0 zuruecksetzen, was bei MAX-Aggregation den echten hoeheren
+        # Wert anderer Sessions plattmachen koennte (Frank-Bug-Report 2026-05-10 abend).
+        $sevenDValue = 0
+        if (Test-ValidPercent $week_used) {
+            $sevenDValue = [int]$week_used
+        } elseif (Test-Path $myState) {
+            try {
+                $existing = Get-Content -Raw -Encoding UTF8 -Path $myState | ConvertFrom-Json
+                if ($existing -and (Test-ValidPercent $existing.seven_d)) {
+                    $sevenDValue = [int]$existing.seven_d
+                }
+            } catch { $sevenDValue = 0 }
+        }
         $payload = [ordered]@{
             ts_seen        = $nowTs
             session_id     = $sessionId
             account_fp     = $accountFp
             five_h         = [int]$five_h_used
             five_h_resets  = [long]$five_h_resets
-            seven_d        = if (Test-ValidPercent $week_used) { [int]$week_used } else { 0 }
+            seven_d        = $sevenDValue
         }
         # Atomic write: tmp + rename (Schicht 3: Eliminierung von Half-Read)
         ($payload | ConvertTo-Json -Compress) | Out-File -FilePath $tmpState -Encoding UTF8 -Force
