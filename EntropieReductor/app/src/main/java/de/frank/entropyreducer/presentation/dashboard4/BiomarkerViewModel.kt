@@ -217,6 +217,7 @@ class BiomarkerViewModel @Inject constructor(
     private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
     private val settings: AppSettings,
+    private val hcValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
 ) : ViewModel() {
 
     private val _refreshing = MutableStateFlow(false)
@@ -328,31 +329,103 @@ class BiomarkerViewModel @Inject constructor(
                 tag,
                 "refreshWeight done: latestKg=$latestKg latestBf=$latestBf historyKgCount=${historyKg.size}",
             )
+            // Cross-Device-Cache (Frank-Wunsch 2026-05-10 abend): alle aus HC
+            // gelesenen Werte zusaetzlich in die DB-Tabelle hc_value_cache
+            // schreiben. Beim Drive-Backup wird die Tabelle mit-exportiert,
+            // beim Restore auf einem anderen Geraet eingespielt. Damit landen
+            // Werte vom Fold 6 auch auf dem S23 Ultra, obwohl Zepp dort nicht
+            // rueckwirkend in HC schreibt.
+            val now = System.currentTimeMillis()
+            val cacheRows = buildList {
+                fun addAll(metric: String, pairs: List<Pair<Long, Double>>) {
+                    pairs.forEach {
+                        add(de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity(
+                            metric = metric, timestampMs = it.first, value = it.second, createdAt = now,
+                        ))
+                    }
+                }
+                addAll("weight", historyKg)
+                addAll("body_fat", historyBf)
+                addAll("lean_body_mass", historyLean)
+                addAll("body_water", historyWater)
+                addAll("bone_mass", historyBone)
+            }
+            runCatching { hcValueDao.upsertAll(cacheRows) }
+                .onFailure { android.util.Log.w(tag, "HC-Cache-Write fehlgeschlagen", it) }
+
+            // UI-State: HC-Live + Cache mergen. Bei doppeltem Timestamp gewinnt
+            // der HC-Live-Wert (er ist frisch direkt aus der Quelle).
+            val cachedAll = runCatching { hcValueDao.getAll() }.getOrDefault(emptyList())
+            val mergedKg = mergeHcWithCache(historyKg, cachedAll, "weight")
+            val mergedBf = mergeHcWithCache(historyBf, cachedAll, "body_fat")
+            val mergedLean = mergeHcWithCache(historyLean, cachedAll, "lean_body_mass")
+            val mergedWater = mergeHcWithCache(historyWater, cachedAll, "body_water")
+            val mergedBone = mergeHcWithCache(historyBone, cachedAll, "bone_mass")
+            // Latest = juengster aus dem gemergten Verlauf (oder HC-Live falls Cache leer)
+            val effLatestKg = mergedKg.maxByOrNull { it.first }?.second ?: latestKg
+            val effLatestBf = mergedBf.maxByOrNull { it.first }?.second ?: latestBf
+            val effLatestLean = mergedLean.maxByOrNull { it.first }?.second ?: latestLean
+            val effLatestWater = mergedWater.maxByOrNull { it.first }?.second ?: latestWater
+            val effLatestBone = mergedBone.maxByOrNull { it.first }?.second ?: latestBone
+            // Avg-Berechnung jetzt ueber den Merge (mehr Datenpunkte = aussagekraeftiger)
+            val effAvgKg = mergedKg.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgKg
+            val effAvgBf = mergedBf.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgBf
+            val effAvgLean = mergedLean.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgLean
+            val effAvgWater = mergedWater.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgWater
+            val effAvgBone = mergedBone.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgBone
+
             _weight.value = WeightState(
                 healthConnectAvailable = true,
                 permissionGranted = true,
-                latestKg = latestKg,
-                avg30dKg = avgKg,
-                history30d = historyKg,
-                latestBodyFatPercent = latestBf,
-                avg30dBodyFatPercent = avgBf,
-                bodyFatHistory30d = historyBf,
-                latestLeanBodyMassKg = latestLean,
-                avg30dLeanBodyMassKg = avgLean,
-                leanBodyMassHistory30d = historyLean,
-                latestBodyWaterMassKg = latestWater,
-                avg30dBodyWaterMassKg = avgWater,
-                bodyWaterMassHistory30d = historyWater,
-                latestBoneMassKg = latestBone,
-                avg30dBoneMassKg = avgBone,
-                boneMassHistory30d = historyBone,
+                latestKg = effLatestKg,
+                avg30dKg = effAvgKg,
+                history30d = mergedKg,
+                latestBodyFatPercent = effLatestBf,
+                avg30dBodyFatPercent = effAvgBf,
+                bodyFatHistory30d = mergedBf,
+                latestLeanBodyMassKg = effLatestLean,
+                avg30dLeanBodyMassKg = effAvgLean,
+                leanBodyMassHistory30d = mergedLean,
+                latestBodyWaterMassKg = effLatestWater,
+                avg30dBodyWaterMassKg = effAvgWater,
+                bodyWaterMassHistory30d = mergedWater,
+                latestBoneMassKg = effLatestBone,
+                avg30dBoneMassKg = effAvgBone,
+                boneMassHistory30d = mergedBone,
                 lastReadAtMs = System.currentTimeMillis(),
                 isLoading = false,
+            )
+            android.util.Log.i(
+                tag,
+                "refreshWeight merged: weight=${mergedKg.size} bodyFat=${mergedBf.size} lean=${mergedLean.size} water=${mergedWater.size} bone=${mergedBone.size}",
             )
             // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer
             // den 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
             settings.setLastHealthConnectSync(System.currentTimeMillis())
+            // Frank-Wunsch 2026-05-10 abend: nach jedem refresh sofort Backup
+            // triggern damit das andere Geraet die neuen Werte beim naechsten
+            // App-Start sieht.
+            if (cacheRows.isNotEmpty()) {
+                syncCoordinator.requestSync()
+            }
         }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-10 abend: HC-Live-Werte und Cross-Device-Cache mergen.
+     * Bei doppeltem Timestamp gewinnt der HC-Live-Wert. Ergebnis ist sortiert
+     * nach Timestamp aufsteigend.
+     */
+    private fun mergeHcWithCache(
+        hcLive: List<Pair<Long, Double>>,
+        cachedAll: List<de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity>,
+        metric: String,
+    ): List<Pair<Long, Double>> {
+        val byTs = hcLive.associate { it.first to it.second }.toMutableMap()
+        cachedAll.filter { it.metric == metric }.forEach { row ->
+            byTs.putIfAbsent(row.timestampMs, row.value)
+        }
+        return byTs.entries.map { it.key to it.value }.sortedBy { it.first }
     }
 
     /**

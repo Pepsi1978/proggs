@@ -67,6 +67,7 @@ class SyncCoordinator @Inject constructor(
     private val scientistMessageDaoLazy: Lazy<ScientistMessageDao>,
     private val hypothesisMessageDaoLazy: Lazy<HypothesisMessageDao>,
     private val cardOrderRepoLazy: Lazy<BiomarkerCardOrderRepository>,
+    private val healthConnectValueDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
     private val json: Json,
 ) {
 
@@ -128,9 +129,13 @@ class SyncCoordinator @Inject constructor(
             // automatisch angehaengte DEFAULT_ORDER. Leere Liste = User hat nichts
             // verschoben, beim Restore passiert dann auch nichts.
             val cardOrder = cardOrderRepoLazy.get().rawSavedOrder.first()
+            // Frank-Wunsch 2026-05-10 abend: Cross-Device-HC-Cache mit ins Backup.
+            val hcValues = healthConnectValueDaoLazy.get().getAll().map {
+                BackupHealthConnectValue(metric = it.metric, timestampMs = it.timestampMs, value = it.value)
+            }
 
             val payload = BackupPayload(
-                version = 3,
+                version = 4,
                 exportedAt = System.currentTimeMillis(),
                 entries = entries,
                 insights = insights,
@@ -140,6 +145,7 @@ class SyncCoordinator @Inject constructor(
                 scientistMessages = sessMessages,
                 hypothesisMessages = hypMessages,
                 biomarkerCardOrder = cardOrder,
+                healthConnectValues = hcValues,
             )
             val text = json.encodeToString(BackupPayload.serializer(), payload)
             backupManager.upload(text)

@@ -41,7 +41,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class BackupPayload(
-    val version: Int = 3,
+    val version: Int = 4,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -58,6 +58,23 @@ data class BackupPayload(
      * (aus aelteren App-Versionen) werden dort automatisch herausgefiltert.
      */
     val biomarkerCardOrder: List<String> = emptyList(),
+    /**
+     * Schema v4 (Frank-Wunsch 2026-05-10 abend): Cross-Device-Cache aller
+     * Health-Connect-Werte (Gewicht, Koerperfett, Magere Koerpermasse, Wasser,
+     * Knochenmasse, Hoehe, BMR). Wird auf dem Sende-Geraet beim refreshWeight
+     * gefuellt und beim Restore auf dem Empfaenger-Geraet in die DB geschrieben.
+     * Damit hat das neue Geraet sofort den vollen Verlauf, auch wenn Zepp dort
+     * nicht rueckwirkend in HC pusht. Default = emptyList damit v3-Backups
+     * weiterhin lesbar bleiben.
+     */
+    val healthConnectValues: List<BackupHealthConnectValue> = emptyList(),
+)
+
+@Serializable
+data class BackupHealthConnectValue(
+    val metric: String,
+    val timestampMs: Long,
+    val value: Double,
 )
 
 @Serializable

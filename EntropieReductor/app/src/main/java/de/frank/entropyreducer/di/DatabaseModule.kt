@@ -35,6 +35,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_13_14,
                 AppDatabase.MIGRATION_14_15,
                 AppDatabase.MIGRATION_15_16,
+                AppDatabase.MIGRATION_16_17,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
@@ -78,6 +79,7 @@ object DatabaseModule {
     @Provides fun provideOuraResilienceDao(db: AppDatabase) = db.ouraResilienceDao()
     @Provides fun provideOuraSleepDetailDao(db: AppDatabase) = db.ouraSleepDetailDao()
     @Provides fun provideOuraPersonalInfoDao(db: AppDatabase) = db.ouraPersonalInfoDao()
+    @Provides fun provideHealthConnectValueDao(db: AppDatabase) = db.healthConnectValueDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.

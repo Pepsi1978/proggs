@@ -41,6 +41,7 @@ class SyncEntriesUseCase @Inject constructor(
     private val scientistMessageDao: ScientistMessageDao,
     private val hypothesisMessageDao: HypothesisMessageDao,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
+    private val healthConnectValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
     private val secrets: EncryptedSecretsStore,
     private val json: Json,
 ) {
@@ -160,6 +161,25 @@ class SyncEntriesUseCase @Inject constructor(
         if (payload.biomarkerCardOrder.isNotEmpty()) {
             cardOrderRepo.saveOrder(payload.biomarkerCardOrder)
             updated++
+        }
+
+        // --- Health-Connect-Werte-Cache (v4+, Frank-Wunsch 2026-05-10 abend) ---
+        // Cross-Device-Sync: was auf dem Fold 6 in HC steht, landet ueber das
+        // Backup auch hier. Insert ist via PrimaryKey (metric, timestampMs)
+        // idempotent — bestehende Werte werden ueberschrieben aber das ist OK
+        // weil HC-Werte immutable sind (selber Timestamp = selber Messwert).
+        if (payload.healthConnectValues.isNotEmpty()) {
+            val now = System.currentTimeMillis()
+            val entities = payload.healthConnectValues.map {
+                de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity(
+                    metric = it.metric,
+                    timestampMs = it.timestampMs,
+                    value = it.value,
+                    createdAt = now,
+                )
+            }
+            healthConnectValueDao.upsertAll(entities)
+            inserted += entities.size
         }
 
         driveSession.end()

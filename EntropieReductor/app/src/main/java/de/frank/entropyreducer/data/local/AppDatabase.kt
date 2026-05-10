@@ -39,6 +39,8 @@ import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
+import de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity
+import de.frank.entropyreducer.data.local.dao.HealthConnectValueDao
 
 /**
  * Haupt-Datenbank — enthaelt alle nicht-Forscher-Daten. Frank-Wunsch 2026-05-09:
@@ -73,8 +75,9 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
         OuraResilienceEntity::class,
         OuraSleepDetailEntity::class,
         OuraPersonalInfoEntity::class,
+        HealthConnectValueEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -105,6 +108,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun ouraResilienceDao(): OuraResilienceDao
     abstract fun ouraSleepDetailDao(): OuraSleepDetailDao
     abstract fun ouraPersonalInfoDao(): OuraPersonalInfoDao
+    abstract fun healthConnectValueDao(): HealthConnectValueDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -376,6 +380,30 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_startMs ON amazfit_workouts(startMs)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_dateKey ON amazfit_workouts(dateKey)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_oura_sleep_detail_day ON oura_sleep_detail(day)")
+            }
+        }
+
+        /**
+         * Schema 16 -> 17 (Frank-Wunsch 2026-05-10 abend):
+         * Cross-Device-Cache fuer Health-Connect-Werte. Wird beim Backup mit-exportiert
+         * und beim Restore auf einem anderen Geraet eingespielt. Damit hat die App
+         * ueber Geraete-Wechsel hinweg den vollen HC-Verlauf, auch wenn Zepp auf dem
+         * neuen Geraet die alten Werte nicht in HC pushen kann.
+         */
+        val MIGRATION_16_17: Migration = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS hc_value_cache (
+                        metric TEXT NOT NULL,
+                        timestampMs INTEGER NOT NULL,
+                        value REAL NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        PRIMARY KEY(metric, timestampMs)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_hc_value_cache_metric ON hc_value_cache(metric)")
             }
         }
     }
