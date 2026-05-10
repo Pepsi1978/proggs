@@ -44,6 +44,7 @@ import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,6 +78,22 @@ fun BiomarkerHostScreen(
     val cosmos = LocalCosmos.current
     val themeVm: ThemeViewModel = hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsState()
+
+    // Health-Connect-Gewicht (Frank-Wunsch 2026-05-10): separater State + Launcher
+    // fuer den Permission-Dialog. Nach erfolgreichem Grant lesen wir die Werte neu.
+    val weightState by vm.weight.collectAsState()
+    val weightPermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.health.connect.client.PermissionController
+            .createRequestPermissionResultContract(),
+    ) { _ -> vm.refreshWeight() }
+    val onRequestWeightPermission: () -> Unit = {
+        weightPermissionLauncher.launch(
+            setOf(
+                androidx.health.connect.client.permission.HealthPermission
+                    .getReadPermission(androidx.health.connect.client.records.WeightRecord::class),
+            ),
+        )
+    }
 
     CosmosScaffold(
         title = "Biomarker",
@@ -222,6 +239,8 @@ fun BiomarkerHostScreen(
                             onOpenMetricDetail = onOpenMetricDetail,
                             onOpenTrainingDetail = onOpenTrainingDetail,
                             onOpenAllTrainings = onOpenAllTrainings,
+                            weightState = weightState,
+                            onRequestWeightPermission = onRequestWeightPermission,
                         )
                     }
                 }
@@ -1227,11 +1246,14 @@ private fun BiomarkerCardForId(
     onOpenMetricDetail: (String) -> Unit,
     onOpenTrainingDetail: (String) -> Unit,
     onOpenAllTrainings: () -> Unit,
+    weightState: WeightState = WeightState(),
+    onRequestWeightPermission: () -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     Column(modifier = Modifier.fillMaxWidth()) {
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_WEIGHT -> MiniWeightCard(weightState, onRequestWeightPermission)
 
             // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
@@ -1595,4 +1617,63 @@ private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (Str
         footnote = "vs. 30-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.SLEEP_PERF) },
     )
+}
+
+/**
+ * Gewichts-Mini-Karte (Frank-Wunsch 2026-05-10) — liest aus Health Connect, das
+ * von der Zepp-App mit den Daten der Amazfit Smart Scale befuellt wird.
+ *
+ * Drei Anzeigemodi:
+ *  1. HC nicht verfuegbar -> Hinweis "Health Connect nicht installiert"
+ *  2. Permission nicht erteilt -> Tap fordert Permission an
+ *  3. Permission erteilt + Daten -> Wert + Delta + Footnote (Standard-Mini-Karte)
+ *
+ * Hauttemperatur-Logik analog: Bei Gewicht ist NIEDRIGER nicht zwingend besser,
+ * aber Frank moechte typisch (z.B. Diaet-Phase) Trend nach unten als positiv
+ * sehen — daher deltaPositive = (latestKg < avg30dKg).
+ */
+@Composable
+private fun MiniWeightCard(weight: WeightState, onRequestPermission: () -> Unit) {
+    when {
+        !weight.healthConnectAvailable -> {
+            MetricMiniCard(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Gewicht",
+                value = "—",
+                delta = "",
+                deltaPositive = false,
+                footnote = "Health Connect nicht verfuegbar",
+            )
+        }
+        !weight.permissionGranted -> {
+            MetricMiniCard(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Gewicht",
+                value = "Tippen",
+                delta = "",
+                deltaPositive = false,
+                footnote = "Erlaubnis erforderlich",
+                onClick = onRequestPermission,
+            )
+        }
+        else -> {
+            val latest = weight.latestKg
+            val avg = weight.avg30dKg
+            val deltaText = if (latest != null && avg != null) {
+                val diff = latest - avg
+                val sign = if (diff >= 0) "+" else "−"
+                "$sign${"%.1f".format(kotlin.math.abs(diff))} kg"
+            } else {
+                ""
+            }
+            MetricMiniCard(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Gewicht",
+                value = latest?.let { "${"%.1f".format(it)} kg" } ?: "—",
+                delta = deltaText,
+                deltaPositive = (latest ?: 0.0) < (avg ?: 0.0),
+                footnote = "vs. 30-Tage-Mittel",
+            )
+        }
+    }
 }

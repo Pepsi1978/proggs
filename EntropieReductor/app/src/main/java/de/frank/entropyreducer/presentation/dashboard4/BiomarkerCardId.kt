@@ -28,6 +28,9 @@ object BiomarkerCardId {
     const val MINI_SLEEP_TOTAL = "mini_sleep_total"
     const val MINI_SLEEP_PERFORMANCE = "mini_sleep_performance"
 
+    // Gewicht aus Health Connect (Zepp-Bridge, Frank-Wunsch 2026-05-10)
+    const val MINI_WEIGHT = "mini_weight"
+
     // Herzfrequenz-Block
     const val HRV = "hrv"
     const val RHR = "rhr"
@@ -87,6 +90,7 @@ object BiomarkerCardId {
         MINI_SLEEP_PERFORMANCE,
         SLEEP_RESTORATIVE,
         SKIN_TEMP_DELTA,
+        MINI_WEIGHT,
     )
 
     val DEFAULT_ORDER: List<String> = listOf(
@@ -95,6 +99,7 @@ object BiomarkerCardId {
         MINI_RHR,
         MINI_SLEEP_TOTAL,
         MINI_SLEEP_PERFORMANCE,
+        MINI_WEIGHT,
         HRV,
         RHR,
         RESPIRATORY,

@@ -28,6 +28,7 @@ playServicesAuth = "21.3.0"
 credentials = "1.5.0-alpha06"
 googleId = "1.1.1"
 reorderable = "2.4.0"
+healthConnect = "1.1.0-rc02"
 
 [libraries]
 # Compose BOM
@@ -107,6 +108,10 @@ google-id = { group = "com.google.android.libraries.identity.googleid", name = "
 
 # Reorderable LazyColumn (Drag & Drop fuer Biomarker-Karten — Frank-Wunsch 2026-05-10)
 reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
+
+# Health Connect (Frank-Wunsch 2026-05-10) — liest Gewicht aus der Zepp-App ueber
+# den Health-Connect-Bridge der Zepp-App seit Januar 2025.
+health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

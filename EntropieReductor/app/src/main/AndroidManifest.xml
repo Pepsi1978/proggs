@@ -17,6 +17,14 @@
     <!-- WorkManager / Hintergrund-Sync -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Health Connect (Frank-Wunsch 2026-05-10): Gewicht aus Zepp-Bridge lesen -->
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+
+    <!-- Sichtbarkeit von Health Connect ab Android 14 (Pflicht-Query) -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <application
         android:name=".EntropyReducerApp"
         android:allowBackup="false"
@@ -89,6 +97,22 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Health Connect Privacy-Policy-Activity (Pflicht von Google ab Android 14)
+             Wird angezeigt wenn der Benutzer auf "Datenschutzerklaerung" im Health-Connect-
+             Permission-Dialog tippt. Frank-Wunsch 2026-05-10. -->
+        <activity
+            android:name=".presentation.health.HealthConnectPrivacyActivity"
+            android:exported="true"
+            android:theme="@style/Theme.EntropieReductor">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity>
 
         <!-- WorkManager Hilt-Initialisierung -->
         <provider

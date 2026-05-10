@@ -12,6 +12,7 @@ import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
 import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
+import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
@@ -111,6 +112,24 @@ data class BiomarkerUiState(
     val ouraSleepDetailsForSelectedDay: List<OuraSleepDetailEntity> = emptyList(),
 )
 
+/**
+ * Weight-State fuer die Health-Connect-Mini-Karte (Frank-Wunsch 2026-05-10).
+ * Wird separat vom Hauptstate gehalten, weil Health Connect kein Flow ist sondern
+ * suspend-basiert — der Wert wird beim Init und beim Refresh einmalig gelesen.
+ *
+ * Mit  - permissionGranted=false: Karte zeigt "Tippen um zu erlauben"
+ * Mit  - permissionGranted=true + latestKg=null: Karte zeigt "Keine Daten in HC"
+ * Mit  - permissionGranted=true + latestKg!=null: Karte zeigt Wert + Delta
+ */
+@androidx.compose.runtime.Immutable
+data class WeightState(
+    val healthConnectAvailable: Boolean = false,
+    val permissionGranted: Boolean = false,
+    val latestKg: Double? = null,
+    val avg30dKg: Double? = null,
+    val history30d: List<Pair<Long, Double>> = emptyList(),
+)
+
 @HiltViewModel
 class BiomarkerViewModel @Inject constructor(
     private val repo: WhoopRepository,
@@ -118,6 +137,7 @@ class BiomarkerViewModel @Inject constructor(
     private val ouraRepo: OuraRepository,
     private val scheduler: BackgroundScheduler,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
+    private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
     settings: AppSettings,
 ) : ViewModel() {
@@ -125,6 +145,41 @@ class BiomarkerViewModel @Inject constructor(
     private val _refreshing = MutableStateFlow(false)
     private val _message = MutableStateFlow<String?>(null)
     private val _selectedDate = MutableStateFlow(java.time.LocalDate.now())
+
+    // Health-Connect-Gewicht: separater State, wird beim Init und nach jedem
+    // erfolgreichen Permission-Grant aktualisiert.
+    private val _weight = MutableStateFlow(WeightState())
+    val weight: StateFlow<WeightState> = _weight
+
+    init {
+        viewModelScope.launch { refreshWeight() }
+    }
+
+    /** Liest Gewicht aus Health Connect. Ruft die Pruefungen + Reads sequentiell auf. */
+    fun refreshWeight() {
+        viewModelScope.launch {
+            val available = healthConnect.isAvailable()
+            if (!available) {
+                _weight.value = WeightState(healthConnectAvailable = false)
+                return@launch
+            }
+            val granted = healthConnect.hasWeightReadPermission()
+            if (!granted) {
+                _weight.value = WeightState(healthConnectAvailable = true, permissionGranted = false)
+                return@launch
+            }
+            val latest = healthConnect.readLatestWeightKg()
+            val avg = healthConnect.averageWeightKg(30)
+            val history = healthConnect.readWeightHistory(30)
+            _weight.value = WeightState(
+                healthConnectAvailable = true,
+                permissionGranted = true,
+                latestKg = latest,
+                avg30dKg = avg,
+                history30d = history,
+            )
+        }
+    }
 
     /**
      * Aktuelle Reihenfolge der Biomarker-Karten (Frank-Wunsch 2026-05-10).
