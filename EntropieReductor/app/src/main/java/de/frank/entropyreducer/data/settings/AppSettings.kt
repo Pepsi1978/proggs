@@ -134,6 +134,30 @@ class AppSettings @Inject constructor(
         it[KEY_WIDGET_ONLY_TODAY] = value
     }
 
+    /**
+     * Atomarer Toggle des "Nur Heute"-Flags (Frank-Wunsch 2026-05-11, Bugfix).
+     *
+     * Vorher: read-then-write in zwei separaten Calls (readWidgetOnlyTodayOnce
+     * + setWidgetOnlyToday). Bei zwei schnellen Klicks lasen beide Activity-
+     * Instanzen den GLEICHEN Wert (DataStore hatte den ersten Write noch nicht
+     * committed) → beide setzten true → keine sichtbare Änderung.
+     *
+     * Jetzt: ein einziger ds.edit { }-Block — DataStore garantiert dort
+     * Mutual Exclusion. Zwei parallele Toggle-Aufrufe togglen sauber den Wert
+     * (false → true → false), statt sich gegenseitig zu überschreiben.
+     *
+     * @return der NEUE Wert nach dem Toggle (für Logging/Tests)
+     */
+    suspend fun toggleWidgetOnlyToday(): Boolean {
+        var newValue = false
+        ds.edit { prefs ->
+            val current = prefs[KEY_WIDGET_ONLY_TODAY] ?: false
+            newValue = !current
+            prefs[KEY_WIDGET_ONLY_TODAY] = newValue
+        }
+        return newValue
+    }
+
     suspend fun setWhisperModel(value: String) = ds.edit { it[KEY_WHISPER_MODEL] = value }
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }

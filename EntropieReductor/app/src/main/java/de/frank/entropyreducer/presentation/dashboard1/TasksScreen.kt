@@ -139,18 +139,20 @@ fun TasksScreen(
         },
     )
 
-    // Frank-Wunsch 2026-05-11: Widget muss sofort frisch werden wenn sich
-    // Aufgaben aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne
-    // diesen Trigger wuerde die Liste bis zu 30 Min veraltet bleiben.
-    // Frank-Wunsch 2026-05-11 (zweite Iteration): Widget-Refresh war zuvor an
-    // jeden state.entriesByBucket-Tick gekoppelt — das hat die App ruckeln
-    // lassen weil updateAll() bei jedem Recompose lief (suspendable, teuer,
-    // rendert alle Widget-Instanzen neu). Jetzt: snapshotFlow erzeugt einen
-    // stabilen String-Signature der nur STRUKTUR-Aenderungen enthaelt (welche
-    // ID in welchem Bucket), distinctUntilChanged dedupliziert, debounce
-    // sammelt Burst-Aenderungen, dann ein einziger updateAll. Resultat: das
-    // Widget bleibt frisch, aber die App ruckelt nicht mehr.
-    val widgetUpdateContext = androidx.compose.ui.platform.LocalContext.current
+    // Frank-Wunsch 2026-05-11: Widget muss frisch werden wenn sich Aufgaben
+    // aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne diesen
+    // Trigger wuerde die Liste bis zu 30 Min veraltet bleiben.
+    //
+    // Frank-Wunsch 2026-05-11 (dritte Iteration, Performance-Fix):
+    //  - debounce von 600ms auf 1500ms erhoeht: bei schnellem Editieren oder
+    //    Bucket-Umsortieren sammelt das mehr Updates und ruft updateAll nur
+    //    einmal pro Burst. Glance.updateAll rendert ALLE Widget-Instanzen
+    //    neu (laedt alle aktiven Eintraege aus Room, baut RemoteViews) — das
+    //    ist teuer und ruckelt die App wenn das Widget installiert ist.
+    //  - applicationContext statt LocalContext.current: Context ist langlebig,
+    //    haengt nicht am Activity-Lifecycle und vermeidet potentielle Recompose-
+    //    Trigger wenn LocalContext sich aendert.
+    val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     @OptIn(FlowPreview::class)
     LaunchedEffect(Unit) {
         androidx.compose.runtime.snapshotFlow {
@@ -162,11 +164,11 @@ fun TasksScreen(
             }
         }
             .distinctUntilChanged()
-            .debounce(600)
+            .debounce(1500)
             .collect {
                 runCatching {
                     de.frank.entropyreducer.presentation.widget.EntropyReducerWidget()
-                        .updateAll(widgetUpdateContext)
+                        .updateAll(appCtx)
                 }
             }
     }

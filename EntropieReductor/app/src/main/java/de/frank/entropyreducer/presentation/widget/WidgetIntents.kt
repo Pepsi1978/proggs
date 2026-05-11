@@ -3,13 +3,9 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
-import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.updateAll
-import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -117,34 +113,7 @@ object WidgetDeepLinkBus {
     }
 }
 
-/**
- * In-Widget-Action zum Toggeln des "Nur Heute"-Filters (Frank-Wunsch 2026-05-11).
- *
- * Glance's ActionCallback laeuft im Service-Process, OEFFNET DIE APP NICHT.
- * Wir liest das aktuelle widgetOnlyToday-Flag aus, invertiert es, speichert
- * und ruft updateAll() — das Widget rendert sich sofort mit gefiltertem Inhalt.
- */
-class WidgetToggleOnlyTodayAction : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) {
-        android.util.Log.i("WidgetToggle", "onAction FIRED")
-        try {
-            val settings = EntryPointAccessors
-                .fromApplication(
-                    context.applicationContext,
-                    EntropyReducerWidget.WidgetEntryPoint::class.java,
-                )
-                .appSettings()
-            val current = settings.readWidgetOnlyTodayOnce()
-            android.util.Log.i("WidgetToggle", "current=$current → ${!current}")
-            settings.setWidgetOnlyToday(!current)
-            EntropyReducerWidget().updateAll(context)
-            android.util.Log.i("WidgetToggle", "updateAll done")
-        } catch (t: Throwable) {
-            android.util.Log.e("WidgetToggle", "FAILED", t)
-        }
-    }
-}
+// Hinweis: Frueher gab es hier eine WidgetToggleOnlyTodayAction (Glance
+// ActionCallback). Die hat in der Praxis nicht zuverlaessig gefeuert (Glance
+// Service Process Issues). Sie wurde durch WidgetToggleActivity ersetzt —
+// siehe presentation/widget/WidgetToggleActivity.kt. Code 2026-05-11 entfernt.
