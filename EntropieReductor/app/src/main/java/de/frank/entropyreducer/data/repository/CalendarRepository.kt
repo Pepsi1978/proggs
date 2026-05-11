@@ -146,9 +146,17 @@ class CalendarRepository @Inject constructor(
                         while (dayIter.isBefore(endDateExclusive)) {
                             val dayStr = dayIter.toString()
                             val existing = daysByDate[dayStr]
-                            if (parsed != ShiftCode.UNBEKANNT ||
-                                existing == null || existing.shiftCode == ShiftCode.UNBEKANNT
-                            ) {
+                            // Prioritaets-Stufen (Frank-Regel 2026-05-11):
+                            // URLAUB (100) > FREI(explizit) (80) > TAGDIENST/NACHTDIENST (50) >
+                            // FREI(default, rawText leer) (10) > UNBEKANNT (0).
+                            // Sonst wuerden zwei Events am gleichen Tag (z.B. "X" + "Tag 2")
+                            // sich gegenseitig ueberschreiben — Reihenfolge ist API-abhaengig.
+                            // Frank's Konvention: Wenn "X" steht, ist der Tag IMMER frei.
+                            val newPrio = priorityOf(parsed, summary)
+                            val oldPrio = existing
+                                ?.let { priorityOf(it.shiftCode, it.rawCalendarText) }
+                                ?: -1
+                            if (newPrio >= oldPrio) {
                                 daysByDate[dayStr] = CalendarDayEntity(
                                     date = dayStr,
                                     shiftCode = parsed,
@@ -217,6 +225,23 @@ class CalendarRepository @Inject constructor(
         daysByDate.size
     }.onFailure { Log.e(TAG, "Calendar-Sync fehlgeschlagen", it) }
         .also { session.end() } // Token-Cache leeren — naechster Sync holt frisch
+
+    /**
+     * Prioritaet eines Schichtcodes fuer Konflikt-Aufloesung wenn mehrere
+     * Events am gleichen Tag liegen.
+     *   100 = URLAUB (gewinnt immer)
+     *    80 = FREI explizit aus Event ("X", "Tag 2 X" etc., rawText nicht leer)
+     *    50 = TAGDIENST / NACHTDIENST
+     *    10 = FREI Default (kein Event eingetragen, rawText leer)
+     *     0 = UNBEKANNT
+     * Frank-Regel 2026-05-11: "Wenn ein X mit drin steht, habe ich immer frei."
+     */
+    private fun priorityOf(code: ShiftCode, rawText: String): Int = when (code) {
+        ShiftCode.URLAUB -> 100
+        ShiftCode.FREI -> if (rawText.isNotBlank()) 80 else 10
+        ShiftCode.TAGDIENST, ShiftCode.NACHTDIENST -> 50
+        ShiftCode.UNBEKANNT -> 0
+    }
 
     private fun parseIsoToMs(iso: String?): Long {
         if (iso.isNullOrBlank()) return 0L
