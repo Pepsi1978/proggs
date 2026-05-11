@@ -141,10 +141,15 @@
              Iterationen war ein klickbarer Toggle im Widget nicht zuverlaessig.
              Stattdessen: Toggle in den Widget-Einstellungen (Settings-Zahnrad
              oben rechts oeffnet die App-Settings mit "Nur Heute"-Schalter). -->
+        <!-- android:theme 2026-05-11: Versucht den ListView-Scrollbar zu
+             verstecken. Receiver-Theme wird vom Widget-Host (Nova Launcher etc.)
+             beim Inflate der Glance-RemoteViews gelesen — listViewStyle und
+             scrollbar-Properties werden so auf die interne ListView angewendet. -->
         <receiver
             android:name=".presentation.widget.EntropyReducerWidgetReceiver"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:theme="@style/Theme.EntropieReductor.Widget">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

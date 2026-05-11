@@ -15,10 +15,24 @@
     <!--
         Widget-spezifische Style-Overrides (Frank-Wunsch 2026-05-11).
         Versteckt den ListView-Scrollbar in der Glance LazyColumn — der
-        ist standardmaessig sichtbar und stoert visuell. Wird via
-        android:listViewStyle vom Widget-Host (z.B. Nova Launcher) gelesen.
+        ist standardmaessig sichtbar und stoert visuell.
     -->
     <style name="WidgetListViewNoScrollbar" parent="@android:style/Widget.Material.ListView">
+        <item name="android:scrollbars">none</item>
+        <item name="android:scrollbarSize">0dp</item>
+        <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:fadeScrollbars">true</item>
+        <item name="android:overScrollMode">never</item>
+    </style>
+
+    <!--
+        Theme das beim Widget-Receiver gesetzt wird (im Manifest). Setzt
+        android:listViewStyle und scrollbar-Defaults — das wirkt auf die
+        ListView die Glance intern fuer LazyColumn nutzt.
+    -->
+    <style name="Theme.EntropieReductor.Widget" parent="android:Theme.Material.NoActionBar">
+        <item name="android:listViewStyle">@style/WidgetListViewNoScrollbar</item>
         <item name="android:scrollbars">none</item>
         <item name="android:scrollbarSize">0dp</item>
         <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
