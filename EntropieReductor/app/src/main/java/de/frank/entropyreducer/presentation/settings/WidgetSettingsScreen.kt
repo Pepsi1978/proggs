@@ -74,8 +74,15 @@ class WidgetSettingsViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode> = settings.widgetThemeModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
 
+    val onlyToday: StateFlow<Boolean> = settings.widgetOnlyTodayFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     fun setTheme(mode: ThemeMode) {
         viewModelScope.launch { settings.setWidgetThemeMode(mode) }
+    }
+
+    fun setOnlyToday(value: Boolean) {
+        viewModelScope.launch { settings.setWidgetOnlyToday(value) }
     }
 }
 
@@ -86,6 +93,7 @@ fun WidgetSettingsScreen(
 ) {
     val cosmos = LocalCosmos.current
     val mode by vm.themeMode.collectAsState()
+    val onlyToday by vm.onlyToday.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -95,6 +103,13 @@ fun WidgetSettingsScreen(
             // Widget sofort neu rendern damit der Theme-Wechsel sichtbar wird.
             // runCatching weil das Update fehlschlagen kann wenn das Widget
             // noch nicht auf dem Homescreen liegt.
+            runCatching { EntropyReducerWidget().updateAll(context) }
+        }
+    }
+
+    fun setOnlyTodayAndRefresh(value: Boolean) {
+        vm.setOnlyToday(value)
+        scope.launch {
             runCatching { EntropyReducerWidget().updateAll(context) }
         }
     }
@@ -162,6 +177,35 @@ fun WidgetSettingsScreen(
                 description = "Dunkler Hintergrund mit hellem Text — auch wenn das Gerät hell ist",
                 isActive = mode == ThemeMode.DARK,
                 onClick = { setAndRefresh(ThemeMode.DARK) },
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Anzeige-Filter",
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "Hier waehlst du, ob das Widget alle Aufgaben oder nur die heutigen anzeigt. " +
+                    "Die Einstellung wirkt sofort nach dem Wechsel.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+
+            ThemeOptionRow(
+                icon = Icons.Outlined.RadioButtonUnchecked,
+                label = "Alle Aufgaben",
+                description = "Zeigt alle Buckets (Heute, Morgen, Freiblock, Spaeter) — Standard",
+                isActive = !onlyToday,
+                onClick = { setOnlyTodayAndRefresh(false) },
+            )
+            ThemeOptionRow(
+                icon = Icons.Outlined.RadioButtonChecked,
+                label = "Nur Heute",
+                description = "Zeigt nur die fuer heute geplanten Aufgaben — fuer den Tagesfokus",
+                isActive = onlyToday,
+                onClick = { setOnlyTodayAndRefresh(true) },
             )
 
             Spacer(Modifier.height(8.dp))

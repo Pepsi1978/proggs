@@ -10,13 +10,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.currentState
-import androidx.glance.state.GlanceStateDefinition
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -83,14 +78,6 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 
-    // KRITISCH (Bugfix 2026-05-11, achte Iteration — neue Herangehensweise):
-    // PreferencesGlanceStateDefinition ist Glance's eigener reaktiver Store.
-    // Wenn ein ActionCallback updateAppWidgetState aufruft, erkennt Glance
-    // automatisch die Aenderung UND triggert provideGlance neu. Das ist der
-    // offizielle Pattern fuer Widget-internen State.
-    override val stateDefinition: GlanceStateDefinition<Preferences> =
-        PreferencesGlanceStateDefinition
-
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entry = EntryPointAccessors
             .fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
@@ -99,33 +86,27 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
         val themeMode = settings.readWidgetThemeModeOnce()
         val palette = resolveWidgetPalette(context, themeMode)
-        android.util.Log.i("WidgetToggle", "provideGlance: themeMode=$themeMode")
+        val onlyToday = settings.readWidgetOnlyTodayOnce()
+        android.util.Log.i("WidgetWidget", "provideGlance: themeMode=$themeMode, onlyToday=$onlyToday")
 
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
 
+        val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
+            mapOf(
+                TimeBucket.HEUTE to all
+                    .filter { it.timeBucket == TimeBucket.HEUTE }
+                    .sortedByDescending { it.priorityScore },
+            )
+        } else {
+            ALL_BUCKETS.associateWith { bucket ->
+                all.filter { it.timeBucket == bucket }
+                    .sortedByDescending { it.priorityScore }
+            }
+        }
+
         provideContent {
             GlanceTheme {
-                // onlyToday wird REAKTIV aus Glance's eigenem State gelesen.
-                // Jede Aenderung via updateAppWidgetState triggert hier sofort
-                // einen Recompose — das ist der Kern des sauberen Patterns.
-                val prefs = currentState<Preferences>()
-                val onlyToday = prefs[KEY_ONLY_TODAY] ?: false
-                android.util.Log.i("WidgetToggle", "Composable read: onlyToday=$onlyToday")
-
-                val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
-                    mapOf(
-                        TimeBucket.HEUTE to all
-                            .filter { it.timeBucket == TimeBucket.HEUTE }
-                            .sortedByDescending { it.priorityScore },
-                    )
-                } else {
-                    ALL_BUCKETS.associateWith { bucket ->
-                        all.filter { it.timeBucket == bucket }
-                            .sortedByDescending { it.priorityScore }
-                    }
-                }
-
                 WidgetContent(grouped = grouped, palette = palette, onlyToday = onlyToday)
             }
         }
@@ -136,11 +117,6 @@ class EntropyReducerWidget : GlanceAppWidget() {
     interface WidgetEntryPoint {
         fun entryDao(): EntropyEntryDao
         fun appSettings(): AppSettings
-    }
-
-    companion object {
-        /** Glance-State Key fuer den "nur Heute"-Filter. Reaktiv via currentState. */
-        val KEY_ONLY_TODAY = booleanPreferencesKey("only_today")
     }
 }
 
@@ -355,13 +331,15 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int, onlyToday: Boo
 }
 
 /**
- * Häkchen-Toggle im Widget-Header (Bugfix 2026-05-11, fuenfte Iteration —
- * offizieller Glance-Pattern). Aktiv = nur HEUTE sichtbar, inaktiv = alle Buckets.
+ * Häkchen-Modus-Indikator im Widget-Header (Bugfix 2026-05-11, finale Loesung).
+ * Aktiv = nur HEUTE wird angezeigt, inaktiv = alle Buckets.
  *
- * Click ruft WidgetToggleAction (ActionCallback) auf — laeuft im WorkManager-
- * Worker, ist NICHT an Activity-Lifecycle gebunden. Action macht den
- * DataStore-Toggle (atomar) und ruft update(context, glanceId) fuer gezielten
- * Re-Render der spezifischen Widget-Instance. Quelle: developer.android.com.
+ * Nach 10 gescheiterten Iterationen mit einem klickbaren Toggle (Glance +
+ * Nova Launcher konnten den Klick nicht zuverlaessig zum Render-Update
+ * uebersetzen) ist dieser Indikator jetzt NICHT mehr klickbar — er zeigt
+ * nur den aktuellen Modus an. Der Wechsel passiert in den Widget-Einstellungen
+ * (Tap aufs Settings-Zahnrad rechts daneben oeffnet die Settings, dort
+ * gibt es einen "Nur Heute"-Schalter).
  *
  * Aktiv-Farbe: GRUEN (palette.catHealth = #34D399 / #059669) — Frank's Wunsch.
  */
@@ -375,7 +353,8 @@ private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
             .background(ColorProvider(bg))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clickable(actionStartActivity<WidgetToggleActivity>()),
+            // KEIN clickable mehr — Wechsel via Widget-Einstellungen (siehe oben).
+            .clickable(WidgetIntents.openHeaderAction(WidgetIntents.ACTION_SETTINGS)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
@@ -386,7 +365,7 @@ private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
         )
         Spacer(GlanceModifier.width(4.dp))
         Text(
-            text = "Heute",
+            text = if (isActive) "Nur Heute" else "Alle",
             style = TextStyle(
                 color = ColorProvider(tint),
                 fontSize = 11.sp,
