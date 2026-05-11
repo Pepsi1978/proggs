@@ -114,7 +114,7 @@
     <string name="coming_soon_biomarker">Die Whoop-Anbindung mit Recovery-Ring und HRV-Verlauf wird in Stufe 2 freigeschaltet.</string>
 
     <!-- Stufe 4: Widget -->
-    <string name="widget_description">Entropie-Reduktor: Status-Pille, Top-Aufgabe und Mic-Button auf dem Homescreen.</string>
+    <string name="widget_description">Entropie-Reduktor Aufgaben — scrollbare Liste mit Heute/Morgen/Freiblock/Später, tippen öffnet die App.</string>
 
     <!-- Notifications -->
     <string name="notification_recording_title">Entropie Reduktor — Aufnahme</string>

@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.presentation
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,9 @@ import de.frank.entropyreducer.domain.usecase.SyncEntriesUseCase
 import de.frank.entropyreducer.presentation.launch.LaunchScreen
 import de.frank.entropyreducer.presentation.navigation.AppNavGraph
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
+import de.frank.entropyreducer.presentation.widget.WidgetDeepLink
+import de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus
+import de.frank.entropyreducer.presentation.widget.WidgetIntents
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,6 +50,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Frank-Wunsch 2026-05-11: Wenn die App vom Home-Screen-Widget aus
+        // gestartet wurde, traegt das Intent eine Task-ID + Aktion. Wir
+        // schreiben das in den WidgetDeepLinkBus — TasksScreen reagiert.
+        handleWidgetIntent(intent)
         setContent {
             // BootstrapViewModel: init {} legt beim ersten Start die Default-Prompts an.
             hiltViewModel<BootstrapViewModel>()
@@ -65,6 +73,10 @@ class MainActivity : ComponentActivity() {
             }
 
             EntropieReductorTheme(darkTheme = effectiveDark) {
+                // Falls die App schon lief und nur via singleTop neu hereinkommt,
+                // wird onNewIntent gefeuert — der Bus wird dort befuellt. Hier
+                // braucht es nichts weiter.
+
                 // Frank-Wunsch 2026-05-09: Beim App-Start zuerst ein
                 // LaunchScreen mit dem Variant-Label (Debugversion oder
                 // Performance Version) — Frank kann so beide parallel
@@ -80,6 +92,27 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Activity ist launchMode=standard (Default), aber Widget-Action-Intents
+        // setzen FLAG_ACTIVITY_SINGLE_TOP — wenn die App schon laeuft landet der
+        // Tap also hier statt onCreate. Bus befuellen und fertig.
+        setIntent(intent)
+        handleWidgetIntent(intent)
+    }
+
+    private fun handleWidgetIntent(intent: Intent?) {
+        intent ?: return
+        val taskId = intent.getStringExtra(WidgetIntents.EXTRA_TASK_ID) ?: return
+        val action = intent.getStringExtra(WidgetIntents.EXTRA_ACTION)
+            ?: WidgetIntents.ACTION_FOCUS
+        WidgetDeepLinkBus.emit(WidgetDeepLink(taskId = taskId, action = action))
+        // Extras NICHT aus dem Intent loeschen — wenn Activity-Recreate
+        // passiert (z.B. Theme-Wechsel waehrend des Widget-Taps), wird
+        // handleWidgetIntent noch einmal aufgerufen; der Bus deduppliziert
+        // ueber den consumer-side clear() in TasksScreen.
     }
 }
 

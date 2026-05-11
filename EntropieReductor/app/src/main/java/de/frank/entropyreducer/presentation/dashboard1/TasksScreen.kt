@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.glance.appwidget.updateAll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -134,6 +135,45 @@ fun TasksScreen(
             scope.launch { snackbar.showSnackbar(msg) }
         },
     )
+
+    // Frank-Wunsch 2026-05-11: Widget muss sofort frisch werden wenn sich
+    // Aufgaben aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne
+    // diesen Trigger wuerde die Liste bis zu 30 Min veraltet bleiben.
+    val widgetUpdateContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(state.entriesByBucket) {
+        runCatching {
+            // updateAll ist eine suspendable Extension-Funktion auf
+            // GlanceAppWidget (siehe androidx.glance.appwidget.updateAll —
+            // Import oben im File ergaenzt).
+            de.frank.entropyreducer.presentation.widget.EntropyReducerWidget()
+                .updateAll(widgetUpdateContext)
+        }
+    }
+
+    // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder die KI/Manuell-
+    // Pille schickt einen Deep-Link an WidgetDeepLinkBus. Wir reagieren hier:
+    //  - ACTION_RESCHEDULE → BucketPickerSheet fuer die Task oeffnen
+    //  - ACTION_FOCUS      → Tasks-Tab ist schon offen (NavGraph default); kein
+    //    weiterer Schritt noetig — Frank scrollt zur Karte (LazyColumn-Scroll
+    //    auf Karten-Ebene koennte spaeter ergaenzt werden).
+    // Nach Verarbeitung wird der Bus geleert, damit ein Configuration-Change
+    // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
+    val widgetDeepLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
+        .collectAsState()
+    LaunchedEffect(widgetDeepLink) {
+        val link = widgetDeepLink ?: return@LaunchedEffect
+        val existsInActive = state.entriesByBucket.values
+            .any { list -> list.any { it.id == link.taskId } }
+        if (!existsInActive) {
+            // Task wurde inzwischen erledigt/geloescht — Tap silent verwerfen
+            de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
+            return@LaunchedEffect
+        }
+        if (link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE) {
+            bucketPickerEntryId = link.taskId
+        }
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
+    }
 
     LaunchedEffect(state.errorMessage) {
         state.errorMessage?.let {
