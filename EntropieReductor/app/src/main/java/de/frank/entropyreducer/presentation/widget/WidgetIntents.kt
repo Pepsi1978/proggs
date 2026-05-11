@@ -1,18 +1,14 @@
 package de.frank.entropyreducer.presentation.widget
 
-import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
-import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -121,22 +117,17 @@ object WidgetDeepLinkBus {
 }
 
 /**
- * Offizieller Glance-Toggle-Pattern (Bugfix 2026-05-11, fuenfte Iteration).
+ * Glance-native Toggle (Bugfix 2026-05-11, achte Iteration — neue Herangehensweise).
  *
- * Recherche-Ergebnis: Die richtige Loesung fuer Widget-Toggle-Buttons ist
- * `actionRunCallback<ActionCallback>` (laeuft in WorkManager Worker mit voller
- * Ausfuehrungszeit) plus `update(context, glanceId)` fuer gezielten Re-Render
- * der spezifischen Widget-Instanz. Quelle: Android Developers Docs
- * (developer.android.com/develop/ui/compose/glance/user-interaction).
+ * Komplett neu: KEIN externer DataStore mehr, KEIN Hilt, KEIN Broadcast.
+ * Wir nutzen Glance's eigenen reaktiven State via PreferencesGlanceStateDefinition.
+ * Wenn updateAppWidgetState aufgerufen wird, erkennt Glance die Aenderung in
+ * SEINEM eigenen State und triggert provideGlance + Recompose automatisch.
  *
- * Frueher: actionStartActivity<WidgetToggleActivity> — Activity wurde zwar
- * gestartet (Logcat zeigte ActivityTaskManager:START), aber onCreate-Logs
- * kamen nicht durch, Hilt-Injection unzuverlaessig. ActionCallback umgeht
- * den Activity-Lifecycle komplett — laeuft direkt im Widget-Worker.
- *
- * Logging an mehreren Stellen damit wir bei zukuenftigen Bugs sofort sehen
- * wo es klemmt (Worker startet nicht / Hilt fehlt / DataStore-Write haengt /
- * update() schlaegt fehl).
+ * Das ist der offizielle Pattern den Google empfiehlt (developer.android.com).
+ * Alle vorherigen Iterationen sind gescheitert weil sie externe State-Quellen
+ * (AppSettings DataStore) mit Glance kombinierten — Glance kann externe
+ * Aenderungen nicht erkennen und cached den Composable.
  */
 class WidgetToggleAction : ActionCallback {
     override suspend fun onAction(
@@ -146,55 +137,19 @@ class WidgetToggleAction : ActionCallback {
     ) {
         android.util.Log.i("WidgetToggle", "ActionCallback.onAction ENTRY")
         try {
-            val settings = EntryPointAccessors
-                .fromApplication(
-                    context.applicationContext,
-                    EntropyReducerWidget.WidgetEntryPoint::class.java,
-                )
-                .appSettings()
-            android.util.Log.i("WidgetToggle", "Hilt-Settings entryPoint geladen")
-            val newValue = settings.toggleWidgetOnlyToday()
-            android.util.Log.i("WidgetToggle", "Atomic toggle → $newValue")
-
-            // KRITISCH (Bugfix 2026-05-11, siebte Iteration — Nova Launcher fix):
-            // Frank nutzt Nova Launcher der Widgets aggressiv cached. Glance's
-            // updateAll() queued einen Worker der manchmal erst 30 Sekunden
-            // spaeter laeuft → User sieht keine Reaktion. Loesung: DIREKTER
-            // AppWidget-Update-Broadcast bypassed Glance's Worker-Queue komplett
-            // und triggert sofort den EntropyReducerWidgetReceiver, der dann
-            // synchron provideGlance aufruft. Dieser Broadcast funktioniert exakt
-            // wie `adb shell am broadcast -a APPWIDGET_UPDATE` (was nachweislich
-            // funktioniert).
             updateAppWidgetState(context, glanceId) { prefs ->
                 prefs.toMutablePreferences().apply {
-                    set(WIDGET_TICK_KEY, System.currentTimeMillis())
+                    val current = this[EntropyReducerWidget.KEY_ONLY_TODAY] ?: false
+                    val newValue = !current
+                    set(EntropyReducerWidget.KEY_ONLY_TODAY, newValue)
+                    android.util.Log.i("WidgetToggle", "Glance-State toggle: $current → $newValue")
                 }
             }
-            android.util.Log.i("WidgetToggle", "Glance-State Tick geschrieben")
-
-            // Direkter AppWidget-Update-Broadcast (umgeht Nova-Cache + Glance-Queue)
-            val mgr = AppWidgetManager.getInstance(context)
-            val component = ComponentName(context, EntropyReducerWidgetReceiver::class.java)
-            val ids = mgr.getAppWidgetIds(component)
-            if (ids.isNotEmpty()) {
-                val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
-                    this.component = component
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-                }
-                context.sendBroadcast(intent)
-                android.util.Log.i("WidgetToggle", "Direct broadcast sent for ${ids.size} widget(s)")
-            }
-
-            // Zusaetzlich Glance's updateAll als Fallback fuer normale Launcher
-            EntropyReducerWidget().updateAll(context)
-            android.util.Log.i("WidgetToggle", "updateAll(context) fired")
+            android.util.Log.i("WidgetToggle", "updateAppWidgetState completed — Recompose laeuft automatisch")
+            // KEIN updateAll noetig! Glance erkennt die Aenderung in SEINEM State
+            // und triggert provideGlance + Recompose automatisch.
         } catch (t: Throwable) {
             android.util.Log.e("WidgetToggle", "ActionCallback FAILED", t)
         }
-    }
-
-    companion object {
-        /** Tick-Key in Glance's eigenem State — forciert Recompose bei Toggle. */
-        val WIDGET_TICK_KEY = longPreferencesKey("widget_tick")
     }
 }

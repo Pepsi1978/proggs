@@ -10,9 +10,14 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.currentState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -79,6 +84,14 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 
+    // KRITISCH (Bugfix 2026-05-11, achte Iteration — neue Herangehensweise):
+    // PreferencesGlanceStateDefinition ist Glance's eigener reaktiver Store.
+    // Wenn ein ActionCallback updateAppWidgetState aufruft, erkennt Glance
+    // automatisch die Aenderung UND triggert provideGlance neu. Das ist der
+    // offizielle Pattern fuer Widget-internen State.
+    override val stateDefinition: GlanceStateDefinition<Preferences> =
+        PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entry = EntryPointAccessors
             .fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
@@ -87,27 +100,33 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
         val themeMode = settings.readWidgetThemeModeOnce()
         val palette = resolveWidgetPalette(context, themeMode)
-        val onlyToday = settings.readWidgetOnlyTodayOnce()
-        android.util.Log.i("WidgetToggle", "provideGlance: onlyToday=$onlyToday themeMode=$themeMode")
+        android.util.Log.i("WidgetToggle", "provideGlance: themeMode=$themeMode")
 
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-        // Frank-Wunsch 2026-05-11: Häkchen-Filter im Widget — nur HEUTE
-        // anzeigen wenn aktiv, sonst alle Buckets.
-        val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
-            mapOf(
-                TimeBucket.HEUTE to all
-                    .filter { it.timeBucket == TimeBucket.HEUTE }
-                    .sortedByDescending { it.priorityScore },
-            )
-        } else {
-            ALL_BUCKETS.associateWith { bucket ->
-                all.filter { it.timeBucket == bucket }.sortedByDescending { it.priorityScore }
-            }
-        }
 
         provideContent {
             GlanceTheme {
+                // onlyToday wird REAKTIV aus Glance's eigenem State gelesen.
+                // Jede Aenderung via updateAppWidgetState triggert hier sofort
+                // einen Recompose — das ist der Kern des sauberen Patterns.
+                val prefs = currentState<Preferences>()
+                val onlyToday = prefs[KEY_ONLY_TODAY] ?: false
+                android.util.Log.i("WidgetToggle", "Composable read: onlyToday=$onlyToday")
+
+                val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
+                    mapOf(
+                        TimeBucket.HEUTE to all
+                            .filter { it.timeBucket == TimeBucket.HEUTE }
+                            .sortedByDescending { it.priorityScore },
+                    )
+                } else {
+                    ALL_BUCKETS.associateWith { bucket ->
+                        all.filter { it.timeBucket == bucket }
+                            .sortedByDescending { it.priorityScore }
+                    }
+                }
+
                 WidgetContent(grouped = grouped, palette = palette, onlyToday = onlyToday)
             }
         }
@@ -118,6 +137,11 @@ class EntropyReducerWidget : GlanceAppWidget() {
     interface WidgetEntryPoint {
         fun entryDao(): EntropyEntryDao
         fun appSettings(): AppSettings
+    }
+
+    companion object {
+        /** Glance-State Key fuer den "nur Heute"-Filter. Reaktiv via currentState. */
+        val KEY_ONLY_TODAY = booleanPreferencesKey("only_today")
     }
 }
 
