@@ -118,9 +118,21 @@ fun InteractiveLineChart(
     val firstDate = remember(safe) { Instant.ofEpochMilli(safe.first().first).atZone(ZoneId.systemDefault()).toLocalDate() }
     val lastDate = remember(safe) { Instant.ofEpochMilli(safe.last().first).atZone(ZoneId.systemDefault()).toLocalDate() }
 
-    // 5 Y-Achsen-Werte (Min, 25%, Mitte, 75%, Max) ebenfalls cachen.
+    // 9 Y-Achsen-Werte (Frank-Wunsch 2026-05-11: feiner als die alten 5 Ticks —
+    // Sprung von 6h39 auf 9h03 war zu gross, Zwischenwerte fehlten). Reihenfolge
+    // ist oben→unten: max, 87.5%, 75%, ..., 12.5%, min.
     val yLabels = remember(minY, maxY, rangeY) {
-        listOf(maxY, minY + rangeY * 0.75, minY + rangeY * 0.5, minY + rangeY * 0.25, minY)
+        listOf(
+            maxY,
+            minY + rangeY * 0.875,
+            minY + rangeY * 0.75,
+            minY + rangeY * 0.625,
+            minY + rangeY * 0.5,
+            minY + rangeY * 0.375,
+            minY + rangeY * 0.25,
+            minY + rangeY * 0.125,
+            minY,
+        )
     }
 
     // Werte-Formatter: wenn extern gesetzt (z.B. fuer Schlafstunden) verwenden,
@@ -195,20 +207,14 @@ fun InteractiveLineChart(
                 val w = size.width
                 val h = size.height
                 val gridColor = cosmos.glassBorder
-                // Horizontale Hilfslinien (5 Stueck — passt zu den 5 Y-Labels).
-                // Performance-Fix Loop 1 (2026-05-10): Y-Ticks als FloatArray statt
-                // listOf-Allokation pro Frame. PathEffect via remember oben einmalig.
-                val tick0 = 0f
-                val tick25 = h * 0.25f
-                val tick50 = h * 0.5f
-                val tick75 = h * 0.75f
-                val tick100 = h
+                // Horizontale Hilfslinien (9 Stueck — passt zu den 9 Y-Labels).
+                // Frank-Wunsch 2026-05-11: feinere Unterteilung damit grosse Spannen
+                // (z.B. 5h vs. 9h) Zwischenmarken haben.
                 val gridLineColor = gridColor.copy(alpha = 0.3f)
-                drawLine(gridLineColor, Offset(0f, tick0), Offset(w, tick0), 1f, pathEffect = gridDashEffect)
-                drawLine(gridLineColor, Offset(0f, tick25), Offset(w, tick25), 1f, pathEffect = gridDashEffect)
-                drawLine(gridLineColor, Offset(0f, tick50), Offset(w, tick50), 1f, pathEffect = gridDashEffect)
-                drawLine(gridLineColor, Offset(0f, tick75), Offset(w, tick75), 1f, pathEffect = gridDashEffect)
-                drawLine(gridLineColor, Offset(0f, tick100), Offset(w, tick100), 1f, pathEffect = gridDashEffect)
+                for (n in 0..8) {
+                    val yTick = h * (n / 8f)
+                    drawLine(gridLineColor, Offset(0f, yTick), Offset(w, yTick), 1f, pathEffect = gridDashEffect)
+                }
                 // Datenlinie + Punkte
                 if (safe.size >= 2) {
                     val stepX = w / (safe.size - 1).toFloat()

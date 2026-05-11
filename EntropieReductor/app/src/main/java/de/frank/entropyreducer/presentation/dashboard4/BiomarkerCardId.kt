@@ -139,7 +139,9 @@ object BiomarkerCardId {
         SLEEP_DEBT,
         KILOJOULES,
         STRAIN,
-        WORKOUTS_FOR_DAY,
+        // WORKOUTS_FOR_DAY: Frank-Vorgabe 2026-05-11 entfernt — die Whoop-Workouts
+        // an diesem Tag sind im Biomarker-Screen redundant. Wird zusaetzlich in
+        // HIDDEN_CARD_IDS gelistet damit es auch fuer bestehende User verschwindet.
         CORRELATION,
         AMAZFIT_LAST_HERO,
         AMAZFIT_TRAININGS,
@@ -170,5 +172,6 @@ object BiomarkerCardId {
         OURA_SLEEP_DETAIL,
         MINI_BODY_WATER,
         MINI_BONE_MASS,
+        WORKOUTS_FOR_DAY,
     )
 }

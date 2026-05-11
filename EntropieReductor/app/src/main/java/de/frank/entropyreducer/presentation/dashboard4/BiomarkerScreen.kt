@@ -487,10 +487,9 @@ fun BiomarkerHostScreen(
                     onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
                 )
             }
-            // Workout-Bereich ganz unten in den Daten-Patterns, vor der Korrelation.
-            // Frank-Wunsch 2026-05-09: grosses Pattern mit Sportart-Icon, Belastung,
-            // Kalorien, Puls, Dauer, HF-Zonen pro Training.
-            item { WorkoutsForDayCard(workouts = state.workoutsForSelectedDay) }
+            // Frank-Wunsch 2026-05-11: WorkoutsForDayCard (Whoop-Workouts an diesem
+            // Tag) ist im Biomarker-Screen redundant — die Trainings stehen schon im
+            // Amazfit-Hero-Bereich. Komplett entfernt aus Default-Layout.
             // Korrelations-Card: zeigt Pearson-Korrelation HRV ↔ Schlafdauer
             // über die volle Historie.
             item { CorrelationCard(state) }
@@ -1218,7 +1217,10 @@ private fun SkinTempDeltaCard(
         delta > 0.0 -> CosmosColors.Critical
         else -> cosmos.textPrimary
     }
-    val tempSuffix = currentValue?.let { "${"%.2f".format(it)} °C aktuell · vs. 30-Tage-Mittel" }
+    // Frank-Wunsch 2026-05-11: "vs. 30-Tage-Mittel" gehoert auf eine eigene Zeile —
+    // der Strich zwischen "aktuell" und "vs." sah aus als wuerde der Text gewaltsam
+    // umbrechen.
+    val tempSuffix = currentValue?.let { "${"%.2f".format(it)} °C aktuell\nvs. 30-Tage-Mittel" }
         ?: "vs. 30-Tage-Mittel"
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),

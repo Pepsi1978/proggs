@@ -480,16 +480,16 @@ private fun ThirtyDayAverageLabel(values: List<Double>) {
 
 /**
  * Farb-Skala fuer Score-Karten (Readiness, Schlaf-Score, Aktivität).
- * Frank-Vorgabe 2026-05-10: drei Stufen.
- *   - 80 oder mehr: gruen (Success)
- *   - 60 bis 79:    gelb (Warning)
- *   - unter 60:     rot (Critical)
+ * Frank-Vorgabe 2026-05-11: drei Stufen mit verschobenen Schwellen.
+ *   - 75 oder mehr: gruen (Success)
+ *   - 50 bis 74:    gelb (Warning)
+ *   - unter 50:     rot (Critical)
  * Resilienz nutzt eine eigene Logik (levelToColor), keine Score-Skala.
  */
 internal fun scoreColor(score: Int?): Color = when {
     score == null -> CosmosColors.AccentPrimary
-    score >= 80 -> CosmosColors.Success
-    score >= 60 -> CosmosColors.Warning
+    score >= 75 -> CosmosColors.Success
+    score >= 50 -> CosmosColors.Warning
     else -> CosmosColors.Critical
 }
 

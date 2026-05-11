@@ -611,9 +611,10 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
     val xLabelFn: (Int) -> String = { i ->
         if (totalKm != null) {
             val km = (i.toDouble() / lastIdx) * totalKm
-            // Bei sehr kurzen Laeufen (< 5 km) eine Nachkommastelle anzeigen,
-            // ab 5 km reicht eine ganze Zahl damit die Achse nicht ueberladen wirkt.
-            if (totalKm < 5.0) "Km ${"%.1f".format(km)}" else "Km ${km.toInt()}"
+            // Frank-Wunsch 2026-05-11: IMMER eine Nachkommastelle, damit das letzte
+            // Tick die exakte Laufstrecke zeigt (z.B. 7,2 km bei 7,16 km-Lauf statt
+            // truncated 7). Schrittweite = totalKm/6 weil 6 Ticks im Chart.
+            "Km ${"%.1f".format(km)}"
         } else {
             "Km ${i + 1}"
         }
