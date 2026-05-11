@@ -156,6 +156,10 @@ fun BiomarkerDetailScreen(
                                 accent = spec.accent,
                                 unit = spec.unit,
                                 height = 220,
+                                // Frank-Wunsch 2026-05-11: Y-Achse und Tooltip mit der
+                                // gleichen Formatierung wie die Werte-Liste/Statistik —
+                                // Schlafdauer also "7h 23min" statt nackter Minutenzahl.
+                                valueFormatter = spec.format,
                             )
                         }
                     }

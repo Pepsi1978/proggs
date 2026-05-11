@@ -105,7 +105,7 @@ fun AmazfitTrainingDetailScreen(
             item { TrainingseffektCard(w) }
             if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city) }
             if (hr.isNotEmpty()) item { PulsverlaufCard(hr) }
-            if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream) }
+            if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream, w.distanceMeters) }
             if (splits.isNotEmpty()) item { SplitsCard(splits) }
             item { SchwimmCard(w) }
             // Diagnose-Karte: zeigt WAS fehlt und bietet manuelles Neuladen.
@@ -590,7 +590,7 @@ private fun ChartWithAxes(
  * Y-Achse INVERTIERT — niedrigere sec/km (= schneller) ist OBEN.
  */
 @Composable
-private fun TempoVerlaufCard(stream: List<Double>) {
+private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
     val cosmos = LocalCosmos.current
     // stream-Werte sind bereits in sec/km vom Parser. Stark schwankende Werte
     // (z.B. an Pause-Phasen) ueber 1200 sec/km filtern damit der Chart nicht
@@ -601,6 +601,23 @@ private fun TempoVerlaufCard(stream: List<Double>) {
     val min = secPerKm.min()
     val max = secPerKm.max()
     val accent = CosmosColors.AccentPrimary
+    // Frank-Wunsch 2026-05-11: X-Achse zeigt echte Kilometer (z.B. "Km 0", "Km 1",
+    // "Km 5.8") statt Sample-Index (frueher "Km 1" bis "Km 3011" weil pro Sample
+    // ein Label). Wir interpolieren linear: Sample i steht fuer Position
+    // (i / (N-1)) * totalKm. Wenn keine Distanz bekannt ist, fallen wir auf den
+    // alten Index zurueck (kommt selten vor).
+    val totalKm = distanceMeters?.takeIf { it > 0 }?.let { it / 1000.0 }
+    val lastIdx = (secPerKm.size - 1).coerceAtLeast(1)
+    val xLabelFn: (Int) -> String = { i ->
+        if (totalKm != null) {
+            val km = (i.toDouble() / lastIdx) * totalKm
+            // Bei sehr kurzen Laeufen (< 5 km) eine Nachkommastelle anzeigen,
+            // ab 5 km reicht eine ganze Zahl damit die Achse nicht ueberladen wirkt.
+            if (totalKm < 5.0) "Km ${"%.1f".format(km)}" else "Km ${km.toInt()}"
+        } else {
+            "Km ${i + 1}"
+        }
+    }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -626,8 +643,8 @@ private fun TempoVerlaufCard(stream: List<Double>) {
                 yMax = max,
                 yUnit = "min/km",
                 yFormat = { formatPaceSec(it) },
-                xLabel = { i -> "Km ${i + 1}" },
-                xTickCount = (secPerKm.size - 1).coerceAtMost(6).coerceAtLeast(1),
+                xLabel = xLabelFn,
+                xTickCount = 6,
                 yTickCount = 4,
                 values = secPerKm,
                 invertY = true,

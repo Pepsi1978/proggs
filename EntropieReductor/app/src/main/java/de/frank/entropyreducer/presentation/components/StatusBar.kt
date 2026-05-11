@@ -141,7 +141,7 @@ private fun StatusDetailSheet(
                 value = breakdown.biomarkerScore?.let { "$it %" } ?: "Whoop nicht verbunden",
                 detail = buildString {
                     breakdown.recoveryScore?.let { append("Recovery $it %  ") }
-                    breakdown.hrvMs?.let { append("HRV ${"%.0f".format(it)} ms  ") }
+                    breakdown.hrvMs?.let { append("HRV ${"%.1f".format(it)} ms  ") }
                     breakdown.sleepPerformance?.let { append("Sleep $it %") }
                 }.trim(),
             )

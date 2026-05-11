@@ -91,9 +91,10 @@ internal fun AmazfitLastTrainingHeroCard(
     onOpenDetail: (String) -> Unit,
 ) {
     val latest = workouts.firstOrNull() ?: return
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        LetzterLaufHero(w = latest, onOpenDetail = { onOpenDetail(latest.trackId) })
-    }
+    // Frank-Wunsch 2026-05-11: KEIN GlassCard-Wrapper mehr — die gelbe Blase
+    // (LetzterLaufHero-Box mit accent-Hintergrund) ist selbst die Karte. Die
+    // weisse Aussen-Blase um die gelbe Innen-Blase wirkte wie doppelter Rand.
+    LetzterLaufHero(w = latest, onOpenDetail = { onOpenDetail(latest.trackId) })
 }
 
 @Composable

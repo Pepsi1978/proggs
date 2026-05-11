@@ -566,7 +566,7 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
         MetricMiniCard(
             modifier = Modifier.weight(1f),
             label = "HRV",
-            value = latest?.hrvMs?.let { "${"%.0f".format(it)} ms" } ?: "—",
+            value = latest?.hrvMs?.let { "${"%.1f".format(it)} ms" } ?: "—",
             delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
             deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
@@ -1200,30 +1200,35 @@ private fun SkinTempDeltaCard(
     delta: Double?,
     onClick: () -> Unit,
 ) {
-    // Frank-Wunsch 2026-05-10 (vierte Praezisierung): EXAKT die gleiche Standard-
-    // Groesse wie alle anderen Mini-Karten — also auch hier Label + Wert + Delta
-    // + Footnote. Vorherige Variante "nur Label + Wert" war optisch kuerzer als
-    // die Restorative-Karte und Frank wollte beide identisch hoch haben.
-    // Wert = aktueller Hauttemperatur-Messwert (z.B. 36.42 °C),
-    // Delta = Abweichung vom 30-Tage-Schnitt (z.B. +0.34 °C / −0.12 °C),
-    // Footnote = "vs. 30-Tage-Mittel".
-    // Bei Hauttemperatur ist NIEDRIGER besser (Whoop-Doktrin), daher
-    // deltaPositive = (delta < 0).
+    // Frank-Wunsch 2026-05-11: gedreht. Die ABWEICHUNG vom 30-Tage-Mittel ist
+    // jetzt der grosse, farbige Hauptwert (rot bei steigender Temperatur,
+    // gruen bei fallender — niedriger ist besser bei Hauttemperatur). Die
+    // absolute Temperatur ist nur noch klein als Zusatzzeile in der Footnote.
+    val cosmos = LocalCosmos.current
     val sign = when {
         delta == null -> ""
         delta >= 0 -> "+"
         else -> "−"
     }
     val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
-    val deltaText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else ""
+    val bigDeltaText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—"
+    val bigDeltaColor = when {
+        delta == null -> cosmos.textPrimary
+        delta < 0.0 -> CosmosColors.Success
+        delta > 0.0 -> CosmosColors.Critical
+        else -> cosmos.textPrimary
+    }
+    val tempSuffix = currentValue?.let { "${"%.2f".format(it)} °C aktuell · vs. 30-Tage-Mittel" }
+        ?: "vs. 30-Tage-Mittel"
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Hauttemperatur",
-        value = currentValue?.let { "${"%.2f".format(it)} °C" } ?: "—",
-        delta = deltaText,
+        value = bigDeltaText,
+        delta = "",
         deltaPositive = (delta ?: 0.0) < 0.0,
-        footnote = "vs. 30-Tage-Mittel",
+        footnote = tempSuffix,
         onClick = onClick,
+        valueColor = bigDeltaColor,
     )
 }
 
@@ -1574,7 +1579,7 @@ private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "HRV",
-        value = latest?.hrvMs?.let { "${"%.0f".format(it)} ms" } ?: "—",
+        value = latest?.hrvMs?.let { "${"%.1f".format(it)} ms" } ?: "—",
         delta = formatDelta(latest?.hrvMs, avgHrv, "ms"),
         deltaPositive = (latest?.hrvMs ?: 0.0) > (avgHrv ?: 0.0),
         footnote = "vs. 30-Tage-Mittel",
