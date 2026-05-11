@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Karten-Hintergrund mit linearem Gradient: BOTTOM-LEFT (transparent ueber
+  surfaceCard) nach TOP-RIGHT (Bucket-Tint). Spiegelt das GlassCard-Tint-
+  Verhalten der App-Karten (Brush.linearGradient bottom-left -> top-right).
+  Angle 45 = von unten-links nach oben-rechts in Android-Gradients.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <gradient
+        android:type="linear"
+        android:angle="45"
+        android:startColor="#FFFFFF"
+        android:endColor="#2E2563EB" />
+</shape>

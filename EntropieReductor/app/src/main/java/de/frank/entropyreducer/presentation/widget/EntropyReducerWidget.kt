@@ -23,6 +23,7 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -135,6 +136,49 @@ private fun bucketIconRes(bucket: TimeBucket): Int = when (bucket) {
     TimeBucket.MORGEN -> R.drawable.ic_widget_bucket_morgen
     TimeBucket.FREIBLOCK -> R.drawable.ic_widget_bucket_freiblock
     TimeBucket.SPAETER -> R.drawable.ic_widget_bucket_spaeter
+}
+
+/**
+ * Karten-Hintergrund mit Gradient-Drawable: BOTTOM-LEFT (transparent ueber
+ * surfaceCard) nach TOP-RIGHT (Bucket-Tint mit alpha). Spiegelt das
+ * GlassCard-Tint-Verhalten der App (Frank-Wunsch 2026-05-11). Pro Bucket x
+ * Theme ein eigenes Drawable (8 total in res/drawable/).
+ */
+private fun cardBackgroundRes(palette: WidgetPalette, bucket: TimeBucket): Int = if (palette.isDark) {
+    when (bucket) {
+        TimeBucket.HEUTE -> R.drawable.bg_card_heute_dark
+        TimeBucket.MORGEN -> R.drawable.bg_card_morgen_dark
+        TimeBucket.FREIBLOCK -> R.drawable.bg_card_freiblock_dark
+        TimeBucket.SPAETER -> R.drawable.bg_card_spaeter_dark
+    }
+} else {
+    when (bucket) {
+        TimeBucket.HEUTE -> R.drawable.bg_card_heute_light
+        TimeBucket.MORGEN -> R.drawable.bg_card_morgen_light
+        TimeBucket.FREIBLOCK -> R.drawable.bg_card_freiblock_light
+        TimeBucket.SPAETER -> R.drawable.bg_card_spaeter_light
+    }
+}
+
+/**
+ * Kompaktes Bucket-Label fuer EntryMetaRow (Spiegel von TasksScreen Z.1471).
+ */
+private fun bucketLabelShort(bucket: TimeBucket): String = when (bucket) {
+    TimeBucket.HEUTE -> "heute"
+    TimeBucket.MORGEN -> "morgen"
+    TimeBucket.FREIBLOCK -> "Freiblock"
+    TimeBucket.SPAETER -> "später"
+}
+
+/**
+ * Geschaetzte Dauer als kompakter Text — Spiegel von TasksScreen Z.1477.
+ */
+private fun durationHint(minutes: Int?): String? = minutes?.let {
+    when {
+        it < 60 -> "$it min"
+        it < 24 * 60 -> "${it / 60} h"
+        else -> "${it / (24 * 60)} d"
+    }
 }
 
 private fun categoryColor(palette: WidgetPalette, cat: EntropyCategory): Color = when (cat) {
@@ -316,118 +360,182 @@ private fun BucketHeader(palette: WidgetPalette, bucket: TimeBucket, count: Int)
 private fun TaskCard(entry: EntropyEntryEntity, palette: WidgetPalette) {
     val catColor = categoryColor(palette, entry.category)
     val prioColor = priorityColor(palette, entry.priorityScore)
-    val tintBase = bucketTint(palette, entry.timeBucket).copy(alpha = palette.cardTintAlpha)
     val isManual = entry.manualBucket != null
     val bucketAccent = bucketTint(palette, entry.timeBucket)
 
-    // AEUSSERE Box: Karte = Focus-Action (gesamte Karte tippbar)
+    // EINE Box mit Gradient-Drawable als Hintergrund (Frank-Wunsch 2026-05-11):
+    // Das Drawable enthaelt cornerRadius UND linearen Gradient bottom-left →
+    // top-right (transparent surfaceCard → Bucket-Tint mit alpha). Glance
+    // unterstuetzt background(ImageProvider, ContentScale) nativ.
     Box(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .background(ColorProvider(palette.surfaceCard))
+            .background(
+                imageProvider = ImageProvider(cardBackgroundRes(palette, entry.timeBucket)),
+                contentScale = ContentScale.FillBounds,
+            )
             .cornerRadius(20.dp)
+            .padding(14.dp)
             .clickable(WidgetIntents.openTaskAction(entry.id, WidgetIntents.ACTION_FOCUS)),
     ) {
-        // INNERE Box: Bucket-Tint-Overlay (ersetzt GlassCard-Tint-Gradient)
-        Box(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .background(ColorProvider(tintBase))
-                .cornerRadius(20.dp)
-                .padding(14.dp),
-        ) {
-            Column(modifier = GlanceModifier.fillMaxWidth()) {
-                // TOP-ROW: IconCircle | Title-Block | Prio+Check (4-Spalten wie Original)
-                Row(verticalAlignment = Alignment.Top) {
-                    CategoryIconCircle(palette = palette, color = catColor, iconRes = categoryIconRes(entry.category))
-                    Spacer(GlanceModifier.width(12.dp))
-                    Column(modifier = GlanceModifier.defaultWeight()) {
-                        // Kategorie-Pille
-                        CategoryPill(palette = palette, label = categoryLabel(entry.category), color = catColor)
-                        Spacer(GlanceModifier.height(6.dp))
-                        // Title
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            // TOP-ROW: IconCircle | Title-Block | Prio+Check (4-Spalten wie Original)
+            Row(verticalAlignment = Alignment.Top) {
+                CategoryIconCircle(palette = palette, color = catColor, iconRes = categoryIconRes(entry.category))
+                Spacer(GlanceModifier.width(12.dp))
+                Column(modifier = GlanceModifier.defaultWeight()) {
+                    CategoryPill(palette = palette, label = categoryLabel(entry.category), color = catColor)
+                    Spacer(GlanceModifier.height(6.dp))
+                    Text(
+                        text = entry.title,
+                        style = TextStyle(
+                            color = ColorProvider(palette.textPrimary),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        maxLines = 2,
+                    )
+                    if (entry.description.isNotBlank()) {
+                        Spacer(GlanceModifier.height(4.dp))
                         Text(
-                            text = entry.title,
+                            text = entry.description,
                             style = TextStyle(
-                                color = ColorProvider(palette.textPrimary),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
+                                color = ColorProvider(palette.textSecondary),
+                                fontSize = 12.sp,
                             ),
                             maxLines = 2,
                         )
-                        if (entry.description.isNotBlank()) {
-                            Spacer(GlanceModifier.height(4.dp))
-                            Text(
-                                text = entry.description,
-                                style = TextStyle(
-                                    color = ColorProvider(palette.textSecondary),
-                                    fontSize = 12.sp,
-                                ),
-                                maxLines = 2,
-                            )
-                        }
-                    }
-                    Spacer(GlanceModifier.width(8.dp))
-                    // Rechte Spalte: Prio-Zahl + "Prio"-Label + Check-Box
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "${entry.priorityScore.toInt()}",
-                            style = TextStyle(
-                                color = ColorProvider(prioColor),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
-                        Text(
-                            text = "Prio",
-                            style = TextStyle(
-                                color = ColorProvider(palette.textSecondary),
-                                fontSize = 10.sp,
-                            ),
-                        )
-                        Spacer(GlanceModifier.height(8.dp))
-                        // Check-Box als statische Anzeige (Tap landet via outer-clickable
-                        // in der App; Toggle direkt im Widget wuerde RemoteViewsService
-                        // erfordern und ist mit Glance-LazyColumn-Items nicht zuverlaessig)
-                        Box(
-                            modifier = GlanceModifier
-                                .size(26.dp)
-                                .cornerRadius(8.dp)
-                                .background(ColorProvider(palette.border)),
-                            contentAlignment = Alignment.Center,
-                        ) {}
                     }
                 }
-                Spacer(GlanceModifier.height(12.dp))
-                // SEVERITY-BAR (10 feine Segmente fuer naheren Look ans Original)
-                SeverityBar(severity = entry.severity, palette = palette)
-                // TAGS (max 3)
-                val tagsToShow = entry.tags.take(3)
-                if (tagsToShow.isNotEmpty()) {
-                    Spacer(GlanceModifier.height(10.dp))
-                    Row {
-                        tagsToShow.forEach { tag ->
-                            TagPill(palette = palette, tag = tag)
-                            Spacer(GlanceModifier.width(6.dp))
-                        }
-                    }
-                }
-                Spacer(GlanceModifier.height(10.dp))
-                // BOTTOM-ROW: Prominente Bucket-Pille (KI/Manuell) mit Icon
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(GlanceModifier.defaultWeight())
-                    BucketStatusPill(
-                        palette = palette,
-                        bucket = entry.timeBucket,
-                        accent = bucketAccent,
-                        isManual = isManual,
-                        onClickAction = WidgetIntents.openTaskAction(
-                            entry.id,
-                            WidgetIntents.ACTION_RESCHEDULE,
+                Spacer(GlanceModifier.width(8.dp))
+                // Rechte Spalte: Prio-Zahl + Label + Check-Box
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "${entry.priorityScore.toInt()}",
+                        style = TextStyle(
+                            color = ColorProvider(prioColor),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
                         ),
                     )
+                    Text(
+                        text = "Prio",
+                        style = TextStyle(
+                            color = ColorProvider(palette.textSecondary),
+                            fontSize = 10.sp,
+                        ),
+                    )
+                    Spacer(GlanceModifier.height(8.dp))
+                    Box(
+                        modifier = GlanceModifier
+                            .size(26.dp)
+                            .cornerRadius(8.dp)
+                            .background(ColorProvider(palette.border)),
+                        contentAlignment = Alignment.Center,
+                    ) {}
                 }
             }
+            Spacer(GlanceModifier.height(12.dp))
+            SeverityBar(severity = entry.severity, palette = palette)
+
+            val tagsToShow = entry.tags.take(3)
+            if (tagsToShow.isNotEmpty()) {
+                Spacer(GlanceModifier.height(10.dp))
+                Row {
+                    tagsToShow.forEach { tag ->
+                        TagPill(palette = palette, tag = tag)
+                        Spacer(GlanceModifier.width(6.dp))
+                    }
+                }
+            }
+            Spacer(GlanceModifier.height(10.dp))
+
+            // BOTTOM-ROW: Meta-Info LINKS (Bucket+Dauer, Empfohlen, Wearable) +
+            // KI/Manuell-Pille RECHTS — exakt wie im TasksScreen Z.1170-1173.
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EntryMetaRow(
+                    palette = palette,
+                    entry = entry,
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                BucketStatusPill(
+                    palette = palette,
+                    bucket = entry.timeBucket,
+                    accent = bucketAccent,
+                    isManual = isManual,
+                    onClickAction = WidgetIntents.openTaskAction(
+                        entry.id,
+                        WidgetIntents.ACTION_RESCHEDULE,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Meta-Zeile unter den Tags — Spiegel von TasksScreen.EntryMetaRow (Z.1463).
+ *  - Bucket-Label (klein) mit Uhr-Icon + optional ", X min" Dauer
+ *  - "Empfohlen"-Badge falls priorityScore > 70
+ *  - "Wearable"-Indikator falls biomarkerSnapshotId != null
+ */
+@Composable
+private fun EntryMetaRow(
+    palette: WidgetPalette,
+    entry: EntropyEntryEntity,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    val bucketText = bucketLabelShort(entry.timeBucket)
+    val dur = durationHint(entry.estimatedDurationMinutes)
+    val metaText = if (dur != null) "$bucketText, $dur" else bucketText
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_cat_temporal),
+            contentDescription = null,
+            modifier = GlanceModifier.size(12.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(palette.textSecondary)),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(
+            text = metaText,
+            style = TextStyle(
+                color = ColorProvider(palette.textSecondary),
+                fontSize = 11.sp,
+            ),
+        )
+        if (entry.priorityScore > 70) {
+            Spacer(GlanceModifier.width(8.dp))
+            Box(
+                modifier = GlanceModifier
+                    .background(ColorProvider(palette.prioGreen.copy(alpha = 0.18f)))
+                    .cornerRadius(50.dp)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = "Empfohlen",
+                    style = TextStyle(
+                        color = ColorProvider(palette.prioGreen),
+                        fontSize = 10.sp,
+                    ),
+                )
+            }
+        }
+        if (entry.biomarkerSnapshotId != null) {
+            Spacer(GlanceModifier.width(6.dp))
+            Image(
+                provider = ImageProvider(R.drawable.ic_widget_cat_health),
+                contentDescription = null,
+                modifier = GlanceModifier.size(11.dp),
+                colorFilter = androidx.glance.ColorFilter.tint(
+                    ColorProvider(palette.bucketSpaeter),
+                ),
+            )
         }
     }
 }

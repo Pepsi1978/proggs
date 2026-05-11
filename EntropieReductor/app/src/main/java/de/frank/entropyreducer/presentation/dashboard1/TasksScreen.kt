@@ -21,6 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -139,15 +142,33 @@ fun TasksScreen(
     // Frank-Wunsch 2026-05-11: Widget muss sofort frisch werden wenn sich
     // Aufgaben aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne
     // diesen Trigger wuerde die Liste bis zu 30 Min veraltet bleiben.
+    // Frank-Wunsch 2026-05-11 (zweite Iteration): Widget-Refresh war zuvor an
+    // jeden state.entriesByBucket-Tick gekoppelt — das hat die App ruckeln
+    // lassen weil updateAll() bei jedem Recompose lief (suspendable, teuer,
+    // rendert alle Widget-Instanzen neu). Jetzt: snapshotFlow erzeugt einen
+    // stabilen String-Signature der nur STRUKTUR-Aenderungen enthaelt (welche
+    // ID in welchem Bucket), distinctUntilChanged dedupliziert, debounce
+    // sammelt Burst-Aenderungen, dann ein einziger updateAll. Resultat: das
+    // Widget bleibt frisch, aber die App ruckelt nicht mehr.
     val widgetUpdateContext = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(state.entriesByBucket) {
-        runCatching {
-            // updateAll ist eine suspendable Extension-Funktion auf
-            // GlanceAppWidget (siehe androidx.glance.appwidget.updateAll —
-            // Import oben im File ergaenzt).
-            de.frank.entropyreducer.presentation.widget.EntropyReducerWidget()
-                .updateAll(widgetUpdateContext)
+    @OptIn(FlowPreview::class)
+    LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow {
+            // Stable signature: nur Bucket-Zuordnung + Reihenfolge der IDs.
+            // Tags/Description-Aenderungen triggern kein Update — die sehen
+            // im Widget eh nicht anders aus solange Layout stabil bleibt.
+            state.entriesByBucket.entries.joinToString("|") { (bucket, list) ->
+                "$bucket=${list.joinToString(",") { it.id + ":" + it.manualBucket?.name.orEmpty() }}"
+            }
         }
+            .distinctUntilChanged()
+            .debounce(600)
+            .collect {
+                runCatching {
+                    de.frank.entropyreducer.presentation.widget.EntropyReducerWidget()
+                        .updateAll(widgetUpdateContext)
+                }
+            }
     }
 
     // Frank-Wunsch 2026-05-11: Widget-Tap auf eine Aufgabe oder die KI/Manuell-

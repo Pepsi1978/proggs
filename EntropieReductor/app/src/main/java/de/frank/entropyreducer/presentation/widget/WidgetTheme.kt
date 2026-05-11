@@ -51,6 +51,8 @@ data class WidgetPalette(
     val severityEmpty: Color,
     // Card-Tint-Alpha (heller braucht andere Mischung als dunkler)
     val cardTintAlpha: Float,
+    // Marker fuer Karten-Gradient-Drawable-Auswahl
+    val isDark: Boolean,
 )
 
 /**
@@ -84,6 +86,7 @@ val WidgetDarkPalette = WidgetPalette(
     severityFull = Color(0xFFFBBF24),
     severityEmpty = Color(0xFF2A1F44),
     cardTintAlpha = 0.12f,
+    isDark = true,
 )
 
 /**
@@ -118,6 +121,7 @@ val WidgetLightPalette = WidgetPalette(
     severityFull = Color(0xFFD97706),
     severityEmpty = Color(0xFFEBE6F8),
     cardTintAlpha = 0.18f,
+    isDark = false,
 )
 
 /**
