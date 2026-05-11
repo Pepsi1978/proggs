@@ -12,6 +12,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -331,12 +332,13 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int, onlyToday: Boo
 }
 
 /**
- * Häkchen-Toggle im Widget-Header (Frank-Wunsch 2026-05-11, dritte Iteration).
- * Aktiv = nur HEUTE sichtbar, inaktiv = alle Buckets.
+ * Häkchen-Toggle im Widget-Header (Bugfix 2026-05-11, fuenfte Iteration —
+ * offizieller Glance-Pattern). Aktiv = nur HEUTE sichtbar, inaktiv = alle Buckets.
  *
- * Click oeffnet WidgetToggleActivity (Theme.NoDisplay) die den DataStore-Flag
- * invertiert und das Widget refresht. actionRunCallback hat in der Praxis
- * nicht funktioniert; Activity-Pfad ist robust.
+ * Click ruft WidgetToggleAction (ActionCallback) auf — laeuft im WorkManager-
+ * Worker, ist NICHT an Activity-Lifecycle gebunden. Action macht den
+ * DataStore-Toggle (atomar) und ruft update(context, glanceId) fuer gezielten
+ * Re-Render der spezifischen Widget-Instance. Quelle: developer.android.com.
  *
  * Aktiv-Farbe: GRUEN (palette.catHealth = #34D399 / #059669) — Frank's Wunsch.
  */
@@ -350,7 +352,7 @@ private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
             .background(ColorProvider(bg))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clickable(actionStartActivity<WidgetToggleActivity>()),
+            .clickable(actionRunCallback<WidgetToggleAction>()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(

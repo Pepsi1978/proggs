@@ -3,9 +3,12 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.appwidget.action.ActionCallback
+import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -113,7 +116,45 @@ object WidgetDeepLinkBus {
     }
 }
 
-// Hinweis: Frueher gab es hier eine WidgetToggleOnlyTodayAction (Glance
-// ActionCallback). Die hat in der Praxis nicht zuverlaessig gefeuert (Glance
-// Service Process Issues). Sie wurde durch WidgetToggleActivity ersetzt —
-// siehe presentation/widget/WidgetToggleActivity.kt. Code 2026-05-11 entfernt.
+/**
+ * Offizieller Glance-Toggle-Pattern (Bugfix 2026-05-11, fuenfte Iteration).
+ *
+ * Recherche-Ergebnis: Die richtige Loesung fuer Widget-Toggle-Buttons ist
+ * `actionRunCallback<ActionCallback>` (laeuft in WorkManager Worker mit voller
+ * Ausfuehrungszeit) plus `update(context, glanceId)` fuer gezielten Re-Render
+ * der spezifischen Widget-Instanz. Quelle: Android Developers Docs
+ * (developer.android.com/develop/ui/compose/glance/user-interaction).
+ *
+ * Frueher: actionStartActivity<WidgetToggleActivity> — Activity wurde zwar
+ * gestartet (Logcat zeigte ActivityTaskManager:START), aber onCreate-Logs
+ * kamen nicht durch, Hilt-Injection unzuverlaessig. ActionCallback umgeht
+ * den Activity-Lifecycle komplett — laeuft direkt im Widget-Worker.
+ *
+ * Logging an mehreren Stellen damit wir bei zukuenftigen Bugs sofort sehen
+ * wo es klemmt (Worker startet nicht / Hilt fehlt / DataStore-Write haengt /
+ * update() schlaegt fehl).
+ */
+class WidgetToggleAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        android.util.Log.i("WidgetToggle", "ActionCallback.onAction ENTRY")
+        try {
+            val settings = EntryPointAccessors
+                .fromApplication(
+                    context.applicationContext,
+                    EntropyReducerWidget.WidgetEntryPoint::class.java,
+                )
+                .appSettings()
+            android.util.Log.i("WidgetToggle", "Hilt-Settings entryPoint geladen")
+            val newValue = settings.toggleWidgetOnlyToday()
+            android.util.Log.i("WidgetToggle", "Atomic toggle → $newValue")
+            EntropyReducerWidget().update(context, glanceId)
+            android.util.Log.i("WidgetToggle", "update(context, glanceId) fired")
+        } catch (t: Throwable) {
+            android.util.Log.e("WidgetToggle", "ActionCallback FAILED", t)
+        }
+    }
+}
