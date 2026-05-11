@@ -658,13 +658,49 @@ private fun TagPill(palette: WidgetPalette, tag: String) {
  * Severity-Bar mit 10 feinen Segmenten — 1:1-naehe zur App-Bar (die Canvas
  * mit Gradient nutzt; das geht in RemoteViews nicht). Jedes Segment ist
  * eine kleine Box mit dem severity-Wert als Fuellung.
+ *
+ * Bugfix 2026-05-11: Glance/RemoteViews erlaubt MAX 10 KINDER pro Container.
+ * 10 Boxes + 9 Spacer waren 19 Elemente → IllegalArgumentException, das
+ * gesamte Widget konnte nicht rendern (Widget blieb im alten State sichtbar
+ * obwohl DataStore-Toggle korrekt war). Loesung: Nested Rows (Outer Row mit
+ * 2 Half-Rows). Outer-Row = 3 Elemente, Inner-Rows = je 9 Elemente.
  */
 @Composable
 private fun SeverityBar(severity: Int, palette: WidgetPalette) {
     val sev = severity.coerceIn(1, 10)
     Row(modifier = GlanceModifier.fillMaxWidth()) {
-        for (i in 0 until 10) {
-            // Farbverlauf wie im Original: 1-2 blau, 3-4 gruen, 5-6 gelb, 7-8 orange, 9-10 rot
+        SeverityBarHalf(
+            startIndex = 0,
+            endIndex = 5,
+            sev = sev,
+            palette = palette,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+        Spacer(GlanceModifier.width(2.dp))
+        SeverityBarHalf(
+            startIndex = 5,
+            endIndex = 10,
+            sev = sev,
+            palette = palette,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+    }
+}
+
+/**
+ * 5 Severity-Segmente in einer Row — Helper fuer SeverityBar Split.
+ * 5 Boxes + 4 Spacer = 9 Elemente (unter dem Glance-10-Limit).
+ */
+@Composable
+private fun SeverityBarHalf(
+    startIndex: Int,
+    endIndex: Int,
+    sev: Int,
+    palette: WidgetPalette,
+    modifier: GlanceModifier,
+) {
+    Row(modifier = modifier) {
+        for (i in startIndex until endIndex) {
             val isFilled = i < sev
             val segColor = if (isFilled) {
                 when (i) {
@@ -684,7 +720,7 @@ private fun SeverityBar(severity: Int, palette: WidgetPalette) {
                     .background(ColorProvider(segColor))
                     .cornerRadius(2.dp),
             ) {}
-            if (i < 9) Spacer(GlanceModifier.width(2.dp))
+            if (i < endIndex - 1) Spacer(GlanceModifier.width(2.dp))
         }
     }
 }
