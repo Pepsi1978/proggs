@@ -12,8 +12,12 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.R
+import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.settings.AppSettings
+import de.frank.entropyreducer.domain.model.EntryStatus
+import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.presentation.MainActivity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -32,12 +36,13 @@ import kotlinx.coroutines.runBlocking
  *   - WidgetUpdater (separates Object) wird von App-Seite aufgerufen wenn
  *     Settings/Tasks geaendert werden
  */
-class EntropyReducerWidgetProvider : AppWidgetProvider() {
+class EntropyReducerWidgetReceiver : AppWidgetProvider() {
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
         fun appSettings(): AppSettings
+        fun entryDao(): EntropyEntryDao
     }
 
     override fun onUpdate(
@@ -55,15 +60,23 @@ class EntropyReducerWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         widgetId: Int,
     ) {
-        val settings = EntryPointAccessors
+        val entry = EntryPointAccessors
             .fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
-            .appSettings()
+        val settings = entry.appSettings()
+        val dao = entry.entryDao()
 
         // Settings synchron lesen — onUpdate laeuft auf Main-Thread aber kurz.
         val themeMode = runBlocking { settings.readWidgetThemeModeOnce() }
         val onlyToday = runBlocking { settings.readWidgetOnlyTodayOnce() }
         val bgAlpha = runBlocking { settings.readWidgetBgAlphaOnce() }
         val palette = resolveWidgetPaletteSimple(context, themeMode)
+
+        // Counter laden — Anzahl offener Aufgaben (gefiltert nach onlyToday)
+        val openCount = runBlocking {
+            val all = dao.getActive().first()
+                .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
+            if (onlyToday) all.count { it.timeBucket == TimeBucket.HEUTE } else all.size
+        }
 
         val views = RemoteViews(context.packageName, R.layout.widget_root)
 
@@ -72,7 +85,7 @@ class EntropyReducerWidgetProvider : AppWidgetProvider() {
         views.setInt(R.id.widget_bg, "setBackgroundColor", bgColor)
 
         // Header befuellen
-        applyHeader(views, palette, onlyToday)
+        applyHeader(views, palette, onlyToday, openCount)
 
         // PendingIntents fuer Header-Taps
         val openAppIntent = createMainActivityIntent(context, "", WidgetIntents.ACTION_OPEN, widgetId)
@@ -111,10 +124,12 @@ class EntropyReducerWidgetProvider : AppWidgetProvider() {
         views: RemoteViews,
         palette: SimpleWidgetPalette,
         onlyToday: Boolean,
+        openCount: Int,
     ) {
-        // Titel + Counter Text-Farben (Counter wird vom Service ueberschrieben)
+        // Titel + Counter mit echter Aufgaben-Anzahl
         views.setTextViewText(R.id.header_title, if (onlyToday) "Heute" else "Aufgaben")
         views.setTextColor(R.id.header_title, palette.textPrimary)
+        views.setTextViewText(R.id.header_counter, "$openCount offen")
         views.setTextColor(R.id.header_counter, palette.textSecondary)
 
         // Heute-Indikator Pille: active = gruener Tint, inactive = grau
@@ -130,13 +145,13 @@ class EntropyReducerWidgetProvider : AppWidgetProvider() {
             pillTint = palette.textSecondary
             pillLabel = "Alle"
         }
-        views.setInt(R.id.header_today_pill, "setBackgroundColor", pillBg)
+        views.setColorStateList(R.id.header_today_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(pillBg))
         views.setInt(R.id.header_today_icon, "setColorFilter", pillTint)
         views.setTextViewText(R.id.header_today_label, pillLabel)
         views.setTextColor(R.id.header_today_label, pillTint)
 
         // Settings-Zahnrad: surfaceMuted Hintergrund + textSecondary Tint
-        views.setInt(R.id.header_settings_btn, "setBackgroundColor", palette.surfaceMuted)
+        views.setColorStateList(R.id.header_settings_btn, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
     }
 
     private fun createMainActivityIntent(

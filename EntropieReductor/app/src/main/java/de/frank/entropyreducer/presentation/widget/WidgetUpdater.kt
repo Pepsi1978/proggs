@@ -23,7 +23,7 @@ object WidgetUpdater {
     suspend fun updateAll(context: Context) {
         val appCtx = context.applicationContext
         val mgr = AppWidgetManager.getInstance(appCtx)
-        val component = ComponentName(appCtx, EntropyReducerWidgetProvider::class.java)
+        val component = ComponentName(appCtx, EntropyReducerWidgetReceiver::class.java)
         val ids = mgr.getAppWidgetIds(component)
         if (ids.isEmpty()) return
 

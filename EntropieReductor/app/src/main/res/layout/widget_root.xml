@@ -11,10 +11,11 @@
 
     <!-- Hintergrund-Schicht: einfarbig, Alpha wird zur Laufzeit ueber setColorFilter
          oder setInt setBackgroundColor (mit Alpha-ARGB) gesetzt. -->
-    <View
+    <ImageView
         android:id="@+id/widget_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@null"
         android:background="#0E0B24" />
 
     <LinearLayout

@@ -137,7 +137,7 @@ class EntropyReducerRemoteViewsFactory(
         val views = RemoteViews(context.packageName, R.layout.widget_item_bucket_header)
         val accent = bucketColor(palette, item.bucket)
         // Hintergrund der Pille mit 22% Alpha vom Akzent
-        views.setInt(R.id.bucket_pill, "setBackgroundColor", applyAlpha(accent, 0.22f))
+        views.setColorStateList(R.id.bucket_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(accent, 0.22f)))
         views.setImageViewResource(R.id.bucket_icon, bucketIconRes(item.bucket))
         views.setInt(R.id.bucket_icon, "setColorFilter", accent)
         views.setTextViewText(R.id.bucket_label, bucketLabel(item.bucket))
@@ -164,12 +164,12 @@ class EntropyReducerRemoteViewsFactory(
         )
 
         // Icon-Kreis: 18% Alpha vom catColor
-        views.setInt(R.id.cat_icon_bg, "setBackgroundColor", applyAlpha(catColor, 0.18f))
+        views.setColorStateList(R.id.cat_icon_bg, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(catColor, 0.18f)))
         views.setImageViewResource(R.id.cat_icon, categoryIconRes(entry.category))
         views.setInt(R.id.cat_icon, "setColorFilter", catColor)
 
         // Kategorie-Pille
-        views.setInt(R.id.cat_pill, "setBackgroundColor", applyAlpha(catColor, 0.22f))
+        views.setColorStateList(R.id.cat_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(catColor, 0.22f)))
         views.setTextViewText(R.id.cat_pill, categoryLabel(entry.category))
         views.setTextColor(R.id.cat_pill, catColor)
 
@@ -189,7 +189,7 @@ class EntropyReducerRemoteViewsFactory(
         views.setTextColor(R.id.task_prio_value, prioColor)
 
         // Check-Box
-        views.setInt(R.id.task_check_box, "setBackgroundColor", palette.border)
+        views.setColorStateList(R.id.task_check_box, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.border))
 
         // Severity-Bar (10 Segmente)
         applySeverityBar(views, entry.severity)
@@ -203,7 +203,7 @@ class EntropyReducerRemoteViewsFactory(
         views.setTextColor(R.id.meta_text, palette.textSecondary)
         if (entry.priorityScore > 70) {
             views.setViewVisibility(R.id.empfohlen_badge, android.view.View.VISIBLE)
-            views.setInt(R.id.empfohlen_badge, "setBackgroundColor", applyAlpha(palette.prioGreen, 0.18f))
+            views.setColorStateList(R.id.empfohlen_badge, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(palette.prioGreen, 0.18f)))
             views.setTextColor(R.id.empfohlen_badge, palette.prioGreen)
         } else {
             views.setViewVisibility(R.id.empfohlen_badge, android.view.View.GONE)
@@ -217,12 +217,12 @@ class EntropyReducerRemoteViewsFactory(
 
         // KI/Manuell-Pille
         if (isManual) {
-            views.setInt(R.id.bucket_status_pill, "setBackgroundColor", applyAlpha(bucketAccent, 0.22f))
+            views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(applyAlpha(bucketAccent, 0.22f)))
             views.setInt(R.id.bucket_status_icon, "setColorFilter", bucketAccent)
             views.setTextViewText(R.id.bucket_status_label, "manuell")
             views.setTextColor(R.id.bucket_status_label, bucketAccent)
         } else {
-            views.setInt(R.id.bucket_status_pill, "setBackgroundColor", palette.surfaceMuted)
+            views.setColorStateList(R.id.bucket_status_pill, "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
             views.setInt(R.id.bucket_status_icon, "setColorFilter", palette.textSecondary)
             views.setTextViewText(R.id.bucket_status_label, "KI")
             views.setTextColor(R.id.bucket_status_label, palette.textSecondary)
@@ -264,7 +264,7 @@ class EntropyReducerRemoteViewsFactory(
             } else {
                 palette.severityEmpty
             }
-            views.setInt(segIds[i], "setBackgroundColor", color)
+            views.setColorStateList(segIds[i], "setBackgroundTintList", android.content.res.ColorStateList.valueOf(color))
         }
     }
 
@@ -281,7 +281,7 @@ class EntropyReducerRemoteViewsFactory(
             if (i < take.size) {
                 views.setViewVisibility(tagIds[i], android.view.View.VISIBLE)
                 views.setTextViewText(tagIds[i], take[i])
-                views.setInt(tagIds[i], "setBackgroundColor", palette.surfaceMuted)
+                views.setColorStateList(tagIds[i], "setBackgroundTintList", android.content.res.ColorStateList.valueOf(palette.surfaceMuted))
                 views.setTextColor(tagIds[i], palette.textSecondary)
                 if (i > 0) {
                     views.setViewVisibility(spacerIds[i - 1], android.view.View.VISIBLE)

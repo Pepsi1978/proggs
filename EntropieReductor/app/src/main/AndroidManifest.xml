@@ -141,7 +141,7 @@
              verstecken wurde das Widget mit klassischem AppWidgetProvider
              neu gebaut. ListView hat android:scrollbars="none" → Balken weg. -->
         <receiver
-            android:name=".presentation.widget.EntropyReducerWidgetProvider"
+            android:name=".presentation.widget.EntropyReducerWidgetReceiver"
             android:exported="true"
             android:label="@string/app_name">
             <intent-filter>

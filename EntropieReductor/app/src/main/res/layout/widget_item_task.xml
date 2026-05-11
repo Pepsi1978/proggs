@@ -32,7 +32,7 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp">
 
-                <View
+                <ImageView
                     android:id="@+id/cat_icon_bg"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -47,7 +47,7 @@
                     android:contentDescription="Kategorie" />
             </FrameLayout>
 
-            <View
+            <ImageView
                 android:layout_width="12dp"
                 android:layout_height="1dp" />
 
@@ -71,7 +71,7 @@
                     android:textColor="#22D3EE"
                     android:text="Umgebung" />
 
-                <View
+                <ImageView
                     android:layout_width="1dp"
                     android:layout_height="6dp" />
 
@@ -99,7 +99,7 @@
                     android:visibility="visible" />
             </LinearLayout>
 
-            <View
+            <ImageView
                 android:layout_width="8dp"
                 android:layout_height="1dp" />
 
@@ -126,11 +126,11 @@
                     android:textColor="#A499D9"
                     android:text="Prio" />
 
-                <View
+                <ImageView
                     android:layout_width="1dp"
                     android:layout_height="8dp" />
 
-                <View
+                <ImageView
                     android:id="@+id/task_check_box"
                     android:layout_width="26dp"
                     android:layout_height="26dp"
@@ -138,7 +138,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <View
+        <ImageView
             android:layout_width="1dp"
             android:layout_height="12dp" />
 
@@ -165,7 +165,7 @@
                 android:textColor="#A499D9"
                 android:text="Tag" />
 
-            <View
+            <ImageView
                 android:layout_width="6dp"
                 android:layout_height="1dp"
                 android:visibility="gone"
@@ -183,7 +183,7 @@
                 android:text="Tag"
                 android:visibility="gone" />
 
-            <View
+            <ImageView
                 android:layout_width="6dp"
                 android:layout_height="1dp"
                 android:visibility="gone"
@@ -202,7 +202,7 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <View
+        <ImageView
             android:layout_width="1dp"
             android:layout_height="10dp" />
 

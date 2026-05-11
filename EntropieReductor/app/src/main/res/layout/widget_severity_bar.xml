@@ -9,23 +9,23 @@
     android:layout_height="7dp"
     android:orientation="horizontal">
 
-    <View android:id="@+id/seg_0" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_1" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_2" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_3" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_4" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_5" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_6" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_7" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_8" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
-    <View android:layout_width="2dp" android:layout_height="7dp" />
-    <View android:id="@+id/seg_9" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:id="@+id/seg_0" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_1" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_2" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_3" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_4" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_5" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_6" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_7" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_8" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
+    <ImageView android:layout_width="2dp" android:layout_height="7dp" />
+    <ImageView android:id="@+id/seg_9" android:layout_width="0dp" android:layout_height="7dp" android:layout_weight="1" android:background="@drawable/widget_severity_segment" />
 </LinearLayout>

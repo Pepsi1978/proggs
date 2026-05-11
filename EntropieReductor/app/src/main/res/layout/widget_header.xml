@@ -67,7 +67,7 @@
     </LinearLayout>
 
     <!-- 6dp Spacer -->
-    <View
+    <ImageView
         android:layout_width="6dp"
         android:layout_height="1dp" />
 
