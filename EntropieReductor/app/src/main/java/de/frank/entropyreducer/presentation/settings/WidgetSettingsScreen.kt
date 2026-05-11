@@ -19,8 +19,10 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Brightness7
 import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,16 +82,19 @@ class WidgetSettingsViewModel @Inject constructor(
     val bgAlpha: StateFlow<Float> = settings.widgetBgAlphaFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1.0f)
 
-    fun setTheme(mode: ThemeMode) {
-        viewModelScope.launch { settings.setWidgetThemeMode(mode) }
+    // Suspend-Varianten: erlauben dem Composable zu warten bis der DataStore-
+    // Write committed ist, bevor er updateAll aufruft. Bugfix 2026-05-11 fuer
+    // race condition wo updateAll mit altem State lief.
+    suspend fun setThemeSuspend(mode: ThemeMode) {
+        settings.setWidgetThemeMode(mode)
     }
 
-    fun setOnlyToday(value: Boolean) {
-        viewModelScope.launch { settings.setWidgetOnlyToday(value) }
+    suspend fun setOnlyTodaySuspend(value: Boolean) {
+        settings.setWidgetOnlyToday(value)
     }
 
-    fun setBgAlpha(value: Float) {
-        viewModelScope.launch { settings.setWidgetBgAlpha(value) }
+    suspend fun setBgAlphaSuspend(value: Float) {
+        settings.setWidgetBgAlpha(value)
     }
 }
 
@@ -105,26 +110,26 @@ fun WidgetSettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Bugfix 2026-05-11: setXxx und updateAll sequenziell ausfuehren statt
+    // parallel. Vorher race condition: updateAll lief manchmal BEVOR der
+    // DataStore-Write committed war → Widget rendert mit altem State.
     fun setAndRefresh(newMode: ThemeMode) {
-        vm.setTheme(newMode)
         scope.launch {
-            // Widget sofort neu rendern damit der Theme-Wechsel sichtbar wird.
-            // runCatching weil das Update fehlschlagen kann wenn das Widget
-            // noch nicht auf dem Homescreen liegt.
+            vm.setThemeSuspend(newMode)
             runCatching { EntropyReducerWidget().updateAll(context) }
         }
     }
 
     fun setOnlyTodayAndRefresh(value: Boolean) {
-        vm.setOnlyToday(value)
         scope.launch {
+            vm.setOnlyTodaySuspend(value)
             runCatching { EntropyReducerWidget().updateAll(context) }
         }
     }
 
     fun setBgAlphaAndRefresh(value: Float) {
-        vm.setBgAlpha(value)
         scope.launch {
+            vm.setBgAlphaSuspend(value)
             runCatching { EntropyReducerWidget().updateAll(context) }
         }
     }
@@ -209,14 +214,14 @@ fun WidgetSettingsScreen(
             )
 
             ThemeOptionRow(
-                icon = Icons.Outlined.RadioButtonUnchecked,
+                icon = Icons.Outlined.FormatListBulleted,
                 label = "Alle Aufgaben",
                 description = "Zeigt alle Buckets (Heute, Morgen, Freiblock, Spaeter) — Standard",
                 isActive = !onlyToday,
                 onClick = { setOnlyTodayAndRefresh(false) },
             )
             ThemeOptionRow(
-                icon = Icons.Outlined.RadioButtonChecked,
+                icon = Icons.Outlined.Today,
                 label = "Nur Heute",
                 description = "Zeigt nur die fuer heute geplanten Aufgaben — fuer den Tagesfokus",
                 isActive = onlyToday,

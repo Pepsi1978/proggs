@@ -11,4 +11,18 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowBackground">@color/cosmos_bg_dark</item>
     </style>
+
+    <!--
+        Widget-spezifische Style-Overrides (Frank-Wunsch 2026-05-11).
+        Versteckt den ListView-Scrollbar in der Glance LazyColumn — der
+        ist standardmaessig sichtbar und stoert visuell. Wird via
+        android:listViewStyle vom Widget-Host (z.B. Nova Launcher) gelesen.
+    -->
+    <style name="WidgetListViewNoScrollbar" parent="@android:style/Widget.Material.ListView">
+        <item name="android:scrollbars">none</item>
+        <item name="android:scrollbarSize">0dp</item>
+        <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:fadeScrollbars">true</item>
+    </style>
 </resources>

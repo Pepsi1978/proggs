@@ -126,6 +126,9 @@ fun TasksScreen(
     // tatsaechliche Eintrag wird aus dem aktuellen State frisch nachgelesen damit
     // die Anzeige immer den neusten manualBucket/timeBucket-Stand zeigt.
     var bucketPickerEntryId by remember { mutableStateOf<String?>(null) }
+    // LazyListState am Top damit beide LaunchedEffects (Bucket-Picker + Scroll)
+    // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     val micPerm = rememberMicPermissionState(
         onAllGranted = { vm.onMicClick() },
@@ -183,25 +186,42 @@ fun TasksScreen(
     // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
     val widgetDeepLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
         .collectAsState()
-    // Bugfix 2026-05-11: Beim App-Start via Widget kommt der DeepLink BEVOR
-    // state.entriesByBucket geladen ist — der existsInActive-Check schlug
-    // immer fehl und Bus.clear() loeschte den Link bevor die Tasks da waren.
-    // Fix: Den Link DIREKT konsumieren ohne Existenz-Check (das Bucket-Picker-
-    // Sheet selbst behandelt den Fall dass die Task nicht existiert).
-    LaunchedEffect(widgetDeepLink) {
+    // Bugfix 2026-05-11: Konsolidierter Widget-Tap-Handler. Vorher zwei
+    // LaunchedEffects (BucketPicker + Scroll), die race-conditions hatten —
+    // einer hat den Bus gecleart bevor der andere reagieren konnte. Jetzt
+    // ein einziger Effect der ALLES macht: warten bis Tasks geladen sind,
+    // scrollen, bucketPicker oeffnen, dann Bus clearen.
+    //
+    // Key (widgetDeepLink, state.entriesByBucket) feuert auch wenn die Tasks
+    // erst spaeter nachladen — z.B. beim App-Start aus dem Widget heraus.
+    LaunchedEffect(widgetDeepLink, state.entriesByBucket) {
         val link = widgetDeepLink ?: return@LaunchedEffect
-        // ACTION_SETTINGS und ACTION_OPEN behandelt AppNavGraph selbst —
-        // hier nur die Task-bezogenen Aktionen konsumieren, sonst klauen
-        // wir das Event und die Navigation findet nicht statt.
         val isTaskAction = link.action ==
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
             link.action ==
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
         if (!isTaskAction) return@LaunchedEffect
 
+        // Warten bis Tasks geladen sind, sonst kann computeTaskItemIndex
+        // den Index nicht finden und der Scroll waere zu briefing.
+        val tasksLoaded = state.entriesByBucket.values.any { it.isNotEmpty() } ||
+            state.resolvedEntries.isNotEmpty()
+        if (!tasksLoaded) return@LaunchedEffect
+
+        // 1) Scroll zur Aufgabe (beide Aktionen — FOCUS und RESCHEDULE)
+        val targetIndex = computeTaskItemIndex(state = state, taskId = link.taskId)
+        if (targetIndex >= 0) {
+            runCatching {
+                listState.animateScrollToItem(targetIndex, scrollOffset = -120)
+            }
+        }
+
+        // 2) Bei RESCHEDULE zusaetzlich den Bucket-Picker oeffnen
         if (link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE) {
             bucketPickerEntryId = link.taskId
         }
+
+        // 3) Bus clearen — Link wurde konsumiert
         de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
     }
 
@@ -291,29 +311,9 @@ fun TasksScreen(
                         state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
                     }
                 }
-                // Frank-Wunsch 2026-05-11: Beim Widget-Tap soll die Liste direkt
-                // zur angetippten Karte scrollen — Frank will nicht erst suchen.
-                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                LaunchedEffect(widgetDeepLink, state.entriesByBucket) {
-                    val link = widgetDeepLink ?: return@LaunchedEffect
-                    // Nur task-bezogene Aktionen scrollen — Settings/Open NICHT.
-                    val isScroll =
-                        link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
-                        link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
-                    if (!isScroll) return@LaunchedEffect
-                    val targetIndex = computeTaskItemIndex(
-                        state = state,
-                        taskId = link.taskId,
-                    )
-                    if (targetIndex >= 0) {
-                        // 60 dp negative Offset = Karte landet etwa in der oberen
-                        // Bildschirm-Drittel (nicht ganz oben am Rand) — fuehlt sich
-                        // an wie "an der Stelle des Daumens".
-                        runCatching {
-                            listState.animateScrollToItem(targetIndex, scrollOffset = -120)
-                        }
-                    }
-                }
+                // Frank-Wunsch 2026-05-11: Scroll zur Widget-getappten Aufgabe
+                // wird jetzt im konsolidierten LaunchedEffect oben gehandhabt
+                // (listState ist am Top der TasksScreen-Funktion deklariert).
 
                 LazyColumn(
                     state = listState,
