@@ -3,12 +3,9 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
-import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.state.updateAppWidgetState
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -116,40 +113,8 @@ object WidgetDeepLinkBus {
     }
 }
 
-/**
- * Glance-native Toggle (Bugfix 2026-05-11, achte Iteration — neue Herangehensweise).
- *
- * Komplett neu: KEIN externer DataStore mehr, KEIN Hilt, KEIN Broadcast.
- * Wir nutzen Glance's eigenen reaktiven State via PreferencesGlanceStateDefinition.
- * Wenn updateAppWidgetState aufgerufen wird, erkennt Glance die Aenderung in
- * SEINEM eigenen State und triggert provideGlance + Recompose automatisch.
- *
- * Das ist der offizielle Pattern den Google empfiehlt (developer.android.com).
- * Alle vorherigen Iterationen sind gescheitert weil sie externe State-Quellen
- * (AppSettings DataStore) mit Glance kombinierten — Glance kann externe
- * Aenderungen nicht erkennen und cached den Composable.
- */
-class WidgetToggleAction : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) {
-        android.util.Log.i("WidgetToggle", "ActionCallback.onAction ENTRY")
-        try {
-            updateAppWidgetState(context, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    val current = this[EntropyReducerWidget.KEY_ONLY_TODAY] ?: false
-                    val newValue = !current
-                    set(EntropyReducerWidget.KEY_ONLY_TODAY, newValue)
-                    android.util.Log.i("WidgetToggle", "Glance-State toggle: $current → $newValue")
-                }
-            }
-            android.util.Log.i("WidgetToggle", "updateAppWidgetState completed — Recompose laeuft automatisch")
-            // KEIN updateAll noetig! Glance erkennt die Aenderung in SEINEM State
-            // und triggert provideGlance + Recompose automatisch.
-        } catch (t: Throwable) {
-            android.util.Log.e("WidgetToggle", "ActionCallback FAILED", t)
-        }
-    }
-}
+// Hinweis: Frueher gab es hier eine WidgetToggleAction (ActionCallback). Sie
+// wurde 2026-05-11 entfernt zugunsten der WidgetToggleActivity (Hybrid-Pattern):
+// Activity-Klicks sind robust gegen Process-Freezing durch das Samsung-OS,
+// und in der Activity wird Glance's nativer reaktiver State direkt geschrieben.
+// Siehe presentation/widget/WidgetToggleActivity.kt.

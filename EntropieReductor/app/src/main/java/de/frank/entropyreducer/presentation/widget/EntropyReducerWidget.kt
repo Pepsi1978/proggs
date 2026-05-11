@@ -14,7 +14,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.currentState
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -376,7 +375,7 @@ private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
             .background(ColorProvider(bg))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clickable(actionRunCallback<WidgetToggleAction>()),
+            .clickable(actionStartActivity<WidgetToggleActivity>()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(

@@ -136,10 +136,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Widget Toggle-Activity (Hybrid-Pattern 2026-05-11, neunte Iteration):
+             Unsichtbar (Theme.NoDisplay), togglet Glance's eigenen State via
+             updateAppWidgetState. Pattern: Activity-Klick ist sehr robust
+             (System startet sie immer), Glance-State ist reaktiv (triggert
+             automatischen Recompose). -->
+        <activity
+            android:name=".presentation.widget.WidgetToggleActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="" />
+
         <!-- Stufe 4: Home-Screen-Widget (Glance) -->
-        <!-- WidgetToggleActivity 2026-05-11 entfernt: ersetzt durch
-             WidgetToggleAction (ActionCallback) — laeuft im Glance-Worker
-             ohne Activity-Lifecycle, ist der offizielle Glance-Pattern. -->
         <receiver
             android:name=".presentation.widget.EntropyReducerWidgetReceiver"
             android:exported="true"
