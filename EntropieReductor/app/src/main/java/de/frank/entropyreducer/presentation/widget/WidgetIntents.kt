@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.presentation.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -155,18 +156,36 @@ class WidgetToggleAction : ActionCallback {
             val newValue = settings.toggleWidgetOnlyToday()
             android.util.Log.i("WidgetToggle", "Atomic toggle → $newValue")
 
-            // KRITISCH (Bugfix 2026-05-11, sechste Iteration):
-            // Glance haelt seinen Composable-Cache gueltig solange SEIN eigener
-            // State unveraendert bleibt — updateAll allein triggert kein
-            // provideGlance weil Glance "nichts hat sich geaendert" denkt.
-            // Wir schreiben einen Tick-Timestamp in Glance's eigenen State —
-            // das forciert die State-Change-Erkennung und damit den Re-Render.
+            // KRITISCH (Bugfix 2026-05-11, siebte Iteration — Nova Launcher fix):
+            // Frank nutzt Nova Launcher der Widgets aggressiv cached. Glance's
+            // updateAll() queued einen Worker der manchmal erst 30 Sekunden
+            // spaeter laeuft → User sieht keine Reaktion. Loesung: DIREKTER
+            // AppWidget-Update-Broadcast bypassed Glance's Worker-Queue komplett
+            // und triggert sofort den EntropyReducerWidgetReceiver, der dann
+            // synchron provideGlance aufruft. Dieser Broadcast funktioniert exakt
+            // wie `adb shell am broadcast -a APPWIDGET_UPDATE` (was nachweislich
+            // funktioniert).
             updateAppWidgetState(context, glanceId) { prefs ->
                 prefs.toMutablePreferences().apply {
                     set(WIDGET_TICK_KEY, System.currentTimeMillis())
                 }
             }
             android.util.Log.i("WidgetToggle", "Glance-State Tick geschrieben")
+
+            // Direkter AppWidget-Update-Broadcast (umgeht Nova-Cache + Glance-Queue)
+            val mgr = AppWidgetManager.getInstance(context)
+            val component = ComponentName(context, EntropyReducerWidgetReceiver::class.java)
+            val ids = mgr.getAppWidgetIds(component)
+            if (ids.isNotEmpty()) {
+                val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+                    this.component = component
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                }
+                context.sendBroadcast(intent)
+                android.util.Log.i("WidgetToggle", "Direct broadcast sent for ${ids.size} widget(s)")
+            }
+
+            // Zusaetzlich Glance's updateAll als Fallback fuer normale Launcher
             EntropyReducerWidget().updateAll(context)
             android.util.Log.i("WidgetToggle", "updateAll(context) fired")
         } catch (t: Throwable) {
