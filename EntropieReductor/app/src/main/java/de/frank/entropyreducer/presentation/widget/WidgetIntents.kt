@@ -8,6 +8,7 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -151,8 +152,13 @@ class WidgetToggleAction : ActionCallback {
             android.util.Log.i("WidgetToggle", "Hilt-Settings entryPoint geladen")
             val newValue = settings.toggleWidgetOnlyToday()
             android.util.Log.i("WidgetToggle", "Atomic toggle → $newValue")
-            EntropyReducerWidget().update(context, glanceId)
-            android.util.Log.i("WidgetToggle", "update(context, glanceId) fired")
+            // KRITISCH (Bugfix 2026-05-11): updateAll(context) statt update(context, glanceId).
+            // update() triggert kein neues provideGlance wenn der State extern (AppSettings
+            // DataStore) liegt — Glance erkennt nur Aenderungen an seinem EIGENEN State.
+            // updateAll(context) forciert einen kompletten Neuaufbau aller Widget-Instanzen,
+            // damit provideGlance frisch laeuft und den neuen DataStore-Wert liest.
+            EntropyReducerWidget().updateAll(context)
+            android.util.Log.i("WidgetToggle", "updateAll(context) fired")
         } catch (t: Throwable) {
             android.util.Log.e("WidgetToggle", "ActionCallback FAILED", t)
         }
