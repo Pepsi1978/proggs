@@ -3,11 +3,13 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
@@ -152,15 +154,28 @@ class WidgetToggleAction : ActionCallback {
             android.util.Log.i("WidgetToggle", "Hilt-Settings entryPoint geladen")
             val newValue = settings.toggleWidgetOnlyToday()
             android.util.Log.i("WidgetToggle", "Atomic toggle → $newValue")
-            // KRITISCH (Bugfix 2026-05-11): updateAll(context) statt update(context, glanceId).
-            // update() triggert kein neues provideGlance wenn der State extern (AppSettings
-            // DataStore) liegt — Glance erkennt nur Aenderungen an seinem EIGENEN State.
-            // updateAll(context) forciert einen kompletten Neuaufbau aller Widget-Instanzen,
-            // damit provideGlance frisch laeuft und den neuen DataStore-Wert liest.
+
+            // KRITISCH (Bugfix 2026-05-11, sechste Iteration):
+            // Glance haelt seinen Composable-Cache gueltig solange SEIN eigener
+            // State unveraendert bleibt — updateAll allein triggert kein
+            // provideGlance weil Glance "nichts hat sich geaendert" denkt.
+            // Wir schreiben einen Tick-Timestamp in Glance's eigenen State —
+            // das forciert die State-Change-Erkennung und damit den Re-Render.
+            updateAppWidgetState(context, glanceId) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    set(WIDGET_TICK_KEY, System.currentTimeMillis())
+                }
+            }
+            android.util.Log.i("WidgetToggle", "Glance-State Tick geschrieben")
             EntropyReducerWidget().updateAll(context)
             android.util.Log.i("WidgetToggle", "updateAll(context) fired")
         } catch (t: Throwable) {
             android.util.Log.e("WidgetToggle", "ActionCallback FAILED", t)
         }
+    }
+
+    companion object {
+        /** Tick-Key in Glance's eigenem State — forciert Recompose bei Toggle. */
+        val WIDGET_TICK_KEY = longPreferencesKey("widget_tick")
     }
 }
