@@ -14,12 +14,15 @@
 
     <!--
         Widget-spezifische Style-Overrides (Frank-Wunsch 2026-05-11).
-        Versteckt den ListView-Scrollbar in der Glance LazyColumn — der
-        ist standardmaessig sichtbar und stoert visuell.
+        Versucht den ListView-Scrollbar so klein wie moeglich zu machen
+        (Glance erlaubt kein komplettes Ausblenden — Receiver-Theme wird
+        von Nova ignoriert). Minimale Groesse 1dp + transparente Farben.
     -->
     <style name="WidgetListViewNoScrollbar" parent="@android:style/Widget.Material.ListView">
         <item name="android:scrollbars">none</item>
-        <item name="android:scrollbarSize">0dp</item>
+        <item name="android:scrollbarSize">1dp</item>
+        <item name="android:scrollbarFadeDuration">100</item>
+        <item name="android:scrollbarDefaultDelayBeforeFade">0</item>
         <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
         <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
         <item name="android:fadeScrollbars">true</item>
@@ -29,12 +32,15 @@
     <!--
         Theme das beim Widget-Receiver gesetzt wird (im Manifest). Setzt
         android:listViewStyle und scrollbar-Defaults — das wirkt auf die
-        ListView die Glance intern fuer LazyColumn nutzt.
+        ListView die Glance intern fuer LazyColumn nutzt. Falls Launcher
+        das Theme respektiert: Scrollbar ist 1dp breit + transparent.
     -->
     <style name="Theme.EntropieReductor.Widget" parent="android:Theme.Material.NoActionBar">
         <item name="android:listViewStyle">@style/WidgetListViewNoScrollbar</item>
         <item name="android:scrollbars">none</item>
-        <item name="android:scrollbarSize">0dp</item>
+        <item name="android:scrollbarSize">1dp</item>
+        <item name="android:scrollbarFadeDuration">100</item>
+        <item name="android:scrollbarDefaultDelayBeforeFade">0</item>
         <item name="android:scrollbarThumbVertical">@android:color/transparent</item>
         <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
         <item name="android:fadeScrollbars">true</item>

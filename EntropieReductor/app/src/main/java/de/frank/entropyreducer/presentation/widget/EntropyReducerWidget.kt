@@ -15,6 +15,8 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -251,58 +253,36 @@ private fun WidgetContent(
         if (totalTasks == 0) {
             EmptyState(palette = palette)
         } else {
-            // Frank-Wunsch 2026-05-11: LazyColumn durch normale Column ersetzt,
-            // damit kein Scrollbar mehr im Widget erscheint. Glance erlaubt
-            // keine offizielle Scrollbar-Deaktivierung in LazyColumn — Receiver-
-            // Theme wird vom Launcher (Nova) ignoriert. Loesung: ohne
-            // scrollable Container, dafuer Limit auf max 5 Tasks pro Bucket
-            // damit alles in das Widget passt (insgesamt max 20 Tasks).
-            // Wenn ein Bucket >5 Tasks hat, gibt es einen "+X weitere"-Hinweis.
-            Column(modifier = GlanceModifier.fillMaxSize()) {
+            // LazyColumn zurueck (Frank-Wunsch 2026-05-11): Scrollen MUSS
+            // funktionieren. Padding rechts (8dp) damit der Scrollbar (falls
+            // sichtbar bleibt) nicht ueber den Content rendert sondern in
+            // den 8dp-Streifen rechts. Receiver-Theme im Manifest macht
+            // scrollbar zusaetzlich auf 1dp breit + transparent (falls
+            // Launcher das Theme respektiert).
+            LazyColumn(
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .padding(end = 8.dp),
+            ) {
                 ALL_BUCKETS.forEach { bucket ->
                     val tasks = grouped[bucket].orEmpty()
                     if (tasks.isNotEmpty()) {
-                        BucketHeader(palette = palette, bucket = bucket, count = tasks.size)
-                        tasks.take(MAX_TASKS_PER_BUCKET).forEach { entry ->
-                            Spacer(GlanceModifier.height(8.dp))
-                            TaskCard(entry = entry, palette = palette)
+                        item(itemId = bucket.ordinal.toLong()) {
+                            BucketHeader(palette = palette, bucket = bucket, count = tasks.size)
                         }
-                        if (tasks.size > MAX_TASKS_PER_BUCKET) {
-                            Spacer(GlanceModifier.height(6.dp))
-                            MoreTasksHint(
-                                palette = palette,
-                                count = tasks.size - MAX_TASKS_PER_BUCKET,
-                            )
+                        items(items = tasks, itemId = { it.id.hashCode().toLong() }) { entry ->
+                            Column {
+                                Spacer(GlanceModifier.height(8.dp))
+                                TaskCard(entry = entry, palette = palette)
+                            }
                         }
-                        Spacer(GlanceModifier.height(14.dp))
+                        item(itemId = (bucket.ordinal + 100).toLong()) {
+                            Spacer(GlanceModifier.height(14.dp))
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-/** Maximum an Tasks pro Bucket im Widget (ohne Scroll). Bei 4 Buckets = 20 Tasks total. */
-private const val MAX_TASKS_PER_BUCKET = 5
-
-@Composable
-private fun MoreTasksHint(palette: WidgetPalette, count: Int) {
-    Box(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .background(ColorProvider(palette.surfaceMuted))
-            .cornerRadius(50.dp)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clickable(WidgetIntents.openHeaderAction(WidgetIntents.ACTION_OPEN)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "+ $count weitere — antippen zum Oeffnen",
-            style = TextStyle(
-                color = ColorProvider(palette.textSecondary),
-                fontSize = 11.sp,
-            ),
-        )
     }
 }
 
