@@ -3,9 +3,13 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.updateAll
+import dagger.hilt.android.EntryPointAccessors
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -110,5 +114,30 @@ object WidgetDeepLinkBus {
 
     fun clear() {
         _events.value = null
+    }
+}
+
+/**
+ * In-Widget-Action zum Toggeln des "Nur Heute"-Filters (Frank-Wunsch 2026-05-11).
+ *
+ * Glance's ActionCallback laeuft im Service-Process, OEFFNET DIE APP NICHT.
+ * Wir liest das aktuelle widgetOnlyToday-Flag aus, invertiert es, speichert
+ * und ruft updateAll() — das Widget rendert sich sofort mit gefiltertem Inhalt.
+ */
+class WidgetToggleOnlyTodayAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        val settings = EntryPointAccessors
+            .fromApplication(
+                context.applicationContext,
+                EntropyReducerWidget.WidgetEntryPoint::class.java,
+            )
+            .appSettings()
+        val current = settings.readWidgetOnlyTodayOnce()
+        settings.setWidgetOnlyToday(!current)
+        EntropyReducerWidget().updateAll(context)
     }
 }

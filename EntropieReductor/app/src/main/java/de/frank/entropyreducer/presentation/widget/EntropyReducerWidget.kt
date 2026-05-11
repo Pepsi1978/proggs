@@ -12,6 +12,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -86,16 +87,27 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
         val themeMode = settings.readWidgetThemeModeOnce()
         val palette = resolveWidgetPalette(context, themeMode)
+        val onlyToday = settings.readWidgetOnlyTodayOnce()
 
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-        val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = ALL_BUCKETS.associateWith { bucket ->
-            all.filter { it.timeBucket == bucket }.sortedByDescending { it.priorityScore }
+        // Frank-Wunsch 2026-05-11: Häkchen-Filter im Widget — nur HEUTE
+        // anzeigen wenn aktiv, sonst alle Buckets.
+        val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = if (onlyToday) {
+            mapOf(
+                TimeBucket.HEUTE to all
+                    .filter { it.timeBucket == TimeBucket.HEUTE }
+                    .sortedByDescending { it.priorityScore },
+            )
+        } else {
+            ALL_BUCKETS.associateWith { bucket ->
+                all.filter { it.timeBucket == bucket }.sortedByDescending { it.priorityScore }
+            }
         }
 
         provideContent {
             GlanceTheme {
-                WidgetContent(grouped = grouped, palette = palette)
+                WidgetContent(grouped = grouped, palette = palette, onlyToday = onlyToday)
             }
         }
     }
@@ -225,6 +237,7 @@ private fun priorityColor(palette: WidgetPalette, score: Double): Color = when {
 private fun WidgetContent(
     grouped: Map<TimeBucket, List<EntropyEntryEntity>>,
     palette: WidgetPalette,
+    onlyToday: Boolean,
 ) {
     val totalTasks = grouped.values.sumOf { it.size }
     Column(
@@ -233,7 +246,7 @@ private fun WidgetContent(
             .background(ColorProvider(palette.bgRoot))
             .padding(10.dp),
     ) {
-        WidgetHeader(palette = palette, totalTasks = totalTasks)
+        WidgetHeader(palette = palette, totalTasks = totalTasks, onlyToday = onlyToday)
         Spacer(GlanceModifier.height(8.dp))
         if (totalTasks == 0) {
             EmptyState(palette = palette)
@@ -262,7 +275,7 @@ private fun WidgetContent(
 }
 
 @Composable
-private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int) {
+private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int, onlyToday: Boolean) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -275,7 +288,7 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Aufgaben",
+                text = if (onlyToday) "Heute" else "Aufgaben",
                 style = TextStyle(
                     color = ColorProvider(palette.textPrimary),
                     fontSize = 18.sp,
@@ -291,6 +304,11 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int) {
                 ),
             )
         }
+        // Frank-Wunsch 2026-05-11: Häkchen-Toggle "Nur Heute". Glance-ActionCallback
+        // toggelt das DataStore-Flag und rendert das Widget neu — die App
+        // wird nicht geoeffnet.
+        OnlyTodayToggle(palette = palette, isActive = onlyToday)
+        Spacer(GlanceModifier.width(6.dp))
         // Settings-Icon rechts — oeffnet Widget-Settings-Screen
         Box(
             modifier = GlanceModifier
@@ -309,6 +327,43 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int) {
                 ),
             )
         }
+    }
+}
+
+/**
+ * Häkchen-Toggle im Widget-Header (Frank-Wunsch 2026-05-11). Aktiv = nur HEUTE
+ * sichtbar, inaktiv = alle Buckets. Visualisiert als Checkbox-Pille mit Check-
+ * Icon + Label "Heute". Aktiv: Heute-Akzentfarbe (Pink/Rosa) als Background.
+ */
+@Composable
+private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
+    val accent = palette.bucketHeute
+    val bg = if (isActive) accent.copy(alpha = 0.22f) else palette.surfaceMuted
+    val tint = if (isActive) accent else palette.textSecondary
+    Row(
+        modifier = GlanceModifier
+            .background(ColorProvider(bg))
+            .cornerRadius(50.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clickable(actionRunCallback<WidgetToggleOnlyTodayAction>()),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Check-Icon — visuell sofort als "Checkbox" erkennbar.
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_check),
+            contentDescription = if (isActive) "Filter aktiv: nur Heute" else "Filter aus: alle Buckets",
+            modifier = GlanceModifier.size(14.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(tint)),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(
+            text = "Heute",
+            style = TextStyle(
+                color = ColorProvider(tint),
+                fontSize = 11.sp,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            ),
+        )
     }
 }
 

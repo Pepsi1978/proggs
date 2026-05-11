@@ -119,6 +119,21 @@ class AppSettings @Inject constructor(
         }
     }
 
+    /**
+     * Häkchen-Filter im Widget (Frank-Wunsch 2026-05-11). Wenn true, zeigt das
+     * Aufgaben-Widget nur die HEUTE-Aufgaben. Default false = alle Buckets.
+     */
+    val widgetOnlyTodayFlow: Flow<Boolean> = ds.data
+        .map { it[KEY_WIDGET_ONLY_TODAY] ?: false }
+        .distinctUntilChanged()
+
+    suspend fun readWidgetOnlyTodayOnce(): Boolean =
+        ds.data.first()[KEY_WIDGET_ONLY_TODAY] ?: false
+
+    suspend fun setWidgetOnlyToday(value: Boolean) = ds.edit {
+        it[KEY_WIDGET_ONLY_TODAY] = value
+    }
+
     suspend fun setWhisperModel(value: String) = ds.edit { it[KEY_WHISPER_MODEL] = value }
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
@@ -164,6 +179,7 @@ class AppSettings @Inject constructor(
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_WIDGET_THEME_MODE = stringPreferencesKey("widget_theme_mode")
+        private val KEY_WIDGET_ONLY_TODAY = booleanPreferencesKey("widget_only_today")
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")

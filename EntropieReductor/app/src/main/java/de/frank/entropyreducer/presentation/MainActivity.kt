@@ -54,6 +54,11 @@ class MainActivity : ComponentActivity() {
         // gestartet wurde, traegt das Intent eine Task-ID + Aktion. Wir
         // schreiben das in den WidgetDeepLinkBus — TasksScreen reagiert.
         handleWidgetIntent(intent)
+        // Frank-Wunsch 2026-05-11 (dritte Iteration): Bei Widget-Tap soll der
+        // LaunchScreen UEBERSPRUNGEN werden — Frank will direkt die Aufgabe
+        // sehen, nicht erst auf "Start" tippen muessen. Initialer started-Wert
+        // dafuer abgeleitet aus dem Intent.
+        val widgetFastTrack = hasWidgetExtras(intent)
         setContent {
             // BootstrapViewModel: init {} legt beim ersten Start die Default-Prompts an.
             hiltViewModel<BootstrapViewModel>()
@@ -84,7 +89,17 @@ class MainActivity : ComponentActivity() {
                 // ueberlebt Configuration-Changes wie Theme-Wechsel oder
                 // Foldable-Klappung; nur ein echter App-Neustart bringt den
                 // LaunchScreen zurueck.
-                var started by rememberSaveable { mutableStateOf(false) }
+                var started by rememberSaveable { mutableStateOf(widgetFastTrack) }
+                // Wenn die App offen war und ein Widget-Tap onNewIntent triggert,
+                // setzt der Bus-Collector started=true und der LaunchScreen
+                // verschwindet sofort. Auch fuer den ersten Start mit Widget-
+                // Intent (widgetFastTrack ist dann schon true).
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus
+                        .events.collect { link ->
+                            if (link != null) started = true
+                        }
+                }
                 if (started) {
                     AppNavGraph()
                 } else {
@@ -101,6 +116,11 @@ class MainActivity : ComponentActivity() {
         // Tap also hier statt onCreate. Bus befuellen und fertig.
         setIntent(intent)
         handleWidgetIntent(intent)
+    }
+
+    private fun hasWidgetExtras(intent: Intent?): Boolean {
+        if (intent == null) return false
+        return intent.hasExtra(WidgetIntents.EXTRA_ACTION)
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
