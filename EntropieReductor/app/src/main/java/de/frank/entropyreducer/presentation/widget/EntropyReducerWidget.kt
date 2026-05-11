@@ -87,7 +87,8 @@ class EntropyReducerWidget : GlanceAppWidget() {
         val themeMode = settings.readWidgetThemeModeOnce()
         val palette = resolveWidgetPalette(context, themeMode)
         val onlyToday = settings.readWidgetOnlyTodayOnce()
-        android.util.Log.i("WidgetWidget", "provideGlance: themeMode=$themeMode, onlyToday=$onlyToday")
+        val bgAlpha = settings.readWidgetBgAlphaOnce()
+        android.util.Log.i("WidgetWidget", "provideGlance: themeMode=$themeMode, onlyToday=$onlyToday, bgAlpha=$bgAlpha")
 
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
@@ -107,7 +108,7 @@ class EntropyReducerWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
-                WidgetContent(grouped = grouped, palette = palette, onlyToday = onlyToday)
+                WidgetContent(grouped = grouped, palette = palette, onlyToday = onlyToday, bgAlpha = bgAlpha)
             }
         }
     }
@@ -238,12 +239,13 @@ private fun WidgetContent(
     grouped: Map<TimeBucket, List<EntropyEntryEntity>>,
     palette: WidgetPalette,
     onlyToday: Boolean,
+    bgAlpha: Float = 1.0f,
 ) {
     val totalTasks = grouped.values.sumOf { it.size }
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(palette.bgRoot))
+            .background(ColorProvider(palette.bgRoot.copy(alpha = bgAlpha)))
             .padding(10.dp),
     ) {
         WidgetHeader(palette = palette, totalTasks = totalTasks, onlyToday = onlyToday)

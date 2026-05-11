@@ -77,12 +77,19 @@ class WidgetSettingsViewModel @Inject constructor(
     val onlyToday: StateFlow<Boolean> = settings.widgetOnlyTodayFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val bgAlpha: StateFlow<Float> = settings.widgetBgAlphaFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1.0f)
+
     fun setTheme(mode: ThemeMode) {
         viewModelScope.launch { settings.setWidgetThemeMode(mode) }
     }
 
     fun setOnlyToday(value: Boolean) {
         viewModelScope.launch { settings.setWidgetOnlyToday(value) }
+    }
+
+    fun setBgAlpha(value: Float) {
+        viewModelScope.launch { settings.setWidgetBgAlpha(value) }
     }
 }
 
@@ -94,6 +101,7 @@ fun WidgetSettingsScreen(
     val cosmos = LocalCosmos.current
     val mode by vm.themeMode.collectAsState()
     val onlyToday by vm.onlyToday.collectAsState()
+    val bgAlpha by vm.bgAlpha.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -109,6 +117,13 @@ fun WidgetSettingsScreen(
 
     fun setOnlyTodayAndRefresh(value: Boolean) {
         vm.setOnlyToday(value)
+        scope.launch {
+            runCatching { EntropyReducerWidget().updateAll(context) }
+        }
+    }
+
+    fun setBgAlphaAndRefresh(value: Float) {
+        vm.setBgAlpha(value)
         scope.launch {
             runCatching { EntropyReducerWidget().updateAll(context) }
         }
@@ -208,6 +223,45 @@ fun WidgetSettingsScreen(
                 onClick = { setOnlyTodayAndRefresh(true) },
             )
 
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Transparenz",
+                style = MaterialTheme.typography.titleMedium,
+                color = cosmos.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                "Hier stellst du ein, wie durchsichtig der Hintergrund des Widgets ist. " +
+                    "Komplett deckend = Hintergrund verdeckt das Wallpaper. Durchsichtig = " +
+                    "Wallpaper schimmert durch das Widget hindurch.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Deckkraft",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cosmos.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${(bgAlpha * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            androidx.compose.material3.Slider(
+                value = bgAlpha,
+                onValueChange = { setBgAlphaAndRefresh(it) },
+                valueRange = 0.1f..1.0f,
+                steps = 17, // 18 Schritte = ~5%-Sprünge zwischen 10% und 100%
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             Spacer(Modifier.height(8.dp))
             Text(
                 "Vorschau",
@@ -217,7 +271,7 @@ fun WidgetSettingsScreen(
             )
             val palette = resolveWidgetPalette(context, mode)
             WidgetPreviewCard(
-                bgColor = palette.bgRoot,
+                bgColor = palette.bgRoot.copy(alpha = bgAlpha),
                 surfaceColor = palette.surfaceCard,
                 tintColor = palette.bucketHeute.copy(alpha = palette.cardTintAlpha),
                 textPrimary = palette.textPrimary,

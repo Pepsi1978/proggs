@@ -183,6 +183,11 @@ fun TasksScreen(
     // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
     val widgetDeepLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
         .collectAsState()
+    // Bugfix 2026-05-11: Beim App-Start via Widget kommt der DeepLink BEVOR
+    // state.entriesByBucket geladen ist — der existsInActive-Check schlug
+    // immer fehl und Bus.clear() loeschte den Link bevor die Tasks da waren.
+    // Fix: Den Link DIREKT konsumieren ohne Existenz-Check (das Bucket-Picker-
+    // Sheet selbst behandelt den Fall dass die Task nicht existiert).
     LaunchedEffect(widgetDeepLink) {
         val link = widgetDeepLink ?: return@LaunchedEffect
         // ACTION_SETTINGS und ACTION_OPEN behandelt AppNavGraph selbst —
@@ -194,12 +199,6 @@ fun TasksScreen(
             de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
         if (!isTaskAction) return@LaunchedEffect
 
-        val existsInActive = state.entriesByBucket.values
-            .any { list -> list.any { it.id == link.taskId } }
-        if (!existsInActive) {
-            de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
-            return@LaunchedEffect
-        }
         if (link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE) {
             bucketPickerEntryId = link.taskId
         }
@@ -479,8 +478,11 @@ fun TasksScreen(
                 onClearManual = { vm.clearManualBucket(id) },
                 onClose = { bucketPickerEntryId = null },
             )
-        } else {
-            // Eintrag nicht mehr da — Sheet einfach schliessen.
+        } else if (allActive.isNotEmpty()) {
+            // Bugfix 2026-05-11: Eintrag nur reseten wenn Tasks SCHON geladen
+            // sind UND der Eintrag wirklich weg ist. Beim Start via Widget ist
+            // allActive zunaechst leer (Tasks laden noch) — wir warten bis sie
+            // da sind, statt das Sheet vorzeitig zu schliessen.
             bucketPickerEntryId = null
         }
     }

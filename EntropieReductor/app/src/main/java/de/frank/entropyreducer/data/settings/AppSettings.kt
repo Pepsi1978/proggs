@@ -3,6 +3,7 @@ package de.frank.entropyreducer.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -135,6 +136,22 @@ class AppSettings @Inject constructor(
     }
 
     /**
+     * Hintergrund-Deckkraft des Widgets (Frank-Wunsch 2026-05-11).
+     * Float 0.0 (komplett transparent) bis 1.0 (volle Deckkraft). Default 1.0
+     * = wie vorher (kein Transparenz-Effekt).
+     */
+    val widgetBgAlphaFlow: Flow<Float> = ds.data
+        .map { (it[KEY_WIDGET_BG_ALPHA] ?: 1.0f).coerceIn(0.0f, 1.0f) }
+        .distinctUntilChanged()
+
+    suspend fun readWidgetBgAlphaOnce(): Float =
+        (ds.data.first()[KEY_WIDGET_BG_ALPHA] ?: 1.0f).coerceIn(0.0f, 1.0f)
+
+    suspend fun setWidgetBgAlpha(value: Float) = ds.edit {
+        it[KEY_WIDGET_BG_ALPHA] = value.coerceIn(0.0f, 1.0f)
+    }
+
+    /**
      * Atomarer Toggle des "Nur Heute"-Flags (Frank-Wunsch 2026-05-11, Bugfix).
      *
      * Vorher: read-then-write in zwei separaten Calls (readWidgetOnlyTodayOnce
@@ -204,6 +221,7 @@ class AppSettings @Inject constructor(
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_WIDGET_THEME_MODE = stringPreferencesKey("widget_theme_mode")
         private val KEY_WIDGET_ONLY_TODAY = booleanPreferencesKey("widget_only_today")
+        private val KEY_WIDGET_BG_ALPHA = floatPreferencesKey("widget_bg_alpha")
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
