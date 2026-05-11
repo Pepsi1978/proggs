@@ -31,10 +31,24 @@ object WidgetIntents {
 
     const val ACTION_FOCUS = "focus"
     const val ACTION_RESCHEDULE = "reschedule"
+    const val ACTION_SETTINGS = "settings"
+    const val ACTION_OPEN = "open"
 
     /** Bundle-Schluessel im Intent — identisch zum ActionParameters.Key-Namen. */
     const val EXTRA_TASK_ID = "widget_task_id"
     const val EXTRA_ACTION = "widget_action"
+
+    /**
+     * Header-Tap (App oeffnen) oder Settings-Icon-Tap. Hat keine Task-ID,
+     * nur die Action. taskId wird hier auf einen leeren Marker gesetzt damit
+     * das Schema gleich bleibt.
+     */
+    fun openHeaderAction(action: String) = actionStartActivity<MainActivity>(
+        actionParametersOf(
+            KEY_TASK_ID to "",
+            KEY_ACTION to action,
+        ),
+    )
 
     /**
      * Baut eine Glance-Action die MainActivity startet und Task-ID + Action als

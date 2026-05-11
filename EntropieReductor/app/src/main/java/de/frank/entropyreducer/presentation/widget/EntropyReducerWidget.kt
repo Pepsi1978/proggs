@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -18,7 +20,6 @@ import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.unit.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -28,16 +29,20 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import de.frank.entropyreducer.R
 import de.frank.entropyreducer.data.local.dao.EntropyEntryDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
+import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
@@ -45,54 +50,51 @@ import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.first
 
 /**
- * Home-Screen-Widget v2 (Frank-Wunsch 2026-05-11).
+ * Home-Screen-Widget v3 (Frank-Wunsch 2026-05-11, zweite Iteration).
  *
- * Scrollbare Aufgaben-Liste die den Tagesplan-Inhalt 1:1 wiederspiegelt:
- *  - 4 Sektionen (HEUTE / MORGEN / FREIBLOCK / SPAETER) mit jeweils eigener
- *    Header-Pille in der Bucket-Akzent-Farbe
- *  - Karten in derselben Reihenfolge wie im TasksScreen (priorityScore desc)
- *  - Karten 1:1 nachgebaut: Bucket-Tint-Hintergrund, Kategorie-Pille mit
- *    Akzent-Farbe, Title + Description, Prio-Zahl in Score-Farbe + "Prio"-
- *    Label, Severity-Bar als 5 Boxen, Tags-Pills, KI/Manuell-Status-Pille
- *  - Zwei Tap-Zonen pro Karte:
- *      * Tap irgendwo auf der Karte → MainActivity oeffnet mit Fokus auf Task
- *      * Tap auf KI/Manuell-Pille → MainActivity oeffnet + Bucket-Picker-Sheet
+ * Verbesserungen gegenueber v2:
+ *  - Karte 1:1 zur App-Karte: Icon-Kreis links + Title-Block + Prio-Zahl + Check-Box rechts
+ *  - KI/Manuell-Pille deutlich prominenter mit Bucket-Icon + Text
+ *  - Settings-Icon oben rechts im Header
+ *  - Hell/Dunkel-Theme via WidgetPalette (gesteuert per WidgetSettingsScreen)
+ *  - Severity-Bar mit 10 feinen Segmenten statt 5
+ *  - 4 Bereichs-Sektionen (Heute/Morgen/Freiblock/Spaeter) mit prominenten Headern
  *
- * Glance-Realitaet: GlassCard (Glas-Effekt), graphicsLayer, BorderStroke und
- * Canvas-basierte Severity-Bar gibt es in RemoteViews nicht. Stattdessen
- * Bucket-Tint-Background, cornerRadius, Boxen-Severity-Bar — die Optik bleibt
- * dem TasksScreen sehr nahe, ist aber nicht pixelgenau identisch (technisch
- * unmoeglich).
+ * Glance-Realitaet:
+ *  - Glas-Effekt (Blur, GraphicsLayer) ist in RemoteViews unmoeglich. Wir
+ *    nutzen surfaceCard-Hintergrund + Bucket-Tint-Overlay (cardTintAlpha aus
+ *    Palette) — wirkt aus Distanz wie Glas.
+ *  - Severity-Bar als 10 nebeneinander-Boxen statt Canvas-Gradient.
+ *  - Compose ImageVectors (Icons.Outlined.Psychology etc.) sind hier nicht
+ *    nutzbar — stattdessen XML-Vector-Drawables aus res/drawable.
  *
- * Update: alle 15 Min via PeriodicWorkRequest (widget_info.xml) ODER auf
- * Abruf via `EntropyReducerWidget().updateAll(context)` nach jedem DB-
- * Schreibvorgang in TasksScreen.
+ * Update:
+ *  - System: alle 30 Min via PeriodicWorkRequest (widget_info.xml)
+ *  - App: nach jedem Bucket-Wechsel ruft TasksScreen updateAll(context)
+ *  - Settings-Aenderung: WidgetSettingsScreen ruft updateAll
  */
 class EntropyReducerWidget : GlanceAppWidget() {
 
-    // SizeMode.Exact: bei jedem Resize wird provideGlance neu aufgerufen,
-    // damit die Liste sich an Hoehe/Breite anpasst (z.B. Fullscreen-Resize
-    // zeigt mehr Karten als Mini-Variante).
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val dao = EntryPointAccessors
+        val entry = EntryPointAccessors
             .fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
-            .entryDao()
-        // Alle aktiven Eintraege laden (ohne ARCHIVIERT). REDUZIERT (erledigt)
-        // kommt zwar mit, wird aber im Widget nicht angezeigt — Frank will im
-        // Widget nur OFFENE/IN_ARBEIT-Karten sehen.
+        val dao = entry.entryDao()
+        val settings = entry.appSettings()
+
+        val themeMode = settings.readWidgetThemeModeOnce()
+        val palette = resolveWidgetPalette(context, themeMode)
+
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
-        // Pro Bucket nach priorityScore absteigend sortieren — identisch zur
-        // TasksScreen-Sortierung.
         val grouped: Map<TimeBucket, List<EntropyEntryEntity>> = ALL_BUCKETS.associateWith { bucket ->
             all.filter { it.timeBucket == bucket }.sortedByDescending { it.priorityScore }
         }
 
         provideContent {
             GlanceTheme {
-                WidgetContent(grouped = grouped)
+                WidgetContent(grouped = grouped, palette = palette)
             }
         }
     }
@@ -101,6 +103,7 @@ class EntropyReducerWidget : GlanceAppWidget() {
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
         fun entryDao(): EntropyEntryDao
+        fun appSettings(): AppSettings
     }
 }
 
@@ -111,40 +114,13 @@ private val ALL_BUCKETS = listOf(
     TimeBucket.SPAETER,
 )
 
-// --- Farb-Konstanten (Spiegel von theme/Color.kt) ---
-// Glance laeuft im RemoteViews-Process — Compose-Theme-Tokens (LocalCosmos,
-// MaterialTheme) sind hier NICHT verfuegbar. Werte werden 1:1 aus
-// theme/Color.kt gespiegelt; Aenderungen dort muessen hier mitgezogen werden.
-private val BgRoot = Color(0xFF0E0B24)
-private val SurfaceCard = Color(0xFF1A1438)
-private val SurfaceMuted = Color(0xFF2A1F44)
-private val TextPrimary = Color(0xFFEAE6FF)
-private val TextSecondary = Color(0xFFA499D9)
+// --- Bucket-Helpers ---
 
-private val BucketHeuteTint = Color(0xFFF472B6)
-private val BucketMorgenTint = Color(0xFFFBBF24)
-private val BucketFreiblockTint = Color(0xFF22C55E)
-private val BucketSpaeterTint = Color(0xFF60A5FA)
-
-private val CatPhysical = Color(0xFFF87171)
-private val CatMental = Color(0xFFA78BFA)
-private val CatTemporal = Color(0xFFFBBF24)
-private val CatEmotional = Color(0xFFF472B6)
-private val CatHealth = Color(0xFF34D399)
-private val CatEnvironment = Color(0xFF22D3EE)
-private val CatOther = Color(0xFF94A3B8)
-
-private val PrioRed = Color(0xFFEF4444)
-private val PrioOrange = Color(0xFFF97316)
-private val PrioYellow = Color(0xFFEAB308)
-private val PrioGreen = Color(0xFF22C55E)
-private val PrioBlue = Color(0xFF3B82F6)
-
-private fun bucketTint(bucket: TimeBucket): Color = when (bucket) {
-    TimeBucket.HEUTE -> BucketHeuteTint
-    TimeBucket.MORGEN -> BucketMorgenTint
-    TimeBucket.FREIBLOCK -> BucketFreiblockTint
-    TimeBucket.SPAETER -> BucketSpaeterTint
+private fun bucketTint(palette: WidgetPalette, bucket: TimeBucket): Color = when (bucket) {
+    TimeBucket.HEUTE -> palette.bucketHeute
+    TimeBucket.MORGEN -> palette.bucketMorgen
+    TimeBucket.FREIBLOCK -> palette.bucketFreiblock
+    TimeBucket.SPAETER -> palette.bucketSpaeter
 }
 
 private fun bucketLabel(bucket: TimeBucket): String = when (bucket) {
@@ -154,14 +130,21 @@ private fun bucketLabel(bucket: TimeBucket): String = when (bucket) {
     TimeBucket.SPAETER -> "Später"
 }
 
-private fun categoryColor(cat: EntropyCategory): Color = when (cat) {
-    EntropyCategory.KOERPERLICH -> CatPhysical
-    EntropyCategory.MENTAL -> CatMental
-    EntropyCategory.ZEITLICH -> CatTemporal
-    EntropyCategory.EMOTIONAL -> CatEmotional
-    EntropyCategory.GESUNDHEITLICH -> CatHealth
-    EntropyCategory.UMGEBUNG -> CatEnvironment
-    EntropyCategory.SONSTIGES -> CatOther
+private fun bucketIconRes(bucket: TimeBucket): Int = when (bucket) {
+    TimeBucket.HEUTE -> R.drawable.ic_widget_bucket_today
+    TimeBucket.MORGEN -> R.drawable.ic_widget_bucket_morgen
+    TimeBucket.FREIBLOCK -> R.drawable.ic_widget_bucket_freiblock
+    TimeBucket.SPAETER -> R.drawable.ic_widget_bucket_spaeter
+}
+
+private fun categoryColor(palette: WidgetPalette, cat: EntropyCategory): Color = when (cat) {
+    EntropyCategory.KOERPERLICH -> palette.catPhysical
+    EntropyCategory.MENTAL -> palette.catMental
+    EntropyCategory.ZEITLICH -> palette.catTemporal
+    EntropyCategory.EMOTIONAL -> palette.catEmotional
+    EntropyCategory.GESUNDHEITLICH -> palette.catHealth
+    EntropyCategory.UMGEBUNG -> palette.catEnvironment
+    EntropyCategory.SONSTIGES -> palette.catOther
 }
 
 private fun categoryLabel(cat: EntropyCategory): String = when (cat) {
@@ -174,47 +157,58 @@ private fun categoryLabel(cat: EntropyCategory): String = when (cat) {
     EntropyCategory.SONSTIGES -> "Sonstiges"
 }
 
-private fun priorityColor(score: Double): Color = when {
-    score >= 80.0 -> PrioRed
-    score >= 60.0 -> PrioOrange
-    score >= 40.0 -> PrioYellow
-    score >= 20.0 -> PrioGreen
-    else -> PrioBlue
+private fun categoryIconRes(cat: EntropyCategory): Int = when (cat) {
+    EntropyCategory.KOERPERLICH -> R.drawable.ic_widget_cat_physical
+    EntropyCategory.MENTAL -> R.drawable.ic_widget_cat_mental
+    EntropyCategory.ZEITLICH -> R.drawable.ic_widget_cat_temporal
+    EntropyCategory.EMOTIONAL -> R.drawable.ic_widget_cat_emotional
+    EntropyCategory.GESUNDHEITLICH -> R.drawable.ic_widget_cat_health
+    EntropyCategory.UMGEBUNG -> R.drawable.ic_widget_cat_environment
+    EntropyCategory.SONSTIGES -> R.drawable.ic_widget_cat_other
 }
 
-// --- Widget-Layout ---
+private fun priorityColor(palette: WidgetPalette, score: Double): Color = when {
+    score >= 80.0 -> palette.prioRed
+    score >= 60.0 -> palette.prioOrange
+    score >= 40.0 -> palette.prioYellow
+    score >= 20.0 -> palette.prioGreen
+    else -> palette.prioBlue
+}
+
+// --- Layout ---
 
 @Composable
-private fun WidgetContent(grouped: Map<TimeBucket, List<EntropyEntryEntity>>) {
+private fun WidgetContent(
+    grouped: Map<TimeBucket, List<EntropyEntryEntity>>,
+    palette: WidgetPalette,
+) {
     val totalTasks = grouped.values.sumOf { it.size }
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(BgRoot))
+            .background(ColorProvider(palette.bgRoot))
             .padding(10.dp),
     ) {
-        // Header: Logo-Pille + Gesamt-Zaehler + Tap-to-open (oeffnet App ohne
-        // Task-Fokus → landet auf dem zuletzt aktiven Tab)
-        WidgetHeader(totalTasks = totalTasks)
+        WidgetHeader(palette = palette, totalTasks = totalTasks)
         Spacer(GlanceModifier.height(8.dp))
         if (totalTasks == 0) {
-            EmptyState()
+            EmptyState(palette = palette)
         } else {
             LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
                 ALL_BUCKETS.forEach { bucket ->
                     val tasks = grouped[bucket].orEmpty()
                     if (tasks.isNotEmpty()) {
                         item(itemId = bucket.ordinal.toLong()) {
-                            BucketHeader(bucket = bucket, count = tasks.size)
+                            BucketHeader(palette = palette, bucket = bucket, count = tasks.size)
                         }
                         items(items = tasks, itemId = { it.id.hashCode().toLong() }) { entry ->
                             Column {
-                                Spacer(GlanceModifier.height(6.dp))
-                                TaskCard(entry = entry)
+                                Spacer(GlanceModifier.height(8.dp))
+                                TaskCard(entry = entry, palette = palette)
                             }
                         }
                         item(itemId = (bucket.ordinal + 100).toLong()) {
-                            Spacer(GlanceModifier.height(12.dp))
+                            Spacer(GlanceModifier.height(14.dp))
                         }
                     }
                 }
@@ -224,62 +218,94 @@ private fun WidgetContent(grouped: Map<TimeBucket, List<EntropyEntryEntity>>) {
 }
 
 @Composable
-private fun WidgetHeader(totalTasks: Int) {
+private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int) {
     Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .clickable(actionStartActivity<MainActivity>()),
+        modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = "Aufgaben",
-            style = TextStyle(
-                color = ColorProvider(TextPrimary),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
-        Spacer(GlanceModifier.width(8.dp))
-        Text(
-            text = "$totalTasks offen",
-            style = TextStyle(
-                color = ColorProvider(TextSecondary),
-                fontSize = 12.sp,
-            ),
-        )
+        // Linker Bereich: Title+Counter, oeffnet die App
+        Row(
+            modifier = GlanceModifier
+                .defaultWeight()
+                .clickable(WidgetIntents.openHeaderAction(WidgetIntents.ACTION_OPEN)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Aufgaben",
+                style = TextStyle(
+                    color = ColorProvider(palette.textPrimary),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+            Spacer(GlanceModifier.width(8.dp))
+            Text(
+                text = "$totalTasks offen",
+                style = TextStyle(
+                    color = ColorProvider(palette.textSecondary),
+                    fontSize = 12.sp,
+                ),
+            )
+        }
+        // Settings-Icon rechts — oeffnet Widget-Settings-Screen
+        Box(
+            modifier = GlanceModifier
+                .size(32.dp)
+                .background(ColorProvider(palette.surfaceMuted))
+                .cornerRadius(50.dp)
+                .clickable(WidgetIntents.openHeaderAction(WidgetIntents.ACTION_SETTINGS)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_widget_settings),
+                contentDescription = "Widget-Einstellungen",
+                modifier = GlanceModifier.size(18.dp),
+                colorFilter = androidx.glance.ColorFilter.tint(
+                    ColorProvider(palette.textSecondary),
+                ),
+            )
+        }
     }
 }
 
 @Composable
-private fun BucketHeader(bucket: TimeBucket, count: Int) {
-    val accent = bucketTint(bucket)
+private fun BucketHeader(palette: WidgetPalette, bucket: TimeBucket, count: Int) {
+    val accent = bucketTint(palette, bucket)
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
             .padding(top = 4.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Akzent-Pille mit Bucket-Name
         Box(
             modifier = GlanceModifier
                 .background(ColorProvider(accent.copy(alpha = 0.22f)))
                 .cornerRadius(12.dp)
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .padding(horizontal = 10.dp, vertical = 5.dp),
         ) {
-            Text(
-                text = bucketLabel(bucket),
-                style = TextStyle(
-                    color = ColorProvider(accent),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                ),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    provider = ImageProvider(bucketIconRes(bucket)),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(14.dp),
+                    colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(accent)),
+                )
+                Spacer(GlanceModifier.width(6.dp))
+                Text(
+                    text = bucketLabel(bucket),
+                    style = TextStyle(
+                        color = ColorProvider(accent),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                    ),
+                )
+            }
         }
         Spacer(GlanceModifier.width(6.dp))
         Text(
             text = "$count",
             style = TextStyle(
-                color = ColorProvider(TextSecondary),
+                color = ColorProvider(palette.textSecondary),
                 fontSize = 12.sp,
             ),
         )
@@ -287,95 +313,111 @@ private fun BucketHeader(bucket: TimeBucket, count: Int) {
 }
 
 @Composable
-private fun TaskCard(entry: EntropyEntryEntity) {
-    val catColor = categoryColor(entry.category)
-    val prioColor = priorityColor(entry.priorityScore)
-    val tintBase = bucketTint(entry.timeBucket).copy(alpha = 0.12f)
+private fun TaskCard(entry: EntropyEntryEntity, palette: WidgetPalette) {
+    val catColor = categoryColor(palette, entry.category)
+    val prioColor = priorityColor(palette, entry.priorityScore)
+    val tintBase = bucketTint(palette, entry.timeBucket).copy(alpha = palette.cardTintAlpha)
     val isManual = entry.manualBucket != null
-    val bucketAccent = bucketTint(entry.timeBucket)
+    val bucketAccent = bucketTint(palette, entry.timeBucket)
 
-    // AEUSSERE Box: clickable = Karte-Focus-Action (Tap irgendwo auf der Karte)
-    // INNERE KI/Manuell-Pille hat ihre EIGENE clickable, die das outer-click
-    // ueberschreibt (Glance Click-Propagation: innerstes clickable gewinnt).
+    // AEUSSERE Box: Karte = Focus-Action (gesamte Karte tippbar)
     Box(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .background(ColorProvider(SurfaceCard))
-            .cornerRadius(16.dp)
+            .background(ColorProvider(palette.surfaceCard))
+            .cornerRadius(20.dp)
             .clickable(WidgetIntents.openTaskAction(entry.id, WidgetIntents.ACTION_FOCUS)),
     ) {
-        // Zweite Layer: leichter Bucket-Tint oben drueber, damit die Karte den
-        // Bucket schon visuell verraet (ersetzt das GlassCard-Tint-Gradient).
+        // INNERE Box: Bucket-Tint-Overlay (ersetzt GlassCard-Tint-Gradient)
         Box(
             modifier = GlanceModifier
                 .fillMaxWidth()
                 .background(ColorProvider(tintBase))
-                .cornerRadius(16.dp)
-                .padding(12.dp),
+                .cornerRadius(20.dp)
+                .padding(14.dp),
         ) {
             Column(modifier = GlanceModifier.fillMaxWidth()) {
-                // TOP-ROW: Kategorie-Pille links | weight=1 fuer Title | Prio-Zahl rechts
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CategoryPill(category = entry.category, color = catColor)
-                    Spacer(GlanceModifier.defaultWeight())
-                    Text(
-                        text = "${entry.priorityScore.toInt()}",
-                        style = TextStyle(
-                            color = ColorProvider(prioColor),
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                    Spacer(GlanceModifier.width(4.dp))
-                    Text(
-                        text = "Prio",
-                        style = TextStyle(
-                            color = ColorProvider(TextSecondary),
-                            fontSize = 10.sp,
-                        ),
-                    )
+                // TOP-ROW: IconCircle | Title-Block | Prio+Check (4-Spalten wie Original)
+                Row(verticalAlignment = Alignment.Top) {
+                    CategoryIconCircle(palette = palette, color = catColor, iconRes = categoryIconRes(entry.category))
+                    Spacer(GlanceModifier.width(12.dp))
+                    Column(modifier = GlanceModifier.defaultWeight()) {
+                        // Kategorie-Pille
+                        CategoryPill(palette = palette, label = categoryLabel(entry.category), color = catColor)
+                        Spacer(GlanceModifier.height(6.dp))
+                        // Title
+                        Text(
+                            text = entry.title,
+                            style = TextStyle(
+                                color = ColorProvider(palette.textPrimary),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                            maxLines = 2,
+                        )
+                        if (entry.description.isNotBlank()) {
+                            Spacer(GlanceModifier.height(4.dp))
+                            Text(
+                                text = entry.description,
+                                style = TextStyle(
+                                    color = ColorProvider(palette.textSecondary),
+                                    fontSize = 12.sp,
+                                ),
+                                maxLines = 2,
+                            )
+                        }
+                    }
+                    Spacer(GlanceModifier.width(8.dp))
+                    // Rechte Spalte: Prio-Zahl + "Prio"-Label + Check-Box
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${entry.priorityScore.toInt()}",
+                            style = TextStyle(
+                                color = ColorProvider(prioColor),
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                        Text(
+                            text = "Prio",
+                            style = TextStyle(
+                                color = ColorProvider(palette.textSecondary),
+                                fontSize = 10.sp,
+                            ),
+                        )
+                        Spacer(GlanceModifier.height(8.dp))
+                        // Check-Box als statische Anzeige (Tap landet via outer-clickable
+                        // in der App; Toggle direkt im Widget wuerde RemoteViewsService
+                        // erfordern und ist mit Glance-LazyColumn-Items nicht zuverlaessig)
+                        Box(
+                            modifier = GlanceModifier
+                                .size(26.dp)
+                                .cornerRadius(8.dp)
+                                .background(ColorProvider(palette.border)),
+                            contentAlignment = Alignment.Center,
+                        ) {}
+                    }
                 }
-                Spacer(GlanceModifier.height(8.dp))
-                // TITLE
-                Text(
-                    text = entry.title,
-                    style = TextStyle(
-                        color = ColorProvider(TextPrimary),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    maxLines = 2,
-                )
-                if (entry.description.isNotBlank()) {
-                    Spacer(GlanceModifier.height(4.dp))
-                    Text(
-                        text = entry.description,
-                        style = TextStyle(
-                            color = ColorProvider(TextSecondary),
-                            fontSize = 12.sp,
-                        ),
-                        maxLines = 2,
-                    )
-                }
-                Spacer(GlanceModifier.height(8.dp))
-                // SEVERITY-BAR (5 Boxen, gefuellt nach severity/2)
-                SeverityBar(severity = entry.severity)
+                Spacer(GlanceModifier.height(12.dp))
+                // SEVERITY-BAR (10 feine Segmente fuer naheren Look ans Original)
+                SeverityBar(severity = entry.severity, palette = palette)
                 // TAGS (max 3)
                 val tagsToShow = entry.tags.take(3)
                 if (tagsToShow.isNotEmpty()) {
-                    Spacer(GlanceModifier.height(8.dp))
+                    Spacer(GlanceModifier.height(10.dp))
                     Row {
                         tagsToShow.forEach { tag ->
-                            TagPill(tag)
+                            TagPill(palette = palette, tag = tag)
                             Spacer(GlanceModifier.width(6.dp))
                         }
                     }
                 }
-                Spacer(GlanceModifier.height(8.dp))
-                // BOTTOM-ROW: Bucket-Pill (KI/Manuell) — eigene clickable
+                Spacer(GlanceModifier.height(10.dp))
+                // BOTTOM-ROW: Prominente Bucket-Pille (KI/Manuell) mit Icon
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(GlanceModifier.defaultWeight())
                     BucketStatusPill(
+                        palette = palette,
                         bucket = entry.timeBucket,
                         accent = bucketAccent,
                         isManual = isManual,
@@ -391,15 +433,33 @@ private fun TaskCard(entry: EntropyEntryEntity) {
 }
 
 @Composable
-private fun CategoryPill(category: EntropyCategory, color: Color) {
+private fun CategoryIconCircle(palette: WidgetPalette, color: Color, iconRes: Int) {
     Box(
         modifier = GlanceModifier
-            .background(ColorProvider(color.copy(alpha = 0.20f)))
+            .size(44.dp)
+            .background(ColorProvider(color.copy(alpha = 0.18f)))
+            .cornerRadius(50.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            provider = ImageProvider(iconRes),
+            contentDescription = null,
+            modifier = GlanceModifier.size(22.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(color)),
+        )
+    }
+}
+
+@Composable
+private fun CategoryPill(palette: WidgetPalette, label: String, color: Color) {
+    Box(
+        modifier = GlanceModifier
+            .background(ColorProvider(color.copy(alpha = 0.22f)))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
-            text = categoryLabel(category),
+            text = label,
             style = TextStyle(
                 color = ColorProvider(color),
                 fontSize = 11.sp,
@@ -410,68 +470,89 @@ private fun CategoryPill(category: EntropyCategory, color: Color) {
 }
 
 @Composable
-private fun TagPill(tag: String) {
+private fun TagPill(palette: WidgetPalette, tag: String) {
     Box(
         modifier = GlanceModifier
-            .background(ColorProvider(SurfaceMuted))
+            .background(ColorProvider(palette.surfaceMuted))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
             text = tag,
-            style = TextStyle(color = ColorProvider(TextSecondary), fontSize = 10.sp),
+            style = TextStyle(
+                color = ColorProvider(palette.textSecondary),
+                fontSize = 10.sp,
+            ),
         )
     }
 }
 
 /**
- * Severity-Bar als 5 Boxen — Ersatz fuer die Canvas-basierte
- * SeverityRainbowBar aus TasksScreen.kt. severity 1-10 wird auf 1-5 Boxen
- * gemappt (severity/2 aufgerundet). Farben gleich wie im Original:
- *  1 = blau, 2 = gruen, 3 = gelb, 4 = orange, 5 = rot.
+ * Severity-Bar mit 10 feinen Segmenten — 1:1-naehe zur App-Bar (die Canvas
+ * mit Gradient nutzt; das geht in RemoteViews nicht). Jedes Segment ist
+ * eine kleine Box mit dem severity-Wert als Fuellung.
  */
 @Composable
-private fun SeverityBar(severity: Int) {
-    val filledCount = ((severity + 1) / 2).coerceIn(0, 5)
-    val segmentColors = listOf(PrioBlue, PrioGreen, PrioYellow, PrioOrange, PrioRed)
+private fun SeverityBar(severity: Int, palette: WidgetPalette) {
+    val sev = severity.coerceIn(1, 10)
     Row(modifier = GlanceModifier.fillMaxWidth()) {
-        for (i in 0 until 5) {
-            val isFilled = i < filledCount
-            val segColor = if (isFilled) segmentColors[i] else SurfaceMuted
+        for (i in 0 until 10) {
+            // Farbverlauf wie im Original: 1-2 blau, 3-4 gruen, 5-6 gelb, 7-8 orange, 9-10 rot
+            val isFilled = i < sev
+            val segColor = if (isFilled) {
+                when (i) {
+                    in 0..1 -> palette.prioBlue
+                    in 2..3 -> palette.prioGreen
+                    in 4..5 -> palette.prioYellow
+                    in 6..7 -> palette.prioOrange
+                    else -> palette.prioRed
+                }
+            } else {
+                palette.severityEmpty
+            }
             Box(
                 modifier = GlanceModifier
                     .defaultWeight()
-                    .height(6.dp)
+                    .height(7.dp)
                     .background(ColorProvider(segColor))
-                    .cornerRadius(3.dp),
+                    .cornerRadius(2.dp),
             ) {}
-            if (i < 4) Spacer(GlanceModifier.width(3.dp))
+            if (i < 9) Spacer(GlanceModifier.width(2.dp))
         }
     }
 }
 
 @Composable
 private fun BucketStatusPill(
+    palette: WidgetPalette,
     bucket: TimeBucket,
     accent: Color,
     isManual: Boolean,
     onClickAction: androidx.glance.action.Action,
 ) {
-    val bgColor = if (isManual) accent.copy(alpha = 0.22f) else SurfaceMuted
-    val textColor = if (isManual) accent else TextSecondary
+    val bgColor = if (isManual) accent.copy(alpha = 0.22f) else palette.surfaceMuted
+    val textColor = if (isManual) accent else palette.textSecondary
     val label = if (isManual) "manuell" else "KI"
-    Box(
+    Row(
         modifier = GlanceModifier
             .background(ColorProvider(bgColor))
             .cornerRadius(50.dp)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .clickable(onClickAction),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        Image(
+            provider = ImageProvider(bucketIconRes(bucket)),
+            contentDescription = null,
+            modifier = GlanceModifier.size(14.dp),
+            colorFilter = androidx.glance.ColorFilter.tint(ColorProvider(textColor)),
+        )
+        Spacer(GlanceModifier.width(6.dp))
         Text(
             text = label,
             style = TextStyle(
                 color = ColorProvider(textColor),
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = if (isManual) FontWeight.Bold else FontWeight.Normal,
             ),
         )
@@ -479,7 +560,7 @@ private fun BucketStatusPill(
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(palette: WidgetPalette) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -488,9 +569,9 @@ private fun EmptyState() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Keine offenen Aufgaben.\nAntippen, um die App zu oeffnen.",
+            text = "Keine offenen Aufgaben.\nAntippen, um die App zu öffnen.",
             style = TextStyle(
-                color = ColorProvider(TextSecondary),
+                color = ColorProvider(palette.textSecondary),
                 fontSize = 14.sp,
             ),
         )

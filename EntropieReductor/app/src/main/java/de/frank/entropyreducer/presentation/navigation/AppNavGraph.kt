@@ -1,6 +1,9 @@
 package de.frank.entropyreducer.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -52,6 +55,29 @@ private fun NavController.tabSwitch(route: String) {
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
+
+    // Frank-Wunsch 2026-05-11: Settings-Icon im Widget oeffnet direkt den
+    // Widget-Settings-Screen. ACTION_FOCUS / ACTION_RESCHEDULE werden in
+    // TasksScreen behandelt — hier nur ACTION_SETTINGS + ACTION_OPEN.
+    val widgetLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
+        .collectAsState()
+    LaunchedEffect(widgetLink) {
+        val link = widgetLink ?: return@LaunchedEffect
+        when (link.action) {
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_SETTINGS -> {
+                nav.navigate(Routes.SETTINGS_WIDGET)
+                de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
+            }
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_OPEN -> {
+                // Sicherstellen dass Tasks-Tab vorne ist (Header-Tap)
+                nav.tabSwitch(Routes.TASKS)
+                de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
+            }
+            // ACTION_FOCUS / ACTION_RESCHEDULE → TasksScreen-LaunchedEffect kuemmert sich
+            else -> Unit
+        }
+    }
+
     NavHost(
         navController = nav,
         startDestination = Routes.TASKS,
@@ -178,6 +204,11 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         }
         composable(Routes.SETTINGS_ARCHIVE) {
             de.frank.entropyreducer.presentation.settings.archive.ArchiveScreen(
+                onBack = { nav.popBackStack(); Unit },
+            )
+        }
+        composable(Routes.SETTINGS_WIDGET) {
+            de.frank.entropyreducer.presentation.settings.WidgetSettingsScreen(
                 onBack = { nav.popBackStack(); Unit },
             )
         }

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,6 +87,38 @@ class AppSettings @Inject constructor(
         }
     }
 
+    /**
+     * Theme-Modus speziell fuer das Home-Screen-Widget (Frank-Wunsch 2026-05-11).
+     * Bewusst entkoppelt vom App-Theme: Frank kann das Widget hell stellen
+     * obwohl die App dunkel ist, und umgekehrt. Default SYSTEM = folgt
+     * Geraete-Einstellung (also nicht zwingend an App-Theme gekoppelt, weil
+     * Widget oft ausserhalb der App sichtbar ist).
+     */
+    val widgetThemeModeFlow: Flow<ThemeMode> = ds.data.map { prefs ->
+        when (prefs[KEY_WIDGET_THEME_MODE]) {
+            "LIGHT" -> ThemeMode.LIGHT
+            "DARK" -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
+        }
+    }.distinctUntilChanged()
+
+    suspend fun setWidgetThemeMode(value: ThemeMode) = ds.edit {
+        it[KEY_WIDGET_THEME_MODE] = value.name
+    }
+
+    /**
+     * Suspend-Read fuer den Widget-Worker (provideGlance laeuft in einem
+     * Coroutine-Scope, kein collect-Flow noetig).
+     */
+    suspend fun readWidgetThemeModeOnce(): ThemeMode {
+        val prefs = ds.data.first()
+        return when (prefs[KEY_WIDGET_THEME_MODE]) {
+            "LIGHT" -> ThemeMode.LIGHT
+            "DARK" -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
+        }
+    }
+
     suspend fun setWhisperModel(value: String) = ds.edit { it[KEY_WHISPER_MODEL] = value }
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
@@ -130,6 +163,7 @@ class AppSettings @Inject constructor(
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_WIDGET_THEME_MODE = stringPreferencesKey("widget_theme_mode")
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")

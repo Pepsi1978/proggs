@@ -162,10 +162,18 @@ fun TasksScreen(
         .collectAsState()
     LaunchedEffect(widgetDeepLink) {
         val link = widgetDeepLink ?: return@LaunchedEffect
+        // ACTION_SETTINGS und ACTION_OPEN behandelt AppNavGraph selbst —
+        // hier nur die Task-bezogenen Aktionen konsumieren, sonst klauen
+        // wir das Event und die Navigation findet nicht statt.
+        val isTaskAction = link.action ==
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
+            link.action ==
+            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
+        if (!isTaskAction) return@LaunchedEffect
+
         val existsInActive = state.entriesByBucket.values
             .any { list -> list.any { it.id == link.taskId } }
         if (!existsInActive) {
-            // Task wurde inzwischen erledigt/geloescht — Tap silent verwerfen
             de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.clear()
             return@LaunchedEffect
         }
