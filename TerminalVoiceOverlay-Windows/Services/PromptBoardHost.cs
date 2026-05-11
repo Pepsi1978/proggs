@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PromptBoard.Core.Models;
 using PromptBoard.Core.Repositories;
 using PromptBoard.Core.Services;
 using PromptBoard.Data;
@@ -108,6 +110,58 @@ public static class PromptBoardHost
             // Idempotent: skipped on subsequent runs because the SK file
             // already holds the values.
             MigrateGoogleSecretsToSk();
+
+            // Strg+1..9 Hotkeys SOFORT scharfschalten, ohne dass der Benutzer
+            // erst das Prompt-Board oeffnen muss. Frueher wurde die
+            // HotkeyRegistry ausschliesslich vom PromptBoardPanel.Render()
+            // befuellt — solange das Panel nie sichtbar war, blieb die
+            // Registry leer und der Low-Level-Keyboard-Hook in OverlayWindow
+            // hat alle Strg+1..9-Tastendruecke durchgereicht. Jetzt laden
+            // wir den initialen Stand direkt aus der DB, danach
+            // ueberschreibt jeder Panel-Render die Werte weiterhin im
+            // Normalbetrieb.
+            LoadHotkeyRegistryFromDb();
+        }
+    }
+
+    /// <summary>
+    /// Befuellt die globale <see cref="HotkeyRegistry"/> einmalig aus der
+    /// SQLite-DB. Wird beim Overlay-Start aufgerufen, damit Strg+1..9 sofort
+    /// funktionieren — auch ohne dass das PromptBoardPanel je geoeffnet wurde.
+    /// Synchron implementiert (passt in den synchronen Initialize-Pfad).
+    /// Fehler werden geschluckt: ein DB-Problem darf den Overlay-Start
+    /// niemals blockieren — die Hotkeys bleiben in dem Fall einfach inert,
+    /// genau wie vor diesem Fix.
+    /// </summary>
+    private static void LoadHotkeyRegistryFromDb()
+    {
+        try
+        {
+            using var scope = _provider!.CreateScope();
+            var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+            var bound = ctx.Prompts
+                .AsNoTracking()
+                .Where(p => p.HotkeyNumber != null)
+                .ToList();
+
+            var entries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>(bound.Count);
+            foreach (var p in bound)
+            {
+                if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
+                {
+                    entries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
+                        n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
+                }
+            }
+            HotkeyRegistry.Replace(entries);
+            Console.WriteLine($"HotkeyRegistry bootstrap: {entries.Count} Prompt-Hotkey(s) geladen.");
+        }
+        catch (Exception ex)
+        {
+            // "Better stale than broken": bei DB-Fehler bleibt die Registry
+            // leer, der Hook reicht Strg+1..9 ans Fokusfenster weiter — der
+            // exakt gleiche Zustand wie vor diesem Fix.
+            Console.WriteLine($"HotkeyRegistry bootstrap failed: {ex.Message}");
         }
     }
 
