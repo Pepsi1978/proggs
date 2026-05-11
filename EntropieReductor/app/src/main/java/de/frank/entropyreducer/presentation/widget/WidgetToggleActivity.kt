@@ -1,11 +1,13 @@
 package de.frank.entropyreducer.presentation.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +50,7 @@ class WidgetToggleActivity : ComponentActivity() {
         android.util.Log.i("WidgetToggle", "Activity found ${ids.size} widget instances")
         if (ids.isEmpty()) return
 
+        // 1. Glance-State togglen (reaktiver Store)
         ids.forEach { glanceId ->
             updateAppWidgetState(context, glanceId) { prefs ->
                 prefs.toMutablePreferences().apply {
@@ -58,8 +61,28 @@ class WidgetToggleActivity : ComponentActivity() {
                 }
             }
         }
-        // Belt-and-suspenders: zusaetzlich updateAll fuer Sicherheit
-        EntropyReducerWidget().updateAll(context)
-        android.util.Log.i("WidgetToggle", "Activity-toggle completed + updateAll fired")
+
+        // 2. KRITISCH (Bugfix 2026-05-11, zehnte Iteration):
+        // Direkter AppWidget-Update-Broadcast statt Glance.updateAll().
+        // Logcat-Beweis: updateAll() wird zwar aufgerufen aber Glance triggert
+        // provideGlance NICHT neu (Worker-Queue-Dedup-Problem). Der DIREKTE
+        // Broadcast triggert dagegen sofort den GlanceAppWidgetReceiver, der
+        // synchron einen neuen Worker startet — exakt wie
+        // `adb shell am broadcast -a APPWIDGET_UPDATE` (was nachweislich
+        // funktioniert).
+        val appWidgetMgr = AppWidgetManager.getInstance(context)
+        val component = ComponentName(context, EntropyReducerWidgetReceiver::class.java)
+        val intIds = appWidgetMgr.getAppWidgetIds(component)
+        if (intIds.isNotEmpty()) {
+            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+                this.component = component
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intIds)
+            }
+            context.sendBroadcast(intent)
+            android.util.Log.i("WidgetToggle", "Direct broadcast sent for ${intIds.size} widget(s)")
+        } else {
+            android.util.Log.w("WidgetToggle", "Keine AppWidget-IDs gefunden fuer Direct-Broadcast")
+        }
+        android.util.Log.i("WidgetToggle", "Activity-toggle completed")
     }
 }
