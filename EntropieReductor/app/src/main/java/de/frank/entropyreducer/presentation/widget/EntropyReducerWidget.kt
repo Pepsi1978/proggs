@@ -12,7 +12,6 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -88,6 +87,7 @@ class EntropyReducerWidget : GlanceAppWidget() {
         val themeMode = settings.readWidgetThemeModeOnce()
         val palette = resolveWidgetPalette(context, themeMode)
         val onlyToday = settings.readWidgetOnlyTodayOnce()
+        android.util.Log.i("WidgetToggle", "provideGlance: onlyToday=$onlyToday themeMode=$themeMode")
 
         val all = dao.getActive().first()
             .filter { it.status == EntryStatus.OFFEN || it.status == EntryStatus.IN_ARBEIT }
@@ -331,24 +331,28 @@ private fun WidgetHeader(palette: WidgetPalette, totalTasks: Int, onlyToday: Boo
 }
 
 /**
- * Häkchen-Toggle im Widget-Header (Frank-Wunsch 2026-05-11). Aktiv = nur HEUTE
- * sichtbar, inaktiv = alle Buckets. Visualisiert als Checkbox-Pille mit Check-
- * Icon + Label "Heute". Aktiv: Heute-Akzentfarbe (Pink/Rosa) als Background.
+ * Häkchen-Toggle im Widget-Header (Frank-Wunsch 2026-05-11, dritte Iteration).
+ * Aktiv = nur HEUTE sichtbar, inaktiv = alle Buckets.
+ *
+ * Click oeffnet WidgetToggleActivity (Theme.NoDisplay) die den DataStore-Flag
+ * invertiert und das Widget refresht. actionRunCallback hat in der Praxis
+ * nicht funktioniert; Activity-Pfad ist robust.
+ *
+ * Aktiv-Farbe: GRUEN (palette.catHealth = #34D399 / #059669) — Frank's Wunsch.
  */
 @Composable
 private fun OnlyTodayToggle(palette: WidgetPalette, isActive: Boolean) {
-    val accent = palette.bucketHeute
-    val bg = if (isActive) accent.copy(alpha = 0.22f) else palette.surfaceMuted
-    val tint = if (isActive) accent else palette.textSecondary
+    val activeColor = palette.catHealth
+    val bg = if (isActive) activeColor.copy(alpha = 0.30f) else palette.surfaceMuted
+    val tint = if (isActive) activeColor else palette.textSecondary
     Row(
         modifier = GlanceModifier
             .background(ColorProvider(bg))
             .cornerRadius(50.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clickable(actionRunCallback<WidgetToggleOnlyTodayAction>()),
+            .clickable(actionStartActivity<WidgetToggleActivity>()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Check-Icon — visuell sofort als "Checkbox" erkennbar.
         Image(
             provider = ImageProvider(R.drawable.ic_widget_check),
             contentDescription = if (isActive) "Filter aktiv: nur Heute" else "Filter aus: alle Buckets",

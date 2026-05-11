@@ -136,6 +136,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Widget Toggle-Activity (Frank-Wunsch 2026-05-11): unsichtbar,
+             toggelt nur das DataStore-Flag fuer "nur Heute" im Widget und
+             finished sich sofort. Glance's actionRunCallback hat in der Praxis
+             nicht zuverlaessig gefeuert. -->
+        <activity
+            android:name=".presentation.widget.WidgetToggleActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="" />
+
         <!-- Stufe 4: Home-Screen-Widget (Glance) -->
         <receiver
             android:name=".presentation.widget.EntropyReducerWidgetReceiver"

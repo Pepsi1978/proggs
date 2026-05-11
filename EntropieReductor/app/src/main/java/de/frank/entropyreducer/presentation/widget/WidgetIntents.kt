@@ -130,14 +130,21 @@ class WidgetToggleOnlyTodayAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        val settings = EntryPointAccessors
-            .fromApplication(
-                context.applicationContext,
-                EntropyReducerWidget.WidgetEntryPoint::class.java,
-            )
-            .appSettings()
-        val current = settings.readWidgetOnlyTodayOnce()
-        settings.setWidgetOnlyToday(!current)
-        EntropyReducerWidget().updateAll(context)
+        android.util.Log.i("WidgetToggle", "onAction FIRED")
+        try {
+            val settings = EntryPointAccessors
+                .fromApplication(
+                    context.applicationContext,
+                    EntropyReducerWidget.WidgetEntryPoint::class.java,
+                )
+                .appSettings()
+            val current = settings.readWidgetOnlyTodayOnce()
+            android.util.Log.i("WidgetToggle", "current=$current → ${!current}")
+            settings.setWidgetOnlyToday(!current)
+            EntropyReducerWidget().updateAll(context)
+            android.util.Log.i("WidgetToggle", "updateAll done")
+        } catch (t: Throwable) {
+            android.util.Log.e("WidgetToggle", "FAILED", t)
+        }
     }
 }
