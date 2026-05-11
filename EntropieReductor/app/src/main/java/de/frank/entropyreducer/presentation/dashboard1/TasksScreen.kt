@@ -20,7 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.glance.appwidget.updateAll
+// Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
+// AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -170,7 +171,7 @@ fun TasksScreen(
             .debounce(1500)
             .collect {
                 runCatching {
-                    de.frank.entropyreducer.presentation.widget.EntropyReducerWidget()
+                    de.frank.entropyreducer.presentation.widget.WidgetUpdater
                         .updateAll(appCtx)
                 }
             }

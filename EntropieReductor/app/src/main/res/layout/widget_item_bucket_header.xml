@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bucket-Header in der ListView (Heute / Morgen / Freiblock / Spaeter).
+  Bucket-Tinted Pille + Anzahl rechts daneben. Visuell 1:1 zur Glance-Version.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:id="@+id/bucket_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="5dp"
+        android:background="@drawable/widget_bucket_pill_bg">
+
+        <ImageView
+            android:id="@+id/bucket_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_widget_bucket_today"
+            android:contentDescription="Bucket" />
+
+        <TextView
+            android:id="@+id/bucket_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#F472B6"
+            android:text="Heute" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="6dp"
+        android:layout_height="1dp" />
+
+    <TextView
+        android:id="@+id/bucket_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#A499D9"
+        android:text="0" />
+</LinearLayout>

@@ -3,72 +3,30 @@ package de.frank.entropyreducer.presentation.widget
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
 import de.frank.entropyreducer.presentation.MainActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Widget Deep-Link Infrastruktur (Frank-Wunsch 2026-05-11).
  *
- * Das scrollbare Aufgaben-Widget hat zwei Tap-Zonen pro Karte:
- *  - Karte allgemein → oeffnet App auf dem Aufgaben-Tab mit Fokus auf der Task
- *  - KI/Manuell-Pille → oeffnet App und triggert direkt das Bucket-Picker-Sheet
- *
- * Glance verpackt die ActionParameters automatisch als Intent-Extras (der Key-Name
- * landet als String-Schluessel im Bundle), MainActivity liest sie in onCreate +
- * onNewIntent und schickt sie in den WidgetDeepLinkBus. TasksScreen beobachtet
- * den Bus und reagiert per LaunchedEffect.
+ * Klassisches Widget (kein Glance mehr). Konstanten + Bus sind weiterhin
+ * geteilte Resource zwischen Widget-Provider/Service und App-Seite
+ * (MainActivity, TasksScreen).
  */
 object WidgetIntents {
-
-    /** ID der angetippten EntropyEntryEntity (String-UUID). */
-    val KEY_TASK_ID: ActionParameters.Key<String> = ActionParameters.Key("widget_task_id")
-
-    /** Aktion: "focus" (Karte angetippt) oder "reschedule" (KI/Manuell-Pille angetippt). */
-    val KEY_ACTION: ActionParameters.Key<String> = ActionParameters.Key("widget_action")
 
     const val ACTION_FOCUS = "focus"
     const val ACTION_RESCHEDULE = "reschedule"
     const val ACTION_SETTINGS = "settings"
     const val ACTION_OPEN = "open"
 
-    /** Bundle-Schluessel im Intent — identisch zum ActionParameters.Key-Namen. */
+    /** Bundle-Schluessel im Intent. */
     const val EXTRA_TASK_ID = "widget_task_id"
     const val EXTRA_ACTION = "widget_action"
 
     /**
-     * Header-Tap (App oeffnen) oder Settings-Icon-Tap. Hat keine Task-ID,
-     * nur die Action. taskId wird hier auf einen leeren Marker gesetzt damit
-     * das Schema gleich bleibt.
-     */
-    fun openHeaderAction(action: String) = actionStartActivity<MainActivity>(
-        actionParametersOf(
-            KEY_TASK_ID to "",
-            KEY_ACTION to action,
-        ),
-    )
-
-    /**
-     * Baut eine Glance-Action die MainActivity startet und Task-ID + Action als
-     * Extras mitschickt. Wird in jeder Aufgabenkarte zweimal verwendet (einmal
-     * fuer die ganze Karte, einmal fuer die KI/Manuell-Pille).
-     *
-     * Singletop-Flag in MainActivity sorgt dafuer dass kein zweiter Activity-
-     * Stack entsteht — onNewIntent uebernimmt.
-     */
-    fun openTaskAction(taskId: String, action: String) = actionStartActivity<MainActivity>(
-        actionParametersOf(
-            KEY_TASK_ID to taskId,
-            KEY_ACTION to action,
-        ),
-    )
-
-    /**
-     * Fallback fuer Klassik-Intent-Erzeugung (z.B. fuer Tests oder manuelle
-     * Trigger). Wird aktuell nicht direkt vom Widget verwendet — Glance baut
-     * den Intent selbst aus den ActionParameters.
+     * Klassik-Intent-Erzeugung fuer Tap auf Widget-Items. Wird vom
+     * EntropyReducerWidgetProvider via setOnClickFillInIntent verwendet.
      */
     fun buildExplicitIntent(context: Context, taskId: String, action: String): Intent =
         Intent().apply {
@@ -89,16 +47,8 @@ data class WidgetDeepLink(
 )
 
 /**
- * Process-scoped Bus fuer Widget-Deep-Links.
- *
- * Warum object statt Hilt-Singleton: Widget-Klicks landen IMMER im selben
- * Process wie die UI (singleTop-Activity), Lifecycle ist kurzlebig (App ist
- * gerade gestartet oder schon offen). Ein simples Kotlin-Singleton reicht
- * voellig und vermeidet zusaetzliche Hilt-Module.
- *
- * Nach Verarbeitung MUSS der Consumer das Event mit clear() konsumieren,
- * damit ein Configuration-Change (z.B. Theme-Wechsel) den Tap nicht zweimal
- * triggert.
+ * Process-scoped Bus fuer Widget-Deep-Links. MainActivity emit'et bei
+ * Widget-Intent, TasksScreen collect'et und reagiert.
  */
 object WidgetDeepLinkBus {
     private val _events = MutableStateFlow<WidgetDeepLink?>(null)
@@ -112,9 +62,3 @@ object WidgetDeepLinkBus {
         _events.value = null
     }
 }
-
-// Hinweis: Frueher gab es hier eine WidgetToggleAction (ActionCallback). Sie
-// wurde 2026-05-11 entfernt zugunsten der WidgetToggleActivity (Hybrid-Pattern):
-// Activity-Klicks sind robust gegen Process-Freezing durch das Samsung-OS,
-// und in der Activity wird Glance's nativer reaktiver State direkt geschrieben.
-// Siehe presentation/widget/WidgetToggleActivity.kt.

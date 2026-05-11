@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default-Hintergrund fuer die Bucket-Header-Pille. Farbe wird zur Laufzeit
+  pro Bucket via setColorFilter dynamisch gefaerbt (bucket-Akzentfarbe mit
+  alpha 0.22).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#38F472B6" />
+    <corners android:radius="12dp" />
+</shape>

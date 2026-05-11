@@ -43,12 +43,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.glance.appwidget.updateAll
+// Glance-Imports entfernt 2026-05-11 — Widget ist jetzt klassischer
+// AppWidgetProvider. Refresh ueber WidgetUpdater.updateAll.
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.ThemeMode
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
-import de.frank.entropyreducer.presentation.widget.EntropyReducerWidget
+import de.frank.entropyreducer.presentation.widget.WidgetUpdater
 import de.frank.entropyreducer.presentation.widget.WidgetDarkPalette
 import de.frank.entropyreducer.presentation.widget.WidgetLightPalette
 import de.frank.entropyreducer.presentation.widget.resolveWidgetPalette
@@ -116,21 +117,21 @@ fun WidgetSettingsScreen(
     fun setAndRefresh(newMode: ThemeMode) {
         scope.launch {
             vm.setThemeSuspend(newMode)
-            runCatching { EntropyReducerWidget().updateAll(context) }
+            runCatching { WidgetUpdater.updateAll(context) }
         }
     }
 
     fun setOnlyTodayAndRefresh(value: Boolean) {
         scope.launch {
             vm.setOnlyTodaySuspend(value)
-            runCatching { EntropyReducerWidget().updateAll(context) }
+            runCatching { WidgetUpdater.updateAll(context) }
         }
     }
 
     fun setBgAlphaAndRefresh(value: Float) {
         scope.launch {
             vm.setBgAlphaSuspend(value)
-            runCatching { EntropyReducerWidget().updateAll(context) }
+            runCatching { WidgetUpdater.updateAll(context) }
         }
     }
 
