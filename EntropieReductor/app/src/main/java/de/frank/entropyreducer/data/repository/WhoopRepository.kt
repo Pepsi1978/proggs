@@ -206,9 +206,17 @@ constructor(
         // 12.05 17:00 → Chart-Datum 12.05 fuer einen Wert der heute morgen kam.
         // Jetzt: capturedAt = sleep.end (Aufwach-Zeit, z.B. 13.05 07:00) → Chart-Datum
         // 13.05. Falls Sleep fehlt, fallback auf cycle.start + 14h (~ Aufwach-Zeit).
-        val capturedAt =
+        //
+        // Crash-Fix 2026-05-13: Wenn zwei Cycles dieselbe Sleep zugeordnet bekommen
+        // (DST-Edge-Case oder Sync-Glitch), bekamen sie sonst identischen capturedAt
+        // → IllegalArgumentException "Key X was already used" in LazyColumn. Wir
+        // disambiguieren mit cycle.id (0..59s Offset) damit jeder Snapshot eindeutig
+        // bleibt ohne den Aufwach-Tag zu verschieben.
+        val baseCapturedAt =
             sleep?.end?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
                 ?: cycleStartInstant.plus(java.time.Duration.ofHours(14)).toEpochMilli()
+        val cycleIdOffset = ((cycle.id ?: 0L) % 60L) * 1000L
+        val capturedAt = baseCapturedAt + cycleIdOffset
         val recoveryScore = recovery?.score
 
         // Frank-Wunsch 2026-05-08: alle Whoop-Felder mappen die die API liefert.
