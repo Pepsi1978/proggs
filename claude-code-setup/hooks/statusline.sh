@@ -38,7 +38,7 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-effort_upper="${effort^^}"
+effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
 
 # Home-Pfad zu ~ kuerzen ohne Subprocess
 case "$cwd_raw" in
@@ -99,7 +99,7 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-printf -v now_ts '%(%s)T' -1
+now_ts=$(date +%s)
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -316,7 +316,7 @@ if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
 fi
 
 # Uhrzeit
-printf -v time '%(%H:%M)T' -1
+time=$(date +%H:%M)
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
