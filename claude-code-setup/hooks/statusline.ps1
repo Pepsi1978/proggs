@@ -248,11 +248,14 @@ try {
         if ($resets -ne 0 -and -not (Test-ValidResetTs $resets $nowTs)) {
             $resets = 0  # Ungueltigen Timestamp ignorieren, aber Eintrag behalten
         }
+        $tsSeen = 0
+        try { $tsSeen = [long]$entry.ts_seen } catch { $tsSeen = 0 }
         $allEntries += [PSCustomObject]@{
             session_id    = $sid
             five_h        = [int]$entry.five_h
             seven_d       = if (Test-ValidPercent $entry.seven_d) { [int]$entry.seven_d } else { 0 }
             five_h_resets = $resets
+            ts_seen       = $tsSeen
         }
     }
 
@@ -261,8 +264,13 @@ try {
         $candidates = $allEntries | Where-Object { [long]$_.five_h_resets -eq $maxResets }
         if ($candidates.Count -gt 0) {
             $bestFive = $candidates | Sort-Object -Property @{Expression={[int]$_.five_h}} -Descending | Select-Object -First 1
-            # 7d unabhaengig: hoechster Wert ueber alle Sessions (validiert)
-            $freshSeven = ($allEntries | ForEach-Object { [int]$_.seven_d } | Measure-Object -Maximum).Maximum
+            # 7d: AKTUELLSTER Wert (hoechster ts_seen), NICHT MAX.
+            # Frank-Bug-Report 2026-05-13: 7d ist ein gleitendes Fenster und kann
+            # SINKEN, wenn alter Verbrauch aus dem 7-Tage-Fenster faellt. MAX-Logik
+            # nahm dann alte hohe Werte (z.B. seven_d:100 von gestern) statt der
+            # aktuellen 31%. Aktuellster Wert ist immer der korrekte aktuelle.
+            $freshestEntry = $allEntries | Sort-Object -Property @{Expression={[long]$_.ts_seen}} -Descending | Select-Object -First 1
+            $freshSeven = [int]$freshestEntry.seven_d
 
             # Letzte Sicherheitsclamp — sollte durch Validierung schon 0..100 sein
             $freshFive = [int]$bestFive.five_h
