@@ -1,5 +1,8 @@
 package de.frank.entropyreducer.presentation.dashboard4
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,56 +18,51 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import de.frank.entropyreducer.presentation.ThemeViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.IsolatedThemeToggleIcon
 import de.frank.entropyreducer.presentation.components.MicState
 import de.frank.entropyreducer.presentation.components.StatusBar
-import androidx.compose.material.icons.outlined.Tune
-import de.frank.entropyreducer.presentation.components.IsolatedThemeToggleIcon
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import de.frank.entropyreducer.presentation.components.charts.HrvLineChart
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.RecoveryRing
+import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
 import de.frank.entropyreducer.presentation.components.charts.SleepStagesBar
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 
 /**
- * Dashboard 4 — Biomarker. Spec §13.
- * Recovery-Ring + Schluesselwerte (HRV/RHR/Schlaf/Sleep-Performance) + HRV-Verlauf
- * + Schlafstadien gestern + Strain. Wenn Whoop nicht verbunden ist, zeigen wir
- * einen Empty-State mit Verweis auf Settings.
+ * Dashboard 4 — Biomarker. Spec §13. Recovery-Ring + Schluesselwerte
+ * (HRV/RHR/Schlaf/Sleep-Performance) + HRV-Verlauf
+ * + Schlafstadien gestern + Strain. Wenn Whoop nicht verbunden ist, zeigen wir einen Empty-State
+ *   mit Verweis auf Settings.
  */
 @Composable
 fun BiomarkerHostScreen(
@@ -92,10 +90,14 @@ fun BiomarkerHostScreen(
     // LeanBodyMass — alle drei werden in einem Klick angefordert. Nach
     // erfolgreichem Grant lesen wir alle Werte neu.
     val weightState by vm.weight.collectAsStateWithLifecycle()
-    val weightPermissionLauncher = rememberLauncherForActivityResult(
-        contract = androidx.health.connect.client.PermissionController
-            .createRequestPermissionResultContract(),
-    ) { _ -> vm.refreshWeight() }
+    val weightPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                androidx.health.connect.client.PermissionController
+                    .createRequestPermissionResultContract()
+        ) { _ ->
+            vm.refreshWeight()
+        }
     val onRequestWeightPermission: () -> Unit = {
         // Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
         // Permissions in einem Rutsch anfordern, damit zukuenftige Plugins ohne
@@ -166,31 +168,32 @@ fun BiomarkerHostScreen(
         // hier ausgefiltert — sie tauchen nicht mehr im LazyGrid auf, auch wenn
         // sie noch in der persistierten Reihenfolge stehen. Damit verschwinden
         // OURA_ACTIVITY und OURA_SLEEP_DETAIL automatisch ueberall.
-        var localOrder by remember(cardOrder) {
-            mutableStateOf(cardOrder.filterNot { it in BiomarkerCardId.HIDDEN_CARD_IDS })
-        }
+        var localOrder by
+            remember(cardOrder) {
+                mutableStateOf(cardOrder.filterNot { it in BiomarkerCardId.HIDDEN_CARD_IDS })
+            }
 
         // 2-Spalten-Grid: Mini-Karten (HRV, Ruhepuls, Schlaf, Performance) belegen
         // je 1 Spalte, alle anderen die volle Breite. Frank-Wunsch 2026-05-10:
         // Mini-Karten sollen sich auch UNTEREINANDER tauschen lassen (z.B. HRV ↔ Performance).
         val lazyGridState = rememberLazyGridState()
-        val reorderState = rememberReorderableLazyGridState(lazyGridState) { from, to ->
-            // Reorder anhand der String-Keys, nicht der LazyGrid-Indizes — damit
-            // Header-Items mit eigenen String-Keys (hdr_*) zwischen den verschiebbaren
-            // Karten ignoriert werden koennen (die sind nicht in localOrder).
-            val fromKey = from.key as? String
-            val toKey = to.key as? String
-            if (fromKey != null && toKey != null && fromKey != toKey) {
-                val fromIdx = localOrder.indexOf(fromKey)
-                val toIdx = localOrder.indexOf(toKey)
-                if (fromIdx >= 0 && toIdx >= 0) {
-                    localOrder = localOrder.toMutableList().apply {
-                        add(toIdx, removeAt(fromIdx))
+        val reorderState =
+            rememberReorderableLazyGridState(lazyGridState) { from, to ->
+                // Reorder anhand der String-Keys, nicht der LazyGrid-Indizes — damit
+                // Header-Items mit eigenen String-Keys (hdr_*) zwischen den verschiebbaren
+                // Karten ignoriert werden koennen (die sind nicht in localOrder).
+                val fromKey = from.key as? String
+                val toKey = to.key as? String
+                if (fromKey != null && toKey != null && fromKey != toKey) {
+                    val fromIdx = localOrder.indexOf(fromKey)
+                    val toIdx = localOrder.indexOf(toKey)
+                    if (fromIdx >= 0 && toIdx >= 0) {
+                        localOrder =
+                            localOrder.toMutableList().apply { add(toIdx, removeAt(fromIdx)) }
+                        vm.saveCardOrder(localOrder)
                     }
-                    vm.saveCardOrder(localOrder)
                 }
             }
-        }
 
         LazyVerticalGrid(
             state = lazyGridState,
@@ -199,12 +202,13 @@ fun BiomarkerHostScreen(
             // Frank-Wunsch 2026-05-09: top auf 0 damit der Sync-Zeitstempel direkt
             // an die jetzt kompakte TopAppBar anschliesst (~8dp natuerliche Luft
             // bleiben durch das vertikale Zentrieren des Titels in der TopAppBar).
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 0.dp,
-                bottom = 16.dp,
-            ),
+            contentPadding =
+                androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 0.dp,
+                    bottom = 16.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -218,13 +222,14 @@ fun BiomarkerHostScreen(
                     // Sync-Zeitstempel — also den Zeitpunkt zu dem wirklich ALLE
                     // Quellen aktuell waren. Wenn eine Quelle noch nie gesynced
                     // wurde (0L), wird sie ignoriert; wenn alle 0 sind, "noch nie".
-                    text = "Zuletzt synchronisiert: ${formatRelativeSyncTime(
+                    text =
+                        "Zuletzt synchronisiert: ${formatRelativeSyncTime(
                         listOfNotNull(
                             state.lastWhoopSyncMs.takeIf { it > 0L },
                             state.lastOuraSyncMs.takeIf { it > 0L },
                             state.lastAmazfitSyncMs.takeIf { it > 0L },
                             state.lastHealthConnectSyncMs.takeIf { it > 0L },
-                        ).minOrNull() ?: 0L,
+                        ).minOrNull() ?: 0L
                     )}",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
@@ -264,11 +269,7 @@ fun BiomarkerHostScreen(
                     // Frank-Wunsch 2026-05-10: KEIN sichtbares Drag-Handle mehr — die
                     // ganze Karte ist long-press-draggable. Tap auf die Karte oeffnet
                     // weiterhin den Detail-Screen (Compose unterscheidet Tap vs. Long-Press).
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .longPressDraggableHandle(),
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().longPressDraggableHandle()) {
                         BiomarkerCardForId(
                             id = id,
                             state = state,
@@ -395,11 +396,13 @@ fun BiomarkerHostScreen(
                             awakeMinutes = (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
                         )
                         Spacer(Modifier.height(8.dp))
+                        // Frank-Wunsch 2026-05-13: Reihenfolge + Farben 1:1 vom Bar uebernehmen:
+                        // Tief → REM → Leicht → Wach.
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SleepStageChip("REM", CosmosColors.AccentSecondary) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
-                            SleepStageChip("Tief", CosmosColors.AccentPrimary) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
-                            SleepStageChip("Leicht", CosmosColors.Warning) { onOpenMetricDetail(MetricKey.SLEEP_LIGHT) }
-                            SleepStageChip("Wach", CosmosColors.Critical) { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) }
+                            SleepStageChip("Tief", SleepStageColors.Deep) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
+                            SleepStageChip("REM", SleepStageColors.Rem) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
+                            SleepStageChip("Leicht", SleepStageColors.Light) { onOpenMetricDetail(MetricKey.SLEEP_LIGHT) }
+                            SleepStageChip("Wach", SleepStageColors.Awake) { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) }
                         }
                     }
                 }
@@ -539,7 +542,11 @@ fun BiomarkerHostScreen(
             state.message?.let { msg ->
                 item("ft_msg", span = { GridItemSpan(2) }) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(msg, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
+                        Text(
+                            msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cosmos.textSecondary,
+                        )
                     }
                 }
             }
@@ -559,7 +566,8 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
     val avgHrv = history.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
     val avgRhr = history.mapNotNull { it.restingHeartRate }.takeIf { it.isNotEmpty() }?.average()
     val avgSleep = history.mapNotNull { it.sleepTotalMinutes }.takeIf { it.isNotEmpty() }?.average()
-    val avgSleepPerf = history.mapNotNull { it.sleepPerformance }.takeIf { it.isNotEmpty() }?.average()
+    val avgSleepPerf =
+        history.mapNotNull { it.sleepPerformance }.takeIf { it.isNotEmpty() }?.average()
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MetricMiniCard(
@@ -585,16 +593,23 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
     Spacer(Modifier.height(8.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val sleepMin = latest?.sleepTotalMinutes ?: 0
-        val sleepLabel = if (sleepMin == 0) {
-            "—"
-        } else {
-            "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
-        }
+        val sleepLabel =
+            if (sleepMin == 0) {
+                "—"
+            } else {
+                "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
+            }
         MetricMiniCard(
             modifier = Modifier.weight(1f),
             label = "Schlaf",
             value = sleepLabel,
-            delta = formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
+            delta =
+                formatDelta(
+                    latest?.sleepTotalMinutes?.toDouble(),
+                    avgSleep,
+                    "min",
+                    asMinutes = true,
+                ),
             deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
             onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
@@ -641,10 +656,15 @@ internal object MetricKey {
 }
 
 /**
- * Formatiert die Differenz zwischen aktuellem Wert und 30-Tage-Mittel als
- * "+X" / "-X" inkl. Einheit. Bei null-Werten leerer String.
+ * Formatiert die Differenz zwischen aktuellem Wert und 30-Tage-Mittel als "+X" / "-X" inkl.
+ * Einheit. Bei null-Werten leerer String.
  */
-private fun formatDelta(current: Double?, avg: Double?, unit: String, asMinutes: Boolean = false): String {
+private fun formatDelta(
+    current: Double?,
+    avg: Double?,
+    unit: String,
+    asMinutes: Boolean = false,
+): String {
     if (current == null || avg == null) return ""
     val diff = current - avg
     val sign = if (diff >= 0) "+" else ""
@@ -671,9 +691,9 @@ private fun MetricMiniCard(
     onClick: (() -> Unit)? = null,
     valueColor: androidx.compose.ui.graphics.Color? = null,
     /**
-     * Optionaler Suffix der NEBEN dem Label steht (z.B. Datum des letzten Werts).
-     * Frank-Wunsch 2026-05-10: "Gewicht  14.01." statt Datum unten in Footnote.
-     * Wird subtil in textSecondary-Farbe und kleiner Schrift gerendert.
+     * Optionaler Suffix der NEBEN dem Label steht (z.B. Datum des letzten Werts). Frank-Wunsch
+     * 2026-05-10: "Gewicht 14.01." statt Datum unten in Footnote. Wird subtil in
+     * textSecondary-Farbe und kleiner Schrift gerendert.
      */
     labelSuffix: String? = null,
 ) {
@@ -683,7 +703,11 @@ private fun MetricMiniCard(
     GlassCard(modifier = cardModifier) {
         Column {
             if (labelSuffix.isNullOrBlank()) {
-                Text(label, style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cosmos.textSecondary,
+                )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -708,28 +732,41 @@ private fun MetricMiniCard(
             )
             if (delta.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(delta, color = deltaColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    delta,
+                    color = deltaColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
             if (footnote.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
-                Text(footnote, color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    footnote,
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
         }
     }
 }
 
 /**
- * Klein-Pille für Sleep-Stage-Schnellzugriff im Schlaf-Card. Tap navigiert zum
- * jeweiligen Stage-Detail-Screen mit allen Werten als Liste + Verlaufschart.
+ * Klein-Pille für Sleep-Stage-Schnellzugriff im Schlaf-Card. Tap navigiert zum jeweiligen
+ * Stage-Detail-Screen mit allen Werten als Liste + Verlaufschart.
  */
 @Composable
-private fun SleepStageChip(label: String, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+private fun SleepStageChip(
+    label: String,
+    accent: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(accent.copy(alpha = 0.18f))
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier =
+            Modifier.clip(RoundedCornerShape(50))
+                .background(accent.copy(alpha = 0.18f))
+                .clickable { onClick() }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Text(
             text = label,
@@ -742,22 +779,23 @@ private fun SleepStageChip(label: String, accent: androidx.compose.ui.graphics.C
 
 /**
  * Tag-Selektor-Bar (Frank-Wunsch 2026-05-08): Pfeil-links / Datum / Pfeil-rechts
- * + "Heute"-Button wenn der ausgewaehlte Tag nicht heute ist. Erlaubt Frank
- * zwischen Heute / gestern / vorgestern / beliebigem Tag zu wechseln.
+ * + "Heute"-Button wenn der ausgewaehlte Tag nicht heute ist. Erlaubt Frank zwischen Heute /
+ *   gestern / vorgestern / beliebigem Tag zu wechseln.
  */
 @Composable
 private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
     val cosmos = LocalCosmos.current
     val today = java.time.LocalDate.now()
     val selDate = state.selectedDate
-    val label = when (selDate) {
-        today -> "Heute"
-        today.minusDays(1) -> "Gestern"
-        today.minusDays(2) -> "Vorgestern"
-        // Performance-Audit Loop 2 (2026-05-10): Top-level Formatter (DATE_SELECTOR_FMT)
-        // statt Allokation pro Recomposition.
-        else -> selDate.format(DATE_SELECTOR_FMT)
-    }
+    val label =
+        when (selDate) {
+            today -> "Heute"
+            today.minusDays(1) -> "Gestern"
+            today.minusDays(2) -> "Vorgestern"
+            // Performance-Audit Loop 2 (2026-05-10): Top-level Formatter (DATE_SELECTOR_FMT)
+            // statt Allokation pro Recomposition.
+            else -> selDate.format(DATE_SELECTOR_FMT)
+        }
     val isToday = selDate == today
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -786,19 +824,21 @@ private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
                     )
                 }
             }
-            IconButton(
-                onClick = { vm.shiftDay(1) },
-                enabled = !isToday,
-            ) {
+            IconButton(onClick = { vm.shiftDay(1) }, enabled = !isToday) {
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
                     contentDescription = "Folgetag",
-                    tint = if (isToday) cosmos.textSecondary.copy(alpha = 0.4f) else cosmos.textPrimary,
+                    tint =
+                        if (isToday) cosmos.textSecondary.copy(alpha = 0.4f) else cosmos.textPrimary,
                 )
             }
             if (!isToday) {
                 androidx.compose.material3.TextButton(onClick = vm::goToToday) {
-                    Text("Heute", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Heute",
+                        color = CosmosColors.AccentPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }
@@ -806,9 +846,9 @@ private fun DateSelectorBar(state: BiomarkerUiState, vm: BiomarkerViewModel) {
 }
 
 /**
- * Generische History-Chart-Card mit interaktivem Linien-Chart (Y-Achse,
- * X-Achse, Tap-zu-Tooltip). Tap auf die ganze Card oeffnet den Detail-Screen
- * mit voller Zahlen-Liste (Frank-Wunsch 2026-05-08).
+ * Generische History-Chart-Card mit interaktivem Linien-Chart (Y-Achse, X-Achse, Tap-zu-Tooltip).
+ * Tap auf die ganze Card oeffnet den Detail-Screen mit voller Zahlen-Liste (Frank-Wunsch
+ * 2026-05-08).
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -818,15 +858,21 @@ private fun MetricHistoryCard(
     points: List<Pair<Long, Double>>,
     unit: String,
     onClick: () -> Unit,
-    /** True bei Metriken wo niedriger besser ist (RHR, Schlafdefizit, Avg-HR).
-     *  Trendlinien-Farbe wird dann semantisch gefaerbt: fallend = gruen. */
+    /**
+     * True bei Metriken wo niedriger besser ist (RHR, Schlafdefizit, Avg-HR). Trendlinien-Farbe
+     * wird dann semantisch gefaerbt: fallend = gruen.
+     */
     lowerIsBetter: Boolean = false,
-    /** Frank-Wunsch 2026-05-09: bei Schlafdauer die Y-Achse + Tooltip + Header-Wert
-     *  in Stunden statt Minuten formatieren. Wenn null: Standard formatY + unit. */
+    /**
+     * Frank-Wunsch 2026-05-09: bei Schlafdauer die Y-Achse + Tooltip + Header-Wert in Stunden statt
+     * Minuten formatieren. Wenn null: Standard formatY + unit.
+     */
     valueFormatter: ((Double) -> String)? = null,
-    /** Frank-Wunsch 2026-05-09: Durchschnitt soll ueber ALLE jemals gespeicherten
-     *  Werte (volle Historie seit 25.02.2026) berechnet werden, nicht nur die letzten
-     *  70 Tage die im Chart sichtbar sind. Wenn null: fallback auf points. */
+    /**
+     * Frank-Wunsch 2026-05-09: Durchschnitt soll ueber ALLE jemals gespeicherten Werte (volle
+     * Historie seit 25.02.2026) berechnet werden, nicht nur die letzten 70 Tage die im Chart
+     * sichtbar sind. Wenn null: fallback auf points.
+     */
     fullHistoryPoints: List<Pair<Long, Double>>? = null,
 ) {
     val cosmos = LocalCosmos.current
@@ -835,7 +881,8 @@ private fun MetricHistoryCard(
     // sofort sieht ohne den Chart antippen zu muessen.
     val latestValue = points.lastOrNull()?.second
     val latestLabel = latestValue?.let { v ->
-        valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
+        valueFormatter?.invoke(v)
+            ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
     }
     // Frank-Wunsch 2026-05-09: unter jedem Chart der Durchschnitt aller Werte + die
     // Abweichung des aktuellen Werts vom Durchschnitt. Plus = gruen, Minus = rot.
@@ -844,34 +891,37 @@ private fun MetricHistoryCard(
     // Performance-Audit Loop 3 (2026-05-10): avg in remember(...) — vorher pro
     // Recomposition O(N) Scan ueber die volle Historie (bis 365 Datenpunkte).
     val avgSource = fullHistoryPoints ?: points
-    val avg = remember(avgSource) {
-        avgSource.map { it.second }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avg =
+        remember(avgSource) { avgSource.map { it.second }.takeIf { it.isNotEmpty() }?.average() }
     val diff = if (latestValue != null && avg != null) latestValue - avg else null
     val avgLabel = avg?.let { v ->
-        valueFormatter?.invoke(v) ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
+        valueFormatter?.invoke(v)
+            ?: (formatLatestForCard(v) + if (unit.isNotBlank()) " $unit" else "")
     }
     val diffLabel = diff?.let { d ->
         val sign = if (d >= 0) "+" else "−"
         val absValue = kotlin.math.abs(d)
-        val formatted = valueFormatter?.invoke(absValue)
-            ?: (formatLatestForCard(absValue) + if (unit.isNotBlank()) " $unit" else "")
+        val formatted =
+            valueFormatter?.invoke(absValue)
+                ?: (formatLatestForCard(absValue) + if (unit.isNotBlank()) " $unit" else "")
         "$sign$formatted"
     }
     // Frank-Praezisierung 2026-05-09: Farbe respektiert lowerIsBetter — bei Ruhepuls,
     // Schlafdefizit, Atemfrequenz, Hauttemperatur ist ein NIEDRIGERER Wert besser
     // (also negative Abweichung = gruen). Bei HRV, Schlaf-Performance, SpO2 etc.
     // ist hoeher besser. Bei diff == 0 neutrale Farbe (kein Auf/Ab).
-    val isImprovement: Boolean? = when {
-        diff == null || diff == 0.0 -> null
-        lowerIsBetter -> diff < 0
-        else -> diff > 0
-    }
-    val diffColor = when (isImprovement) {
-        null -> cosmos.textSecondary
-        true -> CosmosColors.Success
-        false -> CosmosColors.Critical
-    }
+    val isImprovement: Boolean? =
+        when {
+            diff == null || diff == 0.0 -> null
+            lowerIsBetter -> diff < 0
+            else -> diff > 0
+        }
+    val diffColor =
+        when (isImprovement) {
+            null -> cosmos.textSecondary
+            true -> CosmosColors.Success
+            false -> CosmosColors.Critical
+        }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -921,11 +971,11 @@ private fun MetricHistoryCard(
                     // - Diff-Farbe respektiert lowerIsBetter pro Metrik (siehe oben)
                     // - 'Durchschnitt' linksbuendig, 'Abweichung' rechtsbuendig
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CosmosColors.AccentPrimary.copy(alpha = 0.10f))
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -995,33 +1045,35 @@ private val SLEEP_HOUR_FORMAT: (Double) -> String = { mins ->
 }
 
 /**
- * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer
- * über die letzten 30 Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf
- * mit höherer HRV einhergeht".
+ * Korrelations-Card: berechnet Pearson-Korrelation zwischen HRV und Schlafdauer über die letzten 30
+ * Tage. Frank-Wunsch (Soll-Bild 15/25): "zeigt ob mehr Schlaf mit höherer HRV einhergeht".
  */
 @Composable
 private fun CorrelationCard(state: BiomarkerUiState) {
     val cosmos = LocalCosmos.current
     // Performance-Audit Loop 3 (2026-05-10): Pearson-Pairs in remember(state.history)
     // statt pro Recomposition. Bei 200+ Datenpunkten signifikanter Allokationsschutz.
-    val pairsAndR = remember(state.history) {
-        val pairs = state.history.mapNotNull { snap ->
-            val hrv = snap.hrvMs ?: return@mapNotNull null
-            val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
-            hrv to sleep.toDouble()
+    val pairsAndR =
+        remember(state.history) {
+            val pairs =
+                state.history.mapNotNull { snap ->
+                    val hrv = snap.hrvMs ?: return@mapNotNull null
+                    val sleep = snap.sleepTotalMinutes ?: return@mapNotNull null
+                    hrv to sleep.toDouble()
+                }
+            pairs to (if (pairs.size >= 3) pearson(pairs) else null)
         }
-        pairs to (if (pairs.size >= 3) pearson(pairs) else null)
-    }
     val pairs = pairsAndR.first
     val r = pairsAndR.second
-    val (label, color) = when {
-        r == null -> "Nicht genug Daten" to cosmos.textSecondary
-        r >= 0.5 -> "Starke positive Korrelation" to CosmosColors.Success
-        r >= 0.2 -> "Schwache positive Korrelation" to CosmosColors.AccentPrimary
-        r >= -0.2 -> "Keine klare Korrelation" to cosmos.textSecondary
-        r >= -0.5 -> "Schwache negative Korrelation" to CosmosColors.Warning
-        else -> "Starke negative Korrelation" to CosmosColors.Critical
-    }
+    val (label, color) =
+        when {
+            r == null -> "Nicht genug Daten" to cosmos.textSecondary
+            r >= 0.5 -> "Starke positive Korrelation" to CosmosColors.Success
+            r >= 0.2 -> "Schwache positive Korrelation" to CosmosColors.AccentPrimary
+            r >= -0.2 -> "Keine klare Korrelation" to cosmos.textSecondary
+            r >= -0.5 -> "Schwache negative Korrelation" to CosmosColors.Warning
+            else -> "Starke negative Korrelation" to CosmosColors.Critical
+        }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
@@ -1047,8 +1099,9 @@ private fun CorrelationCard(state: BiomarkerUiState) {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Höhere Werte deuten an: mehr Schlaf -> höhere HRV. " +
-                    "Negative Werte heißen: mehr Schlaf -> niedrigere HRV (selten).",
+                text =
+                    "Höhere Werte deuten an: mehr Schlaf -> höhere HRV. " +
+                        "Negative Werte heißen: mehr Schlaf -> niedrigere HRV (selten).",
                 color = cosmos.textSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -1070,28 +1123,33 @@ private fun pearson(pairs: List<Pair<Double, Double>>): Double {
 }
 
 /**
- * Gesamterholung-Card im Soll-Design (Bild 15/25).
- * Layout: links Title + Status-Sub-Text + Erlaeuterung; rechts großer Recovery-Ring.
+ * Gesamterholung-Card im Soll-Design (Bild 15/25). Layout: links Title + Status-Sub-Text +
+ * Erlaeuterung; rechts großer Recovery-Ring.
  */
 @Composable
 private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     // Recovery vom AUSGEWAEHLTEN Tag, sonst latest.
     val score = (state.selectedSnapshot ?: state.latest)?.recoveryScore
-    val statusLabel = when {
-        score == null -> "Noch keine Daten"
-        score >= 75 -> "Dein Körper ist im Hoch."
-        score >= 50 -> "Dein Körper ist im Gleichgewicht."
-        score >= 25 -> "Dein Körper braucht heute Schonung."
-        else -> "Dein Körper ist erschoepft."
-    }
+    val statusLabel =
+        when {
+            score == null -> "Noch keine Daten"
+            score >= 75 -> "Dein Körper ist im Hoch."
+            score >= 50 -> "Dein Körper ist im Gleichgewicht."
+            score >= 25 -> "Dein Körper braucht heute Schonung."
+            else -> "Dein Körper ist erschoepft."
+        }
     // Frank-Wunsch 2026-05-10: Delta vs. 30-Tage-Mittel direkt unter dem Status,
     // damit Frank sofort sieht ob die heutige Erholung ueber oder unter dem
     // persoenlichen Schnitt liegt — gleicher Stil wie bei den Mini-Karten.
     // Performance-Audit Loop 3 (2026-05-10): mapNotNull+average in remember.
-    val avgRecovery = remember(state.history30Days) {
-        state.history30Days.mapNotNull { it.recoveryScore }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avgRecovery =
+        remember(state.history30Days) {
+            state.history30Days
+                .mapNotNull { it.recoveryScore }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+        }
     val deltaText = formatDelta(score?.toDouble(), avgRecovery, "")
     val deltaPositive = (score?.toDouble() ?: 0.0) > (avgRecovery ?: 0.0)
     val deltaColor = if (deltaPositive) CosmosColors.Success else CosmosColors.Critical
@@ -1124,8 +1182,9 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
                     // Frank-Vorgabe 2026-05-10: hinter 'vs. 30-Tage-Mittel'
                     // den konkreten Mittelwert anzeigen — sonst weiss Frank nicht
                     // gegen welchen Vergleichswert das Delta gerechnet ist.
-                    val avgLabel = avgRecovery?.let { "vs. 30-Tage-Mittel: ${it.toInt()}" }
-                        ?: "vs. 30-Tage-Mittel"
+                    val avgLabel =
+                        avgRecovery?.let { "vs. 30-Tage-Mittel: ${it.toInt()}" }
+                            ?: "vs. 30-Tage-Mittel"
                     Text(
                         text = avgLabel,
                         color = cosmos.textSecondary,
@@ -1151,26 +1210,22 @@ private fun GesamterholungCard(state: BiomarkerUiState, onOpenDetail: (String) -
 }
 
 /**
- * Formatiert den letzten erfolgreichen Sync-Zeitstempel als kurze deutsche
- * Relativzeit. Frank will auf einen Blick sehen ob die Whoop-Daten frisch sind.
+ * Formatiert den letzten erfolgreichen Sync-Zeitstempel als kurze deutsche Relativzeit. Frank will
+ * auf einen Blick sehen ob die Whoop-Daten frisch sind.
  *
- * 0L = noch nie gesynced. < 1 Min = "gerade eben". < 60 Min = "vor X Minuten".
- * Sonst absolute Zeit oder Datum, je nachdem ob heute oder frueher.
+ * 0L = noch nie gesynced. < 1 Min = "gerade eben". < 60 Min = "vor X Minuten". Sonst absolute Zeit
+ * oder Datum, je nachdem ob heute oder frueher.
  */
 /**
- * Erholsamer-Schlaf-Karte — Eigenberechnung aus REM + Tiefschlaf in % vom
- * Gesamtschlaf. Whoop's Restorative-Sleep-Feature ist nicht ueber die API
- * abrufbar, aber die Formel liefert sehr nahe Werte (Frank-Recherche 2026-05-09).
+ * Erholsamer-Schlaf-Karte — Eigenberechnung aus REM + Tiefschlaf in % vom Gesamtschlaf. Whoop's
+ * Restorative-Sleep-Feature ist nicht ueber die API abrufbar, aber die Formel liefert sehr nahe
+ * Werte (Frank-Recherche 2026-05-09).
  *
- * Optisch: grosser Prozent-Wert, Sub-Zeile mit den beiden Komponenten REM/Tief,
- * Begruendungstext darunter. Tap fuehrt zum Detail-Screen mit Verlauf.
+ * Optisch: grosser Prozent-Wert, Sub-Zeile mit den beiden Komponenten REM/Tief, Begruendungstext
+ * darunter. Tap fuehrt zum Detail-Screen mit Verlauf.
  */
 @Composable
-private fun RestorativeSleepCard(
-    percent: Double?,
-    avgPercent: Double?,
-    onClick: () -> Unit,
-) {
+private fun RestorativeSleepCard(percent: Double?, avgPercent: Double?, onClick: () -> Unit) {
     // Frank-Wunsch 2026-05-10: 1:1 wie die anderen Mini-Karten (HRV, Schlaf,
     // Performance, Herzfrequenz) — gleiche MetricMiniCard mit Label + Wert +
     // Delta vs. 30-Tage-Mittel + Footnote. Hoeherer Restorative-Anteil ist
@@ -1187,41 +1242,40 @@ private fun RestorativeSleepCard(
 }
 
 /**
- * Hauttemperatur-Delta-Karte — zeigt die Abweichung des aktuellen Wertes vom
- * 30-Tage-Schnitt. Grosse Werte oder rote Faerbung deuten auf Erkrankung,
- * Stress, Zyklus-Effekt oder Aufenthalt in warmer/kalter Umgebung hin.
+ * Hauttemperatur-Delta-Karte — zeigt die Abweichung des aktuellen Wertes vom 30-Tage-Schnitt.
+ * Grosse Werte oder rote Faerbung deuten auf Erkrankung, Stress, Zyklus-Effekt oder Aufenthalt in
+ * warmer/kalter Umgebung hin.
  *
  * Wenn die Baseline noch nicht stabil (< 7 Werte): freundlicher Hinweis.
  */
 @Composable
-private fun SkinTempDeltaCard(
-    currentValue: Double?,
-    delta: Double?,
-    onClick: () -> Unit,
-) {
+private fun SkinTempDeltaCard(currentValue: Double?, delta: Double?, onClick: () -> Unit) {
     // Frank-Wunsch 2026-05-11: gedreht. Die ABWEICHUNG vom 30-Tage-Mittel ist
     // jetzt der grosse, farbige Hauptwert (rot bei steigender Temperatur,
     // gruen bei fallender — niedriger ist besser bei Hauttemperatur). Die
     // absolute Temperatur ist nur noch klein als Zusatzzeile in der Footnote.
     val cosmos = LocalCosmos.current
-    val sign = when {
-        delta == null -> ""
-        delta >= 0 -> "+"
-        else -> "−"
-    }
+    val sign =
+        when {
+            delta == null -> ""
+            delta >= 0 -> "+"
+            else -> "−"
+        }
     val absDelta = delta?.let { kotlin.math.abs(it) } ?: 0.0
     val bigDeltaText = if (delta != null) "$sign${"%.2f".format(absDelta)} °C" else "—"
-    val bigDeltaColor = when {
-        delta == null -> cosmos.textPrimary
-        delta < 0.0 -> CosmosColors.Success
-        delta > 0.0 -> CosmosColors.Critical
-        else -> cosmos.textPrimary
-    }
+    val bigDeltaColor =
+        when {
+            delta == null -> cosmos.textPrimary
+            delta < 0.0 -> CosmosColors.Success
+            delta > 0.0 -> CosmosColors.Critical
+            else -> cosmos.textPrimary
+        }
     // Frank-Wunsch 2026-05-11: "vs. 30-Tage-Mittel" gehoert auf eine eigene Zeile —
     // der Strich zwischen "aktuell" und "vs." sah aus als wuerde der Text gewaltsam
     // umbrechen.
-    val tempSuffix = currentValue?.let { "${"%.2f".format(it)} °C aktuell\nvs. 30-Tage-Mittel" }
-        ?: "vs. 30-Tage-Mittel"
+    val tempSuffix =
+        currentValue?.let { "${"%.2f".format(it)} °C aktuell\nvs. 30-Tage-Mittel" }
+            ?: "vs. 30-Tage-Mittel"
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Hauttemperatur",
@@ -1251,10 +1305,10 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
         diffSec < 60 -> "gerade eben"
         diffSec < 3600 -> "vor ${diffSec / 60} Minuten"
         else -> {
-            val syncInstant = java.time.Instant.ofEpochMilli(syncMs)
-                .atZone(java.time.ZoneId.systemDefault())
-            val nowInstant = java.time.Instant.ofEpochMilli(now)
-                .atZone(java.time.ZoneId.systemDefault())
+            val syncInstant =
+                java.time.Instant.ofEpochMilli(syncMs).atZone(java.time.ZoneId.systemDefault())
+            val nowInstant =
+                java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
             val sameDay = syncInstant.toLocalDate() == nowInstant.toLocalDate()
             if (sameDay) {
                 "heute ${syncInstant.format(SYNC_TIME_FMT)}"
@@ -1268,21 +1322,19 @@ private fun formatRelativeSyncTime(syncMs: Long): String {
 /**
  * Verschiebbare Biomarker-Karte fuer eine gegebene Card-ID.
  *
- * Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten. Diese Composable
- * ist die Bruecke zwischen der Card-ID (String aus [BiomarkerCardId]) und der
- * konkreten UI. Nutzt die bereits vorhandenen privaten Composables
- * (MetricHistoryCard, GesamterholungCard, KeyValueGrid, SkinTempDeltaCard,
- * RestorativeSleepCard, CorrelationCard, AmazfitLastTrainingHeroCard,
- * AmazfitTrainingsCard, WorkoutsForDayCard) und entscheidet anhand der ID
- * welche Card gerendert wird.
+ * Frank-Wunsch 2026-05-10: Drag & Drop fuer alle Daten-Karten. Diese Composable ist die Bruecke
+ * zwischen der Card-ID (String aus [BiomarkerCardId]) und der konkreten UI. Nutzt die bereits
+ * vorhandenen privaten Composables (MetricHistoryCard, GesamterholungCard, KeyValueGrid,
+ * SkinTempDeltaCard, RestorativeSleepCard, CorrelationCard, AmazfitLastTrainingHeroCard,
+ * AmazfitTrainingsCard, WorkoutsForDayCard) und entscheidet anhand der ID welche Card gerendert
+ * wird.
  *
- * Wird umschlossen von einer Column damit Multi-Element-Cards (z.B. KeyValueGrid
- * mit zwei Rows + Spacer) korrekt vertikal anordnen — sonst wuerde der aeussere
- * Box im LazyColumn-Item die Children stapeln statt untereinander.
+ * Wird umschlossen von einer Column damit Multi-Element-Cards (z.B. KeyValueGrid mit zwei Rows +
+ * Spacer) korrekt vertikal anordnen — sonst wuerde der aeussere Box im LazyColumn-Item die Children
+ * stapeln statt untereinander.
  *
- * Wenn eine ID nicht bekannt ist (Schutz vor Datenmuell aus dem DataStore):
- * stille leere Box. Das Repository filtert solche IDs eigentlich raus, aber
- * Defense-in-Depth.
+ * Wenn eine ID nicht bekannt ist (Schutz vor Datenmuell aus dem DataStore): stille leere Box. Das
+ * Repository filtert solche IDs eigentlich raus, aber Defense-in-Depth.
  */
 @Composable
 private fun BiomarkerCardForId(
@@ -1300,36 +1352,42 @@ private fun BiomarkerCardForId(
     Column(modifier = Modifier.fillMaxWidth()) {
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
-            BiomarkerCardId.MINI_WEIGHT -> MiniWeightCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.WEIGHT) },
-            )
-            BiomarkerCardId.MINI_BODY_FAT -> MiniBodyFatCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_FAT) },
-            )
-            BiomarkerCardId.MINI_LEAN_BODY_MASS -> MiniLeanBodyMassCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.LEAN_BODY_MASS) },
-            )
-            BiomarkerCardId.MINI_BODY_WATER -> MiniBodyWaterCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_WATER) },
-            )
-            BiomarkerCardId.MINI_BONE_MASS -> MiniBoneMassCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BONE_MASS) },
-            )
-            BiomarkerCardId.MINI_MUSCLE_MASS -> MiniMuscleMassCard(
-                weight = weightState,
-                onRequestPermission = onRequestWeightPermission,
-                onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.MUSCLE_MASS) },
-            )
+            BiomarkerCardId.MINI_WEIGHT ->
+                MiniWeightCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.WEIGHT) },
+                )
+            BiomarkerCardId.MINI_BODY_FAT ->
+                MiniBodyFatCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_FAT) },
+                )
+            BiomarkerCardId.MINI_LEAN_BODY_MASS ->
+                MiniLeanBodyMassCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.LEAN_BODY_MASS) },
+                )
+            BiomarkerCardId.MINI_BODY_WATER ->
+                MiniBodyWaterCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_WATER) },
+                )
+            BiomarkerCardId.MINI_BONE_MASS ->
+                MiniBoneMassCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BONE_MASS) },
+                )
+            BiomarkerCardId.MINI_MUSCLE_MASS ->
+                MiniMuscleMassCard(
+                    weight = weightState,
+                    onRequestPermission = onRequestWeightPermission,
+                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.MUSCLE_MASS) },
+                )
 
             // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
@@ -1338,87 +1396,97 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.MINI_HRV -> MiniHrvCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
-            BiomarkerCardId.MINI_SLEEP_PERFORMANCE -> MiniSleepPerformanceCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
+                MiniSleepPerformanceCard(state, onOpenMetricDetail)
 
-            BiomarkerCardId.HRV -> MetricHistoryCard(
-                title = "HRV-Verlauf",
-                accent = CosmosColors.AccentPrimary,
-                points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
-                unit = "ms",
-                onClick = { onOpenMetricDetail(MetricKey.HRV) },
-            )
+            BiomarkerCardId.HRV ->
+                MetricHistoryCard(
+                    title = "HRV-Verlauf",
+                    accent = CosmosColors.AccentPrimary,
+                    points = state.chartData.pointsLast70["hrv"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["hrv"] ?: emptyList(),
+                    unit = "ms",
+                    onClick = { onOpenMetricDetail(MetricKey.HRV) },
+                )
 
-            BiomarkerCardId.RHR -> MetricHistoryCard(
-                title = "Ruhepuls",
-                accent = CosmosColors.Critical,
-                points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
-                unit = "bpm",
-                onClick = { onOpenMetricDetail(MetricKey.RHR) },
-                lowerIsBetter = true,
-            )
+            BiomarkerCardId.RHR ->
+                MetricHistoryCard(
+                    title = "Ruhepuls",
+                    accent = CosmosColors.Critical,
+                    points = state.chartData.pointsLast70["rhr"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["rhr"] ?: emptyList(),
+                    unit = "bpm",
+                    onClick = { onOpenMetricDetail(MetricKey.RHR) },
+                    lowerIsBetter = true,
+                )
 
-            BiomarkerCardId.RESPIRATORY -> MetricHistoryCard(
-                title = "Atemfrequenz",
-                accent = CosmosColors.AccentPrimary,
-                points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
-                unit = "/min",
-                onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
-                lowerIsBetter = true,
-            )
+            BiomarkerCardId.RESPIRATORY ->
+                MetricHistoryCard(
+                    title = "Atemfrequenz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = state.chartData.pointsLast70["respiratory"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["respiratory"] ?: emptyList(),
+                    unit = "/min",
+                    onClick = { onOpenMetricDetail(MetricKey.RESPIRATORY) },
+                    lowerIsBetter = true,
+                )
 
-            BiomarkerCardId.SPO2 -> MetricHistoryCard(
-                title = "Sauerstoffsättigung",
-                accent = CosmosColors.Success,
-                points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
-                unit = "%",
-                onClick = { onOpenMetricDetail(MetricKey.SPO2) },
-            )
+            BiomarkerCardId.SPO2 ->
+                MetricHistoryCard(
+                    title = "Sauerstoffsättigung",
+                    accent = CosmosColors.Success,
+                    points = state.chartData.pointsLast70["spo2"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["spo2"] ?: emptyList(),
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SPO2) },
+                )
 
-            BiomarkerCardId.SKIN_TEMP -> MetricHistoryCard(
-                title = "Hauttemperatur",
-                accent = CosmosColors.Warning,
-                points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
-                unit = "°C",
-                onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
-                lowerIsBetter = true,
-            )
+            BiomarkerCardId.SKIN_TEMP ->
+                MetricHistoryCard(
+                    title = "Hauttemperatur",
+                    accent = CosmosColors.Warning,
+                    points = state.chartData.pointsLast70["skin_temp"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["skin_temp"] ?: emptyList(),
+                    unit = "°C",
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                    lowerIsBetter = true,
+                )
 
-            BiomarkerCardId.SKIN_TEMP_DELTA -> SkinTempDeltaCard(
-                currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
-                delta = state.skinTempDelta,
-                onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
-            )
+            BiomarkerCardId.SKIN_TEMP_DELTA ->
+                SkinTempDeltaCard(
+                    currentValue = (state.selectedSnapshot ?: state.latest)?.skinTempCelsius,
+                    delta = state.skinTempDelta,
+                    onClick = { onOpenMetricDetail(MetricKey.SKIN_TEMP) },
+                )
 
-            BiomarkerCardId.SLEEP_PERFORMANCE -> MetricHistoryCard(
-                title = "Schlaf-Performance",
-                accent = CosmosColors.Success,
-                points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
-                unit = "%",
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
-            )
+            BiomarkerCardId.SLEEP_PERFORMANCE ->
+                MetricHistoryCard(
+                    title = "Schlaf-Performance",
+                    accent = CosmosColors.Success,
+                    points = state.chartData.pointsLast70["sleep_perf"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_perf"] ?: emptyList(),
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_PERF) },
+                )
 
-            BiomarkerCardId.SLEEP_TOTAL -> MetricHistoryCard(
-                title = "Schlafdauer",
-                accent = CosmosColors.AccentSecondary,
-                points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
-                unit = "min",
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
-                valueFormatter = SLEEP_HOUR_FORMAT,
-            )
+            BiomarkerCardId.SLEEP_TOTAL ->
+                MetricHistoryCard(
+                    title = "Schlafdauer",
+                    accent = CosmosColors.AccentSecondary,
+                    points = state.chartData.pointsLast70["sleep_total"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_total"] ?: emptyList(),
+                    unit = "min",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                    valueFormatter = SLEEP_HOUR_FORMAT,
+                )
 
             BiomarkerCardId.SLEEP_STAGES -> {
                 // Schlafphasen-Card mit Stage-Bar + 4 Stage-Chips.
                 GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenMetricDetail(MetricKey.SLEEP_TOTAL) },
+                    modifier =
+                        Modifier.fillMaxWidth().clickable {
+                            onOpenMetricDetail(MetricKey.SLEEP_TOTAL)
+                        }
                 ) {
                     Column {
                         Text(
@@ -1430,125 +1498,160 @@ private fun BiomarkerCardForId(
                         Spacer(Modifier.height(12.dp))
                         SleepStagesBar(
                             remMinutes = (state.selectedSnapshot ?: state.latest)?.sleepRemMinutes,
-                            deepMinutes = (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
-                            lightMinutes = (state.selectedSnapshot ?: state.latest)?.sleepLightMinutes,
-                            awakeMinutes = (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
+                            deepMinutes =
+                                (state.selectedSnapshot ?: state.latest)?.sleepDeepMinutes,
+                            lightMinutes =
+                                (state.selectedSnapshot ?: state.latest)?.sleepLightMinutes,
+                            awakeMinutes =
+                                (state.selectedSnapshot ?: state.latest)?.sleepAwakeMinutes,
                         )
                         Spacer(Modifier.height(8.dp))
+                        // Frank-Wunsch 2026-05-13: Reihenfolge + Farben 1:1 vom Bar uebernehmen:
+                        // Tief → REM → Leicht → Wach.
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SleepStageChip("REM", CosmosColors.AccentSecondary) { onOpenMetricDetail(MetricKey.SLEEP_REM) }
-                            SleepStageChip("Tief", CosmosColors.AccentPrimary) { onOpenMetricDetail(MetricKey.SLEEP_DEEP) }
-                            SleepStageChip("Leicht", CosmosColors.Warning) { onOpenMetricDetail(MetricKey.SLEEP_LIGHT) }
-                            SleepStageChip("Wach", CosmosColors.Critical) { onOpenMetricDetail(MetricKey.SLEEP_AWAKE) }
+                            SleepStageChip("Tief", SleepStageColors.Deep) {
+                                onOpenMetricDetail(MetricKey.SLEEP_DEEP)
+                            }
+                            SleepStageChip("REM", SleepStageColors.Rem) {
+                                onOpenMetricDetail(MetricKey.SLEEP_REM)
+                            }
+                            SleepStageChip("Leicht", SleepStageColors.Light) {
+                                onOpenMetricDetail(MetricKey.SLEEP_LIGHT)
+                            }
+                            SleepStageChip("Wach", SleepStageColors.Awake) {
+                                onOpenMetricDetail(MetricKey.SLEEP_AWAKE)
+                            }
                         }
                     }
                 }
             }
 
-            BiomarkerCardId.SLEEP_RESTORATIVE -> RestorativeSleepCard(
-                // Performance-Audit E1 (2026-05-10): 30d-Avg jetzt im VM vorberechnet.
-                percent = state.restorativeSleepPercent,
-                avgPercent = state.chartData.restorativeSleepAvg30dPercent,
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
-            )
+            BiomarkerCardId.SLEEP_DEEP_GRAPH ->
+                DeepSleepGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history,
+                )
 
-            BiomarkerCardId.SLEEP_EFFICIENCY -> MetricHistoryCard(
-                title = "Schlafeffizienz",
-                accent = CosmosColors.Success,
-                points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
-                unit = "%",
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
-            )
+            BiomarkerCardId.SLEEP_RESTORATIVE ->
+                RestorativeSleepCard(
+                    // Performance-Audit E1 (2026-05-10): 30d-Avg jetzt im VM vorberechnet.
+                    percent = state.restorativeSleepPercent,
+                    avgPercent = state.chartData.restorativeSleepAvg30dPercent,
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_RESTORATIVE) },
+                )
 
-            BiomarkerCardId.SLEEP_CONSISTENCY -> MetricHistoryCard(
-                title = "Schlafregelmäßigkeit",
-                accent = CosmosColors.Success,
-                points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
-                unit = "%",
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
-            )
+            BiomarkerCardId.SLEEP_EFFICIENCY ->
+                MetricHistoryCard(
+                    title = "Schlafeffizienz",
+                    accent = CosmosColors.Success,
+                    points = state.chartData.pointsLast70["sleep_efficiency"] ?: emptyList(),
+                    fullHistoryPoints =
+                        state.chartData.fullPoints["sleep_efficiency"] ?: emptyList(),
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_EFFICIENCY) },
+                )
 
-            BiomarkerCardId.SLEEP_DEBT -> MetricHistoryCard(
-                lowerIsBetter = true,
-                title = "Schlafdefizit",
-                accent = CosmosColors.Warning,
-                points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
-                unit = "min",
-                onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
-            )
+            BiomarkerCardId.SLEEP_CONSISTENCY ->
+                MetricHistoryCard(
+                    title = "Schlafregelmäßigkeit",
+                    accent = CosmosColors.Success,
+                    points = state.chartData.pointsLast70["sleep_consistency"] ?: emptyList(),
+                    fullHistoryPoints =
+                        state.chartData.fullPoints["sleep_consistency"] ?: emptyList(),
+                    unit = "%",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_CONSISTENCY) },
+                )
 
-            BiomarkerCardId.KILOJOULES -> MetricHistoryCard(
-                // Performance-Audit E1 (2026-05-10): Today-Filter + kJ→kcal-Umrechnung
-                // jetzt im VM vorberechnet (buildChartData). Tagesstart wird einmal pro
-                // combine-Emission ermittelt — der lokale remember{} entfaellt damit.
-                title = "Tagesumsatz",
-                accent = CosmosColors.AccentPrimary,
-                points = state.chartData.pointsLast70["kilojoules"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["kilojoules"] ?: emptyList(),
-                unit = "kcal",
-                onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
-            )
+            BiomarkerCardId.SLEEP_DEBT ->
+                MetricHistoryCard(
+                    lowerIsBetter = true,
+                    title = "Schlafdefizit",
+                    accent = CosmosColors.Warning,
+                    points = state.chartData.pointsLast70["sleep_debt"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["sleep_debt"] ?: emptyList(),
+                    unit = "min",
+                    onClick = { onOpenMetricDetail(MetricKey.SLEEP_DEBT) },
+                )
 
-            BiomarkerCardId.STRAIN -> MetricHistoryCard(
-                title = "Belastung",
-                accent = CosmosColors.Warning,
-                points = state.chartData.pointsLast70["strain"] ?: emptyList(),
-                fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
-                unit = "",
-                onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
-            )
+            BiomarkerCardId.KILOJOULES ->
+                MetricHistoryCard(
+                    // Performance-Audit E1 (2026-05-10): Today-Filter + kJ→kcal-Umrechnung
+                    // jetzt im VM vorberechnet (buildChartData). Tagesstart wird einmal pro
+                    // combine-Emission ermittelt — der lokale remember{} entfaellt damit.
+                    title = "Tagesumsatz",
+                    accent = CosmosColors.AccentPrimary,
+                    points = state.chartData.pointsLast70["kilojoules"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["kilojoules"] ?: emptyList(),
+                    unit = "kcal",
+                    onClick = { onOpenMetricDetail(MetricKey.KILOJOULES) },
+                )
 
-            BiomarkerCardId.WORKOUTS_FOR_DAY -> WorkoutsForDayCard(
-                workouts = state.workoutsForSelectedDay,
-            )
+            BiomarkerCardId.STRAIN ->
+                MetricHistoryCard(
+                    title = "Belastung",
+                    accent = CosmosColors.Warning,
+                    points = state.chartData.pointsLast70["strain"] ?: emptyList(),
+                    fullHistoryPoints = state.chartData.fullPoints["strain"] ?: emptyList(),
+                    unit = "",
+                    onClick = { onOpenMetricDetail(MetricKey.STRAIN) },
+                )
+
+            BiomarkerCardId.WORKOUTS_FOR_DAY ->
+                WorkoutsForDayCard(workouts = state.workoutsForSelectedDay)
 
             BiomarkerCardId.CORRELATION -> CorrelationCard(state)
 
-            BiomarkerCardId.AMAZFIT_LAST_HERO -> AmazfitLastTrainingHeroCard(
-                workouts = state.amazfitWorkouts,
-                onOpenDetail = onOpenTrainingDetail,
-            )
+            BiomarkerCardId.AMAZFIT_LAST_HERO ->
+                AmazfitLastTrainingHeroCard(
+                    workouts = state.amazfitWorkouts,
+                    onOpenDetail = onOpenTrainingDetail,
+                )
 
-            BiomarkerCardId.AMAZFIT_TRAININGS -> AmazfitTrainingsCard(
-                workouts = state.amazfitWorkouts,
-                onOpenAll = onOpenAllTrainings,
-                onOpenDetail = onOpenTrainingDetail,
-            )
+            BiomarkerCardId.AMAZFIT_TRAININGS ->
+                AmazfitTrainingsCard(
+                    workouts = state.amazfitWorkouts,
+                    onOpenAll = onOpenAllTrainings,
+                    onOpenDetail = onOpenTrainingDetail,
+                )
 
             // Oura-Ring-Karten (Frank-Wunsch 2026-05-10, Etappe D mit Historie).
-            BiomarkerCardId.OURA_READINESS -> OuraReadinessCard(
-                readiness = state.ouraReadinessForSelectedDay,
-                history = state.ouraReadinessHistory,
-                onClick = { onOpenOuraDetail(OuraMetricKey.READINESS) },
-            )
+            BiomarkerCardId.OURA_READINESS ->
+                OuraReadinessCard(
+                    readiness = state.ouraReadinessForSelectedDay,
+                    history = state.ouraReadinessHistory,
+                    selectedDate = state.selectedDate,
+                    onClick = { onOpenOuraDetail(OuraMetricKey.READINESS) },
+                )
 
-            BiomarkerCardId.OURA_SLEEP_SCORE -> OuraSleepScoreCard(
-                sleep = state.ouraSleepForSelectedDay,
-                history = state.ouraSleepHistory,
-                onClick = { onOpenOuraDetail(OuraMetricKey.SLEEP_SCORE) },
-            )
+            BiomarkerCardId.OURA_SLEEP_SCORE ->
+                OuraSleepScoreCard(
+                    sleep = state.ouraSleepForSelectedDay,
+                    history = state.ouraSleepHistory,
+                    selectedDate = state.selectedDate,
+                    onClick = { onOpenOuraDetail(OuraMetricKey.SLEEP_SCORE) },
+                )
 
-            BiomarkerCardId.OURA_ACTIVITY -> OuraActivityCard(
-                activity = state.ouraActivityForSelectedDay,
-                history = state.ouraActivityHistory,
-                onClick = { onOpenOuraDetail(OuraMetricKey.ACTIVITY) },
-            )
+            BiomarkerCardId.OURA_ACTIVITY ->
+                OuraActivityCard(
+                    activity = state.ouraActivityForSelectedDay,
+                    history = state.ouraActivityHistory,
+                    onClick = { onOpenOuraDetail(OuraMetricKey.ACTIVITY) },
+                )
 
-            BiomarkerCardId.OURA_RESILIENCE -> OuraResilienceCard(
-                resilience = state.ouraResilienceForSelectedDay,
-                history = state.ouraResilienceHistory,
-                onClick = { onOpenOuraDetail(OuraMetricKey.RESILIENCE) },
-            )
+            BiomarkerCardId.OURA_RESILIENCE ->
+                OuraResilienceCard(
+                    resilience = state.ouraResilienceForSelectedDay,
+                    history = state.ouraResilienceHistory,
+                    onClick = { onOpenOuraDetail(OuraMetricKey.RESILIENCE) },
+                )
 
             // Sleep-Detail bleibt im when fuer Backward-Compat — ist aber NICHT
             // mehr in DEFAULT_ORDER (Frank vertraut nur Whoop fuer Schlafphasen).
-            BiomarkerCardId.OURA_SLEEP_DETAIL -> OuraSleepDetailCard(
-                sleepDetails = state.ouraSleepDetailsForSelectedDay,
-                onClick = { },
-            )
+            BiomarkerCardId.OURA_SLEEP_DETAIL ->
+                OuraSleepDetailCard(
+                    sleepDetails = state.ouraSleepDetailsForSelectedDay,
+                    onClick = {},
+                )
 
             else -> {
                 // Unbekannte Card-ID — stille leere Box. Defense-in-Depth gegen
@@ -1559,12 +1662,11 @@ private fun BiomarkerCardForId(
 }
 
 /**
- * Mini-Karten (Frank-Wunsch 2026-05-10) — die vier kleinen 1-Spalten-Karten oben
- * im Biomarker-Screen mit HRV, Ruhepuls, Schlaf und Schlaf-Performance. Frueher
- * waren sie als festes 2x2-Grid (KeyValueGrid) zusammengebaut, jetzt sind es vier
- * unabhaengige verschiebbare Items im LazyVerticalGrid. Frank wollte HRV nach rechts
- * neben Ruhepuls schieben oder runter zu Performance tauschen — das geht nur wenn
- * jede Mini-Card eine eigene reorderable Identitaet hat.
+ * Mini-Karten (Frank-Wunsch 2026-05-10) — die vier kleinen 1-Spalten-Karten oben im
+ * Biomarker-Screen mit HRV, Ruhepuls, Schlaf und Schlaf-Performance. Frueher waren sie als festes
+ * 2x2-Grid (KeyValueGrid) zusammengebaut, jetzt sind es vier unabhaengige verschiebbare Items im
+ * LazyVerticalGrid. Frank wollte HRV nach rechts neben Ruhepuls schieben oder runter zu Performance
+ * tauschen — das geht nur wenn jede Mini-Card eine eigene reorderable Identitaet hat.
  *
  * Die Logik (Wert + 30-Tage-Mittel + Delta + Footnote) ist identisch zur bisherigen
  * KeyValueGrid-Implementierung — nur eben pro Karte einzeln.
@@ -1575,9 +1677,10 @@ private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
     // Performance-Audit Loop 2 (2026-05-10): mapNotNull+average in
     // remember(state.history30Days) statt pro Recomposition (z.B. Scroll im
     // LazyVerticalGrid). 4x in dieser Datei (HRV/RHR/SleepTotal/SleepPerformance).
-    val avgHrv = remember(state.history30Days) {
-        state.history30Days.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avgHrv =
+        remember(state.history30Days) {
+            state.history30Days.mapNotNull { it.hrvMs }.takeIf { it.isNotEmpty() }?.average()
+        }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "HRV",
@@ -1592,9 +1695,13 @@ private fun MiniHrvCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
 @Composable
 private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgRhr = remember(state.history30Days) {
-        state.history30Days.mapNotNull { it.restingHeartRate }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avgRhr =
+        remember(state.history30Days) {
+            state.history30Days
+                .mapNotNull { it.restingHeartRate }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+        }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Herzfrequenz",
@@ -1610,20 +1717,26 @@ private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
 @Composable
 private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgSleep = remember(state.history30Days) {
-        state.history30Days.mapNotNull { it.sleepTotalMinutes }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avgSleep =
+        remember(state.history30Days) {
+            state.history30Days
+                .mapNotNull { it.sleepTotalMinutes }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+        }
     val sleepMin = latest?.sleepTotalMinutes ?: 0
-    val sleepLabel = if (sleepMin == 0) {
-        "—"
-    } else {
-        "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
-    }
+    val sleepLabel =
+        if (sleepMin == 0) {
+            "—"
+        } else {
+            "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
+        }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Schlaf",
         value = sleepLabel,
-        delta = formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
+        delta =
+            formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
         deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
         footnote = "vs. 30-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
@@ -1633,9 +1746,13 @@ private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -
 @Composable
 private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
-    val avgSleepPerf = remember(state.history30Days) {
-        state.history30Days.mapNotNull { it.sleepPerformance }.takeIf { it.isNotEmpty() }?.average()
-    }
+    val avgSleepPerf =
+        remember(state.history30Days) {
+            state.history30Days
+                .mapNotNull { it.sleepPerformance }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+        }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Performance",
@@ -1648,17 +1765,17 @@ private fun MiniSleepPerformanceCard(state: BiomarkerUiState, onOpenDetail: (Str
 }
 
 /**
- * Gewichts-Mini-Karte (Frank-Wunsch 2026-05-10) — liest aus Health Connect, das
- * von der Zepp-App mit den Daten der Amazfit Smart Scale befuellt wird.
+ * Gewichts-Mini-Karte (Frank-Wunsch 2026-05-10) — liest aus Health Connect, das von der Zepp-App
+ * mit den Daten der Amazfit Smart Scale befuellt wird.
  *
  * Drei Anzeigemodi:
- *  1. HC nicht verfuegbar -> Hinweis "Health Connect nicht installiert"
- *  2. Permission nicht erteilt -> Tap fordert Permission an
- *  3. Permission erteilt + Daten -> Wert + Delta + Footnote (Standard-Mini-Karte)
+ * 1. HC nicht verfuegbar -> Hinweis "Health Connect nicht installiert"
+ * 2. Permission nicht erteilt -> Tap fordert Permission an
+ * 3. Permission erteilt + Daten -> Wert + Delta + Footnote (Standard-Mini-Karte)
  *
- * Hauttemperatur-Logik analog: Bei Gewicht ist NIEDRIGER nicht zwingend besser,
- * aber Frank moechte typisch (z.B. Diaet-Phase) Trend nach unten als positiv
- * sehen — daher deltaPositive = (latestKg < avg30dKg).
+ * Hauttemperatur-Logik analog: Bei Gewicht ist NIEDRIGER nicht zwingend besser, aber Frank moechte
+ * typisch (z.B. Diaet-Phase) Trend nach unten als positiv sehen — daher deltaPositive = (latestKg <
+ * avg30dKg).
  */
 @Composable
 private fun MiniWeightCard(
@@ -1735,7 +1852,8 @@ private fun MiniBodyWaterCard(
         unit = "kg",
         valueFormatter = { "${"%.1f".format(it)} kg" },
         // Bei Wasser ist hoeher = besser (Hydration). Frank-Vorgabe analog Magermasse.
-        deltaPositive = (weight.latestBodyWaterMassKg ?: 0.0) > (weight.avg30dBodyWaterMassKg ?: 0.0),
+        deltaPositive =
+            (weight.latestBodyWaterMassKg ?: 0.0) > (weight.avg30dBodyWaterMassKg ?: 0.0),
         onRequestPermission = onRequestPermission,
         onClick = onClick,
     )
@@ -1764,9 +1882,9 @@ private fun MiniBoneMassCard(
 
 /**
  * Muskelmasse-Karte (Frank-Wunsch 2026-05-10): Health Connect hat keinen direkten
- * Muscle-Mass-Datentyp. Wir naehern an: Muskelmasse ≈ Magermasse - Knochenmasse.
- * (Magermasse = Muskeln + Wasser + Knochen + Organe → minus Knochen = Muskel + Wasser + Organe.)
- * Wenn Knochenmasse fehlt, fallback auf reine Magermasse.
+ * Muscle-Mass-Datentyp. Wir naehern an: Muskelmasse ≈ Magermasse - Knochenmasse. (Magermasse =
+ * Muskeln + Wasser + Knochen + Organe → minus Knochen = Muskel + Wasser + Organe.) Wenn
+ * Knochenmasse fehlt, fallback auf reine Magermasse.
  *
  * History-Berechnung erfolgt punktweise zwischen den Werten gleicher Zeitstempel.
  */
@@ -1807,20 +1925,20 @@ private fun computeMuscleMassHistory(
     // Tag oder fallback). Wenn kein Bone-Wert da ist, nutzen wir lean direkt.
     val boneByMs = boneHistory.associate { it.first to it.second }
     return leanHistory.map { (ts, lean) ->
-        val bone = boneByMs[ts]
-            ?: boneHistory.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
+        val bone =
+            boneByMs[ts] ?: boneHistory.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
         ts to (if (bone != null) lean - bone else lean)
     }
 }
 
 /**
- * Gemeinsame Implementierung der Health-Connect-Mini-Karten (Gewicht, Koerperfett,
- * Magermasse, Wasser, Knochen). Frank-Wunsch 2026-05-10 (zweite Iteration):
- *  - Tap im "Wert vorhanden"-Zustand oeffnet Detail-Screen mit History (analog
- *    zu Readiness/Schlaf-Score)
- *  - Footnote zeigt Datum des letzten Werts ("vom 14.01.2026 · vs. 30-Tage-Mittel")
- *  - Bei fehlender Permission: Tap startet Permission-Dialog
- *  - Bei keinen Daten: Tap oeffnet trotzdem den Detail-Screen, dort kann Refresh ausgeloest werden
+ * Gemeinsame Implementierung der Health-Connect-Mini-Karten (Gewicht, Koerperfett, Magermasse,
+ * Wasser, Knochen). Frank-Wunsch 2026-05-10 (zweite Iteration):
+ * - Tap im "Wert vorhanden"-Zustand oeffnet Detail-Screen mit History (analog zu
+ *   Readiness/Schlaf-Score)
+ * - Footnote zeigt Datum des letzten Werts ("vom 14.01.2026 · vs. 30-Tage-Mittel")
+ * - Bei fehlender Permission: Tap startet Permission-Dialog
+ * - Bei keinen Daten: Tap oeffnet trotzdem den Detail-Screen, dort kann Refresh ausgeloest werden
  */
 @Composable
 private fun HealthConnectMiniCard(
@@ -1879,13 +1997,14 @@ private fun HealthConnectMiniCard(
             )
         }
         else -> {
-            val deltaText = if (avg != null) {
-                val diff = latest - avg
-                val sign = if (diff >= 0) "+" else "−"
-                "$sign${"%.1f".format(kotlin.math.abs(diff))} $unit"
-            } else {
-                ""
-            }
+            val deltaText =
+                if (avg != null) {
+                    val diff = latest - avg
+                    val sign = if (diff >= 0) "+" else "−"
+                    "$sign${"%.1f".format(kotlin.math.abs(diff))} $unit"
+                } else {
+                    ""
+                }
             // Frank-Wunsch 2026-05-10 (zweite Iteration): Datum NEBEN dem Label,
             // nicht in der Footnote. So sieht Frank auf einen Blick wie alt der
             // Wert ist ohne nach unten gucken zu muessen.
@@ -1911,5 +2030,4 @@ private val MINI_DATE_FMT: ThreadLocal<java.text.SimpleDateFormat> = ThreadLocal
     java.text.SimpleDateFormat("dd.MM.", java.util.Locale.GERMAN)
 }
 
-private fun formatMiniDate(ms: Long): String =
-    MINI_DATE_FMT.get()!!.format(java.util.Date(ms))
+private fun formatMiniDate(ms: Long): String = MINI_DATE_FMT.get()!!.format(java.util.Date(ms))

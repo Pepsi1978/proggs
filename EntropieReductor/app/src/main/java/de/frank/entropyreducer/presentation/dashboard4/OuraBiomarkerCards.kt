@@ -36,32 +36,31 @@ import de.frank.entropyreducer.presentation.theme.LocalCosmos
  * Oura-Ring-Karten fuer den Biomarker-Bildschirm.
  *
  * Etappe E (Frank-Vorgabe 2026-05-10): radikal aufgeraeumt. Pro Karte:
- *  - Score (groß) plus Plus/Minus-Trend zum 30-Tage-Durchschnitt
- *  - 7-Tage-Mini-Balkenchart mit Wert IN jedem Balken
- *  - Klick fuehrt zum Detail-Screen mit 30-Tage-Verlauf (Etappe F)
+ * - Score (groß) plus Plus/Minus-Trend zum 30-Tage-Durchschnitt
+ * - 7-Tage-Mini-Balkenchart mit Wert IN jedem Balken
+ * - Klick fuehrt zum Detail-Screen mit 30-Tage-Verlauf (Etappe F)
  *
  * RAUS aus den Karten:
- *   - Hauttemperatur-Abweichung (Readiness)
- *   - Tief/REM/Effizienz-Contributors (Sleep-Score)
- *   - Sub-Faktor-Bars (Resilienz)
- *   - 3-Tage-Werte-Liste auf allen Karten
- *   - "Letzte 7 Tage"-Beschriftung
- *   - Diagnose-Texte ("Wie erholt dein Koerper heute ist...")
+ * - Hauttemperatur-Abweichung (Readiness)
+ * - Tief/REM/Effizienz-Contributors (Sleep-Score)
+ * - Sub-Faktor-Bars (Resilienz)
+ * - 3-Tage-Werte-Liste auf allen Karten
+ * - "Letzte 7 Tage"-Beschriftung
+ * - Diagnose-Texte ("Wie erholt dein Koerper heute ist...")
  *
- * Aktivitaet behaelt Schritte und Aktive Kalorien als Chips, weil Frank
- * diese explizit drinhaben wollte.
+ * Aktivitaet behaelt Schritte und Aktive Kalorien als Chips, weil Frank diese explizit drinhaben
+ * wollte.
  */
-
 private val OuraAccent: Color = CosmosColors.Success
 
 @Composable
 private fun OuraSourceLabel(text: String = "Oura Ring") {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(OuraAccent.copy(alpha = 0.18f))
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier =
+            Modifier.clip(RoundedCornerShape(6.dp))
+                .background(OuraAccent.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
     ) {
         Text(
             text = text,
@@ -77,24 +76,39 @@ private fun OuraSourceLabel(text: String = "Oura Ring") {
 internal fun OuraReadinessCard(
     readiness: OuraReadinessEntity?,
     history: List<OuraReadinessEntity>,
+    selectedDate: java.time.LocalDate,
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val score = readiness?.score
+    // Frank-Wunsch 2026-05-13: IMMER den aktuellsten verfuegbaren Wert anzeigen.
+    // Bei "Heute" plus fehlender heutiger Eintrag fallback auf juengsten in
+    // Historie (Oura-Sync-Delay 40-50 Min). "Stand: ..."-Label zeigt von wann.
+    val today = java.time.LocalDate.now()
+    val effective =
+        remember(readiness, history, selectedDate) {
+            readiness ?: if (selectedDate == today) history.maxByOrNull { it.day } else null
+        }
+    val score = effective?.score
     val color = scoreColor(score)
     // Performance-Audit Loop 3 (2026-05-10): takeLast/mapNotNull in remember.
-    val historyAggregates = remember(history) {
-        val last30 = history.takeLast(30).mapNotNull { it.score }
-        val last7Doubles = history.takeLast(7).mapNotNull { it.score?.toDouble() }
-        last30 to last7Doubles
-    }
+    val historyAggregates =
+        remember(history) {
+            val last30 = history.takeLast(30).mapNotNull { it.score }
+            val last7Doubles = history.takeLast(7).mapNotNull { it.score?.toDouble() }
+            last30 to last7Doubles
+        }
     val last30Scores = historyAggregates.first
     val last7Scores = historyAggregates.second
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             CardHeader(title = "Readiness", color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Scores.map { it.toDouble() })
+            ScoreWithTrend(
+                score = score?.toDouble(),
+                color = color,
+                last30 = last30Scores.map { it.toDouble() },
+            )
+            StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
                 values = last7Scores,
@@ -112,17 +126,29 @@ internal fun OuraReadinessCard(
 internal fun OuraSleepScoreCard(
     sleep: OuraDailySleepEntity?,
     history: List<OuraDailySleepEntity>,
+    selectedDate: java.time.LocalDate,
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val score = sleep?.score
+    // Frank-Wunsch 2026-05-13: IMMER den aktuellsten Wert. Siehe OuraReadinessCard.
+    val today = java.time.LocalDate.now()
+    val effective =
+        remember(sleep, history, selectedDate) {
+            sleep ?: if (selectedDate == today) history.maxByOrNull { it.day } else null
+        }
+    val score = effective?.score
     val color = scoreColor(score)
     val last30Scores = history.takeLast(30).mapNotNull { it.score }
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             CardHeader(title = "Schlaf-Score", color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Scores.map { it.toDouble() })
+            ScoreWithTrend(
+                score = score?.toDouble(),
+                color = color,
+                last30 = last30Scores.map { it.toDouble() },
+            )
+            StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
                 values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
@@ -133,6 +159,30 @@ internal fun OuraSleepScoreCard(
             ThirtyDayAverageLabel(values = last30Scores.map { it.toDouble() })
         }
     }
+}
+
+/**
+ * "Stand: gestern (12.05.)" — Hinweis dass der angezeigte Wert NICHT vom ausgewaehlten Tag stammt
+ * sondern aus der Historie kommt. Verhindert Verwirrung bei Sync-Delay (Oura: 40-50 Min nach
+ * Ring-Sync).
+ */
+@Composable
+private fun StaleDataLabel(entryDay: String?, selectedDate: java.time.LocalDate) {
+    if (entryDay == null) return
+    val cosmos = LocalCosmos.current
+    val entryDate = runCatching { java.time.LocalDate.parse(entryDay) }.getOrNull() ?: return
+    if (entryDate == selectedDate) return
+    val today = java.time.LocalDate.now()
+    val label =
+        when (entryDate) {
+            today -> "Stand: heute"
+            today.minusDays(1) -> "Stand: gestern"
+            today.minusDays(2) -> "Stand: vorgestern"
+            else ->
+                "Stand: ${entryDate.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM."))}"
+        }
+    Spacer(Modifier.height(2.dp))
+    Text(text = label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
 }
 
 /** Activity-Score plus Schritte/Kalorien (Frank-Vorgabe: bleiben drin). */
@@ -150,11 +200,18 @@ internal fun OuraActivityCard(
         Column {
             CardHeader(title = "Aktivität", color = cosmos.textPrimary)
             Spacer(Modifier.height(8.dp))
-            ScoreWithTrend(score = score?.toDouble(), color = color, last30 = last30Scores.map { it.toDouble() })
+            ScoreWithTrend(
+                score = score?.toDouble(),
+                color = color,
+                last30 = last30Scores.map { it.toDouble() },
+            )
             if (activity != null) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatChip("Schritte", activity.steps?.let { "%,d".format(it).replace(',', '.') } ?: "—")
+                    StatChip(
+                        "Schritte",
+                        activity.steps?.let { "%,d".format(it).replace(',', '.') } ?: "—",
+                    )
                     StatChip("Aktive kcal", activity.activeCalories?.toString() ?: "—")
                 }
             }
@@ -170,8 +227,8 @@ internal fun OuraActivityCard(
 }
 
 /**
- * Resilienz mit Level (deutsch). KEINE Sub-Faktoren mehr (Frank-Vorgabe).
- * Plus/Minus auf Rang-Basis ueber die letzten 30 Tage.
+ * Resilienz mit Level (deutsch). KEINE Sub-Faktoren mehr (Frank-Vorgabe). Plus/Minus auf Rang-Basis
+ * ueber die letzten 30 Tage.
  */
 @Composable
 internal fun OuraResilienceCard(
@@ -231,7 +288,8 @@ internal fun OuraResilienceCard(
                             0 -> CosmosColors.Critical
                             1 -> CosmosColors.Warning
                             2 -> CosmosColors.AccentPrimary
-                            3, 4 -> CosmosColors.Success
+                            3,
+                            4 -> CosmosColors.Success
                             else -> color
                         }
                     },
@@ -242,14 +300,11 @@ internal fun OuraResilienceCard(
 }
 
 /**
- * Schlaf-Phasen-Karte — bleibt fuer Backward-Compat im when, aber nicht mehr
- * in DEFAULT_ORDER. Frank vertraut nur Whoop fuer Schlafphasen.
+ * Schlaf-Phasen-Karte — bleibt fuer Backward-Compat im when, aber nicht mehr in DEFAULT_ORDER.
+ * Frank vertraut nur Whoop fuer Schlafphasen.
  */
 @Composable
-internal fun OuraSleepDetailCard(
-    sleepDetails: List<OuraSleepDetailEntity>,
-    onClick: () -> Unit,
-) {
+internal fun OuraSleepDetailCard(sleepDetails: List<OuraSleepDetailEntity>, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     val main = sleepDetails.maxByOrNull { it.totalSleepSeconds ?: 0 }
     val deep = main?.deepSeconds ?: 0
@@ -263,11 +318,11 @@ internal fun OuraSleepDetailCard(
             Spacer(Modifier.height(10.dp))
             if (totalInBed > 0) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(cosmos.glassBorder.copy(alpha = 0.3f)),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(cosmos.glassBorder.copy(alpha = 0.3f))
                 ) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         SleepPhaseSegment(deep, totalInBed, Color(0xFF6366F1))
@@ -304,11 +359,7 @@ private fun CardHeader(title: String, color: Color) {
 
 /** Score in grosser Zahl plus Plus/Minus-Badge zum 30-Tage-Durchschnitt. */
 @Composable
-private fun ScoreWithTrend(
-    score: Double?,
-    color: Color,
-    last30: List<Double>,
-) {
+private fun ScoreWithTrend(score: Double?, color: Color, last30: List<Double>) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = score?.toInt()?.toString() ?: "—",
@@ -333,25 +384,25 @@ private fun ScoreWithTrend(
 }
 
 /**
- * Plus/Minus-Badge mit Farbe. Frank-Vorgabe 2026-05-10: ohne zusaetzlichen
- * Beschreibungstext darunter — die '30-Tage-Durchschnitt: 75'-Zeile am Ende
- * der Karte erklaert sich selbst, also keine Doppel-Information. Plus
- * (gruen) wenn Wert ueber 30-Tage-Mittel, Minus (rot) wenn drunter, blau
- * bei kaum Aenderung (innerhalb +/-0.5).
+ * Plus/Minus-Badge mit Farbe. Frank-Vorgabe 2026-05-10: ohne zusaetzlichen Beschreibungstext
+ * darunter — die '30-Tage-Durchschnitt: 75'-Zeile am Ende der Karte erklaert sich selbst, also
+ * keine Doppel-Information. Plus (gruen) wenn Wert ueber 30-Tage-Mittel, Minus (rot) wenn drunter,
+ * blau bei kaum Aenderung (innerhalb +/-0.5).
  */
 @Composable
 private fun TrendBadge(delta: Double, formatter: (Double) -> String) {
-    val color = when {
-        delta > 0.5 -> CosmosColors.Success
-        delta < -0.5 -> CosmosColors.Critical
-        else -> CosmosColors.AccentPrimary
-    }
+    val color =
+        when {
+            delta > 0.5 -> CosmosColors.Success
+            delta < -0.5 -> CosmosColors.Critical
+            else -> CosmosColors.AccentPrimary
+        }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.18f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier =
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
             text = formatter(delta),
@@ -365,15 +416,13 @@ private fun TrendBadge(delta: Double, formatter: (Double) -> String) {
 /**
  * Mini-Balkenchart der letzten Werte mit Beschriftung UNTER jedem Balken.
  *
- * Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine EIGENE Farbe abhaengig
- * vom Wert dieses Balkens. Bei den Score-Karten (Readiness, Schlaf-Score,
- * Aktivität) heisst das: ein Balken mit 85 ist gruen, einer mit 70 gelb, einer
- * mit 55 rot — der ganze Verlauf zeigt also auf einen Blick wo gute und wo
- * schlechte Tage waren. `colorFor` mappt einen einzelnen Balkenwert auf seine
- * Farbe. Bei Resilienz/Levels wird einfach immer dieselbe Farbe zurueckgegeben.
+ * Frank-Vorgabe 2026-05-10: jeder Balken bekommt seine EIGENE Farbe abhaengig vom Wert dieses
+ * Balkens. Bei den Score-Karten (Readiness, Schlaf-Score, Aktivität) heisst das: ein Balken mit 85
+ * ist gruen, einer mit 70 gelb, einer mit 55 rot — der ganze Verlauf zeigt also auf einen Blick wo
+ * gute und wo schlechte Tage waren. `colorFor` mappt einen einzelnen Balkenwert auf seine Farbe.
+ * Bei Resilienz/Levels wird einfach immer dieselbe Farbe zurueckgegeben.
  *
- * Auch der Wert-Text unter dem Balken nimmt diese Farbe damit Balken und Zahl
- * zusammenpassen.
+ * Auch der Wert-Text unter dem Balken nimmt diese Farbe damit Balken und Zahl zusammenpassen.
  */
 @Composable
 private fun HistoryMiniChartWithLabels(
@@ -385,16 +434,12 @@ private fun HistoryMiniChartWithLabels(
     if (values.isEmpty()) return
     val padded = values.takeLast(7)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp),
+        modifier = Modifier.fillMaxWidth().height(54.dp),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Wenn weniger als 7 Werte vorhanden sind, links auffuellen.
-        repeat(7 - padded.size) {
-            Box(modifier = Modifier.weight(1f).height(54.dp))
-        }
+        repeat(7 - padded.size) { Box(modifier = Modifier.weight(1f).height(54.dp)) }
         padded.forEach { v ->
             val barColor = colorFor(v)
             val frac = (v / maxValue).coerceIn(0.0, 1.0).toFloat()
@@ -404,11 +449,11 @@ private fun HistoryMiniChartWithLabels(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height((40.dp * frac).coerceAtLeast(2.dp))
-                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                        .background(barColor.copy(alpha = 0.85f)),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height((40.dp * frac).coerceAtLeast(2.dp))
+                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(barColor.copy(alpha = 0.85f))
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -429,11 +474,7 @@ private fun androidx.compose.foundation.layout.RowScope.SleepPhaseSegment(
     color: Color,
 ) {
     if (seconds <= 0) return
-    Box(
-        modifier = Modifier
-            .weight(seconds.toFloat() / total.toFloat())
-            .background(color),
-    )
+    Box(modifier = Modifier.weight(seconds.toFloat() / total.toFloat()).background(color))
 }
 
 @Composable
@@ -446,14 +487,12 @@ private fun StatChip(label: String, value: String) {
 }
 
 /**
- * Kleine Zeile direkt unter dem Mini-Verlaufschart die den 30-Tage-Durchschnitt
- * der Werte anzeigt — Frank-Vorgabe 2026-05-10: 'unter den Balken bitte da
- * noch den Durchschnittwert anzeigen lassen fuer 30 Tage' und die Zahl 'als
- * schwarze Zahl, egal was der Durchschnitt'. Schwarz bedeutet hier
- * cosmos.textPrimary (also der App-Standardtext, im Dark-Mode hell statt
- * schwarz — der hoechste Kontrast zum Karten-Hintergrund). Frank's
- * Begruendung war dass keine Farbinterpretation noetig sein soll — die Zahl
- * steht einfach da als Zahl.
+ * Kleine Zeile direkt unter dem Mini-Verlaufschart die den 30-Tage-Durchschnitt der Werte anzeigt —
+ * Frank-Vorgabe 2026-05-10: 'unter den Balken bitte da noch den Durchschnittwert anzeigen lassen
+ * fuer 30 Tage' und die Zahl 'als schwarze Zahl, egal was der Durchschnitt'. Schwarz bedeutet hier
+ * cosmos.textPrimary (also der App-Standardtext, im Dark-Mode hell statt schwarz — der hoechste
+ * Kontrast zum Karten-Hintergrund). Frank's Begruendung war dass keine Farbinterpretation noetig
+ * sein soll — die Zahl steht einfach da als Zahl.
  */
 @Composable
 private fun ThirtyDayAverageLabel(values: List<Double>) {
@@ -479,42 +518,46 @@ private fun ThirtyDayAverageLabel(values: List<Double>) {
 /* --------------------- Reine Funktionen (kein @Composable) --------------------- */
 
 /**
- * Farb-Skala fuer Score-Karten (Readiness, Schlaf-Score, Aktivität).
- * Frank-Vorgabe 2026-05-11: drei Stufen mit verschobenen Schwellen.
- *   - 75 oder mehr: gruen (Success)
- *   - 50 bis 74:    gelb (Warning)
- *   - unter 50:     rot (Critical)
- * Resilienz nutzt eine eigene Logik (levelToColor), keine Score-Skala.
+ * Farb-Skala fuer Score-Karten (Readiness, Schlaf-Score, Aktivität). Frank-Vorgabe 2026-05-11: drei
+ * Stufen mit verschobenen Schwellen.
+ * - 75 oder mehr: gruen (Success)
+ * - 50 bis 74: gelb (Warning)
+ * - unter 50: rot (Critical) Resilienz nutzt eine eigene Logik (levelToColor), keine Score-Skala.
  */
-internal fun scoreColor(score: Int?): Color = when {
-    score == null -> CosmosColors.AccentPrimary
-    score >= 75 -> CosmosColors.Success
-    score >= 50 -> CosmosColors.Warning
-    else -> CosmosColors.Critical
-}
+internal fun scoreColor(score: Int?): Color =
+    when {
+        score == null -> CosmosColors.AccentPrimary
+        score >= 75 -> CosmosColors.Success
+        score >= 50 -> CosmosColors.Warning
+        else -> CosmosColors.Critical
+    }
 
-internal fun levelToGerman(level: String?): String = when (level) {
-    "limited" -> "Eingeschränkt"
-    "adequate" -> "Ausreichend"
-    "solid" -> "Solide"
-    "strong" -> "Stark"
-    "exceptional" -> "Außergewöhnlich"
-    else -> "—"
-}
+internal fun levelToGerman(level: String?): String =
+    when (level) {
+        "limited" -> "Eingeschränkt"
+        "adequate" -> "Ausreichend"
+        "solid" -> "Solide"
+        "strong" -> "Stark"
+        "exceptional" -> "Außergewöhnlich"
+        else -> "—"
+    }
 
-internal fun levelToColor(level: String?, fallback: Color): Color = when (level) {
-    "exceptional", "strong" -> CosmosColors.Success
-    "solid" -> CosmosColors.AccentPrimary
-    "adequate" -> CosmosColors.Warning
-    "limited" -> CosmosColors.Critical
-    else -> fallback
-}
+internal fun levelToColor(level: String?, fallback: Color): Color =
+    when (level) {
+        "exceptional",
+        "strong" -> CosmosColors.Success
+        "solid" -> CosmosColors.AccentPrimary
+        "adequate" -> CosmosColors.Warning
+        "limited" -> CosmosColors.Critical
+        else -> fallback
+    }
 
-internal fun levelToRank(level: String?): Double? = when (level) {
-    "limited" -> 0.0
-    "adequate" -> 1.0
-    "solid" -> 2.0
-    "strong" -> 3.0
-    "exceptional" -> 4.0
-    else -> null
-}
+internal fun levelToRank(level: String?): Double? =
+    when (level) {
+        "limited" -> 0.0
+        "adequate" -> 1.0
+        "solid" -> 2.0
+        "strong" -> 3.0
+        "exceptional" -> 4.0
+        else -> null
+    }

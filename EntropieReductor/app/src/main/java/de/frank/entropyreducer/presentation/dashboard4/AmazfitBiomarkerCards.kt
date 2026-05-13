@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.presentation.dashboard4
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,8 +37,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Header-Trenner zwischen Whoop-Werten und Amazfit-T-Rex-3-Werten.
- * Frank-Wunsch 2026-05-09: deutliche Quellen-Trennung.
+ * Header-Trenner zwischen Whoop-Werten und Amazfit-T-Rex-3-Werten. Frank-Wunsch 2026-05-09:
+ * deutliche Quellen-Trennung.
  */
 @Composable
 internal fun AmazfitSectionHeader() {
@@ -46,10 +48,10 @@ internal fun AmazfitSectionHeader() {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+            modifier =
+                Modifier.size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CosmosColors.Warning.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -77,13 +79,13 @@ internal fun AmazfitSectionHeader() {
 }
 
 /**
- * Sport-Card im Biomarker-Screen. Zeigt die letzten ~5 Trainings als kompakte
- * Liste mit Sportart-Symbol + Distanz + Zeit + Pace + Puls. Tap auf eine Zeile
- * fuehrt zum Detail-Screen, "Alle anzeigen" oeffnet die volle Trainings-Liste.
+ * Sport-Card im Biomarker-Screen. Zeigt die letzten ~5 Trainings als kompakte Liste mit
+ * Sportart-Symbol + Distanz + Zeit + Pace + Puls. Tap auf eine Zeile fuehrt zum Detail-Screen,
+ * "Alle anzeigen" oeffnet die volle Trainings-Liste.
  */
 /**
- * EIGENE Hero-Card fuer den letzten Lauf — Frank-Wunsch 2026-05-09: separate
- * "Blase" oberhalb der Trainings-Liste, nicht IN der Trainings-Card.
+ * EIGENE Hero-Card fuer den letzten Lauf — Frank-Wunsch 2026-05-09: separate "Blase" oberhalb der
+ * Trainings-Liste, nicht IN der Trainings-Card.
  */
 @Composable
 internal fun AmazfitLastTrainingHeroCard(
@@ -110,10 +112,10 @@ internal fun AmazfitTrainingsCard(
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CosmosColors.Warning.copy(alpha = 0.18f)),
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CosmosColors.Warning.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -144,7 +146,8 @@ internal fun AmazfitTrainingsCard(
             Spacer(Modifier.height(10.dp))
             if (workouts.isEmpty()) {
                 Text(
-                    text = "Noch keine Trainings — verbinde dich in den Einstellungen unter API mit deinem Zepp-Konto.",
+                    text =
+                        "Noch keine Trainings — verbinde dich in den Einstellungen unter API mit deinem Zepp-Konto.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
@@ -166,10 +169,10 @@ internal fun AmazfitTrainingsCard(
                         text = "+ $remaining weitere Trainings",
                         color = cosmos.textSecondary,
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenAll() }
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clickable { onOpenAll() }
+                                .padding(vertical = 4.dp),
                     )
                 }
             }
@@ -178,33 +181,32 @@ internal fun AmazfitTrainingsCard(
 }
 
 /**
- * Hero-Pattern für den letzten Lauf — Frank-Wunsch 2026-05-09:
- * "schoenes Fenster mit allen Werten in Patterns".
- * Sportart-Icon + Datum + T-Rex-3-Badge oben, dann Distanz und Dauer GROSS,
- * darunter ein 2x2-Pattern mit Pace, Puls, Kalorien, Höhenmeter.
+ * Hero-Pattern für den letzten Lauf — Frank-Wunsch 2026-05-09: "schoenes Fenster mit allen Werten
+ * in Patterns". Sportart-Icon + Datum + T-Rex-3-Badge oben, dann Distanz und Dauer GROSS, darunter
+ * ein 2x2-Pattern mit Pace, Puls, Kalorien, Höhenmeter.
  */
 @Composable
-private fun LetzterLaufHero(
-    w: AmazfitWorkoutEntity,
-    onOpenDetail: () -> Unit,
-) {
+private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
+    val heroShape = RoundedCornerShape(14.dp)
+    // Frank-Wunsch 2026-05-13: Heller Rahmen wie bei allen anderen Pattern (GlassCard-Border).
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(accent.copy(alpha = 0.10f))
-            .clickable { onOpenDetail() }
-            .padding(14.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(heroShape)
+                .background(accent.copy(alpha = 0.10f))
+                .border(BorderStroke(1.dp, cosmos.glassBorder), heroShape)
+                .clickable { onOpenDetail() }
+                .padding(14.dp)
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accent.copy(alpha = 0.22f)),
+                    modifier =
+                        Modifier.size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accent.copy(alpha = 0.22f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -229,10 +231,10 @@ private fun LetzterLaufHero(
                     )
                 }
                 Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(accent.copy(alpha = 0.22f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(accent.copy(alpha = 0.22f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "T-Rex 3",
@@ -243,7 +245,10 @@ private fun LetzterLaufHero(
                 }
             }
             Spacer(Modifier.height(14.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 HeroBigStat(
                     label = "Distanz",
                     value = w.distanceMeters?.let { formatDistance(it) } ?: "—",
@@ -259,7 +264,10 @@ private fun LetzterLaufHero(
             }
             Spacer(Modifier.height(14.dp))
             // 2x2-Pattern mit den wichtigsten weiteren Werten.
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 MiniStat(
                     label = "Ø Pace",
                     value = w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—",
@@ -272,7 +280,10 @@ private fun LetzterLaufHero(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 MiniStat(
                     label = "Kalorien",
                     value = w.calories?.let { "%.0f kcal".format(it) } ?: "—",
@@ -307,10 +318,11 @@ private fun HeroBigStat(
 private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
     val cosmos = LocalCosmos.current
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(cosmos.glassBorder.copy(alpha = 0.15f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(cosmos.glassBorder.copy(alpha = 0.15f))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Column {
             Text(
@@ -330,21 +342,18 @@ private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier
 }
 
 /**
- * Eine Zeile in der Trainings-Liste. Sportart links, Datum/Zeit Mitte oben,
- * Distanz und Pace darunter, Pulswerte rechts.
+ * Eine Zeile in der Trainings-Liste. Sportart links, Datum/Zeit Mitte oben, Distanz und Pace
+ * darunter, Pulswerte rechts.
  */
 @Composable
-internal fun AmazfitWorkoutRow(
-    workout: AmazfitWorkoutEntity,
-    onClick: () -> Unit,
-) {
+internal fun AmazfitWorkoutRow(workout: AmazfitWorkoutEntity, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable { onClick() }
-            .padding(vertical = 6.dp, horizontal = 4.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { onClick() }
+                .padding(vertical = 6.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -445,14 +454,13 @@ internal fun formatDuration(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
     val s = seconds % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s)
-    else "%d:%02d".format(m, s)
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
 /**
- * VO2Max-Berechnung fuer Hero-MiniStat und Trainings-Liste — zentrale
- * Formel damit Hero, Detail-Screen und Liste denselben Wert zeigen.
- * Reine ACSM-Formel + HR-Reserve + Frank's empirische +2 Korrektur.
+ * VO2Max-Berechnung fuer Hero-MiniStat und Trainings-Liste — zentrale Formel damit Hero,
+ * Detail-Screen und Liste denselben Wert zeigen. Reine ACSM-Formel + HR-Reserve + Frank's
+ * empirische +2 Korrektur.
  */
 internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity): String {
     val avgHr = w.avgHeartRate ?: return "—"

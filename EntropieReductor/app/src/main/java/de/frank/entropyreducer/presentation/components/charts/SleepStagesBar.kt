@@ -25,9 +25,18 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Gestapelter horizontaler Bar für Schlafstadien (REM/Tief/Leicht/Wach).
- * Spec §13.1 Punkt 6.
+ * Geteilte Schlafphasen-Farben — wird sowohl vom Stage-Bar als auch von den Beschreibungs-Chips
+ * unter dem Bar verwendet, damit Farben 1:1 uebereinstimmen. Frank-Wunsch 2026-05-13: Reihenfolge
+ * in Beschreibung = Bar (Tief → REM → Leicht → Wach).
  */
+object SleepStageColors {
+    val Deep: Color = Color(0xFF6366F1)
+    val Rem: Color = CosmosColors.AccentSecondary
+    val Light: Color = CosmosColors.AccentPrimary
+    val Awake: Color = CosmosColors.Warning
+}
+
+/** Gestapelter horizontaler Bar für Schlafstadien (REM/Tief/Leicht/Wach). Spec §13.1 Punkt 6. */
 @Composable
 fun SleepStagesBar(
     remMinutes: Int?,
@@ -45,19 +54,39 @@ fun SleepStagesBar(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp)
-                .clip(RoundedCornerShape(50))
-                .background(cosmos.glassBg),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(32.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(cosmos.glassBg)
         ) {
             Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                 // Frank-Wunsch 2026-05-09: Prozentwerte mittig in den Phasen-Segmenten
                 // anzeigen — REM, Tiefschlaf, Leichtschlaf bekommen Prozent, Wach nicht.
-                StageSegment(weight = deep, total = total, color = Color(0xFF6366F1), showPercent = true)
-                StageSegment(weight = rem, total = total, color = CosmosColors.AccentSecondary, showPercent = true)
-                StageSegment(weight = light, total = total, color = CosmosColors.AccentPrimary, showPercent = true)
-                StageSegment(weight = awake, total = total, color = CosmosColors.Warning, showPercent = false)
+                StageSegment(
+                    weight = deep,
+                    total = total,
+                    color = SleepStageColors.Deep,
+                    showPercent = true,
+                )
+                StageSegment(
+                    weight = rem,
+                    total = total,
+                    color = SleepStageColors.Rem,
+                    showPercent = true,
+                )
+                StageSegment(
+                    weight = light,
+                    total = total,
+                    color = SleepStageColors.Light,
+                    showPercent = true,
+                )
+                StageSegment(
+                    weight = awake,
+                    total = total,
+                    color = SleepStageColors.Awake,
+                    showPercent = false,
+                )
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -65,10 +94,10 @@ fun SleepStagesBar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Legend("Tief", deep, Color(0xFF6366F1))
-            Legend("REM", rem, CosmosColors.AccentSecondary)
-            Legend("Leicht", light, CosmosColors.AccentPrimary)
-            Legend("Wach", awake, CosmosColors.Warning)
+            Legend("Tief", deep, SleepStageColors.Deep)
+            Legend("REM", rem, SleepStageColors.Rem)
+            Legend("Leicht", light, SleepStageColors.Light)
+            Legend("Wach", awake, SleepStageColors.Awake)
         }
     }
 }
@@ -84,10 +113,7 @@ private fun androidx.compose.foundation.layout.RowScope.StageSegment(
     if (ratio <= 0f) return
     val percent = (ratio * 100).toInt()
     Box(
-        modifier = Modifier
-            .weight(ratio)
-            .fillMaxHeight()
-            .background(color),
+        modifier = Modifier.weight(ratio).fillMaxHeight().background(color),
         contentAlignment = Alignment.Center,
     ) {
         // Prozent nur anzeigen wenn Segment breit genug (sonst wird's gequetscht)
