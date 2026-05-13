@@ -98,8 +98,8 @@ internal fun DeepSleepGraphCard(
             }
             Spacer(Modifier.height(12.dp))
 
-            // Balken-Graph der letzten 30 Tage.
-            DeepSleepBars(values = derived.last30Percent, accent = accent)
+            // Balken-Graph der letzten 30 Tage — pro Balken eine Ampel-Farbe.
+            DeepSleepBars(values = derived.last30Percent)
 
             Spacer(Modifier.height(10.dp))
 
@@ -200,7 +200,7 @@ private fun BiomarkerSnapshotEntity.percent(): Double? {
 /* ------------------------- UI-Bausteine ------------------------- */
 
 @Composable
-private fun DeepSleepBars(values: List<Double>, accent: Color) {
+private fun DeepSleepBars(values: List<Double>) {
     val cosmos = LocalCosmos.current
     // Y-Achse fest auf 30 % skalieren — Frank-typische Tiefschlafanteile liegen
     // 12-25 %. So sieht man Schwankungen deutlich ohne dass die Balken winzig wirken.
@@ -232,13 +232,25 @@ private fun DeepSleepBars(values: List<Double>, accent: Color) {
                             Modifier.weight(1f)
                                 .fillMaxHeight(ratio)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(accent)
+                                .background(deepSleepBarColor(pct))
                     )
                 }
             }
         }
     }
 }
+
+/**
+ * Farbe pro Balken im Tiefschlaf-Graph (Frank-Wunsch 2026-05-13): 0 – 10 % → Rot (kritisch wenig)
+ * 10 – 20 % → Gelb (grenzwertig) 20 – 30 % → Gruen (gesund)
+ * > > 30 % → Gruen (extra viel)
+ */
+private fun deepSleepBarColor(pct: Double): Color =
+    when {
+        pct < 10.0 -> CosmosColors.Critical
+        pct < 20.0 -> CosmosColors.Warning
+        else -> CosmosColors.Success
+    }
 
 @Composable
 private fun TrendBadgePercent(delta: Double) {
