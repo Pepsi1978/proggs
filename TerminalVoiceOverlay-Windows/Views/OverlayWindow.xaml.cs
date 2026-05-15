@@ -1786,6 +1786,35 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
+        /// <summary>
+        /// Reine Toggle-Variante fuer den Strg+Shift+Alt+E-Hotkey vom
+        /// Stream Deck. Anders als <see cref="BtnAutoEnter_Click"/>:
+        ///  - KEIN sofortiger Return ans Terminal bei OFF→ON
+        ///    (Frank's Stream-Deck-Wunsch: nur Status umschalten,
+        ///    keine Leerzeile in der CLI),
+        ///  - kein <c>_forceReturnOnNextSubmit</c>/<c>TrySubmitInputText</c>-
+        ///    Spezialpfad (der Hotkey reagiert nie auf das Promtboard-
+        ///    Eingabefeld, das macht der Maus-Klick weiterhin).
+        /// Aktualisiert nur die Variable + den Button-Hintergrund.
+        /// </summary>
+        private void ToggleAutoEnterFromHotkey()
+        {
+            if (autoEnterEnabled)
+            {
+                autoEnterEnabled = false;
+                EnterButton.Background = ToggleOff;
+                hasPastedText = false;
+                Console.WriteLine("Auto-enter OFF (via hotkey)");
+            }
+            else
+            {
+                autoEnterEnabled = true;
+                EnterButton.Background = BtnProcessing;
+                hasPastedText = false;
+                Console.WriteLine("Auto-enter ON (via hotkey, no Return triggered)");
+            }
+        }
+
         /// <summary>Star button — toggles the full PromptBoard integration:
         /// opens/closes the side panel AND enables/disables the always-on
         /// prefix. Default-Einstieg seit Aenderung 2026-05-09: erster Klick
@@ -3226,10 +3255,10 @@ namespace TerminalVoiceOverlay.Views
                     if (isDown && !_autoEnterHotkeyDown)
                     {
                         _autoEnterHotkeyDown = true;
-                        LogHotkeyEvent("Strg+Shift+Alt+E FIRE → toggle auto-enter");
+                        LogHotkeyEvent("Strg+Shift+Alt+E FIRE → toggle auto-enter (no Return)");
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            try { BtnAutoEnter_Click(this, new RoutedEventArgs()); }
+                            try { ToggleAutoEnterFromHotkey(); }
                             catch (Exception ex) { LogHotkeyEvent($"Strg+Shift+Alt+E toggle failed: {ex.Message}"); }
                         }));
                         return new IntPtr(1);
