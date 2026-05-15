@@ -33,11 +33,15 @@ const WS_RECONNECT_DELAY_MS = 1000;
 const TOGGLE_PAUSE_MS = 800;
 const GHOST_CONTEXT_TIMEOUT_MS = 5000;
 const KEY_DEBOUNCE_MS = 250;
+const HEARTBEAT_INTERVAL_MS = 5000;
 
 let websocket = null;
 let pluginUUID = null;
 let registerEvent = null;
 let wsPort = null;
+let heartbeatTimer = null;
+let heartbeatCounter = 0;
+let pollCounter = 0;
 
 // context -> { timer, lastOn, toggleUntil, lastSeen, lastKeyDownTs }
 const actionContexts = new Map();
@@ -52,6 +56,31 @@ function connectElgatoStreamDeckSocket(
 	registerEvent = inRegisterEvent;
 	wsPort = inPort;
 	openWebSocket();
+	startHeartbeat();
+}
+
+// Heartbeat-Logger: alle 5 Sekunden eine "ALIVE"-Zeile in TVO-hotkey.log.
+// Wenn der Plugin-Code lebt, sieht Frank diese Zeilen kontinuierlich.
+// Wenn sie aufhoeren, ist der Plugin-Webview tot oder im Stream-Deck-
+// Software-Editor pausiert. Damit ist sofort sichtbar wo das System
+// "haengt" — keine Devtools noetig.
+function startHeartbeat() {
+	if (heartbeatTimer) clearInterval(heartbeatTimer);
+	heartbeatTimer = setInterval(() => {
+		heartbeatCounter++;
+		const wsState = websocket ? websocket.readyState : -1;
+		const ctxCount = actionContexts.size;
+		log(
+			"ALIVE i=" +
+				heartbeatCounter +
+				" polls=" +
+				pollCounter +
+				" ws=" +
+				wsState +
+				" ctxs=" +
+				ctxCount,
+		);
+	}, HEARTBEAT_INTERVAL_MS);
 }
 
 function openWebSocket() {
@@ -105,10 +134,21 @@ function openWebSocket() {
 		}
 	};
 
-	websocket.onerror = () => log("WS error");
+	websocket.onerror = (ev) =>
+		log("WS error type=" + (ev && ev.type) + " message=" + (ev && ev.message));
 
 	websocket.onclose = (ev) => {
-		log("WS closed code=" + ev.code + " — reconnecting");
+		log(
+			"WS CLOSED code=" +
+				ev.code +
+				" reason=" +
+				(ev.reason || "(none)") +
+				" wasClean=" +
+				ev.wasClean +
+				" — reconnecting in " +
+				WS_RECONNECT_DELAY_MS +
+				"ms",
+		);
 		websocket = null;
 		setTimeout(openWebSocket, WS_RECONNECT_DELAY_MS);
 	};
@@ -172,6 +212,7 @@ async function pollOnce(context) {
 	if (Date.now() < state.toggleUntil) {
 		return;
 	}
+	pollCounter++;
 	try {
 		const res = await fetch(TVO_STATUS_URL, {
 			method: "GET",
@@ -184,6 +225,14 @@ async function pollOnce(context) {
 		state.lastSeen = Date.now();
 		applyStateIfChanged(context, !!data.on);
 	} catch (err) {
+		log(
+			"POLL ERROR ctx=" +
+				shortCtx(context) +
+				" name=" +
+				(err && err.name) +
+				" msg=" +
+				(err && err.message),
+		);
 		applyStateIfChanged(context, false, "offline");
 	}
 }

@@ -1848,8 +1848,8 @@ namespace TerminalVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Reine Toggle-Variante fuer den Strg+Shift+Alt+E-Hotkey vom
-        /// Stream Deck. Anders als <see cref="BtnAutoEnter_Click"/>:
+        /// Reine Toggle-Variante fuer das Stream-Deck-Plugin (HTTP-API).
+        /// Anders als <see cref="BtnAutoEnter_Click"/>:
         ///  - KEIN sofortiger Return ans Terminal bei OFF→ON
         ///    (Frank's Stream-Deck-Wunsch: nur Status umschalten,
         ///    keine Leerzeile in der CLI),
@@ -1863,14 +1863,14 @@ namespace TerminalVoiceOverlay.Views
             // Geht jetzt ueber SetAutoEnter, damit JEDE State-Aenderung
             // mit Quelle + vorher/nachher in TVO-hotkey.log landet —
             // dann ist Drift-Debugging in 30 Sekunden moeglich.
-            SetAutoEnter(!autoEnterEnabled, "HTTP/Hotkey");
+            SetAutoEnter(!autoEnterEnabled, "StreamDeckHTTP");
         }
 
         /// <summary>
         /// Einziger Schreibzugriff auf <see cref="autoEnterEnabled"/> ausser
-        /// der Initialisierung in der Felddeklaration. Alle drei Pfade —
-        /// UI-Klick (<see cref="BtnAutoEnter_Click"/>), HTTP-Toggle vom
-        /// Stream-Deck-Plugin, Strg+Shift+Alt+E-Hotkey — gehen hier durch.
+        /// der Initialisierung in der Felddeklaration. Beide Pfade —
+        /// UI-Klick (<see cref="BtnAutoEnter_Click"/>) und HTTP-Toggle
+        /// vom Stream-Deck-Plugin — gehen hier durch.
         ///
         /// Loggt vorher+nachher+Quelle in TVO-hotkey.log. So sieht jeder
         /// Drift sofort in der Datei aus wer wann was umgeschaltet hat.
@@ -3303,58 +3303,12 @@ namespace TerminalVoiceOverlay.Views
                 }
             }
 
-            // ── Auto-Enter-Toggle-Hotkey: Strg+Shift+Alt+E ─────────────────
-            //
-            // Frank's Wunsch (#2242): den Auto-Enter-Toggle (orange/grau-
-            // Button unten im Overlay) auf eine Stream-Deck-Taste legen.
-            // Strg+Shift+Alt+E: drei-Modifier-Kombi → praktisch garantiert
-            // kollisionsfrei in jeder App, und der Stream Deck XL kann sie
-            // in der "Hotkey"-Action senden. Achtung: AltGr+E waere "€" auf
-            // deutscher Tastatur, aber Shift dazu macht die Kombi eindeutig
-            // — wer "€" tippen will, drueckt AltGr+E ohne Shift und ist
-            // weiter wie gewohnt im Geschaeft.
-            //
-            // Der Hotkey ruft denselben Click-Handler wie der Enter-Button
-            // im Overlay (BtnAutoEnter_Click) ueber den UI-Dispatcher auf,
-            // damit das Toggle-Verhalten 1:1 identisch ist (inkl. der
-            // hasPastedText-Logik und dem Sofort-Return wenn von OFF→ON
-            // gewechselt wird).
-            if (vk == NativeMethods.Win32.VK_E)
-            {
-                bool ctrl   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
-                bool alt    = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
-                bool shift  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
-                bool lwin   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_LWIN)    & 0x8000) != 0;
-                bool rwin   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_RWIN)    & 0x8000) != 0;
-                bool win    = lwin || rwin;
-                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
-                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
-
-                if (ctrl && shift && alt && !win)
-                {
-                    if (isDown && !_autoEnterHotkeyDown)
-                    {
-                        _autoEnterHotkeyDown = true;
-                        LogHotkeyEvent("Strg+Shift+Alt+E FIRE → toggle auto-enter (no Return)");
-                        // Dispatcher.Invoke (sync) statt BeginInvoke — konsistent
-                        // mit dem HTTP-Pfad. Verhindert dass parallele Hotkey-Toggles
-                        // und HTTP-Toggles in unterschiedlicher Reihenfolge auf den
-                        // State zugreifen.
-                        Dispatcher.Invoke(new Action(() =>
-                        {
-                            try { ToggleAutoEnterFromHotkey(); }
-                            catch (Exception ex) { LogHotkeyEvent($"Strg+Shift+Alt+E toggle failed: {ex.Message}"); }
-                        }));
-                        return new IntPtr(1);
-                    }
-                    if (isDown) return new IntPtr(1); // Auto-Repeat schlucken
-                    if (isUp) _autoEnterHotkeyDown = false;
-                }
-                else if (isUp)
-                {
-                    _autoEnterHotkeyDown = false;
-                }
-            }
+            // Strg+Shift+Alt+E-Hotkey wurde am 2026-05-15 entfernt (Frank's
+            // Wunsch in Commit #2253). Der Auto-Enter-Toggle laeuft jetzt
+            // ausschliesslich ueber das Stream-Deck-Plugin via HTTP-API
+            // (POST /autoenter/toggle) — siehe AutoEnterStatusServer.cs.
+            // Ein global registrierter Hotkey ist ueberfluessig und war
+            // eine zusaetzliche Drift-Quelle (eigener Codepfad zum State).
 
             // ── Prompt-Hotkeys: Win+Alt+A..Win+Alt+Z ───────────────────────
             //
@@ -3451,14 +3405,6 @@ namespace TerminalVoiceOverlay.Views
         /// Gleiche Auto-Repeat-Schutzlogik wie <see cref="_promptHotkeyDown"/>.
         /// </summary>
         private readonly bool[] _promptLetterHotkeyDown = new bool[26];
-
-        /// <summary>
-        /// Down-Latch fuer Strg+Shift+Alt+E (Auto-Enter-Toggle-Hotkey).
-        /// Verhindert dass das Halten der Kombi den Toggle mehrfach
-        /// ausloest. Wird auf false zurueckgesetzt sobald irgendein
-        /// KeyUp im Hook beobachtet wird.
-        /// </summary>
-        private bool _autoEnterHotkeyDown;
 
         /// <summary>
         /// Append-only Diagnose-Log fuer Letter-Hotkey-Events. Schreibt
