@@ -3194,6 +3194,79 @@ namespace TerminalVoiceOverlay.Views
                 }
             }
 
+            // ── Prompt-Hotkeys: Win+Alt+A..Win+Alt+Z ───────────────────────
+            //
+            // Genau dieselbe Logik wie der Strg+1..9-Zweig oben, nur mit
+            // einem groesseren Schluesselraum. Win+Alt wurde gewaehlt weil
+            // Strg+Alt = AltGr auf deutscher Tastatur waere (zerstoert @,
+            // €, [, ], usw.) und Strg+Shift+Buchstabe in den meisten
+            // Terminals/Editoren schon belegt ist. Win+Alt ist global
+            // ausserhalb der Game Bar weitgehend frei.
+            //
+            // Wir greifen nur wenn:
+            //   1) eine reine Win+Alt-Kombi gehalten wird (kein Ctrl, kein Shift),
+            //   2) ein Prompt mit diesem Buchstaben in der HotkeyRegistry steht,
+            //   3) ein Terminal-Fenster im Vordergrund ist.
+            // Sonst laeuft die Taste durch.
+            if (vk >= 0x41 && vk <= 0x5A && HotkeyRegistry.HasAnyLetter)
+            {
+                bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool shift = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
+                bool lwin  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_LWIN)    & 0x8000) != 0;
+                bool rwin  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_RWIN)    & 0x8000) != 0;
+                bool win   = lwin || rwin;
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (win && alt && !ctrl && !shift)
+                {
+                    char letter = (char)vk; // 0x41..0x5A → 'A'..'Z'
+                    int letterIdx = (int)(vk - 0x41); // 0..25 fuer Down-Latch
+                    var entry = HotkeyRegistry.LookupLetter(letter);
+                    if (entry is HotkeyRegistry.Entry e)
+                    {
+                        IntPtr terminalHwnd = _terminalWatcher.ActiveTerminalHwnd;
+                        IntPtr foreground = NativeMethods.Win32.GetForegroundWindow();
+                        bool terminalIsForeground = terminalHwnd != IntPtr.Zero
+                            && (foreground == terminalHwnd || IsWindowDescendantOf(foreground, terminalHwnd));
+
+                        if (terminalIsForeground)
+                        {
+                            if (isDown && !_promptLetterHotkeyDown[letterIdx])
+                            {
+                                _promptLetterHotkeyDown[letterIdx] = true;
+                                Console.WriteLine($"Hotkey: Win+Alt+{letter} — paste prompt ({e.EffectiveText.Length} chars)");
+                                Dispatcher.BeginInvoke(new Action(async () =>
+                                {
+                                    try
+                                    {
+                                        await TerminalController.PasteTextAsync(
+                                            e.EffectiveText,
+                                            _terminalWatcher.ActiveTerminalHwnd,
+                                            autoEnterEnabled);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"Prompt letter-hotkey paste failed: {ex.Message}");
+                                    }
+                                }));
+                                return new IntPtr(1);
+                            }
+                            if (isDown) return new IntPtr(1); // Auto-Repeat schlucken
+                            if (isUp) _promptLetterHotkeyDown[letterIdx] = false;
+                        }
+                    }
+                }
+                else if (isUp)
+                {
+                    // Sicherheitsnetz analog zum Number-Zweig.
+                    int letterIdx = (int)(vk - 0x41);
+                    if (letterIdx >= 0 && letterIdx <= 25)
+                        _promptLetterHotkeyDown[letterIdx] = false;
+                }
+            }
+
             return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
         }
 
@@ -3204,6 +3277,12 @@ namespace TerminalVoiceOverlay.Views
         /// laenger gedrueckt haelt.
         /// </summary>
         private readonly bool[] _promptHotkeyDown = new bool[10];
+
+        /// <summary>
+        /// Indices 0..25 = 'A'..'Z' fuer die Win+Alt+Buchstabe-Hotkeys.
+        /// Gleiche Auto-Repeat-Schutzlogik wie <see cref="_promptHotkeyDown"/>.
+        /// </summary>
+        private readonly bool[] _promptLetterHotkeyDown = new bool[26];
 
         /// <summary>
         /// Manche Terminal-Apps (Windows Terminal, VS Code Integrated

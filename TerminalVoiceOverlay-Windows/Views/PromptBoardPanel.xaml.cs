@@ -1518,6 +1518,7 @@ public partial class PromptBoardPanel : Window
         if (!_allPromptsCacheStaleDueToError)
         {
             var hotkeyEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
+            var letterEntries = new List<KeyValuePair<char, HotkeyRegistry.Entry>>();
             foreach (var p in _allPromptsCache)
             {
                 if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
@@ -1525,8 +1526,18 @@ public partial class PromptBoardPanel : Window
                     hotkeyEntries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
                         n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
                 }
+                if (p.HotkeyLetter is char l)
+                {
+                    char upper = char.ToUpperInvariant(l);
+                    if (upper >= 'A' && upper <= 'Z')
+                    {
+                        letterEntries.Add(new KeyValuePair<char, HotkeyRegistry.Entry>(
+                            upper, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
+                    }
+                }
             }
             HotkeyRegistry.Replace(hotkeyEntries);
+            HotkeyRegistry.ReplaceLetters(letterEntries);
         }
     }
 
@@ -1586,6 +1597,13 @@ public partial class PromptBoardPanel : Window
         if (prompt.HotkeyNumber is int hk && hk >= 1 && hk <= 9)
         {
             titleText += $" (Strg+{hk})";
+        }
+        // Zusaetzlich der Win+Alt+Buchstabe-Hotkey wenn gesetzt. Beide
+        // Klammern koennen gleichzeitig sichtbar sein, falls ein Prompt
+        // sowohl eine Nummer als auch einen Buchstaben hat.
+        if (prompt.HotkeyLetter is char hl && hl >= 'A' && hl <= 'Z')
+        {
+            titleText += $" (Win+Alt+{hl})";
         }
 
         // ── Title button (klick schaltet das gelbe Haekchen um) ──
@@ -1725,18 +1743,17 @@ public partial class PromptBoardPanel : Window
             }
         };
 
-        // ── Whole-row right-click → open editor (same effect as ✎) ──
-        // Right-click is NOT consumed by WPF Buttons by default. Instead of
-        // walking the visual tree (which would also exclude the insert label
-        // button — wrong), the 3 action buttons absorb their own right-click
-        // above. Anything that bubbles up here is a click on the label or
-        // the row background, both of which should open the editor.
-        row.MouseRightButtonUp += async (_, e) =>
-        {
-            if (e.Handled) return;
-            e.Handled = true;
-            await EditPromptAsync(prompt);
-        };
+        // ── Whole-row right-click → context menu (Hotkey-Auswahl + Edit) ──
+        // Frueher oeffnete der Rechtsklick direkt den Editor. Seit der
+        // Win+Alt+<Buchstabe>-Erweiterung zeigt er stattdessen ein
+        // Kontextmenue mit den Hotkey-Optionen UND der Edit-Option, damit
+        // Frank die A-Z-Belegung schnell per Maus zuweisen kann ohne den
+        // Edit-Dialog zu durchlaufen. WPF feuert das ContextMenu bei
+        // Rechtsklick automatisch — wir brauchen daher keinen eigenen
+        // MouseRightButtonUp-Handler mehr. Die 3 Action-Buttons absorbieren
+        // ihre eigenen Rechtsklicks weiter oben (damit ein Rechtsklick auf
+        // den Stift nicht zusaetzlich das ContextMenu oeffnet).
+        row.ContextMenu = BuildPromptContextMenu(prompt);
 
         // ── Drop-Target: Drag&Drop einer anderen Prompt-Zeile auf diese
         //    Zeile setzt die Reihenfolge neu. Position oben/unten am Cursor
@@ -2188,6 +2205,165 @@ public partial class PromptBoardPanel : Window
         }
     }
 
+    /// <summary>
+    /// Analog zu <see cref="StripHotkeyFromOthersAsync"/> aber fuer den
+    /// Buchstaben-Hotkey. Falls ein anderer Prompt bereits den gleichen
+    /// Buchstaben hatte, wird er stillschweigend uebernommen (last-wins),
+    /// damit die Eindeutigkeit erhalten bleibt.
+    /// </summary>
+    private static async Task StripHotkeyLetterFromOthersAsync(
+        IPromptRepository repo, char letter, Guid exceptId)
+    {
+        char upper = char.ToUpperInvariant(letter);
+        if (upper < 'A' || upper > 'Z') return;
+
+        var allPrompts = new List<Prompt>();
+        using (var scope = PromptBoardHost.Services.CreateScope())
+        {
+            var catRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            var cats = await catRepo.GetAllAsync();
+            var localRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+            foreach (var c in cats)
+                allPrompts.AddRange(await localRepo.GetByCategoryAsync(c.Id));
+        }
+
+        foreach (var other in allPrompts)
+        {
+            if (other.HotkeyLetter is not char ol) continue;
+            if (char.ToUpperInvariant(ol) != upper) continue;
+            if (other.Id == exceptId) continue;
+            other.HotkeyLetter = null;
+            await repo.UpdateAsync(other);
+        }
+    }
+
+    /// <summary>
+    /// Weist dem Prompt einen Win+Alt+&lt;letter&gt;-Hotkey zu. Falls bereits
+    /// ein anderer Prompt diesen Buchstaben hatte, wird dort die Bindung
+    /// entfernt (last-wins, identisch zur Number-Variante).
+    /// <paramref name="letter"/> = null entfernt die Bindung komplett.
+    /// </summary>
+    private async Task AssignHotkeyLetterAsync(Prompt prompt, char? letter)
+    {
+        try
+        {
+            char? upper = letter is char c ? char.ToUpperInvariant(c) : (char?)null;
+            if (upper is char u && (u < 'A' || u > 'Z')) upper = null;
+
+            using var scope = PromptBoardHost.Services.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+
+            // Erst die anderen freistellen, dann unsere eigene Bindung setzen.
+            // Reihenfolge wichtig: wenn der Benutzer sich selbst nochmal
+            // den gleichen Buchstaben zuweist, soll exceptId verhindern dass
+            // wir uns selber leer machen.
+            if (upper is char up)
+            {
+                await StripHotkeyLetterFromOthersAsync(repo, up, prompt.Id);
+            }
+
+            prompt.HotkeyLetter = upper;
+            await repo.UpdateAsync(prompt);
+            ScheduleAutoBackup();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Fehler beim Hotkey-Zuweisen",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Erzeugt das ContextMenu fuer eine Prompt-Zeile (Rechtsklick).
+    /// Inhalt: "Hotkey zuweisen" mit Untermenue A..Z, "Hotkey entfernen",
+    /// Separator, "Bearbeiten", "Loeschen". Wird bei jedem Render neu
+    /// aufgebaut damit "belegt durch Prompt X"-Marker aktuell bleiben.
+    /// </summary>
+    private ContextMenu BuildPromptContextMenu(Prompt prompt)
+    {
+        var menu = new ContextMenu();
+
+        // ── "Hotkey zuweisen" mit Untermenue A..Z ──
+        var assignItem = new MenuItem { Header = "Hotkey zuweisen (Win+Alt+…)" };
+
+        // Belegungs-Map vorberechnen: welcher Buchstabe gehoert welchem
+        // Prompt? Wenn ein anderer Prompt den Buchstaben schon hat, zeigen
+        // wir das im Submenue-Eintrag damit Frank sehen kann ob ein Klick
+        // die Bindung "stiehlt". O(N) ueber den Cache, was bei ~hunderten
+        // Prompts ohne Probleme passt.
+        var byLetter = new Dictionary<char, Prompt>();
+        foreach (var p in _allPromptsCache)
+        {
+            if (p.HotkeyLetter is char l)
+            {
+                char up = char.ToUpperInvariant(l);
+                if (up >= 'A' && up <= 'Z' && !byLetter.ContainsKey(up))
+                {
+                    byLetter[up] = p;
+                }
+            }
+        }
+
+        char? currentLetter = prompt.HotkeyLetter is char cl
+            ? char.ToUpperInvariant(cl)
+            : (char?)null;
+
+        for (char ch = 'A'; ch <= 'Z'; ch++)
+        {
+            string header;
+            if (byLetter.TryGetValue(ch, out var ownerPrompt) && ownerPrompt.Id != prompt.Id)
+            {
+                // Belegt von einem anderen Prompt — Label kuerzen damit das
+                // Submenue nicht ueberlaeuft.
+                string ownerLabel = ownerPrompt.ShortLabel ?? "";
+                if (ownerLabel.Length > 40) ownerLabel = ownerLabel.Substring(0, 40) + "…";
+                header = $"Win+Alt+{ch}   (belegt von: {ownerLabel})";
+            }
+            else
+            {
+                header = $"Win+Alt+{ch}";
+            }
+
+            var item = new MenuItem
+            {
+                Header = header,
+                IsCheckable = true,
+                IsChecked = currentLetter == ch,
+            };
+            // Lokale Kopie fuer den Closure — ohne diese Zeile wuerden alle
+            // Klicks immer auf das letzte ch ('Z') zeigen.
+            char captured = ch;
+            item.Click += async (_, _) => await AssignHotkeyLetterAsync(prompt, captured);
+            assignItem.Items.Add(item);
+        }
+        menu.Items.Add(assignItem);
+
+        // ── "Hotkey entfernen" — nur enabled wenn aktuell einer gesetzt ist ──
+        var removeItem = new MenuItem
+        {
+            Header = "Hotkey entfernen",
+            IsEnabled = currentLetter is not null,
+        };
+        removeItem.Click += async (_, _) => await AssignHotkeyLetterAsync(prompt, null);
+        menu.Items.Add(removeItem);
+
+        menu.Items.Add(new Separator());
+
+        // ── "Bearbeiten" — ersetzt das alte Direkt-Verhalten des Rechtsklicks ──
+        var editItem = new MenuItem { Header = "Bearbeiten…" };
+        editItem.Click += async (_, _) => await EditPromptAsync(prompt);
+        menu.Items.Add(editItem);
+
+        // ── "Loeschen" — analog zum Trash-Icon mit Bestaetigungsdialog ──
+        var deleteItem = new MenuItem { Header = "Loeschen" };
+        deleteItem.Click += async (_, _) => await DeletePromptAsync(prompt);
+        menu.Items.Add(deleteItem);
+
+        return menu;
+    }
+
     private async Task DeletePromptAsync(Prompt prompt)
     {
         if (!ConfirmDialog.Ask(this, "Prompt loeschen?",
@@ -2521,6 +2697,7 @@ public partial class PromptBoardPanel : Window
                 IsPostPrompt = p.IsPostPrompt,
                 SortOrder = p.SortOrder,
                 HotkeyNumber = p.HotkeyNumber,
+                HotkeyLetter = p.HotkeyLetter,
             }).ToList(),
             SeparatorTemplate = appSettings.SeparatorTemplate,
         };
@@ -2588,6 +2765,7 @@ public partial class PromptBoardPanel : Window
                 IsPostPrompt = p.IsPostPrompt,
                 SortOrder = p.SortOrder,
                 HotkeyNumber = p.HotkeyNumber,
+                HotkeyLetter = p.HotkeyLetter,
             };
             if (existingPromptIds.ContainsKey(p.Id))
                 await promptRepo.UpdateAsync(entity);
@@ -2741,5 +2919,8 @@ public partial class PromptBoardPanel : Window
         // carry this — JSON deserialization leaves the property at null,
         // exactly the same state as a freshly created prompt.
         public int? HotkeyNumber { get; set; }
+        // Win+Alt+<letter> hotkey ('A'..'Z'), null when unbound. Same
+        // backward-compatibility note as HotkeyNumber.
+        public char? HotkeyLetter { get; set; }
     }
 }

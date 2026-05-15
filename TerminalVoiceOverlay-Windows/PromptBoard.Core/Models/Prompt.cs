@@ -64,6 +64,17 @@ public class Prompt : BaseEntity
     public int? HotkeyNumber { get; set; }
 
     /// <summary>
+    /// Optional Win+Alt+&lt;letter&gt; hotkey (A-Z) that pastes this prompt
+    /// into the active terminal. Null when no hotkey is assigned.
+    /// Stored as upper-case ASCII char ('A'..'Z'). Same uniqueness rule
+    /// as <see cref="HotkeyNumber"/>: assigning a letter that another
+    /// prompt already owns silently transfers it (last-wins). Like the
+    /// number variant this is local-only and NOT included in the Drive
+    /// backup so each machine keeps its own bindings.
+    /// </summary>
+    public char? HotkeyLetter { get; set; }
+
+    /// <summary>
     /// Which Gemini meta-prompt produced the last ImprovedText. Lets the
     /// user see provenance and re-run against a different meta-prompt.
     /// </summary>

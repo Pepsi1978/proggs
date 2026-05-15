@@ -45,7 +45,12 @@ public sealed record PromptDto(
     // backup so a Drive auto-restore on launch doesn't wipe the user's
     // hotkey assignments. Null when an older backup that pre-dates this
     // feature is restored — same effect as never having set one.
-    int? HotkeyNumber = null);
+    int? HotkeyNumber = null,
+    // Optional Win+Alt+<letter> hotkey ('A'..'Z', or null for unbound).
+    // Same reasoning as HotkeyNumber: gets backed up so the Drive
+    // auto-restore on launch doesn't wipe the user's bindings. Null when
+    // an older backup that pre-dates this feature is restored.
+    char? HotkeyLetter = null);
 
 /// <summary>How a restore merges the incoming document with the existing data.</summary>
 public enum RestoreMode

@@ -121,6 +121,11 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const ushort VK_F9      = 0x78; // Hotkey: Strg+F9 oder Shift+F9 = PTT (kurze Kombi, keine Konflikte in CLIs)
         public const ushort VK_F11     = 0x7A; // Hotkey: Alt+F11 = Explorer am Release-Bundle-Pfad oeffnen
         public const ushort VK_F12     = 0x7B; // Hotkey: Alt+F12 = PTT (Alt+Wheel zoomt nicht, daher kein Zoom-Konflikt)
+        // Modifier keys for the Win+Alt+<letter> prompt hotkey branch in
+        // OverlayWindow's low-level keyboard hook. GetAsyncKeyState honours
+        // both left- and right-hand Win/Alt keys via VK_MENU/VK_LWIN/VK_RWIN.
+        public const ushort VK_LWIN    = 0x5B;
+        public const ushort VK_RWIN    = 0x5C;
 
         // ── Low-Level Keyboard Hook (fuer Push-to-Talk) ──
         // RegisterHotKey kann nur KeyDown — fuer Push-to-Talk brauchen wir

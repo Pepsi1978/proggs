@@ -101,6 +101,12 @@ public static class PromptBoardHost
             // unassigned, exactly as if no one had ever set one.
             EnsureHotkeyColumn();
 
+            // Win+Alt+<letter> prompt hotkeys (A-Z). Same idempotent ALTER
+            // pattern as HotkeyNumber. Adds the column + index to legacy
+            // SQLite files that pre-date this feature; first-run installs
+            // already have it from EnsureCreated.
+            EnsureHotkeyLetterColumn();
+
             // The AppSettingsRepository self-bootstraps the singleton
             // row on first GetAsync() call, so no explicit seeding here.
 
@@ -248,6 +254,25 @@ public static class PromptBoardHost
             // after EnsureCreated has already added the index.
             TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyNumber INTEGER NULL");
             TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyNumber ON Prompts (HotkeyNumber)");
+        }
+        catch
+        {
+            // First-run case: EF-Core EnsureCreated will have created
+            // the column from the model already. Never block startup.
+        }
+    }
+
+    private static void EnsureHotkeyLetterColumn()
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={DbPath}");
+            conn.Open();
+            // Nullable TEXT, one char (A-Z) per row. EF Core maps char? to
+            // TEXT in SQLite. Index for the low-level hook's per-keystroke
+            // lookup, same as HotkeyNumber.
+            TryRun(conn, "ALTER TABLE Prompts ADD COLUMN HotkeyLetter TEXT NULL");
+            TryRun(conn, "CREATE INDEX IF NOT EXISTS IX_Prompts_HotkeyLetter ON Prompts (HotkeyLetter)");
         }
         catch
         {

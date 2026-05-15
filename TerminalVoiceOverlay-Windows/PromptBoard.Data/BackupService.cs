@@ -225,7 +225,8 @@ public sealed class BackupService : IBackupService
             IsActiveForImprovement: active,
             CreatedAtUtc: p.CreatedAt,
             UpdatedAtUtc: p.UpdatedAt,
-            HotkeyNumber: p.HotkeyNumber);
+            HotkeyNumber: p.HotkeyNumber,
+            HotkeyLetter: p.HotkeyLetter);
     }
 
     private static Prompt FromDto(PromptDto p)
@@ -262,6 +263,7 @@ public sealed class BackupService : IBackupService
             SortOrder = p.SortOrder,
             ImprovedByAiPromptId = p.ImprovedByAiPromptId,
             HotkeyNumber = p.HotkeyNumber,
+            HotkeyLetter = p.HotkeyLetter,
             CreatedAt = p.CreatedAtUtc,
             UpdatedAt = p.UpdatedAtUtc,
         };

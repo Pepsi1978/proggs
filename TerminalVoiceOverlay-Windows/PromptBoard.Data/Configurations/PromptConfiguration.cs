@@ -30,9 +30,14 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
         // keyboard hook looks up "which prompt owns Strg+3?" on every
         // keydown — without the index that's a full table scan.
         b.Property(p => p.HotkeyNumber);
+        // Optional Win+Alt+<letter> hotkey ('A'..'Z'). Stored as a 1-char
+        // TEXT column for SQLite portability — EF maps char? to TEXT(1).
+        // Same indexing rationale as HotkeyNumber.
+        b.Property(p => p.HotkeyLetter).HasMaxLength(1);
 
         b.HasIndex(p => p.CategoryId);
         b.HasIndex(p => p.IsAlwaysOn);
         b.HasIndex(p => p.HotkeyNumber);
+        b.HasIndex(p => p.HotkeyLetter);
     }
 }
