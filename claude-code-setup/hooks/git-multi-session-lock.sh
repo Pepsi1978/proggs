@@ -45,9 +45,11 @@ hook_log_warn() { :; }
 # Perf-Loop 1: hook-log lazy-load NACH den skip-checks (95% der Aufrufe sind skip).
 # Wir laden es erst nach Pattern-Match wenn wir wirklich im write-path sind.
 
-# Perf-Loop 2: Stdin via bash builtin statt cat-Subprocess (spart ~5-10ms je Aufruf).
-# IFS='' + read -d '' liest bis EOF in eine Variable.
-IFS= read -r -d '' input < /dev/stdin 2>/dev/null
+# Debug-Loop 1: zurueck zu cat — bash 3.2 (macOS-Default) interpretiert
+# `read -d ''` anders als bash 4+ (liest nur bis newline statt bis NUL).
+# Bei multi-line JSON katastrophal. cat ist universal kompatibel.
+# Kosten: ~5-10ms Subprocess-Overhead je Aufruf (akzeptabel fuer Safety).
+input=$(cat 2>/dev/null || true)
 if [ -z "$input" ]; then exit 0; fi
 
 # Perf-Loop 2: Schneller grep-skip VOR python3-Parse. 95% der Aufrufe sind
@@ -179,14 +181,18 @@ except Exception:
     fi
 }
 
-# Self-Refresh: direct output redirect (truncates target).
-# Perf-Loop 1.2: temp+mv war redundant — own session, concurrent reads
-# anderer Sessions werden durch korrupt-cleanup (Schicht 2) abgedeckt.
-# Spart 1 file-op + 1 syscall (mv).
+# Self-Refresh: temp + atomic rename (mv ist atomar via rename(2) auf POSIX).
+# Debug-Loop 2 Fix: direct redirect `> target` truncate-on-open ist NICHT atomar
+# aus reader-Sicht — andere Sessions koennen partial content sehen, als korrupt
+# klassifizieren und unseren Lock LOESCHEN. mv (rename(2)) macht den target erst
+# nach komplettem temp-write sichtbar.
+# Direktive 3 Schicht 1 (Praevention) MUSS bleiben.
 write_lock_refresh() {
     local target="$1" session="$2" repo="$3" pid_val="$4" cmd_val="$5"
+    local tempfile
+    tempfile="${target}.tmp.$$.$RANDOM"
 
-    if printf '%s\t%s\t%s\t%s' "$session" "$repo" "$pid_val" "$cmd_val" | python3 -c "
+    if ! printf '%s\t%s\t%s\t%s' "$session" "$repo" "$pid_val" "$cmd_val" | python3 -c "
 import sys, json
 from datetime import datetime, timezone
 try:
@@ -204,10 +210,19 @@ try:
     print(json.dumps(data), end='')
 except Exception:
     sys.exit(1)
-" > "$target" 2>/dev/null; then
-        return 0
+" > "$tempfile" 2>/dev/null; then
+        rm -f "$tempfile" 2>/dev/null
+        return 1
     fi
-    return 1
+    if [ ! -s "$tempfile" ]; then
+        rm -f "$tempfile" 2>/dev/null
+        return 1
+    fi
+    mv -f "$tempfile" "$target" 2>/dev/null || {
+        rm -f "$tempfile" 2>/dev/null
+        return 1
+    }
+    return 0
 }
 
 # Liveness-Check: kill -0 sendet kein Signal, prueft nur Existenz + Permission.

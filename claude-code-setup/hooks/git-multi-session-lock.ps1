@@ -172,15 +172,20 @@ function Write-LockAtomic {
 
 function Write-LockOverwrite {
     param($path, $jsonContent, $utf8NoBom)
-    # Self-Refresh: WriteAllText single-syscall (FileMode.Create truncates+writes).
-    # Perf-Loop 1.2: Korrupt-Cleanup (Schicht 2 von Direktive 3) deckt einen
-    # partial-write-Crash bereits ab — temp+rename war redundant und doppelt so
-    # langsam. Bei Crash mitten in WriteAllText wird das leere File von der
-    # naechsten Session als korrupt erkannt + geloescht.
+    # Self-Refresh: temp + atomic File.Move (atomar auf NTFS via ReplaceFile/MoveFileEx).
+    # Debug-Loop 2 Fix: WriteAllText direkt hatte FileShare.Read — concurrent reader
+    # einer anderen Session konnte partial content sehen, als korrupt klassifizieren
+    # und unseren Lock LOESCHEN. Atomic-rename hat dieses Fenster nicht (target wird
+    # erst nach komplettem temp-write sichtbar).
+    # Direktive 3 Schicht 1 (Praevention) MUSS bleiben — Schicht 2 (Korrupt-Cleanup)
+    # allein ist nicht genug.
+    $tempPath = "$path.tmp.$PID.$(Get-Random)"
     try {
-        [System.IO.File]::WriteAllText($path, $jsonContent, $utf8NoBom)
+        [System.IO.File]::WriteAllText($tempPath, $jsonContent, $utf8NoBom)
+        [System.IO.File]::Move($tempPath, $path, $true)
         return $true
     } catch {
+        try { if ([System.IO.File]::Exists($tempPath)) { [System.IO.File]::Delete($tempPath) } } catch { }
         return $false
     }
 }
