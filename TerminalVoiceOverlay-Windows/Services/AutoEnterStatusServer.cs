@@ -65,11 +65,12 @@ namespace TerminalVoiceOverlay.Services
             }
             catch (Exception ex)
             {
-                // Port 5723 kann theoretisch von einer anderen App belegt sein.
-                // Wir blocken nicht den App-Start — der Server bleibt einfach
-                // aus, das Stream Deck Plugin kriegt dann beim Polling einen
-                // Connection-Refused und zeigt seinen "disconnected"-State.
-                Console.WriteLine($"AutoEnterStatusServer: konnte nicht starten ({ex.Message})");
+                // Port 5723 kann theoretisch von einer anderen App belegt sein,
+                // oder der HttpListener weigert sich aus Permission-Gruenden zu
+                // binden. Wir blocken nicht den App-Start — der Server bleibt
+                // einfach aus, das Stream Deck Plugin kriegt dann beim Polling
+                // einen Connection-Refused und zeigt seinen "offline"-State.
+                LogStartup($"START-FEHLER: {ex.GetType().Name}: {ex.Message}");
                 _listener = null;
                 return;
             }
@@ -80,7 +81,19 @@ namespace TerminalVoiceOverlay.Services
                 Name = "AutoEnterStatusServer",
             };
             _thread.Start();
-            Console.WriteLine($"AutoEnterStatusServer laeuft auf {ListenPrefix}");
+            LogStartup($"START-OK: laeuft auf {ListenPrefix}");
+        }
+
+        private static void LogStartup(string msg)
+        {
+            Console.WriteLine($"AutoEnterStatusServer: {msg}");
+            try
+            {
+                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
+                System.IO.File.AppendAllText(path,
+                    $"{DateTime.Now:HH:mm:ss.fff} HTTP-SERVER {msg}{Environment.NewLine}");
+            }
+            catch { /* never block startup */ }
         }
 
         private void Loop()
@@ -149,6 +162,29 @@ namespace TerminalVoiceOverlay.Services
                 // praktisch immer, ist visuell trotzdem instant.
                 Thread.Sleep(30);
                 WriteJsonState(ctx, _getCurrentState());
+                return;
+            }
+
+            if (path.Equals("/log", StringComparison.OrdinalIgnoreCase)
+                && ctx.Request.HttpMethod == "POST")
+            {
+                // Diagnose-Endpunkt fuer das Stream-Deck-Plugin (keine
+                // Filesystem-Rechte im Webview). Plugin POSTet eine Textzeile,
+                // wir haengen sie an TVO-hotkey.log an. Body wird einfach
+                // 1:1 uebernommen — kein JSON-Parsing.
+                string body;
+                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
+                {
+                    body = sr.ReadToEnd();
+                }
+                try
+                {
+                    string logPath = Path.Combine(Path.GetTempPath(), "TVO-hotkey.log");
+                    File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} PLUGIN {body}{Environment.NewLine}");
+                }
+                catch { /* ignore */ }
+                ctx.Response.StatusCode = 204;
+                ctx.Response.Close();
                 return;
             }
 

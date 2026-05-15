@@ -6,33 +6,26 @@
 // Richtung. Beide Seiten bleiben automatisch synchron — egal ob der User
 // im Overlay per Maus klickt oder die Stream-Deck-Taste drueckt.
 //
-// Kommunikation:
-//   - Plugin <-> Stream-Deck-Software: WebSocket (Elgato SDK v2)
-//   - Plugin <-> TVO:                  HTTP (127.0.0.1:5723)
-//
-// Plugin-Verhalten:
-//   * Pro action-Instanz wird beim "willAppear"-Event ein Polling-Loop
-//     gestartet: alle 500 ms wird GET /autoenter/status abgefragt, der
-//     Tastenzustand wird auf 0 (grau) oder 1 (orange) gesetzt.
-//   * Bei "keyDown" wird POST /autoenter/toggle geschickt. Der Server
-//     antwortet mit dem neuen Stand, den wir direkt zurueckschreiben —
-//     keine Wartezeit bis zum naechsten Poll.
-//   * "willDisappear" stoppt den Polling-Loop fuer die Instanz.
+// v2 (2026-05-15): Caching weg. Frueher cachte das Plugin den letzten
+// State und ueberspratzte gleiche-State-Updates — das fuehrte dazu dass
+// die Taste nur EINMAL korrekt ihre Farbe wechselte und dann nicht mehr.
+// Jetzt schickt jeder Poll-Tick ein setState/setTitle, Stream Deck
+// dedupliziert intern. Zusaetzlich POST /log fuer Diagnose.
 // ============================================================================
 
 const TVO_STATUS_URL = "http://127.0.0.1:5723/autoenter/status";
 const TVO_TOGGLE_URL = "http://127.0.0.1:5723/autoenter/toggle";
+const TVO_LOG_URL = "http://127.0.0.1:5723/log";
 const POLL_INTERVAL_MS = 500;
 
-// Wird von der Stream-Deck-Software beim Plugin-Start aufgerufen. Die
-// Parameter teilen uns den WebSocket-Port und die UUIDs mit.
 let websocket = null;
 let pluginUUID = null;
 let registerEvent = null;
 
-// Pro action-context (einzigartig pro Stream-Deck-Taste mit dieser Action)
-// halten wir den Polling-Timer und den zuletzt bekannten State.
-const actionContexts = new Map(); // context -> { timer, lastOn }
+// Pro action-context (eine pro Stream-Deck-Taste mit dieser Action)
+// halten wir den Polling-Timer. lastOn wurde absichtlich entfernt —
+// siehe Header-Kommentar.
+const actionContexts = new Map(); // context -> { timer }
 
 function connectElgatoStreamDeckSocket(
 	inPort,
@@ -46,13 +39,13 @@ function connectElgatoStreamDeckSocket(
 	websocket = new WebSocket("ws://127.0.0.1:" + inPort);
 
 	websocket.onopen = () => {
-		// Plugin bei der Stream-Deck-Software registrieren
 		websocket.send(
 			JSON.stringify({
 				event: inRegisterEvent,
 				uuid: inPluginUUID,
 			}),
 		);
+		log("WS open, registered as " + inPluginUUID);
 	};
 
 	websocket.onmessage = (msg) => {
@@ -67,17 +60,18 @@ function connectElgatoStreamDeckSocket(
 		const context = payload.context;
 
 		if (event === "willAppear") {
+			log("willAppear ctx=" + shortCtx(context));
 			startPolling(context);
 		} else if (event === "willDisappear") {
+			log("willDisappear ctx=" + shortCtx(context));
 			stopPolling(context);
 		} else if (event === "keyDown") {
+			log("keyDown ctx=" + shortCtx(context));
 			handleKeyDown(context);
 		}
 	};
 
 	websocket.onerror = (err) => {
-		// Nichts zu tun — Stream-Deck-Software macht den Reconnect alleine
-		// wenn sie unsere HTML-Seite neu laedt.
 		console.error("WebSocket error:", err);
 	};
 }
@@ -86,7 +80,7 @@ function startPolling(context) {
 	if (actionContexts.has(context)) {
 		stopPolling(context);
 	}
-	const state = { timer: null, lastOn: null };
+	const state = { timer: null };
 	actionContexts.set(context, state);
 
 	// Sofort einmal pollen, danach im Intervall
@@ -112,36 +106,44 @@ async function pollOnce(context) {
 		const data = await res.json();
 		applyState(context, !!data.on);
 	} catch (err) {
-		// TVO laeuft nicht oder Port belegt. Wir setzen die Taste auf
-		// State 0 (grau) und schreiben dezent "offline" in den Title,
-		// damit der User merkt dass das Plugin keine Verbindung hat.
 		applyState(context, false, "offline");
 	}
 }
 
+// Sendet IMMER ein setState + setTitle — kein Caching mehr. Stream Deck
+// dedupliziert intern und das spart uns die Bug-Klasse "lastOn ist
+// nicht mehr synchron mit dem echten Tastenzustand".
 function applyState(context, on, statusText) {
-	const state = actionContexts.get(context);
 	const desired = on ? 1 : 0;
-
-	// Nur senden wenn sich was geaendert hat — spart WebSocket-Traffic
-	// und vermeidet Flackern.
-	if (!state || state.lastOn !== on || statusText !== undefined) {
-		if (state) state.lastOn = on;
-		sendToStreamDeck({
-			event: "setState",
-			context: context,
-			payload: { state: desired },
-		});
-		sendToStreamDeck({
-			event: "setTitle",
-			context: context,
-			payload: {
-				title: statusText || "Auto-Enter",
-				target: 0, // hardware + software
-			},
-		});
+	sendToStreamDeck({
+		event: "setState",
+		context: context,
+		payload: { state: desired },
+	});
+	sendToStreamDeck({
+		event: "setTitle",
+		context: context,
+		payload: {
+			title: statusText || "Auto-Enter",
+			target: 0, // hardware + software
+		},
+	});
+	// Diagnose-Log — nur jeden 4. Aufruf damit das Log nicht zumuellt.
+	pollCounter++;
+	if (pollCounter % 4 === 0) {
+		log(
+			"applyState ctx=" +
+				shortCtx(context) +
+				" on=" +
+				on +
+				" desired=" +
+				desired +
+				(statusText ? " status=" + statusText : ""),
+		);
 	}
 }
+
+let pollCounter = 0;
 
 async function handleKeyDown(context) {
 	try {
@@ -151,10 +153,10 @@ async function handleKeyDown(context) {
 		});
 		if (!res.ok) throw new Error("HTTP " + res.status);
 		const data = await res.json();
+		log("toggle response on=" + data.on);
 		applyState(context, !!data.on);
 	} catch (err) {
-		// TVO antwortet nicht — kurze visuelle Rueckmeldung: showAlert
-		// (kleines gelbes Warndreieck auf der Taste).
+		log("toggle failed: " + err.message);
 		sendToStreamDeck({
 			event: "showAlert",
 			context: context,
@@ -165,5 +167,24 @@ async function handleKeyDown(context) {
 function sendToStreamDeck(message) {
 	if (websocket && websocket.readyState === WebSocket.OPEN) {
 		websocket.send(JSON.stringify(message));
+	}
+}
+
+function shortCtx(ctx) {
+	if (!ctx) return "?";
+	return ctx.length > 8 ? ctx.substring(0, 8) + ".." : ctx;
+}
+
+// Schreibt eine Zeile nach TVO-hotkey.log via Plugin-Diagnose-Endpunkt.
+// Fire-and-forget, niemals blockieren.
+function log(message) {
+	try {
+		fetch(TVO_LOG_URL, {
+			method: "POST",
+			body: message,
+			cache: "no-store",
+		}).catch(() => {});
+	} catch {
+		/* ignore */
 	}
 }
