@@ -1764,7 +1764,7 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
             else ->
                 if (verbose) entropyAnalysisSystemPromptVerbose else entropyAnalysisSystemPrompt
         }
-        return base + "\n\n" + Constants.NO_EM_DASH_RULE
+        return base + "\n\n" + Constants.NO_EM_DASH_RULE + "\n\n" + Constants.NO_DATES_RULE
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
@@ -2031,7 +2031,11 @@ AUSGABEFORMAT:
 - Keine Markdown-Backticks, kein Text davor/danach.
 - Beginne direkt mit [ und ende mit ].
                 """
-                    .trimIndent() + "\n\n" + Constants.NO_EM_DASH_RULE
+                    .trimIndent() +
+                    "\n\n" +
+                    Constants.NO_EM_DASH_RULE +
+                    "\n\n" +
+                    Constants.NO_DATES_RULE
 
             val rerankUserText = buildString {
                 appendLine("=== PROFIL-FOKUS DES BENUTZERS ===")

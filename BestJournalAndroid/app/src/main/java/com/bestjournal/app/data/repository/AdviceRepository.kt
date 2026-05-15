@@ -77,8 +77,19 @@ constructor(
         return "$prompt\n\n$instruction"
     }
 
+    /**
+     * Frank-Wunsch 2026-05-15: Haengt die Anti-Datums-Regel an jeden System-Prompt
+     * an. Damit erscheinen in den sichtbaren Textfeldern (erklaerung, beschreibung,
+     * zusammenfassung, gesamtanalyse) keine "3.4."/"23.04."-Verweise mehr, weil
+     * die das TTS-Vorlesen stören und den Erkenntnisfluss brechen.
+     */
+    private fun appendNoDatesRule(prompt: String): String {
+        val rule = context.getString(R.string.ai_prompt_no_dates_rule)
+        return "$prompt\n\n$rule"
+    }
+
     private fun finalizePrompt(prompt: String): String =
-        appendResponseLanguageInstruction(localizeSchemaKeys(prompt))
+        appendNoDatesRule(appendResponseLanguageInstruction(localizeSchemaKeys(prompt)))
 
     /** Entropy analysis prompt — fully localized via string resources. */
     private fun buildEntropyAnalysisSystemPrompt(): String {

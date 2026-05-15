@@ -252,6 +252,36 @@ object Constants {
             "wenn keine natuerlichere Formulierung moeglich ist."
 
     /**
+     * Frank-Wunsch 2026-05-15: TTS-Vorlesefreundliche Formulierung. Die Texte in den
+     * Detail-Dialogen werden ueber den orangen Lautsprecher vorgelesen — Datumsangaben
+     * im Format "3.4." oder "23.04." stoeren das Vorlese-Erlebnis. Diese Regel wird an
+     * alle Dashboard-System-Prompts angehaengt.
+     */
+    const val NO_DATES_RULE =
+        "TTS-VORLESEFREUNDLICH (PFLICHT — DATUMS-VERBOT IN SICHTBAREN TEXTEN):\n" +
+            "In ALLEN sichtbaren Textfeldern (beschreibung, erklaerung, " +
+            "zusammenfassung, gesamtanalyse) DARFST DU KEINE Datumsangaben " +
+            "verwenden — weder \"3.4.\", \"23.04.\", \"28.4.\", \"24.04.\", " +
+            "\"30.4.\" noch \"Eintrag vom 3. April\", \"am 23.04.\", " +
+            "\"vom 28.4.\" oder aehnliche Verweise auf konkrete Eintragsdaten. " +
+            "Diese Texte werden dem Nutzer vorgelesen — Datumsketten klingen " +
+            "vorgelesen unnatuerlich und brechen den Erkenntnisfluss.\n\n" +
+            "FORMULIERE STATTDESSEN DIE REINE ERKENNTNIS:\n" +
+            "- FALSCH: \"Eintraege vom 3.4., 28.4. und 23.4. belegen, dass dein " +
+            "Biorhythmus durch spaete Schlafzeiten leidet.\"\n" +
+            "- RICHTIG: \"Spaete Schlafzeiten zerstoeren deinen Biorhythmus systematisch.\"\n" +
+            "- FALSCH: \"Eintrag vom 30. verbindet deine Borreliose direkt mit dem Mangel an Sport.\"\n" +
+            "- RICHTIG: \"Deine Borreliose haengt direkt mit dem Bewegungsmangel zusammen.\"\n" +
+            "- FALSCH: \"Laufen ist der Schluessel zur mentalen Klarheit, die du bei den " +
+            "Intervalllaeufen am 24.04. gespuert hast.\"\n" +
+            "- RICHTIG: \"Laufen ist der Schluessel zur mentalen Klarheit, die du beim " +
+            "Intervalltraining spuerst.\"\n\n" +
+            "Die inhaltliche Erkenntnis bleibt — nur die konkreten Datumsverweise fallen weg. " +
+            "Du kannst weiterhin allgemeine zeitliche Bezuege nutzen (\"wiederkehrend\", " +
+            "\"zuletzt\", \"ueber mehrere Tage\"). Datumsangaben gehoeren NUR in das " +
+            "\"herleitung\"-Feld (Provenienz, wird intern verwendet, nicht angezeigt)."
+
+    /**
      * Verbose-Mode-Suffix fuer Dashboard-Analyseprompts. Aktiviert wenn der Schalter
      * "Laengere Version" in den Einstellungen an ist. Das Profil-Prompt und die
      * Sortierung bleiben identisch, nur die Ausfuehrlichkeit wird erhoeht.
