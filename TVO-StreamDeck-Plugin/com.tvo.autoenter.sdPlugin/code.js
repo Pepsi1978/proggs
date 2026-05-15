@@ -240,7 +240,12 @@ async function pollOnce(context) {
 function applyStateIfChanged(context, on, statusText) {
 	const state = actionContexts.get(context);
 	if (!state) return;
-	if (state.lastOn === on && !statusText) return;
+	// v1.0.4: DEDUP entfernt. Wir senden bei JEDEM Poll setState, auch wenn
+	// state.lastOn unveraendert ist. Grund: wenn die Stream-Deck-Software
+	// aus irgendeinem Grund den State visuell falsch zeigt (z.B. weil ein
+	// frueher Plugin-Reload sie aus dem Sync gebracht hat), korrigiert der
+	// naechste Poll-Tick (max 700 ms spaeter) das automatisch. Mit Dedup
+	// blieb das Display in solchen Faellen dauerhaft falsch.
 	state.lastOn = on;
 	sendSetState(context, on, statusText);
 }
@@ -271,11 +276,17 @@ function sendSetState(context, on, statusText) {
 		context: context,
 		payload: { state: desired },
 	});
-	sendToStreamDeck({
-		event: "setTitle",
-		context: context,
-		payload: { title: statusText || "", target: 0 },
-	});
+	// v1.0.4: setTitle nur bei Status-Text (z.B. "offline"). Vorher haben wir
+	// bei jedem setState einen leeren Title gesendet — das ueberschreibt
+	// den Title den der Benutzer im Editor selbst gesetzt hat. Jetzt bleibt
+	// Frank's Custom-Title erhalten.
+	if (statusText) {
+		sendToStreamDeck({
+			event: "setTitle",
+			context: context,
+			payload: { title: statusText, target: 0 },
+		});
+	}
 }
 
 async function handleKeyDown(context) {
