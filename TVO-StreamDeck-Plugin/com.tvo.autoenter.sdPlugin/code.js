@@ -32,7 +32,10 @@ const POLL_INTERVAL_MS = 700;
 const WS_RECONNECT_DELAY_MS = 1000;
 const TOGGLE_PAUSE_MS = 800;
 const GHOST_CONTEXT_TIMEOUT_MS = 5000;
-const KEY_DEBOUNCE_MS = 250;
+// Hardware-Bouncing tritt typisch in <50 ms auf. 75 ms faengt das ab,
+// laesst aber jeden bewussten menschlichen Klick durch (auch schnellstes
+// Hin-und-Her bei 5-7 Klicks/Sekunde = 140-200 ms Abstand).
+const KEY_DEBOUNCE_MS = 75;
 const HEARTBEAT_INTERVAL_MS = 5000;
 
 let websocket = null;
