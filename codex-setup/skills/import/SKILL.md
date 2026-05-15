@@ -32,7 +32,7 @@ Never overwrite another CLI's private setup when importing into Codex or Gemini.
 |-------------|---------------------|
 | `codex` | `~/.codex/`, `codex-harness/`, `AGENTS.md` |
 | `codex` | `~/.codex/`, `codex-setup/`, `AGENTS.md`, Codex-owned memory and scripts |
-| `gemini` | local Gemini config, `Gemini-Setup/`, `GEMINI.md`, Gemini-owned memory and scripts |
+| `gemini` | local Gemini config, `gemini-setup/`, `GEMINI.md`, Gemini-owned memory and scripts |
 
 Same CLI on another platform:
 - mirror 1:1
@@ -59,7 +59,7 @@ Map the platform:
 Determine the CLI:
 - Codex runtime or `.claude` ownership -> `cli=codex`
 - Codex runtime or `codex-setup` ownership -> `cli=codex`
-- Gemini runtime or `Gemini-Setup` ownership -> `cli=gemini`
+- Gemini runtime or `gemini-setup` ownership -> `cli=gemini`
 
 Your exact platform key is:
 `{platform}/{cli}`

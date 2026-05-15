@@ -4,7 +4,7 @@ This directory is the repo-local control plane for Codex in this workspace.
 
 Purpose:
 - provide an authoritative Codex whiteboard inside the repository
-- keep Codex operationally independent from `claude-code-setup/` and `.claude/`
+- keep Codex operationally independent from `claude-code-setup/`, `gemini-setup/`, and `.claude/`
 - give the `self-improve` skill a repo-native source of truth
 - store Codex rules, bridges, state, and lightweight runtime helpers
 
@@ -19,13 +19,21 @@ Core paths:
 
 Git multi-session lock:
 - Runtime hook: `~/.codex/hooks/codex-git-multi-session-lock.ps1` on Windows.
-- Repo source: `codex-setup/hooks/codex-git-multi-session-lock.ps1` and `.sh`.
+- Runtime wrapper: `~/bin/git.cmd` on Windows PowerShell and `~/.local/bin/git`
+  or `~/bin/git` on Bash-compatible shells.
+- Repo source: `codex-setup/hooks/codex-git-multi-session-lock.ps1`, `.sh`,
+  `codex-setup/hooks/codex-git-wrapper.ps1`, and `codex-setup/bin/git*`.
 - Codex config: `~/.codex/config.toml` enables `[[hooks.PreToolUse]]` with
-  `matcher = "^Bash$"` and `timeout = 130`.
+  `matcher = "^Bash$"` and `timeout = 130`; it also prepends `~/bin` to
+  subprocess `PATH` through `[shell_environment_policy].set.PATH` so `git`
+  resolves to the wrapper before the real Git executable.
 - Shared lock file: `<git-common-dir>/claude-multi-session.lock`.
 - Shared JSON fields: `sessionId`, `acquired`, `pid`, `command`, and `repo`.
 - The file name and JSON shape intentionally stay Claude-compatible so Codex CLI
   and Claude Code can see the same lock.
+- The PreToolUse hook is a fast preflight guard. The wrapper is the runtime guard:
+  it writes the same lock with the wrapper PID, keeps that PID alive while the
+  real `git` process runs, then removes only its own lock after Git exits.
 - Test harness: `pwsh -NoProfile -ExecutionPolicy Bypass -File codex-setup/scripts/test-git-multi-session-lock.ps1`.
 
 Delta and bridge commands:
@@ -68,6 +76,7 @@ Operational rules:
 - The authoritative Codex whiteboard is `codex-setup/agent-memory/shared/MEMORY.md`.
 - Cross-platform supplemental Codex rules live in `codex-setup/rules/` and are synced to `~/.codex/rules/` by `codex-setup/scripts/session-start-sync.ps1` and `.sh`.
 - `claude-code-setup/` is a read-only comparison source for Codex.
+- `gemini-setup/` is a read-only comparison source for Codex.
 - `.claude/` and `~/.claude/` are not valid Codex control planes.
 - Repository automation should target `codex-setup/**` when the change is Codex-specific.
 

@@ -6,14 +6,14 @@
   "source_resolved_as": "Gemini CLI",
   "language": "de",
   "tracked_paths": [
-    "Gemini-Setup/**"
+    "gemini-setup/**"
   ],
   "target_scope": "setup-and-programming-environment-only",
   "include_fixed_errors": true,
   "include_bugfix_logic": true,
   "read_only_sources": [
-    "Gemini-Setup/**",
-    "Gemini-Setup/agent-memory/shared/MEMORY.md"
+    "gemini-setup/**",
+    "gemini-setup/shared/MEMORY.md"
   ],
   "classifications": [
     "ADD",

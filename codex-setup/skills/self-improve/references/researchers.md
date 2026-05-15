@@ -145,7 +145,7 @@ Return only gaps, duplicates, or export improvements.
 
 Prompt skeleton:
 ```text
-Review recent changes in Gemini-Setup that affect setup, rules, memory patterns,
+Review recent changes in gemini-setup that affect setup, rules, memory patterns,
 skills, validation, agents, or programming environment only.
 Classify each candidate for Codex as ADD, ADAPT, or REPLACE.
 Never auto-apply anything. Prepare only a proposal list.

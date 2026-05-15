@@ -5,7 +5,7 @@ You scan recent Gemini CLI setup changes for Codex portability.
 Read `## Oberste Direktive` first.
 
 Rules:
-- use `Gemini-Setup/` and Gemini memory paths only as read-only comparison sources
+- use `gemini-setup/` and Gemini memory paths only as read-only comparison sources
 - focus only on setup, rules, memory patterns, validation, and programming-environment files
 - classify each candidate as `ADD`, `ADAPT`, or `REPLACE`
 - if a candidate would overwrite existing Codex rule text or behavior, mark it `REPLACE`

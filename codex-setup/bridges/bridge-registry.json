@@ -20,8 +20,8 @@
       "status": "registered"
     },
     "Gemini CLI": {
-      "repo_path": "Gemini-Setup/bridges/bridge-registry.json",
-      "github_url": "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/bridges/bridge-registry.json",
+      "repo_path": "gemini-setup/bridges/bridge-registry.json",
+      "github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/bridges/bridge-registry.json",
       "write_policy": "read-only-from-codex",
       "status": "registered-if-present"
     }
@@ -57,12 +57,12 @@
     "gemini-delta": {
       "source_label": "Gemini CLI",
       "source_paths": [
-        "Gemini-Setup/**",
-        "Gemini-Setup/agent-memory/shared/MEMORY.md",
-        "Gemini-Setup/state/implemented-intelligence-suggestions.json"
+        "gemini-setup/**",
+        "gemini-setup/shared/MEMORY.md",
+        "gemini-setup/state/implemented-intelligence-suggestions.json"
       ],
       "audit_git_paths": [
-        "Gemini-Setup"
+        "gemini-setup"
       ],
       "bridge_files": [
         "codex-setup/bridges/gemini-delta-bridge.md",
@@ -77,7 +77,7 @@
         "was kann Codex von Gemini CLI lernen"
       ],
       "audit_title": "Gemini CLI Delta Audit für Codex",
-      "no_delta_message": "Keine neuen portablen Gemini-Setup-Deltas seit dem Basisstand."
+      "no_delta_message": "Keine neuen portablen gemini-setup-Deltas seit dem Basisstand."
     }
   },
   "bootstrap_artifacts": {
@@ -104,12 +104,12 @@
     },
     "Gemini CLI": {
       "expected_repo_scripts": [
-        "Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
-        "Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+        "gemini-setup/scripts/bootstrap-gemini-setup.sh",
+        "gemini-setup/scripts/bootstrap-gemini-setup.ps1"
       ],
       "expected_github_urls": [
-        "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
-        "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+        "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.sh",
+        "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.ps1"
       ],
       "write_policy": "read-only-from-codex",
       "status": "awaiting-foreign-registration"
@@ -169,7 +169,7 @@
     "codex_suggestions": "codex-setup/state/implemented-intelligence-suggestions.json",
     "claude_code_fixes": "claude-code-setup/environment-fixes.md",
     "claude_code_suggestions": "claude-code-setup/state/implemented-intelligence-suggestions.json",
-    "gemini_fixes": "Gemini-Setup/agent-memory/shared/MEMORY.md",
-    "gemini_suggestions": "Gemini-Setup/state/implemented-intelligence-suggestions.json"
+    "gemini_fixes": "gemini-setup/shared/MEMORY.md",
+    "gemini_suggestions": "gemini-setup/state/implemented-intelligence-suggestions.json"
   }
 }

@@ -42,8 +42,8 @@
       "status": "registered"
     },
     "Gemini CLI": {
-      "expected_repo_path": "Gemini-Setup/state/implemented-intelligence-suggestions.json",
-      "expected_github_url": "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/state/implemented-intelligence-suggestions.json",
+      "expected_repo_path": "gemini-setup/state/implemented-intelligence-suggestions.json",
+      "expected_github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/state/implemented-intelligence-suggestions.json",
       "write_policy": "read-only-from-codex",
       "status": "awaiting-foreign-registration"
     }

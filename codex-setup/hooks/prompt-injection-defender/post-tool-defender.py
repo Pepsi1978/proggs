@@ -42,7 +42,7 @@ TRUSTED_PATH_PREFIXES = [
     # Our setup repo
     "codex-harness/",
     "codex-setup/",
-    "Gemini-Setup/",
+    "gemini-setup/",
     # Common config files
     "AGENTS.md",
     "package.json",

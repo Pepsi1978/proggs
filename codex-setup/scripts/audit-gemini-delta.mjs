@@ -110,24 +110,28 @@ function getLatestRelevantCommit() {
 	});
 }
 
+const GEMINI_SETUP_PREFIX = "gemini-setup/";
+
 function isPortableSourcePath(sourcePath) {
 	if (sourcePath === "GEMINI.md") return true;
-	if (!sourcePath.startsWith("Gemini-Setup/")) return false;
+	if (!sourcePath.startsWith(GEMINI_SETUP_PREFIX)) return false;
 
 	return (
-		sourcePath === "Gemini-Setup/agent-memory/shared/MEMORY.md" ||
-		sourcePath ===
-			"Gemini-Setup/state/implemented-intelligence-suggestions.json" ||
-		/^Gemini-Setup\/rules\/.+\.md$/u.test(sourcePath) ||
-		/^Gemini-Setup\/agents\/.+\.md$/u.test(sourcePath) ||
-		/^Gemini-Setup\/commands\/.+/u.test(sourcePath) ||
-		/^Gemini-Setup\/hooks\/.+/u.test(sourcePath) ||
-		/^Gemini-Setup\/skills\/.+/u.test(sourcePath) ||
-		/^Gemini-Setup\/scripts\/.+/u.test(sourcePath) ||
-		/^Gemini-Setup\/mcp-.+\.json$/u.test(sourcePath) ||
-		/^Gemini-Setup\/settings.*\.json$/u.test(sourcePath) ||
-		sourcePath === "Gemini-Setup/manifest.json" ||
-		sourcePath === "Gemini-Setup/README.md"
+		sourcePath === "gemini-setup/shared/MEMORY.md" ||
+		sourcePath === "gemini-setup/agent-memory/shared/MEMORY.md" ||
+		sourcePath === "gemini-setup/state/implemented-intelligence-suggestions.json" ||
+		/^gemini-setup\/archive\/rules\/.+\.md$/u.test(sourcePath) ||
+		/^gemini-setup\/rules\/.+\.md$/u.test(sourcePath) ||
+		/^gemini-setup\/agents\/.+\.md$/u.test(sourcePath) ||
+		/^gemini-setup\/commands\/.+/u.test(sourcePath) ||
+		/^gemini-setup\/hooks\/.+/u.test(sourcePath) ||
+		/^gemini-setup\/skills\/.+/u.test(sourcePath) ||
+		/^gemini-setup\/scripts\/.+/u.test(sourcePath) ||
+		/^gemini-setup\/mcp-.+\.json$/u.test(sourcePath) ||
+		/^gemini-setup\/settings.*\.json$/u.test(sourcePath) ||
+		sourcePath === "gemini-setup/manifest.json" ||
+		sourcePath === "gemini-setup/PORTING-LIST.md" ||
+		sourcePath === "gemini-setup/README.md"
 	);
 }
 
@@ -142,14 +146,20 @@ function classifyPath(sourcePath) {
 	const filename = path.posix.basename(sourcePath);
 	const basename = filename.replace(/\.[^.]+$/u, "");
 
-	if (/^Gemini-Setup\/rules\/.+\.md$/u.test(sourcePath)) {
+	if (
+		/^gemini-setup\/rules\/.+\.md$/u.test(sourcePath) ||
+		/^gemini-setup\/archive\/rules\/.+\.md$/u.test(sourcePath)
+	) {
 		return {
 			category: "rule",
 			target_hints: [`codex-setup/rules/${basename}.md`],
 		};
 	}
 
-	if (sourcePath === "Gemini-Setup/agent-memory/shared/MEMORY.md") {
+	if (
+		sourcePath === "gemini-setup/shared/MEMORY.md" ||
+		sourcePath === "gemini-setup/agent-memory/shared/MEMORY.md"
+	) {
 		return {
 			category: "memory-pattern",
 			target_hints: [
@@ -163,7 +173,7 @@ function classifyPath(sourcePath) {
 
 	if (
 		sourcePath ===
-		"Gemini-Setup/state/implemented-intelligence-suggestions.json"
+		"gemini-setup/state/implemented-intelligence-suggestions.json"
 	) {
 		return {
 			category: "implemented-intelligence-ledger",
@@ -175,14 +185,14 @@ function classifyPath(sourcePath) {
 		};
 	}
 
-	if (/^Gemini-Setup\/agents\/.+\.md$/u.test(sourcePath)) {
+	if (/^gemini-setup\/agents\/.+\.md$/u.test(sourcePath)) {
 		return {
 			category: "agent",
 			target_hints: [`codex-setup/agents/${filename}`],
 		};
 	}
 
-	if (/^Gemini-Setup\/commands\//u.test(sourcePath)) {
+	if (/^gemini-setup\/commands\//u.test(sourcePath)) {
 		return {
 			category: "command",
 			target_hints: [
@@ -192,21 +202,21 @@ function classifyPath(sourcePath) {
 		};
 	}
 
-	if (/^Gemini-Setup\/hooks\//u.test(sourcePath)) {
+	if (/^gemini-setup\/hooks\//u.test(sourcePath)) {
 		return {
 			category: "hook",
 			target_hints: ["codex-setup/scripts/", "AGENTS.md"],
 		};
 	}
 
-	if (/^Gemini-Setup\/skills\//u.test(sourcePath)) {
+	if (/^gemini-setup\/skills\//u.test(sourcePath)) {
 		return {
 			category: "skill",
 			target_hints: ["codex-setup/skills/", "AGENTS.md"],
 		};
 	}
 
-	if (/^Gemini-Setup\/scripts\//u.test(sourcePath)) {
+	if (/^gemini-setup\/scripts\//u.test(sourcePath)) {
 		return {
 			category: "script",
 			target_hints: ["codex-setup/scripts/"],
@@ -214,9 +224,9 @@ function classifyPath(sourcePath) {
 	}
 
 	if (
-		/^Gemini-Setup\/settings.*\.json$/u.test(sourcePath) ||
-		/^Gemini-Setup\/mcp-.+\.json$/u.test(sourcePath) ||
-		sourcePath === "Gemini-Setup/manifest.json"
+		/^gemini-setup\/settings.*\.json$/u.test(sourcePath) ||
+		/^gemini-setup\/mcp-.+\.json$/u.test(sourcePath) ||
+		sourcePath === "gemini-setup/manifest.json"
 	) {
 		return {
 			category: "environment-config",

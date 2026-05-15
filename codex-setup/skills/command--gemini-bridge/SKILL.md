@@ -10,12 +10,12 @@ Aenderungen in die Codex Umgebung.
 
 ## Ablauf
 
-1. Lies `~/.codex/state/gemini-delta-state.json` fuer den letzten geprueften Commit
-2. Fuehre aus: `cd ~/prompts:proggs && git log --oneline <last_commit>..HEAD -- Gemini-Setup/`
+1. Lies `codex-setup/state/gemini-delta-state.json` fuer den letzten geprueften Commit
+2. Fuehre aus: `cd ~/prompts:proggs && git log --oneline <last_commit>..HEAD -- gemini-setup/`
 3. Wenn keine neuen Commits: "Kein Delta seit letztem Check." melden und beenden
 4. Geaenderte Dateien lesen — NUR umgebungsbezogene Aenderungen betrachten
-5. `Gemini-Setup/agent-memory/shared/MEMORY.md` auf neue Erkenntnisse und Fehler-Fixes pruefen
-6. `Gemini-Setup/rules/global.md` auf neue Regeln pruefen
+5. `gemini-setup/shared/MEMORY.md` auf neue Erkenntnisse und Fehler-Fixes pruefen
+6. `gemini-setup/rules/*.md` und `gemini-setup/archive/rules/*.md` auf neue Regeln pruefen, falls diese Pfade existieren
 7. Jeden Kandidaten klassifizieren und als strukturierte Liste praesentieren
 
 ## Klassifikation
@@ -36,6 +36,6 @@ Pro Punkt: Klasse, Quelle, Ziel, Grund, Empfehlung, Bugfix-Signal (ja/nein)
 
 ## Sicherheitsregeln
 
-- NUR READ-ONLY Zugriff auf Gemini-Setup/ — NIEMALS dort schreiben
+- NUR READ-ONLY Zugriff auf `gemini-setup/` — NIEMALS dort schreiben
 - Portierte Regeln gelten erst nach 5 Anwendungen als robust
-- Nach Benutzer-Approval: `gemini-delta-state.json` und `codex-harness/state/gemini-delta-state.json` aktualisieren
+- Nach Benutzer-Approval: `codex-setup/state/gemini-delta-state.json` aktualisieren

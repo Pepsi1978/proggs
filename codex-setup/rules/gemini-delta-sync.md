@@ -8,6 +8,6 @@ Classification:
 - `REPLACE`: would replace existing Codex behavior and therefore requires explicit approval
 
 Rules:
-- never write into `Gemini-Setup/`
+- never write into `gemini-setup/`
 - prefer additive Codex integration over replacement
 - report grouped proposals before any implementation that would replace Codex behavior

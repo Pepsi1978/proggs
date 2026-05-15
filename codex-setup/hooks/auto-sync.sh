@@ -113,7 +113,7 @@ fi
 
 # C2 (ported from Gemini): Write cross-CLI delta summary to whiteboard after pull
 codex_changes=$(git log --oneline "$local_sha..$remote_sha" -- codex-setup/ 2>/dev/null | wc -l | tr -d ' ')
-gemini_changes=$(git log --oneline "$local_sha..$remote_sha" -- Gemini-Setup/ 2>/dev/null | wc -l | tr -d ' ')
+gemini_changes=$(git log --oneline "$local_sha..$remote_sha" -- gemini-setup/ 2>/dev/null | wc -l | tr -d ' ')
 if [ "$codex_changes" -gt 0 ] 2>/dev/null || [ "$gemini_changes" -gt 0 ] 2>/dev/null; then
     cli_parts=""
     [ "$codex_changes" -gt 0 ] 2>/dev/null && cli_parts="Codex($codex_changes)"

@@ -33,7 +33,7 @@ ported_ids=$(cat "$LEDGER_FILE" 2>/dev/null)
 
 # Define partner porting lists
 partners=(
-    "Gemini:$REPO_ROOT/Gemini-Setup/PORTING-LIST.md"
+    "Gemini:$REPO_ROOT/gemini-setup/PORTING-LIST.md"
     "Codex:$REPO_ROOT/codex-setup/PORTING-LIST.md"
 )
 

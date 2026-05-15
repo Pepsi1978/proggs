@@ -8,7 +8,7 @@ Use this reference under the whiteboard's `## Oberste Direktive` when the user a
 
 ## Mandatory Guardrails
 
-- treat `Gemini-Setup/` and Gemini memory paths as read-only comparison sources
+- treat `gemini-setup/` and Gemini memory paths as read-only comparison sources
 - never write, delete, or reorganize files there from a Codex self-improve run
 - write only into `codex-setup/`, `AGENTS.md`, or Codex validation files when needed
 - run `codex-setup/scripts/audit-gemini-delta.*` before proposing any Gemini-side port

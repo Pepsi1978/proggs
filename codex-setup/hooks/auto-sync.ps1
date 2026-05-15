@@ -102,7 +102,7 @@ if ($behind -gt 0) {
 # This makes incoming changes visible for /self-improve and future sessions
 try {
     $codexChanges = git log --oneline "$local..$remote" -- codex-setup/ 2>$null | Measure-Object | Select-Object -ExpandProperty Count
-    $geminiChanges = git log --oneline "$local..$remote" -- Gemini-Setup/ 2>$null | Measure-Object | Select-Object -ExpandProperty Count
+    $geminiChanges = git log --oneline "$local..$remote" -- gemini-setup/ 2>$null | Measure-Object | Select-Object -ExpandProperty Count
     if ($codexChanges -gt 0 -or $geminiChanges -gt 0) {
         $parts = @()
         if ($codexChanges -gt 0) { $parts += "Codex($codexChanges)" }

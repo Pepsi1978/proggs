@@ -36,7 +36,7 @@ $portedIds = @($ledger.ported)
 
 # Define partner porting lists
 $partners = @(
-    @{ name = "Gemini"; path = Join-Path $RepoRoot "Gemini-Setup" "PORTING-LIST.md" },
+    @{ name = "Gemini"; path = Join-Path $RepoRoot "gemini-setup" "PORTING-LIST.md" },
     @{ name = "Codex"; path = Join-Path $RepoRoot "codex-setup" "PORTING-LIST.md" }
 )
 

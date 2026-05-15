@@ -3,12 +3,12 @@
 
 # Gemini CLI Delta Bridge (für Codex)
 
-Diese Brücke erlaubt Codex, Gemini-Setup-Deltas nur lesend zu prüfen und sinnvolle Muster Codex-native zu übernehmen.
+Diese Brücke erlaubt Codex, `gemini-setup/`-Deltas nur lesend zu prüfen und sinnvolle Muster Codex-native zu übernehmen.
 
 Read-only Quellen:
 
-- `Gemini-Setup/**`
-- `Gemini-Setup/agent-memory/shared/MEMORY.md`
-- `Gemini-Setup/state/implemented-intelligence-suggestions.json`
+- `gemini-setup/**`
+- `gemini-setup/shared/MEMORY.md`
+- `gemini-setup/state/implemented-intelligence-suggestions.json`
 
 Codex schreibt niemals in Gemini-Verzeichnisse. Kandidaten werden als `ADD`, `ADAPT` oder `REPLACE` klassifiziert; REPLACE-Fälle brauchen Bestätigung.

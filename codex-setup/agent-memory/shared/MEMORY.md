@@ -51,6 +51,7 @@ Es ist die einzige autoritative operative Memory fuer den Codex-Self-Improve-Wor
 ## Debugging-Muster
 
 - Fehlende repo-lokale Kontrollstruktur fuer Codex fuehrt zu Drift zwischen lokal installiertem Skill und Workspace.
+- 2026-05-15: Gemini-Setup-Read-only-Regel hatte eine versteckte Integrationslücke: Einige Codex-Bridge- und Audit-Metadaten zeigten noch auf den historischen Pfad `Gemini-Setup/`, während der aktuelle Repo-Ordner `gemini-setup/` heißt und `shared/MEMORY.md` nutzt. Root Cause: Die erste Read-only-Ergänzung setzte nur die globale Regel und das Whiteboard, prüfte aber nicht die verwandten Gemini-Delta-Oberflächen. Fix: Codex-Bridge-Registry, Gemini-Audit, Delta-Metadaten, README und State auf `gemini-setup/` ausgerichtet; Claude/Gemini bleiben weiterhin reine Lesequellen.
 
 ## Performance & Optimierung
 

@@ -4,12 +4,12 @@
   "bridge_registry_path": "codex-setup/bridges/bridge-registry.json",
   "scope": "gemini-environment-only",
   "tracked_paths": [
-    "Gemini-Setup/**",
-    "Gemini-Setup/agent-memory/shared/MEMORY.md",
-    "Gemini-Setup/state/implemented-intelligence-suggestions.json"
+    "gemini-setup/**",
+    "gemini-setup/shared/MEMORY.md",
+    "gemini-setup/state/implemented-intelligence-suggestions.json"
   ],
   "tracked_git_paths": [
-    "Gemini-Setup"
+    "gemini-setup"
   ],
   "replace_requires_confirmation": true,
   "additive_bias": true,

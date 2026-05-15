@@ -33,9 +33,9 @@ Never export another CLI's private setup as if it belonged to the current one.
 
 | Current CLI | Own setup roots | Foreign roots to ignore |
 |-------------|-----------------|-------------------------|
-| `codex` | `~/.codex/`, `codex-harness/`, `AGENTS.md` | `codex-setup/`, `Gemini-Setup/`, `GEMINI.md` |
-| `codex` | `~/.codex/`, `codex-setup/`, `AGENTS.md` | `codex-harness/`, `Gemini-Setup/`, `AGENTS.md`, `GEMINI.md` |
-| `gemini` | local Gemini config, `Gemini-Setup/`, `GEMINI.md` | `codex-harness/`, `codex-setup/`, `AGENTS.md`, `AGENTS.md` |
+| `codex` | `~/.codex/`, `codex-harness/`, `AGENTS.md` | `codex-setup/`, `gemini-setup/`, `GEMINI.md` |
+| `codex` | `~/.codex/`, `codex-setup/`, `AGENTS.md` | `codex-harness/`, `gemini-setup/`, `AGENTS.md`, `GEMINI.md` |
+| `gemini` | local Gemini config, `gemini-setup/`, `GEMINI.md` | `codex-harness/`, `codex-setup/`, `AGENTS.md`, `AGENTS.md` |
 
 Shared artifacts like `~/Codex/codex-harness/mirror-ledger.md` may always be read.
 
@@ -56,12 +56,12 @@ Map the platform:
 Determine the CLI:
 - active Codex workspace or `.claude` ownership -> `cli=codex`
 - active Codex workspace or `codex-setup` ownership -> `cli=codex`
-- active Gemini workspace or `Gemini-Setup` ownership -> `cli=gemini`
+- active Gemini workspace or `gemini-setup` ownership -> `cli=gemini`
 
 If runtime markers are ambiguous, infer the CLI from the changed files:
 - `.codex/` or `codex-harness/` -> `codex`
 - `.codex/` or `codex-setup/` -> `codex`
-- `Gemini-Setup/` or `GeminiCLI` paths -> `gemini`
+- `gemini-setup/` or `GeminiCLI` paths -> `gemini`
 
 Use the exact source key `{platform}/{cli}` in APPLIED lines.
 

@@ -73,7 +73,7 @@
     "environment_fixes": {
       "codex": "codex-setup/state/environment-fixes.json",
       "claude_code_read_only_source": "claude-code-setup/environment-fixes.md",
-      "gemini_read_only_source": "Gemini-Setup/agent-memory/shared/MEMORY.md"
+      "gemini_read_only_source": "gemini-setup/shared/MEMORY.md"
     },
     "implemented_intelligence_suggestions": {
       "codex": {

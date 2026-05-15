@@ -11,7 +11,7 @@ Use this reference under the whiteboard's `## Oberste Direktive` when the user a
 
 - treat `claude-code-setup/` and `CLAUDE.md` as read-only comparison sources
 - never write, delete, or reorganize files there from a Codex self-improve run
-- treat `Gemini-Setup/` and `%USERPROFILE%\GeminiCLI` as read-only comparison sources too
+- treat `gemini-setup/` and `%USERPROFILE%\GeminiCLI` as read-only comparison sources too
 - write only into `codex-setup/`, `AGENTS.md`, or Codex validation files when needed
 - run `codex-setup/scripts/audit-claude-delta.*` before proposing any port
 - include setup-level bugfixes and hardening logic when they are portable to Codex
