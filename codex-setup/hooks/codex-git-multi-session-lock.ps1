@@ -6,7 +6,8 @@
 param(
     [string]$Command,
     [string]$Cwd,
-    [string]$SessionId
+    [string]$SessionId,
+    [int]$OwnerPid = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,7 +62,8 @@ function New-LockJson {
     param(
         [string]$Session,
         [string]$CommandText,
-        [string]$Repo
+        [string]$Repo,
+        [int]$OwnerPid
     )
 
     $shortCommand = $CommandText
@@ -72,7 +74,7 @@ function New-LockJson {
     return ([ordered]@{
         sessionId = $Session
         acquired = [DateTimeOffset]::UtcNow.ToString("o", [Globalization.CultureInfo]::InvariantCulture)
-        pid = $PID
+        pid = $OwnerPid
         command = $shortCommand
         repo = $Repo
     } | ConvertTo-Json -Compress)
@@ -148,6 +150,31 @@ function Test-ProcessAlive {
     }
 }
 
+function Resolve-RealGit {
+    if ($env:CODEX_GIT_LOCK_REAL_GIT -and [System.IO.File]::Exists($env:CODEX_GIT_LOCK_REAL_GIT)) {
+        return $env:CODEX_GIT_LOCK_REAL_GIT
+    }
+
+    $commonCandidates = @(
+        "C:\Program Files\Git\cmd\git.exe",
+        "C:\Program Files\Git\bin\git.exe"
+    )
+    foreach ($candidate in $commonCandidates) {
+        if ([System.IO.File]::Exists($candidate)) {
+            return $candidate
+        }
+    }
+
+    try {
+        $cmdInfo = Get-Command git.exe -ErrorAction Stop
+        if ($cmdInfo.Source) {
+            return $cmdInfo.Source
+        }
+    } catch { }
+
+    return "git.exe"
+}
+
 try {
     $gitWritePattern = '\bgit\s+(add|commit|push|fetch|rebase|pull|reset|restore|stash|am|cherry-pick|revert|merge|tag\s+\S|branch\s+(-[Dd]|--delete|--force|--move|-m\s+\S|-M\s+\S)|worktree\s+(add|remove|move|prune)|submodule\s+(update|add|deinit))\b'
 
@@ -191,6 +218,7 @@ try {
     }
 
     try { . "$PSScriptRoot\hook-log.ps1" } catch { }
+    $realGit = Resolve-RealGit
 
     if ([string]::IsNullOrWhiteSpace($cwdValue)) {
         $cwdValue = (Get-Location).Path
@@ -201,7 +229,7 @@ try {
         exit 0
     }
 
-    $gitCommonDir = (& git -C $cwdValue rev-parse --git-common-dir 2>$null)
+    $gitCommonDir = (& $realGit -C $cwdValue rev-parse --git-common-dir 2>$null)
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($gitCommonDir)) {
         Hook-Log "codex-git-multi-session-lock: no git repo at $cwdValue"
         exit 0
@@ -218,6 +246,13 @@ try {
 
     $lockFile = Join-Path $gitCommonDir "claude-multi-session.lock"
     $mySessionId = Get-CodexSessionId -HookData $hookData -ExplicitSessionId $SessionId
+    $lockOwnerPid = $OwnerPid
+    if ($lockOwnerPid -le 0 -and $env:CODEX_GIT_LOCK_OWNER_PID -match '^\d+$') {
+        $lockOwnerPid = [int]$env:CODEX_GIT_LOCK_OWNER_PID
+    }
+    if ($lockOwnerPid -le 0) {
+        $lockOwnerPid = $PID
+    }
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
     $culture = [Globalization.CultureInfo]::InvariantCulture
     $maxWaitSec = 120
@@ -230,7 +265,7 @@ try {
     $waited = 0
 
     while ($waited -lt $maxWaitSec) {
-        $newJson = New-LockJson -Session $mySessionId -CommandText $cmd -Repo $gitCommonDir
+        $newJson = New-LockJson -Session $mySessionId -CommandText $cmd -Repo $gitCommonDir -OwnerPid $lockOwnerPid
 
         if (Write-LockCreateNew -Path $lockFile -Json $newJson -Encoding $utf8NoBom) {
             Hook-Log "codex-git-multi-session-lock: acquired for '$cmd'"

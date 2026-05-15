@@ -18,6 +18,52 @@ cmd="${CODEX_GIT_LOCK_COMMAND:-}"
 cwd="${CODEX_GIT_LOCK_CWD:-}"
 session_id="${CODEX_GIT_LOCK_SESSION_ID:-}"
 
+normalize_windows_path_for_bash() {
+    local value="$1"
+    case "$value" in
+        [A-Za-z]:\\*)
+            local drive rest
+            drive="$(printf '%s' "${value:0:1}" | tr '[:upper:]' '[:lower:]')"
+            rest="${value:3}"
+            rest="${rest//\\//}"
+            printf '/%s/%s' "$drive" "$rest"
+            ;;
+        *)
+            printf '%s' "$value"
+            ;;
+    esac
+}
+
+resolve_real_git() {
+    if [ -n "${CODEX_GIT_LOCK_REAL_GIT:-}" ] && [ -x "${CODEX_GIT_LOCK_REAL_GIT:-}" ]; then
+        printf '%s' "$CODEX_GIT_LOCK_REAL_GIT"
+        return
+    fi
+
+    if command -v git.exe >/dev/null 2>&1; then
+        command -v git.exe
+        return
+    fi
+
+    local candidates candidate home_bin home_local_bin script_git
+    candidates="$(which -a git 2>/dev/null || command -v git 2>/dev/null || true)"
+    home_bin="${HOME:-}/bin/git"
+    home_local_bin="${HOME:-}/.local/bin/git"
+    script_git="$SCRIPT_DIR/git"
+
+    for candidate in $candidates; do
+        case "$candidate" in
+            "$home_bin"|"$home_local_bin"|"$script_git") continue ;;
+        esac
+        if [ -x "$candidate" ]; then
+            printf '%s' "$candidate"
+            return
+        fi
+    done
+
+    printf 'git'
+}
+
 if [ -n "$input" ]; then
     if ! [[ $input =~ $git_write_pattern ]]; then
         exit 0
@@ -63,9 +109,11 @@ type hook_log >/dev/null 2>&1 || hook_log() { :; }
 type hook_log_warn >/dev/null 2>&1 || hook_log_warn() { :; }
 
 [ -z "$cwd" ] && cwd="$PWD"
+cwd="$(normalize_windows_path_for_bash "$cwd")"
 [ -d "$cwd" ] || exit 0
 
-git_common_dir="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+real_git="$(resolve_real_git)"
+git_common_dir="$("$real_git" -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
 if [ -z "$git_common_dir" ]; then
     hook_log "codex-git-multi-session-lock: no git repo at $cwd" 2>/dev/null || true
     exit 0
@@ -97,6 +145,10 @@ max_corrupt_retries=5
 corrupt_retries=0
 waited=0
 cmd_short="${cmd:0:200}"
+lock_owner_pid="${CODEX_GIT_LOCK_OWNER_PID:-$$}"
+if ! [[ $lock_owner_pid =~ ^[0-9]+$ ]] || [ "$lock_owner_pid" -le 0 ] 2>/dev/null; then
+    lock_owner_pid="$$"
+fi
 
 make_lock_json() {
     local session="$1"
@@ -185,7 +237,7 @@ except Exception:
 }
 
 while [ "$waited" -lt "$max_wait" ]; do
-    new_json="$(make_lock_json "$session_id" "$git_common_dir" "$$" "$cmd_short" || true)"
+    new_json="$(make_lock_json "$session_id" "$git_common_dir" "$lock_owner_pid" "$cmd_short" || true)"
 
     if write_lock_create_new "$lockfile" "$new_json"; then
         hook_log "codex-git-multi-session-lock: acquired for '$cmd_short'" 2>/dev/null || true
@@ -200,7 +252,7 @@ while [ "$waited" -lt "$max_wait" ]; do
     parsed="$(parse_lock "$lock_raw")"
     old_ifs="$IFS"
     IFS="$(printf '\037')"
-    read -r lock_session lock_acquired lock_pid age <<< "$parsed"
+    read -r lock_session _lock_acquired lock_pid age <<< "$parsed"
     IFS="$old_ifs"
 
     if [ -z "$lock_raw" ] || [ -z "$lock_session" ]; then

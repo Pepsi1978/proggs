@@ -2,6 +2,9 @@ tools/
 .code-search/
 .think-tank/
 .env
+!codex-setup/bin/
+!codex-setup/bin/git
+!codex-setup/bin/git.cmd
 test_api.ts
 .mcp.json
 BestJournalAndroid/app/google-services.json
