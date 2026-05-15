@@ -119,6 +119,7 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const ushort VK_I       = 0x49; // Hotkey: Ctrl+Alt+I = Insert last screenshot
         public const ushort VK_M       = 0x4D; // Hotkey: Shift+Alt+M = PTT (alternative ohne Leertaste, keine Konflikte mit System-Menue)
         public const ushort VK_F9      = 0x78; // Hotkey: Strg+F9 oder Shift+F9 = PTT (kurze Kombi, keine Konflikte in CLIs)
+        public const ushort VK_E       = 0x45; // Hotkey: Strg+Shift+Alt+E = Auto-Enter-Toggle (Stream-Deck-tauglich)
         public const ushort VK_F11     = 0x7A; // Hotkey: Alt+F11 = Explorer am Release-Bundle-Pfad oeffnen
         public const ushort VK_F12     = 0x7B; // Hotkey: Alt+F12 = PTT (Alt+Wheel zoomt nicht, daher kein Zoom-Konflikt)
         // Modifier keys for the Win+Alt+<letter> prompt hotkey branch in

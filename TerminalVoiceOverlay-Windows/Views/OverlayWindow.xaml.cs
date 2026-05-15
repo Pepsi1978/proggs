@@ -3194,6 +3194,55 @@ namespace TerminalVoiceOverlay.Views
                 }
             }
 
+            // ── Auto-Enter-Toggle-Hotkey: Strg+Shift+Alt+E ─────────────────
+            //
+            // Frank's Wunsch (#2242): den Auto-Enter-Toggle (orange/grau-
+            // Button unten im Overlay) auf eine Stream-Deck-Taste legen.
+            // Strg+Shift+Alt+E: drei-Modifier-Kombi → praktisch garantiert
+            // kollisionsfrei in jeder App, und der Stream Deck XL kann sie
+            // in der "Hotkey"-Action senden. Achtung: AltGr+E waere "€" auf
+            // deutscher Tastatur, aber Shift dazu macht die Kombi eindeutig
+            // — wer "€" tippen will, drueckt AltGr+E ohne Shift und ist
+            // weiter wie gewohnt im Geschaeft.
+            //
+            // Der Hotkey ruft denselben Click-Handler wie der Enter-Button
+            // im Overlay (BtnAutoEnter_Click) ueber den UI-Dispatcher auf,
+            // damit das Toggle-Verhalten 1:1 identisch ist (inkl. der
+            // hasPastedText-Logik und dem Sofort-Return wenn von OFF→ON
+            // gewechselt wird).
+            if (vk == NativeMethods.Win32.VK_E)
+            {
+                bool ctrl   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
+                bool alt    = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
+                bool shift  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_SHIFT)   & 0x8000) != 0;
+                bool lwin   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_LWIN)    & 0x8000) != 0;
+                bool rwin   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_RWIN)    & 0x8000) != 0;
+                bool win    = lwin || rwin;
+                bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
+
+                if (ctrl && shift && alt && !win)
+                {
+                    if (isDown && !_autoEnterHotkeyDown)
+                    {
+                        _autoEnterHotkeyDown = true;
+                        LogHotkeyEvent("Strg+Shift+Alt+E FIRE → toggle auto-enter");
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try { BtnAutoEnter_Click(this, new RoutedEventArgs()); }
+                            catch (Exception ex) { LogHotkeyEvent($"Strg+Shift+Alt+E toggle failed: {ex.Message}"); }
+                        }));
+                        return new IntPtr(1);
+                    }
+                    if (isDown) return new IntPtr(1); // Auto-Repeat schlucken
+                    if (isUp) _autoEnterHotkeyDown = false;
+                }
+                else if (isUp)
+                {
+                    _autoEnterHotkeyDown = false;
+                }
+            }
+
             // ── Prompt-Hotkeys: Win+Alt+A..Win+Alt+Z ───────────────────────
             //
             // 1:1 dieselbe Struktur wie der Strg+1..9-Zweig oben, nur mit
@@ -3289,6 +3338,14 @@ namespace TerminalVoiceOverlay.Views
         /// Gleiche Auto-Repeat-Schutzlogik wie <see cref="_promptHotkeyDown"/>.
         /// </summary>
         private readonly bool[] _promptLetterHotkeyDown = new bool[26];
+
+        /// <summary>
+        /// Down-Latch fuer Strg+Shift+Alt+E (Auto-Enter-Toggle-Hotkey).
+        /// Verhindert dass das Halten der Kombi den Toggle mehrfach
+        /// ausloest. Wird auf false zurueckgesetzt sobald irgendein
+        /// KeyUp im Hook beobachtet wird.
+        /// </summary>
+        private bool _autoEnterHotkeyDown;
 
         /// <summary>
         /// Append-only Diagnose-Log fuer Letter-Hotkey-Events. Schreibt
