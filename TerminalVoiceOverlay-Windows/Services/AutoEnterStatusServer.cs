@@ -156,11 +156,11 @@ namespace TerminalVoiceOverlay.Services
             if (path.Equals("/autoenter/toggle", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "POST")
             {
-                _toggle(); // synchron oder via Dispatcher.BeginInvoke (Aufrufer-Sache)
-                // Kurzes Warten damit der Toggle im UI-Thread durchschlaegt
-                // bevor wir den neuen Stand zurueckmelden. 30 ms reichen
-                // praktisch immer, ist visuell trotzdem instant.
-                Thread.Sleep(30);
+                // Aufrufer-Vertrag: _toggle() ist SYNCHRON. Sprich:
+                // OverlayWindow ruft Dispatcher.Invoke (nicht BeginInvoke),
+                // sodass nach Rueckkehr aus _toggle() der neue State
+                // garantiert sichtbar ist. Kein Sleep mehr noetig.
+                _toggle();
                 WriteJsonState(ctx, _getCurrentState());
                 return;
             }

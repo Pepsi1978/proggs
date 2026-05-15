@@ -619,14 +619,66 @@ namespace TerminalVoiceOverlay.Views
             // (Stream Deck Plugin) abfragbar UND erlaubt Toggle-Requests.
             // Localhost only — keine externe Erreichbarkeit, keine Firewall-
             // Eintraege noetig.
+            // WICHTIG: Dispatcher.Invoke (synchron) statt BeginInvoke (async)!
+            //
+            // Vorgeschichte 2026-05-15:
+            // Mit BeginInvoke war der Ablauf race-condition-anfaellig:
+            //   1) HTTP-Thread ruft BeginInvoke → kehrt sofort zurueck
+            //   2) HTTP-Server schlaeft 30ms, ruft dann _getCurrentState()
+            //   3) Wenn UI-Dispatcher unter Last (Audio-Buffer, Polling),
+            //      ist der Toggle nach 30ms noch nicht durch → ALTER State
+            //      wird gemeldet → Plugin denkt "Toggle wirkt nicht" →
+            //      drueckt nochmal → State driftet auseinander → UI-Queue
+            //      staut sich mit halben Toggles → "alles eingefroren".
+            //
+            // Mit Dispatcher.Invoke (sync):
+            //   1) HTTP-Thread blockt bis der Toggle im UI-Thread fertig ist
+            //   2) Danach liest _getCurrentState() garantiert den NEUEN Wert
+            //   3) Kein Sleep noetig (im AutoEnterStatusServer entfernt)
+            //   4) Kein Cross-Thread-Stau im Dispatcher
+            //
+            // Kein Deadlock-Risiko: der UI-Thread wartet nirgends auf den
+            // HTTP-Listener-Thread. Worst-case-Latenz fuer den HTTP-Client:
+            // ~5-50ms bis die UI das Toggle durchgefuehrt hat — fuer das
+            // Stream-Deck-Plugin praktisch instantan.
             _autoEnterServer = new Services.AutoEnterStatusServer(
                 getCurrentState: () => autoEnterEnabled,
-                toggle: () => Dispatcher.BeginInvoke(new Action(() =>
+                toggle: () =>
                 {
-                    try { ToggleAutoEnterFromHotkey(); }
-                    catch (Exception ex) { Console.WriteLine($"AutoEnter HTTP toggle failed: {ex.Message}"); }
-                })));
+                    try
+                    {
+                        Dispatcher.Invoke(new Action(() =>
+                        {
+                            try { ToggleAutoEnterFromHotkey(); }
+                            catch (Exception innerEx)
+                            {
+                                LogAutoEnterToggleError("INNER", innerEx);
+                            }
+                        }));
+                    }
+                    catch (Exception outerEx)
+                    {
+                        // Dispatcher.Invoke selbst kann werfen wenn das
+                        // Fenster gerade geschlossen wird. Wir loggen das
+                        // sichtbar in die TVO-hotkey.log, damit kuenftige
+                        // Probleme nicht mehr still verschluckt werden.
+                        LogAutoEnterToggleError("OUTER", outerEx);
+                    }
+                });
             _autoEnterServer.Start();
+        }
+
+        private static void LogAutoEnterToggleError(string scope, Exception ex)
+        {
+            string msg = $"AutoEnter HTTP toggle failed ({scope}): {ex.GetType().Name}: {ex.Message}";
+            Console.WriteLine(msg);
+            try
+            {
+                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
+                System.IO.File.AppendAllText(path,
+                    $"{DateTime.Now:HH:mm:ss.fff} TOGGLE-ERROR {msg}{Environment.NewLine}");
+            }
+            catch { /* never block hotkey path */ }
         }
 
         private Services.AutoEnterStatusServer? _autoEnterServer;
