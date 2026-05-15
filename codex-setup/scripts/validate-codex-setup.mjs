@@ -309,6 +309,7 @@ function validateGitLockRuntime(repoRoot, codexSetupDir, errors) {
   const requiredRepoFiles = [
     "bin/git",
     "bin/git.cmd",
+    "hooks/codex-git-multi-session-lock.cmd",
     "hooks/codex-git-multi-session-lock.ps1",
     "hooks/codex-git-multi-session-lock.sh",
     "hooks/codex-git-wrapper.ps1",
@@ -348,6 +349,7 @@ function validateGitLockRuntime(repoRoot, codexSetupDir, errors) {
   if (process.platform === "win32") {
     const activeFiles = [
       path.join(home, "bin", "git.cmd"),
+      path.join(home, ".codex", "hooks", "codex-git-multi-session-lock.cmd"),
       path.join(home, ".codex", "hooks", "codex-git-multi-session-lock.ps1"),
       path.join(home, ".codex", "hooks", "codex-git-wrapper.ps1"),
     ];
@@ -356,8 +358,11 @@ function validateGitLockRuntime(repoRoot, codexSetupDir, errors) {
         errors.push(`${formatPath(repoRoot, filePath)}: aktive Git-Lock-Runtime-Datei fehlt`);
       }
     }
-    if (!configText.includes("codex-git-multi-session-lock.ps1")) {
-      errors.push("~/.codex/config.toml: PreToolUse-Hook codex-git-multi-session-lock.ps1 fehlt");
+    if (
+      !configText.includes("codex-git-multi-session-lock.cmd") &&
+      !configText.includes("codex-git-multi-session-lock.ps1")
+    ) {
+      errors.push("~/.codex/config.toml: PreToolUse-Hook codex-git-multi-session-lock.cmd fehlt");
     }
   } else if (!configText.includes("codex-git-multi-session-lock.sh")) {
     errors.push("~/.codex/config.toml: PreToolUse-Hook codex-git-multi-session-lock.sh fehlt");

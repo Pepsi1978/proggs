@@ -11,12 +11,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 hook_log() { :; }
 hook_log_warn() { :; }
 
-git_write_pattern='\bgit[[:space:]]+(add|commit|push|fetch|rebase|pull|reset|restore|stash|am|cherry-pick|revert|merge|tag[[:space:]]+[^[:space:]]|branch[[:space:]]+(-[Dd]|--delete|--force|--move|-m[[:space:]]+[^[:space:]]|-M[[:space:]]+[^[:space:]])|worktree[[:space:]]+(add|remove|move|prune)|submodule[[:space:]]+(update|add|deinit))\b'
+git_write_pattern='\bgit[[:space:]]+(add|commit|push|fetch|rebase|pull|reset|restore|checkout|switch|rm|mv|clean|gc|maintenance|stash|am|cherry-pick|revert|merge|tag[[:space:]]+[^[:space:]]|branch[[:space:]]+(-[Dd]|--delete|--force|--move|-m[[:space:]]+[^[:space:]]|-M[[:space:]]+[^[:space:]])|remote[[:space:]]+(add|remove|rm|rename|set-url|prune|update)|worktree[[:space:]]+(add|remove|move|prune)|submodule[[:space:]]+(update|add|deinit))\b'
 
 input="$(cat 2>/dev/null || true)"
 cmd="${CODEX_GIT_LOCK_COMMAND:-}"
 cwd="${CODEX_GIT_LOCK_CWD:-}"
 session_id="${CODEX_GIT_LOCK_SESSION_ID:-}"
+explicit_git_common_dir="${CODEX_GIT_LOCK_COMMON_DIR:-}"
 
 normalize_windows_path_for_bash() {
     local value="$1"
@@ -113,11 +114,16 @@ cwd="$(normalize_windows_path_for_bash "$cwd")"
 [ -d "$cwd" ] || exit 0
 
 real_git="$(resolve_real_git)"
-git_common_dir="$("$real_git" -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+git_common_dir="$explicit_git_common_dir"
+if [ -z "$git_common_dir" ]; then
+    git_common_dir="$("$real_git" -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+fi
 if [ -z "$git_common_dir" ]; then
     hook_log "codex-git-multi-session-lock: no git repo at $cwd" 2>/dev/null || true
     exit 0
 fi
+
+git_common_dir="$(normalize_windows_path_for_bash "$git_common_dir")"
 
 case "$git_common_dir" in
     /*) ;;

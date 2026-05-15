@@ -100,7 +100,7 @@ parse_invocation() {
 
 is_write_operation() {
     case "$subcommand" in
-        add|commit|push|fetch|rebase|pull|reset|restore|stash|am|cherry-pick|revert|merge)
+        add|commit|push|fetch|rebase|pull|reset|restore|checkout|switch|rm|mv|clean|gc|maintenance|stash|am|cherry-pick|revert|merge)
             return 0
             ;;
         tag)
@@ -114,6 +114,10 @@ is_write_operation() {
                 -m|-M) [ "$#" -gt 1 ]; return $? ;;
                 *) return 1 ;;
             esac
+            ;;
+        remote)
+            [ "$#" -gt 0 ] || return 1
+            case "$1" in add|remove|rm|rename|set-url|prune|update) return 0 ;; *) return 1 ;; esac
             ;;
         worktree)
             [ "$#" -gt 0 ] || return 1
@@ -134,17 +138,15 @@ release_own_lock() {
     local session="$2"
     local owner_pid="$3"
     [ -n "$lockfile" ] && [ -f "$lockfile" ] || return 0
-    python3 - "$lockfile" "$session" "$owner_pid" <<'PY' 2>/dev/null
-import json, os, sys
-path, session, owner_pid = sys.argv[1], sys.argv[2], int(sys.argv[3])
-try:
-    with open(path, "r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    if data.get("sessionId") == session and int(data.get("pid", -1)) == owner_pid:
-        os.remove(path)
-except Exception:
-    pass
-PY
+    local raw session_needle pid_needle
+    raw="$(cat "$lockfile" 2>/dev/null || true)"
+    session_needle="\"sessionId\":\"$session\""
+    pid_needle="\"pid\":$owner_pid"
+    case "$raw" in
+        *"$session_needle"*"$pid_needle"*|*"$pid_needle"*"$session_needle"*)
+            rm -f "$lockfile" 2>/dev/null || true
+            ;;
+    esac
 }
 
 real_git="$(resolve_real_git)"
@@ -169,9 +171,20 @@ if ! is_write_operation "${remaining[@]}"; then
     exec "$real_git" "$@"
 fi
 
-helper="${HOME:-}/.codex/hooks/codex-git-multi-session-lock.sh"
+helper="$SCRIPT_DIR/../hooks/codex-git-multi-session-lock.sh"
 if [ ! -f "$helper" ]; then
-    helper="$SCRIPT_DIR/../hooks/codex-git-multi-session-lock.sh"
+    helper="${HOME:-}/.codex/hooks/codex-git-multi-session-lock.sh"
+fi
+
+git_common_dir="$("$real_git" -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
+lockfile=""
+if [ -n "$git_common_dir" ]; then
+    case "$git_common_dir" in
+        /*|[A-Za-z]:[/\\]*) lockfile="$git_common_dir/claude-multi-session.lock" ;;
+        *) lockfile="$cwd/$git_common_dir/claude-multi-session.lock" ;;
+    esac
+else
+    exec "$real_git" "$@"
 fi
 
 session_id="${CODEX_GIT_LOCK_SESSION_ID:-${CODEX_SESSION_ID:-ppid-$PPID}}"
@@ -185,17 +198,9 @@ if [ -f "$helper" ]; then
     CODEX_GIT_LOCK_CWD="$cwd" \
     CODEX_GIT_LOCK_SESSION_ID="$session_id" \
     CODEX_GIT_LOCK_OWNER_PID="$$" \
+    CODEX_GIT_LOCK_COMMON_DIR="$git_common_dir" \
     CODEX_GIT_LOCK_REAL_GIT="$real_git" \
         bash "$helper" >/dev/null || true
-fi
-
-git_common_dir="$("$real_git" -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
-lockfile=""
-if [ -n "$git_common_dir" ]; then
-    case "$git_common_dir" in
-        /*|[A-Za-z]:[/\\]*) lockfile="$git_common_dir/claude-multi-session.lock" ;;
-        *) lockfile="$cwd/$git_common_dir/claude-multi-session.lock" ;;
-    esac
 fi
 
 CODEX_GIT_LOCK_BYPASS=1 "$real_git" "$@"

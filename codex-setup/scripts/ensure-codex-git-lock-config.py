@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 
 
 def toml_basic(value: str) -> str:
@@ -44,7 +45,14 @@ def ensure_config(config_path: pathlib.Path, path_value: str, hook_command: str,
     content = set_toml_section_key(content, "shell_environment_policy", "inherit", '"all"')
     content = set_toml_section_key(content, "shell_environment_policy.set", "PATH", toml_basic(path_value))
 
-    if hook_marker not in content:
+    hook_command_line = f"command = {toml_basic(hook_command)}"
+    hook_command_pattern = re.compile(
+        r"""(?m)^command\s*=.*codex-git-multi-session-lock\.(?:cmd|ps1|sh).*$"""
+    )
+
+    if hook_command_pattern.search(content):
+        content = hook_command_pattern.sub(lambda _match: hook_command_line, content)
+    elif hook_marker not in content:
         content = (
             content.rstrip()
             + f"""
@@ -54,7 +62,7 @@ matcher = "^Bash$"
 
 [[hooks.PreToolUse.hooks]]
 type = "command"
-command = {toml_basic(hook_command)}
+{hook_command_line}
 timeout = 130
 statusMessage = "Checking git multi-session lock"
 """

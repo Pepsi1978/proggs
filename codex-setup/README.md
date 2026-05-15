@@ -18,11 +18,14 @@ Core paths:
 - `codex-setup/skills/`
 
 Git multi-session lock:
-- Runtime hook: `~/.codex/hooks/codex-git-multi-session-lock.ps1` on Windows.
+- Runtime hook: `~/.codex/hooks/codex-git-multi-session-lock.cmd` on Windows.
+  The `.cmd` launcher only starts the PowerShell hook when the shell command
+  contains Git text; this avoids PowerShell startup cost for unrelated shell
+  commands.
 - Runtime wrapper: `~/bin/git.cmd` on Windows PowerShell and `~/.local/bin/git`
   or `~/bin/git` on Bash-compatible shells.
-- Repo source: `codex-setup/hooks/codex-git-multi-session-lock.ps1`, `.sh`,
-  `codex-setup/hooks/codex-git-wrapper.ps1`, and `codex-setup/bin/git*`.
+- Repo source: `codex-setup/hooks/codex-git-multi-session-lock.cmd`, `.ps1`,
+  `.sh`, `codex-setup/hooks/codex-git-wrapper.ps1`, and `codex-setup/bin/git*`.
 - Codex config: `~/.codex/config.toml` enables `[[hooks.PreToolUse]]` with
   `matcher = "^Bash$"` and `timeout = 130`; it also prepends `~/bin` to
   subprocess `PATH` through `[shell_environment_policy].set.PATH` so `git`

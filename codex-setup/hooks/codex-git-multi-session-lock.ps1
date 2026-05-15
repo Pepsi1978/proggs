@@ -7,7 +7,8 @@ param(
     [string]$Command,
     [string]$Cwd,
     [string]$SessionId,
-    [int]$OwnerPid = 0
+    [int]$OwnerPid = 0,
+    [string]$GitCommonDir
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,14 +29,6 @@ function ConvertFrom-GitBashPath {
     return $PathValue
 }
 
-function Get-ParentProcessId {
-    try {
-        return (Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop).ParentProcessId
-    } catch {
-        return $null
-    }
-}
-
 function Get-CodexSessionId {
     param($HookData, [string]$ExplicitSessionId)
 
@@ -51,10 +44,6 @@ function Get-CodexSessionId {
         return $env:CODEX_SESSION_ID
     }
 
-    $parentPid = Get-ParentProcessId
-    if ($parentPid) {
-        return "ppid-$parentPid"
-    }
     return "pid-$PID"
 }
 
@@ -175,8 +164,35 @@ function Resolve-RealGit {
     return "git.exe"
 }
 
+function Resolve-GitCommonDir {
+    param(
+        [string]$RealGit,
+        [string]$CwdValue,
+        [string]$ExplicitGitCommonDir
+    )
+
+    $candidate = $ExplicitGitCommonDir
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+        $candidate = (& $RealGit -C $CwdValue rev-parse --git-common-dir 2>$null)
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($candidate)) {
+            return $null
+        }
+    }
+
+    $candidate = (ConvertFrom-GitBashPath -PathValue ([string]$candidate)).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($candidate)) {
+        $candidate = [System.IO.Path]::GetFullPath((Join-Path $CwdValue $candidate))
+    }
+
+    if (-not [System.IO.Directory]::Exists($candidate)) {
+        return $null
+    }
+
+    return $candidate
+}
+
 try {
-    $gitWritePattern = '\bgit\s+(add|commit|push|fetch|rebase|pull|reset|restore|stash|am|cherry-pick|revert|merge|tag\s+\S|branch\s+(-[Dd]|--delete|--force|--move|-m\s+\S|-M\s+\S)|worktree\s+(add|remove|move|prune)|submodule\s+(update|add|deinit))\b'
+    $gitWritePattern = '\bgit\s+(add|commit|push|fetch|rebase|pull|reset|restore|checkout|switch|rm|mv|clean|gc|maintenance|stash|am|cherry-pick|revert|merge|tag\s+\S|branch\s+(-[Dd]|--delete|--force|--move|-m\s+\S|-M\s+\S)|remote\s+(add|remove|rm|rename|set-url|prune|update)|worktree\s+(add|remove|move|prune)|submodule\s+(update|add|deinit))\b'
 
     $hookInput = [Console]::In.ReadToEnd()
     $hookData = $null
@@ -217,9 +233,6 @@ try {
         exit 0
     }
 
-    try { . "$PSScriptRoot\hook-log.ps1" } catch { }
-    $realGit = Resolve-RealGit
-
     if ([string]::IsNullOrWhiteSpace($cwdValue)) {
         $cwdValue = (Get-Location).Path
     }
@@ -229,18 +242,11 @@ try {
         exit 0
     }
 
-    $gitCommonDir = (& $realGit -C $cwdValue rev-parse --git-common-dir 2>$null)
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($gitCommonDir)) {
+    try { . "$PSScriptRoot\hook-log.ps1" } catch { }
+    $realGit = Resolve-RealGit
+    $gitCommonDir = Resolve-GitCommonDir -RealGit $realGit -CwdValue $cwdValue -ExplicitGitCommonDir $GitCommonDir
+    if ([string]::IsNullOrWhiteSpace($gitCommonDir)) {
         Hook-Log "codex-git-multi-session-lock: no git repo at $cwdValue"
-        exit 0
-    }
-
-    $gitCommonDir = $gitCommonDir.Trim()
-    if (-not [System.IO.Path]::IsPathRooted($gitCommonDir)) {
-        $gitCommonDir = [System.IO.Path]::GetFullPath((Join-Path $cwdValue $gitCommonDir))
-    }
-
-    if (-not [System.IO.Directory]::Exists($gitCommonDir)) {
         exit 0
     }
 

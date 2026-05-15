@@ -37,24 +37,12 @@ function Resolve-RealGit {
     return "git.exe"
 }
 
-function Get-ParentProcessId {
-    try {
-        return (Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop).ParentProcessId
-    } catch {
-        return $null
-    }
-}
-
 function Get-StableSessionId {
     if ($env:CODEX_GIT_LOCK_SESSION_ID) {
         return $env:CODEX_GIT_LOCK_SESSION_ID
     }
     if ($env:CODEX_SESSION_ID) {
         return $env:CODEX_SESSION_ID
-    }
-    $parentPid = Get-ParentProcessId
-    if ($parentPid) {
-        return "ppid-$parentPid"
     }
     return "pid-$PID"
 }
@@ -130,7 +118,7 @@ function Test-GitWriteOperation {
     )
 
     switch ($Subcommand) {
-        { $_ -in @("add", "commit", "push", "fetch", "rebase", "pull", "reset", "restore", "stash", "am", "cherry-pick", "revert", "merge") } {
+        { $_ -in @("add", "commit", "push", "fetch", "rebase", "pull", "reset", "restore", "checkout", "switch", "rm", "mv", "clean", "gc", "maintenance", "stash", "am", "cherry-pick", "revert", "merge") } {
             return $true
         }
         "tag" {
@@ -142,6 +130,9 @@ function Test-GitWriteOperation {
             if ($first -in @("-D", "-d", "--delete", "--force", "--move")) { return $true }
             if ($first -in @("-m", "-M") -and $Remaining.Count -gt 1) { return $true }
             return $false
+        }
+        "remote" {
+            return ($Remaining.Count -gt 0 -and $Remaining[0] -in @("add", "remove", "rm", "rename", "set-url", "prune", "update"))
         }
         "worktree" {
             return ($Remaining.Count -gt 0 -and $Remaining[0] -in @("add", "remove", "move", "prune"))
@@ -155,7 +146,7 @@ function Test-GitWriteOperation {
     }
 }
 
-function Get-LockPath {
+function Get-GitCommonDir {
     param(
         [string]$RealGit,
         [string]$Cwd
@@ -175,7 +166,190 @@ function Get-LockPath {
         return $null
     }
 
-    return (Join-Path $gitCommonDir "claude-multi-session.lock")
+    return $gitCommonDir
+}
+
+function New-LockJson {
+    param(
+        [string]$Session,
+        [string]$CommandText,
+        [string]$Repo,
+        [int]$OwnerPid
+    )
+
+    $shortCommand = $CommandText
+    if ($shortCommand.Length -gt 200) {
+        $shortCommand = $shortCommand.Substring(0, 200)
+    }
+
+    return ([ordered]@{
+        sessionId = $Session
+        acquired = [DateTimeOffset]::UtcNow.ToString("o", [Globalization.CultureInfo]::InvariantCulture)
+        pid = $OwnerPid
+        command = $shortCommand
+        repo = $Repo
+    } | ConvertTo-Json -Compress)
+}
+
+function Write-LockCreateNew {
+    param(
+        [string]$Path,
+        [string]$Json,
+        [System.Text.Encoding]$Encoding
+    )
+
+    $stream = $null
+    $created = $false
+    try {
+        $stream = [System.IO.File]::Open(
+            $Path,
+            [System.IO.FileMode]::CreateNew,
+            [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]::None
+        )
+        $created = $true
+        $bytes = $Encoding.GetBytes($Json)
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush()
+        return $true
+    } catch {
+        if ($created) {
+            try { [System.IO.File]::Delete($Path) } catch { }
+        }
+        return $false
+    } finally {
+        if ($stream) {
+            try { $stream.Dispose() } catch { }
+        }
+    }
+}
+
+function Write-LockRefresh {
+    param(
+        [string]$Path,
+        [string]$Json,
+        [System.Text.Encoding]$Encoding
+    )
+
+    $tempPath = "$Path.tmp.$PID.$([Guid]::NewGuid().ToString('N'))"
+    try {
+        [System.IO.File]::WriteAllText($tempPath, $Json, $Encoding)
+        [System.IO.File]::Move($tempPath, $Path, $true)
+        return $true
+    } catch {
+        try {
+            if ([System.IO.File]::Exists($tempPath)) {
+                [System.IO.File]::Delete($tempPath)
+            }
+        } catch { }
+        return $false
+    }
+}
+
+function Test-ProcessAlive {
+    param([int]$ProcessId)
+
+    if ($ProcessId -le 0) {
+        return $false
+    }
+
+    try {
+        $null = Get-Process -Id $ProcessId -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Acquire-GitLock {
+    param(
+        [string]$GitCommonDir,
+        [string]$SessionId,
+        [string]$CommandText,
+        [int]$OwnerPid
+    )
+
+    $lockPath = Join-Path $GitCommonDir "claude-multi-session.lock"
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    $culture = [Globalization.CultureInfo]::InvariantCulture
+    $maxWaitSec = 120
+    if ($env:CODEX_GIT_LOCK_MAX_WAIT_SECONDS -match '^\d+$') {
+        $maxWaitSec = [int]$env:CODEX_GIT_LOCK_MAX_WAIT_SECONDS
+    }
+    $staleThresholdSec = 180
+    $maxCorruptRetries = 5
+    $corruptRetries = 0
+    $waited = 0
+
+    while ($waited -lt $maxWaitSec) {
+        $newJson = New-LockJson -Session $SessionId -CommandText $CommandText -Repo $GitCommonDir -OwnerPid $OwnerPid
+
+        if (Write-LockCreateNew -Path $lockPath -Json $newJson -Encoding $utf8NoBom) {
+            return $lockPath
+        }
+
+        $lockData = $null
+        $readFailed = $false
+        try {
+            $raw = [System.IO.File]::ReadAllText($lockPath, $utf8NoBom)
+            if ([string]::IsNullOrWhiteSpace($raw)) {
+                $readFailed = $true
+            } else {
+                $lockData = $raw | ConvertFrom-Json -ErrorAction Stop
+            }
+        } catch {
+            $readFailed = $true
+        }
+
+        if ($readFailed -or -not $lockData -or -not $lockData.sessionId) {
+            $corruptRetries++
+            if ($corruptRetries -gt $maxCorruptRetries) {
+                return $lockPath
+            }
+            try { [System.IO.File]::Delete($lockPath) } catch { Start-Sleep -Milliseconds 100 }
+            Start-Sleep -Milliseconds 100
+            continue
+        }
+
+        $age = 999.0
+        try {
+            $acquired = [DateTimeOffset]::Parse([string]$lockData.acquired, $culture).UtcDateTime
+            $age = ([DateTime]::UtcNow - $acquired).TotalSeconds
+        } catch {
+            $age = 999.0
+        }
+
+        $lockPid = 0
+        try { $lockPid = [int]$lockData.pid } catch { $lockPid = 0 }
+        $isOwnLock = ([string]$lockData.sessionId -eq $SessionId)
+        $pidAlive = if ($isOwnLock) { $true } else { Test-ProcessAlive -ProcessId $lockPid }
+        $isStale = ($age -gt $staleThresholdSec) -or (-not $pidAlive)
+
+        if ($isStale) {
+            try { [System.IO.File]::Delete($lockPath) } catch { Start-Sleep -Milliseconds 100 }
+            $corruptRetries = 0
+            Start-Sleep -Milliseconds 100
+            continue
+        }
+
+        if ($isOwnLock) {
+            $null = Write-LockRefresh -Path $lockPath -Json $newJson -Encoding $utf8NoBom
+            return $lockPath
+        }
+
+        if ($waited -eq 0) {
+            [Console]::Error.WriteLine("codex-git-wrapper: another session holds git lock (session $($lockData.sessionId), pid $lockPid, age $([int]$age)s). Waiting...")
+        } elseif (($waited % 10) -eq 0) {
+            [Console]::Error.WriteLine("codex-git-wrapper: still waiting (${waited}s)...")
+        }
+
+        Start-Sleep -Seconds 2
+        $waited += 2
+        $corruptRetries = 0
+    }
+
+    [Console]::Error.WriteLine("WARNING: codex-git-wrapper timeout after ${waited}s; continuing without lock.")
+    return $lockPath
 }
 
 function Release-OwnLock {
@@ -192,8 +366,9 @@ function Release-OwnLock {
     try {
         $raw = [System.IO.File]::ReadAllText($LockPath)
         if ([string]::IsNullOrWhiteSpace($raw)) { return }
-        $data = $raw | ConvertFrom-Json -ErrorAction Stop
-        if ($data.sessionId -eq $SessionId -and [int]$data.pid -eq $OwnerPid) {
+        $sessionNeedle = '"sessionId":"' + $SessionId.Replace('\', '\\').Replace('"', '\"') + '"'
+        $pidNeedle = '"pid":' + [string]$OwnerPid
+        if ($raw.Contains($sessionNeedle) -and $raw.Contains($pidNeedle)) {
             [System.IO.File]::Delete($LockPath)
         }
     } catch { }
@@ -218,11 +393,12 @@ try {
         exit $LASTEXITCODE
     }
 
-    $helperPath = Join-Path $PSScriptRoot "codex-git-multi-session-lock.ps1"
-    if (-not [System.IO.File]::Exists($helperPath)) {
+    $gitCommonDir = Get-GitCommonDir -RealGit $realGit -Cwd $info.Cwd
+    if ([string]::IsNullOrWhiteSpace($gitCommonDir)) {
         & $realGit @GitArgs
         exit $LASTEXITCODE
     }
+    $lockPath = Join-Path $gitCommonDir "claude-multi-session.lock"
 
     $sessionId = Get-StableSessionId
     $normalizedCommand = "git $($info.Subcommand)"
@@ -237,12 +413,11 @@ try {
     $env:CODEX_GIT_LOCK_REAL_GIT = $realGit
 
     try {
-        & pwsh -NoProfile -ExecutionPolicy Bypass -File $helperPath -Command $normalizedCommand -Cwd $info.Cwd -SessionId $sessionId -OwnerPid $PID | Out-Null
+        $lockPath = Acquire-GitLock -GitCommonDir $gitCommonDir -SessionId $sessionId -CommandText $normalizedCommand -OwnerPid $PID
     } catch {
-        [Console]::Error.WriteLine("codex-git-wrapper: lock helper failed-open: $($_.Exception.Message)")
+        [Console]::Error.WriteLine("codex-git-wrapper: lock acquire failed-open: $($_.Exception.Message)")
     }
 
-    $lockPath = Get-LockPath -RealGit $realGit -Cwd $info.Cwd
     try {
         $env:CODEX_GIT_LOCK_BYPASS = "1"
         & $realGit @GitArgs

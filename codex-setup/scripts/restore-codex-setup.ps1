@@ -105,9 +105,12 @@ function Ensure-CodexGitLockConfig {
     $content = Set-TomlSectionKey -Content $content -Section "shell_environment_policy" -Key "inherit" -Value '"all"'
     $content = Set-TomlSectionKey -Content $content -Section "shell_environment_policy.set" -Key "PATH" -Value $pathValue
 
-    if ($content -notmatch [regex]::Escape("codex-git-multi-session-lock.ps1")) {
-        $hookPath = Join-Path $env:USERPROFILE ".codex\hooks\codex-git-multi-session-lock.ps1"
-        $hookCommand = "pwsh -NoProfile -ExecutionPolicy Bypass -File `"$hookPath`""
+    $hookPath = Join-Path $env:USERPROFILE ".codex\hooks\codex-git-multi-session-lock.cmd"
+    $hookCommand = 'cmd /d /s /c ""{0}""' -f $hookPath
+    $hookCommandPattern = '(?m)^command\s*=.*codex-git-multi-session-lock\.(?:cmd|ps1|sh).*$'
+    if ($content -match $hookCommandPattern) {
+        $content = [regex]::Replace($content, $hookCommandPattern, "command = '$hookCommand'")
+    } elseif ($content -notmatch [regex]::Escape("codex-git-multi-session-lock.cmd")) {
         $content = $content.TrimEnd() + @"
 
 [[hooks.PreToolUse]]
