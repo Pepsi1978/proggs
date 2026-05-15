@@ -265,6 +265,7 @@ _Noch keine Eintraege._
 | 2026-03-31 | Iterative Internet-Recherche | 3 Wellen: Breit → Tief → Kreativ, max 50 Ergebnisse/Researcher | Hoch |
 | 2026-04-03 | Memory-Konsolidierung (Traumsession) | 3 Agents parallel (episodic + claude-mem + scores) → Whiteboard-Update → Memory-Cleanup | Hoch |
 | 2026-05-15 | Custom Win+Alt-Hotkey im LL-Keyboard-Hook (.NET/WPF) | 3-Killer-Check: (1) EF HasConversion fuer char?, (2) Bootstrap-Pfad neben Render-Pfad, (3) ReleaseNonCtrlModifiers vor SendCtrlV + File-Logging in %TEMP%. Volle Anleitung: ~/proggs/LEARNINGS.md "Custom Global Hotkeys" | Hoch (nach 6 Commits) |
+| 2026-05-15 | Externe Trigger (Stream Deck / MacroPad / Voice) auf UI-Toggle legen | Separate Toggle-Methode `ToggleXFromHotkey()` einbauen die NUR den State + die Button-Optik aendert. NIEMALS den UI-Click-Handler direkt aufrufen — der hat fast immer Side-Effects (Return-Push, Submit, Animation) die fuer den externen Trigger unerwuenscht sind. Faustregel: UI-Klick = visuelle Sofortwirkung mit Side-Effects, externer Hotkey = reine Status-Aenderung. | Hoch |
 
 ## Chaos-Test Ergebnisse
 <!-- chaos-tester Agent schreibt hierher -->
