@@ -161,6 +161,20 @@ namespace TerminalVoiceOverlay.Services
             // Bring terminal to foreground (robust: AttachThreadInput + AllowSetForegroundWindow)
             BringToForeground(terminalHwnd);
 
+            // ── Modifier-Release vor Ctrl+V ─────────────────────────────
+            // Wenn der Paste durch einen Hotkey ausgeloest wurde (z.B.
+            // Win+Alt+B oder Shift+Alt+M), sind die Trigger-Modifier-Tasten
+            // beim SendCtrlV-Aufruf moeglicherweise IMMER NOCH virtuell
+            // gedrueckt (Frank haelt sie physisch). Windows wuerde dann
+            // "Win+Alt+Ctrl+V" sehen statt einfachem "Ctrl+V" — und das ist
+            // kein Paste mehr. Wir schicken synthetische KEYUP-Events fuer
+            // alle nicht-Ctrl-Modifier, damit der virtuelle Tastatur-State
+            // sauber ist, BEVOR Ctrl+V geht. Bei Strg+1..9-Hotkeys ist Ctrl
+            // der gewollte Modifier und bleibt unten — daher kein Release
+            // fuer Ctrl hier. Hardware-KEYUP-Events kommen spaeter (wenn
+            // Frank physisch loslaesst) und sind dann ein NoOp.
+            ReleaseNonCtrlModifiers();
+
             // Send Ctrl+V
             SendCtrlV();
 
@@ -335,6 +349,36 @@ namespace TerminalVoiceOverlay.Services
             Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
+        /// <summary>
+        /// Sendet synthetische KEYUP-Events fuer Win, Alt und Shift damit
+        /// der virtuelle Tastatur-State sauber ist bevor <see cref="SendCtrlV"/>
+        /// laeuft. Wird vor jedem Paste aufgerufen, denn Hotkey-getriggerte
+        /// Pastes laufen waehrend Frank die Trigger-Modifier physisch noch
+        /// haelt — Windows wuerde sonst "Win+Alt+Ctrl+V" sehen statt nur
+        /// "Ctrl+V". Ctrl wird hier NICHT released, weil die Strg+1..9-
+        /// Hotkeys den Ctrl-Modifier intentional gedrueckt halten und
+        /// SendCtrlV gleich darauf Ctrl down nochmal sendet (idempotent
+        /// im keybd_event-Modell).
+        /// </summary>
+        private static void ReleaseNonCtrlModifiers()
+        {
+            void Up(ushort vk)
+            {
+                byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
+                Win32.keybd_event((byte)vk, scan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }
+
+            // Beide Win-Tasten, beide Alt-Tasten, beide Shift-Tasten.
+            Up(0x5B); // VK_LWIN
+            Up(0x5C); // VK_RWIN
+            Up(0xA4); // VK_LMENU (linke Alt)
+            Up(0xA5); // VK_RMENU (rechte Alt / AltGr)
+            Up(0xA0); // VK_LSHIFT
+            Up(0xA1); // VK_RSHIFT
+            // Kleine Pause damit Windows die Up-Events verarbeiten kann.
+            System.Threading.Thread.Sleep(20);
         }
 
         private static void SendKey(ushort vk)
