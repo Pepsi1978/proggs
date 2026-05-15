@@ -3126,7 +3126,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.19.5",
+                            "Entropy Journal V0.19.6",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

@@ -31,6 +31,15 @@ object Constants {
     const val PREF_AUTO_UPDATE_DASHBOARD = "auto_update_dashboard"
     const val PREF_VERBOSE_DASHBOARD = "verbose_dashboard"
     const val PREF_VERBOSE_DASHBOARD_CHANGED_AT = "verbose_dashboard_changed_at"
+
+    /**
+     * Signatur (scenario | verbose | customPromptSavedAt) der zuletzt erfolgreich
+     * generierten Rueckblicke. Wird beim ViewModel-Init gegen den aktuellen Wert
+     * verglichen — bei Abweichung werden ALLE bestehenden Rueckblicke geloescht und
+     * neu generiert. Verhindert dass alte Rueckblicke aus einem anderen Profil oder
+     * Variant-Setting in der Datenbank bleiben (Duplikate).
+     */
+    const val PREF_RETRO_LAST_GENERATED_SIGNATURE = "retro_last_generated_signature"
     const val PREF_GOOGLE_ACCOUNT_NAME = "google_account_name"
     const val PREF_GOOGLE_ACCOUNT_EMAIL = "google_account_email"
     const val PREF_GOOGLE_AVATAR_URL = "google_avatar_url"

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -55,4 +56,21 @@ interface RetrospectiveDao {
         rangeStart: Long,
         rangeEnd: Long,
     ): List<RetrospectiveSummaryEntity>
+
+    /**
+     * Defense-in-Depth: atomarer Upsert pro Zeitraum.
+     *
+     * Loescht zuerst alle bestehenden Eintraege fuer (type, startDate) — egal wie viele —
+     * und fuegt dann den neuen Eintrag ein. Damit kann fuer denselben Zeitraum
+     * strukturell nie ein Duplikat entstehen, auch wenn die Generations-Logik mal
+     * versagt oder eine Race-Condition einen Insert nach deleteAll() durchschmuggelt.
+     *
+     * Beide Schritte laufen in einer Room-Transaktion, sind also fuer andere Threads
+     * unsichtbar bis sie komplett durch sind.
+     */
+    @Transaction
+    suspend fun upsertForPeriod(entity: RetrospectiveSummaryEntity) {
+        deleteByTypeAndRange(entity.type, entity.startDate, entity.startDate)
+        insert(entity)
+    }
 }

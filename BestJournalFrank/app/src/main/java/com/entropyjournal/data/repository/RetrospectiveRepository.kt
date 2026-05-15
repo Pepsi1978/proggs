@@ -20,6 +20,12 @@ class RetrospectiveRepository @Inject constructor(private val dao: Retrospective
 
     suspend fun insertAll(summaries: List<RetrospectiveSummaryEntity>) = dao.insertAll(summaries)
 
+    /**
+     * Atomarer Upsert pro Zeitraum — siehe [RetrospectiveDao.upsertForPeriod].
+     * Strukturelle Garantie gegen Duplikat-Eintraege fuer denselben Zeitraum.
+     */
+    suspend fun upsertForPeriod(summary: RetrospectiveSummaryEntity) = dao.upsertForPeriod(summary)
+
     suspend fun count(): Int = dao.count()
 
     suspend fun deleteAll() = dao.deleteAll()

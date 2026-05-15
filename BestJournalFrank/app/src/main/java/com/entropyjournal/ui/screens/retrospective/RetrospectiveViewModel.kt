@@ -223,9 +223,64 @@ constructor(
                     }
 
                     _isGenerating.value = true
-                    val count = generateUseCase.generateMissing()
-                    if (count > 0) {
-                        Log.d("RetroVM", "Generated $count new reviews")
+
+                    // Signature-Check: vergleicht die aktuelle Profil+Variant-Kombi
+                    // mit der zuletzt erfolgreich generierten. Stimmt es nicht, dann
+                    // wurden waehrend die Rueckblicke geschlossen waren das Profil oder
+                    // der Verbose-Schalter geaendert — der Polling-Loop hat das nicht
+                    // mitbekommen, weil der ViewModel zwischenzeitlich nicht aktiv war.
+                    // In diesem Fall: ALLE Rueckblicke loeschen und mit der neuen
+                    // Signatur neu generieren — sonst sieht der User alte Texte aus
+                    // dem vorherigen Profil oder die neuen ZUSAETZLICH zu den alten.
+                    val currentSig = generateUseCase.currentSignature()
+                    val storedSig =
+                        encryptedPrefs.getString(
+                            com.entropyjournal.util.Constants.PREF_RETRO_LAST_GENERATED_SIGNATURE,
+                            null,
+                        )
+                    val signatureChanged = storedSig != null && storedSig != currentSig
+
+                    if (signatureChanged) {
+                        Log.d(
+                            "RetroVM",
+                            "Signature changed since last generation (stored=$storedSig, current=$currentSig) — regenerating all retrospectives",
+                        )
+                        _isProfileSwitch.value = true
+                        try {
+                            repository.deleteAll()
+                            val count = generateUseCase.generateMissing()
+                            generateUseCase.persistCurrentSignature()
+                            // lastScenario/lastVerboseChangedAt auf den aktuellen Stand
+                            // setzen, damit der Polling-Loop nicht direkt nochmal
+                            // dasselbe macht.
+                            lastScenario =
+                                encryptedPrefs.getInt(
+                                    com.entropyjournal.util.Constants.PREF_DASHBOARD_SCENARIO,
+                                    0,
+                                )
+                            lastVerboseChangedAt =
+                                encryptedPrefs.getLong(
+                                    com.entropyjournal.util.Constants.PREF_VERBOSE_DASHBOARD_CHANGED_AT,
+                                    0L,
+                                )
+                            lastCustomPromptSavedAt =
+                                encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+                            Log.d(
+                                "RetroVM",
+                                "Regenerated $count reviews after signature mismatch",
+                            )
+                        } finally {
+                            _isProfileSwitch.value = false
+                        }
+                    } else {
+                        val count = generateUseCase.generateMissing()
+                        if (count > 0) {
+                            Log.d("RetroVM", "Generated $count new reviews")
+                        }
+                        // Signature beim allerersten Start persistieren (storedSig == null).
+                        if (storedSig == null) {
+                            generateUseCase.persistCurrentSignature()
+                        }
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
@@ -291,6 +346,9 @@ constructor(
                     repository.deleteAll()
                     Log.d("RetroVM", "Deleted all retrospectives for profile-change regeneration")
                     val count = generateUseCase.generateMissing()
+                    // Signatur des neuen Profil/Variant-Zustands persistieren,
+                    // damit der naechste ViewModel-Start nicht erneut regeneriert.
+                    generateUseCase.persistCurrentSignature()
                     if (count == 0) {
                         Log.w("RetroVM", "Regeneration produced 0 reviews — AI may have failed")
                     } else {

@@ -37,6 +37,35 @@ constructor(
     }
 
     /**
+     * Liefert die aktuelle "Generations-Signatur" — eine Kombination aus:
+     *  - aktivem Profil-Index (PREF_DASHBOARD_SCENARIO)
+     *  - Verbose-Schalter (PREF_VERBOSE_DASHBOARD)
+     *  - Zeitpunkt der letzten Custom-Prompt-Speicherung (custom_prompt_saved_at)
+     *
+     * Wenn diese Signatur sich aendert, muessen ALLE bestehenden Rueckblicke
+     * geloescht und neu generiert werden — sonst bleiben Eintraege aus einem
+     * vorherigen Profil/Variant in der DB.
+     */
+    fun currentSignature(): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        val verbose = encryptedPrefs.getBoolean(Constants.PREF_VERBOSE_DASHBOARD, false)
+        val customPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+        return "$scenario|$verbose|$customPromptSavedAt"
+    }
+
+    /**
+     * Schreibt die aktuelle Signatur in die EncryptedPrefs — wird vom Aufrufer
+     * NACH erfolgreichem regenerateAll()/generateMissing() aufgerufen, damit
+     * der naechste ViewModel-Start keinen erneuten Regen-Lauf ausloest.
+     */
+    fun persistCurrentSignature() {
+        encryptedPrefs
+            .edit()
+            .putString(Constants.PREF_RETRO_LAST_GENERATED_SIGNATURE, currentSignature())
+            .apply()
+    }
+
+    /**
      * Liefert das vom Benutzer in den Einstellungen gewaehlte Gemini-Modell.
      * ALLE KI-Aufrufe in diesem UseCase nutzen ausschliesslich dieses Modell —
      * keine hartcodierten Modelle mehr fuer einzelne Aufgaben.
@@ -129,7 +158,9 @@ constructor(
      */
     suspend fun regenerateAll(): Int {
         retroRepo.deleteAll()
-        return generateMissing()
+        val count = generateMissing()
+        persistCurrentSignature()
+        return count
     }
 
     // ── Weekly ──────────────────────────────────────────────────────────────
@@ -189,7 +220,7 @@ constructor(
                                 // verbose switch twice in quick succession), do NOT
                                 // insert stale data into the fresh DB state.
                                 currentCoroutineContext().ensureActive()
-                                retroRepo.insert(entity)
+                                retroRepo.upsertForPeriod(entity)
                                 generated.incrementAndGet()
                                 Log.d(
                                     "Retro",
@@ -375,7 +406,7 @@ ${summaryText.take(500)}"""
                         semaphore.withPermit {
                             generateSingleMonthly(task, profileStyle)?.let { entity ->
                                 currentCoroutineContext().ensureActive()
-                                retroRepo.insert(entity)
+                                retroRepo.upsertForPeriod(entity)
                                 generated.incrementAndGet()
                                 Log.d(
                                     "Retro",
@@ -543,7 +574,7 @@ ${summaryText.take(500)}"""
         val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Jahresrückblick $year"
 
         currentCoroutineContext().ensureActive()
-        retroRepo.insert(
+        retroRepo.upsertForPeriod(
             RetrospectiveSummaryEntity(
                 type = "YEARLY",
                 periodLabel = "$year",
