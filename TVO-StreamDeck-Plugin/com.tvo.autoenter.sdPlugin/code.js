@@ -1,30 +1,31 @@
 // ============================================================================
-// TVO Auto-Enter Stream Deck Plugin
+// TVO Auto-Enter Stream Deck Plugin — v3 (stabil)
 //
-// Spiegelt den Auto-Enter-Status des Terminal Voice Overlays (orange/grau)
-// auf eine Stream-Deck-Taste UND erlaubt Toggle-Steuerung in die andere
-// Richtung. Beide Seiten bleiben automatisch synchron — egal ob der User
-// im Overlay per Maus klickt oder die Stream-Deck-Taste drueckt.
-//
-// v2 (2026-05-15): Caching weg. Frueher cachte das Plugin den letzten
-// State und ueberspratzte gleiche-State-Updates — das fuehrte dazu dass
-// die Taste nur EINMAL korrekt ihre Farbe wechselte und dann nicht mehr.
-// Jetzt schickt jeder Poll-Tick ein setState/setTitle, Stream Deck
-// dedupliziert intern. Zusaetzlich POST /log fuer Diagnose.
+// v3-Aenderungen (2026-05-15, nach "10 Versuche dann tot"-Bug):
+//   * WebSocket auto-reconnect bei onclose/onerror — ohne das verschluckt
+//     das Plugin alle setState-Nachrichten nachdem die Stream-Deck-Software
+//     den Socket schliesst (Inactivity-Timeout oder Service-Reload).
+//   * Jeder setState wird UNCONDITIONAL geloggt (kein Throttling mehr), so
+//     dass jede Plugin-Aktion live in TVO-hotkey.log sichtbar ist.
+//   * sendToStreamDeck loggt explizit wenn der WebSocket NICHT offen ist —
+//     damit "Taste reagiert aber Farbe wechselt nicht"-Faelle eindeutig in
+//     den Logs auftauchen.
+//   * keyDown loest nach dem Toggle ZWEI applyState-Calls aus (sofort +
+//     200 ms spaeter), damit Stream Deck auch bei schnellen Mehrfach-Klicks
+//     den letzten State garantiert anzeigt.
 // ============================================================================
 
 const TVO_STATUS_URL = "http://127.0.0.1:5723/autoenter/status";
 const TVO_TOGGLE_URL = "http://127.0.0.1:5723/autoenter/toggle";
 const TVO_LOG_URL = "http://127.0.0.1:5723/log";
 const POLL_INTERVAL_MS = 500;
+const WS_RECONNECT_DELAY_MS = 1000;
 
 let websocket = null;
 let pluginUUID = null;
 let registerEvent = null;
+let wsPort = null;
 
-// Pro action-context (eine pro Stream-Deck-Taste mit dieser Action)
-// halten wir den Polling-Timer. lastOn wurde absichtlich entfernt —
-// siehe Header-Kommentar.
 const actionContexts = new Map(); // context -> { timer }
 
 function connectElgatoStreamDeckSocket(
@@ -35,17 +36,37 @@ function connectElgatoStreamDeckSocket(
 ) {
 	pluginUUID = inPluginUUID;
 	registerEvent = inRegisterEvent;
+	wsPort = inPort;
+	openWebSocket();
+}
 
-	websocket = new WebSocket("ws://127.0.0.1:" + inPort);
+function openWebSocket() {
+	log("WS connecting to port " + wsPort);
+	try {
+		websocket = new WebSocket("ws://127.0.0.1:" + wsPort);
+	} catch (e) {
+		log(
+			"WS construction failed: " +
+				e.message +
+				" — retry in " +
+				WS_RECONNECT_DELAY_MS +
+				"ms",
+		);
+		setTimeout(openWebSocket, WS_RECONNECT_DELAY_MS);
+		return;
+	}
 
 	websocket.onopen = () => {
 		websocket.send(
 			JSON.stringify({
-				event: inRegisterEvent,
-				uuid: inPluginUUID,
+				event: registerEvent,
+				uuid: pluginUUID,
 			}),
 		);
-		log("WS open, registered as " + inPluginUUID);
+		log("WS open + registered (uuid=" + shortCtx(pluginUUID) + ")");
+		// Beim Reconnect: alle bekannten Action-Instances einmal frisch
+		// sync-en, damit die Tasten sofort die richtige Farbe haben.
+		actionContexts.forEach((_state, ctx) => pollOnce(ctx));
 	};
 
 	websocket.onmessage = (msg) => {
@@ -72,7 +93,21 @@ function connectElgatoStreamDeckSocket(
 	};
 
 	websocket.onerror = (err) => {
-		console.error("WebSocket error:", err);
+		log("WS error");
+	};
+
+	websocket.onclose = (ev) => {
+		log(
+			"WS closed code=" +
+				ev.code +
+				" reason=" +
+				(ev.reason || "(empty)") +
+				" — reconnecting in " +
+				WS_RECONNECT_DELAY_MS +
+				"ms",
+		);
+		websocket = null;
+		setTimeout(openWebSocket, WS_RECONNECT_DELAY_MS);
 	};
 }
 
@@ -82,8 +117,6 @@ function startPolling(context) {
 	}
 	const state = { timer: null };
 	actionContexts.set(context, state);
-
-	// Sofort einmal pollen, danach im Intervall
 	pollOnce(context);
 	state.timer = setInterval(() => pollOnce(context), POLL_INTERVAL_MS);
 }
@@ -110,11 +143,21 @@ async function pollOnce(context) {
 	}
 }
 
-// Sendet IMMER ein setState + setTitle — kein Caching mehr. Stream Deck
-// dedupliziert intern und das spart uns die Bug-Klasse "lastOn ist
-// nicht mehr synchron mit dem echten Tastenzustand".
+// Sendet IMMER setState + setTitle, kein Caching. Loggt unconditional.
 function applyState(context, on, statusText) {
 	const desired = on ? 1 : 0;
+	const wsState = websocket ? websocket.readyState : -1;
+	log(
+		"applyState ctx=" +
+			shortCtx(context) +
+			" on=" +
+			on +
+			" desired=" +
+			desired +
+			" ws=" +
+			wsState +
+			(statusText ? " status=" + statusText : ""),
+	);
 	sendToStreamDeck({
 		event: "setState",
 		context: context,
@@ -124,26 +167,11 @@ function applyState(context, on, statusText) {
 		event: "setTitle",
 		context: context,
 		payload: {
-			title: statusText || "Auto-Enter",
-			target: 0, // hardware + software
+			title: statusText || "",
+			target: 0,
 		},
 	});
-	// Diagnose-Log — nur jeden 4. Aufruf damit das Log nicht zumuellt.
-	pollCounter++;
-	if (pollCounter % 4 === 0) {
-		log(
-			"applyState ctx=" +
-				shortCtx(context) +
-				" on=" +
-				on +
-				" desired=" +
-				desired +
-				(statusText ? " status=" + statusText : ""),
-		);
-	}
 }
-
-let pollCounter = 0;
 
 async function handleKeyDown(context) {
 	try {
@@ -155,6 +183,9 @@ async function handleKeyDown(context) {
 		const data = await res.json();
 		log("toggle response on=" + data.on);
 		applyState(context, !!data.on);
+		// Doppelte Sicherung: bei sehr schnellen Klicks kann Stream Deck
+		// setState verschlucken. 200 ms spaeter pollen wir frisch.
+		setTimeout(() => pollOnce(context), 200);
 	} catch (err) {
 		log("toggle failed: " + err.message);
 		sendToStreamDeck({
@@ -167,6 +198,13 @@ async function handleKeyDown(context) {
 function sendToStreamDeck(message) {
 	if (websocket && websocket.readyState === WebSocket.OPEN) {
 		websocket.send(JSON.stringify(message));
+	} else {
+		log(
+			"SEND-SKIPPED ws=" +
+				(websocket ? websocket.readyState : "null") +
+				" event=" +
+				message.event,
+		);
 	}
 }
 
