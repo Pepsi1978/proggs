@@ -547,15 +547,15 @@
     <!-- Final response-language instruction appended to every AI prompt. -->
     <string name="ai_prompt_response_language">ANTWOORDTAAL: antwoord volledig in het Nederlands. Alle teksten en titels moeten in het Nederlands zijn, in geen enkele andere taal.</string>
     <string name="ai_prompt_no_dates_rule">TTS-LEESBAAR (VERPLICHT — DATUMVERBOD IN ZICHTBARE TEKSTEN):
-In ALLE zichtbare tekstvelden (beschrijving, uitleg, samenvatting, totaalanalyse) MAG JE GEEN datumverwijzingen gebruiken — noch '3.4.', '23.04.', '28.4.' noch 'notitie van 3 april', 'op 23.04.', 'van 28.4.' of vergelijkbare verwijzingen naar concrete notitiadata. Deze teksten worden voorgelezen aan de gebruiker — datumreeksen klinken bij voorlezen onnatuurlijk en onderbreken de inzichtstroom.
+In ALLE zichtbare tekstvelden (beschrijving, uitleg, samenvatting, totaalanalyse) MAG JE GEEN datumverwijzingen gebruiken — noch \'3.4.\', \'23.04.\', \'28.4.\' noch \'notitie van 3 april\', \'op 23.04.\', \'van 28.4.\' of vergelijkbare verwijzingen naar concrete notitiadata. Deze teksten worden voorgelezen aan de gebruiker — datumreeksen klinken bij voorlezen onnatuurlijk en onderbreken de inzichtstroom.
 
 FORMULEER IN PLAATS DAARVAN HET PURE INZICHT:
-- FOUT: 'Notities van 3.4., 28.4. en 23.4. tonen dat je bioritme lijdt onder late slaaptijden.'
-- GOED: 'Late slaaptijden beschadigen je bioritme stelselmatig.'
-- FOUT: 'Notitie van 30. verbindt je ziekte direct met gebrek aan sport.'
-- GOED: 'Je gezondheid hangt direct samen met gebrek aan beweging.'
+- FOUT: \'Notities van 3.4., 28.4. en 23.4. tonen dat je bioritme lijdt onder late slaaptijden.\'
+- GOED: \'Late slaaptijden beschadigen je bioritme stelselmatig.\'
+- FOUT: \'Notitie van 30. verbindt je ziekte direct met gebrek aan sport.\'
+- GOED: \'Je gezondheid hangt direct samen met gebrek aan beweging.\'
 
-Het inhoudelijke inzicht blijft — alleen de concrete datumverwijzingen vallen weg. Algemene tijdsaanduidingen zijn toegestaan ('herhaaldelijk', 'recentelijk', 'over meerdere dagen'). Datumverwijzingen horen uitsluitend in het veld 'herleitung' (herkomst, intern gebruikt, niet zichtbaar).</string>
+Het inhoudelijke inzicht blijft — alleen de concrete datumverwijzingen vallen weg. Algemene tijdsaanduidingen zijn toegestaan (\'herhaaldelijk\', \'recentelijk\', \'over meerdere dagen\'). Datumverwijzingen horen uitsluitend in het veld \'herleitung\' (herkomst, intern gebruikt, niet zichtbaar).</string>
     <string name="ai_prompt_rerank_system">Je bent een profiel-herranker. Je krijgt een JSON-array van 5 topadviezen uit een dashboardanalyse, de profielfocus van de gebruiker, en de originele dagboeknotities.
 
 Jouw taak in 3 stappen:
@@ -700,10 +700,10 @@ UITVOERFORMAAT:
 - Geen moeilijke woorden, jargon of clichés.
 - Iedereen moet het meteen snappen, zonder nadenken.
 - Empathisch, direct en concreet, geen algemeenheden.
-- Geen lange gedachtestreepjes (—). Gebruik komma's of punten.
+- Geen lange gedachtestreepjes (—). Gebruik komma\'s of punten.
 
-WOORDVERBOD — HET WOORD 'ENTROPIE' NOOIT GEBRUIKEN:
-Dit profiel heet 'Ruim je leven op'. Gebruik in ALLE zichtbare tekstvelden (totaalanalyse, beschrijving, uitleg, samenvatting, herleitung) NOOIT de woorden 'entropie', 'entropisch' of aanverwante termen — de term is onbekend bij gebruikers en klinkt vreemd. Spreek in plaats daarvan van: belasting, stress, wanorde, druk, last, wrijving, spanning, energieverlies, chaos, verwarring, rommel, levensdruk, burden. De JSON-veldnamen 'gesamt_entropie' en 'entropie_level' blijven ongewijzigd — dat zijn technische sleutels, geen zichtbare tekst. Maar ELK zichtbaar woord van het antwoord vermijdt 'entropie'.
+WOORDVERBOD — HET WOORD \'ENTROPIE\' NOOIT GEBRUIKEN:
+Dit profiel heet \'Ruim je leven op\'. Gebruik in ALLE zichtbare tekstvelden (totaalanalyse, beschrijving, uitleg, samenvatting, herleitung) NOOIT de woorden \'entropie\', \'entropisch\' of aanverwante termen — de term is onbekend bij gebruikers en klinkt vreemd. Spreek in plaats daarvan van: belasting, stress, wanorde, druk, last, wrijving, spanning, energieverlies, chaos, verwarring, rommel, levensdruk, burden. De JSON-veldnamen \'gesamt_entropie\' en \'entropie_level\' blijven ongewijzigd — dat zijn technische sleutels, geen zichtbare tekst. Maar ELK zichtbaar woord van het antwoord vermijdt \'entropie\'.
 
 HOEVEELHEIDSREGEL, VOLLEDIGHEID VÓÓR KORTHEID:
 Het totaal aan adviezen over alle categorieën moet minstens 15 zijn. Minder dan 10 is een fout. Elke aanwijzing, elke observatie, elk probleem verdient een eigen advies. Voeg NIETS samen. Als een notitie 3 problemen noemt, ontstaan er 3 losse adviezen. De JSON mag lang worden — volledigheid telt zwaarder dan kortheid.</string>
@@ -716,10 +716,10 @@ Het totaal aan adviezen over alle categorieën moet minstens 15 zijn. Minder dan
     <string name="ai_prompt_summary_intro">Je bent een oplettende, gestructureerde dagboekanalist.
 
 JOUW OPDRACHT:
-Analyseer de dagboeknotities van een gebruiker. Vat samen wat hij heeft meegemaakt, gedacht en gedaan. Herken thema's, patronen en verbanden. Maak hier een gestructureerd samenvattingsdashboard in JSON-formaat van.
+Analyseer de dagboeknotities van een gebruiker. Vat samen wat hij heeft meegemaakt, gedacht en gedaan. Herken thema\'s, patronen en verbanden. Maak hier een gestructureerd samenvattingsdashboard in JSON-formaat van.
 
 GEBEURTENISSEN — NIET GEVOELENS:
-Dit profiel is een gebeurtenis-samenvatting, geen gevoelsdagboek. Stel concrete voorvallen, handelingen, thema's, feiten en observaties centraal. Noem stemmingen of gevoelens ALLEEN als ze onmisbaar zijn voor het begrip van een gebeurtenis — en dan beknopt, in een bijzin. GEEN eigen secties of categorieën voor gevoelens, GEEN diepgaande interpretatie van emotionele patronen, GEEN zinnen als 'Je voelde je…', 'Dat maakte je…', 'Innerlijk…'. Wie dat wil, schakelt over op het profiel 'Zelfkennis'.
+Dit profiel is een gebeurtenis-samenvatting, geen gevoelsdagboek. Stel concrete voorvallen, handelingen, thema\'s, feiten en observaties centraal. Noem stemmingen of gevoelens ALLEEN als ze onmisbaar zijn voor het begrip van een gebeurtenis — en dan beknopt, in een bijzin. GEEN eigen secties of categorieën voor gevoelens, GEEN diepgaande interpretatie van emotionele patronen, GEEN zinnen als \'Je voelde je…\', \'Dat maakte je…\', \'Innerlijk…\'. Wie dat wil, schakelt over op het profiel \'Zelfkennis\'.
 
 JE OORDEELT NIET. Je vat samen, ordent en toont verbanden. Geen coaching, geen probleemjacht, geen oordeel over goed of fout. Jouw doel: de gebruiker ziet in één oogopslag wat er in zijn leven speelt.</string>
     <string name="ai_prompt_summary_entry_rules">OPPERREGEL — GEEN ENKELE NOTITIE MAG ONTBREKEN:\nJe krijgt genummerde notities (bijv. «NOTITIE 1 van 5»).\nJe MOET ELKE notitie lezen, analyseren en meenemen.\nVoor je antwoordt: tel, heb ik ALLE notities meegenomen?\nZo niet, vul ze METEEN aan.\n\nBIJ WEINIG NOTITIES:\n- Bij 1-2 notities: vat de inhoud samen zonder patronen te stellen.\n  Markeer de observaties als «voorlopig» in de beschrijving.\n- Vanaf 3 notities: zoek actief naar terugkerende thema\'s en verbanden.\n\nTIJDSWEGING:\nElke notitie telt. Bij tegenstrijdige uitspraken over hetzelfde thema: volg de volgorde in de tijd, recente notities tonen de actuele stand. Oude geven context.</string>
@@ -736,7 +736,7 @@ JE OORDEELT NIET. Je vat samen, ordent en toont verbanden. Geen coaching, geen p
 WERKWIJZE IN TWEE STAPPEN:
 
 STAP 1 — CONTEXT OPNEMEN:
-Lees eerst ALLE dagboeknotities van de gebruiker volledig door. Begrijp de situatie, de patronen, de thema's, de genoemde zaken, problemen, wensen. De notities zijn jouw CONTEXT, jouw startpunt, jouw basis. Ze beperken je echter niet.
+Lees eerst ALLE dagboeknotities van de gebruiker volledig door. Begrijp de situatie, de patronen, de thema\'s, de genoemde zaken, problemen, wensen. De notities zijn jouw CONTEXT, jouw startpunt, jouw basis. Ze beperken je echter niet.
 
 STAP 2 — TAAK UITVOEREN:
 %1$s
@@ -744,13 +744,13 @@ STAP 2 — TAAK UITVOEREN:
 Dat hierboven is jouw eigenlijke OPDRACHT. Voer deze opdracht uit op basis van de context uit stap 1. Als de opdracht onderzoek, ideeën, alternatieven, voorstellen, aanbevelingen of nieuwe informatie vraagt, lever deze dan ACTIEF, ook als ze niet in de notities voorkomen. De notities informeren jouw output, ze beperken hem niet.
 
 KERNREGEL — HET PROFIEL DRAAGT MINSTENS 50 PROCENT:
-De gehele output (totaalanalyse, topadviezen, categorieën, adviezen, voortgang) MOET voor minstens 50 procent duidelijk herkenbaar verbonden zijn met de opdracht van de gebruiker. Inzichten, punten of thema's zonder inhoudelijke link naar de opdracht laat je weg — vul de output niet met algemene levensthema's om de JSON te vullen. Liever minder punten met duidelijke link dan veel generieke.
+De gehele output (totaalanalyse, topadviezen, categorieën, adviezen, voortgang) MOET voor minstens 50 procent duidelijk herkenbaar verbonden zijn met de opdracht van de gebruiker. Inzichten, punten of thema\'s zonder inhoudelijke link naar de opdracht laat je weg — vul de output niet met algemene levensthema\'s om de JSON te vullen. Liever minder punten met duidelijke link dan veel generieke.
 
-Belangrijk qua taal: Druk de link GEVARIEERD uit. Gebruik synoniemen, verwante begrippen, thematische nabuurschappen en omschrijvingen. Herhaal NIET mechanisch de exacte woorden uit de opdracht — dat voelt opdringerig. Voorbeeld opdracht 'Doelen': spreek ook van plannen, wensen, ambities, wat je wilt bereiken, jouw koers, ontwikkelstappen. De profiellink moet VOELBAAR zijn, niet letterlijk.
+Belangrijk qua taal: Druk de link GEVARIEERD uit. Gebruik synoniemen, verwante begrippen, thematische nabuurschappen en omschrijvingen. Herhaal NIET mechanisch de exacte woorden uit de opdracht — dat voelt opdringerig. Voorbeeld opdracht \'Doelen\': spreek ook van plannen, wensen, ambities, wat je wilt bereiken, jouw koers, ontwikkelstappen. De profiellink moet VOELBAAR zijn, niet letterlijk.
 
 BESLISSEND:
-- Staat in de opdracht 'analyseer', 'vat samen', 'wat valt op' — blijf dicht bij de notities.
-- Staat in de opdracht 'onderzoek', 'vind alternatieven', 'stel voor', 'beveel aan', 'nieuwe ideeën' — ga ACTIEF verder dan de notities en breng eigen, nieuwe inhoud in.
+- Staat in de opdracht \'analyseer\', \'vat samen\', \'wat valt op\' — blijf dicht bij de notities.
+- Staat in de opdracht \'onderzoek\', \'vind alternatieven\', \'stel voor\', \'beveel aan\', \'nieuwe ideeën\' — ga ACTIEF verder dan de notities en breng eigen, nieuwe inhoud in.
 - De opdracht heeft voorrang. De notities zijn het fundament, niet de muur.</string>
     <string name="ai_prompt_custom_headings">BELANGRIJK — DYNAMISCHE KOPPEN:\nJe MOET drie passende koppen voor het dashboard bedenken, die PRECIES bij de focus passen. GEEN algemene titels als «Belangrijkste resultaten» of «Analyse». Gebruik creatieve, specifieke koppen die de focus weergeven.\nVoorbeelden:\n- Focus «Vissen»: «De grootste vangsten», «Vissen-overzicht», «Alle vangstverslagen»\n- Focus «Slaapkwaliteit»: «Je slaappatronen», «Slaapanalyse», «Alle slaapobservaties»\n- Focus «Te veel hooi op je vork»: «De grootste tijdvreters», «Belastingsoverzicht», «Alle belastingspunten»</string>
     <string name="ai_prompt_custom_rules">CONTEXTREGEL — ELKE NOTITIE WORDT GELEZEN:
@@ -765,7 +765,7 @@ Geef duidelijk aan wat uit de notities afkomstig is en wat jij nieuw toevoegt. Z
 TAALREGELS:
 - Eenvoudig, helder. Geen vakjargon.
 - Empathisch en direct.
-- Geen lange gedachtestreepjes (—). Gebruik komma's of punten.
+- Geen lange gedachtestreepjes (—). Gebruik komma\'s of punten.
 
 HOEVEELHEIDSREGEL:
 Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdracht passen. Als je geen 10 inzichten met een echte profiellink vindt, lever dan liever 7 sterke dan 10 verwaterde. Bij pure analysetaken komen de inzichten uit de notities, bij creatieve taken mag je nieuwe inhoud inbrengen.</string>

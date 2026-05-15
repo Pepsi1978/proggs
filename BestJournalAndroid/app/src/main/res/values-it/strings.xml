@@ -704,7 +704,7 @@
 
 1) &quot;ueberschrift_top5/analyse/ergebnisse&quot;: OBBLIGATORIO. Creativo, specifico, max 3 parole. DEVE rispecchiare il RISULTATO del compito, non solo il tema. NIENTE titoli generici.
 
-2) &quot;fokus_kern&quot;: OBBLIGATORIO. Una singola frase (15-30 parole) che mostra all'utente: &quot;Ho capito il tuo compito — QUESTO e il filo conduttore.&quot; Non citare il compito, riformulalo con parole tue. Viene mostrato in cima al dashboard ed e la prova che il profilo funziona.
+2) &quot;fokus_kern&quot;: OBBLIGATORIO. Una singola frase (15-30 parole) che mostra all\'utente: &quot;Ho capito il tuo compito — QUESTO e il filo conduttore.&quot; Non citare il compito, riformulalo con parole tue. Viene mostrato in cima al dashboard ed e la prova che il profilo funziona.
 
 3) &quot;fokus_zitate&quot;: OBBLIGATORIO, 3-5 elementi. Brevi passaggi tratti testualmente o quasi testualmente dalle voci del diario, direttamente pertinenti al compito. Formato: &quot;[Data] breve citazione o passaggio parafrasato&quot;. Se per compiti creativi non ci sono corrispondenze letterali, prendi le 3-5 voci tematicamente piu vicine e descrivi il legame in una riga. Se meno di 3 voci sono tematicamente pertinenti, includile comunque e aggiungi &quot;(vicinanza tematica)&quot; — non lasciare mai vuoto.
 
@@ -724,7 +724,7 @@
    {
      &quot;titel&quot;: &quot;max 6 parole&quot;,
      &quot;beschreibung&quot;: &quot;13-21 parole, conciso e diretto.&quot;,
-     &quot;erklaerung&quot;: &quot;5-8 frasi dettagliate. Se il contenuto e nuovo, spiega perche si adatta al contesto dell'utente. Se viene dalle voci, cita il riferimento concreto.&quot;
+     &quot;erklaerung&quot;: &quot;5-8 frasi dettagliate. Se il contenuto e nuovo, spiega perche si adatta al contesto dell\'utente. Se viene dalle voci, cita il riferimento concreto.&quot;
    }
 
 9) &quot;kategorien&quot;: Gruppi tematici che strutturano il compito (dinamici). ALMENO la meta deve essere pertinente al compito.
@@ -743,7 +743,7 @@
 
 HERLEITUNG — PROVENIENZA DEL CONTENUTO:
 - Il contenuto viene da una voce: imposta &quot;datum&quot; sulla data della voce, &quot;zusammenfassung&quot; da il riferimento concreto.
-- Il contenuto e nuovo (es. alternativa ricercata, suggerimento proprio): imposta &quot;datum&quot; su &quot;neu&quot;, &quot;zusammenfassung&quot; spiega in 1-2 frasi perche questo suggerimento si adatta al contesto dell'utente.</string>
+- Il contenuto e nuovo (es. alternativa ricercata, suggerimento proprio): imposta &quot;datum&quot; su &quot;neu&quot;, &quot;zusammenfassung&quot; spiega in 1-2 frasi perche questo suggerimento si adatta al contesto dell\'utente.</string>
     <string name="ai_prompt_custom_output">REGOLA DEL NUMERO DI PAROLE: «descrizione» in azioni_principali e consigli SEMPRE 13-21 parole.\n\nFORMATO DI USCITA — REGOLE RIGIDE:\n- Rispondi SOLO con l\'oggetto JSON.\n- Niente testo prima o dopo. Niente backtick.\n- Inizia direttamente con { e termina con }.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -1166,12 +1166,12 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
     <string name="profile_style_insight">\n- Scrivi nello stile di un racconto di profonda conoscenza di sé, svela schemi di pensiero, emozioni ricorrenti e forze nascoste</string>
     <string name="profile_style_coach">\n- Scrivi nello stile di un accompagnatore motivante di obiettivi, mostra i progressi sugli obiettivi personali e incoraggia a continuare</string>
     <string name="profile_style_custom">
-- STILE PROFILO (Personalizzato): Scrivi questa retrospettiva con un chiaro riferimento al compito dell'utente. REGOLE OBBLIGATORIE:
+- STILE PROFILO (Personalizzato): Scrivi questa retrospettiva con un chiaro riferimento al compito dell\'utente. REGOLE OBBLIGATORIE:
   1) ALMENO 60% della retrospettiva tratta direttamente o per parafrasi il tema del compito.
   2) ALMENO UNA sezione tematica e completamente dedicata al focus del compito (titolo + testo).
   3) Esprimi il riferimento al profilo in modo VARIANTENREICH con sinonimi e aree tematiche correlate, NON con ripetizione meccanica delle parole.
   4) Mantieni brevi o ometti le osservazioni senza relazione col compito — meglio meno sezioni con vero riferimento che molte generiche.
-  Compito dell'utente (come orientamento): &quot;%1&quot;</string>
+  Compito dell\'utente (come orientamento): &quot;%1&quot;</string>
 
 
     <!-- ════════════════════════════════════════════════════════════════════

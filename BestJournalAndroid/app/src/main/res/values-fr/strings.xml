@@ -548,16 +548,16 @@
          Kept in the device language so the model's last signal matches the UI language. -->
     <string name="ai_prompt_response_language">LANGUE DE RÉPONSE\u00A0: réponds entièrement en français. Tous les textes et titres doivent être en français, pas dans une autre langue.</string>
     <string name="ai_prompt_no_dates_rule">RÈGLE TTS — PAS DE DATES DANS LE TEXTE :
-N'utilise JAMAIS de dates, de jours ou de semaines dans les champs texte visibles (noms de catégories, titres, descriptions, conseils, résumés, analyse globale, gesamtanalyse, genese). Les dates rendent le texte TTS illisible et sont affichées séparément dans l'interface. PAS de formulations telles que « le 3 mai », « semaine 18 », « le mardi », « ce mois-ci le 5 ». Les données restent valides dans les clés JSON comme datum, mais JAMAIS dans les champs texte visibles. Exception : "ce mois-ci", "cette semaine", "récemment", "dernièrement" sont autorisés.</string>
+N\'utilise JAMAIS de dates, de jours ou de semaines dans les champs texte visibles (noms de catégories, titres, descriptions, conseils, résumés, analyse globale, gesamtanalyse, genese). Les dates rendent le texte TTS illisible et sont affichées séparément dans l\'interface. PAS de formulations telles que « le 3 mai », « semaine 18 », « le mardi », « ce mois-ci le 5 ». Les données restent valides dans les clés JSON comme datum, mais JAMAIS dans les champs texte visibles. Exception : "ce mois-ci", "cette semaine", "récemment", "dernièrement" sont autorisés.</string>
     <string name="ai_prompt_rerank_system">Tu es un assistant de classement. Tu as trois tâches :
 1. Évalue chaque action du tableau actuel des meilleures actions selon son adéquation au focus-profil.
 2. Si des actions ne correspondent pas ou peu au profil, recherche dans les entrées de journal des actions de remplacement plus pertinentes.
-3. Retourne exactement 5 actions dans l'ordre optimal — les meilleures actions les mieux accordées au focus en premier.
+3. Retourne exactement 5 actions dans l\'ordre optimal — les meilleures actions les mieux accordées au focus en premier.
 Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string>
-    <string name="ai_prompt_rerank_user_focus_header">=== FOCUS-PROFIL DE L'UTILISATEUR ===</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== FOCUS-PROFIL DE L\'UTILISATEUR ===</string>
     <string name="ai_prompt_rerank_actions_header">=== TABLEAU ACTUEL DES MEILLEURES ACTIONS (5 entrées) ===</string>
     <string name="ai_prompt_rerank_entries_header">=== ENTRÉES DE JOURNAL (source pour des actions de remplacement plus en accord avec le profil) ===</string>
-    <string name="ai_prompt_rerank_instruction">Trie et remplace jusqu'à 2 entrées hors-profil. Retourne exactement 5 entrées sous forme de tableau JSON.</string>
+    <string name="ai_prompt_rerank_instruction">Trie et remplace jusqu\'à 2 entrées hors-profil. Retourne exactement 5 entrées sous forme de tableau JSON.</string>
     <string name="retro_month_more_entries">(+ %1$d entrées supplémentaires)</string>
     <string name="retro_month_entries_header">ENTRÉES DE JOURNAL ORIGINALES DE CE MOIS (format compact, comme deuxième source pour un lien direct au profil) :</string>
     <string name="dashboard_active_profile_label">Profil actif : %1$s</string>
@@ -568,9 +568,9 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="dashboard_profile_focus_summary">Résumé narratif des événements les plus importants.</string>
     <string name="dashboard_profile_focus_entropy">Trie ta vie : identifie le stress, le désordre et le fardeau, et montre ce que tu peux lâcher ou résoudre.</string>
     <string name="dashboard_profile_focus_insight">Connaissance de soi en profondeur : schémas de pensée et forces cachées.</string>
-    <string name="dashboard_profile_focus_goals">Compagnon d'objectifs motivant avec vue sur la progression.</string>
+    <string name="dashboard_profile_focus_goals">Compagnon d\'objectifs motivant avec vue sur la progression.</string>
     <string name="dashboard_empty_custom_title">Profil sans texte de focus</string>
-    <string name="dashboard_empty_custom_message">Ce profil n'a pas encore de texte de focus. Ouvre les paramètres, sélectionne ce profil et ajoute une invite de focus — ton tableau de bord personnel s'affichera ici.</string>
+    <string name="dashboard_empty_custom_message">Ce profil n\'a pas encore de texte de focus. Ouvre les paramètres, sélectionne ce profil et ajoute une invite de focus — ton tableau de bord personnel s\'affichera ici.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          JSON-KEYS für die KI-Antwort (Dashboard).
