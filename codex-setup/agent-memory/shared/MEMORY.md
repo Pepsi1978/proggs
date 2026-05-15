@@ -46,6 +46,7 @@ Es ist die einzige autoritative operative Memory fuer den Codex-Self-Improve-Wor
 
 - Codex nutzt ein eigenes Whiteboard in `codex-setup/` statt `claude-code-setup/` oder `.claude/`.
 - `claude-code-setup/` bleibt eine read-only Vergleichsquelle.
+- `gemini-setup/` bleibt ebenfalls eine read-only Vergleichsquelle; Schreibänderungen für Setup-Regeln gehören in `codex-setup/`.
 
 ## Debugging-Muster
 
@@ -68,3 +69,4 @@ Es ist die einzige autoritative operative Memory fuer den Codex-Self-Improve-Wor
 - Whiteboard-Schreibzugriffe laufen ueber `codex-setup/scripts/whiteboard-bridge.mjs` oder die Wrapper.
 - Direkte Append-Muster an das Whiteboard sind verboten.
 - Codex-spezifische Setup-Aenderungen gehoeren nach `codex-setup/`.
+- Benutzerregel vom 2026-05-15: In `claude-code-setup/` und `gemini-setup/` grundsätzlich nur lesen, nicht schreiben. Wenn Setup-Wissen oder Regeln geschrieben werden müssen, dann im Codex-Setup unter `codex-setup/`.
