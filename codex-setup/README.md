@@ -17,6 +17,17 @@ Core paths:
 - `codex-setup/bridges/`
 - `codex-setup/skills/`
 
+Git multi-session lock:
+- Runtime hook: `~/.codex/hooks/codex-git-multi-session-lock.ps1` on Windows.
+- Repo source: `codex-setup/hooks/codex-git-multi-session-lock.ps1` and `.sh`.
+- Codex config: `~/.codex/config.toml` enables `[[hooks.PreToolUse]]` with
+  `matcher = "^Bash$"` and `timeout = 130`.
+- Shared lock file: `<git-common-dir>/claude-multi-session.lock`.
+- Shared JSON fields: `sessionId`, `acquired`, `pid`, `command`, and `repo`.
+- The file name and JSON shape intentionally stay Claude-compatible so Codex CLI
+  and Claude Code can see the same lock.
+- Test harness: `pwsh -NoProfile -ExecutionPolicy Bypass -File codex-setup/scripts/test-git-multi-session-lock.ps1`.
+
 Delta and bridge commands:
 
 ```bash
