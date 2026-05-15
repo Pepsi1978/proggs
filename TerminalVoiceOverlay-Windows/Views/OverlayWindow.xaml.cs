@@ -613,7 +613,23 @@ namespace TerminalVoiceOverlay.Views
             // Hook WndProc for WM_MOUSEACTIVATE
             var source = HwndSource.FromHwnd(hwnd);
             source?.AddHook(WndProc);
+
+            // ── AutoEnter-Status-HTTP-Server starten ───────────────────────
+            // Macht den aktuellen orange/grau-Zustand fuer externe Hardware
+            // (Stream Deck Plugin) abfragbar UND erlaubt Toggle-Requests.
+            // Localhost only — keine externe Erreichbarkeit, keine Firewall-
+            // Eintraege noetig.
+            _autoEnterServer = new Services.AutoEnterStatusServer(
+                getCurrentState: () => autoEnterEnabled,
+                toggle: () => Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { ToggleAutoEnterFromHotkey(); }
+                    catch (Exception ex) { Console.WriteLine($"AutoEnter HTTP toggle failed: {ex.Message}"); }
+                })));
+            _autoEnterServer.Start();
         }
+
+        private Services.AutoEnterStatusServer? _autoEnterServer;
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
