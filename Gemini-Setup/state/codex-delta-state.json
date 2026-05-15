@@ -1,0 +1,12 @@
+﻿{
+	"version": 1,
+	"scope": "codex-environment-only",
+	"tracked_paths": ["codex-setup/**", "AGENTS.md"],
+	"replace_requires_confirmation": true,
+	"additive_bias": true,
+	"last_reviewed_commit": "d3e1564",
+	"last_applied_commit": "d3e1564",
+	"last_reviewed_at": "2026-03-24T22:55:00+01:00",
+	"last_applied_at": "2026-03-24T22:55:00+01:00",
+	"notes": "Full port of Codex improvements from d3e1564. Applied: 8 Intelligence Dimensions to Gemini Whiteboard, Workspace Orchestration instructions to MEMORY.md, verified incremental indexing as default, and integrated Windows launcher resolution hardening principles."
+}

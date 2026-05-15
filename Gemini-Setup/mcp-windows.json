@@ -1,0 +1,20 @@
+﻿{
+	"_comment": "MCP server configuration for Windows. Managed by Gemini-Setup/hooks/post-merge.",
+	"mcpServers": {
+		"code-review-graph": {
+			"command": "uvx",
+			"args": ["code-review-graph", "serve"]
+		},
+		"code-search": {
+			"command": "bun",
+			"args": ["run", "mcp-code-search/src/index.ts"]
+		},
+		"think-tank": {
+			"command": "npx",
+			"args": ["-y", "mcp-think-tank@2.0.6"],
+			"env": {
+				"MCP_THINK_TANK_STORAGE": ".think-tank"
+			}
+		}
+	}
+}

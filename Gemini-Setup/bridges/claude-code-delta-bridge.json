@@ -1,0 +1,39 @@
+﻿{
+	"version": 1,
+	"bridge_name": "claude-code-delta",
+	"source_label": "Claude Code",
+	"language": "de",
+	"tracked_paths": ["CLAUDE.md", "claude-code-setup/**"],
+	"target_scope": "setup-and-programming-environment-only",
+	"include_fixed_errors": true,
+	"include_bugfix_logic": true,
+	"include_implemented_intelligence_suggestions": true,
+	"read_only_sources": [
+		"CLAUDE.md",
+		"claude-code-setup/**",
+		"claude-code-setup/environment-fixes.md",
+		"claude-code-setup/state/implemented-intelligence-suggestions.json"
+	],
+	"classifications": ["ADD", "ADAPT", "REPLACE"],
+	"proposal_only": true,
+	"replacement_requires_confirmation": true,
+	"additive_bias": true,
+	"report_groups": [
+		{ "code": "A", "title": "Regeln und Prompts" },
+		{ "code": "B", "title": "Agents, Skills und Arbeitsprozesse" },
+		{ "code": "C", "title": "Skripte, Hooks und Validierung" },
+		{ "code": "D", "title": "Runtime und Konfiguration" },
+		{ "code": "E", "title": "Fehlerfixes aus environment-fixes.md" }
+	],
+	"state_file": "Gemini-Setup/state/claude-code-delta-state.json",
+	"spec_file": "Gemini-Setup/bridges/claude-code-delta-bridge.md",
+	"bridge_registry": "Gemini-Setup/bridges/bridge-registry.json",
+	"trigger_phrases": [
+		"starte die Bruecke zu Claude Code",
+		"was hat Claude Code verbessert",
+		"welche Verbesserungen gibt es bei Claude Code",
+		"welche Fehler hat Claude Code gefixt",
+		"Claude-Code-Delta pruefen",
+		"synchronisiere mit Claude Code"
+	]
+}
