@@ -240,12 +240,16 @@ async function pollOnce(context) {
 function applyStateIfChanged(context, on, statusText) {
 	const state = actionContexts.get(context);
 	if (!state) return;
-	// v1.0.4: DEDUP entfernt. Wir senden bei JEDEM Poll setState, auch wenn
-	// state.lastOn unveraendert ist. Grund: wenn die Stream-Deck-Software
-	// aus irgendeinem Grund den State visuell falsch zeigt (z.B. weil ein
-	// frueher Plugin-Reload sie aus dem Sync gebracht hat), korrigiert der
-	// naechste Poll-Tick (max 700 ms spaeter) das automatisch. Mit Dedup
-	// blieb das Display in solchen Faellen dauerhaft falsch.
+	// v1.0.5: DEDUP WIEDER eingebaut. v1.0.4 hatte es entfernt, was bei
+	// stabilem TVO-State zu setState-Spam (1.4/s) fuehrte. Das hat im
+	// Stream-Deck-Editor die State-Konfigurations-UI eingefroren — der
+	// Editor konnte nie eine stabile Render-Pause haben.
+	//
+	// Mit DisableAutomaticStates=true (manifest v1.0.4+) kann die Anzeige
+	// nicht mehr von der SDK in den falschen State gebracht werden — Plugin
+	// ist die einzige Wahrheit. Force-Re-Sync per Poll-Tick ist deshalb
+	// nicht mehr noetig; Dedup ist sicher.
+	if (state.lastOn === on && !statusText) return;
 	state.lastOn = on;
 	sendSetState(context, on, statusText);
 }
