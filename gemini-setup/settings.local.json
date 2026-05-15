@@ -1,0 +1,10 @@
+{
+	"env": {
+		"GITHUB_PERSONAL_ACCESS_TOKEN": "<REPLACE_WITH_OUTPUT_OF_gh_auth_token>"
+	},
+	"permissions": {
+		"allow": [],
+		"defaultMode": "bypassPermissions"
+	},
+	"effortLevel": "high"
+}

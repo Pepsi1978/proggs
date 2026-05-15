@@ -1,0 +1,96 @@
+# Secrets & credentials
+.env
+.env.*
+*.pem
+*.key
+*.p12
+credentials.json
+secrets.json
+.npmrc
+.netrc
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Build artifacts
+build/
+dist/
+*.app/
+*.exe
+*.dll
+*.dylib
+*.so
+
+# .NET / C#
+bin/
+obj/
+
+# Swift SPM
+.build/
+.swiftpm/
+
+# Rust / Cargo
+target/
+
+# Go
+vendor/
+
+# Android / Gradle
+.gradle/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+keystore.properties
+google-services.json
+
+# Dependencies
+node_modules/
+.packages/
+Pods/
+bun.lockb
+
+# Gemini CLI
+.Gemini/memory/
+.Gemini-trace/
+
+# Parry (Prompt Injection Scanner)
+.parry-guard.redb
+.parry/
+
+# Archives & compressed
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Crash reports & logs
+*.crash
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+

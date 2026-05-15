@@ -1,0 +1,223 @@
+{
+	"_DEPRECATED": "2026-03-25: Replaced by Universal Mirror Bridge (mirror-ledger.md + export/import agents). This file is kept for reference only.",
+	"version": 2,
+	"registry_name": "gemini-setup-bridge-registry",
+	"registry_path": "gemini-setup/bridges/bridge-registry.json",
+	"github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/bridges/bridge-registry.json",
+	"proposal_prefix": "💡 Intelligenz-Vorschlag:",
+	"global_policies": {
+		"proposal_only": true,
+		"replace_requires_confirmation": true,
+		"foreign_sources_read_only": true,
+		"implemented_intelligence_must_be_resilient": true,
+		"implemented_intelligence_resilience_rule": "Umgesetzte Intelligenzvorschlaege muessen denselben Zukunftsstandard wie Umgebungsfixes haben: verwandte Oberflaechen mitpruefen, update-resistent bauen, Failure-Review mitdenken und die Umsetzung so dokumentieren, dass andere CLIs sie ohne Session-Kontext verstehen."
+	},
+	"peer_registry_targets": {
+		"Codex": {
+			"repo_path": "codex-setup/bridges/bridge-registry.json",
+			"github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/bridges/bridge-registry.json",
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		},
+		"Gemini CLI": {
+			"repo_path": "gemini-setup/bridges/bridge-registry.json",
+			"github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/bridges/bridge-registry.json",
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		}
+	},
+	"bridges": {
+		"codex-delta": {
+			"source_label": "Codex",
+			"source_paths": [
+				"codex-setup/**",
+				"AGENTS.md",
+				"codex-setup/state/implemented-intelligence-suggestions.json"
+			],
+			"audit_git_paths": ["codex-setup", "AGENTS.md"],
+			"bridge_files": [
+				"gemini-setup/bridges/codex-delta-bridge.md",
+				"gemini-setup/bridges/codex-delta-bridge.json"
+			],
+			"state_file": "gemini-setup/state/codex-delta-state.json",
+			"state_scope": "codex-environment-only",
+			"trigger_phrases": [
+				"hol dir die neuesten Informationen von Codex",
+				"starte bitte die Bruecke zu Codex",
+				"was wurde bei Codex erneuert",
+				"welche Verbesserungen gibt es bei Codex",
+				"was kann Gemini CLI von Codex lernen"
+			],
+			"audit_title": "Codex Delta Audit",
+			"no_delta_message": "Keine neuen portablen Codex-Setup-Deltas seit dem Basisstand."
+		},
+		"gemini-delta": {
+			"source_label": "Gemini CLI",
+			"source_paths": [
+				"gemini-setup/**",
+				"gemini-setup/agent-memory/shared/MEMORY.md",
+				"gemini-setup/state/implemented-intelligence-suggestions.json"
+			],
+			"audit_git_paths": ["gemini-setup"],
+			"bridge_files": [
+				"gemini-setup/bridges/gemini-delta-bridge.md",
+				"gemini-setup/bridges/gemini-delta-bridge.json"
+			],
+			"state_file": "gemini-setup/state/gemini-delta-state.json",
+			"state_scope": "gemini-environment-only",
+			"trigger_phrases": [
+				"starte bitte die Bruecke zu Gemini CLI",
+				"was wurde bei Gemini CLI erneuert",
+				"welche Verbesserungen gibt es bei Gemini CLI",
+				"was kann Gemini CLI von Gemini CLI lernen",
+				"hol dir die neuesten Informationen von Gemini"
+			],
+			"audit_title": "Gemini CLI Delta Audit",
+			"no_delta_message": "Keine neuen portablen gemini-setup-Deltas seit dem Basisstand."
+		}
+	},
+	"bootstrap_artifacts": {
+		"Gemini CLI": {
+			"repo_scripts": [
+				"gemini-setup/scripts/bootstrap-gemini-setup.sh",
+				"gemini-setup/scripts/bootstrap-gemini-setup.ps1"
+			],
+			"github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.ps1"
+			],
+			"write_policy": "read-write-own-workspace"
+		},
+		"Codex": {
+			"expected_repo_scripts": [
+				"codex-setup/scripts/bootstrap-codex-setup.sh",
+				"codex-setup/scripts/bootstrap-codex-setup.ps1"
+			],
+			"expected_github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.ps1"
+			],
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		},
+		"Gemini CLI": {
+			"expected_repo_scripts": [
+				"gemini-setup/scripts/bootstrap-gemini-setup.sh",
+				"gemini-setup/scripts/bootstrap-gemini-setup.ps1"
+			],
+			"expected_github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-gemini-setup.ps1"
+			],
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		}
+	},
+	"bootstrap_report_artifacts": {
+		"Gemini CLI": {
+			"repo_scripts": [
+				"gemini-setup/scripts/bootstrap-report.mjs",
+				"gemini-setup/scripts/bootstrap-report.sh",
+				"gemini-setup/scripts/bootstrap-report.ps1"
+			],
+			"github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.mjs",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.ps1"
+			],
+			"write_policy": "read-write-own-workspace"
+		},
+		"Codex": {
+			"expected_repo_scripts": [
+				"codex-setup/scripts/bootstrap-report.mjs",
+				"codex-setup/scripts/bootstrap-report.sh",
+				"codex-setup/scripts/bootstrap-report.ps1"
+			],
+			"expected_github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.mjs",
+				"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-report.ps1"
+			],
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		},
+		"Gemini CLI": {
+			"expected_repo_scripts": [
+				"gemini-setup/scripts/bootstrap-report.mjs",
+				"gemini-setup/scripts/bootstrap-report.sh",
+				"gemini-setup/scripts/bootstrap-report.ps1"
+			],
+			"expected_github_urls": [
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.mjs",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.sh",
+				"https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/scripts/bootstrap-report.ps1"
+			],
+			"write_policy": "read-only-from-gemini-setup",
+			"status": "registered"
+		}
+	},
+	"exchange_bridges": {
+		"environment-fix-exchange": {
+			"bridge_files": [
+				"gemini-setup/bridges/environment-fix-exchange-bridge.md",
+				"gemini-setup/bridges/environment-fix-exchange-bridge.json"
+			],
+			"state_file": "gemini-setup/state/environment-fixes.json",
+			"source_label": "CLI Environment Fixes",
+			"source_paths": [
+				"gemini-setup/environment-fixes.md",
+				"gemini-setup/state/environment-fixes.json"
+			],
+			"trigger_phrases": [
+				"logge diesen Umgebungsfix",
+				"welche Fehler hast du in deiner Umgebung gefixt",
+				"was kann Codex von meinen Fixes lernen",
+				"teile diesen Fix mit Codex und Gemini"
+			]
+		},
+		"intelligence-suggestion-exchange": {
+			"bridge_files": [
+				"gemini-setup/bridges/intelligence-suggestion-exchange-bridge.md",
+				"gemini-setup/bridges/intelligence-suggestion-exchange-bridge.json"
+			],
+			"state_file": "gemini-setup/state/implemented-intelligence-suggestions.json",
+			"source_label": "Implemented Intelligence Suggestions",
+			"source_paths": [
+				"gemini-setup/state/implemented-intelligence-suggestions.json"
+			],
+			"trigger_phrases": [
+				"welche Intelligenzvorschlaege hast du umgesetzt",
+				"wo ist deine Intelligenzvorschlag-Liste",
+				"was koennen Codex oder Gemini CLI von deinen Intelligenzvorschlaegen lernen"
+			]
+		}
+	},
+	"ledger_addresses": {
+		"Gemini_code_fixes": "gemini-setup/environment-fixes.md",
+		"Gemini_code_suggestions": "gemini-setup/state/implemented-intelligence-suggestions.json",
+		"codex_fixes": "codex-setup/state/environment-fixes.json",
+		"codex_suggestions": "codex-setup/state/implemented-intelligence-suggestions.json",
+		"gemini_fixes": "gemini-setup/agent-memory/shared/MEMORY.md",
+		"gemini_suggestions": "gemini-setup/state/implemented-intelligence-suggestions.json"
+	},
+	"shared_infrastructure": {
+		"semantic_search": {
+			"setup_guide": "gemini-setup/SETUP-SEMANTIC-SEARCH-UNIVERSAL.md",
+			"github_url": "https://github.com/Pepsi1978/proggs/blob/main/gemini-setup/SETUP-SEMANTIC-SEARCH-UNIVERSAL.md",
+			"server_source": "mcp-code-search/src/index.ts",
+			"reindex_script": "mcp-code-search/src/reindex.ts",
+			"mcp_config_macos": "gemini-setup/mcp-macos.json",
+			"mcp_config_windows": "gemini-setup/mcp-windows.json",
+			"reindex_hook_macos": "gemini-setup/hooks/reindex-codebase.sh",
+			"reindex_hook_windows": "gemini-setup/hooks/reindex-codebase.ps1",
+			"description": "Lokale semantische Code-Suche via Ollama + nomic-embed-text. Universelle Anleitung fuer alle CLIs."
+		},
+		"directives": {
+			"directive_1": "gemini-setup/bridges/directive-1-superintelligence-universal.md",
+			"directive_2": "gemini-setup/bridges/directive-2-self-observation-universal.md",
+			"directive_3_rule": "gemini-setup/rules/resilient-bugfixing.md",
+			"description": "Die 3 Haupt-Direktiven in CLI-neutralem Format."
+		}
+	}
+}
+

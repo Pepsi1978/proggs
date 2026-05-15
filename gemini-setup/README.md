@@ -1,62 +1,131 @@
-﻿# Gemini-Setup ÔÇö Die Superintelligenz-Zentrale
+# Gemini CLI Setup — Plattformuebergreifende Programmierumgebung
 
-Dieses Verzeichnis ist das operative Gehirn und die Konfigurationsbasis f├╝r das **Gemini CLI** in diesem Workspace. Es ist darauf ausgelegt, die Programmierumgebung durch Selbstbeobachtung und Cross-Tool-Lernen (Codex/Claude) kontinuierlich zu verbessern.
+Zentrale Konfiguration fuer Gemini CLI auf macOS und Windows.
+Dieses Verzeichnis ist die **Single Source of Truth** fuer die gesamte Umgebung.
 
-## ­ƒÜÇ Die 3 Haupt-Direktiven
+## Quick Start (neuer Rechner)
 
-Gemini CLI operiert unter einem strengen Grundgesetz, das in `rules/` definiert ist:
+### Windows (PowerShell als Administrator)
+```powershell
+cd ~/proggs/gemini-setup
+.\setup-windows.ps1
+```
 
-1. **Superintelligenz (`SUPERINTELLIGENZ.md`):** Jede Session muss das System messbar intelligenter machen. Fokus auf den **Compound Intelligence Effect**.
-2. **Selbstbeobachtung (`SELBSTBEOBACHTUNG.md`):** Kontinuierliche Analyse der eigenen Arbeit. Fehler, Umwege und Ineffizienzen werden am Ende jeder Aufgabe als ­ƒÆí **Intelligenz-Vorschlag** gemeldet.
-3. **Resilient Bugfixing (`RESILIENT_BUGFIXING.md`):** Ein Fehler wird genau EINMAL gemacht. Jeder Fix muss zukunftssicher, dokumentiert und plattform├╝bergreifend (macOS/Windows) sein.
+### macOS (Terminal)
+```bash
+cd ~/proggs/gemini-setup
+chmod +x setup-macos.sh
+./setup-macos.sh
+```
 
----
+### Nach dem Setup: Settings manuell kopieren
+Die `settings.json` liegt ausserhalb des Repos bei `~/.gemini/settings.json`.
+Sie wird NICHT automatisch deployed (Gemini CLI erwartet sie an diesem festen Ort).
 
-## ­ƒøá Infrastruktur & Automatisierung
+**Windows:**
+```powershell
+Copy-Item ~/proggs/gemini-setup/settings-reference.json ~/.gemini/settings.json
+```
 
-### 1. Bootstrap & Validierung
-- **`bootstrap-gemini-setup.sh/.ps1`:** Initialisiert die Umgebung, pr├╝ft Updates und startet Hintergrunddienste.
-- **`validate-gemini-setup.sh/.ps1`:** Verifiziert die Existenz und Integrit├ñt aller 25+ Kernkomponenten.
-- **`bootstrap-report.mjs`:** Erzeugt einen Statusbericht ├╝ber Registrierungen, Br├╝cken und Ledger.
+**macOS:**
+```bash
+cp ~/proggs/gemini-setup/settings.json ~/.gemini/settings.json
+```
 
-### 2. Cross-CLI Br├╝cken (Intelligence Exchange)
-Gemini lernt aktiv von seinen Partner-CLIs ├╝ber die Br├╝cken in `bridges/`:
-- **`audit-codex-delta.mjs`:** Scant `codex-setup/` auf neue Regeln und Tools.
-- **`audit-claude-delta.mjs`:** Scant `claude-code-setup/` und `CLAUDE.md`.
-- **`bridge-registry.json`:** Die zentrale Map f├╝r alle Br├╝cken und Synchronisations-Ziele.
+## Statusline (plattformuebergreifend)
 
-### 3. Semantische Suche (MCP)
-- **`code-search-mcp-client.mjs`:** Direkter Zugriff auf den lokalen Code-Search Server.
-- **`check-code-search-health.mjs`:** Diagnosetool f├╝r den Index-Status.
-- **`reindex-codebase.sh`:** Automatischer Hintergrund-Job zur Aktualisierung des Suchindex.
-- **`validate-mcp-paths.mjs`:** Guard, der Pfadfehler in der `.mcp.json` verhindert.
+Die Statusline zeigt unten in jeder Gemini-CLI-Session: `🤖 Modell | ⚡ Effort | 📁 Ordner | ⏱ 5h-Limit | 📅 7d-Limit | 🧠 Context | 🕐 Zeit` — mit farbigen Fortschrittsbalken (gruen <50%, gelb 50-79%, rot ab 80%).
 
-### 4. Whiteboard & Ged├ñchtnis
-- **`MEMORY.md`:** Das zentrale "Shared Whiteboard". Hier flie├ƒen alle Erkenntnisse strukturiert ein.
-- **`whiteboard-bridge.mjs`:** Technische Schnittstelle zum sicheren Schreiben in das Whiteboard.
-- **`writeback-enforcer.sh`:** Stellt sicher, dass Agenten-Erkenntnisse (Sentinels) am Ende jeder Aufgabe gemerged werden.
+**Wo:**
+- Bash-Variante: `gemini-setup/hooks/statusline.sh` — fuer macOS, Linux und Windows-Git-Bash
+- PowerShell-Variante: `gemini-setup/hooks/statusline.ps1` — Windows-natives Pendant
 
----
+**Aktivierung:** Erfolgt automatisch durch `setup-windows.ps1` bzw. `setup-macos.sh`. Beide Skripte deployen die Statusline-Hooks nach `~/.gemini/hooks/`. Der Eintrag `statusLine.command = "bash ~/.gemini/hooks/statusline.sh"` steht bereits in `settings.json` und `settings-reference.json`.
 
-## ­ƒñû Spezialisierte Agenten
+**Voraussetzung auf macOS:** `jq` muss installiert sein (`brew install jq`). Auf Windows wird `jq` durch das Setup-Skript gesetzt.
 
-In `agents/` befinden sich Definitionen f├╝r spezialisierte Rollen:
-- **`challenger`:** Findet Schwachstellen in neuen Architekturentw├╝rfen.
-- **`durability-auditor`:** Pr├╝ft die langfristige Haltbarkeit von Fixes.
-- **`env-checker`:** ├£berwacht die Stabilit├ñt der lokalen Laufzeitumgebung.
-- **`intelligence-researcher`:** Sucht nach technologischen Durchbr├╝chen f├╝r das System.
+**Wenn die Icons als Boxen erscheinen:** Das Terminal braucht Emoji-/Nerd-Font-Unterstuetzung. Empfohlen: Windows Terminal mit "Cascadia Code" oder iTerm2/Terminal.app mit Nerd-Font-Variante.
 
----
+## Verzeichnisstruktur
 
-## ­ƒöä Git- & Sync-Regeln
+| Verzeichnis | Inhalt | Dateien |
+|-------------|--------|---------|
+| `rules/` | Regeln und Direktiven (19 Dateien) | Superintelligenz, Selbstbeobachtung, Resilient Bugfixing, Sprach-Regeln, Intent-Tracking, etc. |
+| `agents/` | Custom Agenten (15 Stueck) | architect, batch-reviewer, challenger, code-reviewer, coder, debugger, env-checker, evolution-analyst, intelligence-researcher, mar-reviewer, optimizer, quality-gate, researcher, tester, ui-polisher |
+| `commands/` | Slash-Commands | `/self-improve`, `/tool-check`, `/geminiception` |
+| `skills/` | Custom Skills (6 Stueck) | auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja |
+| `hooks/` | Hook-Skripte (.ps1 + .sh Paare) | 22 Hooks fuer 17 Event-Typen |
+| `bridges/` | CLI-Bruecken (read-only Sync) | claude-delta-bridge, codex-delta-bridge |
+| `state/` | Delta-State-Tracking | claude-delta-state.json, codex-delta-state.json |
+| `scripts/` | Hilfs-Skripte | self-improve-sync, semantic-search-healthcheck |
+| `settings-reference.json` | 1:1 Kopie der Windows settings.json | Referenz fuer Cross-Platform-Sync |
+| `settings.json` | macOS-Version der settings.json | Gleiche Plugins/Permissions, andere Pfade |
+| `settings.local.json` | Vorlage fuer lokale Overrides | bypassPermissions |
+| `environment-fixes.md` | Fehler-Fix-Datenbank | Fuer Cross-Tool-Lernen (Gemini CLI, Codex CLI, Gemini CLI) |
 
-Um Konflikte in der Multi-CLI-Umgebung zu vermeiden, gelten strikte Regeln:
-- **Rebase-Pflicht:** Vor jedem Push MUSS ein `git fetch` und `git rebase origin/main` durchgef├╝hrt werden.
-- **Autonome Pushes:** Nur innerhalb von `Gemini-Setup/` erlaubt. Alles andere ben├Âtigt eine Benutzerfreigabe.
-- **Auto-Sync:** Das Skript `auto-sync.sh` f├╝hrt beim Start automatisch einen Pull durch und zeigt Ver├ñnderungen als Diff an.
+## Die 3 Direktiven (Prioritaets-Hierarchie)
 
-## ­ƒÆí Wie man das System verbessert
-Verwende den **`self-improve`** Skill (in `skills/self-improve/`), um einen gef├╝hrten 6-stufigen Optimierungsdurchlauf zu starten. Triggere ihn einfach mit: *"Gemini, verbessere dich"* oder *"/self-improve"*.
+| Rang | Direktive | Datei | Bedeutung |
+|------|-----------|-------|-----------|
+| **#1** | Superintelligenz | `rules/superintelligence.md` | Exponentielle Intelligenzsteigerung, Compound Effect, 8 Dimensionen |
+| **#2** | Selbstbeobachtung | `rules/self-observation.md` | Sich selbst bei der Arbeit beobachten, Fehler/Umwege/Muster erkennen |
+| **#3** | Resilient Bugfixing | `rules/resilient-bugfixing.md` | Jeder Fehler nur einmal, 5-Schritte-Pflicht, Fix-Induced-Failure-Pruefung |
 
----
-*Status: Vollst├ñndig geh├ñrtet und synchronisiert (24. M├ñrz 2026)*
+## Konfiguration (aktueller Stand 2026-03-23)
+
+| Eigenschaft | Wert |
+|-------------|------|
+| Plugins | 91 (Windows) / 92 (macOS) — 88 aktiv |
+| Marketplaces | 12 extra |
+| Hook-Events | 17 |
+| Permissions | 105 (inkl. 43 GitHub MCP) |
+| Agenten | 15 custom |
+| Effort Level | high (IMMER) |
+| Permission Mode | bypassPermissions (IMMER) |
+| Subagent Model | gemini-2.0-flash-exp (oder entsprechend) |
+| Agent Teams | aktiviert |
+| Auto-Updates | latest channel |
+
+## Cross-Tool-Bruecken
+
+Gemini CLI hat Bruecken zu Claude Code und Codex CLI. Diese funktionieren read-only —
+jedes Tool liest bei den anderen, schreibt aber NUR in seinen eigenen Workspace.
+
+| Bruecke | Trigger | Quell-Ordner |
+|---------|---------|-------------|
+| Claude-Delta | "starte die Bruecke zu Claude" | `claude-code-setup/**` (read-only) |
+| Codex-Delta | "starte die Bruecke zu Codex" | `codex-setup/**` (read-only) |
+
+Die Bruecken praesentieren Aenderungen als nummerierte Vorschlagsliste (A1, B1, C1, D1, E1).
+Der Benutzer entscheidet welche Punkte uebernommen werden. NIEMALS autonom uebernehmen.
+
+## Fehler-Fix-Datenbanken (Cross-Tool-Lernen)
+
+Alle drei CLI-Umgebungen dokumentieren ihre Umgebungs-Fixes in eigenen Datenbanken:
+
+| Tool | Pfad im Repo | Format |
+|------|-------------|--------|
+| Claude Code | `claude-code-setup/environment-fixes.md` | Markdown |
+| Codex CLI | `codex-setup/state/environment-fixes.json` | JSON |
+| Gemini CLI | `gemini-setup/agent-memory/shared/MEMORY.md` | Markdown |
+
+## Settings-Synchronisation (3-Dateien-Regel)
+
+`~/.gemini/settings.json` liegt AUSSERHALB des Repos. Bei Aenderungen:
+
+1. `settings-reference.json` — 1:1 Kopie der Windows-Settings (im Repo)
+2. `settings.json` — macOS-Version mit gleichen Features, anderen Pfaden (im Repo)
+3. `settings.local.json` — Vorlage fuer lokale Overrides (im Repo)
+
+Hooks verwenden plattform-spezifische Kommandos:
+- macOS: `bash ~/.gemini/hooks/*.sh`
+- Windows: `pwsh -NoProfile -ExecutionPolicy Bypass -File "$USERPROFILE/.gemini/hooks/*.ps1"`
+
+## Bekannte Plattform-Fallen (aus environment-fixes.md)
+
+- **Python Encoding**: Windows = cp1252, IMMER `encoding='utf-8'` angeben
+- **grep -P**: Crasht auf Windows Git Bash, stattdessen awk/sed verwenden
+- **Atomares Schreiben**: Nie `open('w')` fuer kritische Dateien, immer temp+rename
+- **Temp-Pfade**: macOS = `/tmp/`, Windows = `$env:TEMP/`
+- **Bun-Pfad**: macOS = `/opt/homebrew/bin/bun`, Windows = `$USERPROFILE/.bun/bin/bun.exe`
+

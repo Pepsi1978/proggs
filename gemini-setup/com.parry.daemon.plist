@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.parry.daemon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/frank/.cargo/bin/parry</string>
+        <string>--hf-token-path</string>
+        <string>/Users/frank/.config/huggingface/token</string>
+        <string>--threshold</string>
+        <string>0.7</string>
+        <string>--scan-mode</string>
+        <string>full</string>
+        <string>serve</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>/tmp/parry-daemon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/parry-daemon.log</string>
+</dict>
+</plist>

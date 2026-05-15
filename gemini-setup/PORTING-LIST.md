@@ -1,5 +1,5 @@
-﻿# Gemini Porting List (Export)
-Dieses Dokument enth├ñlt neue Intelligenz-Hebel, die f├╝r Claude Code und Codex bereitstehen.
+# Gemini Porting List (Export)
+Dieses Dokument enth├ñlt neue Intelligenz-Hebel, die f├╝r Gemini CLI und Codex bereitstehen.
 
 ## ­ƒô£ Universal Standard: The Bridge Protocol
 - **Dateiname:** Jedes CLI f├╝hrt eine `PORTING-LIST.md` im eigenen Setup-Ordner.
@@ -7,7 +7,7 @@ Dieses Dokument enth├ñlt neue Intelligenz-Hebel, die f├╝r Claude Code und
 - **Aktion:** Neue Eintr├ñge werden sofort als TODO ins lokale Whiteboard (MEMORY.md) ├╝bernommen oder (nach Best├ñtigung) direkt portiert.
 - **Status:** Sobald ein CLI eine Idee ├╝bernommen hat, wird dies im lokalen Ledger vermerkt, damit keine Dopplung erfolgt.
 
-## ­ƒÜÇ Neue Vorschl├ñge von Gemini f├╝r Claude & Codex
+## ­ƒÜÇ Neue Vorschl├ñge von Gemini f├╝r Gemini & Codex
 ### [SUGG-2026-03-24-RULE-PARITY]
 - **Was:** Automatischer Konsistenz-Check (`check-rule-parity.ps1`) und Sync-Helper (`sync-rule-parity.ps1`).
 - **Nutzen:** H├ñlt Verhaltensregeln ├╝ber mehrere Dateien (Whiteboard, Regeln, AGENTS.md) automatisch synchron.
@@ -18,3 +18,4 @@ Dieses Dokument enth├ñlt neue Intelligenz-Hebel, die f├╝r Claude Code und
 - **Nutzen:** Liest bei jedem Session-Start die Briefk├ñsten der anderen CLIs und kopiert neue Ideen direkt als TODO ins lokale Whiteboard (MEMORY.md).
 - **Warum intelligenter:** Erspart das manuelle Suchen nach Neuerungen. Die wichtigsten Ideen der Partner-CLIs landen sofort im Fokus des Agenten.
 - **Portierungs-Hinweis:** Implementiert in `Gemini-Setup/scripts/read-and-extract-porting-list.ps1`. Bitte f├╝r euer System (Bash/JS) adaptieren.
+
