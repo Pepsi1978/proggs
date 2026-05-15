@@ -547,6 +547,28 @@
     <!-- Final response-language instruction appended to every AI prompt. -->
     <string name="ai_prompt_response_language">回复语言：请全部用简体中文回复。所有文字和标题都用简体中文，不用其他语言。</string>
 
+    <!-- TTS-friendly date ban -->
+    <string name="ai_prompt_no_dates_rule">朗读友好（必须 — 可见文本中禁止日期）：\n在所有可见文本字段（描述、说明、摘要、整体分析）里，不准使用日期 — 既不写「4.3」「04.23」「4.28」，也不写「4月3日的条目」「04.23」「来自4.28」或类似指向具体条目日期的提法。这些文本会被朗读给用户 — 一串串日期念出来很不自然，会打断洞见的流畅。\n\n请直接说出纯粹的洞见：\n- 错误：「4.3、4.28和4.23的条目表明你的生物节律因晚睡而受损。」\n- 正确：「晚睡正在系统性地破坏你的生物节律。」\n- 错误：「30号的条目把你的疾病直接和缺乏运动联系起来。」\n- 正确：「你的疾病和缺乏运动直接相关。」\n- 错误：「跑步是清晰头脑的钥匙，这是你在4.24的间歇跑中感受到的。」\n- 正确：「跑步是清晰头脑的钥匙，这是你在间歇训练中感受到的。」\n\n洞见保留下来 — 只是具体日期消失了。你仍可使用一般性的时间表达（「反复」「最近」「几天以来」）。日期只属于 "herleitung" 字段（来源信息，仅内部使用，不显示）。</string>
+    <!-- B2 Re-Ranker prompt -->
+    <string name="ai_prompt_rerank_system">你是一位档案重排器。你会收到来自仪表盘分析的 5 条最优行动 JSON 数组、用户的档案焦点以及原始日记条目。\n\n你的任务分 3 步：\n1) 重新排序这 5 条行动，把与档案焦点关联最清楚的排在前面。\n2) 检查 5 条行动里是否最多有 2 条与档案焦点没有实质关联。如果有，就用从日记条目中推导出的、更贴合档案的行动替换它们。每条行动保持相同的 JSON 结构（titel、beschreibung、erklaerung）。\n3) 用同义词和主题邻近词来多样地表达档案关联，不要机械地重复档案词。关联要让人感受到，而不是字面照搬。\n\n重要：\n- 最终恰好返回 5 条。\n- 仅在确实缺乏档案关联时才替换 — 如果数组本来就贴合，只排序，不要替换任何东西。\n- 保持每条记录的 JSON 结构（相同的键：titel、beschreibung、erklaerung）。\n- 语言为中文，不用长破折号，beschreibung 13-21 个词。\n\n朗读友好（必须 — 禁止日期）：\n在 beschreibung 和 erklaerung 中绝不使用日期（「4.3」「04.23」「30号的条目」）。这些文本会被朗读 — 日期串听起来很不自然。请说出纯粹的洞见，不带具体日期。例：\n- 错误：「4.3和4.23的条目表明你的生物节律在受损。」\n- 正确：「晚睡正在系统性地破坏你的生物节律。」\n一般性时间表达可以用（「反复」「最近」「几天以来」），具体日期不行。\n\n输出格式：\n- 只输出一个 JSON 数组（根级方括号）。\n- 不要 markdown 反引号，前后不要任何文字。\n- 直接以 [ 开始，以 ] 结束。</string>
+    <string name="ai_prompt_rerank_user_focus_header">=== 用户的档案焦点 ===</string>
+    <string name="ai_prompt_rerank_actions_header">=== 当前最优行动数组（5 条） ===</string>
+    <string name="ai_prompt_rerank_entries_header">=== 日记条目（用于强档案替换点的来源） ===</string>
+    <string name="ai_prompt_rerank_instruction">排序并替换最多 2 条偏离焦点的记录。返回恰好 5 条作为 JSON 数组。</string>
+    <string name="retro_month_more_entries">（再 <xliff:g id="count" example="3">%1$d</xliff:g> 条）</string>
+    <string name="retro_month_entries_header">本月原始日记条目（紧凑形式，作为直接档案关联的第二来源）：</string>
+    <string name="dashboard_active_profile_label">当前档案：<xliff:g id="profile" example="摘要">%1$s</xliff:g></string>
+    <string name="dashboard_profile_summary">摘要</string>
+    <string name="dashboard_profile_entropy">清理你的生活</string>
+    <string name="dashboard_profile_insight">自我认识</string>
+    <string name="dashboard_profile_goals">个人目标</string>
+    <string name="dashboard_profile_focus_summary">最重要事件的叙述性摘要。</string>
+    <string name="dashboard_profile_focus_entropy">整理你的生活：识别压力、混乱和负担，并指出可以放下或解决的部分。</string>
+    <string name="dashboard_profile_focus_insight">深度自我认识：思维模式和隐藏的优点。</string>
+    <string name="dashboard_profile_focus_goals">激励型目标伙伴，附带进度视图。</string>
+    <string name="dashboard_empty_custom_title">没有焦点文字的档案</string>
+    <string name="dashboard_empty_custom_message">这个档案还没有焦点文字。打开设置，选择此档案，并添加一条焦点提示 — 然后你的个人仪表盘就会出现在这里。</string>
+
     <!-- ════════════════════════════════════════════════════════════════════
          JSON-KEYS für die KI-Antwort (Dashboard).
          ════════════════════════════════════════════════════════════════════ -->
@@ -648,14 +670,14 @@
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
     <string name="ai_prompt_entropy_intro">你是一位富有同理心、极其聪明的生活顾问和规律分析师。\n\n你的任务：\n分析用户的日记条目。找出反复出现的压力、混乱和负担来源。生成一份 JSON 格式、结构清晰的建议面板。\n\n我们要找的 — 个人负担：\n一切在用户生活里造成混乱、压力、精力流失、疼痛、睡眠问题、情绪负担或掌控感下降的东西。</string>
     <string name="ai_prompt_entropy_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说单次观察，不谈规律。\n  在描述里把建议标为「初步」。\n- 3 条及以上：主动寻找规律与跨条的联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景与规律。</string>
-    <string name="ai_prompt_entropy_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 有同理心、直接、具体，不讲空泛。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有分类的建议总数至少 15。少于 10 就是错误。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个不同的问题，就要写出 3 条不同的建议。JSON 可以长，完整比简短更重要。</string>
+    <string name="ai_prompt_entropy_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 有同理心、直接、具体，不讲空泛。\n- 不要长破折号（—）。用逗号或句号。\n\n禁词 — 绝对不要用「熵」这个词：\n本档案叫「清理你的生活」。在所有可见文本字段（gesamtanalyse、描述、说明、摘要、推导）里，绝不要用「熵」「熵的」「熵化」 — 用户不熟悉这个词，听起来很怪。请改用：压力、超载、混乱、压迫、负担、摩擦、紧张、能量流失、混沌、迷茫、生活之重。JSON 字段名「gesamt_entropie」和「entropie_level」保持不变 — 它们是技术键，不是可见文本。但回答中每一个可见的字都要避开「熵」。\n\n数量规则 — 完整优先于简短：\n所有分类的建议总数至少 15。少于 10 就是错误。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个不同的问题，就要写出 3 条不同的建议。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_entropy_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   各分类负担水平的加权平均。\n   - 0.0-0.33 = 低（状态良好）\n   - 0.34-0.66 = 中（需要留意）\n   - 0.67-1.0 = 高（建议立刻行动）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   - 「xiajiang」= 负担在减轻\n   - 「wen」= 负担保持\n   - 「shangsheng」= 负担在加重\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条读，提炼主要主题。\n   - 给每条里的每个主题命名。\n   - 识别主题之间的联系。\n   - 同时识别进展与优点，不只说问题。\n   - 同理而亲切，直接对用户说。</string>
     <string name="ai_prompt_entropy_schema_fields">4) \"jinzhan\"(数组，0-5 条）\n   找出负担减轻或已在发挥作用的习惯与长处。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 5 个字词）\",\n     \"miaoshu\": \"具体改善了什么或做得好的是什么(2-3 句）。\",\n     \"laiyuan\": \"来自哪一条或哪几条(1 句）。\"\n   }\n   只有 1 条记录或没有明显进展时：空数组 []。\n\n5) \"zhongyao_xingdong\"(数组，正好 5 条）\n   最能强力且持久地减轻个人负担的 5 个行动。按效果排序（最强的在前）。跨分类、整体地思考。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，短而有力：做什么，为什么。\",\n     \"jieshi\": \"详细理由(5-8 句）。为什么恰好是这件事？哪些条目暴露了问题？做了之后会怎样？\"\n   }</string>
     <string name="ai_prompt_entropy_schema_categories">6) \"fenlei\"(数组，需要多少就有多少）\n   每一个识别到的主题 = 一个分类。\n   每个分类的结构：\n   {\n     \"mingcheng\": \"分类名（最多 12 字，1-2 个字词）\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"该分类的小结(3-5 句）。\",\n     \"jianyi\": [...]\n   }\n\n   分类名 — 短而准：\n   对：「睡眠」、「工作」、「体能」、「心理」、「项目」\n   错：「个人发展」→「发展」\n\n   分类 — 动态：\n   把下面作为基础，不合时就新建：\n   - 睡眠 (icon: bedtime, yanse: #6C63FF)\n   - 工作 (icon: work, yanse: #FF6B6B)\n   - 体能 (icon: fitness_center, yanse: #4ECDC4)\n   - 饮食 (icon: restaurant, yanse: #FFE66D)\n   - 心理 (icon: psychology, yanse: #A78BFA)\n   - 关系 (icon: people, yanse: #F472B6)\n   - 家 (icon: home, yanse: #34D399)\n   - 发展 (icon: trending_up, yanse: #60A5FA)\n   - 项目 (icon: code, yanse: #F59E0B)\n   - 健康 (icon: health_and_safety, yanse: #EF4444)\n   - 财务 (icon: account_balance, yanse: #10B981)\n   - 休闲 (icon: sports_esports, yanse: #EC4899)\n   - 自然 (icon: grass, yanse: #22C55E)\n   - 疼痛 (icon: healing, yanse: #DC2626)\n   其他图标：spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   各分类的负担水平(0.0-1.0):\n   - 0.0-0.33 = 低（绿）\n   - 0.34-0.66 = 中（黄）\n   - 0.67-1.0 = 高（红）\n\n   各分类的建议 — 数量：\n   能从条目里引出的建议全部写出。宁多勿少，每个分类 5-20 条是常态。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个问题，就要写出 3 条。每条都必须基于条目里的具体表达。按优先度排序：先「gao」，再「zhong」，再「di」。\n\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，具体而直白：做什么，为什么。\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 个相关分类名，加一句为什么。没有就：null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"条目日期（如 28.03.2026)\",\n         \"zhaiyao\": \"该条目里相关的部分(1-2 句）。\"\n       }\n     ]\n   }\n\n   优先度含义：\n   - 「gao」= 紧急，立刻行动（最大的负担来源）\n   - 「zhong」= 明显，尽快处理\n   - 「di」= 观察，长期处理</string>
     <string name="ai_prompt_entropy_output">输出格式 — 严格规则：\n- 只用 JSON 对象回答。\n- 前后不要文字。\n- 不要 Markdown 反引号。\n- 直接以 { 开头，以 } 结尾。\n- 有效 JSON，不要漏逗号或重复键。</string>
 
     <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
-    <string name="ai_prompt_summary_intro">你是一位细心、有条理的日记分析师。\n\n你的任务：\n分析用户的日记条目。汇总他所经历、所想、所感、所做的。识别主题、规律和联系。生成一份 JSON 格式、结构清晰的摘要面板。\n\n你不做评判。你汇总、整理并呈现联系。不做教练，也不搜问题，不下好坏判断。目标：让用户一眼就能看清当前的生活。</string>
+    <string name="ai_prompt_summary_intro">你是一位细心、有条理的日记分析师。\n\n你的任务：\n分析用户的日记条目。汇总他所经历、所想和所做的。识别主题、规律和联系。生成一份 JSON 格式、结构清晰的摘要面板。\n\n情绪 — 不在前台：\n本档案是事件摘要，而不是情绪日记。请专注于具体事件、行动、主题、事实和观察。仅当对理解某个事件不可或缺时才提及情绪或心情 — 而且也只用半句话简短带过。不要为情绪单设章节或类别，不要对情绪模式做深度解读，不要使用诸如「你感觉到……」「这让你……」「内心里……」之类的句式。想要这些的用户，会切到「自我认识」档案。\n\n你不做评判。你汇总、整理并呈现联系。不做教练，也不搜问题，不下好坏判断。目标：让用户一眼就能看清当前的生活。</string>
     <string name="ai_prompt_summary_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：汇总内容，不做规律性断言。\n  在描述里把观察标为「初步」。\n- 3 条及以上：主动寻找反复出现的主题与联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景。</string>
     <string name="ai_prompt_summary_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 中立、清晰、事实化，不评判，不给建议。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有主题的洞见总数至少 15。少于 10 就是错误。每一个想法、每一段经历、每一次观察都值得一条独立洞见。不要合并。一条记录触及 3 个主题就应写出 3 条洞见。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_summary_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   用户生活里现在发生得有多多？所有主题的加权平均。\n   - 0.0-0.33 = 平静阶段（活动与变化都少）\n   - 0.34-0.66 = 常态阶段（活动量中等）\n   - 0.67-1.0 = 密集阶段（多个主题同时）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   对比旧的与新的：\n   - 「shangsheng」= 越来越多事，活动上升\n   - 「wen」= 水平相近\n   - 「xiajiang」= 变得更安静，主题变少\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条读，提炼主要主题。\n   - 给每条里的每个主题命名。\n   - 识别主题之间的联系。\n   - 现在用户最被什么占据？\n   - 在不同记录间什么发生了变化？\n   - 事实化而亲切，直接对用户说。\n   - 不做评判、不给建议，只汇总与整理。</string>
@@ -665,7 +687,7 @@
 
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
-    <string name="ai_prompt_custom_intro">你是一位聪明、细心的日记分析师。\n\n用户的焦点（这就是你的任务）：\n%1$s\n\n请严格围绕这个焦点来分析日记条目。找出所有相关的东西。生成一份 JSON 格式、结构清晰的面板。</string>
+    <string name="ai_prompt_custom_intro">你是一位聪明、细心的日记分析师，同时也是任务执行者。\n\n按两步工作：\n\n第一步 — 吸收上下文：\n首先完整阅读用户的所有日记条目。理解情境、规律、主题、被提到的事物、问题和愿望。日记条目是你的上下文、出发点、根基。但它们不限制你。\n\n第二步 — 执行任务：\n%1$s\n\n上面就是你真正的任务。基于第一步的上下文来执行这项任务。如果任务要求做研究、想点子、找替代方案、给建议、做推荐或提供新信息 — 哪怕日记里没有，也要主动提供。日记是你输出的素材，不是上限。\n\n核心规则 — 档案至少占 50%：\n整个输出（gesamtanalyse、top_massnahmen、kategorien、ratschlaege、fortschritte）必须至少 50% 与用户的任务有清晰可见的关联。与任务没有内容关联的洞见、要点或主题，请舍弃 — 不要为了凑满 JSON 而塞入泛泛的生活话题。宁可少而有焦点，也不要多而平庸。\n\n关于语言：用同义词、相关词、主题邻近词和改写来多样地表达档案关联，不要机械地重复任务里的字。例：任务「目标」，也可以说计划、愿望、抱负、想达成的事、方向、成长步骤。例：任务「运动」，也可以说锻炼、训练、体力活动、耐力、体能、健康。档案关联要让人感受得到，不要字面照搬。\n\n关键：\n- 任务里说「分析」「总结」「有什么显眼」时 — 紧贴日记内容。\n- 任务里说「研究」「找替代」「建议」「推荐」「补充」「假如」「新想法」时 — 主动超出日记范围，加入自己的新内容。\n- 任务优先。日记是地基，不是天花板。</string>
     <string name="ai_prompt_custom_headings">重要 — 动态标题：\n你必须自己创造 3 个正好契合焦点的标题。「主要结果」或「分析」这类通用标题都不允许。请用能反映焦点的创意、具体标题。\n例子：\n- 焦点「钓鱼」: 「最大的钓获」、「钓鱼概览」、「全部记录」\n- 焦点「睡眠质量」: 「你的睡眠规律」、「睡眠分析」、「全部观察」\n- 焦点「总是揽太多事」: 「最大的时间小偷」、「负担概览」、「全部负担点」</string>
     <string name="ai_prompt_custom_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录。必须读并纳入每一条。\n\n语言规则：\n- 简单清晰，不用生僻词。\n- 同理而直接。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则：\n至少 10 条洞见。每一个方面都值得一条独立洞见。</string>
     <string name="ai_prompt_custom_schema">JSON 输出结构：\n{\n  \"biaoti_qian5\": \"前 5 的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_fenxi\": \"概览的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_jieguo\": \"全部结果的创意标题（契合焦点，最多 3 个字词）\",\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"biaoti_qian5/fenxi/jieguo\": 必填。创意、具体，最多 3 个字词。必须契合焦点。不允许通用标题。\n\n2) \"zhengti_shang\"(0.0-1.0): 焦点领域在条目里出现得有多强？\n\n3) \"qushi\": 只有 3+ 条时才填。焦点领域在变化吗？\n\n4) \"zhengti_fenxi\"(15-25 句）: 条目里关于焦点领域说了什么？把每条里每个相关细节都讲到。\n\n5) \"jinzhan\"(0-5 条）: 焦点领域中的规律或变化。\n   { \"biaoti\": \"最多 5 个字词\", \"miaoshu\": \"2-3 句\", \"laiyuan\": \"1 句\" }\n\n6) \"zhongyao_xingdong\"(正好 5 条）: 关于焦点领域的最重要洞见。\n   {\n     \"biaoti\": \"最多 6 个字词\",\n     \"miaoshu\": \"13-21 个字词，紧凑有力。\",\n     \"jieshi\": \"5-8 句详述。\"\n   }\n\n7) \"fenlei\": 与焦点匹配的主题分组（动态生成）。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon_name\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"最多 6 个字词\",\n       \"miaoshu\": \"13-21 个字词\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"与另一个主题的关联，或 null\",\n       \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"1-2 句\"}]\n     }]\n   }</string>
@@ -1097,7 +1119,7 @@
     <string name="consent_card1_title">本地存储</string>
     <string name="consent_card1_body">你的记录保留在你的设备上。</string>
     <string name="consent_card2_title">AI 功能（美国）</string>
-    <string name="consent_card2_body">可选地,文本会发送到 Google Gemini,朗读文本发送到 Microsoft Edge 位于美国的服务器(EU-US Data Privacy Framework)。语音录音会依据标准合同条款(EU SCCs)发送到 Groq(美国)。</string>
+    <string name="consent_card2_body">可选地，文本会发送到 Google Gemini,朗读文本发送到 Microsoft Edge 位于美国的服务器（EU-US Data Privacy Framework）。语音录音会依据标准合同条款（EU SCCs）发送到 Groq(美国)。</string>
     <string name="consent_card3_title">匿名统计</string>
     <string name="consent_card3_body">Firebase Analytics,可选，可随时在设置中更改。</string>
     <string name="consent_links_header">我们的法律文本：</string>
@@ -1220,17 +1242,17 @@
     <string name="privacy_sheet_all_on">全部开启</string>
     <string name="privacy_sheet_all_off">全部关闭</string>
     <string name="consent_toggle_analytics_title">匿名使用分析</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — 帮助我们改进应用。没有个人内，只有匿名点击次数。数据传：Google 美国(Data Privacy Framework)。</string>
-    <string name="consent_toggle_groq_title">语音转文本(Groq Whisper)</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 帮助我们改进应用。没有个人内，只有匿名点击次数。数据传：Google 美国（Data Privacy Framework）。</string>
+    <string name="consent_toggle_groq_title">语音转文本（Groq Whisper）</string>
     <string name="consent_toggle_groq_body">支持口述条目。你的语音录音会加密发送到 Groq(美国),转换为文本后删除。你的录音不会用于训练。</string>
-    <string name="consent_toggle_gemini_title">AI 反思(Google Gemini)</string>
+    <string name="consent_toggle_gemini_title">AI 反思（Google Gemini）</string>
     <string name="consent_toggle_gemini_body">仪表板 AI、摘要、回顾和文本优化。将文本片段发送到 Google Gemini(美国)。你的条目不会用于训练。</string>
-    <string name="consent_toggle_tts_title">朗读(Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_title">朗读（Microsoft Edge TTS）</string>
     <string name="consent_toggle_tts_body">以自然声音朗读条目。将文本发送到 Microsoft(美国)。</string>
     <string name="consent_toggle_drive_title">Google Drive 备份</string>
     <string name="consent_toggle_drive_body">将条目加密保存到你自己的 Google Drive。你保留完全控制权 — 文件在你的账户，不在我们这里。</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">加利福尼亚选择退出(CCPA/CPRA 2026)。激活，所有可选数据处理均被禁用 — 仅保留本地功能。</string>
+    <string name="consent_toggle_do_not_sell_body">加利福尼亚选择退出（CCPA/CPRA 2026）。激活，所有可选数据处理均被禁用 — 仅保留本地功能。</string>
     <string name="consent_btn_accept_all">全部接受</string>
     <string name="consent_btn_save_selection">保存我的选择</string>
     <string name="consent_btn_minimum_only">全部拒绝</string>
@@ -1240,11 +1262,11 @@
     <string name="consent_details_expand">详情</string>
     <string name="settings_open_privacy_sheet">自定义隐私设置</string>
     <string name="settings_privacy_section_header">隐私与同意</string>
-    <string name="settings_ai_groq_title">语音转文本(Groq)</string>
+    <string name="settings_ai_groq_title">语音转文本（Groq）</string>
     <string name="settings_ai_groq_subtitle">将语音录音发送到 Groq 美国进行转录</string>
-    <string name="settings_ai_gemini_title">AI 反思(Gemini)</string>
+    <string name="settings_ai_gemini_title">AI 反思（Gemini）</string>
     <string name="settings_ai_gemini_subtitle">将文本发送到 Google 美国以生成 AI 摘要</string>
-    <string name="settings_ai_tts_title">朗读(Edge TTS)</string>
+    <string name="settings_ai_tts_title">朗读（Edge TTS）</string>
     <string name="settings_ai_tts_subtitle">将文本发送到 Microsoft 美国以进行语音输出</string>
     <string name="settings_drive_backup_title">Google Drive 备份</string>
     <string name="settings_drive_backup_subtitle">将条目加密保存到你的 Drive</string>
