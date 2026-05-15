@@ -162,6 +162,19 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
             null
         }
     }
+    // Frank-Wunsch 2026-05-15: Buendelt alle TTS-Dependencies fuer die Top-Aktionen-
+    // Detail-Dialoge in einem einzigen Objekt, das durch die 5 Block-Composables
+    // weitergereicht wird. Bewusst KEIN remember, weil doHaptic ein nicht-hashbares
+    // Lambda ist; das Objekt ist klein und der Overhead pro Recomposition zu klein
+    // um den Wartungsaufwand einer @Stable-Markierung zu rechtfertigen.
+    val topActionTtsCtx =
+        DashboardTtsContext(
+            tts = dashboardTts,
+            edgeTtsGate = edgeTtsGate,
+            ttsPrefs = dashboardTtsPrefs,
+            doHaptic = doHaptic,
+            context = context,
+        )
 
     DisposableEffect(Unit) {
         onDispose {
@@ -788,7 +801,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         // Key Insights block (replaces Top 5 Maßnahmen)
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
-                            item { SummaryKeyInsightsBlock(actions = topActions) }
+                            item {
+                                SummaryKeyInsightsBlock(
+                                    actions = topActions,
+                                    ttsCtx = topActionTtsCtx,
+                                )
+                            }
                         }
 
                         // Overview (replaces Gesamtanalyse)
@@ -915,7 +933,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
 
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
-                            item { InsightKeyBlock(actions = topActions) }
+                            item {
+                                InsightKeyBlock(
+                                    actions = topActions,
+                                    ttsCtx = topActionTtsCtx,
+                                )
+                            }
                         }
 
                         item {
@@ -1035,7 +1058,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
 
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
-                            item { GoalNextStepsBlock(actions = topActions) }
+                            item {
+                                GoalNextStepsBlock(
+                                    actions = topActions,
+                                    ttsCtx = topActionTtsCtx,
+                                )
+                            }
                         }
 
                         item {
@@ -1164,7 +1192,13 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
 
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
-                            item { CustomInsightsBlock(actions = topActions, title = customTop5) }
+                            item {
+                                CustomInsightsBlock(
+                                    actions = topActions,
+                                    ttsCtx = topActionTtsCtx,
+                                    title = customTop5,
+                                )
+                            }
                         }
 
                         item {
@@ -1284,7 +1318,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         // Top-5 Entropy-Reducing Actions — visually prominent block
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
-                            item { TopActionsBlock(actions = topActions) }
+                            item {
+                                TopActionsBlock(
+                                    actions = topActions,
+                                    ttsCtx = topActionTtsCtx,
+                                )
+                            }
                         }
 
                         // Overall analysis
@@ -2286,8 +2325,108 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
     )
 }
 
+/**
+ * Frank-Wunsch 2026-05-15: Vorlese-Button (oranger Lautsprecher) in jedem
+ * Top-Aktionen-Detail-Dialog. Buendelt alle TTS-Dependencies, damit sie durch
+ * alle 5 Block-Composables in einem einzigen Parameter durchgereicht werden.
+ */
+class DashboardTtsContext(
+    val tts: com.bestjournal.app.util.EdgeTtsPlayer,
+    val edgeTtsGate: com.bestjournal.app.ui.components.PrivacyGateState,
+    val ttsPrefs: android.content.SharedPreferences?,
+    val doHaptic: (HapticFeedbackType) -> Unit,
+    val context: android.content.Context,
+)
+
+/**
+ * Frank-Wunsch 2026-05-15: gleicher oranger Lautsprecher wie in den
+ * Tagebucheintraegen und Rueckblicken, jetzt auch in den Top-Aktionen-Dialogen.
+ * Vorgelesen wird die UEBERSCHRIFT (ohne Zahl davor) und der Rest des Texts.
+ */
 @Composable
-private fun TopActionsBlock(actions: List<TopAction>) {
+private fun TopActionTtsButton(action: TopAction, ttsCtx: DashboardTtsContext) {
+    var isSpeaking by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    val ttsText =
+        buildString {
+            append(action.title)
+            if (action.description.isNotBlank()) {
+                append(". ")
+                append(action.description)
+            }
+            if (action.detailedDescription.isNotBlank()) {
+                append(". ")
+                append(action.detailedDescription)
+            }
+        }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            // Sicherheit: Dialog wird geschlossen waehrend gesprochen wird —
+            // sofort stoppen, sonst spielt der Audio-Player im Hintergrund weiter.
+            if (isSpeaking || isLoading) {
+                ttsCtx.tts.stop()
+            }
+        }
+    }
+    IconButton(
+        onClick = {
+            ttsCtx.doHaptic(HapticFeedbackType.LongPress)
+            if (isSpeaking || isLoading) {
+                ttsCtx.tts.stop()
+                isSpeaking = false
+                isLoading = false
+            } else {
+                val ttsOn =
+                    ttsCtx.ttsPrefs?.getBoolean(
+                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED,
+                        false,
+                    ) ?: false
+                if (!ttsOn) {
+                    android.widget.Toast.makeText(
+                            ttsCtx.context,
+                            ttsCtx.context.getString(R.string.dashboard_enable_voices),
+                            android.widget.Toast.LENGTH_SHORT,
+                        )
+                        .show()
+                } else {
+                    ttsCtx.edgeTtsGate.run {
+                        isLoading = true
+                        isSpeaking = true
+                        val voice =
+                            ttsCtx.ttsPrefs?.getString(
+                                com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
+                                com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                    .defaultVoiceId,
+                            )
+                                ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                    .defaultVoiceId
+                        ttsCtx.tts.speak(
+                            ttsText,
+                            voice = voice,
+                            onPlaybackStart = { isLoading = false },
+                        ) {
+                            isSpeaking = false
+                            isLoading = false
+                        }
+                    }
+                }
+            }
+        },
+        modifier = Modifier.size(40.dp),
+    ) {
+        Icon(
+            if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
+            contentDescription =
+                if (isSpeaking) stringResource(R.string.dashboard_tts_stop)
+                else stringResource(R.string.dashboard_tts_read),
+            tint = FeatureAccentOrange,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+@Composable
+private fun TopActionsBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContext) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = NeonAmber, glowIntensity = 0.3f) {
@@ -2362,12 +2501,22 @@ private fun TopActionsBlock(actions: List<TopAction>) {
     }
 
     selectedAction?.let { (index, action) ->
-        TopActionDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
+        TopActionDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+            ttsCtx = ttsCtx,
+        )
     }
 }
 
 @Composable
-private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+private fun TopActionDetailDialog(
+    action: TopAction,
+    index: Int,
+    onDismiss: () -> Unit,
+    ttsCtx: DashboardTtsContext,
+) {
     val dotColor =
         when (index) {
             0 -> NeonRed
@@ -2421,11 +2570,15 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    stringResource(R.string.action_close),
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TopActionTtsButton(action = action, ttsCtx = ttsCtx)
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        stringResource(R.string.action_close),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         },
     )
@@ -2514,7 +2667,7 @@ private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () ->
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
+private fun SummaryKeyInsightsBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContext) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = SummaryPalette.secondary, glowIntensity = 0.25f) {
@@ -2605,12 +2758,18 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
             action = action,
             index = index,
             onDismiss = { selectedAction = null },
+            ttsCtx = ttsCtx,
         )
     }
 }
 
 @Composable
-private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+private fun SummaryInsightDetailDialog(
+    action: TopAction,
+    index: Int,
+    onDismiss: () -> Unit,
+    ttsCtx: DashboardTtsContext,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -2671,8 +2830,12 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = SummaryPalette.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TopActionTtsButton(action = action, ttsCtx = ttsCtx)
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_close), color = SummaryPalette.primary)
+                }
             }
         },
     )
@@ -2798,7 +2961,7 @@ private fun SummaryObservationCard(
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun InsightKeyBlock(actions: List<TopAction>) {
+private fun InsightKeyBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContext) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = InsightPalette.primary, glowIntensity = 0.25f) {
@@ -2884,12 +3047,22 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
     }
 
     selectedAction?.let { (index, action) ->
-        InsightDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
+        InsightDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+            ttsCtx = ttsCtx,
+        )
     }
 }
 
 @Composable
-private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+private fun InsightDetailDialog(
+    action: TopAction,
+    index: Int,
+    onDismiss: () -> Unit,
+    ttsCtx: DashboardTtsContext,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -2950,8 +3123,12 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = InsightPalette.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TopActionTtsButton(action = action, ttsCtx = ttsCtx)
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_close), color = InsightPalette.primary)
+                }
             }
         },
     )
@@ -3073,7 +3250,7 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun GoalNextStepsBlock(actions: List<TopAction>) {
+private fun GoalNextStepsBlock(actions: List<TopAction>, ttsCtx: DashboardTtsContext) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = GoalPalette.primary, glowIntensity = 0.25f) {
@@ -3156,12 +3333,22 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
     }
 
     selectedAction?.let { (index, action) ->
-        GoalStepDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
+        GoalStepDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+            ttsCtx = ttsCtx,
+        )
     }
 }
 
 @Composable
-private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+private fun GoalStepDetailDialog(
+    action: TopAction,
+    index: Int,
+    onDismiss: () -> Unit,
+    ttsCtx: DashboardTtsContext,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -3218,8 +3405,12 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = GoalPalette.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TopActionTtsButton(action = action, ttsCtx = ttsCtx)
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_close), color = GoalPalette.primary)
+                }
             }
         },
     )
@@ -3343,6 +3534,7 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
 @Composable
 private fun CustomInsightsBlock(
     actions: List<TopAction>,
+    ttsCtx: DashboardTtsContext,
     title: String = stringResource(R.string.dashboard_top_results_fallback),
 ) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
@@ -3427,12 +3619,22 @@ private fun CustomInsightsBlock(
     }
 
     selectedAction?.let { (index, action) ->
-        CustomDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
+        CustomDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+            ttsCtx = ttsCtx,
+        )
     }
 }
 
 @Composable
-private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+private fun CustomDetailDialog(
+    action: TopAction,
+    index: Int,
+    onDismiss: () -> Unit,
+    ttsCtx: DashboardTtsContext,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -3489,8 +3691,12 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = CustomPalette.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TopActionTtsButton(action = action, ttsCtx = ttsCtx)
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_close), color = CustomPalette.primary)
+                }
             }
         },
     )
