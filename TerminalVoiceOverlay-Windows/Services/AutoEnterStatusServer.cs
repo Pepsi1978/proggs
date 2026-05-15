@@ -272,27 +272,54 @@ namespace TerminalVoiceOverlay.Services
             }
         }
 
+        // Sequenzialisierung der SSE-Schreibvorgaenge. response.OutputStream
+        // ist nicht thread-safe — gleichzeitige Writes auf denselben Stream
+        // wuerden den SSE-Frame-Aufbau ("data: ...\n\n") zerschiessen.
+        private readonly object _sseWriteLock = new object();
+
         /// <summary>
         /// Wird vom OverlayWindow aufgerufen NACH jeder State-Aenderung
         /// (egal ob UI-Klick oder HTTP-Toggle). Schickt den neuen State an
         /// alle aktiven SSE-Clients. Tote Verbindungen werden anhand von
         /// Write-Exceptions erkannt und sauber entfernt.
+        ///
+        /// KRITISCH: Diese Methode wird vom UI-Thread aufgerufen (SetAutoEnter).
+        /// Wenn die TCP-Sendepuffer eines toten/langsamen Clients voll sind,
+        /// blockiert response.OutputStream.Write() bis OS-Default-Timeout (30s+)
+        /// — das wuerde den gesamten TVO-UI-Thread einfrieren bei jedem
+        /// State-Change. Deshalb laufen die Writes auf dem ThreadPool, nicht
+        /// auf dem aufrufenden Thread.
         /// </summary>
         public void NotifyStateChanged(bool newState)
         {
+            // Snapshot vom UI-Thread aus (kurzer Lock), dann Writes async.
             System.Collections.Generic.List<HttpListenerResponse> snapshot;
             lock (_sseLock) snapshot = new System.Collections.Generic.List<HttpListenerResponse>(_sseClients);
 
+            if (snapshot.Count == 0) return;
+
+            // Fire-and-forget auf dem ThreadPool. UI-Thread kehrt sofort zurueck.
+            Task.Run(() => DoBroadcast(snapshot, newState));
+        }
+
+        private void DoBroadcast(System.Collections.Generic.List<HttpListenerResponse> snapshot, bool newState)
+        {
             var dead = new System.Collections.Generic.List<HttpListenerResponse>();
-            foreach (var r in snapshot)
+            // Lock damit nicht zwei parallele Broadcasts (z.B. von schnellen
+            // hintereinander-State-Changes) denselben Stream gleichzeitig
+            // beschreiben und SSE-Frames verheddern.
+            lock (_sseWriteLock)
             {
-                try
+                foreach (var r in snapshot)
                 {
-                    WriteSseLine(r, newState);
-                }
-                catch
-                {
-                    dead.Add(r);
+                    try
+                    {
+                        WriteSseLine(r, newState);
+                    }
+                    catch
+                    {
+                        dead.Add(r);
+                    }
                 }
             }
 
