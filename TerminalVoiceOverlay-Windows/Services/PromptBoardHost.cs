@@ -174,7 +174,20 @@ public static class PromptBoardHost
             }
             HotkeyRegistry.Replace(numberEntries);
             HotkeyRegistry.ReplaceLetters(letterEntries);
-            Console.WriteLine($"HotkeyRegistry bootstrap: {numberEntries.Count} Strg+N + {letterEntries.Count} Win+Alt+Buchstabe geladen.");
+            string msg = $"HotkeyRegistry bootstrap: {numberEntries.Count} Strg+N + {letterEntries.Count} Win+Alt+Buchstabe geladen.";
+            Console.WriteLine(msg);
+            // Auch ins Diagnose-Log schreiben damit wir ohne Console-Output
+            // sehen ob der Bootstrap erfolgreich war.
+            try
+            {
+                string logPath = Path.Combine(Path.GetTempPath(), "TVO-hotkey.log");
+                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} BOOTSTRAP {msg}{Environment.NewLine}");
+                foreach (var kv in letterEntries)
+                {
+                    File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} BOOTSTRAP letter='{kv.Key}' textLen={kv.Value.EffectiveText.Length}{Environment.NewLine}");
+                }
+            }
+            catch { /* never block startup */ }
         }
         catch (Exception ex)
         {

@@ -30,10 +30,18 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
         // keyboard hook looks up "which prompt owns Strg+3?" on every
         // keydown — without the index that's a full table scan.
         b.Property(p => p.HotkeyNumber);
-        // Optional Win+Alt+<letter> hotkey ('A'..'Z'). Stored as a 1-char
-        // TEXT column for SQLite portability — EF maps char? to TEXT(1).
-        // Same indexing rationale as HotkeyNumber.
-        b.Property(p => p.HotkeyLetter).HasMaxLength(1);
+        // Optional Win+Alt+<letter> hotkey ('A'..'Z'). EF Core's default
+        // mapping for char? on SQLite is INTEGER (UTF-16 code unit), which
+        // disagrees with our manual ALTER TABLE Prompts ADD COLUMN
+        // HotkeyLetter TEXT migration in PromptBoardHost. Without an
+        // explicit converter the LOAD path was returning null for every
+        // row even when the DB clearly held 'A'/'B' values — which is why
+        // HotkeyRegistry.HasAnyLetter stayed false after restart.
+        b.Property(p => p.HotkeyLetter)
+            .HasConversion(
+                v => v.HasValue ? v.Value.ToString() : null,
+                v => string.IsNullOrEmpty(v) ? (char?)null : v[0])
+            .HasMaxLength(1);
 
         b.HasIndex(p => p.CategoryId);
         b.HasIndex(p => p.IsAlwaysOn);

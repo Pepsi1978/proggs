@@ -3209,7 +3209,7 @@ namespace TerminalVoiceOverlay.Views
             // %TEMP%\TVO-hotkey.log gestempelt. So koennen wir nachvollziehen
             // ob der Hook gefeuert hat und ob terminalIsForeground wahr war
             // — ohne dass Frank ein Debugger braucht.
-            if (vk >= 0x41 && vk <= 0x5A && HotkeyRegistry.HasAnyLetter)
+            if (vk >= 0x41 && vk <= 0x5A)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt   = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
@@ -3220,11 +3220,15 @@ namespace TerminalVoiceOverlay.Views
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
                 bool isUp   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
 
-                if (win && alt && !ctrl && !shift)
+                if (win && alt && !ctrl && !shift && isDown)
                 {
                     char letter = (char)vk; // 0x41..0x5A → 'A'..'Z'
                     int letterIdx = (int)(vk - 0x41); // 0..25 fuer Down-Latch
-                    var entry = HotkeyRegistry.LookupLetter(letter);
+                    bool hasAny = HotkeyRegistry.HasAnyLetter;
+                    var entry = hasAny ? HotkeyRegistry.LookupLetter(letter) : null;
+                    // Logging IMMER, auch wenn Registry leer oder kein Match —
+                    // damit wir live nachverfolgen koennen warum es nicht feuert.
+                    LogHotkeyEvent($"Win+Alt+{letter} DOWN hasAnyLetter={hasAny} matched={entry is not null}");
                     if (entry is HotkeyRegistry.Entry e)
                     {
                         IntPtr terminalHwnd = _terminalWatcher.ActiveTerminalHwnd;
@@ -3232,14 +3236,11 @@ namespace TerminalVoiceOverlay.Views
                         bool terminalIsForeground = terminalHwnd != IntPtr.Zero
                             && (foreground == terminalHwnd || IsWindowDescendantOf(foreground, terminalHwnd));
 
-                        if (isDown)
-                        {
-                            LogHotkeyEvent($"Win+Alt+{letter} DOWN matched=true termHwnd={terminalHwnd} fgHwnd={foreground} isFg={terminalIsForeground}");
-                        }
+                        LogHotkeyEvent($"Win+Alt+{letter} GATE termHwnd={terminalHwnd} fgHwnd={foreground} isFg={terminalIsForeground}");
 
                         if (terminalIsForeground)
                         {
-                            if (isDown && !_promptLetterHotkeyDown[letterIdx])
+                            if (!_promptLetterHotkeyDown[letterIdx])
                             {
                                 _promptLetterHotkeyDown[letterIdx] = true;
                                 LogHotkeyEvent($"Win+Alt+{letter} FIRE → paste {e.EffectiveText.Length} chars");
@@ -3259,8 +3260,7 @@ namespace TerminalVoiceOverlay.Views
                                 }));
                                 return new IntPtr(1);
                             }
-                            if (isDown) return new IntPtr(1); // Auto-Repeat schlucken
-                            if (isUp) _promptLetterHotkeyDown[letterIdx] = false;
+                            return new IntPtr(1); // Auto-Repeat schlucken
                         }
                     }
                 }
