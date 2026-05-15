@@ -1,6 +1,6 @@
 {
 	"Name": "TVO Auto-Enter",
-	"Version": "1.0.7",
+	"Version": "1.0.8",
 	"Author": "Frank / TerminalVoiceOverlay",
 	"Description": "Spiegelt den orange/grau Auto-Enter-Status des Terminal Voice Overlays auf eine Stream-Deck-Taste. Tastendruck schaltet beidseitig synchron um.",
 	"Icon": "icons/plugin-category",

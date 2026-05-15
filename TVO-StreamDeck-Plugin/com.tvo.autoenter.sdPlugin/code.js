@@ -361,6 +361,12 @@ function sendSetState(context, on, statusText) {
 }
 
 async function handleKeyDown(context) {
+	// v1.0.8: Wir setzen NICHT mehr selbst setState nach HTTP-Response.
+	// Der TVO-Server pusht via SSE den neuen State innerhalb von ~3 ms
+	// nach Toggle — das ist SCHNELLER als die HTTP-Response zurueck zu uns.
+	// Frueher haben wir den State nochmal mit forceSetState gesendet,
+	// was den Stream-Deck-SDK mit doppelten setStates belastet hat und bei
+	// rapider Klick-Folge zu "hakeligem" Visual-Update gefuehrt hat.
 	const state = actionContexts.get(context);
 	if (!state) return;
 	const now = Date.now();
@@ -391,8 +397,14 @@ async function handleKeyDown(context) {
 		if (!res.ok) throw new Error("HTTP " + res.status);
 		const data = await res.json();
 		const on = !!data.on;
-		log("toggle response on=" + on);
-		forceSetState(context, on);
+		log("toggle response on=" + on + " (SSE push handles setState)");
+		// v1.0.8: KEIN forceSetState mehr hier. Der TVO-Server hat parallel
+		// zur HTTP-Response einen SSE-Push gesendet, der ueber den Push-Pfad
+		// schneller bei uns ankommt. Doppel-setState war Last-Multiplikator
+		// fuer den Stream-Deck-SDK und Ursache fuer "hakelige" Visual-Updates.
+		// Wir aktualisieren nur unseren lokalen lastOn-Cache, damit der
+		// naechste SSE-Push mit gleichem Wert nicht erneut sendet (Dedup).
+		state.lastOn = on;
 	} catch (err) {
 		log("toggle failed: " + err.message);
 		sendToStreamDeck({ event: "showAlert", context: context });

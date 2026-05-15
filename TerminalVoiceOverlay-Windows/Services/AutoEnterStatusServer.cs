@@ -277,6 +277,16 @@ namespace TerminalVoiceOverlay.Services
         // wuerden den SSE-Frame-Aufbau ("data: ...\n\n") zerschiessen.
         private readonly object _sseWriteLock = new object();
 
+        // Pre-encoded SSE-Frames. Vorher haben wir bei jedem Broadcast
+        // Encoding.UTF8.GetBytes("data: {...}\n\n") aufgerufen — bei vielen
+        // schnellen State-Changes summiert sich das zu spuerbarem GC-Druck.
+        // Da der Inhalt sich nicht aendert (nur on=true oder false), reichen
+        // zwei statische Byte-Arrays.
+        private static readonly byte[] _sseFrameOn =
+            Encoding.UTF8.GetBytes("data: {\"on\":true}\n\n");
+        private static readonly byte[] _sseFrameOff =
+            Encoding.UTF8.GetBytes("data: {\"on\":false}\n\n");
+
         /// <summary>
         /// Wird vom OverlayWindow aufgerufen NACH jeder State-Aenderung
         /// (egal ob UI-Klick oder HTTP-Toggle). Schickt den neuen State an
@@ -339,9 +349,8 @@ namespace TerminalVoiceOverlay.Services
 
         private static void WriteSseLine(HttpListenerResponse response, bool on)
         {
-            // SSE-Format: jede Nachricht ist "data: <payload>\n\n".
-            string data = $"data: {(on ? "{\"on\":true}" : "{\"on\":false}")}\n\n";
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            // Pre-encoded Frames — keine Allocation bei jedem Broadcast.
+            byte[] bytes = on ? _sseFrameOn : _sseFrameOff;
             response.OutputStream.Write(bytes, 0, bytes.Length);
             response.OutputStream.Flush();
         }
