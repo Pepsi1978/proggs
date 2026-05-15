@@ -3196,18 +3196,19 @@ namespace TerminalVoiceOverlay.Views
 
             // ── Prompt-Hotkeys: Win+Alt+A..Win+Alt+Z ───────────────────────
             //
-            // Genau dieselbe Logik wie der Strg+1..9-Zweig oben, nur mit
-            // einem groesseren Schluesselraum. Win+Alt wurde gewaehlt weil
-            // Strg+Alt = AltGr auf deutscher Tastatur waere (zerstoert @,
-            // €, [, ], usw.) und Strg+Shift+Buchstabe in den meisten
-            // Terminals/Editoren schon belegt ist. Win+Alt ist global
-            // ausserhalb der Game Bar weitgehend frei.
-            //
-            // Wir greifen nur wenn:
+            // 1:1 dieselbe Struktur wie der Strg+1..9-Zweig oben, nur mit
+            // anderen Tasten — Frank's ausdruecklicher Wunsch in #2238.
+            // Wir feuern nur wenn:
             //   1) eine reine Win+Alt-Kombi gehalten wird (kein Ctrl, kein Shift),
             //   2) ein Prompt mit diesem Buchstaben in der HotkeyRegistry steht,
             //   3) ein Terminal-Fenster im Vordergrund ist.
-            // Sonst laeuft die Taste durch.
+            // Sonst laeuft die Taste durch — Browser-/Editor-Shortcuts bleiben
+            // unberuehrt.
+            //
+            // Datei-Logging: jeder DOWN-Event und jeder FIRE wird in
+            // %TEMP%\TVO-hotkey.log gestempelt. So koennen wir nachvollziehen
+            // ob der Hook gefeuert hat und ob terminalIsForeground wahr war
+            // — ohne dass Frank ein Debugger braucht.
             if (vk >= 0x41 && vk <= 0x5A && HotkeyRegistry.HasAnyLetter)
             {
                 bool ctrl  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
@@ -3231,12 +3232,17 @@ namespace TerminalVoiceOverlay.Views
                         bool terminalIsForeground = terminalHwnd != IntPtr.Zero
                             && (foreground == terminalHwnd || IsWindowDescendantOf(foreground, terminalHwnd));
 
+                        if (isDown)
+                        {
+                            LogHotkeyEvent($"Win+Alt+{letter} DOWN matched=true termHwnd={terminalHwnd} fgHwnd={foreground} isFg={terminalIsForeground}");
+                        }
+
                         if (terminalIsForeground)
                         {
                             if (isDown && !_promptLetterHotkeyDown[letterIdx])
                             {
                                 _promptLetterHotkeyDown[letterIdx] = true;
-                                Console.WriteLine($"Hotkey: Win+Alt+{letter} — paste prompt ({e.EffectiveText.Length} chars)");
+                                LogHotkeyEvent($"Win+Alt+{letter} FIRE → paste {e.EffectiveText.Length} chars");
                                 Dispatcher.BeginInvoke(new Action(async () =>
                                 {
                                     try
@@ -3248,7 +3254,7 @@ namespace TerminalVoiceOverlay.Views
                                     }
                                     catch (Exception ex)
                                     {
-                                        Console.WriteLine($"Prompt letter-hotkey paste failed: {ex.Message}");
+                                        LogHotkeyEvent($"Win+Alt+{letter} paste failed: {ex.Message}");
                                     }
                                 }));
                                 return new IntPtr(1);
@@ -3283,6 +3289,26 @@ namespace TerminalVoiceOverlay.Views
         /// Gleiche Auto-Repeat-Schutzlogik wie <see cref="_promptHotkeyDown"/>.
         /// </summary>
         private readonly bool[] _promptLetterHotkeyDown = new bool[26];
+
+        /// <summary>
+        /// Append-only Diagnose-Log fuer Letter-Hotkey-Events. Schreibt
+        /// nach %TEMP%\TVO-hotkey.log. Wird vom Low-Level-Keyboard-Hook-
+        /// Thread aufgerufen — Datei-IO darf den Hook NICHT blockieren oder
+        /// werfen, daher try/catch um alles. Sehr kurze Zeile, keine
+        /// Buffer-Flushes (default trailing flush ist OK).
+        /// </summary>
+        private static void LogHotkeyEvent(string message)
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
+                System.IO.File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+            }
+            catch
+            {
+                // Stille: Logging darf den Hook nicht in die Knie zwingen.
+            }
+        }
 
         /// <summary>
         /// Manche Terminal-Apps (Windows Terminal, VS Code Integrated
