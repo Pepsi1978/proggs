@@ -1,7 +1,16 @@
 // ============================================================================
-// TVO Auto-Enter Stream Deck Plugin — v4 (race-condition-free)
+// TVO Auto-Enter Stream Deck Plugin — v5 (debounce + lastSeen-everywhere)
 //
-// v4-Aenderungen (2026-05-15, nach forensischer Log-Analyse):
+// v5-Aenderungen (2026-05-15, nach State-Drift-Vorfall):
+//   * KEY-DEBOUNCE: handleKeyDown ignoriert keyDowns die weniger als
+//     250 ms nach dem letzten kamen. Schuetzt vor Hardware-Bouncing und
+//     doppelten OS-Events die sonst parallele Toggles erzeugen wuerden.
+//   * lastSeen wird jetzt bei JEDEM Plugin-Event aktualisiert
+//     (willAppear, keyDown, erfolgreichem Poll) — verhindert dass
+//     Ghost-Cleanup einen legitimen Context killt der nur lange nicht
+//     gedrueckt wurde.
+//
+// v4-Aenderungen (2026-05-15):
 //   * POLLING-PAUSE WAEHREND TOGGLE: Direkt nach keyDown wird das Polling
 //     fuer 800 ms ausgesetzt. Verhindert dass ein Poll-Tick im Flug den
 //     gerade erfolgten Toggle mit dem alten State ueberschreibt.
@@ -23,13 +32,14 @@ const POLL_INTERVAL_MS = 700;
 const WS_RECONNECT_DELAY_MS = 1000;
 const TOGGLE_PAUSE_MS = 800;
 const GHOST_CONTEXT_TIMEOUT_MS = 5000;
+const KEY_DEBOUNCE_MS = 250;
 
 let websocket = null;
 let pluginUUID = null;
 let registerEvent = null;
 let wsPort = null;
 
-// context -> { timer, lastOn, toggleUntil, lastSeen }
+// context -> { timer, lastOn, toggleUntil, lastSeen, lastKeyDownTs }
 const actionContexts = new Map();
 
 function connectElgatoStreamDeckSocket(
@@ -76,6 +86,12 @@ function openWebSocket() {
 		const event = payload.event;
 		const context = payload.context;
 
+		// lastSeen jetzt fuer ALLE Events aktualisiert — verhindert dass
+		// ein Context als Ghost geraetselt wird, nur weil Frank ihn lange
+		// nicht gedrueckt hat. Polling-Aktivitaet allein zaehlt.
+		const stateForLastSeen = actionContexts.get(context);
+		if (stateForLastSeen) stateForLastSeen.lastSeen = Date.now();
+
 		if (event === "willAppear") {
 			log("willAppear ctx=" + shortCtx(context));
 			cleanupGhostContexts(context);
@@ -84,8 +100,6 @@ function openWebSocket() {
 			log("willDisappear ctx=" + shortCtx(context));
 			stopPolling(context);
 		} else if (event === "keyDown") {
-			const state = actionContexts.get(context);
-			if (state) state.lastSeen = Date.now();
 			log("keyDown ctx=" + shortCtx(context));
 			handleKeyDown(context);
 		}
@@ -135,6 +149,7 @@ function startPolling(context) {
 		lastOn: null,
 		toggleUntil: 0,
 		lastSeen: Date.now(),
+		lastKeyDownTs: 0,
 	};
 	actionContexts.set(context, state);
 	pollOnce(context);
@@ -164,6 +179,9 @@ async function pollOnce(context) {
 		});
 		if (!res.ok) throw new Error("HTTP " + res.status);
 		const data = await res.json();
+		// Erfolgreicher Poll = lebendiger Context. Schuetzt ihn vor
+		// Ghost-Cleanup, auch wenn er lange nicht gedrueckt wurde.
+		state.lastSeen = Date.now();
 		applyStateIfChanged(context, !!data.on);
 	} catch (err) {
 		applyStateIfChanged(context, false, "offline");
@@ -214,10 +232,26 @@ function sendSetState(context, on, statusText) {
 async function handleKeyDown(context) {
 	const state = actionContexts.get(context);
 	if (!state) return;
+	const now = Date.now();
+	// DEBOUNCE: wenn der letzte keyDown weniger als 250 ms her ist,
+	// ignorieren. Schuetzt vor Hardware-Bouncing (manche Stream-Deck-
+	// Tasten erzeugen zwei keyDowns) und davor dass parallele Toggles
+	// den State-Sync zwischen Stream Deck und TVO durcheinander bringen.
+	if (now - (state.lastKeyDownTs || 0) < KEY_DEBOUNCE_MS) {
+		log(
+			"keyDown DEBOUNCED (delta=" +
+				(now - state.lastKeyDownTs) +
+				"ms < " +
+				KEY_DEBOUNCE_MS +
+				"ms)",
+		);
+		return;
+	}
+	state.lastKeyDownTs = now;
 	// Polling fuer 800 ms pausieren, damit kein In-Flight-Poll den
 	// Toggle ueberschreibt.
-	state.toggleUntil = Date.now() + TOGGLE_PAUSE_MS;
-	state.lastSeen = Date.now();
+	state.toggleUntil = now + TOGGLE_PAUSE_MS;
+	state.lastSeen = now;
 	try {
 		const res = await fetch(TVO_TOGGLE_URL, {
 			method: "POST",

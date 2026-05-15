@@ -136,6 +136,13 @@ namespace TerminalVoiceOverlay.Services
             ctx.Response.Headers["Access-Control-Allow-Origin"] = "*";
             ctx.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
             ctx.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
+            // Cache-Buster: das Stream-Deck-Webview ist ein Chrome-Embed und
+            // hat einen aggressiven HTTP-Cache. Wenn ein Status-Response auch
+            // nur 1 Sekunde gecached wuerde, koennte der Plugin alten State
+            // sehen und falsch anzeigen. no-store erzwingt einen frischen
+            // Round-Trip bei jedem Poll.
+            ctx.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+            ctx.Response.Headers["Pragma"] = "no-cache";
 
             if (ctx.Request.HttpMethod == "OPTIONS")
             {
@@ -160,8 +167,11 @@ namespace TerminalVoiceOverlay.Services
                 // OverlayWindow ruft Dispatcher.Invoke (nicht BeginInvoke),
                 // sodass nach Rueckkehr aus _toggle() der neue State
                 // garantiert sichtbar ist. Kein Sleep mehr noetig.
+                bool before = _getCurrentState();
                 _toggle();
-                WriteJsonState(ctx, _getCurrentState());
+                bool after = _getCurrentState();
+                LogStartup($"TOGGLE before={before} after={after} (changed={before != after})");
+                WriteJsonState(ctx, after);
                 return;
             }
 

@@ -1834,19 +1834,12 @@ namespace TerminalVoiceOverlay.Views
             if (autoEnterEnabled)
             {
                 // Turn OFF
-                autoEnterEnabled = false;
-                EnterButton.Background = ToggleOff;
-                hasPastedText = false;
-                Console.WriteLine("Auto-enter OFF");
+                SetAutoEnter(false, "UI-Click");
             }
             else
             {
                 // Turn ON → fire Return immediately
-                autoEnterEnabled = true;
-                EnterButton.Background = BtnProcessing;
-                hasPastedText = false;
-                Console.WriteLine("Auto-enter ON — firing Return");
-
+                SetAutoEnter(true, "UI-Click");
                 // Fire a Return key press into the active terminal — async,
                 // damit der 200-ms-BringToForeground-Block nicht den UI-Thread
                 // einfriert.
@@ -1867,20 +1860,39 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void ToggleAutoEnterFromHotkey()
         {
-            if (autoEnterEnabled)
+            // Geht jetzt ueber SetAutoEnter, damit JEDE State-Aenderung
+            // mit Quelle + vorher/nachher in TVO-hotkey.log landet —
+            // dann ist Drift-Debugging in 30 Sekunden moeglich.
+            SetAutoEnter(!autoEnterEnabled, "HTTP/Hotkey");
+        }
+
+        /// <summary>
+        /// Einziger Schreibzugriff auf <see cref="autoEnterEnabled"/> ausser
+        /// der Initialisierung in der Felddeklaration. Alle drei Pfade —
+        /// UI-Klick (<see cref="BtnAutoEnter_Click"/>), HTTP-Toggle vom
+        /// Stream-Deck-Plugin, Strg+Shift+Alt+E-Hotkey — gehen hier durch.
+        ///
+        /// Loggt vorher+nachher+Quelle in TVO-hotkey.log. So sieht jeder
+        /// Drift sofort in der Datei aus wer wann was umgeschaltet hat.
+        ///
+        /// MUSS am UI-Thread aufgerufen werden (Background-Setter auf
+        /// <see cref="EnterButton"/> wuerden eine WPF-Cross-Thread-
+        /// Exception werfen).
+        /// </summary>
+        private void SetAutoEnter(bool newValue, string source)
+        {
+            bool oldValue = autoEnterEnabled;
+            autoEnterEnabled = newValue;
+            EnterButton.Background = newValue ? BtnProcessing : ToggleOff;
+            hasPastedText = false;
+            Console.WriteLine($"Auto-enter {(newValue ? "ON" : "OFF")} (source={source})");
+            try
             {
-                autoEnterEnabled = false;
-                EnterButton.Background = ToggleOff;
-                hasPastedText = false;
-                Console.WriteLine("Auto-enter OFF (via hotkey)");
+                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
+                System.IO.File.AppendAllText(path,
+                    $"{DateTime.Now:HH:mm:ss.fff} STATE-CHANGE source={source} from={oldValue} to={newValue}{Environment.NewLine}");
             }
-            else
-            {
-                autoEnterEnabled = true;
-                EnterButton.Background = BtnProcessing;
-                hasPastedText = false;
-                Console.WriteLine("Auto-enter ON (via hotkey, no Return triggered)");
-            }
+            catch { /* never block UI for diagnostics */ }
         }
 
         /// <summary>Star button — toggles the full PromptBoard integration:
@@ -3324,7 +3336,11 @@ namespace TerminalVoiceOverlay.Views
                     {
                         _autoEnterHotkeyDown = true;
                         LogHotkeyEvent("Strg+Shift+Alt+E FIRE → toggle auto-enter (no Return)");
-                        Dispatcher.BeginInvoke(new Action(() =>
+                        // Dispatcher.Invoke (sync) statt BeginInvoke — konsistent
+                        // mit dem HTTP-Pfad. Verhindert dass parallele Hotkey-Toggles
+                        // und HTTP-Toggles in unterschiedlicher Reihenfolge auf den
+                        // State zugreifen.
+                        Dispatcher.Invoke(new Action(() =>
                         {
                             try { ToggleAutoEnterFromHotkey(); }
                             catch (Exception ex) { LogHotkeyEvent($"Strg+Shift+Alt+E toggle failed: {ex.Message}"); }
