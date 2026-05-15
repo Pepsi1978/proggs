@@ -145,22 +145,36 @@ public static class PromptBoardHost
         {
             using var scope = _provider!.CreateScope();
             var ctx = scope.ServiceProvider.GetRequiredService<PromptBoardDbContext>();
+            // Beide Hotkey-Spalten in EINER Abfrage holen: ein Prompt kann
+            // sowohl HotkeyNumber als auch HotkeyLetter gesetzt haben, und
+            // wir brauchen ihn in beiden Faellen.
             var bound = ctx.Prompts
                 .AsNoTracking()
-                .Where(p => p.HotkeyNumber != null)
+                .Where(p => p.HotkeyNumber != null || p.HotkeyLetter != null)
                 .ToList();
 
-            var entries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>(bound.Count);
+            var numberEntries = new List<KeyValuePair<int, HotkeyRegistry.Entry>>();
+            var letterEntries = new List<KeyValuePair<char, HotkeyRegistry.Entry>>();
             foreach (var p in bound)
             {
                 if (p.HotkeyNumber is int n && n >= 1 && n <= 9)
                 {
-                    entries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
+                    numberEntries.Add(new KeyValuePair<int, HotkeyRegistry.Entry>(
                         n, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
                 }
+                if (p.HotkeyLetter is char l)
+                {
+                    char upper = char.ToUpperInvariant(l);
+                    if (upper >= 'A' && upper <= 'Z')
+                    {
+                        letterEntries.Add(new KeyValuePair<char, HotkeyRegistry.Entry>(
+                            upper, new HotkeyRegistry.Entry(p.Id, p.EffectiveText())));
+                    }
+                }
             }
-            HotkeyRegistry.Replace(entries);
-            Console.WriteLine($"HotkeyRegistry bootstrap: {entries.Count} Prompt-Hotkey(s) geladen.");
+            HotkeyRegistry.Replace(numberEntries);
+            HotkeyRegistry.ReplaceLetters(letterEntries);
+            Console.WriteLine($"HotkeyRegistry bootstrap: {numberEntries.Count} Strg+N + {letterEntries.Count} Win+Alt+Buchstabe geladen.");
         }
         catch (Exception ex)
         {
