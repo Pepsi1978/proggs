@@ -133,6 +133,19 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
 ### 2026-05-10 19:34 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
 ### 2026-05-10 19:35 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 21:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-10 22:16 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-10 22:24 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-10 22:24 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-11 01:19 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-11 18:59 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-13 18:42 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-14 18:56 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-14 18:56 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 96%
+### 2026-05-15 10:38 — Hook: startup-checks.ps1 — Speicherplatz KRITISCH bei 97%
+### 2026-05-15 10:56 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-05-15 13:14 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: startup) — Status: AUTO-GEFIXT
+### 2026-05-15 13:33 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: xhigh, jetzt: high — Quelle: clear) — Status: AUTO-GEFIXT
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
@@ -251,6 +264,7 @@ _Noch keine Eintraege._
 | 2026-03-31 | Splash-Screen-Animation | Compose Keyframes + rememberUpdatedState fuer Audio-Sync | Hoch |
 | 2026-03-31 | Iterative Internet-Recherche | 3 Wellen: Breit → Tief → Kreativ, max 50 Ergebnisse/Researcher | Hoch |
 | 2026-04-03 | Memory-Konsolidierung (Traumsession) | 3 Agents parallel (episodic + claude-mem + scores) → Whiteboard-Update → Memory-Cleanup | Hoch |
+| 2026-05-15 | Custom Win+Alt-Hotkey im LL-Keyboard-Hook (.NET/WPF) | 3-Killer-Check: (1) EF HasConversion fuer char?, (2) Bootstrap-Pfad neben Render-Pfad, (3) ReleaseNonCtrlModifiers vor SendCtrlV + File-Logging in %TEMP%. Volle Anleitung: ~/proggs/LEARNINGS.md "Custom Global Hotkeys" | Hoch (nach 6 Commits) |
 
 ## Chaos-Test Ergebnisse
 <!-- chaos-tester Agent schreibt hierher -->

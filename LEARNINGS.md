@@ -870,3 +870,109 @@ Ich denk an die "5 F" — **Firebase, File, Folder, Filter, Fertig:**
 4. **F**ilter: API-Schluessel-Einschraenkung erweitern in Cloud Console
 5. **F**ertig: Build, hochladen, 5 Min warten
 
+
+---
+
+## Custom Global Hotkeys auf Windows (.NET/WPF) — die 3 Stille-Killer ⭐⭐
+
+> **Quelle:** TerminalVoiceOverlay-Windows, Vorfall 2026-05-15.
+> Commits #2234-#2240 (6 Commits, mehrere Stunden Debug-Zeit).
+> Frank's Worte: "Das darf beim naechsten Mal nicht mehr passieren."
+
+Globale Hotkeys mit ungewoehnlichen Modifier-Kombinationen (Win+Alt+X, Shift+Alt+X, ...) in einer .NET-WPF-App mit SQLite-Persistenz und einem Low-Level Keyboard Hook haben **drei voneinander unabhaengige Bug-Klassen**, die zusammen das Feature still killen koennen. Einzeln subtil, in Kombination toedlich.
+
+### Killer 1 — EF Core char?/short?/byte? Mapping auf SQLite
+
+**Symptom:** Schreiben in die DB funktioniert, Lesen liefert immer `null` zurueck — obwohl die SQLite-Spalte sichtbar korrekte Werte enthaelt.
+
+**Root cause:** EF Core 8+ default-Mapping fuer `char?` auf SQLite ist **INTEGER** (UTF-16 code unit). Eine manuell per `ALTER TABLE ... ADD COLUMN ... TEXT NULL` angelegte TEXT-Spalte kollidiert. SQLite's dynamische Typisierung (storage class != declared type) maskiert den Bug: Schreiben legt einen Wert ab, aber EF Core's Read-Pfad findet keinen passenden Typ und faellt silent auf `null`.
+
+**Fix in der EntityTypeConfiguration:**
+```csharp
+b.Property(p => p.HotkeyLetter)
+    .HasConversion(
+        v => v.HasValue ? v.Value.ToString() : null,
+        v => string.IsNullOrEmpty(v) ? (char?)null : v[0])
+    .HasMaxLength(1);
+```
+
+**Gilt analog fuer alle "exotischen" .NET-Typen** (char, byte, short, sbyte, Guid mit explicit type, custom value types). Faustregel: bei jedem Property, das **kein** `string`/`int`/`long`/`bool`/`double`/`DateTime` ist, einen expliziten `HasConversion` setzen.
+
+### Killer 2 — Bootstrap-Pfad neben Render-Pfad
+
+**Symptom:** Hotkey funktioniert direkt nach der Zuweisung im UI, aber nach App-Restart ist die in-memory-Registry leer und der Hook gibt alle Tastendruecke durch.
+
+**Root cause:** Bei den meisten Hotkey-Implementierungen gibt es **zwei Pfade** die die Lookup-Tabelle befuellen:
+1. **Render-Pfad** (z.B. nach jeder UI-Aktualisierung): pflegt die Tabelle waehrend die App laeuft
+2. **Bootstrap-Pfad** (einmal beim App-Start): laedt vor dem ersten UI-Render aus der DB
+
+Bei der Feature-Erweiterung wird typisch nur der Render-Pfad angepasst, der Bootstrap-Pfad bleibt auf der alten Feature-Variante stehen.
+
+**Fix:** Im Projekt nach allen Aufrufen der Registry-/Cache-Methode greppen. Jeder Aufrufer muss erweitert werden, nicht nur die offensichtlichste UI-Stelle. Pflicht-Test: **App neu starten** und Feature ohne UI-Refresh testen.
+
+### Killer 3 — Modifier-Konflikt beim SendCtrlV
+
+**Symptom:** Hook feuert nachweislich (File-Log zeigt `FIRE`), Clipboard wird gesetzt, `BringToForeground` laeuft (Cursor flackert) — aber im Zielfenster landet **kein Text**.
+
+**Root cause:** Bei einem Hotkey-getriggerten Paste haelt der User die Trigger-Modifier-Tasten (Win, Alt, Shift) **physisch noch gedrueckt**, waehrend `SendCtrlV` ueber `keybd_event` ein virtuelles `Strg+V` schickt. Windows sieht dann `Win+Alt+Strg+V` statt nur `Strg+V` — kein Paste mehr, sondern eine undefinierte Tastenkombi.
+
+Bei Strg+1..9-Hotkeys faellt das **nicht auf**, weil Ctrl der gewollte Modifier ist und mit dem Paste-Modifier uebereinstimmt. Sobald der Trigger-Modifier != Ctrl ist (Win+, Alt+, Shift+Alt+, ...), bricht das Paste-Verhalten still.
+
+**Fix:** Vor `SendCtrlV` synthetische KEYUP-Events fuer **alle nicht-Ctrl-Modifier** senden:
+```csharp
+private static void ReleaseNonCtrlModifiers()
+{
+    void Up(ushort vk)
+    {
+        byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
+        Win32.keybd_event((byte)vk, scan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+    }
+    Up(0x5B); Up(0x5C); // VK_LWIN, VK_RWIN
+    Up(0xA4); Up(0xA5); // VK_LMENU, VK_RMENU
+    Up(0xA0); Up(0xA1); // VK_LSHIFT, VK_RSHIFT
+    System.Threading.Thread.Sleep(20); // OS-Verarbeitung
+}
+```
+
+Hardware-KEYUP-Events die spaeter ankommen (wenn der User physisch loslaesst) sind NoOps, weil der virtuelle State bereits "up" ist.
+
+### Diagnose-Hebel: File-Logging in %TEMP%
+
+Bei WPF-Apps ohne angehaengte Console geht `Console.WriteLine` ins Leere. Fuer Hook-Diagnose ist file-basiertes Logging Gold wert. Ohne Logfile haetten wir die drei Bug-Klassen oben nicht in dieser Reihenfolge gefunden — ein Bug haetten den naechsten maskiert.
+
+```csharp
+private static void LogHotkeyEvent(string message)
+{
+    try
+    {
+        string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
+        System.IO.File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+    }
+    catch { /* never block the hook thread */ }
+}
+```
+
+Logge: Bootstrap-Result (Anzahl geladene Eintraege), Hook-Eingang mit Modifier-Status, GATE-Pruefung (Vordergrund-Pruefung), FIRE-Event mit Paste-Laenge. Das macht Hook-Bugs in Minuten sichtbar.
+
+### Pflicht-Checkliste fuer neue Hotkey-Features auf Windows
+
+```
+[ ] DB-Spaltentyp passt zum .NET-Property-Typ
+[ ] EF-Konfiguration: explicit HasConversion fuer exotische Typen
+[ ] ALLE Code-Pfade die die Lookup-Tabelle befuellen erweitert (Render UND Bootstrap UND Restore)
+[ ] Falls Trigger-Modifier != Ctrl: ReleaseNonCtrlModifiers vor SendCtrlV
+[ ] File-Logging fuer Bootstrap, Hook-Eingang, GATE, FIRE
+[ ] Test nach App-Restart (NICHT nur nach UI-Zuweisung)
+[ ] Test mit physisch gehaltenem Modifier (kein "press-and-release"-Test allein)
+[ ] Test in der Zielanwendung (Terminal, Editor) — nicht nur Notepad
+```
+
+### Memory-Trick fuer die Zukunft
+
+Ich merke mir die **3 K** — **Konvertierung, Kaltstart, Konflikt:**
+1. **K**onvertierung: EF-Mapping passt zum DB-Typ?
+2. **K**altstart: Bootstrap-Pfad erweitert?
+3. **K**onflikt: Modifier-Release vor Paste?
+
+Wenn alle drei "ja" sind, funktioniert der Hotkey. Wenn einer "nein" ist, faellt das Feature still aus — und der naechste maskiert die anderen.
+
