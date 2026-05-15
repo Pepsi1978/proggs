@@ -2360,12 +2360,15 @@ public partial class PromptBoardPanel : Window
 
         for (char ch = 'A'; ch <= 'Z'; ch++)
         {
+            bool ownedByOther = byLetter.TryGetValue(ch, out var ownerPrompt) && ownerPrompt.Id != prompt.Id;
+
             string header;
-            if (byLetter.TryGetValue(ch, out var ownerPrompt) && ownerPrompt.Id != prompt.Id)
+            if (ownedByOther)
             {
                 // Belegt von einem anderen Prompt — Label kuerzen damit das
-                // Submenue nicht ueberlaeuft.
-                string ownerLabel = ownerPrompt.ShortLabel ?? "";
+                // Submenue nicht ueberlaeuft. Eintrag wird unten disabled,
+                // damit Frank sofort sieht "den kann ich nicht benutzen".
+                string ownerLabel = ownerPrompt!.ShortLabel ?? "";
                 if (ownerLabel.Length > 40) ownerLabel = ownerLabel.Substring(0, 40) + "…";
                 header = $"Win+Alt+{ch}   (belegt von: {ownerLabel})";
             }
@@ -2379,6 +2382,12 @@ public partial class PromptBoardPanel : Window
                 Header = header,
                 IsCheckable = true,
                 IsChecked = currentLetter == ch,
+                // Ausgegraut sobald ein ANDERER Prompt den Buchstaben schon
+                // belegt — verhindert versehentliches Stehlen. Der eigene
+                // aktuell aktive Buchstabe bleibt klickbar, sonst koennte
+                // man ihn nie wieder freigeben/wechseln. Freie Buchstaben
+                // bleiben ebenfalls klickbar.
+                IsEnabled = !ownedByOther,
             };
             // Lokale Kopie fuer den Closure — ohne diese Zeile wuerden alle
             // Klicks immer auf das letzte ch ('Z') zeigen.
