@@ -265,12 +265,113 @@ constructor(
                     .trim()
             val blocks = parseAdviceJson(cleanJson, entryCount)
 
+            // B2 — Profil-Re-Ranking: bei Custom-Profilen einen zweiten Gemini-Call,
+            // der das top_massnahmen-Array auf Profil-Bezug priorisiert. Der erste
+            // Call generiert die Analyse, der zweite optimiert sie auf den Benutzer-
+            // Fokus. Schlaegt der Re-Ranking-Call fehl, bleiben die Original-Bloecke
+            // unveraendert (defensive Fehlerbehandlung).
+            val scenarioForRerank = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+            val finalBlocks =
+                if (scenarioForRerank >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {
+                    val customForRerank =
+                        com.bestjournal.app.data.prefs.CustomAnalysesStore
+                            .activePromptOrEmpty(encryptedPrefs, scenarioForRerank)
+                    if (customForRerank.isNotBlank() && blocks.isNotEmpty()) {
+                        reRankTopActionsForProfile(
+                            blocks = blocks,
+                            userFocus = customForRerank,
+                            allEntriesText = allEntriesText,
+                            modelName = modelName,
+                        )
+                    } else blocks
+                } else blocks
+
             adviceDashboardDao.deleteAll()
-            adviceDashboardDao.upsertAll(blocks)
+            adviceDashboardDao.upsertAll(finalBlocks)
 
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * B2 — Profil-Re-Ranking: zweiter Gemini-Call, der das `topActionsJson`-Array
+     * auf den Benutzer-Fokus priorisiert. Sortiert profilrelevante Punkte nach oben
+     * und ersetzt bis zu 2 profilfremde Eintraege durch profilstaerkere aus den
+     * Tagebucheintraegen. Schlaegt der Call fehl, werden die Original-Bloecke
+     * unveraendert zurueckgegeben — kein harter Fehler.
+     */
+    private suspend fun reRankTopActionsForProfile(
+        blocks: List<AdviceBlockEntity>,
+        userFocus: String,
+        allEntriesText: String,
+        modelName: String,
+    ): List<AdviceBlockEntity> {
+        try {
+            val originalTopActions = blocks.firstOrNull()?.topActionsJson ?: return blocks
+            if (originalTopActions.isBlank() || originalTopActions == "[]") return blocks
+
+            val systemPrompt = context.getString(R.string.ai_prompt_rerank_system)
+            val userText = buildString {
+                appendLine(context.getString(R.string.ai_prompt_rerank_user_focus_header))
+                appendLine(userFocus)
+                appendLine()
+                appendLine(context.getString(R.string.ai_prompt_rerank_actions_header))
+                appendLine(originalTopActions)
+                appendLine()
+                appendLine(context.getString(R.string.ai_prompt_rerank_entries_header))
+                // Maximal 6000 Zeichen Tagebuch um Token-Eskalation zu vermeiden
+                appendLine(allEntriesText.take(6000))
+                appendLine()
+                appendLine(context.getString(R.string.ai_prompt_rerank_instruction))
+            }
+
+            val rerankResult =
+                firebaseAiService.generateContent(
+                    prompt = userText,
+                    modelName = modelName,
+                    systemPrompt = systemPrompt,
+                )
+            val rawText = rerankResult.getOrNull() ?: return blocks
+            val cleaned =
+                rawText
+                    .trim()
+                    .removePrefix("```json")
+                    .removePrefix("```")
+                    .removeSuffix("```")
+                    .replace("—", ", ")
+                    .trim()
+
+            if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+                android.util.Log.w("Rerank", "Re-Ranker liefert kein JSON-Array, behalte Original")
+                return blocks
+            }
+            val parsed = try {
+                JSONArray(cleaned)
+            } catch (e: Exception) {
+                android.util.Log.w("Rerank", "Re-Ranker liefert ungueltiges JSON: ${e.message}")
+                return blocks
+            }
+            if (parsed.length() != 5) {
+                android.util.Log.w(
+                    "Rerank",
+                    "Re-Ranker liefert ${parsed.length()} statt 5 Eintraege, behalte Original",
+                )
+                return blocks
+            }
+
+            android.util.Log.d(
+                "Rerank",
+                "Profil-Re-Ranking erfolgreich, ${parsed.length()} Top-Massnahmen aktualisiert",
+            )
+            return blocks.map { it.copy(topActionsJson = cleaned) }
+        } catch (e: Exception) {
+            android.util.Log.w(
+                "Rerank",
+                "Re-Ranking fehlgeschlagen: ${e.message}, behalte Original-Bloecke",
+            )
+            return blocks
         }
     }
 
@@ -418,11 +519,19 @@ constructor(
             val top5 = json.optString(keys.headingTop5, json.optString("ueberschrift_top5", ""))
             val analyse = json.optString(keys.headingAnalysis, json.optString("ueberschrift_analyse", ""))
             val ergebnisse = json.optString(keys.headingResults, json.optString("ueberschrift_ergebnisse", ""))
+            // A2 — fokus_kern + fokus_zitate sind die neuen Profil-Anker. Sie werden
+            // in den Prefs gehalten und vom DashboardScreen oben als Profil-Header
+            // gerendert (C1). Defensiv eingelesen — bei alten Prompts oder fehlender
+            // KI-Antwort bleiben die Felder leer.
+            val fokusKern = json.optString("fokus_kern", "")
+            val fokusZitate = json.optJSONArray("fokus_zitate")?.toString() ?: "[]"
             encryptedPrefs
                 .edit()
                 .putString("custom_header_top5", top5)
                 .putString("custom_header_analyse", analyse)
                 .putString("custom_header_ergebnisse", ergebnisse)
+                .putString("custom_fokus_kern", fokusKern)
+                .putString("custom_fokus_zitate_json", fokusZitate)
                 .apply()
         }
 

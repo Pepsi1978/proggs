@@ -333,6 +333,11 @@ constructor(
         val monthStart: Calendar,
         val monthEnd: Calendar,
         val weeksText: String,
+        // B1 — Original-Eintraege des Monats kompakt (Datum + Snippet pro Eintrag).
+        // Werden zusaetzlich zum weeksText in den Monatsretro-Prompt eingebaut, damit
+        // der Profil-Bezug nicht nur aus den (bereits zusammengefassten) Wochenretros
+        // gezogen wird sondern direkt aus den Original-Eintraegen sichtbar bleibt.
+        val monthEntriesCompact: String,
         val monthName: String,
         val month: Int,
         val year: Int,
@@ -375,9 +380,39 @@ constructor(
                 weeklyReviews.joinToString("\n\n---\n\n") { week ->
                     "[${week.periodLabel}] ${week.title}\n${week.summaryText}"
                 }
+            // B1 — Kompakte Liste der Original-Eintraege des Monats. Bei sehr vielen
+            // Eintraegen (>40) werden die ersten 40 genommen, der Rest mit Hinweis
+            // unten erwaehnt — verhindert Token-Eskalation.
+            val compactDf = SimpleDateFormat("dd.MM.", DeviceLocale.locale)
+            val maxCompactEntries = 40
+            val compactList =
+                monthEntries.take(maxCompactEntries).joinToString("\n") { e ->
+                    val date = compactDf.format(java.util.Date(e.timestamp))
+                    val text = (e.displayText.ifBlank { e.rawText }).take(150)
+                    "[$date] $text"
+                }
+            val monthEntriesCompact =
+                if (monthEntries.size > maxCompactEntries)
+                    compactList +
+                        "\n" +
+                        context.getString(
+                            R.string.retro_month_more_entries,
+                            monthEntries.size - maxCompactEntries,
+                        )
+                else compactList
             val month = monthStart.get(Calendar.MONTH)
             val year = monthStart.get(Calendar.YEAR)
-            tasks.add(MonthlyTask(monthStart, monthEnd, weeksText, monthNames[month], month, year))
+            tasks.add(
+                MonthlyTask(
+                    monthStart,
+                    monthEnd,
+                    weeksText,
+                    monthEntriesCompact,
+                    monthNames[month],
+                    month,
+                    year,
+                )
+            )
         }
 
         if (tasks.isEmpty()) return 0
@@ -417,6 +452,15 @@ constructor(
     ): RetrospectiveSummaryEntity? {
         try {
             val lang = DeviceLocale.promptLanguage
+            // B1 — zweite Quelle fuer Profil-Bezug: Original-Tagebucheintraege des
+            // Monats kompakt, damit der Profil-Bezug nicht erst durch die (bereits
+            // zusammengefassten) Wochenrueckblicke filtern muss.
+            val monthEntriesBlock =
+                if (task.monthEntriesCompact.isNotBlank())
+                    context.getString(R.string.retro_month_entries_header) +
+                        "\n" +
+                        task.monthEntriesCompact
+                else ""
             val prompt =
                 listOf(
                         context.getString(R.string.ai_retro_month_intro),
@@ -427,6 +471,7 @@ constructor(
                         context.getString(R.string.ai_retro_month_entries_header) +
                             "\n" +
                             task.weeksText,
+                        monthEntriesBlock,
                     )
                     .filter { it.isNotBlank() }
                     .joinToString("\n\n")

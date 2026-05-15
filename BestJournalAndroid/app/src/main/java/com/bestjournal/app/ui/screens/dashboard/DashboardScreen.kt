@@ -266,6 +266,81 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // C1 — Profil-Header: zeigt das aktive Profil + Kurzfokus.
+                // Bei Custom-Profilen mit gesetztem fokus_kern wird dieser bevorzugt
+                // angezeigt — das ist die KI-eigene Zusammenfassung des Auftrags-Kerns.
+                // Faellt fokus_kern leer aus, wird der erste Teil des Profil-Prompts gezeigt.
+                if (uiState.activeProfileLabel.isNotBlank()) {
+                    item(key = "profile_header") {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text =
+                                        stringResource(
+                                            R.string.dashboard_active_profile_label,
+                                            uiState.activeProfileLabel,
+                                        ),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                val focusText =
+                                    if (uiState.customFokusKern.isNotBlank())
+                                        uiState.customFokusKern
+                                    else uiState.activeProfileFocus
+                                if (focusText.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = focusText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                // B3 — Hinweis-Karte bei leerem Custom-Profil-Prompt. Wird statt
+                // des normalen Dashboards gerendert, damit der Benutzer den fehlenden
+                // Schritt nicht uebersieht.
+                if (uiState.emptyCustomPromptWarning) {
+                    item(key = "empty_custom_warning") {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Rounded.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.dashboard_empty_custom_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(R.string.dashboard_empty_custom_message),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            }
+                        }
+                    }
+                    return@LazyColumn
+                }
+
                 if (uiState.showAiInfoBanner) {
                     item(key = "ai_banner") {
                         AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() })
