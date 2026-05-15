@@ -27,11 +27,17 @@
 
 const TVO_STATUS_URL = "http://127.0.0.1:5723/autoenter/status";
 const TVO_TOGGLE_URL = "http://127.0.0.1:5723/autoenter/toggle";
+const TVO_EVENTS_URL = "http://127.0.0.1:5723/autoenter/events";
 const TVO_LOG_URL = "http://127.0.0.1:5723/log";
-const POLL_INTERVAL_MS = 700;
+// SSE ist die PRIMAERE Quelle fuer State-Updates (Push, sofort).
+// Polling existiert nur noch als Fallback und Sanity-Check, falls die
+// SSE-Verbindung mal kaputt geht oder die TVO neu startet. 30 Sekunden
+// reicht — der Push-Pfad ist die schnelle Strecke.
+const POLL_INTERVAL_MS = 30000;
 const WS_RECONNECT_DELAY_MS = 1000;
+const SSE_RECONNECT_DELAY_MS = 2000;
 const TOGGLE_PAUSE_MS = 800;
-const GHOST_CONTEXT_TIMEOUT_MS = 5000;
+const GHOST_CONTEXT_TIMEOUT_MS = 30000;
 // Hardware-Bouncing tritt typisch in <50 ms auf. 75 ms faengt das ab,
 // laesst aber jeden bewussten menschlichen Klick durch (auch schnellstes
 // Hin-und-Her bei 5-7 Klicks/Sekunde = 140-200 ms Abstand).
@@ -45,6 +51,8 @@ let wsPort = null;
 let heartbeatTimer = null;
 let heartbeatCounter = 0;
 let pollCounter = 0;
+let eventSource = null;
+let sseMessageCounter = 0;
 
 // context -> { timer, lastOn, toggleUntil, lastSeen, lastKeyDownTs }
 const actionContexts = new Map();
@@ -59,7 +67,58 @@ function connectElgatoStreamDeckSocket(
 	registerEvent = inRegisterEvent;
 	wsPort = inPort;
 	openWebSocket();
+	openEventSource();
 	startHeartbeat();
+}
+
+// SSE-Subscription zum TVO-Server. WICHTIG: das ist der primaere
+// State-Update-Pfad. Polling (siehe pollOnce) ist nur Fallback alle 30s.
+// EventSource hat AUTO-RECONNECT eingebaut — kein eigener setTimeout-Loop
+// noetig wie bei WebSocket. Im Stream-Deck-Webview wird onmessage event-
+// driven gefeuert und ist NICHT von Chrome's Background-Tab-Throttling
+// betroffen (im Gegensatz zu setInterval, das von 700ms auf ~60s gedrosselt
+// wurde sobald der Plugin-Webview im Hintergrund war).
+function openEventSource() {
+	if (eventSource) {
+		try {
+			eventSource.close();
+		} catch {}
+		eventSource = null;
+	}
+	try {
+		eventSource = new EventSource(TVO_EVENTS_URL);
+	} catch (e) {
+		log("SSE construction failed: " + e.message);
+		setTimeout(openEventSource, SSE_RECONNECT_DELAY_MS);
+		return;
+	}
+
+	eventSource.onopen = () => {
+		log("SSE open");
+	};
+
+	eventSource.onmessage = (e) => {
+		sseMessageCounter++;
+		try {
+			const data = JSON.parse(e.data);
+			const on = !!data.on;
+			// Push an alle bekannten Stream-Deck-Action-Contexts.
+			actionContexts.forEach((state, ctx) => {
+				applyStateIfChanged(ctx, on);
+			});
+		} catch (err) {
+			log("SSE parse error: " + err.message + " raw=" + (e.data || "?"));
+		}
+	};
+
+	eventSource.onerror = (ev) => {
+		// EventSource reconnected automatisch — wir loggen nur einmal.
+		log(
+			"SSE error/closed readyState=" +
+				(eventSource ? eventSource.readyState : "?") +
+				" — EventSource handles reconnect",
+		);
+	};
 }
 
 // Heartbeat-Logger: alle 5 Sekunden eine "ALIVE"-Zeile in TVO-hotkey.log.
@@ -72,12 +131,17 @@ function startHeartbeat() {
 	heartbeatTimer = setInterval(() => {
 		heartbeatCounter++;
 		const wsState = websocket ? websocket.readyState : -1;
+		const sseState = eventSource ? eventSource.readyState : -1;
 		const ctxCount = actionContexts.size;
 		log(
 			"ALIVE i=" +
 				heartbeatCounter +
 				" polls=" +
 				pollCounter +
+				" sse=" +
+				sseState +
+				" sseMsgs=" +
+				sseMessageCounter +
 				" ws=" +
 				wsState +
 				" ctxs=" +

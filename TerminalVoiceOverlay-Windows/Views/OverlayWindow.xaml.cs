@@ -1893,6 +1893,13 @@ namespace TerminalVoiceOverlay.Views
                     $"{DateTime.Now:HH:mm:ss.fff} STATE-CHANGE source={source} from={oldValue} to={newValue}{Environment.NewLine}");
             }
             catch { /* never block UI for diagnostics */ }
+
+            // PUSH den neuen State an alle SSE-Subscriber. Damit landet der
+            // neue Stand sofort beim Stream-Deck-Plugin — egal ob Chrome im
+            // Plugin-Webview gerade setInterval drosselt. EventSource-
+            // onmessage ist nicht von Background-Tab-Throttling betroffen.
+            try { _autoEnterServer?.NotifyStateChanged(newValue); }
+            catch (Exception ex) { Console.WriteLine($"SSE push failed: {ex.Message}"); }
         }
 
         /// <summary>Star button — toggles the full PromptBoard integration:

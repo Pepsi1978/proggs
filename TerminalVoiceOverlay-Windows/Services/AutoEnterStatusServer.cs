@@ -39,6 +39,16 @@ namespace TerminalVoiceOverlay.Services
         private Thread? _thread;
         private volatile bool _stopRequested;
 
+        // Server-Sent-Events-Clients (Stream-Deck-Plugin abonniert hier).
+        // SSE wird gebraucht weil das Plugin im Chromium-Webview laeuft und
+        // setInterval/setTimeout dort von Chrome auf ~1/Minute gedrosselt
+        // werden sobald der Webview nicht im Vordergrund ist (Background-
+        // Tab-Throttling). Polling kommt nicht durch — Push schon, weil
+        // EventSource-onmessage event-driven ist und NICHT gedrosselt wird.
+        private readonly System.Collections.Generic.List<HttpListenerResponse> _sseClients
+            = new System.Collections.Generic.List<HttpListenerResponse>();
+        private readonly object _sseLock = new object();
+
         /// <summary>
         /// <paramref name="getCurrentState"/> liefert "ist Auto-Enter an?".
         /// <paramref name="toggle"/> wird vom Server aufgerufen wenn ein
@@ -175,6 +185,13 @@ namespace TerminalVoiceOverlay.Services
                 return;
             }
 
+            if (path.Equals("/autoenter/events", StringComparison.OrdinalIgnoreCase)
+                && ctx.Request.HttpMethod == "GET")
+            {
+                HandleSseSubscribe(ctx);
+                return;
+            }
+
             if (path.Equals("/log", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "POST")
             {
@@ -211,6 +228,95 @@ namespace TerminalVoiceOverlay.Services
             ctx.Response.ContentLength64 = bytes.Length;
             ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
             ctx.Response.Close();
+        }
+
+        /// <summary>
+        /// Server-Sent-Events-Subscription. Plugin verbindet via
+        /// <c>new EventSource("http://127.0.0.1:5723/autoenter/events")</c>,
+        /// Server haelt die Verbindung offen und schreibt bei jeder State-
+        /// Aenderung eine SSE-Zeile in den Stream. Webview-Background-Tab-
+        /// Throttling betrifft EventSource-onmessage NICHT — Push kommt
+        /// instant durch, auch wenn setInterval im Plugin gedrosselt ist.
+        /// </summary>
+        private void HandleSseSubscribe(HttpListenerContext ctx)
+        {
+            var response = ctx.Response;
+            response.StatusCode = 200;
+            response.ContentType = "text/event-stream; charset=utf-8";
+            response.Headers["Cache-Control"] = "no-cache, no-store";
+            response.Headers["Connection"] = "keep-alive";
+            response.Headers["X-Accel-Buffering"] = "no";
+            response.SendChunked = true;
+
+            // Initialer State sofort — damit das Plugin nach Connect den
+            // aktuellen Stand kennt und nicht erst auf die naechste
+            // State-Aenderung warten muss.
+            try
+            {
+                bool initial = _getCurrentState();
+                WriteSseLine(response, initial);
+                LogStartup($"SSE client connected (initial={initial}, total={_sseClients.Count + 1})");
+            }
+            catch (Exception ex)
+            {
+                LogStartup($"SSE initial write failed: {ex.Message}");
+                try { response.Close(); } catch { }
+                return;
+            }
+
+            // Verbindung offen lassen — der Server-Loop kehrt zur naechsten
+            // GetContext()-Iteration zurueck. Die Response bleibt registriert.
+            lock (_sseLock)
+            {
+                _sseClients.Add(response);
+            }
+        }
+
+        /// <summary>
+        /// Wird vom OverlayWindow aufgerufen NACH jeder State-Aenderung
+        /// (egal ob UI-Klick oder HTTP-Toggle). Schickt den neuen State an
+        /// alle aktiven SSE-Clients. Tote Verbindungen werden anhand von
+        /// Write-Exceptions erkannt und sauber entfernt.
+        /// </summary>
+        public void NotifyStateChanged(bool newState)
+        {
+            System.Collections.Generic.List<HttpListenerResponse> snapshot;
+            lock (_sseLock) snapshot = new System.Collections.Generic.List<HttpListenerResponse>(_sseClients);
+
+            var dead = new System.Collections.Generic.List<HttpListenerResponse>();
+            foreach (var r in snapshot)
+            {
+                try
+                {
+                    WriteSseLine(r, newState);
+                }
+                catch
+                {
+                    dead.Add(r);
+                }
+            }
+
+            if (dead.Count > 0)
+            {
+                lock (_sseLock)
+                {
+                    foreach (var r in dead)
+                    {
+                        _sseClients.Remove(r);
+                        try { r.Close(); } catch { }
+                    }
+                }
+                LogStartup($"SSE removed {dead.Count} dead client(s), active={_sseClients.Count}");
+            }
+        }
+
+        private static void WriteSseLine(HttpListenerResponse response, bool on)
+        {
+            // SSE-Format: jede Nachricht ist "data: <payload>\n\n".
+            string data = $"data: {(on ? "{\"on\":true}" : "{\"on\":false}")}\n\n";
+            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            response.OutputStream.Write(bytes, 0, bytes.Length);
+            response.OutputStream.Flush();
         }
 
         public void Dispose()
