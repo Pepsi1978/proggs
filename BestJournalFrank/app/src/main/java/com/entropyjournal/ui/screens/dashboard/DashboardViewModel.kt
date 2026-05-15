@@ -97,9 +97,17 @@ constructor(
                 customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
                 customHeaderErgebnisse =
                     encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
-                customFokusKern = encryptedPrefs.getString("custom_fokus_kern", "") ?: "",
+                // Bug-Fix 2026-05-15: customFokusKern nur bei Custom-Profil aus Prefs lesen,
+                // sonst stehen die Daten vom letzten Custom-Profil-Refresh fuer alle anderen
+                // Profile in der UI sichtbar.
+                customFokusKern =
+                    if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX)
+                        encryptedPrefs.getString("custom_fokus_kern", "") ?: ""
+                    else "",
                 customFokusZitateJson =
-                    encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: "",
+                    if (scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX)
+                        encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: ""
+                    else "",
                 activeProfileLabel = computeProfileLabel(scenario),
                 activeProfileFocus = computeProfileFocus(scenario),
                 emptyCustomPromptWarning = isEmptyCustomProfile(scenario),
@@ -121,6 +129,8 @@ constructor(
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
                     val emptyWarn = isEmptyCustomProfile(currentScenario)
+                    // Bug-Fix 2026-05-15: customFokusKern/Zitate beim Wechsel zuruecksetzen,
+                    // damit nicht die Werte vom alten Profil sichtbar bleiben.
                     _uiState.value =
                         _uiState.value.copy(
                             currentScenario = currentScenario,
@@ -128,6 +138,8 @@ constructor(
                             activeProfileLabel = computeProfileLabel(currentScenario),
                             activeProfileFocus = computeProfileFocus(currentScenario),
                             emptyCustomPromptWarning = emptyWarn,
+                            customFokusKern = "",
+                            customFokusZitateJson = "",
                         )
                     adviceRepository.clearDashboard()
                     if (currentScenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX) {

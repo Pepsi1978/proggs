@@ -216,8 +216,16 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
                                 )
+                                // Bug-Fix 2026-05-15: customFokusKern stammt aus dem letzten
+                                // Custom-Profil-Refresh und ueberlebt in Prefs auch wenn der User
+                                // auf ein eingebautes Profil wechselt. Folge: alle Profile zeigen
+                                // denselben Fokus-Kern. Daher: customFokusKern NUR bei
+                                // Custom-Profilen verwenden, sonst IMMER activeProfileFocus.
+                                val isCustomProfile =
+                                    uiState.currentScenario >=
+                                        com.entropyjournal.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX
                                 val focusText =
-                                    if (uiState.customFokusKern.isNotBlank())
+                                    if (isCustomProfile && uiState.customFokusKern.isNotBlank())
                                         uiState.customFokusKern
                                     else uiState.activeProfileFocus
                                 if (focusText.isNotBlank()) {
@@ -226,6 +234,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                         text = focusText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        // Frank-Vorgabe 2026-05-15: max 3 Zeilen.
+                                        maxLines = 3,
+                                        overflow =
+                                            androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
                                 }
                             }
