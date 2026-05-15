@@ -305,6 +305,65 @@ function validateBridgeInfrastructure(repoRoot, codexSetupDir, errors) {
   }
 }
 
+function validateGitLockRuntime(repoRoot, codexSetupDir, errors) {
+  const requiredRepoFiles = [
+    "bin/git",
+    "bin/git.cmd",
+    "hooks/codex-git-multi-session-lock.ps1",
+    "hooks/codex-git-multi-session-lock.sh",
+    "hooks/codex-git-wrapper.ps1",
+    "scripts/ensure-codex-git-lock-config.py",
+    "scripts/test-git-multi-session-lock.ps1",
+  ];
+
+  for (const relativePath of requiredRepoFiles) {
+    const fullPath = path.join(codexSetupDir, relativePath);
+    if (!fs.existsSync(fullPath)) {
+      errors.push(`codex-setup/${relativePath}: Git-Lock-Runtime-Datei fehlt`);
+    }
+  }
+
+  const home = os.homedir();
+  const configPath = path.join(home, ".codex", "config.toml");
+  if (!fs.existsSync(configPath)) {
+    errors.push("~/.codex/config.toml fehlt - Git-Lock-Runtime nicht prüfbar");
+    return;
+  }
+
+  const configText = fs.readFileSync(configPath, "utf8");
+  const normalizedConfigText = configText.replace(/\\\\/g, "\\");
+  const homeBin = path.join(home, "bin");
+  const homeLocalBin = path.join(home, ".local", "bin");
+
+  if (!configText.includes("[shell_environment_policy.set]")) {
+    errors.push("~/.codex/config.toml: [shell_environment_policy.set] fehlt für Git-Wrapper-PATH");
+  }
+  if (!normalizedConfigText.includes(homeBin)) {
+    errors.push(`~/.codex/config.toml: ${homeBin} fehlt im Codex-PATH vor realem Git`);
+  }
+  if (!normalizedConfigText.includes(homeLocalBin)) {
+    errors.push(`~/.codex/config.toml: ${homeLocalBin} fehlt im Codex-PATH vor realem Git`);
+  }
+
+  if (process.platform === "win32") {
+    const activeFiles = [
+      path.join(home, "bin", "git.cmd"),
+      path.join(home, ".codex", "hooks", "codex-git-multi-session-lock.ps1"),
+      path.join(home, ".codex", "hooks", "codex-git-wrapper.ps1"),
+    ];
+    for (const filePath of activeFiles) {
+      if (!fs.existsSync(filePath)) {
+        errors.push(`${formatPath(repoRoot, filePath)}: aktive Git-Lock-Runtime-Datei fehlt`);
+      }
+    }
+    if (!configText.includes("codex-git-multi-session-lock.ps1")) {
+      errors.push("~/.codex/config.toml: PreToolUse-Hook codex-git-multi-session-lock.ps1 fehlt");
+    }
+  } else if (!configText.includes("codex-git-multi-session-lock.sh")) {
+    errors.push("~/.codex/config.toml: PreToolUse-Hook codex-git-multi-session-lock.sh fehlt");
+  }
+}
+
 function main() {
   const repoRoot = resolveRepoRoot(process.cwd());
   const codexSetupDir = path.join(repoRoot, "codex-setup");
@@ -329,6 +388,7 @@ function main() {
   validatePythonHeredoc(repoRoot, codexSetupDir, errors);
   validateSessionScorerBinding(repoRoot, errors, warnings);
   validateBridgeInfrastructure(repoRoot, codexSetupDir, errors);
+  validateGitLockRuntime(repoRoot, codexSetupDir, errors);
 
   console.log("Codex-Setup-Validierung");
   console.log(`- Repo-Skills geprueft: ${repoSkillFiles.length}`);
