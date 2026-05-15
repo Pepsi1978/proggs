@@ -1753,6 +1753,13 @@ public partial class PromptBoardPanel : Window
         // MouseRightButtonUp-Handler mehr. Die 3 Action-Buttons absorbieren
         // ihre eigenen Rechtsklicks weiter oben (damit ein Rechtsklick auf
         // den Stift nicht zusaetzlich das ContextMenu oeffnet).
+        // PreviewMouseRightButtonDown: PromptBoard zuerst nach vorne
+        // holen, damit die Popups des ContextMenus nicht hinter anderen
+        // Topmost-Fenstern landen.
+        row.PreviewMouseRightButtonDown += (_, _) =>
+        {
+            try { Activate(); } catch { /* Activate kann fehlschlagen wenn die App keinen Input-Focus haben darf — egal, dann hilft ForcePopupTopmost. */ }
+        };
         row.ContextMenu = BuildPromptContextMenu(prompt);
 
         // ── Drop-Target: Drag&Drop einer anderen Prompt-Zeile auf diese
@@ -2276,6 +2283,27 @@ public partial class PromptBoardPanel : Window
     }
 
     /// <summary>
+    /// Forciert das native Hosting-HWND eines Popups (ContextMenu oder
+    /// Submenue) auf HWND_TOPMOST. Hintergrund: das PromptBoard-Fenster
+    /// laeuft mit ShowActivated="False" und Topmost="True" — die
+    /// Default-Popups erben das nicht zuverlaessig und landen hinter
+    /// anderen Topmost-Fenstern (Voice-Overlay, andere Apps). Ohne diesen
+    /// Workaround konnte Frank das A..Z-Untermenue nicht sehen weil es
+    /// hinter dem Voice-Terminal-Overlay verschwand.
+    /// </summary>
+    private static void ForcePopupTopmost(System.Windows.Media.Visual? popupVisual)
+    {
+        if (popupVisual is null) return;
+        if (PresentationSource.FromVisual(popupVisual) is not HwndSource hwndSource) return;
+        if (hwndSource.Handle == IntPtr.Zero) return;
+        NativeMethods.Win32.SetWindowPos(
+            hwndSource.Handle,
+            NativeMethods.Win32.HWND_TOPMOST,
+            0, 0, 0, 0,
+            NativeMethods.Win32.SWP_NOMOVE | NativeMethods.Win32.SWP_NOSIZE | NativeMethods.Win32.SWP_NOACTIVATE);
+    }
+
+    /// <summary>
     /// Erzeugt das ContextMenu fuer eine Prompt-Zeile (Rechtsklick).
     /// Inhalt: "Hotkey zuweisen" mit Untermenue A..Z, "Hotkey entfernen",
     /// Separator, "Bearbeiten", "Loeschen". Wird bei jedem Render neu
@@ -2284,9 +2312,29 @@ public partial class PromptBoardPanel : Window
     private ContextMenu BuildPromptContextMenu(Prompt prompt)
     {
         var menu = new ContextMenu();
+        // Wenn das Top-Level-ContextMenu im Vordergrund poppt, schicken
+        // wir sein natives Popup-HWND aktiv auf HWND_TOPMOST — siehe
+        // ForcePopupTopmost-Kommentar.
+        menu.Opened += (s, _) => ForcePopupTopmost(s as System.Windows.Media.Visual);
 
         // ── "Hotkey zuweisen" mit Untermenue A..Z ──
         var assignItem = new MenuItem { Header = "Hotkey zuweisen (Win+Alt+…)" };
+        // Beim Aufklappen des A..Z-Untermenues liegt der Popup-Container
+        // in einem EIGENEN HWND — also auch hier explizit TOPMOST setzen.
+        // Wir greifen das Visual des ersten Sub-Items ab (es teilt sich
+        // das Popup-HWND mit allen anderen Sub-Items) und schicken den
+        // Befehl per Dispatcher.BeginInvoke an den naechsten Render-Tick,
+        // weil das Popup im Moment des SubmenuOpened-Events noch nicht
+        // gemessen / verbunden sein kann.
+        assignItem.SubmenuOpened += (s, _) =>
+        {
+            if (s is not MenuItem mi || mi.Items.Count == 0) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var firstChild = mi.ItemContainerGenerator.ContainerFromIndex(0) as System.Windows.Media.Visual;
+                ForcePopupTopmost(firstChild);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        };
 
         // Belegungs-Map vorberechnen: welcher Buchstabe gehoert welchem
         // Prompt? Wenn ein anderer Prompt den Buchstaben schon hat, zeigen
