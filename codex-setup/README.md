@@ -17,6 +17,24 @@ Core paths:
 - `codex-setup/bridges/`
 - `codex-setup/skills/`
 
+Delta and bridge commands:
+
+```bash
+# Compare Claude Code setup changes as read-only Codex port candidates
+node codex-setup/scripts/audit-claude-delta.mjs scan --limit 20
+
+# Compare Gemini setup changes as read-only Codex port candidates
+node codex-setup/scripts/audit-gemini-delta.mjs scan --limit 20
+
+# Print Codex bootstrap, ledger, and bridge addresses
+node codex-setup/scripts/bootstrap-report.mjs
+```
+
+```powershell
+# Windows bootstrap entrypoint
+powershell -ExecutionPolicy Bypass -File codex-setup/scripts/bootstrap-codex-setup.ps1
+```
+
 Restore on a new machine:
 
 ```bash

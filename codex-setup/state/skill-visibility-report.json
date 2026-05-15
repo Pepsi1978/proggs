@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-04-22T11:36:00.104021+00:00",
+  "generated_at": "2026-05-15T19:36:29.561955+00:00",
   "skills_root": "C:\\Users\\barwa\\.codex\\skills",
   "installed_count": 550,
   "implicit_budget": 60,
   "implicit_count": 59,
   "explicit_only_count": 491,
-  "files_changed": 1,
+  "files_changed": 6,
   "implicit_skills": [
     "imagegen",
     "openai-docs",

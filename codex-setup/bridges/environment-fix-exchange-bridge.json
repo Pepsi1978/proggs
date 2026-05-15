@@ -1,0 +1,44 @@
+{
+  "_DEPRECATED": "2026-03-25: Replaced by Universal Mirror Bridge. Kept as Codex-native ledger metadata.",
+  "version": 1,
+  "bridge_name": "environment-fix-exchange",
+  "source_label": "Codex Environment Fixes",
+  "language": "de",
+  "scope": "programming-environment-only",
+  "entry_schema": [
+    "id",
+    "summary",
+    "context",
+    "symptom",
+    "root_cause",
+    "fixed_at",
+    "verification",
+    "portability_notes",
+    "resilience_summary"
+  ],
+  "requires_full_context": true,
+  "requires_resilient_bugfix_fields": true,
+  "bridge_registry": {
+    "registry_path": "codex-setup/bridges/bridge-registry.json",
+    "registry_github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/bridges/bridge-registry.json",
+    "bridge_id": "environment-fix-exchange"
+  },
+  "write_scope": [
+    "codex-setup/ only"
+  ],
+  "read_only_consumers": [
+    "Claude Code",
+    "Gemini CLI",
+    "other CLI environments"
+  ],
+  "trigger_phrases": [
+    "logge diesen Codex-Umgebungsfix",
+    "welche Fehler hast du in deiner Codex-Umgebung gefixt",
+    "was können Claude Code oder Gemini CLI von deinen Fixes lernen"
+  ],
+  "reference_implementation": [
+    "codex-setup/state/environment-fixes.json",
+    "codex-setup/scripts/register-environment-fix.mjs",
+    "codex-setup/scripts/new-environment-fix.mjs"
+  ]
+}

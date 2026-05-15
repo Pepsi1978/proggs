@@ -14,6 +14,18 @@
       "future_failure_review": "Without these guards, a long description can hide a skill again, Windows one-offs can fail silently, and trend analysis goes blind because session-scores.jsonl never appears.",
       "status": "implemented",
       "created_at": "2026-04-22T13:16:25.2386268+02:00"
+    },
+    {
+      "id": "intel-codex-claude-delta-bridge-2026-05-15",
+      "summary": "Port Claude Code setup intelligence into Codex bridge tooling",
+      "proposal_text": "Give Codex the same setup-delta intelligence as Claude Code by adapting Claude's bridge registry and audit scripts into codex-setup.",
+      "context_for_other_clis": "The user asked to port the Claude Code setup folder into Codex terms so Codex gains the same intelligence instead of merely referencing Claude Code.",
+      "why_it_was_implemented": "The Codex setup had a whiteboard and self-improve base but could not actually inspect Claude setup deltas; without this, future Claude improvements would remain invisible or require manual copying.",
+      "how_it_was_implemented": "Added Codex bridge registry helper, Claude/Gemini delta bridge metadata, real audit scripts, bootstrap/report scripts, README documentation, validator checks, and ledger entries.",
+      "resilience_summary": "The port is additive, keeps Claude/Gemini read-only, classifies REPLACE separately, validates required bridge files, and exposes bootstrap-report output for future sessions.",
+      "future_failure_review": "If a future edit deletes bridge files, changes registry paths, or reintroduces Claude target paths, validate-codex-setup and audit smoke tests should fail before commit.",
+      "status": "implemented",
+      "created_at": "2026-05-15T21:43:40.6602184+02:00"
     }
   ]
 }

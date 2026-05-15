@@ -245,6 +245,66 @@ function validateSessionScorerBinding(repoRoot, errors, warnings) {
   }
 }
 
+function validateBridgeInfrastructure(repoRoot, codexSetupDir, errors) {
+  const requiredFiles = [
+    "bridges/bridge-registry.json",
+    "bridges/claude-delta-bridge.md",
+    "bridges/claude-delta-bridge.json",
+    "bridges/gemini-delta-bridge.md",
+    "bridges/gemini-delta-bridge.json",
+    "bridges/environment-fix-exchange-bridge.json",
+    "bridges/intelligence-suggestion-exchange-bridge.json",
+    "scripts/bridge-registry.mjs",
+    "scripts/audit-claude-delta.mjs",
+    "scripts/audit-claude-delta.sh",
+    "scripts/audit-gemini-delta.mjs",
+    "scripts/audit-gemini-delta.sh",
+    "scripts/bootstrap-codex-setup.sh",
+    "scripts/bootstrap-codex-setup.ps1",
+    "scripts/bootstrap-report.mjs",
+    "scripts/bootstrap-report.sh",
+    "scripts/bootstrap-report.ps1",
+  ];
+
+  for (const relativePath of requiredFiles) {
+    const fullPath = path.join(codexSetupDir, relativePath);
+    if (!fs.existsSync(fullPath)) {
+      errors.push(`codex-setup/${relativePath}: fehlt`);
+    }
+  }
+
+  const registryPath = path.join(codexSetupDir, "bridges", "bridge-registry.json");
+  if (!fs.existsSync(registryPath)) {
+    return;
+  }
+
+  let registry;
+  try {
+    registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+  } catch (error) {
+    errors.push(`codex-setup/bridges/bridge-registry.json: ungültiges JSON (${error.message})`);
+    return;
+  }
+
+  for (const bridgeId of ["claude-delta", "gemini-delta"]) {
+    const bridge = registry.bridges?.[bridgeId];
+    if (!bridge) {
+      errors.push(`codex-setup/bridges/bridge-registry.json: bridges.${bridgeId} fehlt`);
+      continue;
+    }
+
+    for (const bridgeFile of bridge.bridge_files || []) {
+      if (!fs.existsSync(path.join(repoRoot, bridgeFile))) {
+        errors.push(`${bridgeFile}: in Registry referenziert, aber Datei fehlt`);
+      }
+    }
+
+    if (!bridge.state_file) {
+      errors.push(`codex-setup/bridges/bridge-registry.json: ${bridgeId}.state_file fehlt`);
+    }
+  }
+}
+
 function main() {
   const repoRoot = resolveRepoRoot(process.cwd());
   const codexSetupDir = path.join(repoRoot, "codex-setup");
@@ -268,6 +328,7 @@ function main() {
 
   validatePythonHeredoc(repoRoot, codexSetupDir, errors);
   validateSessionScorerBinding(repoRoot, errors, warnings);
+  validateBridgeInfrastructure(repoRoot, codexSetupDir, errors);
 
   console.log("Codex-Setup-Validierung");
   console.log(`- Repo-Skills geprueft: ${repoSkillFiles.length}`);

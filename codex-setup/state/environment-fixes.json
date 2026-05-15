@@ -23,6 +23,17 @@
       "verification": "Added the codex-setup validator, deployed the updated self-improve skill, blocked Python heredoc in bash-guard.ps1, rebound the session scorer via the PowerShell profile, manually created ~/.codex/session-scores.jsonl through the scorer, and reached clean validator status.",
       "portability_notes": "Other CLIs should keep a repo-native validator plus an active-runtime scorer hook that is tested against the current transcript schema.",
       "resilience_summary": "A1 adds loader-safe frontmatter checks, A2 blocks the Windows failure mode before execution, and B1 restores session score generation with a schema-tolerant scorer and active launcher binding."
+    },
+    {
+      "id": "envfix-codex-claude-delta-bridge-2026-05-15",
+      "summary": "Codex-native Claude/Gemini delta bridge port",
+      "context": "User requested porting Claude Code setup intelligence into codex-setup so Codex can inspect foreign setup deltas without depending on Claude control files.",
+      "symptom": "codex-setup/scripts/audit-claude-delta.mjs and audit-gemini-delta.mjs were stubs that only reported readiness and could not classify ADD/ADAPT/REPLACE candidates.",
+      "root_cause": "The initial Codex setup bootstrap created placeholder delta audit scripts but did not port Claude Code's bridge registry helper, real Git delta scanner, bridge metadata, or bootstrap report infrastructure.",
+      "fixed_at": "2026-05-15T21:43:40.6602184+02:00",
+      "verification": "node --check passed for bridge-registry.mjs, audit-claude-delta.mjs, audit-gemini-delta.mjs, and bootstrap-report.mjs; JSON bridge files parse; audit-claude-delta scan produces candidates; bootstrap-report emits Codex bridge metadata.",
+      "portability_notes": "Other CLI setups can copy the pattern: registry helper plus per-peer bridge JSON plus Git-based scanner, with foreign sources read-only and replacement candidates requiring confirmation.",
+      "resilience_summary": "Defense in depth: bridge registry is machine-readable, audit scripts classify risk, README documents commands, validate-codex-setup now checks bridge infrastructure, and ledgers record the environment fix."
     }
   ]
 }
