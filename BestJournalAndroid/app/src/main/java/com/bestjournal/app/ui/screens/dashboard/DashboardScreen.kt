@@ -288,8 +288,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
                                 )
+                                // Bug-Fix 2026-05-15: customFokusKern darf NUR bei
+                                // Custom-Profilen verwendet werden. Sonst ueberschreibt der
+                                // aus dem Prefs gelesene Wert (vom letzten Custom-Profil-Refresh
+                                // uebriggeblieben) die statischen Beschreibungen aller
+                                // eingebauten Profile — alle Profile haetten denselben Text.
+                                val isCustomProfile =
+                                    uiState.currentScenario >=
+                                        com.bestjournal.app.util.Constants.FIRST_CUSTOM_SCENARIO_INDEX
                                 val focusText =
-                                    if (uiState.customFokusKern.isNotBlank())
+                                    if (isCustomProfile && uiState.customFokusKern.isNotBlank())
                                         uiState.customFokusKern
                                     else uiState.activeProfileFocus
                                 if (focusText.isNotBlank()) {
@@ -298,6 +306,11 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         text = focusText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        // Frank-Vorgabe 2026-05-15: max 3 Zeilen, bei Ueberlauf
+                                        // mit Ellipsis abkuerzen — der Header soll kompakt bleiben.
+                                        maxLines = 3,
+                                        overflow =
+                                            androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
                                 }
                             }

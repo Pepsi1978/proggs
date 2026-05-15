@@ -120,6 +120,11 @@ constructor(
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         aiRateLimiter.setCurrentScenario(scenario)
         analyticsTracker.trackDashboardViewed(scenario)
+        // Bug-Fix 2026-05-15: customFokusKern stammt aus dem letzten Custom-Profil-Refresh
+        // und ueberlebt in Prefs auch wenn der User auf ein eingebautes Profil wechselt.
+        // Beim Init NUR lesen wenn das aktive Profil tatsaechlich ein Custom-Profil ist —
+        // sonst sieht das eingebaute Profil den fremden Custom-Kern als Beschreibung.
+        val isCurrentCustom = scenario >= Constants.FIRST_CUSTOM_SCENARIO_INDEX
         _uiState.update {
             it.copy(
                 currentScenario = scenario,
@@ -127,9 +132,14 @@ constructor(
                 customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
                 customHeaderErgebnisse =
                     encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
-                customFokusKern = encryptedPrefs.getString("custom_fokus_kern", "") ?: "",
+                customFokusKern =
+                    if (isCurrentCustom)
+                        encryptedPrefs.getString("custom_fokus_kern", "") ?: ""
+                    else "",
                 customFokusZitateJson =
-                    encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: "",
+                    if (isCurrentCustom)
+                        encryptedPrefs.getString("custom_fokus_zitate_json", "") ?: ""
+                    else "",
                 activeProfileLabel = computeProfileLabel(scenario),
                 activeProfileFocus = computeProfileFocus(scenario),
                 emptyCustomPromptWarning = isEmptyCustomProfile(scenario),
@@ -232,6 +242,12 @@ constructor(
                         currentScenario,
                     )
                     val emptyWarn = isEmptyCustomProfile(currentScenario)
+                    // Bug-Fix 2026-05-15: customFokusKern/Zitate stammen aus dem
+                    // letzten Custom-Profil-Refresh. Beim Profil-Wechsel sind die
+                    // Werte fuer das NEUE Profil noch nicht generiert — also leeren,
+                    // sonst zeigt der Profil-Header den alten Fokus-Kern an. Bei
+                    // Custom-Profilen werden die Felder mit der naechsten Analyse
+                    // wieder gefuellt (AdviceRepository.parseAdviceJson).
                     _uiState.update {
                         it.copy(
                             currentScenario = currentScenario,
@@ -239,6 +255,8 @@ constructor(
                             activeProfileLabel = computeProfileLabel(currentScenario),
                             activeProfileFocus = computeProfileFocus(currentScenario),
                             emptyCustomPromptWarning = emptyWarn,
+                            customFokusKern = "",
+                            customFokusZitateJson = "",
                         )
                     }
                     adviceRepository.clearDashboard()
