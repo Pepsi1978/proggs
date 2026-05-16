@@ -379,6 +379,15 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
     ) { result ->
         result.data?.let { data -> vm.onPolarAuthResult(data) }
     }
+    // Frank-Wunsch 2026-05-16: File-Picker fuer Polar-Bulk-Export-ZIP. Polar
+    // liefert die per Mail nach dem Export-Antrag. Wir lesen sie ueber den
+    // Content-Resolver direkt aus dem ZIP — kein Entpacken in den App-Cache
+    // noetig. Filter: nur ZIP-MIME-Typen anzeigen.
+    val bulkImportPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        uri?.let { vm.startPolarBulkImport(it) }
+    }
     // Polar's Brand-Rot (offizielle Markenfarbe). Wird fuer die Titelzeile + den
     // "Verbinden"-Button verwendet, damit die Card optisch von Whoop (Cyan-Blau)
     // und Oura (Tuerkis) unterscheidbar ist.
@@ -489,6 +498,40 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                         color = cosmos.textSecondary,
                     )
                 }
+            }
+            // Bulk-Import-Sektion: gesamte Polar-Historie aus ZIP-Datei
+            // einlesen (Frank-Wunsch 2026-05-16). Polar's Live-API liefert
+            // nur die letzten 4 Wochen — Vollarchive nur ueber Bulk-Export.
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Gesamte Historie importieren",
+                style = MaterialTheme.typography.titleSmall,
+                color = cosmos.textPrimary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Hast du eine Polar-Export-ZIP per Mail erhalten (von " +
+                    "flow.polar.com/data/export-data)? Hier kannst du ALLE " +
+                    "Trainings deiner Polar-Historie auf einmal importieren. " +
+                    "Bei 10 Jahren Trainings dauert der Vorgang ca. 30-60 Sek.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    // Akzeptiere ZIP-Dateien aus dem File-Picker. Manche
+                    // Geraete liefern "application/x-zip-compressed",
+                    // andere "application/zip" — wir nehmen beide via "*/*"
+                    // und filtern in der Importer-Logik selbst, sonst sieht
+                    // Frank die Polar-Mail-ZIP evtl. nicht in der Liste.
+                    bulkImportPicker.launch("*/*")
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(6.dp))
+                Text("Polar-Export-ZIP auswaehlen")
             }
             Spacer(Modifier.height(8.dp))
             Text(

@@ -362,6 +362,31 @@ class BackgroundScheduler @Inject constructor(
         wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
+    /**
+     * Stoesst den Polar-Bulk-Import an (Frank-Wunsch 2026-05-16).
+     * zipUri ist die content:// URI die der File-Picker liefert.
+     * REPLACE: ein laufender Import wird ersetzt, kein Doppel-Import.
+     */
+    fun runPolarBulkImport(zipUri: android.net.Uri) {
+        // KEIN Netzwerk-Constraint — die ZIP liegt schon lokal auf dem Geraet.
+        // Nur Sicherheit: bei niedrigem Akku abwarten waere unschoen, weil
+        // der User aktiv "Importieren" gedrueckt hat. Also OHNE Battery-Check.
+        val request = OneTimeWorkRequestBuilder<PolarBulkImportWorker>()
+            .setInputData(
+                androidx.work.workDataOf(
+                    PolarBulkImportWorker.KEY_ZIP_URI to zipUri.toString(),
+                ),
+            )
+            // Foreground-Worker brauchen Expedited-Hint um sofort zu starten
+            .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build()
+        wm.enqueueUniqueWork(
+            PolarBulkImportWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.REPLACE,
+            request,
+        )
+    }
+
     /** Berechnet die Anzahl Minuten bis zum naechsten Vorkommen von [targetMinutes] (Tagesminuten). */
     private fun minutesUntil(targetMinutes: Int): Long {
         val now = LocalDateTime.now(ZoneId.systemDefault())

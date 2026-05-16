@@ -238,6 +238,19 @@ class OAuthViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Startet den Polar-Bulk-Import — der User hat eine Polar-Export-ZIP aus
+     * dem File-Picker ausgewaehlt (Frank-Wunsch 2026-05-16: 10-Jahre-Historie).
+     * Der Worker laeuft im Foreground mit Notification und schreibt am Ende
+     * alle Trainings via REPLACE in die DB.
+     */
+    fun startPolarBulkImport(zipUri: android.net.Uri) {
+        scheduler.runPolarBulkImport(zipUri)
+        _state.update {
+            it.copy(message = "Polar-Historie wird importiert — beachte die Benachrichtigung")
+        }
+    }
+
     fun clearMessage() { _state.update { it.copy(message = null) } }
 
     private companion object {
