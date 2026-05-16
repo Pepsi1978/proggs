@@ -44,6 +44,7 @@ class SyncEntriesUseCase @Inject constructor(
     private val healthConnectValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
     private val amazfitWorkoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     private val secrets: EncryptedSecretsStore,
+    private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val json: Json,
 ) {
 
@@ -190,7 +191,21 @@ class SyncEntriesUseCase @Inject constructor(
         // Wenn das lokale Geraet bereits Detail-Felder hat die im Backup leer
         // sind, bleiben die lokalen Daten erhalten. So gewinnt der NEUERE Stand
         // immer — egal ob er aus dem Backup oder vom lokalen Sync kam.
-        if (payload.amazfitWorkouts.isNotEmpty()) {
+        //
+        // Frank-Wunsch 2026-05-16: Nach erfolgreicher Cleanup-Migration (Flag
+        // workoutCleanupV1Done) den Workout-Block ueberspringen — sonst wuerden
+        // alte Drive-Backups mit 391 Workouts den geleerten Stand sofort wieder
+        // ueberschreiben. Wenn Frank's Polar-Integration spaeter Workouts
+        // schreibt, ueberschreibt der naechste regulaere Sync das Drive-Backup
+        // mit dem Polar-Stand — der Restore wird dann nur Polar-Workouts mergen.
+        val workoutCleanupDone = appSettings.isWorkoutCleanupV1Done()
+        if (workoutCleanupDone && payload.amazfitWorkouts.isNotEmpty()) {
+            android.util.Log.i(
+                "SyncEntries",
+                "Restore: ueberspringe ${payload.amazfitWorkouts.size} Workouts aus Backup (Cleanup-Migration aktiv)",
+            )
+        }
+        if (!workoutCleanupDone && payload.amazfitWorkouts.isNotEmpty()) {
             val merged = payload.amazfitWorkouts.map { backupWorkout ->
                 val freshFromBackup = backupWorkout.toEntity()
                 val existing = amazfitWorkoutDao.getById(freshFromBackup.trackId)
