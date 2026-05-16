@@ -164,8 +164,12 @@ data class PolarUser(
     @SerialName("last-name") val lastName: String? = null,
     val birthdate: String? = null,
     val gender: String? = null,
+    /** Gewicht in kg. Live-Sonde 2026-05-16: Polar liefert Floats wie 88.2 */
     val weight: Float? = null,
-    val height: Int? = null,
+    /** Groesse in cm. Live-Sonde 2026-05-16: Polar liefert Floats wie 178.0 —
+     *  NICHT Int wie ich initial annahm. JSON-Parser warf "Unexpected symbol '.'
+     *  in numeric literal" weil 178.0 nicht in Int passt. Float ist sicher. */
+    val height: Float? = null,
 )
 
 /** Antwort auf POST /exercise-transactions — enthaelt die Transaction-ID. */

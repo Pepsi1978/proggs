@@ -189,8 +189,9 @@ fun AmazfitTrainingsScreen(
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "Verbinde dein Zepp-Konto in den Einstellungen unter API. " +
-                                    "Nach dem Login werden alle Trainings der T-Rex 3 hier erscheinen.",
+                                "Verbinde dein Polar-Konto in den Einstellungen unter API. " +
+                                    "Nach dem Login werden alle Trainings aus Polar Flow " +
+                                    "(inkl. externer Brustgurt-Daten vom H10) hier erscheinen.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = cosmos.textSecondary,
                             )

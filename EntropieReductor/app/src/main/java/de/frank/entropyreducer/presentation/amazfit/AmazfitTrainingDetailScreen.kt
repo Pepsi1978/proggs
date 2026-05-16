@@ -78,7 +78,7 @@ fun AmazfitTrainingDetailScreen(
     val tempoStream = remember(w?.paceStreamJson) { parsePaceStream(w?.paceStreamJson) }
 
     CosmosScaffold(
-        title = workout?.sportName ?: "Training (T-Rex 3)",
+        title = workout?.sportName ?: "Training (${sourceLabel(workout?.source)})",
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
@@ -177,7 +177,7 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = "T-Rex 3",
+                        text = sourceLabel(w.source),
                         color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
@@ -1102,3 +1102,26 @@ private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.Amazfi
 /** VO2Max mit deutschem Komma-Format — Frank-Wunsch 2026-05-09: "40,8" statt "41". */
 private fun formatVo2(v: Double): String =
     "%.1f".format(v).replace(".", ",")
+
+/**
+ * Frank-Wunsch 2026-05-16: Quellenabhaengige Beschriftung des Workout-Chips
+ * und des Default-Titels. Polar ist ab jetzt die alleinige Workout-Quelle —
+ * alte Zepp/Amazfit-Trainings bleiben mit "T-Rex 3" markiert damit Frank
+ * historisch sieht woher der Eintrag stammt.
+ *
+ * - source == "polar"          → "Polar"
+ * - source == "health_connect" → "Health Connect"
+ * - source enthaelt "huami"    → "T-Rex 3"  (Zepp-Cloud, z.B. "run.8716545.huami.com")
+ * - source == null oder leer   → "T-Rex 3"  (Legacy-Default fuer alte Eintraege)
+ * - Sonstiges                  → "Polar"    (defensiver Default — zukuenftige Eintraege)
+ */
+private fun sourceLabel(source: String?): String {
+    if (source.isNullOrBlank()) return "T-Rex 3"
+    val lc = source.lowercase()
+    return when {
+        lc == "polar" -> "Polar"
+        lc == "health_connect" -> "Health Connect"
+        lc.contains("huami") -> "T-Rex 3"
+        else -> "Polar"
+    }
+}
