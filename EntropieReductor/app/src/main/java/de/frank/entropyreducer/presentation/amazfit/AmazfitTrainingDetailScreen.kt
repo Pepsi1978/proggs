@@ -254,7 +254,10 @@ private fun TerrainGrid(w: AmazfitWorkoutEntity) {
     StatsGrid(
         listOf(
             "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
-            "VO₂Max" to (w.vo2Max?.let { formatVo2(it) } ?: estimateVo2Max(w)),
+            // Frank-Wunsch 2026-05-16: VO2max IMMER selbst berechnen (ACSM + Karvonen + 2).
+            // Der DB-Wert (z.B. Polar's running-index oder Zepp-VO2max) wird ignoriert —
+            // nur die eigenen Daten zaehlen. Wenn Eingaben fehlen, steht "—".
+            "VO₂Max" to estimateVo2Max(w),
         ),
     )
 }

@@ -705,6 +705,18 @@ class AmazfitRepository @Inject constructor(
         val workout = workoutDao.getById(trackId) ?: return@runCatching false
         val source = workout.source
             ?: return@runCatching false
+
+        // Frank-Wunsch 2026-05-16: Polar-Workouts werden ueber die Polar-API
+        // refreshed (Direct-URL), nicht ueber den Zepp-Endpoint. Bei "polar-bulk"
+        // (aus Bulk-Export-Datei) gibt es keinen Online-Endpoint — dann nichts tun.
+        if (source == "polar") {
+            return@runCatching refreshPolarWorkout(workout, force)
+        }
+        if (source == "polar-bulk") {
+            Log.d(TAG, "Workout $trackId stammt aus Polar-Bulk-Import — kein API-Refresh moeglich")
+            return@runCatching false
+        }
+
         // Cache-Logik: nicht jeder Detail-Open soll den Server quaelen, aber bei
         // alten Trainings ohne Daten soll man trotzdem nochmal probieren koennen.
         if (!force) {
@@ -780,6 +792,88 @@ class AmazfitRepository @Inject constructor(
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.w(TAG, "ensureWorkoutDetail fehlgeschlagen fuer $trackId: ${it.message}")
         }
+    }
+
+    /**
+     * Refreshed ein bereits gespeichertes Polar-Workout via Direct-URL ohne
+     * Transaction-Workflow. Wird vom "Erneut laden"-Button im Detail-Screen
+     * und vom periodischen Sync getriggert wenn `force=true` ist.
+     *
+     * Frank-Wunsch 2026-05-16: aktuelles Trailrunning 17:22 hatte nach dem
+     * ersten Sync (mit altem Buggy-Code) keine Streams. Polar's normaler
+     * Transaction-Workflow liefert die Exercise nicht mehr — aber per
+     * Direct-URL `/v3/users/{uid}/exercises/{eid}` ist sie permanent
+     * abrufbar inkl. Samples + GPX.
+     *
+     * Merge-Strategie: "fresh wins if not null" — Felder die im neuen Fetch
+     * leer sind ueberschreiben nicht die alten DB-Werte. Damit gehen muehsam
+     * gesammelte Daten nicht durch ein leeres Refresh verloren.
+     */
+    private suspend fun refreshPolarWorkout(
+        workout: AmazfitWorkoutEntity,
+        force: Boolean,
+    ): Boolean {
+        // Cache: wenn nicht force und Streams schon da → kein API-Call.
+        if (!force) {
+            val hasHr = !workout.heartRateSeriesJson.isNullOrBlank()
+            val hasTempo = !workout.paceStreamJson.isNullOrBlank() && workout.paceStreamJson != " "
+            val hasGps = !workout.gpsTrackJson.isNullOrBlank()
+            if (hasHr && hasTempo && hasGps) {
+                return false
+            }
+            // Throttle: maximal alle 30 Minuten neu probieren wenn nichts da war,
+            // damit Frank's wiederholte Detail-Screen-Oeffnungen den Server nicht
+            // jedes Mal anstossen. Polar AccessLink hat 500/15min Rate-Limit.
+            val ageMs = System.currentTimeMillis() - workout.createdAt
+            if (ageMs < 30 * 60 * 1000L) {
+                Log.d(TAG, "Polar-Refresh fuer ${workout.trackId} gedrosselt (Cache ${ageMs / 1000}s alt)")
+                return false
+            }
+        }
+        // Exercise-ID extrahieren: trackId = "polar-{id}"
+        val exerciseId = workout.trackId.removePrefix("polar-").toLongOrNull()
+        if (exerciseId == null) {
+            Log.w(TAG, "Polar-Refresh: trackId ${workout.trackId} hat kein gueltiges Polar-ID-Suffix")
+            return false
+        }
+        val fresh = polarRepo.get().refreshExercise(exerciseId).getOrNull()
+        if (fresh == null) {
+            Log.w(TAG, "Polar-Refresh fuer ${workout.trackId}: keine frischen Daten erhalten")
+            return false
+        }
+        // Merge: fresh wins if not null, sonst existing.
+        val merged = workout.copy(
+            durationSeconds = fresh.durationSeconds ?: workout.durationSeconds,
+            sportType = fresh.sportType ?: workout.sportType,
+            sportName = fresh.sportName ?: workout.sportName,
+            distanceMeters = fresh.distanceMeters ?: workout.distanceMeters,
+            avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: workout.avgPaceSecPerKm,
+            maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: workout.maxPaceSecPerKm,
+            avgSpeedKmh = fresh.avgSpeedKmh ?: workout.avgSpeedKmh,
+            maxSpeedKmh = fresh.maxSpeedKmh ?: workout.maxSpeedKmh,
+            calories = fresh.calories ?: workout.calories,
+            avgHeartRate = fresh.avgHeartRate ?: workout.avgHeartRate,
+            maxHeartRate = fresh.maxHeartRate ?: workout.maxHeartRate,
+            gpsTrackJson = fresh.gpsTrackJson ?: workout.gpsTrackJson,
+            heartRateSeriesJson = fresh.heartRateSeriesJson ?: workout.heartRateSeriesJson,
+            paceSeriesJson = fresh.paceSeriesJson ?: workout.paceSeriesJson,
+            paceStreamJson = fresh.paceStreamJson ?: workout.paceStreamJson,
+            altitudeGainMeters = fresh.altitudeGainMeters ?: workout.altitudeGainMeters,
+            altitudeLossMeters = fresh.altitudeLossMeters ?: workout.altitudeLossMeters,
+            trainingEffectAerobic = fresh.trainingEffectAerobic ?: workout.trainingEffectAerobic,
+            trainingEffectAnaerobic = fresh.trainingEffectAnaerobic ?: workout.trainingEffectAnaerobic,
+            // VO2max IMMER aus dem frischen Compute uebernehmen — nullable.
+            // Wenn alle Eingaben da sind, ist fresh.vo2Max gesetzt. Sonst null
+            // (kein veralteter Polar-runningIndex mehr im DB-Datensatz).
+            vo2Max = fresh.vo2Max,
+            cadence = fresh.cadence ?: workout.cadence,
+            strideLengthCm = fresh.strideLengthCm ?: workout.strideLengthCm,
+            createdAt = System.currentTimeMillis(),
+        )
+        workoutDao.upsert(merged)
+        Log.i(TAG, "Polar-Refresh fuer ${workout.trackId} OK: gps=${merged.gpsTrackJson != null} hr=${merged.heartRateSeriesJson != null} tempo=${merged.paceStreamJson != null} splits=${merged.paceSeriesJson != null} maxSpeed=${merged.maxSpeedKmh} altGain=${merged.altitudeGainMeters} altLoss=${merged.altitudeLossMeters} cadence=${merged.cadence} stride=${merged.strideLengthCm} vo2=${merged.vo2Max}")
+        syncCoordinatorLazy.get().requestSync()
+        return true
     }
 
     /**

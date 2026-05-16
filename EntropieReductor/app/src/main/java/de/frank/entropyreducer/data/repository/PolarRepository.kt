@@ -60,6 +60,38 @@ class PolarRepository @Inject constructor(
         oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L
 
     /**
+     * Laedt eine BEREITS GESYNCTE Exercise direkt ueber die Standalone-URL
+     * (`/v3/users/{uid}/exercises/{eid}`) — OHNE Transaction-Workflow.
+     *
+     * Hintergrund (Frank-Befund 2026-05-16): Polar's Transaction-Workflow
+     * liefert pro Exercise nur EINMAL. Nach dem Commit ist die Exercise aus
+     * der Transaction-Liste raus. Wir koennen sie aber permanent per
+     * Direct-URL aufrufen und damit fehlende Sample-Streams, GPX oder
+     * korrigierte Felder nachladen — perfekt fuer "Erneut laden"-Buttons.
+     *
+     * @param exerciseId Polar-interne Exercise-ID (aus trackId="polar-{id}")
+     * @return Frisch zusammengebaute Entity oder null bei Fehler / unauthenticated.
+     */
+    suspend fun refreshExercise(exerciseId: Long): Result<AmazfitWorkoutEntity?> = runCatchingCancellable {
+        if (!isAuthenticated()) {
+            Log.d(TAG, "Polar: refreshExercise($exerciseId) — nicht authentifiziert")
+            return@runCatchingCancellable null
+        }
+        val accessToken = oauth.freshPolarAccessToken()
+            ?: throw IllegalStateException("Polar-Access-Token nicht verfuegbar (Token abgelaufen — neu anmelden noetig)")
+        val bearer = "Bearer $accessToken"
+        val userId = secrets.polarUserId
+        val exerciseUrl = "https://www.polaraccesslink.com/v3/users/$userId/exercises/$exerciseId"
+        Log.i(TAG, "Polar: refreshExercise $exerciseId via Direct-URL")
+        val exercise = api.getExercise(bearer, exerciseUrl)
+        buildEntity(bearer, exerciseUrl, exercise)
+    }.onFailure { ex ->
+        if (ex !is kotlinx.coroutines.CancellationException) {
+            Log.w(TAG, "Polar: refreshExercise($exerciseId) fehlgeschlagen — ${ex.message}")
+        }
+    }
+
+    /**
      * Pollt die naechste Polar-Transaction und mappt alle enthaltenen Exercises
      * auf AmazfitWorkoutEntities. Aufrufer schreibt das Ergebnis in die DB.
      *
