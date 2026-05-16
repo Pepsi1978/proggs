@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.oura.OuraApi
+import de.frank.entropyreducer.data.remote.polar.PolarApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.zepp.ZeppApi
 import kotlinx.serialization.json.Json
@@ -203,4 +204,26 @@ object NetworkModule {
     @Provides @Singleton
     fun provideOuraApi(@Named("oura") retrofit: Retrofit): OuraApi =
         retrofit.create(OuraApi::class.java)
+
+    /* ----- Polar AccessLink v3 (Frank-Wunsch 2026-05-16) -----
+     *
+     * Workouts mit GPS, Pulsverlauf (auch vom externen H10), Pace, Cadence,
+     * Splits und HR-Zonen. Polar ist nach dem Strava-Revert die alleinige
+     * Workout-Quelle der App. Token-Endpoint laeuft auf polarremote.com, die
+     * eigentlichen Daten-Endpoints auf www.polaraccesslink.com — OAuthService
+     * kennt beide URLs, hier brauchen wir nur die Daten-Basis. */
+
+    @Provides
+    @Singleton
+    @Named("polar")
+    fun providePolarRetrofit(client: OkHttpClient, json: Json): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://www.polaraccesslink.com/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
+    @Provides @Singleton
+    fun providePolarApi(@Named("polar") retrofit: Retrofit): PolarApi =
+        retrofit.create(PolarApi::class.java)
 }

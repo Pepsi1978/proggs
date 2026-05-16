@@ -152,6 +152,7 @@ fun ApiKeysScreen(
                     onStop = vm::stopTtsPreview,
                 )
             }
+            item { PolarOAuthCard(oauthVm, oauthState) }
             item { WhoopOAuthCard(oauthVm, oauthState) }
             item { AmazfitLoginCard(zeppVm, zeppState) }
             item { OuraApiCard(ouraVm, ouraState) }
@@ -349,6 +350,152 @@ private fun WhoopOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                 Spacer(Modifier.height(8.dp))
                 ConnectionLabel("Verbunden", CosmosColors.Success, Icons.Outlined.CheckCircle)
             }
+        }
+    }
+}
+
+/**
+ * Polar-OAuth-Card (Frank-Wunsch 2026-05-16). Polar AccessLink ist die
+ * alleinige Workout-Quelle nachdem Strava entfernt wurde (Strava verlor die
+ * Brustgurt-HR-Daten). Polar zieht die H10-Daten sauber durch.
+ *
+ * Anleitung in der Card:
+ *  1. Account auf admin.polaraccesslink.com erstellen (Login mit Polar-Flow)
+ *  2. Neue App registrieren, Client-ID und Client-Secret kopieren
+ *  3. Callback URL eintragen: localhost
+ *  4. Hier Client-ID + Secret eintragen, Speichern, Verbinden
+ *
+ * Anders als Strava: Polar nutzt HTTP-Basic-Auth beim Token-Endpoint, daher
+ * keine speziellen Anforderungen an die Redirect-URI-Domain. Wir nutzen
+ * dennoch den localhost-Trick aus Strava-Erfahrung damit Polar's Domain-
+ * Validator nicht zickt.
+ */
+@Composable
+private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
+    val cosmos = LocalCosmos.current
+    var secretHidden by remember { mutableStateOf(true) }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        result.data?.let { data -> vm.onPolarAuthResult(data) }
+    }
+    // Polar's Brand-Rot (offizielle Markenfarbe). Wird fuer die Titelzeile + den
+    // "Verbinden"-Button verwendet, damit die Card optisch von Whoop (Cyan-Blau)
+    // und Oura (Tuerkis) unterscheidbar ist.
+    val polarRed = Color(0xFFE6014C)
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                "Polar AccessLink",
+                style = MaterialTheme.typography.titleMedium,
+                color = polarRed,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Workouts mit GPS, Pulsverlauf vom externen Brustgurt (H10), Pace, " +
+                    "Cadence und Splits direkt aus Polar Flow. Erstelle eine App auf " +
+                    "https://admin.polaraccesslink.com (Login mit deinem Polar-Flow-Konto), " +
+                    "kopiere Client-ID + Client-Secret hierher. Als Callback URL einfach " +
+                    "\"localhost\" eintragen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                state.polarRedirectUri,
+                style = MaterialTheme.typography.bodySmall,
+                color = polarRed,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.polarClientId,
+                onValueChange = vm::setPolarClientId,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Client ID", color = cosmos.textSecondary) },
+                singleLine = true,
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.polarClientSecret,
+                onValueChange = vm::setPolarClientSecret,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Client Secret", color = cosmos.textSecondary) },
+                visualTransformation = if (secretHidden) PasswordVisualTransformation() else VisualTransformation.None,
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { secretHidden = !secretHidden }) {
+                        Icon(
+                            imageVector = if (secretHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                            contentDescription = if (secretHidden) "Anzeigen" else "Verbergen",
+                            tint = cosmos.textSecondary,
+                        )
+                    }
+                },
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = vm::savePolarCredentials,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Speichern") }
+                if (state.polarConnected) {
+                    Button(
+                        onClick = vm::disconnectPolar,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                    ) {
+                        Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Trennen")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            vm.buildPolarAuthIntent()?.let { launcher.launch(it) }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = polarRed),
+                    ) {
+                        Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Verbinden")
+                    }
+                }
+            }
+            if (state.polarConnected) {
+                Spacer(Modifier.height(8.dp))
+                ConnectionLabel(
+                    label = if (state.polarUserId > 0L) {
+                        "Verbunden — User #${state.polarUserId}"
+                    } else {
+                        "Verbunden"
+                    },
+                    color = CosmosColors.Success,
+                    icon = Icons.Outlined.CheckCircle,
+                )
+                if (state.polarLastSyncMs > 0L) {
+                    val deltaMin = (System.currentTimeMillis() - state.polarLastSyncMs) / 60_000L
+                    val label = when {
+                        deltaMin < 1L -> "gerade eben"
+                        deltaMin < 60L -> "vor $deltaMin Min."
+                        deltaMin < 24L * 60L -> "vor ${deltaMin / 60L} Std."
+                        else -> "vor ${deltaMin / (24L * 60L)} Tagen"
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Letzter Sync: $label",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Powered by Polar — Daten nur fuer persoenliche Analyse.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
         }
     }
 }

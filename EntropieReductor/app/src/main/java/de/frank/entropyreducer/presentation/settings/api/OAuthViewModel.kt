@@ -16,13 +16,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Zustand der OAuth-Verbindungen für Whoop und Google Calendar. */
+/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Polar. */
 data class OAuthUiState(
     val calendarAccountEmail: String? = null,
     val whoopConnected: Boolean = false,
     val whoopClientId: String = "",
     val whoopClientSecret: String = "",
     val whoopRedirectUri: String = OAuthService.WHOOP_REDIRECT_URI_DEFAULT,
+    // Polar (Frank-Wunsch 2026-05-16): alleinige Workout-Quelle nach Strava-Revert.
+    val polarConnected: Boolean = false,
+    val polarClientId: String = "",
+    val polarClientSecret: String = "",
+    val polarRedirectUri: String = OAuthService.POLAR_REDIRECT_URI_DEFAULT,
+    val polarUserId: Long = 0L,
+    val polarLastSyncMs: Long = 0L,
     val message: String? = null,
 )
 
@@ -73,6 +80,11 @@ class OAuthViewModel @Inject constructor(
         whoopConnected = oauth.loadWhoopAuthState().isAuthorized,
         whoopClientId = secrets.whoopClientId.orEmpty(),
         whoopClientSecret = secrets.whoopClientSecret.orEmpty(),
+        polarConnected = oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L,
+        polarClientId = secrets.polarClientId.orEmpty(),
+        polarClientSecret = secrets.polarClientSecret.orEmpty(),
+        polarUserId = secrets.polarUserId,
+        polarLastSyncMs = secrets.polarLastSyncEpochMs,
     )
 
     fun setWhoopClientId(value: String) { _state.update { it.copy(whoopClientId = value) } }
@@ -160,6 +172,69 @@ class OAuthViewModel @Inject constructor(
             secrets.calendarAccountEmail = null
             scheduler.cancelCalendarSync()
             _state.update { it.copy(calendarAccountEmail = null, message = "Google Calendar getrennt.") }
+        }
+    }
+
+    /* ------------------------------- Polar ------------------------------- */
+
+    fun setPolarClientId(value: String) { _state.update { it.copy(polarClientId = value) } }
+    fun setPolarClientSecret(value: String) { _state.update { it.copy(polarClientSecret = value) } }
+
+    fun savePolarCredentials() {
+        val rawId = state.value.polarClientId.trim()
+        val rawSecret = state.value.polarClientSecret.trim()
+        if (rawSecret.length > 256) {
+            _state.update {
+                it.copy(message = "Polar-Client-Secret ist ungewoehnlich lang " +
+                    "(${rawSecret.length} Zeichen). Bitte nur den Secret-String " +
+                    "aus dem Polar-Developer-Dashboard einfuegen. NICHT gespeichert.")
+            }
+            return
+        }
+        secrets.polarClientId = rawId.ifBlank { null }
+        secrets.polarClientSecret = rawSecret.ifBlank { null }
+        _state.update { it.copy(message = "Polar-Credentials gespeichert.") }
+    }
+
+    fun buildPolarAuthIntent(): Intent? {
+        val clientId = secrets.polarClientId
+        if (clientId.isNullOrBlank()) {
+            _state.update { it.copy(message = "Bitte zuerst die Polar-Client-ID speichern.") }
+            return null
+        }
+        return oauth.buildPolarAuthIntent(clientId, state.value.polarRedirectUri)
+    }
+
+    fun onPolarAuthResult(intent: Intent) {
+        viewModelScope.launch {
+            val result = oauth.handlePolarAuthResult(intent, secrets.polarClientSecret)
+            result.onSuccess {
+                _state.update {
+                    it.copy(
+                        polarConnected = true,
+                        polarUserId = secrets.polarUserId,
+                        message = "Polar verbunden — Trainings werden geladen.",
+                    )
+                }
+                // Sofort einen ersten Sync ausloesen, dann den Nightly-Job sicherstellen.
+                scheduler.runPolarSyncNow()
+                scheduler.ensureNightlyJobs()
+            }.onFailure { ex ->
+                _state.update { it.copy(message = "Polar-Auth fehlgeschlagen: ${ex.message}") }
+            }
+        }
+    }
+
+    fun disconnectPolar() {
+        oauth.clearPolarAuthState()
+        scheduler.cancelPolarSync()
+        _state.update {
+            it.copy(
+                polarConnected = false,
+                polarUserId = 0L,
+                polarLastSyncMs = 0L,
+                message = "Polar getrennt.",
+            )
         }
     }
 

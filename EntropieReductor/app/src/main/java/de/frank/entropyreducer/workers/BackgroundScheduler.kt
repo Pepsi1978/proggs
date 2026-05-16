@@ -63,6 +63,18 @@ class BackgroundScheduler @Inject constructor(
                 .setConstraints(constraints)
                 .build(),
         )
+        // Frank-Wunsch 2026-05-16: Polar AccessLink als alleinige Workout-
+        // Quelle. Nightly um 04:30 ist deutlich frueher als die Strava-Periode
+        // war (Polar hat 1-Jahr-Tokens und keine Refresh-Notwendigkeit, daher
+        // weniger Last). Manueller Trigger laeuft ueber runPolarSyncNow.
+        wm.enqueueUniquePeriodicWork(
+            PolarSyncWorker.UNIQUE_NAME_PERIODIC,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            PeriodicWorkRequestBuilder<PolarSyncWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build(),
+        )
     }
 
     /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */
@@ -326,6 +338,28 @@ class BackgroundScheduler @Inject constructor(
     fun cancelAmazfitSync() {
         wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_PERIODIC)
         wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_ONESHOT)
+    }
+
+    /**
+     * Stoesst einen einmaligen Polar-Sync an (Frank-Wunsch 2026-05-16).
+     * Wird nach erfolgreichem Polar-OAuth automatisch geschickt, plus per
+     * Pull-to-Refresh im Training-Tab. KEEP statt REPLACE — Doppel-Trigger
+     * (z.B. OAuth-Resume + App-Foreground) sollen kein zweites Mal laufen.
+     */
+    fun runPolarSyncNow() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED).build()
+        wm.enqueueUniqueWork(
+            PolarSyncWorker.UNIQUE_NAME_ONESHOT,
+            ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequestBuilder<PolarSyncWorker>()
+                .setConstraints(constraints).build(),
+        )
+    }
+
+    fun cancelPolarSync() {
+        wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_PERIODIC)
+        wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
     /** Berechnet die Anzahl Minuten bis zum naechsten Vorkommen von [targetMinutes] (Tagesminuten). */

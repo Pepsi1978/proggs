@@ -80,6 +80,15 @@ class AmazfitRepository @Inject constructor(
      * sofort verfuegbare Quelle.
      */
     private val healthConnect: HealthConnectManager,
+    /**
+     * Frank-Wunsch 2026-05-16 (final): Polar AccessLink wird die ALLEINIGE
+     * Workout-Quelle. Strava ist raus (Strava verlor die externen Brustgurt-
+     * HR-Daten), Zepp-Cloud + Health Connect liefern aus dem gleichen Aerger
+     * nur noch Daily-Werte. Polar zieht Workouts inkl. H10-Brustgurt-HR sauber
+     * durch — genau das was fehlte.
+     * dagger.Lazy nur als defensives Pattern analog zu syncCoordinatorLazy.
+     */
+    private val polarRepo: dagger.Lazy<PolarRepository>,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -139,6 +148,30 @@ class AmazfitRepository @Inject constructor(
         return changed
     }
 
+    /**
+     * Holt die naechste Polar-Transaction (alle seit dem letzten Commit neuen
+     * Workouts) und mappt sie auf AmazfitWorkoutEntities mit `source="polar"`
+     * und `trackId="polar-{id}"`. Bei fehlender Auth oder leerer Transaction
+     * gibt es eine leere Liste — kein Fehler.
+     *
+     * Direktive 3 (Resilient Bugfixing): Auch wenn der Polar-Sync scheitert,
+     * laeuft der restliche Amazfit-Sync (Daily-Werte) weiter. Wir geben hier
+     * eine leere Liste zurueck und loggen den Fehler.
+     */
+    suspend fun mergeFromPolar(): List<AmazfitWorkoutEntity> {
+        val repo = polarRepo.get()
+        if (!repo.isAuthenticated()) {
+            Log.d(TAG, "Polar: nicht verbunden — kein Polar-Sync")
+            return emptyList()
+        }
+        return repo.fetchWorkoutsAsEntities().getOrElse { ex ->
+            if (ex !is kotlinx.coroutines.CancellationException) {
+                Log.w(TAG, "Polar-Sync fehlgeschlagen: ${ex.message}")
+            }
+            emptyList()
+        }
+    }
+
     /** Manueller Auslöser: synchronisiert die letzten [days] Tage. */
     suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatchingCancellable {
         var appToken = auth.freshAppToken()
@@ -194,14 +227,13 @@ class AmazfitRepository @Inject constructor(
         // Die UI-Cards wurden ebenfalls entfernt damit keine leeren "—"-
         // Eintraege im Biomarker-Bereich erscheinen.
 
-        // Frank-Wunsch 2026-05-16 (final): Workout-Quellen komplett deaktiviert.
-        // Trainings kommen ab jetzt ausschliesslich ueber die Polar-API-
-        // Integration (separate Session). Zepp-Cloud + Health Connect liefern
-        // hier KEINE Workouts mehr — nur noch Daily-Werte (PAI, BioCharge,
-        // Stress, Schritte). Block bleibt strukturell drin damit die spaetere
-        // Polar-Pipeline an die Stelle einsteigen kann.
-        val workoutEntities = emptyList<AmazfitWorkoutEntity>()
-        if (false && workoutEntities.isNotEmpty()) {
+        // Frank-Wunsch 2026-05-16 (final): Polar AccessLink ist die ALLEINIGE
+        // Workout-Quelle. Strava lieferte externe Brustgurt-HR nicht durch,
+        // Zepp-Cloud + Health Connect waren ebenfalls unzuverlaessig — Polar
+        // zieht alle Daten inkl. H10-Brustgurt sauber durch.
+        // mergeFromPolar liefert direkt die fertigen AmazfitWorkoutEntities.
+        val workoutEntities = mergeFromPolar()
+        if (workoutEntities.isNotEmpty()) {
             // Frank-Bug 2026-05-11: Der Workout-Summary-Endpoint liefert KEINE
             // Detail-Felder (GPS-Track, Pulsverlauf, Tempoverlauf, Splits) — die
             // kommen erst beim ON-DEMAND-Aufruf von ensureWorkoutDetail. Wenn
