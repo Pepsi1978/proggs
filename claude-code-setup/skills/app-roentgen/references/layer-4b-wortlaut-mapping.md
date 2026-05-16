@@ -21,6 +21,7 @@ Deshalb sind 1:1-Wortlaute nicht optional, sondern die Grundlage des gesamten Re
 
 | Regel | Pflicht-Format |
 |-------|---------------|
+| **Stable Area-ID** | Jeder Bereich bekommt eine eindeutige ID (z.B. `area_id: dialog_delete_entry`) fuer Plugin-Konsumenten |
 | **Zitat in Anfuehrungszeichen** | `"Jetzt Premium starten"` — kein freier Fliesstext, immer `"..."` |
 | **Quelle vollstaendig** | `R.string.paywall_cta_primary @ res/values/strings.xml:142` |
 | **UI-Element nennen** | "Primaer-Button TopBar / TopBar-Title / Confirm-Button im Loesch-Dialog" |
@@ -28,6 +29,51 @@ Deshalb sind 1:1-Wortlaute nicht optional, sondern die Grundlage des gesamten Re
 | **Sonderzeichen erhalten** | Umlaute, Geviertstriche, geschuetzte Leerzeichen, runde/typografische Quotes nicht "normalisieren" |
 | **Plurals komplett** | `<plurals>` mit allen Quantitaeten: zero/one/two/few/many/other (sofern definiert) |
 | **Format-Strings markieren** | `%1$s`, `%2$d` bleiben drin und werden als Platzhalter erklaert |
+
+### Stable Area-ID Konvention
+
+Jede Wortlaut-Tabelle bekommt eine eindeutige `area_id`, damit Plugins (Rechtssicherheits-Skill, Uebersetzungs-Skill, kuenftige Plugins) gezielt referenzieren koennen.
+
+**Format:** `<typ>_<name>_<sub>`
+
+| Typ-Praefix | Bedeutung | Beispiel |
+|------------|-----------|----------|
+| `screen_` | Bildschirm | `screen_dashboard`, `screen_entry_editor` |
+| `dialog_` | Dialog | `dialog_delete_entry`, `dialog_logout_confirm` |
+| `sheet_` | Bottom-Sheet | `sheet_share_options`, `sheet_filter_entries` |
+| `menu_` | Menue | `menu_topbar_dashboard`, `menu_overflow_settings` |
+| `setting_` | Settings-Item (Hierarchie mit `>`) | `setting_account_profile_displayname` |
+| `snack_` | Snackbar | `snack_entry_saved`, `snack_network_error` |
+| `toast_` | Toast | `toast_invalid_input` |
+| `notif_` | Push-Notification-Template | `notif_daily_reminder`, `notif_trial_end` |
+| `error_` | Error-State | `error_offline`, `error_billing_unavailable` |
+| `empty_` | Empty-State | `empty_dashboard_no_entries` |
+| `loading_` | Loading-State | `loading_paywall_purchase` |
+| `tip_` | Tooltip / Banner | `tip_onboarding_step3_save` |
+| `field_` | TextField | `field_login_email`, `field_entry_title` |
+| `chip_` | Chip | `chip_filter_emotional`, `chip_filter_recent` |
+| `search_` | SearchBar | `search_entries`, `search_help` |
+| `a11y_` | semantics-Block | `a11y_fab_new_entry`, `a11y_paywall_close` |
+| `slider_` | Slider | `slider_reminder_time` |
+| `picker_` | Date/Time-Picker | `picker_reminder_time`, `picker_entry_date` |
+| `link_` | AnnotatedString Inline-Link | `link_terms_in_onboarding`, `link_privacy_in_paywall` |
+| `paywall_` | Paywall-Bildschirm | `paywall_main`, `paywall_onboarding`, `paywall_winback` |
+| `state_` | Subscription-State-Banner | `state_paused`, `state_grace_period`, `state_on_hold` |
+| `churn_` | Cancel-/Churn-Flow | `churn_survey`, `churn_confirm` |
+| `legal_` | Rechtstext (Schicht 4d) | `legal_terms_link`, `legal_privacy_link`, `legal_consent_banner` |
+| `perm_` | Permission-Rationale (Schicht 4d) | `perm_camera_rationale`, `perm_notifications_rationale` |
+| `external_` | Externe Inhalte (Schicht 4e) | `external_store_listing_de`, `external_email_welcome_de` |
+
+### Regeln fuer Area-IDs
+
+| Regel | Begruendung |
+|-------|-------------|
+| **snake_case** | Kompatibel mit JSON-Keys, URLs, CLI-Tools |
+| **stabil ueber Audit-Laeufe** | Selbe ID auch wenn String-Key sich aendert |
+| **eindeutig pro Bericht** | Keine zwei Bereiche duerfen die gleiche `area_id` haben |
+| **kurz aber sprechend** | `dialog_delete_entry` statt `dialog_delete_journal_entry_confirmation_with_undo_button` |
+| **Hierarchien mit `_`** | Settings-Pfade: `setting_account_profile_displayname` |
+| **Sub-Komponenten mit `__` (doppelter Underscore)** | `dialog_delete_entry__confirm_button` fuer einzelne Slots |
 
 ## 4b.2 Die 20 Bereichstypen — fuer jeden eine Pflicht-Tabelle
 
@@ -224,13 +270,15 @@ Es gibt keine "zu tief"-Grenze. Wenn die App 9 Ebenen tief verschachtelt — all
 ```markdown
 ### Wortlaute im Screen: <Name> (`DashboardScreen.kt:42`)
 
-| UI-Element | String-Key | Wortlaut (DE) | Wortlaut (EN) | Wortlaut (FR) | ... |
-|-----------|-----------|---------------|--------------|---------------|-----|
-| TopBar-Title | `dashboard_title` | "Mein Tagebuch" | "My Journal" | "Mon journal" | ... |
-| FAB-Label (a11y) | `dashboard_fab_new_entry_cd` | "Neuen Eintrag erstellen" | "Create new entry" | ... | ... |
-| Empty-State-Headline | `dashboard_empty_title` | "Noch keine Eintraege" | "No entries yet" | ... | ... |
-| Empty-State-Body | `dashboard_empty_body` | "Tippe auf das Plus-Symbol, um deinen ersten Eintrag zu erstellen." | ... | ... | ... |
-| Empty-State-CTA | `dashboard_empty_cta` | "Ersten Eintrag erstellen" | ... | ... | ... |
+**Area-ID:** `screen_dashboard`
+
+| UI-Element | Sub-Area-ID | String-Key | Wortlaut (DE) | Wortlaut (EN) | Wortlaut (FR) | ... |
+|-----------|------------|-----------|---------------|--------------|---------------|-----|
+| TopBar-Title | `screen_dashboard__topbar_title` | `dashboard_title` | "Mein Tagebuch" | "My Journal" | "Mon journal" | ... |
+| FAB-Label (a11y) | `screen_dashboard__fab_cd` | `dashboard_fab_new_entry_cd` | "Neuen Eintrag erstellen" | "Create new entry" | ... | ... |
+| Empty-State-Headline | `screen_dashboard__empty_title` | `dashboard_empty_title` | "Noch keine Eintraege" | "No entries yet" | ... | ... |
+| Empty-State-Body | `screen_dashboard__empty_body` | `dashboard_empty_body` | "Tippe auf das Plus-Symbol, um deinen ersten Eintrag zu erstellen." | ... | ... | ... |
+| Empty-State-CTA | `screen_dashboard__empty_cta` | `dashboard_empty_cta` | "Ersten Eintrag erstellen" | ... | ... | ... |
 ```
 
 ### Standard-Tabelle pro Dialog

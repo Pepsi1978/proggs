@@ -1,9 +1,42 @@
+---
+app_roentgen_schema_version: "2.0"
+app_name: "<APP-NAME>"
+audit_date: "YYYY-MM-DD"
+app_version_code: "<Version-Code>"
+app_version_name: "<Version-Name>"
+audited_directory: "<Pfad>"
+audit_tool: "app-roentgen Skill (Claude Code)"
+consumers:
+  - rechtssicherheit
+  - uebersetzung
+sections:
+  layer_1_manifest: true
+  layer_2_dependencies: true
+  layer_3_architecture: true
+  layer_4_screens: true
+  layer_4b_wording: true
+  layer_4c_translation_context: true
+  layer_4d_legal_text: true
+  layer_4e_external_content: true
+  layer_5_paywall: true
+  layer_6_hidden_features: true
+  layer_7_marketing_claims: true
+checklist_total_points: 82
+---
+
 # App-Roentgen Audit-Bericht — <APP-NAME>
 
 **Audit-Datum:** YYYY-MM-DD
 **App-Version:** <Version-Code> / <Version-Name>
 **Geprueftes Verzeichnis:** <Pfad>
 **Audit durch:** app-roentgen Skill (Claude Code)
+**Schema-Version:** 2.0
+
+> Dieser Bericht hat ein maschinenlesbares YAML-Frontmatter (oben). Plugins koennen damit
+> die Schema-Version pruefen und entscheiden welche Sektionen sie konsumieren.
+>
+> Parallel zu dieser MD-Datei existiert `<audit-name>.json` mit den strukturierten Daten
+> fuer programmatischen Zugriff. Siehe `references/plugin-api.md`.
 
 ---
 

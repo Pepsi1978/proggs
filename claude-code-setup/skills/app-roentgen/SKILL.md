@@ -198,6 +198,20 @@ bash ~/.claude/skills/app-roentgen/scripts/feature-scan.sh <pfad-zur-android-app
 
 Das Skript schreibt einen Initial-Bericht ins App-Verzeichnis als `app-roentgen-initial-scan.md`. Dieser ist die Basis fuer die Tiefenanalyse durch Claude in den 7 Schichten.
 
+## Plugin-API: JSON-Export fuer maschinelle Konsumenten
+
+Parallel zum Markdown-Bericht kann ein strukturierter JSON-Export erzeugt werden, den der Rechtssicherheits-Skill, der Uebersetzungs-Skill und kuenftige Plugins konsumieren:
+
+```bash
+python3 ~/.claude/skills/app-roentgen/scripts/export-json.py <pfad-zur-android-app>
+```
+
+Output: `<app-dir>/app-roentgen-export.json` mit Schema-Version 2.0.
+
+Der Export enthaelt: alle Strings mit Hash + Translatable-Flag + Format-Args + xliff:g-IDs + Slot-Laenge, Plurals mit CLDR-Vollstaendigkeitspruefung pro Sprache, Glossar, Du/Sie-Konsistenz, SDK-Erkennung (AI/Ads/Billing/Health/WebView/Firebase), Permission-Liste.
+
+→ **Detail-Doku**: `references/plugin-api.md`
+
 ## Output-Format des finalen Berichts
 
 Der finale Bericht wird in der App-Wurzel als `app-roentgen-AUDIT-YYYY-MM-DD.md` gespeichert. Die Struktur folgt dem Template `assets/audit-report-template.md`. Pflichtbestandteile:
