@@ -41,7 +41,7 @@
     <string name="journal_later">Más tarde</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">Desde %1$s al día</string>
-    <string name="paywall_instead_per_month">en vez de %1$s al mes</string>
+    <string name="paywall_instead_per_month">Ahorra %1$d%% frente al plan mensual</string>
     <string name="paywall_or">o</string>
     <string name="paywall_with_limited">con límites reducidos.</string>
     <!-- Churn missed string -->
@@ -1406,4 +1406,15 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">Generosa cuota diaria de IA para uso intensivo.</string>
+    <string name="ai_limits_dialog_title">¿Cómo funciona la cuota diaria de IA?</string>
+    <string name="ai_limits_dialog_body" formatted="false">CON SUSCRIPCIÓN PREMIUM\n\nTu cuota diaria:\n• Hasta 150 análisis de panel por perfil IA (con 4 perfiles: hasta 600 por día)\n• Hasta 150 mejoras de texto\n\nCómo funciona en detalle:\n• Solicitudes 1 a 30: máxima calidad IA\n• Solicitudes 31 a 100: calidad estándar rápida\n• En la solicitud 101: pausa única de 30 min\n• Solicitudes 101 a 150: calidad estándar rápida\n• A partir de la solicitud 151: sin más solicitudes hasta mañana\n\nPara todos los usuarios:\n• Máximo 50 solicitudes IA por hora — luego pausa de 5 min\n\n¿Cuándo se reinician las cuotas?\nCada día a medianoche (tu hora local) comienza una cuota nueva completa.\n\n──────────\n\nSIN SUSCRIPCIÓN\n\n• 5 análisis de panel por semana\n• 5 mejoras de texto por semana\n• Siempre en calidad estándar rápida\n• Se reinicia cada lunes a medianoche (tu hora local)\n\n──────────\n\nMás del 99% de los usuarios probablemente nunca alcanzarán estos límites.</string>
+    <string name="ai_limits_dialog_close">Entendido</string>
+    <string name="theme_neutral">Neutro</string>
+    <string name="theme_profile">Color de perfil — color del perfil del panel</string>
+    <string name="theme_solarized">Solsticio</string>
+    <string name="theme_dracula">Medianoche</string>
+    <string name="theme_one_dark">Atelier</string>
+    <string name="theme_nord">Noche Polar</string>
+    <string name="theme_gruvbox">Ámbar</string>
 </resources>

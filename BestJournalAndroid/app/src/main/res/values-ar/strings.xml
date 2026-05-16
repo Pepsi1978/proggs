@@ -41,7 +41,7 @@
     <string name="journal_later">لاحقا</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">من %1$s يوميا</string>
-    <string name="paywall_instead_per_month">بدلا من %1$s في الشهر</string>
+    <string name="paywall_instead_per_month">وفِّر %1$d%% مقارنةً بالخطة الشهرية</string>
     <string name="paywall_or">أو</string>
     <string name="paywall_with_limited">مع حدود استخدام.</string>
     <!-- Churn missed string -->
@@ -1415,4 +1415,15 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">حصة يومية سخية من الذكاء الاصطناعي للاستخدام المكثف.</string>
+    <string name="ai_limits_dialog_title">كيف تعمل الحصة اليومية للذكاء الاصطناعي؟</string>
+    <string name="ai_limits_dialog_body" formatted="false">مع الاشتراك المميز\n\nيتوفر لك يوميًا:\n• ما يصل إلى 150 تحليلًا للوحة التحكم لكل ملف تعريف ذكاء اصطناعي (4 ملفات تعريف = ما يصل إلى 600 يوميًا)\n• ما يصل إلى 150 تحسينًا للنص\n\nالتفاصيل:\n• الطلبات 1-30: أعلى جودة للذكاء الاصطناعي\n• الطلبات 31-100: جودة قياسية سريعة\n• الطلب 101: إيقاف مؤقت لمرة واحدة مدته 30 دقيقة\n• الطلبات 101-150: جودة قياسية سريعة\n• من الطلب 151: لا مزيد من الطلبات حتى الغد\n\nينطبق على جميع المستخدمين:\n• بحد أقصى 50 طلب ذكاء اصطناعي في الساعة - ثم إيقاف مؤقت لمدة 5 دقائق\n\nمتى يُعاد تعيين الحصص؟\nكل يوم عند 0:00 (بتوقيتك المحلي) تبدأ حصة جديدة كاملة.\n\n──────────\n\nبدون اشتراك\n\n• 5 تحليلات للوحة التحكم في الأسبوع\n• 5 تحسينات للنص في الأسبوع\n• دائمًا بجودة قياسية سريعة\n• يُعاد تعيينها كل يوم اثنين عند 0:00 (بتوقيتك المحلي)\n\n──────────\n\nأكثر من 99% من المستخدمين على الأرجح لن يصطدموا بهذه القيود أبدًا.</string>
+    <string name="ai_limits_dialog_close">حسنًا</string>
+    <string name="theme_neutral">محايد</string>
+    <string name="theme_profile">لون الملف الشخصي — لون ملف تعريف لوحة التحكم</string>
+    <string name="theme_solarized">الانقلاب الشمسي</string>
+    <string name="theme_dracula">منتصف الليل</string>
+    <string name="theme_one_dark">المرسم</string>
+    <string name="theme_nord">الليل القطبي</string>
+    <string name="theme_gruvbox">الكهرمان</string>
 </resources>

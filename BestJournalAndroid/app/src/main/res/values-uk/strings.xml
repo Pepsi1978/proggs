@@ -41,7 +41,7 @@
     <string name="journal_later">Пізніше</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">Від %1$s на день</string>
-    <string name="paywall_instead_per_month">замість %1$s на місяць</string>
+    <string name="paywall_instead_per_month">Заощаджуй %1$d%% порівняно з місячним планом</string>
     <string name="paywall_or">або</string>
     <string name="paywall_with_limited">з обмеженими лімітами.</string>
     <!-- Churn missed string -->
@@ -1412,4 +1412,15 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">Щедрий денний ліміт ШІ для інтенсивного використання.</string>
+    <string name="ai_limits_dialog_title">Як працює денний ліміт ШІ?</string>
+    <string name="ai_limits_dialog_body" formatted="false">З ПІДПИСКОЮ PREMIUM\n\nКожного дня тобі доступно:\n• До 150 аналізів дашборда на профіль ШІ (при 4 профілях — до 600 на день)\n• До 150 покращень тексту\n\nЯк це працює детально:\n• Запити 1–30: у найвищій якості ШІ\n• Запити 31–100: у швидкій стандартній якості\n• На 101-му запиті: одноразова пауза 30 хв\n• Запити 101–150: швидка стандартна якість\n• З 151-го запиту: нових запитів до завтра немає\n\nТакож для всіх користувачів:\n• Не більше 50 запитів ШІ на годину — потім пауза 5 хв\n\nКоли скидаються ліміти?\nКожного дня опівночі (за місцевим часом) починається новий повний ліміт.\n\n──────────\n\nБЕЗ ПІДПИСКИ\n\n• 5 аналізів дашборда на тиждень\n• 5 покращень тексту на тиждень\n• Завжди у швидкій стандартній якості\n• Скидання щопонеділка опівночі (за місцевим часом)\n\n──────────\n\nПонад 99% користувачів, імовірно, ніколи не зіткнуться з цими обмеженнями.</string>
+    <string name="ai_limits_dialog_close">Зрозуміло</string>
+    <string name="theme_neutral">Нейтральний</string>
+    <string name="theme_profile">Колір профілю — колір профілю дашборда</string>
+    <string name="theme_solarized">Сонцестояння</string>
+    <string name="theme_dracula">Північ</string>
+    <string name="theme_one_dark">Ательє</string>
+    <string name="theme_nord">Полярна ніч</string>
+    <string name="theme_gruvbox">Бурштин</string>
 </resources>

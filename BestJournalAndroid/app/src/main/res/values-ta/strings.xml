@@ -41,7 +41,7 @@
     <string name="journal_later">பிறகு</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">நாளுக்கு %1$s முதல்</string>
-    <string name="paywall_instead_per_month">மாதத்திற்கு %1$s பதிலாக</string>
+    <string name="paywall_instead_per_month">மாதாந்திர திட்டத்தை விட %1$d%% சேமிப்பு</string>
     <string name="paywall_or">அல்லது</string>
     <string name="paywall_with_limited">வரையறுக்கப்பட்ட வரம்புகளுடன்.</string>
     <!-- Churn missed string -->
@@ -1437,4 +1437,15 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">தீவிர பயன்பாட்டிற்காக தாராளமான தினசரி AI ஒதுக்கீடு.</string>
+    <string name="ai_limits_dialog_title">தினசரி AI ஒதுக்கீடு எப்படி செயல்படுகிறது?</string>
+    <string name="ai_limits_dialog_body" formatted="false">பிரீமியம் சந்தாவுடன்\n\nதினசரி கிடைப்பது:\n• ஒவ்வொரு AI சுயவிவரத்திற்கும் 150 வரை டாஷ்போர்டு பகுப்பாய்வுகள் (4 சுயவிவரங்கள் = தினசரி 600 வரை)\n• 150 வரை உரை மேம்பாடுகள்\n\nவிவரங்கள்:\n• கோரிக்கைகள் 1 முதல் 30 வரை: உயர்ந்த AI தரம்\n• கோரிக்கைகள் 31 முதல் 100 வரை: வேகமான நிலையான தரம்\n• 101வது கோரிக்கையில்: ஒரு முறை 30 நிமிட இடைவேளை\n• கோரிக்கைகள் 101 முதல் 150 வரை: வேகமான நிலையான தரம்\n• 151வது கோரிக்கையிலிருந்து: நாளை வரை மேலும் கோரிக்கைகள் இல்லை\n\nஅனைத்து பயனர்களுக்கும் பொருந்தும்:\n• மணிக்கு அதிகபட்சம் 50 AI கோரிக்கைகள் — பின்னர் 5 நிமிட இடைவேளை\n\nஒதுக்கீடு எப்போது மீட்டமைக்கப்படும்?\nதினசரி 0:00 மணிக்கு (உங்கள் உள்ளூர் நேரம்) புதிய முழு ஒதுக்கீடு தொடங்கும்.\n\n──────────\n\nசந்தா இல்லாமல்\n\n• வாரத்திற்கு 5 டாஷ்போர்டு பகுப்பாய்வுகள்\n• வாரத்திற்கு 5 உரை மேம்பாடுகள்\n• எப்போதும் வேகமான நிலையான தரத்தில்\n• ஒவ்வொரு திங்கள்கிழமை 0:00 மணிக்கு (உங்கள் உள்ளூர் நேரம்) மீட்டமைக்கப்படும்\n\n──────────\n\n99%-க்கும் அதிகமான பயனர்கள் இந்த வரம்புகளை எப்போதும் சந்திக்க மாட்டார்கள்.</string>
+    <string name="ai_limits_dialog_close">புரிந்தது</string>
+    <string name="theme_neutral">நடுநிலை</string>
+    <string name="theme_profile">சுயவிவர நிறம் — டாஷ்போர்டு சுயவிவரத்தின் நிறம்</string>
+    <string name="theme_solarized">அயனகாலம்</string>
+    <string name="theme_dracula">நள்ளிரவு</string>
+    <string name="theme_one_dark">பணிமனை</string>
+    <string name="theme_nord">துருவ இரவு</string>
+    <string name="theme_gruvbox">அம்பர்</string>
 </resources>

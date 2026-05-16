@@ -41,7 +41,7 @@
     <string name="journal_later">తర్వాత</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">రోజుకి %1$s నుండి</string>
-    <string name="paywall_instead_per_month">నెలకి %1$s బదులుగా</string>
+    <string name="paywall_instead_per_month">నెలవారీ ప్లాన్ కంటే %1$d%% ఆదా</string>
     <string name="paywall_or">లేదా</string>
     <string name="paywall_with_limited">పరిమితులతో.</string>
     <!-- Churn missed string -->
@@ -1341,4 +1341,15 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">సహేతుకమైన దైనందిన AI కోటా, తీవ్ర వినియోగం కోసం.</string>
+    <string name="ai_limits_dialog_title">దైనందిన AI కోటా ఎలా పని చేస్తుంది?</string>
+    <string name="ai_limits_dialog_body" formatted="false">ప్రీమియం సభ్యత్వంతో\n\nరోజుకు అందుబాటులో ఉంటుంది:\n• ప్రతి AI ప్రొఫైల్‌కు 150 వరకు డ్యాష్‌బోర్డ్ విశ్లేషణలు (4 ప్రొఫైల్‌లు = రోజుకు 600 వరకు)\n• 150 వరకు వచన మెరుగుదలలు\n\nవివరాలు:\n• అభ్యర్థనలు 1 నుండి 30: అత్యధిక AI నాణ్యత\n• అభ్యర్థనలు 31 నుండి 100: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 101వ అభ్యర్థనకు: ఒకసారి 30 నిమిషాల విరామం\n• అభ్యర్థనలు 101 నుండి 150: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 151వ అభ్యర్థన నుండి: రేపటివరకు మరిన్ని అభ్యర్థనలు లేవు\n\nఅందరు వినియోగదారులకు వర్తిస్తుంది:\n• గంటకు గరిష్టంగా 50 AI అభ్యర్థనలు — తర్వాత 5 నిమిషాల విరామం\n\nకోటా ఎప్పుడు రీసెట్ అవుతుంది?\nప్రతిరోజూ 0:00 (మీ స్థానిక సమయం) వద్ద కొత్త పూర్తి కోటా మొదలవుతుంది.\n\n──────────\n\nసభ్యత్వం లేకుండా\n\n• వారానికి 5 డ్యాష్‌బోర్డ్ విశ్లేషణలు\n• వారానికి 5 వచన మెరుగుదలలు\n• ఎల్లప్పుడూ వేగవంతమైన ప్రామాణిక నాణ్యతలో\n• ప్రతి సోమవారం 0:00 (మీ స్థానిక సమయం) రీసెట్\n\n──────────\n\n99% కంటే ఎక్కువ మంది వినియోగదారులు ఈ పరిమితులను ఎప్పుడూ ఎదుర్కోకపోవచ్చు.</string>
+    <string name="ai_limits_dialog_close">అర్థమైంది</string>
+    <string name="theme_neutral">తటస్థ</string>
+    <string name="theme_profile">ప్రొఫైల్ రంగు — డ్యాష్‌బోర్డ్ ప్రొఫైల్ రంగు</string>
+    <string name="theme_solarized">అయనాంతం</string>
+    <string name="theme_dracula">అర్థరాత్రి</string>
+    <string name="theme_one_dark">కార్యశాల</string>
+    <string name="theme_nord">ధ్రువ రాత్రి</string>
+    <string name="theme_gruvbox">అంబర్</string>
 </resources>

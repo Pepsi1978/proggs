@@ -41,7 +41,7 @@
     <string name="journal_later">नंतर</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">दिवसाला फक्त %1$s पासून</string>
-    <string name="paywall_instead_per_month">महिन्याला %1$s ऐवजी</string>
+    <string name="paywall_instead_per_month">मासिक योजनेपेक्षा %1$d%% बचत</string>
     <string name="paywall_or">किंवा</string>
     <string name="paywall_with_limited">मर्यादित वापरासह.</string>
     <!-- Churn missed string -->
@@ -1515,4 +1515,15 @@ herleitung — सामग्रीचा स्रोत:
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">सखोल वापरासाठी उदार दैनंदिन AI कोटा.</string>
+    <string name="ai_limits_dialog_title">दैनंदिन AI कोटा कसा काम करतो?</string>
+    <string name="ai_limits_dialog_body" formatted="false">प्रीमियम सदस्यत्वासह\n\nदररोज उपलब्ध:\n• प्रत्येक AI प्रोफाइलसाठी 150 पर्यंत डॅशबोर्ड विश्लेषणे (4 प्रोफाइल = दररोज 600 पर्यंत)\n• 150 पर्यंत मजकूर सुधारणा\n\nतपशील:\n• विनंत्या 1 ते 30: सर्वोच्च AI गुणवत्ता\n• विनंत्या 31 ते 100: जलद मानक गुणवत्ता\n• 101व्या विनंतीवर: एकदाचा 30 मिनिटांचा विराम\n• विनंत्या 101 ते 150: जलद मानक गुणवत्ता\n• 151व्या विनंतीपासून: उद्यापर्यंत आणखी विनंत्या नाही\n\nसर्व वापरकर्त्यांना लागू:\n• प्रति तास जास्तीत जास्त 50 AI विनंत्या — नंतर 5 मिनिटांचा विराम\n\nकोटा कधी रीसेट होतो?\nदररोज 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) नवीन पूर्ण कोटा सुरू होतो.\n\n──────────\n\nसदस्यत्वाशिवाय\n\n• दर आठवड्याला 5 डॅशबोर्ड विश्लेषणे\n• दर आठवड्याला 5 मजकूर सुधारणा\n• नेहमी जलद मानक गुणवत्तेत\n• दर सोमवारी 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) रीसेट\n\n──────────\n\n99% पेक्षा जास्त वापरकर्त्यांना कदाचित हे निर्बंध कधीच लागणार नाहीत.</string>
+    <string name="ai_limits_dialog_close">समजले</string>
+    <string name="theme_neutral">तटस्थ</string>
+    <string name="theme_profile">प्रोफाइल रंग — डॅशबोर्ड प्रोफाइलचा रंग</string>
+    <string name="theme_solarized">अयनांत</string>
+    <string name="theme_dracula">मध्यरात्र</string>
+    <string name="theme_one_dark">कार्यशाळा</string>
+    <string name="theme_nord">ध्रुवीय रात्र</string>
+    <string name="theme_gruvbox">अंबर</string>
 </resources>

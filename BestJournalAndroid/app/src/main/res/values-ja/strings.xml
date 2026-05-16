@@ -41,7 +41,7 @@
     <string name="journal_later">後で</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">1日%1$sから</string>
-    <string name="paywall_instead_per_month">月額%1$sの代わりに</string>
+    <string name="paywall_instead_per_month">月額プランより%1$d%%お得</string>
     <string name="paywall_or">または</string>
     <string name="paywall_with_limited">制限付きで。</string>
     <!-- Churn missed string -->
@@ -1397,4 +1397,15 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">集中的なご利用のための充実した日次AIクォータ。</string>
+    <string name="ai_limits_dialog_title">日次AIクォータの仕組みは？</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM プランご利用の場合\n\n1日あたりの利用可能数：\n• AIプロフィールごとに最大150回のダッシュボード分析（4プロフィールの場合、1日最大600回）\n• 最大150回のテキスト改善\n\n詳細な仕組み：\n• リクエスト1〜30回目：最高品質のAI\n• リクエスト31〜100回目：高速スタンダード品質\n• 101回目のリクエスト：1回限りの30分休止\n• リクエスト101〜150回目：高速スタンダード品質\n• 151回目以降：翌日まで新たなリクエスト不可\n\nまた、すべてのユーザー共通：\n• 1時間あたり最大50回のAIリクエスト — その後5分間の休止\n\nクォータはいつリセットされますか？\n毎日0時（あなたの現地時刻）に新しいフルクォータが開始されます。\n\n──────────\n\nプランなしの場合\n\n• 週5回のダッシュボード分析\n• 週5回のテキスト改善\n• 常に高速スタンダード品質\n• 毎週月曜日0時（あなたの現地時刻）にリセット\n\n──────────\n\nユーザーの99%以上は、これらの制限に達することはないでしょう。</string>
+    <string name="ai_limits_dialog_close">了解しました</string>
+    <string name="theme_neutral">ニュートラル</string>
+    <string name="theme_profile">プロフィールカラー — ダッシュボードプロフィールの色</string>
+    <string name="theme_solarized">夏至</string>
+    <string name="theme_dracula">真夜中</string>
+    <string name="theme_one_dark">アトリエ</string>
+    <string name="theme_nord">極夜</string>
+    <string name="theme_gruvbox">琥珀</string>
 </resources>

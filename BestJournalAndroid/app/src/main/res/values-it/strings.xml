@@ -41,7 +41,7 @@
     <string name="journal_later">Più tardi</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">Da %1$s al giorno</string>
-    <string name="paywall_instead_per_month">invece di %1$s al mese</string>
+    <string name="paywall_instead_per_month">Risparmia il %1$d%% rispetto al piano mensile</string>
     <string name="paywall_or">oppure</string>
     <string name="paywall_with_limited">con limiti ridotti.</string>
     <!-- Churn missed string -->
@@ -1463,4 +1463,15 @@ Cosa vuoi fare?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
+    <string name="ai_limits_disclaimer">Generosa quota giornaliera di IA per un uso intensivo.</string>
+    <string name="ai_limits_dialog_title">Come funziona la quota giornaliera di IA?</string>
+    <string name="ai_limits_dialog_body" formatted="false">CON ABBONAMENTO PREMIUM\n\nOgni giorno hai a disposizione:\n• Fino a 150 analisi del dashboard per profilo IA (con 4 profili, fino a 600 al giorno)\n• Fino a 150 miglioramenti del testo\n\nCome funziona nel dettaglio:\n• Richieste da 1 a 30: nella qualità IA più elevata\n• Richieste da 31 a 100: nella qualità standard veloce\n• Alla 101ª richiesta: pausa unica di 30 min\n• Richieste da 101 a 150: qualità standard veloce\n• Dalla 151ª in poi: nessun\'altra richiesta fino a domani\n\nInoltre, per tutti gli utenti:\n• Massimo 50 richieste IA all\'ora — poi pausa di 5 min\n\nQuando vengono ripristinate le quote?\nOgni giorno a mezzanotte (ora locale) inizia una nuova quota completa.\n\n──────────\n\nSENZA ABBONAMENTO\n\n• 5 analisi del dashboard a settimana\n• 5 miglioramenti del testo a settimana\n• Sempre nella qualità standard veloce\n• Ripristinate ogni lunedì a mezzanotte (ora locale)\n\n──────────\n\nOltre il 99% degli utenti probabilmente non incontrerà mai questi limiti.</string>
+    <string name="ai_limits_dialog_close">Capito</string>
+    <string name="theme_neutral">Neutro</string>
+    <string name="theme_profile">Colore profilo — colore del profilo dashboard</string>
+    <string name="theme_solarized">Solstizio</string>
+    <string name="theme_dracula">Mezzanotte</string>
+    <string name="theme_one_dark">Atelier</string>
+    <string name="theme_nord">Notte Polare</string>
+    <string name="theme_gruvbox">Ambra</string>
 </resources>
