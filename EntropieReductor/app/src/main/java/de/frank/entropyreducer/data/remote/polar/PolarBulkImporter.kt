@@ -172,19 +172,22 @@ class PolarBulkImporter @Inject constructor(
         // DISTANZ: letzter non-NaN-Wert ist die Gesamtdistanz in Metern
         val distanceMeters = distanceStream?.let { lastFiniteValue(it) }
 
-        // SPEED in m/s (Polar-Standard) → km/h und Pace
+        // Frank-Live-Sonde 2026-05-16: Polar's SPEED-Stream-Werte sind BEREITS
+        // in km/h — NICHT in m/s wie urspruenglich angenommen. Beweis: 50-min-
+        // Outdoor-Lauf mit 6.5 km zeigte SPEED-Werte 6.3-7.6 (passt zu km/h
+        // Joggen, nicht m/s das waere 23-27 km/h Sprint). Kein *3.6 mehr.
         val speedValues = speedStream?.let { extractFiniteDoubles(it) } ?: emptyList()
-        val avgSpeedKmh = if (speedValues.isNotEmpty()) {
-            val avgMs = speedValues.average()
-            if (avgMs > 0.0) avgMs * 3.6 else null
-        } else null
-        val maxSpeedKmh = speedValues.maxOrNull()?.let { it * 3.6 }
+        val positiveSpeeds = speedValues.filter { it > 0.0 }
+        val avgSpeedKmh = positiveSpeeds.takeIf { it.isNotEmpty() }?.average()
+        val maxSpeedKmh = positiveSpeeds.maxOrNull()
         // Avg-Pace bevorzugt aus Distanz+Dauer (verlaesslicher als Speed-Stream-Avg)
         val avgPaceSecPerKm = if (distanceMeters != null && distanceMeters > 0.0 &&
             durationSeconds != null && durationSeconds > 0L) {
             durationSeconds.toDouble() / (distanceMeters / 1000.0)
         } else avgSpeedKmh?.let { 3600.0 / it }
-        val maxPaceSecPerKm = maxSpeedKmh?.let { 3600.0 / it }
+        // Max-Pace = schnellster Wert in sec/km — bei schnellster km/h-
+        // Geschwindigkeit. 20 km/h → 180 sec/km (3:00 min/km).
+        val maxPaceSecPerKm = maxSpeedKmh?.takeIf { it > 0.5 }?.let { 3600.0 / it }
 
         // Hoehengewinn/-verlust aus ALTITUDE
         val altValues = altitudeStream?.let { extractFiniteDoubles(it) } ?: emptyList()
@@ -336,21 +339,25 @@ class PolarBulkImporter @Inject constructor(
     }
 
     /**
-     * SPEED-Stream (m/s) -> Pace-Verlauf in Sekunden pro km.
+     * SPEED-Stream (km/h, Polar-Bulk-Format) -> Pace-Verlauf in Sekunden pro km.
      * Format `[[ts, paceSecPerKm], ...]`.
+     *
+     * Frank-Korrektur 2026-05-16: SPEED ist km/h, nicht m/s wie ich erst dachte.
+     * Pace = 3600 / kmh (nicht 1000/ms).
      */
     private fun buildPaceStreamJson(entry: PolarBulkSampleEntry, startEpochMs: Long): String? {
         val rate = (entry.intervalMillis ?: 1000L).coerceAtLeast(100L)
         var anyPushed = false
         val arr = buildJsonArray {
             entry.values.forEachIndexed { idx, v ->
-                val ms = toFiniteDouble(v) ?: return@forEachIndexed
+                val kmh = toFiniteDouble(v) ?: return@forEachIndexed
                 val ts = startEpochMs + idx.toLong() * rate
                 addJsonArray {
                     add(JsonPrimitive(ts))
-                    if (ms > 0.1) {
-                        // m/s -> sec/km : 1000/ms
-                        add(JsonPrimitive(1000.0 / ms))
+                    if (kmh > 0.5) {
+                        // km/h -> sec/km : 3600/kmh
+                        // Beispiel: 10 km/h -> 360 sec/km = 6:00 min/km
+                        add(JsonPrimitive(3600.0 / kmh))
                         anyPushed = true
                     } else {
                         add(JsonPrimitive(null as String?))
