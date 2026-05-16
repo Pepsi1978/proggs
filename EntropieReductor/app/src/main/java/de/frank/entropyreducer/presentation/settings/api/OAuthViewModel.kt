@@ -343,6 +343,20 @@ class OAuthViewModel @Inject constructor(
     }
 
     /**
+     * Callback aus dem PolarFlowWebLoginScreen — WebView hat erfolgreich
+     * eingeloggt und liefert den Cookie-Header. Wir persistieren das.
+     */
+    fun savePolarFlowWebCookies(cookieHeader: String) {
+        polarFlowWeb.setCookiesFromWebView(cookieHeader, null)
+        _state.update {
+            it.copy(
+                polarFlowWebConnected = true,
+                message = "Polar Flow Web Login erfolgreich (via Browser).",
+            )
+        }
+    }
+
+    /**
      * Laedt EIN konkretes Workout via Polar Flow Web nach. Frank nutzt
      * das fuer den 17:22-Lauf 486174823 — der ueber die AccessLink-API
      * dauerhaft nicht mehr abrufbar ist.

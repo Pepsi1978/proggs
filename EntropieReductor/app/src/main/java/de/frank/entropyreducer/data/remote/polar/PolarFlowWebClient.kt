@@ -208,6 +208,31 @@ class PolarFlowWebClient @Inject constructor(
     }
 
     /**
+     * Speichert Cookies aus dem WebView-Login. WebView's CookieManager liefert
+     * sie als ein einziger Header-String "name1=value1; name2=value2; ...".
+     * Wir parsen das in unser persistierungs-Format um.
+     */
+    fun setCookiesFromWebView(cookieHeader: String, email: String?) {
+        if (cookieHeader.isBlank()) return
+        // WebView-Cookies haben kein Expires/Domain/Path-Detail im Header.
+        // Wir nutzen flow.polar.com als Default-Domain mit 1-Jahr-Expiry.
+        val expiry = System.currentTimeMillis() + 365L * 24 * 3600 * 1000
+        val lines = mutableListOf<String>()
+        for (raw in cookieHeader.split(";")) {
+            val kv = raw.trim()
+            val eq = kv.indexOf('=')
+            if (eq <= 0) continue
+            val name = kv.substring(0, eq).trim()
+            val value = kv.substring(eq + 1).trim()
+            // host\tname\tvalue\tdomain\tpath\texpires\tsecure\thttpOnly
+            lines += "flow.polar.com\t$name\t$value\t.polar.com\t/\t$expiry\ttrue\tfalse"
+        }
+        secrets.polarFlowCookieJar = lines.joinToString("\n")
+        if (!email.isNullOrBlank()) secrets.polarFlowEmail = email
+        Log.i(TAG, "PolarFlowWeb: Cookies aus WebView gespeichert (${lines.size} Eintraege)")
+    }
+
+    /**
      * Laedt EINEN Workout via Polar Flow Web. exerciseId ist die numerische
      * ID die wir aus dem trackId ("polar-486174823") extrahieren — Polar
      * Flow's Webseite nutzt die gleichen IDs wie AccessLink.

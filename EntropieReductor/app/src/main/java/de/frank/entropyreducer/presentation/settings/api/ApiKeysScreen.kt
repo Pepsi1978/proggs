@@ -612,42 +612,36 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                         }
                     }
                 } else {
-                    var flowEmail by remember { mutableStateOf(state.polarFlowEmail) }
-                    var flowPassword by remember { mutableStateOf("") }
-                    var passwordHidden by remember { mutableStateOf(true) }
-                    OutlinedTextField(
-                        value = flowEmail,
-                        onValueChange = { flowEmail = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Polar Email") },
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = flowPassword,
-                        onValueChange = { flowPassword = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Polar Passwort") },
-                        singleLine = true,
-                        visualTransformation = if (passwordHidden) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-                        trailingIcon = {
-                            IconButton(onClick = { passwordHidden = !passwordHidden }) {
-                                Icon(
-                                    imageVector = if (passwordHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                                    contentDescription = null,
-                                )
-                            }
-                        },
-                    )
-                    Spacer(Modifier.height(6.dp))
+                    // WebView-Login: Frank klickt den Button, WebView oeffnet,
+                    // er loggt sich ueber Polar's normale Login-Seite ein.
+                    // App liest die Cookies aus dem WebView und persistiert sie.
+                    var showWebLogin by remember { mutableStateOf(false) }
+                    if (showWebLogin) {
+                        androidx.compose.ui.window.Dialog(
+                            onDismissRequest = { showWebLogin = false },
+                            properties = androidx.compose.ui.window.DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                dismissOnBackPress = true,
+                                dismissOnClickOutside = false,
+                            ),
+                        ) {
+                            PolarFlowWebLoginScreen(
+                                onLoginSuccess = { cookieHeader ->
+                                    vm.savePolarFlowWebCookies(cookieHeader)
+                                    showWebLogin = false
+                                },
+                                onDismiss = { showWebLogin = false },
+                            )
+                        }
+                    }
                     Button(
-                        onClick = { vm.loginPolarFlowWeb(flowEmail, flowPassword) },
+                        onClick = { showWebLogin = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = polarRed),
                     ) {
                         Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
-                        Text("Mit Polar Flow Web anmelden")
+                        Text("Mit Polar Flow Web anmelden (Browser)")
                     }
                 }
             }
