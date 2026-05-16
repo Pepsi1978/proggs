@@ -243,6 +243,33 @@ class EncryptedSecretsStore @Inject constructor(
             }.apply()
         }
 
+    /**
+     * Polar Flow Web-Login: Email die Frank verwendet hat (fuer UI-Anzeige).
+     * Passwort wird NIE gespeichert — nur der Session-Cookie.
+     */
+    var polarFlowEmail: String?
+        get() = prefs.getString(KEY_POLAR_FLOW_EMAIL, null)
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) remove(KEY_POLAR_FLOW_EMAIL)
+                else putString(KEY_POLAR_FLOW_EMAIL, value)
+            }.apply()
+        }
+
+    /**
+     * Polar Flow Web Cookie-Jar (serialisiert, verschluesselt). Enthaelt
+     * den Session-Cookie nach erfolgreichem Login. Bei Ablauf muss Frank
+     * neu einloggen.
+     */
+    var polarFlowCookieJar: String?
+        get() = prefs.getString(KEY_POLAR_FLOW_COOKIES, null)
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) remove(KEY_POLAR_FLOW_COOKIES)
+                else putString(KEY_POLAR_FLOW_COOKIES, value)
+            }.apply()
+        }
+
     fun clearPolarAuthState() {
         prefs.edit()
             .remove(KEY_POLAR_AUTH_STATE)
@@ -356,5 +383,7 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_POLAR_MEMBER_ID = "polar_member_id"
         private const val KEY_POLAR_REFRESH_ATTEMPTS = "polar_refresh_attempts"
         private const val KEY_POLAR_V4_AUTH_STATE = "polar_v4_auth_state_json"
+        private const val KEY_POLAR_FLOW_EMAIL = "polar_flow_email"
+        private const val KEY_POLAR_FLOW_COOKIES = "polar_flow_cookie_jar"
     }
 }

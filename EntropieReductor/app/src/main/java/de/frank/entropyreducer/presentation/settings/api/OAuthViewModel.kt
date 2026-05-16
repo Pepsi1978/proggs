@@ -30,6 +30,8 @@ data class OAuthUiState(
     // Polar (Frank-Wunsch 2026-05-16): alleinige Workout-Quelle nach Strava-Revert.
     val polarConnected: Boolean = false,
     val polarV4Connected: Boolean = false,
+    val polarFlowWebConnected: Boolean = false,
+    val polarFlowEmail: String = "",
     val polarClientId: String = "",
     val polarClientSecret: String = "",
     val polarRedirectUri: String = OAuthService.POLAR_REDIRECT_URI_DEFAULT,
@@ -52,6 +54,9 @@ class OAuthViewModel @Inject constructor(
     private val oauth: OAuthService,
     private val secrets: EncryptedSecretsStore,
     private val scheduler: BackgroundScheduler,
+    private val polarFlowWeb: de.frank.entropyreducer.data.remote.polar.PolarFlowWebClient,
+    private val polarRepo: de.frank.entropyreducer.data.repository.PolarRepository,
+    private val workoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     val calendarSignIn: CalendarSignInHelper,
 ) : ViewModel() {
 
@@ -88,6 +93,8 @@ class OAuthViewModel @Inject constructor(
         whoopClientSecret = secrets.whoopClientSecret.orEmpty(),
         polarConnected = oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L,
         polarV4Connected = oauth.loadPolarV4AuthState().isAuthorized,
+        polarFlowWebConnected = polarFlowWeb.isLoggedIn(),
+        polarFlowEmail = secrets.polarFlowEmail.orEmpty(),
         polarClientId = secrets.polarClientId.orEmpty(),
         polarClientSecret = secrets.polarClientSecret.orEmpty(),
         polarUserId = secrets.polarUserId,
@@ -288,6 +295,101 @@ class OAuthViewModel @Inject constructor(
         oauth.clearPolarV4AuthState()
         _state.update {
             it.copy(polarV4Connected = false, message = "Polar V4 getrennt.")
+        }
+    }
+
+    /* ====================== Polar Flow Web (Email/Passwort) ====================== */
+
+    /**
+     * Login auf flow.polar.com mit Email + Passwort. Passwort wird NIE
+     * gespeichert, nur der Session-Cookie. Bei Erfolg: 17:22-Lauf nachladen.
+     */
+    fun loginPolarFlowWeb(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) {
+            _state.update { it.copy(message = "Bitte Email und Passwort eingeben.") }
+            return
+        }
+        _state.update { it.copy(message = "Login bei Polar Flow Web…") }
+        viewModelScope.launch {
+            val result = polarFlowWeb.login(email.trim(), password)
+            result.onSuccess {
+                _state.update {
+                    it.copy(
+                        polarFlowWebConnected = true,
+                        polarFlowEmail = email.trim(),
+                        message = "Polar Flow Web verbunden — alle Workouts erreichbar",
+                    )
+                }
+            }.onFailure { ex ->
+                _state.update {
+                    it.copy(
+                        polarFlowWebConnected = false,
+                        message = "Polar Flow Web Login fehlgeschlagen: ${ex.message ?: "unbekannter Fehler"}",
+                    )
+                }
+            }
+        }
+    }
+
+    fun disconnectPolarFlowWeb() {
+        polarFlowWeb.logout()
+        _state.update {
+            it.copy(
+                polarFlowWebConnected = false,
+                polarFlowEmail = "",
+                message = "Polar Flow Web getrennt.",
+            )
+        }
+    }
+
+    /**
+     * Laedt EIN konkretes Workout via Polar Flow Web nach. Frank nutzt
+     * das fuer den 17:22-Lauf 486174823 — der ueber die AccessLink-API
+     * dauerhaft nicht mehr abrufbar ist.
+     */
+    fun reloadPolarFlowWebWorkout(exerciseId: Long) {
+        _state.update { it.copy(message = "Lade Workout $exerciseId via Polar Flow Web…") }
+        viewModelScope.launch {
+            val result = polarFlowWeb.fetchWorkout(exerciseId)
+            result.onSuccess { fresh ->
+                if (fresh == null) {
+                    _state.update { it.copy(message = "Workout $exerciseId konnte nicht geladen werden — Cookie evtl. abgelaufen, bitte neu einloggen.") }
+                    return@onSuccess
+                }
+                // Mit existierender Entity mergen (fresh wins if not null) und schreiben.
+                val existing = workoutDao.getById(fresh.trackId)
+                val merged = if (existing != null && existing.source != "polar-bulk") {
+                    existing.copy(
+                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
+                        sportType = fresh.sportType ?: existing.sportType,
+                        sportName = fresh.sportName ?: existing.sportName,
+                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
+                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
+                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
+                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
+                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
+                        calories = fresh.calories ?: existing.calories,
+                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
+                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
+                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
+                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
+                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
+                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
+                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
+                        vo2Max = fresh.vo2Max ?: existing.vo2Max,
+                        cadence = fresh.cadence ?: existing.cadence,
+                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
+                        createdAt = System.currentTimeMillis(),
+                    )
+                } else fresh
+                workoutDao.upsert(merged)
+                _state.update {
+                    it.copy(message = "Workout $exerciseId geladen — Streams: HR=${merged.heartRateSeriesJson != null} GPS=${merged.gpsTrackJson != null} Pace=${merged.paceStreamJson != null}")
+                }
+            }.onFailure { ex ->
+                _state.update { it.copy(message = "Workout $exerciseId fehlgeschlagen: ${ex.message}") }
+            }
         }
     }
 

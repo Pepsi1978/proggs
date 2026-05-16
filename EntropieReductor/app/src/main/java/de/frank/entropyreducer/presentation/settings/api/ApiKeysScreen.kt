@@ -558,6 +558,98 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                         Text("Mit Polar V4 verbinden")
                     }
                 }
+
+                // Polar Flow Web (Email/Passwort) — Fallback fuer Workouts
+                // die in AccessLink nicht mehr verfuegbar sind. Liest direkt
+                // von flow.polar.com mit Cookie-basiertem Login.
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Polar Flow Web (Email/Passwort)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Falls die offizielle API ein Workout nicht mehr liefert: Polar Flow Web hat alle Workouts dauerhaft. Logge dich einmal mit Polar-Email + Passwort ein. Dein Passwort wird NIE gespeichert — nur der Session-Cookie.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(8.dp))
+                if (state.polarFlowWebConnected) {
+                    Column {
+                        ConnectionLabel(
+                            label = "Web verbunden${if (state.polarFlowEmail.isNotBlank()) " (${state.polarFlowEmail})" else ""}",
+                            color = CosmosColors.Success,
+                            icon = Icons.Outlined.CheckCircle,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            var exerciseIdText by remember { mutableStateOf("486174823") }
+                            OutlinedTextField(
+                                value = exerciseIdText,
+                                onValueChange = { exerciseIdText = it.filter { c -> c.isDigit() } },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Workout-ID") },
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    exerciseIdText.toLongOrNull()?.let { vm.reloadPolarFlowWebWorkout(it) }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = polarRed),
+                            ) {
+                                Text("Nachladen")
+                            }
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Button(
+                            onClick = vm::disconnectPolarFlowWeb,
+                            colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                        ) {
+                            Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("Abmelden")
+                        }
+                    }
+                } else {
+                    var flowEmail by remember { mutableStateOf(state.polarFlowEmail) }
+                    var flowPassword by remember { mutableStateOf("") }
+                    var passwordHidden by remember { mutableStateOf(true) }
+                    OutlinedTextField(
+                        value = flowEmail,
+                        onValueChange = { flowEmail = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Polar Email") },
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = flowPassword,
+                        onValueChange = { flowPassword = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Polar Passwort") },
+                        singleLine = true,
+                        visualTransformation = if (passwordHidden) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+                        trailingIcon = {
+                            IconButton(onClick = { passwordHidden = !passwordHidden }) {
+                                Icon(
+                                    imageVector = if (passwordHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                    contentDescription = null,
+                                )
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Button(
+                        onClick = { vm.loginPolarFlowWeb(flowEmail, flowPassword) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = polarRed),
+                    ) {
+                        Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Mit Polar Flow Web anmelden")
+                    }
+                }
             }
             // Bulk-Import-Sektion: gesamte Polar-Historie aus ZIP-Datei
             // einlesen (Frank-Wunsch 2026-05-16). Polar's Live-API liefert
