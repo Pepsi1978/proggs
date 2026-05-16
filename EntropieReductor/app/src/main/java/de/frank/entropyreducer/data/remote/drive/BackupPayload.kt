@@ -336,43 +336,52 @@ fun HypothesisMessageEntity.toBackup(): BackupHypothesisMessage = BackupHypothes
     createdAt = createdAt,
 )
 
-fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout = BackupAmazfitWorkout(
-    trackId = trackId,
-    dateKey = dateKey,
-    startMs = startMs,
-    endMs = endMs,
-    durationSeconds = durationSeconds,
-    sportType = sportType,
-    sportName = sportName,
-    distanceMeters = distanceMeters,
-    avgPaceSecPerKm = avgPaceSecPerKm,
-    maxPaceSecPerKm = maxPaceSecPerKm,
-    avgSpeedKmh = avgSpeedKmh,
-    maxSpeedKmh = maxSpeedKmh,
-    calories = calories,
-    avgHeartRate = avgHeartRate,
-    maxHeartRate = maxHeartRate,
-    gpsTrackJson = gpsTrackJson,
-    heartRateSeriesJson = heartRateSeriesJson,
-    paceSeriesJson = paceSeriesJson,
-    splitsJson = splitsJson,
-    altitudeGainMeters = altitudeGainMeters,
-    altitudeLossMeters = altitudeLossMeters,
-    trainingEffectAerobic = trainingEffectAerobic,
-    trainingEffectAnaerobic = trainingEffectAnaerobic,
-    vo2Max = vo2Max,
-    cadence = cadence,
-    strideLengthCm = strideLengthCm,
-    recoveryTimeHours = recoveryTimeHours,
-    skinTempCelsius = skinTempCelsius,
-    swolf = swolf,
-    poolLaps = poolLaps,
-    poolLengthMeters = poolLengthMeters,
-    source = source,
-    city = city,
-    paceStreamJson = paceStreamJson,
-    createdAt = createdAt,
-)
+fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout {
+    // Frank-Bugfix 2026-05-16: Bei Polar-Bulk-Import (956+ Trainings mit
+    // sekundengenauen Streams) wuerde ein vollstaendiges Backup-JSON
+    // > 100 MB werden — OOM beim Serialize. Stream-Felder werden bei
+    // polar-bulk-Eintraegen NICHT mitgebackuped (die Originale stehen
+    // ja in Frank's Polar-Export-ZIP, die er bei Bedarf re-importieren
+    // kann). Metadaten bleiben drin.
+    val isBulk = source == "polar-bulk"
+    return BackupAmazfitWorkout(
+        trackId = trackId,
+        dateKey = dateKey,
+        startMs = startMs,
+        endMs = endMs,
+        durationSeconds = durationSeconds,
+        sportType = sportType,
+        sportName = sportName,
+        distanceMeters = distanceMeters,
+        avgPaceSecPerKm = avgPaceSecPerKm,
+        maxPaceSecPerKm = maxPaceSecPerKm,
+        avgSpeedKmh = avgSpeedKmh,
+        maxSpeedKmh = maxSpeedKmh,
+        calories = calories,
+        avgHeartRate = avgHeartRate,
+        maxHeartRate = maxHeartRate,
+        gpsTrackJson = if (isBulk) null else gpsTrackJson,
+        heartRateSeriesJson = if (isBulk) null else heartRateSeriesJson,
+        paceSeriesJson = if (isBulk) null else paceSeriesJson,
+        splitsJson = if (isBulk) null else splitsJson,
+        altitudeGainMeters = altitudeGainMeters,
+        altitudeLossMeters = altitudeLossMeters,
+        trainingEffectAerobic = trainingEffectAerobic,
+        trainingEffectAnaerobic = trainingEffectAnaerobic,
+        vo2Max = vo2Max,
+        cadence = cadence,
+        strideLengthCm = strideLengthCm,
+        recoveryTimeHours = recoveryTimeHours,
+        skinTempCelsius = skinTempCelsius,
+        swolf = swolf,
+        poolLaps = poolLaps,
+        poolLengthMeters = poolLengthMeters,
+        source = source,
+        city = city,
+        paceStreamJson = if (isBulk) null else paceStreamJson,
+        createdAt = createdAt,
+    )
+}
 
 // ---------- Backup → Entity ----------
 
