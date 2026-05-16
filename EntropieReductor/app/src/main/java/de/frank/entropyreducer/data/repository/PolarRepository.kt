@@ -206,9 +206,18 @@ class PolarRepository @Inject constructor(
     }
 
     /**
-     * Baut aus einer Polar-Exercise + Sample-Streams ein AmazfitWorkoutEntity.
-     * Lazy: GPX (Strecke) holen wir vorerst NICHT — das waere ein zusaetzlicher
-     * Request pro Workout. Wir nutzen den Distance-Sample-Stream wenn vorhanden.
+     * Baut aus einer Polar-Exercise + Sample-Streams + GPX ein AmazfitWorkoutEntity
+     * — vollstaendige Daten so wie der BulkImporter (Frank-Wunsch 2026-05-16:
+     * "die gleichen Daten wie historische").
+     *
+     * Pro Exercise werden geladen:
+     *  - GET .../samples           → Liste verfuegbarer Stream-URLs
+     *  - GET .../samples/0..11     → einzelne Streams (HR, Speed, Distance,
+     *                                Altitude, Run-Cadence, ...)
+     *  - GET .../gpx (wenn has-route=true) → GPX-Track fuer gpsTrackJson
+     *
+     * VO2max wird IMMER selbst berechnet (Frank-Konstanten maxHr=180, restHr=65,
+     * +2-Offset wie bei Zepp) — Polar's running-index wird ignoriert.
      */
     private suspend fun buildEntity(
         bearer: String,
@@ -225,24 +234,37 @@ class PolarRepository @Inject constructor(
         val dateKey = Instant.ofEpochMilli(startEpochMs)
             .atZone(ZoneId.systemDefault()).toLocalDate().toString()
 
-        // Sample-Streams holen — wenn die Liste leer ist oder die einzelnen
-        // Calls scheitern, leben wir mit den Summary-Daten.
+        // Sammelvariablen fuer Sample-Streams — befuellt wenn Polar den
+        // jeweiligen Stream liefert (sonst null = "vom Server nicht geliefert").
         var hrJson: String? = null
         var paceStreamJson: String? = null
         var maxPaceSecPerKm: Double? = null
-        var cadence: Int? = null
+        var maxSpeedKmh: Double? = null
+        var runCadenceAvg: Double? = null
+        var cyclingCadenceAvg: Double? = null
         var altitudeGain: Double? = null
+        var altitudeLoss: Double? = null
+        var splitsJson: String? = null
+        var distanceFromStream: Double? = null
 
         val samplesList = runCatching {
             api.listSamples(bearer, "$exerciseUrl/samples")
+        }.onFailure {
+            Log.w(TAG, "Polar: Sample-Liste konnte nicht geladen werden — ${it.message}")
         }.getOrNull()
 
-        if (samplesList != null) {
+        if (samplesList == null || samplesList.samples.isEmpty()) {
+            Log.w(TAG, "Polar: Exercise ${exercise.id} liefert KEINE Sample-Streams. Polar braucht oft 5-30 Min nach Workout-Upload bis Streams verfuegbar sind. Beim naechsten Sync nochmal versuchen.")
+        } else {
+            // Welche Type-IDs hat Polar tatsaechlich angeboten? — fuer Diagnose.
+            val offeredTypes = samplesList.samples.map { it.substringAfterLast("/") }
+            Log.i(TAG, "Polar: Exercise ${exercise.id} bietet Sample-Type-IDs ${offeredTypes.joinToString()}")
             for (sampleUrl in samplesList.samples) {
-                // Die URL endet auf /samples/{type-id} — daraus den Typ ableiten.
                 val typeId = sampleUrl.substringAfterLast("/")
                 try {
                     val sample = api.getSample(bearer, sampleUrl)
+                    val valueCount = sample.data.count { it == ',' } + 1
+                    Log.d(TAG, "Polar: Stream type=$typeId rate=${sample.recordingRate}s values=$valueCount")
                     when (typeId) {
                         PolarSampleType.HEART_RATE -> {
                             hrJson = PolarSampleMapper.heartRateToJson(sample, startEpochMs)
@@ -250,31 +272,88 @@ class PolarRepository @Inject constructor(
                         PolarSampleType.SPEED -> {
                             paceStreamJson = PolarSampleMapper.speedToPaceJson(sample, startEpochMs)
                             maxPaceSecPerKm = PolarSampleMapper.maxPaceFromSpeedStream(sample)
+                            maxSpeedKmh = PolarSampleMapper.maxSpeedKmhFromSpeedStream(sample)
                         }
-                        PolarSampleType.RUN_CADENCE, PolarSampleType.CADENCE -> {
-                            cadence = avgInt(sample)
+                        PolarSampleType.RUN_CADENCE -> {
+                            runCadenceAvg = PolarSampleMapper.avgFromSample(sample)
+                        }
+                        PolarSampleType.CADENCE -> {
+                            cyclingCadenceAvg = PolarSampleMapper.avgFromSample(sample)
                         }
                         PolarSampleType.ALTITUDE -> {
-                            altitudeGain = computeAltitudeGain(sample)
+                            altitudeGain = PolarSampleMapper.altitudeGainFromSample(sample)
+                            altitudeLoss = PolarSampleMapper.altitudeLossFromAltitudeStream(sample)
+                        }
+                        PolarSampleType.DISTANCE -> {
+                            splitsJson = PolarSampleMapper.splitsFromDistanceStream(sample)
+                            // Letzter Wert ist die Gesamtdistanz — Fallback wenn
+                            // exercise.distance fehlt.
+                            distanceFromStream = PolarSampleMapper.parseValues(sample)
+                                .filterNotNull().filter { it > 0.0 }.lastOrNull()
+                        }
+                        else -> {
+                            // POWER, AIR_PRESSURE, TEMPERATURE, RR_INTERVAL — fuer
+                            // Recovery aktuell nicht genutzt, aber Log fuer spaeter.
                         }
                     }
                 } catch (ce: kotlinx.coroutines.CancellationException) {
                     throw ce
                 } catch (t: Throwable) {
-                    Log.w(TAG, "Polar: Sample-Stream $sampleUrl konnte nicht geladen werden — ${t.message}")
+                    Log.w(TAG, "Polar: Sample-Stream $sampleUrl (type=$typeId) konnte nicht geladen werden — ${t.message}")
                 }
             }
         }
 
-        val distance = exercise.distance?.toDouble()
+        // GPS-Track: GPX-Endpoint nur abrufen wenn Polar sagt has-route=true.
+        var gpsTrackJson: String? = null
+        if (exercise.hasRoute) {
+            val gpxUrl = "$exerciseUrl/gpx"
+            try {
+                val resp = api.getGpx(bearer, gpxUrl)
+                if (resp.isSuccessful) {
+                    val xml = resp.body()?.string()
+                    if (!xml.isNullOrBlank()) {
+                        gpsTrackJson = PolarSampleMapper.parseGpxToTrackJson(xml)
+                        if (gpsTrackJson != null) {
+                            Log.i(TAG, "Polar: GPX fuer Exercise ${exercise.id} geparst (${xml.length} bytes XML)")
+                        } else {
+                            Log.w(TAG, "Polar: GPX-XML lieferte 0 Trackpunkte fuer Exercise ${exercise.id}")
+                        }
+                    } else {
+                        Log.w(TAG, "Polar: GPX-Endpoint lieferte leeren Body fuer Exercise ${exercise.id}")
+                    }
+                } else {
+                    Log.w(TAG, "Polar: GPX-Endpoint HTTP ${resp.code()} fuer Exercise ${exercise.id}")
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                Log.w(TAG, "Polar: GPX-Endpoint Exception fuer Exercise ${exercise.id} — ${t.message}")
+            }
+        } else {
+            Log.d(TAG, "Polar: Exercise ${exercise.id} hat keine Route (has-route=false)")
+        }
+
+        // Distance: Summary bevorzugt, Sample-Stream als Fallback.
+        val distance = exercise.distance?.toDouble() ?: distanceFromStream
         val avgPace = PolarSampleMapper.computeAvgPaceSecPerKm(distance, durationSeconds)
         val avgSpeedKmh = PolarSampleMapper.computeAvgSpeedKmh(distance, durationSeconds)
-        // VO2Max-Schaetzung: Polar liefert "running-index" der als VO2Max-Aequivalent
-        // gilt (Polar-Doku). Falls leer kommt das Field via die UI-Berechnung im
-        // AmazfitTrainingDetailScreen aus avgSpeed + avgHr.
-        val vo2Max = exercise.runningIndex?.toDouble()
-        // Training-Effekt: Polar liefert cardio-load und muscle-load 0-10. Wir
-        // mappen das grob auf die 0-5-Garmin-Skala (Halbierung).
+
+        // VO2max IMMER selbst berechnen — Polar's running-index wird ignoriert
+        // (Frank-Wunsch 2026-05-16: gleiche Formel wie Zepp, +2-Offset).
+        val avgHr = exercise.heartRate?.average
+        val vo2Max = PolarSampleMapper.estimateVo2Max(distance, durationSeconds, avgHr)
+
+        // Cadence: Run-Cadence bevorzugt (Laufen), sonst Cycling-Cadence.
+        val cadenceInt = (runCadenceAvg ?: cyclingCadenceAvg)?.toInt()
+
+        // Schrittlaenge: aus Run-Cadence-Mittelwert + Distanz + Dauer.
+        val strideLengthCm = PolarSampleMapper.strideLengthCmFromCadenceAndDistance(
+            runCadenceAvg, distance, durationSeconds,
+        )
+
+        // Training-Effekt: Polar liefert cardio-load und muscle-load 0-10.
+        // Halbierung mappt grob auf die 0-5-Garmin-Skala.
         val trainEffectAerobic = exercise.trainingLoadPro?.cardioLoad?.let { it / 2.0 }
         val trainEffectAnaerobic = exercise.trainingLoadPro?.muscleLoad?.let { it / 2.0 }
 
@@ -290,21 +369,21 @@ class PolarRepository @Inject constructor(
             avgPaceSecPerKm = avgPace,
             maxPaceSecPerKm = maxPaceSecPerKm,
             avgSpeedKmh = avgSpeedKmh,
-            maxSpeedKmh = null,
+            maxSpeedKmh = maxSpeedKmh,
             calories = exercise.calories?.toDouble(),
-            avgHeartRate = exercise.heartRate?.average,
+            avgHeartRate = avgHr,
             maxHeartRate = exercise.heartRate?.maximum,
-            gpsTrackJson = null,                  // GPX-Endpoint wird vorerst nicht abgerufen
+            gpsTrackJson = gpsTrackJson,
             heartRateSeriesJson = hrJson,
-            paceSeriesJson = null,
+            paceSeriesJson = splitsJson,            // splitsJson liefert Km-Splits fuer parsePipeDoubleList
             splitsJson = null,
             altitudeGainMeters = altitudeGain,
-            altitudeLossMeters = null,
+            altitudeLossMeters = altitudeLoss,
             trainingEffectAerobic = trainEffectAerobic,
             trainingEffectAnaerobic = trainEffectAnaerobic,
             vo2Max = vo2Max,
-            cadence = cadence,
-            strideLengthCm = null,
+            cadence = cadenceInt,
+            strideLengthCm = strideLengthCm,
             recoveryTimeHours = null,
             skinTempCelsius = null,
             swolf = null,
@@ -315,29 +394,6 @@ class PolarRepository @Inject constructor(
             paceStreamJson = paceStreamJson,
             createdAt = System.currentTimeMillis(),
         )
-    }
-
-    /** Durchschnittswert eines Sample-Streams als Int (z.B. Cadence). */
-    private fun avgInt(sample: PolarSample): Int? {
-        val values = PolarSampleMapper.parseValues(sample).filterNotNull().filter { it > 0.0 }
-        if (values.isEmpty()) return null
-        return (values.sum() / values.size).toInt()
-    }
-
-    /**
-     * Aus dem Altitude-Stream den kumulativen Hoehengewinn berechnen — alle
-     * positiven Differenzen aufaddieren. Polar liefert keinen vorberechneten
-     * "ascent"-Wert in der Exercise-Summary.
-     */
-    private fun computeAltitudeGain(sample: PolarSample): Double? {
-        val values = PolarSampleMapper.parseValues(sample).filterNotNull()
-        if (values.size < 2) return null
-        var gain = 0.0
-        for (i in 1 until values.size) {
-            val delta = values[i] - values[i - 1]
-            if (delta > 0.0) gain += delta
-        }
-        return if (gain > 0.0) gain else null
     }
 
     companion object {

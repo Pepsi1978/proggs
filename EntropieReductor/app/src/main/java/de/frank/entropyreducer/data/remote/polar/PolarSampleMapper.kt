@@ -120,6 +120,232 @@ object PolarSampleMapper {
         return 3600.0 / maxKmh
     }
 
+    /** Maximale Geschwindigkeit aus Speed-Stream in km/h. */
+    fun maxSpeedKmhFromSpeedStream(sample: PolarSample): Double? {
+        val values = parseValues(sample).mapNotNull { it?.takeIf { v -> v > 0.0 } }
+        return values.maxOrNull()
+    }
+
+    /** Durchschnittswert eines Sample-Streams (z.B. RUN_CADENCE). Null wenn leer. */
+    fun avgFromSample(sample: PolarSample): Double? {
+        val values = parseValues(sample).mapNotNull { it?.takeIf { v -> v > 0.0 } }
+        if (values.isEmpty()) return null
+        return values.average()
+    }
+
+    /**
+     * Hoehengewinn — alle positiven Differenzen aufaddieren. Polar liefert
+     * in der Exercise-Summary keinen vorberechneten "ascent"-Wert.
+     */
+    fun altitudeGainFromSample(sample: PolarSample): Double? {
+        val values = parseValues(sample).filterNotNull()
+        if (values.size < 2) return null
+        var gain = 0.0
+        for (i in 1 until values.size) {
+            val delta = values[i] - values[i - 1]
+            if (delta > 0.0) gain += delta
+        }
+        return if (gain > 0.5) gain else null
+    }
+
+    /**
+     * Hoehenverlust analog zum Hoehengewinn — alle negativen Differenzen
+     * aufaddieren. Polar liefert in der Exercise-Summary keinen "descent"-Wert.
+     */
+    fun altitudeLossFromAltitudeStream(sample: PolarSample): Double? {
+        val values = parseValues(sample).filterNotNull()
+        if (values.size < 2) return null
+        var loss = 0.0
+        for (i in 1 until values.size) {
+            val delta = values[i] - values[i - 1]
+            if (delta < 0.0) loss += -delta
+        }
+        return if (loss > 0.5) loss else null
+    }
+
+    /**
+     * Schrittlaenge in cm aus Distanz und Run-Cadence.
+     * Schritte_total = run_cadence_avg [spm] * duration_min
+     * Schrittlaenge_m = distance_m / Schritte_total
+     */
+    fun strideLengthCmFromCadenceAndDistance(
+        runCadenceAvgSpm: Double?,
+        distanceMeters: Double?,
+        durationSeconds: Long?,
+    ): Int? {
+        if (runCadenceAvgSpm == null || runCadenceAvgSpm <= 0.0) return null
+        if (distanceMeters == null || distanceMeters <= 0.0) return null
+        if (durationSeconds == null || durationSeconds <= 0L) return null
+        val totalSteps = runCadenceAvgSpm * (durationSeconds / 60.0)
+        if (totalSteps <= 0.0) return null
+        val strideM = distanceMeters / totalSteps
+        // Plausibilitaet: Schrittlaenge Laufen 50-200 cm
+        val strideCm = (strideM * 100.0).toInt()
+        return if (strideCm in 30..250) strideCm else null
+    }
+
+    /**
+     * Km-Splits aus kumuliertem Distance-Stream — fuer jeden vollen Kilometer
+     * wird die Zeit dorthin festgehalten und die Pace berechnet (sec/km).
+     * Ergebnis als Pipe-Format `"308.5|315.2|..."` (passend zu parsePipeDoubleList
+     * im Detail-Screen).
+     *
+     * @param distSample Distance-Stream (Type "10"), Werte in Metern kumulativ
+     * @return Pipe-getrennte Km-Pace-Liste oder null wenn nicht genug Daten
+     */
+    fun splitsFromDistanceStream(distSample: PolarSample): String? {
+        val rate = distSample.recordingRate.coerceAtLeast(1)
+        val values = parseValues(distSample)
+        if (values.size < 2) return null
+        // Distance ist kumulativ — wann wurde jeder Kilometer erreicht?
+        val kmTimesSeconds = mutableListOf<Double>() // Zeitpunkt fuer 1km, 2km, ...
+        var nextKm = 1
+        var lastValue = 0.0
+        var lastIdx = 0
+        for ((idx, v) in values.withIndex()) {
+            val d = v ?: continue
+            if (d < lastValue) { lastValue = d; continue } // Reset/Glitch
+            while (d >= nextKm * 1000.0) {
+                // Interpolation zwischen idx-1 (lastValue) und idx (d):
+                val prevDist = if (idx == 0) 0.0 else (values[lastIdx] ?: lastValue)
+                val target = nextKm * 1000.0
+                val span = d - prevDist
+                val frac = if (span > 0.0) (target - prevDist) / span else 0.0
+                val t = (lastIdx + frac * (idx - lastIdx)) * rate.toDouble()
+                kmTimesSeconds += t
+                nextKm++
+            }
+            lastValue = d
+            lastIdx = idx
+        }
+        if (kmTimesSeconds.isEmpty()) return null
+        // Splits = Zeit pro Km = Differenz zur Vor-Km-Zeit (in Sekunden pro Km)
+        val splits = buildList {
+            var prev = 0.0
+            for (t in kmTimesSeconds) {
+                add(t - prev)
+                prev = t
+            }
+        }
+        // Plausibilitaetsfilter: 2:00..30:00 pro Km
+        val cleaned = splits.filter { it in 120.0..1800.0 }
+        if (cleaned.isEmpty()) return null
+        return cleaned.joinToString("|") { "%.1f".format(it).replace(",", ".") }
+    }
+
+    /**
+     * Wandelt Polar's GPX-XML in das App-interne GPS-Track-JSON-Format
+     * `[[lat, lon, alt, ts], ...]`.
+     *
+     * GPX-Struktur (vereinfacht):
+     *   <gpx>
+     *     <trk>
+     *       <trkseg>
+     *         <trkpt lat="60.1234" lon="24.5678">
+     *           <ele>15.3</ele>
+     *           <time>2026-05-16T13:42:01Z</time>
+     *         </trkpt>
+     *         ...
+     *
+     * Wir nutzen XmlPullParser (Android-built-in, keine Dependency).
+     * Bei Parse-Fehler liefern wir null statt einer Exception, damit der Sync
+     * weiterlaeuft.
+     */
+    fun parseGpxToTrackJson(gpxXml: String): String? {
+        if (gpxXml.isBlank()) return null
+        return runCatching {
+            val parser = android.util.Xml.newPullParser()
+            parser.setInput(java.io.StringReader(gpxXml))
+            val points = mutableListOf<Triple<Double, Double, Pair<Double?, Long?>>>()
+            var lat: Double? = null
+            var lon: Double? = null
+            var ele: Double? = null
+            var ts: Long? = null
+            var current = ""
+            var event = parser.eventType
+            while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                when (event) {
+                    org.xmlpull.v1.XmlPullParser.START_TAG -> {
+                        current = parser.name
+                        if (current.equals("trkpt", ignoreCase = true)) {
+                            lat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
+                            lon = parser.getAttributeValue(null, "lon")?.toDoubleOrNull()
+                            ele = null
+                            ts = null
+                        }
+                    }
+                    org.xmlpull.v1.XmlPullParser.TEXT -> {
+                        val text = parser.text?.trim().orEmpty()
+                        if (text.isNotEmpty()) {
+                            when (current.lowercase()) {
+                                "ele" -> ele = text.toDoubleOrNull()
+                                "time" -> ts = runCatching {
+                                    java.time.Instant.parse(text).toEpochMilli()
+                                }.getOrNull()
+                            }
+                        }
+                    }
+                    org.xmlpull.v1.XmlPullParser.END_TAG -> {
+                        if (parser.name.equals("trkpt", ignoreCase = true)) {
+                            val la = lat; val lo = lon
+                            if (la != null && lo != null) {
+                                points += Triple(la, lo, ele to ts)
+                            }
+                            lat = null; lon = null; ele = null; ts = null
+                        }
+                        current = ""
+                    }
+                }
+                event = parser.next()
+            }
+            if (points.isEmpty()) return@runCatching null
+            val arr = buildJsonArray {
+                for ((la, lo, alt_ts) in points) {
+                    addJsonArray {
+                        add(JsonPrimitive(la))
+                        add(JsonPrimitive(lo))
+                        val a = alt_ts.first
+                        if (a != null) add(JsonPrimitive(a)) else add(JsonPrimitive(0.0))
+                        val t = alt_ts.second
+                        if (t != null) add(JsonPrimitive(t)) else add(JsonPrimitive(0L))
+                    }
+                }
+            }
+            JSON.encodeToString(JsonArray.serializer(), arr)
+        }.getOrNull()
+    }
+
+    /**
+     * Schaetzt VO2Max nach ACSM-Lauf-Formel + Karvonen-HR-Reserve + Frank-Offset.
+     * Identisch zur estimateVo2Max() im AmazfitTrainingDetailScreen, aber als
+     * Repository-Funktion damit wir die Berechnung beim Sync persistieren koennen.
+     * Frank-Wunsch 2026-05-16: gleiche Formel wie bei Zepp, auch fuer API-Lauf.
+     *
+     * Schritt 1: VO2 bei diesem Workout = 0.2 * Speed (m/min) + 3.5
+     * Schritt 2: HR-Reserve-Anteil = (avgHr - restHr) / (maxHr - restHr)
+     * Schritt 3: VO2Max = VO2_workout / HR_reserve + 2.0 (Frank-Empirie)
+     *
+     * Frank's Konstanten: maxHr=180, restHr=65.
+     */
+    fun estimateVo2Max(
+        distanceMeters: Double?,
+        durationSeconds: Long?,
+        avgHr: Int?,
+    ): Double? {
+        if (distanceMeters == null || distanceMeters < 200.0) return null
+        if (durationSeconds == null || durationSeconds <= 60L) return null
+        if (avgHr == null || avgHr < 60) return null
+        val maxHr = 180
+        val restHr = 65
+        val durationMin = durationSeconds / 60.0
+        val speedMperMin = distanceMeters / durationMin
+        val vo2Workout = 0.2 * speedMperMin + 3.5
+        val hrReserveFraction = (avgHr - restHr).toDouble() / (maxHr - restHr).toDouble()
+        if (hrReserveFraction <= 0.1) return null
+        val vo2 = vo2Workout / hrReserveFraction + 2.0
+        return vo2.takeIf { it in 20.0..80.0 }
+    }
+
     /**
      * Parst ISO-8601-Duration ("PT1H30M45S") in Sekunden. Polar-spezifisch:
      * Bruchteile (z.B. "PT45.5S") werden aufgerundet.

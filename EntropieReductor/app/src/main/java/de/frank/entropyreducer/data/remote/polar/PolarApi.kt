@@ -274,16 +274,30 @@ data class PolarSample(
     val data: String,
 )
 
-/** Sample-Typ-IDs aus der Polar-Doku. */
+/**
+ * Sample-Typ-IDs aus der offiziellen Polar AccessLink V3 Doku
+ * (https://www.polar.com/accesslink-api/#samples).
+ *
+ * KRITISCH (Frank-Befund 2026-05-16): Die alten IDs 5-9 waren falsch — der
+ * Bulk-Export nutzt String-Identifier ("DISTANCE", "RUN_CADENCE"), die REST-
+ * API aber numerische Codes. Die Reihenfolge ist nicht konsekutiv 0..9
+ * sondern hat Luecken (POWER_PEDALING_INDEX, POWER_LR_BALANCE, etc.). Frueher
+ * wurde z.B. Run-Cadence als "6" gesucht und dabei stattdessen POWER_LR_BALANCE
+ * eingelesen, Distance als "8" hat in Wirklichkeit RUN_CADENCE getroffen.
+ */
 object PolarSampleType {
-    const val HEART_RATE = "0"      // bpm
-    const val SPEED = "1"           // km/h
-    const val CADENCE = "2"         // rpm
-    const val ALTITUDE = "3"        // m
-    const val POWER = "4"           // W
-    const val AIR_PRESSURE = "5"    // hPa
-    const val RUN_CADENCE = "6"     // Schritte/min
-    const val TEMPERATURE = "7"     // °C
-    const val DISTANCE = "8"        // m (kumuliert)
-    const val RR_INTERVAL = "9"     // ms (Herzschlag-zu-Herzschlag)
+    const val HEART_RATE = "0"               // bpm
+    const val SPEED = "1"                    // km/h (Frank-Live-Sonde 2026-05-16)
+    const val CADENCE = "2"                  // rpm — Cycling-Pedaltritte
+    const val ALTITUDE = "3"                 // m
+    const val POWER = "4"                    // W
+    const val POWER_PEDALING_INDEX = "5"     // % (Cycling)
+    const val POWER_LR_BALANCE = "6"         // % (Cycling)
+    const val AIR_PRESSURE = "7"             // hPa
+    const val RUN_CADENCE = "8"              // Schritte/min — KORRIGIERT von "6"
+    const val TEMPERATURE = "9"              // C — KORRIGIERT von "7"
+    const val DISTANCE = "10"                // m (kumuliert) — KORRIGIERT von "8"
+    const val RR_INTERVAL = "11"             // ms — KORRIGIERT von "9"
+    // Stride-Length ist NICHT als API-Sample verfuegbar — wird aus
+    // distance/(run_cadence_avg * duration/60) berechnet.
 }
