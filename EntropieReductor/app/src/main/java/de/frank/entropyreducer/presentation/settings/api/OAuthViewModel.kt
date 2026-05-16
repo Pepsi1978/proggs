@@ -1,5 +1,6 @@
 package de.frank.entropyreducer.presentation.settings.api
 
+import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,11 +10,14 @@ import de.frank.entropyreducer.data.remote.calendar.CalendarSignInHelper
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.workers.BackgroundScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 /** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Polar. */
@@ -43,6 +47,7 @@ data class OAuthUiState(
  */
 @HiltViewModel
 class OAuthViewModel @Inject constructor(
+    private val app: Application,
     private val oauth: OAuthService,
     private val secrets: EncryptedSecretsStore,
     private val scheduler: BackgroundScheduler,
@@ -239,16 +244,54 @@ class OAuthViewModel @Inject constructor(
     }
 
     /**
-     * Startet den Polar-Bulk-Import — der User hat eine Polar-Export-ZIP aus
-     * dem File-Picker ausgewaehlt (Frank-Wunsch 2026-05-16: 10-Jahre-Historie).
-     * Der Worker laeuft im Foreground mit Notification und schreibt am Ende
-     * alle Trainings via REPLACE in die DB.
+     * Startet den Polar-Bulk-Import (Frank-Wunsch 2026-05-16: 10-Jahre-Historie).
+     *
+     * Frank-Bugfix 2026-05-16 (Crash-Fix): Die vom File-Picker gelieferte URI
+     * koennte ein Google-Drive-Content-Provider sein. Drive's Permission gilt
+     * NUR fuer die Activity — sobald der Worker im Hintergrund laeuft, gibt
+     * der Drive-Provider SecurityException. Loesung: ZIP synchron HIER (im
+     * ViewModel mit Activity-lebensdauernder Permission) in den App-Cache
+     * kopieren, dann dem Worker den lokalen file://-Pfad uebergeben.
+     *
+     * Die Kopie laeuft im viewModelScope auf Dispatchers.IO — bei 91 MB
+     * dauert das 3-5 Sekunden. Solange zeigt die UI eine Status-Message.
      */
     fun startPolarBulkImport(zipUri: android.net.Uri) {
-        scheduler.runPolarBulkImport(zipUri)
-        _state.update {
-            it.copy(message = "Polar-Historie wird importiert — beachte die Benachrichtigung")
+        _state.update { it.copy(message = "ZIP wird vorbereitet (Datei wird kopiert)…") }
+        viewModelScope.launch {
+            val cachedFile = runCatching { copyZipToCache(zipUri) }.getOrElse { t ->
+                _state.update {
+                    it.copy(message = "ZIP konnte nicht gelesen werden: ${t.message ?: t.javaClass.simpleName}")
+                }
+                return@launch
+            }
+            val cacheUri = android.net.Uri.fromFile(cachedFile)
+            scheduler.runPolarBulkImport(cacheUri)
+            _state.update {
+                it.copy(message = "Polar-Historie wird importiert — beachte die Benachrichtigung")
+            }
         }
+    }
+
+    /**
+     * Kopiert die ZIP-Datei vom Source-URI (kann Drive, lokal oder sonstwo
+     * sein) in den App-Cache. Wir arbeiten ueber den ContentResolver — der
+     * App-Process hat hier noch die kurzlebige URI-Permission vom Picker.
+     * 64 KB Buffer ist ein guter Kompromiss zwischen Speed und RAM.
+     *
+     * Bei 91 MB ZIP-Datei werden ~3-5 Sekunden gebraucht (abhaengig von der
+     * Quelle: lokale Datei ~1s, Drive ~5s wegen Re-Download).
+     */
+    private suspend fun copyZipToCache(sourceUri: android.net.Uri): File = withContext(Dispatchers.IO) {
+        val cacheDir = File(app.cacheDir, "polar-bulk-import")
+        if (!cacheDir.exists()) cacheDir.mkdirs()
+        val cachedFile = File(cacheDir, "polar-export-${System.currentTimeMillis()}.zip")
+        app.contentResolver.openInputStream(sourceUri)?.use { input ->
+            cachedFile.outputStream().use { output ->
+                input.copyTo(output, bufferSize = 64 * 1024)
+            }
+        } ?: throw java.io.IOException("openInputStream lieferte null fuer $sourceUri — gibt der Picker eine ungueltige Datei?")
+        cachedFile
     }
 
     fun clearMessage() { _state.update { it.copy(message = null) } }

@@ -1105,23 +1105,27 @@ private fun formatVo2(v: Double): String =
 
 /**
  * Frank-Wunsch 2026-05-16: Quellenabhaengige Beschriftung des Workout-Chips
- * und des Default-Titels. Polar ist ab jetzt die alleinige Workout-Quelle —
- * alte Zepp/Amazfit-Trainings bleiben mit "T-Rex 3" markiert damit Frank
- * historisch sieht woher der Eintrag stammt.
+ * und des Default-Titels. Polar ist ab jetzt die alleinige Workout-Quelle.
  *
- * - source == "polar"          → "Polar"
- * - source == "health_connect" → "Health Connect"
- * - source enthaelt "huami"    → "T-Rex 3"  (Zepp-Cloud, z.B. "run.8716545.huami.com")
- * - source == null oder leer   → "T-Rex 3"  (Legacy-Default fuer alte Eintraege)
- * - Sonstiges                  → "Polar"    (defensiver Default — zukuenftige Eintraege)
+ * Frank-Update 2026-05-16 (Iteration 2): Frank verlangt dass die alten
+ * Eintraege NICHT mehr als "T-Rex 3" angezeigt werden — sie sind aus seiner
+ * Sicht ohnehin obsolet (werden beim naechsten erfolgreichen Polar-Bulk-
+ * Import geloescht). Bis dahin sollen sie neutral "Polar" zeigen, da Frank
+ * seine Trainings konzeptionell als Polar-Trainings sieht (sein H10 ist
+ * ja immer dran, auch wenn die Aufzeichnung historisch ueber Zepp lief).
+ *
+ * - source startsWith "polar"   → "Polar"
+ * - source == "health_connect"  → "Health Connect"
+ * - source enthaelt "huami"     → "Polar" (frueher: "T-Rex 3", aufgehoben 2026-05-16)
+ * - source == null oder leer    → "Polar"
+ * - Sonstiges                   → "Polar"
  */
 private fun sourceLabel(source: String?): String {
-    if (source.isNullOrBlank()) return "T-Rex 3"
+    if (source.isNullOrBlank()) return "Polar"
     val lc = source.lowercase()
     return when {
-        lc == "polar" -> "Polar"
+        lc.startsWith("polar") -> "Polar"
         lc == "health_connect" -> "Health Connect"
-        lc.contains("huami") -> "T-Rex 3"
         else -> "Polar"
     }
 }

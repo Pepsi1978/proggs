@@ -173,6 +173,17 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- WorkManager SystemForegroundService — Frank-Bugfix 2026-05-16:
+             Android 14+ wirft IllegalArgumentException wenn ein Worker mit
+             ForegroundServiceType DATA_SYNC startet aber das Service-Element
+             keinen passenden Typ hat. tools:replace ueberschreibt den
+             Default aus dem AndroidManifest der work-runtime-Library. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync|microphone"
+            tools:node="merge"
+            tools:replace="android:foregroundServiceType" />
+
         <!-- Health Connect Privacy-Policy-Activity (Pflicht von Google ab Android 14)
              Wird angezeigt wenn der Benutzer auf "Datenschutzerklaerung" im Health-Connect-
              Permission-Dialog tippt. Frank-Wunsch 2026-05-10. -->
