@@ -10,7 +10,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.BufferedInputStream
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,26 +20,28 @@ import javax.inject.Singleton
 /**
  * Importer fuer Polar-Flow-Bulk-Export (ZIP).
  *
- * Frank-Wunsch 2026-05-16: gesamte 10-Jahre-Trainings-Historie aus Polar
- * laden. Polar liefert sie per Mail als ZIP — diese Klasse streamt den
- * Inhalt und konvertiert jede Trainings-JSON-Datei in eine
- * AmazfitWorkoutEntity.
+ * Frank-Wunsch 2026-05-16 (Iteration 7): nach mehreren Iterationen mit Format-
+ * Diskrepanzen habe ich die echte ZIP ausgepackt und das tatsaechliche Format
+ * ermittelt. Polar nutzt camelCase-Feldnamen (startTime, durationMillis, hrAvg,
+ * hrMax) statt der hyphenated Form aus der Doku.
  *
- * Iteration 6 (2026-05-16): Nach mehreren Format-Ueberraschungen importieren
- * wir erstmal NUR die METADATEN — kein Pulsverlauf, kein GPS-Track, keine
- * Pace-Streams. Frank's 956 Trainings landen alle in der Liste mit Sportart,
- * Datum, Dauer, Distanz, Avg/Max-HR, Kalorien. Detail-Streams kommen in
- * einer Folge-Iteration nachdem das Sample-Format dokumentiert ist.
+ * Aktueller Stand: Metadaten-Import.
+ *  - 956 Trainings aus Frank's ZIP werden alle importiert
+ *  - Sportart via PolarBulkSportMap aus sport.id
+ *  - Datum aus startTime + timezoneOffsetMinutes
+ *  - Dauer aus durationMillis (in Sekunden umrechnen)
+ *  - Avg/Max-HR direkt aus Top-Level (hrAvg/hrMax)
+ *  - Kalorien direkt aus Top-Level (calories)
+ *  - Training-Load aus trainingLoadReport
  *
- * Streaming-Strategie:
- *  - ContentResolver.openInputStream(uri) → BufferedInputStream → ZipInputStream
- *  - Pro ZipEntry wird der Inhalt nur dann gelesen wenn der Name auf
- *    "training/training-session-*.json" passt
- *  - JSON wird mit ignoreUnknownKeys + isLenient + coerceInputValues
- *    geparst — robust gegen Format-Variationen
+ * NICHT-Import (Folge-Iteration):
+ *  - Pulsverlauf (Stream)
+ *  - GPS-Track
+ *  - Pace-Stream
+ *  - Splits
  *
- * Idempotenz: trackId "polar-{id}" — bei Live-API-Sync werden dieselben IDs
- * mit REPLACE ueberschrieben, kein Duplikat-Problem.
+ * Idempotenz: trackId "polar-{identifier.id}" — bei Live-API werden dieselben
+ * IDs durch REPLACE ueberschrieben.
  */
 @Singleton
 class PolarBulkImporter @Inject constructor(
@@ -73,9 +77,6 @@ class PolarBulkImporter @Inject constructor(
                 while (entry != null) {
                     entriesSeen++
                     val name = entry.name
-                    if (entriesSeen <= 10) {
-                        Log.d(TAG, "Polar-Bulk: ZIP-Eintrag #$entriesSeen: '$name' (dir=${entry.isDirectory})")
-                    }
                     if (!entry.isDirectory && isTrainingEntry(name)) {
                         trainingEntriesSeen++
                         filesProcessed++
@@ -93,13 +94,10 @@ class PolarBulkImporter @Inject constructor(
                             throw ce
                         } catch (t: Throwable) {
                             skipped++
-                            // Nur die ersten 5 Fehler loggen — sonst wuerden 956 Stack-
-                            // Traces das Logcat fluten und nichts bringen.
-                            if (skipped <= 5) {
+                            if (skipped <= 3) {
                                 Log.w(TAG, "Polar-Bulk: Datei $name konnte nicht geparst werden — ${t.message}")
                             }
                         }
-
                         if (filesProcessed % 50 == 0 || filesProcessed < 50) {
                             onProgress(Progress(filesProcessed, entities.size, skipped, name))
                         }
@@ -115,7 +113,6 @@ class PolarBulkImporter @Inject constructor(
         entities
     }
 
-    /** Erkennt eine Trainings-Session-Datei im ZIP. */
     private fun isTrainingEntry(name: String): Boolean {
         val lc = name.lowercase()
         return lc.endsWith(".json") &&
@@ -125,55 +122,62 @@ class PolarBulkImporter @Inject constructor(
     /**
      * Konvertiert eine PolarBulkSession in eine AmazfitWorkoutEntity.
      *
-     * Iteration 6: NUR Metadaten — Sample-Streams werden NICHT mehr geparst
-     * weil das Bulk-Format komplexer ist als die Doku sagt (samples ist ein
-     * Wrapper-Objekt mit verschachteltem samples-Array, nicht direkt ein
-     * Array). Frank kriegt erstmal seine 956 Trainings in die Liste,
-     * Detail-Charts kommen leer. Sample-Format-Reverse-Engineering ist
-     * eine eigene Folge-Iteration.
+     * Echtes Polar-Format (Frank-Live-Sonde 2026-05-16):
+     *  - identifier.id            -> trackId "polar-{id}"
+     *  - startTime "2025-07-26T15:38:28" + timezoneOffsetMinutes 120 -> startMs
+     *  - durationMillis           -> durationSeconds
+     *  - hrAvg/hrMax              -> avgHeartRate/maxHeartRate
+     *  - calories (Int)           -> calories (Double)
+     *  - sport.id                 -> PolarBulkSportMap.nameOf
+     *  - trainingLoadReport       -> trainingEffectAerobic (cardio/2), -Anaerobic (muscle/2)
      */
     private fun sessionToEntity(session: PolarBulkSession): AmazfitWorkoutEntity? {
-        if (session.exercises.isEmpty()) return null
-        val exercise = session.exercises.first()
+        val sessionId = session.identifier?.id ?: return null
+        val startTimeStr = session.startTime ?: return null
+        val offset = session.timezoneOffsetMinutes ?: 0
 
-        val startEpochMs = PolarSampleMapper.parseStartTimeToEpochMs(
-            session.startTime,
-            session.startTimeUtcOffset,
-        ) ?: return null
+        val startEpochMs = parseStartTimeToEpochMs(startTimeStr, offset) ?: return null
 
-        val durationStr = session.duration ?: exercise.duration
-        val durationSeconds = PolarSampleMapper.parseIsoDurationToSeconds(durationStr)
+        val durationSeconds = session.durationMillis?.let { it / 1000L }
         val endEpochMs = startEpochMs + (durationSeconds ?: 0L) * 1000L
         val dateKey = Instant.ofEpochMilli(startEpochMs)
             .atZone(ZoneId.systemDefault()).toLocalDate().toString()
 
-        val distance = (session.distance ?: exercise.distance)?.toDouble()
-        val calories = (session.calories ?: exercise.calories)?.toDouble()
-        val avgPace = PolarSampleMapper.computeAvgPaceSecPerKm(distance, durationSeconds)
-        val avgSpeedKmh = PolarSampleMapper.computeAvgSpeedKmh(distance, durationSeconds)
-        val vo2Max = session.runningIndex?.toDouble()
-        val trainEffectAerobic = session.trainingLoadPro?.cardioLoad?.let { it / 2.0 }
-        val trainEffectAnaerobic = session.trainingLoadPro?.muscleLoad?.let { it / 2.0 }
+        // Falls Top-Level hrAvg/hrMax fehlen, aus statistics.statistics[] fallback'en
+        val firstExercise = session.exercises.firstOrNull()
+        val statsHr = firstExercise?.statistics?.statistics?.firstOrNull { stat ->
+            stat.type == "STATISTICS_TYPE_HEART_RATE"
+        }
+        val avgHr = session.hrAvg ?: statsHr?.avg?.toInt()
+        val maxHr = session.hrMax ?: statsHr?.max?.toInt()
 
-        val heartRateSummary = session.heartRate ?: exercise.heartRate
-        val sportId = exercise.sport?.id
+        val calories = session.calories?.toDouble()
+        val trainEffectAerobic = session.trainingLoadReport?.cardioLoad?.let { it / 2.0 }
+        val trainEffectAnaerobic = session.trainingLoadReport?.muscleLoad?.let { it / 2.0 }
+
+        // Sport-ID kann auf Session-Ebene oder auf Exercise-Ebene stehen.
+        val sportId = session.sport?.id ?: firstExercise?.sport?.id
+
+        // Gerete-Modell als Suffix damit Frank sieht woher das Training kam
+        val sportName = PolarBulkSportMap.nameOf(sportId)
+        val deviceModel = session.product?.modelName
 
         return AmazfitWorkoutEntity(
-            trackId = "polar-${session.id}",
+            trackId = "polar-$sessionId",
             dateKey = dateKey,
             startMs = startEpochMs,
             endMs = endEpochMs,
             durationSeconds = durationSeconds,
             sportType = PolarBulkSportMap.toHealthConnectType(sportId),
-            sportName = PolarBulkSportMap.nameOf(sportId),
-            distanceMeters = distance,
-            avgPaceSecPerKm = avgPace,
+            sportName = sportName,
+            distanceMeters = null,  // Polar liefert distance NICHT auf Top-Level — kommt aus zones/samples (Folge-Iteration)
+            avgPaceSecPerKm = null,
             maxPaceSecPerKm = null,
-            avgSpeedKmh = avgSpeedKmh,
+            avgSpeedKmh = null,
             maxSpeedKmh = null,
             calories = calories,
-            avgHeartRate = heartRateSummary?.average,
-            maxHeartRate = heartRateSummary?.maximum,
+            avgHeartRate = avgHr,
+            maxHeartRate = maxHr,
             gpsTrackJson = null,
             heartRateSeriesJson = null,
             paceSeriesJson = null,
@@ -182,7 +186,7 @@ class PolarBulkImporter @Inject constructor(
             altitudeLossMeters = null,
             trainingEffectAerobic = trainEffectAerobic,
             trainingEffectAnaerobic = trainEffectAnaerobic,
-            vo2Max = vo2Max,
+            vo2Max = null,
             cadence = null,
             strideLengthCm = null,
             recoveryTimeHours = null,
@@ -191,10 +195,21 @@ class PolarBulkImporter @Inject constructor(
             poolLaps = null,
             poolLengthMeters = null,
             source = "polar-bulk",
-            city = null,
+            city = deviceModel,  // Reuse city-Feld fuer Geraete-Modell als Anzeige
             paceStreamJson = null,
             createdAt = System.currentTimeMillis(),
         )
+    }
+
+    /**
+     * Parst Polar's startTime "2025-07-26T15:38:28" (lokal ohne TZ) plus
+     * timezoneOffsetMinutes 120 in Unix-Millis.
+     */
+    private fun parseStartTimeToEpochMs(startTime: String, offsetMinutes: Int): Long? {
+        return runCatching {
+            val zone = ZoneOffset.ofTotalSeconds(offsetMinutes * 60)
+            LocalDateTime.parse(startTime).atOffset(zone).toInstant().toEpochMilli()
+        }.getOrNull()
     }
 
     companion object {
