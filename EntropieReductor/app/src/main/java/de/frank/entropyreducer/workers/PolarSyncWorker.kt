@@ -45,10 +45,6 @@ class PolarSyncWorker @AssistedInject constructor(
             Log.d(TAG, "Polar nicht verbunden — Sync skippen")
             return Result.success()
         }
-        // DIAGNOSE: Bei jedem Sync ALLE Polar-Endpoints abklopfen damit wir
-        // sehen WO Frank's Daten sind. Logs zeigen exakt was Polar liefert.
-        polarRepo.diagnoseAllPolarEndpoints()
-
         // POLAR V4 — wenn verbunden, der bevorzugte Pfad. Liefert alle
         // Trainings inkl. Streams non-destruktiv.
         val v4Outcome = polarRepo.pullV4TrainingSessions()
