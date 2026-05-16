@@ -75,6 +75,15 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Frank-Bugfix 2026-05-16: Strava-Merge muss den alten zepp/hc-Eintrag bei
+     * gleichem Start-Zeitstempel wirklich loeschen, sonst stehen beide gleichzeitig
+     * in der Hero-Card-Liste und die alphabetische Sortierung zeigt "hc_..." vor
+     * "strava_..." an.
+     */
+    @Query("DELETE FROM amazfit_workouts WHERE trackId = :trackId")
+    suspend fun deleteByTrackId(trackId: String)
+
+    /**
      * Frank-Wunsch 2026-05-16: Health-Connect-Workout-Merge braucht die Liste
      * existierender Start-Zeitstempel um Duplikate zu erkennen. Wir vergleichen
      * neue HC-Sessions per +/- 5 Minuten Toleranz gegen diese Liste.
