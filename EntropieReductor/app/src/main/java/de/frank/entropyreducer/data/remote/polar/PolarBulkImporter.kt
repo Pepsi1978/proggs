@@ -218,20 +218,19 @@ class PolarBulkImporter @Inject constructor(
 
         val heartRateSummary = session.heartRate ?: exercise.heartRate
 
+        // Frank-Live-Sonde 2026-05-16: Bulk-Format hat sport als Objekt mit
+        // numerischer ID — NICHT als ALL_CAPS-String wie die Live-API.
+        // Wir mappen die ID via PolarBulkSportMap.
+        val sportId = exercise.sport?.id
+
         return AmazfitWorkoutEntity(
             trackId = "polar-${session.id}",
             dateKey = dateKey,
             startMs = startEpochMs,
             endMs = endEpochMs,
             durationSeconds = durationSeconds,
-            sportType = PolarSampleMapper.mapSportToHealthConnectType(
-                exercise.sport,
-                exercise.detailedSportInfo,
-            ),
-            sportName = PolarSampleMapper.mapSportToGerman(
-                exercise.sport,
-                exercise.detailedSportInfo,
-            ),
+            sportType = PolarBulkSportMap.toHealthConnectType(sportId),
+            sportName = PolarBulkSportMap.nameOf(sportId),
             distanceMeters = distance,
             avgPaceSecPerKm = avgPace,
             maxPaceSecPerKm = maxPaceSecPerKm,

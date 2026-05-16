@@ -100,13 +100,22 @@ class PolarBulkImportWorker @AssistedInject constructor(
                 totalSkipped = progress.skipped
             }
 
-            // Frank-Wunsch 2026-05-16: vor dem Schreiben der Polar-Daten alle
-            // alten Zepp/HC/T-Rex-3-Trainings loeschen. Damit nur noch Polar-
-            // Daten in der Liste sichtbar sind — kein "T-Rex 3"-Label mehr.
+            // Frank-Bugfix 2026-05-16 (Iteration 5): NUR alte non-Polar-Trainings
+            // loeschen wenn der Import wirklich Daten geliefert hat. Wenn 0
+            // Entities geparst wurden (z.B. wegen unbekanntem JSON-Format),
+            // sollen die alten Eintraege NICHT geloescht werden — sonst hat
+            // Frank am Ende eine LEERE Liste statt der frueheren T-Rex-3-Daten.
+            if (allEntities.isEmpty()) {
+                Log.e(TAG, "Polar-Bulk-Import: 0 Trainings geparst von $totalSkipped Eintraegen — alte Daten bleiben erhalten")
+                showFailureNotification("Polar-ZIP konnte nicht gelesen werden — Format-Problem. Alte Trainings bleiben.")
+                cacheFileToCleanup?.let { runCatching { it.delete() } }
+                return Result.failure()
+            }
+
+            // Erfolg-Fall: alte Daten weg, frische Polar-Daten rein.
             val deletedOld = workoutDao.deleteNonPolarWorkouts()
             Log.i(TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
 
-            // Polar-Trainings atomar in die DB — REPLACE-Strategie.
             appDatabase.withTransaction {
                 workoutDao.upsertAll(allEntities)
             }

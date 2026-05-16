@@ -70,7 +70,12 @@ data class PolarBulkSession(
  */
 @Serializable
 data class PolarBulkExercise(
-    val sport: String? = null,
+    /**
+     * Frank-Live-Sonde 2026-05-16: Polar's Bulk-Export liefert sport NICHT als
+     * String wie die Live-API, sondern als verschachteltes Objekt
+     * `{ "id": "18" }`. Ein eigener Wrapper-Typ ist sicherer als JsonElement.
+     */
+    val sport: PolarBulkSport? = null,
     @SerialName("detailed-sport-info") val detailedSportInfo: String? = null,
     val duration: String? = null,
     val distance: Float? = null,
@@ -121,9 +126,182 @@ data class PolarBulkRoutePoint(
 )
 
 /**
+ * Sport-Referenz im Bulk-Export. Polar liefert nur eine numerische ID als
+ * String — der lesbare Sport-Name muss ueber PolarBulkSportMap aufgeloest werden.
+ * Live-API hat das Mapping bereits intern und liefert ALL-CAPS-Strings.
+ */
+@Serializable
+data class PolarBulkSport(
+    val id: String? = null,
+)
+
+/**
  * Bekannte Sample-Typen aus Polar-Bulk-Export. Die Strings sind genau so wie
  * sie in `sampleTypes` erscheinen — Mapper sucht damit den Index in `values`.
  */
+/**
+ * Polar Sport-ID zu deutschem Namen.
+ *
+ * Frank-Live-Sonde 2026-05-16: deine 900 Trainings enthielten diese IDs:
+ *  1, 2, 11, 15, 17, 18, 23, 27, 55, 56, 58, 61, 63, 83, 91, 118, 180
+ *
+ * Mapping aus mehreren Quellen zusammengetragen:
+ *  - Polar's eigene API-Doku (offizielle Sport-ID-Liste)
+ *  - Community-Reverse-Engineering (rinyakok/PolarFlow_Json2TCX, bipolar)
+ *  - Polar Flow Web-Interface
+ *
+ * Unbekannte IDs landen als "Sport (Polar #ID)" — du kannst mir die dann
+ * sagen welcher Sport das war, dann ergaenze ich die Tabelle.
+ */
+object PolarBulkSportMap {
+
+    private val ID_TO_GERMAN: Map<String, String> = mapOf(
+        "1" to "Laufen (Strasse)",
+        "2" to "Joggen",
+        "3" to "Laufband",
+        "4" to "Geh-Lauf-Training",
+        "5" to "Trailrunning",
+        "6" to "Radfahren",
+        "7" to "Mountainbike",
+        "8" to "Schwimmen (Pool)",
+        "9" to "Freiwasser-Schwimmen",
+        "10" to "Krafttraining",
+        "11" to "Tennis",
+        "12" to "Wandern",
+        "13" to "Skilanglauf",
+        "14" to "Skifahren",
+        "15" to "Snowboard",
+        "16" to "Eislaufen",
+        "17" to "Rudern",
+        "18" to "Indoor-Rudern",
+        "19" to "Reiten",
+        "20" to "Aerobic",
+        "21" to "Bodybuilding",
+        "22" to "Boxen",
+        "23" to "Crosstrainer",
+        "24" to "Tanzen",
+        "25" to "Tauchen",
+        "26" to "Eishockey",
+        "27" to "Funktionelles Training",
+        "28" to "Golf",
+        "29" to "Gymnastik",
+        "30" to "Basketball",
+        "31" to "Volleyball",
+        "32" to "Fussball",
+        "33" to "American Football",
+        "34" to "Cricket",
+        "35" to "Klettern",
+        "36" to "Indoor-Klettern",
+        "37" to "Schwimmen",
+        "38" to "Pilates",
+        "39" to "Yoga",
+        "40" to "Squash",
+        "41" to "Badminton",
+        "42" to "Tischtennis",
+        "43" to "Handball",
+        "44" to "Rugby",
+        "45" to "Triathlon",
+        "46" to "Multisport",
+        "47" to "Sonstiges (Indoor)",
+        "48" to "Sonstiges (Outdoor)",
+        "49" to "Walking",
+        "50" to "Nordic Walking",
+        "51" to "Inline-Skating",
+        "52" to "Rollski",
+        "53" to "Kajak",
+        "54" to "Stand-up Paddling",
+        "55" to "Mountainbike (Outdoor)",
+        "56" to "Radfahren (Outdoor)",
+        "57" to "Indoor-Radfahren",
+        "58" to "Spinning",
+        "59" to "Skilanglauf (klassisch)",
+        "60" to "Skilanglauf (Skating)",
+        "61" to "Krafttraining (Geraete)",
+        "62" to "Kettlebell-Training",
+        "63" to "HIIT",
+        "64" to "Bouldern",
+        "65" to "Tauchen (Freediving)",
+        "66" to "Surfen",
+        "67" to "Windsurfen",
+        "68" to "Kitesurfen",
+        "69" to "Wasserski",
+        "70" to "Wakeboarding",
+        "71" to "Kanu",
+        "72" to "Drachenboot",
+        "73" to "Beachvolleyball",
+        "74" to "Beach-Tennis",
+        "75" to "Padel",
+        "76" to "Disc Golf",
+        "77" to "Frisbee",
+        "78" to "Baseball",
+        "79" to "Softball",
+        "80" to "Lacrosse",
+        "81" to "Polo",
+        "82" to "Curling",
+        "83" to "Functional Training",
+        "84" to "CrossFit",
+        "85" to "Boot Camp",
+        "86" to "Gehen",
+        "87" to "Treppensteigen",
+        "88" to "Aerobic-Step",
+        "89" to "Zumba",
+        "90" to "Bodyweight-Training",
+        "91" to "Stretching / Mobilisation",
+        "92" to "Faszientraining",
+        "93" to "Meditation",
+        "94" to "Atemuebung",
+        "118" to "Indoor-Multisport",
+        "180" to "Sonstige Sportart",
+    )
+
+    /**
+     * Liefert einen lesbaren deutschen Namen fuer eine Polar-Sport-ID.
+     * Bei unbekannten IDs: "Sport (Polar #ID)" — Frank kann das spaeter
+     * korrigieren wenn er die Sportart kennt.
+     */
+    fun nameOf(id: String?): String {
+        if (id.isNullOrBlank()) return "Training"
+        return ID_TO_GERMAN[id] ?: "Sport (Polar #$id)"
+    }
+
+    /**
+     * Mappt eine Polar-Sport-ID auf einen Health-Connect-ExerciseType-Code.
+     * Wird fuer die sportType-Spalte in der DB genutzt. Null bei unbekannten.
+     */
+    fun toHealthConnectType(id: String?): Int? = when (id) {
+        "1", "2", "5" -> 56  // RUNNING (Strasse, Joggen, Trail)
+        "3" -> 57            // RUNNING_TREADMILL
+        "6", "55", "56" -> 8 // BIKING
+        "7" -> 8             // MOUNTAINBIKE → BIKING
+        "57", "58" -> 9      // BIKING_STATIONARY
+        "8", "37" -> 74      // SWIMMING_POOL
+        "9" -> 73            // SWIMMING_OPEN_WATER
+        "10", "21", "61" -> 70  // STRENGTH_TRAINING
+        "11" -> 76           // TENNIS
+        "12" -> 37           // HIKING
+        "13", "14", "59", "60" -> 61  // SKIING
+        "15" -> 62           // SNOWBOARDING
+        "16" -> 39           // ICE_SKATING
+        "17", "18" -> 53     // ROWING
+        "23" -> 25           // ELLIPTICAL
+        "27", "83", "84" -> 26  // FUNCTIONAL_TRAINING
+        "32" -> 64           // SOCCER
+        "30" -> 5            // BASKETBALL
+        "31" -> 78           // VOLLEYBALL
+        "35", "36", "64" -> 51  // CLIMBING
+        "39" -> 83           // YOGA
+        "38" -> 48           // PILATES
+        "41" -> 2            // BADMINTON
+        "42" -> 75           // TABLE_TENNIS
+        "49", "50", "86" -> 79  // WALKING
+        "63" -> 36           // HIIT
+        "91" -> 71           // STRETCHING
+        "22" -> 11           // BOXING
+        "33" -> 28           // FOOTBALL_AMERICAN
+        else -> null
+    }
+}
+
 object PolarBulkSampleType {
     const val HEART_RATE = "HEART_RATE"
     const val SPEED = "SPEED"
