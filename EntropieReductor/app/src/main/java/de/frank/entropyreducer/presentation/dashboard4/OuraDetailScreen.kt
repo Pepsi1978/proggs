@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -150,12 +151,19 @@ fun OuraDetailScreen(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
-                items(filtered.reversed()) { (day, value) ->
+                // Frank-Wunsch 2026-05-16: Liste 1:1 wie Recovery-Detail —
+                // Wochentag + dd.MM.yyyy + Wert + Delta zum VORTAG. Reversed
+                // damit der juengste Tag oben steht; Vortag ist dann der naechste
+                // Index (idx+1) in dieser absteigenden Reihenfolge.
+                val sortedDescending = filtered.reversed()
+                itemsIndexed(sortedDescending, key = { _, (day, _) -> day }) { idx, (day, value) ->
+                    val previous = sortedDescending.getOrNull(idx + 1)?.second
                     OuraValueRow(
                         day = day,
                         value = value,
                         isResilience = metricKey == OuraMetricKey.RESILIENCE,
-                        average = avgV,
+                        previousValue = previous,
+                        accent = pickAccent(metricKey, value),
                     )
                 }
             } else {
@@ -369,58 +377,84 @@ private fun OuraVerlaufsChart(
 }
 
 @Composable
-private fun OuraValueRow(day: String, value: Double, isResilience: Boolean, average: Double?) {
+private fun OuraValueRow(
+    day: String,
+    value: Double,
+    isResilience: Boolean,
+    previousValue: Double?,
+    accent: Color,
+) {
     val cosmos = LocalCosmos.current
     val display = if (isResilience) levelToGerman(rankToLevel(value)) else value.toInt().toString()
-    // Abweichung zum Bereichs-Durchschnitt (Frank-Vorgabe 2026-05-10): pro
-    // Tageswert ein '+5'-Plus-Wert in gruen wenn besser als der Schnitt, oder
-    // '-3' in rot wenn schlechter. Nur fuer Readiness und Schlaf-Score
-    // (Score-Skala) — bei Resilienz ueberspringen weil Levels nicht sauber
-    // als Plus/Minus-Differenz abbildbar sind.
-    val deviation: Pair<String, Color>? = if (!isResilience && average != null) {
-        val delta = value - average
-        val rounded = delta.toInt()
-        if (rounded == 0) {
-            "±0" to cosmos.textSecondary
-        } else if (rounded > 0) {
-            "+$rounded" to CosmosColors.Success
-        } else {
-            "$rounded" to CosmosColors.Critical
-        }
-    } else null
+    // Frank-Wunsch 2026-05-16: Delta zum VORTAG, nicht zum Durchschnitt — 1:1
+    // wie Recovery-Detail. Bei Score-Karten ist hoeher = besser, also Plus
+    // = gruen, Minus = rot. Bei Resilienz wird die Differenz uebersprungen
+    // weil Levels nicht sauber als Plus/Minus-Differenz abbildbar sind.
+    val delta: Double? = if (!isResilience && previousValue != null) value - previousValue else null
+    val deltaText: String = delta?.let {
+        val sign = if (it >= 0) "+" else ""
+        "$sign${it.toInt()}"
+    } ?: ""
+    val deltaColor: Color = when {
+        delta == null -> cosmos.textSecondary
+        delta > 0 -> CosmosColors.Success
+        delta < 0 -> CosmosColors.Critical
+        else -> cosmos.textSecondary
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 4.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(cosmos.glassBg)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Frank-Vorgabe 2026-05-10: Datum, Wert und Abweichung direkt nebeneinander
-        // links, NICHT rechtsbuendig. Datum bekommt eine feste Breite damit die
-        // Spalten ordentlich uebereinander stehen, dann der Wert daneben, dann
-        // die Abweichung. Rechter Bereich bleibt leer.
+        // Frank-Wunsch 2026-05-16: Layout 1:1 wie ValueRow in BiomarkerDetailScreen —
+        // Datum (Wochentag + dd.MM.yyyy) links als Weight, Wert in Accent-Farbe
+        // rechts, Delta zum Vortag in einer Box am rechten Rand.
         Text(
-            text = shortDate(day),
+            text = formatRecoveryStyleDate(day),
             style = MaterialTheme.typography.bodyMedium,
-            color = cosmos.textSecondary,
-            modifier = Modifier.width(56.dp),
+            color = cosmos.textPrimary,
+            modifier = Modifier.weight(1f),
         )
         Text(
             text = display,
-            style = MaterialTheme.typography.bodyMedium,
-            color = cosmos.textPrimary,
+            style = MaterialTheme.typography.titleSmall,
+            color = accent,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(48.dp),
         )
-        if (deviation != null) {
-            Text(
-                text = deviation.first,
-                style = MaterialTheme.typography.bodyMedium,
-                color = deviation.second,
-                fontWeight = FontWeight.SemiBold,
-            )
+        if (deltaText.isNotBlank()) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .width(56.dp),
+            ) {
+                Text(
+                    text = deltaText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = deltaColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }
+
+/**
+ * Frank-Wunsch 2026-05-16: gleiches Datums-Format wie Recovery-Detail —
+ * "Sa 16.05.2026" mit Wochentag in deutscher Locale.
+ */
+private fun formatRecoveryStyleDate(day: String): String {
+    if (day.length != 10) return day
+    return runCatching {
+        val date = java.time.LocalDate.parse(day)
+        date.format(OURA_VALUE_DATE_FMT)
+    }.getOrDefault(day)
+}
+
+private val OURA_VALUE_DATE_FMT: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", java.util.Locale.GERMANY)
 
 private fun pickAccent(metricKey: String, current: Double?): Color =
     if (metricKey == OuraMetricKey.RESILIENCE) {
