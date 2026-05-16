@@ -20,14 +20,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
-/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Polar. */
+/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar, Polar und Strava. */
 data class OAuthUiState(
     val calendarAccountEmail: String? = null,
     val whoopConnected: Boolean = false,
     val whoopClientId: String = "",
     val whoopClientSecret: String = "",
     val whoopRedirectUri: String = OAuthService.WHOOP_REDIRECT_URI_DEFAULT,
-    // Polar (Frank-Wunsch 2026-05-16): alleinige Workout-Quelle nach Strava-Revert.
+    // Polar (Frank-Wunsch 2026-05-16).
     val polarConnected: Boolean = false,
     val polarV4Connected: Boolean = false,
     val polarFlowWebConnected: Boolean = false,
@@ -37,6 +37,13 @@ data class OAuthUiState(
     val polarRedirectUri: String = OAuthService.POLAR_REDIRECT_URI_DEFAULT,
     val polarUserId: Long = 0L,
     val polarLastSyncMs: Long = 0L,
+    // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17): Workouts via Polar->Strava.
+    val stravaConnected: Boolean = false,
+    val stravaClientId: String = "",
+    val stravaClientSecret: String = "",
+    val stravaRedirectUri: String = OAuthService.STRAVA_REDIRECT_URI_DEFAULT,
+    val stravaAthleteId: Long = 0L,
+    val stravaLastSyncMs: Long = 0L,
     val message: String? = null,
 )
 
@@ -99,6 +106,11 @@ class OAuthViewModel @Inject constructor(
         polarClientSecret = secrets.polarClientSecret.orEmpty(),
         polarUserId = secrets.polarUserId,
         polarLastSyncMs = secrets.polarLastSyncEpochMs,
+        stravaConnected = oauth.loadStravaAuthState().isAuthorized,
+        stravaClientId = secrets.stravaClientId.orEmpty(),
+        stravaClientSecret = secrets.stravaClientSecret.orEmpty(),
+        stravaAthleteId = secrets.stravaAthleteId,
+        stravaLastSyncMs = secrets.stravaLastSyncEpochMs,
     )
 
     fun setWhoopClientId(value: String) { _state.update { it.copy(whoopClientId = value) } }
@@ -156,6 +168,67 @@ class OAuthViewModel @Inject constructor(
         oauth.clearWhoopAuthState()
         scheduler.cancelWhoopSync()
         _state.update { it.copy(whoopConnected = false, message = "Whoop getrennt.") }
+    }
+
+    /* ------------------------------- Strava ------------------------------- */
+
+    fun setStravaClientId(value: String) { _state.update { it.copy(stravaClientId = value) } }
+    fun setStravaClientSecret(value: String) { _state.update { it.copy(stravaClientSecret = value) } }
+
+    fun saveStravaCredentials() {
+        val rawId = state.value.stravaClientId.trim()
+        val rawSecret = state.value.stravaClientSecret.trim()
+        // Strava's Client-ID ist eine Zahl (3-6 Stellen), Secret ist hex (~40 Zeichen).
+        if (rawId.isNotBlank() && !rawId.matches(Regex("^[0-9]{1,12}$"))) {
+            _state.update {
+                it.copy(message = "Strava-Client-ID ist normalerweise eine Zahl wie '123456'. " +
+                    "Eingabe wurde NICHT gespeichert.")
+            }
+            return
+        }
+        if (rawSecret.length > 256) {
+            _state.update {
+                it.copy(message = "Strava-Client-Secret ist ungewoehnlich lang " +
+                    "(${rawSecret.length} Zeichen). Eingabe wurde NICHT gespeichert.")
+            }
+            return
+        }
+        secrets.stravaClientId = rawId.ifBlank { null }
+        secrets.stravaClientSecret = rawSecret.ifBlank { null }
+        _state.update { it.copy(message = "Strava-Credentials gespeichert.") }
+    }
+
+    fun buildStravaAuthIntent(): Intent? {
+        val clientId = secrets.stravaClientId
+        if (clientId.isNullOrBlank()) {
+            _state.update { it.copy(message = "Bitte zuerst die Strava-Client-ID speichern.") }
+            return null
+        }
+        return oauth.buildStravaAuthIntent(clientId, state.value.stravaRedirectUri)
+    }
+
+    fun onStravaAuthResult(intent: Intent) {
+        viewModelScope.launch {
+            val result = oauth.handleStravaAuthResult(intent, secrets.stravaClientSecret)
+            result.onSuccess {
+                _state.update {
+                    it.copy(
+                        stravaConnected = true,
+                        stravaAthleteId = secrets.stravaAthleteId,
+                        message = "Strava verbunden. Sync laeuft beim naechsten Refresh.",
+                    )
+                }
+            }.onFailure { ex ->
+                _state.update { it.copy(message = "Strava-Auth fehlgeschlagen: ${ex.message}") }
+            }
+        }
+    }
+
+    fun disconnectStrava() {
+        oauth.clearStravaAuthState()
+        _state.update {
+            it.copy(stravaConnected = false, stravaAthleteId = 0L, message = "Strava getrennt.")
+        }
     }
 
     /* ---------------------------- Google Calendar ---------------------------- */
