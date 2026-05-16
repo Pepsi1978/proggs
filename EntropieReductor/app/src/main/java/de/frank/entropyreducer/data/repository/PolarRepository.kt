@@ -60,17 +60,35 @@ class PolarRepository @Inject constructor(
         oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L
 
     /**
-     * Laedt eine BEREITS GESYNCTE Exercise direkt ueber die Standalone-URL
-     * (`/v3/users/{uid}/exercises/{eid}`) — OHNE Transaction-Workflow.
+     * Versucht eine bestehende Exercise NEU zu laden — ueber den Transaction-
+     * Workflow. Polar AccessLink V3 hat KEINEN Direct-Endpoint fuer Exercises:
+     * `GET /v3/users/{uid}/exercises/{eid}` antwortet mit HTTP 404 (Live-Sonde
+     * 2026-05-16). Der frueher angenommene "Standalone-Endpoint" existiert
+     * schlicht nicht — die offizielle OpenAPI-Spec listet Exercises nur unter
+     * `/exercise-transactions/{tid}/exercises/{eid}`.
      *
-     * Hintergrund (Frank-Befund 2026-05-16): Polar's Transaction-Workflow
-     * liefert pro Exercise nur EINMAL. Nach dem Commit ist die Exercise aus
-     * der Transaction-Liste raus. Wir koennen sie aber permanent per
-     * Direct-URL aufrufen und damit fehlende Sample-Streams, GPX oder
-     * korrigierte Felder nachladen — perfekt fuer "Erneut laden"-Buttons.
+     * Konsequenz: Wir koennen eine Exercise nur dann nachladen, wenn ihre
+     * urspruengliche Transaction noch OFFEN ist (also nicht committed wurde).
+     * Sobald eine Transaction committed ist, sind die Daten in Polar's API
+     * dauerhaft unwiederbringlich.
+     *
+     * Strategie:
+     *  1. Neue Transaction starten (POST /exercise-transactions).
+     *     - 201 → es gibt offene Daten, weiter zu Schritt 2.
+     *     - 204 → kein offener Transaction-Block existiert → Exercise wurde
+     *       bereits committed → return null (Frank sieht "keine frischen Daten").
+     *  2. Liste der Exercise-URLs holen und nach der gesuchten exerciseId suchen.
+     *  3. Wenn drin: Exercise + Samples + GPX laden via `buildEntity`.
+     *  4. Wenn die Entity jetzt VOLLSTAENDIG ist (HR-Stream oder Pace-Stream da):
+     *     Transaction committen.
+     *     Wenn nicht (Polar braucht weiterhin Zeit fuer Samples): Transaction
+     *     OFFEN lassen — der naechste Sync bekommt dieselben URLs wieder.
+     *  5. Wenn nicht drin: Transaction trotzdem committen (sonst blockiert sie
+     *     andere Sync-Vorgaenge), return null.
      *
      * @param exerciseId Polar-interne Exercise-ID (aus trackId="polar-{id}")
-     * @return Frisch zusammengebaute Entity oder null bei Fehler / unauthenticated.
+     * @return Frisch zusammengebaute Entity oder null wenn Exercise nicht mehr
+     *         abrufbar (Transaction war committed) oder bei Fehler / unauthenticated.
      */
     suspend fun refreshExercise(exerciseId: Long): Result<AmazfitWorkoutEntity?> = runCatchingCancellable {
         if (!isAuthenticated()) {
@@ -81,10 +99,50 @@ class PolarRepository @Inject constructor(
             ?: throw IllegalStateException("Polar-Access-Token nicht verfuegbar (Token abgelaufen — neu anmelden noetig)")
         val bearer = "Bearer $accessToken"
         val userId = secrets.polarUserId
-        val exerciseUrl = "https://www.polaraccesslink.com/v3/users/$userId/exercises/$exerciseId"
-        Log.i(TAG, "Polar: refreshExercise $exerciseId via Direct-URL")
-        val exercise = api.getExercise(bearer, exerciseUrl)
-        buildEntity(bearer, exerciseUrl, exercise)
+
+        Log.i(TAG, "Polar: refreshExercise $exerciseId via Transaction-Workflow")
+        val transactionResp = api.createExerciseTransaction(bearer, userId)
+        when (transactionResp.code()) {
+            204 -> {
+                Log.w(TAG, "Polar: refreshExercise($exerciseId) — kein offener Transaction-Block (HTTP 204). Das Workout wurde bereits committed und ist in Polar's API nicht mehr abrufbar. Frank kann es nur noch per Polar-Bulk-Export importieren.")
+                return@runCatchingCancellable null
+            }
+            201 -> { /* OK */ }
+            else -> {
+                val err = runCatching { transactionResp.errorBody()?.string()?.take(300) }.getOrNull()
+                throw IllegalStateException("Polar createExerciseTransaction HTTP ${transactionResp.code()}: $err")
+            }
+        }
+        val transactionId = transactionResp.body()?.transactionId
+            ?: extractTransactionIdFromLocation(transactionResp.headers()["Location"])
+            ?: throw IllegalStateException("Polar Transaction-ID konnte nicht ermittelt werden")
+
+        val list = api.listExercisesInTransaction(bearer, userId, transactionId)
+        val targetUrl = list.exercises.firstOrNull { url ->
+            url.trimEnd('/').substringAfterLast("/").toLongOrNull() == exerciseId
+        }
+        if (targetUrl == null) {
+            Log.w(TAG, "Polar: refreshExercise($exerciseId) — Exercise nicht in offener Transaction $transactionId (enthielt ${list.exercises.size} andere Trainings). Polar's API kann diese Exercise nicht mehr liefern.")
+            // Andere Exercises in der Transaction nicht ausversehen verlieren —
+            // sie kommen beim regulaeren PolarSyncWorker-Lauf rein. Hier
+            // explizit NICHT committen, damit der naechste fetchWorkoutsAsEntities
+            // sie noch sieht.
+            return@runCatchingCancellable null
+        }
+
+        val exercise = api.getExercise(bearer, targetUrl)
+        val entity = buildEntity(bearer, targetUrl, exercise)
+
+        val hasStreams = !entity.heartRateSeriesJson.isNullOrBlank() ||
+            !entity.paceStreamJson.isNullOrBlank() ||
+            !entity.gpsTrackJson.isNullOrBlank()
+        if (hasStreams) {
+            commitSafely(bearer, userId, transactionId)
+            Log.i(TAG, "Polar: refreshExercise($exerciseId) erfolgreich — Streams gefunden, Transaction $transactionId committed")
+        } else {
+            Log.w(TAG, "Polar: refreshExercise($exerciseId) — Exercise in Transaction $transactionId gefunden, aber Polar liefert noch keine Samples (5-30 Min nach Upload normal). Transaction OFFEN lassen, naechster Sync versucht es erneut.")
+        }
+        entity
     }.onFailure { ex ->
         if (ex !is kotlinx.coroutines.CancellationException) {
             Log.w(TAG, "Polar: refreshExercise($exerciseId) fehlgeschlagen — ${ex.message}")
@@ -142,12 +200,24 @@ class PolarRepository @Inject constructor(
 
         // Schritt 3: Pro Exercise Detail + Samples laden.
         val entities = mutableListOf<AmazfitWorkoutEntity>()
+        var incompleteFreshCount = 0
         for ((idx, exerciseUrl) in exerciseList.exercises.withIndex()) {
             try {
                 val exercise = api.getExercise(bearer, exerciseUrl)
                 val entity = buildEntity(bearer, exerciseUrl, exercise)
                 entities += entity
-                Log.d(TAG, "Polar: Training ${idx + 1}/${exerciseList.exercises.size} geladen — id=${exercise.id} sport=${exercise.sport} duration=${exercise.duration}")
+                // Vollstaendigkeit pruefen: hat das Workout mindestens HR ODER
+                // Pace ODER GPS? Wenn nicht und das Workout ist juenger als 2h,
+                // ist Polar's Sample-Upload vermutlich noch nicht durch.
+                val hasAnyStream = !entity.heartRateSeriesJson.isNullOrBlank() ||
+                    !entity.paceStreamJson.isNullOrBlank() ||
+                    !entity.gpsTrackJson.isNullOrBlank()
+                val ageMs = System.currentTimeMillis() - entity.startMs
+                val freshWorkout = ageMs in 0..(2 * 60 * 60 * 1000L)
+                if (!hasAnyStream && freshWorkout) {
+                    incompleteFreshCount++
+                }
+                Log.d(TAG, "Polar: Training ${idx + 1}/${exerciseList.exercises.size} geladen — id=${exercise.id} sport=${exercise.sport} duration=${exercise.duration} streams=hr:${!entity.heartRateSeriesJson.isNullOrBlank()},pace:${!entity.paceStreamJson.isNullOrBlank()},gps:${!entity.gpsTrackJson.isNullOrBlank()} ageHours=${ageMs / 3_600_000}")
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 // Direktive 3: CancellationException nie schlucken.
                 throw ce
@@ -160,11 +230,33 @@ class PolarRepository @Inject constructor(
             delay(200)
         }
 
-        // Schritt 4: Transaction committen — PFLICHT.
-        commitSafely(bearer, userId, transactionId)
+        // Schritt 4: Conditional Commit.
+        //
+        // Polar AccessLink V3 hat KEINEN Direct-Endpoint fuer Exercises — nach
+        // einem Commit sind die Daten dauerhaft weg. Deshalb: Wenn ein juenges
+        // Workout (< 2h alt) noch KEINEN Stream hat, lassen wir die Transaction
+        // OFFEN — der naechste Sync (Worker laeuft alle 30 Min) bekommt dieselbe
+        // Exercise nochmal mit dann hoffentlich verfuegbaren Samples.
+        //
+        // Sicherheitsnetz: nach 6 fehlgeschlagenen Refresh-Versuchen oder
+        // wenn ALLE Workouts aelter als 6h sind, committen wir trotzdem damit
+        // Polar nicht ewig blockiert wird (1 offene Transaction pro User).
+        val attempts = secrets.polarRefreshAttempts
+        val giveUpAttempts = 6
+        val shouldKeepOpen = incompleteFreshCount > 0 && attempts < giveUpAttempts
+        if (shouldKeepOpen) {
+            secrets.polarRefreshAttempts = attempts + 1
+            Log.i(TAG, "Polar: $incompleteFreshCount/${entities.size} frische Trainings noch ohne Samples — Transaction $transactionId OFFEN lassen (Versuch ${attempts + 1}/$giveUpAttempts), Worker probiert spaeter nochmal")
+        } else {
+            if (attempts >= giveUpAttempts) {
+                Log.w(TAG, "Polar: nach $attempts Versuchen immer noch unvollstaendige Streams — Transaction $transactionId trotzdem committen damit Polar's API nicht blockiert bleibt")
+            }
+            commitSafely(bearer, userId, transactionId)
+            secrets.polarRefreshAttempts = 0
+        }
 
         secrets.polarLastSyncEpochMs = System.currentTimeMillis()
-        Log.i(TAG, "Polar-Sync abgeschlossen: ${entities.size} Trainings importiert, Transaction $transactionId committed")
+        Log.i(TAG, "Polar-Sync abgeschlossen: ${entities.size} Trainings importiert, Transaction $transactionId ${if (shouldKeepOpen) "OFFEN" else "committed"}")
         entities
     }.onFailure { ex ->
         if (ex !is kotlinx.coroutines.CancellationException) {
@@ -234,7 +326,18 @@ class PolarRepository @Inject constructor(
     /** Aus dem Location-Header `/v3/users/{uid}/exercise-transactions/{tid}` die tid fischen. */
     private fun extractTransactionIdFromLocation(location: String?): Long? {
         if (location.isNullOrBlank()) return null
-        return location.substringAfterLast("/").toLongOrNull()
+        return location.trimEnd('/').substringAfterLast("/").substringBefore("?").toLongOrNull()
+    }
+
+    /**
+     * Extrahiert die Sample-Type-ID aus einer URL wie
+     * `.../exercises/{eid}/samples/10`. Defensiv gegen Trailing-Slashes
+     * und Query-Strings — Polar's API liefert die URLs zwar normalerweise
+     * sauber, aber wir wollen nicht von einem unerwarteten "?" oder "/"
+     * verlieren, was uns die Stream-Zuordnung zerschiesst.
+     */
+    private fun extractTypeId(url: String): String {
+        return url.trimEnd('/').substringAfterLast("/").substringBefore("?")
     }
 
     /**
@@ -289,10 +392,13 @@ class PolarRepository @Inject constructor(
             Log.w(TAG, "Polar: Exercise ${exercise.id} liefert KEINE Sample-Streams. Polar braucht oft 5-30 Min nach Workout-Upload bis Streams verfuegbar sind. Beim naechsten Sync nochmal versuchen.")
         } else {
             // Welche Type-IDs hat Polar tatsaechlich angeboten? — fuer Diagnose.
-            val offeredTypes = samplesList.samples.map { it.substringAfterLast("/") }
+            // Defensiv: trailing-Slash und Query-Strings entfernen damit z.B.
+            // "/samples/10/" oder "/samples/10?x=y" trotzdem als "10" erkannt
+            // werden. Sonst wuerde das `when (typeId)` ins Leere greifen.
+            val offeredTypes = samplesList.samples.map { extractTypeId(it) }
             Log.i(TAG, "Polar: Exercise ${exercise.id} bietet Sample-Type-IDs ${offeredTypes.joinToString()}")
             for (sampleUrl in samplesList.samples) {
-                val typeId = sampleUrl.substringAfterLast("/")
+                val typeId = extractTypeId(sampleUrl)
                 try {
                     val sample = api.getSample(bearer, sampleUrl)
                     val valueCount = sample.data.count { it == ',' } + 1

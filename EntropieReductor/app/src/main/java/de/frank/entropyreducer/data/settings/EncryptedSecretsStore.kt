@@ -216,12 +216,26 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_POLAR_MEMBER_ID, null)
         set(value) { prefs.edit().putString(KEY_POLAR_MEMBER_ID, value).apply() }
 
+    /**
+     * Zaehler der aufeinanderfolgenden Polar-Sync-Versuche bei denen die
+     * Transaction OFFEN gelassen wurde weil Polar noch keine Samples zu
+     * frischen Workouts geliefert hat. Reset auf 0 bei erfolgreichem Commit.
+     *
+     * Sicherheitsnetz gegen ewig blockierte Transactions (Polar erlaubt nur
+     * 1 offene pro User): nach 6 Versuchen (= ca. 3 Stunden bei 30-Min-Worker)
+     * wird trotzdem committed, damit der Sync nicht ewig festsitzt.
+     */
+    var polarRefreshAttempts: Int
+        get() = prefs.getInt(KEY_POLAR_REFRESH_ATTEMPTS, 0)
+        set(value) { prefs.edit().putInt(KEY_POLAR_REFRESH_ATTEMPTS, value).apply() }
+
     fun clearPolarAuthState() {
         prefs.edit()
             .remove(KEY_POLAR_AUTH_STATE)
             .remove(KEY_POLAR_USER_ID)
             .remove(KEY_POLAR_USER_REGISTERED)
             .remove(KEY_POLAR_LAST_SYNC)
+            .remove(KEY_POLAR_REFRESH_ATTEMPTS)
             .apply()
     }
 
@@ -326,5 +340,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_POLAR_LAST_SYNC = "polar_last_sync_ms"
         private const val KEY_POLAR_USER_REGISTERED = "polar_user_registered"
         private const val KEY_POLAR_MEMBER_ID = "polar_member_id"
+        private const val KEY_POLAR_REFRESH_ATTEMPTS = "polar_refresh_attempts"
     }
 }
