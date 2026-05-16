@@ -462,16 +462,7 @@ class OAuthService @Inject constructor(
             "read:profile",
             "offline",
         )
-        // Frank-Befund 2026-05-16: Strava parst die Redirect-URI streng als URL und
-        // vergleicht den HOST-Teil mit dem "Authorization Callback Domain" auf der
-        // Strava-API-Seite. Bei `myscheme://oauth/...` ist host="oauth" — und Strava
-        // wuerde dann erwarten, dass die Callback Domain auch "oauth" ist. Loesung:
-        // wir bauen die URI so, dass der host="localhost" ist — dann kann der User
-        // einfach "localhost" als Callback Domain bei Strava eintragen (das ist
-        // ohnehin der Standard-Hinweis im Strava-Dashboard-Formular). Whoop und
-        // Google akzeptieren das gleiche Pattern, daher haben wir hier KEINEN
-        // Konflikt mit den anderen OAuth-Verbindungen.
-        const val STRAVA_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://localhost/oauth/strava/callback"
+        const val STRAVA_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/strava/callback"
         val STRAVA_SCOPES = listOf(
             // Frank-Wunsch 2026-05-16: read_all gibt Zugriff auf private Activities.
             // activity:read_all schliesst auch Privacy-Zonen ein — wir brauchen sie
