@@ -8,6 +8,15 @@ import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.BufferedInputStream
 import java.time.Instant
 import java.time.LocalDateTime
@@ -16,32 +25,45 @@ import java.time.ZoneOffset
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 /**
- * Importer fuer Polar-Flow-Bulk-Export (ZIP).
+ * Polar-Flow-Bulk-Export Importer (Iteration 8 — Vollausbau).
  *
- * Frank-Wunsch 2026-05-16 (Iteration 7): nach mehreren Iterationen mit Format-
- * Diskrepanzen habe ich die echte ZIP ausgepackt und das tatsaechliche Format
- * ermittelt. Polar nutzt camelCase-Feldnamen (startTime, durationMillis, hrAvg,
- * hrMax) statt der hyphenated Form aus der Doku.
+ * Aus Frank's echter ZIP (96 MB, 956 Trainings, Outdoor mit Polar Vantage V3)
+ * habe ich folgendes Format ermittelt:
  *
- * Aktueller Stand: Metadaten-Import.
- *  - 956 Trainings aus Frank's ZIP werden alle importiert
- *  - Sportart via PolarBulkSportMap aus sport.id
- *  - Datum aus startTime + timezoneOffsetMinutes
- *  - Dauer aus durationMillis (in Sekunden umrechnen)
- *  - Avg/Max-HR direkt aus Top-Level (hrAvg/hrMax)
- *  - Kalorien direkt aus Top-Level (calories)
- *  - Training-Load aus trainingLoadReport
+ * Top-Level (camelCase):
+ *  - identifier.id (String), startTime, stopTime, durationMillis (Long)
+ *  - calories, hrAvg, hrMax (alle Int)
+ *  - timezoneOffsetMinutes
+ *  - sport.id (String), product.modelName
+ *  - trainingLoadReport.cardioLoad/muscleLoad (Double)
  *
- * NICHT-Import (Folge-Iteration):
- *  - Pulsverlauf (Stream)
- *  - GPS-Track
- *  - Pace-Stream
- *  - Splits
+ * exercises[0]:
+ *  - statistics.statistics[]  -> Min/Avg/Max pro Metrik
+ *  - samples.samples[]        -> typed Streams (HR, SPEED, DISTANCE, ...)
+ *  - routes.route.wayPoints[] -> GPS-Punkte
  *
- * Idempotenz: trackId "polar-{identifier.id}" — bei Live-API werden dieselben
- * IDs durch REPLACE ueberschrieben.
+ * samples.samples[] Beispiel-Typen aus Frank's Trainings:
+ *  HEART_RATE, SPEED, DISTANCE, CADENCE, ALTITUDE, TEMPERATURE,
+ *  STRIDE_LENGTH, LEFT_CRANK_CURRENT_POWER
+ *
+ * Werte sind teilweise "NaN" als String (Indoor-Training ohne GPS) — wir
+ * filtern die heraus.
+ *
+ * VOLL-Extraktion in dieser Iteration:
+ *  - Distanz (letzter non-NaN DISTANCE-Wert)
+ *  - Avg/Max-Speed (aus SPEED-Stream)
+ *  - Avg/Max-Pace (3600/avgSpeed)
+ *  - Avg/Max-HR (Top-Level + statistics-Fallback)
+ *  - Pulsverlauf (heartRateSeriesJson)
+ *  - Pace-Verlauf (paceStreamJson)
+ *  - Hoehengewinn + -verlust (aus ALTITUDE-Stream)
+ *  - Cadence (Mittelwert)
+ *  - GPS-Track (routes.route.wayPoints -> gpsTrackJson)
+ *  - Trainingseffekt aerob+anaerob (trainingLoadReport)
+ *  - Geraete-Modell (product.modelName -> city-Feld)
  */
 @Singleton
 class PolarBulkImporter @Inject constructor(
@@ -109,7 +131,7 @@ class PolarBulkImporter @Inject constructor(
         }
 
         onProgress(Progress(filesProcessed, entities.size, skipped, finished = true))
-        Log.i(TAG, "Polar-Bulk-Import fertig: ZIP hatte $entriesSeen Eintraege gesamt, $trainingEntriesSeen davon Trainings — $filesProcessed verarbeitet, ${entities.size} entities erzeugt, $skipped uebersprungen")
+        Log.i(TAG, "Polar-Bulk-Import fertig: $entriesSeen Eintraege gesamt, $trainingEntriesSeen Trainings — ${entities.size} entities, $skipped uebersprungen")
         entities
     }
 
@@ -119,47 +141,84 @@ class PolarBulkImporter @Inject constructor(
             (lc.contains("training-session") || lc.contains("/training/"))
     }
 
-    /**
-     * Konvertiert eine PolarBulkSession in eine AmazfitWorkoutEntity.
-     *
-     * Echtes Polar-Format (Frank-Live-Sonde 2026-05-16):
-     *  - identifier.id            -> trackId "polar-{id}"
-     *  - startTime "2025-07-26T15:38:28" + timezoneOffsetMinutes 120 -> startMs
-     *  - durationMillis           -> durationSeconds
-     *  - hrAvg/hrMax              -> avgHeartRate/maxHeartRate
-     *  - calories (Int)           -> calories (Double)
-     *  - sport.id                 -> PolarBulkSportMap.nameOf
-     *  - trainingLoadReport       -> trainingEffectAerobic (cardio/2), -Anaerobic (muscle/2)
-     */
     private fun sessionToEntity(session: PolarBulkSession): AmazfitWorkoutEntity? {
         val sessionId = session.identifier?.id ?: return null
         val startTimeStr = session.startTime ?: return null
         val offset = session.timezoneOffsetMinutes ?: 0
 
         val startEpochMs = parseStartTimeToEpochMs(startTimeStr, offset) ?: return null
-
         val durationSeconds = session.durationMillis?.let { it / 1000L }
         val endEpochMs = startEpochMs + (durationSeconds ?: 0L) * 1000L
         val dateKey = Instant.ofEpochMilli(startEpochMs)
             .atZone(ZoneId.systemDefault()).toLocalDate().toString()
 
-        // Falls Top-Level hrAvg/hrMax fehlen, aus statistics.statistics[] fallback'en
+        // Streams aus exercises[0].samples.samples[] by type extrahieren
         val firstExercise = session.exercises.firstOrNull()
-        val statsHr = firstExercise?.statistics?.statistics?.firstOrNull { stat ->
-            stat.type == "STATISTICS_TYPE_HEART_RATE"
+        val sampleEntries = firstExercise?.samples?.samples ?: emptyList()
+        val hrStream = sampleEntries.firstOrNull { it.type == "HEART_RATE" }
+        val speedStream = sampleEntries.firstOrNull { it.type == "SPEED" }
+        val distanceStream = sampleEntries.firstOrNull { it.type == "DISTANCE" }
+        val altitudeStream = sampleEntries.firstOrNull { it.type == "ALTITUDE" }
+        val cadenceStream = sampleEntries.firstOrNull { it.type == "CADENCE" }
+        val strideStream = sampleEntries.firstOrNull { it.type == "STRIDE_LENGTH" }
+
+        // Avg/Max-HR mit Fallback aus statistics
+        val statsHr = firstExercise?.statistics?.statistics?.firstOrNull {
+            it.type == "STATISTICS_TYPE_HEART_RATE"
         }
         val avgHr = session.hrAvg ?: statsHr?.avg?.toInt()
-        val maxHr = session.hrMax ?: statsHr?.max?.toInt()
+        val maxHr = session.hrMax ?: statsHr?.max?.toInt() ?: hrStream?.let { maxIntFromStream(it) }
+
+        // DISTANZ: letzter non-NaN-Wert ist die Gesamtdistanz in Metern
+        val distanceMeters = distanceStream?.let { lastFiniteValue(it) }
+
+        // SPEED in m/s (Polar-Standard) → km/h und Pace
+        val speedValues = speedStream?.let { extractFiniteDoubles(it) } ?: emptyList()
+        val avgSpeedKmh = if (speedValues.isNotEmpty()) {
+            val avgMs = speedValues.average()
+            if (avgMs > 0.0) avgMs * 3.6 else null
+        } else null
+        val maxSpeedKmh = speedValues.maxOrNull()?.let { it * 3.6 }
+        // Avg-Pace bevorzugt aus Distanz+Dauer (verlaesslicher als Speed-Stream-Avg)
+        val avgPaceSecPerKm = if (distanceMeters != null && distanceMeters > 0.0 &&
+            durationSeconds != null && durationSeconds > 0L) {
+            durationSeconds.toDouble() / (distanceMeters / 1000.0)
+        } else avgSpeedKmh?.let { 3600.0 / it }
+        val maxPaceSecPerKm = maxSpeedKmh?.let { 3600.0 / it }
+
+        // Hoehengewinn/-verlust aus ALTITUDE
+        val altValues = altitudeStream?.let { extractFiniteDoubles(it) } ?: emptyList()
+        var altGain = 0.0
+        var altLoss = 0.0
+        if (altValues.size >= 2) {
+            for (i in 1 until altValues.size) {
+                val delta = altValues[i] - altValues[i - 1]
+                if (delta > 0.0) altGain += delta else altLoss += -delta
+            }
+        }
+
+        // Cadence-Mittelwert
+        val cadenceValues = cadenceStream?.let { extractFiniteDoubles(it) }?.filter { it > 0.0 }
+        val cadenceAvg = cadenceValues?.takeIf { it.isNotEmpty() }?.average()?.toInt()
+
+        // Stride-Length-Mittelwert in cm
+        val strideValues = strideStream?.let { extractFiniteDoubles(it) }?.filter { it > 0.0 }
+        val strideAvgCm = strideValues?.takeIf { it.isNotEmpty() }?.average()?.toInt()
+
+        // Streams als JSON fuer Charts
+        val heartRateSeriesJson = hrStream?.let { buildHrSeriesJson(it, startEpochMs) }
+        val paceStreamJson = speedStream?.let { buildPaceStreamJson(it, startEpochMs) }
+
+        // GPS-Track aus routes.route.wayPoints
+        val wayPoints = firstExercise?.routes?.route?.wayPoints ?: emptyList()
+        val gpsTrackJson = if (wayPoints.isNotEmpty()) {
+            buildGpsTrackJson(wayPoints, startEpochMs)
+        } else null
 
         val calories = session.calories?.toDouble()
         val trainEffectAerobic = session.trainingLoadReport?.cardioLoad?.let { it / 2.0 }
         val trainEffectAnaerobic = session.trainingLoadReport?.muscleLoad?.let { it / 2.0 }
-
-        // Sport-ID kann auf Session-Ebene oder auf Exercise-Ebene stehen.
         val sportId = session.sport?.id ?: firstExercise?.sport?.id
-
-        // Gerete-Modell als Suffix damit Frank sieht woher das Training kam
-        val sportName = PolarBulkSportMap.nameOf(sportId)
         val deviceModel = session.product?.modelName
 
         return AmazfitWorkoutEntity(
@@ -169,47 +228,161 @@ class PolarBulkImporter @Inject constructor(
             endMs = endEpochMs,
             durationSeconds = durationSeconds,
             sportType = PolarBulkSportMap.toHealthConnectType(sportId),
-            sportName = sportName,
-            distanceMeters = null,  // Polar liefert distance NICHT auf Top-Level — kommt aus zones/samples (Folge-Iteration)
-            avgPaceSecPerKm = null,
-            maxPaceSecPerKm = null,
-            avgSpeedKmh = null,
-            maxSpeedKmh = null,
+            sportName = PolarBulkSportMap.nameOf(sportId),
+            distanceMeters = distanceMeters,
+            avgPaceSecPerKm = avgPaceSecPerKm,
+            maxPaceSecPerKm = maxPaceSecPerKm,
+            avgSpeedKmh = avgSpeedKmh,
+            maxSpeedKmh = maxSpeedKmh,
             calories = calories,
             avgHeartRate = avgHr,
             maxHeartRate = maxHr,
-            gpsTrackJson = null,
-            heartRateSeriesJson = null,
+            gpsTrackJson = gpsTrackJson,
+            heartRateSeriesJson = heartRateSeriesJson,
             paceSeriesJson = null,
             splitsJson = null,
-            altitudeGainMeters = null,
-            altitudeLossMeters = null,
+            altitudeGainMeters = altGain.takeIf { it > 0.5 },
+            altitudeLossMeters = altLoss.takeIf { it > 0.5 },
             trainingEffectAerobic = trainEffectAerobic,
             trainingEffectAnaerobic = trainEffectAnaerobic,
             vo2Max = null,
-            cadence = null,
-            strideLengthCm = null,
+            cadence = cadenceAvg,
+            strideLengthCm = strideAvgCm,
             recoveryTimeHours = null,
             skinTempCelsius = null,
             swolf = null,
             poolLaps = null,
             poolLengthMeters = null,
             source = "polar-bulk",
-            city = deviceModel,  // Reuse city-Feld fuer Geraete-Modell als Anzeige
-            paceStreamJson = null,
+            city = deviceModel,
+            paceStreamJson = paceStreamJson,
             createdAt = System.currentTimeMillis(),
         )
     }
 
     /**
-     * Parst Polar's startTime "2025-07-26T15:38:28" (lokal ohne TZ) plus
-     * timezoneOffsetMinutes 120 in Unix-Millis.
+     * Parst Polar's startTime "2025-07-26T15:38:28" + timezoneOffsetMinutes 120
+     * in Unix-Millis.
      */
     private fun parseStartTimeToEpochMs(startTime: String, offsetMinutes: Int): Long? {
         return runCatching {
             val zone = ZoneOffset.ofTotalSeconds(offsetMinutes * 60)
-            LocalDateTime.parse(startTime).atOffset(zone).toInstant().toEpochMilli()
+            // startTime kann mit oder ohne ".000"-Suffix kommen
+            val parsed = if (startTime.contains('.')) {
+                LocalDateTime.parse(startTime.substringBefore('.'))
+            } else {
+                LocalDateTime.parse(startTime)
+            }
+            parsed.atOffset(zone).toInstant().toEpochMilli()
         }.getOrNull()
+    }
+
+    /**
+     * Wandelt einen Sample-Eintrag in eine Liste finiter Double-Werte.
+     * "NaN"-Strings und JSON-null werden uebersprungen.
+     */
+    private fun extractFiniteDoubles(entry: PolarBulkSampleEntry): List<Double> {
+        return entry.values.mapNotNull { v -> toFiniteDouble(v) }
+    }
+
+    private fun toFiniteDouble(v: JsonElement): Double? {
+        if (v is JsonNull) return null
+        return runCatching {
+            val p = v.jsonPrimitive
+            val s = p.content
+            if (s == "NaN" || s.equals("nan", ignoreCase = true)) return null
+            val d = p.doubleOrNull ?: s.toDoubleOrNull() ?: return null
+            if (d.isNaN() || d.isInfinite()) null else d
+        }.getOrNull()
+    }
+
+    /** Letzter finiter Wert eines Streams — Distanz akkumuliert. */
+    private fun lastFiniteValue(entry: PolarBulkSampleEntry): Double? {
+        for (i in entry.values.indices.reversed()) {
+            val d = toFiniteDouble(entry.values[i])
+            if (d != null && d > 0.0) return d
+        }
+        return null
+    }
+
+    private fun maxIntFromStream(entry: PolarBulkSampleEntry): Int? {
+        var max = -1.0
+        for (v in entry.values) {
+            val d = toFiniteDouble(v) ?: continue
+            if (d > max) max = d
+        }
+        return if (max > 0) max.toInt() else null
+    }
+
+    /**
+     * Heart-Rate-Stream zu JSON `[[ts, hr], ...]`.
+     */
+    private fun buildHrSeriesJson(entry: PolarBulkSampleEntry, startEpochMs: Long): String? {
+        val rate = (entry.intervalMillis ?: 1000L).coerceAtLeast(100L)
+        var anyPushed = false
+        val arr = buildJsonArray {
+            entry.values.forEachIndexed { idx, v ->
+                val hr = toFiniteDouble(v)?.toInt() ?: return@forEachIndexed
+                if (hr <= 0) return@forEachIndexed
+                val ts = startEpochMs + idx.toLong() * rate
+                addJsonArray {
+                    add(JsonPrimitive(ts))
+                    add(JsonPrimitive(hr))
+                }
+                anyPushed = true
+            }
+        }
+        return if (anyPushed) JSON.encodeToString(JsonArray.serializer(), arr) else null
+    }
+
+    /**
+     * SPEED-Stream (m/s) -> Pace-Verlauf in Sekunden pro km.
+     * Format `[[ts, paceSecPerKm], ...]`.
+     */
+    private fun buildPaceStreamJson(entry: PolarBulkSampleEntry, startEpochMs: Long): String? {
+        val rate = (entry.intervalMillis ?: 1000L).coerceAtLeast(100L)
+        var anyPushed = false
+        val arr = buildJsonArray {
+            entry.values.forEachIndexed { idx, v ->
+                val ms = toFiniteDouble(v) ?: return@forEachIndexed
+                val ts = startEpochMs + idx.toLong() * rate
+                addJsonArray {
+                    add(JsonPrimitive(ts))
+                    if (ms > 0.1) {
+                        // m/s -> sec/km : 1000/ms
+                        add(JsonPrimitive(1000.0 / ms))
+                        anyPushed = true
+                    } else {
+                        add(JsonPrimitive(null as String?))
+                    }
+                }
+            }
+        }
+        return if (anyPushed) JSON.encodeToString(JsonArray.serializer(), arr) else null
+    }
+
+    /**
+     * GPS-Track aus wayPoints im AmazfitEntity-Format `[[lat, lon, alt, ts], ...]`.
+     * timestamp = startEpochMs + elapsedMillis.
+     */
+    private fun buildGpsTrackJson(points: List<PolarBulkWayPoint>, startEpochMs: Long): String? {
+        var anyPushed = false
+        val arr = buildJsonArray {
+            points.forEach { p ->
+                val lat = p.latitude ?: return@forEach
+                val lon = p.longitude ?: return@forEach
+                val elapsed = p.elapsedMillis ?: 0L
+                val ts = startEpochMs + elapsed
+                addJsonArray {
+                    add(JsonPrimitive(lat))
+                    add(JsonPrimitive(lon))
+                    add(JsonPrimitive(p.altitude ?: 0.0))
+                    add(JsonPrimitive(ts))
+                }
+                anyPushed = true
+            }
+        }
+        return if (anyPushed) JSON.encodeToString(JsonArray.serializer(), arr) else null
     }
 
     companion object {

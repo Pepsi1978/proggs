@@ -60,22 +60,61 @@ data class PolarBulkExercise(
     val timezoneOffsetMinutes: Int? = null,
     val sport: PolarBulkSport? = null,
     val trainingLoadReport: PolarBulkTrainingLoadReport? = null,
-    /**
-     * Statistics liefert pro Metrik-Typ (HR, SPEED, CADENCE, ...) ein Min/Avg/Max.
-     * Wir nutzen das fuer avg/max-HR-Fallback wenn Top-Level keine hat.
-     */
     val statistics: PolarBulkStatisticsWrapper? = null,
     val zones: JsonElement? = null,
     /**
-     * Samples liegen unter samples.samples[] mit type + intervalMillis + values[].
-     * Wir nehmen das vorerst nur als JsonElement — in einer Folge-Iteration
-     * werden wir HR/Speed/Cadence-Streams daraus extrahieren.
+     * Frank-Live-Sonde 2026-05-16: samples.samples[] enthaelt pro Metrik-Typ
+     * ein Eintrag mit type + intervalMillis + values[]. Bekannte Typen:
+     * HEART_RATE, SPEED, DISTANCE, CADENCE, ALTITUDE, TEMPERATURE,
+     * STRIDE_LENGTH, LEFT_CRANK_CURRENT_POWER.
      */
-    val samples: JsonElement? = null,
-    /** GPS-Track. Format noch nicht abschliessend bekannt. */
-    val recordedRoute: JsonElement? = null,
+    val samples: PolarBulkSamplesWrapper? = null,
+    /**
+     * Frank-Live-Sonde 2026-05-16: routes.route.wayPoints[] enthaelt GPS-Punkte
+     * mit {longitude, latitude, altitude, elapsedMillis}. Bei Indoor-Trainings ist
+     * routes null oder leer.
+     */
+    val routes: PolarBulkRoutesWrapper? = null,
     val laps: JsonElement? = null,
     val strengthTrainingResults: JsonElement? = null,
+)
+
+@Serializable
+data class PolarBulkSamplesWrapper(
+    val samples: List<PolarBulkSampleEntry> = emptyList(),
+)
+
+/**
+ * Ein einzelner typisierter Sample-Stream.
+ *
+ * `values` ist JsonElement-Liste weil Polar in den Werten "NaN" als String
+ * mischen kann — z.B. bei Indoor-Trainings wo DISTANCE und SPEED keine
+ * Werte haben. kotlinx.serialization wirft sonst NumberFormatException.
+ */
+@Serializable
+data class PolarBulkSampleEntry(
+    val type: String? = null,
+    val intervalMillis: Long? = null,
+    val values: List<JsonElement> = emptyList(),
+)
+
+@Serializable
+data class PolarBulkRoutesWrapper(
+    val route: PolarBulkRoute? = null,
+)
+
+@Serializable
+data class PolarBulkRoute(
+    val startTime: String? = null,
+    val wayPoints: List<PolarBulkWayPoint> = emptyList(),
+)
+
+@Serializable
+data class PolarBulkWayPoint(
+    val longitude: Double? = null,
+    val latitude: Double? = null,
+    val altitude: Double? = null,
+    val elapsedMillis: Long? = null,
 )
 
 @Serializable
