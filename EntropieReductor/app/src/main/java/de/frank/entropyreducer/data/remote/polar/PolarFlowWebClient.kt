@@ -240,29 +240,146 @@ class PolarFlowWebClient @Inject constructor(
      */
     suspend fun parseAndStoreWorkoutBody(exerciseId: Long, rawBody: String): Result<AmazfitWorkoutEntity?> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         runCatching {
-            val trimmed = rawBody.trimStart()
-            Log.i(TAG, "PolarFlowWeb: parseAndStoreWorkoutBody bytes=${rawBody.length} starts=${trimmed.take(50)}")
+            // Polar Flow Web liefert samples + route separat — wir prefixen
+            // sie im JS damit wir hier wissen welcher Endpoint es war.
+            val payload = when {
+                rawBody.startsWith("SAMPLES:") -> rawBody.removePrefix("SAMPLES:")
+                rawBody.startsWith("ROUTE:") -> rawBody.removePrefix("ROUTE:")
+                else -> rawBody
+            }
+            val sourceKind = when {
+                rawBody.startsWith("SAMPLES:") -> "samples"
+                rawBody.startsWith("ROUTE:") -> "route"
+                else -> "summary"
+            }
+            val trimmed = payload.trimStart()
+            Log.i(TAG, "PolarFlowWeb: parseAndStoreWorkoutBody source=$sourceKind bytes=${payload.length} starts=${trimmed.take(80)}")
             when {
-                trimmed.startsWith("{") || trimmed.startsWith("[") -> parseWorkoutJson(exerciseId, rawBody)
-                trimmed.contains("TrainingCenterDatabase") -> parseTcx(exerciseId, rawBody)
-                trimmed.startsWith("<gpx") || trimmed.contains("<gpx ") -> parseGpxOnly(exerciseId, rawBody)
+                sourceKind == "samples" -> parseFlowWebSamples(exerciseId, payload)
+                sourceKind == "route" -> parseFlowWebRoute(exerciseId, payload)
+                trimmed.startsWith("{") || trimmed.startsWith("[") -> parseWorkoutJson(exerciseId, payload)
+                trimmed.contains("TrainingCenterDatabase") -> parseTcx(exerciseId, payload)
+                trimmed.startsWith("<gpx") || trimmed.contains("<gpx ") -> parseGpxOnly(exerciseId, payload)
                 trimmed.startsWith("<") -> {
-                    // HTML — versuche inline-JSON zu extrahieren
-                    val extracted = extractTrainingJsonFromHtml(rawBody, exerciseId)
-                    if (extracted != null) {
-                        Log.i(TAG, "PolarFlowWeb: HTML-Inline-JSON extrahiert (${extracted.length} bytes)")
-                        parseWorkoutJson(exerciseId, extracted)
-                    } else {
-                        Log.w(TAG, "PolarFlowWeb: HTML enthielt kein verwertbares Trainings-JSON")
-                        null
-                    }
+                    val extracted = extractTrainingJsonFromHtml(payload, exerciseId)
+                    if (extracted != null) parseWorkoutJson(exerciseId, extracted) else null
                 }
                 else -> {
-                    Log.w(TAG, "PolarFlowWeb: unbekanntes Body-Format — preview=${rawBody.take(200)}")
+                    Log.w(TAG, "PolarFlowWeb: unbekanntes Body-Format — preview=${payload.take(200)}")
                     null
                 }
             }
         }
+    }
+
+    /**
+     * Parst Polar Flow Web's `/api/training/analysis/{id}/samples`-Response.
+     * Polar's Format: `{"sampleTypes":["HEART_RATE","SPEED","ALTITUDE","CADENCE","DISTANCE"],
+     *                   "HEART_RATE":[[0,95],[1000,102],...], "SPEED":[...], ...}`
+     */
+    private fun parseFlowWebSamples(exerciseId: Long, json: String): AmazfitWorkoutEntity? {
+        return runCatching {
+            val root = Json.parseToJsonElement(json) as? JsonObject ?: return@runCatching null
+            // Stamm-Eintrag muss schon in DB sein (summary lief vorher)
+            val startMs = root["startTime"]?.let { (it as? JsonPrimitive)?.doubleOrNull?.toLong() }
+                ?: System.currentTimeMillis()
+            val hrArr = root["HEART_RATE"] as? JsonArray ?: root["heartRate"] as? JsonArray
+            val speedArr = root["SPEED"] as? JsonArray ?: root["speed"] as? JsonArray
+            val altArr = root["ALTITUDE"] as? JsonArray ?: root["altitude"] as? JsonArray
+            val cadArr = root["CADENCE"] as? JsonArray ?: root["RUN_CADENCE"] as? JsonArray ?: root["cadence"] as? JsonArray
+            val distArr = root["DISTANCE"] as? JsonArray ?: root["distance"] as? JsonArray
+
+            val hrJson = extractTsValuePairsAsJson(hrArr, startMs, "hr")
+            val speedJson = extractTsValuePairsAsJson(speedArr, startMs, "speed")
+            val paceJson = speedJson?.let { speedToPace(it) }
+            val maxSpeed = maxFromArray(speedArr)
+            val maxPace = maxSpeed?.takeIf { it > 0 }?.let { 3600.0 / it }
+            val altGain = altitudeGain(altArr)
+            val altLoss = altitudeLoss(altArr)
+            val cadenceAvg = avgFromArray(cadArr)
+            val splitsJson = splitsFromDistance(distArr)
+
+            AmazfitWorkoutEntity(
+                trackId = "polar-$exerciseId",
+                dateKey = "",
+                startMs = startMs,
+                endMs = startMs,
+                durationSeconds = null,
+                sportType = null, sportName = null,
+                distanceMeters = null,
+                avgPaceSecPerKm = null,
+                maxPaceSecPerKm = maxPace,
+                avgSpeedKmh = null,
+                maxSpeedKmh = maxSpeed,
+                calories = null,
+                avgHeartRate = null,
+                maxHeartRate = null,
+                gpsTrackJson = null,
+                heartRateSeriesJson = hrJson,
+                paceSeriesJson = splitsJson,
+                splitsJson = null,
+                altitudeGainMeters = altGain,
+                altitudeLossMeters = altLoss,
+                trainingEffectAerobic = null, trainingEffectAnaerobic = null,
+                vo2Max = null,
+                cadence = cadenceAvg?.toInt(),
+                strideLengthCm = null,
+                recoveryTimeHours = null, skinTempCelsius = null,
+                swolf = null, poolLaps = null, poolLengthMeters = null,
+                source = "polar-flow-web",
+                city = null,
+                paceStreamJson = paceJson,
+                createdAt = System.currentTimeMillis(),
+            )
+        }.getOrNull()
+    }
+
+    /**
+     * Parst Polar Flow Web's `/api/training/analysis/{id}/route`-Response.
+     * Format: `[[lat,lon,alt,time], ...]` oder `{"route":[...]}`.
+     */
+    private fun parseFlowWebRoute(exerciseId: Long, json: String): AmazfitWorkoutEntity? {
+        return runCatching {
+            val gpsJson = json.trim().let { trimmed ->
+                if (trimmed.startsWith("{")) {
+                    val obj = Json.parseToJsonElement(trimmed) as? JsonObject ?: return@let null
+                    val arr = obj["route"] as? JsonArray
+                        ?: obj["coordinates"] as? JsonArray
+                        ?: obj["points"] as? JsonArray
+                        ?: return@let null
+                    Json.encodeToString(JsonArray.serializer(), arr)
+                } else if (trimmed.startsWith("[")) {
+                    trimmed
+                } else null
+            } ?: return@runCatching null
+            AmazfitWorkoutEntity(
+                trackId = "polar-$exerciseId",
+                dateKey = "",
+                startMs = 0L,
+                endMs = 0L,
+                durationSeconds = null,
+                sportType = null, sportName = null,
+                distanceMeters = null,
+                avgPaceSecPerKm = null, maxPaceSecPerKm = null,
+                avgSpeedKmh = null, maxSpeedKmh = null,
+                calories = null,
+                avgHeartRate = null, maxHeartRate = null,
+                gpsTrackJson = gpsJson,
+                heartRateSeriesJson = null,
+                paceSeriesJson = null,
+                splitsJson = null,
+                altitudeGainMeters = null, altitudeLossMeters = null,
+                trainingEffectAerobic = null, trainingEffectAnaerobic = null,
+                vo2Max = null,
+                cadence = null, strideLengthCm = null,
+                recoveryTimeHours = null, skinTempCelsius = null,
+                swolf = null, poolLaps = null, poolLengthMeters = null,
+                source = "polar-flow-web",
+                city = null,
+                paceStreamJson = null,
+                createdAt = System.currentTimeMillis(),
+            )
+        }.getOrNull()
     }
 
     /**
@@ -765,15 +882,25 @@ class PolarFlowWebClient @Inject constructor(
     private fun parseWorkoutJson(exerciseId: Long, json: String): AmazfitWorkoutEntity? {
         return runCatching {
             val root = Json.parseToJsonElement(json) as? JsonObject ?: return@runCatching null
-            val startTime = root["startTime"]?.let { (it as? JsonPrimitive)?.contentOrNull }
+            // Polar Flow Web nutzt startDate/stopTime — AccessLink V3 nutzt startTime
+            val startTime = root["startDate"]?.let { (it as? JsonPrimitive)?.contentOrNull }
+                ?: root["startTime"]?.let { (it as? JsonPrimitive)?.contentOrNull }
             val durationIso = root["duration"]?.let { (it as? JsonPrimitive)?.contentOrNull }
             val distance = root["distance"]?.let { (it as? JsonPrimitive)?.doubleOrNull }
             val calories = root["calories"]?.let { (it as? JsonPrimitive)?.intOrNull }
+                ?: root["kiloCalories"]?.let { (it as? JsonPrimitive)?.intOrNull }
             val sport = root["sport"]?.let { (it as? JsonPrimitive)?.contentOrNull }
+                ?: (root["sport"] as? JsonObject)?.get("name")?.let { (it as? JsonPrimitive)?.contentOrNull }
             val avgHr = root["avgHeartRate"]?.let { (it as? JsonPrimitive)?.intOrNull }
+                ?: root["heartRateAvg"]?.let { (it as? JsonPrimitive)?.intOrNull }
                 ?: (root["heartRate"] as? JsonObject)?.get("average")?.let { (it as? JsonPrimitive)?.intOrNull }
             val maxHr = root["maxHeartRate"]?.let { (it as? JsonPrimitive)?.intOrNull }
+                ?: root["heartRateMax"]?.let { (it as? JsonPrimitive)?.intOrNull }
                 ?: (root["heartRate"] as? JsonObject)?.get("maximum")?.let { (it as? JsonPrimitive)?.intOrNull }
+            val maxSpeedKmh = root["maxSpeed"]?.let { (it as? JsonPrimitive)?.doubleOrNull }
+            val cadenceAvgTopLevel = root["cadenceAvg"]?.let { (it as? JsonPrimitive)?.intOrNull }
+            val ascent = root["ascent"]?.let { (it as? JsonPrimitive)?.doubleOrNull }
+            val descent = root["descent"]?.let { (it as? JsonPrimitive)?.doubleOrNull }
 
             val startMs = startTime?.let {
                 runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
@@ -825,9 +952,9 @@ class PolarFlowWebClient @Inject constructor(
                 sportName = PolarSampleMapper.mapSportToGerman(sport, null),
                 distanceMeters = actualDistance,
                 avgPaceSecPerKm = avgPace,
-                maxPaceSecPerKm = maxPace,
+                maxPaceSecPerKm = maxPace ?: (maxSpeedKmh?.takeIf { it > 0 }?.let { 3600.0 / it }),
                 avgSpeedKmh = avgSpd,
-                maxSpeedKmh = maxSpeed,
+                maxSpeedKmh = maxSpeed ?: maxSpeedKmh,
                 calories = calories?.toDouble(),
                 avgHeartRate = avgHr,
                 maxHeartRate = maxHr,
@@ -835,12 +962,12 @@ class PolarFlowWebClient @Inject constructor(
                 heartRateSeriesJson = hrJson,
                 paceSeriesJson = splitsJson,
                 splitsJson = null,
-                altitudeGainMeters = altGain,
-                altitudeLossMeters = altLoss,
+                altitudeGainMeters = altGain ?: ascent,
+                altitudeLossMeters = altLoss ?: descent,
                 trainingEffectAerobic = null,
                 trainingEffectAnaerobic = null,
                 vo2Max = vo2,
-                cadence = cadenceAvg?.toInt(),
+                cadence = cadenceAvg?.toInt() ?: cadenceAvgTopLevel,
                 strideLengthCm = strideLengthCm,
                 recoveryTimeHours = null,
                 skinTempCelsius = null,

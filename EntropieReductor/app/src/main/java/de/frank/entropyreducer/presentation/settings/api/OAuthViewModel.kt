@@ -348,6 +348,7 @@ class OAuthViewModel @Inject constructor(
      * weiter damit es parst und in die DB schreibt.
      */
     fun savePolarFlowWebWorkoutJson(exerciseId: Long, rawBody: String) {
+        android.util.Log.i("OAuthViewModel", "savePolarFlowWebWorkoutJson: exerciseId=$exerciseId bytes=${rawBody.length}")
         viewModelScope.launch {
             val result = polarFlowWeb.parseAndStoreWorkoutBody(exerciseId, rawBody)
             result.onSuccess { fresh ->

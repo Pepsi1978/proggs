@@ -280,7 +280,14 @@ fun PolarFlowWorkoutLoaderScreen(
                                     return
                                 }
                                 if (url.contains("/training/")) {
-                                    status = "Workout-Seite geladen — Polar wird durchsucht…"
+                                    // Polar Flow Web's ID kann sich vom AccessLink V3 unterscheiden
+                                    // — extrahiere die TATSAECHLICHE ID aus der URL.
+                                    val idMatch = Regex("/training/(?:analysis/)?(\\d+)").find(url)
+                                    val realId = idMatch?.groupValues?.getOrNull(1)?.toLongOrNull() ?: exerciseId
+                                    if (realId != exerciseId) {
+                                        Log.i(TAG, "WorkoutLoader: ID-Mapping: $exerciseId -> $realId (Polar Flow Web nutzt eigene IDs)")
+                                    }
+                                    status = "Workout-Seite geladen ($realId) — XHR-Interceptor aktiv…"
                                     // PASSIVE Interception: Polar's eigene App macht XHR-
                                     // Calls. Wir interceptieren window.fetch + XMLHttpRequest
                                     // und melden alle Trainings-Daten-relevante Responses
@@ -297,7 +304,7 @@ fun PolarFlowWorkoutLoaderScreen(
                                                 if (text.length < 1000) return false;
                                                 // Muss mindestens 2 Training-Felder enthalten
                                                 let hits = 0;
-                                                if (text.indexOf('"$exerciseId"') >= 0) hits += 2;
+                                                if (text.indexOf('"${realId}"') >= 0) hits += 2;
                                                 if (text.indexOf('"exerciseId"') >= 0) hits += 1;
                                                 if (text.indexOf('"samples"') >= 0) hits += 1;
                                                 if (text.indexOf('"heartRate"') >= 0) hits += 1;
@@ -330,35 +337,35 @@ fun PolarFlowWorkoutLoaderScreen(
                                             // 2) Polar's eigene App's Endpoints abklopfen — VIELE Pfad-Varianten
                                             (async () => {
                                                 const probes = [
-                                                    '/api/training/analysis/$exerciseId',
-                                                    '/api/training/analysis/$exerciseId/summary',
-                                                    '/api/training/analysis/$exerciseId/details',
-                                                    '/api/training/analysis/$exerciseId/samples',
-                                                    '/api/training/analysis/$exerciseId/route',
-                                                    '/api/training/$exerciseId',
-                                                    '/api/training/$exerciseId/full',
-                                                    '/api/exercises/$exerciseId',
-                                                    '/api/exercises/$exerciseId/full',
-                                                    '/api/exercises/$exerciseId/data',
-                                                    '/api/exercises/$exerciseId/samples',
-                                                    '/api/exercises/$exerciseId/route',
-                                                    '/api/sport-activities/$exerciseId',
-                                                    '/api/sport-activities/$exerciseId/data',
-                                                    '/api/training-session/$exerciseId',
-                                                    '/api/training-sessions/$exerciseId',
-                                                    '/api/training-sessions/$exerciseId/full',
-                                                    '/api/training-sessions/$exerciseId/details',
-                                                    '/training/api/sample/heartRate/$exerciseId',
-                                                    '/training/api/sample/speed/$exerciseId',
-                                                    '/training/api/sample/altitude/$exerciseId',
-                                                    '/training/api/sample/distance/$exerciseId',
-                                                    '/training/api/sample/cadence/$exerciseId',
-                                                    '/api/training/route/$exerciseId',
-                                                    '/api/training/$exerciseId/route',
-                                                    '/api/training/sample/$exerciseId',
-                                                    '/api/training/route?id=$exerciseId',
-                                                    '/api/training/analyseTab/$exerciseId',
-                                                    '/api/analyseTab/$exerciseId',
+                                                    '/api/training/analysis/${realId}',
+                                                    '/api/training/analysis/${realId}/summary',
+                                                    '/api/training/analysis/${realId}/details',
+                                                    '/api/training/analysis/${realId}/samples',
+                                                    '/api/training/analysis/${realId}/route',
+                                                    '/api/training/${realId}',
+                                                    '/api/training/${realId}/full',
+                                                    '/api/exercises/${realId}',
+                                                    '/api/exercises/${realId}/full',
+                                                    '/api/exercises/${realId}/data',
+                                                    '/api/exercises/${realId}/samples',
+                                                    '/api/exercises/${realId}/route',
+                                                    '/api/sport-activities/${realId}',
+                                                    '/api/sport-activities/${realId}/data',
+                                                    '/api/training-session/${realId}',
+                                                    '/api/training-sessions/${realId}',
+                                                    '/api/training-sessions/${realId}/full',
+                                                    '/api/training-sessions/${realId}/details',
+                                                    '/training/api/sample/heartRate/${realId}',
+                                                    '/training/api/sample/speed/${realId}',
+                                                    '/training/api/sample/altitude/${realId}',
+                                                    '/training/api/sample/distance/${realId}',
+                                                    '/training/api/sample/cadence/${realId}',
+                                                    '/api/training/route/${realId}',
+                                                    '/api/training/${realId}/route',
+                                                    '/api/training/sample/${realId}',
+                                                    '/api/training/route?id=${realId}',
+                                                    '/api/training/analyseTab/${realId}',
+                                                    '/api/analyseTab/${realId}',
                                                 ];
                                                 for (const u of probes) {
                                                     try {
@@ -382,6 +389,32 @@ fun PolarFlowWorkoutLoaderScreen(
                                                     }
                                                 }
                                                 console.log('PolarProbe ALL endpoints scanned, no match');
+                                            })();
+
+                                            // 3) Wenn /summary geliefert hat: ZUSAETZLICH samples + route holen
+                                            (async () => {
+                                                try {
+                                                    const samplesUrl = '/api/training/analysis/${realId}/samples';
+                                                    const rs = await fetch(samplesUrl, {credentials:'include',headers:{'Accept':'application/json,*/*'}});
+                                                    if (rs.ok) {
+                                                        const txt = await rs.text();
+                                                        console.log('PolarSamples HTTP ' + rs.status + ' bytes=' + txt.length);
+                                                        if (txt.length > 200) Android.receiveJson('SAMPLES:' + txt);
+                                                    } else {
+                                                        console.log('PolarSamples HTTP ' + rs.status);
+                                                    }
+                                                } catch(e) { console.log('PolarSamples err: ' + e.message); }
+                                                try {
+                                                    const routeUrl = '/api/training/analysis/${realId}/route';
+                                                    const rr = await fetch(routeUrl, {credentials:'include',headers:{'Accept':'application/json,*/*'}});
+                                                    if (rr.ok) {
+                                                        const txt = await rr.text();
+                                                        console.log('PolarRoute HTTP ' + rr.status + ' bytes=' + txt.length);
+                                                        if (txt.length > 200) Android.receiveJson('ROUTE:' + txt);
+                                                    } else {
+                                                        console.log('PolarRoute HTTP ' + rr.status);
+                                                    }
+                                                } catch(e) { console.log('PolarRoute err: ' + e.message); }
                                             })();
 
                                             const origFetch = window.fetch;
