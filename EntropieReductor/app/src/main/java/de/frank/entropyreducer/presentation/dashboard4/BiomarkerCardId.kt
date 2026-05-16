@@ -18,6 +18,10 @@ package de.frank.entropyreducer.presentation.dashboard4
  */
 object BiomarkerCardId {
     const val GESAMTERHOLUNG = "gesamterholung"
+    // Frank-Wunsch 2026-05-16: Erholungs-Verlauf analog zum Tiefschlaf-Verlauf —
+    // Balken-Graph der letzten 30 Tage Recovery-Score mit Ampel-Farben
+    // (80-100 gruen, 60-79 gelb, <60 rot) und Bottom-Sheet mit Historie.
+    const val RECOVERY_GRAPH = "recovery_graph"
 
     // Mini-Cards (Frank-Wunsch 2026-05-10): einzelne Mini-Karten im 2-Spalten-Grid,
     // die unabhaengig voneinander verschoben werden koennen. Frueher waren sie zu
@@ -115,6 +119,7 @@ object BiomarkerCardId {
     val DEFAULT_ORDER: List<String> =
         listOf(
             GESAMTERHOLUNG,
+            RECOVERY_GRAPH,
             MINI_HRV,
             MINI_RHR,
             MINI_SLEEP_TOTAL,

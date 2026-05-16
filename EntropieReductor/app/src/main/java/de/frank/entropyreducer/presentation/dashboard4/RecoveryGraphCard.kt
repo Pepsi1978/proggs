@@ -1,0 +1,333 @@
+package de.frank.entropyreducer.presentation.dashboard4
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.theme.CosmosColors
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+/**
+ * Erholungsverlauf-Pattern (Frank-Wunsch 2026-05-16).
+ *
+ * Zeigt den Recovery-Score (0-100) der letzten ~30 Tage als Balken-Graph. Tap auf den Graphen
+ * oeffnet eine Bottom-Sheet mit ALLEN historischen Erholungswerten und der Abweichung zum
+ * jeweiligen Vortag. Unter dem Graphen werden — wie bei allen anderen Karten — der
+ * 30-Tage-Durchschnitt UND die aktuelle Abweichung zum Durchschnitt angezeigt.
+ *
+ * Pattern uebernommen 1:1 vom Tiefschlaf-Verlauf (DeepSleepGraphCard) — nur die Berechnung +
+ * Ampel-Schwellen wurden gegen die Recovery-Doktrin getauscht:
+ *  - 80-100 % → Gruen (Success)
+ *  - 60-80 %  → Gelb (Warning)
+ *  - unter 60 % → Rot (Critical)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun RecoveryGraphCard(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    history: List<BiomarkerSnapshotEntity>,
+) {
+    val cosmos = LocalCosmos.current
+    val accent = CosmosColors.Success
+
+    val derived =
+        remember(selectedSnapshot, history) {
+            recoveryDerived(selectedSnapshot = selectedSnapshot, history = history)
+        }
+
+    var sheetOpen by remember { mutableStateOf(false) }
+
+    GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
+        Column {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Erholungsverlauf",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = cosmos.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Recovery-Score pro Tag",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                Text(
+                    text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
+                    color = derived.currentPercent?.let { recoveryBarColor(it) } ?: accent,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            RecoveryBars(values = derived.last30Percent)
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text =
+                        "30-Tage-Schnitt: ${derived.avg30Percent?.let { "%.0f %%".format(it) } ?: "—"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.weight(1f),
+                )
+                if (derived.deltaVsAvg != null) {
+                    RecoveryTrendBadgePercent(delta = derived.deltaVsAvg)
+                }
+            }
+            Text(
+                text = "Tippen fuer komplette Historie",
+                style = MaterialTheme.typography.labelSmall,
+                color = cosmos.textSecondary.copy(alpha = 0.6f),
+            )
+        }
+    }
+
+    if (sheetOpen) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
+            RecoveryHistorySheetContent(rows = derived.historyRows)
+        }
+    }
+}
+
+/* ------------------------- Datenaufbereitung ------------------------- */
+
+private data class RecoveryDerived(
+    val currentPercent: Double?,
+    val avg30Percent: Double?,
+    val deltaVsAvg: Double?,
+    val last30Percent: List<Double>,
+    val historyRows: List<RecoveryRow>,
+)
+
+internal data class RecoveryRow(
+    val date: LocalDate,
+    val percent: Double,
+    val deltaToPrevDay: Double?,
+)
+
+private fun recoveryDerived(
+    selectedSnapshot: BiomarkerSnapshotEntity?,
+    history: List<BiomarkerSnapshotEntity>,
+): RecoveryDerived {
+    val zone = ZoneId.systemDefault()
+    val all =
+        history
+            .mapNotNull { snap ->
+                val pct = snap.recoveryScore?.toDouble() ?: return@mapNotNull null
+                val date = Instant.ofEpochMilli(snap.capturedAt).atZone(zone).toLocalDate()
+                date to pct
+            }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { entry -> entry.value.average() }
+            .toSortedMap()
+            .map { (date, pct) -> date to pct }
+
+    val current = selectedSnapshot?.recoveryScore?.toDouble() ?: all.lastOrNull()?.second
+    val last30 = all.takeLast(30).map { it.second }
+    val avg30 = if (last30.size >= 3) last30.average() else null
+    val delta = if (current != null && avg30 != null) current - avg30 else null
+
+    val rows = mutableListOf<RecoveryRow>()
+    all.forEachIndexed { idx, (date, pct) ->
+        val prev = if (idx > 0) all[idx - 1].second else null
+        val deltaPrev = if (prev != null) pct - prev else null
+        rows += RecoveryRow(date = date, percent = pct, deltaToPrevDay = deltaPrev)
+    }
+    return RecoveryDerived(
+        currentPercent = current,
+        avg30Percent = avg30,
+        deltaVsAvg = delta,
+        last30Percent = last30,
+        historyRows = rows.reversed(),
+    )
+}
+
+/* ------------------------- UI-Bausteine ------------------------- */
+
+@Composable
+private fun RecoveryBars(values: List<Double>) {
+    val cosmos = LocalCosmos.current
+    // Y-Achse fest auf 100 % skalieren — Recovery-Score reicht definitionsgemaess
+    // von 0 bis 100. So sieht man die Ampel-Bereiche (60/80) klar.
+    val yMax = 100.0
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(80.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(cosmos.glassBg)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            if (values.isEmpty()) {
+                Text(
+                    text = "Noch keine Recovery-Daten",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                    modifier = Modifier.padding(4.dp),
+                )
+            } else {
+                values.forEach { pct ->
+                    val ratio = (pct / yMax).coerceIn(0.05, 1.0).toFloat()
+                    Box(
+                        modifier =
+                            Modifier.weight(1f)
+                                .fillMaxHeight(ratio)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(recoveryBarColor(pct))
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Frank-Wunsch 2026-05-16: Ampel-Farben analog zu Whoop-Doktrin.
+ *  - 80 % und mehr: gruen (gut erholt)
+ *  - 60-79 %:        gelb (mittel)
+ *  - unter 60 %:    rot  (schwach)
+ */
+private fun recoveryBarColor(pct: Double): Color =
+    when {
+        pct < 60.0 -> CosmosColors.Critical
+        pct < 80.0 -> CosmosColors.Warning
+        else -> CosmosColors.Success
+    }
+
+@Composable
+private fun RecoveryTrendBadgePercent(delta: Double) {
+    val color =
+        when {
+            delta > 0.5 -> CosmosColors.Success
+            delta < -0.5 -> CosmosColors.Critical
+            else -> CosmosColors.AccentPrimary
+        }
+    Box(
+        modifier =
+            Modifier.clip(RoundedCornerShape(8.dp))
+                .background(color.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = "%+.1f %%".format(delta),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+/* ------------------------- Bottom-Sheet ------------------------- */
+
+private val RECOVERY_SHEET_DATE_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE dd.MM.yyyy", Locale.GERMANY)
+
+@Composable
+private fun RecoveryHistorySheetContent(rows: List<RecoveryRow>) {
+    val cosmos = LocalCosmos.current
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = "Erholungs-Historie",
+            style = MaterialTheme.typography.titleLarge,
+            color = cosmos.textPrimary,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Recovery-Score pro Tag · Abweichung zum Vortag",
+            style = MaterialTheme.typography.labelSmall,
+            color = cosmos.textSecondary,
+        )
+        Spacer(Modifier.height(12.dp))
+        if (rows.isEmpty()) {
+            Text(
+                text = "Noch keine Daten gespeichert.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = cosmos.textSecondary,
+            )
+            return@Column
+        }
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(rows, key = { it.date.toEpochDay() }) { row -> RecoveryHistoryRow(row = row) }
+        }
+    }
+}
+
+@Composable
+private fun RecoveryHistoryRow(row: RecoveryRow) {
+    val cosmos = LocalCosmos.current
+    val deltaColor =
+        when {
+            row.deltaToPrevDay == null -> cosmos.textSecondary
+            row.deltaToPrevDay > 0.5 -> CosmosColors.Success
+            row.deltaToPrevDay < -0.5 -> CosmosColors.Critical
+            else -> CosmosColors.AccentPrimary
+        }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = row.date.format(RECOVERY_SHEET_DATE_FMT),
+            style = MaterialTheme.typography.bodyMedium,
+            color = cosmos.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "%.0f %%".format(row.percent),
+            style = MaterialTheme.typography.bodyMedium,
+            color = recoveryBarColor(row.percent),
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(end = 12.dp),
+        )
+        Text(
+            text = row.deltaToPrevDay?.let { "%+.1f %%".format(it) } ?: "—",
+            style = MaterialTheme.typography.bodyMedium,
+            color = deltaColor,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}

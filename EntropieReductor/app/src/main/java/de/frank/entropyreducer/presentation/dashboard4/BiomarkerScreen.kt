@@ -1356,6 +1356,11 @@ private fun BiomarkerCardForId(
     Column(modifier = Modifier.fillMaxWidth()) {
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
+            BiomarkerCardId.RECOVERY_GRAPH ->
+                RecoveryGraphCard(
+                    selectedSnapshot = state.selectedSnapshot ?: state.latest,
+                    history = state.history30Days,
+                )
             BiomarkerCardId.MINI_WEIGHT ->
                 MiniWeightCard(
                     weight = weightState,
