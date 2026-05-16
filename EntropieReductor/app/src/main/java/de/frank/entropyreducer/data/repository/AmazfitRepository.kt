@@ -164,7 +164,10 @@ class AmazfitRepository @Inject constructor(
             Log.d(TAG, "Polar: nicht verbunden — kein Polar-Sync")
             return emptyList()
         }
-        return repo.fetchWorkoutsAsEntities().getOrElse { ex ->
+        // 2026-05-16: Listen-Endpoint statt Transaction-Workflow. Transaction-
+        // Pfad ist destruktiv (Workout nach Commit nie wieder abrufbar);
+        // Listen-Pfad ist non-destruktiv und liefert die letzten 30 Tage.
+        return repo.pullLast30DaysAsEntities().getOrElse { ex ->
             if (ex !is kotlinx.coroutines.CancellationException) {
                 Log.w(TAG, "Polar-Sync fehlgeschlagen: ${ex.message}")
             }

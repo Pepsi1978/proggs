@@ -45,27 +45,21 @@ class PolarSyncWorker @AssistedInject constructor(
             Log.d(TAG, "Polar nicht verbunden — Sync skippen")
             return Result.success()
         }
-        // NEUER HAUPT-PFAD (Direktive 3, 2026-05-16): Listen-Endpoint pollen.
-        // Liefert die letzten 30 Tage MIT Streams, nicht-destruktiv (kein
-        // Commit-Tod nach erstem Pull). Pro Workout machen wir nochmal
-        // Direct-Reads fuer Samples + GPX mit der hashed ID die das
-        // Listen-Item bringt.
+        // HAUPT-PFAD (2026-05-16, Direktive 3): Listen-Endpoint pollen.
+        // Liefert die letzten 30 Tage MIT Streams. NIE-DESTRUKTIV: kein
+        // Transaction-Commit der die Daten aus Polar's API loescht.
+        // Dadurch koennen wir das gleiche Workout BELIEBIG OFT abrufen,
+        // bis Polar die Samples nachgereicht hat.
+        //
+        // Wichtige Konsequenz: Der Transaction-Workflow wird hier NICHT
+        // mehr aufgerufen. Polar's destruktiver Commit-Effekt (Workout nach
+        // erstem Pull dauerhaft weg) kann uns nicht mehr passieren.
         val listOutcome = polarRepo.pullLast30DaysAsEntities()
         val listEntities = listOutcome.getOrNull().orEmpty()
         applyEntities(listEntities, sourceTag = "Listen-Endpoint")
-
-        // ALT-PFAD als Fallback (z.B. fuer Workouts aelter als 30 Tage, die
-        // ueber den Listen-Endpoint nicht kommen): Transaction-Workflow.
-        // Solange Polar's Conditional-Commit-Logik aktiv ist, gehen auch
-        // hier keine frischen Workouts verloren.
-        val txOutcome = polarRepo.fetchWorkoutsAsEntities()
-        val txEntities = txOutcome.getOrNull().orEmpty()
-        applyEntities(txEntities, sourceTag = "Transaction")
-        return if (txOutcome.isSuccess) Result.success() else {
-            Log.w(TAG, "Polar-Transaction-Pfad fehlgeschlagen: ${txOutcome.exceptionOrNull()?.message}")
-            // Wenn der Listen-Endpoint Daten geliefert hat, sind wir trotzdem
-            // erfolgreich. Nur wenn auch der nichts brachte: retry.
-            if (listEntities.isNotEmpty()) Result.success() else Result.retry()
+        return if (listOutcome.isSuccess) Result.success() else {
+            Log.w(TAG, "Polar-Listen-Endpoint fehlgeschlagen: ${listOutcome.exceptionOrNull()?.message}")
+            Result.retry()
         }
     }
 

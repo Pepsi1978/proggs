@@ -80,13 +80,43 @@ class PolarRepository @Inject constructor(
             ?: throw IllegalStateException("Polar-Access-Token nicht verfuegbar")
         val bearer = "Bearer $accessToken"
 
-        val resp = api.listExercisesLast30Days(bearer)
-        if (!resp.isSuccessful || resp.body() == null) {
-            Log.w(TAG, "Polar: /v3/exercises HTTP ${resp.code()} — Fallback")
+        val rawResp = api.listExercisesLast30DaysRaw(bearer)
+        if (!rawResp.isSuccessful) {
+            Log.w(TAG, "Polar: /v3/exercises HTTP ${rawResp.code()} — Fallback")
             return@runCatchingCancellable emptyList()
         }
-        val items = resp.body()!!
-        Log.i(TAG, "Polar: /v3/exercises lieferte ${items.size} Workouts der letzten 30 Tage")
+        val rawBody = rawResp.body()?.string().orEmpty()
+        Log.i(TAG, "Polar: /v3/exercises raw response (${rawBody.length} bytes): ${rawBody.take(2000)}")
+        val items = runCatching {
+            // Polar gibt das oft als verschachteltes JSON. Wir versuchen
+            // mehrere Formen:
+            // 1. Top-Level-Array `[{...}, ...]`
+            // 2. Objekt `{"exercises": [{...}]}` mit "exercises"-Key
+            // 3. Objekt `{"data": [{...}]}` mit "data"-Key
+            val parsed = kotlinx.serialization.json.Json.parseToJsonElement(rawBody)
+            val arr = when (parsed) {
+                is kotlinx.serialization.json.JsonArray -> parsed
+                is kotlinx.serialization.json.JsonObject -> {
+                    parsed["exercises"] as? kotlinx.serialization.json.JsonArray
+                        ?: parsed["data"] as? kotlinx.serialization.json.JsonArray
+                        ?: parsed["items"] as? kotlinx.serialization.json.JsonArray
+                        ?: kotlinx.serialization.json.JsonArray(emptyList())
+                }
+                else -> kotlinx.serialization.json.JsonArray(emptyList())
+            }
+            arr.mapNotNull { el ->
+                runCatching {
+                    kotlinx.serialization.json.Json {
+                        ignoreUnknownKeys = true
+                        coerceInputValues = true
+                    }.decodeFromJsonElement(PolarExerciseListItem.serializer(), el)
+                }.getOrNull()
+            }
+        }.getOrElse { ex ->
+            Log.w(TAG, "Polar: /v3/exercises Body-Parse fehlgeschlagen — ${ex.message}")
+            emptyList()
+        }
+        Log.i(TAG, "Polar: /v3/exercises lieferte ${items.size} Workouts der letzten 30 Tage (raw=${rawBody.take(120)})")
 
         val entities = mutableListOf<AmazfitWorkoutEntity>()
         for ((idx, item) in items.withIndex()) {

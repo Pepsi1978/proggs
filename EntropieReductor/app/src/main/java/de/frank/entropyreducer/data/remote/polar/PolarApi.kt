@@ -172,6 +172,19 @@ interface PolarApi {
         @retrofit2.http.Query("route") includeRoute: Boolean = true,
     ): Response<List<PolarExerciseListItem>>
 
+    /**
+     * Variante mit Raw-ResponseBody — gibt uns die Moeglichkeit den JSON
+     * selbst zu parsen, falls Polar das Format wechselt (Array vs.
+     * Objekt mit `exercises`/`data`-Key).
+     */
+    @GET("v3/exercises")
+    suspend fun listExercisesLast30DaysRaw(
+        @Header("Authorization") bearer: String,
+        @retrofit2.http.Query("samples") includeSamples: Boolean = true,
+        @retrofit2.http.Query("zones") includeZones: Boolean = true,
+        @retrofit2.http.Query("route") includeRoute: Boolean = true,
+    ): Response<okhttp3.ResponseBody>
+
     /* ===================== Direct-Read-Endpoints (Webhook-Hash-ID) =====================
      *
      * Frank-Befund 2026-05-16 + Researcher-Finding: Polar AccessLink V3 hat
