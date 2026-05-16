@@ -1,0 +1,578 @@
+# Greppable-Patterns: Werkzeugkasten fuer systematische Suchen
+
+## Zweck
+
+Diese Datei sammelt ALLE Greppable-Patterns aus den Schichten 1-7 an einer Stelle. Sie ist der Werkzeugkasten — wenn ein bestimmter Bereich noch tiefer untersucht werden soll, hier nachschauen.
+
+Alle Patterns sind fuer **ripgrep (rg)** oder **grep** auf einem POSIX-Shell formatiert. Auf Windows Git Bash funktionieren sie identisch.
+
+## Generelle Tipps
+
+```bash
+# ripgrep ist schneller und respektiert .gitignore automatisch
+rg "pattern" --type kotlin
+
+# grep mit Datei-Typ:
+grep -rn "pattern" --include='*.kt' .
+
+# Wichtige Flags:
+-l       # nur Dateinamen
+-n       # mit Zeilennummern
+-A 5     # 5 Zeilen nach Treffer
+-B 2     # 2 Zeilen vor Treffer
+-r       # rekursiv
+-i       # case-insensitive
+--include='*.kt'   # Datei-Filter (grep)
+--type kotlin       # Datei-Filter (rg)
+```
+
+Ausschluss von Test-/Build-Verzeichnissen meistens noetig:
+```bash
+... | grep -v 'test/' | grep -v 'build/' | grep -v 'androidTest/'
+```
+
+## Schicht 1 — Manifest
+
+```bash
+# Permissions extrahieren
+grep -oE 'android.permission.[A-Z_]+' AndroidManifest.xml | sort -u
+
+# Activities mit Intent-Filtern
+grep -B1 -A8 '<activity' AndroidManifest.xml | grep -E 'android:name|intent-filter|action android:name|data android:'
+
+# Services
+grep -B1 -A6 '<service' AndroidManifest.xml
+
+# BroadcastReceiver
+grep -B1 -A6 '<receiver' AndroidManifest.xml
+
+# ContentProvider
+grep -B1 -A6 '<provider' AndroidManifest.xml
+
+# Deep-Links extrahieren
+grep -A5 '<intent-filter' AndroidManifest.xml | grep -E 'data android:scheme|data android:host|data android:pathPrefix'
+
+# Meta-Data Tags
+grep -B1 -A2 '<meta-data' AndroidManifest.xml
+
+# Mehrere Manifest-Varianten finden
+find . -name AndroidManifest.xml -not -path '*/build/*'
+
+# Final-merged Manifest nach Build
+ls app/build/intermediates/merged_manifests/release/AndroidManifest.xml 2>/dev/null
+```
+
+## Schicht 2 — Dependencies
+
+```bash
+# Alle implementations
+grep -E '^\s+(implementation|api|kapt|ksp|debugImplementation|releaseImplementation)\s' \
+  $(find . -name 'build.gradle.kts' -not -path '*/build/*')
+
+# Version-Catalog
+grep -E '^[a-zA-Z]' gradle/libs.versions.toml 2>/dev/null
+
+# Plugins
+grep -E 'apply\(|alias\(|id\("' app/build.gradle.kts | head -20
+
+# Build-Variants und Flavors
+grep -A30 'productFlavors' app/build.gradle.kts
+grep -A10 'buildTypes' app/build.gradle.kts
+```
+
+## Schicht 3 — Architektur
+
+```bash
+# ViewModels
+grep -rln '@HiltViewModel' --include='*.kt' . | sort
+grep -rn 'class.*ViewModel\(' --include='*.kt' . | grep -v 'test/'
+
+# Repositories
+grep -rln 'class.*Repository\|interface.*Repository' --include='*.kt' .
+
+# UseCases
+grep -rln 'class.*UseCase\|class.*Interactor' --include='*.kt' .
+
+# Hilt-Module
+grep -rln '@Module' --include='*.kt' .
+grep -rn '@Provides\|@Binds' --include='*.kt' . | head -100
+
+# Room
+grep -rln '@Entity\b' --include='*.kt' .
+grep -rln '@Database\b' --include='*.kt' .
+grep -rln '@Dao\b' --include='*.kt' .
+grep -rn '@Query\|@Insert\|@Delete\|@Update' --include='*.kt' .
+
+# Workers
+grep -rln 'class.*Worker\b\|: CoroutineWorker\|: ListenableWorker' --include='*.kt' .
+grep -rn 'OneTimeWorkRequest\|PeriodicWorkRequest' --include='*.kt' .
+
+# Sealed Classes
+grep -rn 'sealed class\|sealed interface' --include='*.kt' . | grep -E 'State|Event|Effect|Result|Action'
+
+# Application
+grep -rn ': Application()\|@HiltAndroidApp' --include='*.kt' .
+```
+
+## Schicht 4 — Bildschirme und Flows
+
+```bash
+# Top-Level-Screens
+grep -rn '@Composable' --include='*.kt' . | grep -E 'fun [A-Z][a-zA-Z]*Screen\('
+find . -name '*Screen.kt' -not -path '*/test/*' -not -path '*/build/*'
+
+# Compose Destinations Library
+grep -rn '@Destination\|@RootNavGraph\|@NavGraph' --include='*.kt' .
+
+# Navigation
+grep -rn 'NavHost(\|composable("' --include='*.kt' .
+grep -rn 'composable<' --include='*.kt' .
+grep -rn 'navController.navigate\|\.navigate(' --include='*.kt' .
+
+# Click-Handler
+grep -rn 'onClick = {' --include='*.kt' .
+grep -rn '\.clickable {' --include='*.kt' .
+grep -rn '\.combinedClickable\|onLongClick' --include='*.kt' .
+grep -rn '\.selectable\|\.toggleable' --include='*.kt' .
+grep -rn 'IconButton\|TextButton\|FilledTonalButton\|OutlinedButton' --include='*.kt' .
+
+# Side-Effects mit Navigation
+grep -rn 'LaunchedEffect' --include='*.kt' . -A 5
+grep -rn '\.collect {' --include='*.kt' . -A 3
+
+# Dialoge und Bottom-Sheets
+grep -rn 'AlertDialog\|Dialog(\|BasicAlertDialog\|DatePickerDialog' --include='*.kt' .
+grep -rn 'ModalBottomSheet\|BottomSheetScaffold' --include='*.kt' .
+grep -rn 'snackbarHostState\|SnackbarResult' --include='*.kt' .
+
+# UI-Events / UiEffects
+grep -rn 'sealed class UiEvent\|sealed class UiEffect' --include='*.kt' .
+grep -rn 'Channel<\|MutableSharedFlow' --include='*.kt' .
+
+# Onboarding
+grep -rn 'first.*launch\|firstLaunch\|isFirstTime\|onboardingComplete' --include='*.kt' . -i
+grep -rn 'startDestination' --include='*.kt' . -A 3
+grep -rn 'HorizontalPager\|rememberPagerState' --include='*.kt' .
+
+# BackHandler
+grep -rn 'BackHandler' --include='*.kt' .
+
+# ActivityResultLauncher / Externe Intents
+grep -rn 'rememberLauncherForActivityResult\|ActivityResultContracts' --include='*.kt' .
+grep -rn 'Intent\.ACTION_VIEW\|Intent\.ACTION_SEND\|Intent\.ACTION_PICK' --include='*.kt' .
+
+# Permissions Runtime
+grep -rn 'rememberPermissionState\|rememberMultiplePermissionsState' --include='*.kt' .
+grep -rn 'requestPermissions\|checkSelfPermission' --include='*.kt' .
+```
+
+## Schicht 5 — Paywall
+
+```bash
+# Core Billing
+grep -rln 'BillingClient\|BillingFlowParams\|ProductDetails' --include='*.kt' .
+grep -rn 'startConnection\|endConnection\|onBillingSetupFinished' --include='*.kt' .
+grep -rn 'queryProductDetailsAsync\|queryPurchasesAsync' --include='*.kt' .
+
+# Subscription-Felder
+grep -rn 'SubscriptionOfferDetails\|offerToken\|basePlanId\|pricingPhases' --include='*.kt' .
+
+# Kauf-Flow
+grep -rn 'launchBillingFlow\|setProductDetailsParamsList' --include='*.kt' .
+grep -rn 'obfuscatedAccountId\|setObfuscatedAccountId' --include='*.kt' .
+
+# Purchase-Verarbeitung
+grep -rn 'onPurchasesUpdated\|PurchaseState\|isAcknowledged' --include='*.kt' .
+grep -rn 'acknowledgePurchase\|consumeAsync' --include='*.kt' .
+
+# Subscription-Status
+grep -rn 'isSubscribed\|isPremium\|hasSubscription' --include='*.kt' . -i
+
+# Premium-Gates
+grep -rn 'requirePremium\|premiumOnly\|gateBehindPremium' --include='*.kt' . -i
+
+# Trial / Promo
+grep -rn 'pricingPhaseList\|priceAmountMicros\|billingPeriod' --include='*.kt' .
+grep -rn 'RecurrenceMode\|FINITE_RECURRING\|INFINITE_RECURRING\|NON_RECURRING' --include='*.kt' .
+grep -rn 'offerTags\|offerTag' --include='*.kt' .
+grep -rn 'linkedPurchaseToken' --include='*.kt' .
+
+# Cancel-Flow
+grep -rn 'churn\|cancel\|kuendig' --include='*.kt' . -i | grep -v 'test/'
+grep -rn 'ChurnReason\|CancelReason\|cancellationReason' --include='*.kt' .
+
+# Server-Side Validation
+grep -rn 'callFirebaseFunction\|FirebaseFunctions\|httpsCallable' --include='*.kt' .
+
+# Restore Purchases
+grep -rn 'restorePurchases\|RESTORE_PURCHASE' --include='*.kt' . -i
+```
+
+## Schicht 6 — Hidden Features
+
+```bash
+# Background-Jobs
+grep -rln 'class.*Worker\b\|: CoroutineWorker\|: ListenableWorker' --include='*.kt' .
+grep -rn 'WorkManager\.getInstance\|enqueue\|enqueueUniqueWork' --include='*.kt' .
+
+# Widgets
+grep -rln 'class.*: AppWidgetProvider\|extends AppWidgetProvider' --include='*.kt' --include='*.java' .
+grep -rn 'AppWidgetManager\|RemoteViews' --include='*.kt' .
+find . -path '*/res/xml/*widget*.xml'
+
+# Quick-Settings-Tile
+grep -rln 'class.*: TileService' --include='*.kt' .
+
+# App-Shortcuts
+grep -rln 'ShortcutManager\|ShortcutInfo\|ShortcutInfoCompat' --include='*.kt' .
+find . -name 'shortcuts.xml' -path '*/res/xml/*'
+
+# Notification-Channels
+grep -rn 'NotificationChannel\|createNotificationChannel' --include='*.kt' .
+
+# Accessibility Service
+grep -rln 'class.*: AccessibilityService' --include='*.kt' --include='*.java'
+
+# Print
+grep -rn 'PrintDocumentAdapter\|PrintManager\|PrintAttributes' --include='*.kt' .
+
+# NFC
+grep -rn 'NfcAdapter\|NdefRecord\|NdefMessage\|HostApduService' --include='*.kt' .
+
+# Boot-Receiver
+grep -rln 'BroadcastReceiver' --include='*.kt' . | xargs grep -l 'BOOT_COMPLETED' 2>/dev/null
+
+# Feature-Flags / Remote Config
+grep -rn 'FirebaseRemoteConfig\|remoteConfig\b\|remoteConfig\.' --include='*.kt' .
+grep -rn 'BuildConfig\.\|BUILD_TYPE\|FLAVOR\b' --include='*.kt' .
+grep -rn 'isFeatureEnabled\|featureFlag\|FeatureToggle' --include='*.kt' . -i
+
+# Debug-Menus
+grep -rn 'setOnLongClickListener\|onLongClick\|combinedClickable' --include='*.kt' . -A 5
+grep -rn 'BuildConfig.DEBUG' --include='*.kt' . -A 5
+grep -rn 'debugMenu\|DebugScreen\|InternalSettings' --include='*.kt' . -i
+
+# A/B-Tests
+grep -rn 'experiment\|variant\|cohort\|abTest\|treatment' --include='*.kt' . -i
+
+# Account-Deletion
+grep -rn 'deleteAccount\|removeUser\|clearAllData\|gdprDelete' --include='*.kt' . -i
+
+# Backup-Logik
+grep -rln 'BackupAgent\|BackupAgentHelper' --include='*.kt' --include='*.java'
+find . -name 'backup_rules.xml' -path '*/res/xml/*'
+
+# Sharing-Empfaenger
+grep -rn 'ACTION_SEND\|ACTION_SEND_MULTIPLE\|ACTION_PROCESS_TEXT' --include='*.kt' --include='AndroidManifest.xml' .
+
+# In-App-Review
+grep -rn 'ReviewManager\|launchReviewFlow' --include='*.kt' .
+
+# Foreground Services
+grep -rn 'startForeground\|startForegroundService\|foregroundServiceType' --include='*.kt' --include='AndroidManifest.xml' .
+
+# Dynamic Feature Modules
+grep -rn 'com.android.dynamic-feature\|SplitInstallManager' --include='*.kt' --include='*.gradle*' .
+
+# Health Connect
+grep -rn 'HealthConnectClient\|readRecords\|insertRecords\|HealthPermission' --include='*.kt' .
+
+# Credential Manager
+grep -rn 'CredentialManager\|GetPasswordOption\|GetPasskeyOption' --include='*.kt' .
+
+# In-App-Updates
+grep -rn 'AppUpdateManager\|AppUpdateInfo\|completeUpdate' --include='*.kt' .
+
+# DataStore-Keys / SharedPreferences-Keys
+grep -rn 'stringPreferencesKey\|booleanPreferencesKey\|intPreferencesKey\|longPreferencesKey' --include='*.kt' .
+```
+
+## Schicht 7 — Marketing Audit
+
+```bash
+# Strings extrahieren
+cat app/src/main/res/values/strings.xml > /tmp/claims_de.txt
+
+# Alle Sprachen
+ls -d app/src/main/res/values-* | sort
+for f in app/src/main/res/values-*/strings.xml; do
+  echo "===== $f ====="
+  cat "$f"
+done > /tmp/claims_translated.txt
+
+# KRITISCH-Keywords
+grep -E '(unlimited|unbegrenzt|all features|alle Features|always|immer|24/7|forever|lifetime|lebenslang|niemals)' \
+  app/src/main/res/values/strings.xml -i
+
+# HOCH-Keywords
+grep -E '(\bAI\b|\bKI\b|smart|intelligent|offline|private|privat|secure|sicher|ad-free|werbefrei|encrypted|verschluesselt|kostenlos)' \
+  app/src/main/res/values/strings.xml -i
+
+# MITTEL-Keywords
+grep -E '(premium|pro|best|fastest|schnellste|complete|exclusive|professional|profi)' \
+  app/src/main/res/values/strings.xml -i
+
+# Code-Realitaet: Limits suchen
+grep -rn 'maxAnalyses\|dailyLimit\|aiLimit\|MAX_\|FREE_DAILY' --include='*.kt' .
+grep -rn 'analysisCount\|aiUsageCount' --include='*.kt' .
+
+# Code-Realitaet: Werbung-SDKs
+grep -rn 'AdMob\|InterstitialAd\|RewardedAd\|BannerAd' --include='*.kt' .
+grep -E 'AD_ID' app/src/main/AndroidManifest.xml
+
+# Code-Realitaet: KI-Aufrufe
+grep -rn 'GenerativeModel\|GeminiClient\|OpenAI\|Anthropic\|Claude' --include='*.kt' .
+grep -rn 'generateContent\|chat.completions' --include='*.kt' .
+
+# Code-Realitaet: Cloud-Calls
+grep -rn 'firebaseFunctions\|httpsCallable\|retrofit\|ktor' --include='*.kt' .
+
+# Code-Realitaet: Verschluesselung
+grep -rn 'AES\|EncryptedSharedPreferences\|MasterKey\|sqlCipher' --include='*.kt' .
+
+# Code-Realitaet: Analytics
+grep -rn 'FirebaseAnalytics\|Crashlytics\|FirebasePerformance' --include='*.kt' .
+grep -rn 'logEvent\|setUserProperty' --include='*.kt' .
+```
+
+## Schicht 4b — Wortlaut-Mapping (String-Resource-Bruecken)
+
+Diese Patterns sind die zentrale Brücke fuer 1:1-Wortlaut-Extraktion. Sie machen sichtbar WELCHE Strings in WELCHER Datei verwendet werden.
+
+### Compose: String-Resources
+
+```bash
+# stringResource — der haeufigste Compose-Pattern
+grep -rn 'stringResource(\s*R\.string\.' --include='*.kt' . | grep -v '/test/' | grep -v '/build/'
+
+# pluralStringResource — fuer Mengenangaben
+grep -rn 'pluralStringResource(\s*R\.plurals\.' --include='*.kt' . | grep -v '/test/'
+
+# stringResource MIT Format-Argumenten
+grep -rn 'stringResource(\s*R\.string\.[a-zA-Z_]\+\s*,' --include='*.kt' . | grep -v '/test/'
+
+# stringArrayResource — typisch fuer Settings-Dropdowns
+grep -rn 'stringArrayResource(\s*R\.array\.' --include='*.kt' .
+grep -rn 'integerArrayResource(\s*R\.array\.' --include='*.kt' .
+
+# Pro Screen-Datei: welche String-Keys werden verwendet?
+SCREEN=DashboardScreen.kt
+grep -oE 'R\.string\.[a-zA-Z0-9_]+' "$SCREEN" | sort -u
+grep -oE 'R\.plurals\.[a-zA-Z0-9_]+' "$SCREEN" | sort -u
+grep -oE 'R\.array\.[a-zA-Z0-9_]+' "$SCREEN" | sort -u
+```
+
+### Klassisches Android (Activity/Fragment/View)
+
+```bash
+# getString in allen Varianten
+grep -rn 'getString(\s*R\.string\.' --include='*.kt' --include='*.java' . | grep -v '/test/'
+grep -rn 'context\.getString\|requireContext()\.getString\|resources\.getString\|getResources()\.getString' --include='*.kt' --include='*.java' . | grep -v '/test/'
+
+# getQuantityString — Plurals klassisch
+grep -rn 'getQuantityString(\s*R\.plurals\.' --include='*.kt' --include='*.java' .
+
+# getStringArray
+grep -rn 'getStringArray(\s*R\.array\.' --include='*.kt' --include='*.java' .
+
+# XML-Layouts mit Text-Slots
+grep -rn 'android:text=' --include='*.xml' res/ | grep -v '@string/' | head -50
+grep -rn 'android:text="@string/' --include='*.xml' res/
+grep -rn 'android:hint=' --include='*.xml' res/
+grep -rn 'android:contentDescription=' --include='*.xml' res/
+grep -rn 'app:helperText=\|app:errorText=\|app:placeholderText=' --include='*.xml' res/
+```
+
+### Strings-XML alle definierten Keys
+
+```bash
+# Alle String-Keys in der Hauptsprache (zaehlen + listen)
+grep -oE '<string name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<string name="//' | sed 's/"$//' | sort -u
+
+# Alle Plurals
+grep -oE '<plurals name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<plurals name="//' | sed 's/"$//' | sort -u
+
+# Alle Arrays
+grep -oE '<string-array name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<string-array name="//' | sed 's/"$//' | sort -u
+
+# Anzahl pro Sprache
+for f in app/src/main/res/values*/strings.xml; do
+  printf "%-50s %s\n" "$f" "$(grep -c '<string name=' "$f")"
+done
+
+# Tote Keys finden (definiert aber im Code nicht verwendet)
+ALL_KEYS=$(grep -oE '<string name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<string name="//' | sed 's/"$//')
+for k in $ALL_KEYS; do
+  if ! grep -rq "R\.string\.$k\b" --include='*.kt' --include='*.java' --include='*.xml' .; then
+    echo "TOT: $k"
+  fi
+done
+
+# Fehlende Keys (im Code verwendet, in strings.xml nicht definiert)
+USED_KEYS=$(grep -roEh 'R\.string\.[a-zA-Z0-9_]+' --include='*.kt' --include='*.java' . | sed 's/R\.string\.//' | sort -u)
+for k in $USED_KEYS; do
+  if ! grep -q "<string name=\"$k\"" app/src/main/res/values/strings.xml; then
+    echo "FEHLT: $k"
+  fi
+done
+```
+
+### Dialoge — alle Slots erfassen
+
+```bash
+# Compose AlertDialog (Material 3 Slots: title, text, confirmButton, dismissButton)
+grep -rn 'AlertDialog(' --include='*.kt' . -A 30 | grep -E 'title = |text = |confirmButton = |dismissButton = '
+
+# Compose BasicAlertDialog (eigenes Layout)
+grep -rn 'BasicAlertDialog(' --include='*.kt' . -A 30
+
+# Klassisches AlertDialog.Builder
+grep -rn 'AlertDialog\.Builder\|MaterialAlertDialogBuilder' --include='*.kt' --include='*.java' . -A 20 | grep -E '\.setTitle\(|\.setMessage\(|\.setPositiveButton\(|\.setNegativeButton\(|\.setNeutralButton\('
+
+# Date/Time/Picker-Dialoge
+grep -rn 'DatePickerDialog\|TimePickerDialog\|MaterialDatePicker\|MaterialTimePicker' --include='*.kt' --include='*.java' . -A 10
+```
+
+### Menues (alle Tiefen)
+
+```bash
+# Klassische Menu-XML
+find . -path '*/res/menu/*.xml' -not -path '*/build/*'
+grep -rn '<item\b' --include='*.xml' res/menu/ -A 3
+
+# Compose DropdownMenu
+grep -rn 'DropdownMenu(' --include='*.kt' . -A 5
+grep -rn 'DropdownMenuItem(' --include='*.kt' . -A 5
+
+# ExposedDropdownMenuBox (Settings/Pickers)
+grep -rn 'ExposedDropdownMenuBox\|ExposedDropdownMenu' --include='*.kt' . -A 5
+
+# Bottom Navigation
+grep -rn 'NavigationBar(\|NavigationBarItem(' --include='*.kt' . -A 8
+
+# Navigation Rail
+grep -rn 'NavigationRail(\|NavigationRailItem(' --include='*.kt' . -A 5
+
+# Drawer
+grep -rn 'NavigationDrawer\|ModalDrawerSheet\|PermanentDrawerSheet\|NavigationDrawerItem' --include='*.kt' . -A 5
+
+# TopAppBar mit Actions/Menu
+grep -rn 'TopAppBar(' --include='*.kt' . -A 15
+grep -rn 'CenterAlignedTopAppBar\|MediumTopAppBar\|LargeTopAppBar' --include='*.kt' . -A 15
+
+# Tabs
+grep -rn 'TabRow(\|ScrollableTabRow(\|Tab(\|LeadingIconTab(' --include='*.kt' . -A 5
+```
+
+### Settings/Preferences — komplette Hierarchie
+
+```bash
+# Preference-XML (klassisch, AndroidX Preference Library)
+find . -path '*/res/xml/*.xml' -not -path '*/build/*'
+grep -rn '<PreferenceScreen\|<PreferenceCategory\|<SwitchPreferenceCompat\|<CheckBoxPreference\|<ListPreference\|<EditTextPreference\|<SeekBarPreference\|<MultiSelectListPreference\|<DialogPreference\|<Preference\b' --include='*.xml' res/xml/ -A 5
+
+# Preference-Attribute extrahieren
+grep -roEh 'android:title="[^"]*"|android:summary="[^"]*"|android:entries="[^"]*"|android:entryValues="[^"]*"|android:dialogTitle="[^"]*"' --include='*.xml' res/xml/
+
+# Compose-basierte Settings (keine Standard-API, App-spezifisch)
+grep -rn 'SettingsScreen\|SettingsScreen(\|SettingsList\|SettingsRow\|SettingsItem\|PreferenceRow' --include='*.kt' .
+```
+
+### Snackbars, Toasts, Notifications
+
+```bash
+# Snackbar
+grep -rn 'snackbarHostState\.showSnackbar\|SnackbarHost\|Snackbar\.make\|SnackbarResult\|withDismissAction' --include='*.kt' --include='*.java' . -A 3
+
+# Toast
+grep -rn 'Toast\.makeText(' --include='*.kt' --include='*.java' . -A 1
+
+# Notification Channels (Name + Description)
+grep -rn 'NotificationChannel(\|createNotificationChannel\|notificationManager\.createNotificationChannel' --include='*.kt' --include='*.java' . -A 5
+
+# Notification-Inhalte
+grep -rn '\.setContentTitle(\|\.setContentText(\|\.setSubText(\|\.setTicker(\|\.setBigContentTitle(\|\.setSummaryText(\|\.addAction(' --include='*.kt' --include='*.java' .
+
+# Notification Action-Buttons
+grep -rn 'NotificationCompat\.Action\b\|NotificationCompat\.Action\.Builder' --include='*.kt' --include='*.java' .
+```
+
+### Error/Empty/Loading-States
+
+```bash
+# Pattern: sealed class UiState
+grep -rn 'sealed.*UiState\|sealed class.*State\|sealed interface.*State' --include='*.kt' . -A 8
+
+# Komponenten-Namen
+grep -rn 'ErrorScreen\|ErrorState\|ErrorMessage\|ErrorBanner\|EmptyScreen\|EmptyState\|EmptyView\|LoadingScreen\|LoadingState\|LoadingIndicator\|RetryButton\|RetryAction' --include='*.kt' . -A 10
+
+# Compose-Patterns fuer Error-Dialoge
+grep -rn 'isError = true\|supportingText.*error' --include='*.kt' .
+```
+
+### Hardcoded Strings (DARF nicht sein, MUSS aber geprueft werden)
+
+```bash
+# Compose: Text("...") mit Literal
+grep -rn 'Text(\s*"[A-Za-zÄÖÜäöü0-9]' --include='*.kt' . | grep -v '/test/' | grep -v '/build/' | grep -v 'Text(text ='
+
+# Compose: Text(text = "literal")
+grep -rn 'Text(\s*text\s*=\s*"[A-Za-zÄÖÜäöü0-9]' --include='*.kt' . | grep -v '/test/' | grep -v '/build/'
+
+# View: setText("literal")
+grep -rn '\.setText("[A-Za-zÄÖÜäöü0-9][^"]\{3,\}"' --include='*.kt' --include='*.java' . | grep -v '/test/'
+
+# Toast/Snackbar mit String-Literal
+grep -rn 'Toast\.makeText([^,]*,\s*"' --include='*.kt' --include='*.java' . | grep -v '/test/'
+grep -rn 'showSnackbar(\s*"' --include='*.kt' . | grep -v '/test/'
+
+# Title in AlertDialog mit Literal
+grep -rn '\.setTitle("\|\.setMessage("' --include='*.kt' --include='*.java' . | grep -v '/test/'
+```
+
+### Accessibility-Texte (contentDescription)
+
+```bash
+# Compose contentDescription
+grep -rn 'contentDescription\s*=' --include='*.kt' . | grep -v '/test/' | grep -v '/build/'
+
+# semantics-Block
+grep -rn 'semantics\s*{' --include='*.kt' . -A 3
+
+# XML
+grep -rn 'android:contentDescription=' --include='*.xml' res/
+```
+
+### Konkatenierte und Template-Strings
+
+```bash
+# String-Konkatenation mit Plus
+grep -rn '"\s*+\s*stringResource\|stringResource[^)]*)\s*+\s*"' --include='*.kt' .
+
+# Kotlin String-Templates (Vorsicht: viele False-Positives, nur exemplarisch pruefen)
+grep -rn '"[^"]*\$\(\|"[^"]*\${' --include='*.kt' . | grep -v '/test/' | head -30
+```
+
+## Quick-Master-Sweep (das wichtigste in einer Zeile)
+
+```bash
+# Schneller Erst-Eindruck — was hat die App alles?
+echo "=== SCREENS ===" && rg "@Composable" --type kotlin -l | wc -l
+echo "=== VIEWMODELS ===" && rg "@HiltViewModel" --type kotlin | wc -l
+echo "=== USECASES ===" && find . -name '*UseCase.kt' -o -name '*Interactor.kt' | wc -l
+echo "=== ROOM ENTITIES ===" && rg "@Entity\b" --type kotlin -l | wc -l
+echo "=== WORKERS ===" && rg "class.*Worker\b\|: CoroutineWorker" --type kotlin | wc -l
+echo "=== PERMISSIONS ===" && grep -oE 'android.permission.[A-Z_]+' AndroidManifest.xml | sort -u | wc -l
+echo "=== FEATURE FLAGS ===" && rg "remoteConfig\." --type kotlin | wc -l
+echo "=== BILLING REFS ===" && rg "BillingClient\|ProductDetails" --type kotlin -l | wc -l
+echo "=== STRING KEYS ===" && grep -c "<string name=" app/src/main/res/values/strings.xml
+echo "=== PLURAL KEYS ===" && grep -c "<plurals name=" app/src/main/res/values/strings.xml
+echo "=== ARRAY KEYS ===" && grep -c "<string-array name=" app/src/main/res/values/strings.xml
+echo "=== STRING USES (Compose) ===" && rg "stringResource\(\s*R\.string\." --type kotlin | wc -l
+echo "=== STRING USES (klassisch) ===" && rg "getString\(\s*R\.string\." --type kotlin | wc -l
+echo "=== MENU XML ===" && find . -path '*/res/menu/*.xml' -not -path '*/build/*' | wc -l
+echo "=== PREFERENCE XML ===" && find . -path '*/res/xml/*.xml' -not -path '*/build/*' | wc -l
+echo "=== HARDCODED Text() ===" && rg 'Text\(\s*"[A-Za-zÄÖÜäöü]' --type kotlin | grep -v '/test/' | wc -l
+```
+
+Diese Zeilen koennen vor jedem Audit ausgefuehrt werden um eine Groessenordnung der App zu bekommen.
