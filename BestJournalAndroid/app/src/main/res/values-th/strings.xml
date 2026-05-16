@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">คำแนะนำทั้งหมด</string>
     <string name="dashboard_connection">ความเชื่อมโยง</string>
     <string name="dashboard_limit_daily">ถึงขีดจำกัดของวันแล้ว พรุ่งนี้เจอกันใหม่!</string>
+    <string name="dashboard_limit_weekly_profile">ถึงขีดจำกัดรายสัปดาห์ของโปรไฟล์นี้แล้ว เปลี่ยนโปรไฟล์หรือรอจนถึงวันจันทร์</string>
     <string name="dashboard_limit_cooldown">พักสั้น ๆ: อีก %1$d นาทีจึงถึงการวิเคราะห์ถัดไป</string>
     <string name="dashboard_analysis_failed">การวิเคราะห์ล้มเหลว</string>
     <string name="dashboard_last_updated">อัปเดตล่าสุด: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">ถึงขีดจำกัดรายสัปดาห์</string>
-    <string name="ai_limit_body">ไม่มีการสมัครคุณมี 5\u00A0การปรับปรุงข้อความและ 5\u00A0การอัปเดตแดชบอร์ดต่อสัปดาห์\nPremium: สูงสุด 150 ต่อวัน คุณภาพสูงสุด</string>
+    <string name="ai_limit_body">ไม่มีการสมัครสมาชิกคุณจะมี 5 การปรับปรุงข้อความต่อสัปดาห์ และ 5 การอัปเดตแดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์
+ด้วย Premium: สูงสุด 150 ต่อวัน</string>
     <string name="ai_limit_monthly">รายเดือน %1$s ต่อเดือน</string>
     <string name="ai_limit_yearly">รายปี %1$s ต่อปี (ประหยัด 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">ไม่เป็นไร ใช้ต่อโดยไม่มี AI</string>

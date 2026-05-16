@@ -194,6 +194,7 @@
     <string name="dashboard_all_recommendations">બધી ભલામણો</string>
     <string name="dashboard_connection">જોડાણ</string>
     <string name="dashboard_limit_daily">દૈનિક મર્યાદા પહોંચી. કાલે ફરી!</string>
+    <string name="dashboard_limit_weekly_profile">આ પ્રોફાઇલ માટે સાપ્તાહિક મર્યાદા પૂર્ણ. પ્રોફાઇલ બદલો અથવા સોમવાર સુધી રાહ જુઓ.</string>
     <string name="dashboard_limit_cooldown">ટૂંકો વિરામ: આગળના વિશ્લેષણ સુધી %1$d મિનિટ બાકી.</string>
     <string name="dashboard_analysis_failed">વિશ્લેષણ નિષ્ફળ</string>
     <string name="dashboard_last_updated">છેલ્લે %1$s ના રોજ અપડેટ</string>
@@ -879,7 +880,8 @@
 
     
     <string name="ai_limit_title">♻</string>
-    <string name="ai_limit_body">♻ 5\u00A0♻ 5\u00A0♻\nPremium: 150 ♻</string>
+    <string name="ai_limit_body">સબ્સ્ક્રિપ્શન વિના તમારી પાસે દર અઠવાડિયે 5 ટેક્સ્ટ સુધારા અને દર અઠવાડિયે 5 ડૅશબૉર્ડ અપડેટ પ્રતિ પ્રોફાઇલ છે.
+Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="ai_limit_monthly">♻, %1$s/♻</string>
     <string name="ai_limit_yearly">♻, %1$s/♻ (37%% ♻)</string>
     <string name="ai_limit_no_thanks">♻ AI ♻</string>

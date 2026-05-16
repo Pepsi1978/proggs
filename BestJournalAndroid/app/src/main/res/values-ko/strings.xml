@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">모든 제안</string>
     <string name="dashboard_connection">연결</string>
     <string name="dashboard_limit_daily">오늘 한도에 도달했어요. 내일 이어가요!</string>
+    <string name="dashboard_limit_weekly_profile">이 프로필의 주간 한도에 도달했습니다. 프로필을 변경하거나 월요일까지 기다려 주세요.</string>
     <string name="dashboard_limit_cooldown">잠깐의 휴식이에요. 다음 분석까지 %1$d분 남았어요.</string>
     <string name="dashboard_analysis_failed">분석에 실패했어요</string>
     <string name="dashboard_last_updated">마지막 업데이트: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">이번 주 한도에 도달했어요</string>
-    <string name="ai_limit_body">구독 없이는 주에 5\u00A0회의 글 다듬기와 5\u00A0회의 대시보드 업데이트가 가능해요.\n프리미엄이면 하루 최대 150회, 최고 품질로.</string>
+    <string name="ai_limit_body">구독 없이는 주당 5 회 텍스트 개선과 프로필당 주당 5 회 대시보드 업데이트가 가능합니다.
+Premium: 하루 최대 150회.</string>
     <string name="ai_limit_monthly">월 요금제, 월 %1$s</string>
     <string name="ai_limit_yearly">연 요금제, 연 %1$s (37\u00A0%% 절약)</string>
     <string name="ai_limit_no_thanks">괜찮아요, AI 없이 계속할게요</string>

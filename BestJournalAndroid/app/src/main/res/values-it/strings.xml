@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Tutti i consigli</string>
     <string name="dashboard_connection">Collegamento</string>
     <string name="dashboard_limit_daily">Limite giornaliero raggiunto. Si continua domani!</string>
+    <string name="dashboard_limit_weekly_profile">Limite settimanale per questo profilo raggiunto. Cambia profilo o aspetta lunedì.</string>
     <string name="dashboard_limit_cooldown">Breve pausa: ancora %1$d minuti alla prossima analisi.</string>
     <string name="dashboard_analysis_failed">Analisi non riuscita</string>
     <string name="dashboard_last_updated">Ultimo aggiornamento il %1$s</string>
@@ -963,7 +964,8 @@ HERLEITUNG — PROVENIENZA DEL CONTENUTO:
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Hai raggiunto il limite settimanale</string>
-    <string name="ai_limit_body">Senza abbonamento hai 5\u00A0miglioramenti di testo e 5\u00A0aggiornamenti della dashboard a settimana.\nCon Premium: fino a 150 al giorno, in massima qualità.</string>
+    <string name="ai_limit_body">Senza abbonamento hai 5 miglioramenti testo a settimana e 5 aggiornamenti della dashboard a settimana per profilo.
+Con Premium: fino a 150 al giorno.</string>
     <string name="ai_limit_monthly">Abbonamento mensile, %1$s/mese</string>
     <string name="ai_limit_yearly">Abbonamento annuale, %1$s/anno (risparmi il 37%%)</string>
     <string name="ai_limit_no_thanks">No grazie, continua senza IA</string>

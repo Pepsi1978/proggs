@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Усі рекомендації</string>
     <string name="dashboard_connection">Зв\'язок</string>
     <string name="dashboard_limit_daily">Денний ліміт досягнуто. Завтра продовжимо!</string>
+    <string name="dashboard_limit_weekly_profile">Недельный лимит для этого профиля исчерпан. Смените профиль или подождите до понедельника.</string>
     <string name="dashboard_limit_cooldown">Коротка пауза: залишилося %1$d хв до наступного аналізу.</string>
     <string name="dashboard_analysis_failed">Аналіз не вдався</string>
     <string name="dashboard_last_updated">Останнє оновлення: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Ваш тижневий ліміт досягнуто</string>
-    <string name="ai_limit_body">Без підписки у вас 5\u00A0покращень тексту та 5\u00A0оновлень панелі на тиждень.\nЗ Преміум: до 150 на день у повній якості.</string>
+    <string name="ai_limit_body">Без подписки у вас 5 улучшений текста в неделю и 5 обновлений панели в неделю на профиль.
+С Premium: до 150 в день.</string>
     <string name="ai_limit_monthly">Місячна підписка, %1$s/міс.</string>
     <string name="ai_limit_yearly">Річна підписка, %1$s/рік (економія 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Ні, дякую, далі без ШІ</string>

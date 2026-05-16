@@ -255,6 +255,7 @@
     <string name="dashboard_all_recommendations">All Recommendations</string>
     <string name="dashboard_connection">Connection</string>
     <string name="dashboard_limit_daily">Daily limit reached. Try again tomorrow!</string>
+    <string name="dashboard_limit_weekly_profile">Weekly limit for this profile reached. Switch profile or wait until Monday.</string>
     <string name="dashboard_limit_cooldown">Short break: %1$d minutes until your next analysis.</string>
     <string name="dashboard_analysis_failed">Analysis failed</string>
     <string name="dashboard_last_updated">Last updated on %1$s</string>
@@ -942,7 +943,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">You\'ve reached your weekly limit</string>
-    <string name="ai_limit_body">Without a subscription you have 5\u00A0text improvements and 5\u00A0dashboard updates per week.\nWith Premium: up to 150 per day, in full quality.</string>
+    <string name="ai_limit_body">Without a subscription you have 5 text improvements per week and 5 dashboard updates per week per profile.
+With Premium: up to 150 per day.</string>
     <string name="ai_limit_monthly">Monthly, %1$s/month</string>
     <string name="ai_limit_yearly">Yearly, %1$s/year (save 37%%)</string>
     <string name="ai_limit_no_thanks">No thanks, continue without AI</string>

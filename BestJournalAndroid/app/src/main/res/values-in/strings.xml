@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Semua rekomendasi</string>
     <string name="dashboard_connection">Keterkaitan</string>
     <string name="dashboard_limit_daily">Batas harian tercapai. Besok lanjut lagi!</string>
+    <string name="dashboard_limit_weekly_profile">Batas mingguan profil ini tercapai. Ganti profil atau tunggu hingga hari Senin.</string>
     <string name="dashboard_limit_cooldown">Jeda singkat: %1$d menit lagi sampai analisis berikutnya.</string>
     <string name="dashboard_analysis_failed">Analisis gagal</string>
     <string name="dashboard_last_updated">Pembaruan terakhir: %1$s</string>
@@ -908,7 +909,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Batas mingguanmu tercapai</string>
-    <string name="ai_limit_body">Tanpa langganan kamu punya 5\u00A0perbaikan teks dan 5\u00A0pembaruan dasbor per minggu.\nDengan Premium: hingga 150 per hari, kualitas terbaik.</string>
+    <string name="ai_limit_body">Tanpa langganan kamu memiliki 5 peningkatan teks per minggu dan 5 pembaruan dasbor per minggu per profil.
+Dengan Premium: hingga 150 per hari.</string>
     <string name="ai_limit_monthly">Langganan bulanan, %1$s/bulan</string>
     <string name="ai_limit_yearly">Langganan tahunan, %1$s/tahun (hemat 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Tidak, lanjut tanpa AI</string>

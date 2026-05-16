@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">ಎಲ್ಲಾ ಶಿಫಾರಸುಗಳು</string>
     <string name="dashboard_connection">ಸಂಪರ್ಕ</string>
     <string name="dashboard_limit_daily">ದೈನಂದಿನ ಮಿತಿ ತಲುಪಿದೆ. ನಾಳೆ ಮುಂದುವರಿಯುತ್ತದೆ!</string>
+    <string name="dashboard_limit_weekly_profile">ಈ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರದ ಮಿತಿ ತಲುಪಿದೆ. ಪ್ರೊಫೈಲ್ ಬದಲಿಸಿ ಅಥವಾ ಸೋಮವಾರದವರೆಗೆ ಕಾಯಿರಿ.</string>
     <string name="dashboard_limit_cooldown">ಸಣ್ಣ ವಿರಾಮ: ಮುಂದಿನ ವಿಶ್ಲೇಷಣೆಗೆ ಇನ್ನೂ %1$d ನಿಮಿಷಗಳು.</string>
     <string name="dashboard_analysis_failed">ವಿಶ್ಲೇಷಣೆ ವಿಫಲವಾಯಿತು</string>
     <string name="dashboard_last_updated">ಕೊನೆಯ ಅಪ್‌ಡೇಟ್: %1$s</string>
@@ -911,7 +912,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">ನಿಮ್ಮ ವಾರದ ಮಿತಿ ತಲುಪಿದೆ</string>
-    <string name="ai_limit_body">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆ ನೀವು ವಾರಕ್ಕೆ 5\u00A0ಪಠ್ಯ ಸುಧಾರಣೆಗಳು ಮತ್ತು 5\u00A0ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಅಪ್‌ಡೇಟ್‌ಗಳನ್ನು ಹೊಂದಿದ್ದೀರಿ.\nPremium ಚಂದಾದಾರಿಕೆಯೊಂದಿಗೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ, ಪೂರ್ಣ ಗುಣಮಟ್ಟದಲ್ಲಿ.</string>
+    <string name="ai_limit_body">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲದೆ ನಿಮಗೆ ವಾರಕ್ಕೆ 5 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು ಮತ್ತು ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರಕ್ಕೆ 5 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನವೀಕರಣಗಳು ಇವೆ.
+Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="ai_limit_monthly">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ, ತಿಂಗಳಿಗೆ %1$s</string>
     <string name="ai_limit_yearly">ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆ, ವರ್ಷಕ್ಕೆ %1$s (37%% ಉಳಿಸಿ)</string>
     <string name="ai_limit_no_thanks">ಬೇಡ ಧನ್ಯವಾದಗಳು, AI ಇಲ್ಲದೆ ಮುಂದುವರಿಸಿ</string>

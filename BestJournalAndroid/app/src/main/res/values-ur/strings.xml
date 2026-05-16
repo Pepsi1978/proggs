@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">تمام سفارشات</string>
     <string name="dashboard_connection">ربط</string>
     <string name="dashboard_limit_daily">یومیہ حد پوری ہوگئی۔ کل دوبارہ جاری رہے گا!</string>
+    <string name="dashboard_limit_weekly_profile">اس پروفائل کی ہفتہ وار حد پوری ہو گئی۔ پروفائل تبدیل کریں یا پیر تک انتظار کریں۔</string>
     <string name="dashboard_limit_cooldown">مختصر وقفہ: اگلے تجزیے تک %1$d منٹ باقی ہیں۔</string>
     <string name="dashboard_analysis_failed">تجزیہ ناکام ہوگیا</string>
     <string name="dashboard_last_updated">آخری تازہ کاری: %1$s</string>
@@ -911,7 +912,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">آپ کی ہفتہ وار حد پوری ہوگئی</string>
-    <string name="ai_limit_body">سبسکرپشن کے بغیر آپ کے پاس 5\u00A0متن بہتریاں اور 5\u00A0ڈیش بورڈ اپ ڈیٹ ہیں ہفتہ وار۔\n‏Premium سبسکرپشن کے ساتھ: فی دن 150 تک، مکمل معیار میں۔</string>
+    <string name="ai_limit_body">سبسکرپشن کے بغیر آپ کے پاس فی ہفتہ 5 متن بہتری اور فی پروفائل فی ہفتہ 5 ڈیش بورڈ اپ ڈیٹ ہیں۔
+Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="ai_limit_monthly">ماہانہ سبسکرپشن، %1$s/ماہ</string>
     <string name="ai_limit_yearly">سالانہ سبسکرپشن، %1$s/سال (37%% بچائیں)</string>
     <string name="ai_limit_no_thanks">نہیں شکریہ، AI کے بغیر جاری رکھیں</string>

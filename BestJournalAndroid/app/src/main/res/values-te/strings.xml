@@ -204,6 +204,7 @@
     <string name="dashboard_all_recommendations">అన్ని సిఫార్సులు</string>
     <string name="dashboard_connection">కనెక్షన్</string>
     <string name="dashboard_limit_daily">రోజువారీ పరిమితి చేరుకుంది. రేపు కొనసాగుతుంది!</string>
+    <string name="dashboard_limit_weekly_profile">ఈ ప్రొఫైల్ యొక్క వారపు పరిమితి చేరుకుంది. ప్రొఫైల్ మార్చండి లేదా సోమవారం వరకు వేచి ఉండండి.</string>
     <string name="dashboard_limit_cooldown">చిన్న విరామం: తదుపరి విశ్లేషణ కోసం ఇంకా %1$d నిమిషాలు.</string>
     <string name="dashboard_analysis_failed">విశ్లేషణ విఫలమైంది</string>
     <string name="dashboard_last_updated">చివరి అప్‌డేట్: %1$s</string>
@@ -841,7 +842,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">మీ వారపు పరిమితి చేరుకుంది</string>
-    <string name="ai_limit_body">సబ్‌స్క్రిప్షన్ లేకుండా మీరు వారానికి 5\u00A0టెక్స్ట్ మెరుగుదలలు మరియు 5\u00A0డ్యాష్‌బోర్డ్ అప్‌డేట్‌లు కలిగి ఉన్నారు.\nPremium సబ్‌స్క్రిప్షన్‌తో: రోజుకి 150 వరకు, పూర్తి నాణ్యతలో.</string>
+    <string name="ai_limit_body">సబ్‌స్క్రిప్షన్ లేకుండా వారానికి 5 టెక్స్ట్ మెరుగుదలలు మరియు ప్రతి ప్రొఫైల్‌కు వారానికి 5 డాష్‌బోర్డ్ నవీకరణలు ఉంటాయి.
+Premium తో: రోజుకు 150 వరకు.</string>
     <string name="ai_limit_monthly">నెలవారీ సబ్‌స్క్రిప్షన్, %1$s/నెల</string>
     <string name="ai_limit_yearly">వార్షిక సబ్‌స్క్రిప్షన్, %1$s/సంవత్సరం (37%% ఆదా)</string>
     <string name="ai_limit_no_thanks">వద్దు ధన్యవాదాలు, AI లేకుండా కొనసాగించండి</string>

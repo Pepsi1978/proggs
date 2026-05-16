@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">सर्व शिफारसी</string>
     <string name="dashboard_connection">संबंध</string>
     <string name="dashboard_limit_daily">दैनंदिन मर्यादा गाठली. उद्या पुन्हा!</string>
+    <string name="dashboard_limit_weekly_profile">या प्रोफाइलची साप्ताहिक मर्यादा संपली. प्रोफाइल बदला किंवा सोमवारपर्यंत थांबा.</string>
     <string name="dashboard_limit_cooldown">थोडी विश्रांती: पुढील विश्लेषणासाठी आणखी %1$d मिनिटे.</string>
     <string name="dashboard_analysis_failed">विश्लेषण अयशस्वी</string>
     <string name="dashboard_last_updated">%1$s रोजी शेवटचे अद्यतनित</string>
@@ -1017,7 +1018,8 @@ herleitung — सामग्रीचा स्रोत:
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">तुमची साप्ताहिक मर्यादा संपली</string>
-    <string name="ai_limit_body">सदस्यत्वाशिवाय तुमच्याकडे आठवड्यात 5\u00A0मजकूर सुधारणे आणि 5\u00A0डॅशबोर्ड अद्यतने आहेत.\nPremium सदस्यत्वासह: दिवसाला 150 पर्यंत, पूर्ण गुणवत्तेत.</string>
+    <string name="ai_limit_body">सबस्क्रिप्शनशिवाय तुम्हाला आठवड्याला 5 मजकूर सुधारणा आणि प्रत्येक प्रोफाइलसाठी आठवड्याला 5 डॅशबोर्ड अपडेट मिळतात.
+Premium सह: दररोज 150 पर्यंत.</string>
     <string name="ai_limit_monthly">मासिक सदस्यत्व, %1$s/महिना</string>
     <string name="ai_limit_yearly">वार्षिक सदस्यत्व, %1$s/वर्ष (37%% बचत)</string>
     <string name="ai_limit_no_thanks">नको, AI शिवाय पुढे जा</string>

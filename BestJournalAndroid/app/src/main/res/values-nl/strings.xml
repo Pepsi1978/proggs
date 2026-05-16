@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Alle aanbevelingen</string>
     <string name="dashboard_connection">Verbinding</string>
     <string name="dashboard_limit_daily">Daglimiet bereikt. Morgen gaat het weer verder!</string>
+    <string name="dashboard_limit_weekly_profile">Weeklimiet voor dit profiel bereikt. Wissel van profiel of wacht tot maandag.</string>
     <string name="dashboard_limit_cooldown">Korte pauze: nog %1$d minuten tot de volgende analyse.</string>
     <string name="dashboard_analysis_failed">Analyse mislukt</string>
     <string name="dashboard_last_updated">Laatst bijgewerkt op %1$s</string>
@@ -989,7 +990,8 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Je weeklimiet is bereikt</string>
-    <string name="ai_limit_body">Zonder abonnement heb je 5\u00A0tekstverbeteringen en 5\u00A0dashboard-updates per week.\nMet Premium: tot 150 per dag, in volle kwaliteit.</string>
+    <string name="ai_limit_body">Zonder abonnement heb je 5 tekstverbeteringen per week en 5 dashboard-updates per week per profiel.
+Met Premium: tot 150 per dag.</string>
     <string name="ai_limit_monthly">Maandabonnement, %1$s/maand</string>
     <string name="ai_limit_yearly">Jaarabonnement, %1$s/jaar (bespaar 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Nee bedankt, verder zonder AI</string>

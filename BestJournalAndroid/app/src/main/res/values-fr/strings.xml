@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Toutes les recommandations</string>
     <string name="dashboard_connection">Lien</string>
     <string name="dashboard_limit_daily">Limite quotidienne atteinte. À demain\u202F!</string>
+    <string name="dashboard_limit_weekly_profile">Limite hebdomadaire de ce profil atteinte. Change de profil ou attends lundi.</string>
     <string name="dashboard_limit_cooldown">Petite pause\u00A0: encore %1$d minutes avant la prochaine analyse.</string>
     <string name="dashboard_analysis_failed">Échec de l\'analyse</string>
     <string name="dashboard_last_updated">Dernière actualisation le %1$s</string>
@@ -916,7 +917,8 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Ta limite hebdomadaire est atteinte</string>
-    <string name="ai_limit_body">Sans abonnement, tu as 5\u00A0améliorations de texte et 5\u00A0actualisations de tableau de bord par semaine.\nAvec Premium\u00A0: jusqu\'à 150 par jour, en qualité maximale.</string>
+    <string name="ai_limit_body">Sans abonnement, tu as 5 améliorations de texte par semaine et 5 actualisations du tableau de bord par semaine et par profil.
+Avec Premium : jusqu\'à 150 par jour.</string>
     <string name="ai_limit_monthly">Abonnement mensuel, %1$s/mois</string>
     <string name="ai_limit_yearly">Abonnement annuel, %1$s/an (économise 37\u202F%%)</string>
     <string name="ai_limit_no_thanks">Non merci, continuer sans IA</string>

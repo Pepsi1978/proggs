@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">すべての提案</string>
     <string name="dashboard_connection">関連</string>
     <string name="dashboard_limit_daily">今日の上限に達しました。明日続きをどうぞ！</string>
+    <string name="dashboard_limit_weekly_profile">このプロフィールの週間制限に達しました。プロフィールを切り替えるか、月曜日までお待ちください。</string>
     <string name="dashboard_limit_cooldown">少し休憩です。次の分析まであと%1$d分。</string>
     <string name="dashboard_analysis_failed">分析に失敗しました</string>
     <string name="dashboard_last_updated">最終更新：%1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">今週の上限に達しました</string>
-    <string name="ai_limit_body">サブスクなしでは、週に5\u00A0回の文章改善と5\u00A0回のダッシュボード更新です。\nプレミアムなら、日に最大150回、フルクオリティで。</string>
+    <string name="ai_limit_body">サブスクリプションなしでは、週に5 件のテキスト改善と、プロフィールごとに週5 件のダッシュボード更新が利用できます。
+Premiumでは：1日最大150件。</string>
     <string name="ai_limit_monthly">月額プラン、月%1$s</string>
     <string name="ai_limit_yearly">年額プラン、年%1$s(37\u00A0%%お得)</string>
     <string name="ai_limit_no_thanks">いいえ、AIなしで続ける</string>

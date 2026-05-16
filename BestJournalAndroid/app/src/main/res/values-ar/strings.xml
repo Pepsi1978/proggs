@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">كل التوصيات</string>
     <string name="dashboard_connection">ترابط</string>
     <string name="dashboard_limit_daily">تم بلوغ الحدّ اليومي. نواصل غدا!</string>
+    <string name="dashboard_limit_weekly_profile">تم بلوغ الحدّ الأسبوعي لهذا الملف التعريفي. غيِّر الملف التعريفي أو انتظر حتى الاثنين.</string>
     <string name="dashboard_limit_cooldown">استراحة قصيرة: %1$d دقيقة حتى التحليل التالي.</string>
     <string name="dashboard_analysis_failed">فشل التحليل</string>
     <string name="dashboard_last_updated">آخر تحديث: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">بلغت الحدّ الأسبوعي</string>
-    <string name="ai_limit_body">بدون اشتراك لديك 5\u00A0تحسينات نصّية و5\u00A0تحديثات للوحة التحكم أسبوعيا.\nمع المميّز: حتى 150 يوميا، بأعلى جودة.</string>
+    <string name="ai_limit_body">بدون اشتراك، لديك 5 تحسينات نصية أسبوعيًا و5 تحديثات لوحة تحكم أسبوعيًا لكل ملف تعريف.
+مع Premium: حتى 150 يوميًا.</string>
     <string name="ai_limit_monthly">اشتراك شهري، %1$s شهريا</string>
     <string name="ai_limit_yearly">اشتراك سنوي، %1$s سنويا (وفّر 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">لا شكرا، أتابع بدون ذكاء اصطناعي</string>

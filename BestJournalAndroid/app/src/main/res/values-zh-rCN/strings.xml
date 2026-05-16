@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">所有建议</string>
     <string name="dashboard_connection">关联</string>
     <string name="dashboard_limit_daily">今日上限已达到。明天继续！</string>
+    <string name="dashboard_limit_weekly_profile">该档案的每周限额已达到。请切换档案或等到下周一。</string>
     <string name="dashboard_limit_cooldown">小歇一下：距离下一次分析还有 %1$d 分钟。</string>
     <string name="dashboard_analysis_failed">分析失败</string>
     <string name="dashboard_last_updated">最近更新：%1$s</string>
@@ -910,7 +911,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">本周上限已到</string>
-    <string name="ai_limit_body">没有订阅，一周有 5\u00A0次文字润色和 5\u00A0次面板更新。\n高级版：每天最多 150 次，质量最高。</string>
+    <string name="ai_limit_body">无订阅时，每个账号每周有 5 次文字优化和每个档案每周 5 次仪表盘刷新。
+订阅 Premium：每天最多 150 次。</string>
     <string name="ai_limit_monthly">月度订阅，每月 %1$s</string>
     <string name="ai_limit_yearly">年度订阅，每年 %1$s （省 37\u00A0%%）</string>
     <string name="ai_limit_no_thanks">不用了，继续不用 AI</string>

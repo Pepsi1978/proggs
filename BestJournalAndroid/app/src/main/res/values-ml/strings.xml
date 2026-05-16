@@ -194,6 +194,7 @@
     <string name="dashboard_all_recommendations">എല്ലാ ശുപാർശകളും</string>
     <string name="dashboard_connection">ബന്ധം</string>
     <string name="dashboard_limit_daily">ദൈനംദിന പരിധി എത്തി. നാളെ തുടരാം!</string>
+    <string name="dashboard_limit_weekly_profile">ഈ പ്രൊഫൈലിന്റെ ആഴ്ചയിലെ പരിധി എത്തി. പ്രൊഫൈൽ മാറ്റുക അല്ലെങ്കിൽ തിങ്കളാഴ്ച വരെ കാത്തിരിക്കുക.</string>
     <string name="dashboard_limit_cooldown">ഒരു ചെറിയ ഇടവേള: അടുത്ത വിശകലനത്തിന് %1$d മിനിറ്റ് ബാക്കി.</string>
     <string name="dashboard_analysis_failed">വിശകലനം പരാജയപ്പെട്ടു</string>
     <string name="dashboard_last_updated">%1$s-ന് അവസാനം പുതുക്കി</string>
@@ -860,7 +861,8 @@
 
     <!-- AI LIMIT / COMPONENTS -->
     <string name="ai_limit_title">ആഴ്ച പരിധി എത്തി</string>
-    <string name="ai_limit_body">സബ്സ്ക്രിപ്ഷൻ ഇല്ലാതെ ആഴ്ചയിൽ 5\u00A0ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ, 5\u00A0ഡാഷ്ബോർഡ് അപ്‌ഡേറ്റ്.\nPremium-ൽ: ദിവസം 150 വരെ, പൂർണ്ണ ഗുണനിലവാരം.</string>
+    <string name="ai_limit_body">സബ്‌സ്‌ക്രിപ്‌ഷൻ ഇല്ലാതെ ആഴ്‌ചയിൽ 5 ടെക്‌സ്‌റ്റ് മെച്ചപ്പെടുത്തലുകളും ഓരോ പ്രൊഫൈലിനും ആഴ്‌ചയിൽ 5 ഡാഷ്‌ബോർഡ് അപ്‌ഡേറ്റുകളും ഉണ്ടായിരിക്കും.
+Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="ai_limit_monthly">മാസ സബ്സ്ക്രിപ്ഷൻ, %1$s/മാസം</string>
     <string name="ai_limit_yearly">വർഷ സബ്സ്ക്രിപ്ഷൻ, %1$s/വർഷം (37%% ലാഭം)</string>
     <string name="ai_limit_no_thanks">വേണ്ട, AI ഇല്ലാതെ തുടരുക</string>

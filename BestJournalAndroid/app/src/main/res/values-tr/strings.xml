@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">Tüm öneriler</string>
     <string name="dashboard_connection">Bağlantı</string>
     <string name="dashboard_limit_daily">Günlük limit doldu. Yarın devam!</string>
+    <string name="dashboard_limit_weekly_profile">Bu profilin haftalık limiti doldu. Profil değiştir veya Pazartesi'ye kadar bekle.</string>
     <string name="dashboard_limit_cooldown">Kısa mola: sonraki analize %1$d dakika kaldı.</string>
     <string name="dashboard_analysis_failed">Analiz başarısız</string>
     <string name="dashboard_last_updated">Son güncelleme: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Haftalık limitine ulaştın</string>
-    <string name="ai_limit_body">Aboneliksiz haftada 5\u00A0metin iyileştirme ve 5\u00A0panel güncellemesi var.\nPremium ile: günde 150\'ye kadar, tam kalitede.</string>
+    <string name="ai_limit_body">Abonelik olmadan haftada 5 metin iyileştirmesi ve her profil için haftada 5 pano güncellemesi hakkına sahipsin.
+Premium ile: günlük 150\'ye kadar.</string>
     <string name="ai_limit_monthly">Aylık abonelik, %1$s/ay</string>
     <string name="ai_limit_yearly">Yıllık abonelik, %1$s/yıl (37\u00A0%% tasarruf)</string>
     <string name="ai_limit_no_thanks">Hayır, teşekkürler, YZ olmadan devam</string>

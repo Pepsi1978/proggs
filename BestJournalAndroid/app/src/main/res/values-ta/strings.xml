@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">அனைத்து பரிந்துரைகளும்</string>
     <string name="dashboard_connection">தொடர்பு</string>
     <string name="dashboard_limit_daily">நாள் வரம்பு அடைந்தது. நாளை தொடரலாம்!</string>
+    <string name="dashboard_limit_weekly_profile">இந்த சுயவிவரத்தின் வாராந்திர வரம்பு எட்டப்பட்டது. சுயவிவரத்தை மாற்றவும் அல்லது திங்கள் வரை காத்திருக்கவும்.</string>
     <string name="dashboard_limit_cooldown">சிறிது இடைவெளி: அடுத்த பகுப்பாய்விற்கு இன்னும் %1$d நிமிடங்கள்.</string>
     <string name="dashboard_analysis_failed">பகுப்பாய்வு தோல்வியடைந்தது</string>
     <string name="dashboard_last_updated">கடைசியாக புதுப்பிக்கப்பட்டது %1$s</string>
@@ -936,7 +937,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">உங்கள் வார வரம்பு அடைந்தது</string>
-    <string name="ai_limit_body">சந்தா இல்லாமல் வாரத்திற்கு 5\u00A0உரை மேம்பாடுகள் மற்றும் 5\u00A0டாஷ்போர்டு புதுப்பிப்புகள்.\nPremium சந்தாவுடன்: நாளுக்கு 150 வரை, முழு தரத்தில்.</string>
+    <string name="ai_limit_body">சந்தாவின்றி வாரத்திற்கு 5 உரை மேம்பாடுகளும் ஒவ்வொரு சுயவிவரத்திற்கும் வாரத்திற்கு 5 டாஷ்போர்டு புதுப்பிப்புகளும் கிடைக்கும்.
+Premium-உடன்: நாளொன்றுக்கு 150 வரை.</string>
     <string name="ai_limit_monthly">மாத சந்தா, %1$s/மாதம்</string>
     <string name="ai_limit_yearly">ஆண்டு சந்தா, %1$s/ஆண்டு (37%% சேமிக்கவும்)</string>
     <string name="ai_limit_no_thanks">வேண்டாம், KI இல்லாமல் தொடரவும்</string>

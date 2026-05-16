@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">सभी सुझाव</string>
     <string name="dashboard_connection">जुड़ाव</string>
     <string name="dashboard_limit_daily">आज की सीमा पूरी। कल फिर जारी!</string>
+    <string name="dashboard_limit_weekly_profile">इस प्रोफ़ाइल की साप्ताहिक सीमा समाप्त हो गई। प्रोफ़ाइल बदलें या सोमवार तक प्रतीक्षा करें।</string>
     <string name="dashboard_limit_cooldown">छोटा ब्रेक: अगले विश्लेषण तक %1$d मिनट।</string>
     <string name="dashboard_analysis_failed">विश्लेषण विफल</string>
     <string name="dashboard_last_updated">पिछला अपडेट: %1$s</string>
@@ -907,7 +908,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">हफ्तावार सीमा पूरी</string>
-    <string name="ai_limit_body">बिना सदस्यता हर हफ्ते 5\u00A0टेक्स्ट सुधार और 5\u00A0डैशबोर्ड अपडेट।\nPremium: रोज़ 150 तक, सबसे अच्छी गुणवत्ता।</string>
+    <string name="ai_limit_body">सब्सक्रिप्शन के बिना आपके पास प्रति सप्ताह 5 टेक्स्ट सुधार और प्रति प्रोफ़ाइल प्रति सप्ताह 5 डैशबोर्ड अपडेट हैं।
+Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="ai_limit_monthly">माहवार सदस्यता, %1$s प्रति माह</string>
     <string name="ai_limit_yearly">सालाना सदस्यता, %1$s प्रति वर्ष (37\u00A0%% बचत)</string>
     <string name="ai_limit_no_thanks">नहीं, AI के बिना जारी रखें</string>

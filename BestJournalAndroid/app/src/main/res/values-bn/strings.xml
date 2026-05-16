@@ -207,6 +207,7 @@
     <string name="dashboard_all_recommendations">সব সুপারিশ</string>
     <string name="dashboard_connection">সংযোগ</string>
     <string name="dashboard_limit_daily">দৈনিক সীমা শেষ। আগামীকাল আবার চলবে!</string>
+    <string name="dashboard_limit_weekly_profile">এই প্রোফাইলের সাপ্তাহিক সীমা পৌঁছে গেছে। প্রোফাইল বদলান অথবা সোমবার পর্যন্ত অপেক্ষা করুন।</string>
     <string name="dashboard_limit_cooldown">ছোট বিরতি: পরবর্তী বিশ্লেষণের জন্য আরো %1$d মিনিট বাকি।</string>
     <string name="dashboard_analysis_failed">বিশ্লেষণ ব্যর্থ হয়েছে</string>
     <string name="dashboard_last_updated">শেষ হালনাগাদ: %1$s</string>
@@ -911,7 +912,8 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">তোমার সাপ্তাহিক সীমা শেষ</string>
-    <string name="ai_limit_body">সাবস্ক্রিপশন ছাড়া তুমি সপ্তাহে 5\u00A0লেখা উন্নতি আর 5\u00A0ড্যাশবোর্ড-হালনাগাদ পাবে।\nPremium-সাবস্ক্রিপশন দিয়ে: দিনে 150 পর্যন্ত, পূর্ণ গুণমানে।</string>
+    <string name="ai_limit_body">সাবস্ক্রিপশন ছাড়া আপনার প্রতি সপ্তাহে ৫টি টেক্সট উন্নতি এবং প্রতিটি প্রোফাইলের জন্য প্রতি সপ্তাহে ৫টি ড্যাশবোর্ড আপডেট আছে।
+Premium-এ: প্রতিদিন ১৫০ পর্যন্ত।</string>
     <string name="ai_limit_monthly">মাসিক সাবস্ক্রিপশন, %1$s/মাস</string>
     <string name="ai_limit_yearly">বার্ষিক সাবস্ক্রিপশন, %1$s/বছর (37%% সাশ্রয়)</string>
     <string name="ai_limit_no_thanks">না ধন্যবাদ, এআই ছাড়াই এগিয়ে যাও</string>
