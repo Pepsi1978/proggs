@@ -71,7 +71,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AiLimitsDisclaimerRow
-import com.bestjournal.app.ui.components.AiLimitsInfoIcon
+import com.bestjournal.app.ui.components.AiLimitsFreeNote
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
@@ -629,25 +629,8 @@ fun PaywallScreen(viewModel: PaywallViewModel, onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Free tier note (two lines for readability) ──
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AiLimitsInfoIcon(
-                            iconSize = 14.dp,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(R.string.paywall_free_note),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.paywall_with_limited),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // ── Free tier note (two lines for readability) — whole block clickable ──
+                AiLimitsFreeNote()
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
