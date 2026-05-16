@@ -158,12 +158,26 @@ class SyncCoordinator @Inject constructor(
                 healthConnectValues = hcValues,
                 amazfitWorkouts = amazfitWorkouts,
             )
-            val text = json.encodeToString(BackupPayload.serializer(), payload)
-            backupManager.upload(text)
-                .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
-                .onFailure { ex ->
-                    _status.value = SyncStatus.Failed(ex.message ?: "Backup fehlgeschlagen")
-                }
+            // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
+            // beim Serialize. Falls jemals ein Backup-Payload zu gross wird
+            // (z.B. nach einem Bulk-Import) fangen wir den OOM ab und melden
+            // SyncStatus.Failed — die App crasht NICHT mehr in der Endlos-
+            // schleife wenn ein einziger Upload-Versuch fehlschlaegt.
+            try {
+                val text = json.encodeToString(BackupPayload.serializer(), payload)
+                backupManager.upload(text)
+                    .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
+                    .onFailure { ex ->
+                        _status.value = SyncStatus.Failed(ex.message ?: "Backup fehlgeschlagen")
+                    }
+            } catch (oom: OutOfMemoryError) {
+                // Speicher freigeben falls moeglich, dann Fail-State setzen.
+                System.gc()
+                _status.value = SyncStatus.Failed("Backup zu gross fuer Upload (OOM) — Streams werden im naechsten Build ausgeschlossen")
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
+            }
         }
         // Wenn waehrend des Uploads neue Aenderungen kamen: noch einen Run.
         if (dirtyDuringUpload) {

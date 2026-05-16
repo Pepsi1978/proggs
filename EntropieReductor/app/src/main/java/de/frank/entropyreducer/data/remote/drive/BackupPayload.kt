@@ -337,13 +337,13 @@ fun HypothesisMessageEntity.toBackup(): BackupHypothesisMessage = BackupHypothes
 )
 
 fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout {
-    // Frank-Bugfix 2026-05-16: Bei Polar-Bulk-Import (956+ Trainings mit
-    // sekundengenauen Streams) wuerde ein vollstaendiges Backup-JSON
-    // > 100 MB werden — OOM beim Serialize. Stream-Felder werden bei
-    // polar-bulk-Eintraegen NICHT mitgebackuped (die Originale stehen
-    // ja in Frank's Polar-Export-ZIP, die er bei Bedarf re-importieren
-    // kann). Metadaten bleiben drin.
-    val isBulk = source == "polar-bulk"
+    // Frank-Bugfix 2026-05-16 (Iteration 2): isBulk-Check hat nicht gegriffen
+    // weil moeglicherweise Workouts ohne source="polar-bulk" in der DB sind
+    // (Reste von alten Test-Imports). Pragmatisch: ALLE Streams generell aus
+    // dem Backup raus — bei 956+ Trainings sonst garantiert OOM beim
+    // JSON-Serialize. Cross-Device-Restore lebt mit Metadaten — Frank kann
+    // die Streams jederzeit aus der Polar-Bulk-ZIP re-importieren oder die
+    // Live-API-Daten neu fetchen.
     return BackupAmazfitWorkout(
         trackId = trackId,
         dateKey = dateKey,
@@ -360,10 +360,10 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout {
         calories = calories,
         avgHeartRate = avgHeartRate,
         maxHeartRate = maxHeartRate,
-        gpsTrackJson = if (isBulk) null else gpsTrackJson,
-        heartRateSeriesJson = if (isBulk) null else heartRateSeriesJson,
-        paceSeriesJson = if (isBulk) null else paceSeriesJson,
-        splitsJson = if (isBulk) null else splitsJson,
+        gpsTrackJson = null,                // Streams immer raus
+        heartRateSeriesJson = null,
+        paceSeriesJson = null,
+        splitsJson = null,
         altitudeGainMeters = altitudeGainMeters,
         altitudeLossMeters = altitudeLossMeters,
         trainingEffectAerobic = trainingEffectAerobic,
@@ -378,7 +378,7 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout {
         poolLengthMeters = poolLengthMeters,
         source = source,
         city = city,
-        paceStreamJson = if (isBulk) null else paceStreamJson,
+        paceStreamJson = null,
         createdAt = createdAt,
     )
 }
