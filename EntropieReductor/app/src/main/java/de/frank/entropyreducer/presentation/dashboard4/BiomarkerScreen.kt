@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.IsolatedThemeToggleIcon
@@ -592,12 +593,15 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
     }
     Spacer(Modifier.height(8.dp))
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val sleepMin = latest?.sleepTotalMinutes ?: 0
+        // Frank-Wunsch 2026-05-16: reine Schlafzeit OHNE Wachzeit anzeigen
+        // (= Tief + REM + Leicht). Whoop liefert sleepTotalMinutes als Time-in-Bed
+        // inklusive Wachzeit — ziehen wir hier aktiv ab.
+        val effectiveSleepMin = effectiveSleepMinutes(latest)
         val sleepLabel =
-            if (sleepMin == 0) {
+            if (effectiveSleepMin <= 0) {
                 "—"
             } else {
-                "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
+                "${effectiveSleepMin / 60} h ${(effectiveSleepMin % 60).toString().padStart(2, '0')} min"
             }
         MetricMiniCard(
             modifier = Modifier.weight(1f),
@@ -605,12 +609,12 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
             value = sleepLabel,
             delta =
                 formatDelta(
-                    latest?.sleepTotalMinutes?.toDouble(),
+                    effectiveSleepMin.toDouble().takeIf { it > 0.0 },
                     avgSleep,
                     "min",
                     asMinutes = true,
                 ),
-            deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
+            deltaPositive = (effectiveSleepMin.toDouble()) > (avgSleep ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
             onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
         )
@@ -1717,30 +1721,49 @@ private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
 @Composable
 private fun MiniSleepTotalCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
     val latest = state.selectedSnapshot ?: state.latest
+    // Frank-Wunsch 2026-05-16: reine Schlafzeit OHNE Wachzeit anzeigen
+    // (= Tief + REM + Leicht). Wert und Vergleichs-Schnitt beide ohne Wachzeit,
+    // damit Delta korrekt bleibt.
     val avgSleep =
         remember(state.history30Days) {
             state.history30Days
-                .mapNotNull { it.sleepTotalMinutes }
+                .mapNotNull { snap ->
+                    val total = snap.sleepTotalMinutes ?: return@mapNotNull null
+                    val awake = snap.sleepAwakeMinutes ?: 0
+                    (total - awake).coerceAtLeast(0).takeIf { it > 0 }
+                }
                 .takeIf { it.isNotEmpty() }
                 ?.average()
         }
-    val sleepMin = latest?.sleepTotalMinutes ?: 0
+    val effectiveSleepMin = effectiveSleepMinutes(latest)
     val sleepLabel =
-        if (sleepMin == 0) {
+        if (effectiveSleepMin <= 0) {
             "—"
         } else {
-            "${sleepMin / 60} h ${(sleepMin % 60).toString().padStart(2, '0')} min"
+            "${effectiveSleepMin / 60} h ${(effectiveSleepMin % 60).toString().padStart(2, '0')} min"
         }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
         label = "Schlaf",
         value = sleepLabel,
         delta =
-            formatDelta(latest?.sleepTotalMinutes?.toDouble(), avgSleep, "min", asMinutes = true),
-        deltaPositive = (latest?.sleepTotalMinutes?.toDouble() ?: 0.0) > (avgSleep ?: 0.0),
+            formatDelta(effectiveSleepMin.toDouble().takeIf { it > 0.0 }, avgSleep, "min", asMinutes = true),
+        deltaPositive = (effectiveSleepMin.toDouble()) > (avgSleep ?: 0.0),
         footnote = "vs. 30-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.SLEEP_TOTAL) },
     )
+}
+
+/**
+ * Frank-Wunsch 2026-05-16: reine Netto-Schlafzeit (= Tief + REM + Leicht) statt
+ * Time-in-Bed inkl. Wachzeit. Whoop liefert `sleepTotalMinutes` als Zeit im Bett —
+ * Wachzeit aktiv abziehen damit der Schlafwert das ist was Frank erwartet.
+ */
+private fun effectiveSleepMinutes(snap: BiomarkerSnapshotEntity?): Int {
+    if (snap == null) return 0
+    val total = snap.sleepTotalMinutes ?: return 0
+    val awake = snap.sleepAwakeMinutes ?: 0
+    return (total - awake).coerceAtLeast(0)
 }
 
 @Composable

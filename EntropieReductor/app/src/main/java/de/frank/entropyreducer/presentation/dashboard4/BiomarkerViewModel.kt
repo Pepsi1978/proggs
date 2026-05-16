@@ -877,7 +877,15 @@ private fun buildChartData(
             "spo2" to { it.spo2Percent },
             "skin_temp" to { it.skinTempCelsius },
             "sleep_perf" to { it.sleepPerformance?.toDouble() },
-            "sleep_total" to { it.sleepTotalMinutes?.toDouble() },
+            // Frank-Wunsch 2026-05-16: Pattern "Schlafdauer" und Detail-Liste ohne
+            // Wachzeit (Tief + REM + Leicht). Whoop liefert sleepTotalMinutes als
+            // Zeit im Bett — Wachzeit aktiv abziehen.
+            "sleep_total" to { snap ->
+                snap.sleepTotalMinutes?.let { total ->
+                    val awake = snap.sleepAwakeMinutes ?: 0
+                    (total - awake).coerceAtLeast(0).toDouble().takeIf { it > 0 }
+                }
+            },
             "sleep_efficiency" to { it.sleepEfficiencyPercent?.toDouble() },
             "sleep_consistency" to { it.sleepConsistencyPercent?.toDouble() },
             "sleep_debt" to { it.sleepDebtMinutes?.toDouble() },

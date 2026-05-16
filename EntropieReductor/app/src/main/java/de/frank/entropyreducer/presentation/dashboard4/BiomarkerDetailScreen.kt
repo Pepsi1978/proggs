@@ -160,6 +160,10 @@ fun BiomarkerDetailScreen(
                                 // gleichen Formatierung wie die Werte-Liste/Statistik —
                                 // Schlafdauer also "7h 23min" statt nackter Minutenzahl.
                                 valueFormatter = spec.format,
+                                // Frank-Wunsch 2026-05-16: Trendlinien-Farbe muss
+                                // semantisch sein. Bei RHR/Atemfrequenz/Hauttemperatur
+                                // ist niedriger besser — fallend = gruen, steigend = rot.
+                                lowerIsBetter = spec.lowerIsBetter,
                             )
                         }
                     }
@@ -310,7 +314,15 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         title = "Schlafdauer",
         unit = "min",
         accent = CosmosColors.AccentSecondary,
-        extract = { it.sleepTotalMinutes?.toDouble() },
+        // Frank-Wunsch 2026-05-16: Schlafdauer-Liste ohne Wachzeit anzeigen
+        // (Tief + REM + Leicht). Whoop liefert totalInBedMilli — Wachzeit
+        // wird hier aktiv subtrahiert damit Wert konsistent mit Hero+Pattern ist.
+        extract = { snap ->
+            snap.sleepTotalMinutes?.let { total ->
+                val awake = snap.sleepAwakeMinutes ?: 0
+                (total - awake).coerceAtLeast(0).toDouble().takeIf { it > 0 }
+            }
+        },
         format = { v ->
             val m = v.toInt()
             "${m / 60}h ${(m % 60).toString().padStart(2, '0')}min"
@@ -383,6 +395,8 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         accent = CosmosColors.AccentPrimary,
         extract = { it.respiratoryRate },
         format = { "%.1f /min".format(it) },
+        // Frank-Wunsch 2026-05-16: steigende Atemfrequenz ist negativ — Trendlinie rot.
+        lowerIsBetter = true,
     )
     MetricKey.SLEEP_CONSISTENCY -> MetricSpec(
         title = "Schlafregelmäßigkeit",
@@ -433,6 +447,9 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         accent = CosmosColors.Warning,
         extract = { it.skinTempCelsius },
         format = { "%.1f °C".format(it) },
+        // Frank-Wunsch 2026-05-16: niedrigere Hauttemperatur ist im Schlafkontext
+        // positiv — fallend = gruen, steigend = rot.
+        lowerIsBetter = true,
     )
     MetricKey.MAX_HR -> MetricSpec(
         title = "Max. Herzfrequenz",

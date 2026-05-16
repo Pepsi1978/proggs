@@ -51,6 +51,11 @@ fun SleepStagesBar(
     val light = lightMinutes ?: 0
     val awake = awakeMinutes ?: 0
     val total = (rem + deep + light + awake).coerceAtLeast(1)
+    // Frank-Wunsch 2026-05-16: Wach-Prozent erst ab 5 % anzeigen — bei kuerzeren
+    // Wachphasen wuerde die Zahl optisch nur stoeren. Schwelle inklusive, also
+    // ab genau 5 %.
+    val awakePercent = (awake.toFloat() / total * 100f).toInt()
+    val showAwakePercent = awakePercent >= 5
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -62,7 +67,8 @@ fun SleepStagesBar(
         ) {
             Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
                 // Frank-Wunsch 2026-05-09: Prozentwerte mittig in den Phasen-Segmenten
-                // anzeigen — REM, Tiefschlaf, Leichtschlaf bekommen Prozent, Wach nicht.
+                // anzeigen — REM, Tiefschlaf, Leichtschlaf bekommen Prozent, Wach
+                // ab 2026-05-16 auch, aber nur wenn Wachzeit-Anteil >= 5 %.
                 StageSegment(
                     weight = deep,
                     total = total,
@@ -85,7 +91,7 @@ fun SleepStagesBar(
                     weight = awake,
                     total = total,
                     color = SleepStageColors.Awake,
-                    showPercent = false,
+                    showPercent = showAwakePercent,
                 )
             }
         }
