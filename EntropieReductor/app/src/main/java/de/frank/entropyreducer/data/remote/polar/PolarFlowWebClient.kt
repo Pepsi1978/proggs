@@ -241,16 +241,53 @@ class PolarFlowWebClient @Inject constructor(
     suspend fun parseAndStoreWorkoutBody(exerciseId: Long, rawBody: String): Result<AmazfitWorkoutEntity?> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         runCatching {
             val trimmed = rawBody.trimStart()
+            Log.i(TAG, "PolarFlowWeb: parseAndStoreWorkoutBody bytes=${rawBody.length} starts=${trimmed.take(50)}")
             when {
                 trimmed.startsWith("{") || trimmed.startsWith("[") -> parseWorkoutJson(exerciseId, rawBody)
                 trimmed.contains("TrainingCenterDatabase") -> parseTcx(exerciseId, rawBody)
                 trimmed.startsWith("<gpx") || trimmed.contains("<gpx ") -> parseGpxOnly(exerciseId, rawBody)
+                trimmed.startsWith("<") -> {
+                    // HTML — versuche inline-JSON zu extrahieren
+                    val extracted = extractTrainingJsonFromHtml(rawBody, exerciseId)
+                    if (extracted != null) {
+                        Log.i(TAG, "PolarFlowWeb: HTML-Inline-JSON extrahiert (${extracted.length} bytes)")
+                        parseWorkoutJson(exerciseId, extracted)
+                    } else {
+                        Log.w(TAG, "PolarFlowWeb: HTML enthielt kein verwertbares Trainings-JSON")
+                        null
+                    }
+                }
                 else -> {
                     Log.w(TAG, "PolarFlowWeb: unbekanntes Body-Format — preview=${rawBody.take(200)}")
                     null
                 }
             }
         }
+    }
+
+    /**
+     * Sucht in HTML nach eingebetteten Trainings-JSON-Bloecken. Polar Flow
+     * rendert die Daten oft als `var trainingData = {...};` oder als
+     * `window.__INITIAL_STATE__ = {...};`. Plus: regex auf JSON-Bloecke
+     * mit sport+distance.
+     */
+    private fun extractTrainingJsonFromHtml(html: String, exerciseId: Long): String? {
+        val patterns = listOf(
+            "window\\.__INITIAL_STATE__\\s*=\\s*(\\{[\\s\\S]*?\\});".toRegex(),
+            "window\\.__PRELOADED_STATE__\\s*=\\s*(\\{[\\s\\S]*?\\});".toRegex(),
+            "var\\s+trainingData\\s*=\\s*(\\{[\\s\\S]*?\\});".toRegex(),
+            "var\\s+trainingSession\\s*=\\s*(\\{[\\s\\S]*?\\});".toRegex(),
+            "data-training\\s*=\\s*['\"](\\{[\\s\\S]*?\\})['\"]".toRegex(),
+        )
+        for (re in patterns) {
+            val m = re.find(html) ?: continue
+            return m.groupValues[1]
+        }
+        // Suche nach JSON-Bloecken mit sport + distance
+        val genericRe = "(\\{[^{}]{200,}?\"sport\"[^{}]*?\"distance\"[^{}]*?\\})".toRegex()
+        val m = genericRe.find(html)
+        if (m != null) return m.groupValues[1]
+        return null
     }
 
     /**
