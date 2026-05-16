@@ -62,6 +62,7 @@ class OAuthViewModel @Inject constructor(
     private val secrets: EncryptedSecretsStore,
     private val scheduler: BackgroundScheduler,
     private val polarFlowWeb: de.frank.entropyreducer.data.remote.polar.PolarFlowWebClient,
+    private val amazfitRepo: de.frank.entropyreducer.data.repository.AmazfitRepository,
     private val polarRepo: de.frank.entropyreducer.data.repository.PolarRepository,
     private val workoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     val calendarSignIn: CalendarSignInHelper,
@@ -400,6 +401,35 @@ class OAuthViewModel @Inject constructor(
                         message = "Polar Flow Web Login fehlgeschlagen: ${ex.message ?: "unbekannter Fehler"}",
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-17: manueller Strava-Sync-Trigger.
+     * Holt die letzten 30 Tage Workouts mit kompletter Stream-Tiefe
+     * (GPS, HR, Pace, Cadence, Splits) und schreibt sie in die DB.
+     */
+    fun syncStravaNow() {
+        _state.update { it.copy(message = "Strava-Sync laeuft — Workouts inkl. Streams werden geladen…") }
+        viewModelScope.launch {
+            val count = withContext(Dispatchers.IO) {
+                runCatching {
+                    amazfitRepo.mergeFromStrava(days = 30)
+                }.getOrElse {
+                    android.util.Log.w("OAuthViewModel", "Strava-Sync fehlgeschlagen: ${it.message}")
+                    -1
+                }
+            }
+            _state.update {
+                it.copy(
+                    stravaLastSyncMs = if (count >= 0) System.currentTimeMillis() else it.stravaLastSyncMs,
+                    message = when {
+                        count < 0 -> "Strava-Sync fehlgeschlagen — bitte Logcat pruefen oder neu verbinden."
+                        count == 0 -> "Strava-Sync: keine neuen Workouts."
+                        else -> "Strava-Sync: $count Workouts importiert/aktualisiert."
+                    },
+                )
             }
         }
     }

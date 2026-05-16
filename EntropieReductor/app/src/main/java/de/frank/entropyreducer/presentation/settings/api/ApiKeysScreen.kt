@@ -829,6 +829,18 @@ private fun StravaOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     Spacer(Modifier.height(4.dp))
                     Text(label, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
                 }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = vm::syncStravaNow,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFFC4C02),
+                    ),
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Jetzt synchronisieren (Strava)")
+                }
             }
             // Hinweis fuer Branding-Pflicht laut Strava-Guidelines.
             Spacer(Modifier.height(8.dp))
