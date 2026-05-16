@@ -73,7 +73,7 @@ data class PolarBulkExercise(
     /**
      * Frank-Live-Sonde 2026-05-16: Polar's Bulk-Export liefert sport NICHT als
      * String wie die Live-API, sondern als verschachteltes Objekt
-     * `{ "id": "18" }`. Ein eigener Wrapper-Typ ist sicherer als JsonElement.
+     * `{ "id": "18" }`.
      */
     val sport: PolarBulkSport? = null,
     @SerialName("detailed-sport-info") val detailedSportInfo: String? = null,
@@ -82,14 +82,17 @@ data class PolarBulkExercise(
     val calories: Int? = null,
     @SerialName("heart-rate") val heartRate: PolarHeartRateSummary? = null,
     /**
-     * Reihenfolge der Werte in jedem samples[].values-Array.
-     * Bekannte Typen: HEART_RATE, SPEED, CADENCE, ALTITUDE, POWER, PACE,
-     * TEMPERATURE, DISTANCE, RR_INTERVAL, GROUND_CONTACT_TIME,
-     * VERTICAL_OSCILLATION, RUNNING_STRIDE_LENGTH.
+     * Frank-Live-Sonde 2026-05-16 (Iteration 6): samples + recordedRoute haben
+     * IMMER ein Wrapper-Objekt drumherum statt direkt ein Array zu sein:
+     *   "samples": { "samples": [...] }    statt    "samples": [...]
+     * Ich akzeptiere ab jetzt JsonElement und navigiere defensiv im Mapper.
+     * Falls Polar wieder ein neues Format einfuehrt, werden nur die Sample-
+     * Streams leer bleiben, der Rest des Trainings (Metadaten) wird sauber
+     * importiert.
      */
     val sampleTypes: List<String> = emptyList(),
-    val samples: List<PolarBulkSample> = emptyList(),
-    val recordedRoute: List<PolarBulkRoutePoint> = emptyList(),
+    val samples: JsonElement? = null,
+    val recordedRoute: JsonElement? = null,
     val laps: JsonElement? = null,
     val zones: JsonElement? = null,
 )
