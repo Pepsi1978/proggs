@@ -3,7 +3,6 @@ package de.frank.entropyreducer.workers
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.net.Uri
@@ -21,6 +20,10 @@ import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.polar.PolarBulkImporter
+import java.io.File
+import java.io.FileInputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * One-Shot-Worker fuer den Polar-Bulk-Import (Frank-Wunsch 2026-05-16).
@@ -65,17 +68,29 @@ class PolarBulkImportWorker @AssistedInject constructor(
 
         setForeground(buildForegroundInfo("Polar-Import startet…"))
 
+        // SCHICHT 1 (Direktive 3 — Resilient Bugfixing): content://-URIs
+        // verlieren ihre Permission sobald die Activity stirbt. Wir kopieren
+        // die ZIP in den App-Cache damit der Worker garantiert lesen kann —
+        // auch wenn der User in der Zwischenzeit die App schliesst.
+        val cachedZip = try {
+            copyZipToCache(zipUri)
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "Polar-Bulk-Import: ZIP konnte nicht in Cache kopiert werden", t)
+            showFailureNotification("ZIP nicht lesbar: ${t.message ?: t.javaClass.simpleName}")
+            return Result.failure()
+        }
+        setForegroundAsync(buildForegroundInfo("ZIP geladen — beginne Parsing…"))
+
         return try {
-            // Importer ruft uns alle 50 Eintraege mit Progress-Update auf.
-            // Wir nutzen das fuer die Notification UND um Batches direkt in
-            // die DB zu schreiben — damit sind die ersten 50 Trainings sofort
-            // sichtbar, der User sieht etwas waehrend der grosse Rest laeuft.
-            val batch = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
-            var lastWritten = 0
+            // Wir geben dem Importer die Cache-URI (file://...) statt der
+            // urspruenglichen content://-URI. Importer arbeitet ueber
+            // ContentResolver der auch file:// versteht.
+            val cacheUri = Uri.fromFile(cachedZip)
             var totalSkipped = 0
 
-            val allEntities = importer.import(zipUri) { progress ->
-                // Notification updaten
+            val allEntities = importer.import(cacheUri) { progress ->
                 val message = if (progress.finished) {
                     "Fertig — ${progress.entitiesParsed} Trainings importiert (${progress.skipped} uebersprungen)"
                 } else {
@@ -85,7 +100,15 @@ class PolarBulkImportWorker @AssistedInject constructor(
                 totalSkipped = progress.skipped
             }
 
-            // Komplettes Schreiben in der DB — atomar, REPLACE-Strategie
+            // SCHICHT 2: Frank-Wunsch 2026-05-16 — vor dem Schreiben der
+            // Polar-Daten alle alten Zepp/HC/T-Rex-3-Trainings loeschen. Die
+            // Polar-Historie ist die NEUE alleinige Trainings-Quelle, die
+            // alten Eintraege haben keinen Sinn mehr und verwirren die
+            // Liste mit dem "T-Rex 3"-Label.
+            val deletedOld = workoutDao.deleteNonPolarWorkouts()
+            Log.i(TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
+
+            // Polar-Trainings atomar in die DB schreiben — REPLACE-Strategie
             // sorgt dafuer dass spaetere Live-API-Updates dieselben trackIds
             // ueberschreiben koennen ohne Duplikate.
             appDatabase.withTransaction {
@@ -93,23 +116,44 @@ class PolarBulkImportWorker @AssistedInject constructor(
             }
             Log.i(TAG, "Polar-Bulk-Import erfolgreich: ${allEntities.size} Trainings in DB geschrieben, $totalSkipped uebersprungen")
 
+            // Cache-Datei aufraeumen — wir haben sie nicht mehr noetig
+            runCatching { cachedZip.delete() }
+
             // Drive-Backup triggern damit das andere Geraet die Historie bekommt
             syncCoordinator.requestSync()
 
-            // Finale Notification (Foreground-Notification verschwindet beim
-            // Worker-Ende automatisch, wir erzeugen eine bleibende Erfolgs-
-            // Notification damit Frank's Handy auch bei "Bildschirm aus" eine
-            // sichtbare Bestaetigung hat).
             showCompletionNotification(allEntities.size, totalSkipped)
-
             Result.success()
         } catch (ce: kotlinx.coroutines.CancellationException) {
             throw ce
         } catch (t: Throwable) {
             Log.e(TAG, "Polar-Bulk-Import fehlgeschlagen", t)
+            // Cache auch im Fehlerfall aufraeumen
+            runCatching { cachedZip.delete() }
             showFailureNotification(t.message ?: t.javaClass.simpleName)
             Result.failure()
         }
+    }
+
+    /**
+     * Kopiert die ZIP-Datei vom Source-URI in den App-Cache. Das schuetzt
+     * vor URI-Permission-Verlust wenn die Activity beendet wird waehrend
+     * der Worker laeuft (Direktive 3 — Resilient Bugfixing, Schicht 1).
+     * Liefert die Cache-File zurueck. Wirft IOException falls Source nicht
+     * lesbar.
+     */
+    private suspend fun copyZipToCache(sourceUri: Uri): File = withContext(Dispatchers.IO) {
+        val cacheDir = File(appContext.cacheDir, "polar-bulk-import")
+        if (!cacheDir.exists()) cacheDir.mkdirs()
+        // Eindeutige Cache-Datei pro Import (kein Konflikt mit altem File)
+        val cachedFile = File(cacheDir, "polar-export-${System.currentTimeMillis()}.zip")
+        appContext.contentResolver.openInputStream(sourceUri)?.use { input ->
+            cachedFile.outputStream().use { output ->
+                input.copyTo(output, bufferSize = 64 * 1024)
+            }
+        } ?: throw java.io.IOException("openInputStream lieferte null fuer $sourceUri")
+        Log.i(TAG, "Polar-Bulk-Import: ZIP in Cache kopiert (${cachedFile.length() / 1024} KB)")
+        cachedFile
     }
 
     private fun buildForegroundInfo(progressText: String): ForegroundInfo {

@@ -852,10 +852,10 @@ private fun AmazfitLoginCard(vm: ZeppApiViewModel, state: ZeppApiUiState) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Verbinde dich mit deinem Zepp-Konto, um die Sport-Daten der T-Rex 3 " +
-                    "(Trainings, GPS-Tracks, Pace, Pulsverlauf) sowie PAI, BioCharge, " +
-                    "Hauttemperatur und SpO2 in den Biomarker-Bereich zu laden. E-Mail " +
-                    "und Passwort werden verschluesselt auf dem Geraet gespeichert.",
+                "Optional: Verbinde dein Zepp-Konto NUR fuer die Biomarker (PAI, " +
+                    "BioCharge, Hauttemperatur, SpO2, Stress) aus der T-Rex 3. " +
+                    "Trainings kommen ueber Polar — die werden NICHT mehr aus Zepp gezogen. " +
+                    "E-Mail und Passwort werden verschluesselt auf dem Geraet gespeichert.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )

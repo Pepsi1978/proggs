@@ -75,6 +75,26 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Loescht alle Workouts die NICHT von Polar stammen.
+     *
+     * Frank-Wunsch 2026-05-16: Nach dem Strava-Revert und der Umstellung auf
+     * Polar als alleinige Trainings-Quelle sollen die alten Zepp/Health-Connect-
+     * Eintraege weg — sie haben kein Update mehr, die "T-Rex 3"-Labels nerven
+     * und sie verwirren die Trainings-Liste.
+     *
+     * Erfasst:
+     *  - source IS NULL (Legacy-Eintraege ohne Quellen-Tag)
+     *  - source NOT LIKE 'polar%' (alles ausser 'polar' und 'polar-bulk')
+     *
+     * Wird vom PolarBulkImportWorker direkt vor dem Schreiben der frischen
+     * Polar-Trainings aufgerufen — Frank sieht danach nur noch Polar-Daten.
+     *
+     * @return Anzahl der geloeschten Zeilen
+     */
+    @Query("DELETE FROM amazfit_workouts WHERE source IS NULL OR source NOT LIKE 'polar%'")
+    suspend fun deleteNonPolarWorkouts(): Int
+
+    /**
      * Frank-Wunsch 2026-05-16: Health-Connect-Workout-Merge braucht die Liste
      * existierender Start-Zeitstempel um Duplikate zu erkennen. Wir vergleichen
      * neue HC-Sessions per +/- 5 Minuten Toleranz gegen diese Liste.

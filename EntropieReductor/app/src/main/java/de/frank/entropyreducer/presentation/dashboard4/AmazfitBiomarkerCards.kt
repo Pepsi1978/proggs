@@ -147,7 +147,7 @@ internal fun AmazfitTrainingsCard(
             if (workouts.isEmpty()) {
                 Text(
                     text =
-                        "Noch keine Trainings — verbinde dich in den Einstellungen unter API mit deinem Zepp-Konto.",
+                        "Noch keine Trainings — verbinde dich in den Einstellungen unter API mit deinem Polar-Konto.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cosmos.textSecondary,
                 )
