@@ -585,6 +585,7 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             var exerciseIdText by remember { mutableStateOf("486174823") }
+                            var showWorkoutLoader by remember { mutableStateOf<Long?>(null) }
                             OutlinedTextField(
                                 value = exerciseIdText,
                                 onValueChange = { exerciseIdText = it.filter { c -> c.isDigit() } },
@@ -594,11 +595,34 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                             )
                             Button(
                                 onClick = {
-                                    exerciseIdText.toLongOrNull()?.let { vm.reloadPolarFlowWebWorkout(it) }
+                                    exerciseIdText.toLongOrNull()?.let { showWorkoutLoader = it }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = polarRed),
                             ) {
                                 Text("Nachladen")
+                            }
+                            val loaderId = showWorkoutLoader
+                            if (loaderId != null) {
+                                androidx.compose.ui.window.Dialog(
+                                    onDismissRequest = { showWorkoutLoader = null },
+                                    properties = androidx.compose.ui.window.DialogProperties(
+                                        usePlatformDefaultWidth = false,
+                                        dismissOnBackPress = true,
+                                        dismissOnClickOutside = false,
+                                    ),
+                                ) {
+                                    PolarFlowWorkoutLoaderScreen(
+                                        exerciseId = loaderId,
+                                        onJsonReceived = { json ->
+                                            vm.savePolarFlowWebWorkoutJson(loaderId, json)
+                                            showWorkoutLoader = null
+                                        },
+                                        onError = { _ ->
+                                            // bleibt offen, Frank kann manuell schliessen
+                                        },
+                                        onDismiss = { showWorkoutLoader = null },
+                                    )
+                                }
                             }
                         }
                         Spacer(Modifier.height(4.dp))

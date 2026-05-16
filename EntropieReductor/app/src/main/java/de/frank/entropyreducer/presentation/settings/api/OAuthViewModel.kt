@@ -343,6 +343,55 @@ class OAuthViewModel @Inject constructor(
     }
 
     /**
+     * Wird aus dem WorkoutLoader-WebView aufgerufen wenn der JS-fetch
+     * ein gueltiges JSON oder XML geliefert hat. Wir leiten an PolarFlowWeb
+     * weiter damit es parst und in die DB schreibt.
+     */
+    fun savePolarFlowWebWorkoutJson(exerciseId: Long, rawBody: String) {
+        viewModelScope.launch {
+            val result = polarFlowWeb.parseAndStoreWorkoutBody(exerciseId, rawBody)
+            result.onSuccess { fresh ->
+                if (fresh == null) {
+                    _state.update { it.copy(message = "Polar lieferte Daten, aber Parser konnte sie nicht lesen.") }
+                    return@onSuccess
+                }
+                val existing = workoutDao.getById(fresh.trackId)
+                val merged = if (existing != null && existing.source != "polar-bulk") {
+                    existing.copy(
+                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
+                        sportType = fresh.sportType ?: existing.sportType,
+                        sportName = fresh.sportName ?: existing.sportName,
+                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
+                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
+                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
+                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
+                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
+                        calories = fresh.calories ?: existing.calories,
+                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
+                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
+                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
+                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
+                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
+                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
+                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
+                        vo2Max = fresh.vo2Max ?: existing.vo2Max,
+                        cadence = fresh.cadence ?: existing.cadence,
+                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
+                        createdAt = System.currentTimeMillis(),
+                    )
+                } else fresh
+                workoutDao.upsert(merged)
+                _state.update {
+                    it.copy(message = "Workout $exerciseId via Browser-JS geladen — HR=${merged.heartRateSeriesJson != null} GPS=${merged.gpsTrackJson != null} Pace=${merged.paceStreamJson != null} maxSpeed=${merged.maxSpeedKmh} altGain=${merged.altitudeGainMeters}")
+                }
+            }.onFailure { ex ->
+                _state.update { it.copy(message = "Workout-Parse fehlgeschlagen: ${ex.message}") }
+            }
+        }
+    }
+
+    /**
      * Callback aus dem PolarFlowWebLoginScreen — WebView hat erfolgreich
      * eingeloggt und liefert den Cookie-Header. Wir persistieren das.
      */

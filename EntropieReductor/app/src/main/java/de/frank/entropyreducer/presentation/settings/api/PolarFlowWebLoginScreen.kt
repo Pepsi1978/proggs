@@ -3,6 +3,7 @@ package de.frank.entropyreducer.presentation.settings.api
 import android.annotation.SuppressLint
 import android.util.Log
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -27,6 +28,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+
+/**
+ * JavaScript-Interface fuer Polar-Workout-Daten. Wird im WebView injiziert
+ * und vom JS-Fetch aus aufgerufen.
+ */
+class PolarFlowJsBridge(
+    private val onWorkoutJson: (String) -> Unit,
+    private val onError: (String) -> Unit,
+) {
+    @JavascriptInterface
+    fun receiveJson(json: String) {
+        Log.i("PolarFlowJsBridge", "JS-fetch lieferte JSON-Daten (${json.length} bytes), preview=${json.take(300)}")
+        if (json.isNotBlank()) onWorkoutJson(json)
+    }
+
+    @JavascriptInterface
+    fun receiveError(msg: String) {
+        Log.w("PolarFlowJsBridge", "JS-fetch Fehler: $msg")
+        onError(msg)
+    }
+}
 
 /**
  * Polar Flow Login via eingebettetem WebView.
@@ -113,6 +135,9 @@ fun PolarFlowWebLoginScreen(
                                         url.contains("auth.polar.com") ||
                                         url.contains("/flowSso/")
                                     if (isFlowDomain && !isLoginPath) {
+                                        // WICHTIG: flush() persistiert die WebView-Cookies
+                                        // damit sie nach App-Restart noch da sind.
+                                        CookieManager.getInstance().flush()
                                         val cookieHeader = CookieManager.getInstance()
                                             .getCookie("https://flow.polar.com/")
                                             .orEmpty()
@@ -146,3 +171,107 @@ fun PolarFlowWebLoginScreen(
 }
 
 private const val TAG = "PolarFlowLogin"
+
+/**
+ * Workout-Loader-Screen: oeffnet WebView auf Polar's Workout-Detail-Seite
+ * und fuehrt JavaScript-fetch zu /api/training/{id} aus. Da der WebView
+ * voll authentifiziert ist (alle Cookies inkl. HttpOnly), bekommt der
+ * fetch echte JSON-Daten zurueck.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
+@Composable
+fun PolarFlowWorkoutLoaderScreen(
+    exerciseId: Long,
+    onJsonReceived: (String) -> Unit,
+    onError: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var status by remember { mutableStateOf("Lade Polar-Seite…") }
+    BackHandler { onDismiss() }
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Polar Workout $exerciseId laden") })
+        },
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Text(status, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    WebView(ctx).apply {
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            userAgentString = (settings.userAgentString
+                                ?: "Mozilla/5.0 (Linux; Android 14)")
+                                .replace("; wv", "")
+                        }
+                        addJavascriptInterface(
+                            PolarFlowJsBridge(
+                                onWorkoutJson = { json ->
+                                    post {
+                                        status = "Workout-Daten empfangen (${json.length} bytes)"
+                                        onJsonReceived(json)
+                                    }
+                                },
+                                onError = { msg ->
+                                    post {
+                                        status = "Fehler: $msg"
+                                        onError(msg)
+                                    }
+                                },
+                            ),
+                            "Android",
+                        )
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView, url: String) {
+                                super.onPageFinished(view, url)
+                                Log.i(TAG, "WorkoutLoader: pageFinished $url")
+                                if (url.contains("/training/analysis/$exerciseId") ||
+                                    url.contains("/training/$exerciseId")) {
+                                    status = "Seite geladen — fetch wird ausgefuehrt…"
+                                    // JS-fetch ausfuehren — der hat alle Cookies + Browser-Kontext
+                                    val js = """
+                                        (function(){
+                                            const urls = [
+                                                '/api/training/$exerciseId',
+                                                '/api/training-sessions/$exerciseId',
+                                                '/api/exercise/$exerciseId',
+                                                '/api/export/training/tcx/$exerciseId',
+                                                '/api/export/training/gpx/$exerciseId'
+                                            ];
+                                            (async () => {
+                                                for (const u of urls) {
+                                                    try {
+                                                        const r = await fetch(u, {credentials:'include',headers:{'Accept':'application/json,application/xml,*/*'}});
+                                                        const text = await r.text();
+                                                        console.log('PolarFetch ' + u + ' HTTP ' + r.status + ' bytes=' + text.length);
+                                                        if (r.ok && text.length > 100) {
+                                                            const trimmed = text.trim();
+                                                            if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.startsWith('<?xml') || trimmed.startsWith('<TrainingCenterDatabase') || trimmed.startsWith('<gpx')) {
+                                                                Android.receiveJson(text);
+                                                                return;
+                                                            }
+                                                        }
+                                                    } catch(e) {
+                                                        console.error('Polar fetch ' + u + ' Fehler: ' + e.message);
+                                                    }
+                                                }
+                                                Android.receiveError('Kein Endpoint lieferte verwertbare Daten');
+                                            })();
+                                        })();
+                                    """.trimIndent()
+                                    view.evaluateJavascript(js, null)
+                                }
+                            }
+                        }
+                        loadUrl("https://flow.polar.com/training/analysis/$exerciseId")
+                    }
+                },
+            )
+        }
+    }
+}
