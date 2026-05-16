@@ -30,7 +30,7 @@ KERNFUNKTION ERLEBEN        → Sofort Sprache/Text aufnehmen          ✅
 AHA-MOMENT                  → Kein geleiteter Aha-Moment             ❌ ZWEITGRÖSSTES LECK
 TRIAL-START                 → 7 Tage (implizit, nicht kommuniziert)  ⚠️
 REGELMÄSSIGE NUTZUNG        → Keine Streaks, keine Push-Reminders    ❌
-LIMIT ERREICHT              → Nach 7 Tagen → 5/Woche free            ✅
+LIMIT ERREICHT              → Nach 7 Tagen → 5/Woche/Profil free      ✅
 PAYWALL GESEHEN             → Nur Bottom Sheet, kein Fullscreen      ⚠️ DRITTGRÖSSTES LECK
 CONVERSION                  → Monats-/Jahresabo ueber Bottom Sheet   ✅
 RETENTION-MECHANISMEN       → Keine Streaks, keine Gamification      ❌

@@ -14,9 +14,17 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
     companion object {
         private const val KEY_USAGE_DAYS = "ai_usage_days"
         private const val KEY_FIRST_USE_DATE = "ai_first_use_date"
-        private const val KEY_WEEKLY_DASHBOARD_COUNT = "weekly_dashboard_count"
+        // Weekly dashboard count is PER SCENARIO — actual key is built at use site
+        // as "${KEY_WEEKLY_DASHBOARD_COUNT_PREFIX}_$currentScenario", so each profile
+        // gets its own 5/week bucket. Free users with N profiles can therefore make
+        // up to 5*N dashboard refreshes per week. Old global key "weekly_dashboard_count"
+        // from versions <= 0.21.7 is intentionally ignored (effective reset on upgrade).
+        private const val KEY_WEEKLY_DASHBOARD_COUNT_PREFIX = "weekly_dashboard_count"
+        private const val KEY_WEEKLY_DASHBOARD_RESET_PREFIX = "ai_weekly_dashboard_reset"
         private const val KEY_WEEKLY_TEXT_COUNT = "weekly_text_count"
-        private const val KEY_WEEKLY_RESET_DATE = "ai_weekly_reset"
+        // Text reset key keeps its old name so that existing free users with a partly-used
+        // text quota don't get an unintended quota reset when upgrading to >=0.21.8.
+        private const val KEY_WEEKLY_TEXT_RESET = "ai_weekly_reset"
         private const val KEY_BANNER_LAST_SHOWN = "ai_banner_last_shown"
 
         // Dashboard daily tracking (per scenario)
@@ -88,25 +96,35 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
     }
 
     // ── Weekly limits for free users ────────────────────
+    // Dashboard quota is PER SCENARIO: each profile (built-in 0..3 and every custom
+    // analysis from index 4 onwards) has its own 5/week bucket, so a free user can
+    // refresh every profile independently. Text quota stays GLOBAL because text
+    // improvement is not tied to a profile.
+
+    private fun weeklyDashboardCountKey() =
+        "${KEY_WEEKLY_DASHBOARD_COUNT_PREFIX}_$currentScenario"
+
+    private fun weeklyDashboardResetKey() =
+        "${KEY_WEEKLY_DASHBOARD_RESET_PREFIX}_$currentScenario"
 
     fun getWeeklyDashboardCount(): Int {
-        resetWeeklyCounterIfNeeded()
-        return prefs.getInt(KEY_WEEKLY_DASHBOARD_COUNT, 0)
+        resetWeeklyDashboardCounterIfNeeded()
+        return prefs.getInt(weeklyDashboardCountKey(), 0)
     }
 
     fun getWeeklyTextCount(): Int {
-        resetWeeklyCounterIfNeeded()
+        resetWeeklyTextCounterIfNeeded()
         return prefs.getInt(KEY_WEEKLY_TEXT_COUNT, 0)
     }
 
     fun recordWeeklyDashboardUse() {
-        resetWeeklyCounterIfNeeded()
-        val count = prefs.getInt(KEY_WEEKLY_DASHBOARD_COUNT, 0)
-        prefs.edit().putInt(KEY_WEEKLY_DASHBOARD_COUNT, count + 1).apply()
+        resetWeeklyDashboardCounterIfNeeded()
+        val count = prefs.getInt(weeklyDashboardCountKey(), 0)
+        prefs.edit().putInt(weeklyDashboardCountKey(), count + 1).apply()
     }
 
     fun recordWeeklyTextUse() {
-        resetWeeklyCounterIfNeeded()
+        resetWeeklyTextCounterIfNeeded()
         val count = prefs.getInt(KEY_WEEKLY_TEXT_COUNT, 0)
         prefs.edit().putInt(KEY_WEEKLY_TEXT_COUNT, count + 1).apply()
     }
@@ -327,16 +345,30 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         return if (raw.isBlank()) emptySet() else raw.split(",").toSet()
     }
 
-    private fun resetWeeklyCounterIfNeeded() {
-        val nextReset = prefs.getString(KEY_WEEKLY_RESET_DATE, "") ?: ""
+    private fun resetWeeklyDashboardCounterIfNeeded() {
+        val resetKey = weeklyDashboardResetKey()
+        val countKey = weeklyDashboardCountKey()
+        val nextReset = prefs.getString(resetKey, "") ?: ""
         val today = LocalDate.now()
         if (nextReset.isBlank() || today >= LocalDate.parse(nextReset, dateFormatter)) {
             val nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY))
             prefs
                 .edit()
-                .putInt(KEY_WEEKLY_DASHBOARD_COUNT, 0)
+                .putInt(countKey, 0)
+                .putString(resetKey, nextMonday.format(dateFormatter))
+                .apply()
+        }
+    }
+
+    private fun resetWeeklyTextCounterIfNeeded() {
+        val nextReset = prefs.getString(KEY_WEEKLY_TEXT_RESET, "") ?: ""
+        val today = LocalDate.now()
+        if (nextReset.isBlank() || today >= LocalDate.parse(nextReset, dateFormatter)) {
+            val nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY))
+            prefs
+                .edit()
                 .putInt(KEY_WEEKLY_TEXT_COUNT, 0)
-                .putString(KEY_WEEKLY_RESET_DATE, nextMonday.format(dateFormatter))
+                .putString(KEY_WEEKLY_TEXT_RESET, nextMonday.format(dateFormatter))
                 .apply()
         }
     }

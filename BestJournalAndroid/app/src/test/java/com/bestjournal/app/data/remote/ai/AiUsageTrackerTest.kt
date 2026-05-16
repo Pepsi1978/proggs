@@ -282,6 +282,8 @@ class AiUsageTrackerTest {
     }
 
     // ── Weekly free limits ───────────────────────────────────────────────────
+    // Since 0.21.8 the dashboard quota is per scenario: each profile (0..3 built-in,
+    // 4+ custom) has its own 5/week bucket. Text quota remains global.
 
     @Nested
     inner class WeeklyFreeLimits {
@@ -294,14 +296,20 @@ class AiUsageTrackerTest {
             prefs.edit().putString("ai_usage_days", days.joinToString(",")).apply()
             // Set weekly reset to next Monday so counter doesn't reset during test
             val nextMonday = LocalDate.now().with(TemporalAdjusters.next(DayOfWeek.MONDAY))
-            prefs.edit().putString("ai_weekly_reset", nextMonday.format(fmt)).apply()
+            prefs
+                .edit()
+                .putString("ai_weekly_reset", nextMonday.format(fmt)) // text reset
+                .putString("ai_weekly_dashboard_reset_0", nextMonday.format(fmt)) // dashboard scenario 0
+                .putString("ai_weekly_dashboard_reset_1", nextMonday.format(fmt)) // dashboard scenario 1
+                .putString("ai_weekly_dashboard_reset_4", nextMonday.format(fmt)) // dashboard custom analysis
+                .apply()
         }
 
         @Test
         fun `freemium dashboard allowed below weekly limit`() {
             prefs
                 .edit()
-                .putInt("weekly_dashboard_count", Constants.FREE_WEEKLY_DASHBOARD_LIMIT - 1)
+                .putInt("weekly_dashboard_count_0", Constants.FREE_WEEKLY_DASHBOARD_LIMIT - 1)
                 .apply()
             assertTrue(tracker.isFreeDashboardAllowed())
         }
@@ -310,7 +318,7 @@ class AiUsageTrackerTest {
         fun `freemium dashboard blocked at weekly limit`() {
             prefs
                 .edit()
-                .putInt("weekly_dashboard_count", Constants.FREE_WEEKLY_DASHBOARD_LIMIT)
+                .putInt("weekly_dashboard_count_0", Constants.FREE_WEEKLY_DASHBOARD_LIMIT)
                 .apply()
             assertFalse(tracker.isFreeDashboardAllowed())
         }
@@ -351,6 +359,53 @@ class AiUsageTrackerTest {
             val before = tracker.getWeeklyDashboardCount()
             tracker.recordWeeklyDashboardUse()
             assertEquals(before + 1, tracker.getWeeklyDashboardCount())
+        }
+
+        @Test
+        fun `dashboard quota is independent across profiles`() {
+            // Profile 0 has used all 5 — should be blocked
+            prefs
+                .edit()
+                .putInt("weekly_dashboard_count_0", Constants.FREE_WEEKLY_DASHBOARD_LIMIT)
+                .apply()
+            tracker.setCurrentScenario(0)
+            assertFalse(tracker.isFreeDashboardAllowed(), "Scenario 0 should be blocked at limit")
+            assertEquals(0, tracker.getRemainingFreeDashboardUses())
+
+            // Profile 1 has not been touched — should still have full quota
+            tracker.setCurrentScenario(1)
+            assertTrue(tracker.isFreeDashboardAllowed(), "Scenario 1 should still be allowed")
+            assertEquals(
+                Constants.FREE_WEEKLY_DASHBOARD_LIMIT,
+                tracker.getRemainingFreeDashboardUses(),
+            )
+
+            // Custom analysis (scenario 4) — independent bucket
+            tracker.setCurrentScenario(4)
+            assertTrue(tracker.isFreeDashboardAllowed(), "Custom scenario 4 should be allowed")
+            assertEquals(
+                Constants.FREE_WEEKLY_DASHBOARD_LIMIT,
+                tracker.getRemainingFreeDashboardUses(),
+            )
+        }
+
+        @Test
+        fun `recordWeeklyDashboardUse only affects active scenario`() {
+            tracker.setCurrentScenario(2)
+            tracker.recordWeeklyDashboardUse()
+            tracker.recordWeeklyDashboardUse()
+            // Scenario 2: 2 used
+            assertEquals(2, tracker.getWeeklyDashboardCount())
+
+            // Scenarios 0, 1, 3, 4 untouched
+            for (other in listOf(0, 1, 3, 4)) {
+                tracker.setCurrentScenario(other)
+                assertEquals(
+                    0,
+                    tracker.getWeeklyDashboardCount(),
+                    "Scenario $other counter should not have been incremented",
+                )
+            }
         }
     }
 

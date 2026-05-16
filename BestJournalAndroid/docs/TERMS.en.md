@@ -89,7 +89,7 @@ usable. The trial is non-binding and free of charge.
 
 Once the trial ends, the App remains free to use, but with **usage limits**:
 
-- Up to 5 dashboard analyses per week
+- Up to 5 dashboard analyses per week per analysis profile (built-in profiles and each custom analysis count separately)
 - Up to 5 AI text improvements per week
 - 2 weekly reviews (always the most recent ones)
 

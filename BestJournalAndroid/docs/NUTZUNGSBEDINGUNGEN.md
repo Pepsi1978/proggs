@@ -84,7 +84,7 @@ in vollem Umfang nutzbar sind. Die Testphase ist unverbindlich und kostenlos.
 ### 5.2 Free-Modus nach der Testphase
 Nach Ablauf der Testphase bleibt die App kostenlos nutzbar, jedoch mit
 **Nutzungslimits**:
-- Max. 5 Dashboard-Analysen pro Woche
+- Max. 5 Dashboard-Analysen pro Woche je Analyse-Profil (eingebaute Profile und jede individuelle Analyse zählen separat)
 - Max. 5 KI-Textverbesserungen pro Woche
 - 2 Wochenrückblicke (die jeweils neuesten)
 

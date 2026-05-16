@@ -268,6 +268,7 @@
     <string name="dashboard_all_recommendations">Alle Empfehlungen</string>
     <string name="dashboard_connection">Verknüpfung</string>
     <string name="dashboard_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
+    <string name="dashboard_limit_weekly_profile">Wochenlimit für dieses Profil erreicht. Wechsle das Profil oder warte bis Montag.</string>
     <string name="dashboard_limit_cooldown">Kurze Pause: Noch %1$d Minuten bis zur nächsten Analyse.</string>
     <string name="dashboard_analysis_failed">Analyse fehlgeschlagen</string>
     <string name="dashboard_last_updated">Letzte Aktualisierung am %1$s</string>
@@ -551,7 +552,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.21.7</string>
+    <string name="settings_about_version">Best Journal V0.21.8</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <string name="settings_about_copyright" translatable="false">© Barwandt Digital Labs</string>
     <!-- Sign-out dialog -->
@@ -1179,7 +1180,7 @@
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="ai_limit_title">Dein Wochenlimit ist erreicht</string>
-    <string name="ai_limit_body">Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\nMit dem Premium-Abo: bis zu 150 pro Tag.</string>
+    <string name="ai_limit_body">Ohne Abo hast du 5\u00A0Textverbesserungen pro Woche und 5\u00A0Dashboard-Aktualisierungen pro Woche je Profil.\nMit dem Premium-Abo: bis zu 150 pro Tag.</string>
     <string name="ai_limit_monthly">Monatsabo, %1$s/Monat</string>
     <string name="ai_limit_yearly">Jahresabo, %1$s/Jahr (spare 37%%)</string>
     <string name="ai_limit_no_thanks">Nein danke, weiter ohne KI</string>

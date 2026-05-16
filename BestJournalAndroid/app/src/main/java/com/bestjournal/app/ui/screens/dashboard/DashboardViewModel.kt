@@ -237,6 +237,11 @@ constructor(
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
                     aiRateLimiter.setCurrentScenario(currentScenario)
+                    // Weekly dashboard quota is tracked per profile (since 0.21.8): when
+                    // the user switches to a different profile, refresh the counter so the
+                    // limit indicator reflects the new profile's bucket (which may still
+                    // have full 5/5 quota left even if the previous profile was exhausted).
+                    _weeklyDashboardUsed.value = aiUsageTracker.getWeeklyDashboardCount()
                     analyticsTracker.trackProfileSwitched(
                         _uiState.value.currentScenario,
                         currentScenario,
@@ -363,11 +368,18 @@ constructor(
 
             when (accessResult) {
                 is TieredAccessResult.HardLimitReached -> {
+                    // Free users hit the per-profile WEEKLY limit (5 per profile per week,
+                    // since 0.21.8). Trial/subscribed users hit the per-profile DAILY limit
+                    // (101/151). Each case has its own message — the weekly one tells the
+                    // user that switching the profile may free up a fresh bucket.
+                    val isFreemiumFree =
+                        subState is SubscriptionState.Free &&
+                            aiUsageTracker.getCurrentPhase() == AiPhase.FREEMIUM
+                    val limitMessageRes =
+                        if (isFreemiumFree) R.string.dashboard_limit_weekly_profile
+                        else R.string.dashboard_limit_daily
                     _uiState.update {
-                        it.copy(
-                            dashboardLimitMessage =
-                                context.getString(R.string.dashboard_limit_daily)
-                        )
+                        it.copy(dashboardLimitMessage = context.getString(limitMessageRes))
                     }
                     return@launch
                 }
