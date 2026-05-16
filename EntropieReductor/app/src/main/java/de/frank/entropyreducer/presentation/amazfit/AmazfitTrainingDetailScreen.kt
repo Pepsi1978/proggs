@@ -1,5 +1,10 @@
 package de.frank.entropyreducer.presentation.amazfit
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -931,21 +936,69 @@ private fun ValueRow(label: String, value: String?) {
  */
 private fun parsePipeIntList(s: String?): List<Int> {
     if (s.isNullOrBlank()) return emptyList()
+    val trimmed = s.trim()
+    // Frank-Wunsch 2026-05-16: Polar-Bulk-Import liefert HR als JSON-Array
+    // `[[ts, hr], [ts, hr], ...]` — Zepp liefert es als Delta-encoded
+    // "timeDelta,hrDelta;..." Format. Parser erkennt beide automatisch.
+    if (trimmed.startsWith("[")) {
+        return parseJsonTimestampValueAsIntList(trimmed, valueIndex = 1, minVal = 30, maxVal = 230)
+    }
     val deltas = mutableListOf<Int>()
     for (sample in s.split(";")) {
         if (sample.isBlank()) continue
         val parts = sample.split(",")
-        // hr-Delta ist der ZWEITE Wert (parts[1]), parts[0] ist time-delta
         val v = (parts.getOrNull(1) ?: parts.getOrNull(0))?.trim()?.toIntOrNull() ?: continue
         deltas.add(v)
     }
-    // Akkumulieren — Delta zu absolutem HR
     val out = mutableListOf<Int>()
     var sum = 0
     for (d in deltas) {
         sum += d
-        // Plausibilitaetsfilter: HR zwischen 30 und 230
         if (sum in 30..230) out.add(sum)
+    }
+    return out
+}
+
+/**
+ * Frank-Wunsch 2026-05-16: Parst JSON-Array-Streams `[[ts, value], ...]`.
+ * Liefert eine Liste der Values als Int. Defensiv: Plausibilitaets-Range.
+ */
+private fun parseJsonTimestampValueAsIntList(json: String, valueIndex: Int, minVal: Int, maxVal: Int): List<Int> {
+    val out = mutableListOf<Int>()
+    runCatching {
+        val arr = Json.parseToJsonElement(json) as? JsonArray
+            ?: return emptyList()
+        for (item in arr) {
+            val pair = item as? JsonArray ?: continue
+            val v = pair.getOrNull(valueIndex)?.let { el ->
+                runCatching {
+                    (el as? JsonPrimitive)?.intOrNull
+                        ?: (el as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt()
+                }.getOrNull()
+            } ?: continue
+            if (v in minVal..maxVal) out.add(v)
+        }
+    }
+    return out
+}
+
+/**
+ * Wie oben, aber liefert Double-Werte (fuer Pace).
+ */
+private fun parseJsonTimestampValueAsDoubleList(json: String, valueIndex: Int, minVal: Double, maxVal: Double): List<Double> {
+    val out = mutableListOf<Double>()
+    runCatching {
+        val arr = Json.parseToJsonElement(json) as? JsonArray
+            ?: return emptyList()
+        for (item in arr) {
+            val pair = item as? JsonArray ?: continue
+            val v = pair.getOrNull(valueIndex)?.let { el ->
+                runCatching {
+                    (el as? JsonPrimitive)?.doubleOrNull
+                }.getOrNull()
+            } ?: continue
+            if (v in minVal..maxVal) out.add(v)
+        }
     }
     return out
 }
@@ -959,6 +1012,12 @@ private fun parsePipeIntList(s: String?): List<Int> {
  */
 private fun parsePaceStream(s: String?): List<Double> {
     if (s.isNullOrBlank()) return emptyList()
+    val trimmed = s.trim()
+    // Frank-Wunsch 2026-05-16: Polar-Bulk-Import liefert Pace als JSON-Array
+    // `[[ts, paceSecPerKm], ...]` direkt — bereits in sec/km, kein Skalieren noetig.
+    if (trimmed.startsWith("[")) {
+        return parseJsonTimestampValueAsDoubleList(trimmed, valueIndex = 1, minVal = 150.0, maxVal = 1500.0)
+    }
     val out = mutableListOf<Double>()
     for (sample in s.split(";")) {
         if (sample.isBlank()) continue
@@ -1002,6 +1061,24 @@ private fun parsePipeDoubleList(s: String?): List<Double> {
  */
 private fun parseGpsPoints(s: String?): List<Pair<Double, Double>> {
     if (s.isNullOrBlank()) return emptyList()
+    val trimmed = s.trim()
+    // Frank-Wunsch 2026-05-16: Polar-Bulk-Import liefert GPS als JSON-Array
+    // `[[lat, lon, alt, ts], ...]` mit Werten direkt als Dezimalgrad —
+    // KEIN Delta, KEIN Skalieren noetig.
+    if (trimmed.startsWith("[")) {
+        val out = mutableListOf<Pair<Double, Double>>()
+        runCatching {
+            val arr = Json.parseToJsonElement(trimmed)
+                as? JsonArray ?: return@runCatching
+            for (item in arr) {
+                val pt = item as? JsonArray ?: continue
+                val lat = (pt.getOrNull(0) as? JsonPrimitive)?.doubleOrNull ?: continue
+                val lon = (pt.getOrNull(1) as? JsonPrimitive)?.doubleOrNull ?: continue
+                if (lat in -90.0..90.0 && lon in -180.0..180.0) out.add(lat to lon)
+            }
+        }
+        return out
+    }
     val latDeltas = mutableListOf<Long>()
     val lonDeltas = mutableListOf<Long>()
     for (sample in s.split(";")) {
