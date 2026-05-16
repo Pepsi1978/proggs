@@ -615,10 +615,12 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                                         exerciseId = loaderId,
                                         onJsonReceived = { json ->
                                             vm.savePolarFlowWebWorkoutJson(loaderId, json)
-                                            showWorkoutLoader = null
+                                            // Dialog NICHT sofort schliessen — Polar sendet
+                                            // summary + samples + route oft hintereinander.
+                                            // Frank kann manuell schliessen wenn fertig.
                                         },
                                         onError = { _ ->
-                                            // bleibt offen, Frank kann manuell schliessen
+                                            // bleibt offen
                                         },
                                         onDismiss = { showWorkoutLoader = null },
                                     )

@@ -212,16 +212,18 @@ fun PolarFlowWorkoutLoaderScreen(
                         addJavascriptInterface(
                             PolarFlowJsBridge(
                                 onWorkoutJson = { json ->
-                                    post {
-                                        status = "Workout-Daten empfangen (${json.length} bytes)"
-                                        onJsonReceived(json)
-                                    }
+                                    // Direkt-Call statt View.post — JS-Bridge laeuft auf
+                                    // einem internen WebView-Thread, der `post` kann
+                                    // ausfallen wenn der WebView wegen Dialog-Schliessung
+                                    // gerade rekomposiert wird.
+                                    Log.i(TAG, "Bridge.onWorkoutJson — schicke ${json.length} bytes an ViewModel direkt")
+                                    status = "Workout-Daten empfangen (${json.length} bytes)"
+                                    onJsonReceived(json)
                                 },
                                 onError = { msg ->
-                                    post {
-                                        status = "Fehler: $msg"
-                                        onError(msg)
-                                    }
+                                    Log.w(TAG, "Bridge.onError: $msg")
+                                    status = "Fehler: $msg"
+                                    onError(msg)
                                 },
                             ),
                             "Android",
@@ -476,8 +478,8 @@ fun PolarFlowWorkoutLoaderScreen(
 
                                             setTimeout(function(){
                                                 clearInterval(recheckInterval);
-                                                if (!found) Android.receiveError('Polar hat 30s keine Workout-Daten ausgespuckt. Vielleicht klicke im WebView auf das Workout — das triggert die AJAX-Calls.');
-                                            }, 30000);
+                                                if (!found) Android.receiveError('Polar hat 5 Min keine Workout-Daten ausgespuckt. Schliesse den Dialog und versuche es nochmal.');
+                                            }, 300000);
                                         })();
                                     """.trimIndent()
                                     view.evaluateJavascript(js, null)
