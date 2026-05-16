@@ -123,7 +123,12 @@
             </intent-filter>
         </activity>
 
-        <!-- AppAuth Redirect Activity (OAuth fuer Whoop + Google Calendar) -->
+        <!-- AppAuth Redirect Activity (OAuth fuer Whoop + Google Calendar + Strava).
+             Strava-Wunsch 2026-05-16: gleiche Activity nimmt alle drei Redirect-URIs
+             entgegen — wir unterscheiden anhand des Pfades (oauth/whoop/callback,
+             oauth/google/callback, oauth/strava/callback). Manifest braucht KEIN
+             extra Filter weil das Scheme `de.frank.entropyreducer` schon alle
+             Pfade matcht. -->
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true"
