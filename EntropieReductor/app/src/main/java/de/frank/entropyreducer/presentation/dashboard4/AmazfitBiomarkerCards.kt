@@ -184,12 +184,18 @@ internal fun AmazfitTrainingsCard(
  * Hero-Pattern für den letzten Lauf — Frank-Wunsch 2026-05-09: "schoenes Fenster mit allen Werten
  * in Patterns". Sportart-Icon + Datum + T-Rex-3-Badge oben, dann Distanz und Dauer GROSS, darunter
  * ein 2x2-Pattern mit Pace, Puls, Kalorien, Höhenmeter.
+ *
+ * Frank-Befund 2026-05-16: Wenn das juengste Workout in der DB aelter als 24h ist, blenden wir
+ * eine Stale-Warnung ein. So sieht Frank sofort dass die Watch noch nicht mit der Zepp-Cloud
+ * synchronisiert hat — das Workout aus der App-Sicht ist nicht das tatsaechlich letzte.
  */
 @Composable
 private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     val heroShape = RoundedCornerShape(14.dp)
+    val ageHours = ((System.currentTimeMillis() - w.startMs) / 3_600_000L).coerceAtLeast(0L)
+    val isStale = ageHours >= 24L
     // Frank-Wunsch 2026-05-13: Heller Rahmen wie bei allen anderen Pattern (GlassCard-Border).
     Box(
         modifier =
@@ -294,6 +300,35 @@ private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
                     value = formatHeroVo2Max(w),
                     modifier = Modifier.weight(1f),
                 )
+            }
+            // Frank-Wunsch 2026-05-16: Stale-Hinweis wenn juengstes Training aelter als
+            // 24 Stunden ist. Trick: Workouts kommen aus der Zepp-Cloud — wenn die Watch
+            // sich nicht zur Zepp-App synchronisiert, bleiben neue Trainings dort haengen.
+            if (isStale) {
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CosmosColors.Critical.copy(alpha = 0.18f))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "Hinweis: aelter als 24h",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CosmosColors.Critical,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.size(2.dp))
+                        Text(
+                            text =
+                                "Falls du seitdem trainiert hast: Zepp-App oeffnen, Watch synchronisieren, dann hier Refresh druecken.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = cosmos.textSecondary,
+                        )
+                    }
+                }
             }
         }
     }
