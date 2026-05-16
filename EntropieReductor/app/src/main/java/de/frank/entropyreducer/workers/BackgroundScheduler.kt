@@ -70,7 +70,12 @@ class BackgroundScheduler @Inject constructor(
         wm.enqueueUniquePeriodicWork(
             PolarSyncWorker.UNIQUE_NAME_PERIODIC,
             ExistingPeriodicWorkPolicy.UPDATE,
-            PeriodicWorkRequestBuilder<PolarSyncWorker>(24, TimeUnit.HOURS)
+            // 2026-05-16: 24h -> 1h. Polar's Listen-Endpoint ist nicht-
+            // destruktiv (kein Transaction-Commit-Tod) und 1h-Polling fuer
+            // 30 Tage Workouts erzeugt ~24 Anfragen/Tag — weit unter Polar's
+            // Rate-Limit (500/15min). Frische Trainings landen spaetestens
+            // nach 1h in der App ohne manuellen Klick.
+            PeriodicWorkRequestBuilder<PolarSyncWorker>(1, TimeUnit.HOURS)
                 .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .build(),

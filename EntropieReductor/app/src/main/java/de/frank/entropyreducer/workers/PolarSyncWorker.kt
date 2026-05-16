@@ -45,91 +45,99 @@ class PolarSyncWorker @AssistedInject constructor(
             Log.d(TAG, "Polar nicht verbunden — Sync skippen")
             return Result.success()
         }
-        val outcome = polarRepo.fetchWorkoutsAsEntities()
-        return outcome.fold(
-            onSuccess = { entities ->
-                if (entities.isNotEmpty()) {
-                    // Frank-Bug 2026-05-16 (Iteration 2): Frueher wurde ein
-                    // bestehendes Workout komplett SKIPPED — auch wenn der
-                    // frische Polar-Pull jetzt Streams (HR, GPS, Pace) hatte
-                    // die vorher fehlten. Folge: Polar's typische 5-30-Min-
-                    // Latenz fuer Samples konnte NIE in die DB nachfliessen.
-                    //
-                    // Neuer Workflow:
-                    //  - source == "polar-bulk": SKIPPEN (Frank-Wunsch:
-                    //    Bulk-Historie nie ueberschreiben, sie ist die
-                    //    autoritative Lang-Historie aus dem ZIP-Export).
-                    //  - source == "polar" + Entity neu in DB: INSERT.
-                    //  - source == "polar" + Entity schon da: MERGE mit
-                    //    fresh-wins-if-not-null. So bekommen frische Streams
-                    //    eine zweite Chance ohne dass leere Refresh-Versuche
-                    //    bereits vorhandene Daten ausnullen.
-                    val newOnly = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
-                    val updated = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
-                    var skippedBulk = 0
-                    var unchanged = 0
-                    for (e in entities) {
-                        val exists = workoutDao.getById(e.trackId)
-                        when {
-                            exists == null -> newOnly += e
-                            exists.source == "polar-bulk" -> {
-                                skippedBulk++
-                                Log.d(TAG, "Polar-Sync: ${e.trackId} ist Bulk-Eintrag — Live-Daten werden NICHT geschrieben")
-                            }
-                            else -> {
-                                val merged = exists.copy(
-                                    durationSeconds = e.durationSeconds ?: exists.durationSeconds,
-                                    sportType = e.sportType ?: exists.sportType,
-                                    sportName = e.sportName ?: exists.sportName,
-                                    distanceMeters = e.distanceMeters ?: exists.distanceMeters,
-                                    avgPaceSecPerKm = e.avgPaceSecPerKm ?: exists.avgPaceSecPerKm,
-                                    maxPaceSecPerKm = e.maxPaceSecPerKm ?: exists.maxPaceSecPerKm,
-                                    avgSpeedKmh = e.avgSpeedKmh ?: exists.avgSpeedKmh,
-                                    maxSpeedKmh = e.maxSpeedKmh ?: exists.maxSpeedKmh,
-                                    calories = e.calories ?: exists.calories,
-                                    avgHeartRate = e.avgHeartRate ?: exists.avgHeartRate,
-                                    maxHeartRate = e.maxHeartRate ?: exists.maxHeartRate,
-                                    gpsTrackJson = e.gpsTrackJson ?: exists.gpsTrackJson,
-                                    heartRateSeriesJson = e.heartRateSeriesJson ?: exists.heartRateSeriesJson,
-                                    paceSeriesJson = e.paceSeriesJson ?: exists.paceSeriesJson,
-                                    paceStreamJson = e.paceStreamJson ?: exists.paceStreamJson,
-                                    splitsJson = e.splitsJson ?: exists.splitsJson,
-                                    altitudeGainMeters = e.altitudeGainMeters ?: exists.altitudeGainMeters,
-                                    altitudeLossMeters = e.altitudeLossMeters ?: exists.altitudeLossMeters,
-                                    trainingEffectAerobic = e.trainingEffectAerobic ?: exists.trainingEffectAerobic,
-                                    trainingEffectAnaerobic = e.trainingEffectAnaerobic ?: exists.trainingEffectAnaerobic,
-                                    vo2Max = e.vo2Max ?: exists.vo2Max,
-                                    cadence = e.cadence ?: exists.cadence,
-                                    strideLengthCm = e.strideLengthCm ?: exists.strideLengthCm,
-                                    createdAt = System.currentTimeMillis(),
-                                )
-                                if (merged != exists) {
-                                    updated += merged
-                                    Log.i(TAG, "Polar-Sync: ${e.trackId} aktualisiert — streams jetzt: hr=${merged.heartRateSeriesJson != null} pace=${merged.paceStreamJson != null} gps=${merged.gpsTrackJson != null} splits=${merged.paceSeriesJson != null} cadence=${merged.cadence != null} stride=${merged.strideLengthCm != null} altGain=${merged.altitudeGainMeters != null} altLoss=${merged.altitudeLossMeters != null} maxPace=${merged.maxPaceSecPerKm != null}")
-                                } else {
-                                    unchanged++
-                                }
-                            }
-                        }
-                    }
-                    if (newOnly.isNotEmpty() || updated.isNotEmpty()) {
-                        appDatabase.withTransaction {
-                            if (newOnly.isNotEmpty()) workoutDao.upsertAll(newOnly)
-                            for (m in updated) workoutDao.upsert(m)
-                        }
-                        Log.i(TAG, "Polar-Sync: ${newOnly.size} neu, ${updated.size} aktualisiert, $skippedBulk Bulk skipped, $unchanged unveraendert")
-                        syncCoordinator.requestSync()
+        // NEUER HAUPT-PFAD (Direktive 3, 2026-05-16): Listen-Endpoint pollen.
+        // Liefert die letzten 30 Tage MIT Streams, nicht-destruktiv (kein
+        // Commit-Tod nach erstem Pull). Pro Workout machen wir nochmal
+        // Direct-Reads fuer Samples + GPX mit der hashed ID die das
+        // Listen-Item bringt.
+        val listOutcome = polarRepo.pullLast30DaysAsEntities()
+        val listEntities = listOutcome.getOrNull().orEmpty()
+        applyEntities(listEntities, sourceTag = "Listen-Endpoint")
+
+        // ALT-PFAD als Fallback (z.B. fuer Workouts aelter als 30 Tage, die
+        // ueber den Listen-Endpoint nicht kommen): Transaction-Workflow.
+        // Solange Polar's Conditional-Commit-Logik aktiv ist, gehen auch
+        // hier keine frischen Workouts verloren.
+        val txOutcome = polarRepo.fetchWorkoutsAsEntities()
+        val txEntities = txOutcome.getOrNull().orEmpty()
+        applyEntities(txEntities, sourceTag = "Transaction")
+        return if (txOutcome.isSuccess) Result.success() else {
+            Log.w(TAG, "Polar-Transaction-Pfad fehlgeschlagen: ${txOutcome.exceptionOrNull()?.message}")
+            // Wenn der Listen-Endpoint Daten geliefert hat, sind wir trotzdem
+            // erfolgreich. Nur wenn auch der nichts brachte: retry.
+            if (listEntities.isNotEmpty()) Result.success() else Result.retry()
+        }
+    }
+
+    /**
+     * Schreibt Polar-Entities in die DB. Bei bestehenden Eintraegen mit
+     * source="polar" wird gemerged (fresh wins if not null). polar-bulk
+     * bleibt unangetastet damit die autoritative Lang-Historie nicht
+     * von Live-Pulls ueberschrieben wird.
+     */
+    private suspend fun applyEntities(
+        entities: List<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>,
+        sourceTag: String,
+    ) {
+        if (entities.isEmpty()) return
+        val newOnly = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
+        val updated = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
+        var skippedBulk = 0
+        var unchanged = 0
+        for (e in entities) {
+            val exists = workoutDao.getById(e.trackId)
+            when {
+                exists == null -> newOnly += e
+                exists.source == "polar-bulk" -> {
+                    skippedBulk++
+                    Log.d(TAG, "[$sourceTag] ${e.trackId} ist Bulk-Eintrag — Live-Daten NICHT schreiben")
+                }
+                else -> {
+                    val merged = exists.copy(
+                        durationSeconds = e.durationSeconds ?: exists.durationSeconds,
+                        sportType = e.sportType ?: exists.sportType,
+                        sportName = e.sportName ?: exists.sportName,
+                        distanceMeters = e.distanceMeters ?: exists.distanceMeters,
+                        avgPaceSecPerKm = e.avgPaceSecPerKm ?: exists.avgPaceSecPerKm,
+                        maxPaceSecPerKm = e.maxPaceSecPerKm ?: exists.maxPaceSecPerKm,
+                        avgSpeedKmh = e.avgSpeedKmh ?: exists.avgSpeedKmh,
+                        maxSpeedKmh = e.maxSpeedKmh ?: exists.maxSpeedKmh,
+                        calories = e.calories ?: exists.calories,
+                        avgHeartRate = e.avgHeartRate ?: exists.avgHeartRate,
+                        maxHeartRate = e.maxHeartRate ?: exists.maxHeartRate,
+                        gpsTrackJson = e.gpsTrackJson ?: exists.gpsTrackJson,
+                        heartRateSeriesJson = e.heartRateSeriesJson ?: exists.heartRateSeriesJson,
+                        paceSeriesJson = e.paceSeriesJson ?: exists.paceSeriesJson,
+                        paceStreamJson = e.paceStreamJson ?: exists.paceStreamJson,
+                        splitsJson = e.splitsJson ?: exists.splitsJson,
+                        altitudeGainMeters = e.altitudeGainMeters ?: exists.altitudeGainMeters,
+                        altitudeLossMeters = e.altitudeLossMeters ?: exists.altitudeLossMeters,
+                        trainingEffectAerobic = e.trainingEffectAerobic ?: exists.trainingEffectAerobic,
+                        trainingEffectAnaerobic = e.trainingEffectAnaerobic ?: exists.trainingEffectAnaerobic,
+                        vo2Max = e.vo2Max ?: exists.vo2Max,
+                        cadence = e.cadence ?: exists.cadence,
+                        strideLengthCm = e.strideLengthCm ?: exists.strideLengthCm,
+                        createdAt = System.currentTimeMillis(),
+                    )
+                    if (merged != exists) {
+                        updated += merged
+                        Log.i(TAG, "[$sourceTag] ${e.trackId} aktualisiert — streams: hr=${merged.heartRateSeriesJson != null} pace=${merged.paceStreamJson != null} gps=${merged.gpsTrackJson != null} splits=${merged.paceSeriesJson != null} cadence=${merged.cadence != null} stride=${merged.strideLengthCm != null} altGain=${merged.altitudeGainMeters != null} altLoss=${merged.altitudeLossMeters != null} maxPace=${merged.maxPaceSecPerKm != null}")
                     } else {
-                        Log.d(TAG, "Polar-Sync: ${entities.size} geliefert — nichts neu (Bulk: $skippedBulk, unveraendert: $unchanged)")
+                        unchanged++
                     }
                 }
-                Result.success()
-            },
-            onFailure = { ex ->
-                Log.w(TAG, "Polar-Sync fehlgeschlagen: ${ex.message}")
-                Result.retry()
-            },
-        )
+            }
+        }
+        if (newOnly.isNotEmpty() || updated.isNotEmpty()) {
+            appDatabase.withTransaction {
+                if (newOnly.isNotEmpty()) workoutDao.upsertAll(newOnly)
+                for (m in updated) workoutDao.upsert(m)
+            }
+            Log.i(TAG, "[$sourceTag] applyEntities: ${newOnly.size} neu, ${updated.size} aktualisiert, $skippedBulk Bulk skipped, $unchanged unveraendert")
+            syncCoordinator.requestSync()
+        } else {
+            Log.d(TAG, "[$sourceTag] applyEntities: ${entities.size} geliefert — nichts neu (Bulk: $skippedBulk, unveraendert: $unchanged)")
+        }
     }
 
     companion object {

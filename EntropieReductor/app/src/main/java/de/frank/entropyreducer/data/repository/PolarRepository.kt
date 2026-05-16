@@ -61,6 +61,66 @@ class PolarRepository @Inject constructor(
         oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L
 
     /**
+     * Pollt ALLE Workouts der letzten 30 Tage via Listen-Endpoint
+     * (`GET /v3/exercises`) und liefert sie als komplette Entities mit
+     * Streams zurueck. Ein Aufruf, alle Daten — kein Transaction-Workflow
+     * mit destruktivem Commit-Verhalten, kein Webhook noetig.
+     *
+     * Researcher-Finding 2026-05-16: Dieser Endpoint ist die zuverlaessigste
+     * Methode an Polar-Daten zu kommen. Funktioniert auch fuer laengst
+     * committete Workouts. Limit: 30 Tage (aelteres muss aus Polar-Bulk-
+     * Export-ZIP geholt werden).
+     */
+    suspend fun pullLast30DaysAsEntities(): Result<List<AmazfitWorkoutEntity>> = runCatchingCancellable {
+        if (!isAuthenticated()) {
+            Log.d(TAG, "Polar: pullLast30Days — nicht authentifiziert")
+            return@runCatchingCancellable emptyList()
+        }
+        val accessToken = oauth.freshPolarAccessToken()
+            ?: throw IllegalStateException("Polar-Access-Token nicht verfuegbar")
+        val bearer = "Bearer $accessToken"
+
+        val resp = api.listExercisesLast30Days(bearer)
+        if (!resp.isSuccessful || resp.body() == null) {
+            Log.w(TAG, "Polar: /v3/exercises HTTP ${resp.code()} — Fallback")
+            return@runCatchingCancellable emptyList()
+        }
+        val items = resp.body()!!
+        Log.i(TAG, "Polar: /v3/exercises lieferte ${items.size} Workouts der letzten 30 Tage")
+
+        val entities = mutableListOf<AmazfitWorkoutEntity>()
+        for ((idx, item) in items.withIndex()) {
+            try {
+                // Numerische ID aus item.exerciseId (falls vorhanden) oder
+                // aus dem polar-user-URL-Pfad ableiten. Polar's Listen-Items
+                // haben oft nur die hashed `id`. Wir nutzen dann den hashed
+                // String als trackId-Suffix: trackId="polar-hash-aQlC83".
+                val numericId = item.exerciseId
+                val trackIdSuffix = if (numericId != null) numericId.toString() else "hash-${item.id}"
+                val entity = buildEntityFromListItem(bearer, numericId ?: 0L, item)
+                // Fix trackId falls numeric nicht verfuegbar.
+                val finalEntity = if (numericId == null) {
+                    entity.copy(trackId = "polar-$trackIdSuffix")
+                } else entity
+                entities += finalEntity
+                Log.d(TAG, "Polar: Item ${idx + 1}/${items.size} — hashed=${item.id} start=${item.startTime} sport=${item.sport} streams=hr:${finalEntity.heartRateSeriesJson != null},pace:${finalEntity.paceStreamJson != null},gps:${finalEntity.gpsTrackJson != null}")
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                Log.w(TAG, "Polar: pullLast30Days Item ${item.id} fehlgeschlagen — ${t.message}")
+            }
+            delay(150)
+        }
+        secrets.polarLastSyncEpochMs = System.currentTimeMillis()
+        Log.i(TAG, "Polar: pullLast30Days fertig, ${entities.size} Entities mit voller Stream-Pipeline")
+        entities
+    }.onFailure { ex ->
+        if (ex !is kotlinx.coroutines.CancellationException) {
+            Log.e(TAG, "Polar: pullLast30Days fehlgeschlagen", ex)
+        }
+    }
+
+    /**
      * Versucht eine bestehende Exercise NEU zu laden — ueber den Transaction-
      * Workflow. Polar AccessLink V3 hat KEINEN Direct-Endpoint fuer Exercises:
      * `GET /v3/users/{uid}/exercises/{eid}` antwortet mit HTTP 404 (Live-Sonde
