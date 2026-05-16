@@ -553,6 +553,155 @@ grep -rn '"\s*+\s*stringResource\|stringResource[^)]*)\s*+\s*"' --include='*.kt'
 grep -rn '"[^"]*\$\(\|"[^"]*\${' --include='*.kt' . | grep -v '/test/' | head -30
 ```
 
+## Schicht 4c — Translation-Context
+
+### translatable="false" und xliff:g
+
+```bash
+# Nicht-uebersetzbare Strings
+grep -oE '<string name="[^"]+" translatable="false"' app/src/main/res/values/strings.xml | sed 's/<string name="//' | sed 's/" translatable.*//' | sort -u
+
+# Anzahl pro Sprache
+for f in app/src/main/res/values*/strings.xml; do
+  COUNT=$(grep -c 'translatable="false"' "$f" 2>/dev/null || echo 0)
+  printf "%-60s %s\n" "$f" "$COUNT"
+done
+
+# xliff:g-Tags (Inline-Schutz)
+grep -n '<xliff:g' app/src/main/res/values/strings.xml
+grep -oE '<xliff:g id="[^"]*"[^>]*>' app/src/main/res/values/strings.xml | sort -u
+
+# Pruefen ob xmlns:xliff im resources-Tag deklariert ist
+grep -n 'xmlns:xliff' app/src/main/res/values/strings.xml
+
+# Format-Strings OHNE xliff:g (Kandidaten zum Wrappen)
+grep -E '<string[^>]*>[^<]*%[0-9]\$[sdf]' app/src/main/res/values/strings.xml | grep -v 'xliff:g'
+```
+
+### XML-Kommentare als Uebersetzer-Notizen
+
+```bash
+# Strings mit vorangestelltem Kommentar
+awk '/<!--/{c=$0; next} /<string name=/{if(c) print "COMMENT: " c "\nSTRING:  " $0 "\n"; c=""} /^[^!]/{c=""}' app/src/main/res/values/strings.xml | head -100
+
+# Strings OHNE Kommentar (Quote-Liste)
+awk 'BEGIN{prev=""} /<!--/{prev=$0; next} /<string name=/{if(prev=="") print; prev=""} /^[[:space:]]*[^<!]/{prev=""}' app/src/main/res/values/strings.xml | head -50
+
+# Format-Strings ohne Kommentar (Pruefen!)
+grep -B 1 '%[0-9]\$[sdf]' app/src/main/res/values/strings.xml | grep -v '<!--' | grep '<string' | head -30
+```
+
+### CLDR-Plural-Vollstaendigkeit
+
+```bash
+# Alle Plural-Keys
+grep -oE '<plurals name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<plurals name="//' | sed 's/"$//' | sort -u
+
+# Pro Plural-Key alle Quantitaeten in einer Sprache
+KEY=plural_entries_count
+LANG=ru
+awk "/<plurals name=\"$KEY\"/,/<\/plurals>/" "app/src/main/res/values-$LANG/strings.xml" | grep -oE 'quantity="[^"]+"' | sort -u
+
+# Liste benoetigter Quantitaeten pro Sprache (CLDR-Referenz)
+# de, en, es, it, nl, pt, tr, zh, ja, ko: one, other
+# fr, pt-rBR:                              one, many, other
+# ru, uk, pl, cs, sk:                      one, few, many, other
+# ar:                                      zero, one, two, few, many, other
+# he:                                      one, two, many, other
+# cy:                                      zero, one, two, few, many, other
+# ga:                                      one, two, few, many, other
+# sl:                                      one, two, few, other
+```
+
+### HTML/CDATA in Strings
+
+```bash
+# Strings mit HTML-Tags
+grep -E '<string[^>]*>[^<]*<(b|i|u|br|a|font|strong|em|span|p|ol|ul|li|tt)\b' app/src/main/res/values/strings.xml
+
+# CDATA-Bereiche
+grep -E '<!\[CDATA\[' app/src/main/res/values/strings.xml
+
+# HTML-Entities (escapt)
+grep -E '&(lt|gt|amp|quot|apos|nbsp|#[0-9]+);' app/src/main/res/values/strings.xml | head -30
+
+# Strings mit Newlines (\n) — koennen bei Uebersetzung verloren gehen
+grep -E '\\\\n' app/src/main/res/values/strings.xml | head -20
+```
+
+### Format-Argumente erkennen
+
+```bash
+# Positional-Format (%1$s, %2$d)
+grep -oE '%[0-9]+\$[sdf]' app/src/main/res/values/strings.xml | sort -u
+
+# Generic-Format (%s, %d) — sollten POSITIONAL gemacht werden fuer Uebersetzungen
+grep -E '<string[^>]*>[^<]*%[sdf][^<]*<' app/src/main/res/values/strings.xml | grep -v '%[0-9]\$' | head -20
+
+# Argument-Anzahl pro String
+for key in $(grep -oE '<string name="[^"]+"' app/src/main/res/values/strings.xml | sed 's/<string name="//' | sed 's/"$//'); do
+  COUNT=$(grep "<string name=\"$key\"" app/src/main/res/values/strings.xml | grep -oE '%[0-9]\$[sdf]' | sort -u | wc -l)
+  if [ "$COUNT" -gt 0 ]; then
+    echo "$COUNT args: $key"
+  fi
+done | sort -rn | head -20
+```
+
+### Glossar-Auto-Erkennung
+
+```bash
+# Top-50 deutsche Substantive (mit Grossbuchstabe)
+grep -oE '<string name="[^"]+">[^<]+</string>' app/src/main/res/values/strings.xml | \
+  sed 's/<[^>]*>//g' | grep -oE '\b[A-ZÄÖÜ][a-zäöüß]+\b' | \
+  sort | uniq -c | sort -rn | head -50
+
+# Top-50 englische Schlagwoerter (lowercase)
+grep -oE '<string name="[^"]+">[^<]+</string>' app/src/main/res/values-en/strings.xml | \
+  sed 's/<[^>]*>//g' | tr ' ' '\n' | tr -cd '[:alpha:]\n' | \
+  awk '{ print tolower($0) }' | grep -E '^.{4,}$' | sort | uniq -c | sort -rn | head -50
+
+# Inkonsistenz-Pruefung: dasselbe deutsche Wort, verschiedene EN-Uebersetzungen
+# (Manuell pro Top-Begriff: in welchen Strings taucht "Eintrag" auf? Wie wird er uebersetzt?)
+DE_KEY=$(grep -lE '<string name="[^"]+">[^<]*Eintrag' app/src/main/res/values/strings.xml | head -1)
+```
+
+### Region-Differenzen
+
+```bash
+# Identische Strings in Regional-Varianten (Verdacht: keine echte Lokalisierung)
+diff <(grep -E '<string name=' app/src/main/res/values-pt-rBR/strings.xml | sort) \
+     <(grep -E '<string name=' app/src/main/res/values-pt-rPT/strings.xml | sort) | wc -l
+
+# Alle Sprach-Paare die "kandidaten" sind
+ls -d app/src/main/res/values-*/ 2>/dev/null | grep -oE 'values-[a-z]{2}-r[A-Z]{2}' | sort -u
+```
+
+### Du/Sie-Konsistenz (Deutsch)
+
+```bash
+# Du-Form
+grep -cE '\b(du|dein|deine|deinem|deinen|deiner|dir|dich)\b' app/src/main/res/values/strings.xml
+
+# Sie-Form
+grep -cE '\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihnen)\b' app/src/main/res/values/strings.xml
+
+# Detail mit Zeilen
+grep -nE '\b(du|dein|deine)\b' app/src/main/res/values/strings.xml | head -10
+grep -nE '\b(Sie|Ihr|Ihre|Ihnen)\b' app/src/main/res/values/strings.xml | head -10
+```
+
+### Slot-Laengen-Audit
+
+```bash
+# Alle Buttons mit ihrer Laenge (in Hauptsprache) — Cutoff bei 18 Zeichen
+grep -oE '<string name="[^"]*button[^"]*"[^>]*>[^<]+</string>\|<string name="[^"]*_cta[^"]*"[^>]*>[^<]+</string>' app/src/main/res/values/strings.xml | \
+  awk -F'</string>|>' '{ key=$0; sub(/.*name="/,"",key); sub(/".*/,"",key); text=$2; print length(text), key, text }' | sort -rn | head -30
+
+# Push-Notification-Titles
+grep -E '<string name="notif_[^"]*title[^"]*"' app/src/main/res/values/strings.xml | \
+  awk -F'</string>|>' '{ key=$0; sub(/.*name="/,"",key); sub(/".*/,"",key); text=$2; print length(text), key, text }'
+```
+
 ## Quick-Master-Sweep (das wichtigste in einer Zeile)
 
 ```bash

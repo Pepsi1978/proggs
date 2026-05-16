@@ -604,6 +604,287 @@ count_in_file() {
         echo ""
     fi
 
+    # === SCHICHT 4c: TRANSLATION-CONTEXT ===
+    echo "## Schicht 4c — Translation-Context"
+    echo ""
+    echo "Vorarbeit fuer den Uebersetzungs-Skill. Die Tiefenauswertung folgt durch Claude."
+    echo ""
+
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        # 4c.1 translatable=false
+        echo "### 4c.1 Nicht-uebersetzbare Strings"
+        echo ""
+        UNTRANS=$(grep -c 'translatable="false"' "$STRINGS_XML" 2>/dev/null || echo "0")
+        echo "**Anzahl:** $UNTRANS"
+        echo ""
+        if [[ "$UNTRANS" -gt 0 ]]; then
+            echo "\`\`\`"
+            grep 'translatable="false"' "$STRINGS_XML" | sed 's/^[[:space:]]*//' | head -30
+            echo "\`\`\`"
+        fi
+        echo ""
+
+        # 4c.2 xliff:g-Tags
+        echo "### 4c.2 xliff:g-Tags (Inline-Schutz)"
+        echo ""
+        XLIFF_DECL=$(grep -c 'xmlns:xliff' "$STRINGS_XML" 2>/dev/null || echo "0")
+        XLIFF_USES=$(grep -c '<xliff:g' "$STRINGS_XML" 2>/dev/null || echo "0")
+        FORMAT_NO_XLIFF=$(grep -E '<string[^>]*>[^<]*%[0-9]\$[sdf]' "$STRINGS_XML" 2>/dev/null | grep -v 'xliff:g' | wc -l)
+        echo "| Metrik | Wert |"
+        echo "|--------|------|"
+        echo "| xmlns:xliff deklariert | $([[ $XLIFF_DECL -gt 0 ]] && echo "JA" || echo "NEIN") |"
+        echo "| xliff:g-Tags verwendet | $XLIFF_USES |"
+        echo "| Format-Strings OHNE xliff:g (Kandidaten) | $FORMAT_NO_XLIFF |"
+        echo ""
+        if [[ "$XLIFF_USES" -gt 0 ]]; then
+            echo "**Beispiele:**"
+            echo "\`\`\`"
+            grep -E '<xliff:g' "$STRINGS_XML" | head -10
+            echo "\`\`\`"
+            echo ""
+        fi
+
+        # 4c.3 Uebersetzer-Notizen (XML-Kommentare vor String-Tags)
+        echo "### 4c.3 Uebersetzer-Notizen (XML-Kommentare)"
+        echo ""
+        TOTAL_STRINGS=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null || echo "0")
+        COMMENTED=$(awk 'BEGIN{c=0; total=0} /<!--/{flag=1; next} /<string name=/{if(flag) c++; flag=0; total++} /^[[:space:]]*[^<!]/{flag=0} END{print c}' "$STRINGS_XML" 2>/dev/null || echo "0")
+        if [[ "$TOTAL_STRINGS" -gt 0 ]]; then
+            PCT=$(awk "BEGIN { printf \"%.1f\", $COMMENTED * 100 / $TOTAL_STRINGS }")
+        else
+            PCT="0"
+        fi
+        echo "**Strings mit vorangestelltem Kommentar:** $COMMENTED / $TOTAL_STRINGS ($PCT%)"
+        echo ""
+
+        # 4c.4 Plural-Audit
+        echo "### 4c.4 Plural-Resources und CLDR-Vollstaendigkeit"
+        echo ""
+        PLURAL_KEYS=$(grep -oE '<plurals name="[^"]+"' "$STRINGS_XML" 2>/dev/null | sed 's/<plurals name="//' | sed 's/"$//' | sort -u)
+        PLURAL_COUNT=$(echo "$PLURAL_KEYS" | grep -c . || echo 0)
+        echo "**Anzahl Plural-Keys:** $PLURAL_COUNT"
+        echo ""
+
+        if [[ "$PLURAL_COUNT" -gt 0 ]]; then
+            echo "**Quantitaeten pro Sprache und Plural-Key:**"
+            echo ""
+            echo "\`\`\`"
+            for lang_dir in $(ls -d app/src/main/res/values*/ 2>/dev/null | sort); do
+                lang=$(basename "$lang_dir" | sed 's/values//' | sed 's/^-//')
+                [[ -z "$lang" ]] && lang="default"
+                f="$lang_dir/strings.xml"
+                [[ ! -f "$f" ]] && continue
+                for key in $PLURAL_KEYS; do
+                    QUANTITIES=$(awk "/<plurals name=\"$key\"/,/<\/plurals>/" "$f" 2>/dev/null | grep -oE 'quantity="[^"]+"' | sed 's/quantity="//;s/"//' | sort -u | tr '\n' ',' | sed 's/,$//')
+                    [[ -z "$QUANTITIES" ]] && QUANTITIES="(fehlt)"
+                    printf "%-15s | %-40s | %s\n" "$lang" "$key" "$QUANTITIES"
+                done
+            done | head -200
+            echo "\`\`\`"
+            echo ""
+            echo "**CLDR-Referenz:**"
+            echo "- de/en/es/it/nl/pt/tr/zh/ja/ko: \`one, other\`"
+            echo "- fr/pt-rBR: \`one, many, other\`"
+            echo "- ru/uk/pl/cs/sk: \`one, few, many, other\`"
+            echo "- ar: \`zero, one, two, few, many, other\`"
+            echo ""
+        fi
+
+        # 4c.5 HTML/CDATA in Strings
+        echo "### 4c.5 HTML / CDATA in Strings"
+        echo ""
+        HTML_STR=$(grep -cE '<string[^>]*>[^<]*<(b|i|u|br|a|font|strong|em|span|p)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
+        CDATA_STR=$(grep -c '<!\[CDATA\[' "$STRINGS_XML" 2>/dev/null || echo "0")
+        ENTITY_STR=$(grep -cE '&(lt|gt|amp|quot|apos|nbsp|#[0-9]+);' "$STRINGS_XML" 2>/dev/null || echo "0")
+        echo "| Metrik | Wert |"
+        echo "|--------|------|"
+        echo "| Strings mit HTML-Tags | $HTML_STR |"
+        echo "| Strings mit CDATA | $CDATA_STR |"
+        echo "| Strings mit HTML-Entities | $ENTITY_STR |"
+        echo ""
+
+        # 4c.6 Format-Argumente
+        echo "### 4c.6 Format-Argumente"
+        echo ""
+        POSITIONAL_FMT=$(grep -cE '%[0-9]+\$[sdf]' "$STRINGS_XML" 2>/dev/null || echo "0")
+        GENERIC_FMT=$(grep -cE '<string[^>]*>[^<]*%[sdf]' "$STRINGS_XML" 2>/dev/null || echo "0")
+        echo "| Format-Typ | Anzahl |"
+        echo "|-----------|--------|"
+        echo "| Positional (%1\$s, %2\$d) | $POSITIONAL_FMT |"
+        echo "| Generic (%s, %d) | $GENERIC_FMT |"
+        echo ""
+
+        # 4c.7 Glossar — Top deutsche Substantive
+        echo "### 4c.7 Glossar-Kandidaten (Top-30 Begriffe)"
+        echo ""
+        echo "**Top-30 deutsche Substantive (in Strings, Vorkommen):**"
+        echo ""
+        echo "\`\`\`"
+        grep -oE '<string name="[^"]+">[^<]+</string>' "$STRINGS_XML" 2>/dev/null | \
+          sed 's/<[^>]*>//g' | grep -oE '\b[A-ZÄÖÜ][a-zäöüß]+\b' | \
+          sort | uniq -c | sort -rn | head -30
+        echo "\`\`\`"
+        echo ""
+
+        EN_FILE="app/src/main/res/values-en/strings.xml"
+        if [[ -f "$EN_FILE" ]]; then
+            echo "**Top-30 englische Schlagwoerter (lowercase, >3 Zeichen):**"
+            echo ""
+            echo "\`\`\`"
+            grep -oE '<string name="[^"]+">[^<]+</string>' "$EN_FILE" 2>/dev/null | \
+              sed 's/<[^>]*>//g' | tr ' ' '\n' | tr -cd '[:alpha:]\n' | \
+              awk '{ print tolower($0) }' | grep -E '^.{4,}$' | \
+              sort | uniq -c | sort -rn | head -30
+            echo "\`\`\`"
+            echo ""
+        fi
+
+        # 4c.8 Region-Differenzen — direkter Paarvergleich, nicht ueber Base-Variante
+        echo "### 4c.8 Region-Differenzen (Verdacht fehlende Lokalisierung)"
+        echo ""
+        # Alle Sprachen mit Regional-Code finden, dann nach Basissprache gruppieren
+        REGIONAL_LANGS=$(ls -d app/src/main/res/values-*/ 2>/dev/null | grep -oE 'values-[a-z]{2,3}-r[A-Z]{2}' | sed 's/values-//' | sort -u)
+        if [[ -n "$REGIONAL_LANGS" ]]; then
+            # Basissprache extrahieren und Varianten gruppieren
+            BASE_LANGS=$(echo "$REGIONAL_LANGS" | sed 's/-r.*//' | sort -u)
+            FOUND_PAIR=0
+            for base in $BASE_LANGS; do
+                # Alle Varianten dieser Basissprache
+                VARIANTS=$(echo "$REGIONAL_LANGS" | grep "^${base}-r" | sort)
+                VAR_COUNT=$(echo "$VARIANTS" | wc -l)
+                if [[ "$VAR_COUNT" -ge 2 ]]; then
+                    if [[ "$FOUND_PAIR" -eq 0 ]]; then
+                        echo "| Sprach-Paar | Strings im 1. | Strings im 2. | Diff-Zeilen | Status |"
+                        echo "|-------------|---------------|---------------|-------------|--------|"
+                        FOUND_PAIR=1
+                    fi
+                    # Vergleiche jedes Paar
+                    VAR_ARR=($VARIANTS)
+                    for ((i=0; i<${#VAR_ARR[@]}; i++)); do
+                        for ((j=i+1; j<${#VAR_ARR[@]}; j++)); do
+                            VA="${VAR_ARR[$i]}"
+                            VB="${VAR_ARR[$j]}"
+                            FA="app/src/main/res/values-$VA/strings.xml"
+                            FB="app/src/main/res/values-$VB/strings.xml"
+                            [[ ! -f "$FA" ]] || [[ ! -f "$FB" ]] && continue
+                            CA=$(grep -c '<string name=' "$FA" 2>/dev/null || echo "0")
+                            CB=$(grep -c '<string name=' "$FB" 2>/dev/null || echo "0")
+                            DIFFS=$(diff <(grep -oE '<string name="[^"]+">[^<]+' "$FA" 2>/dev/null | sort) \
+                                          <(grep -oE '<string name="[^"]+">[^<]+' "$FB" 2>/dev/null | sort) 2>/dev/null | wc -l)
+                            if [[ "$DIFFS" -lt 20 ]] && [[ "$CA" -gt 100 ]]; then
+                                STATUS="⚠ Verdacht: zu wenig Unterschied (nur $DIFFS Diff-Zeilen)"
+                            else
+                                STATUS="OK ($DIFFS Diff-Zeilen)"
+                            fi
+                            echo "| $VA vs $VB | $CA | $CB | $DIFFS | $STATUS |"
+                        done
+                    done
+                fi
+            done
+            if [[ "$FOUND_PAIR" -eq 0 ]]; then
+                echo "(Regional-Varianten gefunden, aber keine paarweisen Varianten derselben Basissprache)"
+                echo ""
+                echo "Gefundene Regional-Varianten: $(echo "$REGIONAL_LANGS" | tr '\n' ' ')"
+            fi
+        else
+            echo "(keine Regional-Varianten gefunden)"
+        fi
+        echo ""
+
+        # 4c.9 Du/Sie-Konsistenz fuer Deutsch
+        echo "### 4c.9 Du/Sie-Konsistenz (Deutsch)"
+        echo ""
+        DU_COUNT=$(grep -cE '\b(du|dein|deine|deinem|deinen|deiner|dir|dich)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
+        SIE_COUNT=$(grep -cE '\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihnen)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
+        echo "| Anrede-Form | Treffer |"
+        echo "|------------|---------|"
+        echo "| Du-Form (du/dein/dir/dich) | $DU_COUNT |"
+        echo "| Sie-Form (Sie/Ihr/Ihnen) | $SIE_COUNT |"
+        echo ""
+        if [[ "$DU_COUNT" -gt 0 ]] && [[ "$SIE_COUNT" -gt 0 ]]; then
+            echo "**⚠ MISCHANREDE erkannt** — beide Anredeformen kommen vor. Beispiel-Zeilen:"
+            echo ""
+            echo "\`\`\`"
+            echo "[Du-Beispiele]"
+            grep -nE '\b(du|dein|deine)\b' "$STRINGS_XML" 2>/dev/null | head -5
+            echo ""
+            echo "[Sie-Beispiele]"
+            grep -nE '\b(Sie|Ihr|Ihre|Ihnen)\b' "$STRINGS_XML" 2>/dev/null | head -5
+            echo "\`\`\`"
+        else
+            echo "**OK** — durchgaengige Anrede."
+        fi
+        echo ""
+
+        # 4c.10 Slot-Laengen-Audit (nur Buttons + Push-Titles als Stichprobe)
+        echo "### 4c.10 Slot-Laengen-Stichprobe"
+        echo ""
+        echo "Format pro Zeile: \`<Laenge> | <Key> | \"<Wortlaut>\"\` — sortiert nach Laenge"
+        echo ""
+        echo "**Laengste Buttons / CTAs in Hauptsprache (Top 15, Soft-Limit ~18 Zeichen DE):**"
+        echo "\`\`\`"
+        # Python-Helper fuer praezise Extraktion (key + textinhalt)
+        python3 - "$STRINGS_XML" <<'PY' 2>/dev/null || echo "(Python nicht verfuegbar — bitte manuell pruefen)"
+import sys, re
+path = sys.argv[1]
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+# regex: <string name="..." ...>TEXT</string>, key matched gegen button/cta/action
+pattern = re.compile(r'<string\s+name="([^"]*(?:button|cta|action)[^"]*)"[^>]*>(.*?)</string>', re.DOTALL)
+items = []
+for m in pattern.finditer(content):
+    key, text = m.group(1), m.group(2)
+    # HTML-Tags und xliff:g-Wrapper entfernen fuer reine Laenge
+    plain = re.sub(r'<[^>]+>', '', text)
+    items.append((len(plain), key, plain))
+items.sort(key=lambda x: -x[0])
+for length, key, text in items[:15]:
+    print(f'{length:3d} | {key:50s} | "{text}"')
+PY
+        echo "\`\`\`"
+        echo ""
+
+        echo "**Laengste Push-Notification-Titles in Hauptsprache (Top 10, Soft-Limit ~65 Zeichen DE):**"
+        echo "\`\`\`"
+        python3 - "$STRINGS_XML" <<'PY' 2>/dev/null || echo "(Python nicht verfuegbar — bitte manuell pruefen)"
+import sys, re
+path = sys.argv[1]
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+pattern = re.compile(r'<string\s+name="([^"]*notif[^"]*title[^"]*)"[^>]*>(.*?)</string>', re.DOTALL)
+items = []
+for m in pattern.finditer(content):
+    key, text = m.group(1), m.group(2)
+    plain = re.sub(r'<[^>]+>', '', text)
+    items.append((len(plain), key, plain))
+items.sort(key=lambda x: -x[0])
+for length, key, text in items[:10]:
+    print(f'{length:3d} | {key:50s} | "{text}"')
+PY
+        echo "\`\`\`"
+        echo ""
+
+        echo "**Laengste TopBar-Titles in Hauptsprache (Top 10, Soft-Limit ~25 Zeichen DE):**"
+        echo "\`\`\`"
+        python3 - "$STRINGS_XML" <<'PY' 2>/dev/null || echo "(Python nicht verfuegbar — bitte manuell pruefen)"
+import sys, re
+path = sys.argv[1]
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+pattern = re.compile(r'<string\s+name="([^"]*(?:topbar|app_bar|toolbar|title)[^"]*)"[^>]*>(.*?)</string>', re.DOTALL)
+items = []
+for m in pattern.finditer(content):
+    key, text = m.group(1), m.group(2)
+    plain = re.sub(r'<[^>]+>', '', text)
+    items.append((len(plain), key, plain))
+items.sort(key=lambda x: -x[0])
+for length, key, text in items[:10]:
+    print(f'{length:3d} | {key:50s} | "{text}"')
+PY
+        echo "\`\`\`"
+        echo ""
+    fi
+
     # === ABSCHLUSS ===
     echo "---"
     echo ""
@@ -613,11 +894,12 @@ count_in_file() {
     echo "1. Jede der 7 Schichten gemaess \`references/layer-N-*.md\` durchlaufen"
     echo "2. **Schicht 4b vollstaendig ausfuehren** — fuer JEDEN Bereich (Screen, Dialog, Bottom-Sheet, Menue, Settings-Item, Snackbar, Toast, Notification, Error/Empty/Loading) eine eigene 1:1-Wortlaut-Tabelle erstellen"
     echo "3. **Menues rekursiv ausrollen** — JEDE Untermenue-Ebene mit Breadcrumb-Pfad als eigene Zeile, beliebige Tiefe, keine Abkuerzung"
-    echo "4. Pro Befund Datei + Zeilennummer als Beleg liefern"
-    echo "5. Die Don't-Miss-Checkliste (\`references/dont-miss-checklist.md\`) abschliessend pruefen — inkl. Block I (Wortlaut-Erfassung)"
-    echo "6. Den finalen Bericht nach \`assets/audit-report-template.md\` strukturieren"
+    echo "4. **Schicht 4c vollstaendig ausfuehren** — Slot-Laengen, translatable=false, xliff:g, Uebersetzer-Notes, CLDR-Plurals, HTML/CDATA, Format-Args, Glossar, Region-Differenzen, Du/Sie-Konsistenz"
+    echo "5. Pro Befund Datei + Zeilennummer als Beleg liefern"
+    echo "6. Die Don't-Miss-Checkliste (\`references/dont-miss-checklist.md\`) abschliessend pruefen — inkl. Block I (Wortlaut-Erfassung) und Block J (Translation-Context)"
+    echo "7. Den finalen Bericht nach \`assets/audit-report-template.md\` strukturieren"
     echo ""
-    echo "**Naechster Schritt:** Claude liest diesen Initial-Scan und arbeitet die Schichten 1-7 (inkl. 4b) detailliert durch."
+    echo "**Naechster Schritt:** Claude liest diesen Initial-Scan und arbeitet die Schichten 1-7 (inkl. 4b, 4c) detailliert durch."
 } > "$OUTPUT"
 
 echo "Initial-Scan geschrieben: $APP_DIR/$OUTPUT"

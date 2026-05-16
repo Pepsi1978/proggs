@@ -1,4 +1,4 @@
-# Don't-Miss-Checkliste: 58 Punkte fuer 100% Coverage
+# Don't-Miss-Checkliste: 66 Punkte fuer 100% Coverage
 
 ## Zweck
 
@@ -119,6 +119,19 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 [ ] I8. Plurals, Array-Resources, Format-Strings (%s, %d) und hardcoded Strings erfasst — Differenz "Keys im Code" vs "Keys in strings.xml" dokumentiert?
 ```
 
+## Block J — Translation-Context (8 Punkte — Grundlage fuer Uebersetzungs-Skill)
+
+```
+[ ] J1. Slot-Laengen-Audit durchgefuehrt — alle Wortlaute gegen UI-Slot-Maxlaenge geprueft, Ueberlaenge markiert?
+[ ] J2. translatable="false" Strings erfasst und auf Plausibilitaet geprueft (Markennamen, URLs, Versionen)?
+[ ] J3. xliff:g-Tags erfasst — xmlns:xliff korrekt deklariert? Format-Strings ohne xliff:g als Kandidaten markiert?
+[ ] J4. XML-Kommentare (<!-- ... -->) als Uebersetzer-Notizen erfasst, fehlende Notes bei Format-Strings flagged?
+[ ] J5. CLDR-Plural-Vollstaendigkeit pro Sprache geprueft — fehlende Quantitaeten (one/few/many/other/zero/two) pro Sprache aufgelistet?
+[ ] J6. HTML/CDATA/Entity-Inhalte erfasst und Uebersetzer-Hinweis aufgenommen?
+[ ] J7. Format-Argumente semantisch dokumentiert (%1$s = was, %2$d = was), Argument-Anzahl pro String geprueft?
+[ ] J8. Glossar-Begriffe automatisch erkannt (Top-30 Substantive), Konsistenz-Inkonsistenzen aufgelistet, Region-Differenzen + Du/Sie-Konsistenz geprueft?
+```
+
 ## Markier-Beispiele
 
 ```markdown
@@ -145,9 +158,9 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 ## Selbst-Pruefung am Ende
 
 Wenn die Checkliste durch ist:
-- 58 Punkte gesamt
+- 66 Punkte gesamt
 - Wie viele [X]: ___
 - Wie viele [ ] mit "NICHT_VERIFIZIERT (Grund)": ___ — diese sind OK wenn der Grund nachvollziehbar ist
 - Wie viele [ ] ohne Begruendung: ___ — sollte 0 sein
 
-Nur wenn alle 58 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.
+Nur wenn alle 66 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.

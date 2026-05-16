@@ -9,10 +9,16 @@ description: Durchleuchtet eine Android-App systematisch und vollstaendig wie ei
 
 Der Skill durchleuchtet eine Android-App so gruendlich, dass am Ende eine 100-Prozent-vollstaendige Liste vorliegt was die App in jedem einzelnen Bildschirm, bei jedem Klick und in jedem Abbruchpfad genau tut. Ziel ist Rechtssicherheit: Wenn eine Werbeaussage behauptet "Unbegrenzte KI-Analysen" muss der Skill verifizieren ob das im Code wirklich stimmt — oder ob ein Limit von 150 pro Tag drin ist.
 
-Der finale Bericht hat drei Teile:
+Der finale Bericht hat vier Teile:
 1. **Architektur-Inventar** — alles was die App kann, in 15 Kategorien gegliedert
 2. **Wortlaut-Mapping pro Bereich** — fuer JEDEN Bildschirm, Dialog, Bottom-Sheet, jedes Menue und jedes Untermenue (rekursiv, beliebige Tiefe), jedes Settings-Item, jede Notification, jeden Snackbar/Toast/Error-State werden die exakten 1:1-Wortlaute zitiert
-3. **Werbeaussage-vs-Feature-Matrix** — jede beworbene Aussage gegen die Code-Realitaet geprueft
+3. **Translation-Context** — pro Wortlaut die Daten die ein Uebersetzer braucht (Laengen, xliff:g, Notes, Plurals, HTML, Format-Argumente, Glossar, Du/Sie-Konsistenz)
+4. **Werbeaussage-vs-Feature-Matrix** — jede beworbene Aussage gegen die Code-Realitaet geprueft
+
+Der Bericht dient drei nachgelagerten Konsumenten:
+- **Rechtssicherheits-Skill** — prueft Wortlaute gegen UWG, EU UCPD, DSGVO, Google Play Policy
+- **Uebersetzungs-Skill** — uebersetzt Wortlaute mit voller Context-Information (Slot, Laenge, Plural-Regeln, Glossar, Argumente)
+- **Plugin-System** — kann den Bericht maschinenlesbar konsumieren (in spaeterer Welle)
 
 ## Warum 1:1-Wortlaute (KRITISCH)
 
@@ -89,6 +95,23 @@ Fuer JEDEN Bereich der App werden die exakten Wortlaute extrahiert und einer Tab
 **Menues werden rekursiv aufgeloest, beliebige Tiefe.** Wenn Settings einen Eintrag "Konto" hat, der zu "Sicherheit" fuehrt, der wiederum "2FA" enthaelt mit Unter-Optionen "Backup-Codes" → JEDE dieser Ebenen bekommt eine eigene Wortlaut-Tabelle. Keine Abkuerzungen, kein "und so weiter".
 
 → **Detail-Anleitung**: `references/layer-4b-wortlaut-mapping.md`
+
+### Schicht 4c — Translation-Context (PFLICHT — Grundlage fuer Uebersetzungs-Skill)
+
+Pro Wortlaut werden die Daten erfasst die ein Uebersetzer braucht, damit eine korrekte Lokalisierung moeglich ist:
+
+- **Slot-Laengen-Audit** — passt der Text in seinen UI-Slot, wird er nach der Uebersetzung noch passen?
+- **`translatable="false"`** — welche Strings sind explizit gesperrt (Markennamen, Versionen, URLs)
+- **`xliff:g`-Tags** — welche Inline-Teile sind nicht-uebersetzbar (Beispiele in Format-Strings)
+- **XML-Kommentare als Uebersetzer-Notizen** — `<!-- %1$s = Benutzername -->`
+- **CLDR-Plural-Vollstaendigkeit pro Sprache** — Russisch braucht `few`/`many`, Arabisch braucht `zero`/`two`
+- **HTML/CDATA-Inhalte** — werden bei Uebersetzung oft zerstoert
+- **Format-Argument-Semantik** — was bedeutet `%1$s`, was `%2$d`
+- **Glossar-Auto-Erkennung** — haeufige Begriffe die konsistent uebersetzt werden muessen
+- **Region-Differenzen** — pt-rBR vs pt-rPT, zh-rCN vs zh-rTW
+- **Du/Sie-Konsistenz** (Deutsch) — Mischanrede wird geflaggt
+
+→ **Detail-Anleitung**: `references/layer-4c-translation-context.md`
 
 ### Schicht 5 — Paywall-Tiefenanalyse: Der WICHTIGSTE Bereich
 
@@ -187,9 +210,10 @@ Da der Bericht spaeter als juristische Grundlage dienen kann, gilt:
 
 | Skill | Zusammenspiel |
 |-------|--------------|
-| `rechtssicherheit` | Liest den Audit-Bericht und prueft gegen die Wissensbasis in `~/proggs/rechtssicherheit.md` |
-| `string-extraktor` | Wird optional in Schicht 7 aufgerufen um alle Werbe-Strings zu sammeln |
-| `app-monetizer` | Konsumiert die Paywall-Tiefenanalyse als Input |
+| `rechtssicherheit` | Liest Schicht 4b (Wortlaute) + Schicht 7 (Werbeaussagen-Matrix) und prueft gegen die Wissensbasis in `~/proggs/rechtssicherheit.md` |
+| `uebersetzung` | Liest Schicht 4b (Original-Wortlaute) + Schicht 4c (Translation-Context: Slot, Laenge, Plurals, Glossar, Argumente) als Uebersetzungs-Grundlage |
+| `string-extraktor` | Komplementaer zu Schicht 4c — der Extraktor findet hardcoded Strings, der Roentgen-Skill katalogisiert sie inklusive Slot-Zuordnung |
+| `app-monetizer` | Konsumiert die Paywall-Tiefenanalyse (Schicht 5) als Input |
 | `superintelligenz` | Bei sehr grossen Apps (>500 Kotlin-Dateien) parallele Researcher fuer einzelne Schichten spawnen |
 
 ## Was NIEMALS passieren darf

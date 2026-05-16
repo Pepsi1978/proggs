@@ -15,10 +15,11 @@
 4. [Schicht 3 — Architektur-Inventar](#4-schicht-3--architektur-inventar)
 5. [Schicht 4 — Bildschirm-Karte und Klick-Pfade](#5-schicht-4--bildschirm-karte-und-klick-pfade)
 5b. [Schicht 4b — Wortlaut-Mapping pro Bereich](#5b-schicht-4b--wortlaut-mapping-pro-bereich) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
+5c. [Schicht 4c — Translation-Context](#5c-schicht-4c--translation-context) **(GRUNDLAGE FUER UEBERSETZUNGS-SKILL)**
 6. [Schicht 5 — Paywall-Tiefenanalyse](#6-schicht-5--paywall-tiefenanalyse) **(WICHTIGSTER ABSCHNITT)**
 7. [Schicht 6 — Hidden Features](#7-schicht-6--hidden-features)
 8. [Schicht 7 — Werbeaussage-vs-Feature-Matrix](#8-schicht-7--werbeaussage-vs-feature-matrix)
-9. [Don't-Miss-Checkliste (58 Punkte)](#9-dont-miss-checkliste)
+9. [Don't-Miss-Checkliste (66 Punkte)](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
 ---
@@ -54,6 +55,9 @@ Beispiel:
 | Wortlaute zitiert (Schicht 4b) | N |
 | Maximale Menue-Tiefe | N Ebenen |
 | Sprachen der App | N |
+| Translation-Context Slot-Ueberlaengen | N |
+| Translation-Context Glossar-Inkonsistenzen | N |
+| Translation-Context Plural-Luecken pro Sprache | N |
 
 ---
 
@@ -435,6 +439,118 @@ key_y
 
 ---
 
+## 5c. Schicht 4c — Translation-Context
+
+> **GRUNDLAGE FUER UEBERSETZUNGS-SKILL.** Pro Wortlaut die Daten erfasst, die ein Uebersetzer braucht: Slot-Laenge, translatable-Flag, xliff:g-Tags, Notizen, CLDR-Plural-Vollstaendigkeit, HTML/CDATA, Format-Argument-Semantik, Glossar, Region-Differenzen, Du/Sie-Konsistenz.
+
+### 5c.0 Vollstaendigkeits-Statistik
+
+| Metrik | Wert |
+|--------|------|
+| Strings gesamt (Hauptsprache) | N |
+| `translatable="false"` Strings | N |
+| `xliff:g`-Tags verwendet | N |
+| xmlns:xliff deklariert | JA / NEIN |
+| Format-Strings OHNE xliff:g (Kandidaten) | N |
+| Strings mit XML-Kommentar (Uebersetzer-Note) | N / Gesamt (X%) |
+| Format-Strings OHNE Kommentar | N |
+| Plural-Keys gesamt | N |
+| Plural-Sprachen mit fehlenden Quantitaeten | N (Liste) |
+| Strings mit HTML-Tags | N |
+| Strings mit CDATA | N |
+| Strings mit HTML-Entities | N |
+| Positional-Format-Strings (%1\$s, %2\$d) | N |
+| Generic-Format-Strings (%s, %d — sollten positional sein) | N |
+| Glossar-Begriffe identifiziert | N |
+| Glossar-Inkonsistenzen (gleiches DE-Wort, verschiedene EN-Uebersetzungen) | N |
+| Regional-Varianten-Paare | N |
+| Identische Regional-Varianten (Verdacht fehlende Lokalisierung) | N |
+| Strings ueber Slot-Maxlaenge | N (Liste) |
+| Du/Sie-Mischanrede (Deutsch) | JA / NEIN |
+
+### 5c.1 Slot-Laengen-Audit
+
+| String-Key | Wortlaut (DE) | Slot | Laenge (DE) | Max | Status |
+|-----------|---------------|------|-------------|-----|--------|
+| | | | | | |
+
+### 5c.2 Nicht-uebersetzbare Strings (translatable="false")
+
+| Key | Wortlaut | Begruendung (vermutet) |
+|-----|----------|----------------------|
+| | | |
+
+**Erwartete Kandidaten die fehlen** (vom Skill geschaetzt):
+- ...
+
+### 5c.3 xliff:g-Tags
+
+xmlns:xliff deklariert: JA / NEIN
+
+| String-Key | Wortlaut mit xliff:g | id | example |
+|-----------|----------------------|------|---------|
+| | | | |
+
+**Format-Strings ohne xliff:g (Kandidaten):**
+- ...
+
+### 5c.4 Uebersetzer-Notizen (XML-Kommentare)
+
+Strings mit Kommentar: N / Gesamt (X%)
+
+| Key | Wortlaut | Kommentar |
+|-----|----------|-----------|
+| | | |
+
+**Format-Strings ohne Kommentar:**
+- ...
+
+### 5c.5 CLDR-Plural-Audit
+
+| Plural-Key | DE | EN | RU | AR | ZH | ... | Status |
+|-----------|-----|-----|-----|-----|-----|-----|--------|
+| | | | | | | | |
+
+### 5c.6 HTML- und CDATA-Inhalte
+
+| Key | Wortlaut | HTML-Tags | CDATA |
+|-----|----------|-----------|-------|
+| | | | |
+
+### 5c.7 Format-Argumente
+
+| Key | Wortlaut (DE) | Argumente | Argument-Bedeutung | Beispiel-Render |
+|-----|---------------|-----------|--------------------|-----------------|
+| | | | | |
+
+### 5c.8 Glossar (Top-30 Begriffe — konsistent uebersetzen)
+
+| Begriff (DE) | Vorkommen | Aktuelle Uebersetzung EN | Vorschlag konsistent | Anmerkung |
+|-------------|-----------|--------------------------|---------------------|-----------|
+| | | | | |
+
+### 5c.9 Region-Differenzen
+
+| Sprach-Paar | Identische Strings | Differenzen | Status |
+|-------------|-------------------|-------------|--------|
+| | | | |
+
+### 5c.10 Du/Sie-Konsistenz (Deutsch)
+
+| Anrede-Form | Anzahl Treffer | Beispiele |
+|------------|----------------|-----------|
+| | | |
+
+**Befund:** Konsistent / Mischanrede
+
+### 5c.11 Audit-Befunde Schicht 4c
+
+| # | Befund | Risiko | Datei | Empfehlung |
+|---|--------|--------|-------|-----------|
+| | | | | |
+
+---
+
 ## 6. Schicht 5 — Paywall-Tiefenanalyse
 
 > **WICHTIGSTER ABSCHNITT — bekommt eigenes Inhaltsverzeichnis und Detail-Auswertung**
@@ -719,7 +835,17 @@ ___
 - [ ] I7. Push-Notifications mit Channel-Name + Title + Body + Actions zitiert?
 - [ ] I8. Plurals, Array-Resources, Format-Strings, hardcoded Strings erfasst + Differenz-Analyse?
 
-**Gesamt: ___ / 58 gepruefft, ___ NICHT_VERIFIZIERT mit Begruendung**
+### Block J — Translation-Context (8)
+- [ ] J1. Slot-Laengen-Audit durchgefuehrt — alle Wortlaute gegen UI-Slot-Maxlaenge geprueft?
+- [ ] J2. translatable="false" Strings erfasst und auf Plausibilitaet geprueft?
+- [ ] J3. xliff:g-Tags erfasst — xmlns:xliff korrekt deklariert? Format-Strings ohne xliff:g als Kandidaten markiert?
+- [ ] J4. XML-Kommentare als Uebersetzer-Notizen erfasst, fehlende Notes bei Format-Strings flagged?
+- [ ] J5. CLDR-Plural-Vollstaendigkeit pro Sprache geprueft — fehlende Quantitaeten aufgelistet?
+- [ ] J6. HTML/CDATA/Entity-Inhalte erfasst und Uebersetzer-Hinweis aufgenommen?
+- [ ] J7. Format-Argumente semantisch dokumentiert (%1$s = was, %2$d = was)?
+- [ ] J8. Glossar-Begriffe erkannt, Konsistenz-Inkonsistenzen + Region-Differenzen + Du/Sie-Konsistenz geprueft?
+
+**Gesamt: ___ / 66 gepruefft, ___ NICHT_VERIFIZIERT mit Begruendung**
 
 ---
 
