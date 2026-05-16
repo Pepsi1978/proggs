@@ -6,13 +6,19 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
 import androidx.health.connect.client.records.BoneMassRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -499,7 +505,85 @@ class HealthConnectManager @Inject constructor(
         return history.takeIf { it.isNotEmpty() }?.map { it.second }?.average()
     }
 
+    // ---------- Trainings (ExerciseSessionRecord) ----------
+
+    /**
+     * Frank-Wunsch 2026-05-16: Workouts aus Health Connect lesen, damit Trainings
+     * sichtbar werden auch wenn die T-Rex 3 noch nicht zur Zepp-Cloud hochgeladen
+     * hat. Die Zepp-App schreibt Sessions per Bluetooth-Sync sofort in Health
+     * Connect — der Cloud-Upload ist eine separate Stufe und kann verzoegert sein.
+     *
+     * Liefert die Sessions der letzten [days] Tage aufsteigend sortiert.
+     * Distanz, Kalorien und Durchschnittspuls werden pro Session via Aggregate-API
+     * geholt, damit die Hero-Card vollstaendige Werte zeigen kann.
+     */
+    suspend fun readExerciseSessions(days: Int = 30): List<HealthConnectExerciseSession> = runCatching {
+        val c = client() ?: return@runCatching emptyList()
+        val end = Instant.now()
+        val start = end.minusSeconds(days.toLong() * 24L * 60L * 60L)
+        val sessions = c.readRecords(
+            ReadRecordsRequest(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                ascendingOrder = false,
+            ),
+        ).records
+        Log.d(TAG, "ExerciseSessions read: ${sessions.size} im Fenster ${start} .. ${end}")
+        sessions.map { session ->
+            val sessionStart = session.startTime
+            val sessionEnd = session.endTime
+            // Aggregate fuer Distanz + Kalorien + avgHR exakt im Session-Zeitfenster.
+            // Bei Fehlern (z.B. fehlende Permission fuer ein Sub-Feld) defaulten wir
+            // auf null — die Session bleibt importiert, nur das einzelne Feld fehlt.
+            val aggregate = runCatching {
+                c.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(
+                            DistanceRecord.DISTANCE_TOTAL,
+                            TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+                            HeartRateRecord.BPM_AVG,
+                            HeartRateRecord.BPM_MAX,
+                        ),
+                        timeRangeFilter = TimeRangeFilter.between(sessionStart, sessionEnd),
+                    ),
+                )
+            }.getOrNull()
+            val distanceMeters = aggregate?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters
+            val calorieKcal = aggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
+            val avgHr = aggregate?.get(HeartRateRecord.BPM_AVG)
+            val maxHr = aggregate?.get(HeartRateRecord.BPM_MAX)
+            HealthConnectExerciseSession(
+                startMs = sessionStart.toEpochMilli(),
+                endMs = sessionEnd.toEpochMilli(),
+                durationSeconds = (sessionEnd.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L),
+                exerciseType = session.exerciseType,
+                title = session.title?.takeIf { it.isNotBlank() },
+                distanceMeters = distanceMeters,
+                calories = calorieKcal,
+                avgHeartRate = avgHr?.toInt(),
+                maxHeartRate = maxHr?.toInt(),
+            )
+        }
+    }.onFailure { Log.w(TAG, "readExerciseSessions failed", it) }.getOrDefault(emptyList())
+
     private companion object {
         const val TAG = "HealthConnectMgr"
     }
 }
+
+/**
+ * Frank-Wunsch 2026-05-16: vereinfachte Sicht auf eine Health-Connect-Trainings-
+ * Session inkl. aggregierter Distanz/Kalorien/Puls. Verbraucher (AmazfitRepository)
+ * mappen das auf `AmazfitWorkoutEntity` und schreiben mit `source = "health_connect"`.
+ */
+data class HealthConnectExerciseSession(
+    val startMs: Long,
+    val endMs: Long,
+    val durationSeconds: Long,
+    val exerciseType: Int,
+    val title: String?,
+    val distanceMeters: Double?,
+    val calories: Double?,
+    val avgHeartRate: Int?,
+    val maxHeartRate: Int?,
+)

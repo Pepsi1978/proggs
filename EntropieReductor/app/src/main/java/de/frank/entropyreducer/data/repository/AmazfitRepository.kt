@@ -7,6 +7,8 @@ import de.frank.entropyreducer.data.local.dao.AmazfitDailyDao
 import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import de.frank.entropyreducer.data.health.HealthConnectManager
+import de.frank.entropyreducer.data.health.HealthConnectExerciseSession
 import de.frank.entropyreducer.data.remote.zepp.ZeppApi
 import de.frank.entropyreducer.data.remote.zepp.ZeppAuthService
 import de.frank.entropyreducer.data.remote.zepp.ZeppBandDataResponse
@@ -69,6 +71,15 @@ class AmazfitRepository @Inject constructor(
      * ein No-Op wenn Drive-Backup deaktiviert oder kein Konto verbunden ist.
      */
     private val syncCoordinatorLazy: dagger.Lazy<de.frank.entropyreducer.data.remote.drive.SyncCoordinator>,
+    /**
+     * Frank-Wunsch 2026-05-16: Workouts auch aus Health Connect lesen koennen.
+     * Hintergrund: Die T-Rex 3 synct via Bluetooth in die Zepp-App und von dort
+     * via Health Connect zum Phone. Der Cloud-Upload zur Zepp-Server-Seite ist
+     * eine getrennte Stufe — kann verzoegert sein oder Tagen ausbleiben wenn der
+     * Cloud-Sync in der Zepp-App nicht angetippt wird. Health Connect ist die
+     * sofort verfuegbare Quelle.
+     */
+    private val healthConnect: HealthConnectManager,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -275,11 +286,184 @@ class AmazfitRepository @Inject constructor(
         if (workoutEntities.isNotEmpty() || dailyEntities.isNotEmpty()) {
             syncCoordinatorLazy.get().requestSync()
         }
-        dailyEntities.size + workoutEntities.size
+        // Frank-Wunsch 2026-05-16: NACH dem Zepp-Sync zusaetzlich Workouts aus
+        // Health Connect importieren. Workouts die Zepp-Cloud noch nicht
+        // synchronisiert hat, aber die Watch via Bluetooth in die Zepp-App
+        // gespielt hat, landen so trotzdem in der Hero-Card. Zepp-Cloud-Eintraege
+        // haben Vorrang (Dedup per startMs +/- 5 Min).
+        val hcInserted = mergeFromHealthConnect(days = days.coerceAtMost(60))
+        if (hcInserted > 0) {
+            Log.i(TAG, "Health-Connect-Merge: $hcInserted zusaetzliche Workouts importiert")
+            syncCoordinatorLazy.get().requestSync()
+        }
+        dailyEntities.size + workoutEntities.size + hcInserted
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.e(TAG, "Amazfit-Sync fehlgeschlagen", it)
         }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-16: Workouts aus Health Connect als zweite Quelle
+     * importieren — vor allem wenn die T-Rex 3 zwar via Bluetooth in die
+     * Zepp-App geschickt hat, aber Zepp die Daten noch nicht in die Cloud
+     * hochgeladen hat. Health Connect hat den Workout-Datensatz dann schon —
+     * wir mergen ihn in `amazfit_workouts` mit `source = "health_connect"`.
+     *
+     * Dedup-Strategie: Wir holen alle existierenden `startMs` der letzten
+     * [days] Tage aus der DB. Eine HC-Session zaehlt als Duplikat wenn ein
+     * existierender Eintrag innerhalb von +/- 5 Minuten Start-Toleranz liegt.
+     * Damit gewinnt der Zepp-Cloud-Eintrag wenn er spaeter doch noch kommt
+     * (er wird vorher importiert; HC-Session wird dann beim naechsten Sync
+     * als Duplikat erkannt und nicht doppelt eingefuegt).
+     *
+     * trackId-Schema fuer HC-Workouts: `hc_$startMs` — stabil pro Session und
+     * faellt nicht mit Zepp-Cloud-IDs zusammen.
+     *
+     * Liefert die Anzahl neu eingefuegter Eintraege zurueck (0 wenn HC nicht
+     * verfuegbar, Permission fehlt oder alle Sessions schon in der DB sind).
+     */
+    suspend fun mergeFromHealthConnect(days: Int = 30): Int {
+        if (!healthConnect.isAvailable()) {
+            Log.d(TAG, "Health Connect nicht verfuegbar — kein Workout-Merge")
+            return 0
+        }
+        val sessions = healthConnect.readExerciseSessions(days = days)
+        if (sessions.isEmpty()) {
+            Log.d(TAG, "Health Connect lieferte keine Exercise-Sessions im ${days}-Tage-Fenster")
+            return 0
+        }
+        // Existierende Workouts im gleichen Zeitfenster fuer Dedup.
+        val end = System.currentTimeMillis()
+        val start = end - days.toLong() * 24L * 60L * 60L * 1000L
+        val existingStartMs = workoutDao.getStartMsInRange(start, end)
+        val toleranceMs = 5L * 60L * 1000L // 5 Minuten +/- ist immer noch derselbe Lauf
+
+        val toInsert = sessions.mapNotNull { session ->
+            val isDuplicate = existingStartMs.any { existing ->
+                kotlin.math.abs(existing - session.startMs) <= toleranceMs
+            }
+            if (isDuplicate) null else healthConnectSessionToEntity(session)
+        }
+        if (toInsert.isEmpty()) {
+            Log.d(TAG, "Alle ${sessions.size} HC-Sessions sind bereits in der DB — keine neuen Workouts")
+            return 0
+        }
+        workoutDao.upsertAll(toInsert)
+        Log.i(TAG, "Health-Connect-Workouts eingefuegt: ${toInsert.size} (von ${sessions.size} im HC-Fenster)")
+        return toInsert.size
+    }
+
+    /**
+     * Map Health-Connect ExerciseSessionRecord auf AmazfitWorkoutEntity.
+     * Source wird auf "health_connect" gesetzt — damit erkennt die UI woher der
+     * Eintrag kommt und der naechste Zepp-Sync kann ihn ggf. ueberschreiben.
+     * Title aus HC hat Vorrang vor dem generischen Exercise-Type-Mapping, weil
+     * Zepp den genauen Sport (z.B. "Trailrunning") oft als Title schreibt waehrend
+     * der Type-Int nur das grobe RUNNING ist.
+     */
+    private fun healthConnectSessionToEntity(s: HealthConnectExerciseSession): AmazfitWorkoutEntity {
+        val sportName = s.title?.takeIf { it.isNotBlank() } ?: exerciseTypeToGerman(s.exerciseType)
+        val zone = ZoneId.systemDefault()
+        val dateKey = Instant.ofEpochMilli(s.startMs).atZone(zone).toLocalDate().toString()
+        return AmazfitWorkoutEntity(
+            trackId = "hc_${s.startMs}",
+            dateKey = dateKey,
+            startMs = s.startMs,
+            endMs = s.endMs,
+            durationSeconds = s.durationSeconds,
+            sportType = s.exerciseType,
+            sportName = sportName,
+            distanceMeters = s.distanceMeters,
+            avgPaceSecPerKm = null,
+            maxPaceSecPerKm = null,
+            avgSpeedKmh = null,
+            maxSpeedKmh = null,
+            calories = s.calories,
+            avgHeartRate = s.avgHeartRate,
+            maxHeartRate = s.maxHeartRate,
+            altitudeGainMeters = null,
+            altitudeLossMeters = null,
+            trainingEffectAerobic = null,
+            trainingEffectAnaerobic = null,
+            cadence = null,
+            strideLengthCm = null,
+            swolf = null,
+            poolLengthMeters = null,
+            source = "health_connect",
+            city = null,
+            createdAt = System.currentTimeMillis(),
+        )
+    }
+
+    /**
+     * Mapping der Health-Connect ExerciseType-Konstanten auf deutsche Bezeichnungen.
+     * Liste deckt die haeufigsten Sportarten ab — alles unbekannte landet als
+     * "Training (Typ N)" damit Frank weiss dass es ein neuer Code ist.
+     */
+    private fun exerciseTypeToGerman(type: Int): String = when (type) {
+        0 -> "Training"
+        2 -> "Badminton"
+        4 -> "Baseball"
+        5 -> "Basketball"
+        8 -> "Radfahren"
+        9 -> "Radfahren (Heimtrainer)"
+        10 -> "Bootcamp"
+        11 -> "Boxen"
+        13 -> "Calisthenics"
+        14 -> "Cricket"
+        16 -> "Tanzen"
+        25 -> "Crosstrainer"
+        26 -> "Trainingsgruppe"
+        27 -> "Fechten"
+        28 -> "Football"
+        29 -> "Australian Football"
+        31 -> "Frisbee"
+        32 -> "Golf"
+        33 -> "Atemuebung"
+        34 -> "Gymnastik"
+        35 -> "Handball"
+        36 -> "HIIT"
+        37 -> "Wandern"
+        38 -> "Eishockey"
+        39 -> "Eislaufen"
+        44 -> "Kampfsport"
+        46 -> "Paddeln"
+        47 -> "Gleitschirm"
+        48 -> "Pilates"
+        50 -> "Racquetball"
+        51 -> "Klettern"
+        52 -> "Rollhockey"
+        53 -> "Rudern"
+        54 -> "Rudergeraet"
+        55 -> "Rugby"
+        56 -> "Laufen"
+        57 -> "Laufen (Laufband)"
+        58 -> "Segeln"
+        59 -> "Tauchen"
+        60 -> "Skaten"
+        61 -> "Ski"
+        62 -> "Snowboard"
+        63 -> "Schneeschuhwandern"
+        64 -> "Fussball"
+        65 -> "Softball"
+        66 -> "Squash"
+        68 -> "Treppensteigen"
+        69 -> "Stepper"
+        70 -> "Krafttraining"
+        71 -> "Stretching"
+        72 -> "Surfen"
+        73 -> "Schwimmen (Freiwasser)"
+        74 -> "Schwimmen (Pool)"
+        75 -> "Tischtennis"
+        76 -> "Tennis"
+        78 -> "Volleyball"
+        79 -> "Walking"
+        80 -> "Wasserball"
+        81 -> "Gewichtheben"
+        82 -> "Rollstuhl-Training"
+        83 -> "Yoga"
+        else -> "Training (Typ $type)"
     }
 
     /* =========================== Fetcher =========================== */

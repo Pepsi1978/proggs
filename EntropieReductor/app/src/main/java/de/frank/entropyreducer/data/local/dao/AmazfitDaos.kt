@@ -75,6 +75,14 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Frank-Wunsch 2026-05-16: Health-Connect-Workout-Merge braucht die Liste
+     * existierender Start-Zeitstempel um Duplikate zu erkennen. Wir vergleichen
+     * neue HC-Sessions per +/- 5 Minuten Toleranz gegen diese Liste.
+     */
+    @Query("SELECT startMs FROM amazfit_workouts WHERE startMs BETWEEN :from AND :to ORDER BY startMs DESC")
+    suspend fun getStartMsInRange(from: Long, to: Long): List<Long>
+
+    /**
      * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur dort
      * wo der Name aktuell abweicht (idempotent, kein No-Op-UPDATE wenn schon korrekt).
      * Frank-Wunsch 2026-05-10: Migration fuer T-Rex-3-Codes 12 (Crosstrainer) und
