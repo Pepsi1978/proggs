@@ -16,10 +16,12 @@
 5. [Schicht 4 — Bildschirm-Karte und Klick-Pfade](#5-schicht-4--bildschirm-karte-und-klick-pfade)
 5b. [Schicht 4b — Wortlaut-Mapping pro Bereich](#5b-schicht-4b--wortlaut-mapping-pro-bereich) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
 5c. [Schicht 4c — Translation-Context](#5c-schicht-4c--translation-context) **(GRUNDLAGE FUER UEBERSETZUNGS-SKILL)**
+5d. [Schicht 4d — Legal-Text-Inventar](#5d-schicht-4d--legal-text-inventar) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
+5e. [Schicht 4e — Externe Inhalte](#5e-schicht-4e--externe-inhalte)
 6. [Schicht 5 — Paywall-Tiefenanalyse](#6-schicht-5--paywall-tiefenanalyse) **(WICHTIGSTER ABSCHNITT)**
 7. [Schicht 6 — Hidden Features](#7-schicht-6--hidden-features)
 8. [Schicht 7 — Werbeaussage-vs-Feature-Matrix](#8-schicht-7--werbeaussage-vs-feature-matrix)
-9. [Don't-Miss-Checkliste (66 Punkte)](#9-dont-miss-checkliste)
+9. [Don't-Miss-Checkliste (82 Punkte)](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
 ---
@@ -551,6 +553,222 @@ Strings mit Kommentar: N / Gesamt (X%)
 
 ---
 
+## 5d. Schicht 4d — Legal-Text-Inventar
+
+> **GRUNDLAGE FUER RECHTSSICHERHEIT.** Pro Bereich die wortwoertlichen Rechtstexte, sodass der Rechtssicherheits-Skill gegen aktuelle Rechtsprechung pruefen kann.
+
+### 5d.0 Vollstaendigkeits-Statistik
+
+| Metrik | Wert |
+|--------|------|
+| Permissions mit Rationale-Dialog | N / N total |
+| Permissions OHNE Rationale (KRITISCH) | N |
+| Consent-Banner vorhanden | JA / NEIN |
+| Consent gleichrangige Buttons | JA / NEIN / N/A |
+| AGB-URL erreichbar | JA / NEIN |
+| Datenschutz-URL erreichbar | JA / NEIN |
+| Impressum (bei DE-Angebot) | JA / NEIN |
+| Health-Disclaimer (falls Health-App) | JA / NEIN / N/A |
+| AI-Disclaimer (falls KI-App) | JA / NEIN / N/A |
+| Werbe-Markierungen (falls Ads) | JA / NEIN / N/A |
+| In-App-Account-Loeschung | JA / NEIN |
+| Web-URL-Account-Loeschung | JA / NEIN |
+| Newsletter-Double-Opt-In | JA / NEIN / N/A |
+| Widerrufsbelehrung | JA / NEIN / N/A |
+| Standort-Begruendung | JA / NEIN / N/A |
+| Altersfreigabe-Anzeige | JA / NEIN |
+
+### 5d.1 Permission-Rationale-Dialoge
+
+| Permission | Trigger-Screen | Rationale-Title (1:1) | Rationale-Body (1:1) | Allow-Button (1:1) | Deny-Verhalten | Settings-Verweis |
+|-----------|---------------|----------------------|---------------------|---------------------|---------------|------------------|
+| | | | | | | |
+
+### 5d.2 Consent-Banner
+
+Implementierung: Firebase Consent Mode v2 / Google UMP / Eigene Loesung / KEINE
+
+| Slot | String-Key | Wortlaut (DE 1:1) | Pruefung |
+|------|-----------|-------------------|----------|
+| Banner-Title | | | |
+| Banner-Body | | | |
+| "Akzeptieren"-Button | | | Gleich gross wie "Ablehnen"? |
+| "Ablehnen"-Button | | | |
+| "Einstellungen"-Button | | | |
+
+### 5d.3 Rechtstexte-Links
+
+| Dokument | URL | Link-Text (DE 1:1) | Wo erreichbar | Sprachvarianten |
+|----------|-----|---------------------|----------------|----------------|
+| AGB | | | | |
+| Datenschutz | | | | |
+| Impressum | | | | |
+| Widerruf | | | | |
+| Open-Source-Lizenzen | | | | |
+
+### 5d.4 Health-Disclaimer
+
+App-Typ: Fitness / Mental-Health / Wellness / Medizinprodukt / Keine
+
+| Slot | String-Key | Wortlaut (DE 1:1) |
+|------|-----------|-------------------|
+| | | |
+
+### 5d.5 AI-Disclaimer
+
+KI-SDK: Google Gemini / OpenAI / Anthropic / On-Device-ML / Keine
+
+| Slot | String-Key | Wortlaut (DE 1:1) |
+|------|-----------|-------------------|
+| | | |
+
+### 5d.6 Werbe-Markierungen
+
+Ad-SDK: AdMob / Meta / Keine — Affiliate-Links: JA / NEIN
+
+| Komponente | Markierung-Wortlaut |
+|------------|---------------------|
+| | |
+
+### 5d.7 Account-Deletion
+
+In-App: JA / NEIN — Web-URL: JA / NEIN
+
+| Slot | String-Key | Wortlaut (DE 1:1) |
+|------|-----------|-------------------|
+| Settings-Item-Label | | |
+| Confirm-Dialog Title | | |
+| Confirm-Dialog Body (mit "unwiderruflich"?) | | |
+| Confirm-Button | | |
+| Erfolgs-Meldung | | |
+
+### 5d.8 Newsletter / Marketing-Opt-In
+
+Newsletter-Feature: JA / NEIN
+
+| Slot | Wortlaut (DE 1:1) |
+|------|-------------------|
+| | |
+
+### 5d.9 In-App-Kauf-Confirmation
+
+| Slot | Wortlaut (DE 1:1) |
+|------|-------------------|
+| Preis mit Waehrung | |
+| Abrechnungszeitraum | |
+| Auto-Renewal-Hinweis | |
+| Trial-Hinweis | |
+| Cancel-Hinweis | |
+
+### 5d.10 Widerrufsbelehrung
+
+Vorhanden: JA / NEIN
+
+| Slot | Wortlaut (1:1) |
+|------|----------------|
+| Belehrungstext | |
+| Erloeschen-Hinweis (digitale Inhalte) | |
+
+### 5d.11 Standort + Altersfreigabe
+
+| Bereich | Wortlaut / Anzeige |
+|---------|--------------------|
+| Standort-Begruendung in App | |
+| Standort-Begruendung im Store | |
+| Altersfreigabe-Anzeige | |
+
+### 5d.12 Audit-Befunde Schicht 4d
+
+| # | Befund | Risiko | Datei | Empfehlung |
+|---|--------|--------|-------|-----------|
+| | | | | |
+
+---
+
+## 5e. Schicht 4e — Externe Inhalte
+
+> **Audit ueber die App hinaus.** Wortlaute ausserhalb des Code-Repositorys, die genauso UWG-/Werberecht-relevant sind.
+
+### 5e.0 Vollstaendigkeits-Statistik
+
+| Quelle | Erfasst? |
+|--------|---------|
+| Play-Store Title pro Sprache | N / Total |
+| Play-Store Short-Description pro Sprache | N / Total |
+| Play-Store Long-Description pro Sprache | N / Total |
+| Screenshots mit Text dokumentiert | N |
+| Remote-Config Defaults | N Keys |
+| Remote-Config Live-Werte (Frank manuell) | N |
+| Cloud Functions Notifications | N |
+| Email-Templates (Frank manuell) | N |
+| Asset-HTML-Dateien | N |
+| Asset-Markdown-Dateien | N |
+| Externe WebView-URLs | N |
+| PDF-Vorlagen | N |
+| Marketing-Materialien (Frank manuell) | N |
+
+### 5e.1 Play Store Listing
+
+| Sprache | Title | Short-Description | Long-Description (Auszug) | Screenshots-Texte |
+|---------|-------|-------------------|---------------------------|--------------------|
+| DE | | | | |
+| EN | | | | |
+
+### 5e.2 Firebase Remote Config
+
+| Key | Default (1:1) | Live-Wert (Frank) | Wo angezeigt | Audit |
+|-----|---------------|-------------------|--------------|-------|
+| | | | | |
+
+### 5e.3 Cloud Functions Push-Templates
+
+| Funktion | Trigger | Title | Body |
+|----------|---------|-------|------|
+| | | | |
+
+### 5e.4 Email-Templates (Frank manuell)
+
+| Typ | Sprachen | Subject | Body-Auszug |
+|-----|---------|---------|-------------|
+| | | | |
+
+### 5e.5 WebView- und Asset-Inhalte
+
+| Datei / URL | Geladen in | Wortlaut-Auszug |
+|-------------|------------|-----------------|
+| | | |
+
+### 5e.6 PDF-Vorlagen
+
+| Export-Typ | Source-Datei | Sprache | Hardcoded Texte |
+|-----------|--------------|---------|----------------|
+| | | | |
+
+### 5e.7 Marketing-Materialien (Frank manuell)
+
+| Material | Sprache | Wortlaut (1:1) | Audit |
+|----------|---------|----------------|-------|
+| | | | |
+
+### 5e.8 Frank-Aufgaben-Checkliste
+
+- [ ] Play Console → Store-Eintrag → alle Sprachen kopieren
+- [ ] Firebase Remote Config → Live-Werte kopieren
+- [ ] Firebase Auth Email-Templates kopieren
+- [ ] Stripe / Customer-Portal Email-Templates kopieren (falls verwendet)
+- [ ] Webseite Hero/CTAs/Footer kopieren
+- [ ] Social-Media-Bios kopieren
+- [ ] Newsletter-Archiv (letzte 5) kopieren
+- [ ] Promo-Videos Untertitel/eingeblendete Texte transkribieren
+
+### 5e.9 Audit-Befunde Schicht 4e
+
+| # | Befund | Risiko | Datei | Empfehlung |
+|---|--------|--------|-------|-----------|
+| | | | | |
+
+---
+
 ## 6. Schicht 5 — Paywall-Tiefenanalyse
 
 > **WICHTIGSTER ABSCHNITT — bekommt eigenes Inhaltsverzeichnis und Detail-Auswertung**
@@ -845,7 +1063,27 @@ ___
 - [ ] J7. Format-Argumente semantisch dokumentiert (%1$s = was, %2$d = was)?
 - [ ] J8. Glossar-Begriffe erkannt, Konsistenz-Inkonsistenzen + Region-Differenzen + Du/Sie-Konsistenz geprueft?
 
-**Gesamt: ___ / 66 gepruefft, ___ NICHT_VERIFIZIERT mit Begruendung**
+### Block K — Legal-Text-Inventar (10)
+- [ ] K1. Permission-Rationale-Dialoge pro Runtime-Permission erfasst (Title/Body/Allow/Deny/Settings)?
+- [ ] K2. Consent-Banner-Wortlaut erfasst — "Akzeptieren" und "Ablehnen" gleich prominent?
+- [ ] K3. AGB-, Datenschutz-, Impressums-, Widerruf-Links erfasst + Erreichbarkeit?
+- [ ] K4. Health-Disclaimer-Texte erfasst (falls relevant)?
+- [ ] K5. AI-Disclaimer-Texte erfasst (falls KI-SDK)?
+- [ ] K6. Werbe-Markierungen erfasst (falls Ads)?
+- [ ] K7. Account-Deletion-Flow vollstaendig zitiert (inkl. "unwiderruflich")?
+- [ ] K8. Newsletter-Opt-In-Texte erfasst (Double-Opt-In)?
+- [ ] K9. In-App-Kauf-Confirmation + Widerrufsbelehrung erfasst?
+- [ ] K10. Standort-Begruendung + Altersfreigabe-Anzeige erfasst?
+
+### Block L — Externe Inhalte (6)
+- [ ] L1. Google Play Store Listing pro Sprache erfasst?
+- [ ] L2. Firebase Remote Config Defaults + Live-Werte dokumentiert?
+- [ ] L3. Cloud Functions Notification-Templates erfasst?
+- [ ] L4. Email-Templates dokumentiert?
+- [ ] L5. WebView- + Asset-HTML/MD-Inhalte + PDF-Vorlagen erfasst?
+- [ ] L6. Marketing-Materialien als Frank-Aufgabe gelistet?
+
+**Gesamt: ___ / 82 gepruefft, ___ NICHT_VERIFIZIERT mit Begruendung**
 
 ---
 

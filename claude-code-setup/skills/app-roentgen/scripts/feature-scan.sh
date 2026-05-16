@@ -401,7 +401,7 @@ count_in_file() {
     echo ""
 
     if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
-        TOTAL_STRINGS=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null || echo "0")
+        TOTAL_STRINGS=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "Gesamt-Strings (Hauptsprache): $TOTAL_STRINGS"
         echo ""
 
@@ -448,9 +448,9 @@ count_in_file() {
     if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
         echo "### 4b.1 Globale Resource-Zaehlung"
         echo ""
-        STR_COUNT=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null || echo "0")
-        PLR_COUNT=$(grep -c '<plurals name=' "$STRINGS_XML" 2>/dev/null || echo "0")
-        ARR_COUNT=$(grep -c '<string-array name=' "$STRINGS_XML" 2>/dev/null || echo "0")
+        STR_COUNT=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        PLR_COUNT=$(grep -c '<plurals name=' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        ARR_COUNT=$(grep -c '<string-array name=' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "| Resource-Typ | Anzahl in Hauptsprache |"
         echo "|--------------|------------------------|"
         echo "| <string> | $STR_COUNT |"
@@ -462,7 +462,7 @@ count_in_file() {
         echo ""
         echo "\`\`\`"
         for f in $(ls app/src/main/res/values*/strings.xml 2>/dev/null | sort); do
-            COUNT=$(grep -c '<string name=' "$f" 2>/dev/null || echo "0")
+            COUNT=$(grep -c '<string name=' "$f" 2>/dev/null | tr -d '[:space:]')
             printf "%-60s %s\n" "$f" "$COUNT"
         done
         echo "\`\`\`"
@@ -614,7 +614,7 @@ count_in_file() {
         # 4c.1 translatable=false
         echo "### 4c.1 Nicht-uebersetzbare Strings"
         echo ""
-        UNTRANS=$(grep -c 'translatable="false"' "$STRINGS_XML" 2>/dev/null || echo "0")
+        UNTRANS=$(grep -c 'translatable="false"' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "**Anzahl:** $UNTRANS"
         echo ""
         if [[ "$UNTRANS" -gt 0 ]]; then
@@ -627,8 +627,8 @@ count_in_file() {
         # 4c.2 xliff:g-Tags
         echo "### 4c.2 xliff:g-Tags (Inline-Schutz)"
         echo ""
-        XLIFF_DECL=$(grep -c 'xmlns:xliff' "$STRINGS_XML" 2>/dev/null || echo "0")
-        XLIFF_USES=$(grep -c '<xliff:g' "$STRINGS_XML" 2>/dev/null || echo "0")
+        XLIFF_DECL=$(grep -c 'xmlns:xliff' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        XLIFF_USES=$(grep -c '<xliff:g' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         FORMAT_NO_XLIFF=$(grep -E '<string[^>]*>[^<]*%[0-9]\$[sdf]' "$STRINGS_XML" 2>/dev/null | grep -v 'xliff:g' | wc -l)
         echo "| Metrik | Wert |"
         echo "|--------|------|"
@@ -647,8 +647,8 @@ count_in_file() {
         # 4c.3 Uebersetzer-Notizen (XML-Kommentare vor String-Tags)
         echo "### 4c.3 Uebersetzer-Notizen (XML-Kommentare)"
         echo ""
-        TOTAL_STRINGS=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null || echo "0")
-        COMMENTED=$(awk 'BEGIN{c=0; total=0} /<!--/{flag=1; next} /<string name=/{if(flag) c++; flag=0; total++} /^[[:space:]]*[^<!]/{flag=0} END{print c}' "$STRINGS_XML" 2>/dev/null || echo "0")
+        TOTAL_STRINGS=$(grep -c '<string name=' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        COMMENTED=$(awk 'BEGIN{c=0; total=0} /<!--/{flag=1; next} /<string name=/{if(flag) c++; flag=0; total++} /^[[:space:]]*[^<!]/{flag=0} END{print c}' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         if [[ "$TOTAL_STRINGS" -gt 0 ]]; then
             PCT=$(awk "BEGIN { printf \"%.1f\", $COMMENTED * 100 / $TOTAL_STRINGS }")
         else
@@ -693,9 +693,9 @@ count_in_file() {
         # 4c.5 HTML/CDATA in Strings
         echo "### 4c.5 HTML / CDATA in Strings"
         echo ""
-        HTML_STR=$(grep -cE '<string[^>]*>[^<]*<(b|i|u|br|a|font|strong|em|span|p)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
-        CDATA_STR=$(grep -c '<!\[CDATA\[' "$STRINGS_XML" 2>/dev/null || echo "0")
-        ENTITY_STR=$(grep -cE '&(lt|gt|amp|quot|apos|nbsp|#[0-9]+);' "$STRINGS_XML" 2>/dev/null || echo "0")
+        HTML_STR=$(grep -cE '<string[^>]*>[^<]*<(b|i|u|br|a|font|strong|em|span|p)\b' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        CDATA_STR=$(grep -c '<!\[CDATA\[' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        ENTITY_STR=$(grep -cE '&(lt|gt|amp|quot|apos|nbsp|#[0-9]+);' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "| Metrik | Wert |"
         echo "|--------|------|"
         echo "| Strings mit HTML-Tags | $HTML_STR |"
@@ -706,8 +706,8 @@ count_in_file() {
         # 4c.6 Format-Argumente
         echo "### 4c.6 Format-Argumente"
         echo ""
-        POSITIONAL_FMT=$(grep -cE '%[0-9]+\$[sdf]' "$STRINGS_XML" 2>/dev/null || echo "0")
-        GENERIC_FMT=$(grep -cE '<string[^>]*>[^<]*%[sdf]' "$STRINGS_XML" 2>/dev/null || echo "0")
+        POSITIONAL_FMT=$(grep -cE '%[0-9]+\$[sdf]' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        GENERIC_FMT=$(grep -cE '<string[^>]*>[^<]*%[sdf]' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "| Format-Typ | Anzahl |"
         echo "|-----------|--------|"
         echo "| Positional (%1\$s, %2\$d) | $POSITIONAL_FMT |"
@@ -767,8 +767,8 @@ count_in_file() {
                             FA="app/src/main/res/values-$VA/strings.xml"
                             FB="app/src/main/res/values-$VB/strings.xml"
                             [[ ! -f "$FA" ]] || [[ ! -f "$FB" ]] && continue
-                            CA=$(grep -c '<string name=' "$FA" 2>/dev/null || echo "0")
-                            CB=$(grep -c '<string name=' "$FB" 2>/dev/null || echo "0")
+                            CA=$(grep -c '<string name=' "$FA" 2>/dev/null | tr -d '[:space:]')
+                            CB=$(grep -c '<string name=' "$FB" 2>/dev/null | tr -d '[:space:]')
                             DIFFS=$(diff <(grep -oE '<string name="[^"]+">[^<]+' "$FA" 2>/dev/null | sort) \
                                           <(grep -oE '<string name="[^"]+">[^<]+' "$FB" 2>/dev/null | sort) 2>/dev/null | wc -l)
                             if [[ "$DIFFS" -lt 20 ]] && [[ "$CA" -gt 100 ]]; then
@@ -794,8 +794,8 @@ count_in_file() {
         # 4c.9 Du/Sie-Konsistenz fuer Deutsch
         echo "### 4c.9 Du/Sie-Konsistenz (Deutsch)"
         echo ""
-        DU_COUNT=$(grep -cE '\b(du|dein|deine|deinem|deinen|deiner|dir|dich)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
-        SIE_COUNT=$(grep -cE '\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihnen)\b' "$STRINGS_XML" 2>/dev/null || echo "0")
+        DU_COUNT=$(grep -cE '\b(du|dein|deine|deinem|deinen|deiner|dir|dich)\b' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        SIE_COUNT=$(grep -cE '\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihnen)\b' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
         echo "| Anrede-Form | Treffer |"
         echo "|------------|---------|"
         echo "| Du-Form (du/dein/dir/dich) | $DU_COUNT |"
@@ -885,6 +885,289 @@ PY
         echo ""
     fi
 
+    # === SCHICHT 4d: LEGAL-TEXT-INVENTAR ===
+    echo "## Schicht 4d — Legal-Text-Inventar"
+    echo ""
+    echo "Vorarbeit fuer den Rechtssicherheits-Skill."
+    echo ""
+
+    # 4d.1 Permission-Rationale
+    echo "### 4d.1 Permission-Rationale-Indikatoren"
+    echo ""
+    RATIONALE_CODE=$(grep -rln 'rememberPermissionState\|rememberMultiplePermissionsState\|shouldShowRequestPermissionRationale' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    RATIONALE_STRINGS=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        RATIONALE_STRINGS=$(grep -cE '<string name="[^"]*(?:permission|rationale|perm_)[^"]*"' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Dateien mit Runtime-Permission-Aufrufen | $RATIONALE_CODE |"
+    echo "| Permission-/Rationale-Strings in strings.xml | $RATIONALE_STRINGS |"
+    echo ""
+
+    # 4d.2 Consent-Banner
+    echo "### 4d.2 Consent-Banner-Indikatoren"
+    echo ""
+    UMP=$(grep -rln 'UserMessagingPlatform\|ConsentInformation' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    FB_CONSENT=$(grep -rln 'setAnalyticsCollectionEnabled\|setConsent\|FirebaseAnalytics.*setConsent' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    CUSTOM_CONSENT=$(grep -rln 'ConsentScreen\|ConsentDialog\|TrackingConsent\|CookieBanner\|GdprConsent' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    CONSENT_STRINGS=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        CONSENT_STRINGS=$(grep -ciE '<string name="[^"]*(consent|tracking|analytics_opt|cookie|gdpr|einwillig)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Google UMP (User Messaging Platform) | $UMP |"
+    echo "| Firebase Consent-API | $FB_CONSENT |"
+    echo "| Custom Consent-Komponenten | $CUSTOM_CONSENT |"
+    echo "| Consent-Strings in strings.xml | $CONSENT_STRINGS |"
+    echo ""
+
+    # 4d.3 Rechtstexte-Links
+    echo "### 4d.3 Rechtstexte (Links + Strings)"
+    echo ""
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        TERMS_STR=$(grep -ciE '<string name="[^"]*(terms|agb|nutzungsbedingung)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        PRIVACY_STR=$(grep -ciE '<string name="[^"]*(privacy|datenschutz)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        IMPRINT_STR=$(grep -ciE '<string name="[^"]*(imprint|impressum)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        WITHDRAW_STR=$(grep -ciE '<string name="[^"]*(widerruf|withdraw|refund|cancellation_right)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        URL_STRINGS=$(grep -cE '<string[^>]*>https?://' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+        echo "| Rechtstext | String-Treffer |"
+        echo "|-----------|----------------|"
+        echo "| AGB / Terms / Nutzungsbedingungen | $TERMS_STR |"
+        echo "| Datenschutz / Privacy | $PRIVACY_STR |"
+        echo "| Impressum / Imprint | $IMPRINT_STR |"
+        echo "| Widerruf / Withdrawal | $WITHDRAW_STR |"
+        echo "| URL-Strings (http/https) | $URL_STRINGS |"
+        echo ""
+
+        echo "**URLs in strings.xml (Stichprobe):**"
+        echo "\`\`\`"
+        grep -E '<string[^>]*>https?://' "$STRINGS_XML" 2>/dev/null | head -15
+        echo "\`\`\`"
+        echo ""
+    fi
+
+    # 4d.4 Health-Indikatoren
+    echo "### 4d.4 Health-Indikatoren"
+    echo ""
+    HC_SDK=$(grep -rln 'HealthConnect\|GoogleFit' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    HEALTH_TERMS=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        HEALTH_TERMS=$(grep -ciE 'diagnose|therapie|behandlung|medikament|krankheit|symptom|aerzt|psycholog|mental_health|fitness|workout|meditation' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    DISCLAIMER_STR=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        DISCLAIMER_STR=$(grep -ciE '<string name="[^"]*(disclaimer|haftungsausschluss|keine_medizinische|not_medical)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Health Connect / GoogleFit SDK | $HC_SDK |"
+    echo "| Health-Begriffe in Strings | $HEALTH_TERMS |"
+    echo "| Disclaimer-Strings | $DISCLAIMER_STR |"
+    if [[ "$HC_SDK" -gt 0 ]] || [[ "$HEALTH_TERMS" -gt 10 ]]; then
+        echo ""
+        echo "**⚠ Health-Disclaimer-Pflicht moeglich** — manueller Audit empfohlen"
+    fi
+    echo ""
+
+    # 4d.5 AI-Indikatoren
+    echo "### 4d.5 AI-Indikatoren"
+    echo ""
+    AI_SDK=$(grep -rln 'GenerativeModel\|GeminiClient\|OpenAI\|Anthropic\|generateContent\|chat\.completions' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    AI_DISCLAIMER=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        AI_DISCLAIMER=$(grep -ciE '<string name="[^"]*(ai_disclaimer|ki_disclaimer|ai_warning|ki_warning|ai_hint|ki_hint)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| AI-SDK-Aufrufe | $AI_SDK |"
+    echo "| AI-Disclaimer-Strings | $AI_DISCLAIMER |"
+    if [[ "$AI_SDK" -gt 0 ]] && [[ "$AI_DISCLAIMER" -eq 0 ]]; then
+        echo ""
+        echo "**⚠ AI-SDK verwendet aber KEINE Disclaimer-Strings gefunden** — EU AI Act Pflicht!"
+    fi
+    echo ""
+
+    # 4d.6 Werbe-Indikatoren
+    echo "### 4d.6 Werbe-Indikatoren"
+    echo ""
+    AD_SDK=$(grep -rln 'AdMob\|AdSense\|InterstitialAd\|RewardedAd\|BannerAd\|MoPub' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    AD_PERMISSION=$(grep -c 'com.google.android.gms.permission.AD_ID' "${MANIFEST:-/dev/null}" 2>/dev/null | tr -d '[:space:]')
+    AD_MARKING_STR=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        AD_MARKING_STR=$(grep -ciE '<string name="[^"]*(werbung|anzeige|gesponsert|sponsored|advertisement)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Ad-SDK-Aufrufe | $AD_SDK |"
+    echo "| AD_ID Permission im Manifest | $AD_PERMISSION |"
+    echo "| Werbe-Markierungs-Strings | $AD_MARKING_STR |"
+    if [[ "$AD_SDK" -gt 0 ]] && [[ "$AD_MARKING_STR" -eq 0 ]]; then
+        echo ""
+        echo "**⚠ Ad-SDK verwendet aber KEINE Werbe-Markierungs-Strings** — UWG §5a Verstoss!"
+    fi
+    echo ""
+
+    # 4d.7 Account-Deletion
+    echo "### 4d.7 Account-Deletion (DSGVO Art. 17)"
+    echo ""
+    DEL_CODE=$(grep -rln 'deleteAccount\|removeUser\|clearAllData\|gdprDelete\|requestAccountDeletion' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    DEL_STRINGS=0
+    if [[ -n "$STRINGS_XML" ]] && [[ -f "$STRINGS_XML" ]]; then
+        DEL_STRINGS=$(grep -ciE '<string name="[^"]*(delete_account|account_delete|kontoloesch|konto_loesch)' "$STRINGS_XML" 2>/dev/null | tr -d '[:space:]')
+    fi
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Loeschungs-Code-Dateien | $DEL_CODE |"
+    echo "| Loeschungs-Strings | $DEL_STRINGS |"
+    if [[ "$DEL_CODE" -eq 0 ]] || [[ "$DEL_STRINGS" -eq 0 ]]; then
+        echo ""
+        echo "**⚠ Account-Deletion fehlt oder unvollstaendig** — Play Store Policy 2024 Pflicht!"
+    fi
+    echo ""
+
+    # 4d.8 Standort
+    echo "### 4d.8 Standort-Verwendung"
+    echo ""
+    LOC_PERMS=$(grep -cE 'android.permission.ACCESS_(FINE|COARSE|BACKGROUND)_LOCATION' "${MANIFEST:-/dev/null}" 2>/dev/null | tr -d '[:space:]')
+    LOC_CODE=$(grep -rln 'LocationManager\|FusedLocationProviderClient' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| Location-Permissions im Manifest | $LOC_PERMS |"
+    echo "| LocationManager/FusedLocation-Code | $LOC_CODE |"
+    if [[ "$LOC_PERMS" -gt 0 ]] && [[ "$LOC_CODE" -eq 0 ]]; then
+        echo ""
+        echo "**⚠ Location-Permission deklariert aber NIE verwendet** — aus Manifest entfernen!"
+    fi
+    echo ""
+
+    # === SCHICHT 4e: EXTERNE INHALTE ===
+    echo "## Schicht 4e — Externe Inhalte"
+    echo ""
+    echo "Vorarbeit fuer den Audit. Frank muss zusaetzlich Inhalte ausserhalb des Repos beitragen."
+    echo ""
+
+    # 4e.1 Fastlane Metadata
+    echo "### 4e.1 Fastlane Play-Store-Metadaten (falls vorhanden)"
+    echo ""
+    FASTLANE_DIRS=$(ls -d fastlane/metadata/android/*/ 2>/dev/null | wc -l)
+    echo "Fastlane-Sprachen-Verzeichnisse: $FASTLANE_DIRS"
+    if [[ "$FASTLANE_DIRS" -gt 0 ]]; then
+        echo "\`\`\`"
+        ls -d fastlane/metadata/android/*/ 2>/dev/null
+        echo "\`\`\`"
+    fi
+    echo ""
+
+    # 4e.2 Remote Config
+    echo "### 4e.2 Firebase Remote Config"
+    echo ""
+    RC_CODE=$(grep -rln 'FirebaseRemoteConfig\|remoteConfig\.' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    RC_DEFAULTS=$(find . -name 'remote_config_defaults.xml' -o -name 'config_defaults*.xml' 2>/dev/null | grep -v '/build/' | wc -l)
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| RemoteConfig-Code-Dateien | $RC_CODE |"
+    echo "| Default-Wert-XML-Dateien | $RC_DEFAULTS |"
+    echo ""
+    if [[ "$RC_CODE" -gt 0 ]]; then
+        echo "**Remote-Config-Keys im Code:**"
+        echo "\`\`\`"
+        grep -rohE 'remoteConfig\.getString\("[^"]+"\)' --include='*.kt' . 2>/dev/null | sed 's/remoteConfig\.getString("//' | sed 's/")//' | sort -u | head -30
+        echo "\`\`\`"
+        echo ""
+    fi
+
+    # 4e.3 Cloud Functions
+    echo "### 4e.3 Cloud Functions"
+    echo ""
+    FUNCTIONS_DIR=$(find . -name 'functions' -type d -maxdepth 3 -not -path '*/node_modules/*' 2>/dev/null | head -1)
+    if [[ -n "$FUNCTIONS_DIR" ]]; then
+        echo "Functions-Verzeichnis: \`$FUNCTIONS_DIR\`"
+        echo ""
+        NOTIF_SENDS=$(grep -rn 'sendNotification\|messaging\.send\|admin\.messaging' --include='*.ts' --include='*.js' "$FUNCTIONS_DIR" 2>/dev/null | wc -l)
+        echo "Notification-Send-Aufrufe: $NOTIF_SENDS"
+    else
+        echo "Kein Functions-Verzeichnis gefunden (Cloud-Functions nicht im Repo)."
+    fi
+    echo ""
+
+    # 4e.4 WebView
+    echo "### 4e.4 WebView-Inhalte"
+    echo ""
+    WV_CODE=$(grep -rln 'WebView\|loadUrl\|loadData\|loadDataWithBaseURL' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    ASSET_HTML=$(find . -path '*/assets/*' \( -name '*.html' -o -name '*.htm' \) -not -path '*/build/*' 2>/dev/null | wc -l)
+    ASSET_MD=$(find . -path '*/assets/*.md' -not -path '*/build/*' 2>/dev/null | wc -l)
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| WebView-Komponenten im Code | $WV_CODE |"
+    echo "| HTML-Dateien in assets/ | $ASSET_HTML |"
+    echo "| Markdown-Dateien in assets/ | $ASSET_MD |"
+    echo ""
+    if [[ "$ASSET_HTML" -gt 0 ]]; then
+        echo "**Asset-HTML-Dateien:**"
+        echo "\`\`\`"
+        find . -path '*/assets/*' \( -name '*.html' -o -name '*.htm' \) -not -path '*/build/*' 2>/dev/null
+        echo "\`\`\`"
+        echo ""
+    fi
+
+    # 4e.5 PDF-Export
+    echo "### 4e.5 PDF-Export"
+    echo ""
+    PDF_CODE=$(grep -rln 'PdfDocument\|iText\|itextpdf\|PrintDocumentAdapter' --include='*.kt' --include='*.java' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    echo "| Indikator | Anzahl |"
+    echo "|-----------|--------|"
+    echo "| PDF-Generierungs-Code | $PDF_CODE |"
+    echo ""
+
+    # 4e.6 Customer-Support
+    echo "### 4e.6 Customer-Support-System"
+    echo ""
+    SUPPORT=$(grep -rln 'Intercom\|Zendesk\|Helpshift\|Crisp\|Tawk' --include='*.kt' --include='*.java' --include='*.gradle*' . 2>/dev/null | head -3)
+    if [[ -n "$SUPPORT" ]]; then
+        echo "**Erkannte Systeme:**"
+        echo "\`\`\`"
+        echo "$SUPPORT"
+        echo "\`\`\`"
+    else
+        echo "Kein externes Customer-Support-System erkannt (vermutlich Email-only oder kein Support)."
+    fi
+    echo ""
+
+    # === SCHICHT 4b ERWEITERT: NEUE UI-KOMPONENTEN ===
+    echo "## Schicht 4b — Erweiterte UI-Komponenten (Bereiche 13-20)"
+    echo ""
+
+    TF_COUNT=$(grep -rln 'OutlinedTextField(\|TextField(' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    TF_LABEL=$(grep -rn 'label\s*=\s*{' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    TF_PLACE=$(grep -rn 'placeholder\s*=\s*{' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    TF_SUPP=$(grep -rn 'supportingText\s*=\s*{' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    CHIP_COUNT=$(grep -rln 'FilterChip(\|AssistChip(\|InputChip(\|SuggestionChip(' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    TOOLTIP_COUNT=$(grep -rln 'TooltipBox(\|PlainTooltip(\|RichTooltip(' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    SEARCHBAR_COUNT=$(grep -rln 'SearchBar(\|DockedSearchBar(' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    SEMANTICS_COUNT=$(grep -rn 'Modifier\.semantics\s*{\|semantics\s*{' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    SLIDER_COUNT=$(grep -rln 'Slider(\|RangeSlider(' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    DATE_PICK=$(grep -rln 'DatePicker(\|DatePickerDialog(\|rememberDatePickerState' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    TIME_PICK=$(grep -rln 'TimePicker(\|TimePickerDialog(\|rememberTimePickerState' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    ANNOT_STR=$(grep -rln 'buildAnnotatedString\|AnnotatedString\.Builder' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+
+    echo "| UI-Komponente | Treffer |"
+    echo "|---------------|---------|"
+    echo "| TextField (Dateien mit TextField/OutlinedTextField) | $TF_COUNT |"
+    echo "|   davon label-Slots | $TF_LABEL |"
+    echo "|   davon placeholder-Slots | $TF_PLACE |"
+    echo "|   davon supportingText-Slots | $TF_SUPP |"
+    echo "| Chips (Filter/Assist/Input/Suggestion) | $CHIP_COUNT |"
+    echo "| Material 3 Tooltips | $TOOLTIP_COUNT |"
+    echo "| SearchBar / DockedSearchBar | $SEARCHBAR_COUNT |"
+    echo "| semantics-Block (a11y) | $SEMANTICS_COUNT |"
+    echo "| Slider / RangeSlider | $SLIDER_COUNT |"
+    echo "| DatePicker | $DATE_PICK |"
+    echo "| TimePicker | $TIME_PICK |"
+    echo "| AnnotatedString-Builder | $ANNOT_STR |"
+    echo ""
+
     # === ABSCHLUSS ===
     echo "---"
     echo ""
@@ -892,14 +1175,16 @@ PY
     echo ""
     echo "Dieser Initial-Scan ist die Vorarbeit. Die Tiefenanalyse muss:"
     echo "1. Jede der 7 Schichten gemaess \`references/layer-N-*.md\` durchlaufen"
-    echo "2. **Schicht 4b vollstaendig ausfuehren** — fuer JEDEN Bereich (Screen, Dialog, Bottom-Sheet, Menue, Settings-Item, Snackbar, Toast, Notification, Error/Empty/Loading) eine eigene 1:1-Wortlaut-Tabelle erstellen"
+    echo "2. **Schicht 4b vollstaendig ausfuehren** — fuer JEDEN Bereich (20 Bereichstypen inkl. TextField-Slots, Chips, Tooltips, SearchBar, semantics, Slider, Picker, AnnotatedString) eine eigene 1:1-Wortlaut-Tabelle erstellen"
     echo "3. **Menues rekursiv ausrollen** — JEDE Untermenue-Ebene mit Breadcrumb-Pfad als eigene Zeile, beliebige Tiefe, keine Abkuerzung"
     echo "4. **Schicht 4c vollstaendig ausfuehren** — Slot-Laengen, translatable=false, xliff:g, Uebersetzer-Notes, CLDR-Plurals, HTML/CDATA, Format-Args, Glossar, Region-Differenzen, Du/Sie-Konsistenz"
-    echo "5. Pro Befund Datei + Zeilennummer als Beleg liefern"
-    echo "6. Die Don't-Miss-Checkliste (\`references/dont-miss-checklist.md\`) abschliessend pruefen — inkl. Block I (Wortlaut-Erfassung) und Block J (Translation-Context)"
-    echo "7. Den finalen Bericht nach \`assets/audit-report-template.md\` strukturieren"
+    echo "5. **Schicht 4d vollstaendig ausfuehren** — Permission-Rationale, Consent, Rechtstexte, Health/AI/Werbe-Disclaimer, Account-Deletion, Newsletter, Widerruf, Standort, Altersfreigabe"
+    echo "6. **Schicht 4e vollstaendig ausfuehren** — Play-Store-Listing, Remote-Config-Live-Werte, Cloud-Functions-Templates, Email-Templates, WebView-Inhalte, PDF-Vorlagen, Marketing-Material (Frank-Aufgaben dokumentieren)"
+    echo "7. Pro Befund Datei + Zeilennummer als Beleg liefern"
+    echo "8. Die Don't-Miss-Checkliste (\`references/dont-miss-checklist.md\`) abschliessend pruefen — inkl. Block I, J, K, L"
+    echo "9. Den finalen Bericht nach \`assets/audit-report-template.md\` strukturieren"
     echo ""
-    echo "**Naechster Schritt:** Claude liest diesen Initial-Scan und arbeitet die Schichten 1-7 (inkl. 4b, 4c) detailliert durch."
+    echo "**Naechster Schritt:** Claude liest diesen Initial-Scan und arbeitet die Schichten 1-7 (inkl. 4b, 4c, 4d, 4e) detailliert durch."
 } > "$OUTPUT"
 
 echo "Initial-Scan geschrieben: $APP_DIR/$OUTPUT"

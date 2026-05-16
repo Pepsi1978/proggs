@@ -1,4 +1,4 @@
-# Don't-Miss-Checkliste: 66 Punkte fuer 100% Coverage
+# Don't-Miss-Checkliste: 82 Punkte fuer 100% Coverage
 
 ## Zweck
 
@@ -132,6 +132,32 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 [ ] J8. Glossar-Begriffe automatisch erkannt (Top-30 Substantive), Konsistenz-Inkonsistenzen aufgelistet, Region-Differenzen + Du/Sie-Konsistenz geprueft?
 ```
 
+## Block K — Legal-Text-Inventar (10 Punkte — Grundlage fuer Rechtssicherheits-Skill)
+
+```
+[ ] K1. Permission-Rationale-Dialoge pro Runtime-Permission erfasst (Title/Body/Allow/Deny/Settings-Verweis)?
+[ ] K2. Consent-Banner-Wortlaut erfasst — "Akzeptieren" und "Ablehnen" gleich prominent?
+[ ] K3. AGB-, Datenschutz-, Impressums-, Widerruf-Links erfasst und auf Erreichbarkeit geprueft (HTTP 200)?
+[ ] K4. Health-Disclaimer-Texte erfasst (falls Health-/Fitness-/Mental-Health-App)?
+[ ] K5. AI-Disclaimer-Texte erfasst (falls KI-SDK-Aufrufe vorhanden) — pro Antwort + global?
+[ ] K6. Werbe-Markierungen ("Werbung"/"Anzeige"/"Gesponsert") erfasst (falls Ad-SDK)?
+[ ] K7. Account-Deletion-Flow vollstaendig zitiert (Settings-Item, Confirm-Dialog mit Wort "unwiderruflich", Erfolgsmeldung)?
+[ ] K8. Newsletter-Opt-In-Texte erfasst (falls Newsletter) — Double-Opt-In-Hinweis enthalten?
+[ ] K9. In-App-Kauf-Confirmation + Widerrufsbelehrung-Texte erfasst (Pflichthinweise vor Kauf)?
+[ ] K10. Standort-Begruendung + Altersfreigabe-Anzeige erfasst (falls relevant)?
+```
+
+## Block L — Externe Inhalte (6 Punkte — Audit ueber die App hinaus)
+
+```
+[ ] L1. Google Play Store Listing (Title, Short/Long Description, Screenshot-Texte) — pro Sprache erfasst?
+[ ] L2. Firebase Remote Config Defaults + Live-Werte (Frank-Aufgabe) dokumentiert?
+[ ] L3. Cloud Functions Notification-Templates erfasst (falls Functions-Code im Repo)?
+[ ] L4. Email-Templates (Firebase Auth, Stripe) — Frank-Aufgabe dokumentiert?
+[ ] L5. WebView-Inhalte (HTML in assets/, externe URLs, PDF-Vorlagen) erfasst?
+[ ] L6. Marketing-Materialien (Webseite, Promo-Videos, Social-Media, Newsletter-Archiv) als Frank-Aufgabe gelistet?
+```
+
 ## Markier-Beispiele
 
 ```markdown
@@ -158,9 +184,9 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 ## Selbst-Pruefung am Ende
 
 Wenn die Checkliste durch ist:
-- 66 Punkte gesamt
+- 82 Punkte gesamt
 - Wie viele [X]: ___
 - Wie viele [ ] mit "NICHT_VERIFIZIERT (Grund)": ___ — diese sind OK wenn der Grund nachvollziehbar ist
 - Wie viele [ ] ohne Begruendung: ___ — sollte 0 sein
 
-Nur wenn alle 66 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.
+Nur wenn alle 82 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.

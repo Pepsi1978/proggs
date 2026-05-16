@@ -113,6 +113,40 @@ Pro Wortlaut werden die Daten erfasst die ein Uebersetzer braucht, damit eine ko
 
 → **Detail-Anleitung**: `references/layer-4c-translation-context.md`
 
+### Schicht 4d — Legal-Text-Inventar (PFLICHT — Grundlage fuer Rechtssicherheits-Skill)
+
+12 rechtlich obligatorische Wortlaut-Bereiche werden vollstaendig erfasst:
+
+- Permission-Rationale-Dialoge (pro Permission Title/Body/Allow/Deny-Verhalten)
+- Consent-Banner (Analytics, Tracking, Marketing — gleichrangige Akzeptieren/Ablehnen-Buttons?)
+- AGB-, Datenschutz- und Impressums-Links (mit Erreichbarkeit + Sprachvarianten)
+- Health-Disclaimer (bei Fitness-/Mental-Health-Apps)
+- AI-Disclaimer (EU AI Act + FTC)
+- Werbe-Markierungen (UWG §5a — Schleichwerbung)
+- Account-Deletion-Flow (DSGVO Art. 17 — Wort "unwiderruflich" Pflicht)
+- Newsletter-/Marketing-Opt-In (UWG §7 Double-Opt-In)
+- In-App-Kauf-Confirmation (Google Play Subscriptions Policy)
+- Widerrufsbelehrung (BGB §312g — sonst Frist 12 Monate)
+- Standort-Begruendung (Play Console seit 2024)
+- Altersfreigabe-Anzeige (USK/PEGI/IARC)
+
+→ **Detail-Anleitung**: `references/layer-4d-legal-text-inventory.md`
+
+### Schicht 4e — Externe Inhalte (ergaenzend — Audit ueber die App hinaus)
+
+Wortlaute die NICHT im Code-Repository leben aber genauso UWG-/Werberecht-relevant sind:
+
+- Google Play Store Listing (Title, Short/Long Description, Screenshot-Texte) — Frank-Aufgabe oder Fastlane-Metadata
+- Firebase Remote Config Defaults + Live-Werte
+- Cloud Functions Notification-Templates (Trial-End, Subscription-Status)
+- Email-Templates (Firebase Auth, Stripe, Sendgrid)
+- WebView-Inhalte (HTML in assets/ oder externe URLs)
+- PDF-Export-Vorlagen (oft DE-hardcoded)
+- Customer-Support-System (Intercom, Zendesk)
+- Marketing-Materialien (Webseite, Promo-Videos, Social-Media-Bios, Newsletter-Archiv)
+
+→ **Detail-Anleitung**: `references/layer-4e-external-content.md`
+
 ### Schicht 5 — Paywall-Tiefenanalyse: Der WICHTIGSTE Bereich
 
 Hier wird mit besonderer Sorgfalt gearbeitet, weil Werbeaussagen rund um die Paywall am haeufigsten rechtlich problematisch sind. Jeder einzelne Subscription-State, jeder Abbruchpfad, jeder Trial-Schritt, jeder Promo-Code, jeder Win-Back-Flow wird dokumentiert.

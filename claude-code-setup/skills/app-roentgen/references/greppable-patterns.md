@@ -510,6 +510,137 @@ grep -rn 'ErrorScreen\|ErrorState\|ErrorMessage\|ErrorBanner\|EmptyScreen\|Empty
 grep -rn 'isError = true\|supportingText.*error' --include='*.kt' .
 ```
 
+### TextField-Slots (oft uebersehen!)
+
+```bash
+# Material 3 OutlinedTextField / TextField — alle Slots
+grep -rn 'OutlinedTextField(\|TextField(' --include='*.kt' . -A 20 | grep -E 'label\s*=|placeholder\s*=|supportingText\s*=|prefix\s*=|suffix\s*=|isError\s*=|leadingIcon\s*=|trailingIcon\s*='
+
+# Spezifisch nach Text-Slots in TextFields
+grep -rn 'TextField(' --include='*.kt' . -A 30 | grep -E 'Text\("[^"]*"\)|stringResource\(R\.string\.[a-z_]+\)'
+
+# label = {}
+grep -rn 'label\s*=\s*{' --include='*.kt' . -A 2
+
+# placeholder = {}
+grep -rn 'placeholder\s*=\s*{' --include='*.kt' . -A 2
+
+# supportingText = {}
+grep -rn 'supportingText\s*=\s*{' --include='*.kt' . -A 3
+
+# prefix / suffix
+grep -rn 'prefix\s*=\s*{\|suffix\s*=\s*{' --include='*.kt' . -A 2
+
+# BasicTextField mit decorationBox
+grep -rn 'BasicTextField(' --include='*.kt' . -A 30 | grep 'decorationBox'
+
+# DropdownMenuAnchor / ExposedDropdownMenuBox
+grep -rn 'ExposedDropdownMenuBox\|ExposedDropdownMenuAnchor' --include='*.kt' . -A 15
+```
+
+### Chips (oft uebersehen — viele Filter-/Tag-Labels)
+
+```bash
+# Material 3 Chips
+grep -rn 'FilterChip(\|AssistChip(\|InputChip(\|SuggestionChip(\|ElevatedFilterChip(\|ElevatedAssistChip(' --include='*.kt' . -A 8
+
+# label = { Text(...) } in Chips
+grep -rn 'FilterChip\|AssistChip\|InputChip\|SuggestionChip' --include='*.kt' . -A 10 | grep -E 'label\s*=\s*{' -A 1
+
+# Chip-Container (FlowRow mit Chips)
+grep -rn 'FlowRow.*Chip\|Chip\s*[A-Z]' --include='*.kt' . | head -20
+```
+
+### Tooltips Material 3 (PlainTooltip + RichTooltip)
+
+```bash
+# Material 3 TooltipBox
+grep -rn 'TooltipBox(' --include='*.kt' . -A 15
+
+# PlainTooltip — Single-Text-Slot
+grep -rn 'PlainTooltip(' --include='*.kt' . -A 5
+
+# RichTooltip — title/text/action
+grep -rn 'RichTooltip(' --include='*.kt' . -A 15
+grep -rn 'rememberTooltipState\|TooltipState' --include='*.kt' .
+```
+
+### SearchBar / DockedSearchBar (Material 3)
+
+```bash
+grep -rn 'SearchBar(\|DockedSearchBar(' --include='*.kt' . -A 15
+grep -rn 'placeholder\s*=\s*{' --include='*.kt' . -B 5 | grep -E 'SearchBar|DockedSearchBar' -A 5
+grep -rn 'leadingIcon\s*=\s*{\|trailingIcon\s*=\s*{' --include='*.kt' . -B 5 | grep -E 'SearchBar' -A 5
+```
+
+### semantics-Block (Accessibility-Text)
+
+```bash
+# Modifier.semantics { ... }
+grep -rn 'Modifier\.semantics\s*{' --include='*.kt' . -A 5
+grep -rn 'semantics\s*{' --include='*.kt' . -A 5
+
+# Spezifische a11y-Slots
+grep -rn 'contentDescription\s*=' --include='*.kt' . | grep -v 'test/' | head -30
+grep -rn 'stateDescription\s*=\|liveRegion\s*=\|paneTitle\s*=' --include='*.kt' .
+grep -rn 'clearAndSetSemantics\|mergeDescendants' --include='*.kt' .
+
+# Material 3 Komponenten mit eingebauter a11y
+grep -rn 'Modifier\.semantics(mergeDescendants = true)' --include='*.kt' .
+```
+
+### Banner-Komponenten (Custom + Material 3)
+
+```bash
+# Custom Banner
+grep -rn 'class.*Banner\|fun.*Banner(' --include='*.kt' . | head -20
+
+# Snackbar mit Action (oft Banner-Ersatz)
+grep -rn 'snackbarHostState\.showSnackbar' --include='*.kt' . -A 5
+```
+
+### Slider mit Labels
+
+```bash
+# Material 3 Slider
+grep -rn 'Slider(\|RangeSlider(' --include='*.kt' . -A 10
+
+# Slider mit Tooltip / Label
+grep -rn 'Slider(' --include='*.kt' . -A 15 | grep -E 'thumb\s*=|track\s*=' -B 2
+
+# valueRange + steps fuer beschriftete Slider
+grep -rn 'valueRange\s*=' --include='*.kt' . -B 2 | head -10
+```
+
+### Markdown / AnnotatedString (Inline-Hyperlinks)
+
+```bash
+# AnnotatedString-Builder (Compose Native fuer reichen Text)
+grep -rn 'buildAnnotatedString\|AnnotatedString\.Builder' --include='*.kt' . -A 10
+
+# withStyle / SpanStyle
+grep -rn 'withStyle\(' --include='*.kt' . -A 5
+
+# Inline-Hyperlinks (UrlAnnotation, ClickableText)
+grep -rn 'UrlAnnotation\|ClickableText\|LinkAnnotation\|StringAnnotation' --include='*.kt' . -A 5
+
+# Markdown-Libraries
+grep -rln 'compose-markdown\|markdown\.compose\|dev\.jeziellago\.compose_markdown\|com\.halilibo\.richtext' --include='*.kt' --include='*.gradle*' .
+```
+
+### Date/Time-Picker
+
+```bash
+# Material 3 DatePicker
+grep -rn 'DatePicker(\|DatePickerDialog(\|rememberDatePickerState' --include='*.kt' . -A 10
+
+# Material 3 TimePicker
+grep -rn 'TimePicker(\|TimePickerDialog(\|rememberTimePickerState' --include='*.kt' . -A 10
+
+# Custom Picker mit Title/Confirm/Dismiss
+grep -rn 'showModeToggle\|dateRangePicker' --include='*.kt' . -A 5
+```
+
 ### Hardcoded Strings (DARF nicht sein, MUSS aber geprueft werden)
 
 ```bash

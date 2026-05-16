@@ -29,7 +29,7 @@ Deshalb sind 1:1-Wortlaute nicht optional, sondern die Grundlage des gesamten Re
 | **Plurals komplett** | `<plurals>` mit allen Quantitaeten: zero/one/two/few/many/other (sofern definiert) |
 | **Format-Strings markieren** | `%1$s`, `%2$d` bleiben drin und werden als Platzhalter erklaert |
 
-## 4b.2 Die 12 Bereichstypen — fuer jeden eine Pflicht-Tabelle
+## 4b.2 Die 20 Bereichstypen — fuer jeden eine Pflicht-Tabelle
 
 Jede dieser Kategorien bekommt im finalen Bericht einen eigenen Unterabschnitt mit einer Wortlaut-Tabelle. Wenn ein Bereichstyp in der App nicht existiert, wird das explizit vermerkt ("Keine Snackbar-Texte gefunden — geprueft mit Patterns X").
 
@@ -47,6 +47,14 @@ Jede dieser Kategorien bekommt im finalen Bericht einen eigenen Unterabschnitt m
 | 10 | **Empty-States** | Leerer-Zustand-Texte ("Noch keine Eintraege") + Call-to-Action |
 | 11 | **Loading-States** | Lade-Texte, Progress-Beschreibungen |
 | 12 | **Onboarding/Tooltips/Banner** | Schritt-Texte, Tooltip-Bodies, In-App-Banner |
+| 13 | **TextField-Slots** | label, placeholder, supportingText, prefix, suffix, errorText, leadingIcon-cd, trailingIcon-cd |
+| 14 | **Chips** | FilterChip-Label, AssistChip-Label, InputChip-Label, SuggestionChip-Label |
+| 15 | **Material 3 Tooltips** | PlainTooltip-Text, RichTooltip-Title/Text/Action |
+| 16 | **SearchBar / DockedSearchBar** | placeholder, leadingIcon-cd, trailingIcon-cd, suggestion-headers |
+| 17 | **semantics-Block** | contentDescription, stateDescription, liveRegion, paneTitle |
+| 18 | **Slider mit Labels** | thumb-Text, Min/Max-Labels, Step-Labels, Value-Format |
+| 19 | **Date/Time-Picker** | Title, OK-Button, Cancel-Button, Headline-Format |
+| 20 | **AnnotatedString / Markdown** | Inline-Hyperlinks, fette/kursive Spans, eingebettete Klick-Texte |
 
 ## 4b.3 Suchstrategie — wie finde ich die Wortlaute?
 
@@ -274,6 +282,102 @@ Es gibt keine "zu tief"-Grenze. Wenn die App 9 Ebenen tief verschachtelt — all
 | Dropdown-Option 2 | `setting_theme_value_light` | "Hell" | "Light" | ... |
 | Dropdown-Option 3 | `setting_theme_value_dark` | "Dunkel" | "Dark" | ... |
 | Dialog-Title | `setting_theme_dialog_title` | "Design waehlen" | "Choose theme" | ... |
+```
+
+### Standard-Tabelle pro TextField
+
+```markdown
+### TextField: <Name/Zweck> (`<Datei.kt:Zeile>`)
+
+| Slot | String-Key | Wortlaut (DE 1:1) | Wortlaut (EN 1:1) | Weitere Sprachen |
+|------|-----------|-------------------|-------------------|------------------|
+| label | | | | |
+| placeholder | | | | |
+| supportingText | | | | |
+| prefix | | | | |
+| suffix | | | | |
+| errorText (bei isError = true) | | | | |
+| leadingIcon contentDescription | | | | |
+| trailingIcon contentDescription | | | | |
+```
+
+### Standard-Tabelle pro Chip-Gruppe
+
+```markdown
+### Chip-Gruppe: <Name/Zweck> (`<Datei.kt:Zeile>`)
+
+| Chip-Typ | Slot | String-Key | Wortlaut (DE 1:1) | Wortlaut (EN 1:1) |
+|---------|------|-----------|-------------------|-------------------|
+| FilterChip 1 | label | | | |
+| FilterChip 2 | label | | | |
+| AssistChip 1 | label | | | |
+| ... | ... | ... | ... | ... |
+```
+
+### Standard-Tabelle pro Tooltip
+
+```markdown
+### Tooltip: <Name/Zweck> (`<Datei.kt:Zeile>`)
+
+Tooltip-Typ: PlainTooltip / RichTooltip
+
+| Slot | String-Key | Wortlaut (DE 1:1) | Wortlaut (EN 1:1) |
+|------|-----------|-------------------|-------------------|
+| Title (nur Rich) | | | |
+| Text / Body | | | |
+| Action-Button (nur Rich) | | | |
+```
+
+### Standard-Tabelle pro SearchBar
+
+```markdown
+### SearchBar: <Name> (`<Datei.kt:Zeile>`)
+
+| Slot | String-Key | Wortlaut (DE 1:1) | Wortlaut (EN 1:1) |
+|------|-----------|-------------------|-------------------|
+| placeholder | | | |
+| leadingIcon contentDescription | | | |
+| trailingIcon contentDescription | | | |
+| Empty-Suggestions-Header | | | |
+| No-Results-State | | | |
+```
+
+### Standard-Tabelle pro semantics-Block (Accessibility)
+
+```markdown
+### Accessibility-Texte (semantics-Block)
+
+| Komponente | Datei:Zeile | contentDescription | stateDescription | liveRegion | paneTitle |
+|------------|-------------|-------------------|------------------|-----------|-----------|
+| FAB Dashboard | DashboardScreen.kt:88 | "Neuen Eintrag erstellen" | — | — | — |
+| Sync-Status-Banner | TopBar.kt:32 | "Synchronisation laeuft" | "synchronisiert" | Polite | — |
+| Paywall-Bildschirm | PaywallScreen.kt:12 | — | — | — | "Premium-Kauf" |
+| ... | ... | ... | ... | ... | ... |
+```
+
+### Standard-Tabelle pro Date/Time-Picker
+
+```markdown
+### Date/Time-Picker: <Name> (`<Datei.kt:Zeile>`)
+
+| Slot | String-Key | Wortlaut (DE 1:1) | Wortlaut (EN 1:1) |
+|------|-----------|-------------------|-------------------|
+| Picker-Title | | | |
+| Headline-Format (z.B. "%d. %s %d") | | | |
+| OK-Button | | | |
+| Cancel-Button | | | |
+| Mode-Toggle-Label (Date/Range) | | | |
+```
+
+### Standard-Tabelle pro AnnotatedString mit Inline-Links
+
+```markdown
+### Inline-Hyperlinks (AnnotatedString)
+
+| Datei:Zeile | Komponente | Voll-Text mit Markup (1:1) | Link-Texte (1:1) | Link-Targets |
+|-------------|------------|----------------------------|------------------|--------------|
+| OnboardingTerms.kt:42 | Terms-Footer | "Mit Klick auf ..weiter.. akzeptierst du unsere [AGB] und [Datenschutz]" | "AGB", "Datenschutz" | terms_url, privacy_url |
+| ... | ... | ... | ... | ... |
 ```
 
 ### Standard-Tabelle pro Snackbar / Toast / Error
