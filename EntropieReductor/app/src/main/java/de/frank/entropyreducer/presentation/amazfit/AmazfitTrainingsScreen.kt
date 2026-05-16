@@ -62,7 +62,7 @@ fun AmazfitTrainingsScreen(
     val cosmos = LocalCosmos.current
 
     CosmosScaffold(
-        title = "Sport (T-Rex 3)",
+        title = "Sport (Polar)",
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
@@ -107,7 +107,7 @@ fun AmazfitTrainingsScreen(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            "${state.filtered.size} von ${state.workouts.size} Trainings (T-Rex 3)",
+                            "${state.filtered.size} von ${state.workouts.size} Trainings (Polar)",
                             style = MaterialTheme.typography.labelSmall,
                             color = cosmos.textSecondary,
                         )

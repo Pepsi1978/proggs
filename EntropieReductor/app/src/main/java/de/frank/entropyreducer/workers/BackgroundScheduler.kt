@@ -363,6 +363,17 @@ class BackgroundScheduler @Inject constructor(
     }
 
     /**
+     * Bricht alle laufenden oder enqueued Polar-Bulk-Imports ab. Wichtig
+     * vor einem neuen Start, weil WorkManager Worker auch ueber App-Updates
+     * persistiert — ein alter Worker mit gescheiterter Drive-URI koennte
+     * sonst gleichzeitig mit dem neuen file://-URI laufen und Fehler-
+     * Notifications produzieren.
+     */
+    fun cancelPolarBulkImport() {
+        wm.cancelUniqueWork(PolarBulkImportWorker.UNIQUE_NAME_ONESHOT)
+    }
+
+    /**
      * Stoesst den Polar-Bulk-Import an (Frank-Wunsch 2026-05-16).
      * zipUri ist die content:// URI die der File-Picker liefert.
      * REPLACE: ein laufender Import wird ersetzt, kein Doppel-Import.

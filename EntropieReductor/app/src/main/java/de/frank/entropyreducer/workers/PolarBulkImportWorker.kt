@@ -60,17 +60,25 @@ class PolarBulkImportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val zipUriString = inputData.getString(KEY_ZIP_URI)
+        Log.i(TAG, "Polar-Bulk-Worker: doWork gestartet — zipUriString=$zipUriString")
         if (zipUriString.isNullOrBlank()) {
             Log.e(TAG, "Polar-Bulk-Import: kein zipUri uebergeben")
             return Result.failure()
         }
         val zipUri = Uri.parse(zipUriString)
+        Log.i(TAG, "Polar-Bulk-Worker: URI scheme=${zipUri.scheme} path=${zipUri.path}")
 
-        // Frank-Bugfix 2026-05-16 (3. Versuch): Die ZIP wurde schon vom
-        // ViewModel in den App-Cache kopiert (file://-URI). Damit umgehen
-        // wir das Drive-Permission-Problem komplett. Falls aus historischen
-        // Gruenden doch eine content:// URI kommt, schmeisst openInputStream
-        // ggf. SecurityException — die fangen wir defensiv ab.
+        // Frank-Bugfix 2026-05-16 (4. Iteration): Wir akzeptieren NUR noch
+        // file://-URIs. Wenn aus irgendeinem Grund eine alte content://-URI
+        // ankommt (z.B. enqueued Worker vor #774), brechen wir SOFORT ab
+        // mit klarer Fehlermeldung — kein Versuch mehr, Drive zu lesen.
+        if (zipUri.scheme != "file") {
+            val msg = "Polar-Bulk-Worker erhielt ungueltige URI-Quelle '${zipUri.scheme}://' — erwartet wird file://. Bitte ZIP-Datei nochmal auswaehlen."
+            Log.e(TAG, msg)
+            showFailureNotification("Quelle nicht unterstuetzt. Bitte erneut ZIP auswaehlen.")
+            return Result.failure()
+        }
+
         setForeground(buildForegroundInfo("Polar-Historie wird gelesen…"))
 
         // Cache-Datei fuer spaeteres Aufraeumen merken (nur wenn file:// und

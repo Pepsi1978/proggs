@@ -257,14 +257,21 @@ class OAuthViewModel @Inject constructor(
      * dauert das 3-5 Sekunden. Solange zeigt die UI eine Status-Message.
      */
     fun startPolarBulkImport(zipUri: android.net.Uri) {
+        android.util.Log.i("OAuthViewModel", "Polar-Bulk: startPolarBulkImport Source-URI scheme=${zipUri.scheme} authority=${zipUri.authority}")
+        // SCHICHT 1: Alle frueheren Worker-Versuche canceln. Ohne das laufen
+        // gescheiterte Versuche (z.B. mit alter Drive-URI) im Hintergrund weiter
+        // und ueberlagern den frischen Start.
+        scheduler.cancelPolarBulkImport()
         _state.update { it.copy(message = "ZIP wird vorbereitet (Datei wird kopiert)…") }
         viewModelScope.launch {
             val cachedFile = runCatching { copyZipToCache(zipUri) }.getOrElse { t ->
+                android.util.Log.e("OAuthViewModel", "Polar-Bulk: Cache-Copy fehlgeschlagen", t)
                 _state.update {
                     it.copy(message = "ZIP konnte nicht gelesen werden: ${t.message ?: t.javaClass.simpleName}")
                 }
                 return@launch
             }
+            android.util.Log.i("OAuthViewModel", "Polar-Bulk: Cache-Copy fertig — ${cachedFile.length() / 1024} KB unter ${cachedFile.absolutePath}")
             val cacheUri = android.net.Uri.fromFile(cachedFile)
             scheduler.runPolarBulkImport(cacheUri)
             _state.update {

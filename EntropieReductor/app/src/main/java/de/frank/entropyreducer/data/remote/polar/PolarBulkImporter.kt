@@ -79,9 +79,12 @@ class PolarBulkImporter @Inject constructor(
         zipUri: Uri,
         onProgress: (Progress) -> Unit = {},
     ): List<AmazfitWorkoutEntity> = withContext(Dispatchers.IO) {
+        Log.i(TAG, "Polar-Bulk-Importer: starte Import von $zipUri")
         val entities = mutableListOf<AmazfitWorkoutEntity>()
         var filesProcessed = 0
         var skipped = 0
+        var entriesSeen = 0
+        var trainingEntriesSeen = 0
 
         val resolver = context.contentResolver
         val inputStream = resolver.openInputStream(zipUri)
@@ -91,8 +94,15 @@ class PolarBulkImporter @Inject constructor(
             ZipInputStream(buf).use { zip ->
                 var entry = zip.nextEntry
                 while (entry != null) {
+                    entriesSeen++
                     val name = entry.name
+                    // Diagnose: erste 5 Eintraege loggen damit wir die
+                    // ZIP-Struktur live sehen koennen
+                    if (entriesSeen <= 10) {
+                        Log.d(TAG, "Polar-Bulk: ZIP-Eintrag #$entriesSeen: '$name' (dir=${entry.isDirectory})")
+                    }
                     if (!entry.isDirectory && isTrainingEntry(name)) {
+                        trainingEntriesSeen++
                         filesProcessed++
                         try {
                             // Datei vollstaendig in den Speicher lesen — ein
@@ -125,7 +135,7 @@ class PolarBulkImporter @Inject constructor(
         }
 
         onProgress(Progress(filesProcessed, entities.size, skipped, finished = true))
-        Log.i(TAG, "Polar-Bulk-Import fertig: $filesProcessed Dateien, ${entities.size} Entities, $skipped uebersprungen")
+        Log.i(TAG, "Polar-Bulk-Import fertig: ZIP hatte $entriesSeen Eintraege gesamt, $trainingEntriesSeen davon Trainings — $filesProcessed verarbeitet, ${entities.size} entities erzeugt, $skipped uebersprungen")
         entities
     }
 

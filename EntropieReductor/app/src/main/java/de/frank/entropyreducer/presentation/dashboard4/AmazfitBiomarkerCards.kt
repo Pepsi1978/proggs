@@ -64,7 +64,7 @@ internal fun AmazfitSectionHeader() {
         Spacer(Modifier.size(10.dp))
         Column {
             Text(
-                "Amazfit T-Rex 3",
+                "Polar",
                 style = MaterialTheme.typography.titleMedium,
                 color = cosmos.textPrimary,
                 fontWeight = FontWeight.SemiBold,
@@ -127,7 +127,7 @@ internal fun AmazfitTrainingsCard(
                 }
                 Spacer(Modifier.size(10.dp))
                 Text(
-                    text = "Frühere Trainings (T-Rex 3)",
+                    text = "Frühere Trainings (Polar)",
                     style = MaterialTheme.typography.titleMedium,
                     color = cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
@@ -243,7 +243,7 @@ private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = "T-Rex 3",
+                        text = "Polar",
                         color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
