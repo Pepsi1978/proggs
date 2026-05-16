@@ -336,6 +336,49 @@ fun HypothesisMessageEntity.toBackup(): BackupHypothesisMessage = BackupHypothes
     createdAt = createdAt,
 )
 
+/**
+ * Mapping aus der schlanken Backup-Projektion. Streams sind hier per
+ * SELECT bereits ausgeschlossen — kein RAM-Druck.
+ */
+fun de.frank.entropyreducer.data.local.dao.AmazfitWorkoutBackupRow.toBackup(): BackupAmazfitWorkout =
+    BackupAmazfitWorkout(
+        trackId = trackId,
+        dateKey = dateKey,
+        startMs = startMs,
+        endMs = endMs,
+        durationSeconds = durationSeconds,
+        sportType = sportType,
+        sportName = sportName,
+        distanceMeters = distanceMeters,
+        avgPaceSecPerKm = avgPaceSecPerKm,
+        maxPaceSecPerKm = maxPaceSecPerKm,
+        avgSpeedKmh = avgSpeedKmh,
+        maxSpeedKmh = maxSpeedKmh,
+        calories = calories,
+        avgHeartRate = avgHeartRate,
+        maxHeartRate = maxHeartRate,
+        gpsTrackJson = null,
+        heartRateSeriesJson = null,
+        paceSeriesJson = null,
+        splitsJson = null,
+        altitudeGainMeters = altitudeGainMeters,
+        altitudeLossMeters = altitudeLossMeters,
+        trainingEffectAerobic = trainingEffectAerobic,
+        trainingEffectAnaerobic = trainingEffectAnaerobic,
+        vo2Max = vo2Max,
+        cadence = cadence,
+        strideLengthCm = strideLengthCm,
+        recoveryTimeHours = recoveryTimeHours,
+        skinTempCelsius = skinTempCelsius,
+        swolf = swolf,
+        poolLaps = poolLaps,
+        poolLengthMeters = poolLengthMeters,
+        source = source,
+        city = city,
+        paceStreamJson = null,
+        createdAt = createdAt,
+    )
+
 fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout {
     // Frank-Bugfix 2026-05-16 (Iteration 2): isBulk-Check hat nicht gegriffen
     // weil moeglicherweise Workouts ohne source="polar-bulk" in der DB sind

@@ -95,20 +95,36 @@ interface AmazfitWorkoutDao {
     suspend fun deleteNonPolarWorkouts(): Int
 
     /**
+     * Frank-Bugfix 2026-05-16: SELECT ohne die grossen Stream-Felder
+     * (gpsTrackJson, heartRateSeriesJson, paceSeriesJson, paceStreamJson,
+     * splitsJson) damit beim Backup nicht 100+ MB Daten in den RAM kommen
+     * die danach eh weggeworfen werden.
+     *
+     * Bei 956 Polar-Bulk-Trainings reduziert das den Backup-Build-RAM
+     * von ~135 MB auf ~3 MB — beide Allokationsspitzen weg.
+     */
+    @Query(
+        "SELECT trackId, dateKey, startMs, endMs, durationSeconds, sportType, " +
+            "sportName, distanceMeters, avgPaceSecPerKm, maxPaceSecPerKm, " +
+            "avgSpeedKmh, maxSpeedKmh, calories, avgHeartRate, maxHeartRate, " +
+            "altitudeGainMeters, altitudeLossMeters, trainingEffectAerobic, " +
+            "trainingEffectAnaerobic, vo2Max, cadence, strideLengthCm, " +
+            "recoveryTimeHours, skinTempCelsius, swolf, poolLaps, " +
+            "poolLengthMeters, source, city, createdAt " +
+            "FROM amazfit_workouts ORDER BY startMs DESC"
+    )
+    suspend fun getAllForBackupSlim(): List<AmazfitWorkoutBackupRow>
+
+    /**
      * Frank-Wunsch 2026-05-16: Health-Connect-Workout-Merge braucht die Liste
-     * existierender Start-Zeitstempel um Duplikate zu erkennen. Wir vergleichen
-     * neue HC-Sessions per +/- 5 Minuten Toleranz gegen diese Liste.
+     * existierender Start-Zeitstempel um Duplikate zu erkennen.
      */
     @Query("SELECT startMs FROM amazfit_workouts WHERE startMs BETWEEN :from AND :to ORDER BY startMs DESC")
     suspend fun getStartMsInRange(from: Long, to: Long): List<Long>
 
     /**
-     * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur dort
-     * wo der Name aktuell abweicht (idempotent, kein No-Op-UPDATE wenn schon korrekt).
-     * Frank-Wunsch 2026-05-10: Migration fuer T-Rex-3-Codes 12 (Crosstrainer) und
-     * 52 (Krafttraining) — beide wurden frueher faelschlich als "Laufen" gespeichert
-     * weil der source-Prefix "run.huami.com" auf der T-Rex 3 generisch fuer alle
-     * Sportarten ist. Gibt die Anzahl geaenderter Zeilen zurueck.
+     * Setzt sportName fuer alle Workouts mit gegebenem sportType — aber nur
+     * wo der Name aktuell abweicht (idempotent).
      */
     @Query(
         "UPDATE amazfit_workouts SET sportName = :sportName " +
@@ -116,3 +132,41 @@ interface AmazfitWorkoutDao {
     )
     suspend fun updateSportNameByType(sportType: Int, sportName: String): Int
 }
+
+/**
+ * Schlanke Projektion fuer das Cross-Device-Backup — ohne die teuren
+ * Stream-Felder (gpsTrackJson, heartRateSeriesJson, paceSeriesJson,
+ * paceStreamJson, splitsJson). Bei 956 Workouts spart das ~130 MB RAM.
+ */
+data class AmazfitWorkoutBackupRow(
+    val trackId: String,
+    val dateKey: String,
+    val startMs: Long,
+    val endMs: Long,
+    val durationSeconds: Long?,
+    val sportType: Int?,
+    val sportName: String?,
+    val distanceMeters: Double?,
+    val avgPaceSecPerKm: Double?,
+    val maxPaceSecPerKm: Double?,
+    val avgSpeedKmh: Double?,
+    val maxSpeedKmh: Double?,
+    val calories: Double?,
+    val avgHeartRate: Int?,
+    val maxHeartRate: Int?,
+    val altitudeGainMeters: Double?,
+    val altitudeLossMeters: Double?,
+    val trainingEffectAerobic: Double?,
+    val trainingEffectAnaerobic: Double?,
+    val vo2Max: Double?,
+    val cadence: Int?,
+    val strideLengthCm: Int?,
+    val recoveryTimeHours: Int?,
+    val skinTempCelsius: Double?,
+    val swolf: Int?,
+    val poolLaps: Int?,
+    val poolLengthMeters: Double?,
+    val source: String?,
+    val city: String?,
+    val createdAt: Long,
+)

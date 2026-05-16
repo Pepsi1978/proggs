@@ -140,8 +140,16 @@ class SyncCoordinator @Inject constructor(
             // Daten fuer immer erhalten und das Restore auf dem S23 Ultra braucht
             // keinen Zepp-API-Call mehr (kein Re-Login, kein Kicken aus der
             // Zepp-Handy-App).
+            // Frank-Bugfix 2026-05-16: observeAll().first() laed ALLE Workout-
+            // Felder inkl. der grossen Stream-Spalten (Pulsverlauf-JSON,
+            // GPS-Track-JSON, Pace-Stream-JSON) in den RAM. Bei 956 Workouts
+            // sind das 100+ MB nur fuer die DB-Liste, plus dann nochmal so
+            // viel fuer .map { toBackup() }. Auf Android's 256-MB-Heap-Limit
+            // pro App ist das fast garantiert OOM.
+            // getAllForBackupSlim selektiert auf SQL-Ebene nur die kleinen
+            // Metadaten-Spalten -> ~3 MB RAM statt 100+ MB.
             val amazfitWorkouts = amazfitWorkoutDaoLazy.get()
-                .observeAll().first()
+                .getAllForBackupSlim()
                 .map { it.toBackup() }
 
             val payload = BackupPayload(
