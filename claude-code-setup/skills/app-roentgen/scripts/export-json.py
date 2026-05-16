@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-app-roentgen JSON-Exporter — Welle 3 (Plugin-API)
+app-roentgen JSON-Exporter
 
-Erzeugt strukturierte JSON-Ausgabe aus dem Audit-Bericht eines Android-App-Repos.
-Plugins (Rechtssicherheits-Skill, Uebersetzungs-Skill, andere) konsumieren diese
-JSON-Datei statt der Markdown-Datei.
+Erzeugt eine strukturierte JSON-Ausgabe aus einem Android-App-Repo, parallel zum
+Markdown-Audit-Bericht. Nachgelagerte Skills (Rechtssicherheits-Skill,
+Uebersetzungs-Skill) koennen diese JSON-Datei programmatisch lesen anstatt
+die Markdown-Datei parsen zu muessen.
 
 Aufruf:
     python3 export-json.py <pfad-zur-android-app>

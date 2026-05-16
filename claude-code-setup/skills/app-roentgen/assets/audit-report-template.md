@@ -32,11 +32,12 @@ checklist_total_points: 82
 **Audit durch:** app-roentgen Skill (Claude Code)
 **Schema-Version:** 2.0
 
-> Dieser Bericht hat ein maschinenlesbares YAML-Frontmatter (oben). Plugins koennen damit
-> die Schema-Version pruefen und entscheiden welche Sektionen sie konsumieren.
+> Dieser Bericht hat ein maschinenlesbares YAML-Frontmatter (oben). Nachgelagerte Skills
+> (z.B. der Rechtssicherheits-Skill oder der Uebersetzungs-Skill) koennen damit die
+> Schema-Version pruefen und entscheiden welche Sektionen sie konsumieren.
 >
-> Parallel zu dieser MD-Datei existiert `<audit-name>.json` mit den strukturierten Daten
-> fuer programmatischen Zugriff. Siehe `references/plugin-api.md`.
+> Bei Bedarf kann zusaetzlich ein `app-roentgen-export.json` mit strukturierten Daten
+> erzeugt werden (siehe `scripts/export-json.py`).
 
 ---
 

@@ -15,10 +15,9 @@ Der finale Bericht hat vier Teile:
 3. **Translation-Context** — pro Wortlaut die Daten die ein Uebersetzer braucht (Laengen, xliff:g, Notes, Plurals, HTML, Format-Argumente, Glossar, Du/Sie-Konsistenz)
 4. **Werbeaussage-vs-Feature-Matrix** — jede beworbene Aussage gegen die Code-Realitaet geprueft
 
-Der Bericht dient drei nachgelagerten Konsumenten:
+Der Bericht dient zwei nachgelagerten Konsumenten:
 - **Rechtssicherheits-Skill** — prueft Wortlaute gegen UWG, EU UCPD, DSGVO, Google Play Policy
 - **Uebersetzungs-Skill** — uebersetzt Wortlaute mit voller Context-Information (Slot, Laenge, Plural-Regeln, Glossar, Argumente)
-- **Plugin-System** — kann den Bericht maschinenlesbar konsumieren (in spaeterer Welle)
 
 ## Warum 1:1-Wortlaute (KRITISCH)
 
@@ -198,9 +197,9 @@ bash ~/.claude/skills/app-roentgen/scripts/feature-scan.sh <pfad-zur-android-app
 
 Das Skript schreibt einen Initial-Bericht ins App-Verzeichnis als `app-roentgen-initial-scan.md`. Dieser ist die Basis fuer die Tiefenanalyse durch Claude in den 7 Schichten.
 
-## Plugin-API: JSON-Export fuer maschinelle Konsumenten
+## JSON-Schnittstelle fuer maschinelle Konsumenten
 
-Parallel zum Markdown-Bericht kann ein strukturierter JSON-Export erzeugt werden, den der Rechtssicherheits-Skill, der Uebersetzungs-Skill und kuenftige Plugins konsumieren:
+Parallel zum Markdown-Bericht kann ein strukturierter JSON-Export erzeugt werden, den der Rechtssicherheits-Skill und der Uebersetzungs-Skill konsumieren koennen:
 
 ```bash
 python3 ~/.claude/skills/app-roentgen/scripts/export-json.py <pfad-zur-android-app>
@@ -210,7 +209,7 @@ Output: `<app-dir>/app-roentgen-export.json` mit Schema-Version 2.0.
 
 Der Export enthaelt: alle Strings mit Hash + Translatable-Flag + Format-Args + xliff:g-IDs + Slot-Laenge, Plurals mit CLDR-Vollstaendigkeitspruefung pro Sprache, Glossar, Du/Sie-Konsistenz, SDK-Erkennung (AI/Ads/Billing/Health/WebView/Firebase), Permission-Liste.
 
-→ **Detail-Doku**: `references/plugin-api.md`
+Der JSON-Export ist optional — er wird nur erzeugt wenn der Konsument ihn explizit braucht. Das Markdown-Format reicht fuer den manuellen Audit.
 
 ## Output-Format des finalen Berichts
 

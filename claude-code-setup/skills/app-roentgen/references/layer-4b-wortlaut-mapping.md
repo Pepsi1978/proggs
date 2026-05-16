@@ -21,7 +21,7 @@ Deshalb sind 1:1-Wortlaute nicht optional, sondern die Grundlage des gesamten Re
 
 | Regel | Pflicht-Format |
 |-------|---------------|
-| **Stable Area-ID** | Jeder Bereich bekommt eine eindeutige ID (z.B. `area_id: dialog_delete_entry`) fuer Plugin-Konsumenten |
+| **Stable Area-ID** | Jeder Bereich bekommt eine eindeutige ID (z.B. `area_id: dialog_delete_entry`) fuer programmatischen Zugriff und stabile Querverweise |
 | **Zitat in Anfuehrungszeichen** | `"Jetzt Premium starten"` — kein freier Fliesstext, immer `"..."` |
 | **Quelle vollstaendig** | `R.string.paywall_cta_primary @ res/values/strings.xml:142` |
 | **UI-Element nennen** | "Primaer-Button TopBar / TopBar-Title / Confirm-Button im Loesch-Dialog" |
@@ -32,7 +32,7 @@ Deshalb sind 1:1-Wortlaute nicht optional, sondern die Grundlage des gesamten Re
 
 ### Stable Area-ID Konvention
 
-Jede Wortlaut-Tabelle bekommt eine eindeutige `area_id`, damit Plugins (Rechtssicherheits-Skill, Uebersetzungs-Skill, kuenftige Plugins) gezielt referenzieren koennen.
+Jede Wortlaut-Tabelle bekommt eine eindeutige `area_id`, damit nachgelagerte Skills (Rechtssicherheits-Skill, Uebersetzungs-Skill) gezielt referenzieren koennen und der Audit-Bericht ueber mehrere Laeufe hinweg stabile Querverweise behaelt.
 
 **Format:** `<typ>_<name>_<sub>`
 
