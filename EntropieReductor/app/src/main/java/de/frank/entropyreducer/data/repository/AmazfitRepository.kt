@@ -88,6 +88,21 @@ class AmazfitRepository @Inject constructor(
         dailyDao.getRange(from, to)
 
     fun observeAllWorkouts(): Flow<List<AmazfitWorkoutEntity>> = workoutDao.observeAll()
+
+    /**
+     * Frank-Wunsch 2026-05-16: Einmalige Workout-Cleanup-Migration vor der Polar-
+     * Integration. Loescht ALLE Workouts aus der lokalen DB und triggert sofort
+     * einen Drive-Sync — damit wird das Drive-Backup mit dem aktuellen (leeren)
+     * Stand ueberschrieben und spielt die alten Trainings nicht mehr zurueck.
+     *
+     * Backup-Logik bleibt erhalten: kuenftige Polar-Workouts werden weiter
+     * gesichert und cross-device wiederhergestellt.
+     */
+    suspend fun cleanupAllWorkoutsForMigration() {
+        Log.i(TAG, "Workout-Cleanup-Migration: loesche alle amazfit_workouts und triggere Drive-Sync")
+        workoutDao.deleteAll()
+        syncCoordinatorLazy.get().requestSync()
+    }
     fun observeWorkoutsByDate(dateKey: String): Flow<List<AmazfitWorkoutEntity>> =
         workoutDao.observeByDateKey(dateKey)
     fun observeWorkoutById(trackId: String): Flow<AmazfitWorkoutEntity?> =

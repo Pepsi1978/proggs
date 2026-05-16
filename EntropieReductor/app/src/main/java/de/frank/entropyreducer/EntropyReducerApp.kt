@@ -109,6 +109,32 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
+        // Frank-Wunsch 2026-05-16: Einmalige Workout-Cleanup-Migration vor der
+        // Polar-Integration. Loescht alle bestehenden Workouts und triggert einen
+        // Sync damit das Drive-Backup mit dem leeren Stand ueberschrieben wird.
+        // 5-Sekunden-Delay damit etwaige Drive-Restore-Operationen am App-Start
+        // zuerst abgeschlossen sind und ihre Workouts ueberhaupt sichtbar werden,
+        // bevor die Migration sie raeumt. Idempotent via workoutCleanupV1-Flag.
+        applicationScope.launch {
+            kotlinx.coroutines.delay(5000L)
+            runCatching {
+                if (!appSettings.isWorkoutCleanupV1Done()) {
+                    amazfitRepository.cleanupAllWorkoutsForMigration()
+                    appSettings.setWorkoutCleanupV1Done(true)
+                    android.util.Log.i(
+                        "EntropyReducerApp",
+                        "Workout-Cleanup-Migration v1 abgeschlossen — Backup wird mit leerem Stand ueberschrieben",
+                    )
+                }
+            }.onFailure {
+                android.util.Log.w(
+                    "EntropyReducerApp",
+                    "Workout-Cleanup-Migration fehlgeschlagen",
+                    it,
+                )
+            }
+        }
+
         // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
         // Whoop-Rate-Limit ist 60 req/min — selbst 50 Foreground-Wechsel/Tag sind
         // unkritisch, der Worker macht nur 3 paginierte API-Calls pro Sync.

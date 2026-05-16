@@ -212,6 +212,16 @@ class AppSettings @Inject constructor(
         it[KEY_MONTHLY_REVIEW_AT] = atMs
     }
 
+    /**
+     * Frank-Wunsch 2026-05-16: einmalige Workout-Cleanup-Migration. Wird beim
+     * App-Start ausgefuehrt — loescht alle bestehenden amazfit_workouts und
+     * triggert einen Drive-Sync damit das Backup mit dem leeren Stand ueberschrieben
+     * wird. Backup-Logik selbst bleibt erhalten — Polar-Integration kann spaeter
+     * sauber einsteigen.
+     */
+    suspend fun isWorkoutCleanupV1Done(): Boolean = ds.data.map { it[KEY_WORKOUT_CLEANUP_V1] ?: false }.first()
+    suspend fun setWorkoutCleanupV1Done(value: Boolean) = ds.edit { it[KEY_WORKOUT_CLEANUP_V1] = value }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -227,6 +237,7 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
+        private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")
