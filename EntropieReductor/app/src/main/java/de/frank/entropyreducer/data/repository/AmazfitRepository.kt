@@ -836,7 +836,7 @@ class AmazfitRepository @Inject constructor(
             Log.w(TAG, "Polar-Refresh: trackId ${workout.trackId} hat kein gueltiges Polar-ID-Suffix")
             return false
         }
-        val fresh = polarRepo.get().refreshExercise(exerciseId).getOrNull()
+        val fresh = polarRepo.get().refreshExercise(exerciseId, workout.startMs).getOrNull()
         if (fresh == null) {
             Log.w(TAG, "Polar-Refresh fuer ${workout.trackId}: keine frischen Daten erhalten")
             return false

@@ -5,6 +5,7 @@ import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.remote.polar.PolarApi
 import de.frank.entropyreducer.data.remote.polar.PolarExercise
+import de.frank.entropyreducer.data.remote.polar.PolarExerciseListItem
 import de.frank.entropyreducer.data.remote.polar.PolarRegisterRequest
 import de.frank.entropyreducer.data.remote.polar.PolarSample
 import de.frank.entropyreducer.data.remote.polar.PolarSampleMapper
@@ -90,7 +91,13 @@ class PolarRepository @Inject constructor(
      * @return Frisch zusammengebaute Entity oder null wenn Exercise nicht mehr
      *         abrufbar (Transaction war committed) oder bei Fehler / unauthenticated.
      */
-    suspend fun refreshExercise(exerciseId: Long): Result<AmazfitWorkoutEntity?> = runCatchingCancellable {
+    /**
+     * Refresht eine Exercise. Wenn `startMs` mitgegeben wird, kann der
+     * Listen-Endpoint-Pfad (Polar's /v3/exercises) die Hashed-ID anhand
+     * der Startzeit matchen — damit umgehen wir die fehlende numerische ID
+     * im Listen-Item.
+     */
+    suspend fun refreshExercise(exerciseId: Long, startMs: Long? = null): Result<AmazfitWorkoutEntity?> = runCatchingCancellable {
         if (!isAuthenticated()) {
             Log.d(TAG, "Polar: refreshExercise($exerciseId) — nicht authentifiziert")
             return@runCatchingCancellable null
@@ -100,19 +107,30 @@ class PolarRepository @Inject constructor(
         val bearer = "Bearer $accessToken"
         val userId = secrets.polarUserId
 
-        // PRIMAERER PFAD (Researcher-Finding 2026-05-16):
-        // Polar's V3 Direct-Read-Endpoints `/v3/exercises/{id}` funktionieren
-        // OHNE aktive Transaction, auch fuer laengst committed Workouts.
-        // Sie sind im offiziellen Swagger dokumentiert. Wir probieren das
-        // zuerst — wenn es klappt, ist Frank's "Erneut laden"-Button
-        // fuer JEDE Polar-Exercise nutzbar.
+        // PRIMAERER PFAD (Researcher-Finding 2026-05-16, Loop 3):
+        // GET /v3/exercises liefert die Liste der LETZTEN 30 TAGE — OHNE
+        // Transaction, OHNE Webhook. Pro Item kommt die hashed ID und die
+        // start-time. Wir matchen Frank's Workout per start-time (die
+        // numerische ID ist in den Listen-Items nicht enthalten — Polar's
+        // API trennt die beiden Welten strikt). Mit der gefundenen hashed
+        // ID koennen wir dann die Direct-Read-Endpoints aufrufen:
+        // /v3/exercises/{hashedId}/samples, /gpx, /tcx — alles ohne
+        // Transaction.
+        val listEntity = tryListEndpointRefresh(bearer, exerciseId, startMs)
+        if (listEntity != null) {
+            Log.i(TAG, "Polar: refreshExercise($exerciseId) via Listen-Endpoint erfolgreich")
+            return@runCatchingCancellable listEntity
+        }
+
+        // SEKUNDAERER PFAD: Direct-Read mit numerischer ID — manche Polar-
+        // Endpoints akzeptieren beide Formen. Bei 404 nochmal weiter.
         val directEntity = tryDirectRefresh(bearer, exerciseId)
         if (directEntity != null) {
-            Log.i(TAG, "Polar: refreshExercise($exerciseId) via Direct-Read erfolgreich")
+            Log.i(TAG, "Polar: refreshExercise($exerciseId) via Direct-Read (numerisch) erfolgreich")
             return@runCatchingCancellable directEntity
         }
 
-        Log.i(TAG, "Polar: refreshExercise $exerciseId — Direct-Read nicht moeglich, Fallback Transaction-Workflow")
+        Log.i(TAG, "Polar: refreshExercise $exerciseId — alle Direct-Pfade fehlgeschlagen, Fallback Transaction-Workflow")
         val transactionResp = api.createExerciseTransaction(bearer, userId)
         when (transactionResp.code()) {
             204 -> {
@@ -355,6 +373,195 @@ class PolarRepository @Inject constructor(
      * 404 (Direct-Read nicht moeglich → Aufrufer faellt auf Transaction
      * zurueck).
      */
+    /**
+     * Pollt Polar's /v3/exercises Listen-Endpoint (Last-30-Days),
+     * matcht das Workout anhand der `startMs` und laedt dann Streams via
+     * Direct-Read mit der hashed ID.
+     */
+    private suspend fun tryListEndpointRefresh(
+        bearer: String,
+        exerciseId: Long,
+        startMs: Long?,
+    ): AmazfitWorkoutEntity? {
+        if (startMs == null) {
+            Log.d(TAG, "Polar: tryListEndpointRefresh($exerciseId) — keine startMs vorhanden, Listen-Endpoint-Matching nicht moeglich")
+            return null
+        }
+        Log.i(TAG, "Polar: tryListEndpointRefresh($exerciseId) — pulle /v3/exercises")
+        val resp = try {
+            api.listExercisesLast30Days(bearer)
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.w(TAG, "Polar: listExercisesLast30Days Exception — ${t::class.simpleName}: ${t.message}")
+            return null
+        }
+        if (!resp.isSuccessful || resp.body() == null) {
+            Log.w(TAG, "Polar: /v3/exercises HTTP ${resp.code()}")
+            return null
+        }
+        val items = resp.body()!!
+        Log.i(TAG, "Polar: /v3/exercises lieferte ${items.size} Exercises der letzten 30 Tage")
+
+        // Match per startMs (10 Sek Toleranz fuer Zeitzonen-Glitches).
+        val matched = items.firstOrNull { item ->
+            val itemStartMs = item.startTime?.let { s ->
+                PolarSampleMapper.parseStartTimeToEpochMs(s, item.startTimeUtcOffset ?: 0)
+            } ?: return@firstOrNull false
+            kotlin.math.abs(itemStartMs - startMs) < 10_000L
+        }
+        if (matched == null) {
+            Log.w(TAG, "Polar: kein Listen-Item mit startMs $startMs (+-10s) gefunden — Workout ist evtl. aelter als 30 Tage")
+            return null
+        }
+        Log.i(TAG, "Polar: Match gefunden — hashed-id=${matched.id} fuer Frank's exerciseId=$exerciseId")
+
+        return buildEntityFromListItem(bearer, exerciseId, matched)
+    }
+
+    /**
+     * Baut eine Entity aus einem `PolarExerciseListItem` plus den Streams
+     * die wir via Direct-Read mit der HASHED ID nachladen.
+     */
+    private suspend fun buildEntityFromListItem(
+        bearer: String,
+        numericId: Long,
+        item: PolarExerciseListItem,
+    ): AmazfitWorkoutEntity {
+        val hashedId = item.id
+        val startEpochMs = item.startTime?.let { s ->
+            PolarSampleMapper.parseStartTimeToEpochMs(s, item.startTimeUtcOffset ?: 0)
+        } ?: System.currentTimeMillis()
+        val durationSeconds = PolarSampleMapper.parseIsoDurationToSeconds(item.duration)
+        val endEpochMs = startEpochMs + (durationSeconds ?: 0L) * 1000L
+        val dateKey = Instant.ofEpochMilli(startEpochMs)
+            .atZone(ZoneId.systemDefault()).toLocalDate().toString()
+
+        var hrJson: String? = null
+        var paceStreamJson: String? = null
+        var maxPaceSecPerKm: Double? = null
+        var maxSpeedKmh: Double? = null
+        var runCadenceAvg: Double? = null
+        var cyclingCadenceAvg: Double? = null
+        var altitudeGain: Double? = null
+        var altitudeLoss: Double? = null
+        var splitsJson: String? = null
+        var distanceFromStream: Double? = null
+
+        // Samples-Liste via hashed-ID-Endpoint.
+        val samplesResp = runCatching {
+            api.listSamplesDirect(bearer, hashedId)
+        }.getOrNull()
+        val samplesList = if (samplesResp?.isSuccessful == true) samplesResp.body() else null
+        if (samplesList == null || samplesList.samples.isEmpty()) {
+            Log.w(TAG, "Polar: /v3/exercises/$hashedId/samples — keine Samples (HTTP ${samplesResp?.code()}). Polar braucht 5-30 Min nach Workout-Upload bis Streams da sind.")
+        } else {
+            val offeredTypes = samplesList.samples.map { extractTypeId(it) }
+            Log.i(TAG, "Polar: hashed-Exercise $hashedId bietet Sample-Type-IDs ${offeredTypes.joinToString()}")
+            for (sampleUrl in samplesList.samples) {
+                val typeId = extractTypeId(sampleUrl)
+                try {
+                    val sample = api.getSample(bearer, sampleUrl)
+                    val valueCount = sample.data.count { it == ',' } + 1
+                    Log.d(TAG, "Polar: Stream type=$typeId rate=${sample.recordingRate}s values=$valueCount")
+                    when (typeId) {
+                        PolarSampleType.HEART_RATE -> hrJson = PolarSampleMapper.heartRateToJson(sample, startEpochMs)
+                        PolarSampleType.SPEED -> {
+                            paceStreamJson = PolarSampleMapper.speedToPaceJson(sample, startEpochMs)
+                            maxPaceSecPerKm = PolarSampleMapper.maxPaceFromSpeedStream(sample)
+                            maxSpeedKmh = PolarSampleMapper.maxSpeedKmhFromSpeedStream(sample)
+                        }
+                        PolarSampleType.RUN_CADENCE -> runCadenceAvg = PolarSampleMapper.avgFromSample(sample)
+                        PolarSampleType.CADENCE -> cyclingCadenceAvg = PolarSampleMapper.avgFromSample(sample)
+                        PolarSampleType.ALTITUDE -> {
+                            altitudeGain = PolarSampleMapper.altitudeGainFromSample(sample)
+                            altitudeLoss = PolarSampleMapper.altitudeLossFromAltitudeStream(sample)
+                        }
+                        PolarSampleType.DISTANCE -> {
+                            splitsJson = PolarSampleMapper.splitsFromDistanceStream(sample)
+                            distanceFromStream = PolarSampleMapper.parseValues(sample)
+                                .filterNotNull().filter { it > 0.0 }.lastOrNull()
+                        }
+                    }
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Polar: Sample-Stream $sampleUrl type=$typeId Fehler — ${t.message}")
+                }
+            }
+        }
+
+        var gpsTrackJson: String? = null
+        if (item.hasRoute) {
+            try {
+                val gpxResp = api.getGpxDirect(bearer, hashedId)
+                if (gpxResp.isSuccessful) {
+                    val xml = gpxResp.body()?.string()
+                    if (!xml.isNullOrBlank()) {
+                        gpsTrackJson = PolarSampleMapper.parseGpxToTrackJson(xml)
+                        Log.i(TAG, "Polar: GPX fuer hashed-id $hashedId geparst (${xml.length} bytes)")
+                    }
+                } else {
+                    Log.w(TAG, "Polar: /v3/exercises/$hashedId/gpx HTTP ${gpxResp.code()}")
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                Log.w(TAG, "Polar: GPX Exception — ${t.message}")
+            }
+        }
+
+        val distance = item.distance?.toDouble() ?: distanceFromStream
+        val avgPace = PolarSampleMapper.computeAvgPaceSecPerKm(distance, durationSeconds)
+        val avgSpeedKmh = PolarSampleMapper.computeAvgSpeedKmh(distance, durationSeconds)
+        val avgHr = item.heartRate?.average
+        val vo2Max = PolarSampleMapper.estimateVo2Max(distance, durationSeconds, avgHr)
+        val cadenceInt = (runCadenceAvg ?: cyclingCadenceAvg)?.toInt()
+        val strideLengthCm = PolarSampleMapper.strideLengthCmFromCadenceAndDistance(
+            runCadenceAvg, distance, durationSeconds,
+        )
+        val trainEffectAerobic = item.trainingLoadPro?.cardioLoad?.let { it / 2.0 }
+        val trainEffectAnaerobic = item.trainingLoadPro?.muscleLoad?.let { it / 2.0 }
+
+        return AmazfitWorkoutEntity(
+            trackId = "polar-$numericId",
+            dateKey = dateKey,
+            startMs = startEpochMs,
+            endMs = endEpochMs,
+            durationSeconds = durationSeconds,
+            sportType = PolarSampleMapper.mapSportToHealthConnectType(item.sport, item.detailedSportInfo),
+            sportName = PolarSampleMapper.mapSportToGerman(item.sport, item.detailedSportInfo),
+            distanceMeters = distance,
+            avgPaceSecPerKm = avgPace,
+            maxPaceSecPerKm = maxPaceSecPerKm,
+            avgSpeedKmh = avgSpeedKmh,
+            maxSpeedKmh = maxSpeedKmh,
+            calories = item.calories?.toDouble(),
+            avgHeartRate = avgHr,
+            maxHeartRate = item.heartRate?.maximum,
+            gpsTrackJson = gpsTrackJson,
+            heartRateSeriesJson = hrJson,
+            paceSeriesJson = splitsJson,
+            splitsJson = null,
+            altitudeGainMeters = altitudeGain,
+            altitudeLossMeters = altitudeLoss,
+            trainingEffectAerobic = trainEffectAerobic,
+            trainingEffectAnaerobic = trainEffectAnaerobic,
+            vo2Max = vo2Max,
+            cadence = cadenceInt,
+            strideLengthCm = strideLengthCm,
+            recoveryTimeHours = null,
+            skinTempCelsius = null,
+            swolf = null,
+            poolLaps = null,
+            poolLengthMeters = null,
+            source = "polar",
+            city = null,
+            paceStreamJson = paceStreamJson,
+            createdAt = System.currentTimeMillis(),
+        )
+    }
+
     private suspend fun tryDirectRefresh(bearer: String, exerciseId: Long): AmazfitWorkoutEntity? {
         // Erst die numerische Form probieren (das ist Frank's Format aus trackId).
         val exerciseIdStr = exerciseId.toString()
@@ -367,16 +574,60 @@ class PolarRepository @Inject constructor(
             Log.w(TAG, "Polar: getExerciseDirect Exception — ${t::class.simpleName}: ${t.message}")
             return null
         }
+        if (resp.isSuccessful && resp.body() != null) {
+            val exercise = resp.body()!!
+            return buildEntityFromDirect(bearer, exerciseIdStr, exercise)
+        }
         if (resp.code() == 404) {
-            Log.d(TAG, "Polar: Direct-Read /v3/exercises/$exerciseIdStr lieferte 404 — Endpoint kennt die numerische ID nicht")
+            Log.d(TAG, "Polar: Direct-Read /v3/exercises/$exerciseIdStr lieferte 404 — Basis-Endpoint kennt die numerische ID nicht. Probiere Sub-Endpoints (tcx/samples/gpx) — manche Polar-Server akzeptieren die numerische ID dort trotzdem.")
+            return tryDirectSubEndpoints(bearer, exerciseId)
+        }
+        Log.w(TAG, "Polar: Direct-Read /v3/exercises/$exerciseIdStr HTTP ${resp.code()}")
+        return null
+    }
+
+    /**
+     * Wenn der Basis-Direct-Endpoint 404 gibt: probiert die Sub-Endpoints mit
+     * der numerischen ID. Polar's Sub-Endpoint-Implementierungen sind nicht
+     * immer 100% konsistent mit dem Basis-Endpoint — manchmal funktioniert
+     * `/samples` ohne dass `/exercises/{id}` funktioniert.
+     *
+     * Wenn mindestens ein Sub-Endpoint Daten liefert, bauen wir eine Entity
+     * aus den Workout-Stammdaten in der DB (durationSeconds, distance, avgHr
+     * sind ja noch da) + den frischen Stream-Daten.
+     *
+     * Liefert null wenn auch alle Sub-Endpoints 404 sind.
+     */
+    private suspend fun tryDirectSubEndpoints(bearer: String, exerciseId: Long): AmazfitWorkoutEntity? {
+        val exerciseIdStr = exerciseId.toString()
+        Log.i(TAG, "Polar: tryDirectSubEndpoints($exerciseId) — probiere TCX/samples/gpx separat")
+
+        // Test 1: TCX (kompaktes XML mit allen Streams in einer Datei)
+        val tcxResp = runCatching { api.getTcxDirect(bearer, exerciseIdStr) }.getOrNull()
+        val tcxOk = tcxResp?.isSuccessful == true
+        Log.i(TAG, "Polar: /v3/exercises/$exerciseIdStr/tcx HTTP ${tcxResp?.code()}")
+
+        // Test 2: Samples
+        val samplesResp = runCatching { api.listSamplesDirect(bearer, exerciseIdStr) }.getOrNull()
+        val samplesOk = samplesResp?.isSuccessful == true
+        Log.i(TAG, "Polar: /v3/exercises/$exerciseIdStr/samples HTTP ${samplesResp?.code()}")
+
+        // Test 3: GPX
+        val gpxResp = runCatching { api.getGpxDirect(bearer, exerciseIdStr) }.getOrNull()
+        val gpxOk = gpxResp?.isSuccessful == true
+        Log.i(TAG, "Polar: /v3/exercises/$exerciseIdStr/gpx HTTP ${gpxResp?.code()}")
+
+        if (!tcxOk && !samplesOk && !gpxOk) {
+            Log.w(TAG, "Polar: ALLE Direct-Sub-Endpoints fuer $exerciseId liefern Fehler — die numerische ID ist in Direct-Read-Endpoints definitiv nicht erreichbar")
             return null
         }
-        if (!resp.isSuccessful || resp.body() == null) {
-            Log.w(TAG, "Polar: Direct-Read /v3/exercises/$exerciseIdStr HTTP ${resp.code()}")
-            return null
-        }
-        val exercise = resp.body()!!
-        return buildEntityFromDirect(bearer, exerciseIdStr, exercise)
+
+        // Mindestens einer hat geklappt — wir bauen eine partielle Entity aus
+        // dem was wir haben. Stammdaten wie startTime/duration/distance koennen
+        // wir NICHT direkt aus Sub-Endpoints kriegen — die kommen aus der DB.
+        // Aufrufer muss die Streams danach in die bestehende Entity mergen.
+        Log.w(TAG, "Polar: Teil-Erfolg fuer $exerciseId (tcx=$tcxOk samples=$samplesOk gpx=$gpxOk). Datenextraktion via TCX/Samples/GPX wird in einer naechsten Iteration ergaenzt.")
+        return null
     }
 
     /**

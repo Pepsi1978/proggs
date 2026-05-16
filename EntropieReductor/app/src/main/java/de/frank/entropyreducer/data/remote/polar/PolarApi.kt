@@ -147,6 +147,31 @@ interface PolarApi {
         @Path("transactionId") transactionId: Long,
     ): Response<Unit>
 
+    /**
+     * Listen-Endpoint: liefert alle Exercises der letzten 30 Tage MIT
+     * hashed IDs — OHNE Transaction-Workflow, OHNE Webhook noetig.
+     *
+     * Researcher-Finding 2026-05-16 (Polar Swagger): Dieser Endpoint ist der
+     * fehlende Baustein. Polar's Direct-Read-Endpoints (`/v3/exercises/{id}`)
+     * brauchen die **hashed** Exercise-ID — die numerische ID gibt 404. Aber
+     * Polar's Transaction-Workflow liefert NUR die numerische ID. Dieser
+     * Listen-Endpoint ist die Bruecke: er gibt fuer jede Exercise sowohl die
+     * numerische id (im body) als auch die hashed id (in der URL) zurueck.
+     *
+     * Mit Query-Parameter `samples=true` werden die Sample-Stream-URLs gleich
+     * mitgeliefert (spart einen Round-Trip). `route=true` aktiviert die GPX-URL.
+     *
+     * Scope: accesslink.read_all (haben wir via OAuth schon).
+     * Limit: 30 Tage. Aelteres muss via Transaction-Workflow (committed = weg).
+     */
+    @GET("v3/exercises")
+    suspend fun listExercisesLast30Days(
+        @Header("Authorization") bearer: String,
+        @retrofit2.http.Query("samples") includeSamples: Boolean = true,
+        @retrofit2.http.Query("zones") includeZones: Boolean = true,
+        @retrofit2.http.Query("route") includeRoute: Boolean = true,
+    ): Response<List<PolarExerciseListItem>>
+
     /* ===================== Direct-Read-Endpoints (Webhook-Hash-ID) =====================
      *
      * Frank-Befund 2026-05-16 + Researcher-Finding: Polar AccessLink V3 hat
@@ -288,6 +313,52 @@ data class PolarExercise(
 data class PolarHeartRateSummary(
     val average: Int? = null,
     val maximum: Int? = null,
+)
+
+/**
+ * Listen-Item aus `GET /v3/exercises`. Hat alle PolarExercise-Felder PLUS
+ * eine `id` die NICHT der Long aus PolarExercise ist sondern die **hashed**
+ * String-ID (z.B. "aQlC83"). Polar's Swagger nennt das Feld `id` in beiden
+ * Faellen — wir mappen es hier separat damit der Typ als String bleibt.
+ *
+ * Optional sind `samples`, `heart-rate-zones`, `route` direkt eingebettet
+ * wenn man die entsprechenden Query-Parameter setzt.
+ */
+@Serializable
+data class PolarExerciseListItem(
+    /** Hashed ID (string) — fuer Direct-Read-Endpoints. */
+    val id: String,
+    @SerialName("upload-time") val uploadTime: String? = null,
+    @SerialName("polar-user") val polarUser: String? = null,
+    @SerialName("transaction-id") val transactionId: Long? = null,
+    val device: String? = null,
+    @SerialName("device-id") val deviceId: String? = null,
+    @SerialName("start-time") val startTime: String? = null,
+    @SerialName("start-time-utc-offset") val startTimeUtcOffset: Int? = null,
+    val duration: String? = null,
+    val calories: Int? = null,
+    val distance: Float? = null,
+    @SerialName("heart-rate") val heartRate: PolarHeartRateSummary? = null,
+    @SerialName("training-load") val trainingLoad: Double? = null,
+    val sport: String? = null,
+    @SerialName("has-route") val hasRoute: Boolean = false,
+    @SerialName("club-id") val clubId: Int? = null,
+    @SerialName("club-name") val clubName: String? = null,
+    @SerialName("detailed-sport-info") val detailedSportInfo: String? = null,
+    @SerialName("fat-percentage") val fatPercentage: Int? = null,
+    @SerialName("carbohydrate-percentage") val carbohydratePercentage: Int? = null,
+    @SerialName("protein-percentage") val proteinPercentage: Int? = null,
+    @SerialName("running-index") val runningIndex: Int? = null,
+    @SerialName("training-load-pro") val trainingLoadPro: PolarTrainingLoadPro? = null,
+    /**
+     * Numerische Exercise-ID. Polar's Listen-Endpoint zeigt sie NICHT direkt
+     * an — die hashed `id` ist die einzige ID. Die numerische ID muessen wir
+     * ueber den `polar-user`-Pfad oder die `start-time` matchen.
+     *
+     * Wenn Polar in einer zukuenftigen API-Version doch eine numerische ID
+     * im Listen-Item liefert, kommt sie hier rein.
+     */
+    @SerialName("exercise-id") val exerciseId: Long? = null,
 )
 
 @Serializable
