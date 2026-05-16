@@ -179,16 +179,14 @@ class AmazfitRepository @Inject constructor(
         // Die UI-Cards wurden ebenfalls entfernt damit keine leeren "—"-
         // Eintraege im Biomarker-Bereich erscheinen.
 
-        // Workouts holen (Summary)
-        val workoutEntities = try {
-            fetchWorkoutSummaries(region, appToken, userId, from, today)
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            throw ce
-        } catch (t: Throwable) {
-            Log.w(TAG, "Workout-Fetch fehlgeschlagen: ${t::class.simpleName}: ${t.message}")
-            emptyList()
-        }
-        if (workoutEntities.isNotEmpty()) {
+        // Frank-Wunsch 2026-05-16 (final): Workout-Quellen komplett deaktiviert.
+        // Trainings kommen ab jetzt ausschliesslich ueber die Polar-API-
+        // Integration (separate Session). Zepp-Cloud + Health Connect liefern
+        // hier KEINE Workouts mehr — nur noch Daily-Werte (PAI, BioCharge,
+        // Stress, Schritte). Block bleibt strukturell drin damit die spaetere
+        // Polar-Pipeline an die Stelle einsteigen kann.
+        val workoutEntities = emptyList<AmazfitWorkoutEntity>()
+        if (false && workoutEntities.isNotEmpty()) {
             // Frank-Bug 2026-05-11: Der Workout-Summary-Endpoint liefert KEINE
             // Detail-Felder (GPS-Track, Pulsverlauf, Tempoverlauf, Splits) — die
             // kommen erst beim ON-DEMAND-Aufruf von ensureWorkoutDetail. Wenn
@@ -286,17 +284,11 @@ class AmazfitRepository @Inject constructor(
         if (workoutEntities.isNotEmpty() || dailyEntities.isNotEmpty()) {
             syncCoordinatorLazy.get().requestSync()
         }
-        // Frank-Wunsch 2026-05-16: NACH dem Zepp-Sync zusaetzlich Workouts aus
-        // Health Connect importieren. Workouts die Zepp-Cloud noch nicht
-        // synchronisiert hat, aber die Watch via Bluetooth in die Zepp-App
-        // gespielt hat, landen so trotzdem in der Hero-Card. Zepp-Cloud-Eintraege
-        // haben Vorrang (Dedup per startMs +/- 5 Min).
-        val hcInserted = mergeFromHealthConnect(days = days.coerceAtMost(60))
-        if (hcInserted > 0) {
-            Log.i(TAG, "Health-Connect-Merge: $hcInserted zusaetzliche Workouts importiert")
-            syncCoordinatorLazy.get().requestSync()
-        }
-        dailyEntities.size + workoutEntities.size + hcInserted
+        // Frank-Wunsch 2026-05-16 (final): Health-Connect-Workout-Merge
+        // ebenfalls deaktiviert — Polar-API uebernimmt alle Trainings.
+        // mergeFromHealthConnect bleibt als Methode erhalten falls sie spaeter
+        // wieder gebraucht wird, wird aber nicht mehr automatisch aufgerufen.
+        dailyEntities.size + workoutEntities.size
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.e(TAG, "Amazfit-Sync fehlgeschlagen", it)
