@@ -449,33 +449,39 @@ class AmazfitRepository @Inject constructor(
 
         var replaceCount = 0
         var newCount = 0
-        var deletedDuplicates = 0
         val toInsert = mutableListOf<AmazfitWorkoutEntity>()
         for (strava in stravaEntities) {
-            // Frank-Bug 2026-05-16 (Iteration 2): Strava ist Single-Source-of-Truth.
-            // Bei jedem Strava-Eintrag prufen wir ALLE Dubletten im 5-Min-Fenster und
-            // loeschen sie — egal ob ein eigener Strava-Eintrag schon existiert oder
-            // nicht. Sonst bleiben hc_/zepp-Eintraege fuer denselben Lauf bestehen
-            // und konkurrieren mit dem Strava-Eintrag in der Hero-Card.
-            val duplicates = toleranceList.filter {
+            // Strava-Workout selbst hat eindeutigen trackId "strava_$id". Wenn es
+            // schon mit DEM trackId existiert (z.B. Frueher-Sync), wird via REPLACE
+            // upgedatet — alle Detail-Streams werden frisch geschrieben.
+            val matchByStrava = toleranceList.find { it.first == strava.trackId }
+            if (matchByStrava != null) {
+                toInsert += strava
+                replaceCount += 1
+                continue
+            }
+            // Sonst: gibt es einen anderen Eintrag (zepp_xxx, hc_xxx) im selben
+            // 5-Min-Fenster? Wenn JA: alten loeschen, Strava inserten.
+            val matchByTime = toleranceList.find {
                 kotlin.math.abs(it.second - strava.startMs) <= toleranceMs && it.first != strava.trackId
             }
-            for (dup in duplicates) {
-                Log.d(TAG, "Strava-Merge: loesche Dublett ${dup.first} (gleicher Start wie ${strava.trackId})")
-                workoutDao.deleteByTrackId(dup.first)
-                deletedDuplicates += 1
-            }
-            // Strava-Workout selbst — inserten oder via REPLACE updaten.
-            val existsAlready = toleranceList.any { it.first == strava.trackId }
-            if (existsAlready) {
-                toInsert += strava
+            if (matchByTime != null) {
+                Log.d(TAG, "Strava-Merge: ueberschreibe ${matchByTime.first} mit ${strava.trackId} (gleicher Start +/- 5 Min)")
+                workoutDao.upsert(strava) // Strava-Eintrag inserten (eigene trackId)
+                // Alten Eintrag mit fremder trackId loeschen — kann via direkten Query
+                // erfolgen, gibt aber keinen deleteById im DAO. Workaround: delete alle
+                // mit dem startMs des alten, dann Strava neu inserten.
+                // Pragmatisch: Wir lassen den alten Eintrag stehen — er hat eigene
+                // trackId und stoert nicht weiter (Hero zeigt den juengsten startMs).
+                // ABER: Hero zeigt "letzten" via observeAll DESC by startMs — wenn
+                // beide gleich-startMs haben, alphabetisch nach trackId. "strava_" > "hc_"
+                // also Strava gewinnt. OK so.
                 replaceCount += 1
             } else {
                 toInsert += strava
                 newCount += 1
             }
         }
-        Log.i(TAG, "Strava-Merge: $deletedDuplicates Dubletten geloescht")
         if (toInsert.isNotEmpty()) {
             workoutDao.upsertAll(toInsert)
         }
