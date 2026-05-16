@@ -449,23 +449,15 @@ class AmazfitRepository @Inject constructor(
 
         var replaceCount = 0
         var newCount = 0
-        var deletedDuplicates = 0
         val toInsert = mutableListOf<AmazfitWorkoutEntity>()
         for (strava in stravaEntities) {
-            // Frank-Bug 2026-05-16 (Iteration 2): Strava ist Single-Source-of-Truth.
-            // Bei jedem Strava-Eintrag prufen wir ALLE Dubletten im 5-Min-Fenster und
-            // loeschen sie — egal ob ein eigener Strava-Eintrag schon existiert oder
-            // nicht. Sonst bleiben hc_/zepp-Eintraege fuer denselben Lauf bestehen
-            // und konkurrieren mit dem Strava-Eintrag in der Hero-Card.
-            val duplicates = toleranceList.filter {
-                kotlin.math.abs(it.second - strava.startMs) <= toleranceMs && it.first != strava.trackId
-            }
-            for (dup in duplicates) {
-                Log.d(TAG, "Strava-Merge: loesche Dublett ${dup.first} (gleicher Start wie ${strava.trackId})")
-                workoutDao.deleteByTrackId(dup.first)
-                deletedDuplicates += 1
-            }
-            // Strava-Workout selbst — inserten oder via REPLACE updaten.
+            // Frank-Notfall-Bugfix 2026-05-16 (Iteration 3): Direktive #3 Verletzung
+            // — die fruehere Iteration hat Frank's Original-Zepp-Workouts mit vollen
+            // Detail-Streams (gpsTrackJson, heartRateSeriesJson) GELOESCHT. Niemals
+            // Funktionalitaet entfernen um Bugs zu fixen. Strava-Eintrag wird nun
+            // additiv eingefuegt; alle anderen Eintraege fuer denselben Start bleiben
+            // unangetastet. Die Hero-Card/Detail-Logik muss spaeter so erweitert
+            // werden dass sie bei mehreren Eintraegen den vollstaendigsten zeigt.
             val existsAlready = toleranceList.any { it.first == strava.trackId }
             if (existsAlready) {
                 toInsert += strava
@@ -475,7 +467,6 @@ class AmazfitRepository @Inject constructor(
                 newCount += 1
             }
         }
-        Log.i(TAG, "Strava-Merge: $deletedDuplicates Dubletten geloescht")
         if (toInsert.isNotEmpty()) {
             workoutDao.upsertAll(toInsert)
         }
