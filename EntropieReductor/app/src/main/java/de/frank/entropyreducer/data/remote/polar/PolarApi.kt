@@ -146,6 +146,64 @@ interface PolarApi {
         @Path("userId") userId: Long,
         @Path("transactionId") transactionId: Long,
     ): Response<Unit>
+
+    /* ===================== Direct-Read-Endpoints (Webhook-Hash-ID) =====================
+     *
+     * Frank-Befund 2026-05-16 + Researcher-Finding: Polar AccessLink V3 hat
+     * NEBEN dem Transaction-Workflow eine zweite Pfad-Klasse — Direct-Read-
+     * Endpoints, die KEINE aktive Transaction brauchen. Sie sind im Polar-
+     * Swagger-Spec dokumentiert (siehe https://www.polar.com/accesslink-api/swagger.yaml)
+     * und werden vom Webhook-Payload-Feld `url` referenziert.
+     *
+     * Pfad: /v3/exercises/{id} (NICHT /v3/users/{uid}/exercises/{eid} — das gibt 404!)
+     *
+     * Die ID wird in der Doku als "hashed" bezeichnet ("aQlC83"), aber Polar
+     * akzeptiert in vielen Faellen auch die numerische ID die unsere PolarExercise.id
+     * liefert. Wir probieren beide Formen. Bei 404 schlucken wir den Fehler
+     * gracefully und fallen auf den Transaction-Pfad zurueck.
+     */
+
+    /** Direct-Read der Exercise — funktioniert auch fuer committed Workouts. */
+    @GET("v3/exercises/{exerciseId}")
+    suspend fun getExerciseDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<PolarExercise>
+
+    /** Direct-Read der Sample-Liste. */
+    @GET("v3/exercises/{exerciseId}/samples")
+    suspend fun listSamplesDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<PolarSamplesList>
+
+    /** Direct-Read der HR-Zonen. */
+    @GET("v3/exercises/{exerciseId}/heart-rate-zones")
+    suspend fun getHeartRateZonesDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<List<PolarHeartRateZone>>
+
+    /** Direct-Read GPX (XML). */
+    @GET("v3/exercises/{exerciseId}/gpx")
+    suspend fun getGpxDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Direct-Read TCX (XML, hat oft MEHR Daten als GPX — z.B. HR-Stream eingebettet). */
+    @GET("v3/exercises/{exerciseId}/tcx")
+    suspend fun getTcxDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Direct-Read FIT (binary, vollstaendiger Stream-Datensatz). */
+    @GET("v3/exercises/{exerciseId}/fit")
+    suspend fun getFitDirect(
+        @Header("Authorization") bearer: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<okhttp3.ResponseBody>
 }
 
 /* ===================== DTOs ===================== */

@@ -49,23 +49,78 @@ class PolarSyncWorker @AssistedInject constructor(
         return outcome.fold(
             onSuccess = { entities ->
                 if (entities.isNotEmpty()) {
-                    // Frank-Wunsch 2026-05-16: Live-API-Sync soll Bulk-Historie
-                    // NICHT ueberschreiben. Pro Entity pruefen ob trackId
-                    // schon in DB ist — wenn ja: skippen, sonst inserten.
+                    // Frank-Bug 2026-05-16 (Iteration 2): Frueher wurde ein
+                    // bestehendes Workout komplett SKIPPED — auch wenn der
+                    // frische Polar-Pull jetzt Streams (HR, GPS, Pace) hatte
+                    // die vorher fehlten. Folge: Polar's typische 5-30-Min-
+                    // Latenz fuer Samples konnte NIE in die DB nachfliessen.
+                    //
+                    // Neuer Workflow:
+                    //  - source == "polar-bulk": SKIPPEN (Frank-Wunsch:
+                    //    Bulk-Historie nie ueberschreiben, sie ist die
+                    //    autoritative Lang-Historie aus dem ZIP-Export).
+                    //  - source == "polar" + Entity neu in DB: INSERT.
+                    //  - source == "polar" + Entity schon da: MERGE mit
+                    //    fresh-wins-if-not-null. So bekommen frische Streams
+                    //    eine zweite Chance ohne dass leere Refresh-Versuche
+                    //    bereits vorhandene Daten ausnullen.
                     val newOnly = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
-                    var skipped = 0
+                    val updated = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
+                    var skippedBulk = 0
+                    var unchanged = 0
                     for (e in entities) {
                         val exists = workoutDao.getById(e.trackId)
-                        if (exists == null) newOnly += e else skipped++
-                    }
-                    if (newOnly.isNotEmpty()) {
-                        appDatabase.withTransaction {
-                            workoutDao.upsertAll(newOnly)
+                        when {
+                            exists == null -> newOnly += e
+                            exists.source == "polar-bulk" -> {
+                                skippedBulk++
+                                Log.d(TAG, "Polar-Sync: ${e.trackId} ist Bulk-Eintrag — Live-Daten werden NICHT geschrieben")
+                            }
+                            else -> {
+                                val merged = exists.copy(
+                                    durationSeconds = e.durationSeconds ?: exists.durationSeconds,
+                                    sportType = e.sportType ?: exists.sportType,
+                                    sportName = e.sportName ?: exists.sportName,
+                                    distanceMeters = e.distanceMeters ?: exists.distanceMeters,
+                                    avgPaceSecPerKm = e.avgPaceSecPerKm ?: exists.avgPaceSecPerKm,
+                                    maxPaceSecPerKm = e.maxPaceSecPerKm ?: exists.maxPaceSecPerKm,
+                                    avgSpeedKmh = e.avgSpeedKmh ?: exists.avgSpeedKmh,
+                                    maxSpeedKmh = e.maxSpeedKmh ?: exists.maxSpeedKmh,
+                                    calories = e.calories ?: exists.calories,
+                                    avgHeartRate = e.avgHeartRate ?: exists.avgHeartRate,
+                                    maxHeartRate = e.maxHeartRate ?: exists.maxHeartRate,
+                                    gpsTrackJson = e.gpsTrackJson ?: exists.gpsTrackJson,
+                                    heartRateSeriesJson = e.heartRateSeriesJson ?: exists.heartRateSeriesJson,
+                                    paceSeriesJson = e.paceSeriesJson ?: exists.paceSeriesJson,
+                                    paceStreamJson = e.paceStreamJson ?: exists.paceStreamJson,
+                                    splitsJson = e.splitsJson ?: exists.splitsJson,
+                                    altitudeGainMeters = e.altitudeGainMeters ?: exists.altitudeGainMeters,
+                                    altitudeLossMeters = e.altitudeLossMeters ?: exists.altitudeLossMeters,
+                                    trainingEffectAerobic = e.trainingEffectAerobic ?: exists.trainingEffectAerobic,
+                                    trainingEffectAnaerobic = e.trainingEffectAnaerobic ?: exists.trainingEffectAnaerobic,
+                                    vo2Max = e.vo2Max ?: exists.vo2Max,
+                                    cadence = e.cadence ?: exists.cadence,
+                                    strideLengthCm = e.strideLengthCm ?: exists.strideLengthCm,
+                                    createdAt = System.currentTimeMillis(),
+                                )
+                                if (merged != exists) {
+                                    updated += merged
+                                    Log.i(TAG, "Polar-Sync: ${e.trackId} aktualisiert — streams jetzt: hr=${merged.heartRateSeriesJson != null} pace=${merged.paceStreamJson != null} gps=${merged.gpsTrackJson != null} splits=${merged.paceSeriesJson != null} cadence=${merged.cadence != null} stride=${merged.strideLengthCm != null} altGain=${merged.altitudeGainMeters != null} altLoss=${merged.altitudeLossMeters != null} maxPace=${merged.maxPaceSecPerKm != null}")
+                                } else {
+                                    unchanged++
+                                }
+                            }
                         }
-                        Log.i(TAG, "Polar-Sync: ${newOnly.size} neue Workouts geschrieben ($skipped bereits in DB)")
+                    }
+                    if (newOnly.isNotEmpty() || updated.isNotEmpty()) {
+                        appDatabase.withTransaction {
+                            if (newOnly.isNotEmpty()) workoutDao.upsertAll(newOnly)
+                            for (m in updated) workoutDao.upsert(m)
+                        }
+                        Log.i(TAG, "Polar-Sync: ${newOnly.size} neu, ${updated.size} aktualisiert, $skippedBulk Bulk skipped, $unchanged unveraendert")
                         syncCoordinator.requestSync()
                     } else {
-                        Log.d(TAG, "Polar-Sync: ${entities.size} Workouts geliefert, alle schon in DB ($skipped skipped)")
+                        Log.d(TAG, "Polar-Sync: ${entities.size} geliefert — nichts neu (Bulk: $skippedBulk, unveraendert: $unchanged)")
                     }
                 }
                 Result.success()
