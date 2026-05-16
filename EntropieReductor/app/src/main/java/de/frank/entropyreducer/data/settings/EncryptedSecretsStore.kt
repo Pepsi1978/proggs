@@ -229,6 +229,20 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getInt(KEY_POLAR_REFRESH_ATTEMPTS, 0)
         set(value) { prefs.edit().putInt(KEY_POLAR_REFRESH_ATTEMPTS, value).apply() }
 
+    /**
+     * Polar V4 (Dynamic API) Auth-State. Komplett separat von V3.
+     * V4 nutzt auth.polar.com mit anderen Scopes und liefert ALLE
+     * Workouts inkl. Streams non-destruktiv.
+     */
+    var polarV4AuthStateJson: String?
+        get() = prefs.getString(KEY_POLAR_V4_AUTH_STATE, null)
+        set(value) {
+            prefs.edit().apply {
+                if (value == null) remove(KEY_POLAR_V4_AUTH_STATE)
+                else putString(KEY_POLAR_V4_AUTH_STATE, value)
+            }.apply()
+        }
+
     fun clearPolarAuthState() {
         prefs.edit()
             .remove(KEY_POLAR_AUTH_STATE)
@@ -341,5 +355,6 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_POLAR_USER_REGISTERED = "polar_user_registered"
         private const val KEY_POLAR_MEMBER_ID = "polar_member_id"
         private const val KEY_POLAR_REFRESH_ATTEMPTS = "polar_refresh_attempts"
+        private const val KEY_POLAR_V4_AUTH_STATE = "polar_v4_auth_state_json"
     }
 }

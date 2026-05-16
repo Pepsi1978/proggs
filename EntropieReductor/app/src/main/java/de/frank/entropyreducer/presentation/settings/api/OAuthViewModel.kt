@@ -29,6 +29,7 @@ data class OAuthUiState(
     val whoopRedirectUri: String = OAuthService.WHOOP_REDIRECT_URI_DEFAULT,
     // Polar (Frank-Wunsch 2026-05-16): alleinige Workout-Quelle nach Strava-Revert.
     val polarConnected: Boolean = false,
+    val polarV4Connected: Boolean = false,
     val polarClientId: String = "",
     val polarClientSecret: String = "",
     val polarRedirectUri: String = OAuthService.POLAR_REDIRECT_URI_DEFAULT,
@@ -86,6 +87,7 @@ class OAuthViewModel @Inject constructor(
         whoopClientId = secrets.whoopClientId.orEmpty(),
         whoopClientSecret = secrets.whoopClientSecret.orEmpty(),
         polarConnected = oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L,
+        polarV4Connected = oauth.loadPolarV4AuthState().isAuthorized,
         polarClientId = secrets.polarClientId.orEmpty(),
         polarClientSecret = secrets.polarClientSecret.orEmpty(),
         polarUserId = secrets.polarUserId,
@@ -251,6 +253,41 @@ class OAuthViewModel @Inject constructor(
                 polarLastSyncMs = 0L,
                 message = "Polar getrennt.",
             )
+        }
+    }
+
+    /* ============================ Polar V4 (Dynamic API) ============================ */
+
+    fun buildPolarV4AuthIntent(): Intent? {
+        val clientId = secrets.polarClientId
+        if (clientId.isNullOrBlank()) {
+            _state.update { it.copy(message = "Bitte zuerst die Polar-Client-ID speichern.") }
+            return null
+        }
+        return oauth.buildPolarV4AuthIntent(clientId, state.value.polarRedirectUri)
+    }
+
+    fun onPolarV4AuthResult(intent: Intent) {
+        viewModelScope.launch {
+            val result = oauth.handlePolarV4AuthResult(intent, secrets.polarClientSecret)
+            result.onSuccess {
+                _state.update {
+                    it.copy(
+                        polarV4Connected = true,
+                        message = "Polar V4 verbunden — Trainings werden geladen.",
+                    )
+                }
+                scheduler.runPolarSyncNow()
+            }.onFailure { ex ->
+                _state.update { it.copy(message = "Polar V4-Auth fehlgeschlagen: ${ex.message}") }
+            }
+        }
+    }
+
+    fun disconnectPolarV4() {
+        oauth.clearPolarV4AuthState()
+        _state.update {
+            it.copy(polarV4Connected = false, message = "Polar V4 getrennt.")
         }
     }
 

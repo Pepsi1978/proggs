@@ -13,6 +13,10 @@ import de.frank.entropyreducer.data.remote.polar.PolarSampleType
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.doubleOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -59,6 +63,289 @@ class PolarRepository @Inject constructor(
     /** Sind wir bei Polar authentifiziert UND haben eine User-ID? */
     fun isAuthenticated(): Boolean =
         oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L
+
+    /** Ist Polar V4 (Dynamic API) verbunden? */
+    fun isV4Authenticated(): Boolean = oauth.loadPolarV4AuthState().isAuthorized
+
+    /**
+     * V4 Sync: pollt /v4/training-sessions, parst die TrainingSessions inkl.
+     * eingebetteter samples + routes und baut Entities.
+     * Non-destruktiv: kein Commit-Loeschen, Workouts bleiben verfuegbar.
+     */
+    suspend fun pullV4TrainingSessions(): Result<List<AmazfitWorkoutEntity>> = runCatchingCancellable {
+        if (!isV4Authenticated()) {
+            Log.d(TAG, "PolarV4: nicht authentifiziert — skip")
+            return@runCatchingCancellable emptyList()
+        }
+        val v4Token = oauth.freshPolarV4AccessToken()
+            ?: throw IllegalStateException("PolarV4-Token nicht verfuegbar (neu autorisieren)")
+        val bearer = "Bearer $v4Token"
+
+        val resp = api.listV4TrainingSessions(bearer)
+        if (!resp.isSuccessful) {
+            val err = resp.errorBody()?.string()?.take(300)
+            Log.w(TAG, "PolarV4: /v4/training-sessions HTTP ${resp.code()}: $err")
+            return@runCatchingCancellable emptyList()
+        }
+        val body = resp.body()?.string().orEmpty()
+        Log.i(TAG, "PolarV4: /v4/training-sessions ${body.length} bytes — preview=${body.take(500)}")
+        val items = parseV4TrainingSessions(body)
+        Log.i(TAG, "PolarV4: ${items.size} Sessions geparst")
+        items
+    }.onFailure { ex ->
+        if (ex !is kotlinx.coroutines.CancellationException) {
+            Log.e(TAG, "PolarV4: pullV4TrainingSessions fehlgeschlagen", ex)
+        }
+    }
+
+    /**
+     * Parst die Antwort von `/v4/training-sessions`. Polar V4 hat ein
+     * komplexeres Schema mit statistics, samples, routes, swimming-phases.
+     * Wir extrahieren die Felder die unsere Entity braucht.
+     */
+    private fun parseV4TrainingSessions(json: String): List<AmazfitWorkoutEntity> {
+        val out = mutableListOf<AmazfitWorkoutEntity>()
+        runCatching {
+            val root = kotlinx.serialization.json.Json.parseToJsonElement(json)
+            val arr = when (root) {
+                is kotlinx.serialization.json.JsonArray -> root
+                is kotlinx.serialization.json.JsonObject -> {
+                    root["training-sessions"] as? kotlinx.serialization.json.JsonArray
+                        ?: root["trainingSessions"] as? kotlinx.serialization.json.JsonArray
+                        ?: root["data"] as? kotlinx.serialization.json.JsonArray
+                        ?: root["items"] as? kotlinx.serialization.json.JsonArray
+                        ?: kotlinx.serialization.json.JsonArray(emptyList())
+                }
+                else -> kotlinx.serialization.json.JsonArray(emptyList())
+            }
+            for (el in arr) {
+                runCatching {
+                    val obj = el as? kotlinx.serialization.json.JsonObject ?: return@runCatching null
+                    val id = obj["id"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                        ?: obj["session-id"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                        ?: return@runCatching null
+                    val startTime = obj["start-time"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                        ?: obj["startTime"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                    val utcOff = obj["start-time-utc-offset"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull }
+                        ?: 0
+                    val duration = obj["duration"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                    val distance = obj["distance"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.doubleOrNull }
+                    val calories = obj["kilo-calories"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull }
+                        ?: obj["calories"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull }
+                    val sport = obj["sport"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+                    val avgHr = obj["heart-rate"]?.let { hr ->
+                        (hr as? kotlinx.serialization.json.JsonObject)?.get("average")?.let {
+                            (it as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull
+                        }
+                    }
+                    val maxHr = obj["heart-rate"]?.let { hr ->
+                        (hr as? kotlinx.serialization.json.JsonObject)?.get("maximum")?.let {
+                            (it as? kotlinx.serialization.json.JsonPrimitive)?.intOrNull
+                        }
+                    }
+                    val startEpochMs = startTime?.let {
+                        PolarSampleMapper.parseStartTimeToEpochMs(it, utcOff)
+                    } ?: System.currentTimeMillis()
+                    val durSec = PolarSampleMapper.parseIsoDurationToSeconds(duration)
+                    val dateKey = java.time.Instant.ofEpochMilli(startEpochMs)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+                    val avgPace = PolarSampleMapper.computeAvgPaceSecPerKm(distance, durSec)
+                    val avgSpd = PolarSampleMapper.computeAvgSpeedKmh(distance, durSec)
+                    val vo2 = PolarSampleMapper.estimateVo2Max(distance, durSec, avgHr)
+                    AmazfitWorkoutEntity(
+                        trackId = "polar-v4-$id",
+                        dateKey = dateKey,
+                        startMs = startEpochMs,
+                        endMs = startEpochMs + (durSec ?: 0L) * 1000L,
+                        durationSeconds = durSec,
+                        sportType = PolarSampleMapper.mapSportToHealthConnectType(sport, null),
+                        sportName = PolarSampleMapper.mapSportToGerman(sport, null),
+                        distanceMeters = distance,
+                        avgPaceSecPerKm = avgPace,
+                        maxPaceSecPerKm = null,
+                        avgSpeedKmh = avgSpd,
+                        maxSpeedKmh = null,
+                        calories = calories?.toDouble(),
+                        avgHeartRate = avgHr,
+                        maxHeartRate = maxHr,
+                        gpsTrackJson = null,
+                        heartRateSeriesJson = null,
+                        paceSeriesJson = null,
+                        splitsJson = null,
+                        altitudeGainMeters = null,
+                        altitudeLossMeters = null,
+                        trainingEffectAerobic = null,
+                        trainingEffectAnaerobic = null,
+                        vo2Max = vo2,
+                        cadence = null,
+                        strideLengthCm = null,
+                        recoveryTimeHours = null,
+                        skinTempCelsius = null,
+                        swolf = null,
+                        poolLaps = null,
+                        poolLengthMeters = null,
+                        source = "polar-v4",
+                        city = null,
+                        paceStreamJson = null,
+                        createdAt = System.currentTimeMillis(),
+                    )
+                }.getOrNull()?.let { out += it }
+            }
+        }.onFailure { ex ->
+            Log.w(TAG, "PolarV4: Body-Parse-Fehler — ${ex.message}")
+        }
+        return out
+    }
+
+    /**
+     * DIAGNOSE: testet systematisch alle Polar-Endpoints und loggt Status +
+     * Response-Body-Preview. Damit sehen wir WO Polar Frank's Daten hat
+     * — wenn AccessLink V3 leer ist, vielleicht hat V4 sie?
+     */
+    suspend fun diagnoseAllPolarEndpoints(): Result<Unit> = runCatchingCancellable {
+        if (!isAuthenticated()) {
+            Log.w(TAG, "DIAG: nicht authentifiziert")
+            return@runCatchingCancellable
+        }
+        val accessToken = oauth.freshPolarAccessToken()
+            ?: throw IllegalStateException("Polar-Access-Token nicht verfuegbar")
+        val bearer = "Bearer $accessToken"
+        val userId = secrets.polarUserId
+
+        suspend fun ep(name: String, call: suspend () -> retrofit2.Response<okhttp3.ResponseBody>) {
+            try {
+                val r = call()
+                val body = r.body()?.string().orEmpty().take(500)
+                val errBody = if (!r.isSuccessful) r.errorBody()?.string()?.take(500).orEmpty() else ""
+                Log.i(TAG, "DIAG[$name] HTTP ${r.code()} ${if (r.isSuccessful) "OK body" else "ERR body"}: ${if (r.isSuccessful) body else errBody}")
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                Log.w(TAG, "DIAG[$name] Exception: ${t::class.simpleName}: ${t.message}")
+            }
+        }
+
+        // Basic Auth fuer V4 + Notifications (Polar-Doku: V4 + /notifications
+        // nutzen client_id:client_secret als Basic Auth, NICHT den Bearer-
+        // Token aus dem OAuth-Flow).
+        val clientId = secrets.polarClientId.orEmpty()
+        val clientSecret = secrets.polarClientSecret.orEmpty()
+        val basic = if (clientId.isNotBlank() && clientSecret.isNotBlank()) {
+            val raw = "$clientId:$clientSecret"
+            "Basic " + android.util.Base64.encodeToString(raw.toByteArray(), android.util.Base64.NO_WRAP)
+        } else ""
+
+        Log.i(TAG, "DIAG: starte Endpoint-Sweep fuer userId=$userId (basic=${basic.isNotBlank()})")
+        ep("getUser") { api.getUserRaw(bearer, userId) }
+        ep("listOpenExerciseTransactions") { api.listOpenExerciseTransactions(bearer, userId) }
+        ep("listOpenActivityTransactions") { api.listOpenActivityTransactions(bearer, userId) }
+        ep("getNotifications_bearer") { api.getNotifications(bearer) }
+        if (basic.isNotBlank()) ep("getNotifications_basic") { api.getNotifications(basic) }
+        ep("listExercisesLast30Days") { api.listExercisesLast30DaysRaw(bearer) }
+        ep("listExercisesLast30Days_noQuery") { api.listExercisesLast30DaysRaw(bearer, includeSamples = false, includeZones = false, includeRoute = false) }
+        ep("listUserExercises") { api.listUserExercises(bearer, userId) }
+        ep("listSleep") { api.listSleep(bearer, userId) }
+        ep("listTrainingData") { api.listTrainingData(bearer, userId) }
+        ep("listExercisesV4_bearer") { api.listExercisesV4(bearer) }
+        if (basic.isNotBlank()) ep("listExercisesV4_basic") { api.listExercisesV4(basic) }
+        ep("listTrainingSessionsV4_bearer") { api.listTrainingSessionsV4(bearer) }
+        if (basic.isNotBlank()) ep("listTrainingSessionsV4_basic") { api.listTrainingSessionsV4(basic) }
+        ep("listTrainingSessionsByUserV4_bearer") { api.listTrainingSessionsByUserV4(bearer, userId) }
+        if (basic.isNotBlank()) ep("listTrainingSessionsByUserV4_basic") { api.listTrainingSessionsByUserV4(basic, userId) }
+        ep("continuousHeartRate") { api.continuousHeartRate(bearer, userId) }
+        ep("stepSamples") { api.stepSamples(bearer, userId) }
+        ep("tokenInfo") { api.tokenInfo(bearer) }
+        ep("nightlyRecharge") { api.nightlyRecharge(bearer, userId) }
+        // Activity-Transaction probe — KEINE Commit-Aktion!
+        try {
+            val txResp = api.createActivityTransaction(bearer, userId)
+            val txBody = txResp.body()?.string().orEmpty().take(400)
+            Log.i(TAG, "DIAG[createActivityTransaction] HTTP ${txResp.code()} body: $txBody")
+            if (txResp.isSuccessful) {
+                // Versuche die Transaction-Daten zu lesen — aber NICHT committen.
+                val tid = "\"transaction-id\"\\s*:\\s*(\\d+)".toRegex().find(txBody)?.groupValues?.getOrNull(1)?.toLongOrNull()
+                if (tid != null) {
+                    try {
+                        val r = api.getActivityTransaction(bearer, userId, tid)
+                        Log.i(TAG, "DIAG[getActivityTransaction tid=$tid] HTTP ${r.code()} body: ${r.body()?.string().orEmpty().take(500)}")
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "DIAG[getActivityTransaction] Ex: ${t.message}")
+                    }
+                }
+            }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.w(TAG, "DIAG[createActivityTransaction] Ex: ${t.message}")
+        }
+        // Exercise-Transaction probe — non-destructive: wir starten sie, lesen
+        // sie, COMMITEN ABER NICHT. Damit sehen wir was Polar gerade fuer
+        // Exercises offen hat ohne ihn auszuloeschen.
+        try {
+            val txResp = api.createExerciseTransaction(bearer, userId)
+            Log.i(TAG, "DIAG[createExerciseTransaction] HTTP ${txResp.code()} bodyTxId=${txResp.body()?.transactionId} loc=${txResp.headers()["Location"]}")
+            val txId = txResp.body()?.transactionId
+                ?: extractTransactionIdFromLocation(txResp.headers()["Location"])
+            if (txResp.code() == 201 && txId != null) {
+                val listResp = api.listExercisesInTransaction(bearer, userId, txId)
+                Log.i(TAG, "DIAG[listExercisesInTransaction tid=$txId] anzahl=${listResp.exercises.size} urls=${listResp.exercises.take(5)}")
+                // KEIN commit — Transaction offen lassen damit andere Pfade
+                // sie auch noch sehen koennen.
+            } else if (txResp.code() == 204) {
+                Log.i(TAG, "DIAG[createExerciseTransaction] 204 — keine offenen Exercises in Polar's API")
+            }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.w(TAG, "DIAG[createExerciseTransaction] Ex: ${t.message}")
+        }
+        // POLAR V4 — direkter OkHttp-Aufruf weil Retrofit's Body-Handling
+        // mit dem manuellen Content-Type-Header kollidiert (grant_type
+        // landete nie im Body). OkHttp direkt umgeht das.
+        if (basic.isNotBlank()) {
+            // Wir probieren BEIDE Polar-Token-Endpoints (V3 + V4) mit
+            // client_credentials. Polar V3 nutzt polarremote.com, V4 nutzt
+            // auth.polar.com. client_credentials ist offiziell nur fuer
+            // "Service Apps" — wir testen ob's bei Frank klappt.
+            val v4AuthUrl = "https://auth.polar.com/oauth/token"
+            val grantVariants = listOf(
+                "client_credentials" to "training_sessions:read",
+                "client_credentials" to "accesslink.read_all",
+                "client_credentials" to "",
+            )
+            val client = okhttp3.OkHttpClient()
+            for ((grant, scope) in grantVariants) {
+                try {
+                    val formBuilder = okhttp3.FormBody.Builder()
+                        .add("grant_type", grant)
+                    if (scope.isNotEmpty()) formBuilder.add("scope", scope)
+                    val request = okhttp3.Request.Builder()
+                        .url(v4AuthUrl)
+                        .header("Authorization", basic)
+                        .header("Accept", "application/json")
+                        .post(formBuilder.build())
+                        .build()
+                    val response = client.newCall(request).execute()
+                    val ccBody = response.body?.string().orEmpty()
+                    Log.i(TAG, "DIAG[V4_cc grant=$grant scope=$scope] HTTP ${response.code} body: ${ccBody.take(800)}")
+                    val v4Token = "\"access_token\"\\s*:\\s*\"([^\"]+)\"".toRegex().find(ccBody)?.groupValues?.getOrNull(1)
+                    response.close()
+                    if (!v4Token.isNullOrBlank()) {
+                        Log.i(TAG, "DIAG: V4-Token erhalten ($grant/$scope) — teste /v4/training-sessions")
+                        ep("V4_listTrainingSessions_${grant}_${scope.replace(":", "-")}") { api.listV4TrainingSessions("Bearer $v4Token") }
+                        break
+                    }
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w(TAG, "DIAG[V4_cc grant=$grant] Ex: ${t.message}")
+                }
+            }
+        }
+        // Auch teste V4 mit Frank's bestehendem OAuth-Bearer.
+        ep("V4_listTrainingSessions_user_oauth") { api.listV4TrainingSessions(bearer) }
+        Log.i(TAG, "DIAG: Sweep beendet")
+    }
 
     /**
      * Pollt ALLE Workouts der letzten 30 Tage via Listen-Endpoint

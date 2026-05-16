@@ -242,6 +242,140 @@ interface PolarApi {
         @Header("Authorization") bearer: String,
         @Path("exerciseId") exerciseId: String,
     ): Response<okhttp3.ResponseBody>
+
+    /* ===================== Diagnose-Endpoints =====================
+     * Diese Endpoints werden vom diagnoseAllPolarEndpoints-Aufruf
+     * systematisch probiert um zu sehen WO Polar Frank's Daten
+     * eigentlich hat.
+     */
+
+    @GET("v3/notifications")
+    suspend fun getNotifications(
+        @Header("Authorization") bearer: String,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}")
+    suspend fun getUserRaw(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}/exercise-transactions")
+    suspend fun listOpenExerciseTransactions(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}/activity-transactions")
+    suspend fun listOpenActivityTransactions(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}/sleep")
+    suspend fun listSleep(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}/training-data")
+    suspend fun listTrainingData(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v3/users/{userId}/exercises")
+    suspend fun listUserExercises(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** V4 — Continuous Samples API. */
+    @GET("v4/data/exercises")
+    suspend fun listExercisesV4(
+        @Header("Authorization") bearer: String,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v4/data/training-sessions")
+    suspend fun listTrainingSessionsV4(
+        @Header("Authorization") bearer: String,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v4/data/users/{userId}/training-sessions")
+    suspend fun listTrainingSessionsByUserV4(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** POST new activity-transaction. */
+    @POST("v3/users/{userId}/activity-transactions")
+    suspend fun createActivityTransaction(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** GET activity-transaction details. */
+    @GET("v3/users/{userId}/activity-transactions/{tid}")
+    suspend fun getActivityTransaction(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+        @Path("tid") tid: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Continuous heart rate Stream V3 (Webhook-Direct). */
+    @GET("v3/users/{userId}/continuous-heart-rate")
+    suspend fun continuousHeartRate(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Daily-Activity-Steps-Sensor V3. */
+    @GET("v3/users/{userId}/step-samples")
+    suspend fun stepSamples(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Polar Open Auth — Token-Info Endpoint, zeigt Scope. */
+    @GET("v3/oauth/token/info")
+    suspend fun tokenInfo(
+        @Header("Authorization") bearer: String,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Polar Recharge (Nightly-Recharge / Recovery). */
+    @GET("v3/users/{userId}/nightly-recharge")
+    suspend fun nightlyRecharge(
+        @Header("Authorization") bearer: String,
+        @Path("userId") userId: Long,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Polar V4 — training sessions. Authentication: OAuth2 via auth.polar.com. */
+    @GET("v4/training-sessions")
+    suspend fun listV4TrainingSessions(
+        @Header("Authorization") authHeader: String,
+    ): Response<okhttp3.ResponseBody>
+
+    @GET("v4/data/exercises/{exerciseId}")
+    suspend fun getV4ExerciseDetail(
+        @Header("Authorization") authHeader: String,
+        @Path("exerciseId") exerciseId: String,
+    ): Response<okhttp3.ResponseBody>
+
+    /** Polar's Token-Exchange (V4) via client_credentials.
+     *
+     * Wichtig: Polar's Auth-Server akzeptiert grant_type NUR als Form-Body.
+     * Wir senden den Body manuell als RequestBody damit kein Content-Type-
+     * Mismatch entsteht. Retrofit's @FormUrlEncoded haben in der Vergangenheit
+     * 400 "grant_type missing" produziert.
+     */
+    @POST
+    suspend fun polarTokenClientCredentials(
+        @Url url: String,
+        @Header("Authorization") basic: String,
+        @Header("Content-Type") contentType: String = "application/x-www-form-urlencoded",
+        @Header("Accept") accept: String = "application/json;charset=UTF-8",
+        @Body body: okhttp3.RequestBody,
+    ): Response<okhttp3.ResponseBody>
 }
 
 /* ===================== DTOs ===================== */

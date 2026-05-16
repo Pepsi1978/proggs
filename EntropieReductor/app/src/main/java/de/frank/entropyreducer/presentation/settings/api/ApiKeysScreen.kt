@@ -379,6 +379,11 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
     ) { result ->
         result.data?.let { data -> vm.onPolarAuthResult(data) }
     }
+    val v4Launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        result.data?.let { data -> vm.onPolarV4AuthResult(data) }
+    }
     // Frank-Wunsch 2026-05-16: File-Picker fuer Polar-Bulk-Export-ZIP. Polar
     // liefert die per Mail nach dem Export-Antrag. Wir lesen sie ueber den
     // Content-Resolver direkt aus dem ZIP — kein Entpacken in den App-Cache
@@ -507,6 +512,51 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                         style = MaterialTheme.typography.bodySmall,
                         color = cosmos.textSecondary,
                     )
+                }
+                // Polar V4 (Dynamic API) — separater OAuth-Pfad fuer non-
+                // destruktiven Zugriff auf alle Trainings inkl. Streams.
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Polar V4 (alle Trainings inkl. Streams)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "V4 ist Polar's neue API. Sie liefert ALLE Workouts der letzten 30 Tage inkl. HR-, GPS-, Speed- und Pace-Streams — auch laengst gespeicherte Trainings. Einmaliger Browser-Login mit neuem Scope `training_sessions:read`.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.height(8.dp))
+                if (state.polarV4Connected) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ConnectionLabel(
+                            label = "V4 verbunden",
+                            color = CosmosColors.Success,
+                            icon = Icons.Outlined.CheckCircle,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Button(
+                            onClick = vm::disconnectPolarV4,
+                            colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.Critical),
+                        ) {
+                            Icon(Icons.Outlined.LinkOff, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(6.dp))
+                            Text("V4 trennen")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            vm.buildPolarV4AuthIntent()?.let { v4Launcher.launch(it) }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = polarRed),
+                    ) {
+                        Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text("Mit Polar V4 verbinden")
+                    }
                 }
             }
             // Bulk-Import-Sektion: gesamte Polar-Historie aus ZIP-Datei

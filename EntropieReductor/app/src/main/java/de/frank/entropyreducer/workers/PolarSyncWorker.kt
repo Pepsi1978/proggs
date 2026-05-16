@@ -45,6 +45,15 @@ class PolarSyncWorker @AssistedInject constructor(
             Log.d(TAG, "Polar nicht verbunden — Sync skippen")
             return Result.success()
         }
+        // DIAGNOSE: Bei jedem Sync ALLE Polar-Endpoints abklopfen damit wir
+        // sehen WO Frank's Daten sind. Logs zeigen exakt was Polar liefert.
+        polarRepo.diagnoseAllPolarEndpoints()
+
+        // POLAR V4 — wenn verbunden, der bevorzugte Pfad. Liefert alle
+        // Trainings inkl. Streams non-destruktiv.
+        val v4Outcome = polarRepo.pullV4TrainingSessions()
+        applyEntities(v4Outcome.getOrNull().orEmpty(), sourceTag = "PolarV4")
+
         // HAUPT-PFAD (2026-05-16, Direktive 3): Listen-Endpoint pollen.
         // Liefert die letzten 30 Tage MIT Streams. NIE-DESTRUKTIV: kein
         // Transaction-Commit der die Daten aus Polar's API loescht.
