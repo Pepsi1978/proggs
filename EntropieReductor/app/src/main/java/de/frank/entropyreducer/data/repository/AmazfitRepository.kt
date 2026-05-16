@@ -17,7 +17,6 @@ import de.frank.entropyreducer.data.remote.zepp.ZeppWorkoutHistoryResponse
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -81,13 +80,6 @@ class AmazfitRepository @Inject constructor(
      * sofort verfuegbare Quelle.
      */
     private val healthConnect: HealthConnectManager,
-    /**
-     * Frank-Wunsch 2026-05-16: Strava ist die PRIMAERE Workout-Quelle nachdem
-     * Zepp's Cloud-Upload seit App-Update 10.x abgespeckt wurde. Liefert volle
-     * Streams (GPS, HR, Pace, Cadence, Hoehenmeter, Splits). Strava-Daten haben
-     * VORRANG vor HC und Zepp wenn beide existieren.
-     */
-    private val stravaRepo: dagger.Lazy<StravaRepository>,
 ) {
 
     fun observeLatestDaily(): Flow<AmazfitDailyEntity?> = dailyDao.getLatest()
@@ -304,14 +296,7 @@ class AmazfitRepository @Inject constructor(
             Log.i(TAG, "Health-Connect-Merge: $hcInserted zusaetzliche Workouts importiert")
             syncCoordinatorLazy.get().requestSync()
         }
-        // Strava-Merge — Reihenfolge gewollt: Strava NACH Zepp+HC damit Strava-
-        // Daten (vollstaendigste Streams) etwaige Zepp/HC-Stubs ueberschreiben.
-        val stravaCount = mergeFromStrava(days = days.coerceAtMost(60))
-        if (stravaCount > 0) {
-            Log.i(TAG, "Strava-Merge: $stravaCount Workouts mit vollen Streams importiert/aktualisiert")
-            syncCoordinatorLazy.get().requestSync()
-        }
-        dailyEntities.size + workoutEntities.size + hcInserted + stravaCount
+        dailyEntities.size + workoutEntities.size + hcInserted
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.e(TAG, "Amazfit-Sync fehlgeschlagen", it)
@@ -409,84 +394,6 @@ class AmazfitRepository @Inject constructor(
             city = null,
             createdAt = System.currentTimeMillis(),
         )
-    }
-
-    /**
-     * Frank-Wunsch 2026-05-16: Strava-Workouts in die `amazfit_workouts`-Tabelle
-     * mergen. Strava ist die zuverlaessigste Quelle mit vollen Detail-Daten
-     * (GPS, HR, Pace, Splits), daher hat Strava VORRANG.
-     *
-     * Strategie:
-     *  1. Strava-Activities der letzten [days] Tage holen (inkl. Streams + Laps).
-     *  2. Pro Strava-Workout: pruefe ob ein existierender Eintrag innerhalb +/- 5
-     *     Min am gleichen Start liegt. Falls JA: alten Eintrag loeschen (nach trackId)
-     *     und Strava-Eintrag inserten. Falls NEIN: einfach inserten.
-     *  3. Pure Insertion erfolgt via upsertAll (REPLACE-Strategie der DB).
-     *
-     * Rate-Limit-Schutz steckt im StravaRepository — wir muessen hier nichts machen.
-     */
-    suspend fun mergeFromStrava(days: Int = 60): Int {
-        val repo = stravaRepo.get()
-        if (!repo.isAuthenticated()) {
-            Log.d(TAG, "Strava: nicht verbunden — kein Strava-Merge")
-            return 0
-        }
-        val result = repo.fetchWorkoutsAsEntities(days = days)
-        val stravaEntities = result.getOrDefault(emptyList())
-        if (stravaEntities.isEmpty()) {
-            return 0
-        }
-        // Existierende Workouts im selben Zeitfenster fuer Dedup/Overwrite.
-        val end = System.currentTimeMillis()
-        val start = end - days.toLong() * 24L * 60L * 60L * 1000L
-        val toleranceMs = 5L * 60L * 1000L
-
-        // Hole alle existierenden Workouts im Range (Liste statt nur startMs damit
-        // wir auch trackId fuer das Loeschen haben).
-        val existingInRange = workoutDao.observeRange(start, end)
-            .first()
-        val toleranceList = existingInRange.map { it.trackId to it.startMs }
-
-        var replaceCount = 0
-        var newCount = 0
-        val toInsert = mutableListOf<AmazfitWorkoutEntity>()
-        for (strava in stravaEntities) {
-            // Strava-Workout selbst hat eindeutigen trackId "strava_$id". Wenn es
-            // schon mit DEM trackId existiert (z.B. Frueher-Sync), wird via REPLACE
-            // upgedatet — alle Detail-Streams werden frisch geschrieben.
-            val matchByStrava = toleranceList.find { it.first == strava.trackId }
-            if (matchByStrava != null) {
-                toInsert += strava
-                replaceCount += 1
-                continue
-            }
-            // Sonst: gibt es einen anderen Eintrag (zepp_xxx, hc_xxx) im selben
-            // 5-Min-Fenster? Wenn JA: alten loeschen, Strava inserten.
-            val matchByTime = toleranceList.find {
-                kotlin.math.abs(it.second - strava.startMs) <= toleranceMs && it.first != strava.trackId
-            }
-            if (matchByTime != null) {
-                Log.d(TAG, "Strava-Merge: ueberschreibe ${matchByTime.first} mit ${strava.trackId} (gleicher Start +/- 5 Min)")
-                workoutDao.upsert(strava) // Strava-Eintrag inserten (eigene trackId)
-                // Alten Eintrag mit fremder trackId loeschen — kann via direkten Query
-                // erfolgen, gibt aber keinen deleteById im DAO. Workaround: delete alle
-                // mit dem startMs des alten, dann Strava neu inserten.
-                // Pragmatisch: Wir lassen den alten Eintrag stehen — er hat eigene
-                // trackId und stoert nicht weiter (Hero zeigt den juengsten startMs).
-                // ABER: Hero zeigt "letzten" via observeAll DESC by startMs — wenn
-                // beide gleich-startMs haben, alphabetisch nach trackId. "strava_" > "hc_"
-                // also Strava gewinnt. OK so.
-                replaceCount += 1
-            } else {
-                toInsert += strava
-                newCount += 1
-            }
-        }
-        if (toInsert.isNotEmpty()) {
-            workoutDao.upsertAll(toInsert)
-        }
-        Log.i(TAG, "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben")
-        return newCount + replaceCount
     }
 
     /**

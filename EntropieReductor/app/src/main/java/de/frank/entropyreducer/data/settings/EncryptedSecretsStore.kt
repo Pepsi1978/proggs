@@ -151,40 +151,6 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_ZEPP_LAST_SYNC, 0L)
         set(value) { prefs.edit().putLong(KEY_ZEPP_LAST_SYNC, value).apply() }
 
-    // Strava — Frank-Wunsch 2026-05-16. OAuth2 (PKCE/Standard) mit AppAuth.
-    // Zepp pusht Workouts direkt zu Strava (Drittanbieter-Verknuepfung in der
-    // Zepp-App), wir holen sie hier mit voller Detail-Tiefe (GPS-Stream,
-    // HR-Stream, Pace pro km, Splits, Cadence, Hoehenmeter). Strava ist Primaer-
-    // Quelle fuer Workouts ab 10.05.2026 — die Zepp-Cloud-API liefert seit dem
-    // Zepp-App-Update nur noch unvollstaendige bis gar keine neuen Workouts.
-    var stravaClientId: String?
-        get() = prefs.getString(KEY_STRAVA_CLIENT_ID, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_CLIENT_ID, value).apply() }
-
-    var stravaClientSecret: String?
-        get() = prefs.getString(KEY_STRAVA_CLIENT_SECRET, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_CLIENT_SECRET, value).apply() }
-
-    /** AppAuth-serialisierter AuthState als JSON — enthaelt Access + rotierenden Refresh-Token. */
-    var stravaAuthStateJson: String?
-        get() = prefs.getString(KEY_STRAVA_AUTH_STATE, null)
-        set(value) { prefs.edit().putString(KEY_STRAVA_AUTH_STATE, value).apply() }
-
-    var stravaAthleteId: Long
-        get() = prefs.getLong(KEY_STRAVA_ATHLETE_ID, 0L)
-        set(value) { prefs.edit().putLong(KEY_STRAVA_ATHLETE_ID, value).apply() }
-
-    var stravaLastSyncEpochMs: Long
-        get() = prefs.getLong(KEY_STRAVA_LAST_SYNC, 0L)
-        set(value) { prefs.edit().putLong(KEY_STRAVA_LAST_SYNC, value).apply() }
-
-    fun clearStravaAuthState() {
-        prefs.edit()
-            .remove(KEY_STRAVA_AUTH_STATE)
-            .remove(KEY_STRAVA_ATHLETE_ID)
-            .apply()
-    }
-
     // Oura Ring — Frank-Wunsch 2026-05-10. Personal Access Token aus
     // https://cloud.ouraring.com/personal-access-tokens. Single-User-Token,
     // kein OAuth-Flow noetig, kein Ablauf. Wird als Bearer-Header bei jedem
@@ -291,11 +257,5 @@ class EncryptedSecretsStore @Inject constructor(
         // Oura Ring
         private const val KEY_OURA_PAT = "oura_personal_access_token"
         private const val KEY_OURA_LAST_SYNC = "oura_last_sync_ms"
-        // Strava (Frank-Wunsch 2026-05-16)
-        private const val KEY_STRAVA_CLIENT_ID = "strava_client_id"
-        private const val KEY_STRAVA_CLIENT_SECRET = "strava_client_secret"
-        private const val KEY_STRAVA_AUTH_STATE = "strava_auth_state_json"
-        private const val KEY_STRAVA_ATHLETE_ID = "strava_athlete_id"
-        private const val KEY_STRAVA_LAST_SYNC = "strava_last_sync_ms"
     }
 }

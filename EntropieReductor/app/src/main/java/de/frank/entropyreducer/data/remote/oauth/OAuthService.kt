@@ -52,19 +52,6 @@ class OAuthService @Inject constructor(
         Uri.parse("https://api.prod.whoop.com/oauth/oauth2/token"),
     )
 
-    /**
-     * Konfiguration fuer Strava (Frank-Wunsch 2026-05-16).
-     * mobile/authorize ist der Mobile-Pfad — oeffnet die Strava-App falls installiert
-     * und faellt sonst auf den Browser zurueck. Bei /oauth/authorize wuerde der
-     * Browser unkonditional starten was schlechtere UX ist. Strava ist auch ein
-     * Confidential Client und verlangt das Client-Secret beim Token-Exchange UND
-     * beim Refresh — gleiche Defense wie Whoop (ClientSecretPost).
-     */
-    val stravaConfig = AuthorizationServiceConfiguration(
-        Uri.parse("https://www.strava.com/oauth/mobile/authorize"),
-        Uri.parse("https://www.strava.com/oauth/token"),
-    )
-
     /** Gemeinsamer AuthorizationService — leichtgewichtig, kann pro Aufruf erzeugt werden. */
     fun newService(): AuthorizationService = AuthorizationService(context)
 
@@ -316,118 +303,6 @@ class OAuthService @Inject constructor(
         }
     }
 
-    /* =================================== Strava =================================== */
-
-    /**
-     * Frank-Wunsch 2026-05-16: Strava-OAuth analog zu Whoop. Rotierende Refresh-
-     * Tokens — der AuthState haelt sie automatisch aktuell, aber wir muessen nach
-     * jedem Refresh den State persistieren (saveStravaAuthState).
-     */
-    fun buildStravaAuthIntent(clientId: String, redirectUri: String): Intent {
-        Log.d(TAG, "Strava: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
-        val request = AuthorizationRequest.Builder(
-            stravaConfig,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(redirectUri),
-        )
-            .setScopes(*STRAVA_SCOPES.toTypedArray())
-            // Frank-Hinweis 2026-05-16: approval_prompt=auto — kein erneuter
-            // Genehmigungs-Dialog wenn Frank schon einmal zugestimmt hat.
-            .setAdditionalParameters(mapOf("approval_prompt" to "auto"))
-            .build()
-        return newService().getAuthorizationRequestIntent(request)
-    }
-
-    fun loadStravaAuthState(): AuthState {
-        val json = secrets.stravaAuthStateJson
-        return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
-        } else AuthState()
-    }
-
-    fun saveStravaAuthState(state: AuthState) {
-        secrets.stravaAuthStateJson = state.jsonSerializeString()
-    }
-
-    fun clearStravaAuthState() {
-        secrets.clearStravaAuthState()
-    }
-
-    suspend fun handleStravaAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
-        val resp = AuthorizationResponse.fromIntent(intent)
-        val ex = AuthorizationException.fromIntent(intent)
-        if (ex != null) {
-            Log.e(TAG, "Strava: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}")
-        }
-        if (resp == null) {
-            return Result.failure(ex ?: IllegalStateException("Keine Strava-Authorization-Antwort"))
-        }
-        if (clientSecret.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("Strava-Client-Secret fehlt — bitte in den API-Settings eintragen"))
-        }
-        val state = AuthState(resp, ex)
-        val tokenRequest = resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
-        val tokenResult = exchangeToken(tokenRequest)
-        return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "Strava: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}")
-            state.update(tokenResp, null)
-            saveStravaAuthState(state)
-            // Athlete-ID liegt im Token-Response unter additionalParameters.athlete.id
-            // — manche Strava-Token-Responses haben es im Top-Level-JSON statt im
-            // Standard-OAuth-Feld. AppAuth erkennt das nicht von selbst, also fischen
-            // wir es aus den additionalParameters wenn vorhanden.
-            val athleteIdRaw = tokenResp.additionalParameters["athlete"]
-            // Format: "{\"id\":12345,...}" — wir extrahieren id mit einer billigen Regex.
-            athleteIdRaw?.let { json ->
-                val match = Regex("\"id\"\\s*:\\s*(\\d+)").find(json)
-                match?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
-                    secrets.stravaAthleteId = it
-                    Log.d(TAG, "Strava: athleteId=$it gespeichert")
-                }
-            }
-        }.onFailure { failure ->
-            Log.e(TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
-            clearStravaAuthState()
-        }.map { Unit }
-    }
-
-    /**
-     * Frischer Access-Token fuer Strava. Strava ist ein Confidential Client —
-     * beim Refresh MUSS das Client-Secret mitgeschickt werden, sonst antwortet
-     * der Server mit invalid_client (gleicher Bug wie damals bei Whoop —
-     * siehe Bug-Case 2026-05-09).
-     */
-    suspend fun freshStravaAccessToken(): String? {
-        val state = loadStravaAuthState()
-        if (!state.isAuthorized) {
-            Log.d(TAG, "Strava-Refresh: kein AuthState — kein Token")
-            return null
-        }
-        val clientSecret = secrets.stravaClientSecret
-        if (clientSecret.isNullOrBlank()) {
-            Log.e(TAG, "Strava-Refresh: Client-Secret fehlt")
-            throw IllegalStateException(
-                "Strava-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben.",
-            )
-        }
-        val clientAuth = ClientSecretPost(clientSecret)
-        val service = newService()
-        return suspendCancellableCoroutine { cont ->
-            state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
-                if (ex != null) {
-                    Log.e(TAG, "Strava-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}", ex)
-                    cont.resume(null)
-                } else {
-                    Log.d(TAG, "Strava-Token-Refresh OK — Laenge=${accessToken?.length ?: 0}")
-                    saveStravaAuthState(state)
-                    cont.resume(accessToken)
-                }
-                service.dispose()
-            }
-        }
-    }
-
     /* ================================== Helper ================================== */
 
     private suspend fun exchangeToken(
@@ -461,14 +336,6 @@ class OAuthService @Inject constructor(
             "read:workout",
             "read:profile",
             "offline",
-        )
-        const val STRAVA_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/strava/callback"
-        val STRAVA_SCOPES = listOf(
-            // Frank-Wunsch 2026-05-16: read_all gibt Zugriff auf private Activities.
-            // activity:read_all schliesst auch Privacy-Zonen ein — wir brauchen sie
-            // damit GPS-Tracks komplett geladen werden.
-            "activity:read_all",
-            "read",
         )
     }
 }
