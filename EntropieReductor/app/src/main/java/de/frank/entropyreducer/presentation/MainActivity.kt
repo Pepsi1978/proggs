@@ -265,6 +265,11 @@ class StartupViewModel @Inject constructor(
                 if (oauth.loadWhoopAuthState().isAuthorized) {
                     scheduler.runWhoopSyncNow()
                 }
+                // Frank-Wunsch 2026-05-16: Polar-Sync auch beim App-Start.
+                // Bedingung: Polar verbunden + User-ID vorhanden.
+                if (oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L) {
+                    scheduler.runPolarSyncNow()
+                }
                 scheduler.runKiQuestionCheckNow()
             }
         }

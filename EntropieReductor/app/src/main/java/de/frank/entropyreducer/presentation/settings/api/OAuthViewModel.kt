@@ -230,6 +230,17 @@ class OAuthViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Manueller Trigger fuer Polar-Live-API-Sync (Frank-Wunsch 2026-05-16).
+     * Stoesst PolarSyncWorker an. Neue Trainings landen mit source="polar"
+     * und trackId="polar-{id}" in der DB — Bulk-Eintraege bleiben geschuetzt
+     * (Worker filtert existierende trackIds raus).
+     */
+    fun syncPolarNow() {
+        scheduler.runPolarSyncNow()
+        _state.update { it.copy(message = "Polar-Sync gestartet — neue Trainings werden geladen") }
+    }
+
     fun disconnectPolar() {
         oauth.clearPolarAuthState()
         scheduler.cancelPolarSync()

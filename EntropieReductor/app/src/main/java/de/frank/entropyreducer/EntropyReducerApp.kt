@@ -38,6 +38,8 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var oauth: OAuthService
 
+    @Inject lateinit var secrets: de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+
     @Inject lateinit var dataMigrator: InitialDataMigrator
 
     @Inject lateinit var amazfitRepository: AmazfitRepository
@@ -155,6 +157,17 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         applicationScope.launch {
                             if (oauth.loadWhoopAuthState().isAuthorized) {
                                 scheduler.runWhoopSyncNow()
+                            }
+                        }
+                        // Frank-Wunsch 2026-05-16: Polar bei jedem App-Foreground.
+                        // Live-API hat keine Single-Token-Problematik wie Zepp —
+                        // sicher mehrfach pro Tag triggerbar. Worker filtert
+                        // existierende trackIds raus, also auch kein Duplikat-
+                        // Schaden bei wiederholten Aufrufen.
+                        applicationScope.launch {
+                            if (oauth.loadPolarAuthState().isAuthorized &&
+                                secrets.polarUserId > 0L) {
+                                scheduler.runPolarSyncNow()
                             }
                         }
                         // Frank-Wunsch 2026-05-11: Amazfit/Zepp wird NICHT mehr automatisch

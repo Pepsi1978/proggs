@@ -777,12 +777,15 @@ constructor(
 
     fun refreshNow() {
         // Frank-Wunsch 2026-05-10: Refresh-Button aktualisiert ALLE Datenquellen
-        // (Whoop, Amazfit, Oura, Health Connect) parallel. Vorher nur Whoop —
-        // jetzt sammelt das ViewModel die Counts pro Quelle und zeigt eine
-        // zusammengefasste Status-Meldung.
+        // (Whoop, Amazfit, Oura, Health Connect) parallel.
+        // Frank-Wunsch 2026-05-16: Polar Live-API ebenfalls mit-syncen damit
+        // neue Trainings nach einem Lauf direkt reinkommen.
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Health Connect) …"
+            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Polar + Health Connect) …"
+            // Polar laeuft via WorkManager (Foreground-Notification, eigene
+            // Pipeline) — nicht awaitable, einfach anstossen
+            scheduler.runPolarSyncNow()
             val whoopJob = async { repo.syncLastDays(365) }
             val amazfitJob = async {
                 runCatching { amazfitRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }

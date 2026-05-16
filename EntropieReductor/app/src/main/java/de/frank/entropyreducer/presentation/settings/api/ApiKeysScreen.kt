@@ -483,6 +483,16 @@ private fun PolarOAuthCard(vm: OAuthViewModel, state: OAuthUiState) {
                     color = CosmosColors.Success,
                     icon = Icons.Outlined.CheckCircle,
                 )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = vm::syncPolarNow,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = polarRed),
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Jetzt synchronisieren")
+                }
                 if (state.polarLastSyncMs > 0L) {
                     val deltaMin = (System.currentTimeMillis() - state.polarLastSyncMs) / 60_000L
                     val label = when {

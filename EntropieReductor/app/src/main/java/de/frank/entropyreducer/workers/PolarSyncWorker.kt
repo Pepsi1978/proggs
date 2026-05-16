@@ -49,13 +49,24 @@ class PolarSyncWorker @AssistedInject constructor(
         return outcome.fold(
             onSuccess = { entities ->
                 if (entities.isNotEmpty()) {
-                    appDatabase.withTransaction {
-                        workoutDao.upsertAll(entities)
+                    // Frank-Wunsch 2026-05-16: Live-API-Sync soll Bulk-Historie
+                    // NICHT ueberschreiben. Pro Entity pruefen ob trackId
+                    // schon in DB ist — wenn ja: skippen, sonst inserten.
+                    val newOnly = mutableListOf<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity>()
+                    var skipped = 0
+                    for (e in entities) {
+                        val exists = workoutDao.getById(e.trackId)
+                        if (exists == null) newOnly += e else skipped++
                     }
-                    Log.i(TAG, "Polar-Sync: ${entities.size} Workouts geschrieben")
-                    // Frische Trainings sofort ins Drive-Backup — gleicher Pattern
-                    // wie bei den anderen Datenquellen.
-                    syncCoordinator.requestSync()
+                    if (newOnly.isNotEmpty()) {
+                        appDatabase.withTransaction {
+                            workoutDao.upsertAll(newOnly)
+                        }
+                        Log.i(TAG, "Polar-Sync: ${newOnly.size} neue Workouts geschrieben ($skipped bereits in DB)")
+                        syncCoordinator.requestSync()
+                    } else {
+                        Log.d(TAG, "Polar-Sync: ${entities.size} Workouts geliefert, alle schon in DB ($skipped skipped)")
+                    }
                 }
                 Result.success()
             },
