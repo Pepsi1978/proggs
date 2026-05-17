@@ -76,6 +76,10 @@ internal fun WakeTimeGraphCard(
             wakeTimeDerived(selectedSnapshot = selectedSnapshot, history = history)
         }
 
+    // Frank-Wunsch 2026-05-17: Header-Zahl bekommt die gleiche Ampel-Farbe wie
+    // der aktuelle Tagesbalken (gruen/gelb/rot). Einheitlich erkennbar.
+    val headerColor = derived.currentPercent?.let { wakeTimeBarColor(it) } ?: accent
+
     var sheetOpen by remember { mutableStateOf(false) }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
@@ -96,7 +100,7 @@ internal fun WakeTimeGraphCard(
                 }
                 Text(
                     text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
-                    color = accent,
+                    color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                 )

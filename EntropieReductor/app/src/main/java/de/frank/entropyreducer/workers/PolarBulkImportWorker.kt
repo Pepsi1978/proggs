@@ -116,10 +116,23 @@ class PolarBulkImportWorker @AssistedInject constructor(
             val deletedOld = workoutDao.deleteNonPolarWorkouts()
             Log.i(TAG, "Polar-Bulk-Import: $deletedOld alte non-Polar-Trainings geloescht")
 
-            appDatabase.withTransaction {
-                workoutDao.upsertAll(allEntities)
+            // Frank-Wunsch 2026-05-17: Manuell editierte Workouts NICHT
+            // ueberschreiben. Wir filtern fresh-Eintraege deren trackId in der DB
+            // schon mit manualOverridesMs != null existiert.
+            var protectedCount = 0
+            val safeEntities = allEntities.mapNotNull { fresh ->
+                val existing = workoutDao.getById(fresh.trackId)
+                if (existing?.manualOverridesMs != null) {
+                    protectedCount++
+                    Log.d(TAG, "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert")
+                    null
+                } else fresh
             }
-            Log.i(TAG, "Polar-Bulk-Import erfolgreich: ${allEntities.size} Trainings in DB geschrieben, $totalSkipped uebersprungen")
+
+            appDatabase.withTransaction {
+                workoutDao.upsertAll(safeEntities)
+            }
+            Log.i(TAG, "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)")
 
             // Cache aufraeumen (nur unsere eigene Datei)
             cacheFileToCleanup?.let { runCatching { it.delete() } }

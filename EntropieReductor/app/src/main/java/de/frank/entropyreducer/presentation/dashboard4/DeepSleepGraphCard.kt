@@ -70,6 +70,10 @@ internal fun DeepSleepGraphCard(
             deepSleepDerived(selectedSnapshot = selectedSnapshot, history = history)
         }
 
+    // Frank-Wunsch 2026-05-17: Header-Zahl bekommt die gleiche Ampel-Farbe wie
+    // der aktuelle Tagesbalken (rot/gelb/gruen). Einheitlich erkennbar.
+    val headerColor = derived.currentPercent?.let { deepSleepBarColor(it) } ?: accent
+
     var sheetOpen by remember { mutableStateOf(false) }
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { sheetOpen = true }) {
@@ -91,7 +95,7 @@ internal fun DeepSleepGraphCard(
                 }
                 Text(
                     text = derived.currentPercent?.let { "%.0f %%".format(it) } ?: "—",
-                    color = accent,
+                    color = headerColor,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                 )
