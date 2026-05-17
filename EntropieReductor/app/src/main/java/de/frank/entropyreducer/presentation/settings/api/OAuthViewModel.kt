@@ -20,24 +20,17 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
-/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar, Polar und Strava. */
+/** Zustand der OAuth-Verbindungen für Whoop, Google Calendar und Strava. */
 data class OAuthUiState(
     val calendarAccountEmail: String? = null,
     val whoopConnected: Boolean = false,
     val whoopClientId: String = "",
     val whoopClientSecret: String = "",
     val whoopRedirectUri: String = OAuthService.WHOOP_REDIRECT_URI_DEFAULT,
-    // Polar (Frank-Wunsch 2026-05-16).
-    val polarConnected: Boolean = false,
-    val polarV4Connected: Boolean = false,
-    val polarFlowWebConnected: Boolean = false,
-    val polarFlowEmail: String = "",
-    val polarClientId: String = "",
-    val polarClientSecret: String = "",
-    val polarRedirectUri: String = OAuthService.POLAR_REDIRECT_URI_DEFAULT,
-    val polarUserId: Long = 0L,
-    val polarLastSyncMs: Long = 0L,
-    // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17): Workouts via Polar->Strava.
+    // Polar-OAuth-State entfernt 2026-05-17 (Frank-Wunsch). Polar-Bulk-Import-
+    // Status braucht keinen Persistent-State — der ZIP-Picker startet den
+    // Worker direkt.
+    // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17).
     val stravaConnected: Boolean = false,
     val stravaClientId: String = "",
     val stravaClientSecret: String = "",
@@ -61,9 +54,7 @@ class OAuthViewModel @Inject constructor(
     private val oauth: OAuthService,
     private val secrets: EncryptedSecretsStore,
     private val scheduler: BackgroundScheduler,
-    private val polarFlowWeb: de.frank.entropyreducer.data.remote.polar.PolarFlowWebClient,
     private val amazfitRepo: de.frank.entropyreducer.data.repository.AmazfitRepository,
-    private val polarRepo: de.frank.entropyreducer.data.repository.PolarRepository,
     private val workoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
     val calendarSignIn: CalendarSignInHelper,
 ) : ViewModel() {
@@ -99,14 +90,6 @@ class OAuthViewModel @Inject constructor(
         whoopConnected = oauth.loadWhoopAuthState().isAuthorized,
         whoopClientId = secrets.whoopClientId.orEmpty(),
         whoopClientSecret = secrets.whoopClientSecret.orEmpty(),
-        polarConnected = oauth.loadPolarAuthState().isAuthorized && secrets.polarUserId > 0L,
-        polarV4Connected = oauth.loadPolarV4AuthState().isAuthorized,
-        polarFlowWebConnected = polarFlowWeb.isLoggedIn(),
-        polarFlowEmail = secrets.polarFlowEmail.orEmpty(),
-        polarClientId = secrets.polarClientId.orEmpty(),
-        polarClientSecret = secrets.polarClientSecret.orEmpty(),
-        polarUserId = secrets.polarUserId,
-        polarLastSyncMs = secrets.polarLastSyncEpochMs,
         stravaConnected = oauth.loadStravaAuthState().isAuthorized,
         stravaClientId = secrets.stravaClientId.orEmpty(),
         stravaClientSecret = secrets.stravaClientSecret.orEmpty(),
@@ -263,147 +246,9 @@ class OAuthViewModel @Inject constructor(
         }
     }
 
-    /* ------------------------------- Polar ------------------------------- */
-
-    fun setPolarClientId(value: String) { _state.update { it.copy(polarClientId = value) } }
-    fun setPolarClientSecret(value: String) { _state.update { it.copy(polarClientSecret = value) } }
-
-    fun savePolarCredentials() {
-        val rawId = state.value.polarClientId.trim()
-        val rawSecret = state.value.polarClientSecret.trim()
-        if (rawSecret.length > 256) {
-            _state.update {
-                it.copy(message = "Polar-Client-Secret ist ungewoehnlich lang " +
-                    "(${rawSecret.length} Zeichen). Bitte nur den Secret-String " +
-                    "aus dem Polar-Developer-Dashboard einfuegen. NICHT gespeichert.")
-            }
-            return
-        }
-        secrets.polarClientId = rawId.ifBlank { null }
-        secrets.polarClientSecret = rawSecret.ifBlank { null }
-        _state.update { it.copy(message = "Polar-Credentials gespeichert.") }
-    }
-
-    fun buildPolarAuthIntent(): Intent? {
-        val clientId = secrets.polarClientId
-        if (clientId.isNullOrBlank()) {
-            _state.update { it.copy(message = "Bitte zuerst die Polar-Client-ID speichern.") }
-            return null
-        }
-        return oauth.buildPolarAuthIntent(clientId, state.value.polarRedirectUri)
-    }
-
-    fun onPolarAuthResult(intent: Intent) {
-        viewModelScope.launch {
-            val result = oauth.handlePolarAuthResult(intent, secrets.polarClientSecret)
-            result.onSuccess {
-                _state.update {
-                    it.copy(
-                        polarConnected = true,
-                        polarUserId = secrets.polarUserId,
-                        message = "Polar verbunden — Trainings werden geladen.",
-                    )
-                }
-                // Sofort einen ersten Sync ausloesen, dann den Nightly-Job sicherstellen.
-                scheduler.runPolarSyncNow()
-                scheduler.ensureNightlyJobs()
-            }.onFailure { ex ->
-                _state.update { it.copy(message = "Polar-Auth fehlgeschlagen: ${ex.message}") }
-            }
-        }
-    }
-
-    /**
-     * Manueller Trigger fuer Polar-Live-API-Sync (Frank-Wunsch 2026-05-16).
-     * Stoesst PolarSyncWorker an. Neue Trainings landen mit source="polar"
-     * und trackId="polar-{id}" in der DB — Bulk-Eintraege bleiben geschuetzt
-     * (Worker filtert existierende trackIds raus).
-     */
-    fun syncPolarNow() {
-        scheduler.runPolarSyncNow()
-        _state.update { it.copy(message = "Polar-Sync gestartet — neue Trainings werden geladen") }
-    }
-
-    fun disconnectPolar() {
-        oauth.clearPolarAuthState()
-        scheduler.cancelPolarSync()
-        _state.update {
-            it.copy(
-                polarConnected = false,
-                polarUserId = 0L,
-                polarLastSyncMs = 0L,
-                message = "Polar getrennt.",
-            )
-        }
-    }
-
-    /* ============================ Polar V4 (Dynamic API) ============================ */
-
-    fun buildPolarV4AuthIntent(): Intent? {
-        val clientId = secrets.polarClientId
-        if (clientId.isNullOrBlank()) {
-            _state.update { it.copy(message = "Bitte zuerst die Polar-Client-ID speichern.") }
-            return null
-        }
-        return oauth.buildPolarV4AuthIntent(clientId, state.value.polarRedirectUri)
-    }
-
-    fun onPolarV4AuthResult(intent: Intent) {
-        viewModelScope.launch {
-            val result = oauth.handlePolarV4AuthResult(intent, secrets.polarClientSecret)
-            result.onSuccess {
-                _state.update {
-                    it.copy(
-                        polarV4Connected = true,
-                        message = "Polar V4 verbunden — Trainings werden geladen.",
-                    )
-                }
-                scheduler.runPolarSyncNow()
-            }.onFailure { ex ->
-                _state.update { it.copy(message = "Polar V4-Auth fehlgeschlagen: ${ex.message}") }
-            }
-        }
-    }
-
-    fun disconnectPolarV4() {
-        oauth.clearPolarV4AuthState()
-        _state.update {
-            it.copy(polarV4Connected = false, message = "Polar V4 getrennt.")
-        }
-    }
-
-    /* ====================== Polar Flow Web (Email/Passwort) ====================== */
-
-    /**
-     * Login auf flow.polar.com mit Email + Passwort. Passwort wird NIE
-     * gespeichert, nur der Session-Cookie. Bei Erfolg: 17:22-Lauf nachladen.
-     */
-    fun loginPolarFlowWeb(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _state.update { it.copy(message = "Bitte Email und Passwort eingeben.") }
-            return
-        }
-        _state.update { it.copy(message = "Login bei Polar Flow Web…") }
-        viewModelScope.launch {
-            val result = polarFlowWeb.login(email.trim(), password)
-            result.onSuccess {
-                _state.update {
-                    it.copy(
-                        polarFlowWebConnected = true,
-                        polarFlowEmail = email.trim(),
-                        message = "Polar Flow Web verbunden — alle Workouts erreichbar",
-                    )
-                }
-            }.onFailure { ex ->
-                _state.update {
-                    it.copy(
-                        polarFlowWebConnected = false,
-                        message = "Polar Flow Web Login fehlgeschlagen: ${ex.message ?: "unbekannter Fehler"}",
-                    )
-                }
-            }
-        }
-    }
+    // Polar-V3/V4/FlowWeb OAuth-Methoden entfernt 2026-05-17 (Frank-Wunsch).
+    // Polar-Historie kommt jetzt nur noch ueber Polar-ZIP-Bulk-Import
+    // (siehe startPolarBulkImport unten).
 
     /**
      * Frank-Wunsch 2026-05-17: manueller Strava-Sync-Trigger.
@@ -434,131 +279,8 @@ class OAuthViewModel @Inject constructor(
         }
     }
 
-    fun disconnectPolarFlowWeb() {
-        polarFlowWeb.logout()
-        _state.update {
-            it.copy(
-                polarFlowWebConnected = false,
-                polarFlowEmail = "",
-                message = "Polar Flow Web getrennt.",
-            )
-        }
-    }
-
-    /**
-     * Wird aus dem WorkoutLoader-WebView aufgerufen wenn der JS-fetch
-     * ein gueltiges JSON oder XML geliefert hat. Wir leiten an PolarFlowWeb
-     * weiter damit es parst und in die DB schreibt.
-     */
-    fun savePolarFlowWebWorkoutJson(exerciseId: Long, rawBody: String) {
-        android.util.Log.i("OAuthViewModel", "savePolarFlowWebWorkoutJson: exerciseId=$exerciseId bytes=${rawBody.length}")
-        viewModelScope.launch {
-            val result = polarFlowWeb.parseAndStoreWorkoutBody(exerciseId, rawBody)
-            result.onSuccess { fresh ->
-                if (fresh == null) {
-                    _state.update { it.copy(message = "Polar lieferte Daten, aber Parser konnte sie nicht lesen.") }
-                    return@onSuccess
-                }
-                val existing = workoutDao.getById(fresh.trackId)
-                val merged = if (existing != null && existing.source != "polar-bulk") {
-                    existing.copy(
-                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
-                        sportType = fresh.sportType ?: existing.sportType,
-                        sportName = fresh.sportName ?: existing.sportName,
-                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
-                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
-                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
-                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
-                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
-                        calories = fresh.calories ?: existing.calories,
-                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
-                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
-                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
-                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
-                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
-                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
-                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
-                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
-                        vo2Max = fresh.vo2Max ?: existing.vo2Max,
-                        cadence = fresh.cadence ?: existing.cadence,
-                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
-                        createdAt = System.currentTimeMillis(),
-                    )
-                } else fresh
-                workoutDao.upsert(merged)
-                _state.update {
-                    it.copy(message = "Workout $exerciseId via Browser-JS geladen — HR=${merged.heartRateSeriesJson != null} GPS=${merged.gpsTrackJson != null} Pace=${merged.paceStreamJson != null} maxSpeed=${merged.maxSpeedKmh} altGain=${merged.altitudeGainMeters}")
-                }
-            }.onFailure { ex ->
-                _state.update { it.copy(message = "Workout-Parse fehlgeschlagen: ${ex.message}") }
-            }
-        }
-    }
-
-    /**
-     * Callback aus dem PolarFlowWebLoginScreen — WebView hat erfolgreich
-     * eingeloggt und liefert den Cookie-Header. Wir persistieren das.
-     */
-    fun savePolarFlowWebCookies(cookieHeader: String) {
-        polarFlowWeb.setCookiesFromWebView(cookieHeader, null)
-        _state.update {
-            it.copy(
-                polarFlowWebConnected = true,
-                message = "Polar Flow Web Login erfolgreich (via Browser).",
-            )
-        }
-    }
-
-    /**
-     * Laedt EIN konkretes Workout via Polar Flow Web nach. Frank nutzt
-     * das fuer den 17:22-Lauf 486174823 — der ueber die AccessLink-API
-     * dauerhaft nicht mehr abrufbar ist.
-     */
-    fun reloadPolarFlowWebWorkout(exerciseId: Long) {
-        _state.update { it.copy(message = "Lade Workout $exerciseId via Polar Flow Web…") }
-        viewModelScope.launch {
-            val result = polarFlowWeb.fetchWorkout(exerciseId)
-            result.onSuccess { fresh ->
-                if (fresh == null) {
-                    _state.update { it.copy(message = "Workout $exerciseId konnte nicht geladen werden — Cookie evtl. abgelaufen, bitte neu einloggen.") }
-                    return@onSuccess
-                }
-                // Mit existierender Entity mergen (fresh wins if not null) und schreiben.
-                val existing = workoutDao.getById(fresh.trackId)
-                val merged = if (existing != null && existing.source != "polar-bulk") {
-                    existing.copy(
-                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
-                        sportType = fresh.sportType ?: existing.sportType,
-                        sportName = fresh.sportName ?: existing.sportName,
-                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
-                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
-                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
-                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
-                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
-                        calories = fresh.calories ?: existing.calories,
-                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
-                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
-                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
-                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
-                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
-                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
-                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
-                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
-                        vo2Max = fresh.vo2Max ?: existing.vo2Max,
-                        cadence = fresh.cadence ?: existing.cadence,
-                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
-                        createdAt = System.currentTimeMillis(),
-                    )
-                } else fresh
-                workoutDao.upsert(merged)
-                _state.update {
-                    it.copy(message = "Workout $exerciseId geladen — Streams: HR=${merged.heartRateSeriesJson != null} GPS=${merged.gpsTrackJson != null} Pace=${merged.paceStreamJson != null}")
-                }
-            }.onFailure { ex ->
-                _state.update { it.copy(message = "Workout $exerciseId fehlgeschlagen: ${ex.message}") }
-            }
-        }
-    }
+    // Polar Flow Web Methoden (disconnectPolarFlowWeb, savePolarFlowWebWorkoutJson,
+    // savePolarFlowWebCookies, reloadPolarFlowWebWorkout) entfernt 2026-05-17.
 
     /**
      * Startet den Polar-Bulk-Import (Frank-Wunsch 2026-05-16: 10-Jahre-Historie).

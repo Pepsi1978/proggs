@@ -807,10 +807,9 @@ constructor(
         // neue Trainings nach einem Lauf direkt reinkommen.
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Polar + Health Connect) …"
-            // Polar laeuft via WorkManager (Foreground-Notification, eigene
-            // Pipeline) — nicht awaitable, einfach anstossen
-            scheduler.runPolarSyncNow()
+            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Health Connect) …"
+            // Polar-Live-Sync entfernt 2026-05-17 (Frank-Wunsch): Polar-Daten
+            // kommen ueber Strava (im Amazfit-Sync drin) oder ZIP-Bulk-Import.
             val whoopJob = async { repo.syncLastDays(365) }
             val amazfitJob = async {
                 runCatching { amazfitRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }

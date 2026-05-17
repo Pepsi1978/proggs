@@ -198,121 +198,11 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getLong(KEY_OURA_LAST_SYNC, 0L)
         set(value) { prefs.edit().putLong(KEY_OURA_LAST_SYNC, value).apply() }
 
-    // Polar AccessLink — Frank-Wunsch 2026-05-16. OAuth2 (Authorization Code +
-    // HTTP Basic Auth beim Token-Endpoint, KEIN Refresh-Token). Polar wird die
-    // alleinige Workout-Quelle nachdem Strava die externen Brustgurt-HR-Daten
-    // verloren hat. Polar reicht die H10-Daten vom gekoppelten Brustgurt sauber
-    // durch — genau das was fehlte. Tokens leben ~1 Jahr, bei Revocation muss
-    // der User neu autorisieren (kein Refresh moeglich).
-    var polarClientId: String?
-        get() = prefs.getString(KEY_POLAR_CLIENT_ID, null)
-        set(value) { prefs.edit().putString(KEY_POLAR_CLIENT_ID, value).apply() }
-
-    var polarClientSecret: String?
-        get() = prefs.getString(KEY_POLAR_CLIENT_SECRET, null)
-        set(value) { prefs.edit().putString(KEY_POLAR_CLIENT_SECRET, value).apply() }
-
-    /** Persistierter AppAuth-AuthState als JSON-Blob (analog Whoop/Google). */
-    var polarAuthStateJson: String?
-        get() = prefs.getString(KEY_POLAR_AUTH_STATE, null)
-        set(value) { prefs.edit().putString(KEY_POLAR_AUTH_STATE, value).apply() }
-
-    /**
-     * Polar-User-ID aus dem Token-Response (`x_user_id`). Wird in JEDEM API-
-     * Pfad als {user-id} verwendet — ohne sie geht nichts. 0 = noch nicht
-     * gesetzt / nicht authentifiziert.
-     */
-    var polarUserId: Long
-        get() = prefs.getLong(KEY_POLAR_USER_ID, 0L)
-        set(value) { prefs.edit().putLong(KEY_POLAR_USER_ID, value).apply() }
-
-    /** Zeitstempel der letzten erfolgreichen Polar-Synchronisation (ms). */
-    var polarLastSyncEpochMs: Long
-        get() = prefs.getLong(KEY_POLAR_LAST_SYNC, 0L)
-        set(value) { prefs.edit().putLong(KEY_POLAR_LAST_SYNC, value).apply() }
-
-    /**
-     * Flag das anzeigt, ob der User bereits via POST /v3/users registriert
-     * wurde. Polar gibt bei doppelter Registrierung 409 zurueck — wir cachen
-     * den Erfolg damit jede Sync-Aktion nicht erneut versucht zu registrieren.
-     */
-    var polarUserRegistered: Boolean
-        get() = prefs.getBoolean(KEY_POLAR_USER_REGISTERED, false)
-        set(value) { prefs.edit().putBoolean(KEY_POLAR_USER_REGISTERED, value).apply() }
-
-    /**
-     * Persistierte member-id (UUID) die wir bei der ersten Registrierung an
-     * Polar geschickt haben. Muss zwischen App-Neuinstallationen erhalten
-     * bleiben — sonst wirft Polar 409 wenn der User schon mit einer anderen
-     * member-id registriert ist.
-     */
-    var polarMemberId: String?
-        get() = prefs.getString(KEY_POLAR_MEMBER_ID, null)
-        set(value) { prefs.edit().putString(KEY_POLAR_MEMBER_ID, value).apply() }
-
-    /**
-     * Zaehler der aufeinanderfolgenden Polar-Sync-Versuche bei denen die
-     * Transaction OFFEN gelassen wurde weil Polar noch keine Samples zu
-     * frischen Workouts geliefert hat. Reset auf 0 bei erfolgreichem Commit.
-     *
-     * Sicherheitsnetz gegen ewig blockierte Transactions (Polar erlaubt nur
-     * 1 offene pro User): nach 6 Versuchen (= ca. 3 Stunden bei 30-Min-Worker)
-     * wird trotzdem committed, damit der Sync nicht ewig festsitzt.
-     */
-    var polarRefreshAttempts: Int
-        get() = prefs.getInt(KEY_POLAR_REFRESH_ATTEMPTS, 0)
-        set(value) { prefs.edit().putInt(KEY_POLAR_REFRESH_ATTEMPTS, value).apply() }
-
-    /**
-     * Polar V4 (Dynamic API) Auth-State. Komplett separat von V3.
-     * V4 nutzt auth.polar.com mit anderen Scopes und liefert ALLE
-     * Workouts inkl. Streams non-destruktiv.
-     */
-    var polarV4AuthStateJson: String?
-        get() = prefs.getString(KEY_POLAR_V4_AUTH_STATE, null)
-        set(value) {
-            prefs.edit().apply {
-                if (value == null) remove(KEY_POLAR_V4_AUTH_STATE)
-                else putString(KEY_POLAR_V4_AUTH_STATE, value)
-            }.apply()
-        }
-
-    /**
-     * Polar Flow Web-Login: Email die Frank verwendet hat (fuer UI-Anzeige).
-     * Passwort wird NIE gespeichert — nur der Session-Cookie.
-     */
-    var polarFlowEmail: String?
-        get() = prefs.getString(KEY_POLAR_FLOW_EMAIL, null)
-        set(value) {
-            prefs.edit().apply {
-                if (value == null) remove(KEY_POLAR_FLOW_EMAIL)
-                else putString(KEY_POLAR_FLOW_EMAIL, value)
-            }.apply()
-        }
-
-    /**
-     * Polar Flow Web Cookie-Jar (serialisiert, verschluesselt). Enthaelt
-     * den Session-Cookie nach erfolgreichem Login. Bei Ablauf muss Frank
-     * neu einloggen.
-     */
-    var polarFlowCookieJar: String?
-        get() = prefs.getString(KEY_POLAR_FLOW_COOKIES, null)
-        set(value) {
-            prefs.edit().apply {
-                if (value == null) remove(KEY_POLAR_FLOW_COOKIES)
-                else putString(KEY_POLAR_FLOW_COOKIES, value)
-            }.apply()
-        }
-
-    fun clearPolarAuthState() {
-        prefs.edit()
-            .remove(KEY_POLAR_AUTH_STATE)
-            .remove(KEY_POLAR_USER_ID)
-            .remove(KEY_POLAR_USER_REGISTERED)
-            .remove(KEY_POLAR_LAST_SYNC)
-            .remove(KEY_POLAR_REFRESH_ATTEMPTS)
-            .apply()
-    }
+    // Polar OAuth-Properties entfernt 2026-05-17 (Frank-Wunsch). Polar-Historie
+    // wird nur noch ueber ZIP-Bulk-Import eingelesen, keine API-Anbindung.
+    // Die alten DataStore-Eintraege bleiben physisch in den EncryptedShared-
+    // Preferences erhalten (kein Cleanup-Pflicht), werden aber von keinem
+    // Code mehr gelesen.
 
     /** Account-Mailadresse für Drive-Backup. Wird beim Sign-In gesetzt. */
     var driveAccountEmail: String?
@@ -407,18 +297,7 @@ class EncryptedSecretsStore @Inject constructor(
         // Oura Ring
         private const val KEY_OURA_PAT = "oura_personal_access_token"
         private const val KEY_OURA_LAST_SYNC = "oura_last_sync_ms"
-        // Polar AccessLink (Frank-Wunsch 2026-05-16)
-        private const val KEY_POLAR_CLIENT_ID = "polar_client_id"
-        private const val KEY_POLAR_CLIENT_SECRET = "polar_client_secret"
-        private const val KEY_POLAR_AUTH_STATE = "polar_auth_state_json"
-        private const val KEY_POLAR_USER_ID = "polar_user_id"
-        private const val KEY_POLAR_LAST_SYNC = "polar_last_sync_ms"
-        private const val KEY_POLAR_USER_REGISTERED = "polar_user_registered"
-        private const val KEY_POLAR_MEMBER_ID = "polar_member_id"
-        private const val KEY_POLAR_REFRESH_ATTEMPTS = "polar_refresh_attempts"
-        private const val KEY_POLAR_V4_AUTH_STATE = "polar_v4_auth_state_json"
-        private const val KEY_POLAR_FLOW_EMAIL = "polar_flow_email"
-        private const val KEY_POLAR_FLOW_COOKIES = "polar_flow_cookie_jar"
+        // Polar-OAuth-Keys entfernt 2026-05-17 (Frank-Wunsch).
         // Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17)
         private const val KEY_STRAVA_CLIENT_ID = "strava_client_id"
         private const val KEY_STRAVA_CLIENT_SECRET = "strava_client_secret"

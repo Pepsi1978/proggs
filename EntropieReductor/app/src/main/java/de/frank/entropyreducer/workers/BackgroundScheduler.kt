@@ -72,38 +72,8 @@ class BackgroundScheduler @Inject constructor(
         )
         // Frank-Wunsch 2026-05-17: Polar-Periodic-Worker NUR enqueueen wenn
         // disablePolarSync=false. Default: Polar AUS. Damit ist Frank's Wunsch
-        // umgesetzt — alle Polar-Quellen (V3, V4, Flow Web, TCX, Bulk) bleiben
-        // im Code erhalten, aber kein Worker mehr triggert sie automatisch.
-        // Strava ist die alleinige Trainings-Quelle (manuell triggerbar via
-        // syncStravaNow im Biomarker-Tab).
-        applicationScope.launch {
-            if (appSettings.isPolarSyncDisabled()) {
-                Log.i(
-                    TAG,
-                    "Polar-Sync ist deaktiviert (disablePolarSync=true) — " +
-                        "PolarSyncWorker periodic wird nicht enqueued",
-                )
-                wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_PERIODIC)
-            } else {
-                // Frank-Wunsch 2026-05-16: Polar AccessLink als alleinige Workout-
-                // Quelle. Nightly um 04:30 ist deutlich frueher als die Strava-Periode
-                // war (Polar hat 1-Jahr-Tokens und keine Refresh-Notwendigkeit, daher
-                // weniger Last). Manueller Trigger laeuft ueber runPolarSyncNow.
-                wm.enqueueUniquePeriodicWork(
-                    PolarSyncWorker.UNIQUE_NAME_PERIODIC,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    // 2026-05-16: 24h -> 1h. Polar's Listen-Endpoint ist nicht-
-                    // destruktiv (kein Transaction-Commit-Tod) und 1h-Polling fuer
-                    // 30 Tage Workouts erzeugt ~24 Anfragen/Tag — weit unter Polar's
-                    // Rate-Limit (500/15min). Frische Trainings landen spaetestens
-                    // nach 1h in der App ohne manuellen Klick.
-                    PeriodicWorkRequestBuilder<PolarSyncWorker>(1, TimeUnit.HOURS)
-                        .setInitialDelay(initialDelayMinutes, TimeUnit.MINUTES)
-                        .setConstraints(constraints)
-                        .build(),
-                )
-            }
-        }
+        // Polar-Periodic-Sync entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API
+        // raus. Polar-Workouts kommen nur ueber ZIP-Bulk-Import.
     }
 
     /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */
@@ -369,38 +339,9 @@ class BackgroundScheduler @Inject constructor(
         wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
-    /**
-     * Stoesst einen einmaligen Polar-Sync an (Frank-Wunsch 2026-05-16).
-     * Wird nach erfolgreichem Polar-OAuth automatisch geschickt, plus per
-     * Pull-to-Refresh im Training-Tab. KEEP statt REPLACE — Doppel-Trigger
-     * (z.B. OAuth-Resume + App-Foreground) sollen kein zweites Mal laufen.
-     *
-     * Frank-Wunsch 2026-05-17: Wenn `disablePolarSync=true` (Default) wird
-     * der Worker NICHT gestartet. Damit ist die zentrale Guard-Stelle — alle
-     * Caller (EntropyReducerApp, StartupViewModel, BiomarkerViewModel,
-     * OAuthViewModel) sind automatisch geguarded.
-     */
-    fun runPolarSyncNow() {
-        applicationScope.launch {
-            if (appSettings.isPolarSyncDisabled()) {
-                Log.i(TAG, "runPolarSyncNow: Polar deaktiviert — skip")
-                return@launch
-            }
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED).build()
-            wm.enqueueUniqueWork(
-                PolarSyncWorker.UNIQUE_NAME_ONESHOT,
-                ExistingWorkPolicy.KEEP,
-                OneTimeWorkRequestBuilder<PolarSyncWorker>()
-                    .setConstraints(constraints).build(),
-            )
-        }
-    }
-
-    fun cancelPolarSync() {
-        wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_PERIODIC)
-        wm.cancelUniqueWork(PolarSyncWorker.UNIQUE_NAME_ONESHOT)
-    }
+    // runPolarSyncNow + cancelPolarSync entfernt 2026-05-17 (Frank-Wunsch).
+    // Polar-Live-API gibt es nicht mehr — nur noch Polar-ZIP-Bulk-Import
+    // (siehe runPolarBulkImport / cancelPolarBulkImport unten).
 
     /**
      * Bricht alle laufenden oder enqueued Polar-Bulk-Imports ab. Wichtig

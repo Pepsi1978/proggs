@@ -13,7 +13,6 @@ import de.frank.entropyreducer.data.remote.GoogleTtsApi
 import de.frank.entropyreducer.data.remote.GroqWhisperApi
 import de.frank.entropyreducer.data.remote.calendar.GoogleCalendarApi
 import de.frank.entropyreducer.data.remote.oura.OuraApi
-import de.frank.entropyreducer.data.remote.polar.PolarApi
 import de.frank.entropyreducer.data.remote.strava.StravaApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.zepp.ZeppApi
@@ -205,21 +204,6 @@ object NetworkModule {
     @Provides @Singleton
     fun provideOuraApi(@Named("oura") retrofit: Retrofit): OuraApi =
         retrofit.create(OuraApi::class.java)
-
-    /* ----- Polar AccessLink v3 (Frank-Wunsch 2026-05-16) ----- */
-    @Provides
-    @Singleton
-    @Named("polar")
-    fun providePolarRetrofit(client: OkHttpClient, json: Json): Retrofit =
-        Retrofit.Builder()
-            .baseUrl("https://www.polaraccesslink.com/")
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-
-    @Provides @Singleton
-    fun providePolarApi(@Named("polar") retrofit: Retrofit): PolarApi =
-        retrofit.create(PolarApi::class.java)
 
     /* ----- Strava API V3 (Frank-Wunsch 2026-05-16, revived 2026-05-17) ----- */
     @Provides

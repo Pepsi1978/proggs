@@ -228,18 +228,8 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                                 scheduler.runWhoopSyncNow()
                             }
                         }
-                        // Frank-Wunsch 2026-05-16: Polar bei jedem App-Foreground.
-                        // Frank-Wunsch 2026-05-17: nur wenn `disablePolarSync == false`.
-                        // Default ist Polar AUS — Strava alleinige Trainings-Quelle.
-                        // Code bleibt erhalten damit Polar jederzeit wieder anschaltbar ist.
-                        applicationScope.launch {
-                            val polarDisabled = appSettings.isPolarSyncDisabled()
-                            if (!polarDisabled &&
-                                oauth.loadPolarAuthState().isAuthorized &&
-                                secrets.polarUserId > 0L) {
-                                scheduler.runPolarSyncNow()
-                            }
-                        }
+                        // Polar-Foreground-Sync entfernt 2026-05-17 (Frank-Wunsch:
+                        // Polar-Live-API raus, Polar-Historie nur ueber ZIP-Bulk-Import).
                         // Frank-Wunsch 2026-05-11: Amazfit/Zepp wird NICHT mehr automatisch
                         // beim App-Start synchronisiert. Grund: jeder Re-Login zur Zepp-
                         // Cloud invalidiert den Token der Zepp-App auf dem Handy — Frank

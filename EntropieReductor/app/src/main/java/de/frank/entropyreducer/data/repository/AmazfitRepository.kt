@@ -82,12 +82,10 @@ class AmazfitRepository @Inject constructor(
      */
     private val healthConnect: HealthConnectManager,
     /**
-     * Polar AccessLink (Frank-Wunsch 2026-05-16) + Strava (revived 2026-05-17).
-     * Polar zieht Workouts inkl. H10-Brustgurt-HR durch. Strava bekommt die
-     * gleichen Daten via Polar->Strava-Sync und liefert sie als komplettes
-     * Streams-Bundle (GPS, HR, Pace, Cadence, Hoehenmeter, Splits).
+     * Strava ist seit 2026-05-17 alleinige Live-API-Quelle fuer Workouts —
+     * Polar-Repo wurde entfernt (Frank-Wunsch). Polar-Historie kommt nur noch
+     * ueber Polar-ZIP-Bulk-Import (siehe PolarBulkImporter).
      */
-    private val polarRepo: dagger.Lazy<PolarRepository>,
     private val stravaRepo: dagger.Lazy<StravaRepository>,
 ) {
 
@@ -138,7 +136,7 @@ class AmazfitRepository @Inject constructor(
      * Werten berechnet.
      *
      * Bei spaeterem Strava-Sync werden manuelle Werte NICHT automatisch ueber-
-     * schrieben: PolarSyncWorker.applyEntities nutzt "fresh wins if not null",
+     * schrieben: mergeFromStrava (siehe unten) nutzt "fresh wins if not null",
      * d.h. ein neuer non-null-Wert wuerde den manuellen ersetzen. Wenn Frank
      * das nicht will, einfach den Sync nicht erneut triggern.
      *
@@ -246,32 +244,8 @@ class AmazfitRepository @Inject constructor(
         return changed
     }
 
-    /**
-     * Holt die naechste Polar-Transaction (alle seit dem letzten Commit neuen
-     * Workouts) und mappt sie auf AmazfitWorkoutEntities mit `source="polar"`
-     * und `trackId="polar-{id}"`. Bei fehlender Auth oder leerer Transaction
-     * gibt es eine leere Liste — kein Fehler.
-     *
-     * Direktive 3 (Resilient Bugfixing): Auch wenn der Polar-Sync scheitert,
-     * laeuft der restliche Amazfit-Sync (Daily-Werte) weiter. Wir geben hier
-     * eine leere Liste zurueck und loggen den Fehler.
-     */
-    suspend fun mergeFromPolar(): List<AmazfitWorkoutEntity> {
-        val repo = polarRepo.get()
-        if (!repo.isAuthenticated()) {
-            Log.d(TAG, "Polar: nicht verbunden — kein Polar-Sync")
-            return emptyList()
-        }
-        // 2026-05-16: Listen-Endpoint statt Transaction-Workflow. Transaction-
-        // Pfad ist destruktiv (Workout nach Commit nie wieder abrufbar);
-        // Listen-Pfad ist non-destruktiv und liefert die letzten 30 Tage.
-        return repo.pullLast30DaysAsEntities().getOrElse { ex ->
-            if (ex !is kotlinx.coroutines.CancellationException) {
-                Log.w(TAG, "Polar-Sync fehlgeschlagen: ${ex.message}")
-            }
-            emptyList()
-        }
-    }
+    // mergeFromPolar entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API
+    // komplett raus. Polar-Daten kommen nur noch via Polar-ZIP-Bulk-Import.
 
     /** Manueller Auslöser: synchronisiert die letzten [days] Tage. */
     suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatchingCancellable {
@@ -328,92 +302,10 @@ class AmazfitRepository @Inject constructor(
         // Die UI-Cards wurden ebenfalls entfernt damit keine leeren "—"-
         // Eintraege im Biomarker-Bereich erscheinen.
 
-        // Frank-Wunsch 2026-05-16 (final): Polar AccessLink ist die ALLEINIGE
-        // Workout-Quelle. Strava lieferte externe Brustgurt-HR nicht durch,
-        // Zepp-Cloud + Health Connect waren ebenfalls unzuverlaessig — Polar
-        // zieht alle Daten inkl. H10-Brustgurt sauber durch.
-        // mergeFromPolar liefert direkt die fertigen AmazfitWorkoutEntities.
-        val workoutEntities = mergeFromPolar()
-        if (workoutEntities.isNotEmpty()) {
-            // Frank-Bug 2026-05-11: Der Workout-Summary-Endpoint liefert KEINE
-            // Detail-Felder (GPS-Track, Pulsverlauf, Tempoverlauf, Splits) — die
-            // kommen erst beim ON-DEMAND-Aufruf von ensureWorkoutDetail. Wenn
-            // wir hier direkt mit upsertAll (REPLACE-Strategie) schreiben, werden
-            // bereits geladene Detail-Felder mit null UEBERSCHRIEBEN — Frank's
-            // muehsam nachgeladene Pulsdiagramme, GPS-Tracks und Tempoverlaeufe
-            // sind nach JEDEM Sync weg. Gleiche Bug-Klasse wie der ensureWorkout-
-            // Detail-Bug von 2026-05-09 — damals wurde nur dort gefixt, hier nicht.
-            // Jetzt: Existierende Eintraege lesen und Detail-Felder bewahren.
-            val merged = workoutEntities.map { fresh ->
-                val existing = workoutDao.getById(fresh.trackId)
-                if (existing == null) {
-                    fresh
-                } else {
-                    // Frank-Wunsch 2026-05-11 (zweite Iteration): Belt-and-Suspenders
-                    // Schutz fuer ALLE Felder ausser vo2Max. Pattern: 'fresh wins
-                    // if not null, existing als Fallback'. Wenn der Server irgendwann
-                    // null fuer ein Feld liefert (API-Bug, Server-Ausfall, geloeschte
-                    // Detail-Daten), bleibt der lokale Wert erhalten. Updates kommen
-                    // aber normal durch — wenn Zepp eine Distanz korrigiert oder Pace
-                    // praeziser berechnet, gewinnt der frische Wert.
-                    //
-                    // vo2Max ist EXPLIZIT ausgenommen — wird im UI live durch
-                    // estimateVo2Max() aus avgSpeedKmh + avgHeartRate berechnet
-                    // (AmazfitTrainingDetailScreen.kt:252, ACSM-Lauf-Formel). Da
-                    // die Eingaben dieser Formel hier geschuetzt sind, ist vo2Max
-                    // immer ableitbar — der DB-Wert ist nur ein optionaler Cache
-                    // und darf ruhig auf null fallen.
-                    //
-                    // createdAt bleibt auf existing damit der 6h-Detail-Cache-Check
-                    // (in ensureWorkoutDetail) korrekt bleibt — sonst wuerde jeder
-                    // Summary-Sync den Cache-Timer zuruecksetzen.
-                    fresh.copy(
-                        // Identifier + Zeitstempel — sollten gleich bleiben, fresh
-                        // gewinnt falls Zepp je korrekturen liefert
-                        durationSeconds = fresh.durationSeconds ?: existing.durationSeconds,
-                        sportType = fresh.sportType ?: existing.sportType,
-                        sportName = fresh.sportName ?: existing.sportName,
-                        // Summary-Metriken
-                        distanceMeters = fresh.distanceMeters ?: existing.distanceMeters,
-                        avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
-                        maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
-                        avgSpeedKmh = fresh.avgSpeedKmh ?: existing.avgSpeedKmh,
-                        maxSpeedKmh = fresh.maxSpeedKmh ?: existing.maxSpeedKmh,
-                        calories = fresh.calories ?: existing.calories,
-                        avgHeartRate = fresh.avgHeartRate ?: existing.avgHeartRate,
-                        maxHeartRate = fresh.maxHeartRate ?: existing.maxHeartRate,
-                        altitudeGainMeters = fresh.altitudeGainMeters ?: existing.altitudeGainMeters,
-                        altitudeLossMeters = fresh.altitudeLossMeters ?: existing.altitudeLossMeters,
-                        trainingEffectAerobic = fresh.trainingEffectAerobic ?: existing.trainingEffectAerobic,
-                        trainingEffectAnaerobic = fresh.trainingEffectAnaerobic ?: existing.trainingEffectAnaerobic,
-                        // vo2Max bewusst NICHT geschuetzt (Frank-Wunsch) — wird im UI
-                        // berechnet, fresh.vo2Max ist meist null, das ist OK
-                        cadence = fresh.cadence ?: existing.cadence,
-                        strideLengthCm = fresh.strideLengthCm ?: existing.strideLengthCm,
-                        recoveryTimeHours = fresh.recoveryTimeHours ?: existing.recoveryTimeHours,
-                        skinTempCelsius = fresh.skinTempCelsius ?: existing.skinTempCelsius,
-                        // Schwimm-spezifische Felder
-                        swolf = fresh.swolf ?: existing.swolf,
-                        poolLaps = fresh.poolLaps ?: existing.poolLaps,
-                        poolLengthMeters = fresh.poolLengthMeters ?: existing.poolLengthMeters,
-                        // Metadaten
-                        source = fresh.source ?: existing.source,
-                        city = fresh.city ?: existing.city,
-                        // Detail-Streams (frueher der einzige Schutz, jetzt Teil des
-                        // gesamten Belt-and-Suspenders-Patterns) — fresh hat sie nie
-                        // weil Summary-Endpoint sie nicht liefert, existing gewinnt
-                        gpsTrackJson = fresh.gpsTrackJson ?: existing.gpsTrackJson,
-                        heartRateSeriesJson = fresh.heartRateSeriesJson ?: existing.heartRateSeriesJson,
-                        paceSeriesJson = fresh.paceSeriesJson ?: existing.paceSeriesJson,
-                        paceStreamJson = fresh.paceStreamJson ?: existing.paceStreamJson,
-                        splitsJson = fresh.splitsJson ?: existing.splitsJson,
-                        // createdAt: existing wins fuer den 6h-Detail-Cache-Timer
-                        createdAt = existing.createdAt,
-                    )
-                }
-            }
-            workoutDao.upsertAll(merged)
-        }
+        // Polar-Live-Workout-Pull entfernt 2026-05-17 (Frank-Wunsch): Polar-
+        // Workouts kommen jetzt nur ueber Strava-Sync (Polar → Strava-Mirror)
+        // oder via Polar-ZIP-Bulk-Import. mergeFromPolar() ist weg.
+        val workoutEntities = emptyList<AmazfitWorkoutEntity>()
 
         val syncTs = System.currentTimeMillis()
         secrets.zeppLastSyncEpochMs = syncTs
@@ -929,10 +821,9 @@ class AmazfitRepository @Inject constructor(
         // Frank-Wunsch 2026-05-16: Polar-Workouts werden ueber die Polar-API
         // refreshed (Direct-URL), nicht ueber den Zepp-Endpoint. Bei "polar-bulk"
         // (aus Bulk-Export-Datei) gibt es keinen Online-Endpoint — dann nichts tun.
-        if (source == "polar") {
-            return@runCatching refreshPolarWorkout(workout, force)
-        }
-        if (source == "polar-bulk") {
+        // 2026-05-17: Polar-Live-API entfernt — alte source="polar"-Eintraege
+        // verhalten sich jetzt wie polar-bulk (kein Online-Refresh moeglich).
+        if (source == "polar" || source == "polar-bulk") {
             Log.d(TAG, "Workout $trackId stammt aus Polar-Bulk-Import — kein API-Refresh moeglich")
             return@runCatching false
         }
@@ -1014,87 +905,8 @@ class AmazfitRepository @Inject constructor(
         }
     }
 
-    /**
-     * Refreshed ein bereits gespeichertes Polar-Workout via Direct-URL ohne
-     * Transaction-Workflow. Wird vom "Erneut laden"-Button im Detail-Screen
-     * und vom periodischen Sync getriggert wenn `force=true` ist.
-     *
-     * Frank-Wunsch 2026-05-16: aktuelles Trailrunning 17:22 hatte nach dem
-     * ersten Sync (mit altem Buggy-Code) keine Streams. Polar's normaler
-     * Transaction-Workflow liefert die Exercise nicht mehr — aber per
-     * Direct-URL `/v3/users/{uid}/exercises/{eid}` ist sie permanent
-     * abrufbar inkl. Samples + GPX.
-     *
-     * Merge-Strategie: "fresh wins if not null" — Felder die im neuen Fetch
-     * leer sind ueberschreiben nicht die alten DB-Werte. Damit gehen muehsam
-     * gesammelte Daten nicht durch ein leeres Refresh verloren.
-     */
-    private suspend fun refreshPolarWorkout(
-        workout: AmazfitWorkoutEntity,
-        force: Boolean,
-    ): Boolean {
-        // Cache: wenn nicht force und Streams schon da → kein API-Call.
-        if (!force) {
-            val hasHr = !workout.heartRateSeriesJson.isNullOrBlank()
-            val hasTempo = !workout.paceStreamJson.isNullOrBlank() && workout.paceStreamJson != " "
-            val hasGps = !workout.gpsTrackJson.isNullOrBlank()
-            if (hasHr && hasTempo && hasGps) {
-                return false
-            }
-            // Throttle: maximal alle 30 Minuten neu probieren wenn nichts da war,
-            // damit Frank's wiederholte Detail-Screen-Oeffnungen den Server nicht
-            // jedes Mal anstossen. Polar AccessLink hat 500/15min Rate-Limit.
-            val ageMs = System.currentTimeMillis() - workout.createdAt
-            if (ageMs < 30 * 60 * 1000L) {
-                Log.d(TAG, "Polar-Refresh fuer ${workout.trackId} gedrosselt (Cache ${ageMs / 1000}s alt)")
-                return false
-            }
-        }
-        // Exercise-ID extrahieren: trackId = "polar-{id}"
-        val exerciseId = workout.trackId.removePrefix("polar-").toLongOrNull()
-        if (exerciseId == null) {
-            Log.w(TAG, "Polar-Refresh: trackId ${workout.trackId} hat kein gueltiges Polar-ID-Suffix")
-            return false
-        }
-        val fresh = polarRepo.get().refreshExercise(exerciseId, workout.startMs).getOrNull()
-        if (fresh == null) {
-            Log.w(TAG, "Polar-Refresh fuer ${workout.trackId}: keine frischen Daten erhalten")
-            return false
-        }
-        // Merge: fresh wins if not null, sonst existing.
-        val merged = workout.copy(
-            durationSeconds = fresh.durationSeconds ?: workout.durationSeconds,
-            sportType = fresh.sportType ?: workout.sportType,
-            sportName = fresh.sportName ?: workout.sportName,
-            distanceMeters = fresh.distanceMeters ?: workout.distanceMeters,
-            avgPaceSecPerKm = fresh.avgPaceSecPerKm ?: workout.avgPaceSecPerKm,
-            maxPaceSecPerKm = fresh.maxPaceSecPerKm ?: workout.maxPaceSecPerKm,
-            avgSpeedKmh = fresh.avgSpeedKmh ?: workout.avgSpeedKmh,
-            maxSpeedKmh = fresh.maxSpeedKmh ?: workout.maxSpeedKmh,
-            calories = fresh.calories ?: workout.calories,
-            avgHeartRate = fresh.avgHeartRate ?: workout.avgHeartRate,
-            maxHeartRate = fresh.maxHeartRate ?: workout.maxHeartRate,
-            gpsTrackJson = fresh.gpsTrackJson ?: workout.gpsTrackJson,
-            heartRateSeriesJson = fresh.heartRateSeriesJson ?: workout.heartRateSeriesJson,
-            paceSeriesJson = fresh.paceSeriesJson ?: workout.paceSeriesJson,
-            paceStreamJson = fresh.paceStreamJson ?: workout.paceStreamJson,
-            altitudeGainMeters = fresh.altitudeGainMeters ?: workout.altitudeGainMeters,
-            altitudeLossMeters = fresh.altitudeLossMeters ?: workout.altitudeLossMeters,
-            trainingEffectAerobic = fresh.trainingEffectAerobic ?: workout.trainingEffectAerobic,
-            trainingEffectAnaerobic = fresh.trainingEffectAnaerobic ?: workout.trainingEffectAnaerobic,
-            // VO2max IMMER aus dem frischen Compute uebernehmen — nullable.
-            // Wenn alle Eingaben da sind, ist fresh.vo2Max gesetzt. Sonst null
-            // (kein veralteter Polar-runningIndex mehr im DB-Datensatz).
-            vo2Max = fresh.vo2Max,
-            cadence = fresh.cadence ?: workout.cadence,
-            strideLengthCm = fresh.strideLengthCm ?: workout.strideLengthCm,
-            createdAt = System.currentTimeMillis(),
-        )
-        workoutDao.upsert(merged)
-        Log.i(TAG, "Polar-Refresh fuer ${workout.trackId} OK: gps=${merged.gpsTrackJson != null} hr=${merged.heartRateSeriesJson != null} tempo=${merged.paceStreamJson != null} splits=${merged.paceSeriesJson != null} maxSpeed=${merged.maxSpeedKmh} altGain=${merged.altitudeGainMeters} altLoss=${merged.altitudeLossMeters} cadence=${merged.cadence} stride=${merged.strideLengthCm} vo2=${merged.vo2Max}")
-        syncCoordinatorLazy.get().requestSync()
-        return true
-    }
+    // refreshPolarWorkout entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API raus.
+    // Erhaltene Polar-Bulk-Workouts werden in ensureWorkoutDetail uebersprungen.
 
     /**
      * Holt PAI- und Stress-Events ueber den verifizierten /events-Endpoint

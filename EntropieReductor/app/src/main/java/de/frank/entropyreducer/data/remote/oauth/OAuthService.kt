@@ -53,20 +53,8 @@ class OAuthService @Inject constructor(
         Uri.parse("https://api.prod.whoop.com/oauth/oauth2/token"),
     )
 
-    /**
-     * Konfiguration fuer Polar AccessLink (Frank-Wunsch 2026-05-16).
-     * KRITISCH: Polar verlangt HTTP-Basic-Auth fuer den Token-Endpoint.
-     */
-    val polarConfig = AuthorizationServiceConfiguration(
-        Uri.parse("https://flow.polar.com/oauth2/authorization"),
-        Uri.parse("https://polarremote.com/v2/oauth2/token"),
-    )
-
-    /** Polar V4 (Dynamic API) OAuth-Config. */
-    val polarV4Config = AuthorizationServiceConfiguration(
-        Uri.parse("https://auth.polar.com/oauth/authorize"),
-        Uri.parse("https://auth.polar.com/oauth/token"),
-    )
+    // Polar AccessLink V3 + V4 OAuth-Configs entfernt 2026-05-17 (Frank-Wunsch:
+    // Polar nur noch ueber ZIP-Bulk-Import, keine API-Anbindung mehr).
 
     /**
      * Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17).
@@ -330,218 +318,9 @@ class OAuthService @Inject constructor(
         }
     }
 
-    /* =================================== Polar =================================== */
-
-    /**
-     * Frank-Wunsch 2026-05-16: Polar AccessLink wird die ALLEINIGE Workout-Quelle
-     * nachdem Strava externe Brustgurt-HR-Daten verloren hat. Polar zieht die
-     * H10-Daten vom gekoppelten Brustgurt sauber in seine Cloud, und liefert sie
-     * uns ueber die API genauso wie wenn die Uhr selbst gemessen haette.
-     *
-     * UNTERSCHIEDE zu Whoop/Strava:
-     *  - HTTP-Basic-Auth (ClientSecretBasic), nicht ClientSecretPost
-     *  - KEIN Refresh-Token, dafuer Tokens mit ~1 Jahr Laufzeit
-     *  - User-ID kommt im Token-Response als `x_user_id` zurueck — speichern wir
-     *    in `secrets.polarUserId` weil sie in jedem nachfolgenden API-Pfad steht
-     */
-    fun buildPolarAuthIntent(clientId: String, redirectUri: String): Intent {
-        Log.d(TAG, "Polar: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
-        val request = AuthorizationRequest.Builder(
-            polarConfig,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(redirectUri),
-        )
-            .setScopes(*POLAR_SCOPES.toTypedArray())
-            .build()
-        return newService().getAuthorizationRequestIntent(request)
-    }
-
-    fun loadPolarAuthState(): AuthState {
-        val json = secrets.polarAuthStateJson
-        return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
-        } else AuthState()
-    }
-
-    fun savePolarAuthState(state: AuthState) {
-        secrets.polarAuthStateJson = state.jsonSerializeString()
-    }
-
-    fun clearPolarAuthState() {
-        secrets.clearPolarAuthState()
-    }
-
-    /**
-     * Verarbeitet das Result des Polar-OAuth-Intents.
-     * Polar verlangt HTTP-Basic-Auth, also bauen wir den Token-Request ohne
-     * client_secret im Body und uebergeben `ClientSecretBasic` an
-     * `performTokenRequest`.
-     *
-     * Aus dem Token-Response extrahieren wir `x_user_id` (Polar-User-ID) und
-     * speichern sie — sie wird in JEDEM nachfolgenden API-Pfad als {user-id}
-     * gebraucht.
-     */
-    suspend fun handlePolarAuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
-        val resp = AuthorizationResponse.fromIntent(intent)
-        val ex = AuthorizationException.fromIntent(intent)
-        if (ex != null) {
-            Log.e(TAG, "Polar: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}")
-        }
-        if (resp == null) {
-            return Result.failure(ex ?: IllegalStateException("Keine Polar-Authorization-Antwort"))
-        }
-        if (clientSecret.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("Polar-Client-Secret fehlt — bitte in den API-Settings eintragen"))
-        }
-        val state = AuthState(resp, ex)
-        // Polar's Token-Endpoint verlangt KEIN client_secret im Body — das kommt
-        // ueber den Authorization-Header (Basic Auth) via ClientSecretBasic beim
-        // performTokenRequest. Daher hier KEINE additionalParameters fuer
-        // client_secret setzen.
-        val tokenRequest = resp.createTokenExchangeRequest()
-        val clientAuth = ClientSecretBasic(clientSecret)
-        val tokenResult = exchangeTokenWithAuth(tokenRequest, clientAuth)
-        return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "Polar: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}")
-            state.update(tokenResp, null)
-            savePolarAuthState(state)
-            // x_user_id aus den additionalParameters fischen — AppAuth legt
-            // unbekannte Token-Response-Felder dort ab.
-            val xUserIdRaw = tokenResp.additionalParameters["x_user_id"]
-            val parsedUserId = xUserIdRaw?.toLongOrNull()
-            if (parsedUserId != null && parsedUserId > 0L) {
-                secrets.polarUserId = parsedUserId
-                Log.d(TAG, "Polar: x_user_id=$parsedUserId gespeichert")
-            } else {
-                Log.w(TAG, "Polar: x_user_id NICHT im Token-Response — additionalParams=${tokenResp.additionalParameters.keys}")
-            }
-        }.onFailure { failure ->
-            Log.e(TAG, "Polar: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
-            clearPolarAuthState()
-        }.map { Unit }
-    }
-
-    /**
-     * Frischer Access-Token fuer Polar. Polar hat KEIN Refresh-Token —
-     * solange der gespeicherte Token nicht widerrufen wurde, gibt AppAuth ihn
-     * direkt zurueck. Bei Ablauf (~1 Jahr) oder Revocation kommt null und
-     * der Aufrufer muss den User zur Neu-Autorisierung schicken.
-     */
-    suspend fun freshPolarAccessToken(): String? {
-        val state = loadPolarAuthState()
-        if (!state.isAuthorized) {
-            Log.d(TAG, "Polar-Refresh: kein AuthState — kein Token")
-            return null
-        }
-        // Da Polar keine Refresh-Tokens vergibt, gibt AppAuth den gespeicherten
-        // Access-Token direkt zurueck. Wir setzen trotzdem ClientSecretBasic
-        // damit der eventuelle Refresh-Versuch nicht in einen 401 laeuft.
-        val clientSecret = secrets.polarClientSecret
-        val clientAuth = if (!clientSecret.isNullOrBlank()) ClientSecretBasic(clientSecret) else null
-        val service = newService()
-        return suspendCancellableCoroutine { cont ->
-            val callback = net.openid.appauth.AuthState.AuthStateAction { accessToken, _, ex ->
-                if (ex != null) {
-                    Log.e(TAG, "Polar-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}", ex)
-                    cont.resume(null)
-                } else {
-                    savePolarAuthState(state)
-                    cont.resume(accessToken)
-                }
-                service.dispose()
-            }
-            if (clientAuth != null) {
-                state.performActionWithFreshTokens(service, clientAuth, callback)
-            } else {
-                state.performActionWithFreshTokens(service, callback)
-            }
-        }
-    }
-
-    /* ================================== Polar V4 ================================== */
-
-    fun buildPolarV4AuthIntent(clientId: String, redirectUri: String): Intent {
-        Log.d(TAG, "PolarV4: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
-        val request = AuthorizationRequest.Builder(
-            polarV4Config,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(redirectUri),
-        )
-            .setScopes(*POLAR_V4_SCOPES.toTypedArray())
-            .build()
-        return newService().getAuthorizationRequestIntent(request)
-    }
-
-    fun loadPolarV4AuthState(): AuthState {
-        val json = secrets.polarV4AuthStateJson
-        return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
-        } else AuthState()
-    }
-
-    fun savePolarV4AuthState(state: AuthState) {
-        secrets.polarV4AuthStateJson = state.jsonSerializeString()
-    }
-
-    fun clearPolarV4AuthState() {
-        secrets.polarV4AuthStateJson = null
-    }
-
-    suspend fun handlePolarV4AuthResult(intent: Intent, clientSecret: String?): Result<Unit> {
-        val resp = AuthorizationResponse.fromIntent(intent)
-        val ex = AuthorizationException.fromIntent(intent)
-        if (ex != null) {
-            Log.e(TAG, "PolarV4: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}")
-        }
-        if (resp == null) {
-            return Result.failure(ex ?: IllegalStateException("Keine PolarV4-Authorization-Antwort"))
-        }
-        if (clientSecret.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("Polar-Client-Secret fehlt"))
-        }
-        val state = AuthState(resp, ex)
-        val tokenRequest = resp.createTokenExchangeRequest()
-        val clientAuth = ClientSecretBasic(clientSecret)
-        val tokenResult = exchangeTokenWithAuth(tokenRequest, clientAuth)
-        return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "PolarV4: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}")
-            state.update(tokenResp, null)
-            savePolarV4AuthState(state)
-        }.onFailure { failure ->
-            Log.e(TAG, "PolarV4: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
-            clearPolarV4AuthState()
-        }.map { Unit }
-    }
-
-    suspend fun freshPolarV4AccessToken(): String? {
-        val state = loadPolarV4AuthState()
-        if (!state.isAuthorized) {
-            Log.d(TAG, "PolarV4: kein AuthState — kein Token")
-            return null
-        }
-        val clientSecret = secrets.polarClientSecret
-        val clientAuth = if (!clientSecret.isNullOrBlank()) ClientSecretBasic(clientSecret) else null
-        val service = newService()
-        return suspendCancellableCoroutine { cont ->
-            val callback = net.openid.appauth.AuthState.AuthStateAction { accessToken, _, ex ->
-                if (ex != null) {
-                    Log.e(TAG, "PolarV4-Token-Refresh fehlgeschlagen — ${ex.message}", ex)
-                    cont.resume(null)
-                } else {
-                    savePolarV4AuthState(state)
-                    cont.resume(accessToken)
-                }
-                service.dispose()
-            }
-            if (clientAuth != null) {
-                state.performActionWithFreshTokens(service, clientAuth, callback)
-            } else {
-                state.performActionWithFreshTokens(service, callback)
-            }
-        }
-    }
+    // Polar V3/V4/Flow-Web OAuth-Logik entfernt 2026-05-17 (Frank-Wunsch).
+    // Polar-Historie wird ausschliesslich ueber Polar-ZIP-Bulk-Import eingelesen,
+    // siehe PolarBulkImporter + PolarBulkImportWorker. Live-API-Anbindung entfaellt.
 
     /* =================================== Strava =================================== */
 
@@ -702,18 +481,7 @@ class OAuthService @Inject constructor(
             "offline",
         )
 
-        /** Polar AccessLink V3 Redirect-URI (localhost-Host trick). */
-        const val POLAR_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://localhost/oauth/polar/callback"
-
-        /** Polar's AccessLink V3 hat einen Scope: accesslink.read_all. */
-        val POLAR_SCOPES = listOf("accesslink.read_all")
-
-        /** Polar V4 Scopes. */
-        val POLAR_V4_SCOPES = listOf(
-            "training_sessions:read",
-            "routes:read",
-            "training_targets:read",
-        )
+        // Polar V3/V4 Konstanten entfernt 2026-05-17 (Frank-Wunsch).
 
         /** Strava Redirect-URI + Scopes. */
         const val STRAVA_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/strava/callback"
