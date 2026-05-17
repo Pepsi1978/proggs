@@ -147,24 +147,46 @@ class StravaRepository @Inject constructor(
         val avgPaceSecPerKm = summary.averageSpeed?.takeIf { it > 0 }?.let { 1000.0 / it }
         val maxPaceSecPerKm = summary.maxSpeed?.takeIf { it > 0 }?.let { 1000.0 / it }
 
-        // GPS-Track als JSON (latlng-Stream)
+        // Frank-Wunsch 2026-05-17: Streams im Polar-Bulk-Tupel-Format
+        // `[[ts, value], ...]` schreiben — das Format das der UI-Parser
+        // (AmazfitTrainingDetailScreen.parseJsonTimestampValueAsIntList /
+        // parseJsonTimestampValueAsDoubleList) erwartet. Frueher wurden
+        // flache Arrays `[100, 105, 102]` geschrieben → UI zeigte "Format-
+        // Fehler" weil der Parser bei valueIndex=1 ins Leere griff.
+        val timeStream = streams["time"]?.data
+        // GPS-Track als [[lat, lng], ...] — bleibt unveraendert, UI-Parser
+        // versteht das (parseGpsPoints).
         val gpsJson = streams["latlng"]?.data?.let { latlngArr ->
             buildJsonArray {
                 latlngArr.forEach { pair -> add(pair) }
             }.toString()
         }
-        val hrJson = streams["heartrate"]?.data?.toString()
-        // velocity_smooth zu Pace-Stream umrechnen (sec/km pro Sample).
-        val paceStreamJson = streams["velocity_smooth"]?.data?.let { speedArr ->
-            buildJsonArray {
-                speedArr.forEach { speedElem ->
-                    val v = (speedElem as? JsonPrimitive)?.content?.toDoubleOrNull()
-                    val secPerKm = if (v != null && v > 0.1) 1000.0 / v else 0.0
-                    add(JsonPrimitive(secPerKm))
-                }
-            }.toString()
+        // Pulsverlauf: [[time_seconds, hr_bpm], ...]
+        val hrJson = streams["heartrate"]?.data?.let { hrArr ->
+            buildPairedTimestampArray(timeStream, hrArr)
         }
-        // splits_metric aus Detail-Response (km-Splits).
+        // Tempo-Verlauf: velocity_smooth (m/s) -> sec/km, gepaart mit time.
+        // Format: [[time_seconds, sec_per_km], ...]
+        val paceStreamJson = streams["velocity_smooth"]?.data?.let { speedArr ->
+            buildPairedTimestampArray(timeStream, speedArr) { speedElem ->
+                val v = (speedElem as? JsonPrimitive)?.content?.toDoubleOrNull()
+                if (v != null && v > 0.1) JsonPrimitive(1000.0 / v) else null
+            }
+        }
+        // Pace pro Kilometer (km-Splits): UI nutzt parsePipeDoubleList das ein
+        // ";"-getrenntes Zepp-Format erwartet, KEIN JSON. Format z.B. "600.5;595.2;610.3"
+        // mit Pace in sec/km pro Kilometer.
+        val splitsZeppFormat = detail?.splitsMetric?.let { splits ->
+            splits.mapNotNull { split ->
+                val avgSpeed = split.averageSpeed ?: return@mapNotNull null
+                if (avgSpeed <= 0.1) return@mapNotNull null
+                val secPerKm = 1000.0 / avgSpeed
+                "%.1f".format(java.util.Locale.US, secPerKm)
+            }.joinToString(";")
+        }?.takeIf { it.isNotBlank() }
+        // splitsJson behalten wir zusaetzlich als Rohdaten falls spaeter
+        // gebraucht (Hoehenmeter pro Split, HR pro Split). Nutzt nichts
+        // im aktuellen UI, schadet aber auch nichts.
         val splitsJson = detail?.splitsMetric?.let { splits ->
             buildJsonArray {
                 splits.forEach { split ->
@@ -177,6 +199,35 @@ class StravaRepository @Inject constructor(
                     })
                 }
             }.toString()
+        }
+
+        // Frank-Wunsch 2026-05-17: Hoehenverlust aus altitude-Stream
+        // berechnen (Strava Summary hat nur total_elevation_gain). Wir
+        // summieren alle negativen Hoehen-Deltas.
+        val altitudeLossMeters: Double? = streams["altitude"]?.data?.let { altArr ->
+            var loss = 0.0
+            var prev: Double? = null
+            for (el in altArr) {
+                val curr = (el as? JsonPrimitive)?.content?.toDoubleOrNull() ?: continue
+                val p = prev
+                if (p != null && curr < p) loss += (p - curr)
+                prev = curr
+            }
+            if (loss > 0.0) loss else null
+        }
+
+        // Frank-Wunsch 2026-05-17: Schrittlaenge aus Cadence + Distance + Dauer.
+        // Strava cadence ist rpm pro Bein (typ. 80-90 fuer Laeufer). Schritte
+        // gesamt = cadence * 2 * duration_minutes. Stride = distance / Schritte.
+        val strideLengthCm: Int? = run {
+            val dist = summary.distance ?: return@run null
+            val cad = summary.averageCadence ?: return@run null
+            if (cad <= 0.0 || dist <= 0.0 || duration <= 0) return@run null
+            val durationMin = duration / 60.0
+            val totalSteps = cad * 2.0 * durationMin
+            if (totalSteps <= 0.0) return@run null
+            val strideM = dist / totalSteps
+            if (strideM in 0.4..2.5) (strideM * 100.0).toInt() else null
         }
 
         return AmazfitWorkoutEntity(
@@ -200,14 +251,16 @@ class StravaRepository @Inject constructor(
             maxHeartRate = summary.maxHeartrate?.toInt(),
             gpsTrackJson = gpsJson,
             heartRateSeriesJson = hrJson,
-            paceSeriesJson = paceStreamJson,
+            // paceSeriesJson = Pace pro Kilometer (Zepp-Format ";"-getrennt
+            // sec/km-Werte) — wird von parsePipeDoubleList gelesen.
+            paceSeriesJson = splitsZeppFormat,
             splitsJson = splitsJson,
             altitudeGainMeters = summary.totalElevationGain,
-            altitudeLossMeters = null,
+            altitudeLossMeters = altitudeLossMeters,
             trainingEffectAerobic = null,
             trainingEffectAnaerobic = null,
             cadence = summary.averageCadence?.toInt(),
-            strideLengthCm = null,
+            strideLengthCm = strideLengthCm,
             swolf = null,
             poolLengthMeters = null,
             source = "strava",
@@ -215,6 +268,43 @@ class StravaRepository @Inject constructor(
             paceStreamJson = paceStreamJson,
             createdAt = System.currentTimeMillis(),
         )
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-17: Helfer fuer das Polar-Bulk-Tupel-Format
+     * `[[time_seconds, value], ...]`. Paart die [time]-Stream-Eintraege
+     * mit den [value]-Stream-Eintraegen (gleiche Index-Position) und liefert
+     * ein JSON-Array-String das der UI-Parser
+     * (parseJsonTimestampValueAsIntList / parseJsonTimestampValueAsDoubleList)
+     * direkt verarbeiten kann.
+     *
+     * Wenn [time] null ist, wird die Index-Position selbst als Pseudo-Zeit
+     * verwendet — der Parser braucht im Polar-Bulk-Pfad nur valueIndex=1, die
+     * Time-Position wird ignoriert. So funktioniert es auch bei Strava-Activities
+     * ohne separaten time-Stream (selten, aber moeglich).
+     *
+     * @param valueTransform Optionale Transformation pro Wert (z.B. m/s → sec/km).
+     *   Liefert null → Sample wird uebersprungen.
+     */
+    private fun buildPairedTimestampArray(
+        time: JsonArray?,
+        values: JsonArray,
+        valueTransform: (kotlinx.serialization.json.JsonElement) -> JsonPrimitive? = { el ->
+            (el as? JsonPrimitive)
+        },
+    ): String {
+        return buildJsonArray {
+            values.forEachIndexed { idx, valueEl ->
+                val transformed = valueTransform(valueEl) ?: return@forEachIndexed
+                val ts = (time?.getOrNull(idx) as? JsonPrimitive) ?: JsonPrimitive(idx)
+                add(
+                    buildJsonArray {
+                        add(ts)
+                        add(transformed)
+                    },
+                )
+            }
+        }.toString()
     }
 
     private fun parseStartMs(utcIso: String?, localIso: String?): Long {
