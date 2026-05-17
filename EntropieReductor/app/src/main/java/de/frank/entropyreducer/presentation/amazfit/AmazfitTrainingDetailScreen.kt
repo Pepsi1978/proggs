@@ -457,7 +457,7 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
     // Frank-Wunsch 2026-05-17 (Iteration 2): Tap auf Karte oeffnet Vollbild-
     // Modus mit aktivierten Zoom-Buttons. State lebt hier damit Dialog auch
     // nach Recomposition der Card stabil bleibt.
-    var fullscreen by remember { mutableStateOf(false) }
+    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
@@ -475,15 +475,21 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     .fillMaxWidth()
                     .aspectRatio(1.6f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBorder.copy(alpha = 0.08f))
-                    // Frank-Wunsch 2026-05-17 (Iteration 3): Tap auf irgendwo
-                    // in der Karten-Vorschau oeffnet sofort den Vollbild-Modus.
-                    // Eingebettete Karte ist nur Vorschau — Zoom + Pan finden
-                    // ausschliesslich im Vollbild statt.
-                    .clickable(enabled = points.size >= 2) { fullscreen = true },
+                    .background(cosmos.glassBorder.copy(alpha = 0.08f)),
             ) {
                 if (points.size >= 2) {
                     GpsTrackMap(points = points, fullscreen = false)
+                    // Frank-Wunsch 2026-05-17 (Iteration 5): Overlay-Box UEBER
+                    // der Map ist Pflicht — der clickable-Modifier auf der
+                    // Outer-Box wird ignoriert weil die GoogleMap-AndroidView
+                    // alle Touches abfaengt bevor sie zur Box zurueckkehren.
+                    // Diese transparente Overlay-Box liegt durch die Children-
+                    // Reihenfolge UEBER der Karte und faengt den Tap.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { fullscreen = true },
+                    )
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -637,7 +643,7 @@ private fun PulsverlaufCard(hr: List<Int>) {
         val mins = i / 60
         "${mins} min"
     }
-    var fullscreen by remember { mutableStateOf(false) }
+    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -944,6 +950,11 @@ private fun ZoomableChartDialog(
         crosshairTooltip(visibleValues[idx], xLabelWrapper(idx))
     }
 
+    // title und subtitle werden im Dialog NICHT mehr angezeigt — Frank-Wunsch
+    // 2026-05-17 Iteration 5: maximaler Chart-Platz, kein Header-Text.
+    @Suppress("UNUSED_VARIABLE")
+    val unusedHeader = title to subtitle
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -953,154 +964,121 @@ private fun ZoomableChartDialog(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = cosmos.textPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                        )
-                    }
-                    if (scale > 1f || clampedOffset > 0f) {
-                        IconButton(
-                            onClick = { scale = 1f; offset = 0f; crosshairIdxInVisible = null },
-                            modifier = Modifier
-                                .padding(end = 4.dp)
-                                .size(44.dp)
-                                .background(cosmos.glassBorder.copy(alpha = 0.20f), CircleShape),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Refresh,
-                                contentDescription = "Zoom zurücksetzen",
-                                tint = cosmos.textPrimary,
-                            )
+            // Chart fuellt jetzt den ganzen Dialog (minus padding) — kein
+            // Header, kein Footer mehr. Close-Button schwebt oben rechts.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+                    // Frank-Wunsch 2026-05-17 (Iteration 5): detectTransformGestures
+                    // statt manueller awaitEachGesture-Logik — das ist Composes
+                    // eingebauter Pinch+Pan-Detector und funktioniert garantiert.
+                    // Pinch wird per zoom != 1f erkannt, Single-Finger-Drag setzt
+                    // den Crosshair.
+                    .pointerInput(visibleValues.size, totalSize) {
+                        detectTransformGestures(panZoomLock = false) { centroid, pan, zoom, _ ->
+                            val padLeftPx = 56f
+                            val padRightPx = 12f
+                            val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                            if (kotlin.math.abs(zoom - 1f) > 0.005f) {
+                                // Pinch-Modus — Zoom + Pan auf Visible-Range
+                                val newScale = (scale * zoom).coerceIn(1f, 50f)
+                                val newVisible = (1f / newScale).coerceIn(
+                                    2f / totalSize.coerceAtLeast(2).toFloat(),
+                                    1f,
+                                )
+                                val panFrac = -pan.x / canvasW * newVisible
+                                val newOffset = (offset + panFrac).coerceIn(
+                                    0f,
+                                    (1f - newVisible).coerceAtLeast(0f),
+                                )
+                                scale = newScale
+                                offset = newOffset
+                                crosshairIdxInVisible = null
+                            } else {
+                                // Single-Finger-Pan-Modus → Crosshair an Daumen-X
+                                val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
+                                val frac = ((centroid.x - padLeftPx) / w).coerceIn(0f, 1f)
+                                crosshairIdxInVisible = (frac * (visibleValues.size - 1).coerceAtLeast(1))
+                                    .toInt()
+                                    .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                            }
                         }
                     }
+                    // Zweiter Modifier: detectTapGestures fuer sofortiges
+                    // Crosshair beim ersten Touch — detectTransformGestures
+                    // wartet auf touchSlop, das fuehlt sich traege an.
+                    .pointerInput(visibleValues.size) {
+                        detectTapGestures(
+                            onPress = { tapOffset ->
+                                val padLeftPx = 56f
+                                val padRightPx = 12f
+                                val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
+                                val frac = ((tapOffset.x - padLeftPx) / w).coerceIn(0f, 1f)
+                                crosshairIdxInVisible = (frac * (visibleValues.size - 1).coerceAtLeast(1))
+                                    .toInt()
+                                    .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                            },
+                            onDoubleTap = {
+                                scale = 1f
+                                offset = 0f
+                                crosshairIdxInVisible = null
+                            },
+                        )
+                    },
+            ) {
+                ChartWithAxes(
+                    accent = accent,
+                    xCount = visibleValues.size,
+                    yMin = yMinScaled,
+                    yMax = yMaxScaled,
+                    yUnit = yUnit,
+                    yFormat = yFormat,
+                    xLabel = xLabelWrapper,
+                    xTickCount = 6,
+                    yTickCount = 7,
+                    values = visibleValues,
+                    invertY = invertY,
+                    modifier = Modifier.fillMaxSize(),
+                    crosshairIdx = crosshairIdxInVisible,
+                    crosshairLabel = crosshairLabel,
+                )
+            }
+            // Close-Button schwebt oben rechts. Reset-Button NUR sichtbar
+            // wenn aktuell gezoomt.
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (scale > 1.01f || clampedOffset > 0.001f) {
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = { scale = 1f; offset = 0f; crosshairIdxInVisible = null },
                         modifier = Modifier
+                            .padding(end = 8.dp)
                             .size(44.dp)
-                            .background(cosmos.glassBorder.copy(alpha = 0.20f), CircleShape),
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Close,
-                            contentDescription = "Vollbild schliessen",
-                            tint = cosmos.textPrimary,
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = "Zoom zurücksetzen",
+                            tint = Color.White,
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Box(
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        // Frank-Wunsch 2026-05-17 (Iteration 4): manuelle Pointer-
-                        // Verwaltung statt detectTransformGestures, damit Single-
-                        // Finger-Touch = Crosshair-Scrub und nur Two-Finger-Touch
-                        // = Pinch-Zoom + Pan. So funktioniert es wie in Strava,
-                        // Apple Fitness, Garmin Connect.
-                        .pointerInput(totalSize, visibleValues.size) {
-                            awaitEachGesture {
-                                // Konstanten muessen mit ChartWithAxes-Padding
-                                // uebereinstimmen — sonst landet der Crosshair
-                                // neben dem Finger.
-                                val padLeftPx = 56f
-                                val padRightPx = 12f
-
-                                fun pointerXToIdx(xPx: Float): Int {
-                                    val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
-                                    val frac = ((xPx - padLeftPx) / w).coerceIn(0f, 1f)
-                                    return (frac * (visibleValues.size - 1).coerceAtLeast(1)).toInt()
-                                        .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
-                                }
-
-                                val firstDown = awaitFirstDown(requireUnconsumed = false)
-                                crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
-                                var isPinching = false
-                                var initialDist = 0f
-
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val pressed = event.changes.filter { it.pressed }
-                                    if (pressed.isEmpty()) break
-
-                                    if (pressed.size >= 2) {
-                                        // Two-Finger-Modus = Zoom + Pan.
-                                        // Crosshair waehrend Pinch ausblenden.
-                                        if (!isPinching) {
-                                            isPinching = true
-                                            crosshairIdxInVisible = null
-                                            initialDist = (pressed[0].position - pressed[1].position).getDistance().coerceAtLeast(1f)
-                                        } else {
-                                            val newDist = (pressed[0].position - pressed[1].position).getDistance().coerceAtLeast(1f)
-                                            val zoomFactor = newDist / initialDist
-                                            // Pan = Mittelpunkt-Verschiebung der beiden Finger
-                                            val pan0 = pressed[0].positionChange()
-                                            val pan1 = pressed[1].positionChange()
-                                            val panX = (pan0.x + pan1.x) / 2f
-
-                                            val newScale = (scale * zoomFactor).coerceIn(1f, 50f)
-                                            val newVisible = (1f / newScale).coerceIn(
-                                                2f / totalSize.coerceAtLeast(2).toFloat(),
-                                                1f,
-                                            )
-                                            val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                                            val panFrac = -panX / canvasW * newVisible
-                                            val newOffset = (offset + panFrac).coerceIn(
-                                                0f,
-                                                (1f - newVisible).coerceAtLeast(0f),
-                                            )
-                                            scale = newScale
-                                            offset = newOffset
-                                            initialDist = newDist
-                                        }
-                                        pressed.forEach { it.consume() }
-                                    } else if (pressed.size == 1 && !isPinching) {
-                                        // Single-Finger-Modus = Crosshair-Scrub.
-                                        crosshairIdxInVisible = pointerXToIdx(pressed[0].position.x)
-                                        pressed[0].consume()
-                                    }
-                                }
-                                // Finger losgelassen — Crosshair sichtbar lassen
-                                // damit User den letzten Wert noch lesen kann.
-                                isPinching = false
-                            }
-                        },
+                        .size(44.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                 ) {
-                    ChartWithAxes(
-                        accent = accent,
-                        xCount = visibleValues.size,
-                        yMin = yMinScaled,
-                        yMax = yMaxScaled,
-                        yUnit = yUnit,
-                        yFormat = yFormat,
-                        xLabel = xLabelWrapper,
-                        xTickCount = 6,
-                        yTickCount = 7,
-                        values = visibleValues,
-                        invertY = invertY,
-                        modifier = Modifier.fillMaxSize(),
-                        crosshairIdx = crosshairIdxInVisible,
-                        crosshairLabel = crosshairLabel,
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Vollbild schliessen",
+                        tint = Color.White,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = if (scale > 1.05f) {
-                        "Zoom ${"%.1f".format(scale)}× · Ein Finger = Wert ablesen · Zwei Finger = Zoom + Verschieben"
-                    } else {
-                        "Ein Finger über Grafik ziehen = Wert ablesen · Zwei Finger spreizen = Zoomen · Gerät drehen für mehr Breite"
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cosmos.textSecondary,
-                )
             }
         }
     }
@@ -1143,7 +1121,7 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             "Km ${i + 1}"
         }
     }
-    var fullscreen by remember { mutableStateOf(false) }
+    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
