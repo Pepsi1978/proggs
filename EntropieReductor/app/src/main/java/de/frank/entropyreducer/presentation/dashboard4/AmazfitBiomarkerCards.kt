@@ -562,7 +562,10 @@ internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity, restingHrForDay: Int?): S
     val distance = w.distanceMeters ?: return "—"
     val duration = w.durationSeconds ?: return "—"
     if (duration < 60 || distance < 100 || avgHr < 80 || avgHr > 220) return "—"
-    val restingHr = restingHrForDay ?: return "—"
+    // Frank-Wunsch 2026-05-17 (revidiert): Fallback 60 bpm wenn kein Whoop-
+    // Ruhepuls fuer den Tag verfuegbar — so bekommen auch alte Polar-Bulk-
+    // Trainings (vor Whoop-Anschaffung) einen VO2max-Schaetzwert.
+    val restingHr = restingHrForDay ?: 60
     val frankMaxHr = 180
     if (frankMaxHr <= restingHr) return "—"
     val durationMin = duration / 60.0

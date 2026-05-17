@@ -1202,9 +1202,11 @@ private fun estimateVo2Max(
     val duration = w.durationSeconds ?: return "—"
     if (duration < 60 || distance < 100) return "—"
     if (avgHr < 80 || avgHr > 220) return "—"
-    // Frank-Wunsch 2026-05-17: kein Default-Ruhepuls mehr. Wenn kein
-    // Tages-Wert verfuegbar → leer statt geraten.
-    val restingHr = restingHrForDay ?: return "—"
+    // Frank-Wunsch 2026-05-17 (revidiert): Wenn fuer den Tag KEIN Whoop-
+    // Ruhepuls verfuegbar (alle Trainings vor der Whoop-Anschaffung Feb 2026),
+    // nutze als Fallback 60 bpm. So bekommen auch alle aelteren Polar-
+    // Bulk-Trainings einen VO2max-Schaetzwert.
+    val restingHr = restingHrForDay ?: 60
     val frankMaxHr = 180
     if (frankMaxHr <= restingHr) return "—"
     val durationMin = duration / 60.0
