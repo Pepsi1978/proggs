@@ -55,8 +55,9 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -501,13 +502,17 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
         }
     }
 
-    // Vollbild-Overlay als Dialog. usePlatformDefaultWidth=false sorgt dafuer
-    // dass der Dialog die GANZE Screen-Groesse einnimmt (Default waere ~80%).
-    // System-Back schliesst automatisch via onDismissRequest.
+    // Vollbild-Overlay als Popup. Frank-Wunsch 2026-05-17 Iteration 6: Popup
+    // statt Dialog — Popup nutzt das gleiche Window wie die Activity. Damit
+    // ueberlebt der Vollbild-Modus Geraete-Rotationen sofern die Activity
+    // configChanges deklariert hat (was sie tut). Dialog hingegen hat sein
+    // eigenes Window mit eigenem Lifecycle, das bei Rotation oft zerstoert
+    // wird auch wenn Activity intakt bleibt.
     if (fullscreen && points.size >= 2) {
-        Dialog(
+        BackHandler { fullscreen = false }
+        Popup(
+            properties = PopupProperties(focusable = true),
             onDismissRequest = { fullscreen = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
             Box(
                 modifier = Modifier
@@ -515,9 +520,6 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     .background(Color.Black),
             ) {
                 GpsTrackMap(points = points, fullscreen = true)
-                // Schliessen-Button oben links. Halbtransparenter Hintergrund
-                // damit der Button auf Satellit-Bild (helle wie dunkle Bereiche)
-                // sichtbar bleibt.
                 IconButton(
                     onClick = { fullscreen = false },
                     modifier = Modifier
@@ -955,9 +957,10 @@ private fun ZoomableChartDialog(
     @Suppress("UNUSED_VARIABLE")
     val unusedHeader = title to subtitle
 
-    Dialog(
+    BackHandler { onDismiss() }
+    Popup(
+        properties = PopupProperties(focusable = true),
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
             modifier = Modifier
@@ -976,13 +979,19 @@ private fun ZoomableChartDialog(
                     // Pinch wird per zoom != 1f erkannt, Single-Finger-Drag setzt
                     // den Crosshair.
                     .pointerInput(visibleValues.size, totalSize) {
+                        // Frank-Wunsch 2026-05-17 Iteration 6: flüssiger
+                        // Pinch wie bei Google Maps. Threshold 0.001f statt
+                        // 0.005f → jede minimalste Bewegung wirkt sofort.
+                        // Max-Zoom 100x statt 50x → mehr Detail-Tiefe.
+                        // panZoomLock = false → Pinch und Pan koexistieren.
                         detectTransformGestures(panZoomLock = false) { centroid, pan, zoom, _ ->
                             val padLeftPx = 56f
                             val padRightPx = 12f
                             val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                            if (kotlin.math.abs(zoom - 1f) > 0.005f) {
+                            val isPinch = kotlin.math.abs(zoom - 1f) > 0.001f
+                            if (isPinch) {
                                 // Pinch-Modus — Zoom + Pan auf Visible-Range
-                                val newScale = (scale * zoom).coerceIn(1f, 50f)
+                                val newScale = (scale * zoom).coerceIn(1f, 100f)
                                 val newVisible = (1f / newScale).coerceIn(
                                     2f / totalSize.coerceAtLeast(2).toFloat(),
                                     1f,
