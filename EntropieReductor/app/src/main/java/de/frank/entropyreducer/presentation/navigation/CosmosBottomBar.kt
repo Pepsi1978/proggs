@@ -213,7 +213,33 @@ private fun SubModeRow(
     onParentClick: () -> Unit,
     onSubAreaClick: (Int) -> Unit,
 ) {
+    // Frank-Wunsch 2026-05-17 (zweite Praezisierung): Der aktive Tab bleibt an
+    // SEINER ursprunglichen Position. Die anderen drei Slots werden mit den
+    // Sub-Icons 1..3 (in dieser Reihenfolge) gefuellt — nicht aufgeruckt.
+    //
+    // Beispiel: Tap auf Biomarker (rechts aussen) → Sub-Icons 1/2/3 stehen an
+    // den Positionen Aufgaben/Analyse/Forscher, Biomarker bleibt rechts.
     val parentMeta = parentMetaFor(parentTab)
+    val slots = listOf(Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER)
+    val subIcons = listOf(
+        SubIconMeta(Icons.Outlined.Inbox, "1"),
+        SubIconMeta(Icons.Outlined.Tune, "2"),
+        SubIconMeta(Icons.Outlined.Insights, "3"),
+    )
+
+    // Pre-compute: pro Slot entweder Parent oder Sub-Icon (mit Index 1..3).
+    val items: List<SlotItem> = buildList {
+        var subCounter = 0
+        for (slotTab in slots) {
+            if (slotTab == parentTab) {
+                add(SlotItem.Parent)
+            } else {
+                subCounter++
+                add(SlotItem.Sub(index = subCounter, meta = subIcons[subCounter - 1]))
+            }
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,33 +247,37 @@ private fun SubModeRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        TabItem(
-            label = parentMeta.label,
-            icon = parentMeta.icon,
-            tint = tint,
-            onClick = onParentClick,
-        )
-        TabItem(
-            label = "1",
-            icon = Icons.Outlined.Inbox,
-            tint = tint,
-            onClick = { onSubAreaClick(1) },
-        )
-        Spacer(Modifier.width(64.dp))
-        TabItem(
-            label = "2",
-            icon = Icons.Outlined.Tune,
-            tint = tint,
-            onClick = { onSubAreaClick(2) },
-        )
-        TabItem(
-            label = "3",
-            icon = Icons.Outlined.Insights,
-            tint = tint,
-            onClick = { onSubAreaClick(3) },
-        )
+        items.forEachIndexed { index, item ->
+            // Mic-Luecke zwischen Slot 2 (Analyse-Position) und Slot 3 (Forscher-Position)
+            if (index == 2) Spacer(Modifier.width(64.dp))
+
+            when (item) {
+                is SlotItem.Parent -> TabItem(
+                    label = parentMeta.label,
+                    icon = parentMeta.icon,
+                    tint = tint,
+                    onClick = onParentClick,
+                )
+                is SlotItem.Sub -> {
+                    val capturedIndex = item.index
+                    TabItem(
+                        label = item.meta.label,
+                        icon = item.meta.icon,
+                        tint = tint,
+                        onClick = { onSubAreaClick(capturedIndex) },
+                    )
+                }
+            }
+        }
     }
 }
+
+private sealed class SlotItem {
+    object Parent : SlotItem()
+    data class Sub(val index: Int, val meta: SubIconMeta) : SlotItem()
+}
+
+private data class SubIconMeta(val icon: ImageVector, val label: String)
 
 @Composable
 private fun TabItem(
