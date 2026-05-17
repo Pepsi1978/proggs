@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -252,6 +253,22 @@ constructor(
 
     init {
         viewModelScope.launch { refreshWeight() }
+        // Frank-Wunsch 2026-05-17: Persistenten Footer beim App-Start aus
+        // DataStore laden — damit "Letzter Sync: 17.05. 14:32 …" auch nach
+        // Force-Stop oder Geraete-Neustart sichtbar bleibt.
+        viewModelScope.launch {
+            val savedFooter = settings.lastRefreshFooterFlow.first()
+            if (savedFooter.isNotBlank() && _message.value == null) {
+                _message.value = savedFooter
+            }
+        }
+        // Frank-Wunsch 2026-05-17: Auto-Sync beim Oeffnen des Biomarker-Screens
+        // damit der Footer immer aktuell ist. Nutzt die gleiche Logik wie der
+        // manuelle Refresh-Button — laeuft parallel, ist idempotent durch die
+        // diversen Cache-Mechanismen der einzelnen Repos.
+        viewModelScope.launch {
+            refreshNow()
+        }
     }
 
     /**
@@ -875,7 +892,13 @@ constructor(
             val ts = "%02d.%02d. %02d:%02d".format(
                 now.dayOfMonth, now.monthValue, now.hour, now.minute,
             )
-            _message.value = "✓ $ts · $summary"
+            val finalMessage = "✓ $ts · $summary"
+            _message.value = finalMessage
+            // Frank-Wunsch 2026-05-17: Footer-Text + Zeitstempel in DataStore
+            // persistieren — verschwindet sonst beim naechsten App-Start.
+            runCatching {
+                settings.setLastRefreshFooter(finalMessage, System.currentTimeMillis())
+            }
         }
     }
 

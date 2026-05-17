@@ -50,6 +50,15 @@ class AppSettings @Inject constructor(
     /** Letzter Lauf der KI-Frage-des-Moments (Epoch-Millisekunden). */
     val lastKiQuestionCheckMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_KI_QUESTION] ?: 0L }
 
+    /**
+     * Frank-Wunsch 2026-05-17: Persistenter Footer-Text fuer den Biomarker-
+     * Sync-Status. Wird vom BiomarkerViewModel nach jedem refreshNow() in
+     * DataStore geschrieben — beim App-Neustart liest der ViewModel den letzten
+     * Stand wieder rein, damit der Footer NICHT verschwindet.
+     */
+    val lastRefreshFooterFlow: Flow<String> = ds.data.map { it[KEY_LAST_REFRESH_FOOTER] ?: "" }.distinctUntilChanged()
+    val lastRefreshFooterAtMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_REFRESH_FOOTER_AT] ?: 0L }.distinctUntilChanged()
+
     // Performance-Audit Loop 2 (2026-05-10): distinctUntilChanged auf alle
     // Markdown-Flows. Vorher emittierte ds.data bei jeder beliebigen DataStore-
     // Schreiboperation einen neuen Wert auf ALLEN map-Flows — ein Sync-Timestamp-
@@ -189,6 +198,17 @@ class AppSettings @Inject constructor(
     suspend fun setLastHealthConnectSync(value: Long) = ds.edit { it[KEY_LAST_HEALTH_CONNECT_SYNC] = value }
     suspend fun setLastKiQuestionCheck(value: Long) = ds.edit { it[KEY_LAST_KI_QUESTION] = value }
 
+    /**
+     * Frank-Wunsch 2026-05-17: Persistenten Footer-Text + Zeitstempel atomar
+     * speichern. Wird vom BiomarkerViewModel.refreshNow() nach jedem Sync
+     * aufgerufen — beim App-Neustart sieht Frank den letzten Sync-Status
+     * weiterhin, statt eines leeren Footers.
+     */
+    suspend fun setLastRefreshFooter(text: String, atMs: Long) = ds.edit {
+        it[KEY_LAST_REFRESH_FOOTER] = text
+        it[KEY_LAST_REFRESH_FOOTER_AT] = atMs
+    }
+
     suspend fun setCachedAnalysis(markdown: String, atMs: Long) = ds.edit {
         it[KEY_CACHED_ANALYSIS] = markdown
         it[KEY_CACHED_ANALYSIS_AT] = atMs
@@ -279,6 +299,8 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
+        private val KEY_LAST_REFRESH_FOOTER = stringPreferencesKey("last_refresh_footer_text")
+        private val KEY_LAST_REFRESH_FOOTER_AT = longPreferencesKey("last_refresh_footer_at_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
         private val KEY_WORKOUT_CLEANUP_V2 = booleanPreferencesKey("workout_cleanup_v2_done")
         private val KEY_SPORT_RENAME_V1 = booleanPreferencesKey("sport_rename_v1_done")

@@ -154,6 +154,50 @@ class AmazfitRepository @Inject constructor(
             return false
         }
         val now = System.currentTimeMillis()
+        // Frank-Wunsch 2026-05-17 (Iteration 2): Tracke pro Feld welches
+        // editiert wurde — damit das Schloss-Icon im StatsGrid pro Karte
+        // (Ø Puls, Schrittlänge, Kalorien etc.) angezeigt werden kann.
+        // Labels MUESSEN genau mit den StatsGrid-Labels im DetailScreen
+        // uebereinstimmen (siehe AmazfitTrainingDetailScreen.kt).
+        val editedLabels = mutableSetOf<String>()
+        existing.manualOverrideFields
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.forEach { editedLabels.add(it) }
+        if (avgPaceSecPerKm != null && (existing.avgPaceSecPerKm == null ||
+                kotlin.math.abs(avgPaceSecPerKm - existing.avgPaceSecPerKm) > 1.0)) {
+            editedLabels.add("Ø Pace")
+        }
+        if (maxPaceSecPerKm != null && (existing.maxPaceSecPerKm == null ||
+                kotlin.math.abs(maxPaceSecPerKm - existing.maxPaceSecPerKm) > 1.0)) {
+            editedLabels.add("Maximale Pace")
+        }
+        if (avgHeartRate != null && avgHeartRate != existing.avgHeartRate) {
+            editedLabels.add("Ø Puls")
+        }
+        if (maxHeartRate != null && maxHeartRate != existing.maxHeartRate) {
+            editedLabels.add("Maximalpuls")
+        }
+        if (altitudeGainMeters != null && (existing.altitudeGainMeters == null ||
+                kotlin.math.abs(altitudeGainMeters - existing.altitudeGainMeters) > 0.5)) {
+            editedLabels.add("Höhe ↑")
+        }
+        if (altitudeLossMeters != null && (existing.altitudeLossMeters == null ||
+                kotlin.math.abs(altitudeLossMeters - existing.altitudeLossMeters) > 0.5)) {
+            editedLabels.add("Höhe ↓")
+        }
+        if (cadence != null && cadence != existing.cadence) {
+            editedLabels.add("Schrittfrequenz")
+        }
+        if (strideLengthCm != null && strideLengthCm != existing.strideLengthCm) {
+            editedLabels.add("Schrittlänge")
+        }
+        if (calories != null && (existing.calories == null ||
+                kotlin.math.abs(calories - existing.calories) > 0.5)) {
+            editedLabels.add("Kalorien")
+        }
+        val mergedFields = editedLabels.joinToString(",").takeIf { it.isNotEmpty() }
         val updated = existing.copy(
             avgPaceSecPerKm = avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
             maxPaceSecPerKm = maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
@@ -170,10 +214,11 @@ class AmazfitRepository @Inject constructor(
             // dass nachfolgende Strava-Syncs die hier gesetzten Summary-Werte
             // wieder ueberschreiben (siehe mergeFromStrava).
             manualOverridesMs = now,
+            manualOverrideFields = mergedFields,
             createdAt = now,
         )
         workoutDao.upsert(updated)
-        Log.i(TAG, "Manual overrides applied to $trackId (manualOverridesMs=$now)")
+        Log.i(TAG, "Manual overrides applied to $trackId (fields=$mergedFields)")
         return true
     }
 
@@ -375,6 +420,12 @@ class AmazfitRepository @Inject constructor(
         }
         val result = repo.fetchWorkoutsAsEntities(days = days)
         val stravaEntities = result.getOrDefault(emptyList())
+        // Frank-Wunsch 2026-05-17: Sync-Zeitstempel setzen sobald die API
+        // erfolgreich antwortet — auch wenn 0 neue Workouts. Damit zeigt der
+        // "Zuletzt synchronisiert"-Header auch bei reinen App-Start-Auto-
+        // Syncs (mergeFromStrava direkt ohne syncLastDays-Wrapper) einen
+        // frischen Zeitstempel.
+        appSettings.setLastAmazfitSync(System.currentTimeMillis())
         if (stravaEntities.isEmpty()) {
             return 0
         }
