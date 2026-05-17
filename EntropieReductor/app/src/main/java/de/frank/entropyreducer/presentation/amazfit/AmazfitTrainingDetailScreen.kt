@@ -97,36 +97,24 @@ fun AmazfitTrainingDetailScreen(
     // Tempo-Stream = hochaufgeloeste Sample-Liste aus paceStreamJson (~3000 Werte
     // pro Lauf, fuer den fluessigen Tempo-Verlauf-Chart)
     val tempoStream = remember(w?.paceStreamJson) { parsePaceStream(w?.paceStreamJson) }
-    // Frank-Wunsch 2026-05-17 (Iteration 2): Pro-Feld-Schloss-Icon. Set der
+    // Frank-Wunsch 2026-05-17 (Iteration 3): Pro-Feld-Schloss-Icon. Set der
     // Labels die manuell editiert wurden — wird an alle StatsGrid-Aufrufe
     // weitergereicht. Labels MUESSEN exakt mit den Stat-Card-Labels
     // uebereinstimmen.
     //
-    // Fallback fuer Bestandsdaten: Trainings die VOR Einfuehrung der
-    // manualOverrideFields-Spalte editiert wurden haben manualOverridesMs
-    // gesetzt aber manualOverrideFields == null. Fuer diese zeigen wir alle
-    // 9 editierbaren Labels als geschuetzt — wir wissen nicht WELCHE der
-    // Felder Frank damals editiert hat, also markieren wir alle damit
-    // wenigstens sichtbar ist dass dieses Training manuelle Edits hat.
-    val editedLabels: Set<String> = remember(w?.manualOverrideFields, w?.manualOverridesMs) {
-        val explicit = w?.manualOverrideFields
+    // KEIN Fallback fuer Bestandsdaten: Trainings die vor Einfuehrung der
+    // manualOverrideFields-Spalte editiert wurden zeigen KEINE Schloesser.
+    // Falscher Schloss-Spam (alle 9 Karten markiert obwohl nur Puls editiert)
+    // ist schlimmer als gar kein Schloss. Wenn Frank Schloesser bei alten
+    // Trainings will, einfach erneut editieren — dann werden die konkret
+    // geaenderten Felder spezifisch markiert.
+    val editedLabels: Set<String> = remember(w?.manualOverrideFields) {
+        w?.manualOverrideFields
             ?.split(",")
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?.toSet()
-        if (!explicit.isNullOrEmpty()) {
-            explicit
-        } else if (w?.manualOverridesMs != null) {
-            setOf(
-                "Ø Pace", "Maximale Pace",
-                "Ø Puls", "Maximalpuls",
-                "Höhe ↑", "Höhe ↓",
-                "Schrittfrequenz", "Schrittlänge",
-                "Kalorien",
-            )
-        } else {
-            emptySet()
-        }
+            ?: emptySet()
     }
 
     CosmosScaffold(
