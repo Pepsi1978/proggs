@@ -103,7 +103,7 @@ Spanisch de facto Pflicht (Vollstreckbarkeit setzt Spanisch voraus)
 ### Aenderungen 2024–2026
 - **06/2024:** Neue AAIP-Sanktionsverordnung
 - 2025: Drei Reform-Bills im Kongress — Biometrie, Automated Decision Making, DPIA-Pflicht, DPO optional
-- **Kein neues Gesetz verabschiedet** (Stand Mai 2026) — Ley 25.326 weiter in Kraft
+- **Kein neues Gesetz verabschiedet** (zum Skill-Stand dieser Datei) — Ley 25.326 weiter in Kraft
 - **AAIP 2023:** Neue SCCs (Standard Contractual Clauses) fuer Drittstaaten-Transfers eingefuehrt
 
 ### Cross-Border (EU/DE-Anbieter) — WICHTIG

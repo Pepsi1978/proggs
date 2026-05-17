@@ -52,7 +52,11 @@ for f in "$PARENT_DIR/$APP_NAME-app-roentgen-AUDIT-"*.md; do
 done
 
 # 3. Workspace-Root / WORKSPACE/APP_NAME/
-WORKSPACE_ROOT="$HOME/proggs"
+# Aufloesung in 3 Stufen (von hoch zu niedrig prior):
+#   a) Umgebungsvariable WORKSPACE_ROOT, falls explizit gesetzt
+#   b) Eltern-Verzeichnis von APP_DIR (`realpath "$APP_DIR/.."`) — funktioniert plattformneutral
+#   c) Fallback $HOME/proggs (Franks Standard-Setup) — nur wenn (a) und (b) fehlschlagen
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-$(realpath "$APP_DIR/.." 2>/dev/null || echo "$HOME/proggs")}"
 if [ -d "$WORKSPACE_ROOT/$APP_NAME" ]; then
     for f in "$WORKSPACE_ROOT/$APP_NAME"/app-roentgen-*.md "$WORKSPACE_ROOT/$APP_NAME"/app-roentgen-export.json; do
         if [ -f "$f" ]; then

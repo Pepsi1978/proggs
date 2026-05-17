@@ -87,7 +87,7 @@ Englisch ausreichend.
 - APP-8-Cross-Border-Hinweis fehlt
 - Notifiable Data Breach Plan fehlt
 
-## Neuseeland — Privacy Act 2020 (NEU im Skill seit 2026-05-17)
+## Neuseeland — Privacy Act 2020
 
 ### Pflichten
 - 13 Information Privacy Principles (IPPs)

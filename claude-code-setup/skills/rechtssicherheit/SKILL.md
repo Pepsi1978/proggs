@@ -132,6 +132,18 @@ pruefende App liegt.
 **Verboten:** Harte Pfade wie `C:\Users\...` oder `/Users/barwa/...` als Default. Wenn der
 Benutzer eine konkrete Datei ausserhalb des Workspaces nennt, darf der Skill dort lesen/schreiben.
 
+**Platzhalter im Skill** (gelten in SKILL.md, allen References und allen Skript-Aufrufen):
+
+| Platzhalter | Bedeutung | Beispiel |
+|---|---|---|
+| `<WORKSPACE_ROOT>` | Repo-/Workspace-Root — Eltern-Verzeichnis aller geprueften Apps | `$HOME/proggs/` (macOS/Linux), `%USERPROFILE%\proggs\` (Windows) |
+| `<APP_DIR>` | Absoluter Pfad zum App-Wurzelverzeichnis (enthaelt `app/`, `gradle/`, `settings.gradle.kts`, etc.) | `$HOME/proggs/BestJournalAndroid/` |
+| `<APP_NAME>` | Letztes Pfad-Segment von `<APP_DIR>` (ohne Trennzeichen) | `BestJournalAndroid` |
+
+Beim Skript-Aufruf wird `<APP_DIR>` als Argument uebergeben. `<APP_NAME>` leitet sich automatisch
+ab. `<WORKSPACE_ROOT>` kann der Skill aus `<APP_DIR>/..` errechnen oder aus der Umgebungsvariable
+`WORKSPACE_ROOT` lesen, falls gesetzt.
+
 ## Skill-Stand und Recherche-Aktualitaet
 
 **Skill-Stand: 2026-05-17.**
@@ -306,6 +318,11 @@ Wenn keine Treffer in einem erwarteten Bereich: explizit notieren ("Keine Accoun
 gefunden" o.ae.).
 
 ### Schritt 5 — Detail-Pruefung
+
+> *Schritt 5 prueft 10 Aspekte:*
+> *5a Projekt/Package · 5b Manifest+Permissions · 5c SDKs · 5d Lokale Speicherung ·*
+> *5e Rechtstexte · 5f Consent · 5g Store Listing · 5h UK-Vertreter ·*
+> *5i UGC/KI/Barrierefreiheit · 5j Compliance-Artefakte (muss vor Schritt 6 laufen)*
 
 **Vorbereitung — IMMER zuerst lesen:** `references/enforcement-trends-2026.md` enthaelt die
 aktuellen Abmahn-Hotspots und Bussgeld-Trends in DE/EU plus internationale Enforcement-News.

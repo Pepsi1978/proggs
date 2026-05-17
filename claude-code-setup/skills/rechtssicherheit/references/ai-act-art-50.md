@@ -1,8 +1,8 @@
 # EU AI Act Art. 50 — Konkrete Transparenz-Pflichten ab 02.08.2026
 
 > **Wann diese Datei lesen:** Wenn die App KI/GenAI-Features enthaelt (Chatbot, Bild-/Audio-/Video-
-> Generierung, Deepfake, Automated Decisions). Dies ist die wichtigste neue Pflicht seit dem
-> alten Skill-Stand.
+> Generierung, Deepfake, Automated Decisions). Diese Datei beschreibt die Transparenz-Pflichten
+> nach Art. 50 EU AI Act und das Zusammenspiel mit der Google Play AI-Content-Policy.
 
 ## Inkrafttreten
 

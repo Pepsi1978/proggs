@@ -25,9 +25,10 @@ if [ ! -d "$APP_DIR" ]; then
     exit 2
 fi
 
-# Suche-Strategie: rg bevorzugt, sonst grep -E (Pflicht damit `|` als ODER funktioniert).
-# Achtung: Claude Code injiziert eine `rg`-Funktion in die interaktive Shell. Diese ist
-# in einer Subshell nicht verfuegbar. Wir akzeptieren rg nur wenn es ein BINARY ist.
+# Suche-Strategie: bevorzugt rg (schneller), fallback auf grep -E (extended regex — Pflicht
+# damit `|` als ODER funktioniert). `command -v rg` muss ein BINARY finden, nicht eine
+# Bash-Funktion — Claude Code injiziert eine `rg`-Funktion in interaktive Shells, die in
+# Subshells nicht verfuegbar ist. Direktive 3: ohne -E waeren alle Pipe-Patterns unwirksam.
 if command -v rg >/dev/null 2>&1 && ! type -t rg 2>/dev/null | grep -q function; then
     SEARCH="rg -n -i --no-heading -l"
 else

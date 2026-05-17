@@ -5,7 +5,7 @@
 
 ## Pakistan — KEIN aktives Datenschutzgesetz
 
-### Status (Stand Mai 2026)
+### Status (zum Skill-Stand dieser Datei)
 - PDPB 2023 vom Kabinett genehmigt (04/2023) — parlamentarische Zustimmung ausgeblieben
 - PDPB 2025 (ueberarbeiteter Entwurf) — weiterhin nicht verabschiedet
 - 12/2025-Analyse: Pakistans Presse bezeichnet Zustand als **"legal vacuum"** fuer Datenschutz

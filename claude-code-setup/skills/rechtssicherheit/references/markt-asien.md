@@ -1,11 +1,28 @@
 # Markt Asien — Rechtsraum-Reference
 
+> **Skill-Stand dieser Datei:** 2026-05-17 (siehe SKILL.md fuer den globalen Stand).
+> Wenn der Skill-Stand >30 Tage alt ist, neue Recherche durchfuehren.
+
 > **Wann diese Datei lesen:** Wenn die App in einem asiatischen Markt ausgespielt wird
 > (Indien, Japan, Korea, Taiwan, Hongkong, Singapore, Thailand, Indonesien, Vietnam, Sri Lanka)
 > oder eine entsprechende Locale aktiv ist (hi, ja, ko, zh-Hant, th, id, bn, te, mr, ta, ur, gu, kn, ml).
 
 > **Hinweis zu China:** China (PIPL, zh-Hans) ist in dieser Programmierumgebung BEWUSST AUSGESCHLOSSEN.
 > Die Sektion bleibt nur als Referenz fuer eventuell spaetere Faelle.
+
+## Inhalt
+
+1. [Indien — DPDP Act + Rules 2025](#indien--dpdp-act--rules-2025)
+2. [Japan — APPI](#japan--appi)
+3. [Korea (Suedkorea) — PIPA](#korea-suedkorea--pipa)
+4. [Taiwan — PDPA + Novelle 11/2025](#taiwan--pdpa--novelle-112025)
+5. [Hongkong — PDPO](#hongkong--pdpo-inkl-doxxing-reform)
+6. [Singapore — PDPA](#singapore--pdpa)
+7. [Thailand — PDPA 2019](#thailand--pdpa-2019)
+8. [Indonesien — UU PDP 2022](#indonesien--uu-pdp--law-27-of-2022)
+9. [Vietnam — PDPL 2026](#vietnam--pdpl-law-9120252026qh15)
+10. [Sri Lanka — PDPA 2022](#sri-lanka--pdpa-no-9-of-2022)
+11. [Vergleichsmatrix](#vergleichsmatrix-asien)
 
 ## Indien — DPDP Act + Rules 2025
 
@@ -58,7 +75,7 @@ Aktiv. Novelle November 2025 offiziell verkuendet — neue Pflichten:
 - DPO fuer Behoerden (neu)
 - Erweiterte Inspektionsrechte der PDPC
 - **Personal Data Protection Commission (PDPC):** Vorbereitungsbuero aktiv, noch nicht offiziell gegruendet
-  (Stand Mai 2026 — urspruenglich 08/2025 geplant, verzoegert)
+  (zum Skill-Stand dieser Datei — urspruenglich 08/2025 geplant, verzoegert)
 - Bis PDPC operativ: Branchenbehoerden zustaendig (NCC fuer Apps/Telekom)
 
 ### Pflichtangaben
@@ -266,14 +283,14 @@ Tilleke & Gibbins Vietnam PDPL, DLA Piper Vietnam, Rouse
 
 ## Sri Lanka — PDPA No. 9 of 2022
 
-### Status: Substantive Provisions NOCH NICHT in Kraft (Stand Mai 2026)
+### Status: Substantive Provisions NOCH NICHT in Kraft (zum Skill-Stand dieser Datei)
 
 ### Chronologie
 - 03/2022: Gesetz verabschiedet
 - 2023: Nur DPA-Gruendungsprovisions + Definitionssektion in Kraft
 - 03/2025: Geplanter Start (18.03.2025) — **ABGESAGT** per Gazette 14.03.2025
 - 10/2025: Amendment Act No. 22 of 2025 — Minister erhaelt Ermessen ueber Inkraftsetzung
-- **Mai 2026: Substantive Provisions noch nicht in Kraft**
+- **Zum Skill-Stand dieser Datei:** Substantive Provisions noch nicht in Kraft
 
 ### Was bereits gilt
 - DPA (Data Protection Authority) operativ: `dpa.gov.lk`, `info@dpa.gov.lk`
