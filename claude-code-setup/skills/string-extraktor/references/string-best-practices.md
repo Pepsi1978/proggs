@@ -1092,6 +1092,20 @@ val text = resources.getQuantityString(R.plurals.journal_entries, count, count)
 | `id` | Erklaert dem Uebersetzer WAS das ist | `"user_name"`, nicht `"x"` |
 | `example` | Zeigt WIE der Wert zur Laufzeit aussieht | `"Maria"`, `"5 Tage"` |
 
+### TMS-Kompatibilitaet (wichtig bei Weblate-Workflows)
+
+Crowdin, Lokalise und Phrase unterstuetzen `xliff:g` vollstaendig. **Weblate hat
+einen bekannten Bug** (Issue #7473, seit 2022 offen) und kann `xliff:g`-Tags
+verlieren oder falsch zusammenfuegen. Bei Weblate-Workflows entweder:
+
+1. **Alternative ICU MessageFormat verwenden** (siehe Kapitel 15b), oder
+2. **`xliff:g` durch reinen `<!-- ... -->`-Kommentar dokumentieren** und auf den
+   Inline-Schutz verzichten — die Platzhalter sind dann ungeschuetzt aber
+   nicht TMS-kaputt.
+
+Wenn die App TMS-agnostisch sein soll (mehrere Uebersetzungsplattformen
+parallel): `xliff:g` mit Kommentar-Backup verwenden.
+
 ---
 
 ## 15. Plurals korrekt anlegen
@@ -1130,6 +1144,52 @@ Sprach-Dateien (`values-ar/`, `values-ru/` etc.) ergaenzt.
 | Russisch/Polnisch | `one`, `few`, `many`, `other` | Komplex |
 | Arabisch | `zero`, `one`, `two`, `few`, `many`, `other` | Alle 6! |
 | Japanisch/Chinesisch/Tuerkisch | `other` | Nur 1 Form |
+
+---
+
+## 15b. ICU MessageFormat — Alternative fuer Multi-Plattform-Apps
+
+> **Wann relevant:** Wenn die App parallel auf Android, iOS und Web ausgerollt
+> werden soll und EINE Quelle fuer Plurals/Format ueber alle Plattformen pflegen
+> moechte. Crowdin, Lokalise und SimpleLocalize empfehlen ICU MessageFormat
+> seit 2024 als plattformuebergreifenden Standard.
+
+### Was ICU MessageFormat ist
+
+Ein einheitliches Format das Plurals, Auswahl und Variablen in EINEM String
+kombiniert — funktioniert identisch auf Android (API 24+), iOS, Web (formatjs).
+
+```
+{count, plural,
+    =0 {Keine Eintraege}
+    one {1 Eintrag}
+    other {# Eintraege}
+}
+```
+
+### Android-Integration (API 24+)
+
+```kotlin
+import android.icu.text.MessageFormat
+
+val msg = MessageFormat.format(
+    "{0, plural, =0 {Keine Eintraege} one {1 Eintrag} other {# Eintraege}}",
+    intArrayOf(count)
+)
+```
+
+### Wann ICU bevorzugen, wann Android-Plurals
+
+| Situation | Bessere Wahl |
+|-----------|-------------|
+| Reine Android-App, ein TMS | **Android `<plurals>`** (Standard, am einfachsten) |
+| Multi-Plattform (Android+iOS+Web) | **ICU MessageFormat** (eine Quelle fuer alle) |
+| Inline-Auswahl `{gender, select, ...}` | **ICU** (Android-Plurals koennen das nicht) |
+| Embedded Plural in Satz mit anderen Variablen | **ICU** (einfacher) |
+| Bestehende App mit `<plurals>` | **Bei `<plurals>` bleiben** (nicht migrieren ohne Grund) |
+
+ICU ist optional — Android-`<plurals>` bleibt der Default des Skills. Erwaehne
+ICU als Empfehlung wenn der Benutzer Multi-Plattform-Plaene andeutet.
 
 ---
 
@@ -1184,19 +1244,28 @@ Sprach-Dateien (`values-ar/`, `values-ru/` etc.) ergaenzt.
 <string name="date_format_iso" translatable="false">yyyy-MM-dd</string>
 ```
 
-### Eigene Datei: `donottranslate.xml` (Google-Methode)
+### Eigene Datei: `donottranslate.xml` (EMPFOHLENE Google-Methode)
 
-Android Lint behandelt ALLE Strings in einer Datei namens `donottranslate.xml` automatisch
-als nicht uebersetzbar:
+> **Bevorzugte Strategie bei mehr als 5 nicht-uebersetzbaren Strings.** Android
+> Lint behandelt ALLE Strings in einer Datei namens **`donottranslate.xml`**
+> automatisch als `translatable="false"` — ohne dass auf jedem einzelnen String
+> das Attribut gesetzt werden muss. Das ist sauberer, weniger fehleranfaellig
+> und macht beim Lesen der `strings.xml` sofort klar welche Strings uebersetzt
+> werden und welche nicht.
 
 ```xml
-<!-- res/values/donottranslate.xml -->
+<!-- res/values/donottranslate.xml — kein translatable-Attribut noetig! -->
 <resources>
     <string name="app_name">MyApp</string>
     <string name="firebase_project_id">myapp-prod</string>
     <string name="support_email">support@example.com</string>
+    <string name="url_privacy">https://example.com/privacy</string>
+    <string name="date_format_iso">yyyy-MM-dd</string>
 </resources>
 ```
+
+**Faustregel:** 1-5 nicht-uebersetzbare Strings → `translatable="false"` inline.
+6+ nicht-uebersetzbare Strings → `donottranslate.xml` anlegen.
 
 ---
 
@@ -1251,6 +1320,45 @@ gesamte Eintrag ohne Fallback. Bei `@string/`-Referenzen greift der Fallback.
 
 `<b>`, `<i>`, `<u>`, `<strike>`, `<sup>`, `<sub>`, `<big>`, `<small>`,
 `<font color="#...">`, `<br>`, `<a href="...">`
+
+### Compose-Empfehlung 2024+: `AnnotatedString` + `SpanStyle` statt HTML
+
+> **Seit Compose 1.7 / 2024:** Fuer formatierten Text in Compose-Apps wird
+> `buildAnnotatedString` mit `SpanStyle` bevorzugt gegenueber HTML-Tags in Strings.
+> Vorteile: typsicher, kein Parsing zur Laufzeit, bessere Theme-Integration, kein
+> Konflikt mit `<` und `>` in der XML-Datei.
+
+```kotlin
+// VORHER (HTML in Strings):
+<string name="terms">Mit Klick stimmst du den <b>AGB</b> zu</string>
+Text(text = AnnotatedString.fromHtml(stringResource(R.string.terms)))
+
+// NACHHER (AnnotatedString + SpanStyle):
+<string name="terms_prefix">Mit Klick stimmst du den </string>
+<string name="terms_emphasized">AGB</string>
+<string name="terms_suffix"> zu</string>
+
+val text = buildAnnotatedString {
+    append(stringResource(R.string.terms_prefix))
+    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+        append(stringResource(R.string.terms_emphasized))
+    }
+    append(stringResource(R.string.terms_suffix))
+}
+```
+
+**Wann was waehlen:**
+
+| Situation | Empfehlung |
+|-----------|-----------|
+| Reine View-App (kein Compose) | HTML in Strings + `HtmlCompat.fromHtml` |
+| Compose-App, einfaches Bold/Italic | `AnnotatedString` + `SpanStyle` |
+| Compose-App, eingebettete Links | `AnnotatedString` + `LinkAnnotation` (Compose 1.7+) |
+| Compose-App, dynamisches HTML aus Server | `AnnotatedString.fromHtml()` (Compose 1.7+) |
+| Migration einer alten App | Bestehendes HTML belassen, neuer Code mit AnnotatedString |
+
+`AnnotatedString.fromHtml()` ist die Migrations-Bruecke — sie verarbeitet
+bestehende HTML-Strings ohne dass alle auf einmal umgestellt werden muessen.
 
 ---
 

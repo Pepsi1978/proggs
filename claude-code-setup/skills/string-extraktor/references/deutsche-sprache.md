@@ -369,6 +369,25 @@ Akzeptiert von German UPA, Screenreader macht kurze Pause (barrierefrei):
 <!-- Problem: Screenreader liest "*" als "Stern" — schlechte Barrierefreiheit -->
 ```
 
+### Barrierefreiheits-Hinweis (Blinden- und Sehbehindertenverband — BSV)
+
+> **Wichtig fuer Accessibility:** Der Blinden- und Sehbehindertenverband
+> empfiehlt **Vollformen** (`Fahrerinnen und Fahrer`) als die screenreader-
+> kompatibelste Variante — werden von TalkBack/VoiceOver korrekt vorgelesen.
+> Sonderzeichen (`*`, `:`, `_`) erzeugen Sprachpausen oder werden falsch
+> ausgesprochen ("Stern", "Doppelpunkt").
+
+**Prioritaeten-Reihenfolge fuer maximale Barrierefreiheit:**
+
+1. **Vollformen** — screenreader-perfekt, aber **2-3x laenger** → nicht fuer Buttons/Tabs
+2. **Partizip-Substantive** (`Nutzende`, `Lernende`) — screenreader-perfekt UND kurz → **bevorzugt fuer App-Strings**
+3. **Geschlechtsneutrale Substantive** (`Person`, `Mitglied`) — screenreader-perfekt
+4. Doppelpunkt-Notation — akzeptable Kompromiss-Loesung im Fliesstext
+5. Gender-Stern — nur wenn Zielgruppe das explizit erwartet, Accessibility-Kompromiss
+
+**Praktische Faustregel:** Partizip + Neutral als Default, Vollformen in
+beschreibenden Texten wo Laenge nicht stoert (Onboarding, About-Texte, Hilfe).
+
 ### DO / DON'T-Tabelle
 
 | DON'T | DO | Strategie |
@@ -413,13 +432,28 @@ Deutsch ist strukturell **30–40 %** wortlänger als Englisch. Kein Fehler — 
 
 ### Strategien gegen Längenprobleme
 
-**1. Soft-Hyphen für erzwungenen Umbruch:**
+**1. Soft-Hyphen für erzwungenen Umbruch (PFLICHT bei Komposita >18 Zeichen — siehe Beispiele unten):**
 
 ```xml
 <string name="label_notifications">Benach\u00ADrichtigungen</string>
 <string name="label_privacy">Daten\u00ADschutz\u00ADerklärung</string>
 <!-- \u00AD wird nur sichtbar, wenn Umbruch nötig -->
 ```
+
+**Pflichtkandidaten fuer Soft-Hyphen in deutschen Apps:**
+
+| Wort | Empfohlene Trennung |
+|------|--------------------|
+| Datenschutzerklärung | Daten\u00ADschutz\u00ADerklärung |
+| Nutzungsbedingungen | Nutzungs\u00ADbedingungen |
+| Benachrichtigungseinstellungen | Benach\u00ADrichtigungs\u00ADeinstellungen |
+| Zahlungsmethoden | Zahlungs\u00ADmethoden |
+| Kontoeinstellungen | Konto\u00ADeinstellungen |
+| Sicherheitsüberprüfung | Sicherheits\u00ADüberprüfung |
+| Anmeldedaten | Anmelde\u00ADdaten |
+
+**Setz-Regel:** Soft-Hyphen zwischen Wortbestandteilen, nicht mitten im Wort.
+Sinnvolle Silbengrenze (z.B. `Benach-richtigungen`), nicht `Be-nachrichtigungen`.
 
 **2. Kürzere Synonyme bevorzugen:**
 

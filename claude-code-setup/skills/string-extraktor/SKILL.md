@@ -45,20 +45,22 @@ Kopien im `references/`-Verzeichnis dieses Skills.
 
 ---
 
-## Die 5 Phasen im Ueberblick
+## Die 6 Phasen im Ueberblick
 
 ```
-PHASE 0: SPRACH-KONTEXT ── Du/Sie-Entscheidung, Gender-Strategie, Region (NEU)
+PHASE 0: SPRACH-KONTEXT ── Du/Sie-Entscheidung, Gender-Strategie, Region
     │
 PHASE 1: SCAN ──────────── Alle hardcodierten Strings finden
     │
-PHASE 2: AUDIT ─────────── Bestehende strings.xml pruefen (+ deutsche Qualitaet)
+PHASE 2: AUDIT ─────────── Bestehende strings.xml pruefen + Glossar-Konsistenz
     │
 PHASE 3: CREATE ────────── Fehlende Strings nach DE-Regeln erstellen
     │
-PHASE 4: VERIFY ────────── Zweiter Durchlauf + DE-Qualitaets-Checkliste (20 Punkte)
+PHASE 4: VERIFY ────────── Zweiter Durchlauf + Pseudolokalisierung + DE-Qualitaet
     │
 PHASE 5: FUNKTIONS-CHECK ── Strings duerfen nichts kaputt machen
+    │
+PHASE 6: PRAEVENTION ───── Pre-Commit + CI + Lint dauerhaft einrichten (einmalig)
 ```
 
 Jede Phase endet mit einem **Fortschritts-Report** an den Benutzer.
@@ -182,6 +184,14 @@ Glob: **/app/src/main/res/values/strings.xml
 Den Benutzer fragen welches Projekt gemeint ist, wenn mehrere gefunden werden.
 Das `app/src/main/`-Verzeichnis ist die Basis fuer alle weiteren Operationen.
 
+**Multi-Module-Apps (PFLICHT-Pruefung):** Wenn das Projekt mehrere Module hat
+(z.B. `app/`, `feature-auth/`, `feature-home/`, `core-ui/`), liegt **pro Modul
+eine eigene strings.xml** in `src/main/res/values/`. Jedes Modul hat seine eigene
+`R`-Klasse (`com.example.featureauth.R.string.x`). Der Skill arbeitet pro Modul
+sequentiell: erst `app/`, dann jedes Feature-Modul, dann Core-Module. Bei
+Glob-Suchen darum `**/src/main/res/values/strings.xml` verwenden statt nur
+`app/src/main/`.
+
 ### 1.2 Screen-Inventar erstellen
 
 Alle UI-relevanten Kotlin-Dateien finden und als Checkliste aufbauen:
@@ -207,6 +217,17 @@ Gefunden: N Screens, M ViewModels, K Dialoge/Overlays
 ```
 
 ### 1.3 Die 9 Grep-Muster anwenden
+
+**Master-Skript fuer den ersten Scan (empfohlen bei grossen Apps):**
+
+```bash
+bash ~/.claude/skills/string-extraktor/scripts/scan-strings.sh <APP_DIR>
+```
+
+Das Skript fasst alle 9+8 Grep-Muster zusammen und erzeugt einen strukturierten
+Initial-Bericht (`string-extraktor-scan.md`) im App-Verzeichnis. Reduziert die
+Token-Kosten und liefert reproduzierbare Ergebnisse. Bei kleinen Apps oder
+gezielter Pruefung einzelner Screens reichen die Patterns einzeln.
 
 Fuer JEDE .kt-Datei unter `app/src/main/java/` diese 9 Muster pruefen
 (Details: Referenzdatei Kapitel 2):
@@ -237,18 +258,15 @@ Fuer JEDE .kt-Datei unter `app/src/main/java/` diese 9 Muster pruefen
 > Dies ist **keine Option**, sondern **PFLICHT** — auch bei "nur schnell
 > checken"-Aufgaben. Die Suche dauert <5 Sekunden.
 
-**Die 8 Pflicht-Muster fuer deutsche Umlaut-Escapes:**
+**Pflicht-Muster — alle 7 deutschen Umlaute in Unicode-Escape-Form plus Breitnetz:**
 
-| # | Pattern | Zeichen | Beispiel |
-|---|---------|---------|----------|
-| U1 | `\\u00dc` | Ü | `"\u00dcberblick"` = "Überblick" |
-| U2 | `\\u00fc` | ü | `"M\u00fcll"` = "Müll" |
-| U3 | `\\u00d6` | Ö | `"\u00d6ffentlich"` = "Öffentlich" |
-| U4 | `\\u00f6` | ö | `"h\u00f6ren"` = "hören" |
-| U5 | `\\u00c4` | Ä | `"\u00c4nderung"` = "Änderung" |
-| U6 | `\\u00e4` | ä | `"w\u00e4hlen"` = "wählen" |
-| U7 | `\\u00df` | ß | `"gr\u00fc\u00dfen"` = "grüßen" |
-| U8 | `\\u[0-9a-fA-F]{4}` | JEDE Escape | Breites Netz — alle \uXXXX finden |
+| Code | Zeichen | Code | Zeichen | Code | Zeichen | Breitnetz |
+|------|---------|------|---------|------|---------|-----------|
+| `\u00dc` | Ü | `\u00fc` | ü | `\u00df` | ß | `\u[0-9a-fA-F]{4}` |
+| `\u00d6` | Ö | `\u00f6` | ö | | | (alle Escapes) |
+| `\u00c4` | Ä | `\u00e4` | ä | | | |
+
+Beispiele aus echten Bugs: `"Überblick"` = `"Überblick"`, `"Müll"` = `"Müll"`, `"grüßen"` = `"grüßen"`.
 
 **Grep-Aufruf (mit dem Grep-Tool, Pattern als regex):**
 ```
@@ -414,6 +432,44 @@ Was NICHT automatisch gefixt wird (braucht Kontext-Entscheidung):
 
 Diese dem Benutzer als Liste zeigen und um Entscheidung bitten.
 
+### 2.5 Glossar-Konsistenz pruefen (App-Vokabular)
+
+> **Warum diese Phase existiert:** Eine App muss durchgaengig die GLEICHEN
+> Begriffe fuer die GLEICHEN Konzepte verwenden. Wenn auf einem Screen "Eintrag"
+> steht und auf dem naechsten "Notiz" oder "Beitrag", ist das ein Vertrauensbruch
+> mit dem Benutzer und macht jede spaetere Uebersetzung inkonsistent. Profi-Tools
+> wie Crowdin/Phrase/Lokalise nutzen dafuer "Term Bases" — wir nutzen einen
+> automatischen Haeufigkeitsscan.
+
+**Top-30 Substantive ermitteln:**
+
+```bash
+grep -oE '<string name="[^"]+">[^<]+</string>' app/src/main/res/values/strings.xml \
+  | sed 's/<[^>]*>//g' \
+  | grep -oE '\b[A-ZÄÖÜ][a-zäöüß]+\b' \
+  | sort | uniq -c | sort -rn | head -30
+```
+
+Aus dieser Liste die zentralen Konzepte identifizieren (z.B. "Eintrag", "Stimmung",
+"Erinnerung") und pruefen ob es Synonyme gibt die das gleiche meinen
+(z.B. "Notiz", "Beitrag", "Tagebucheintrag"). Bei Synonym-Verdacht:
+
+```bash
+grep -nE '\b(Eintrag|Notiz|Beitrag|Tagebucheintrag)\b' app/src/main/res/values/strings.xml
+```
+
+**Output an den Benutzer (wenn Inkonsistenzen):**
+
+```
+GLOSSAR-INKONSISTENZ gefunden:
+  "Eintrag" (87 Vorkommen) vs "Notiz" (12 Vorkommen) — gleicher Begriff?
+  "Stimmung" (45 Vorkommen) vs "Mood" (3 Vorkommen) — Anglizismus-Leakage
+Empfehlung: Eine Variante als Standard waehlen, alle anderen umstellen.
+```
+
+Der Benutzer entscheidet welcher Begriff Standard wird — der Skill setzt das nicht
+selbststaendig um (zu hoher Aenderungs-Aufwand fuer eine automatische Entscheidung).
+
 ---
 
 ## Phase 3: CREATE — Fehlende Strings erstellen
@@ -519,6 +575,23 @@ sealed class UiText {
 }
 ```
 
+**Compose 1.6+ Hinweis (modernerer Resource-Zugriff):** Statt
+`LocalContext.current.getString(R.string.x)` in Nicht-Composable-Lambdas
+(z.B. `clickable {}` Bloecke) ist `LocalResources.current.getString(R.string.x)`
+seit Compose 1.6 die saubere Alternative — sie ist composable-aware und reagiert
+korrekt auf Konfigurationsaenderungen. Bei reinem Composable-Kontext bleibt
+`stringResource()` die erste Wahl.
+
+```kotlin
+@Composable
+fun Beispiel() {
+    val resources = LocalResources.current
+    Button(onClick = { showToast(resources.getString(R.string.saved)) }) {
+        Text(stringResource(R.string.save_button))
+    }
+}
+```
+
 **Schritt 6: Deutsche Sprach-Validierung (PFLICHT fuer jeden neuen String)**
 
 > **Warum dieser Schritt PFLICHT ist:** Primaersprache ist Deutsch. Ein schlecht
@@ -554,35 +627,9 @@ Fuer JEDEN neu erstellten deutschen String diese 10 Validierungen durchgehen
 | Technische Abk. (URL, API, PDF) | Immer Grossbuchstaben | A.6 |
 | Geschuetztes Leerzeichen | Vor Einheiten (`100\u00A0MB`), in `z.\u00A0B.` | A.6 |
 
-**Bei Verstoss:** Direkt den String ueberarbeiten. Nicht erst am Ende sammeln —
-der Fix ist waehrend des Schreibens 10x schneller als nachtraeglich.
-
-**Automatisierbare DE-Checks (Grep-basiert):**
-
-```
-# Verstoss: englische Title Case in Composita
-Grep: "[a-zäöüß]+\s+[A-ZÄÖÜ][a-zäöüß]+\s+[A-ZÄÖÜ]"  (in strings.xml, kontextabhaengig)
-
-# Verstoss: veraltete Rechtschreibung
-Grep: "daß|muß|Haß|Fluß|Tip\b"
-
-# Verstoss: Schreibmaschinen-Anfuehrungszeichen
-Grep: >[^<]*"[^"]*"[^<]*<    (in strings.xml, indikativ)
-
-# Verstoss: Bindestrich statt Bis-Strich
-Grep: "\d+\s*-\s*\d+\s*Uhr"
-
-# Verstoss: Denglisch
-Grep: "ge(shared|liked|checked|pushed|downloaded)"
-
-# Verstoss: Unicode-Escape fuer deutsche Umlaute im Code
-Grep: "\\u00(dc|fc|d6|f6|c4|e4|df)"
-
-# Verstoss: fehlendes geschuetztes Leerzeichen vor Einheit
-Grep: "\d+(MB|GB|KB|kg|km|°C|%)\b"    (ohne NBSP oder Leerzeichen davor)
-```
-
-Diese Grep-Muster laufen automatisch in Phase 4 (VERIFY).
+**Bei Verstoss:** Direkt den String ueberarbeiten — der Fix ist waehrend des
+Schreibens 10x schneller als nachtraeglich. Die automatisierbaren Grep-Checks
+fuer Rechtschreibung/Denglisch/NBSP/Bis-Strich laufen am Ende in Phase 4 (VERIFY).
 
 ### 3.3 Mengenangaben: Plurals statt if/else
 
@@ -607,13 +654,7 @@ val text = pluralStringResource(R.plurals.journal_entries, count, count)
 `other` ist PFLICHT — ohne `other` crasht die App.
 `count` wird ZWEIMAL uebergeben: einmal fuer Kategorie-Auswahl, einmal fuer `%d`.
 
-### 3.4 Bei grossen Dateien: Effiziente Bearbeitung
-
-- **Dateien ueber 500 Zeilen**: Grep + gezieltes Read (offset+limit) + Edit. KEINE Agents.
-- **3+ gleichartige Aenderungen**: Python-Batch-Script statt manuelle Edits.
-- **Screen fuer Screen**: Nie mehr als eine grosse Datei gleichzeitig bearbeiten.
-
-### 3.5 Fortschritt nach jedem Screen zeigen
+### 3.4 Fortschritt nach jedem Screen zeigen
 
 ```
 Screen: SettingsScreen.kt
@@ -673,35 +714,11 @@ Alle Punkte muessen mit JA beantwortet werden (Details: Referenzdateien).
 - [ ] XLIFF-Namespace im `<resources>`-Tag deklariert?
 - [ ] Build kompiliert ohne Fehler?
 
-**Deutsche Sprach-Qualitaet — 20 Punkte (aus references/deutsche-sprache.md, Teil D.2):**
-
-*Orthographie & Typografie (6 Punkte)*
-- [ ] ß nach langem Vokal / nach Diphthong; ss nach kurzem Vokal (kein `daß`, `muß`, `Haß`, `Fluß`)
-- [ ] Umlaute ä/ö/ü/ß direkt in UTF-8 — KEIN `\u00dc`-Escape im Kotlin-Code
-- [ ] Typografische Anfuehrungszeichen `„..."` statt `"..."`
-- [ ] Gedankenstrich `–` (U+2013) mit Leerzeichen fuer Einschuebe; ohne fuer Bis-Spannen (`9–17 Uhr`)
-- [ ] Substantive IMMER gross, auch in Ueberschriften (kein `Einstellungen Speichern`)
-- [ ] Auslassungspunkte `…` (U+2026) als 1 Zeichen, nicht drei Punkte
-
-*Stil & UX (4 Punkte)*
-- [ ] Du/Sie konsistent in der GESAMTEN App — keine Mischung
-- [ ] Sie/Ihnen/Ihr IMMER grossgeschrieben (bei Sie-Apps)
-- [ ] Gender-neutrale Formen bei neuen Strings bevorzugt (Partizip: `Nutzende`, `Lernende`)
-- [ ] Keine Genderzeichen (`*`, `:`, `_`) in Button-Labels (Screenreader-Stoerung!)
-
-*Buttons & Labels (5 Punkte)*
-- [ ] Buttons im Infinitiv, nicht Imperativ (`Speichern`, nicht `Speichere!`)
-- [ ] Kein Punkt bei Buttons, Titeln, Labels, Menue-Eintraegen
-- [ ] Dialog-Buttons spezifisch statt `Ja`/`Nein` (`Loeschen`/`Behalten`)
-- [ ] Technische Abkuerzungen IMMER gross (URL, API, PDF, ID)
-- [ ] Max. Laengen beachtet (Tab: 12, Button: 20, AppBar: 25, Menue: 30)
-
-*Formate (5 Punkte)*
-- [ ] Dezimaltrennzeichen `,` — NIE `.` (`3,14`, nicht `3.14`)
-- [ ] Datum `TT.MM.JJJJ` (`17.04.2026`) oder ausgeschrieben `17. April 2026`
-- [ ] Zeit 24-Stunden-Format (`14:30`), nie 12h mit PM
-- [ ] Waehrung `10,50 €` (Symbol NACH Betrag, mit geschuetztem Leerzeichen `\u00A0`)
-- [ ] Plurals: NUR `one` + `other` fuer Deutsch (kein `zero`/`few`/`many`)
+**Deutsche Sprach-Qualitaet — 20 Punkte:**
+Die vollstaendige Checkliste (6 Orthographie/Typografie + 4 Stil/UX + 5 Buttons/Labels
++ 5 Formate) lebt in `references/deutsche-sprache.md` Teil D.2 — dort durchgehen, alle
+Punkte muessen mit JA beantwortet sein. Bei JEDEM Verstoss: String ueberarbeiten,
+nicht erst am Ende sammeln.
 
 **Automatisierte DE-Grep-Checks in Phase 4:**
 ```
@@ -724,7 +741,61 @@ Grep in strings.xml: >[^<]*\"[^\"]*\"[^<]*<    → pruefen
 Grep: \d+(MB|GB|kg|km|°C)\b              → pruefen
 ```
 
-### 4.5 Ergebnis-Report (PFLICHT — dem Benutzer zeigen)
+### 4.5 Pseudolokalisierung (`en-XA`) — die zuverlaessigste Visual-Pruefung
+
+> **Warum diese Phase existiert:** Die Grep-Muster finden ~95% der hardcodierten
+> Strings. Die letzten 5% — dynamisch zusammengebaute Strings, Strings in
+> Drittbibliotheken, in PDF-Vorlagen, in `buildAnnotatedString`-Lambdas — werden
+> erst sichtbar wenn die App tatsaechlich laeuft. Pseudolokalisierung macht diese
+> Strings auf einen Blick sichtbar. Lokalise und Crowdin nennen es uebereinstimmend
+> "die zuverlaessigste Methode zum Auffinden vergessener Strings".
+
+**Einmalige Einrichtung in `app/build.gradle.kts`:**
+
+```kotlin
+android {
+    buildTypes {
+        getByName("debug") {
+            isPseudoLocalesEnabled = true
+        }
+    }
+}
+```
+
+**Wichtig:** `resConfigs` darf Pseudolocales NICHT herausfiltern:
+```kotlin
+// FALSCH (Pseudolocale verschwindet aus APK):
+resourceConfigurations += setOf("de", "en")
+// RICHTIG: keine resConfigs setzen, oder Pseudolocale ausdruecklich erlauben
+```
+
+**Durchfuehrung:**
+
+1. Debug-APK bauen und installieren
+2. Geraet/Emulator-Sprache auf **"English (XA)"** stellen
+   (Einstellungen → System → Sprachen → English (XA))
+3. JEDEN Screen durchklicken, besonders:
+   - Fehlerzustaende (offline, falsches Passwort)
+   - Selten genutzte Dialoge (Account-Loeschung, Datenexport)
+   - Onboarding komplett durchspielen
+   - Push-Notifications empfangen
+   - Empty-States provozieren (alle Eintraege loeschen)
+4. **Jeder unakzentuierte Text = vergessener String** — Screenshot + Notiz
+
+**Zwei Pseudolocales — wann welche?**
+
+| Locale | Was es tut | Findet |
+|--------|-----------|--------|
+| `en-XA` | Akzente + 30-40% Textexpansion | Hardcodierte Strings (bleiben unakzentuiert), Layout-Overflow durch lange Uebersetzungen |
+| `ar-XB` | Spiegelt Text (RTL-Simulation) | RTL-Layout-Fehler, BIDI-Probleme |
+
+`en-XA` ist Pflicht, `ar-XB` empfohlen sobald die App im Nahost-Markt geplant ist.
+
+**Wenn Pseudolokalisierung nicht moeglich** (Release-APK ohne Debug-Build oder
+Geraet kein Pseudolocale erkennt): explizit dem Benutzer melden und Phase 4.6
+ueberspringen — keine fingerlanglee Loesung erfinden.
+
+### 4.6 Ergebnis-Report (PFLICHT — dem Benutzer zeigen)
 
 ```
 STRING-EXTRAKTION ABGESCHLOSSEN
@@ -874,15 +945,9 @@ Grep: stringResource\(R\.string\.\w+,
 Grep: getString\(R\.string\.\w+,
 ```
 
-**Automatisierter Abgleich (Python-Script):**
-
-```python
-# Fuer jede stringResource()-Stelle im Code:
-# 1. String-Key extrahieren (R.string.xyz)
-# 2. In strings.xml die Anzahl Platzhalter zaehlen
-# 3. Im Code die Anzahl uebergebener Argumente zaehlen
-# 4. Wenn ungleich: ALARM
-```
+**Automatisierter Abgleich:** Pro `stringResource()`-Stelle im Code den String-Key
+extrahieren, in `strings.xml` die `%`-Anzahl zaehlen, gegen die Anzahl uebergebener
+Argumente im Aufruf vergleichen. Bei Differenz: ALARM.
 
 ### 5.4 Compose-Kontext-Fehler (COMPILE- UND RUNTIME-BUGS)
 
@@ -977,6 +1042,90 @@ FUNKTIONALITAETS-CHECK
 
 ---
 
+## Phase 6: PRAEVENTION — neue hardcodierte Strings dauerhaft verhindern
+
+> **Warum diese Phase existiert:** Eine perfekt extrahierte strings.xml ist nichts
+> wert wenn beim naechsten Feature wieder hardcodierte Strings dazukommen. Diese
+> Phase richtet automatische Guards ein, die Rueckfaelle verhindern. Lokalise und
+> Crowdin empfehlen das uebereinstimmend als CI/CD-Standard 2025.
+>
+> **Diese Phase wird einmalig pro Projekt eingerichtet** — nicht bei jedem Skill-Lauf.
+> Bei weiteren Skill-Laeufen pruefen ob die Guards noch aktiv sind.
+
+### 6.1 Pre-Commit-Hook (Git)
+
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$')
+ERR=0
+for F in $STAGED; do
+    HITS=$(git diff --cached "$F" | grep "^+" \
+        | grep -E 'Text\("[A-Za-zÄÖÜäöüß ]{3,}"\)|title\s*=\s*"[A-Za-zÄÖÜäöüß ]{3,}"' \
+        | grep -v '//\|stringResource\|@Suppress\|@Preview')
+    if [ -n "$HITS" ]; then
+        echo "Hardcoded strings in $F:"; echo "$HITS"; ERR=$((ERR+1))
+    fi
+done
+[ $ERR -gt 0 ] && { echo "Bitte stringResource() verwenden."; exit 1; } || exit 0
+```
+
+Hook ausfuehrbar machen: `chmod +x .git/hooks/pre-commit`.
+
+### 6.2 CI-Check (GitHub Actions)
+
+```yaml
+name: i18n String Check
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          git diff origin/main...HEAD --name-only --diff-filter=ACM \
+            | grep '\.kt$' \
+            | xargs -I{} grep -nH 'Text(\s*"[^"]\{3,\}"' {} 2>/dev/null \
+            | grep -v 'stringResource\|@Preview' | tee /tmp/hits.txt
+          [ -s /tmp/hits.txt ] && exit 1 || exit 0
+```
+
+### 6.3 Lint verschaerfen in `build.gradle.kts`
+
+```kotlin
+android {
+    lint {
+        error("MissingTranslation")
+        error("HardcodedText")
+        warning("MissingQuantity")
+        abortOnError = true
+    }
+}
+```
+
+### 6.4 String-Freeze vor Releases (wie Mozilla/Brave/Nextcloud)
+
+1-2 Wochen vor Release: PRs die `strings.xml` aendern werden blockiert.
+Uebersetzer bekommen garantierte Zeit. Das verhindert "neue Strings tropfen
+in letzter Minute rein und sind dann nicht uebersetzt".
+
+### 6.5 Output an den Benutzer
+
+```
+PRAEVENTION EINGERICHTET:
+═══════════════════════════════════════
+[X] Pre-Commit-Hook installiert
+[X] GitHub-Action aktiv
+[X] Lint-Regeln verschaerft
+[ ] String-Freeze-Policy noch zu definieren (vor erstem Release)
+═══════════════════════════════════════
+```
+
+Bei bestehender Einrichtung: nur den Status zeigen, nichts ueberschreiben.
+
+---
+
 ## Wichtige Regeln (IMMER beachten)
 
 ### Was NIEMALS gemacht werden darf
@@ -996,27 +1145,20 @@ FUNKTIONALITAETS-CHECK
 - ❌ `stringResource()` in `remember {}` cachen (aktualisiert sich nicht bei Sprachwechsel)
 - ❌ Click-Handler beim Refactoring von Text() zu stringResource() verlieren
 
-**Deutsche Sprache (zusaetzlich):**
-- ❌ Du und Sie in der gleichen App mischen — muss app-weit konsistent sein
-- ❌ Sie/Ihnen/Ihr klein schreiben (das ist 3. Person Plural, nicht Anrede)
-- ❌ Veraltete Rechtschreibung (`daß`, `muß`, `Haß`, `Fluß`, `Tip`) verwenden
-- ❌ Unicode-Escapes `\u00dc` statt `Ü` im Kotlin-Code — muss als String-Ressource extrahiert werden
-- ❌ Englische Title Case in deutschen Ueberschriften (`Einstellungen Speichern` statt `Einstellungen speichern`)
-- ❌ Schreibmaschinen-Anfuehrungszeichen `"..."` statt typografischer `„..."` in sichtbaren Strings
-- ❌ Bindestrich `-` statt Bis-Strich `–` bei Zeitspannen (`9-17 Uhr`)
-- ❌ Drei Punkte `...` statt Auslassungspunkte `…` (U+2026)
-- ❌ Generisches Maskulinum (`Benutzer`) in NEUEN Strings ohne Begruendung — bevorzugt Partizip (`Nutzende`) oder Neutral (`Person`)
-- ❌ Genderzeichen (`*`, `:`, `_`) in Button-Labels (stoert Screenreader)
-- ❌ Denglisch-Formen (`geshared`, `geliked`, `downgeloaded`, `canceln`, `forwarden`)
-- ❌ Punkt am Ende von Buttons, Titeln, Labels, Menue-Eintraegen
-- ❌ Imperativ-Form statt Infinitiv (`Speichere!` statt `Speichern`)
-- ❌ Vage Dialog-Buttons (`Ja`/`Nein`) statt spezifischer Aktionen (`Loeschen`/`Behalten`)
-- ❌ Fehlendes geschuetztes Leerzeichen zwischen Zahl und Einheit (`100MB` statt `100\u00A0MB`)
-- ❌ Englisches Zahlenformat (`3.14`, `1,000.50`) statt deutschem (`3,14`, `1.000,50`)
-- ❌ 12-Stunden-Zeitformat mit AM/PM — immer 24h (`14:30`)
-- ❌ Waehrungssymbol VOR dem Betrag (`€10,50`) statt DANACH (`10,50 €`)
-- ❌ `quantity="zero"` in Plurals verwenden — fuer Deutsch wirkungslos, Empty-State separat
-- ❌ `Benutzer` durch `Benutzer*in` in Button-Label ersetzen — nutze `Person` oder `Nutzende`
+**Deutsche Sprache (Top-10 — Vollliste in `references/deutsche-sprache.md`):**
+- ❌ Du und Sie mischen — app-weit eine Form konsistent
+- ❌ Sie/Ihnen/Ihr klein (das ist 3. Person Plural, nicht Anrede)
+- ❌ Veraltete Rechtschreibung: `daß`, `muß`, `Haß`, `Fluß`, `Tip`
+- ❌ Unicode-Escapes `Ü` statt `Ü` im Kotlin-Code
+- ❌ Englische Title Case (`Einstellungen Speichern` statt `Einstellungen speichern`)
+- ❌ Schreibmaschinen-Quotes `"..."` statt typografischer `„...“`
+- ❌ Denglisch (`geshared`, `geliked`, `canceln`) — deutsche Form
+- ❌ Imperativ statt Infinitiv bei Buttons (`Speichere!` statt `Speichern`)
+- ❌ Punkt am Ende von Buttons, Titeln, Labels, Menues
+- ❌ Genderzeichen `*`/`:`/`_` in Button-Labels (Screenreader-Stoerung)
+
+Weitere Verbote (Zahlen, Datum, Zeit, Waehrung, Plurals, Soft-Hyphen, Gender):
+siehe DE-Referenz Teil D.2 (20-Punkte-Checkliste) und Teile A-C.
 
 ### Effiziente Bearbeitung bei grossen Projekten
 
