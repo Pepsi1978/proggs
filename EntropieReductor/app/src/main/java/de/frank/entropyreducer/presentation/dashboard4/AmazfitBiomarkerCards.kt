@@ -16,10 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DirectionsRun
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -279,19 +277,6 @@ private fun LetzterLaufHero(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Spacer(Modifier.size(4.dp))
-                // Frank-Wunsch 2026-05-17: Stift-Icon zum manuellen Editieren.
-                IconButton(
-                    onClick = { editOpen = true },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Werte bearbeiten",
-                        tint = accent,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
             }
             Spacer(Modifier.height(14.dp))
             Row(
@@ -321,11 +306,13 @@ private fun LetzterLaufHero(
                     label = "Ø Pace",
                     value = w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—",
                     modifier = Modifier.weight(1f),
+                    onClick = { editOpen = true },
                 )
                 MiniStat(
                     label = "Ø Puls",
                     value = w.avgHeartRate?.let { "$it bpm" } ?: "—",
                     modifier = Modifier.weight(1f),
+                    onClick = { editOpen = true },
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -337,11 +324,13 @@ private fun LetzterLaufHero(
                     label = "Kalorien",
                     value = w.calories?.let { "%.0f kcal".format(it) } ?: "—",
                     modifier = Modifier.weight(1f),
+                    onClick = { editOpen = true },
                 )
                 MiniStat(
                     label = "VO₂Max",
                     value = formatHeroVo2Max(w),
                     modifier = Modifier.weight(1f),
+                    onClick = { editOpen = true },
                 )
             }
             // Frank-Wunsch 2026-05-16: Stale-Hinweis wenn juengstes Training aelter als
@@ -393,13 +382,22 @@ private fun HeroBigStat(
 }
 
 @Composable
-private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
+private fun MiniStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
     val cosmos = LocalCosmos.current
+    // Frank-Wunsch 2026-05-17: Stift raus, stattdessen ist die ganze Mini-Stat-
+    // Flaeche selbst klickbar (oeffnet Edit-Dialog).
+    val clickModifier = if (onClick != null) Modifier.clickable { onClick() } else Modifier
     Box(
         modifier =
             modifier
                 .clip(RoundedCornerShape(10.dp))
                 .background(cosmos.glassBorder.copy(alpha = 0.15f))
+                .then(clickModifier)
                 .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Column {

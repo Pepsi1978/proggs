@@ -7,6 +7,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DirectionsRun
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
@@ -118,9 +118,9 @@ fun AmazfitTrainingDetailScreen(
                 item { Text("Wird geladen …", color = cosmos.textSecondary) }
                 return@LazyColumn
             }
-            item { HeroCard(w) { editDialogOpen = true } }
-            item { PaceAndHrGrid(w) }
-            item { TerrainGrid(w) }
+            item { HeroCard(w) }
+            item { PaceAndHrGrid(w, onEditClick = { editDialogOpen = true }) }
+            item { TerrainGrid(w, onEditClick = { editDialogOpen = true }) }
             item { TrainingseffektCard(w) }
             if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city) }
             if (hr.isNotEmpty()) item { PulsverlaufCard(hr) }
@@ -148,7 +148,7 @@ fun AmazfitTrainingDetailScreen(
 /* ============================== HERO ============================== */
 
 @Composable
-private fun HeroCard(w: AmazfitWorkoutEntity, onEditWorkout: () -> Unit) {
+private fun HeroCard(w: AmazfitWorkoutEntity) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -202,21 +202,6 @@ private fun HeroCard(w: AmazfitWorkoutEntity, onEditWorkout: () -> Unit) {
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Spacer(Modifier.size(6.dp))
-                // Frank-Wunsch 2026-05-17: Stift-Icon zum manuellen Editieren
-                // der Einzelwerte (Pace, Puls, Hoehe, Cadence, Stride, Kalorien).
-                // VO2max ist NICHT editierbar — wird automatisch berechnet.
-                IconButton(
-                    onClick = onEditWorkout,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Werte bearbeiten",
-                        tint = accent,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
             }
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -258,48 +243,58 @@ private fun BigStat(label: String, value: String, accent: androidx.compose.ui.gr
 /* ============================== STATS-GRIDS ============================== */
 
 @Composable
-private fun PaceAndHrGrid(w: AmazfitWorkoutEntity) {
+private fun PaceAndHrGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
     StatsGrid(
-        listOf(
+        items = listOf(
             "Ø Pace" to (w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—"),
             "Maximale Pace" to (w.maxPaceSecPerKm?.let { formatPace(it) } ?: "—"),
             "Ø Puls" to (w.avgHeartRate?.let { "$it bpm" } ?: "—"),
             "Maximalpuls" to (w.maxHeartRate?.let { "$it bpm" } ?: "—"),
         ),
+        onItemClick = onEditClick,
     )
 }
 
 @Composable
-private fun TerrainGrid(w: AmazfitWorkoutEntity) {
+private fun TerrainGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
     StatsGrid(
-        listOf(
+        items = listOf(
             "Höhe ↑" to (w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—"),
             "Höhe ↓" to (w.altitudeLossMeters?.let { "%.0f m".format(it) } ?: "—"),
             "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
             "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
         ),
+        onItemClick = onEditClick,
     )
     Spacer(Modifier.height(8.dp))
     StatsGrid(
-        listOf(
+        items = listOf(
             "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
             // Frank-Wunsch 2026-05-16: VO2max IMMER selbst berechnen (ACSM + Karvonen + 2).
             // Der DB-Wert (z.B. Polar's running-index oder Zepp-VO2max) wird ignoriert —
             // nur die eigenen Daten zaehlen. Wenn Eingaben fehlen, steht "—".
             "VO₂Max" to estimateVo2Max(w),
         ),
+        onItemClick = onEditClick,
     )
 }
 
 @Composable
-private fun StatsGrid(items: List<Pair<String, String>>) {
+private fun StatsGrid(items: List<Pair<String, String>>, onItemClick: () -> Unit = {}) {
     val cosmos = LocalCosmos.current
     val rows = items.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { row ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (label, value) ->
-                    GlassCard(modifier = Modifier.weight(1f)) {
+                    // Frank-Wunsch 2026-05-17: Jedes Stat-Feld ist klickbar
+                    // und oeffnet den Edit-Dialog. Stift-Icons sind raus —
+                    // direkt auf die Wert-Box tippen.
+                    GlassCard(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onItemClick() },
+                    ) {
                         Column {
                             Text(
                                 text = label,
