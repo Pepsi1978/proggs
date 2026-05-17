@@ -158,23 +158,14 @@ constructor(
                 }
                 snapshots.forEach { dao.upsert(it) }
 
-                // Workouts persistieren — eigene Tabelle, ein Eintrag pro Training.
-                // Frank-Wunsch 2026-05-17: Manuelle Edits respektieren — Eintraege
-                // mit manualOverridesMs != null werden uebersprungen (nicht ueberschrieben).
+                // Workouts persistieren — eigene Tabelle (whoop_workouts), ein
+                // Eintrag pro Training. Manual-Edit-Schutz ist hier nicht noetig —
+                // Whoop-Workouts leben in einer SEPARATEN Tabelle als die editierbaren
+                // amazfit_workouts. Frank's manuelle Edits in der Trainings-Liste
+                // betreffen nur amazfit_workouts.
                 val workoutEntities = workouts.mapNotNull { mapToWorkoutEntity(it) }
                 if (workoutEntities.isNotEmpty()) {
-                    var protectedCount = 0
-                    val safeEntities = workoutEntities.mapNotNull { fresh ->
-                        val existing = workoutDao.getById(fresh.trackId)
-                        if (existing?.manualOverridesMs != null) {
-                            protectedCount++
-                            null
-                        } else fresh
-                    }
-                    if (safeEntities.isNotEmpty()) workoutDao.upsertAll(safeEntities)
-                    if (protectedCount > 0) {
-                        Log.i(TAG, "Whoop-Workouts: $protectedCount manuell editierte uebersprungen, ${safeEntities.size} geschrieben")
-                    }
+                    workoutDao.upsertAll(workoutEntities)
                 }
                 Log.i(
                     TAG,
