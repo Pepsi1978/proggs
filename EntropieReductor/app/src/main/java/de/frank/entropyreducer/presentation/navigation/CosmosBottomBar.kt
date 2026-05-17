@@ -136,6 +136,7 @@ fun CosmosBottomBar(
                     state = micState,
                     onClick = onMicClick,
                     size = 56.dp,
+                    accentColor = OverviewTint,
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
@@ -179,7 +180,7 @@ private fun NormalTabsRow(
     // vier Tabs in der gleichen hellblauen Akzent-Farbe (passend zum Mic-Button).
     // Die Tab-spezifischen Farben (Orange/Gruen/Lila/Rosé) erscheinen ERST wenn
     // ein Tab aktiv ist (Sub-Bar-Modus).
-    val overviewTint = CosmosColors.AccentPrimary
+    val overviewTint = OverviewTint
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -359,6 +360,15 @@ private val MAIN_TABS = setOf(
     Routes.SCIENTIST,
     Routes.BIOMARKER,
 )
+
+/**
+ * Akzent-Farbe in der 5-Tab-Uebersicht (Frank-Wunsch 2026-05-17, fuenfte
+ * Praezisierung): bewusst dunkler als der Standard-Cyan-Akzent, damit die
+ * Beschriftungen unter den Icons auch auf dem hellgrauen Bar-Hintergrund klar
+ * lesbar sind. Wird sowohl auf die 4 Tab-Icons/Texte als auch auf den
+ * Mic-Button angewandt.
+ */
+private val OverviewTint: Color = Color(0xFF0891B2)  // cyan-600
 
 /**
  * Geteilter Switcher-State (5-Tab-Uebersicht vs. Sub-Bar). Wird per
