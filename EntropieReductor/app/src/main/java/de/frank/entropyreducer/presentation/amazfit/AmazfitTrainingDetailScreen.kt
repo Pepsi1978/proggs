@@ -55,6 +55,8 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -952,14 +954,26 @@ private fun ZoomableChartFullscreen(
     onClose: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // State auf Screen-Level via rememberSaveable damit Rotation alles
-    // ueberlebt (zusaetzlich zur configChanges-Activity).
+    // Persistierte States (ueberleben Rotation)
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offset by rememberSaveable { mutableFloatStateOf(0f) }
-    // Frank-Wunsch 2026-05-17: Y-Verschiebung bei vertikalem Single-Finger-Drag
-    // im gezoomten Zustand. yShift in Fraction der visible Y-Span (-1.0 bis +1.0).
     var yShift by rememberSaveable { mutableFloatStateOf(0f) }
     var crosshairIdxInVisible by remember { mutableStateOf<Int?>(null) }
+
+    // Frank-Wunsch 2026-05-17 Iteration 8: Google-Maps-Smoothness via
+    // graphicsLayer-Trick. Waehrend Pinch wird die gesamte Chart-Box GPU-
+    // skaliert (uniform x+y) — KEIN Re-Compute der Polyline, des Y-Auto-Scale
+    // oder der Achsen. Beim Loslassen wird der Pinch-Faktor in echtes scale/
+    // offset konvertiert und der Chart re-rendert.
+    //
+    // Diese States leben NUR waehrend einer aktiven Pinch-Geste, danach
+    // werden sie auf Identity zurueckgesetzt.
+    var pinchScale by remember { mutableFloatStateOf(1f) }
+    var pinchPanX by remember { mutableFloatStateOf(0f) }
+    var pinchPanY by remember { mutableFloatStateOf(0f) }
+    var pinchOriginX by remember { mutableFloatStateOf(0.5f) }
+    var pinchOriginY by remember { mutableFloatStateOf(0.5f) }
+    var isPinching by remember { mutableStateOf(false) }
 
     val totalSize = values.size
     val visibleFraction = (1f / scale).coerceIn(2f / totalSize.coerceAtLeast(2).toFloat(), 1f)
@@ -1010,11 +1024,11 @@ private fun ZoomableChartFullscreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
-                // Smoothness-Hebel: manuelles awaitEachGesture statt
-                // detectTransformGestures. Vorteile:
-                // - Kein touchSlop = sofortige Reaktion (recherche-bestaetigt)
-                // - Pinch + Single-Finger + Y-Pan koexistieren sauber
-                // - Snapshot.withMutableSnapshot fuer Batch-Updates
+                // GOOGLE-MAPS-SMOOTHNESS-HEBEL (Iteration 8):
+                // Manuelles awaitEachGesture mit Live-Pinch via graphicsLayer.
+                // Waehrend zwei Finger drauf sind: kein Re-Compute, nur
+                // GPU-Transform der gesamten Box (Bitmap-Skalierung wie Google
+                // Maps Tiles). Bei Pinch-End: konvertieren in echtes scale/offset.
                 .pointerInput(visibleValues.size, totalSize) {
                     awaitEachGesture {
                         val padLeftPx = 56f
@@ -1028,83 +1042,123 @@ private fun ZoomableChartFullscreen(
                         }
 
                         val firstDown = awaitFirstDown(requireUnconsumed = false)
-                        // Sofortiges Crosshair beim ersten Touch (kein touchSlop-Warten)
                         crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
 
-                        var pointerCount = 1
-                        var lastDist = 0f
-                        var lastCentroidX = firstDown.position.x
+                        // Direction-Lock fuer Single-Finger:
+                        // erste signifikante Bewegung entscheidet ob Crosshair
+                        // (X-dominant) oder Y-Pan (Y-dominant) fuer die ganze Geste.
+                        var singleFingerMode: String? = null // "x" oder "y"
+                        var movementAccumX = 0f
+                        var movementAccumY = 0f
+
+                        val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                        val canvasH = size.height.toFloat().coerceAtLeast(1f)
 
                         while (true) {
                             val event = awaitPointerEvent()
                             val pressed = event.changes.filter { it.pressed }
                             if (pressed.isEmpty()) break
 
-                            pointerCount = pressed.size
-
-                            if (pointerCount >= 2) {
-                                // Pinch-Modus mit Centroid-Pivot (wie Google Maps)
+                            if (pressed.size >= 2) {
+                                // Pinch-Modus — LIVE-Modus via graphicsLayer.
+                                // KEIN scale/offset update hier, sondern nur
+                                // pinchScale/pinchPanX (= GPU-Transform).
                                 val p0 = pressed[0].position
                                 val p1 = pressed[1].position
                                 val newDist = (p0 - p1).getDistance().coerceAtLeast(1f)
-                                val newCentroidX = (p0.x + p1.x) / 2f
-                                val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                                val newCentroid = androidx.compose.ui.geometry.Offset(
+                                    (p0.x + p1.x) / 2f,
+                                    (p0.y + p1.y) / 2f,
+                                )
 
-                                if (lastDist == 0f) {
-                                    // Wechsel von 1 auf 2 Finger
-                                    lastDist = newDist
-                                    lastCentroidX = newCentroidX
+                                if (!isPinching) {
+                                    // Pinch-Start: initialisiere Live-Transform
+                                    isPinching = true
                                     crosshairIdxInVisible = null
+                                    pinchScale = 1f
+                                    pinchPanX = 0f
+                                    pinchPanY = 0f
+                                    pinchOriginX = (newCentroid.x / canvasW).coerceIn(0f, 1f)
+                                    pinchOriginY = (newCentroid.y / canvasH).coerceIn(0f, 1f)
+                                    pressed[0].consume(); pressed[1].consume()
                                 } else {
-                                    val zoomFactor = newDist / lastDist
-                                    val panDx = newCentroidX - lastCentroidX
-
+                                    // Live-Pinch — graphicsLayer-State updaten
+                                    val change0 = pressed[0].positionChange()
+                                    val change1 = pressed[1].positionChange()
+                                    val avgPanX = (change0.x + change1.x) / 2f
+                                    val avgPanY = (change0.y + change1.y) / 2f
+                                    // Distanz-Aenderung -> Zoom-Faktor
+                                    val prevP0 = pressed[0].previousPosition
+                                    val prevP1 = pressed[1].previousPosition
+                                    val prevDist = (prevP0 - prevP1).getDistance().coerceAtLeast(1f)
+                                    val zoomDelta = newDist / prevDist
                                     androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                        val newScale = (scale * zoomFactor).coerceIn(1f, 200f)
-                                        val newVisible = (1f / newScale).coerceIn(
-                                            2f / totalSize.coerceAtLeast(2).toFloat(),
-                                            1f,
-                                        )
-                                        val panFrac = -panDx / canvasW * newVisible
-                                        val newOffset = (offset + panFrac).coerceIn(
-                                            0f,
-                                            (1f - newVisible).coerceAtLeast(0f),
-                                        )
-                                        scale = newScale
-                                        offset = newOffset
+                                        pinchScale = (pinchScale * zoomDelta).coerceIn(0.05f, 50f)
+                                        pinchPanX += avgPanX
+                                        pinchPanY += avgPanY
                                     }
-                                    lastDist = newDist
-                                    lastCentroidX = newCentroidX
+                                    pressed.forEach { it.consume() }
                                 }
-                                pressed.forEach { it.consume() }
-                            } else if (pointerCount == 1) {
-                                // Single-Finger-Modus:
-                                // - Horizontal-Bewegung → Crosshair
-                                // - Vertikal-Bewegung (nur wenn gezoomt) → Y-Pan
-                                lastDist = 0f
+                            } else if (pressed.size == 1 && !isPinching) {
+                                // Single-Finger mit Direction-Lock
                                 val change = pressed[0]
                                 val delta = change.positionChange()
-                                val absDx = kotlin.math.abs(delta.x)
-                                val absDy = kotlin.math.abs(delta.y)
+                                movementAccumX += kotlin.math.abs(delta.x)
+                                movementAccumY += kotlin.math.abs(delta.y)
 
-                                if (scale > 1.05f && absDy > absDx && absDy > 2f) {
-                                    // Vertikaler Drag im Zoom → Y-Range verschieben
-                                    val canvasH = size.height.toFloat().coerceAtLeast(1f)
-                                    val yShiftDelta = -delta.y / canvasH * 1.0f
-                                    androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                        yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
+                                if (singleFingerMode == null && (movementAccumX + movementAccumY) > 8f) {
+                                    // Genug Bewegung — Modus festlegen
+                                    singleFingerMode = if (movementAccumY > movementAccumX * 1.5f && scale > 1.05f) "y" else "x"
+                                }
+
+                                when (singleFingerMode) {
+                                    "y" -> {
+                                        val yShiftDelta = -delta.y / canvasH * 1.0f
+                                        androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                            yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
+                                        }
                                     }
-                                } else {
-                                    // Horizontal oder ohne Zoom → Crosshair
-                                    crosshairIdxInVisible = pointerXToIdx(change.position.x)
+                                    "x", null -> {
+                                        crosshairIdxInVisible = pointerXToIdx(change.position.x)
+                                    }
                                 }
                                 change.consume()
                             }
                         }
-                        lastDist = 0f
+
+                        // ALLE Finger losgelassen — Pinch committen.
+                        if (isPinching) {
+                            // Konvertiere visualScale/pinchPanX in real scale/offset.
+                            // Mathematik: der Datenpunkt unter dem Pivot soll
+                            // an gleicher canvas-Position bleiben.
+                            val pivotFracCanvas = pinchOriginX
+                            // Aktueller visible-Anteil und visible-Start:
+                            val curVisible = (1f / scale).coerceIn(2f / totalSize.toFloat(), 1f)
+                            val curStart = offset.coerceIn(0f, (1f - curVisible).coerceAtLeast(0f))
+                            val dataPivotFrac = curStart + pivotFracCanvas * curVisible
+
+                            val newScale = (scale * pinchScale).coerceIn(1f, 200f)
+                            val newVisible = (1f / newScale).coerceIn(
+                                2f / totalSize.coerceAtLeast(2).toFloat(),
+                                1f,
+                            )
+                            val newStartFromZoom = dataPivotFrac - pivotFracCanvas * newVisible
+                            val panFrac = -pinchPanX / canvasW * newVisible
+                            val newOffset = (newStartFromZoom + panFrac).coerceIn(
+                                0f,
+                                (1f - newVisible).coerceAtLeast(0f),
+                            )
+                            androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                scale = newScale
+                                offset = newOffset
+                                pinchScale = 1f
+                                pinchPanX = 0f
+                                pinchPanY = 0f
+                                isPinching = false
+                            }
+                        }
                     }
                 }
-                // Separater Modifier fuer Doppel-Tap-Reset
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
@@ -1118,22 +1172,38 @@ private fun ZoomableChartFullscreen(
                     )
                 },
         ) {
-            ChartWithAxes(
-                accent = accent,
-                xCount = visibleValues.size,
-                yMin = yMinScaled,
-                yMax = yMaxScaled,
-                yUnit = yUnit,
-                yFormat = yFormat,
-                xLabel = xLabelWrapper,
-                xTickCount = 6,
-                yTickCount = 7,
-                values = visibleValues,
-                invertY = invertY,
-                modifier = Modifier.fillMaxSize(),
-                crosshairIdx = crosshairIdxInVisible,
-                crosshairLabel = crosshairLabel,
-            )
+            // GPU-Transform-Wrapper: waehrend Pinch wird die gesamte Chart-Box
+            // uniform (x+y) skaliert wie Google Maps eine Bitmap. KEIN Re-Compute.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (isPinching) {
+                            scaleX = pinchScale
+                            scaleY = pinchScale
+                            translationX = pinchPanX
+                            translationY = pinchPanY
+                            transformOrigin = TransformOrigin(pinchOriginX, pinchOriginY)
+                        }
+                    },
+            ) {
+                ChartWithAxes(
+                    accent = accent,
+                    xCount = visibleValues.size,
+                    yMin = yMinScaled,
+                    yMax = yMaxScaled,
+                    yUnit = yUnit,
+                    yFormat = yFormat,
+                    xLabel = xLabelWrapper,
+                    xTickCount = 6,
+                    yTickCount = 7,
+                    values = visibleValues,
+                    invertY = invertY,
+                    modifier = Modifier.fillMaxSize(),
+                    crosshairIdx = crosshairIdxInVisible,
+                    crosshairLabel = crosshairLabel,
+                )
+            }
         }
         Row(
             modifier = Modifier
