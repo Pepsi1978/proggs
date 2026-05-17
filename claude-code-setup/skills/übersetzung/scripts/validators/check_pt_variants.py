@@ -13,8 +13,10 @@ Empirische Daten (BestJournal-App, April 2026):
   - pt-BR darf KEINE PT-PT-Vokabeln haben und umgekehrt
 
 Usage:
-    python3 check_pt_variants.py --variant pt-PT --path /path/to/values-pt-rPT/strings.xml
-    python3 check_pt_variants.py --variant pt-BR --path /path/to/values-pt-rBR/strings.xml
+    python3 check_pt_variants.py --locale pt-PT --path /path/to/values-pt-rPT/strings.xml
+    python3 check_pt_variants.py --locale pt-BR --path /path/to/values-pt-rBR/strings.xml
+
+    (Auch akzeptiert: --variant pt-PT / --variant pt-BR fuer Rueckwaerts-Kompatibilitaet.)
 
 Exit-Codes:
     0 = OK (keine Variant-Leakage gefunden)
@@ -74,16 +76,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Portugiesisch-Varianten-Trennung (pt-PT ↔ pt-BR)"
     )
-    parser.add_argument(
-        "--variant",
-        required=True,
+    # --locale ist neuer Standard, --variant bleibt als Alias fuer Rueckwaerts-Kompatibilitaet
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--locale",
         choices=["pt-PT", "pt-BR"],
-        help="Zielvariante der Uebersetzung",
+        help="Zielvariante der Uebersetzung (neuer Standard, gleiches Format wie andere Scripts)",
+    )
+    group.add_argument(
+        "--variant",
+        choices=["pt-PT", "pt-BR"],
+        help="Zielvariante (alter Parameter-Name, weiterhin akzeptiert)",
     )
     parser.add_argument(
         "--path", required=True, help="Absoluter Pfad zur strings.xml"
     )
     args = parser.parse_args()
+    # Aufloesung — egal welcher Parameter, in args.variant zusammenfuehren
+    args.variant = args.locale or args.variant
 
     if not os.path.isfile(args.path):
         print(f"FEHLER: Datei nicht gefunden: {args.path}", file=sys.stderr)

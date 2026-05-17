@@ -37,9 +37,16 @@ KATAKANA = "゠-ヿ"
 
 LOCALE_CONFIG = {
     # locale: (komma_zeichen, label, cjk_range)
-    "zh-rCN": ("，", "Simplified Chinese (zh-Hans)", KANJI),
-    "zh-rTW": ("，", "Traditional Chinese (zh-Hant)", KANJI),
+    "zh-Hans": ("，", "Simplified Chinese (zh-Hans)", KANJI),
+    "zh-Hant": ("，", "Traditional Chinese (zh-Hant)", KANJI),
     "ja": ("、", "Japanese", KANJI + HIRAGANA + KATAKANA),
+}
+
+# Rueckwaerts-Kompatibilitaet: Android-Verzeichnis-Codes auf Sprach-Datei-Codes mappen.
+# So funktionieren sowohl alte ("--locale zh-rCN") als auch neue ("--locale zh-Hans") Aufrufe.
+LOCALE_ALIAS = {
+    "zh-rCN": "zh-Hans",
+    "zh-rTW": "zh-Hant",
 }
 
 
@@ -118,8 +125,8 @@ def main():
     parser.add_argument(
         "--locale",
         required=True,
-        choices=sorted(LOCALE_CONFIG.keys()),
-        help="Locale (zh-rCN, zh-rTW, ja)",
+        choices=sorted(set(list(LOCALE_CONFIG.keys()) + list(LOCALE_ALIAS.keys()))),
+        help="Locale: zh-Hans, zh-Hant, ja (oder Aliase zh-rCN, zh-rTW fuer Rueckwaerts-Kompatibilitaet)",
     )
     parser.add_argument(
         "--path", required=True, help="Absoluter Pfad zur strings.xml"
@@ -130,7 +137,9 @@ def main():
         print(f"FEHLER: Datei nicht gefunden: {args.path}", file=sys.stderr)
         sys.exit(2)
 
-    comma, label, cjk_range = LOCALE_CONFIG[args.locale]
+    # Alias-Aufloesung (zh-rCN -> zh-Hans, etc.) fuer Rueckwaerts-Kompatibilitaet
+    resolved_locale = LOCALE_ALIAS.get(args.locale, args.locale)
+    comma, label, cjk_range = LOCALE_CONFIG[resolved_locale]
 
     try:
         with open(args.path, "r", encoding="utf-8") as f:

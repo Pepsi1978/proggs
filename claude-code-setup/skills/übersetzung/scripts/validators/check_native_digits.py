@@ -33,6 +33,7 @@ LANG_DIGITS = {
     "kn": ("೦೧೨೩೪೫೬೭೮೯", "Kannada"),
     "ml": ("൦൧൨൩൪൫൬൭൮൯", "Malayalam"),
     "ur": ("۰۱۲۳۴۵۶۷۸۹", "Extended Arabic-Indic (Urdu)"),
+    "fa": ("۰۱۲۳۴۵۶۷۸۹", "Extended Arabic-Indic (Persian)"),
 }
 
 

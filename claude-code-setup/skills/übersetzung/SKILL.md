@@ -1,11 +1,11 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 27 Locales (26 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenz. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: Uebersetzt Android strings.xml in alle 30 Locales (29 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenz. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
 ---
 
-# Uebersetzungs-Skill: Android strings.xml in 27 Locales (26 Sprachen)
+# Uebersetzungs-Skill: Android strings.xml in 30 Locales (29 Sprachen)
 
-Dieser Skill uebersetzt die strings.xml einer Android-App in alle 27 Locales — 26 Sprachen,
+Dieser Skill uebersetzt die strings.xml einer Android-App in alle 30 Locales — 29 Sprachen,
 wobei Portugiesisch als zwei eigenstaendige Varianten gepflegt wird (pt-BR fuer Brasilien
 und pt-PT fuer Portugal). Er arbeitet Sprache fuer Sprache, verifiziert jede Uebersetzung
 mit fuenf automatischen Validatoren, und committet nach jeder fertigen Sprache. Das Ziel
@@ -105,15 +105,19 @@ git diff HEAD~1 -- [APP_DIR]/app/src/main/res/values/strings.xml | grep "^+" | g
 ```
 Wenn kein sinnvoller Diff: die letzten 1-3 Commits pruefen oder den Benutzer fragen.
 
-### 1.4 Universal-Prompt und Sprach-Prompts laden
+### 1.4 Universal-Prompt jetzt laden (Sprach-Prompts spaeter)
 
-Der Universal-Prompt liegt in `~/.claude/skills/übersetzung/übersetzung-global.md`
-(Abschnitt 1). Er wird einmal pro Session in den Kontext geladen.
+**JETZT lesen:** Die Datei `~/.claude/skills/übersetzung/übersetzung-global.md` mit
+dem Read-Tool oeffnen. Abschnitt 1 (Universal-Prompt) im Gedaechtnis behalten — er
+wird in Phase 2 fuer JEDE Sprache als Basis benutzt.
 
-Die sprach-spezifischen Prompts liegen pro Sprache in
-`~/.claude/skills/übersetzung/references/languages/[code].md`. Sie werden **erst dann
-geladen wenn die jeweilige Sprache an der Reihe ist** — nicht im Voraus alle. Das spart
-Kontext-Verbrauch um ca. 95% pro Uebersetzungs-Lauf.
+**JETZT NICHT lesen:** Die sprach-spezifischen Dateien in
+`~/.claude/skills/übersetzung/references/languages/[code].md`. Sie werden **erst in
+Phase 2 Schritt A geladen** — pro Sprache nur die eine die gerade dran ist. Das spart
+ca. 95% Kontext-Verbrauch im Vergleich zu "alle 30 vorab".
+
+Wenn du also gerade Franzoesisch uebersetzt, liest du `fr.md`. Wenn du danach
+Persisch uebersetzt, liest du `fa.md` (und vergisst `fr.md` aus deinem Arbeitskontext).
 
 ### 1.5 App-Informationen sammeln
 
@@ -146,11 +150,15 @@ pt-BR     → values-pt-rBR    | pt-PT     → values-pt-rPT    | it        → 
 nl        → values-nl        | pl        → values-pl        | ru        → values-ru
 uk        → values-uk        | tr        → values-tr        | ja        → values-ja
 ko        → values-ko        | zh-Hans   → values-zh-rCN    | zh-Hant   → values-zh-rTW
-ar        → values-ar        | hi        → values-hi        | th        → values-th
-id        → values-in        | bn        → values-bn        | te        → values-te
+ar        → values-ar        | he        → values-iw        | fa        → values-fa
+hi        → values-hi        | th        → values-th        | id        → values-in
+vi        → values-vi        | bn        → values-bn        | te        → values-te
 mr        → values-mr        | ta        → values-ta        | ur        → values-ur
 gu        → values-gu        | kn        → values-kn        | ml        → values-ml
 ```
+
+Hinweis: Hebraeisch verwendet auf Android das alte Locale-Kuerzel `iw` (Legacy-ISO-Code
+von 1989, nicht das aktuelle `he` aus ISO 639-1). Android folgt hier dem Java-Standard.
 
 Fehlende Verzeichnisse erstellen. Bei bestehenden Dateien: nur die zu uebersetzenden
 Strings einfuegen/aktualisieren, nicht die gesamte Datei ueberschreiben (es sei denn,
@@ -165,9 +173,9 @@ Uebersetzungsplan:
 - App: [APP_NAME] in [APP_DIR]
 - Quell-Strings: [Anzahl] Strings aus values/strings.xml
 - Umfang: [alle / nur neue (N Stueck)]
-- Locales: 27 (en, fr, es, pt-BR, pt-PT, it, nl, pl, ru, uk, tr, ja, ko,
-  zh-Hans, zh-Hant, ar, hi, th, id, bn, te, mr, ta, ur, gu, kn, ml)
-  Hinweis: 26 Sprachen, Portugiesisch zaehlt als 2 eigenstaendige Varianten.
+- Locales: 30 (en, fr, es, pt-BR, pt-PT, it, nl, pl, ru, uk, tr, ja, ko,
+  zh-Hans, zh-Hant, ar, he, fa, hi, th, id, vi, bn, te, mr, ta, ur, gu, kn, ml)
+  Hinweis: 29 Sprachen, Portugiesisch zaehlt als 2 eigenstaendige Varianten.
 - Vorgehen: Sprache fuer Sprache, mit Verifikation und Commit nach jeder Sprache
 
 Starte jetzt mit Englisch...
@@ -177,15 +185,18 @@ Starte jetzt mit Englisch...
 
 ## Phase 2: Uebersetzungs-Schleife — Sprache fuer Sprache
 
-Diese Phase ist das Herzstuck des Skills. Fuer JEDES der 27 Locales werden drei
+Diese Phase ist das Herzstuck des Skills. Fuer JEDES der 30 Locales werden drei
 Schritte ausgefuehrt: Uebersetzen, Verifizieren, Speichern.
 
 Die Reihenfolge der Locales folgt dem Inhaltsverzeichnis in `übersetzung-global.md`:
 
 ```
 en → fr → es → pt-BR → pt-PT → it → nl → pl → ru → uk → tr → ja → ko → zh-Hans →
-zh-Hant → ar → hi → th → id → bn → te → mr → ta → ur → gu → kn → ml
+zh-Hant → ar → he → fa → hi → th → id → vi → bn → te → mr → ta → ur → gu → kn → ml
 ```
+
+Geografisch sortiert: Europa-West → Europa-Ost → Ost-Asien → Naher Osten/RTL (ar, he, fa) →
+Indien (hi, ur, bn, te, mr, ta, gu, kn, ml) → Suedost-Asien (th, id, vi).
 
 **WICHTIG:** pt-BR und pt-PT sind separate Locales und MUESSEN beide uebersetzt werden.
 pt-PT wird haeufig vergessen — der bidirektionale PT-Varianten-Check (Validator 3)
@@ -259,27 +270,33 @@ die im ersten Durchlauf entstehen.
    (Native-Ziffern, CJK-Punctuation, Apostroph), nur Bericht wo Kontext-Wissen
    gebraucht wird (PT-Varianten, Laengen-Pacing).
 
+   **Einheitliche CLI-Konvention:** Alle 5 Scripts nutzen `--locale <sprach-datei-code>`
+   (also `fr`, `pt-BR`, `zh-Hans`, `fa`, `he`, `vi`). Intern wandeln sie den Code falls
+   noetig in Android-Verzeichnis-Format um (z.B. `zh-Hans` → `values-zh-rCN`).
+   Rueckwaerts-kompatibel: alte Aufrufe mit `--locale zh-rCN` oder `--variant pt-PT`
+   funktionieren weiter.
+
    **Welcher Validator fuer welche Sprache:**
 
    ```bash
-   # Check 7 — Native-Ziffern: bn, hi, mr, te, ta, gu, kn, ml, ur
+   # Check 7 — Native-Ziffern: bn, hi, mr, te, ta, gu, kn, ml, ur, fa
    python3 ~/.claude/skills/übersetzung/scripts/validators/check_native_digits.py \
        --locale bn --path [APP_DIR]/app/src/main/res/values-bn/strings.xml
 
-   # Check 8 — CJK-Punctuation: zh-rCN, zh-rTW, ja
+   # Check 8 — CJK-Punctuation: zh-Hans, zh-Hant, ja
    python3 ~/.claude/skills/übersetzung/scripts/validators/check_cjk_punctuation.py \
        --locale ja --path [APP_DIR]/app/src/main/res/values-ja/strings.xml
 
    # Check 9 — PT-Varianten: pt-PT und pt-BR (BEIDE!)
    python3 ~/.claude/skills/übersetzung/scripts/validators/check_pt_variants.py \
-       --variant pt-PT --path [APP_DIR]/app/src/main/res/values-pt-rPT/strings.xml
+       --locale pt-PT --path [APP_DIR]/app/src/main/res/values-pt-rPT/strings.xml
 
-   # Check 10 — Apostroph: fr, it, pt-rBR, pt-rPT, en
+   # Check 10 — Apostroph: fr, it, pt-BR, pt-PT, en
    python3 ~/.claude/skills/übersetzung/scripts/validators/check_apostrophes.py \
        --locale fr --path [APP_DIR]/app/src/main/res/values-fr/strings.xml
 
-   # Check 11 — Laengen-Pacing: ALLE Sprachen (empfohlen besonders pl, ru, uk, fr, es,
-   #                                          pt-BR, pt-PT, it, tr, bn, te, mr, ta, gu, kn, ml)
+   # Check 11 — Laengen-Pacing: ALLE Sprachen (besonders empfohlen fuer pl, ru, uk, fr, es,
+   #                                          pt-BR, pt-PT, it, tr, fa, bn, te, mr, ta, gu, kn, ml)
    python3 ~/.claude/skills/übersetzung/scripts/validators/check_length_pacing.py \
        --source [APP_DIR]/app/src/main/res/values/strings.xml \
        --target [APP_DIR]/app/src/main/res/values-pl/strings.xml \
@@ -312,10 +329,13 @@ die im ersten Durchlauf entstehen.
    | ja | Konsistente Hoeflichkeitsstufe (です/ます)? Kein Keigo-Mix? |
    | ko | Konsistente Sprechebene (해요체)? Keine 해라체? |
    | ar | Alle 6 Plural-Formen? Gender-Agreement? Keine Dialekt-Woerter? |
+   | he | Niqqud weg? Gender-Agreement (masculine default)? RTL-Marker korrekt? |
+   | fa | Keine Arabisch-Vokabeln eingestreut? Persische Buchstaben (پ چ ژ گ) korrekt? Arabic-numerals 0-9 statt ۰-۹? |
    | tr | Vokalharmonie korrekt? Keine Plural-Suffixe nach Zahlen? |
    | ru | Richtiger Aspekt (Сохранить, nicht Сохранять)? Alle 4 Plurale? |
    | hi | Kein unkontrolliertes Hinglish? Register konsistent (आप)? |
    | th | Keine Hoeflichkeitspartikel (ครับ/ค่ะ) in Buttons? |
+   | vi | Alle Tonzeichen (`ợ ẫ ừ`) korrekt? Keine Telex-Artefakte (`aa` statt `â`)? |
    | ta | Keine Sanskrit-Lehnwoerter? Natives Tamil fuer persoenliche Begriffe? |
    | mr | Keine Hindi-Woerter? Drei Genera korrekt? |
    | bn | Keine Hindi-Leakage? Keine Devanagari-Zeichen? |
@@ -354,7 +374,7 @@ die im ersten Durchlauf entstehen.
 
 3. **Status melden**:
    ```
-   ✓ [Locale] ist jetzt fertig. ([N]/27)
+   ✓ [Locale] ist jetzt fertig. ([N]/30)
    Naechstes Locale: [naechstes Locale]
    ```
 
@@ -377,7 +397,7 @@ Uebersetzung abgeschlossen!
 | 2 | Franzoesisch | fr | [N] | Alles OK | Fertig |
 | ... | ... | ... | ... | ... | ... |
 
-Gesamt: [N] Strings in 27 Locales (26 Sprachen) uebersetzt.
+Gesamt: [N] Strings in 30 Locales (29 Sprachen) uebersetzt.
 Commits: #[erste] bis #[letzte]
 ```
 
@@ -428,7 +448,7 @@ Diese Prinzipien erklaeren WARUM der Skill so arbeitet wie er arbeitet:
 
 ### Warum sequentiell statt parallel?
 
-Uebersetzungsqualitaet braucht vollen Kontext. Wenn 27 Locales parallel uebersetzt
+Uebersetzungsqualitaet braucht vollen Kontext. Wenn 30 Locales parallel uebersetzt
 werden, bekommt jede nur einen Bruchteil der Aufmerksamkeit. Sequentiell bedeutet:
 jede Sprache bekommt den vollstaendigen Prompt-Kontext, die volle Verifikation, und
 das Ergebnis wird sofort committed — ein Rettungspunkt nach jeder Sprache.

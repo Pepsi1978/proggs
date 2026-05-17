@@ -12,7 +12,7 @@
 
 ---
 
-## Inhaltsverzeichnis — 27 Locales
+## Inhaltsverzeichnis — 30 Locales
 
 | # | Code | Sprache | Referenz-Datei |
 |---|------|---------|----------------|
@@ -32,19 +32,22 @@
 | 14 | zh-Hans | Chinesisch Vereinfacht | `references/languages/zh-Hans.md` |
 | 15 | zh-Hant | Chinesisch Traditionell | `references/languages/zh-Hant.md` |
 | 16 | ar | Arabisch | `references/languages/ar.md` |
-| 17 | hi | Hindi | `references/languages/hi.md` |
-| 18 | th | Thai | `references/languages/th.md` |
-| 19 | id | Indonesisch | `references/languages/id.md` |
-| 20 | bn | Bengali | `references/languages/bn.md` |
-| 21 | te | Telugu | `references/languages/te.md` |
-| 22 | mr | Marathi | `references/languages/mr.md` |
-| 23 | ta | Tamil | `references/languages/ta.md` |
-| 24 | ur | Urdu | `references/languages/ur.md` |
-| 25 | gu | Gujarati | `references/languages/gu.md` |
-| 26 | kn | Kannada | `references/languages/kn.md` |
-| 27 | ml | Malayalam | `references/languages/ml.md` |
+| 17 | he | Hebraeisch | `references/languages/he.md` |
+| 18 | fa | Persisch (Farsi) | `references/languages/fa.md` |
+| 19 | hi | Hindi | `references/languages/hi.md` |
+| 20 | th | Thai | `references/languages/th.md` |
+| 21 | id | Indonesisch | `references/languages/id.md` |
+| 22 | vi | Vietnamesisch | `references/languages/vi.md` |
+| 23 | bn | Bengali | `references/languages/bn.md` |
+| 24 | te | Telugu | `references/languages/te.md` |
+| 25 | mr | Marathi | `references/languages/mr.md` |
+| 26 | ta | Tamil | `references/languages/ta.md` |
+| 27 | ur | Urdu | `references/languages/ur.md` |
+| 28 | gu | Gujarati | `references/languages/gu.md` |
+| 29 | kn | Kannada | `references/languages/kn.md` |
+| 30 | ml | Malayalam | `references/languages/ml.md` |
 
-Hinweis: 26 Sprachen, Portugiesisch wird als 2 eigenstaendige Varianten gepflegt
+Hinweis: 29 Sprachen, Portugiesisch wird als 2 eigenstaendige Varianten gepflegt
 (pt-BR fuer Brasilien, pt-PT fuer Portugal — siehe Check 9 PT-Varianten-Trennung).
 
 ---

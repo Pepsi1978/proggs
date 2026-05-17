@@ -1,0 +1,84 @@
+{
+  "skill_name": "übersetzung",
+  "description": "Realistische Test-Prompts fuer den Uebersetzungs-Skill. Decken die 6 wichtigsten Use-Cases ab: nur eine Sprache, nur neue Strings, RTL-Sprache, CJK-Sprache, indische Sprache, komplette Neuuebersetzung. Mit dem skill-creator:skill-creator als Eval-Suite ausfuehrbar.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "single-language-french",
+      "prompt": "Uebersetze die Strings fuer BestJournal nur auf Franzoesisch. Es geht um die neuen Strings die ich heute eingefuegt habe.",
+      "expected_output": "Skill triggert. Phase 1.3 erkennt 'nur Franzoesisch' und 'nur neue Strings'. Phase 1.5 laedt nur fr.md. Phase 2 Schritt B ruft check_apostrophes.py mit --locale fr auf. Schritt C committet mit Sprach-Code im Commit. Andere 29 Locales werden nicht angefasst.",
+      "files": [],
+      "assertions": [
+        {"text": "Nur fr.md wird geladen (nicht alle 30 Sprach-Dateien)", "type": "behavior"},
+        {"text": "Apostroph-Validator wird mit --locale fr aufgerufen", "type": "behavior"},
+        {"text": "Commit-Message enthaelt 'French' oder 'fr'", "type": "behavior"},
+        {"text": "Andere Sprach-Verzeichnisse (values-ja, values-de, etc.) bleiben unangetastet", "type": "behavior"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "rtl-language-persian",
+      "prompt": "Uebersetze alle Strings auf Persisch fuer meine Wellness-App.",
+      "expected_output": "Skill triggert. fa.md wird geladen. check_native_digits.py wird mit --locale fa aufgerufen (neue Sprache, fa ist seit der Erweiterung drin). RTL-Marker werden beachtet. Persische Buchstaben (پ چ ژ گ) werden korrekt verwendet, keine Arabisch-Verwechslung.",
+      "files": [],
+      "assertions": [
+        {"text": "fa.md wird geladen", "type": "behavior"},
+        {"text": "check_native_digits.py mit --locale fa wird aufgerufen", "type": "behavior"},
+        {"text": "Persische Buchstaben korrekt (پ چ ژ گ vorhanden bei Bedarf)", "type": "content"},
+        {"text": "Arabic numerals 0-9 statt ۰۱۲۳۴۵۶۷۸۹", "type": "content"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "cjk-japanese",
+      "prompt": "Mach mir bitte die japanische Uebersetzung fuer die Strings von BestJournal.",
+      "expected_output": "Skill triggert. ja.md wird geladen. check_cjk_punctuation.py wird mit --locale ja aufgerufen. Half-width Punctuation wird zu full-width konvertiert (Komma `、` nicht `，`). です/ます-Konsistenz wird gepflegt.",
+      "files": [],
+      "assertions": [
+        {"text": "ja.md wird geladen", "type": "behavior"},
+        {"text": "check_cjk_punctuation.py mit --locale ja wird aufgerufen", "type": "behavior"},
+        {"text": "Japanisches Komma 、 (nicht ，) wird verwendet", "type": "content"},
+        {"text": "Konsistenter Hoeflichkeits-Stil (です/ます)", "type": "content"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "indian-tamil-with-shortening",
+      "prompt": "Tamilische Uebersetzung fuer die App bitte. Achte auf die Laengen, Tamil wird oft zu lang.",
+      "expected_output": "Skill triggert. ta.md wird geladen. check_native_digits.py wird mit --locale ta aufgerufen. check_length_pacing.py wird aufgerufen und warnt bei Strings >+40% Laenge. SHORTER-Kommentare werden im LLM-Verbesserungs-Pass ergaenzt.",
+      "files": [],
+      "assertions": [
+        {"text": "ta.md wird geladen", "type": "behavior"},
+        {"text": "check_native_digits.py mit --locale ta wird aufgerufen", "type": "behavior"},
+        {"text": "check_length_pacing.py wird aufgerufen", "type": "behavior"},
+        {"text": "Bei zu langen Strings: <!-- SHORTER: ... --> Kommentare", "type": "content"}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "portuguese-both-variants",
+      "prompt": "Uebersetze die neuen Strings auf Portugiesisch — wir brauchen Brasilien UND Portugal getrennt.",
+      "expected_output": "Skill triggert. Erst pt-BR.md, dann pt-PT.md werden geladen (in zwei getrennten Durchgaengen). check_pt_variants.py wird ZWEIMAL aufgerufen: einmal mit --locale pt-BR fuer Brasilien-Datei, einmal mit --locale pt-PT fuer Portugal-Datei. Keine Cross-Kontamination.",
+      "files": [],
+      "assertions": [
+        {"text": "Beide pt-BR.md und pt-PT.md werden geladen (in dieser Reihenfolge)", "type": "behavior"},
+        {"text": "check_pt_variants.py wird ZWEIMAL aufgerufen", "type": "behavior"},
+        {"text": "values-pt-rBR enthaelt 'usuário' (BR), nicht 'utilizador' (PT)", "type": "content"},
+        {"text": "values-pt-rPT enthaelt 'utilizador' (PT), nicht 'usuário' (BR)", "type": "content"}
+      ]
+    },
+    {
+      "id": 6,
+      "name": "full-translation-30-locales",
+      "prompt": "Lokalisiere die App komplett in alle Sprachen die wir unterstuetzen.",
+      "expected_output": "Skill triggert. Phase 1.7 zeigt Plan mit allen 30 Locales. Phase 2 laeuft 30 Mal durch (Schritt A+B+C pro Sprache). Nach jeder Sprache: Commit + Push. Am Ende: Zusammenfassung in der Tabelle mit Status pro Sprache.",
+      "files": [],
+      "assertions": [
+        {"text": "Plan mit 30 Locales angekuendigt", "type": "behavior"},
+        {"text": "Phase 2 laeuft 30 Mal", "type": "behavior"},
+        {"text": "Jede Sprache hat einen eigenen Commit (30 Commits)", "type": "behavior"},
+        {"text": "Abschluss-Zusammenfassung mit Status pro Sprache", "type": "behavior"}
+      ]
+    }
+  ]
+}
