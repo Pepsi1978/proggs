@@ -154,8 +154,19 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                         "Sport-Rename-V1 fertig: $renamedA Indoor-Rudern + $renamedB Rudergeraet -> Crosstrainer",
                     )
                 }
+                if (!appSettings.isSportRenameV2Done()) {
+                    val renamed = amazfitRepository.renameSportName(
+                        "Funktionelles Training",
+                        "Trailrunning",
+                    )
+                    appSettings.setSportRenameV2Done(true)
+                    android.util.Log.i(
+                        "EntropyReducerApp",
+                        "Sport-Rename-V2 fertig: $renamed Funktionelles Training -> Trailrunning",
+                    )
+                }
             }.onFailure {
-                android.util.Log.w("EntropyReducerApp", "Sport-Rename-V1 fehlgeschlagen", it)
+                android.util.Log.w("EntropyReducerApp", "Sport-Rename fehlgeschlagen", it)
             }
         }
 

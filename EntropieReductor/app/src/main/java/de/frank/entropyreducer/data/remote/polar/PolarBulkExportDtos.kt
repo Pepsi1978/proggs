@@ -178,7 +178,11 @@ object PolarBulkSportMap {
         // (sein Polar zeichnet Crosstrainer-Workouts mit diesem Polar-Sportcode auf).
         "18" to "Crosstrainer",
         "23" to "Crosstrainer",
-        "27" to "Funktionelles Training",
+        // Frank-Wunsch 2026-05-17: Code 27 ist bei Frank's Polar tatsaechlich
+        // Trailrunning (alle 15 Eintraege haben Distanz 6km+, GPS, HR-Stream
+        // und Pace-Stream). Die generische Polar-Bezeichnung "Funktionelles
+        // Training" passt nicht zu seiner Nutzung.
+        "27" to "Trailrunning",
         "32" to "Fussball",
         "55" to "Mountainbike (Outdoor)",
         "56" to "Radfahren (Outdoor)",

@@ -240,6 +240,15 @@ class AppSettings @Inject constructor(
     suspend fun setSportRenameV1Done(value: Boolean) = ds.edit { it[KEY_SPORT_RENAME_V1] = value }
 
     /**
+     * Frank-Wunsch 2026-05-17 (zweite Iteration): "Funktionelles Training" ist
+     * bei Frank's Polar tatsaechlich Trailrunning (alle Eintraege haben Distanz,
+     * GPS und Pulsverlauf). Migration setzt sportName um → VO2max-Anzeige greift
+     * automatisch dank isVo2MaxSport("trail").
+     */
+    suspend fun isSportRenameV2Done(): Boolean = ds.data.map { it[KEY_SPORT_RENAME_V2] ?: false }.first()
+    suspend fun setSportRenameV2Done(value: Boolean) = ds.edit { it[KEY_SPORT_RENAME_V2] = value }
+
+    /**
      * Frank-Wunsch 2026-05-17: Polar-Quellen (V3 AccessLink, V4, Flow Web, TCX,
      * JSON-Bulk) kurzfristig komplett deaktivieren — Strava bleibt aktive
      * Trainings-Quelle. Default true. Wenn false: Polar-Workers laufen wieder
@@ -273,6 +282,7 @@ class AppSettings @Inject constructor(
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
         private val KEY_WORKOUT_CLEANUP_V2 = booleanPreferencesKey("workout_cleanup_v2_done")
         private val KEY_SPORT_RENAME_V1 = booleanPreferencesKey("sport_rename_v1_done")
+        private val KEY_SPORT_RENAME_V2 = booleanPreferencesKey("sport_rename_v2_done")
         private val KEY_DISABLE_POLAR_SYNC = booleanPreferencesKey("disable_polar_sync")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")

@@ -439,7 +439,9 @@ object PolarSampleMapper {
         "OPEN_WATER_SWIMMING" to "Freiwasser-Schwimmen",
         "SWIMMING" to "Schwimmen",
         "STRENGTH_TRAINING" to "Krafttraining",
-        "FUNCTIONAL_TRAINING" to "Funktionelles Training",
+        // Frank-Wunsch 2026-05-17: Frank's Polar nutzt FUNCTIONAL_TRAINING fuer
+        // Trailrunning (alle Eintraege haben Distanz, GPS, HR/Pace-Streams).
+        "FUNCTIONAL_TRAINING" to "Trailrunning",
         "CIRCUIT_TRAINING" to "Zirkeltraining",
         "YOGA" to "Yoga",
         "PILATES" to "Pilates",
