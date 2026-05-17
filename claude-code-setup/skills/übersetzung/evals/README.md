@@ -1,7 +1,18 @@
 # Eval-Suite fuer den Uebersetzungs-Skill
 
 Dieser Ordner enthaelt 6 realistische Test-Prompts zum Verifizieren dass der
-Uebersetzungs-Skill nach Aenderungen weiterhin korrekt arbeitet.
+Uebersetzungs-Skill nach Aenderungen weiterhin korrekt arbeitet. Schema-konform
+nach `skill-creator/references/schemas.md` (Anthropic-Standard).
+
+## Aufbau
+
+```
+evals/
+├── evals.json                       ← 6 Test-Prompts mit Expectations
+├── files/
+│   └── sample_strings_de.xml        ← 12 typische deutsche Test-Strings
+└── README.md                        ← diese Datei
+```
 
 ## Wofuer ist das gut?
 
@@ -14,19 +25,58 @@ funktionieren, funktioniert der Skill in der Praxis.
 
 | # | Name | Use-Case |
 |---|------|----------|
-| 1 | `single-language-french` | Nur eine Sprache, nur neue Strings — der haeufigste Alltagsfall |
-| 2 | `rtl-language-persian` | RTL-Sprache mit neuem Native-Digit-Validator (fa) |
-| 3 | `cjk-japanese` | CJK-Sprache mit full-width-Konvertierung |
-| 4 | `indian-tamil-with-shortening` | Indische Sprache mit Laengen-Pacing-Warnung |
-| 5 | `portuguese-both-variants` | Beide PT-Varianten getrennt |
-| 6 | `full-translation-30-locales` | Komplettlauf ueber alle 30 Locales |
+| 1 | Franzoesisch nur neue Strings | Der haeufigste Alltagsfall |
+| 2 | Persisch (RTL + neue fa-Sprache) | RTL-Layout + Native-Digits-Validator fuer fa |
+| 3 | Japanisch (CJK + full-width Punctuation) | CJK-Punctuation-Validator |
+| 4 | Tamil mit Laengen-Warnung | Indische Sprache + Length-Pacing-Validator |
+| 5 | Portugiesisch beide Varianten | Bidirektionaler PT-Varianten-Check |
+| 6 | Komplettlauf 30 Locales | Stresstest des gesamten Workflows |
+
+## Test-Eingabe-Datei
+
+Alle 6 Tests nutzen `files/sample_strings_de.xml` als Quell-Strings. Diese Datei
+enthaelt 12 typische deutsche Strings:
+
+- Brand-Name (`BestJournal`) mit `translatable="false"` — soll NICHT uebersetzt werden
+- Kurze Button-Texte (`Speichern`, `OK`) — testen Laengen-Pacing
+- Apostroph-Risiko-Strings (`Willkommen zurueck`, `Schreibe heute...`) — bei FR-Uebersetzung
+  entstehen Apostrophe (`l'application`) die der Apostroph-Validator escapen muss
+- Format-Platzhalter (`%1$s`, `%2$d`) — muessen EXAKT erhalten bleiben
+- Plural-Quantities — testen CLDR-Plural-Formen
+- XML-Sonderzeichen (`&amp;`) — testen korrektes Escaping
+
+## Schema-Konformitaet
+
+Die `evals.json` folgt dem offiziellen Skill-Creator-Schema:
+
+```json
+{
+  "skill_name": "übersetzung",
+  "evals": [{
+    "id": 1,
+    "prompt": "...",
+    "expected_output": "...",
+    "files": ["evals/files/sample_strings_de.xml"],
+    "expectations": [
+      "Statement 1 das vom Grader verifiziert werden kann",
+      "Statement 2 das vom Grader verifiziert werden kann"
+    ]
+  }]
+}
+```
+
+Wichtig:
+- `expectations` sind einfache Strings (nicht Objekte) — der Grader gibt sie zurueck
+  mit zusaetzlichem `passed`/`evidence`, aber INPUT-seitig sind sie Strings
+- `files` ist eine Liste relativer Pfade ab Skill-Root
+- Pro Test 4-6 Expectations — discriminating (passen NICHT bei kaputter Skill-Version)
 
 ## Wie ausfuehren?
 
 ### Manuell (Vibe-Check)
 
 Lies einen Test-Prompt aus `evals.json`, kopiere ihn in Claude Code, und schau ob
-der Skill korrekt anspringt und die Assertions erfuellt.
+der Skill korrekt anspringt und die Expectations erfuellt.
 
 ### Automatisiert (skill-creator)
 
@@ -43,6 +93,18 @@ Vergleich. Workflow:
 6. Bei FAIL: skill-creator schlaegt Verbesserungen vor
 ```
 
+### Schema-Validierung
+
+Pruef das Format der evals.json vor Commits:
+
+```bash
+python3 -c "import json; d=json.load(open('evals/evals.json',encoding='utf-8')); \
+  assert 'skill_name' in d; \
+  assert 'evals' in d and len(d['evals']) > 0; \
+  [assert isinstance(e['expectations'], list) and all(isinstance(s, str) for s in e['expectations']) for e in d['evals']]; \
+  print('Schema OK')"
+```
+
 ## Wann ausfuehren?
 
 - **Vor groesseren Skill-Aenderungen**: Baseline-Lauf
@@ -50,16 +112,6 @@ Vergleich. Workflow:
 - **Vor Plugin-Updates** (claude-mem, skill-creator, etc.): Sanity-Check dass
   externe Aenderungen den Skill nicht brechen
 - **Bei Verdacht auf Regression**: Schnell-Check welche Tests jetzt fehlschlagen
-
-## Assertions verstehen
-
-Jeder Test hat 4 Assertions. Sie sind in zwei Kategorien:
-
-- **`type: "behavior"`** — was der Skill TUT (Dateien laden, Scripts aufrufen, Commits)
-- **`type: "content"`** — was im OUTPUT steht (Vokabular, Punctuation, Format)
-
-Behavior-Assertions sind durch Beobachtung der Subagent-Logs pruefbar.
-Content-Assertions sind durch Inspektion der erzeugten strings.xml pruefbar.
 
 ## Was die Tests NICHT pruefen
 
@@ -77,3 +129,4 @@ Wenn du eine neue Sprache hinzufuegst oder einen Validator aenderst:
 1. Pruefe ob ein bestehender Test betroffen ist
 2. Ergaenze ggf. einen neuen Test (z.B. `vietnamese-tone-marks`)
 3. Erhoehe die `id` fortlaufend
+4. Lass die `sample_strings_de.xml` falls moeglich unangetastet (Baseline-Stabilitaet)
