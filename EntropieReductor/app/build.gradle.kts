@@ -72,8 +72,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 146
-        versionName = "0.10.0"
+        versionCode = 147
+        versionName = "0.10.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

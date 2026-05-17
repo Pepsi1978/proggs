@@ -175,6 +175,11 @@ private fun NormalTabsRow(
     currentTab: String,
     onTabSelected: (String) -> Unit,
 ) {
+    // Frank-Wunsch 2026-05-17 (vierte Praezisierung): In der Uebersicht sind ALLE
+    // vier Tabs in der gleichen hellblauen Akzent-Farbe (passend zum Mic-Button).
+    // Die Tab-spezifischen Farben (Orange/Gruen/Lila/Rosé) erscheinen ERST wenn
+    // ein Tab aktiv ist (Sub-Bar-Modus).
+    val overviewTint = CosmosColors.AccentPrimary
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,13 +190,13 @@ private fun NormalTabsRow(
         TabItem(
             label = "Aufgaben",
             icon = Icons.Outlined.Checklist,
-            tint = if (currentTab == Routes.TASKS) subModeTint(Routes.TASKS) else null,
+            tint = overviewTint,
             onClick = { onTabSelected(Routes.TASKS) },
         )
         TabItem(
             label = "Analyse",
             icon = Icons.Outlined.Analytics,
-            tint = if (currentTab == Routes.ANALYSIS) subModeTint(Routes.ANALYSIS) else null,
+            tint = overviewTint,
             onClick = { onTabSelected(Routes.ANALYSIS) },
         )
         // Luecke fuer den Mic-Button
@@ -199,13 +204,13 @@ private fun NormalTabsRow(
         TabItem(
             label = "Forscher",
             icon = Icons.Outlined.Science,
-            tint = if (currentTab == Routes.SCIENTIST) subModeTint(Routes.SCIENTIST) else null,
+            tint = overviewTint,
             onClick = { onTabSelected(Routes.SCIENTIST) },
         )
         TabItem(
             label = "Biomarker",
             icon = Icons.Outlined.MonitorHeart,
-            tint = if (currentTab == Routes.BIOMARKER) subModeTint(Routes.BIOMARKER) else null,
+            tint = overviewTint,
             onClick = { onTabSelected(Routes.BIOMARKER) },
         )
     }
@@ -341,7 +346,8 @@ private fun parentMetaFor(tab: String): ParentMeta = when (tab) {
  */
 private fun subModeTint(tab: String): Color = when (tab) {
     Routes.TASKS -> Color(0xFFEA580C)      // Kraeftiges Orange (orange-600)
-    Routes.ANALYSIS -> Color(0xFFC2410C)   // Zweites Orange, dunkler (orange-700)
+    Routes.ANALYSIS -> Color(0xFF16A34A)   // Mittleres Gruen (green-600), klar
+                                           // unterscheidbar vom Aufgaben-Orange
     Routes.SCIENTIST -> Color(0xFFA78BFA)  // Violett — Frank: "Lila ist okay"
     Routes.BIOMARKER -> Color(0xFFFB7185)  // Rosé — Frank: "Rot ist okay"
     else -> CosmosColors.AccentPrimary
