@@ -19,15 +19,6 @@
   },
   "model": "opus[1m]",
   "enableAllProjectMcpServers": true,
-  "worktree": {
-    "baseRef": "fresh",
-    "symlinkDirectories": [
-      "node_modules",
-      ".cache",
-      ".gradle",
-      "build"
-    ]
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -181,6 +172,16 @@
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/git-multi-session-lock.ps1\"",
             "timeout": 130
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/pre-push-diff-sanity.ps1\"",
+            "timeout": 30
           }
         ]
       }
@@ -453,6 +454,15 @@
       }
     ]
   },
+  "worktree": {
+    "symlinkDirectories": [
+      "node_modules",
+      ".cache",
+      ".gradle",
+      "build"
+    ],
+    "baseRef": "fresh"
+  },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/hooks/statusline.sh",
@@ -516,7 +526,7 @@
     "gh-cli@trailofbits": true,
     "git-cleanup@trailofbits": true,
     "agentic-actions-auditor@trailofbits": true,
-    "aREDACTED — set locally in ~/.claude/settings.json@trailofbits": true,
+    "ask-questions-if-underspecified@trailofbits": true,
     "skill-improver@trailofbits": true,
     "static-analysis@trailofbits": true,
     "workflow-skill-design@trailofbits": true
@@ -588,6 +598,7 @@
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
   "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
