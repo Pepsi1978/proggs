@@ -803,13 +803,13 @@ constructor(
     fun refreshNow() {
         // Frank-Wunsch 2026-05-10: Refresh-Button aktualisiert ALLE Datenquellen
         // (Whoop, Amazfit, Oura, Health Connect) parallel.
-        // Frank-Wunsch 2026-05-16: Polar Live-API ebenfalls mit-syncen damit
-        // neue Trainings nach einem Lauf direkt reinkommen.
+        // Frank-Wunsch 2026-05-17: Permanenter Status-Footer ganz unten —
+        // syncFooterRunning + syncFooterText + Timestamp bleiben dauerhaft im
+        // State erhalten (bis zum naechsten Refresh).
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "Sync läuft (Whoop + Amazfit + Oura + Health Connect) …"
-            // Polar-Live-Sync entfernt 2026-05-17 (Frank-Wunsch): Polar-Daten
-            // kommen ueber Strava (im Amazfit-Sync drin) oder ZIP-Bulk-Import.
+            _message.value = "⟳ Wird synchronisiert: Whoop · Strava · Oura · Health Connect …"
+
             val whoopJob = async { repo.syncLastDays(365) }
             val amazfitJob = async {
                 runCatching { amazfitRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
@@ -817,15 +817,19 @@ constructor(
             val ouraJob = async {
                 runCatching { ouraRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
             }
-            // Health Connect parallel mit-aktualisieren — refreshWeight() startet
-            // seinen eigenen viewModelScope.launch, wir warten nicht ab und
-            // markieren HC einfach als 'angestossen'. Die UI bekommt das Update
-            // ueber den weight-StateFlow sobald die HC-Reads fertig sind.
+            // Strava-Sync (Frank-Wunsch 2026-05-17): expliziter eigener Job
+            // damit der Footer den Strava-Status separat zeigt. Strava wird
+            // zwar auch im Amazfit-Sync getriggert, aber doppelt schadet nicht
+            // (mergeFromStrava ist idempotent + manualOverridesMs-Schutz greift).
+            val stravaJob = async {
+                runCatching { amazfitRepo.mergeFromStrava(days = 30) }.getOrElse { -1 }
+            }
             refreshWeight()
 
             val whoopRes = whoopJob.await()
             val amazfitRes = amazfitJob.await()
             val ouraRes = ouraJob.await()
+            val stravaCount = stravaJob.await()
             _refreshing.value = false
 
             val parts = mutableListOf<String>()
@@ -844,10 +848,12 @@ constructor(
                     )
                 },
             )
+            // Amazfit-Sync ist die Hülle die u.a. Strava-Daten in die DB schreibt.
             amazfitRes.fold(
                 onSuccess = { c -> parts.add("Amazfit $c") },
                 onFailure = { parts.add("Amazfit ✗") },
             )
+            parts.add(if (stravaCount >= 0) "Strava $stravaCount" else "Strava ✗")
             ouraRes.fold(
                 onSuccess = { m ->
                     val total = if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
@@ -855,13 +861,6 @@ constructor(
                 },
                 onFailure = { parts.add("Oura ✗") },
             )
-            // Health Connect: refreshWeight() oben laeuft fire-and-forget in
-            // einem eigenen viewModelScope.launch. Status hier ehrlich aus
-            // dem aktuell sichtbaren Permission/Availability-Stand ableiten —
-            // statt wie frueher unconditional "HC ✓" anzuhaengen, was bei
-            // fehlender Permission oder unverfuegbarem HC eine Falschmeldung
-            // war. Bei "↻" weiss Frank dass HC angestossen wurde, aber das
-            // tatsaechliche Ergebnis kommt ueber den weight-StateFlow rein.
             val hcStatus =
                 when {
                     !healthConnect.isAvailable() -> "HC —"
@@ -869,7 +868,14 @@ constructor(
                     else -> "HC ↻"
                 }
             parts.add(hcStatus)
-            _message.value = "Sync fertig: " + parts.joinToString(" · ")
+            val summary = parts.joinToString(" · ")
+            // Frank-Wunsch 2026-05-17: Permanenter Footer mit Datum+Uhrzeit.
+            // Bleibt sichtbar bis zum naechsten Refresh.
+            val now = java.time.ZonedDateTime.now()
+            val ts = "%02d.%02d. %02d:%02d".format(
+                now.dayOfMonth, now.monthValue, now.hour, now.minute,
+            )
+            _message.value = "✓ $ts · $summary"
         }
     }
 

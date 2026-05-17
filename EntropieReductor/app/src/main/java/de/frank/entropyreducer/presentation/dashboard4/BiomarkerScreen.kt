@@ -543,14 +543,30 @@ fun BiomarkerHostScreen(
                     }
                 }
             }
+            // Frank-Wunsch 2026-05-17: Permanenter Sync-Status-Footer ganz unten.
+            // Zeigt "wird synchronisiert" mit Spinner solange isRefreshing, sonst
+            // das letzte Sync-Ergebnis mit Datum/Uhrzeit + Anzahl pro Quelle.
             state.message?.let { msg ->
                 item("ft_msg", span = { GridItemSpan(2) }) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            msg,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = cosmos.textSecondary,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (state.isRefreshing) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .height(16.dp)
+                                        .width(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = CosmosColors.AccentPrimary,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Text(
+                                msg,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (state.isRefreshing) cosmos.textPrimary else cosmos.textSecondary,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
