@@ -97,34 +97,40 @@ IT-Recht konsultieren.
 |---|---|---|---|---|
 
 ## Jurisdiktions-Gates
+
+> **Sync-Hinweis:** Diese Tabelle ist eine 1:1-Spiegelung der Master-Tabelle in
+> `references/markt-uebersicht.md`. Wenn ein Markt geaendert wird (neuer Markt aufgenommen,
+> Bewertung geaendert, Markt entfernt), MUESSEN beide Tabellen aktualisiert werden. Der Stil
+> (Markt-Namen in `**Fett**`) muss identisch bleiben damit visuelle Konsistenz gewahrt ist.
+
 | Rechtsraum | Pflichtpruefung | Bewertung | Release-Blocker? |
 |---|---|---|---|
-| DE/EU | DSGVO, DDG §5, TDDDG + PIMS, BGB §312k/§356, BFSG, DSA, EU Data Act, AI Act Art. 50 (02.08.2026), DPF | | |
-| UK | UK-GDPR, PECR, Online Safety Act, Art. 27 | | |
-| USA | CCPA/CPRA, COPPA, FTC, Health Breach/HIPAA/FDA | | |
-| Kanada | PIPEDA, Quebec Law 25 | | |
-| Australien | Privacy Act / APPs | | |
-| Neuseeland | Privacy Act 2020 (IPP 1-13, IPP 12, 72h-Breach) | | |
-| Tuerkei | KVKK, VERBIS, lokaler Vertreter, SCCs auf TR, Cross-Border-Reform 06/2024 | | |
-| Ukraine | Law 2297-VI (aktuell) / Bill 8153 (Annaeherung) | | |
-| Pakistan | KEIN aktives Datenschutzgesetz — nur Play-Anforderungen + PECA 2016 | | |
-| Bangladesch | PDPO 2025 (Uebergangszeit), CDO, Datenlokalisierung Restricted/CII | | |
-| China | PIPL (in dieser Programmierumgebung ausgeschlossen) | | |
-| Indien | DPDP + Rules 2025 | | |
-| Japan | APPI | | |
-| Korea | PIPA | | |
-| Taiwan | PDPA + Novelle 11/2025 | | |
-| Hongkong | PDPO + Doxxing-Reform | | |
-| Thailand | PDPA 2019 + Cross-Border-Verordnung 03/2024 + ASEAN-SCCs | | |
-| Indonesien | UU PDP 2022, Bahasa-Pflicht | | |
-| Vietnam | PDPL 2026 (Law 91/2025/QH15), DPIA 60-Tage-Pflicht | | |
-| Sri Lanka | PDPA No. 9/2022 (substantive Provisions ausgesetzt 10/2025) | | |
-| Singapore | PDPA | | |
-| Brasilien | LGPD | | |
-| Mexiko | LFPDPPP-Reform 21.03.2025, ACGG, Simplified Aviso, Spanisch | | |
-| Argentinien | Ley 25.326 + SCCs 2023 + Sanktionsreform 06/2024 | | |
-| Suedafrika | POPIA | | |
-| Saudi/UAE | PDPL | | |
+| **DE/EU** | DSGVO, DDG §5, TDDDG + PIMS, BGB §312k/§356, BFSG, DSA, EU Data Act, AI Act Art. 50 (02.08.2026), DPF | | |
+| **UK** | UK-GDPR, PECR, Online Safety Act, Art. 27 | | |
+| **USA** | CCPA/CPRA, COPPA, FTC, Health Breach/HIPAA/FDA | | |
+| **Kanada** | PIPEDA, Quebec Law 25 | | |
+| **Australien** | Privacy Act / APPs | | |
+| **Neuseeland** | Privacy Act 2020 (IPP 1-13, IPP 12, 72h-Breach) | | |
+| **Tuerkei** | KVKK, VERBIS, lokaler Vertreter, SCCs auf TR, Cross-Border-Reform 06/2024 | | |
+| **Ukraine** | Law 2297-VI (aktuell) / Bill 8153 (Annaeherung) | | |
+| **Pakistan** | KEIN aktives Datenschutzgesetz — nur Play-Anforderungen + PECA 2016 | | |
+| **Bangladesch** | PDPO 2025 (Uebergangszeit), CDO, Datenlokalisierung Restricted/CII | | |
+| **China** | PIPL (in dieser Programmierumgebung ausgeschlossen) | | |
+| **Indien** | DPDP + Rules 2025 | | |
+| **Japan** | APPI | | |
+| **Korea** | PIPA | | |
+| **Taiwan** | PDPA + Novelle 11/2025 | | |
+| **Hongkong** | PDPO + Doxxing-Reform | | |
+| **Thailand** | PDPA 2019 + Cross-Border-Verordnung 03/2024 + ASEAN-SCCs | | |
+| **Indonesien** | UU PDP 2022, Bahasa-Pflicht | | |
+| **Vietnam** | PDPL 2026 (Law 91/2025/QH15), DPIA 60-Tage-Pflicht | | |
+| **Sri Lanka** | PDPA No. 9/2022 (substantive Provisions ausgesetzt 10/2025) | | |
+| **Singapore** | PDPA | | |
+| **Brasilien** | LGPD | | |
+| **Mexiko** | LFPDPPP-Reform 21.03.2025, ACGG, Simplified Aviso, Spanisch | | |
+| **Argentinien** | Ley 25.326 + SCCs 2023 + Sanktionsreform 06/2024 | | |
+| **Suedafrika** | POPIA | | |
+| **Saudi/UAE** | PDPL | | |
 
 ## Formulierungs-Check
 | Textstelle | Datei:Zeile | Risikoart | Empfehlung |

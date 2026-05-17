@@ -82,6 +82,14 @@ Fuer jeden Zielmarkt MUSS geprueft werden:
 
 ## Master-Tabelle: Jurisdiktions-Gates
 
+> **Sync-Pflicht:** Diese Tabelle wird an drei Stellen synchron gehalten:
+> 1. Hier (`references/markt-uebersicht.md`) — Master mit Reference-Spalte
+> 2. `assets/berichtsvorlage.template.md` — Bericht-Variante mit Befund-Spalte
+> 3. `references/wissensbasis-template.md` — Bullet-Liste im Wissensbasis-Template
+>
+> Bei jedem Markt-Update (neu, geaendert, entfernt) MUESSEN alle drei Stellen aktualisiert
+> werden. Stil-Konvention: Markt-Namen IMMER in `**Fett**`.
+
 Diese Master-Tabelle ist die zentrale Pflichtpruefungs-Liste — Details siehe die jeweiligen
 `markt-*.md`-Dateien.
 

@@ -62,6 +62,18 @@ if [ -d "$WORKSPACE_ROOT/$APP_NAME" ]; then
     done
 fi
 
+# Dedup: gleichen realpath nur einmal ausgeben. Wichtig wenn APP_DIR == WORKSPACE_ROOT/APP_NAME.
+declare -a unique_paths=()
+declare -A seen=()
+for p in "${paths[@]}"; do
+    canonical=$(realpath "$p" 2>/dev/null || echo "$p")
+    if [ -z "${seen[$canonical]+x}" ]; then
+        seen[$canonical]=1
+        unique_paths+=("$p")
+    fi
+done
+paths=("${unique_paths[@]}")
+
 echo "  \"roentgen_outputs\": ["
 for ((i=0; i<${#paths[@]}; i++)); do
     if [ $i -lt $((${#paths[@]} - 1)) ]; then

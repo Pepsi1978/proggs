@@ -40,7 +40,7 @@ invocation: user
 4. [Plattformneutrale Pfade](#plattformneutrale-pfade)
 5. [Skill-Stand und Recherche-Aktualitaet](#skill-stand-und-recherche-aktualitaet)
 6. [Markt-Prioritaet und Reference-Karte](#markt-prioritaet-und-reference-karte)
-7. [Ablauf (9 Schritte)](#ablauf-9-schritte)
+7. [Ablauf (8 Hauptschritte + Schritt 1.5)](#ablauf-8-hauptschritte--schritt-15)
 8. [Schweregrade](#schweregrade)
 9. [Bundle-Ressourcen](#bundle-ressourcen)
 10. [Was niemals passieren darf](#was-niemals-passieren-darf)
@@ -174,9 +174,12 @@ diese Datei lesen.
 
 **Wenn ein Markt nicht bewertet werden kann: BLOCKER fuer Rollout in diesem Markt.**
 
-## Ablauf (9 Schritte)
+## Ablauf (8 Hauptschritte + Schritt 1.5)
 
-Strikt in dieser Reihenfolge. Direktive 3 — wenn ein Schritt fehlschlaegt, melden, nicht still weitermachen.
+Strikt in dieser Reihenfolge. Direktive 3 — wenn ein Schritt fehlschlaegt, melden, nicht still
+weitermachen. Schritt 5 enthaelt die zehn Sub-Schritte 5a-5j; das eigentliche Berichtsschreiben
+beginnt erst in Schritt 6, wenn alle Pruefungen aus Schritt 5 inkl. der Compliance-Artefakte
+(5j) abgeschlossen sind.
 
 ### Schritt 1 — Scope klaeren
 
@@ -225,16 +228,19 @@ Pruefe ob `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` existiert.
 Dem Benutzer kurz melden: *"Lese Wissensbasis aus tools/rechtssicherheit.md..."* oder
 *"Lege Wissensbasis neu an."*
 
-### Schritt 3 — Internet-Recherche (5 Researcher parallel)
+### Schritt 3 — Internet-Recherche (6 Researcher parallel)
 
-**Pflicht: 5 Researcher-Agenten in EINER Nachricht parallel starten** (nicht sequentiell).
+**Pflicht: 6 Researcher-Agenten in EINER Nachricht parallel starten** (nicht sequentiell).
 Jeder Researcher: max 50 Ergebnisse, max 15 Web-Fetches, max 10 Minuten Laufzeit, max 2000
-Woerter Prompt (siehe `~/.claude/rules/agent-and-researcher-rules.md`).
+Woerter Prompt (siehe `~/.claude/rules/agent-and-researcher-rules.md`). Die Aufteilung auf
+6 statt 5 ist bewusst — Researcher 4 deckte vorher 11 Rechtsraeume ab und kam mit dem
+50-Ergebnis-Limit nicht in die Tiefe. Jetzt liegt die Last gleichmaessiger.
 
 Dem Benutzer vor dem Start sagen:
-> "Ich starte 5 parallele Researcher fuer DE/EU, US/UK/CA/AU/NZ, Asien-A (IN/JP/KR/TW/HK/SG),
-> Asien-B + LATAM + MENA + Afrika + TR/UA/PK/BD, Play-Store-Policies und Enforcement-/Abmahn-
-> Trends. Laufzeit: ~5-8 Minuten."
+> "Ich starte 6 parallele Researcher fuer DE/EU (inkl. AI Act + Data Act + BFSG + DPF),
+> US/UK/CA/AU/NZ, Asien-A (IN/JP/KR/TW/HK/SG), Asien-B + Suedasien (TH/ID/VN/LK/PK/BD),
+> LATAM + MENA + Afrika + TR/UA, Play-Store-Policies + Enforcement-/Abmahn-Trends.
+> Laufzeit: ~5-8 Minuten."
 
 **Researcher-Aufteilung:**
 
@@ -243,8 +249,9 @@ Dem Benutzer vor dem Start sagen:
 | 1 | DE/EU + AI Act + Data Act + BFSG + DPF-Status | `markt-de-eu.md` + `ai-act-art-50.md` |
 | 2 | UK + USA + Kanada + Australien + Neuseeland | `markt-uk-us-ca-au-nz.md` + `uk-vertreter-pflicht.md` |
 | 3 | Indien + Japan + Korea + Taiwan + Hongkong + Singapore | `markt-asien.md` |
-| 4 | Thailand + Indonesien + Vietnam + Sri Lanka + LATAM + MENA + Afrika + Tuerkei + Ukraine + Pakistan + Bangladesch | `markt-asien.md`, `markt-latam.md`, `markt-mena-afrika.md`, `markt-tuerkei-osteuropa.md`, `markt-sa-pakistan-bangladesch.md` |
-| 5 | Google Play Policies + Enforcement-/Abmahn-Trends | `play-policies-2026.md` + `enforcement-trends-2026.md` |
+| 4 | Thailand + Indonesien + Vietnam + Sri Lanka + Pakistan + Bangladesch | `markt-asien.md` + `markt-sa-pakistan-bangladesch.md` |
+| 5 | Brasilien + Mexiko + Argentinien + Tuerkei + Ukraine + MENA (Saudi/UAE) + Suedafrika | `markt-latam.md` + `markt-tuerkei-osteuropa.md` + `markt-mena-afrika.md` |
+| 6 | Google Play Policies + Enforcement-/Abmahn-Trends | `play-policies-2026.md` + `enforcement-trends-2026.md` |
 
 **Prompt-Muster pro Researcher:**
 
@@ -300,54 +307,79 @@ gefunden" o.ae.).
 
 ### Schritt 5 — Detail-Pruefung
 
+**Vorbereitung — IMMER zuerst lesen:** `references/enforcement-trends-2026.md` enthaelt die
+aktuellen Abmahn-Hotspots und Bussgeld-Trends in DE/EU plus internationale Enforcement-News.
+Lies diese Datei am Anfang von Schritt 5 — sie praegt die Risiko-Einschaetzung (Schweregrad)
+jedes Befunds. Beispiel: Wenn die Trends-Datei "Cookie-Nudging seit 2025 abmahnfaehig"
+ausweist und du im Code einen optisch dominanten Accept-Button findest, ist das ein
+🔴 BLOCKER (nicht 🟡 MITTEL).
+
+> Hinweis: Die folgenden Sub-Schritte 5a-5d klassifizieren die Treffer aus Schritt 4
+> (`scripts/scan-legal-signals.sh`) bzw. den Roentgen-Output. Die rg-Suchpattern stehen
+> zentral im Skript — die SKILL.md listet hier die Pruef-Aspekte, nicht die Suchbefehle.
+
 #### 5a. Projekt und Package
 
-```sh
-rg -n "namespace |applicationId|package=" -g "*.gradle*" -g "*.kts" -g "AndroidManifest.xml" <APP_DIR>
-```
-
-Erfassen: App-Name, Package-ID, Variante/Flavor, minSdk, targetSdk, compileSdk, Store-
-Metadaten (`fastlane/metadata`, `play-store-metadata`, README, Website), verwendete Sprachen/
-Locales (`app/src/main/res/values*`).
+Aus dem Scan erfassen: App-Name, Package-ID, Variante/Flavor, minSdk, targetSdk, compileSdk,
+Store-Metadaten (`fastlane/metadata`, `play-store-metadata`, README, Website), verwendete
+Sprachen/Locales (`app/src/main/res/values*`). Abgleichen mit Privacy Policy
+(Anbieter-Name + App-Name muessen stimmen) und mit den Markt-Pflichtsprachen aus den
+`references/markt-*.md`-Dateien.
 
 #### 5b. Manifest, Permissions, Android-Komponenten
 
-```sh
-rg -n "uses-permission|queries|provider|receiver|service|activity|exported|allowBackup|fullBackupContent|dataExtractionRules|networkSecurityConfig|usesCleartextTraffic|debuggable" -g "AndroidManifest.xml" <APP_DIR>
-```
+Aus dem Scan erfassen: alle `uses-permission`-Eintraege, Exported-Komponenten, Backup-Regeln,
+Network Security Config, Cleartext-Traffic, debuggable-Flag.
 
-**Besonders kritisch:** ACCESS_FINE_LOCATION, ACCESS_BACKGROUND_LOCATION, READ_CONTACTS
-(ab April-2026: Picker statt Permission), CAMERA, RECORD_AUDIO, READ_MEDIA_*, POST_NOTIFICATIONS,
-QUERY_ALL_PACKAGES, AD_ID, Health Connect, Exported Activities, `allowBackup`,
-`usesCleartextTraffic`.
+**Besonders kritisch und einzeln im Bericht zu fuehren:**
+- `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`
+- `READ_CONTACTS` (ab April-2026 nur noch via Android Contact Picker — siehe `references/play-policies-2026.md`)
+- `CAMERA`, `RECORD_AUDIO`
+- `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `MANAGE_EXTERNAL_STORAGE`
+- `POST_NOTIFICATIONS` bei sensiblen Inhalten
+- `QUERY_ALL_PACKAGES`
+- `AD_ID`
+- Health Connect / Gesundheitsdaten
+- Exported Activities/Services/Receivers/Providers
+- `allowBackup`, `fullBackupContent`, `dataExtractionRules`
+- `usesCleartextTraffic` und Network Security Config
 
 Jede Permission gegen Feature, Rechtstext, Prominent Disclosure, Runtime-Permission-Dialog
-und Data Safety abgleichen.
+und Data Safety abgleichen — keine Permission darf "verwaist" sein.
 
 #### 5c. SDKs, Dependencies, Datenabfluss
 
-```sh
-rg -n -i "firebase|analytics|crashlytics|admob|ads|facebook|meta|adjust|appsflyer|sentry|amplitude|mixpanel|onesignal|revenuecat|billing|stripe|openai|anthropic|googleapis|okhttp|retrofit|ktor|webview|javascript" <APP_DIR>
-rg -n -i "http://|https://|Authorization|Bearer|apiKey|apikey|secret|token|client_secret" <APP_DIR>
-```
+Aus dem Scan erfassen: alle SDKs (Firebase, Crashlytics, AdMob, Adjust, Sentry, OpenAI,
+Anthropic, etc.) sowie alle Netzwerk-/Token-/Secret-Treffer.
 
-Pruefen: welche SDKs sammeln automatisch, welche Datenkategorien (IP, Device-IDs, Crash-Logs,
-Analytics Events, Advertising ID, Firebase Installation ID, Push Token), Drittlandtransfer
-(SCC/DPF/PIPL/DPDP/LGPD/PDPL), AVV/DPA, Privacy-Policy-Spezifitaet, Debug-/Test-/Staging-
-Endpunkte entfernt, Secrets aus zentraler Secrets-Ablage (`$HOME/SK/`).
+Pruef-Aspekte:
+- Welche SDKs sammeln automatisch welche Datenkategorien (IP, Device-IDs, Crash-Logs,
+  Analytics Events, Advertising ID, Firebase Installation ID, Push Token)?
+- Drittlandtransfer ausserhalb EU/EWR? Welche Transfergrundlage (SCC/DPF/PIPL/DPDP/LGPD/PDPL)?
+- AVV/DPA fuer jeden Dienst vorhanden (siehe `references/pflichtdokumente.md` interne Artefakte)?
+- Privacy Policy spezifisch genug fuer jeden SDK-Zweck?
+- Debug-/Test-/Staging-Endpunkte aus Release entfernt?
+- Werden Secrets aus zentraler Secrets-Ablage (`$HOME/SK/`) statt aus dem Repo geladen?
 
 #### 5d. Lokale Speicherung, Logs, Backup
 
-```sh
-rg -n -i "SharedPreferences|DataStore|RoomDatabase|SQLite|File\\(|openFileOutput|cacheDir|externalCacheDir|getExternalFilesDir|Log\\.|Timber|println|printStackTrace|Encrypted|KeyStore|MasterKey" <APP_DIR>
-```
+Aus dem Scan erfassen: SharedPreferences, DataStore, RoomDatabase, File-Zugriffe,
+Log-Aufrufe, KeyStore/Encrypted-Hinweise.
 
-Pruefen: Sensitive Daten verschluesselt, Tagebuch-/Gesundheits-/Auth-/Token-Daten nicht in
-Backups/Screenshots/Clipboard/Logs/Crashreports, Backup-Regeln schliessen sensitive Daten aus
-oder verlangen E2E-Schutz, Export/Import dokumentiert und sicher, Loeschfunktion loescht
-lokale Daten + Sync-Daten + Backups.
+Pruef-Aspekte:
+- Sensitive Daten verschluesselt (KeyStore, MasterKey, EncryptedSharedPreferences)?
+- Tagebuch-/Gesundheits-/Auth-/Token-Daten nicht in Backups/Screenshots/Clipboard/Logs/Crashreports?
+- Backup-Regeln schliessen sensitive Daten aus oder verlangen E2E-Schutz?
+- Export/Import bewusst dokumentiert und sicher?
+- Loeschfunktion loescht lokale Daten + Sync-Daten + Backups soweit moeglich?
 
 #### 5e. Rechtstexte und UI-Links
+
+**Inhaltliche Pflichtangaben pro Dokument** (Datenschutzerklaerung, AGB, Impressum, Widerruf,
+Account-/Datenloeschung): vollstaendige Checklisten in `references/pflichtdokumente.md`.
+Diese Checklisten sind die Grundlage fuer die Bewertung jedes Pflichtdokuments — pruefe jedes
+Dokument der App gegen die jeweilige Checkliste, nicht nur gegen das "Pflicht-Platzierung"-Schema
+unten.
 
 Pflicht-Platzierungen:
 
@@ -378,7 +410,7 @@ Store-Release-Sprachen + Markt-Pflichtsprachen aus `references/markt-*.md`.
 Siehe `references/play-policies-2026.md` fuer komplette Pflicht-Deklarations-Liste +
 Play-Console-Checkliste.
 
-#### 5h-UK. UK-Vertreter-Pflicht (UK-GDPR Art. 27)
+#### 5h. UK-Vertreter-Pflicht (UK-GDPR Art. 27)
 
 Vollstaendiges Verfahren mit 3-Trigger-Bedingung + Repo-Pruefung + Option-A/B-Empfehlung:
 **`references/uk-vertreter-pflicht.md`**.
@@ -393,6 +425,23 @@ Wenn Exit-Code 1: UK darf in Country-Availability bleiben.
 - KI: Siehe `references/ai-act-art-50.md` (insb. ab 02.08.2026)
 - Google Play AI Content Policy: In-App-Flagging-Button
 - Barrierefreiheit: BFSG/EAA seit 28.06.2025, WCAG 2.1 AA via EN 301 549, KMU-Ausnahme <10 MA & <2 Mio. EUR
+
+#### 5j. Interne Compliance-Artefakte
+
+Skript: `scripts/check-compliance-artifacts.sh <APP_DIR>` ausfuehren. Es prueft ob 10 interne
+Compliance-Artefakte im Repo nachweisbar sind: VVT/ROPA (DSGVO Art. 30), DSFA/DPIA (Art. 35),
+TIA (Art. 44 ff.), TOMs (Art. 32), AVV-Liste (Art. 28), SCCs/DPF/BCR (Art. 46),
+Loeschkonzept (Art. 5 Abs. 1e + Art. 17), Datenpannen-Meldeplan (Art. 33/34),
+AI-System-Risikoklassifizierung (AI Act Art. 6/9/13), DSA-Beschwerde-/Kontaktstelle (Art. 11).
+
+Details + Pruefkriterien siehe `references/pflichtdokumente.md`.
+
+Skript-Ergebnis fuer den Bericht (Schritt 6) verwenden:
+- Exit-Code 0 (alle 10 nachweisbar): Block "Interne Compliance-Artefakte" im Bericht-Template OK markieren
+- Exit-Code 1 (mindestens 1 fehlt): jedes fehlende Artefakt im Bericht als 🟠 HOCH einzeln auflisten
+
+Wichtig: Dieser Schritt 5j MUSS vor Schritt 6 (Bericht) laufen, damit die Compliance-Befunde
+in den Bericht-Block aufgenommen werden koennen.
 
 ### Schritt 6 — Berichtsvorlage
 
@@ -409,15 +458,7 @@ Verwende **`assets/berichtsvorlage.template.md`** als Template. Beim Erstellen d
 `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` updaten oder neu anlegen. Struktur und
 Diff-Logik siehe **`references/wissensbasis-template.md`**.
 
-### Schritt 8 — Compliance-Artefakte pruefen (intern)
-
-Skript: `scripts/check-compliance-artifacts.sh <APP_DIR>` ausfuehren. Prueft 10 interne
-Compliance-Artefakte (ROPA, DSFA, TIA, TOMs, AVV-Liste, SCCs, Loeschkonzept, Datenpannen-Plan,
-AI-Risikoklassifizierung, DSA-Beschwerdestelle). Details siehe `references/pflichtdokumente.md`.
-
-Wenn Skript Exit-Code 1 (mind. 1 Artefakt fehlt): im Bericht als 🟠 HOCH markieren.
-
-### Schritt 9 — Commit + Push
+### Schritt 8 — Commit + Push
 
 `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` committen und pushen — gemaess
 `~/.claude/rules/parallel-sessions-git.md`:
@@ -476,7 +517,7 @@ Wenn Skript Exit-Code 1 (mind. 1 Artefakt fehlt): im Bericht als 🟠 HOCH marki
 | `scripts/scan-legal-signals.sh` | Vollscan (Schritt 4) |
 | `scripts/check-roentgen-output.sh` | Roentgen-Discovery (Schritt 1.5) |
 | `scripts/check-uk-data-processing.sh` | UK-Vertreter-Pflicht-Check (Schritt 5h-UK) |
-| `scripts/check-compliance-artifacts.sh` | Interne-Artefakte-Pruefung (Schritt 8) |
+| `scripts/check-compliance-artifacts.sh` | Interne-Artefakte-Pruefung (Schritt 5j) |
 
 ## Was niemals passieren darf
 
@@ -530,14 +571,14 @@ Wenn Skript Exit-Code 1 (mind. 1 Artefakt fehlt): im Bericht als 🟠 HOCH marki
 >
 > Ablauf:
 > 1. Pruefe ob ein Roentgen-Output vorhanden ist (`scripts/check-roentgen-output.sh`).
+> 1.5 Roentgen-Output einlesen oder Empfehlung an dich, Roentgen zuerst zu starten.
 > 2. Lese Wissensbasis aus `tools/rechtssicherheit.md` (oder lege sie neu an).
-> 3. Starte 5 parallele Researcher. Laufzeit: ~5-8 Minuten.
+> 3. Starte 6 parallele Researcher (DE/EU, US/UK/CA/AU/NZ, Asien-A, Asien-B + SA-Sub, LATAM + MENA + TR/UA, Play+Enforcement). Laufzeit: ~5-8 Minuten.
 > 4. Vollscan der Codestruktur (`scripts/scan-legal-signals.sh`) wenn kein Roentgen-Output.
-> 5. Detail-Pruefung (Manifest, SDKs, Rechtstexte, Consent, Store, UGC, AI, Health, Kinder, Barrierefreiheit, UK-Vertreter via `scripts/check-uk-data-processing.sh`, Jurisdiktions-Gates).
-> 6. Bericht nach `assets/berichtsvorlage.template.md`.
+> 5. Detail-Pruefung (Manifest, SDKs, Rechtstexte, Consent, Store, UGC, AI, Health, Kinder, Barrierefreiheit, UK-Vertreter via `scripts/check-uk-data-processing.sh`, Jurisdiktions-Gates, Compliance-Artefakte via `scripts/check-compliance-artifacts.sh`).
+> 6. Bericht nach `assets/berichtsvorlage.template.md` (mit Compliance-Befunden aus 5j).
 > 7. Wissensbasis aktualisieren.
-> 8. Interne Compliance-Artefakte pruefen (`scripts/check-compliance-artifacts.sh`).
-> 9. Commit + Push.
+> 8. Commit + Push.
 >
 > Loslegen?
 

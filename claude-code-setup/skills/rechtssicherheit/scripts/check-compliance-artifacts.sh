@@ -86,8 +86,12 @@ for key in VVT_ROPA DSFA_DPIA TIA TOMs AVV_DPA_Liste SCCs Loeschkonzept Datenpan
 done
 echo "  },"
 echo "  \"missing_count\": $MISSING_COUNT,"
-if [ -n "$EXTRA_PATHS" ]; then
-    echo "  \"compliance_dirs_found\": [\"$(echo "$EXTRA_PATHS" | tr ' ' '\",\"')\"]"
+# Doku-Verzeichnisse trimmen und sauber als JSON-Array ausgeben
+EXTRA_TRIMMED=$(echo "$EXTRA_PATHS" | sed -e 's/^ *//' -e 's/ *$//')
+if [ -n "$EXTRA_TRIMMED" ]; then
+    # Pfade als komma-getrennte JSON-Liste — jeder Pfad in Anfuehrungszeichen
+    JSON_DIRS=$(echo "$EXTRA_TRIMMED" | tr ' ' '\n' | awk 'NF{printf "\"%s\",", $0}' | sed 's/,$//')
+    echo "  \"compliance_dirs_found\": [$JSON_DIRS]"
 else
     echo "  \"compliance_dirs_found\": []"
 fi
