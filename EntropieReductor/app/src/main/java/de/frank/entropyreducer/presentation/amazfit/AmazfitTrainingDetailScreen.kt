@@ -97,6 +97,18 @@ fun AmazfitTrainingDetailScreen(
     // Tempo-Stream = hochaufgeloeste Sample-Liste aus paceStreamJson (~3000 Werte
     // pro Lauf, fuer den fluessigen Tempo-Verlauf-Chart)
     val tempoStream = remember(w?.paceStreamJson) { parsePaceStream(w?.paceStreamJson) }
+    // Frank-Wunsch 2026-05-17 (Iteration 2): Pro-Feld-Schloss-Icon. Set der
+    // Labels die manuell editiert wurden — wird an alle StatsGrid-Aufrufe
+    // weitergereicht. Labels MUESSEN exakt mit den Stat-Card-Labels
+    // uebereinstimmen.
+    val editedLabels: Set<String> = remember(w?.manualOverrideFields) {
+        w?.manualOverrideFields
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.toSet()
+            ?: emptySet()
+    }
 
     CosmosScaffold(
         title = workout?.sportName ?: "Training (${sourceLabel(workout?.source)})",
@@ -121,11 +133,12 @@ fun AmazfitTrainingDetailScreen(
                 return@LazyColumn
             }
             item { HeroCard(w) }
-            item { PaceAndHrGrid(w, onEditClick = { editDialogOpen = true }) }
+            item { PaceAndHrGrid(w, editedLabels = editedLabels, onEditClick = { editDialogOpen = true }) }
             item {
                 TerrainGrid(
                     w = w,
                     restingHrForDay = restingHrForDay,
+                    editedLabels = editedLabels,
                     onEditClick = { editDialogOpen = true },
                 )
             }
@@ -188,18 +201,6 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
                         )
                     }
                 }
-                // Frank-Wunsch 2026-05-17: Kleines Schloss-Icon wenn dieses
-                // Training manuell editierte Werte enthaelt — visueller Hinweis
-                // dass die Summary-Felder vor Strava-Sync geschuetzt sind.
-                if (w.manualOverridesMs != null) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = "Manuell editiert — vor Strava-Sync geschützt",
-                        tint = accent,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.size(6.dp))
-                }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -254,7 +255,11 @@ private fun BigStat(label: String, value: String, accent: androidx.compose.ui.gr
 /* ============================== STATS-GRIDS ============================== */
 
 @Composable
-private fun PaceAndHrGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
+private fun PaceAndHrGrid(
+    w: AmazfitWorkoutEntity,
+    editedLabels: Set<String> = emptySet(),
+    onEditClick: () -> Unit = {},
+) {
     StatsGrid(
         items = listOf(
             "Ø Pace" to (w.avgPaceSecPerKm?.let { formatPace(it) } ?: "—"),
@@ -262,6 +267,7 @@ private fun PaceAndHrGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {})
             "Ø Puls" to (w.avgHeartRate?.let { "$it bpm" } ?: "—"),
             "Maximalpuls" to (w.maxHeartRate?.let { "$it bpm" } ?: "—"),
         ),
+        editedLabels = editedLabels,
         onItemClick = onEditClick,
     )
 }
@@ -270,6 +276,7 @@ private fun PaceAndHrGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {})
 private fun TerrainGrid(
     w: AmazfitWorkoutEntity,
     restingHrForDay: Int? = null,
+    editedLabels: Set<String> = emptySet(),
     onEditClick: () -> Unit = {},
 ) {
     StatsGrid(
@@ -279,6 +286,7 @@ private fun TerrainGrid(
             "Schrittfrequenz" to (w.cadence?.let { "$it spm" } ?: "—"),
             "Schrittlänge" to (w.strideLengthCm?.let { "$it cm" } ?: "—"),
         ),
+        editedLabels = editedLabels,
         onItemClick = onEditClick,
     )
     Spacer(Modifier.height(8.dp))
@@ -290,12 +298,17 @@ private fun TerrainGrid(
         add("Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"))
         if (showVo2) add("VO₂Max" to estimateVo2Max(w, restingHrForDay))
     }
-    StatsGrid(items = statsItems, onItemClick = onEditClick)
+    StatsGrid(items = statsItems, editedLabels = editedLabels, onItemClick = onEditClick)
 }
 
 @Composable
-private fun StatsGrid(items: List<Pair<String, String>>, onItemClick: () -> Unit = {}) {
+private fun StatsGrid(
+    items: List<Pair<String, String>>,
+    editedLabels: Set<String> = emptySet(),
+    onItemClick: () -> Unit = {},
+) {
     val cosmos = LocalCosmos.current
+    val accent = CosmosColors.Warning
     val rows = items.chunked(2)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { row ->
@@ -310,11 +323,25 @@ private fun StatsGrid(items: List<Pair<String, String>>, onItemClick: () -> Unit
                             .clickable { onItemClick() },
                     ) {
                         Column {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = cosmos.textSecondary,
-                            )
+                            // Frank-Wunsch 2026-05-17 (Iteration 2): Kleines
+                            // Schloss-Icon direkt im Label wenn dieses Feld
+                            // manuell editiert wurde. Pro Karte sichtbar.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = cosmos.textSecondary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (label in editedLabels) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = "Manuell editiert — vor Strava-Sync geschützt",
+                                        tint = accent,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                            }
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = value,

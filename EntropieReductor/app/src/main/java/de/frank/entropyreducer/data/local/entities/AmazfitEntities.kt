@@ -139,5 +139,11 @@ data class AmazfitWorkoutEntity(
      *  Summary-Felder NICHT mehr ueberschrieben — nur Streams (GPS, HR,
      *  Pace) werden aktualisiert. */
     val manualOverridesMs: Long? = null,
+    /** Frank-Wunsch 2026-05-17: Komma-separierte Liste der Labels (genau wie
+     *  im Detail-Screen StatsGrid angezeigt) der Felder die manuell editiert
+     *  wurden. Beispiel: "Ø Puls,Schrittlänge,Kalorien". null oder leer =
+     *  kein Feld manuell editiert. Wird im DetailScreen genutzt um pro
+     *  Stat-Karte ein Schloss-Icon anzuzeigen. */
+    val manualOverrideFields: String? = null,
     val createdAt: Long,
 )

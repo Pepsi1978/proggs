@@ -77,7 +77,7 @@ import de.frank.entropyreducer.data.local.dao.HealthConnectValueDao
         OuraPersonalInfoEntity::class,
         HealthConnectValueEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -393,6 +393,19 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_17_18: Migration = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN manualOverridesMs INTEGER")
+            }
+        }
+
+        /**
+         * Schema 18 -> 19 (Frank-Wunsch 2026-05-17, Iteration 2):
+         * Neue Spalte `manualOverrideFields` in amazfit_workouts — komma-
+         * separierte Liste der Labels (genau wie im StatsGrid) der manuell
+         * editierten Felder. Ermoeglicht das Anzeigen eines Schloss-Icons
+         * pro Stat-Karte im Detail-Screen statt nur einem globalen Schloss.
+         */
+        val MIGRATION_18_19: Migration = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN manualOverrideFields TEXT")
             }
         }
 
