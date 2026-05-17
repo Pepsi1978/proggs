@@ -44,21 +44,25 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
 /**
- * Bottom-Bar mit 4 Tabs + zentralem Mic-Button (FAB-Style).
- * Mic-Button uebersteht die Tabs und ist global verfuegbar.
+ * Bottom-Bar mit zentralem Mic-Button (FAB-Style).
  *
- * Sub-Mode (Frank-Wunsch 2026-05-17):
- * Tippt der Nutzer auf einen Tab, wechselt die Bar in einen "Sub-Mode" fuer diesen
- * Tab. Statt der 5 Top-Level-Tabs zeigt sie dann links das Tab-Icon und rechts
- * 3 Platzhalter-Sub-Icons (Inbox / Tune / Insights). Jeder Sub-Mode hat eine
- * eigene Akzent-Hintergrundfarbe. Zurueck-Geste oder Klick auf das Parent-Icon
- * verlaesst den Sub-Mode wieder.
+ * Zwei Modi (Frank-Wunsch 2026-05-17, zweite Iteration):
+ *  - **Sub-Bar (Default)** — pro aktivem Top-Level-Tab wird sofort die 3-Symbol-
+ *    Sub-Bar angezeigt, mit eigener Akzent-Farbe fuer ALLE Icons + Texte + Mic
+ *    (Aufgaben mint, Analyse cyan, Forscher violett, Biomarker rosé). Der
+ *    Hintergrund bleibt grau wie der Rest der App.
+ *  - **5-Tab-Switcher** — nach einer Zurueck-Geste sichtbar. Zeigt die vier
+ *    Top-Level-Tabs (Aufgaben/Analyse/Forscher/Biomarker) und den Mic-Button
+ *    in Standardfarben. Klick auf einen Tab navigiert dorthin und kehrt sofort
+ *    in die Sub-Bar zurueck.
  *
- * Klick auf ein Sub-Icon ruft [onSubAreaSelected] mit (parentTab, index 0..2) auf —
- * der Aufrufer navigiert dann zum entsprechenden weissen Platzhalter-Screen.
+ * [forcedSubMode] erzwingt die Sub-Bar fuer einen bestimmten Parent-Tab — wird
+ * vom Sub-Platzhalter-Screen genutzt, damit die Bar dort konsistent in der
+ * Tab-Farbe leuchtet.
  *
- * Wird die Bar auf einem Sub-Screen angezeigt, setzt der Aufrufer [forcedSubMode]
- * auf den Parent-Tab — die Bar zeigt dann sofort und ohne erneuten Tap die Sub-Bar.
+ * [onSubAreaSelected] wird beim Klick auf eines der 3 Sub-Icons aufgerufen
+ * (parentTab + index 1..3). Der Aufrufer navigiert dann auf den entsprechenden
+ * Platzhalter-Screen.
  */
 @Composable
 fun CosmosBottomBar(
@@ -72,23 +76,28 @@ fun CosmosBottomBar(
 ) {
     val cosmos = LocalCosmos.current
 
-    // Sub-Mode aus drei Quellen ableiten (Prioritaet: forced > internal):
-    //   - forcedSubMode (vom Aufrufer gesetzt, z.B. auf einem Sub-Screen)
-    //   - internalSubModeFor (vom Tap auf einen Tab)
-    var internalSubModeFor by remember { mutableStateOf<String?>(null) }
-    val activeSubMode: String? = forcedSubMode ?: internalSubModeFor
+    // Default = Sub-Bar fuer currentTab. Wird via Zurueck-Geste auf den
+    // 5-Tab-Switcher umgeschaltet. Tap auf einen Switcher-Tab schaltet zurueck
+    // auf Sub-Bar (passiert automatisch durch Re-Composition nach Navigation).
+    var showSwitcher by remember { mutableStateOf(false) }
 
-    // Zurueck-Geste verlaesst den lokalen Sub-Mode. Wenn forcedSubMode aktiv ist,
-    // gehoert die Zurueck-Geste dem Aufrufer (NavGraph popBackStack) — wir greifen
-    // nur ein wenn WIR den Sub-Mode lokal aktiviert haben.
-    BackHandler(enabled = forcedSubMode == null && internalSubModeFor != null) {
-        internalSubModeFor = null
+    val isOnMainTab = currentTab in MAIN_TABS
+    val activeSubMode: String? = when {
+        forcedSubMode != null -> forcedSubMode
+        showSwitcher -> null
+        isOnMainTab -> currentTab
+        else -> null
+    }
+
+    // Zurueck-Geste:
+    //  - Sub-Bar sichtbar (und kein forced/sub-screen) → Switcher anzeigen
+    //  - forcedSubMode aktiv → BackHandler aus, NavGraph pop wird greifen
+    BackHandler(enabled = forcedSubMode == null && !showSwitcher && isOnMainTab) {
+        showSwitcher = true
     }
 
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val barBg = if (activeSubMode != null) {
-        subBarBackground(activeSubMode, cosmos.isDark)
-    } else if (cosmos.isDark) {
+    val barBg = if (cosmos.isDark) {
         CosmosColors.BgDarkAccent.copy(alpha = 0.92f)
     } else {
         CosmosColors.BgLightAccent.copy(alpha = 0.92f)
@@ -111,34 +120,47 @@ fun CosmosBottomBar(
                 NormalTabsRow(
                     currentTab = currentTab,
                     onTabSelected = { tab ->
+                        // Aus dem Switcher heraus: navigieren UND Switcher schliessen.
+                        // Die naechste Re-Composition zeigt automatisch die Sub-Bar
+                        // fuer den neuen Tab.
+                        showSwitcher = false
                         onTabSelected(tab)
-                        internalSubModeFor = tab
                     },
                 )
+                MicButton(
+                    state = micState,
+                    onClick = onMicClick,
+                    size = 56.dp,
+                    modifier = Modifier.align(Alignment.Center),
+                )
             } else {
+                val tint = subModeTint(activeSubMode)
                 SubModeRow(
                     parentTab = activeSubMode,
+                    tint = tint,
                     onParentClick = {
-                        // Zurueck zum 5-Tab-View. Wenn forced (= wir sind auf einem
-                        // Sub-Screen), navigieren wir zurueck zum Parent-Tab — das
-                        // verlaesst den Sub-Screen.
+                        // Klick auf das Parent-Icon links:
+                        //  - Auf Sub-Screen (forcedSubMode): zurueck zum Parent-Tab
+                        //    (popBackStack via onTabSelected → tabSwitch).
+                        //  - Auf Main-Screen: 5-Tab-Switcher anzeigen.
                         if (forcedSubMode != null) {
                             onTabSelected(activeSubMode)
                         } else {
-                            internalSubModeFor = null
+                            showSwitcher = true
                         }
                     },
                     onSubAreaClick = { index ->
                         onSubAreaSelected(activeSubMode, index)
                     },
                 )
+                MicButton(
+                    state = micState,
+                    onClick = onMicClick,
+                    size = 56.dp,
+                    accentColor = tint,
+                    modifier = Modifier.align(Alignment.Center),
+                )
             }
-            MicButton(
-                state = micState,
-                onClick = onMicClick,
-                size = 56.dp,
-                modifier = Modifier.align(Alignment.Center),
-            )
         }
     }
 }
@@ -158,13 +180,13 @@ private fun NormalTabsRow(
         TabItem(
             label = "Aufgaben",
             icon = Icons.Outlined.Checklist,
-            selected = currentTab == Routes.TASKS,
+            tint = if (currentTab == Routes.TASKS) subModeTint(Routes.TASKS) else null,
             onClick = { onTabSelected(Routes.TASKS) },
         )
         TabItem(
             label = "Analyse",
             icon = Icons.Outlined.Analytics,
-            selected = currentTab == Routes.ANALYSIS,
+            tint = if (currentTab == Routes.ANALYSIS) subModeTint(Routes.ANALYSIS) else null,
             onClick = { onTabSelected(Routes.ANALYSIS) },
         )
         // Luecke fuer den Mic-Button
@@ -172,13 +194,13 @@ private fun NormalTabsRow(
         TabItem(
             label = "Forscher",
             icon = Icons.Outlined.Science,
-            selected = currentTab == Routes.SCIENTIST,
+            tint = if (currentTab == Routes.SCIENTIST) subModeTint(Routes.SCIENTIST) else null,
             onClick = { onTabSelected(Routes.SCIENTIST) },
         )
         TabItem(
             label = "Biomarker",
             icon = Icons.Outlined.MonitorHeart,
-            selected = currentTab == Routes.BIOMARKER,
+            tint = if (currentTab == Routes.BIOMARKER) subModeTint(Routes.BIOMARKER) else null,
             onClick = { onTabSelected(Routes.BIOMARKER) },
         )
     }
@@ -187,6 +209,7 @@ private fun NormalTabsRow(
 @Composable
 private fun SubModeRow(
     parentTab: String,
+    tint: Color,
     onParentClick: () -> Unit,
     onSubAreaClick: (Int) -> Unit,
 ) {
@@ -198,34 +221,29 @@ private fun SubModeRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        // Links: Parent-Tab als Anker (Klick → zurueck zum normalen 5-Tab-View)
         TabItem(
             label = parentMeta.label,
             icon = parentMeta.icon,
-            selected = true,
+            tint = tint,
             onClick = onParentClick,
         )
-        // Sub-Bereich 1
         TabItem(
             label = "1",
             icon = Icons.Outlined.Inbox,
-            selected = false,
+            tint = tint,
             onClick = { onSubAreaClick(1) },
         )
-        // Luecke fuer den Mic-Button
         Spacer(Modifier.width(64.dp))
-        // Sub-Bereich 2
         TabItem(
             label = "2",
             icon = Icons.Outlined.Tune,
-            selected = false,
+            tint = tint,
             onClick = { onSubAreaClick(2) },
         )
-        // Sub-Bereich 3
         TabItem(
             label = "3",
             icon = Icons.Outlined.Insights,
-            selected = false,
+            tint = tint,
             onClick = { onSubAreaClick(3) },
         )
     }
@@ -235,11 +253,11 @@ private fun SubModeRow(
 private fun TabItem(
     label: String,
     icon: ImageVector,
-    selected: Boolean,
+    tint: Color?,
     onClick: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val tint = if (selected) CosmosColors.AccentPrimary else cosmos.textSecondary
+    val resolvedTint = tint ?: cosmos.textSecondary
     Box(
         modifier = Modifier
             .size(width = 64.dp, height = 56.dp)
@@ -254,14 +272,14 @@ private fun TabItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = tint,
+                tint = resolvedTint,
                 modifier = Modifier.size(22.dp),
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = tint,
+                color = resolvedTint,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
@@ -280,17 +298,22 @@ private fun parentMetaFor(tab: String): ParentMeta = when (tab) {
 }
 
 /**
- * Pro Sub-Mode eine eigene dezente Akzent-Farbe — bleibt nah am Standard-Grau
- * damit es nicht knallt, aber gibt sofort visuelles Feedback dass man "drin" ist.
+ * Tab-Tint fuer Sub-Mode: gilt fuer Icons, Texte, Mic-Button (Frank-Wunsch 2026-05-17).
+ * Bewusst lebendige Farben, damit Frank auf einen Blick erkennt in welchem Pattern
+ * er gerade ist. Identisch zwischen Dark + Light Mode, der graue Hintergrund liefert
+ * ausreichend Kontrast in beiden Themes.
  */
-private fun subBarBackground(tab: String, isDark: Boolean): Color = when (tab) {
-    // Aufgaben → mint (passt zum "erledigen / Haken setzen"-Gefuehl)
-    Routes.TASKS -> if (isDark) Color(0xFF143028).copy(alpha = 0.94f) else Color(0xFFD6EFE2).copy(alpha = 0.94f)
-    // Analyse → cyan/blau (passt zu Diagrammen / Daten)
-    Routes.ANALYSIS -> if (isDark) Color(0xFF112A38).copy(alpha = 0.94f) else Color(0xFFD3E7F5).copy(alpha = 0.94f)
-    // Forscher → violett (passt zu KI / Wissenschaft)
-    Routes.SCIENTIST -> if (isDark) Color(0xFF221A38).copy(alpha = 0.94f) else Color(0xFFE2DAF5).copy(alpha = 0.94f)
-    // Biomarker → warmes Rosé (passt zu Herz / Koerper)
-    Routes.BIOMARKER -> if (isDark) Color(0xFF341A24).copy(alpha = 0.94f) else Color(0xFFF5DBE3).copy(alpha = 0.94f)
-    else -> if (isDark) CosmosColors.BgDarkAccent.copy(alpha = 0.92f) else CosmosColors.BgLightAccent.copy(alpha = 0.92f)
+private fun subModeTint(tab: String): Color = when (tab) {
+    Routes.TASKS -> Color(0xFF34D399)      // Mint / Smaragd — "erledigt"
+    Routes.ANALYSIS -> Color(0xFF22D3EE)   // Cyan — "Daten / Diagramm"
+    Routes.SCIENTIST -> Color(0xFFA78BFA)  // Violett — "KI / Wissenschaft"
+    Routes.BIOMARKER -> Color(0xFFFB7185)  // Rosé — "Herz / Koerper"
+    else -> CosmosColors.AccentPrimary
 }
+
+private val MAIN_TABS = setOf(
+    Routes.TASKS,
+    Routes.ANALYSIS,
+    Routes.SCIENTIST,
+    Routes.BIOMARKER,
+)

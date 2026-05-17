@@ -49,6 +49,7 @@ fun MicButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 96.dp,
+    accentColor: Color? = null,
 ) {
     val infinite = rememberInfiniteTransition(label = "micPulse")
 
@@ -71,10 +72,14 @@ fun MicButton(
         MicState.PROCESSING -> 1f
     }
 
-    val accentBrush = remember {
+    // Mic-Tint pro Tab (Frank-Wunsch 2026-05-17): Bottom-Bar gibt ueber
+    // [accentColor] die aktive Tab-Farbe vor. Ohne Override fallen wir auf den
+    // Cosmos-Primaer-Akzent zurueck.
+    val baseAccent = accentColor ?: CosmosColors.AccentPrimary
+    val accentBrush = remember(baseAccent) {
         Brush.radialGradient(
-            0f to CosmosColors.AccentPrimary,
-            1f to CosmosColors.AccentPrimary.copy(alpha = 0.65f),
+            0f to baseAccent,
+            1f to baseAccent.copy(alpha = 0.65f),
         )
     }
     val recordingBrush = remember {
