@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -134,19 +135,10 @@ fun AmazfitTrainingDetailScreen(
             if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream, w.distanceMeters) }
             if (splits.isNotEmpty()) item { SplitsCard(splits) }
             item { SchwimmCard(w) }
-            // Diagnose-Karte: zeigt WAS fehlt und bietet manuelles Neuladen.
-            // Frank-Beschwerde 2026-05-09: bei alten Trainings fehlten Strecke,
-            // Pulsverlauf und Pace-Bars unsichtbar — niemand wusste warum.
-            item {
-                DatenLueckenCard(
-                    workout = w,
-                    hasGps = gps.isNotEmpty(),
-                    hasHr = hr.isNotEmpty(),
-                    hasTempo = tempoStream.size >= 10,
-                    hasSplits = splits.isNotEmpty(),
-                    onReload = { vm.reloadDetail() },
-                )
-            }
+            // Frank-Wunsch 2026-05-17: DatenLueckenCard + "Erneut laden"-Button
+            // komplett entfernt. Polar-Detail-Daten kommen ueber Polar-ZIP-Bulk-
+            // Import, Strava-Daten ueber Strava-Sync. Manuelles Neuladen pro
+            // Training nicht mehr noetig.
             item { Spacer(Modifier.height(40.dp)) }
         }
     }
@@ -195,6 +187,18 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
                             color = cosmos.textSecondary,
                         )
                     }
+                }
+                // Frank-Wunsch 2026-05-17: Kleines Schloss-Icon wenn dieses
+                // Training manuell editierte Werte enthaelt — visueller Hinweis
+                // dass die Summary-Felder vor Strava-Sync geschuetzt sind.
+                if (w.manualOverridesMs != null) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = "Manuell editiert — vor Strava-Sync geschützt",
+                        tint = accent,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
                 }
                 Box(
                     modifier = Modifier
@@ -794,126 +798,7 @@ private fun lerpColor(
     }
 }
 
-/* ============================== DATEN-LUECKEN ============================== */
-
-/**
- * Karte die transparent anzeigt was bei diesem Training NICHT geladen werden
- * konnte (Strecke, Pulsverlauf, Pace-Bars, Tempo-Verlauf) und einen Button zum
- * erneuten Versuch bietet. Erscheint nur wenn mindestens EIN Block fehlt.
- *
- * Frank-Befund 2026-05-09: bei aelteren Trainings fehlten die Diagramme stumm.
- * Statt sie verschwinden zu lassen, MUSS klar sein WAS fehlt — sonst weiss
- * niemand ob der Server keine Daten hat oder ob das Laden fehlgeschlagen ist.
- */
-@Composable
-private fun DatenLueckenCard(
-    workout: AmazfitWorkoutEntity,
-    hasGps: Boolean,
-    hasHr: Boolean,
-    hasTempo: Boolean,
-    hasSplits: Boolean,
-    onReload: () -> Unit,
-) {
-    val cosmos = LocalCosmos.current
-    val gpsRaw = workout.gpsTrackJson
-    val hrRaw = workout.heartRateSeriesJson
-    val tempoRaw = workout.paceStreamJson
-    val splitsRaw = workout.paceSeriesJson
-
-    // Status pro Block bestimmen:
-    //  "ok"        — Daten sind da und parsen erfolgreich
-    //  "leer"      — Server lieferte nichts (Feld null oder Marker " ")
-    //  "geladen-leer" — Feld hat Inhalt aber Parser fand nichts (Format-Bruch)
-    fun statusOf(parsed: Boolean, raw: String?): String = when {
-        parsed -> "ok"
-        raw.isNullOrBlank() -> "leer"
-        else -> "geladen-leer"
-    }
-
-    val gpsStatus = statusOf(hasGps, gpsRaw)
-    val hrStatus = statusOf(hasHr, hrRaw)
-    val tempoStatus = statusOf(hasTempo, tempoRaw)
-    val splitsStatus = statusOf(hasSplits, splitsRaw)
-
-    val anyMissing = gpsStatus != "ok" || hrStatus != "ok" || tempoStatus != "ok" || splitsStatus != "ok"
-    if (!anyMissing) return
-
-    var reloadInProgress by remember { mutableStateOf(false) }
-
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = CosmosColors.Warning,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = "Detail-Daten",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = cosmos.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            DatenLueckeRow("Strecke (GPS)", gpsStatus)
-            DatenLueckeRow("Pulsverlauf", hrStatus)
-            DatenLueckeRow("Tempo-Verlauf", tempoStatus)
-            DatenLueckeRow("Pace pro Kilometer", splitsStatus)
-            Spacer(Modifier.height(6.dp))
-            // Hilfetext: erklaert was die Status-Worte bedeuten.
-            Text(
-                text = when {
-                    gpsStatus == "leer" && hrStatus == "leer" && tempoStatus == "leer" && splitsStatus == "leer" ->
-                        "Der Server hat fuer dieses Training keine Detail-Daten geliefert. Bei aelteren Trainings ist das normal — die Zepp-Cloud loescht Detail-Daten nach einigen Wochen."
-                    gpsStatus == "geladen-leer" || hrStatus == "geladen-leer" || tempoStatus == "geladen-leer" || splitsStatus == "geladen-leer" ->
-                        "Daten kamen vom Server, aber das Format konnte nicht gelesen werden. Bitte erneut laden."
-                    else ->
-                        "Einige Detail-Daten konnten noch nicht geladen werden. Tippe auf 'Erneut laden' um es nochmal zu versuchen."
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = cosmos.textSecondary,
-            )
-            Spacer(Modifier.height(6.dp))
-            TextButton(
-                onClick = {
-                    reloadInProgress = true
-                    onReload()
-                },
-                enabled = !reloadInProgress,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(if (reloadInProgress) "Wird geladen …" else "Erneut laden")
-            }
-        }
-    }
-}
-
-@Composable
-private fun DatenLueckeRow(label: String, status: String) {
-    val cosmos = LocalCosmos.current
-    val (statusText, statusColor) = when (status) {
-        "ok" -> "verfuegbar" to androidx.compose.ui.graphics.Color(0xFF4CAF50)
-        "leer" -> "vom Server nicht geliefert" to cosmos.textSecondary
-        "geladen-leer" -> "Format-Fehler" to CosmosColors.Critical
-        else -> "?" to cosmos.textSecondary
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = cosmos.textPrimary)
-        Text(statusText, style = MaterialTheme.typography.labelSmall, color = statusColor)
-    }
-}
+// DatenLueckenCard + DatenLueckeRow entfernt 2026-05-17 (Frank-Wunsch).
 
 /* ============================== SCHWIMM ============================== */
 
