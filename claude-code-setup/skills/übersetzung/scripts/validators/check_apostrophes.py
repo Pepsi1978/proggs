@@ -21,6 +21,8 @@ Regel-Set:
   3. Bereits eskapierte Apostrophe \\' → bleiben (nicht doppelt eskapieren)
   4. Apostrophe in <plurals><item> und <string-array><item> wie <string> behandelt
   5. Typographische Apostrophe ’ (U+2019) bleiben unangetastet (legal in Android-XML)
+  6. CDATA-Bloecke <![CDATA[...]]> bleiben unangetastet (Apostrophe darin sind legal,
+     auch ohne Escape — AAPT parsed CDATA-Inhalt nicht als XML)
 
 Usage:
     python3 check_apostrophes.py --locale fr --path /path/to/values-fr/strings.xml
@@ -37,21 +39,47 @@ import tempfile
 
 
 def escape_apostrophes(value):
-    """Eskapiere unescaped ' nur wenn der String nicht in "..." eingeschlossen ist.
-    Schon eskapierte \\' bleiben unveraendert."""
+    """Eskapiere unescaped ' nur ausserhalb von:
+    - doppelten Anfuehrungszeichen (Wrap-Form "...")
+    - CDATA-Bloecken (<![CDATA[...]]>) — darin ist ' legal ohne Escape
+    - bereits eskapierten \\'
+    """
     stripped = value.strip()
     # Regel 2: String in doppelten Anfuehrungszeichen → unangetastet
     if len(stripped) >= 2 and stripped.startswith('"') and stripped.endswith('"'):
         return value, 0
+
+    # Regel 6: CDATA-Bloecke temporaer extrahieren (Inhalt geschuetzt vor Escape).
+    # Das ist wichtig weil <![CDATA[L'application]]> in Android legal ist —
+    # AAPT parsed CDATA-Inhalt nicht als XML, Apostrophe brauchen kein Escape.
+    cdata_marker = "\x00CDATA_BLOCK_{}\x00"
+    cdata_matches = []
+
+    def stash_cdata(m):
+        cdata_matches.append(m.group(0))
+        return cdata_marker.format(len(cdata_matches) - 1)
+
+    protected = re.sub(
+        r"<!\[CDATA\[.*?\]\]>", stash_cdata, value, flags=re.DOTALL
+    )
+
     # Regel 3: \' ist schon eskapiert — ersetze temporaer durch Platzhalter
     placeholder = "\x00ESCAPED_APOS\x00"
-    tmp = value.replace("\\'", placeholder)
+    tmp = protected.replace("\\'", placeholder)
     fixes = tmp.count("'")
     if fixes == 0:
+        # Keine Apostrophe ausserhalb von CDATA — original zurueck
         return value, 0
+
     # Regel 1: alle verbliebenen ' eskapieren
     tmp = tmp.replace("'", "\\'")
-    return tmp.replace(placeholder, "\\'"), fixes
+    tmp = tmp.replace(placeholder, "\\'")
+
+    # CDATA-Bloecke wiederherstellen (Inhalt unveraendert)
+    for i, cdata in enumerate(cdata_matches):
+        tmp = tmp.replace(cdata_marker.format(i), cdata)
+
+    return tmp, fixes
 
 
 def atomic_write(path, content):

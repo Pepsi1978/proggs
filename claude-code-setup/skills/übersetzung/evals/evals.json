@@ -84,6 +84,19 @@
         "Die Abschluss-Zusammenfassung listet jeden der 30 Locales mit Status (fertig/uebersprungen/Fehler)",
         "Bei sprach-spezifischen Validatoren wird der jeweils passende aufgerufen (Native-Ziffern fuer indische, CJK fuer Ostasien, etc.)"
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "Uebersetze die Strings auf Franzoesisch. Eine Eingabe enthaelt einen CDATA-Block mit HTML-Promo — der CDATA-Inhalt soll unangetastet bleiben, denn dort sind Apostrophe und HTML-Tags legal ohne Escape.",
+      "expected_output": "Skill triggert. fr.md wird geladen. check_apostrophes.py wird mit --locale fr aufgerufen. Der CDATA-Block bleibt im Output strukturell unveraendert (Wrapper <![CDATA[...]]> erhalten), aber INHALTLICH ins Franzoesische uebersetzt. Apostrophe innerhalb CDATA werden NICHT escaped. Apostrophe ausserhalb CDATA werden escaped.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Der String 'html_promo' enthaelt im Output noch immer <![CDATA[ und ]]> Wrapper",
+        "Innerhalb des CDATA-Blocks im Output erscheinen keine \\' (Apostroph-Backslash-Escapes) — Apostrophe sind dort unmodifiziert",
+        "HTML-Tags wie <b>...</b> innerhalb CDATA bleiben unverändert erhalten",
+        "Strings AUSSERHALB des CDATA-Blocks mit Apostrophen werden korrekt mit \\' eskapiert",
+        "check_apostrophes.py meldet bei diesem String NICHT 'Apostroph escaped in html_promo' (CDATA-Schutz funktioniert)"
+      ]
     }
   ]
 }

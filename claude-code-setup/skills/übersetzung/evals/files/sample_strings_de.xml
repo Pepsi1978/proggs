@@ -47,4 +47,8 @@ aber generisch genug um fuer jede deutsche Android-App zu funktionieren.
     <!-- XML-Sonderzeichen: testet ob &amp; korrekt escaped wird in der Uebersetzung -->
     <string name="legal_link">Datenschutz &amp; AGB anzeigen</string>
 
+    <!-- CDATA-Block: testet ob Validatoren CDATA-Inhalte NICHT veraendern (Apostroph,
+         HTML-Tags, Sonderzeichen sind dort alle legal) -->
+    <string name="html_promo"><![CDATA[<b>Premium</b> ist da! Hol dir alle Funktionen.]]></string>
+
 </resources>

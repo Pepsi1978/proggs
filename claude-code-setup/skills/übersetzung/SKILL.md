@@ -418,7 +418,7 @@ das explizit nennen:
 
 Wenn der Benutzer sagt "uebersetze nur auf Franzoesisch":
 - Nur diese eine Sprache durchlaufen (Schritt A + B + C)
-- Dann fertig, nicht alle 27 machen
+- Dann fertig, nicht alle 30 machen
 
 ### Bestehende Uebersetzungen aktualisieren (nur neue Strings)
 
@@ -439,6 +439,61 @@ Wenn die App keine strings.xml hat oder sie leer ist:
 Wenn der Benutzer sagt "Franzoesisch nochmal neu":
 - Die bestehende Datei komplett ueberschreiben
 - Volles Programm (Uebersetzen + Verifizieren + Commit)
+
+### Resume nach Abbruch
+
+Wenn der Benutzer sagt "mache weiter mit der Uebersetzung" oder "geh weiter wo wir
+aufgehoert haben":
+- `git log --oneline -30` lesen und alle "#NNN - Translate strings to [Language]"-Commits
+  auflisten
+- Aus dem Inhaltsverzeichnis ableiten welche Locales noch fehlen
+- Mit der naechsten fehlenden Sprache fortfahren (Phase 2 Schritt A)
+- Falls eine Sprache halb fertig ist (Datei existiert aber kein Commit): den Benutzer
+  fragen ob neu uebersetzen oder den vorhandenen Stand committen
+
+### Fehlende Sprach-Datei
+
+Wenn `references/languages/[code].md` nicht existiert (z.B. weil die Sprache aus dem
+Skill entfernt wurde, oder Tippfehler im Code):
+- Read-Tool gibt einen klaren Fehler — nicht still ueberspringen
+- Dem Benutzer melden: "Die Sprach-Datei `[code].md` fehlt. Soll ich diese Sprache
+  ueberspringen, oder soll ich eine neue Sprach-Datei mit Standard-Inhalt erstellen?"
+- Bei Erstellung: Template aus `HOW_TO_ADD_LANGUAGE.md` als Startpunkt
+
+### Validator-Fehler unterscheiden
+
+Validator-Scripts geben drei Exit-Codes:
+- **0**: Alles OK (oder erfolgreich auto-gefixt — kein Eingriff noetig)
+- **1**: Probleme gefunden die manuelle Korrektur brauchen — Bericht lesen, betroffene
+  Strings im LLM-Verbesserungs-Pass nachkorrigieren, dann den Validator erneut laufen
+- **2**: Echter Fehler (Datei nicht lesbar, falsches Locale, Python-Crash) — Skill
+  MUSS abbrechen, Benutzer informieren, NICHT die Sprache als "fertig" markieren
+
+Bei Exit-Code 2 NIEMALS committen — die Datei ist in unbekanntem Zustand.
+
+### Pfade mit Leerzeichen oder Sonderzeichen
+
+Beim Aufruf der Validator-Scripts MUSS der `--path`-Wert in doppelte Anfuehrungszeichen
+gesetzt werden, falls `[APP_DIR]` Leerzeichen oder Shell-Sonderzeichen enthaelt:
+
+```bash
+# Falsch (bricht bei Leerzeichen in /Users/John Doe/...):
+python3 .../check_apostrophes.py --locale fr --path [APP_DIR]/app/.../values-fr/strings.xml
+
+# Richtig:
+python3 .../check_apostrophes.py --locale fr --path "[APP_DIR]/app/.../values-fr/strings.xml"
+```
+
+Praktisch: Variable `APP_DIR` immer in `"$APP_DIR"` einfuegen, nie nackt.
+
+---
+
+## Wartung — neue Sprache hinzufuegen
+
+Wenn der Benutzer eine neue Sprache zum Skill hinzufuegen will (z.B. "fuege Malaiisch
+hinzu"), siehe **`HOW_TO_ADD_LANGUAGE.md`** (im Skill-Ordner). Dort steht die
+11-Stellen-Checkliste mit konkretem Beispiel. Ohne diese Checkliste werden typischerweise
+1-3 Stellen vergessen — was zu inkonsistentem Skill-Verhalten fuehrt.
 
 ---
 
@@ -483,6 +538,18 @@ das spart spuerbar Token und Kontext-Pressure.
 ### Warum eine Datei pro Sprache statt eine grosse?
 
 Wenn nur Franzoesisch uebersetzt wird, soll auch nur die Franzoesisch-Datei in den
-Kontext geladen werden — nicht alle 27 Sprach-Bloecke. Bei Komplettuebersetzungen
+Kontext geladen werden — nicht alle 30 Sprach-Bloecke. Bei Komplettuebersetzungen
 laedt der Skill die Dateien sequentiell nacheinander, jeweils nur die gerade
 gebrauchte. Empirisch spart das ~95% Kontext-Verbrauch pro Uebersetzungs-Lauf.
+
+### Prompt-Caching-Wirkung (Performance-Hinweis)
+
+SKILL.md und übersetzung-global.md sind statisch und werden vom Anthropic Prompt
+Caching System gecacht. Pro Sprach-Wechsel wird im Idealfall NUR die kleine
+sprach-spezifische Datei (~20 Zeilen) frisch geladen — die ca. 660 Zeilen
+SKILL.md + übersetzung-global.md kommen aus dem Cache. Das reduziert die
+Token-Last fuer eine Komplett-Uebersetzung ueber 30 Sprachen drastisch.
+
+Damit das funktioniert: SKILL.md sollte ZWISCHEN den Sprachen nicht erneut
+gelesen werden. Aus dem Gedaechtnis arbeiten. Nur die jeweils naechste Sprach-Datei
+in `references/languages/[code].md` wird frisch eingelesen.
