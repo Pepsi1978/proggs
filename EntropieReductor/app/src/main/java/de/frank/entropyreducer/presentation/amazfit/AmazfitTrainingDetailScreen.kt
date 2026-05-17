@@ -8,6 +8,8 @@ import kotlinx.serialization.json.intOrNull
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -40,13 +42,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -470,32 +475,20 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     .fillMaxWidth()
                     .aspectRatio(1.6f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBorder.copy(alpha = 0.08f)),
+                    .background(cosmos.glassBorder.copy(alpha = 0.08f))
+                    // Frank-Wunsch 2026-05-17 (Iteration 3): Tap auf irgendwo
+                    // in der Karten-Vorschau oeffnet sofort den Vollbild-Modus.
+                    // Eingebettete Karte ist nur Vorschau — Zoom + Pan finden
+                    // ausschliesslich im Vollbild statt.
+                    .clickable(enabled = points.size >= 2) { fullscreen = true },
             ) {
                 if (points.size >= 2) {
                     GpsTrackMap(points = points, fullscreen = false)
-                    // Fullscreen-Button oben rechts, halbtransparent damit die
-                    // Karte darunter nicht verdeckt wird. Klickbar ist nur das
-                    // Icon — die Map-Gesten (Pinch/Drag) bleiben darunter aktiv.
-                    IconButton(
-                        onClick = { fullscreen = true },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(36.dp)
-                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Fullscreen,
-                            contentDescription = "Karte im Vollbild öffnen",
-                            tint = Color.White,
-                        )
-                    }
                 }
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "${points.size} GPS-Punkte · grün = Start, rot = Ziel · Tap auf Vollbild zum Zoomen",
+                text = "${points.size} GPS-Punkte · grün = Start, rot = Ziel · Tap auf Karte für Vollbild",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
@@ -575,19 +568,21 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
             mapType = com.google.maps.android.compose.MapType.HYBRID,
         )
     }
-    // Frank-Wunsch 2026-05-17: Im Vollbild Zoom-Buttons + Kompass sichtbar,
-    // in der eingebetteten Kachel ohne (zu wenig Platz, lenkt vom Trainings-
-    // Detail ab). Gesten (Pinch/Drag/Rotate) sind in beiden Modi aktiv.
+    // Frank-Wunsch 2026-05-17 (Iteration 3): In der eingebetteten Vorschau
+    // sind ALLE Gesten deaktiviert — sonst frisst die GoogleMap-Composable
+    // alle Touch-Events und der Tap-auf-Card-fuer-Vollbild funktioniert nicht.
+    // Im Vollbild sind dafuer alle Steuer-Elemente und alle Gesten aktiv.
     val uiSettings = remember(fullscreen) {
         com.google.maps.android.compose.MapUiSettings(
             zoomControlsEnabled = fullscreen,
             myLocationButtonEnabled = false,
             mapToolbarEnabled = fullscreen,
             compassEnabled = fullscreen,
-            zoomGesturesEnabled = true,
-            scrollGesturesEnabled = true,
-            rotationGesturesEnabled = true,
+            zoomGesturesEnabled = fullscreen,
+            scrollGesturesEnabled = fullscreen,
+            rotationGesturesEnabled = fullscreen,
             tiltGesturesEnabled = fullscreen,
+            scrollGesturesEnabledDuringRotateOrZoom = fullscreen,
         )
     }
     val accent = CosmosColors.Warning
@@ -660,7 +655,11 @@ private fun PulsverlaufCard(hr: List<Int>) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { fullscreen = true },
+            ) {
                 ChartWithAxes(
                     accent = CosmosColors.Critical,
                     xCount = hr.size,
@@ -674,24 +673,10 @@ private fun PulsverlaufCard(hr: List<Int>) {
                     values = values,
                     invertY = false,
                 )
-                IconButton(
-                    onClick = { fullscreen = true },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(32.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Fullscreen,
-                        contentDescription = "Pulsverlauf im Vollbild öffnen",
-                        tint = Color.White,
-                    )
-                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${hr.size} Werte · Min $min · Max $max bpm · Vollbild für Zoom",
+                text = "${hr.size} Werte · Min $min · Max $max bpm · Tap auf Chart für Vollbild",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
@@ -708,6 +693,7 @@ private fun PulsverlaufCard(hr: List<Int>) {
             xLabel = xLabelFn,
             invertY = false,
             yPaddingFraction = 0.10,
+            crosshairTooltip = { v, x -> "${v.toInt()} bpm · $x" },
             onDismiss = { fullscreen = false },
         )
     }
@@ -732,6 +718,11 @@ private fun ChartWithAxes(
     values: List<Double>,
     invertY: Boolean,
     modifier: Modifier = Modifier.fillMaxWidth().height(190.dp),
+    // Frank-Wunsch 2026-05-17 (Iteration 4): Crosshair zeigt vertikale Linie
+    // + dicker Punkt + Tooltip an Daumen-Position waehrend Drag im Vollbild.
+    // Beide Parameter zusammen aktiv = Crosshair sichtbar.
+    crosshairIdx: Int? = null,
+    crosshairLabel: String? = null,
 ) {
     val cosmos = LocalCosmos.current
     val gridColor = cosmos.glassBorder.copy(alpha = 0.5f)
@@ -815,6 +806,71 @@ private fun ChartWithAxes(
                 radius = 5f,
                 center = Offset(toX(values.size - 1), toY(values.last())),
             )
+            // Crosshair-Overlay (Frank-Wunsch 2026-05-17 Iteration 4) —
+            // vertikale Linie + dicker Punkt + Tooltip-Bubble. Nur sichtbar
+            // wenn crosshairIdx im gueltigen Bereich liegt.
+            val ci = crosshairIdx
+            if (ci != null && ci in values.indices) {
+                val cx = toX(ci)
+                val cy = toY(values[ci])
+                // Vertikale Linie quer durchs Chart
+                drawLine(
+                    color = androidx.compose.ui.graphics.Color(0xCCFFFFFF),
+                    start = Offset(cx, padTop),
+                    end = Offset(cx, padTop + h),
+                    strokeWidth = 2f,
+                )
+                // Dicker Akzent-Punkt darueber + weisser Kern
+                drawCircle(
+                    color = accent,
+                    radius = 14f,
+                    center = Offset(cx, cy),
+                )
+                drawCircle(
+                    color = androidx.compose.ui.graphics.Color.White,
+                    radius = 6f,
+                    center = Offset(cx, cy),
+                )
+                // Tooltip-Bubble — auf der gegenueberliegenden Seite vom
+                // Cursor damit der Finger den Text nicht verdeckt.
+                val label = crosshairLabel
+                if (!label.isNullOrBlank()) {
+                    val tipPaint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.WHITE
+                        textSize = 36f
+                        isAntiAlias = true
+                        isFakeBoldText = true
+                    }
+                    val textW = tipPaint.measureText(label)
+                    val tipPad = 14f
+                    val tipBoxW = textW + tipPad * 2
+                    val tipBoxH = 56f
+                    val placeRight = cx + 24f + tipBoxW < size.width
+                    val tipLeft = if (placeRight) cx + 24f else cx - 24f - tipBoxW
+                    val tipTop = padTop + 12f
+                    drawIntoCanvas {
+                        val bgPaint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.argb(235, 0, 0, 0)
+                            isAntiAlias = true
+                        }
+                        it.nativeCanvas.drawRoundRect(
+                            tipLeft,
+                            tipTop,
+                            tipLeft + tipBoxW,
+                            tipTop + tipBoxH,
+                            12f,
+                            12f,
+                            bgPaint,
+                        )
+                        it.nativeCanvas.drawText(
+                            label,
+                            tipLeft + tipPad,
+                            tipTop + tipBoxH / 2 + 12f,
+                            tipPaint,
+                        )
+                    }
+                }
+            }
             @Suppress("UNUSED_VARIABLE") val u2 = yUnit
         }
     }
@@ -848,17 +904,17 @@ private fun ZoomableChartDialog(
     xLabel: (Int) -> String,
     invertY: Boolean,
     yPaddingFraction: Double,
+    crosshairTooltip: (Double, String) -> String,
     onDismiss: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // scale = 1 entspricht voller Sicht; scale = 10 zeigt nur 10% des
-    // Gesamt-Datensatzes (10x reingezoomt). Obergrenze 50x verhindert dass
-    // der Slice unter 2 Punkte fallen kann.
-    var scale by remember { mutableStateOf(1f) }
-    // offset = linke Kante des sichtbaren Bereichs als Fraction 0..1 vom
-    // Gesamt-Datensatz. Wird beim Zoom automatisch eingeschnappt damit der
-    // sichtbare Bereich nie aus dem Datensatz heraus rutscht.
-    var offset by remember { mutableStateOf(0f) }
+    // Frank-Wunsch 2026-05-17 (Iteration 4): rememberSaveable damit Zoom-Stand
+    // Geraete-Rotationen ueberlebt (zusaetzlich zu configChanges im Manifest).
+    var scale by rememberSaveable { mutableFloatStateOf(1f) }
+    var offset by rememberSaveable { mutableFloatStateOf(0f) }
+    // Crosshair-Index relativ zum sichtbaren Slice (nicht zum Gesamt-Datensatz).
+    // null = kein Crosshair sichtbar (Finger losgelassen oder Pinch-Zoom aktiv).
+    var crosshairIdxInVisible by remember { mutableStateOf<Int?>(null) }
 
     val totalSize = values.size
     val visibleFraction = (1f / scale).coerceIn(2f / totalSize.coerceAtLeast(2).toFloat(), 1f)
@@ -874,14 +930,19 @@ private fun ZoomableChartDialog(
     }
     val visibleMin = visibleValues.min()
     val visibleMax = visibleValues.max()
-    // Padding damit die Linie nicht direkt an der Achse klebt. Bei sehr
-    // engem sichtbarem Range (z.B. Plateau-Phasen) mindestens 1 Einheit.
     val rawSpan = (visibleMax - visibleMin).coerceAtLeast(0.0)
     val padding = (rawSpan * yPaddingFraction).coerceAtLeast(1.0)
     val yMinScaled = visibleMin - padding
     val yMaxScaled = visibleMax + padding
 
     val xLabelWrapper: (Int) -> String = { i -> xLabel(startIdx + i) }
+
+    // Crosshair-Label fuer den aktuell selektierten Wert. Wird an
+    // ChartWithAxes uebergeben damit Tooltip-Bubble direkt dort
+    // gerendert wird.
+    val crosshairLabel: String? = crosshairIdxInVisible?.takeIf { it in visibleValues.indices }?.let { idx ->
+        crosshairTooltip(visibleValues[idx], xLabelWrapper(idx))
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -890,7 +951,7 @@ private fun ZoomableChartDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(MaterialTheme.colorScheme.background),
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -898,27 +959,27 @@ private fun ZoomableChartDialog(
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
+                            color = cosmos.textPrimary,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = cosmos.textSecondary,
                         )
                     }
                     if (scale > 1f || clampedOffset > 0f) {
                         IconButton(
-                            onClick = { scale = 1f; offset = 0f },
+                            onClick = { scale = 1f; offset = 0f; crosshairIdxInVisible = null },
                             modifier = Modifier
                                 .padding(end = 4.dp)
                                 .size(44.dp)
-                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                                .background(cosmos.glassBorder.copy(alpha = 0.20f), CircleShape),
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Refresh,
                                 contentDescription = "Zoom zurücksetzen",
-                                tint = Color.White,
+                                tint = cosmos.textPrimary,
                             )
                         }
                     }
@@ -926,12 +987,12 @@ private fun ZoomableChartDialog(
                         onClick = onDismiss,
                         modifier = Modifier
                             .size(44.dp)
-                            .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                            .background(cosmos.glassBorder.copy(alpha = 0.20f), CircleShape),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
                             contentDescription = "Vollbild schliessen",
-                            tint = Color.White,
+                            tint = cosmos.textPrimary,
                         )
                     }
                 }
@@ -940,24 +1001,77 @@ private fun ZoomableChartDialog(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .pointerInput(totalSize) {
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                val newScale = (scale * zoom).coerceIn(1f, 50f)
-                                val newVisible = (1f / newScale).coerceIn(2f / totalSize.coerceAtLeast(2).toFloat(), 1f)
-                                val canvasWidth = size.width.toFloat().coerceAtLeast(1f)
-                                // Pan: nach links wischen (negativer pan.x) verschiebt
-                                // den sichtbaren Bereich nach rechts. Pan-Wert in
-                                // Fraction des sichtbaren Bereichs.
-                                val panFraction = -pan.x / canvasWidth * newVisible
-                                val newOffset = (offset + panFraction).coerceIn(0f, (1f - newVisible).coerceAtLeast(0f))
-                                scale = newScale
-                                offset = newOffset
+                        // Frank-Wunsch 2026-05-17 (Iteration 4): manuelle Pointer-
+                        // Verwaltung statt detectTransformGestures, damit Single-
+                        // Finger-Touch = Crosshair-Scrub und nur Two-Finger-Touch
+                        // = Pinch-Zoom + Pan. So funktioniert es wie in Strava,
+                        // Apple Fitness, Garmin Connect.
+                        .pointerInput(totalSize, visibleValues.size) {
+                            awaitEachGesture {
+                                // Konstanten muessen mit ChartWithAxes-Padding
+                                // uebereinstimmen — sonst landet der Crosshair
+                                // neben dem Finger.
+                                val padLeftPx = 56f
+                                val padRightPx = 12f
+
+                                fun pointerXToIdx(xPx: Float): Int {
+                                    val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
+                                    val frac = ((xPx - padLeftPx) / w).coerceIn(0f, 1f)
+                                    return (frac * (visibleValues.size - 1).coerceAtLeast(1)).toInt()
+                                        .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                                }
+
+                                val firstDown = awaitFirstDown(requireUnconsumed = false)
+                                crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
+                                var isPinching = false
+                                var initialDist = 0f
+
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val pressed = event.changes.filter { it.pressed }
+                                    if (pressed.isEmpty()) break
+
+                                    if (pressed.size >= 2) {
+                                        // Two-Finger-Modus = Zoom + Pan.
+                                        // Crosshair waehrend Pinch ausblenden.
+                                        if (!isPinching) {
+                                            isPinching = true
+                                            crosshairIdxInVisible = null
+                                            initialDist = (pressed[0].position - pressed[1].position).getDistance().coerceAtLeast(1f)
+                                        } else {
+                                            val newDist = (pressed[0].position - pressed[1].position).getDistance().coerceAtLeast(1f)
+                                            val zoomFactor = newDist / initialDist
+                                            // Pan = Mittelpunkt-Verschiebung der beiden Finger
+                                            val pan0 = pressed[0].positionChange()
+                                            val pan1 = pressed[1].positionChange()
+                                            val panX = (pan0.x + pan1.x) / 2f
+
+                                            val newScale = (scale * zoomFactor).coerceIn(1f, 50f)
+                                            val newVisible = (1f / newScale).coerceIn(
+                                                2f / totalSize.coerceAtLeast(2).toFloat(),
+                                                1f,
+                                            )
+                                            val canvasW = size.width.toFloat().coerceAtLeast(1f)
+                                            val panFrac = -panX / canvasW * newVisible
+                                            val newOffset = (offset + panFrac).coerceIn(
+                                                0f,
+                                                (1f - newVisible).coerceAtLeast(0f),
+                                            )
+                                            scale = newScale
+                                            offset = newOffset
+                                            initialDist = newDist
+                                        }
+                                        pressed.forEach { it.consume() }
+                                    } else if (pressed.size == 1 && !isPinching) {
+                                        // Single-Finger-Modus = Crosshair-Scrub.
+                                        crosshairIdxInVisible = pointerXToIdx(pressed[0].position.x)
+                                        pressed[0].consume()
+                                    }
+                                }
+                                // Finger losgelassen — Crosshair sichtbar lassen
+                                // damit User den letzten Wert noch lesen kann.
+                                isPinching = false
                             }
-                        }
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onDoubleTap = { scale = 1f; offset = 0f },
-                            )
                         },
                 ) {
                     ChartWithAxes(
@@ -973,17 +1087,19 @@ private fun ZoomableChartDialog(
                         values = visibleValues,
                         invertY = invertY,
                         modifier = Modifier.fillMaxSize(),
+                        crosshairIdx = crosshairIdxInVisible,
+                        crosshairLabel = crosshairLabel,
                     )
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = if (scale > 1.05f) {
-                        "Zoom ${"%.1f".format(scale)}× · Ein Finger zum Verschieben · Doppel-Tap = Reset"
+                        "Zoom ${"%.1f".format(scale)}× · Ein Finger = Wert ablesen · Zwei Finger = Zoom + Verschieben"
                     } else {
-                        "Zwei Finger spreizen zum Vergrößern · Gerät drehen für mehr Breite"
+                        "Ein Finger über Grafik ziehen = Wert ablesen · Zwei Finger spreizen = Zoomen · Gerät drehen für mehr Breite"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = cosmos.textSecondary,
                 )
             }
         }
@@ -1046,7 +1162,11 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             }
             Spacer(Modifier.height(8.dp))
             // Y invertiert: schneller (kleiner sec/km) ist OBEN auf der Y-Achse.
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { fullscreen = true },
+            ) {
                 ChartWithAxes(
                     accent = accent,
                     xCount = secPerKm.size,
@@ -1060,24 +1180,10 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
                     values = secPerKm,
                     invertY = true,
                 )
-                IconButton(
-                    onClick = { fullscreen = true },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(32.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Fullscreen,
-                        contentDescription = "Tempo-Verlauf im Vollbild öffnen",
-                        tint = Color.White,
-                    )
-                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel · Vollbild für Zoom",
+                text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel · Tap auf Chart für Vollbild",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
@@ -1094,6 +1200,7 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             xLabel = xLabelFn,
             invertY = true,
             yPaddingFraction = 0.05,
+            crosshairTooltip = { v, x -> "${formatPaceSec(v)} · $x" },
             onDismiss = { fullscreen = false },
         )
     }
