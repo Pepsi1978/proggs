@@ -1,12 +1,14 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 26 Sprachen aus der mitgelieferten Referenzdatei übersetzung-global.md (im Skill-Ordner). Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: Uebersetzt Android strings.xml in alle 27 Locales (26 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenzdatei übersetzung-global.md (im Skill-Ordner). Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
 ---
 
-# Uebersetzungs-Skill: Android strings.xml in 26 Sprachen
+# Uebersetzungs-Skill: Android strings.xml in 27 Locales (26 Sprachen)
 
-Dieser Skill uebersetzt die strings.xml einer Android-App in alle 26 Sprachen, die in
-der mitgelieferten Referenzdatei `übersetzung-global.md` definiert sind. Er arbeitet
+Dieser Skill uebersetzt die strings.xml einer Android-App in alle 27 Locales — 26 Sprachen,
+wobei Portugiesisch als zwei eigenstaendige Varianten gepflegt wird (pt-BR fuer Brasilien
+und pt-PT fuer Portugal). Die sprach-spezifischen Prompts liegen in der mitgelieferten
+Referenzdatei `übersetzung-global.md`. Er arbeitet
 Sprache fuer Sprache, verifiziert jede Uebersetzung im zweiten Durchlauf, und committet
 nach jeder fertigen Sprache. Das Ziel ist professionelle App-Store-Qualitaet — nicht
 "gut genug", sondern die bestmoegliche maschinelle Uebersetzung.
@@ -132,8 +134,9 @@ Uebersetzungsplan:
 - App: [APP_NAME] in [APP_DIR]
 - Quell-Strings: [Anzahl] Strings aus values/strings.xml
 - Umfang: [alle / nur neue (N Stueck)]
-- Sprachen: 26 (en, fr, es, pt-BR, it, nl, pl, ru, uk, tr, ja, ko,
+- Locales: 27 (en, fr, es, pt-BR, pt-PT, it, nl, pl, ru, uk, tr, ja, ko,
   zh-Hans, zh-Hant, ar, hi, th, id, bn, te, mr, ta, ur, gu, kn, ml)
+  Hinweis: 26 Sprachen, Portugiesisch zaehlt als 2 eigenstaendige Varianten.
 - Vorgehen: Sprache fuer Sprache, mit Verifikation und Commit nach jeder Sprache
 
 Starte jetzt mit Englisch...
@@ -143,12 +146,16 @@ Starte jetzt mit Englisch...
 
 ## Phase 2: Uebersetzungs-Schleife — Sprache fuer Sprache
 
-Diese Phase ist das Herzstuck des Skills. Fuer JEDE der 26 Sprachen werden drei
+Diese Phase ist das Herzstuck des Skills. Fuer JEDES der 27 Locales werden drei
 Schritte ausgefuehrt: Uebersetzen, Verifizieren, Speichern.
 
-Die Reihenfolge der Sprachen folgt dem Inhaltsverzeichnis in uebersetzung-global.md:
-en → fr → es → pt-BR → it → nl → pl → ru → uk → tr → ja → ko → zh-Hans → zh-Hant
-→ ar → hi → th → id → bn → te → mr → ta → ur → gu → kn → ml
+Die Reihenfolge der Locales folgt dem Inhaltsverzeichnis in uebersetzung-global.md:
+en → fr → es → pt-BR → pt-PT → it → nl → pl → ru → uk → tr → ja → ko → zh-Hans →
+zh-Hant → ar → hi → th → id → bn → te → mr → ta → ur → gu → kn → ml
+
+WICHTIG: pt-BR und pt-PT sind separate Locales und MUESSEN beide uebersetzt werden.
+pt-PT wird haeufig vergessen — der bidirektionale PT-Varianten-Check (Check 9) faengt
+Kreuz-Kontaminationen, aber er ersetzt nicht die Pflege von pt-PT als eigenstaendige Sprache.
 
 ### Schritt A — Uebersetzen (erster Durchlauf)
 
@@ -202,6 +209,8 @@ die im ersten Durchlauf entstehen.
    | **7** | **Native-Ziffern (indische Sprachen PFLICHT)** | **Keine bengalischen/devanagari/tamilischen etc. Ziffern** | **Python-Regex pro Sprache (siehe unten)** |
    | **8** | **Full-width Punctuation (CJK-Sprachen PFLICHT)** | **Keine half-width `, . ! ? : ; ( )` nach CJK-Zeichen** | **Python-Regex (siehe unten)** |
    | **9** | **Portugiesisch-Varianten-Trennung (pt-BR ↔ pt-PT PFLICHT)** | **Keine PT-BR-Vokabeln in pt-PT und umgekehrt** | **Python-Regex bidirektional (siehe unten)** |
+   | **10** | **Apostroph-Auto-Escape (FR/IT/PT-BR/PT-PT/EN PFLICHT)** | **Unescaped `'` in `<string>`-Werten — bricht den AAPT-Build** | **Python-Regex mit Quote-Awareness (siehe unten)** |
+   | **11** | **Laengen-Pacing-Check (alle Sprachen)** | **Uebersetzung >+40% laenger als Source ohne SHORTER-Alternative** | **Python-Diff Source vs Translation (siehe unten)** |
 
 #### Check 7 — Native-Ziffern-Pflichtcheck fuer indische Sprachen
 
@@ -505,6 +514,224 @@ Dieser Check ist **nicht optional** fuer pt-BR und pt-PT. Er wird nach Schritt A
 (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
 ersetzen (siehe Batch-Script-Muster in Check 5), in die Verbesserungs-Meldung aufnehmen.
 
+#### Check 10 — Apostroph-Auto-Escape (FR/IT/PT-BR/PT-PT/EN PFLICHT)
+
+Android-Strings im Format `<string name="..."/>` MUESSEN Apostrophe mit `\'` eskapieren
+oder den ganzen String in doppelte Anfuehrungszeichen `"..."` einschliessen. Sonst
+bricht das AAPT-Tool den Build mit `error: unclosed string` — bevor das APK
+ueberhaupt zusammengesetzt wird.
+
+**Empirisch der HAEUFIGSTE Build-Killer** bei automatischen Uebersetzungen, weil:
+- Franzoesisch produziert massenhaft Apostrophe: `l'application`, `c'est`, `aujourd'hui`
+- Italienisch: `l'app`, `un'altra volta`, `nell'elenco`
+- Portugiesisch (beide Varianten): `d'arvore`, vereinzelt
+- Englisch: `you're`, `it's`, `don't`, `we'll`
+
+LLMs vergessen die Eskapierung in ~30% der Strings die einen Apostroph enthalten,
+trotz expliziter Warnung im Universal-Prompt (Regel 8). Deshalb PFLICHT-Auto-Fix
+via Python — analog zu CJK-Punctuation und Native-Ziffern.
+
+**Regel-Set:**
+1. Apostroph in `<string>`-Wert UND der gesamte String nicht in doppelten
+   Anfuehrungszeichen → escape zu `\'`
+2. Apostroph in `<string>`-Wert UND der gesamte String IST in doppelten
+   Anfuehrungszeichen (Wrap-Form `"..."`) → bleibt unbehandelt (legal)
+3. Bereits eskapierte Apostrophe `\'` → bleiben (nicht doppelt eskapieren)
+4. Apostrophe in `<plurals><item>` und `<string-array><item>` werden wie `<string>`
+   behandelt
+5. Typographische Apostrophe `’` (U+2019) sind in Android-XML legal und werden
+   NICHT angetastet — empfohlen wenn die Uebersetzung typografisch korrekt sein soll
+
+**Pflicht-Script (nach jeder fr/it/pt-rBR/pt-rPT/en Uebersetzung ausfuehren):**
+
+```python
+import re, os, tempfile
+
+LOCALE = "fr"  # anpassen: fr, it, pt-rBR, pt-rPT, en
+PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
+
+def escape_apostrophes(value):
+    """Eskapiere unescaped ' nur wenn der String nicht in "..." eingeschlossen ist.
+    Schon eskapierte \\' bleiben unveraendert."""
+    stripped = value.strip()
+    # Regel 2: String in doppelten Anfuehrungszeichen → unangetastet
+    if len(stripped) >= 2 and stripped.startswith('"') and stripped.endswith('"'):
+        return value, 0
+    # Regel 3: \\' ist schon eskapiert — ersetze temporaer durch Platzhalter
+    placeholder = "\x00ESCAPED_APOS\x00"
+    tmp = value.replace("\\'", placeholder)
+    # Regel 1: alle verbliebenen ' eskapieren
+    fixes = tmp.count("'")
+    if fixes == 0:
+        return value, 0
+    tmp = tmp.replace("'", "\\'")
+    # Platzhalter zurueck
+    return tmp.replace(placeholder, "\\'"), fixes
+
+with open(PATH, "r", encoding="utf-8") as f:
+    content = f.read()
+original = content
+total_fixes = 0
+strings_changed = 0
+
+def process(match):
+    global total_fixes, strings_changed
+    full = match.group(0)
+    body = match.groups()[-1]
+    new_body, n = escape_apostrophes(body)
+    if n > 0:
+        total_fixes += n
+        strings_changed += 1
+        return full.replace(body, new_body)
+    return full
+
+# Sowohl <string> als auch <item> in plurals/string-array
+content = re.sub(r'<string\b[^>]*>(.*?)</string>', process, content, flags=re.DOTALL)
+content = re.sub(r'<item(?:\s+quantity="[^"]+")?\s*>(.*?)</item>', process, content, flags=re.DOTALL)
+
+if content != original:
+    d = os.path.dirname(os.path.abspath(PATH))
+    with tempfile.NamedTemporaryFile("w", dir=d, suffix=".tmp",
+                                      delete=False, encoding="utf-8") as tmp:
+        tmp.write(content); tmp_path = tmp.name
+    os.replace(tmp_path, PATH)
+    print(f"Fixed: {strings_changed} Strings, {total_fixes} Apostrophe escaped")
+else:
+    print(f"OK: 0 unescaped Apostrophe in {LOCALE}")
+```
+
+**WICHTIG — Ausnahmen die NICHT gefixt werden duerfen:**
+- Format-Platzhalter `%1$s` enthalten `$` nicht `'` — kein Eingriff
+- CDATA-Bloecke `<![CDATA[...]]>` brauchen kein Escape — Script ignoriert sie weil
+  der Inhalt nicht im `<string>`-Match liegt
+- Bereits typografische Apostrophe `’` (U+2019) werden NICHT geaendert — auf Wunsch
+  des Benutzers kann die Uebersetzung auch typografische Apostrophe verwenden, die
+  in Android-XML keine Eskapierung brauchen
+
+**Defense in Depth (3 Schichten):**
+1. Praevention: Universal-Prompt Regel 8 warnt vor unescaped Apostrophe
+2. Reaktion: Dieser Check 10 fixt vergessene Eskapierungen automatisch
+3. Bestaetigung: AAPT-Build wuerde unescaped `'` als Fehler melden — falls Check 10
+   ueberlistet wird, faengt der Build den Fehler vor dem Release
+
+Dieser Check ist **nicht optional** fuer fr, it, pt-rBR, pt-rPT, en. Er wird nach
+Schritt A (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen:
+automatisch ersetzen, in die Verbesserungs-Meldung aufnehmen.
+
+#### Check 11 — Laengen-Pacing-Check (alle Sprachen)
+
+Mobile UI hat begrenzten Platz. Wenn eine Uebersetzung deutlich laenger ist als
+das deutsche Original, werden Button-Labels abgeschnitten, Listen-Eintraege
+ueberlaufen, und Tabs zerbrechen visuell. Der Universal-Prompt fordert bereits
+einen `<!-- SHORTER: ... -->` Kommentar bei >40% Laengenzuwachs, aber dieser
+Hinweis wird vom LLM systematisch ignoriert.
+
+**Empirische Daten (Recherche 2026):**
+- Polnisch +25 bis +35% laenger als Deutsch
+- Russisch +20 bis +30%
+- Tamil / Malayalam +25 bis +40%
+- Bengali +20 bis +35%
+- Tuerkisch +30 bis +40% bei Beschreibungen
+- Chinesisch (zh-Hans/zh-Hant) DEUTLICH kuerzer (-30 bis -50%) — kein Risiko
+- Japanisch / Koreanisch ebenfalls kuerzer
+
+**Regel-Set:**
+1. Pro String: `len(translation) / len(source)` berechnen
+2. Schwellenwert: 1.40 (also +40%)
+3. Ausnahmen:
+   - Quell-Strings unter 5 Zeichen werden NICHT geprueft (Verhaeltnis kann
+     trivialerweise hoch sein bei "OK" → "Aceptar")
+   - Strings die nur Platzhalter sind (`%1$s`, `{name}`) werden uebersprungen
+   - Strings mit bereits vorhandenem `<!-- SHORTER:` Kommentar werden uebersprungen
+4. Bei Verletzung: WARN-Liste ausgeben mit String-Name, Faktor, Source, Translation
+5. KEIN Auto-Fix (anders als Check 7-10): das LLM muss in einem Verbesserungs-Pass
+   eine kuerzere Alternative ergaenzen — automatisches Kuerzen ist linguistisch
+   nicht machbar
+
+**Pflicht-Script (nach jeder Uebersetzung ausfuehren):**
+
+```python
+import re, xml.etree.ElementTree as ET
+
+LOCALE = "pl"  # anpassen pro Sprache
+SOURCE_PATH = "[APP_DIR]/app/src/main/res/values/strings.xml"
+TARGET_PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
+THRESHOLD = 1.40   # +40%
+MIN_SOURCE_LEN = 5
+
+def parse_strings(path):
+    """Liefert dict: name -> raw text content (inkl. Platzhalter)."""
+    result = {}
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    for m in re.finditer(
+        r'<string\s+name="([^"]+)"(?:[^>]*)>(.*?)</string>',
+        content, flags=re.DOTALL):
+        name = m.group(1)
+        body = m.group(2)
+        # SHORTER-Kommentar ignorieren wenn vorhanden
+        if '<!-- SHORTER:' in body:
+            continue
+        # Reine Platzhalter-Strings ueberspringen
+        cleaned = re.sub(r'%\d*\$?[sd]', '', body).strip()
+        cleaned = re.sub(r'\{[^}]+\}', '', cleaned).strip()
+        if len(cleaned) == 0:
+            continue
+        result[name] = body
+    return result
+
+src = parse_strings(SOURCE_PATH)
+dst = parse_strings(TARGET_PATH)
+
+violations = []
+for name, src_text in src.items():
+    if name not in dst:
+        continue
+    src_len = len(src_text.strip())
+    if src_len < MIN_SOURCE_LEN:
+        continue
+    dst_len = len(dst[name].strip())
+    if src_len == 0:
+        continue
+    ratio = dst_len / src_len
+    if ratio >= THRESHOLD:
+        violations.append((name, ratio, src_text.strip(), dst[name].strip()))
+
+# Sortiert nach Faktor absteigend
+violations.sort(key=lambda v: -v[1])
+
+if not violations:
+    print(f"OK: Laengen-Pacing fuer {LOCALE} im Rahmen (Schwelle: +{(THRESHOLD-1)*100:.0f}%)")
+else:
+    print(f"WARN: {len(violations)} Strings ueber +{(THRESHOLD-1)*100:.0f}% Laenge:")
+    for name, ratio, src_text, dst_text in violations[:20]:
+        print(f"  [{ratio*100:+.0f}%] {name}")
+        print(f"    DE: {src_text[:80]}")
+        print(f"    {LOCALE}: {dst_text[:80]}")
+    if len(violations) > 20:
+        print(f"  ... und {len(violations)-20} weitere")
+    print("Aktion: SHORTER-Alternativen im LLM-Verbesserungs-Pass ergaenzen.")
+```
+
+**Was passiert mit dem Ergebnis:**
+- 0 Violations → Check passiert, weiter zu Commit
+- 1-N Violations → in die Verifikations-Meldung aufnehmen, optional einen LLM-Pass
+  ueber genau diese Strings mit der Bitte um kuerzere Alternativen
+- "Ausreisser" (Faktor > 2.5x) als ERROR markieren — wahrscheinlich falsche
+  String-Zuordnung oder LLM-Halluzination
+
+**Defense in Depth (2 Schichten):**
+1. Praevention: Universal-Prompt Regel 4 fordert SHORTER-Kommentare
+2. Reaktion: Dieser Check 11 misst objektiv und warnt — keine Halluzinations-Pruefung
+
+Poka-Yoke-Stufe: 1 (Warnung) — automatisches Kuerzen ist linguistisch zu komplex,
+deshalb keine Stufe-2/3-Eliminierung moeglich. Aber: aus der WARN-Liste laesst sich
+ein gezielter LLM-Pass starten der genau diese Strings nachpoliert.
+
+Dieser Check ist **empfohlen** fuer alle Sprachen, **PFLICHT** fuer Sprachen mit
+typischer Laengen-Expansion: pl, ru, uk, fr, es, pt-BR, pt-PT, it, tr, bn, te, mr,
+ta, gu, kn, ml.
+
 3. **Check 5 im Detail — Sprach-spezifische Warnungen:**
    Das ist der wichtigste Check. Fuer jede Sprache gibt es spezifische Gefahren:
 
@@ -527,6 +754,10 @@ ersetzen (siehe Batch-Script-Muster in Check 5), in die Verbesserungs-Meldung au
    | ta | Keine Sanskrit-Lehnwoerter? Natives Tamil fuer persoenliche Begriffe? |
    | mr | Keine Hindi-Woerter? Drei Genera korrekt? |
    | bn | Keine Hindi-Leakage? Keine Devanagari-Zeichen? |
+   | te | Suffix-Ketten zu lang (>15 Silben)? Sanskrit-Mix? SHORTER-Alternativen bei langen Begriffen? |
+   | gu | Korrekte Gujarati-Unicode-Range (U+0A80–U+0AFF)? Keine Devanagari-Zeichen (mit shirorekha = horizontale Linie oben) eingestreut? |
+   | kn | Korrekte Kannada-Unicode-Range (U+0C80–U+0CFF)? Kein Telugu-Mix (U+0C00–U+0C7F sieht aehnlich aus)? |
+   | pl | Alle 4 Plural-Formen (one/few/many/other) vorhanden? "many" nicht mit "other" verwechselt? Geschlecht in Vergangenheit (zapisalem/zapisalam) vermieden? |
    | ml | Vereinfachte Orthographie? Suffix-Ketten korrekt? |
 
 4. **Korrekturen anwenden**: Wenn Probleme gefunden werden, die betroffenen Strings
@@ -558,8 +789,8 @@ ersetzen (siehe Batch-Script-Muster in Check 5), in die Verbesserungs-Meldung au
 
 3. **Status melden**:
    ```
-   ✓ [Sprache] ist jetzt fertig. ([N]/26)
-   Naechste Sprache: [naechste Sprache]
+   ✓ [Locale] ist jetzt fertig. ([N]/27)
+   Naechstes Locale: [naechstes Locale]
    ```
 
 4. **Zur naechsten Sprache** — zurueck zu Schritt A.
@@ -581,7 +812,7 @@ Uebersetzung abgeschlossen!
 | 2 | Franzoesisch | fr | [N] | Alles OK | Fertig |
 | ... | ... | ... | ... | ... | ... |
 
-Gesamt: [N] Strings in 26 Sprachen uebersetzt.
+Gesamt: [N] Strings in 27 Locales (26 Sprachen) uebersetzt.
 Commits: #[erste] bis #[letzte]
 ```
 
@@ -632,7 +863,7 @@ Diese Prinzipien erklaeren WARUM der Skill so arbeitet wie er arbeitet:
 
 ### Warum sequentiell statt parallel?
 
-Uebersetzungsqualitaet braucht vollen Kontext. Wenn 26 Sprachen parallel uebersetzt
+Uebersetzungsqualitaet braucht vollen Kontext. Wenn 27 Locales parallel uebersetzt
 werden, bekommt jede nur einen Bruchteil der Aufmerksamkeit. Sequentiell bedeutet:
 jede Sprache bekommt den vollstaendigen Prompt-Kontext, die volle Verifikation, und
 das Ergebnis wird sofort committed — ein Rettungspunkt nach jeder Sprache.

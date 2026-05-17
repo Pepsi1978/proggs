@@ -371,8 +371,11 @@ Jeder Block wird vom Skill als `[LANGUAGE_SPECIFIC_RULES]` in den Universal-Prom
 ```
 ## Language-Specific Rules: Polish (pl)
 - Register: Informal "ty". Pan/Pani is for government forms, not personal apps.
-- Plurals: one (1), few (2-4, 22-24...), other (0, 5-21, 25-31...) — THREE forms needed.
-  LLMs routinely confuse "few" and "other" forms.
+- Plurals: one (1), few (2-4, 22-24...), many (0, 5-21, 25-30...), other (decimals like 1.5)
+  — FOUR forms needed per CLDR. WRONG to use only "one/few/other": 5+ items fall into
+  "other" which is reserved for fractional/decimal numbers, producing grammatically wrong
+  text ("5 wpisu" instead of "5 wpisów"). LLMs routinely confuse "few" and "many" forms.
+  Verify "many" is present after every Polish plural translation.
 - Text: Polish is 10-20% LONGER than German.
 - Vocabulary: Dziennik, Wpis, Nastroj, Zapisz, Usun, Ustawienia, Dzis
 - "Bezplatny" or "Darmowy" for free (darmowy = colloquial, warmer).
@@ -445,6 +448,16 @@ Jeder Block wird vom Skill als `[LANGUAGE_SPECIFIC_RULES]` in den Universal-Prom
   Kaydet (save), Sil (delete), Ayarlar (settings), Hatirlatici (reminder),
   Abonelik (subscription), Ucretsiz (free)
 - Special characters: c, g, i (dotless), I (dotted uppercase), o, s, u — use correctly.
+- CRITICAL — Dotted/Dotless-I Java/Android Bug: In Turkish locale (Locale("tr")),
+  "I".toLowerCase() produces "ı" (dotless), NOT "i", and "i".toUpperCase() produces
+  "İ" (dotted capital), NOT "I". This is a well-known Android/JVM trap that breaks
+  case-insensitive string comparisons, JSON keys, URL parsing, and file extension
+  checks. App code that calls .toLowerCase() / .toUpperCase() WITHOUT an explicit
+  Locale parameter (Locale.ROOT or Locale.ENGLISH) will silently misbehave for
+  Turkish users. This is NOT a translation problem per se — but every translator
+  should flag any string that depends on case conversion (e.g. "JSON", "URL", "PDF",
+  file paths) for the dev team to audit case handling. Recommended: report findings
+  as <!-- LOCALE-AUDIT: case-conversion risk --> if such terms appear in UI strings.
 - CRITICAL — Vowel harmony: Turkish suffixes MUST harmonize with root vowels.
   "kitap" → "kitapta" NOT "kitepte". Violations sound like broken grammar.
 - WARNING — Agglutination: Suffixes change meaning completely. LLMs stack wrong suffixes
