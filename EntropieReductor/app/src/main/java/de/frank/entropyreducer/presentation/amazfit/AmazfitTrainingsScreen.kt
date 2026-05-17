@@ -201,7 +201,11 @@ fun AmazfitTrainingsScreen(
             } else {
                 items(state.filtered, key = { it.trackId }) { w ->
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        AmazfitWorkoutRow(workout = w, onClick = { onOpenDetail(w.trackId) })
+                        AmazfitWorkoutRow(
+                            workout = w,
+                            onClick = { onOpenDetail(w.trackId) },
+                            restingHrForDay = findRestingHrForWorkoutDay(state.snapshots, w.startMs),
+                        )
                     }
                 }
             }

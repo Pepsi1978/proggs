@@ -491,25 +491,26 @@ internal fun AmazfitWorkoutRow(
         // Frank-Wunsch 2026-05-09: in der Trainings-Liste statt Max-HR den
         // VO2Max-Wert anzeigen — das ist der aussagekraeftigere Trainings-
         // Indikator pro Lauf.
+        //
+        // Frank-Wunsch 2026-05-17: VO₂max-Beschriftung IMMER zeigen — auch
+        // wenn kein Ruhepuls-Wert verfuegbar ist (= "—"). Frank will den Wert
+        // pro Training auf einen Blick sehen koennen, plus Vergleichbarkeit
+        // zwischen Hero-Liste und Alle-Trainings-Liste.
         val vo2 = formatHeroVo2Max(workout, restingHrForDay)
-        if (vo2 != "—" || workout.avgHeartRate != null) {
-            Column(horizontalAlignment = Alignment.End) {
-                workout.avgHeartRate?.let {
-                    Text(
-                        text = "Ø $it bpm",
-                        color = CosmosColors.Critical,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                if (vo2 != "—") {
-                    Text(
-                        text = "VO₂ $vo2",
-                        color = cosmos.textSecondary,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
+        Column(horizontalAlignment = Alignment.End) {
+            workout.avgHeartRate?.let {
+                Text(
+                    text = "Ø $it bpm",
+                    color = CosmosColors.Critical,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
+            Text(
+                text = "VO₂max $vo2",
+                color = cosmos.textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }

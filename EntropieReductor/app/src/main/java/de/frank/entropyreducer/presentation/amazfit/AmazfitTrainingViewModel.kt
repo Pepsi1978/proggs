@@ -30,6 +30,9 @@ data class AmazfitTrainingsUiState(
     val sportFilter: Int? = null,
     val rangeFilter: Range = Range.ALL,
     val availableSports: List<Pair<Int, String>> = emptyList(),
+    // Frank-Wunsch 2026-05-17: BiomarkerSnapshots fuer den Tages-Ruhepuls-
+    // Lookup in der VO2max-Spalte der Trainings-Liste.
+    val snapshots: List<BiomarkerSnapshotEntity> = emptyList(),
 )
 
 enum class Range(val days: Int) { LAST_30(30), LAST_90(90), LAST_365(365), ALL(0) }
@@ -42,6 +45,7 @@ enum class Range(val days: Int) { LAST_30(30), LAST_90(90), LAST_365(365), ALL(0
 @HiltViewModel
 class AmazfitTrainingsViewModel @Inject constructor(
     private val repo: AmazfitRepository,
+    private val biomarkerDao: BiomarkerSnapshotDao,
 ) : ViewModel() {
 
     private val _sportFilter = MutableStateFlow<Int?>(null)
@@ -49,9 +53,10 @@ class AmazfitTrainingsViewModel @Inject constructor(
 
     val state: StateFlow<AmazfitTrainingsUiState> = combine(
         repo.observeAllWorkouts(),
+        biomarkerDao.getAll(),
         _sportFilter,
         _rangeFilter,
-    ) { workouts, sport, range ->
+    ) { workouts, snapshots, sport, range ->
         val now = System.currentTimeMillis()
         val cutoff = if (range == Range.ALL) Long.MIN_VALUE
                      else now - range.days * 24L * 60 * 60 * 1000
@@ -70,6 +75,7 @@ class AmazfitTrainingsViewModel @Inject constructor(
             sportFilter = sport,
             rangeFilter = range,
             availableSports = sportsInData,
+            snapshots = snapshots,
         )
     }.stateIn(
         viewModelScope,
