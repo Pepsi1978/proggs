@@ -488,29 +488,64 @@ class AmazfitRepository @Inject constructor(
             val matchByStrava = toleranceList.find { it.first == strava.trackId }
             if (matchByStrava != null) {
                 val existing = existingByTrackId[strava.trackId]
-                if (existing?.manualOverridesMs != null) {
-                    // Schutz: Streams updaten, Summary erhalten.
+                if (existing != null) {
+                    // Frank-Bugfix 2026-05-17: IMMER "fresh wins if not null, existing
+                    // als Fallback" — egal ob manuell editiert oder nicht. Frueher
+                    // (#823) machte ich bei manualOverridesMs == null einen kompletten
+                    // REPLACE — das hat aber bei aelteren Strava-Trainings die HR-
+                    // und Pace-Daten (die Strava nur fuer junge Workouts liefert) auf
+                    // null gesetzt und Frank's vorhandene Werte zerstoert.
+                    //
+                    // Jetzt: Wenn Strava einen Wert liefert -> der gewinnt. Wenn
+                    // Strava null hat -> existing bleibt. Manuell editierte Felder
+                    // werden zusaetzlich durch manualOverridesMs geschuetzt: dann
+                    // gewinnt IMMER existing (Strava-Wert wird ignoriert).
+                    val isManual = existing.manualOverridesMs != null
                     val merged = existing.copy(
-                        // Nur Strom-Felder uebernehmen (Detail-Daten von Strava).
+                        durationSeconds = if (isManual) existing.durationSeconds else (strava.durationSeconds ?: existing.durationSeconds),
+                        sportType = if (isManual) existing.sportType else (strava.sportType ?: existing.sportType),
+                        sportName = if (isManual) existing.sportName else (strava.sportName ?: existing.sportName),
+                        distanceMeters = if (isManual) existing.distanceMeters else (strava.distanceMeters ?: existing.distanceMeters),
+                        // Summary-Felder: bei manualOverridesMs IMMER existing behalten,
+                        // sonst fresh-wins-if-not-null.
+                        avgPaceSecPerKm = if (isManual) existing.avgPaceSecPerKm else (strava.avgPaceSecPerKm ?: existing.avgPaceSecPerKm),
+                        maxPaceSecPerKm = if (isManual) existing.maxPaceSecPerKm else (strava.maxPaceSecPerKm ?: existing.maxPaceSecPerKm),
+                        avgSpeedKmh = if (isManual) existing.avgSpeedKmh else (strava.avgSpeedKmh ?: existing.avgSpeedKmh),
+                        maxSpeedKmh = if (isManual) existing.maxSpeedKmh else (strava.maxSpeedKmh ?: existing.maxSpeedKmh),
+                        calories = if (isManual) existing.calories else (strava.calories ?: existing.calories),
+                        avgHeartRate = if (isManual) existing.avgHeartRate else (strava.avgHeartRate ?: existing.avgHeartRate),
+                        maxHeartRate = if (isManual) existing.maxHeartRate else (strava.maxHeartRate ?: existing.maxHeartRate),
+                        altitudeGainMeters = if (isManual) existing.altitudeGainMeters else (strava.altitudeGainMeters ?: existing.altitudeGainMeters),
+                        altitudeLossMeters = if (isManual) existing.altitudeLossMeters else (strava.altitudeLossMeters ?: existing.altitudeLossMeters),
+                        cadence = if (isManual) existing.cadence else (strava.cadence ?: existing.cadence),
+                        strideLengthCm = if (isManual) existing.strideLengthCm else (strava.strideLengthCm ?: existing.strideLengthCm),
+                        // Streams: IMMER aktualisieren wenn Strava welche liefert
+                        // (auch bei isManual — Streams sind kein manuell-editierbares Feld).
                         gpsTrackJson = strava.gpsTrackJson ?: existing.gpsTrackJson,
                         heartRateSeriesJson = strava.heartRateSeriesJson ?: existing.heartRateSeriesJson,
                         paceStreamJson = strava.paceStreamJson ?: existing.paceStreamJson,
                         paceSeriesJson = strava.paceSeriesJson ?: existing.paceSeriesJson,
                         splitsJson = strava.splitsJson ?: existing.splitsJson,
-                        // Stadt + sportType/sportName von Strava nicht überschreiben
-                        // wenn Frank etwas Eigenes drin hat — aber wenn existing.city
-                        // null ist und Strava einen Wert hat, OK.
-                        city = existing.city ?: strava.city,
-                        // VO2max wird live im UI berechnet — DB-Wert ist irrelevant.
-                        // Trotzdem nicht ueberschreiben, sicher ist sicher.
+                        // Metadaten + VO2max nicht ueberschreiben.
+                        source = strava.source ?: existing.source,
+                        city = strava.city ?: existing.city,
                         vo2Max = existing.vo2Max,
+                        // manualOverridesMs bleibt erhalten (NIE durch Sync resetten).
+                        manualOverridesMs = existing.manualOverridesMs,
+                        createdAt = strava.createdAt,
                     )
                     toInsert += merged
-                    protectedCount += 1
-                    Log.d(TAG, "Strava-Merge: ${strava.trackId} hat manuelle Edits — nur Streams aktualisiert, Summary erhalten")
+                    if (isManual) {
+                        protectedCount += 1
+                        Log.i(TAG, "Strava-Merge: ${strava.trackId} ist manuell editiert (manualOverridesMs=${existing.manualOverridesMs}) — Summary-Werte BLEIBEN, nur Streams aktualisiert")
+                    } else {
+                        replaceCount += 1
+                        Log.d(TAG, "Strava-Merge: ${strava.trackId} fresh-wins-if-not-null gemerged (kein manueller Edit)")
+                    }
                 } else {
+                    // Neuer Eintrag — direkt einfuegen.
                     toInsert += strava
-                    replaceCount += 1
+                    newCount += 1
                 }
                 continue
             }
