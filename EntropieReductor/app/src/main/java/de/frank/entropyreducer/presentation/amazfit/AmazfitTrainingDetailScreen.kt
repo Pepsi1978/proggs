@@ -900,7 +900,13 @@ private fun ChartWithAxes(
                     val tipBoxH = 56f
                     val placeRight = cx + 24f + tipBoxW < size.width
                     val tipLeft = if (placeRight) cx + 24f else cx - 24f - tipBoxW
-                    val tipTop = padTop + 12f
+                    // Frank-Wunsch 2026-05-17 Iteration 10: Tooltip muss UNTER
+                    // dem Close-Button (oben rechts, ~60dp Bottom) liegen, sonst
+                    // ueberlappt es mit Kamera-Cutout des Fold 6.
+                    // 220 Canvas-Pixel = ca. 70-80dp auf Standard-Displays —
+                    // sicher unter Buttons. Auf grossen Displays (Tablet, Landscape)
+                    // nehmen wir 12% der Canvas-Hoehe falls das mehr ist.
+                    val tipTop = (padTop + (size.height * 0.12f)).coerceAtLeast(padTop + 220f)
                     drawIntoCanvas {
                         it.nativeCanvas.drawRoundRect(
                             tipLeft,
