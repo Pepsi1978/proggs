@@ -585,10 +585,10 @@ private fun KeyValueGrid(state: BiomarkerUiState, onOpenDetail: (String) -> Unit
         )
         MetricMiniCard(
             modifier = Modifier.weight(1f),
-            label = "Herzfrequenz",
+            label = "Ruhepuls",
             value = latest?.restingHeartRate?.let { "$it bpm" } ?: "—",
             delta = formatDelta(latest?.restingHeartRate?.toDouble(), avgRhr, "bpm"),
-            // Bei RHR ist NIEDRIGER besser — Pfeil-Logik invertiert.
+            // Bei Ruhepuls ist NIEDRIGER besser — Pfeil-Logik invertiert.
             deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
             footnote = "vs. 30-Tage-Mittel",
             onClick = { onOpenDetail(MetricKey.RHR) },
@@ -1623,6 +1623,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.AMAZFIT_LAST_HERO ->
                 AmazfitLastTrainingHeroCard(
                     workouts = state.amazfitWorkouts,
+                    snapshots = state.history,
                     onOpenDetail = onOpenTrainingDetail,
                     onSaveOverrides = onSaveWorkoutOverrides,
                 )
@@ -1630,6 +1631,7 @@ private fun BiomarkerCardForId(
             BiomarkerCardId.AMAZFIT_TRAININGS ->
                 AmazfitTrainingsCard(
                     workouts = state.amazfitWorkouts,
+                    snapshots = state.history,
                     onOpenAll = onOpenAllTrainings,
                     onOpenDetail = onOpenTrainingDetail,
                 )
@@ -1724,10 +1726,10 @@ private fun MiniRhrCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit)
         }
     MetricMiniCard(
         modifier = Modifier.fillMaxWidth(),
-        label = "Herzfrequenz",
+        label = "Ruhepuls",
         value = latest?.restingHeartRate?.let { "$it bpm" } ?: "—",
         delta = formatDelta(latest?.restingHeartRate?.toDouble(), avgRhr, "bpm"),
-        // Bei RHR ist NIEDRIGER besser — Pfeil-Logik invertiert.
+        // Bei Ruhepuls ist NIEDRIGER besser — Pfeil-Logik invertiert.
         deltaPositive = (latest?.restingHeartRate?.toDouble() ?: 0.0) < (avgRhr ?: 0.0),
         footnote = "vs. 30-Tage-Mittel",
         onClick = { onOpenDetail(MetricKey.RHR) },

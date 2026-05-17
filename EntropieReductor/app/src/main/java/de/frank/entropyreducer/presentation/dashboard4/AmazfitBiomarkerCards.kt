@@ -32,8 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.amazfit.EditTrainingValuesDialog
 import de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides
+import de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -96,14 +98,15 @@ internal fun AmazfitSectionHeader() {
 @Composable
 internal fun AmazfitLastTrainingHeroCard(
     workouts: List<AmazfitWorkoutEntity>,
+    snapshots: List<BiomarkerSnapshotEntity>,
     onOpenDetail: (String) -> Unit,
     onSaveOverrides: (String, ManualWorkoutOverrides) -> Unit = { _, _ -> },
 ) {
     val latest = workouts.firstOrNull() ?: return
-    // Frank-Wunsch 2026-05-11: KEIN GlassCard-Wrapper mehr — die gelbe Blase
-    // (LetzterLaufHero-Box mit accent-Hintergrund) ist selbst die Karte.
+    val restingHr = findRestingHrForWorkoutDay(snapshots, latest.startMs)
     LetzterLaufHero(
         w = latest,
+        restingHrForDay = restingHr,
         onOpenDetail = { onOpenDetail(latest.trackId) },
         onSaveOverrides = { overrides -> onSaveOverrides(latest.trackId, overrides) },
     )
@@ -112,6 +115,7 @@ internal fun AmazfitLastTrainingHeroCard(
 @Composable
 internal fun AmazfitTrainingsCard(
     workouts: List<AmazfitWorkoutEntity>,
+    snapshots: List<BiomarkerSnapshotEntity>,
     onOpenAll: () -> Unit,
     onOpenDetail: (String) -> Unit,
 ) {
@@ -170,7 +174,11 @@ internal fun AmazfitTrainingsCard(
             } else {
                 rest.forEachIndexed { i, w ->
                     if (i > 0) Spacer(Modifier.height(8.dp))
-                    AmazfitWorkoutRow(workout = w, onClick = { onOpenDetail(w.trackId) })
+                    AmazfitWorkoutRow(
+                        workout = w,
+                        onClick = { onOpenDetail(w.trackId) },
+                        restingHrForDay = findRestingHrForWorkoutDay(snapshots, w.startMs),
+                    )
                 }
                 val remaining = workouts.size - 1 - rest.size
                 if (remaining > 0) {
@@ -202,6 +210,7 @@ internal fun AmazfitTrainingsCard(
 @Composable
 private fun LetzterLaufHero(
     w: AmazfitWorkoutEntity,
+    restingHrForDay: Int?,
     onOpenDetail: () -> Unit,
     onSaveOverrides: (ManualWorkoutOverrides) -> Unit,
 ) {
@@ -328,7 +337,7 @@ private fun LetzterLaufHero(
                 )
                 MiniStat(
                     label = "VO₂Max",
-                    value = formatHeroVo2Max(w),
+                    value = formatHeroVo2Max(w, restingHrForDay),
                     modifier = Modifier.weight(1f),
                     onClick = { editOpen = true },
                 )
@@ -422,7 +431,11 @@ private fun MiniStat(
  * darunter, Pulswerte rechts.
  */
 @Composable
-internal fun AmazfitWorkoutRow(workout: AmazfitWorkoutEntity, onClick: () -> Unit) {
+internal fun AmazfitWorkoutRow(
+    workout: AmazfitWorkoutEntity,
+    onClick: () -> Unit,
+    restingHrForDay: Int? = null,
+) {
     val cosmos = LocalCosmos.current
     Row(
         modifier =
@@ -478,7 +491,7 @@ internal fun AmazfitWorkoutRow(workout: AmazfitWorkoutEntity, onClick: () -> Uni
         // Frank-Wunsch 2026-05-09: in der Trainings-Liste statt Max-HR den
         // VO2Max-Wert anzeigen — das ist der aussagekraeftigere Trainings-
         // Indikator pro Lauf.
-        val vo2 = formatHeroVo2Max(workout)
+        val vo2 = formatHeroVo2Max(workout, restingHrForDay)
         if (vo2 != "—" || workout.avgHeartRate != null) {
             Column(horizontalAlignment = Alignment.End) {
                 workout.avgHeartRate?.let {
@@ -538,13 +551,19 @@ internal fun formatDuration(seconds: Long): String {
  * Detail-Screen und Liste denselben Wert zeigen. Reine ACSM-Formel + HR-Reserve + Frank's
  * empirische +2 Korrektur.
  */
-internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity): String {
+/**
+ * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop-
+ * Snapshot fuer den Workout-Tag). Wenn fuer den Tag KEIN Ruhepuls-Wert
+ * vorliegt → "—" statt mit Hardcoded-65 zu raten.
+ */
+internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity, restingHrForDay: Int?): String {
     val avgHr = w.avgHeartRate ?: return "—"
     val distance = w.distanceMeters ?: return "—"
     val duration = w.durationSeconds ?: return "—"
     if (duration < 60 || distance < 100 || avgHr < 80 || avgHr > 220) return "—"
+    val restingHr = restingHrForDay ?: return "—"
     val frankMaxHr = 180
-    val restingHr = 65
+    if (frankMaxHr <= restingHr) return "—"
     val durationMin = duration / 60.0
     val speedMperMin = distance / durationMin
     val vo2Workout = 0.2 * speedMperMin + 3.5

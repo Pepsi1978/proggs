@@ -72,6 +72,7 @@ fun AmazfitTrainingDetailScreen(
     vm: AmazfitTrainingDetailViewModel = hiltViewModel(),
 ) {
     val workout by vm.workout.collectAsState()
+    val restingHrForDay by vm.restingHrForWorkoutDay.collectAsState()
     val cosmos = LocalCosmos.current
     val w = workout
     // Frank-Wunsch 2026-05-17: Edit-Dialog fuer manuelle Werte (Pace/HR/Hoehe
@@ -120,7 +121,13 @@ fun AmazfitTrainingDetailScreen(
             }
             item { HeroCard(w) }
             item { PaceAndHrGrid(w, onEditClick = { editDialogOpen = true }) }
-            item { TerrainGrid(w, onEditClick = { editDialogOpen = true }) }
+            item {
+                TerrainGrid(
+                    w = w,
+                    restingHrForDay = restingHrForDay,
+                    onEditClick = { editDialogOpen = true },
+                )
+            }
             item { TrainingseffektCard(w) }
             if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city) }
             if (hr.isNotEmpty()) item { PulsverlaufCard(hr) }
@@ -256,7 +263,11 @@ private fun PaceAndHrGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {})
 }
 
 @Composable
-private fun TerrainGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
+private fun TerrainGrid(
+    w: AmazfitWorkoutEntity,
+    restingHrForDay: Int? = null,
+    onEditClick: () -> Unit = {},
+) {
     StatsGrid(
         items = listOf(
             "Höhe ↑" to (w.altitudeGainMeters?.let { "%.0f m".format(it) } ?: "—"),
@@ -270,10 +281,10 @@ private fun TerrainGrid(w: AmazfitWorkoutEntity, onEditClick: () -> Unit = {}) {
     StatsGrid(
         items = listOf(
             "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
-            // Frank-Wunsch 2026-05-16: VO2max IMMER selbst berechnen (ACSM + Karvonen + 2).
-            // Der DB-Wert (z.B. Polar's running-index oder Zepp-VO2max) wird ignoriert —
-            // nur die eigenen Daten zaehlen. Wenn Eingaben fehlen, steht "—".
-            "VO₂Max" to estimateVo2Max(w),
+            // Frank-Wunsch 2026-05-17: VO2max nutzt Tages-Ruhepuls aus dem
+            // Whoop-Snapshot (nicht mehr hardcoded 65). Wenn kein Ruhepuls-
+            // Wert fuer den Tag → "—".
+            "VO₂Max" to estimateVo2Max(w, restingHrForDay),
         ),
         onItemClick = onEditClick,
     )
@@ -1162,35 +1173,39 @@ private typealias ColumnScope = androidx.compose.foundation.layout.ColumnScope
  */
 /**
  * Schaetzt VO2Max nach der ACSM-Formel mit HR-Reserve-Hochrechnung.
- * Dies ist die wissenschaftlich anerkannte Methode (American College of
- * Sports Medicine — Quelle ACSM Guidelines for Exercise Testing 11. Auflage)
- * und wird auch von Garmin Firstbeat als Grundlage genutzt.
+ *
+ * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop-
+ * Snapshot fuer den Workout-Tag), nicht mehr hardcoded. Wenn fuer den
+ * Workout-Tag KEIN Ruhepuls-Wert vorliegt (z.B. Polar-Bulk-Trainings vor der
+ * Whoop-Anschaffung), liefert die Funktion "—" — KEIN Fake mit 65 bpm.
  *
  * Schritt 1 — VO2 bei diesem Workout (ml/kg/min):
  *   VO2_workout = 0.2 × Speed (m/min) + 3.5    [ACSM-Lauf-Formel]
  *
  * Schritt 2 — HR-Reserve-Anteil (Karvonen):
- *   HR_reserve_anteil = (avg_HR − rest_HR) / (max_HR − rest_HR)
+ *   HR_reserve_anteil = (avg_HR − Tages-Ruhepuls) / (max_HR − Tages-Ruhepuls)
  *
  * Schritt 3 — Hochrechnung auf Maximum:
  *   VO2Max ≈ VO2_workout / HR_reserve_anteil
  *
- * Korrektur +2 (Frank-Empirie 2026-05-09): Frank's Zepp-App zeigt fuer den
- * heutigen Lauf 41, reine ACSM gibt 38-39 — also +2 Konstante damit die
- * absoluten Werte zu seinem Geraet passen. Die Variation zwischen Workouts
- * bleibt korrekt, nur der Offset wird angeglichen.
+ * Korrektur +2 (Frank-Empirie 2026-05-09): empirischer Offset damit die
+ * absoluten Werte zu Franks Zepp-App passen.
  *
  * HR_max = 180 (Frank's persoenlicher Maximalpuls)
- * HR_rest = 65 (Default — Frank's typischer Ruhepuls)
  */
-private fun estimateVo2Max(w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity): String {
+private fun estimateVo2Max(
+    w: de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity,
+    restingHrForDay: Int?,
+): String {
     val avgHr = w.avgHeartRate ?: return "—"
     val distance = w.distanceMeters ?: return "—"
     val duration = w.durationSeconds ?: return "—"
     if (duration < 60 || distance < 100) return "—"
     if (avgHr < 80 || avgHr > 220) return "—"
+    // Frank-Wunsch 2026-05-17: kein Default-Ruhepuls mehr. Wenn kein
+    // Tages-Wert verfuegbar → leer statt geraten.
+    val restingHr = restingHrForDay ?: return "—"
     val frankMaxHr = 180
-    val restingHr = 65
     if (frankMaxHr <= restingHr) return "—"
     val durationMin = duration / 60.0
     val speedMperMin = distance / durationMin
