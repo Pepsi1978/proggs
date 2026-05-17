@@ -773,8 +773,29 @@ private fun ChartWithAxes(
     val labelArgb = cosmos.textPrimary.toArgb()
     if (values.size < 2 || yMax <= yMin) return
     // Performance-Audit Loop 2 (2026-05-10): Pfad einmalig allokieren statt
-    // pro Frame.
+    // pro Frame. Iteration 8: textPaint und tooltipPaint auch outside.
     val seriesPath = remember { Path() }
+    val textPaint = remember(labelArgb) {
+        android.graphics.Paint().apply {
+            color = labelArgb
+            textSize = 24f
+            isAntiAlias = true
+        }
+    }
+    val tooltipTextPaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 36f
+            isAntiAlias = true
+            isFakeBoldText = true
+        }
+    }
+    val tooltipBgPaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.argb(235, 0, 0, 0)
+            isAntiAlias = true
+        }
+    }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -792,13 +813,6 @@ private fun ChartWithAxes(
             fun toY(v: Double): Float {
                 val t = ((v - yMin) / range).toFloat().coerceIn(0f, 1f)
                 return padTop + (if (invertY) t else 1f - t) * h
-            }
-            // Achsen-Beschriftung — Theme-Farbe damit sie sichtbar ist (vorher
-            // hartcodiert hellgrau auf hellem Hintergrund — unsichtbar).
-            val textPaint = android.graphics.Paint().apply {
-                color = labelArgb
-                textSize = 24f
-                isAntiAlias = true
             }
             // Y-Gridlines + Beschriftung — mehr Linien fuer feinere Ablesbarkeit
             for (i in 0..yTickCount) {
@@ -876,16 +890,11 @@ private fun ChartWithAxes(
                     center = Offset(cx, cy),
                 )
                 // Tooltip-Bubble — auf der gegenueberliegenden Seite vom
-                // Cursor damit der Finger den Text nicht verdeckt.
+                // Cursor damit der Finger den Text nicht verdeckt. Paints
+                // sind gecacht (siehe oben — vermeidet Pro-Frame-Allokation).
                 val label = crosshairLabel
                 if (!label.isNullOrBlank()) {
-                    val tipPaint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.WHITE
-                        textSize = 36f
-                        isAntiAlias = true
-                        isFakeBoldText = true
-                    }
-                    val textW = tipPaint.measureText(label)
+                    val textW = tooltipTextPaint.measureText(label)
                     val tipPad = 14f
                     val tipBoxW = textW + tipPad * 2
                     val tipBoxH = 56f
@@ -893,10 +902,6 @@ private fun ChartWithAxes(
                     val tipLeft = if (placeRight) cx + 24f else cx - 24f - tipBoxW
                     val tipTop = padTop + 12f
                     drawIntoCanvas {
-                        val bgPaint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.argb(235, 0, 0, 0)
-                            isAntiAlias = true
-                        }
                         it.nativeCanvas.drawRoundRect(
                             tipLeft,
                             tipTop,
@@ -904,13 +909,13 @@ private fun ChartWithAxes(
                             tipTop + tipBoxH,
                             12f,
                             12f,
-                            bgPaint,
+                            tooltipBgPaint,
                         )
                         it.nativeCanvas.drawText(
                             label,
                             tipLeft + tipPad,
                             tipTop + tipBoxH / 2 + 12f,
-                            tipPaint,
+                            tooltipTextPaint,
                         )
                     }
                 }
@@ -1093,7 +1098,11 @@ private fun ZoomableChartFullscreen(
                                     val prevDist = (prevP0 - prevP1).getDistance().coerceAtLeast(1f)
                                     val zoomDelta = newDist / prevDist
                                     androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
-                                        pinchScale = (pinchScale * zoomDelta).coerceIn(0.05f, 50f)
+                                        // Sehr weit gefasste Range damit
+                                        // waehrend Live-Pinch nichts clamped —
+                                        // erst beim Commit (Pinch-End) wird
+                                        // auf 1..200 begrenzt.
+                                        pinchScale = (pinchScale * zoomDelta).coerceIn(0.001f, 1000f)
                                         pinchPanX += avgPanX
                                         pinchPanY += avgPanY
                                     }
