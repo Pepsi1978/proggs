@@ -4,10 +4,11 @@
 > Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
 > konsultiert werden.
 
-> **Wann diese Datei lesen:** Bei jeder Risiko-Einschaetzung und Recherche. Diese Datei
-> wird haeufig aktualisiert — pruefe das `Stand`-Datum.
+> **Skill-Stand dieser Datei:** 2026-05-17 (siehe SKILL.md fuer den globalen Stand).
+> Wenn der Skill-Stand >30 Tage alt ist, neue Recherche durchfuehren — diese Datei wird
+> haeufiger aktualisiert als andere References.
 
-**Stand: 2026-05-17**
+> **Wann diese Datei lesen:** Bei jeder Risiko-Einschaetzung und Recherche.
 
 ## Top-Risiken nach Wirkung (sortiert)
 

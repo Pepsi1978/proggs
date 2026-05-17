@@ -4,6 +4,8 @@
 > Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
 > konsultiert werden.
 
+> **Skill-Stand dieser Datei:** 2026-05-17 (siehe SKILL.md fuer den globalen Stand).
+> Wenn der Skill-Stand >30 Tage alt ist, neue Recherche durchfuehren.
 > **Wann diese Datei lesen:** Sobald die App im UK Play Store ausgespielt wird oder UK-Nutzer
 > personenbezogene Daten ueber die App preisgeben koennten. Der Skill prueft die 3-Trigger-Bedingung
 > systematisch und gibt eine konkrete Empfehlung.

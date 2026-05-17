@@ -4,6 +4,8 @@
 > Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
 > konsultiert werden.
 
+> **Skill-Stand dieser Datei:** 2026-05-17 (siehe SKILL.md fuer den globalen Stand).
+> Wenn der Skill-Stand >30 Tage alt ist, neue Recherche durchfuehren.
 > **Wann diese Datei lesen:** Im Schritt 5 (Detail-Pruefung) und immer wenn ein konkretes
 > Pflichtdokument geprueft wird. Diese Datei ist die zentrale inhaltliche Referenz fuer
 > alle Pflichttexte einer App.
