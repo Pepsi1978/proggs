@@ -405,10 +405,13 @@ Commits: #[erste] bis #[letzte]
 
 Wenn bestimmte Sprachen wahrscheinlich eine menschliche Pruefung brauchen,
 das explizit nennen:
-- Ukrainisch (Russismus-Risiko)
+- Ukrainisch (Russismus-Risiko — LLMs streuen russische Vokabeln ein)
 - Malayalam (komplexe Morphologie, niedrige LLM-Qualitaet)
 - Kannada (schwache LLM-Performance)
-- Thai (Wort-Segmentierung unsichtbar)
+- Thai (Wort-Segmentierung unsichtbar — keine Leerzeichen zwischen Woertern)
+- Vietnamesisch (Diakritika-Verlust — LLMs lassen Tonzeichen weg, z.B. "tam" vs "tâm" vs "tám")
+- Persisch (Arabisch-Verwechslung — LLMs nutzen arabische Buchstaben ي/ك statt persisches ی/ک)
+- Hebraeisch (Gender-Konsistenz — Verben aendern Form je nach Geschlecht des Subjekts)
 
 ---
 

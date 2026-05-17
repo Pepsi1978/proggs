@@ -156,6 +156,19 @@ und
 Uebersetzungsqualitaet braucht vollen Kontext. Wenn 31 Locales parallel uebersetzt
 ```
 
+### Stelle 12 (BONUS): Bekannte Einschraenkungen in Phase 3.2
+
+Falls die neue Sprache bekannte LLM-Schwaechen hat (z.B. Diakritika-Verlust,
+Skript-Verwechslung, Gender-Inkonsistenz), als Zeile in Phase 3.2 ergaenzen:
+
+```
+- [Sprache] ([kurze Beschreibung des LLM-Problems])
+```
+
+Diese Stelle wird haeufig vergessen. Frank's Phase 3.2 hatte nach der vi/fa/he-
+Erweiterung in Stufe 3 die neuen Sprachen NICHT in der Risiko-Liste — wurde
+erst beim 5. Review-Pass entdeckt. Diese Stelle 12 wurde als Resultat ergaenzt.
+
 ---
 
 ## Optionale Erweiterungen je nach Sprach-Typ
