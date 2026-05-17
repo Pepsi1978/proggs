@@ -8,6 +8,8 @@ import kotlinx.serialization.json.intOrNull
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -633,6 +636,13 @@ private fun PulsverlaufCard(hr: List<Int>) {
     val avg = if (hr.isEmpty()) 0 else hr.average().toInt()
     val min = hr.minOrNull() ?: 0
     val max = hr.maxOrNull() ?: 0
+    val values = remember(hr) { hr.map { it.toDouble() } }
+    val xLabelFn: (Int) -> String = { i ->
+        // Minuten-Skala: 1 Sample ≈ 1 Sekunde
+        val mins = i / 60
+        "${mins} min"
+    }
+    var fullscreen by remember { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -650,31 +660,56 @@ private fun PulsverlaufCard(hr: List<Int>) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            ChartWithAxes(
-                accent = CosmosColors.Critical,
-                xCount = hr.size,
-                yMin = (min - 5).coerceAtLeast(40).toDouble(),
-                yMax = (max + 5).coerceAtMost(220).toDouble(),
-                yUnit = "bpm",
-                yFormat = { it.toInt().toString() },
-                xLabel = { i ->
-                    // Minuten-Skala: 1 Sample ≈ 1 Sekunde
-                    val sec = i
-                    val mins = sec / 60
-                    "${mins} min"
-                },
-                xTickCount = 6,
-                yTickCount = 7,
-                values = hr.map { it.toDouble() },
-                invertY = false,
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ChartWithAxes(
+                    accent = CosmosColors.Critical,
+                    xCount = hr.size,
+                    yMin = (min - 5).coerceAtLeast(40).toDouble(),
+                    yMax = (max + 5).coerceAtMost(220).toDouble(),
+                    yUnit = "bpm",
+                    yFormat = { it.toInt().toString() },
+                    xLabel = xLabelFn,
+                    xTickCount = 6,
+                    yTickCount = 7,
+                    values = values,
+                    invertY = false,
+                )
+                IconButton(
+                    onClick = { fullscreen = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(32.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Fullscreen,
+                        contentDescription = "Pulsverlauf im Vollbild öffnen",
+                        tint = Color.White,
+                    )
+                }
+            }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${hr.size} Werte · Min $min · Max $max bpm",
+                text = "${hr.size} Werte · Min $min · Max $max bpm · Vollbild für Zoom",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
         }
+    }
+    if (fullscreen) {
+        ZoomableChartDialog(
+            title = "Pulsverlauf",
+            subtitle = "Ø $avg · Min $min · Max $max bpm · ${hr.size} Werte",
+            accent = CosmosColors.Critical,
+            values = values,
+            yUnit = "bpm",
+            yFormat = { it.toInt().toString() },
+            xLabel = xLabelFn,
+            invertY = false,
+            yPaddingFraction = 0.10,
+            onDismiss = { fullscreen = false },
+        )
     }
 }
 
@@ -696,6 +731,7 @@ private fun ChartWithAxes(
     yTickCount: Int,
     values: List<Double>,
     invertY: Boolean,
+    modifier: Modifier = Modifier.fillMaxWidth().height(190.dp),
 ) {
     val cosmos = LocalCosmos.current
     val gridColor = cosmos.glassBorder.copy(alpha = 0.5f)
@@ -705,9 +741,7 @@ private fun ChartWithAxes(
     // pro Frame.
     val seriesPath = remember { Path() }
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(190.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(cosmos.glassBorder.copy(alpha = 0.10f)),
     ) {
@@ -786,6 +820,176 @@ private fun ChartWithAxes(
     }
 }
 
+/* ====================== ZOOMBARER VOLLBILD-CHART ====================== */
+
+/**
+ * Vollbild-Dialog fuer einen Linien-Chart mit Pinch-Zoom auf der X-Achse und
+ * automatischer Y-Achsen-Skalierung auf den sichtbaren Bereich (Frank-Wunsch
+ * 2026-05-17). Nutzt intern den bestehenden ChartWithAxes-Composable und
+ * uebergibt ihm jeweils nur den sichtbaren Slice der Werte plus passend
+ * berechnete yMin/yMax-Grenzen.
+ *
+ * Bedienung:
+ * - Pinch (zwei Finger zusammen/auseinander) -> Zoom-Faktor 1x..50x
+ * - Ein-Finger-Drag -> Pan horizontal innerhalb der Gesamtdaten
+ * - Doppel-Tap -> Reset auf vollen Bereich (scale=1, offset=0)
+ * - Schliessen via X-Button oben rechts oder System-Back
+ * - Drehung: Geraet drehen funktioniert automatisch (MainActivity hat keine
+ *   Orientation-Sperre) — im Landscape ist der Chart deutlich breiter.
+ */
+@Composable
+private fun ZoomableChartDialog(
+    title: String,
+    subtitle: String,
+    accent: androidx.compose.ui.graphics.Color,
+    values: List<Double>,
+    yUnit: String,
+    yFormat: (Double) -> String,
+    xLabel: (Int) -> String,
+    invertY: Boolean,
+    yPaddingFraction: Double,
+    onDismiss: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    // scale = 1 entspricht voller Sicht; scale = 10 zeigt nur 10% des
+    // Gesamt-Datensatzes (10x reingezoomt). Obergrenze 50x verhindert dass
+    // der Slice unter 2 Punkte fallen kann.
+    var scale by remember { mutableStateOf(1f) }
+    // offset = linke Kante des sichtbaren Bereichs als Fraction 0..1 vom
+    // Gesamt-Datensatz. Wird beim Zoom automatisch eingeschnappt damit der
+    // sichtbare Bereich nie aus dem Datensatz heraus rutscht.
+    var offset by remember { mutableStateOf(0f) }
+
+    val totalSize = values.size
+    val visibleFraction = (1f / scale).coerceIn(2f / totalSize.coerceAtLeast(2).toFloat(), 1f)
+    val maxOffset = (1f - visibleFraction).coerceAtLeast(0f)
+    val clampedOffset = offset.coerceIn(0f, maxOffset)
+    val startIdx = (clampedOffset * (totalSize - 1)).toInt().coerceIn(0, totalSize - 2)
+    val endIdx = ((clampedOffset + visibleFraction) * (totalSize - 1))
+        .toInt()
+        .coerceIn(startIdx + 1, totalSize - 1)
+
+    val visibleValues = remember(values, startIdx, endIdx) {
+        values.subList(startIdx, endIdx + 1).toList()
+    }
+    val visibleMin = visibleValues.min()
+    val visibleMax = visibleValues.max()
+    // Padding damit die Linie nicht direkt an der Achse klebt. Bei sehr
+    // engem sichtbarem Range (z.B. Plateau-Phasen) mindestens 1 Einheit.
+    val rawSpan = (visibleMax - visibleMin).coerceAtLeast(0.0)
+    val padding = (rawSpan * yPaddingFraction).coerceAtLeast(1.0)
+    val yMinScaled = visibleMin - padding
+    val yMaxScaled = visibleMax + padding
+
+    val xLabelWrapper: (Int) -> String = { i -> xLabel(startIdx + i) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                    }
+                    if (scale > 1f || clampedOffset > 0f) {
+                        IconButton(
+                            onClick = { scale = 1f; offset = 0f },
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(44.dp)
+                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Refresh,
+                                contentDescription = "Zoom zurücksetzen",
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Vollbild schliessen",
+                            tint = Color.White,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .pointerInput(totalSize) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val newScale = (scale * zoom).coerceIn(1f, 50f)
+                                val newVisible = (1f / newScale).coerceIn(2f / totalSize.coerceAtLeast(2).toFloat(), 1f)
+                                val canvasWidth = size.width.toFloat().coerceAtLeast(1f)
+                                // Pan: nach links wischen (negativer pan.x) verschiebt
+                                // den sichtbaren Bereich nach rechts. Pan-Wert in
+                                // Fraction des sichtbaren Bereichs.
+                                val panFraction = -pan.x / canvasWidth * newVisible
+                                val newOffset = (offset + panFraction).coerceIn(0f, (1f - newVisible).coerceAtLeast(0f))
+                                scale = newScale
+                                offset = newOffset
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onDoubleTap = { scale = 1f; offset = 0f },
+                            )
+                        },
+                ) {
+                    ChartWithAxes(
+                        accent = accent,
+                        xCount = visibleValues.size,
+                        yMin = yMinScaled,
+                        yMax = yMaxScaled,
+                        yUnit = yUnit,
+                        yFormat = yFormat,
+                        xLabel = xLabelWrapper,
+                        xTickCount = 6,
+                        yTickCount = 7,
+                        values = visibleValues,
+                        invertY = invertY,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = if (scale > 1.05f) {
+                        "Zoom ${"%.1f".format(scale)}× · Ein Finger zum Verschieben · Doppel-Tap = Reset"
+                    } else {
+                        "Zwei Finger spreizen zum Vergrößern · Gerät drehen für mehr Breite"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
 /* ============================== TEMPO-VERLAUF ============================== */
 
 /**
@@ -823,6 +1027,7 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             "Km ${i + 1}"
         }
     }
+    var fullscreen by remember { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -841,26 +1046,56 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             }
             Spacer(Modifier.height(8.dp))
             // Y invertiert: schneller (kleiner sec/km) ist OBEN auf der Y-Achse.
-            ChartWithAxes(
-                accent = accent,
-                xCount = secPerKm.size,
-                yMin = min,
-                yMax = max,
-                yUnit = "min/km",
-                yFormat = { formatPaceSec(it) },
-                xLabel = xLabelFn,
-                xTickCount = 6,
-                yTickCount = 4,
-                values = secPerKm,
-                invertY = true,
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ChartWithAxes(
+                    accent = accent,
+                    xCount = secPerKm.size,
+                    yMin = min,
+                    yMax = max,
+                    yUnit = "min/km",
+                    yFormat = { formatPaceSec(it) },
+                    xLabel = xLabelFn,
+                    xTickCount = 6,
+                    yTickCount = 4,
+                    values = secPerKm,
+                    invertY = true,
+                )
+                IconButton(
+                    onClick = { fullscreen = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .size(32.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Fullscreen,
+                        contentDescription = "Tempo-Verlauf im Vollbild öffnen",
+                        tint = Color.White,
+                    )
+                }
+            }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel",
+                text = "${secPerKm.size} Werte · Schnellster: ${formatPaceSec(min)} · Langsamster: ${formatPaceSec(max)} · grün = Start, rot = Ziel · Vollbild für Zoom",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
         }
+    }
+    if (fullscreen) {
+        ZoomableChartDialog(
+            title = "Tempo-Verlauf",
+            subtitle = "Ø ${formatPaceSec(avg)} · Schnellster ${formatPaceSec(min)} · Langsamster ${formatPaceSec(max)} · ${secPerKm.size} Werte",
+            accent = accent,
+            values = secPerKm,
+            yUnit = "min/km",
+            yFormat = { formatPaceSec(it) },
+            xLabel = xLabelFn,
+            invertY = true,
+            yPaddingFraction = 0.05,
+            onDismiss = { fullscreen = false },
+        )
     }
 }
 
