@@ -228,16 +228,22 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                                 scheduler.runWhoopSyncNow()
                             }
                         }
-                        // Polar-Foreground-Sync entfernt 2026-05-17 (Frank-Wunsch:
-                        // Polar-Live-API raus, Polar-Historie nur ueber ZIP-Bulk-Import).
-                        // Frank-Wunsch 2026-05-11: Amazfit/Zepp wird NICHT mehr automatisch
-                        // beim App-Start synchronisiert. Grund: jeder Re-Login zur Zepp-
-                        // Cloud invalidiert den Token der Zepp-App auf dem Handy — Frank
-                        // wurde dort staendig rausgeworfen. Zepp-Sync laeuft jetzt nur
-                        // noch ueber den manuellen "Aktualisieren"-Knopf im Biomarker-
-                        // Bildschirm (BiomarkerViewModel.refreshNow). Andere APIs (Whoop,
-                        // Oura, Health Connect) sind nicht betroffen — die haben das
-                        // Single-Token-Problem nicht.
+                        // Frank-Wunsch 2026-05-17: Strava bei jedem App-Foreground
+                        // sync — neue Workouts der letzten 30 Tage werden geholt.
+                        // Manuelle Edits sind durch manualOverridesMs geschuetzt
+                        // (siehe AmazfitRepository.mergeFromStrava). Strava-API
+                        // hat 100 Requests/15min Limit — bei 20 App-Wechseln/Tag
+                        // ist das unkritisch.
+                        applicationScope.launch {
+                            runCatching { amazfitRepository.mergeFromStrava(days = 30) }
+                                .onFailure {
+                                    android.util.Log.w(
+                                        "EntropyReducerApp",
+                                        "Strava-Foreground-Sync fehlgeschlagen",
+                                        it,
+                                    )
+                                }
+                        }
                         applicationScope.launch {
                             if (ouraRepository.isTokenConfigured()) {
                                 // Folgesync zieht 7 Tage zurueck — reicht um neue Werte

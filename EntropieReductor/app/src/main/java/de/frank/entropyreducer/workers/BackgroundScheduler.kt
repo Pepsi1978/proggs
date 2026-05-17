@@ -42,9 +42,9 @@ class BackgroundScheduler @Inject constructor(
         // erlaubt nur einen aktiven App-Token pro Account, jeder Re-Login wirft
         // die Zepp-App auf Frank's Handy raus. Zepp wird ab jetzt ausschliesslich
         // ueber den manuellen Refresh-Knopf im Biomarker-Bildschirm getriggert.
-        // Hier explizit den evtl. noch aus alten Builds in WorkManager liegenden
-        // Periodic-Job loeschen (sonst laeuft er weiter, auch nach App-Update).
-        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_PERIODIC)
+        // AmazfitSyncWorker-Cancel entfernt 2026-05-17 (Frank-Wunsch): Worker-
+        // Klasse ist weg, alte Periodic-Jobs sind durch WorkManager-DB-Migration
+        // ohnehin auto-cleanup beim naechsten App-Update.
 
         val targetMinutes = 4 * 60 + 30 // 04:30
         val initialDelayMinutes = minutesUntil(targetMinutes)
@@ -321,23 +321,9 @@ class BackgroundScheduler @Inject constructor(
         wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_ONESHOT)
     }
 
-    /** Stoesst einen einmaligen Amazfit-Sync an (z.B. nach Login oder App-Start).
-     *  KEEP statt REPLACE — siehe runCalendarSyncNow. */
-    fun runAmazfitSyncNow() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED).build()
-        wm.enqueueUniqueWork(
-            AmazfitSyncWorker.UNIQUE_NAME_ONESHOT,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<AmazfitSyncWorker>()
-                .setConstraints(constraints).build(),
-        )
-    }
-
-    fun cancelAmazfitSync() {
-        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_PERIODIC)
-        wm.cancelUniqueWork(AmazfitSyncWorker.UNIQUE_NAME_ONESHOT)
-    }
+    // runAmazfitSyncNow + cancelAmazfitSync entfernt 2026-05-17 (Frank-Wunsch):
+    // Zepp-Cloud-API komplett raus. Workouts kommen ueber Strava-Sync
+    // (BiomarkerViewModel.refreshNow), Daily-Werte ueber Health Connect.
 
     // runPolarSyncNow + cancelPolarSync entfernt 2026-05-17 (Frank-Wunsch).
     // Polar-Live-API gibt es nicht mehr — nur noch Polar-ZIP-Bulk-Import

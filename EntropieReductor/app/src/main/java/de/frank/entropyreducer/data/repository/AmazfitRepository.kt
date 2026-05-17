@@ -9,11 +9,6 @@ import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.health.HealthConnectManager
 import de.frank.entropyreducer.data.health.HealthConnectExerciseSession
-import de.frank.entropyreducer.data.remote.zepp.ZeppApi
-import de.frank.entropyreducer.data.remote.zepp.ZeppAuthService
-import de.frank.entropyreducer.data.remote.zepp.ZeppBandDataResponse
-import de.frank.entropyreducer.data.remote.zepp.ZeppEndpoints
-import de.frank.entropyreducer.data.remote.zepp.ZeppWorkoutHistoryResponse
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
 import kotlinx.coroutines.flow.Flow
@@ -58,8 +53,7 @@ import javax.inject.Singleton
 class AmazfitRepository @Inject constructor(
     private val dailyDao: AmazfitDailyDao,
     private val workoutDao: AmazfitWorkoutDao,
-    private val api: ZeppApi,
-    private val auth: ZeppAuthService,
+    // ZeppApi + ZeppAuthService entfernt 2026-05-17 (Frank-Wunsch).
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val appDatabase: AppDatabase,
@@ -247,93 +241,19 @@ class AmazfitRepository @Inject constructor(
     // mergeFromPolar entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API
     // komplett raus. Polar-Daten kommen nur noch via Polar-ZIP-Bulk-Import.
 
-    /** Manueller Auslöser: synchronisiert die letzten [days] Tage. */
+    /**
+     * Frank-Wunsch 2026-05-17: syncLastDays ist jetzt nur noch Wrapper um
+     * mergeFromStrava. Zepp-Cloud-API komplett raus.
+     */
     suspend fun syncLastDays(days: Int = 365): Result<Int> = runCatchingCancellable {
-        var appToken = auth.freshAppToken()
-            ?: throw IllegalStateException("Kein Zepp-App-Token — bitte erneut anmelden.")
-        val userId = secrets.zeppUserId
-            ?: throw IllegalStateException("Keine Zepp-User-ID — bitte erneut anmelden.")
-        val region = secrets.zeppRegion ?: "de2"
-
-        // Daily-Daten holen
-        val today = LocalDate.now()
-        val from = today.minusDays(days.toLong())
-        val dailyEntities = mutableListOf<AmazfitDailyEntity>()
-
-        try {
-            dailyEntities += fetchDailyRange(region, appToken, userId, from, today)
-        } catch (ce: kotlinx.coroutines.CancellationException) {
-            // Direktive 3: CancellationException NIEMALS schlucken — sie steuert
-            // die Coroutinen-Cancellation (Worker-Stop, Lifecycle-Abbruch).
-            throw ce
-        } catch (t: ZeppAuthException) {
-            // Nur bei echtem Auth-Fehler (401/403) Re-Login + 1x Retry.
-            Log.w(TAG, "Daily-Fetch Auth-Fehler ${t.statusCode}, versuche Re-Login: ${t.message}")
-            if (auth.reloginIfPossible()) {
-                appToken = secrets.zeppAppToken!!
-                try {
-                    dailyEntities += fetchDailyRange(region, appToken, userId, from, today)
-                } catch (ce: kotlinx.coroutines.CancellationException) {
-                    throw ce
-                } catch (retry: Throwable) {
-                    Log.w(TAG, "Daily-Fetch nach Re-Login erneut fehlgeschlagen: ${retry::class.simpleName}: ${retry.message}")
-                }
-            } else {
-                Log.w(TAG, "Re-Login nicht moeglich (keine Credentials gespeichert)")
-            }
-        } catch (t: ZeppEmptyBodyException) {
-            // 200 mit leerem Body — Server liefert nichts fuer den Range. Kein
-            // Crash, kein Re-Login (das hilft nicht), nur Log + leere Liste.
-            Log.w(TAG, "Daily-Fetch lieferte leeren Body (status=${t.statusCode}). Keine Daten fuer Range $from..$today.")
-        } catch (t: Throwable) {
-            // Andere Fehler (5xx, Netz, Parse-Fehler in inneren Strukturen):
-            // protokollieren, aber Sync nicht komplett abbrechen — Workouts
-            // werden noch versucht.
-            Log.w(TAG, "Daily-Fetch fehlgeschlagen: ${t::class.simpleName}: ${t.message}")
-        }
-
-        if (dailyEntities.isNotEmpty()) {
-            dailyDao.upsertAll(dailyEntities)
-        }
-
-        // PAI/BioCharge/Hauttemperatur-Endpoints ENTFERNT 2026-05-09:
-        // Frank-Befund nach mehreren Test-Iterationen — diese Werte sind in
-        // der Zepp-Cloud-API nicht zugaenglich (alle Probe-URLs lieferten 404).
-        // Die UI-Cards wurden ebenfalls entfernt damit keine leeren "—"-
-        // Eintraege im Biomarker-Bereich erscheinen.
-
-        // Polar-Live-Workout-Pull entfernt 2026-05-17 (Frank-Wunsch): Polar-
-        // Workouts kommen jetzt nur ueber Strava-Sync (Polar → Strava-Mirror)
-        // oder via Polar-ZIP-Bulk-Import. mergeFromPolar() ist weg.
-        val workoutEntities = emptyList<AmazfitWorkoutEntity>()
-
         val syncTs = System.currentTimeMillis()
-        secrets.zeppLastSyncEpochMs = syncTs
-        // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den
-        // 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
         appSettings.setLastAmazfitSync(syncTs)
-        Log.i(
-            TAG,
-            "Amazfit-Sync: ${dailyEntities.size} Daily-Eintraege + ${workoutEntities.size} Workouts geschrieben",
-        )
-        // Frank-Wunsch 2026-05-11: Wenn neue Trainings reinkamen, sofort Drive-
-        // Backup ausloesen — gleicher Pattern wie HealthConnect-Updates. Damit
-        // hat das andere Geraet (S23 Ultra) beim naechsten Restore garantiert
-        // den frischen Stand inkl. neuer Detail-Streams. Debounced (1500ms),
-        // No-Op wenn Backup deaktiviert.
-        if (workoutEntities.isNotEmpty() || dailyEntities.isNotEmpty()) {
-            syncCoordinatorLazy.get().requestSync()
-        }
-        // Strava-Merge (Frank-Wunsch 2026-05-16, revived 2026-05-17): Strava
-        // bekommt via Polar->Strava-Sync die kompletten Workout-Daten inkl. HR-
-        // Stream und liefert sie als verlaessliche Quelle. NACH Zepp+Polar damit
-        // Strava-Streams etwaige Stubs anderer Quellen ueberschreiben koennen.
         val stravaCount = mergeFromStrava(days = days.coerceAtMost(60))
         if (stravaCount > 0) {
-            Log.i(TAG, "Strava-Merge: $stravaCount Workouts mit vollen Streams importiert/aktualisiert")
+            Log.i(TAG, "Strava-Merge: $stravaCount Workouts importiert/aktualisiert")
             syncCoordinatorLazy.get().requestSync()
         }
-        dailyEntities.size + workoutEntities.size + stravaCount
+        return@runCatchingCancellable stravaCount
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.e(TAG, "Amazfit-Sync fehlgeschlagen", it)
@@ -652,190 +572,6 @@ class AmazfitRepository @Inject constructor(
         else -> "Training (Typ $type)"
     }
 
-    /* =========================== Fetcher =========================== */
-
-    private suspend fun fetchDailyRange(
-        region: String,
-        appToken: String,
-        userId: String,
-        from: LocalDate,
-        to: LocalDate,
-    ): List<AmazfitDailyEntity> {
-        val params = baseParams(userId).toMutableMap().apply {
-            put("from_date", from.toString())
-            put("to_date", to.toString())
-            put("query_type", "summary")
-        }
-        val rawResp = api.bandData(
-            url = ZeppEndpoints.bandDataUrl(region),
-            headers = ZeppEndpoints.dataHeaders(appToken, UUID.randomUUID().toString()),
-            params = params,
-        )
-        // HTTP-Status differenziert behandeln (Direktive 3: nicht ratendes Re-Login,
-        // sondern statusbasiert). Body wird MANUELL deserialisiert damit ein leerer
-        // Body keinen Crash im retrofit2-kotlinx-serialization-converter ausloest
-        // (Issue #55: Converter wirft JsonDecodingException sync beim parseResponse).
-        val status = rawResp.code()
-        if (status == 401 || status == 403) {
-            throw ZeppAuthException(status, "Auth-Fehler beim Daily-Fetch")
-        }
-        if (!rawResp.isSuccessful) {
-            val errBody = runCatching { rawResp.errorBody()?.string()?.take(500) }.getOrNull()
-            throw IllegalStateException("bandData HTTP $status: $errBody")
-        }
-        val bodyString = runCatching { rawResp.body()?.string() }.getOrNull()
-        if (bodyString.isNullOrEmpty()) {
-            throw ZeppEmptyBodyException(status, "Body leer fuer Range $from..$to")
-        }
-        val resp = runCatching { JSON.decodeFromString(ZeppBandDataResponse.serializer(), bodyString) }
-            .getOrElse { decodeError ->
-                Log.w(TAG, "bandData Body parse-Fehler (status=$status, len=${bodyString.length}, preview=${bodyString.take(200)}): ${decodeError.message}")
-                throw IllegalStateException("bandData JSON-Parse fehlgeschlagen", decodeError)
-            }
-        if (resp.code != null && resp.code != 1) {
-            Log.w(TAG, "bandData lieferte code=${resp.code} (${resp.message})")
-            return emptyList()
-        }
-        return resp.data.mapNotNull { day ->
-            val date = day.date ?: return@mapNotNull null
-            val capturedAt = parseDateAtMidnight(date) ?: return@mapNotNull null
-            val parsed = parseSummaryJson(day.summary)
-            // PARSER-PROBE-Diagnose-Sonde entfernt (Loop 1 Performance-Audit
-            // 2026-05-10): Datenschutz (Zepp-Rohdaten im Logcat) + ungenutzte
-            // String-Allokation. Field-Namen sind unten dokumentiert.
-            // Echte Zepp-Schluesselnamen aus Live-Sonde 2026-05-09:
-            //   stp_ttl/ttl  = Schritte gesamt
-            //   stp_dis/dis  = Distanz in Metern
-            //   stp_cal/cal  = aktive Kalorien
-            //   rhr/slp_rhr  = Ruhepuls
-            //   spob         = SpO2-Baseline %
-            //   slp_to       = Schlafdauer gesamt (Min)
-            //   slp_dp       = Tiefschlaf (Min)
-            //   slp_lt       = Leichtschlaf (Min)
-            //   slp_wk       = Wachzeit (Min)
-            // PAI/BioCharge/Hauttemperatur/Stress sind hier NICHT — kommen aus
-            // separaten Endpoints die das Repository spaeter aufruft.
-            AmazfitDailyEntity(
-                date = date,
-                capturedAt = capturedAt,
-                steps = firstInt(parsed, "stp_ttl", "ttl", "steps"),
-                distanceMeters = firstDouble(parsed, "stp_dis", "dis", "distance"),
-                activeCalories = firstDouble(parsed, "stp_cal", "cal", "calories"),
-                activeMinutes = firstInt(parsed, "active_minutes"),
-                averageHeartRate = firstInt(parsed, "avg_hr"),
-                restingHeartRate = firstInt(parsed, "rhr", "slp_rhr"),
-                spo2Percent = firstDouble(parsed, "spob", "spol", "spor"),
-                // Schlaf-Felder aus dem slp_-Sub-Objekt (Live-Sonde 2026-05-09):
-                //   slp_to = Total-Schlaf in Minuten
-                //   slp_dp = Tiefschlaf
-                //   slp_lt = Leichtschlaf
-                //   slp_wk = Wachzeit
-                //   slp_ss = Sleep-Score
-                sleepTotalMinutes = firstInt(parsed, "slp_to", "to"),
-                sleepDeepMinutes = firstInt(parsed, "slp_dp", "dp"),
-                sleepLightMinutes = firstInt(parsed, "slp_lt", "lt"),
-                sleepWakeMinutes = firstInt(parsed, "slp_wk", "wk"),
-                sleepScore = firstInt(parsed, "slp_ss", "ss"),
-                createdAt = System.currentTimeMillis(),
-            )
-        }
-    }
-
-    private suspend fun fetchWorkoutSummaries(
-        region: String,
-        appToken: String,
-        userId: String,
-        from: LocalDate,
-        to: LocalDate,
-    ): List<AmazfitWorkoutEntity> {
-        val params = baseParams(userId).toMutableMap().apply {
-            put("from_track_id", "0")
-            put("source", "all")
-            put("from_date", from.toString())
-            put("to_date", to.toString())
-        }
-        val rawResp = api.workoutHistory(
-            url = ZeppEndpoints.sportHistoryUrl(region),
-            headers = ZeppEndpoints.dataHeaders(appToken, UUID.randomUUID().toString()),
-            params = params,
-        )
-        val status = rawResp.code()
-        if (status == 401 || status == 403) {
-            throw ZeppAuthException(status, "Auth-Fehler beim Workout-Fetch")
-        }
-        if (!rawResp.isSuccessful) {
-            val errBody = runCatching { rawResp.errorBody()?.string()?.take(500) }.getOrNull()
-            Log.w(TAG, "workoutHistory HTTP $status: $errBody")
-            return emptyList()
-        }
-        val bodyString = runCatching { rawResp.body()?.string() }.getOrNull()
-        if (bodyString.isNullOrEmpty()) {
-            Log.w(TAG, "workoutHistory lieferte leeren Body (status=$status)")
-            return emptyList()
-        }
-        val resp = runCatching { JSON.decodeFromString(ZeppWorkoutHistoryResponse.serializer(), bodyString) }
-            .getOrElse { decodeError ->
-                Log.w(TAG, "workoutHistory Body parse-Fehler (status=$status, len=${bodyString.length}, preview=${bodyString.take(200)}): ${decodeError.message}")
-                return emptyList()
-            }
-        val items = resp.data?.summary ?: return emptyList()
-        // WORKOUT-PROBE-Diagnose-Sonde entfernt (Loop 1 Performance-Audit
-        // 2026-05-10): Datenschutz (Workout-Rohdaten + GPS im Logcat) +
-        // 800-Zeichen-String-Allokation pro Sync.
-        return items.mapNotNull { s ->
-            val trackId = s.trackId ?: return@mapNotNull null
-            // Zepp-Server liefert numerische Felder als Strings — defensiv parsen.
-            val end = s.endTime?.toLongOrNull() ?: return@mapNotNull null
-            val duration = s.durationSeconds?.toLongOrNull() ?: return@mapNotNull null
-            val endMs = end * 1000L
-            val startMs = endMs - duration * 1000L
-            val dateKey = Instant.ofEpochMilli(startMs)
-                .atZone(ZoneId.systemDefault()).toLocalDate().toString()
-            val typeInt = s.type?.toIntOrNull()
-            // Zepp liefert avg_pace in Sekunden pro METER (Live-Sonde 2026-05-09:
-            // 0.5042761 sec/m bei 7.16km/3612s = 8:24 min/km). Wir konvertieren auf
-            // Sekunden pro Kilometer indem wir mit 1000 multiplizieren.
-            val avgPaceSecPerKm = s.avgPace?.toDoubleOrNull()?.let { it * 1000.0 }
-            val maxPaceSecPerKm = s.maxPace?.toDoubleOrNull()?.let { it * 1000.0 }
-            // Speed berechnen falls nicht direkt geliefert: km/h aus Distanz und Dauer.
-            val computedSpeedKmh = if (duration > 0 && s.distanceMeters?.toDoubleOrNull() != null) {
-                (s.distanceMeters.toDouble() / 1000.0) / (duration / 3600.0)
-            } else null
-            // Trainingseffekt kommt als Integer 0-50 — geteilt durch 10 ergibt
-            // die uebliche Anzeige 0.0-5.0 (Garmin-Skala).
-            val trainEffectAerobic = s.trainingEffect?.toDoubleOrNull()?.div(10.0)
-            val trainEffectAnaerobic = s.anaerobicTrainingEffect?.toDoubleOrNull()?.div(10.0)
-            AmazfitWorkoutEntity(
-                trackId = trackId,
-                dateKey = dateKey,
-                startMs = startMs,
-                endMs = endMs,
-                durationSeconds = duration,
-                sportType = typeInt,
-                sportName = AmazfitSportNames.nameOf(typeInt, s.source),
-                distanceMeters = s.distanceMeters?.toDoubleOrNull(),
-                avgPaceSecPerKm = avgPaceSecPerKm,
-                maxPaceSecPerKm = maxPaceSecPerKm,
-                avgSpeedKmh = s.avgSpeed?.toDoubleOrNull() ?: computedSpeedKmh,
-                maxSpeedKmh = null,
-                calories = s.calories?.toDoubleOrNull(),
-                avgHeartRate = s.avgHr?.toDoubleOrNull()?.toInt(),
-                maxHeartRate = s.maxHr?.toDoubleOrNull()?.toInt(),
-                altitudeGainMeters = s.altitudeAscendMeters?.toDoubleOrNull(),
-                altitudeLossMeters = s.altitudeDescendMeters?.toDoubleOrNull(),
-                trainingEffectAerobic = trainEffectAerobic,
-                trainingEffectAnaerobic = trainEffectAnaerobic,
-                cadence = s.avgFrequency?.toDoubleOrNull()?.toInt(),
-                strideLengthCm = s.avgStrideLength?.toIntOrNull(),
-                swolf = s.swolf?.toIntOrNull(),
-                poolLengthMeters = s.swimPoolLength?.toDoubleOrNull(),
-                source = s.source,
-                city = s.city,
-                createdAt = System.currentTimeMillis(),
-            )
-        }
-    }
-
     /**
      * Holt fuer ein bereits gespeichertes Workout die Detail-Daten (GPS-Track,
      * Pulsverlauf, Pace pro km, Splits) und schreibt sie in die Workout-Tabelle.
@@ -879,61 +615,10 @@ class AmazfitRepository @Inject constructor(
                 }
             }
         }
-        val region = secrets.zeppRegion ?: "de2"
-        val appToken = auth.freshAppToken() ?: return@runCatching false
-        val userId = secrets.zeppUserId ?: return@runCatching false
-
-        val params = baseParams(userId).toMutableMap().apply {
-            put("trackid", trackId)
-            put("source", source)
-        }
-        val resp = api.workoutDetail(
-            url = ZeppEndpoints.sportDetailUrl(region, trackId),
-            headers = ZeppEndpoints.webDataHeaders(appToken, UUID.randomUUID().toString()),
-            params = params,
-        )
-        if (!resp.isSuccessful) {
-            Log.w(TAG, "Workout-Detail HTTP ${resp.code()} fuer $trackId")
-            return@runCatching false
-        }
-        val bodyString = resp.body()?.string()
-        if (bodyString.isNullOrEmpty()) {
-            Log.w(TAG, "Workout-Detail Body leer fuer $trackId")
-            return@runCatching false
-        }
-        val detail = runCatching {
-            JSON.decodeFromString(de.frank.entropyreducer.data.remote.zepp.ZeppWorkoutDetailResponse.serializer(), bodyString)
-        }.getOrElse {
-            Log.w(TAG, "Workout-Detail parse-Fehler fuer $trackId: ${it.message}; preview=${bodyString.take(200)}")
-            return@runCatching false
-        }
-        val data = detail.data ?: return@runCatching false
-        Log.i(TAG, "Workout-Detail OK fuer $trackId: gpsLen=${data.longitudeLatitude?.length ?: 0} hrLen=${data.heartRate?.length ?: 0} kiloPaceLen=${data.kiloPace?.length ?: 0}")
-        // Frank-Bug 2026-05-09: Nicht mit null ueberschreiben falls der Server
-        // fuer einzelne Felder bei aelteren Workouts nichts mehr liefert. Sonst
-        // sind die einmal geladenen GPS/HR-Daten bei einem Re-Sync weg.
-        // createdAt wird auf "jetzt" aktualisiert damit der 6h-Cache-Check
-        // weiss wann zuletzt versucht wurde.
-        workoutDao.upsert(
-            workout.copy(
-                gpsTrackJson = data.longitudeLatitude?.takeIf { it.isNotBlank() } ?: workout.gpsTrackJson,
-                heartRateSeriesJson = data.heartRate?.takeIf { it.isNotBlank() } ?: workout.heartRateSeriesJson,
-                paceSeriesJson = data.kiloPace?.takeIf { it.isNotBlank() } ?: workout.paceSeriesJson,
-                splitsJson = data.lap?.takeIf { it.isNotBlank() } ?: workout.splitsJson,
-                // Wenn data.pace immer null ist, Marker " " setzen damit das
-                // Workout als "Detail geladen" gilt und kein Endlos-Reload entsteht.
-                paceStreamJson = data.pace?.takeIf { it.isNotBlank() }
-                    ?: workout.paceStreamJson ?: " ",
-                createdAt = System.currentTimeMillis(),
-            ),
-        )
-        // Frank-Wunsch 2026-05-11: Detail-Daten wandern direkt ins Drive-Backup,
-        // damit die teuren Streams (GPS, Pulsverlauf, Tempoverlauf, Splits)
-        // sofort cross-device verfuegbar sind. Debounced (1500ms) — wenn Frank
-        // mehrere Trainings hintereinander oeffnet wird das zu einem Upload
-        // zusammengefasst.
-        syncCoordinatorLazy.get().requestSync()
-        true
+        // Zepp-Cloud-Detail-Fetch entfernt 2026-05-17 (Frank-Wunsch): Strava-
+        // Workouts haben Details schon beim Sync, Polar-Bulk hat keinen Online-
+        // Endpoint. Andere source-Werte sind altlasten — kein Refresh moeglich.
+        false
     }.onFailure {
         if (it !is kotlinx.coroutines.CancellationException) {
             Log.w(TAG, "ensureWorkoutDetail fehlgeschlagen fuer $trackId: ${it.message}")
@@ -943,193 +628,7 @@ class AmazfitRepository @Inject constructor(
     // refreshPolarWorkout entfernt 2026-05-17 (Frank-Wunsch): Polar-Live-API raus.
     // Erhaltene Polar-Bulk-Workouts werden in ensureWorkoutDetail uebersprungen.
 
-    /**
-     * Holt PAI- und Stress-Events ueber den verifizierten /events-Endpoint
-     * (Quelle: bentasker/zepp_to_influxdb Issue #1 + #7). Plus probiert
-     * BioCharge mit `eventType=BioChargeInfo` (unbestaetigt — T-Rex 3
-     * BioCharge ist erst seit Sept 2025 im Geraet).
-     *
-     * Body-Preview wird ins Logcat geloggt — Frank kann mit seinem ersten
-     * Sync sehen ob die Endpoints antworten und welches Format der Server
-     * liefert. Ergebnis wird defensiv in amazfit_daily gemerged.
-     */
-    private suspend fun fetchEventBasedData(
-        region: String,
-        appToken: String,
-        userId: String,
-        from: LocalDate,
-        to: LocalDate,
-    ) {
-        val zone = ZoneId.systemDefault()
-        val fromMs = from.atStartOfDay(zone).toInstant().toEpochMilli()
-        val toMs = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val url = ZeppEndpoints.eventsUrl(region, userId)
-
-        suspend fun fetch(label: String, eventType: String): String? {
-            return try {
-                val resp = api.rawGet(
-                    url = url,
-                    headers = ZeppEndpoints.webDataHeaders(appToken, UUID.randomUUID().toString()),
-                    params = mapOf(
-                        "eventType" to eventType,
-                        "from" to fromMs.toString(),
-                        "to" to toMs.toString(),
-                        "limit" to "1000",
-                    ),
-                )
-                val status = resp.code()
-                val body = runCatching { resp.body()?.string() ?: resp.errorBody()?.string() }.getOrNull()
-                // EVENTS-preview-Log entfernt (Loop 1 Performance-Audit 2026-05-10):
-                // 3x pro Sync eager 500-Zeichen take + replace ohne BuildConfig.DEBUG-
-                // Guard. Datenschutz (Zepp-Event-Rohdaten im Logcat) + Heap-Allokation.
-                if (status in 200..299) body else null
-            } catch (ce: kotlinx.coroutines.CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                Log.w(TAG, "EVENTS label=$label EXCEPTION ${t::class.simpleName}: ${t.message}")
-                null
-            }
-        }
-
-        val paiBody = fetch("PAI", ZeppEndpoints.EventType.PAI)
-        val stressBody = fetch("STRESS", ZeppEndpoints.EventType.STRESS_ALL_DAY)
-        // BioCharge nur probieren — eventType ist unbestaetigt.
-        fetch("BIOCHARGE", ZeppEndpoints.EventType.BIOCHARGE)
-
-        // Defensive Auswertung: aus den Bodies pro Tag den entsprechenden Wert
-        // extrahieren und in amazfit_daily mergen. Format ist nicht 100% sicher —
-        // wir parsen breit und fallen zurueck wenn unklar.
-        if (paiBody != null) mergePaiIntoDaily(paiBody)
-        if (stressBody != null) mergeStressIntoDaily(stressBody)
-    }
-
-    /**
-     * Versucht PAI-Werte aus dem events-Body zu lesen und in die amazfit_daily-
-     * Eintraege zu mergen. Erwartet ein items[]-Array mit timestamp + data
-     * (data enthaelt totalPai/dailyPai/etc.). Bei unbekanntem Format: leer.
-     */
-    private suspend fun mergePaiIntoDaily(body: String) = runCatching {
-        val root = JSON.parseToJsonElement(body) as? JsonObject ?: return@runCatching
-        val items = (root["items"] as? kotlinx.serialization.json.JsonArray)
-            ?: (root["data"] as? kotlinx.serialization.json.JsonArray)
-            ?: return@runCatching
-        for (item in items) {
-            val obj = item as? JsonObject ?: continue
-            val ts = obj["timestamp"]?.jsonPrimitive?.contentOrNull?.toLongOrNull()
-                ?: obj["time"]?.jsonPrimitive?.contentOrNull?.toLongOrNull()
-                ?: continue
-            // PAI-Daten koennen direkt im item liegen oder im "data"-Sub-Objekt.
-            val data = (obj["data"] as? JsonObject) ?: obj
-            val flat = flattenJsonObject(data)
-            val daily = firstInt(flat, "dailyPai", "daily_pai", "totalPai", "total_pai", "pai")
-                ?: continue
-            val date = Instant.ofEpochMilli(ts)
-                .atZone(ZoneId.systemDefault()).toLocalDate().toString()
-            val existing = dailyDao.getByDate(date)
-            if (existing != null) {
-                dailyDao.upsert(existing.copy(paiScore = daily))
-            }
-        }
-    }.onFailure { Log.w(TAG, "mergePaiIntoDaily Fehler: ${it.message}") }
-
-    /** Wie mergePaiIntoDaily, aber fuer Stress. */
-    private suspend fun mergeStressIntoDaily(body: String) = runCatching {
-        val root = JSON.parseToJsonElement(body) as? JsonObject ?: return@runCatching
-        val items = (root["items"] as? kotlinx.serialization.json.JsonArray)
-            ?: (root["data"] as? kotlinx.serialization.json.JsonArray)
-            ?: return@runCatching
-        for (item in items) {
-            val obj = item as? JsonObject ?: continue
-            val ts = obj["timestamp"]?.jsonPrimitive?.contentOrNull?.toLongOrNull()
-                ?: obj["time"]?.jsonPrimitive?.contentOrNull?.toLongOrNull()
-                ?: continue
-            val data = (obj["data"] as? JsonObject) ?: obj
-            val flat = flattenJsonObject(data)
-            val avg = firstInt(flat, "avg", "average", "avgStress", "avg_stress")
-                ?: continue
-            val date = Instant.ofEpochMilli(ts)
-                .atZone(ZoneId.systemDefault()).toLocalDate().toString()
-            val existing = dailyDao.getByDate(date)
-            if (existing != null) {
-                dailyDao.upsert(existing.copy(stressScore = avg))
-            }
-        }
-    }.onFailure { Log.w(TAG, "mergeStressIntoDaily Fehler: ${it.message}") }
-
     /* =========================== Helpers =========================== */
-
-    private fun baseParams(userId: String): Map<String, String> = mapOf(
-        "userid" to userId,
-        "appid" to UUID.randomUUID().mostSignificantBits.toULong().toString(),
-        "channel" to ZeppEndpoints.CHANNEL,
-        "country" to "DE",
-        "cv" to "${ZeppEndpoints.APP_BUILD}_${ZeppEndpoints.APP_VERSION}",
-        "device" to "android_32",
-        "device_type" to "android_phone",
-        "lang" to "de_DE",
-        "timezone" to "Europe/Berlin",
-        "v" to "2.0",
-    )
-
-    /** Parst ein base64-kodiertes Summary-JSON in eine flache Key-Value-Map. */
-    private fun parseSummaryJson(base64Or: String?): Map<String, JsonElement> {
-        if (base64Or.isNullOrBlank()) return emptyMap()
-        return runCatching {
-            val raw = if (base64Or.startsWith("{")) {
-                base64Or
-            } else {
-                String(android.util.Base64.decode(base64Or, android.util.Base64.DEFAULT))
-            }
-            val parsed = JSON.parseToJsonElement(raw)
-            if (parsed is JsonObject) flattenJsonObject(parsed) else emptyMap()
-        }.getOrElse { emptyMap() }
-    }
-
-    /** Rekursiv alle Primitives einer verschachtelten JSON-Struktur einsammeln. */
-    private fun flattenJsonObject(obj: JsonObject, prefix: String = ""): Map<String, JsonElement> {
-        val out = mutableMapOf<String, JsonElement>()
-        for ((k, v) in obj) {
-            val key = if (prefix.isEmpty()) k else "${prefix}_$k"
-            if (v is JsonObject) {
-                out += flattenJsonObject(v, key)
-            } else {
-                out[key] = v
-                // Auch unter dem unqualifizierten Namen ablegen, damit Lookups
-                // wie parsed["steps"] auch dann funktionieren wenn der Wert in
-                // einem Sub-Objekt sitzt (typischerweise "stp.ttl" oder "step.total").
-                if (k !in out) out[k] = v
-            }
-        }
-        return out
-    }
-
-    private fun parseDateAtMidnight(date: String): Long? = runCatching {
-        LocalDate.parse(date).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-    }.getOrNull()
-
-    private fun JsonElement.intOrNull(): Int? =
-        runCatching { jsonPrimitive.intOrNull }.getOrNull()
-            ?: runCatching { jsonPrimitive.contentOrNull?.toIntOrNull() }.getOrNull()
-
-    private fun JsonElement.doubleOrNull(): Double? =
-        runCatching { jsonPrimitive.doubleOrNull }.getOrNull()
-            ?: runCatching { jsonPrimitive.contentOrNull?.toDoubleOrNull() }.getOrNull()
-
-    @Suppress("unused")
-    private fun JsonElement.stringOrNull(): String? =
-        runCatching { jsonPrimitive.contentOrNull }.getOrNull()
-
-    /** Liefert den ersten nicht-null Int aus einer Liste von moeglichen Schluesseln. */
-    private fun firstInt(map: Map<String, JsonElement>, vararg keys: String): Int? {
-        for (k in keys) map[k]?.intOrNull()?.let { return it }
-        return null
-    }
-
-    /** Liefert den ersten nicht-null Double aus einer Liste von moeglichen Schluesseln. */
-    private fun firstDouble(map: Map<String, JsonElement>, vararg keys: String): Double? {
-        for (k in keys) map[k]?.doubleOrNull()?.let { return it }
-        return null
-    }
 
     companion object {
         private const val TAG = "AmazfitRepository"
@@ -1282,23 +781,3 @@ internal object AmazfitSportNames {
         return "Unbekannt"
     }
 }
-
-/**
- * Wird geworfen wenn die Zepp-API mit 401/403 antwortet — Token ist abgelaufen
- * oder ungueltig. Repository reagiert mit Re-Login + 1x Retry.
- */
-internal class ZeppAuthException(
-    val statusCode: Int,
-    message: String,
-) : RuntimeException("$message (HTTP $statusCode)")
-
-/**
- * Wird geworfen wenn die Zepp-API mit 2xx antwortet aber leerem Body. Tritt auf
- * wenn der Server keine Daten fuer den angefragten Range hat oder wenn der
- * Endpoint die Region/Account-Konfiguration nicht unterstuetzt. Re-Login hilft
- * NICHT — der Caller soll nur loggen und mit leerer Liste weitermachen.
- */
-internal class ZeppEmptyBodyException(
-    val statusCode: Int,
-    message: String,
-) : RuntimeException("$message (HTTP $statusCode, body empty)")
