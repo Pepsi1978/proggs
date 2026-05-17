@@ -75,6 +75,21 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Frank-Wunsch 2026-05-17: Sandwich-Delete fuer den V2-Cleanup. Loescht alle
+     * Workouts deren startMs ausserhalb des Fensters [olderThanMs, newerThanMs]
+     * liegt. Beide Grenzen INKLUSIV — Eintraege mit startMs == olderThanMs oder
+     * startMs == newerThanMs bleiben erhalten.
+     *
+     * Anwendung: 967 Polar-Trainings reduzieren auf "nur die letzten 2 Jahre bis
+     * 30.03.2026 17:25" — also Uralt-Daten UND die neuen Duplikate (17.05., 14.05.,
+     * 09.05., 08.05., 01.05.) in EINEM atomaren Schritt entfernen.
+     *
+     * @return Anzahl der geloeschten Zeilen
+     */
+    @Query("DELETE FROM amazfit_workouts WHERE startMs < :olderThanMs OR startMs > :newerThanMs")
+    suspend fun deleteOutsideRange(olderThanMs: Long, newerThanMs: Long): Int
+
+    /**
      * Loescht alle Workouts die NICHT von Polar stammen.
      *
      * Frank-Wunsch 2026-05-16: Nach dem Strava-Revert und der Umstellung auf

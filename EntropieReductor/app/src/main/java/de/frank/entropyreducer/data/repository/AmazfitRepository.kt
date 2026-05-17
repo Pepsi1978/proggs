@@ -112,6 +112,32 @@ class AmazfitRepository @Inject constructor(
         workoutDao.deleteAll()
         syncCoordinatorLazy.get().requestSync()
     }
+
+    /**
+     * Frank-Wunsch 2026-05-17: V2-Cleanup. Behaelt nur Trainings im Fenster
+     * [olderThanMs, newerThanMs] — alles davor (Uralt-Polar-Daten, ~967 Eintraege)
+     * UND alles danach (die neuen Polar-Duplikate vom 17.05.-01.05.2026) wird in
+     * EINER atomaren SQL-Operation entfernt.
+     *
+     * Triggert anschliessend einen Drive-Sync damit das Backup mit dem reduzierten
+     * Stand ueberschrieben wird (statt die geloeschten Trainings beim naechsten
+     * Geraete-Restore wieder einzuspielen).
+     *
+     * @return Anzahl der geloeschten Workouts
+     */
+    suspend fun cleanupWorkoutsKeepRange(olderThanMs: Long, newerThanMs: Long): Int {
+        val deleted = workoutDao.deleteOutsideRange(olderThanMs, newerThanMs)
+        Log.i(
+            TAG,
+            "Workout-Cleanup-V2: $deleted Trainings geloescht " +
+                "(behalten: startMs zwischen $olderThanMs und $newerThanMs)",
+        )
+        if (deleted > 0) {
+            syncCoordinatorLazy.get().requestSync()
+        }
+        return deleted
+    }
+
     fun observeWorkoutsByDate(dateKey: String): Flow<List<AmazfitWorkoutEntity>> =
         workoutDao.observeByDateKey(dateKey)
     fun observeWorkoutById(trackId: String): Flow<AmazfitWorkoutEntity?> =

@@ -222,6 +222,31 @@ class AppSettings @Inject constructor(
     suspend fun isWorkoutCleanupV1Done(): Boolean = ds.data.map { it[KEY_WORKOUT_CLEANUP_V1] ?: false }.first()
     suspend fun setWorkoutCleanupV1Done(value: Boolean) = ds.edit { it[KEY_WORKOUT_CLEANUP_V1] = value }
 
+    /**
+     * Frank-Wunsch 2026-05-17: Zweite Workout-Cleanup-Migration. Reduziert die
+     * Trainings auf "nur die letzten 2 Jahre bis 30.03.2026 17:25" — alle aelteren
+     * und alle neueren (Polar-Duplikate vom 17.05., 14.05., 09.05., 08.05., 01.05.)
+     * werden geloescht. Idempotent: laeuft genau EINMAL pro App-Installation.
+     */
+    suspend fun isWorkoutCleanupV2Done(): Boolean = ds.data.map { it[KEY_WORKOUT_CLEANUP_V2] ?: false }.first()
+    suspend fun setWorkoutCleanupV2Done(value: Boolean) = ds.edit { it[KEY_WORKOUT_CLEANUP_V2] = value }
+
+    /**
+     * Frank-Wunsch 2026-05-17: Polar-Quellen (V3 AccessLink, V4, Flow Web, TCX,
+     * JSON-Bulk) kurzfristig komplett deaktivieren — Strava bleibt aktive
+     * Trainings-Quelle. Default true. Wenn false: Polar-Workers laufen wieder
+     * (periodischer Sync, Foreground-Trigger, manueller Refresh-Button).
+     *
+     * Code bleibt vollstaendig erhalten — Frank kann Polar jederzeit per
+     * setDisablePolarSync(false) oder per ADB-DataStore-Edit wieder anschalten.
+     */
+    val disablePolarSyncFlow: Flow<Boolean> = ds.data
+        .map { it[KEY_DISABLE_POLAR_SYNC] ?: true }
+        .distinctUntilChanged()
+
+    suspend fun isPolarSyncDisabled(): Boolean = ds.data.map { it[KEY_DISABLE_POLAR_SYNC] ?: true }.first()
+    suspend fun setDisablePolarSync(value: Boolean) = ds.edit { it[KEY_DISABLE_POLAR_SYNC] = value }
+
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
@@ -238,6 +263,8 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
+        private val KEY_WORKOUT_CLEANUP_V2 = booleanPreferencesKey("workout_cleanup_v2_done")
+        private val KEY_DISABLE_POLAR_SYNC = booleanPreferencesKey("disable_polar_sync")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")

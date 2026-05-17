@@ -137,6 +137,42 @@ class EntropyReducerApp : Application(), Configuration.Provider {
             }
         }
 
+        // Frank-Wunsch 2026-05-17: V2-Cleanup vor der Strava-only-Phase.
+        // Behaelt nur Trainings der letzten ~2 Jahre bis 30.03.2026 17:25 Berlin —
+        // alles davor (Uralt-Polar-Daten) UND alles danach (Polar-Duplikate vom
+        // 17.05., 14.05., 09.05., 08.05., 01.05.) wird in einer SQL-Operation
+        // entfernt. Danach soll Strava sauber neu reinkommen.
+        //
+        // 7-Sekunden-Delay: 2 Sekunden nach V1, damit V1-Cleanup + Drive-Refresh
+        // zuerst fertig sind und V2 nur die danach noch da-bleibenden Trainings
+        // anguckt. Idempotent via workoutCleanupV2-Flag.
+        applicationScope.launch {
+            kotlinx.coroutines.delay(7000L)
+            runCatching {
+                if (!appSettings.isWorkoutCleanupV2Done()) {
+                    val zone = java.time.ZoneId.of("Europe/Berlin")
+                    val newerThanMs = java.time.LocalDateTime.of(2026, 3, 30, 17, 26, 0)
+                        .atZone(zone).toInstant().toEpochMilli()
+                    val olderThanMs = System.currentTimeMillis() -
+                        2L * 365L * 24L * 60L * 60L * 1000L
+                    val deleted = amazfitRepository
+                        .cleanupWorkoutsKeepRange(olderThanMs, newerThanMs)
+                    appSettings.setWorkoutCleanupV2Done(true)
+                    android.util.Log.i(
+                        "EntropyReducerApp",
+                        "Workout-Cleanup-V2 abgeschlossen — $deleted Trainings geloescht " +
+                            "(Fenster: $olderThanMs .. $newerThanMs)",
+                    )
+                }
+            }.onFailure {
+                android.util.Log.w(
+                    "EntropyReducerApp",
+                    "Workout-Cleanup-V2 fehlgeschlagen",
+                    it,
+                )
+            }
+        }
+
         // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
         // Whoop-Rate-Limit ist 60 req/min — selbst 50 Foreground-Wechsel/Tag sind
         // unkritisch, der Worker macht nur 3 paginierte API-Calls pro Sync.
@@ -160,12 +196,13 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                             }
                         }
                         // Frank-Wunsch 2026-05-16: Polar bei jedem App-Foreground.
-                        // Live-API hat keine Single-Token-Problematik wie Zepp —
-                        // sicher mehrfach pro Tag triggerbar. Worker filtert
-                        // existierende trackIds raus, also auch kein Duplikat-
-                        // Schaden bei wiederholten Aufrufen.
+                        // Frank-Wunsch 2026-05-17: nur wenn `disablePolarSync == false`.
+                        // Default ist Polar AUS — Strava alleinige Trainings-Quelle.
+                        // Code bleibt erhalten damit Polar jederzeit wieder anschaltbar ist.
                         applicationScope.launch {
-                            if (oauth.loadPolarAuthState().isAuthorized &&
+                            val polarDisabled = appSettings.isPolarSyncDisabled()
+                            if (!polarDisabled &&
+                                oauth.loadPolarAuthState().isAuthorized &&
                                 secrets.polarUserId > 0L) {
                                 scheduler.runPolarSyncNow()
                             }
