@@ -1,9 +1,11 @@
 package de.frank.entropyreducer.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -55,6 +57,31 @@ private fun NavController.tabSwitch(route: String) {
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
+
+    // Frank-Wunsch 2026-05-17: Beim Erststart der App soll die 5-Tab-Uebersicht
+    // sichtbar sein (nicht direkt die Sub-Bar des Aufgaben-Tabs). Der Zustand
+    // muss Tab-Wechsel ueberleben, damit ein Tap auf einen Tab im Switcher die
+    // Sub-Bar sofort und ohne Flackern zeigt.
+    val switcherState = remember { BottomBarSwitcherState() }
+    AppNavHost(nav = nav, switcherState = switcherState, modifier = modifier)
+}
+
+@Composable
+private fun AppNavHost(
+    nav: androidx.navigation.NavHostController,
+    switcherState: BottomBarSwitcherState,
+    modifier: Modifier,
+) {
+    CompositionLocalProvider(LocalBottomBarSwitcher provides switcherState) {
+        AppNavHostInner(nav = nav, modifier = modifier)
+    }
+}
+
+@Composable
+private fun AppNavHostInner(
+    nav: androidx.navigation.NavHostController,
+    modifier: Modifier,
+) {
 
     // Frank-Wunsch 2026-05-11: Settings-Icon im Widget oeffnet direkt den
     // Widget-Settings-Screen. ACTION_FOCUS / ACTION_RESCHEDULE werden in

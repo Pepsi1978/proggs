@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,10 +77,14 @@ fun CosmosBottomBar(
 ) {
     val cosmos = LocalCosmos.current
 
-    // Default = Sub-Bar fuer currentTab. Wird via Zurueck-Geste auf den
-    // 5-Tab-Switcher umgeschaltet. Tap auf einen Switcher-Tab schaltet zurueck
-    // auf Sub-Bar (passiert automatisch durch Re-Composition nach Navigation).
-    var showSwitcher by remember { mutableStateOf(false) }
+    // Geteilter Switcher-State (Frank-Wunsch 2026-05-17, dritte Iteration):
+    // - Beim Erststart der App: showSwitcher = true → 5-Tab-Uebersicht.
+    // - Tap auf einen Tab in der Uebersicht: showSwitcher = false → Sub-Bar.
+    // - Zurueck-Geste aus Sub-Bar: showSwitcher = true → Uebersicht.
+    // - Tab-Wechsel: State bleibt erhalten (CompositionLocal lebt in AppNavGraph),
+    //   d.h. die Uebersicht erscheint nicht ungewollt wieder waehrend Navigation.
+    val switcher = LocalBottomBarSwitcher.current
+    val showSwitcher = switcher.showSwitcher
 
     val isOnMainTab = currentTab in MAIN_TABS
     val activeSubMode: String? = when {
@@ -93,7 +98,7 @@ fun CosmosBottomBar(
     //  - Sub-Bar sichtbar (und kein forced/sub-screen) → Switcher anzeigen
     //  - forcedSubMode aktiv → BackHandler aus, NavGraph pop wird greifen
     BackHandler(enabled = forcedSubMode == null && !showSwitcher && isOnMainTab) {
-        showSwitcher = true
+        switcher.showSwitcher = true
     }
 
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -123,7 +128,7 @@ fun CosmosBottomBar(
                         // Aus dem Switcher heraus: navigieren UND Switcher schliessen.
                         // Die naechste Re-Composition zeigt automatisch die Sub-Bar
                         // fuer den neuen Tab.
-                        showSwitcher = false
+                        switcher.showSwitcher = false
                         onTabSelected(tab)
                     },
                 )
@@ -146,7 +151,7 @@ fun CosmosBottomBar(
                         if (forcedSubMode != null) {
                             onTabSelected(activeSubMode)
                         } else {
-                            showSwitcher = true
+                            switcher.showSwitcher = true
                         }
                     },
                     onSubAreaClick = { index ->
@@ -329,15 +334,16 @@ private fun parentMetaFor(tab: String): ParentMeta = when (tab) {
 
 /**
  * Tab-Tint fuer Sub-Mode: gilt fuer Icons, Texte, Mic-Button (Frank-Wunsch 2026-05-17).
- * Bewusst lebendige Farben, damit Frank auf einen Blick erkennt in welchem Pattern
- * er gerade ist. Identisch zwischen Dark + Light Mode, der graue Hintergrund liefert
- * ausreichend Kontrast in beiden Themes.
+ * Bewusst kraeftige, dunklere Farben, damit sie auch auf dem hellgrauen Bar-
+ * Hintergrund gut lesbar bleiben (Frank-Reklamation 2026-05-17: Mint und Cyan
+ * waren zu hell, der Text war kaum zu sehen). Lila und Rosé hat Frank explizit
+ * als okay bestaetigt — die bleiben.
  */
 private fun subModeTint(tab: String): Color = when (tab) {
-    Routes.TASKS -> Color(0xFF34D399)      // Mint / Smaragd — "erledigt"
-    Routes.ANALYSIS -> Color(0xFF22D3EE)   // Cyan — "Daten / Diagramm"
-    Routes.SCIENTIST -> Color(0xFFA78BFA)  // Violett — "KI / Wissenschaft"
-    Routes.BIOMARKER -> Color(0xFFFB7185)  // Rosé — "Herz / Koerper"
+    Routes.TASKS -> Color(0xFFEA580C)      // Kraeftiges Orange (orange-600)
+    Routes.ANALYSIS -> Color(0xFFC2410C)   // Zweites Orange, dunkler (orange-700)
+    Routes.SCIENTIST -> Color(0xFFA78BFA)  // Violett — Frank: "Lila ist okay"
+    Routes.BIOMARKER -> Color(0xFFFB7185)  // Rosé — Frank: "Rot ist okay"
     else -> CosmosColors.AccentPrimary
 }
 
@@ -347,3 +353,17 @@ private val MAIN_TABS = setOf(
     Routes.SCIENTIST,
     Routes.BIOMARKER,
 )
+
+/**
+ * Geteilter Switcher-State (5-Tab-Uebersicht vs. Sub-Bar). Wird per
+ * [CompositionLocalProvider] in [AppNavGraph] bereitgestellt, damit der Zustand
+ * Tab-Wechsel ueberlebt. Initialwert `true` ist beim App-Start gewollt — Frank
+ * will dort zuerst die 5-Tab-Uebersicht sehen und einen Tab waehlen.
+ */
+class BottomBarSwitcherState {
+    var showSwitcher by mutableStateOf(true)
+}
+
+val LocalBottomBarSwitcher = staticCompositionLocalOf<BottomBarSwitcherState> {
+    BottomBarSwitcherState()
+}
