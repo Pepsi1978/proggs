@@ -1122,7 +1122,12 @@ private fun ZoomableChartFullscreen(
 
                                 when (singleFingerMode) {
                                     "y" -> {
-                                        val yShiftDelta = -delta.y / canvasH * 1.0f
+                                        // Frank-Wunsch 2026-05-17 Iteration 9:
+                                        // Inhalt folgt dem Finger (Strava-Pattern):
+                                        // Finger nach oben -> Graph wandert nach oben.
+                                        // delta.y < 0 (oben) -> yShift < 0 -> yMin/yMax sinken
+                                        // -> Linie verschiebt sich visuell nach oben.
+                                        val yShiftDelta = delta.y / canvasH * 1.0f
                                         androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
                                             yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
                                         }
