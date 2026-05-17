@@ -1,37 +1,66 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 27 Locales (26 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenzdatei übersetzung-global.md (im Skill-Ordner). Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: Uebersetzt Android strings.xml in alle 27 Locales (26 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenz. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
 ---
 
 # Uebersetzungs-Skill: Android strings.xml in 27 Locales (26 Sprachen)
 
 Dieser Skill uebersetzt die strings.xml einer Android-App in alle 27 Locales — 26 Sprachen,
 wobei Portugiesisch als zwei eigenstaendige Varianten gepflegt wird (pt-BR fuer Brasilien
-und pt-PT fuer Portugal). Die sprach-spezifischen Prompts liegen in der mitgelieferten
-Referenzdatei `übersetzung-global.md`. Er arbeitet
-Sprache fuer Sprache, verifiziert jede Uebersetzung im zweiten Durchlauf, und committet
-nach jeder fertigen Sprache. Das Ziel ist professionelle App-Store-Qualitaet — nicht
-"gut genug", sondern die bestmoegliche maschinelle Uebersetzung.
+und pt-PT fuer Portugal). Er arbeitet Sprache fuer Sprache, verifiziert jede Uebersetzung
+mit fuenf automatischen Validatoren, und committet nach jeder fertigen Sprache. Das Ziel
+ist professionelle App-Store-Qualitaet — nicht "gut genug", sondern die bestmoegliche
+maschinelle Uebersetzung.
 
-## Referenzdatei finden (KRITISCH — immer dieser Pfad)
+## Skill-Struktur (Progressive Disclosure, Anthropic Best Practice)
 
-Die Referenzdatei `übersetzung-global.md` (mit Umlaut!) liegt direkt im Skill-Ordner:
+Der Skill folgt dem Drei-Ebenen-Pattern: Metadaten (immer geladen) → Body (bei Trigger)
+→ Resources (nur bei Bedarf).
 
 ```
-/Users/frank/.claude/skills/übersetzung/übersetzung-global.md   (macOS)
-$env:USERPROFILE/.claude/skills/übersetzung/übersetzung-global.md   (Windows)
+übersetzung/
+├── SKILL.md                          ← Dieses Dokument: Workflow + Phasen + Aufrufe
+├── übersetzung-global.md             ← Universal-Prompt + Inhaltsverzeichnis
+├── references/
+│   └── languages/                    ← Eine Datei pro Locale (27 Stueck)
+│       ├── en.md, fr.md, es.md, ...
+└── scripts/
+    └── validators/                   ← Auto-Fix-Scripts (5 Stueck)
+        ├── check_native_digits.py
+        ├── check_cjk_punctuation.py
+        ├── check_pt_variants.py
+        ├── check_apostrophes.py
+        ├── check_length_pacing.py
+        └── README.md
 ```
 
-**NIEMALS** nach `~/proggs/uebersetzung-global.md` (ohne Umlaut) suchen — dieser Pfad
-existiert nicht. Die korrekte Datei heisst mit Umlaut und ist Teil des Skills. Fallback
-bei Nicht-Auffinden: `~/proggs/übersetzung-global.md` — das ist die Master-Kopie.
+**Warum diese Struktur:** Frueher (vor Refactoring-Stufe-B) lagen alle 27 Sprach-Prompts
+in einer Datei (842 Zeilen) und alle Validator-Scripts inline in dieser SKILL.md
+(888 Zeilen). Bei jedem Skill-Trigger wurden ~7.000 Token in den Kontext geladen.
+Mit der neuen Struktur sind es ~3.000 Token im Standard-Fall — und pro Sprach-Wechsel
+laedt der Skill nur die eine Datei die er gerade braucht.
+
+---
+
+## Referenzdatei finden
+
+Die Universal-Referenz `übersetzung-global.md` liegt direkt im Skill-Ordner. Die
+sprach-spezifischen Prompts liegen je in `references/languages/[code].md`. Pfade:
+
+```
+~/.claude/skills/übersetzung/übersetzung-global.md
+~/.claude/skills/übersetzung/references/languages/[code].md
+~/.claude/skills/übersetzung/scripts/validators/check_*.py
+```
+
+(Auf macOS: `/Users/frank/.claude/skills/...`, auf Windows: `%USERPROFILE%/.claude/skills/...`)
 
 ---
 
 ## Wann dieser Skill zum Einsatz kommt
 
 - **Neue App lokalisieren**: "Uebersetze die Strings fuer [App-Name]"
-- **Neue Strings nach Feature**: "Uebersetze nur die neuen Strings" (nach dem Hinzufuegen neuer Features)
+- **Neue Strings nach Feature**: "Uebersetze nur die neuen Strings" (nach Feature-Bau)
 - **Komplette Neuuebersetzung**: "Uebersetze alle Strings komplett neu"
 - **Einzelne Sprache**: "Uebersetze die Strings auf Franzoesisch" (nur eine Sprache)
 
@@ -76,15 +105,15 @@ git diff HEAD~1 -- [APP_DIR]/app/src/main/res/values/strings.xml | grep "^+" | g
 ```
 Wenn kein sinnvoller Diff: die letzten 1-3 Commits pruefen oder den Benutzer fragen.
 
-### 1.4 Prompt-Referenz laden
+### 1.4 Universal-Prompt und Sprach-Prompts laden
 
-Die Datei `~/.claude/skills/übersetzung/übersetzung-global.md` lesen (mit Umlaut!).
-Sie wird mit dem Skill mitgeliefert und ist garantiert vorhanden. Sie enthaelt:
-- **Abschnitt 1**: Den Universal-Prompt mit Platzhaltern
-- **Abschnitt 2**: 26 sprach-spezifische Prompt-Bloecke
+Der Universal-Prompt liegt in `~/.claude/skills/übersetzung/übersetzung-global.md`
+(Abschnitt 1). Er wird einmal pro Session in den Kontext geladen.
 
-Wenn die Datei im Skill-Ordner aus irgendeinem Grund fehlt, ist der Fallback
-`~/proggs/übersetzung-global.md` (Master-Kopie im Repo).
+Die sprach-spezifischen Prompts liegen pro Sprache in
+`~/.claude/skills/übersetzung/references/languages/[code].md`. Sie werden **erst dann
+geladen wenn die jeweilige Sprache an der Reihe ist** — nicht im Voraus alle. Das spart
+Kontext-Verbrauch um ca. 95% pro Uebersetzungs-Lauf.
 
 ### 1.5 App-Informationen sammeln
 
@@ -96,7 +125,7 @@ Fuer die Platzhalter im Universal-Prompt werden diese Informationen benoetigt:
 | `[APP_DESCRIPTION]` | README.md der App oder Benutzer | "Personal journaling and diary app" |
 | `[APP_TONE]` | Aus dem Stil der deutschen Strings ableiten | "Warm, encouraging, personal" |
 | `[TARGET_LANGUAGE]` | Wird pro Sprache gesetzt | "French" |
-| `[LOCALE_CODE]` | Aus uebersetzung-global.md | "fr-FR" |
+| `[LOCALE_CODE]` | Aus dem Inhaltsverzeichnis | "fr-FR" |
 | `[REGISTER]` | Aus dem sprach-spezifischen Prompt | "Informal tu" |
 
 Wenn `[APP_DESCRIPTION]` oder `[APP_TONE]` nicht klar sind: kurz den Benutzer fragen
@@ -107,18 +136,20 @@ Uebersetzung — nicht ueberspringen.
 
 Fuer jede Sprache pruefen ob das Zielverzeichnis existiert:
 ```
-[APP_DIR]/app/src/main/res/values-[locale]/strings.xml
+[APP_DIR]/app/src/main/res/values-[android-locale]/strings.xml
 ```
 
-Locale-Mapping (Android-Verzeichnisnamen):
+Locale-Mapping (Sprach-Datei-Code → Android-Verzeichnis):
 ```
-en → values-en, fr → values-fr, es → values-es, pt-BR → values-pt-rBR,
-it → values-it, nl → values-nl, pl → values-pl, ru → values-ru,
-uk → values-uk, tr → values-tr, ja → values-ja, ko → values-ko,
-zh-Hans → values-zh-rCN, zh-Hant → values-zh-rTW, ar → values-ar,
-hi → values-hi, th → values-th, id → values-in, bn → values-bn,
-te → values-te, mr → values-mr, ta → values-ta, ur → values-ur,
-gu → values-gu, kn → values-kn, ml → values-ml
+en        → values-en        | fr        → values-fr        | es        → values-es
+pt-BR     → values-pt-rBR    | pt-PT     → values-pt-rPT    | it        → values-it
+nl        → values-nl        | pl        → values-pl        | ru        → values-ru
+uk        → values-uk        | tr        → values-tr        | ja        → values-ja
+ko        → values-ko        | zh-Hans   → values-zh-rCN    | zh-Hant   → values-zh-rTW
+ar        → values-ar        | hi        → values-hi        | th        → values-th
+id        → values-in        | bn        → values-bn        | te        → values-te
+mr        → values-mr        | ta        → values-ta        | ur        → values-ur
+gu        → values-gu        | kn        → values-kn        | ml        → values-ml
 ```
 
 Fehlende Verzeichnisse erstellen. Bei bestehenden Dateien: nur die zu uebersetzenden
@@ -149,29 +180,35 @@ Starte jetzt mit Englisch...
 Diese Phase ist das Herzstuck des Skills. Fuer JEDES der 27 Locales werden drei
 Schritte ausgefuehrt: Uebersetzen, Verifizieren, Speichern.
 
-Die Reihenfolge der Locales folgt dem Inhaltsverzeichnis in uebersetzung-global.md:
+Die Reihenfolge der Locales folgt dem Inhaltsverzeichnis in `übersetzung-global.md`:
+
+```
 en → fr → es → pt-BR → pt-PT → it → nl → pl → ru → uk → tr → ja → ko → zh-Hans →
 zh-Hant → ar → hi → th → id → bn → te → mr → ta → ur → gu → kn → ml
+```
 
-WICHTIG: pt-BR und pt-PT sind separate Locales und MUESSEN beide uebersetzt werden.
-pt-PT wird haeufig vergessen — der bidirektionale PT-Varianten-Check (Check 9) faengt
-Kreuz-Kontaminationen, aber er ersetzt nicht die Pflege von pt-PT als eigenstaendige Sprache.
+**WICHTIG:** pt-BR und pt-PT sind separate Locales und MUESSEN beide uebersetzt werden.
+pt-PT wird haeufig vergessen — der bidirektionale PT-Varianten-Check (Validator 3)
+faengt Kreuz-Kontaminationen, aber er ersetzt nicht die Pflege von pt-PT als
+eigenstaendige Sprache.
 
 ### Schritt A — Uebersetzen (erster Durchlauf)
 
-1. **Prompt-Block extrahieren**: In uebersetzung-global.md nach `### [code] —` suchen
-   und den Code-Block zwischen den ``` Markierungen extrahieren.
+1. **Sprach-Prompt laden**: Die Datei `references/languages/[code].md` lesen.
+   Sie enthaelt den Code-Block mit den sprach-spezifischen Regeln zwischen
+   ` ``` `-Markierungen. Diesen Code-Block extrahieren.
 
-2. **Prompt zusammenbauen**: Universal-Prompt + sprach-spezifischer Block.
-   Alle Platzhalter befuellen. Den REGISTER-Wert aus dem sprach-spezifischen Block
-   uebernehmen (z.B. "Informal tu" fuer Franzoesisch).
+2. **Prompt zusammenbauen**: Universal-Prompt (aus `übersetzung-global.md`) +
+   extrahierter sprach-spezifischer Block. Alle Platzhalter befuellen. Den
+   `REGISTER`-Wert aus dem sprach-spezifischen Block uebernehmen (z.B.
+   "Informal tu" fuer Franzoesisch).
 
 3. **Uebersetzen**: Die Quell-Strings mit dem zusammengebauten Prompt uebersetzen.
    Dabei den gesamten Prompt als Kontext im Kopf behalten — jede Warnung, jeder
    Vokabel-Hinweis, jede Plural-Regel ist wichtig.
 
 4. **Ergebnis schreiben**: Die uebersetzten Strings in die Zieldatei schreiben:
-   `values-[locale]/strings.xml`
+   `values-[android-locale]/strings.xml` (siehe Locale-Mapping in 1.6).
 
    Bei Teiluebersetzung (nur neue Strings): Die neuen Strings in die bestehende
    Datei einfuegen, an der gleichen Position wie in der Quelldatei. Die bestehenden
@@ -193,10 +230,11 @@ Kreuz-Kontaminationen, aber er ersetzt nicht die Pflege von pt-PT als eigenstaen
 Der zweite Durchlauf ist keine Option — er ist Pflicht. Er faengt echte Fehler,
 die im ersten Durchlauf entstehen.
 
-1. **Prompt erneut laden**: Den sprach-spezifischen Prompt-Block NOCHMAL lesen.
-   Nicht aus dem Gedaechtnis arbeiten — frisch laden, damit keine Warnung vergessen wird.
+1. **Sprach-Prompt erneut laden**: Die Datei `references/languages/[code].md`
+   NOCHMAL lesen. Nicht aus dem Gedaechtnis arbeiten — frisch laden, damit keine
+   Warnung vergessen wird.
 
-2. **Systematische Pruefung (9 Checks):**
+2. **11 systematische Checks**:
 
    | # | Check | Was geprueft wird | Wie pruefen |
    |---|-------|------------------|-------------|
@@ -206,540 +244,67 @@ die im ersten Durchlauf entstehen.
    | 4 | Plural-Formen | Alle erforderlichen `quantity`-Formen vorhanden | Gegen Prompt-Vorgabe pruefen |
    | 5 | Sprach-Warnungen | Spezifische LLM-Pitfalls aus dem Prompt | Gegen Warnung-Liste pruefen |
    | 6 | Konsistenz | Gleiche Begriffe fuer gleiche Konzepte | Stichprobe der Kern-Vokabeln |
-   | **7** | **Native-Ziffern (indische Sprachen PFLICHT)** | **Keine bengalischen/devanagari/tamilischen etc. Ziffern** | **Python-Regex pro Sprache (siehe unten)** |
-   | **8** | **Full-width Punctuation (CJK-Sprachen PFLICHT)** | **Keine half-width `, . ! ? : ; ( )` nach CJK-Zeichen** | **Python-Regex (siehe unten)** |
-   | **9** | **Portugiesisch-Varianten-Trennung (pt-BR ↔ pt-PT PFLICHT)** | **Keine PT-BR-Vokabeln in pt-PT und umgekehrt** | **Python-Regex bidirektional (siehe unten)** |
-   | **10** | **Apostroph-Auto-Escape (FR/IT/PT-BR/PT-PT/EN PFLICHT)** | **Unescaped `'` in `<string>`-Werten — bricht den AAPT-Build** | **Python-Regex mit Quote-Awareness (siehe unten)** |
-   | **11** | **Laengen-Pacing-Check (alle Sprachen)** | **Uebersetzung >+40% laenger als Source ohne SHORTER-Alternative** | **Python-Diff Source vs Translation (siehe unten)** |
-
-#### Check 7 — Native-Ziffern-Pflichtcheck fuer indische Sprachen
-
-Die Referenzdatei schreibt fuer ALLE indischen Sprachen explizit vor:
-**"Use Arabic numerals (0-9), NOT [native] digits."**
-
-LLMs ignorieren diese Regel haeufig und mischen native Ziffern in die Uebersetzung.
-Das ist ein systematischer Fehler — deshalb PFLICHT-Check via Python nach jeder
-indischen Uebersetzung:
-
-| Sprache | Native Ziffern (VERBOTEN) | Unicode-Range |
-|---------|---------------------------|---------------|
-| bn (Bengali) | ০১২৩৪৫৬৭৮৯ | U+09E6–U+09EF |
-| hi (Hindi) | ०१२३४५६७८९ | U+0966–U+096F |
-| mr (Marathi) | ०१२३४५६७८९ | U+0966–U+096F (Devanagari) |
-| te (Telugu) | ౦౧౨౩౪౫౬౭౮౯ | U+0C66–U+0C6F |
-| ta (Tamil) | ௦௧௨௩௪௫௬௭௮௯ | U+0BE6–U+0BEF |
-| gu (Gujarati) | ૦૧૨૩૪૫૬૭૮૯ | U+0AE6–U+0AEF |
-| kn (Kannada) | ೦೧೨೩೪೫೬೭೮೯ | U+0CE6–U+0CEF |
-| ml (Malayalam) | ൦൧൨൩൪൫൬൭൮൯ | U+0D66–U+0D6F |
-| ur (Urdu) | ۰۱۲۳۴۵۶۷۸۹ | U+06F0–U+06F9 (Extended Arabic-Indic) |
-
-**Pflicht-Script (nach jeder indischen Uebersetzung ausfuehren):**
-
-```python
-import re
-LANG_DIGITS = {
-    "bn": ("০১২৩৪৫৬৭৮৯", "Bengali"),
-    "hi": ("०१२३४५६७८९", "Devanagari"),
-    "mr": ("०१२३४५६७८९", "Devanagari"),
-    "te": ("౦౧౨౩౪౫౬౭౮౯", "Telugu"),
-    "ta": ("௦௧௨௩௪௫௬௭௮௯", "Tamil"),
-    "gu": ("૦૧૨૩૪૫૬૭૮૯", "Gujarati"),
-    "kn": ("೦೧೨೩೪೫೬೭೮೯", "Kannada"),
-    "ml": ("൦൧൨൩൪൫൬൭൮൯", "Malayalam"),
-    "ur": ("۰۱۲۳۴۵۶۷۸۹", "Extended Arabic-Indic"),
-}
-locale = "bn"  # anpassen pro Sprache
-native, label = LANG_DIGITS[locale]
-path = f"[APP_DIR]/app/src/main/res/values-{locale}/strings.xml"
-with open(path, "r", encoding="utf-8") as f:
-    content = f.read()
-count = sum(1 for c in content if c in native)
-if count > 0:
-    print(f"FEHLER: {count} {label}-Ziffern gefunden — MUESSEN zu 0-9 ersetzt werden")
-    fixed = content.translate(str.maketrans(native, "0123456789"))
-    import tempfile, os
-    with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(path),
-                                      suffix=".tmp", delete=False, encoding="utf-8") as tmp:
-        tmp.write(fixed); tmp_path = tmp.name
-    os.replace(tmp_path, path)
-    print(f"Fixed: {count} Ziffern ersetzt")
-else:
-    print(f"OK: 0 {label}-Ziffern (Arabic-only)")
-```
-
-Dieser Check ist **nicht optional** fuer bn, hi, mr, te, ta, gu, kn, ml, ur. Er wird
-nach Schritt A (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 nativen
-Ziffern: automatisch ersetzen, in die Verbesserungs-Meldung aufnehmen.
-
-#### Check 8 — Full-width Punctuation Pflichtcheck fuer CJK-Sprachen
-
-Die Referenzdatei schreibt fuer ALLE CJK-Sprachen explizit vor:
-**"Use full-width punctuation: 。，！？（）「」"**
-
-LLMs verwenden trotzdem haeufig half-width ASCII `, . ! ? : ; ( )` nach CJK-Zeichen.
-Das ist visuell sofort als unprofessionell erkennbar — besonders weil andere CJK-Apps
-(Apple, Google, Native-Apps) durchgaengig full-width verwenden.
-
-**Empirische Daten** (BestJournal-App, April 2026):
-- zh-Hans: 551 half-width Vorkommen → gefixt in #1530
-- zh-Hant: 446 half-width Vorkommen → gefixt in #1531/#1532
-- ja: weniger betroffen, aber auch vorhanden
-
-| Sprache | Half-width (VERBOTEN nach CJK) | Full-width (KORREKT) |
-|---------|-------------------------------|---------------------|
-| zh-Hans | `, . ! ? : ; ( )` | `， 。 ！ ？ ： ； （ ）` |
-| zh-Hant | `, . ! ? : ; ( )` | `， 。 ！ ？ ： ； （ ）` |
-| ja | `, . ! ? : ; ( )` | `、 。 ！ ？ ： ； （ ）` (Komma = `、` !) |
-
-**WICHTIG — Ausnahmen die NICHT gefixt werden duerfen:**
-- JSON-Schema-Strings (typisch in `ai_prompt_*` Keys): half-width `:` und `,` und `"`
-  sind dort Pflicht-Syntax, sonst bricht das KI-Parsing
-- Versionsnummern (`1.0.5`), Uhrzeiten (`12:30`) — half-width bleibt
-- Format-Platzhalter `%1$s`, `%d`
-
-**Pflicht-Script (nach jeder zh-Hans/zh-Hant/ja Uebersetzung ausfuehren):**
-
-```python
-import re, os, tempfile
-
-LOCALE = "zh-rTW"  # anpassen: zh-rCN, zh-rTW, ja
-PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
-
-# Komma fuer ja anders als zh-Hans/zh-Hant!
-COMMA = "、" if LOCALE == "ja" else "，"
-
-def is_json_schema(s):
-    """JSON-Strings duerfen NICHT gefixt werden — sonst bricht KI-Parsing."""
-    if 'JSON' in s and ('\\"' in s or '{' in s):
-        return True
-    if re.search(r'\\"[a-zA-Z_]+\\"\s*:', s):
-        return True
-    return False
-
-def fix_string(text):
-    if is_json_schema(text):
-        return text, 0
-    fixed = text
-    n = 0
-    # Komma nach CJK
-    fixed, c = re.subn(r'([\u4e00-\u9fff]),', rf'\1{COMMA}', fixed); n += c
-    # Punkt nach CJK (nicht in 1.0)
-    fixed, c = re.subn(r'([\u4e00-\u9fff])\.(?!\d)', r'\1。', fixed); n += c
-    # Ausrufezeichen, Fragezeichen
-    fixed, c = re.subn(r'([\u4e00-\u9fff])!', r'\1！', fixed); n += c
-    fixed, c = re.subn(r'([\u4e00-\u9fff])\?', r'\1？', fixed); n += c
-    # Doppelpunkt (nicht in 12:30)
-    fixed, c = re.subn(r'([\u4e00-\u9fff]):(?!\d{2})', r'\1：', fixed); n += c
-    fixed, c = re.subn(r'([\u4e00-\u9fff]);', r'\1；', fixed); n += c
-    # Klammern: ( neben CJK -> （
-    fixed, c = re.subn(r'([\u4e00-\u9fff])\s*\(', r'\1（', fixed); n += c
-    # ) Paire schliessen
-    fixed, c = re.subn(r'（([^（）()]*?)\)', r'（\1）', fixed); n += c
-    # Kosmetisch: kein Space nach full-width Punctuation
-    fixed = re.sub(r'：[ \t]+(\S)', r'：\1', fixed)
-    fixed = re.sub(r'。[ \t]+(\S)', r'。\1', fixed)
-    return fixed, n
-
-with open(PATH, "r", encoding="utf-8") as f:
-    content = f.read()
-original = content
-total_fixes = 0
-strings_changed = 0
-
-def process(match):
-    global total_fixes, strings_changed
-    full = match.group(0)
-    body = match.groups()[-1]
-    new_body, n = fix_string(body)
-    if n > 0:
-        total_fixes += n
-        strings_changed += 1
-        return full.replace(body, new_body)
-    return full
-
-content = re.sub(r'<string name="([^"]+)"(?:[^>]*?)>(.*?)</string>',
-                 process, content, flags=re.DOTALL)
-content = re.sub(r'<item(?:\s+quantity="[^"]+")?>(.*?)</item>',
-                 process, content, flags=re.DOTALL)
-
-if content != original:
-    d = os.path.dirname(os.path.abspath(PATH))
-    with tempfile.NamedTemporaryFile("w", dir=d, suffix=".tmp",
-                                      delete=False, encoding="utf-8") as tmp:
-        tmp.write(content); tmp_path = tmp.name
-    os.replace(tmp_path, PATH)
-    print(f"Fixed: {strings_changed} Strings, {total_fixes} Punctuation-Aenderungen")
-else:
-    print(f"OK: 0 half-width Punctuation in {LOCALE}")
-```
-
-Dieser Check ist **nicht optional** fuer zh-Hans, zh-Hant, ja. Er wird nach Schritt A
-(Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
-ersetzen, in die Verbesserungs-Meldung aufnehmen.
-
-#### Check 9 — Portugiesisch-Varianten-Trennung (pt-BR ↔ pt-PT PFLICHT)
-
-Portugiesisch ist die Sprache mit der hoechsten LLM-Verwechslungs-Rate aller 26 Zielsprachen.
-Praktisch alle Standard-LLMs defaulten auf pt-BR und streuen BR-Vokabular auch dann ein,
-wenn explizit pt-PT angefragt wurde (und umgekehrt). Deshalb PFLICHT-Check via Python
-nach jeder portugiesischen Uebersetzung — BIDIREKTIONAL.
-
-**Empirische Daten** (BestJournal-App, April 2026):
-- pt-PT Uebersetzung: 108 você-Vorkommen, 97 Salvar/Excluir/Compartilhar-Leakage,
-  29 Retrospectiva statt Retrospetiva (AO 1990), ~580 systematische Fixes insgesamt
-- pt-BR darf KEINE PT-PT-Vokabeln haben und umgekehrt. Ein einziges "utilizador"
-  in pt-BR ist genauso falsch wie ein "usuário" in pt-PT.
-
-**Marker-Woerter (die 20 wichtigsten in beide Richtungen):**
-
-| Konzept | pt-PT (KORREKT fuer Portugal) | pt-BR (KORREKT fuer Brasilien) |
-|---------|-------------------------------|--------------------------------|
-| Benutzer | utilizador | usuário |
-| App | aplicação (fem.) | aplicativo (masc.) |
-| Speichern | guardar | salvar |
-| Einstellungen | definições | configurações |
-| Passwort | palavra-passe | senha |
-| Herunterladen | transferir | baixar |
-| Handy | telemóvel | celular |
-| Datei | ficheiro | arquivo |
-| Loeschen | eliminar | excluir |
-| Bildschirm | ecrã | tela |
-| Anmelden | iniciar sessão | fazer login / entrar |
-| Teilen | partilhar | compartilhar |
-| Abonnement | subscrição | assinatura |
-| Kamera | câmara | câmera |
-| Aufzeichnung | registo | registro |
-| Du (Pronomen) | tu | você |
-| Wir (ugs) | nós | a gente |
-| Stress | stress | estresse |
-| Retrospektive (AO 1990) | retrospetiva | retrospectiva |
-| Zugreifen | aceder | acessar |
-| Managen | gerir | gerenciar |
-| Progressiv | "a + Infinitiv" (a guardar) | "-ando / -endo / -indo" (salvando) |
-
-**Pflicht-Script (nach jeder pt-PT ODER pt-BR Uebersetzung ausfuehren):**
-
-```python
-import re, os, tempfile, sys
-
-# Variante definieren: "pt-PT" fuer Portugal, "pt-BR" fuer Brasilien
-TARGET_VARIANT = "pt-PT"  # oder "pt-BR"
-LOCALE = "pt-rPT" if TARGET_VARIANT == "pt-PT" else "pt-rBR"
-PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
-
-# Marker-Paare: (PT-PT-Wort, PT-BR-Wort)
-MARKERS = [
-    ("utilizador", "usuário"), ("aplicação", "aplicativo"),
-    ("guardar", "salvar"), ("definições", "configurações"),
-    ("palavra-passe", "senha"), ("transferir", "baixar"),
-    ("telemóvel", "celular"), ("ficheiro", "arquivo"),
-    ("eliminar", "excluir"), ("ecrã", "tela"),
-    ("iniciar sessão", "fazer login"), ("partilhar", "compartilhar"),
-    ("subscrição", "assinatura"), ("câmara", "câmera"),
-    ("registo", "registro"), ("tu", "você"),
-    ("nós", "a gente"), ("stress", "estresse"),
-    ("retrospetiva", "retrospectiva"), ("aceder", "acessar"),
-    ("gerir", "gerenciar"),
-]
-
-# Gerundium-Indikatoren (BR-only in Progressiv):
-# In pt-PT VERBOTEN: "-ando/-endo/-indo" nach "estar/está/estou"
-GERUND_PATTERNS = [
-    r'\b(est[aoáãou]\w*)\s+\w+(ando|endo|indo)\b',
-]
-
-with open(PATH, "r", encoding="utf-8") as f:
-    content = f.read()
-
-# Nur user-visible Strings pruefen (keine Kommentare, keine Resource-Namen)
-def extract_visible(text):
-    parts = []
-    for m in re.finditer(r'<string[^>]*>([^<]*(?:<(?!/string>)[^<]*)*)</string>', text, re.DOTALL):
-        parts.append(m.group(1))
-    for m in re.finditer(r'<item[^>]*>([^<]*(?:<(?!/item>)[^<]*)*)</item>', text, re.DOTALL):
-        parts.append(m.group(1))
-    return '\n'.join(parts)
-
-visible = extract_visible(content)
-
-# Je nach Zielvariante: den ANDEREN Marker finden
-forbidden_idx = 1 if TARGET_VARIANT == "pt-PT" else 0
-ok_idx = 0 if TARGET_VARIANT == "pt-PT" else 1
-label_forbidden = "pt-BR" if TARGET_VARIANT == "pt-PT" else "pt-PT"
-
-print(f"=== Check 9 — Varianten-Trennung fuer {TARGET_VARIANT} ===")
-print(f"Suche nach {label_forbidden}-Woertern (sollten NICHT vorkommen):\n")
-
-total_leakage = 0
-for pt, br in MARKERS:
-    forbidden = br if TARGET_VARIANT == "pt-PT" else pt
-    # "tu" ist zu unspezifisch — nur mit Wortgrenzen und nicht in Anfuehrungszeichen
-    if forbidden in ("tu", "nós"):
-        # Nur als eigenstaendiges Pronomen
-        pat = r'\b' + re.escape(forbidden) + r'\b'
-    else:
-        pat = r'\b' + re.escape(forbidden) + r'\b'
-    matches = re.findall(pat, visible, re.IGNORECASE)
-    if matches:
-        total_leakage += len(matches)
-        print(f"  WARN {forbidden} (sollte: {pt if TARGET_VARIANT == 'pt-PT' else br}): {len(matches)}x")
-
-# Gerundium-Check (nur fuer pt-PT)
-if TARGET_VARIANT == "pt-PT":
-    gerund_matches = []
-    for pat in GERUND_PATTERNS:
-        for m in re.finditer(pat, visible):
-            gerund_matches.append(m.group(0))
-    if gerund_matches:
-        total_leakage += len(gerund_matches)
-        print(f"  WARN BR-Gerundium (sollte 'a + Infinitiv'): {len(gerund_matches)}x")
-        for g in gerund_matches[:5]:
-            print(f"    Beispiel: {g}")
-
-if total_leakage == 0:
-    print(f"OK: 0 {label_forbidden}-Kontaminationen ✓")
-else:
-    print(f"\nFEHLER: {total_leakage} Varianten-Verletzungen gefunden")
-    print(f"MUESSEN korrigiert werden BEVOR der Commit erfolgt.")
-    sys.exit(1)
-```
-
-**Wann automatisch ausfuehren:**
-- Nach jeder pt-PT Uebersetzung: `TARGET_VARIANT = "pt-PT"` setzen
-- Nach jeder pt-BR Uebersetzung: `TARGET_VARIANT = "pt-BR"` setzen
-- Bei >0 Leakage: automatisch in die sprach-spezifische Fix-Schleife einspeisen
-  (siehe Check 5 sprach-spezifische Warnungen fuer pt-BR und pt-PT)
-
-Dieser Check ist **nicht optional** fuer pt-BR und pt-PT. Er wird nach Schritt A
-(Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
-ersetzen (siehe Batch-Script-Muster in Check 5), in die Verbesserungs-Meldung aufnehmen.
-
-#### Check 10 — Apostroph-Auto-Escape (FR/IT/PT-BR/PT-PT/EN PFLICHT)
-
-Android-Strings im Format `<string name="..."/>` MUESSEN Apostrophe mit `\'` eskapieren
-oder den ganzen String in doppelte Anfuehrungszeichen `"..."` einschliessen. Sonst
-bricht das AAPT-Tool den Build mit `error: unclosed string` — bevor das APK
-ueberhaupt zusammengesetzt wird.
-
-**Empirisch der HAEUFIGSTE Build-Killer** bei automatischen Uebersetzungen, weil:
-- Franzoesisch produziert massenhaft Apostrophe: `l'application`, `c'est`, `aujourd'hui`
-- Italienisch: `l'app`, `un'altra volta`, `nell'elenco`
-- Portugiesisch (beide Varianten): `d'arvore`, vereinzelt
-- Englisch: `you're`, `it's`, `don't`, `we'll`
-
-LLMs vergessen die Eskapierung in ~30% der Strings die einen Apostroph enthalten,
-trotz expliziter Warnung im Universal-Prompt (Regel 8). Deshalb PFLICHT-Auto-Fix
-via Python — analog zu CJK-Punctuation und Native-Ziffern.
-
-**Regel-Set:**
-1. Apostroph in `<string>`-Wert UND der gesamte String nicht in doppelten
-   Anfuehrungszeichen → escape zu `\'`
-2. Apostroph in `<string>`-Wert UND der gesamte String IST in doppelten
-   Anfuehrungszeichen (Wrap-Form `"..."`) → bleibt unbehandelt (legal)
-3. Bereits eskapierte Apostrophe `\'` → bleiben (nicht doppelt eskapieren)
-4. Apostrophe in `<plurals><item>` und `<string-array><item>` werden wie `<string>`
-   behandelt
-5. Typographische Apostrophe `’` (U+2019) sind in Android-XML legal und werden
-   NICHT angetastet — empfohlen wenn die Uebersetzung typografisch korrekt sein soll
-
-**Pflicht-Script (nach jeder fr/it/pt-rBR/pt-rPT/en Uebersetzung ausfuehren):**
-
-```python
-import re, os, tempfile
-
-LOCALE = "fr"  # anpassen: fr, it, pt-rBR, pt-rPT, en
-PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
-
-def escape_apostrophes(value):
-    """Eskapiere unescaped ' nur wenn der String nicht in "..." eingeschlossen ist.
-    Schon eskapierte \\' bleiben unveraendert."""
-    stripped = value.strip()
-    # Regel 2: String in doppelten Anfuehrungszeichen → unangetastet
-    if len(stripped) >= 2 and stripped.startswith('"') and stripped.endswith('"'):
-        return value, 0
-    # Regel 3: \\' ist schon eskapiert — ersetze temporaer durch Platzhalter
-    placeholder = "\x00ESCAPED_APOS\x00"
-    tmp = value.replace("\\'", placeholder)
-    # Regel 1: alle verbliebenen ' eskapieren
-    fixes = tmp.count("'")
-    if fixes == 0:
-        return value, 0
-    tmp = tmp.replace("'", "\\'")
-    # Platzhalter zurueck
-    return tmp.replace(placeholder, "\\'"), fixes
-
-with open(PATH, "r", encoding="utf-8") as f:
-    content = f.read()
-original = content
-total_fixes = 0
-strings_changed = 0
-
-def process(match):
-    global total_fixes, strings_changed
-    full = match.group(0)
-    body = match.groups()[-1]
-    new_body, n = escape_apostrophes(body)
-    if n > 0:
-        total_fixes += n
-        strings_changed += 1
-        return full.replace(body, new_body)
-    return full
-
-# Sowohl <string> als auch <item> in plurals/string-array
-content = re.sub(r'<string\b[^>]*>(.*?)</string>', process, content, flags=re.DOTALL)
-content = re.sub(r'<item(?:\s+quantity="[^"]+")?\s*>(.*?)</item>', process, content, flags=re.DOTALL)
-
-if content != original:
-    d = os.path.dirname(os.path.abspath(PATH))
-    with tempfile.NamedTemporaryFile("w", dir=d, suffix=".tmp",
-                                      delete=False, encoding="utf-8") as tmp:
-        tmp.write(content); tmp_path = tmp.name
-    os.replace(tmp_path, PATH)
-    print(f"Fixed: {strings_changed} Strings, {total_fixes} Apostrophe escaped")
-else:
-    print(f"OK: 0 unescaped Apostrophe in {LOCALE}")
-```
-
-**WICHTIG — Ausnahmen die NICHT gefixt werden duerfen:**
-- Format-Platzhalter `%1$s` enthalten `$` nicht `'` — kein Eingriff
-- CDATA-Bloecke `<![CDATA[...]]>` brauchen kein Escape — Script ignoriert sie weil
-  der Inhalt nicht im `<string>`-Match liegt
-- Bereits typografische Apostrophe `’` (U+2019) werden NICHT geaendert — auf Wunsch
-  des Benutzers kann die Uebersetzung auch typografische Apostrophe verwenden, die
-  in Android-XML keine Eskapierung brauchen
-
-**Defense in Depth (3 Schichten):**
-1. Praevention: Universal-Prompt Regel 8 warnt vor unescaped Apostrophe
-2. Reaktion: Dieser Check 10 fixt vergessene Eskapierungen automatisch
-3. Bestaetigung: AAPT-Build wuerde unescaped `'` als Fehler melden — falls Check 10
-   ueberlistet wird, faengt der Build den Fehler vor dem Release
-
-Dieser Check ist **nicht optional** fuer fr, it, pt-rBR, pt-rPT, en. Er wird nach
-Schritt A (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen:
-automatisch ersetzen, in die Verbesserungs-Meldung aufnehmen.
-
-#### Check 11 — Laengen-Pacing-Check (alle Sprachen)
-
-Mobile UI hat begrenzten Platz. Wenn eine Uebersetzung deutlich laenger ist als
-das deutsche Original, werden Button-Labels abgeschnitten, Listen-Eintraege
-ueberlaufen, und Tabs zerbrechen visuell. Der Universal-Prompt fordert bereits
-einen `<!-- SHORTER: ... -->` Kommentar bei >40% Laengenzuwachs, aber dieser
-Hinweis wird vom LLM systematisch ignoriert.
-
-**Empirische Daten (Recherche 2026):**
-- Polnisch +25 bis +35% laenger als Deutsch
-- Russisch +20 bis +30%
-- Tamil / Malayalam +25 bis +40%
-- Bengali +20 bis +35%
-- Tuerkisch +30 bis +40% bei Beschreibungen
-- Chinesisch (zh-Hans/zh-Hant) DEUTLICH kuerzer (-30 bis -50%) — kein Risiko
-- Japanisch / Koreanisch ebenfalls kuerzer
-
-**Regel-Set:**
-1. Pro String: `len(translation) / len(source)` berechnen
-2. Schwellenwert: 1.40 (also +40%)
-3. Ausnahmen:
-   - Quell-Strings unter 5 Zeichen werden NICHT geprueft (Verhaeltnis kann
-     trivialerweise hoch sein bei "OK" → "Aceptar")
-   - Strings die nur Platzhalter sind (`%1$s`, `{name}`) werden uebersprungen
-   - Strings mit bereits vorhandenem `<!-- SHORTER:` Kommentar werden uebersprungen
-4. Bei Verletzung: WARN-Liste ausgeben mit String-Name, Faktor, Source, Translation
-5. KEIN Auto-Fix (anders als Check 7-10): das LLM muss in einem Verbesserungs-Pass
-   eine kuerzere Alternative ergaenzen — automatisches Kuerzen ist linguistisch
-   nicht machbar
-
-**Pflicht-Script (nach jeder Uebersetzung ausfuehren):**
-
-```python
-import re, xml.etree.ElementTree as ET
-
-LOCALE = "pl"  # anpassen pro Sprache
-SOURCE_PATH = "[APP_DIR]/app/src/main/res/values/strings.xml"
-TARGET_PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
-THRESHOLD = 1.40   # +40%
-MIN_SOURCE_LEN = 5
-
-def parse_strings(path):
-    """Liefert dict: name -> raw text content (inkl. Platzhalter)."""
-    result = {}
-    with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
-    for m in re.finditer(
-        r'<string\s+name="([^"]+)"(?:[^>]*)>(.*?)</string>',
-        content, flags=re.DOTALL):
-        name = m.group(1)
-        body = m.group(2)
-        # SHORTER-Kommentar ignorieren wenn vorhanden
-        if '<!-- SHORTER:' in body:
-            continue
-        # Reine Platzhalter-Strings ueberspringen
-        cleaned = re.sub(r'%\d*\$?[sd]', '', body).strip()
-        cleaned = re.sub(r'\{[^}]+\}', '', cleaned).strip()
-        if len(cleaned) == 0:
-            continue
-        result[name] = body
-    return result
-
-src = parse_strings(SOURCE_PATH)
-dst = parse_strings(TARGET_PATH)
-
-violations = []
-for name, src_text in src.items():
-    if name not in dst:
-        continue
-    src_len = len(src_text.strip())
-    if src_len < MIN_SOURCE_LEN:
-        continue
-    dst_len = len(dst[name].strip())
-    if src_len == 0:
-        continue
-    ratio = dst_len / src_len
-    if ratio >= THRESHOLD:
-        violations.append((name, ratio, src_text.strip(), dst[name].strip()))
-
-# Sortiert nach Faktor absteigend
-violations.sort(key=lambda v: -v[1])
-
-if not violations:
-    print(f"OK: Laengen-Pacing fuer {LOCALE} im Rahmen (Schwelle: +{(THRESHOLD-1)*100:.0f}%)")
-else:
-    print(f"WARN: {len(violations)} Strings ueber +{(THRESHOLD-1)*100:.0f}% Laenge:")
-    for name, ratio, src_text, dst_text in violations[:20]:
-        print(f"  [{ratio*100:+.0f}%] {name}")
-        print(f"    DE: {src_text[:80]}")
-        print(f"    {LOCALE}: {dst_text[:80]}")
-    if len(violations) > 20:
-        print(f"  ... und {len(violations)-20} weitere")
-    print("Aktion: SHORTER-Alternativen im LLM-Verbesserungs-Pass ergaenzen.")
-```
-
-**Was passiert mit dem Ergebnis:**
-- 0 Violations → Check passiert, weiter zu Commit
-- 1-N Violations → in die Verifikations-Meldung aufnehmen, optional einen LLM-Pass
-  ueber genau diese Strings mit der Bitte um kuerzere Alternativen
-- "Ausreisser" (Faktor > 2.5x) als ERROR markieren — wahrscheinlich falsche
-  String-Zuordnung oder LLM-Halluzination
-
-**Defense in Depth (2 Schichten):**
-1. Praevention: Universal-Prompt Regel 4 fordert SHORTER-Kommentare
-2. Reaktion: Dieser Check 11 misst objektiv und warnt — keine Halluzinations-Pruefung
-
-Poka-Yoke-Stufe: 1 (Warnung) — automatisches Kuerzen ist linguistisch zu komplex,
-deshalb keine Stufe-2/3-Eliminierung moeglich. Aber: aus der WARN-Liste laesst sich
-ein gezielter LLM-Pass starten der genau diese Strings nachpoliert.
-
-Dieser Check ist **empfohlen** fuer alle Sprachen, **PFLICHT** fuer Sprachen mit
-typischer Laengen-Expansion: pl, ru, uk, fr, es, pt-BR, pt-PT, it, tr, bn, te, mr,
-ta, gu, kn, ml.
-
-3. **Check 5 im Detail — Sprach-spezifische Warnungen:**
-   Das ist der wichtigste Check. Fuer jede Sprache gibt es spezifische Gefahren:
+   | **7** | **Native-Ziffern** (indische Sprachen) | Keine bengalischen/devanagari/tamilischen etc. Ziffern | `scripts/validators/check_native_digits.py` |
+   | **8** | **Full-width Punctuation** (CJK-Sprachen) | Keine half-width `, . ! ? : ; ( )` nach CJK-Zeichen | `scripts/validators/check_cjk_punctuation.py` |
+   | **9** | **PT-Varianten-Trennung** (pt-BR ↔ pt-PT) | Keine PT-BR-Vokabeln in pt-PT und umgekehrt | `scripts/validators/check_pt_variants.py` |
+   | **10** | **Apostroph-Escape** (FR/IT/PT-BR/PT-PT/EN) | Unescaped `'` in `<string>`-Werten — bricht den AAPT-Build | `scripts/validators/check_apostrophes.py` |
+   | **11** | **Laengen-Pacing** (alle Sprachen) | Uebersetzung >+40% laenger als Source ohne SHORTER-Alternative | `scripts/validators/check_length_pacing.py` |
+
+3. **Validator-Scripts aufrufen** (Checks 7-11):
+
+   Die Validatoren sind eigenstaendige Python-Scripts in `~/.claude/skills/übersetzung/scripts/validators/`.
+   Sie folgen einer einheitlichen Aufruf-Konvention: `--locale` (was die Sprache ist)
+   und `--path` (Zielpfad zur strings.xml). Exit-Code 0 = OK, 1 = Probleme die manuelle
+   Korrektur brauchen, 2 = Fehler. Alle haben Auto-Fix wo das sinnvoll ist
+   (Native-Ziffern, CJK-Punctuation, Apostroph), nur Bericht wo Kontext-Wissen
+   gebraucht wird (PT-Varianten, Laengen-Pacing).
+
+   **Welcher Validator fuer welche Sprache:**
+
+   ```bash
+   # Check 7 — Native-Ziffern: bn, hi, mr, te, ta, gu, kn, ml, ur
+   python3 ~/.claude/skills/übersetzung/scripts/validators/check_native_digits.py \
+       --locale bn --path [APP_DIR]/app/src/main/res/values-bn/strings.xml
+
+   # Check 8 — CJK-Punctuation: zh-rCN, zh-rTW, ja
+   python3 ~/.claude/skills/übersetzung/scripts/validators/check_cjk_punctuation.py \
+       --locale ja --path [APP_DIR]/app/src/main/res/values-ja/strings.xml
+
+   # Check 9 — PT-Varianten: pt-PT und pt-BR (BEIDE!)
+   python3 ~/.claude/skills/übersetzung/scripts/validators/check_pt_variants.py \
+       --variant pt-PT --path [APP_DIR]/app/src/main/res/values-pt-rPT/strings.xml
+
+   # Check 10 — Apostroph: fr, it, pt-rBR, pt-rPT, en
+   python3 ~/.claude/skills/übersetzung/scripts/validators/check_apostrophes.py \
+       --locale fr --path [APP_DIR]/app/src/main/res/values-fr/strings.xml
+
+   # Check 11 — Laengen-Pacing: ALLE Sprachen (empfohlen besonders pl, ru, uk, fr, es,
+   #                                          pt-BR, pt-PT, it, tr, bn, te, mr, ta, gu, kn, ml)
+   python3 ~/.claude/skills/übersetzung/scripts/validators/check_length_pacing.py \
+       --source [APP_DIR]/app/src/main/res/values/strings.xml \
+       --target [APP_DIR]/app/src/main/res/values-pl/strings.xml \
+       --locale pl
+   ```
+
+   Bei Exit-Code 1 (Probleme gefunden): Den Bericht lesen und die genannten Strings
+   im LLM-Verbesserungs-Pass nachkorrigieren. Bei Exit-Code 0: weiter zu Schritt C.
+
+   **Defense in Depth** pro Validator:
+   - Schicht 1 (praeventiv): Universal-Prompt warnt im Vorfeld
+   - Schicht 2 (reaktiv): Script-Aufruf prueft objektiv
+   - Schicht 3 (selbstheilend): Auto-Fix wo machbar (atomares Schreiben via tempfile)
+
+   Details zu jedem Script: `scripts/validators/README.md`.
+
+4. **Check 5 im Detail — Sprach-spezifische Warnungen:**
+   Das ist der wichtigste manuelle Check. Fuer jede Sprache gibt es spezifische Gefahren:
 
    | Sprache | Was im zweiten Durchlauf BESONDERS pruefen |
    |---------|-------------------------------------------|
    | fr | Leerzeichen vor : ; ! ? vorhanden? Guillemets statt Anfuehrungszeichen? |
    | es | Kein Voseo? Kein Usted? Keine Castilian-Begriffe? |
-   | pt-BR | Keine PT-PT-Woerter? (utilizador, aplicacao, guardar, definicoes) |
+   | pt-BR | Keine PT-PT-Woerter? (utilizador, aplicacao, guardar, definicoes) — Check 9 deckt das ab |
+   | pt-PT | Keine PT-BR-Woerter? Gerundium "estar a" statt "-ando"? — Check 9 deckt das ab |
    | nl | Keine German→Dutch False Friends? (wie≠how, mogen≠moegen, meer≠Meer) |
    | uk | KEINE russischen Woerter? (Сохранить→Зберегти, Настройки→Налаштування) |
    | zh-Hans | Keine Traditional-Zeichen? Keine Taiwan-Vokabeln? |
@@ -760,10 +325,10 @@ ta, gu, kn, ml.
    | pl | Alle 4 Plural-Formen (one/few/many/other) vorhanden? "many" nicht mit "other" verwechselt? Geschlecht in Vergangenheit (zapisalem/zapisalam) vermieden? |
    | ml | Vereinfachte Orthographie? Suffix-Ketten korrekt? |
 
-4. **Korrekturen anwenden**: Wenn Probleme gefunden werden, die betroffenen Strings
+5. **Korrekturen anwenden**: Wenn Probleme gefunden werden, die betroffenen Strings
    korrigieren. Dabei den vollstaendigen Prompt-Kontext beruecksichtigen.
 
-5. **Verbesserungen melden**: Dem Benutzer kurz berichten was im zweiten Durchlauf
+6. **Verbesserungen melden**: Dem Benutzer kurz berichten was im zweiten Durchlauf
    verbessert wurde. Format:
    ```
    Verifikation [Sprache]: [N] Verbesserungen
@@ -833,7 +398,7 @@ das explizit nennen:
 
 Wenn der Benutzer sagt "uebersetze nur auf Franzoesisch":
 - Nur diese eine Sprache durchlaufen (Schritt A + B + C)
-- Dann fertig, nicht alle 26 machen
+- Dann fertig, nicht alle 27 machen
 
 ### Bestehende Uebersetzungen aktualisieren (nur neue Strings)
 
@@ -886,3 +451,18 @@ Jede Sprache hat einzigartige Fallstricke. Die franzoesischen Punctuation-Regeln
 helfen nicht bei Koreanisch, die ukrainische Russismus-Warnung ist irrelevant fuer
 Spanisch. Der volle sprach-spezifische Prompt stellt sicher, dass genau die richtigen
 Warnungen aktiv sind.
+
+### Warum die Scripts in scripts/ statt inline?
+
+Drei Gruende: (1) Anthropic Best Practice — Progressive Disclosure haelt SKILL.md
+schlank (<500 Zeilen). (2) Scripts koennen einzeln getestet, versioniert und
+weiterentwickelt werden ohne die SKILL.md zu touchen. (3) Beim Trigger des Skills
+laedt Claude nur die Workflow-Doku in den Kontext, nicht die ~600 Zeilen Python —
+das spart spuerbar Token und Kontext-Pressure.
+
+### Warum eine Datei pro Sprache statt eine grosse?
+
+Wenn nur Franzoesisch uebersetzt wird, soll auch nur die Franzoesisch-Datei in den
+Kontext geladen werden — nicht alle 27 Sprach-Bloecke. Bei Komplettuebersetzungen
+laedt der Skill die Dateien sequentiell nacheinander, jeweils nur die gerade
+gebrauchte. Empirisch spart das ~95% Kontext-Verbrauch pro Uebersetzungs-Lauf.
