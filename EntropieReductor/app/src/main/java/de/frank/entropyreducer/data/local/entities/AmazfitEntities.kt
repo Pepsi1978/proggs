@@ -133,5 +133,11 @@ data class AmazfitWorkoutEntity(
      *  detail.json `pace`-Feld. Frank-Wunsch 2026-05-09: fluessiger Tempo-
      *  Verlauf statt nur 7 Km-Splits. */
     val paceStreamJson: String? = null,
+    /** Frank-Wunsch 2026-05-17: Zeitstempel (epoch-ms) wann der Benutzer
+     *  zuletzt manuell einzelne Werte ueberschrieben hat. null = keine
+     *  manuellen Edits. Beim Strava-Sync werden bei gesetztem Wert die
+     *  Summary-Felder NICHT mehr ueberschrieben — nur Streams (GPS, HR,
+     *  Pace) werden aktualisiert. */
+    val manualOverridesMs: Long? = null,
     val createdAt: Long,
 )

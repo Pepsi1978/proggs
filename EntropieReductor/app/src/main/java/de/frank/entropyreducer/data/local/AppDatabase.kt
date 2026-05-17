@@ -77,7 +77,7 @@ import de.frank.entropyreducer.data.local.dao.HealthConnectValueDao
         OuraPersonalInfoEntity::class,
         HealthConnectValueEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -380,6 +380,19 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_startMs ON amazfit_workouts(startMs)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_amazfit_workouts_dateKey ON amazfit_workouts(dateKey)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_oura_sleep_detail_day ON oura_sleep_detail(day)")
+            }
+        }
+
+        /**
+         * Schema 17 -> 18 (Frank-Wunsch 2026-05-17):
+         * Neue Spalte `manualOverridesMs` in amazfit_workouts. Markiert ob der
+         * Benutzer manuelle Edits vorgenommen hat — null = keine. Beim Strava-
+         * Sync werden Workouts mit gesetztem manualOverridesMs nur in den
+         * Stream-Feldern aktualisiert, nicht in den Summary-Werten.
+         */
+        val MIGRATION_17_18: Migration = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE amazfit_workouts ADD COLUMN manualOverridesMs INTEGER")
             }
         }
 

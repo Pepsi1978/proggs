@@ -161,6 +161,7 @@ class AmazfitRepository @Inject constructor(
             Log.w(TAG, "applyManualOverrides: kein Workout mit trackId=$trackId")
             return false
         }
+        val now = System.currentTimeMillis()
         val updated = existing.copy(
             avgPaceSecPerKm = avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
             maxPaceSecPerKm = maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
@@ -173,10 +174,14 @@ class AmazfitRepository @Inject constructor(
             cadence = cadence ?: existing.cadence,
             strideLengthCm = strideLengthCm ?: existing.strideLengthCm,
             calories = calories ?: existing.calories,
-            createdAt = System.currentTimeMillis(),
+            // Frank-Wunsch 2026-05-17: Markiere als manuell editiert. Verhindert
+            // dass nachfolgende Strava-Syncs die hier gesetzten Summary-Werte
+            // wieder ueberschreiben (siehe mergeFromStrava).
+            manualOverridesMs = now,
+            createdAt = now,
         )
         workoutDao.upsert(updated)
-        Log.i(TAG, "Manual overrides applied to $trackId")
+        Log.i(TAG, "Manual overrides applied to $trackId (manualOverridesMs=$now)")
         return true
     }
 
@@ -571,18 +576,50 @@ class AmazfitRepository @Inject constructor(
         val existingInRange = workoutDao.observeRange(start, end)
             .first()
         val toleranceList = existingInRange.map { it.trackId to it.startMs }
+        // Frank-Wunsch 2026-05-17: Map trackId → existing-Entity damit wir bei
+        // einem matchByStrava pruefen koennen ob der Benutzer manuelle Edits
+        // gemacht hat (manualOverridesMs != null).
+        val existingByTrackId = existingInRange.associateBy { it.trackId }
 
         var replaceCount = 0
         var newCount = 0
+        var protectedCount = 0
         val toInsert = mutableListOf<AmazfitWorkoutEntity>()
         for (strava in stravaEntities) {
             // Strava-Workout selbst hat eindeutigen trackId "strava_$id". Wenn es
-            // schon mit DEM trackId existiert (z.B. Frueher-Sync), wird via REPLACE
-            // upgedatet — alle Detail-Streams werden frisch geschrieben.
+            // schon mit DEM trackId existiert (z.B. Frueher-Sync):
+            //  - bei manualOverridesMs == null: kompletter REPLACE (wie bisher)
+            //  - bei manualOverridesMs != null: nur Streams (GPS/HR/Pace) frisch
+            //    schreiben, Summary-Felder (Pace/HR/Hoehe/Cadence/Stride/Kalorien/
+            //    VO2max) behalten. Damit ueberleben Frank's manuelle Edits jeden
+            //    nachfolgenden Strava-Sync.
             val matchByStrava = toleranceList.find { it.first == strava.trackId }
             if (matchByStrava != null) {
-                toInsert += strava
-                replaceCount += 1
+                val existing = existingByTrackId[strava.trackId]
+                if (existing?.manualOverridesMs != null) {
+                    // Schutz: Streams updaten, Summary erhalten.
+                    val merged = existing.copy(
+                        // Nur Strom-Felder uebernehmen (Detail-Daten von Strava).
+                        gpsTrackJson = strava.gpsTrackJson ?: existing.gpsTrackJson,
+                        heartRateSeriesJson = strava.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        paceStreamJson = strava.paceStreamJson ?: existing.paceStreamJson,
+                        paceSeriesJson = strava.paceSeriesJson ?: existing.paceSeriesJson,
+                        splitsJson = strava.splitsJson ?: existing.splitsJson,
+                        // Stadt + sportType/sportName von Strava nicht überschreiben
+                        // wenn Frank etwas Eigenes drin hat — aber wenn existing.city
+                        // null ist und Strava einen Wert hat, OK.
+                        city = existing.city ?: strava.city,
+                        // VO2max wird live im UI berechnet — DB-Wert ist irrelevant.
+                        // Trotzdem nicht ueberschreiben, sicher ist sicher.
+                        vo2Max = existing.vo2Max,
+                    )
+                    toInsert += merged
+                    protectedCount += 1
+                    Log.d(TAG, "Strava-Merge: ${strava.trackId} hat manuelle Edits — nur Streams aktualisiert, Summary erhalten")
+                } else {
+                    toInsert += strava
+                    replaceCount += 1
+                }
                 continue
             }
             // Sonst: gibt es einen anderen Eintrag (zepp_xxx, hc_xxx) im selben
@@ -610,8 +647,12 @@ class AmazfitRepository @Inject constructor(
         if (toInsert.isNotEmpty()) {
             workoutDao.upsertAll(toInsert)
         }
-        Log.i(TAG, "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben")
-        return newCount + replaceCount
+        Log.i(
+            TAG,
+            "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben, " +
+                "$protectedCount mit manuellen Edits (nur Streams aktualisiert)",
+        )
+        return newCount + replaceCount + protectedCount
     }
 
     /**
