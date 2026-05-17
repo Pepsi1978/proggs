@@ -1,5 +1,9 @@
 # Markt-Uebersicht (Master-Index)
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn du am Anfang eines Audits den Ueberblick brauchst,
 > welche Maerkte abgedeckt sind und in welche Reference-Datei du gehen musst.
 
@@ -16,10 +20,10 @@
 | `markt-mena-afrika.md` | Saudi-Arabien, UAE, Suedafrika | AR-Locale, EN fuer ZA |
 | `uk-vertreter-pflicht.md` | UK-GDPR Art. 27 Spezialfall | App in UK + Anbieter nicht in UK |
 | `ai-act-art-50.md` | EU AI Act Art. 50 ab 02.08.2026 | App hat KI/GenAI/Chatbot/Deepfake-Features |
-| `play-policies-2026.md` | Google Play 2025/2026 Updates | Vor jedem Play-Console-Release |
+| `play-policies.md` | Google Play 2025/2026 Updates | Vor jedem Play-Console-Release |
 | `pflichtdokumente.md` | DSE/AGB/Impressum/Widerruf + interne Artefakte | Im Schritt 5 + Pflichtdokumente-Checks |
 | `roentgen-integration.md` | Schritt 1.5 Detail | Wenn Roentgen-Output vorliegt oder fehlt |
-| `enforcement-trends-2026.md` | Aktuelle Abmahn-Hotspots DE/EU | Bei Recherche und Risiko-Einschaetzung |
+| `enforcement-trends.md` | Aktuelle Abmahn-Hotspots DE/EU | Bei Recherche und Risiko-Einschaetzung |
 | `wissensbasis-template.md` | Schritt 7 Wissensbasis-Pflege | Am Ende des Audits |
 
 ## Schliessliste — In dieser Programmierumgebung ausgeschlossene Maerkte

@@ -1,5 +1,9 @@
 # Markt LATAM — Rechtsraum-Reference
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn die App in Brasilien (pt-BR), Mexiko oder Argentinien
 > (beide es) ausgespielt wird.
 

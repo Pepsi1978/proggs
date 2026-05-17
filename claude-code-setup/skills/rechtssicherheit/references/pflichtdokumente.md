@@ -1,5 +1,9 @@
 # Pflichtdokumente — Inhaltliche Checklisten
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Im Schritt 5 (Detail-Pruefung) und immer wenn ein konkretes
 > Pflichtdokument geprueft wird. Diese Datei ist die zentrale inhaltliche Referenz fuer
 > alle Pflichttexte einer App.

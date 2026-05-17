@@ -1,5 +1,9 @@
 # Markt Asien — Rechtsraum-Reference
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Skill-Stand dieser Datei:** 2026-05-17 (siehe SKILL.md fuer den globalen Stand).
 > Wenn der Skill-Stand >30 Tage alt ist, neue Recherche durchfuehren.
 
@@ -12,16 +16,16 @@
 
 ## Inhalt
 
-1. [Indien — DPDP Act + Rules 2025](#indien--dpdp-act--rules-2025)
-2. [Japan — APPI](#japan--appi)
-3. [Korea (Suedkorea) — PIPA](#korea-suedkorea--pipa)
-4. [Taiwan — PDPA + Novelle 11/2025](#taiwan--pdpa--novelle-112025)
-5. [Hongkong — PDPO](#hongkong--pdpo-inkl-doxxing-reform)
-6. [Singapore — PDPA](#singapore--pdpa)
-7. [Thailand — PDPA 2019](#thailand--pdpa-2019)
-8. [Indonesien — UU PDP 2022](#indonesien--uu-pdp--law-27-of-2022)
-9. [Vietnam — PDPL 2026](#vietnam--pdpl-law-9120252026qh15)
-10. [Sri Lanka — PDPA 2022](#sri-lanka--pdpa-no-9-of-2022)
+1. [Indien — DPDP Act + Rules 2025](#indien-dpdp-act-rules-2025)
+2. [Japan — APPI](#japan-appi)
+3. [Korea (Suedkorea) — PIPA](#korea-suedkorea-pipa)
+4. [Taiwan — PDPA + Novelle 11/2025](#taiwan-pdpa-novelle-112025)
+5. [Hongkong — PDPO](#hongkong-pdpo-inkl-doxxing-reform)
+6. [Singapore — PDPA](#singapore-pdpa)
+7. [Thailand — PDPA 2019](#thailand-pdpa-2019)
+8. [Indonesien — UU PDP 2022](#indonesien-uu-pdp-law-27-of-2022)
+9. [Vietnam — PDPL 2026](#vietnam-pdpl-law-912025qh15)
+10. [Sri Lanka — PDPA 2022](#sri-lanka-pdpa-no-9-of-2022)
 11. [Vergleichsmatrix](#vergleichsmatrix-asien)
 
 ## Indien — DPDP Act + Rules 2025

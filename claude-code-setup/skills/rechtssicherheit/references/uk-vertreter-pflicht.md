@@ -1,5 +1,9 @@
 # UK-Vertreter-Pflicht (UK-GDPR Art. 27) — Standard-Empfehlung: Option B
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Sobald die App im UK Play Store ausgespielt wird oder UK-Nutzer
 > personenbezogene Daten ueber die App preisgeben koennten. Der Skill prueft die 3-Trigger-Bedingung
 > systematisch und gibt eine konkrete Empfehlung.

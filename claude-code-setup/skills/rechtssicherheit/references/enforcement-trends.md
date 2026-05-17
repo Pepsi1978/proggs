@@ -1,5 +1,9 @@
 # Enforcement-/Abmahn-Trends 2025/2026
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Bei jeder Risiko-Einschaetzung und Recherche. Diese Datei
 > wird haeufig aktualisiert — pruefe das `Stand`-Datum.
 
@@ -7,20 +11,20 @@
 
 ## Top-Risiken nach Wirkung (sortiert)
 
-| Bereich | Aktueller Trend 2025/2026 | Wirkung |
+| Bereich | Aktueller Trend 2025/2026 | Schweregrad |
 |--|--|--|
-| DSA | X (Twitter): 120 Mio. EUR Bussgeld (erstes DSA-Bussgeld). Shein: Verfahren 02/2026 eroeffnet. Harmonisierte Berichte ab 01.07.2025 Pflicht | 🔴 Sehr hoch |
-| BFSG | Aufsichtsbehoerden im Aufbau, erste Bescheide ab Herbst 2025. **Abmahnrisiko durch Konkurrenten besteht bereits** | 🟠 Hoch |
-| TDDDG/Cookie | Striktere DE-Durchsetzung 2025/2026. Nudging (Accept-Button optisch groesser) jetzt klar unzulaessig. Abmahnungen durch Verbaende aktiv | 🟠 Hoch |
-| AI Act | Vollstaendige Durchsetzung erst ab 02.08.2026 — aber Dokumentationspflichten (GPAI) bereits aktiv | 🟡 Mittel (steigend) |
-| Play Store | App-Entfernungen bei AI-Policy-Verstoss dokumentiert. Health-Data-Verstoesse und fehlende Account-Deletion zunehmend Ablehnungsgrund | 🟠 Hoch |
-| DPF | Juristisch derzeit stabil, politisch wackelig durch Trump-Regierung (Angriff auf unabhaengige US-Behoerden die DPF ueberwachen) | 🟡 Mittel (volatil) |
-| Tuerkei KVKK | 08/2024 Enforcement gegen 16.350 Organisationen, ~14 Mio. EUR. Bussgeldgrenzen 2026 +25,49% | 🟠 Hoch |
-| Thailand PDPA | Erste Grossbussgeld-Welle 08/2025 (THB 21,5 Mio. gesamt, hoechste THB 7 Mio.) | 🟠 Hoch |
-| Indonesien UU PDP | Vollcompliance formal seit 10/2024, aber Behoerde (BP3DP) noch nicht etabliert — derzeit MOCD | 🟡 Mittel |
-| Vietnam PDPL 2026 | Komplett neues Gesetz seit 01.01.2026, DPIA Pflicht binnen 60 Tagen | 🟠 Hoch |
-| Mexiko LFPDPPP | Komplett neue Fassung seit 21.03.2025: INAI aufgeloest, ACGG uebernimmt, Processor direkt haftbar | 🟠 Hoch |
-| Bangladesch PDPO 2025 | Seit 16.11.2025, 18 Monate Uebergang, Datenlokalisierung fuer Restricted/CII | 🟡 Mittel-Hoch |
+| DSA | X (Twitter): 120 Mio. EUR Bussgeld (erstes DSA-Bussgeld). Shein: Verfahren 02/2026 eroeffnet. Harmonisierte Berichte ab 01.07.2025 Pflicht | 🔴 BLOCKER |
+| BFSG | Aufsichtsbehoerden im Aufbau, erste Bescheide ab Herbst 2025. **Abmahnrisiko durch Konkurrenten besteht bereits** | 🟠 HOCH |
+| TDDDG/Cookie | Striktere DE-Durchsetzung 2025/2026. Nudging (Accept-Button optisch groesser) jetzt klar unzulaessig. Abmahnungen durch Verbaende aktiv | 🟠 HOCH |
+| AI Act | Vollstaendige Durchsetzung erst ab 02.08.2026 — aber Dokumentationspflichten (GPAI) bereits aktiv | 🟡 MITTEL (steigend) |
+| Play Store | App-Entfernungen bei AI-Policy-Verstoss dokumentiert. Health-Data-Verstoesse und fehlende Account-Deletion zunehmend Ablehnungsgrund | 🟠 HOCH |
+| DPF | Juristisch derzeit stabil, politisch wackelig durch Trump-Regierung (Angriff auf unabhaengige US-Behoerden die DPF ueberwachen) | 🟡 MITTEL (volatil) |
+| Tuerkei KVKK | 08/2024 Enforcement gegen 16.350 Organisationen, ~14 Mio. EUR. Bussgeldgrenzen 2026 +25,49% | 🟠 HOCH |
+| Thailand PDPA | Erste Grossbussgeld-Welle 08/2025 (THB 21,5 Mio. gesamt, hoechste THB 7 Mio.) | 🟠 HOCH |
+| Indonesien UU PDP | Vollcompliance formal seit 10/2024, aber Behoerde (BP3DP) noch nicht etabliert — derzeit MOCD | 🟡 MITTEL |
+| Vietnam PDPL 2026 | Komplett neues Gesetz seit 01.01.2026, DPIA Pflicht binnen 60 Tagen | 🟠 HOCH |
+| Mexiko LFPDPPP | Komplett neue Fassung seit 21.03.2025: INAI aufgeloest, ACGG uebernimmt, Processor direkt haftbar | 🟠 HOCH |
+| Bangladesch PDPO 2025 | Seit 16.11.2025, 18 Monate Uebergang, Datenlokalisierung fuer Restricted/CII | 🟠 HOCH |
 
 ## Top-Abmahn-Hotspots Deutschland 2025/2026
 

@@ -1,5 +1,9 @@
 # Markt MENA + Afrika — Rechtsraum-Reference
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn die App in Saudi-Arabien, UAE oder weiteren MENA-Staaten
 > (ar-Locale) bzw. in Suedafrika ausgespielt wird.
 

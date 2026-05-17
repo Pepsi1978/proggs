@@ -1,5 +1,9 @@
 # Wissensbasis-Template (Schritt 7)
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** In Schritt 7 des Skill-Ablaufs, wenn die Wissensbasis
 > `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` aktualisiert oder neu angelegt wird.
 

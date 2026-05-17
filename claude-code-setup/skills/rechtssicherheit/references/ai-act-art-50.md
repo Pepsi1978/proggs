@@ -1,5 +1,9 @@
 # EU AI Act Art. 50 — Konkrete Transparenz-Pflichten ab 02.08.2026
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn die App KI/GenAI-Features enthaelt (Chatbot, Bild-/Audio-/Video-
 > Generierung, Deepfake, Automated Decisions). Diese Datei beschreibt die Transparenz-Pflichten
 > nach Art. 50 EU AI Act und das Zusammenspiel mit der Google Play AI-Content-Policy.

@@ -1,5 +1,9 @@
 # Roentgen-Integration — Schritt 1.5 Detail
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** In Schritt 1.5 des Skill-Ablaufs. Sie beschreibt wie der
 > Rechtssicherheits-Skill mit dem `app-roentgen`-Skill zusammenarbeitet, um Token zu sparen
 > und den UWG-Werbeaussagen-Check zu ermoeglichen.

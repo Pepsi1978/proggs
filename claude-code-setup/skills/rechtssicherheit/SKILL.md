@@ -40,7 +40,7 @@ invocation: user
 4. [Plattformneutrale Pfade](#plattformneutrale-pfade)
 5. [Skill-Stand und Recherche-Aktualitaet](#skill-stand-und-recherche-aktualitaet)
 6. [Markt-Prioritaet und Reference-Karte](#markt-prioritaet-und-reference-karte)
-7. [Ablauf (8 Hauptschritte + Schritt 1.5)](#ablauf-8-hauptschritte--schritt-15)
+7. [Ablauf (8 Hauptschritte + Schritt 1.5)](#ablauf-8-hauptschritte-schritt-15)
 8. [Schweregrade](#schweregrade)
 9. [Bundle-Ressourcen](#bundle-ressourcen)
 10. [Was niemals passieren darf](#was-niemals-passieren-darf)
@@ -263,7 +263,7 @@ Dem Benutzer vor dem Start sagen:
 | 3 | Indien + Japan + Korea + Taiwan + Hongkong + Singapore | `markt-asien.md` |
 | 4 | Thailand + Indonesien + Vietnam + Sri Lanka + Pakistan + Bangladesch | `markt-asien.md` + `markt-sa-pakistan-bangladesch.md` |
 | 5 | Brasilien + Mexiko + Argentinien + Tuerkei + Ukraine + MENA (Saudi/UAE) + Suedafrika | `markt-latam.md` + `markt-tuerkei-osteuropa.md` + `markt-mena-afrika.md` |
-| 6 | Google Play Policies + Enforcement-/Abmahn-Trends | `play-policies-2026.md` + `enforcement-trends-2026.md` |
+| 6 | Google Play Policies + Enforcement-/Abmahn-Trends | `play-policies.md` + `enforcement-trends.md` |
 
 **Prompt-Muster pro Researcher:**
 
@@ -324,7 +324,7 @@ gefunden" o.ae.).
 > *5e Rechtstexte · 5f Consent · 5g Store Listing · 5h UK-Vertreter ·*
 > *5i UGC/KI/Barrierefreiheit · 5j Compliance-Artefakte (muss vor Schritt 6 laufen)*
 
-**Vorbereitung — IMMER zuerst lesen:** `references/enforcement-trends-2026.md` enthaelt die
+**Vorbereitung — IMMER zuerst lesen:** `references/enforcement-trends.md` enthaelt die
 aktuellen Abmahn-Hotspots und Bussgeld-Trends in DE/EU plus internationale Enforcement-News.
 Lies diese Datei am Anfang von Schritt 5 — sie praegt die Risiko-Einschaetzung (Schweregrad)
 jedes Befunds. Beispiel: Wenn die Trends-Datei "Cookie-Nudging seit 2025 abmahnfaehig"
@@ -350,7 +350,7 @@ Network Security Config, Cleartext-Traffic, debuggable-Flag.
 
 **Besonders kritisch und einzeln im Bericht zu fuehren:**
 - `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`
-- `READ_CONTACTS` (ab April-2026 nur noch via Android Contact Picker — siehe `references/play-policies-2026.md`)
+- `READ_CONTACTS` (ab April-2026 nur noch via Android Contact Picker — siehe `references/play-policies.md`)
 - `CAMERA`, `RECORD_AUDIO`
 - `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `MANAGE_EXTERNAL_STORAGE`
 - `POST_NOTIFICATIONS` bei sensiblen Inhalten
@@ -424,7 +424,7 @@ Store-Release-Sprachen + Markt-Pflichtsprachen aus `references/markt-*.md`.
 
 #### 5g. Store Listing und Play Console
 
-Siehe `references/play-policies-2026.md` fuer komplette Pflicht-Deklarations-Liste +
+Siehe `references/play-policies.md` fuer komplette Pflicht-Deklarations-Liste +
 Play-Console-Checkliste.
 
 #### 5h. UK-Vertreter-Pflicht (UK-GDPR Art. 27)
@@ -474,6 +474,18 @@ Verwende **`assets/berichtsvorlage.template.md`** als Template. Beim Erstellen d
 
 `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` updaten oder neu anlegen. Struktur und
 Diff-Logik siehe **`references/wissensbasis-template.md`**.
+
+**Zwei Faelle — der Skill muss zwischen ihnen unterscheiden:**
+
+| Fall | Was tun |
+|--|--|
+| **Wissensbasis existiert nicht** | Komplettes Template aus `references/wissensbasis-template.md` anlegen. Alle aktuellen Recherche-Erkenntnisse + heutige App-Audit-Eintrag eintragen. |
+| **Wissensbasis existiert** | NICHT komplett ueberschreiben. Nur diese Sektionen aktualisieren: (a) "App-Audit-Log" — neue Zeile ANFUEGEN mit Datum, App, Version, Status, Blocker-/Hoch-Zahl, Commit-Notiz. (b) "Quellenregister" — neue Quellen aus Researcher-Runs ANFUEGEN. (c) "Aktuelle Abmahn-Hotspots" — falls neue Erkenntnisse, mit Stand-Datum ergaenzen. (d) "Wiederverwendbare Befundmuster" — falls neu, ANFUEGEN. Bestehende Eintraege bleiben unangetastet. |
+
+**Warum diese Unterscheidung wichtig ist:** Bei mehrfachen Audits derselben App
+oder unterschiedlichen Apps in derselben Wissensbasis wuerden Erkenntnisse sonst
+ueberschrieben statt akkumuliert. Compound-Wissen ist das Ziel — die Wissensbasis
+ist append-only fuer Logs und akkumulativ fuer Erkenntnisse.
 
 ### Schritt 8 — Commit + Push
 
@@ -525,10 +537,10 @@ Diff-Logik siehe **`references/wissensbasis-template.md`**.
 | `references/markt-mena-afrika.md` | SA, AE, ZA |
 | `references/uk-vertreter-pflicht.md` | UK-GDPR Art. 27 Detail |
 | `references/ai-act-art-50.md` | KI-Transparenzpflichten ab 02.08.2026 |
-| `references/play-policies-2026.md` | Google Play 2025/2026 Updates |
+| `references/play-policies.md` | Google Play 2025/2026 Updates |
 | `references/pflichtdokumente.md` | DSE/AGB/Impressum/Widerruf + interne Artefakte |
 | `references/roentgen-integration.md` | Schritt 1.5 Detail |
-| `references/enforcement-trends-2026.md` | Aktuelle Abmahn-Hotspots |
+| `references/enforcement-trends.md` | Aktuelle Abmahn-Hotspots |
 | `references/wissensbasis-template.md` | Schritt 7 Template |
 | `assets/berichtsvorlage.template.md` | Schritt 6 Berichts-Template |
 | `scripts/scan-legal-signals.sh` | Vollscan (Schritt 4) |

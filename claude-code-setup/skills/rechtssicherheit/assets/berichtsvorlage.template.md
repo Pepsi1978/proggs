@@ -58,7 +58,7 @@ IT-Recht konsultieren.
 | AVV-Liste (Art. 28) | | | |
 | SCCs / DPF / BCR | | | |
 | Loeschkonzept | | | |
-| Datenpannen-Plan (Art. 33/34) | | | |
+| Datenpannen-Meldeplan + Logbuch (Art. 33/34, 72h-Frist) | | | |
 | AI-System-Risikoklassifizierung (AI Act) | | | |
 | DSA-Beschwerde-/Kontaktstelle (Art. 11) | | | |
 

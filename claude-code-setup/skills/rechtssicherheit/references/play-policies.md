@@ -1,5 +1,9 @@
 # Google Play Policies 2025/2026 — App-Release-Pflicht-Updates
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Vor JEDEM Play-Console-Release. Auch bei laufender App: alle 30
 > Tage neu pruefen.
 

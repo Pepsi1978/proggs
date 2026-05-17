@@ -1,5 +1,9 @@
 # Markt DE/EU — Rechtsraum-Reference
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn die App in Deutschland oder einem EU-Mitgliedstaat
 > ausgespielt wird (das ist fast immer der Fall). Diese Datei deckt auch die EU-weiten
 > Verordnungen ab, die in allen Mitgliedstaaten direkt gelten.
@@ -115,5 +119,5 @@
 
 ## Enforcement-Trends DE/EU
 
-Siehe `enforcement-trends-2026.md` fuer aktuelle Abmahn-Hotspots, Cookie-Consent-Urteile,
+Siehe `enforcement-trends.md` fuer aktuelle Abmahn-Hotspots, Cookie-Consent-Urteile,
 Data-Safety-Falschangaben, KI-Risiken, BFSG-Klagen.

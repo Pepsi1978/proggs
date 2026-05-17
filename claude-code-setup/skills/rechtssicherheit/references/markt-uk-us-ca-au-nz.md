@@ -1,5 +1,9 @@
 # Markt UK / USA / Kanada / Australien / Neuseeland — Rechtsraum-Reference
 
+> **Hinweis:** Dieser Inhalt ist Teil des `rechtssicherheit`-Skills — eine **technische
+> Pruefhilfe**, KEINE anwaltliche Beratung. Vor Release MUSS ein Fachanwalt fuer IT-Recht
+> konsultiert werden.
+
 > **Wann diese Datei lesen:** Wenn die App in einem englischsprachigen Zielmarkt
 > ausgespielt wird oder die en-Locale aktiv ist.
 
