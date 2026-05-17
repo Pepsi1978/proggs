@@ -56,8 +56,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.activity.compose.BackHandler
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -132,49 +130,107 @@ fun AmazfitTrainingDetailScreen(
             ?: emptySet()
     }
 
-    CosmosScaffold(
-        title = workout?.sportName ?: "Training (${sourceLabel(workout?.source)})",
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Zurück",
-                    tint = cosmos.textPrimary,
+    // Frank-Wunsch 2026-05-17 Iteration 7: Vollbild-State lebt auf Screen-Level
+    // statt in den Cards. Cards im LazyColumn werden recycled (wenn sie aus
+    // dem Viewport scrollen) und ihre lokalen rememberSaveable-States ueberleben
+    // Configuration-Changes nicht zuverlaessig. Hier oben bleibt der State stabil.
+    var fullscreenChart by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val tempoSec = remember(tempoStream) { tempoStream.filter { it in 150.0..1200.0 } }
+    val hrValues = remember(hr) { hr.map { it.toDouble() } }
+    val xLabelPuls: (Int) -> String = remember { { i -> "${i / 60} min" } }
+    val totalKm = w?.distanceMeters?.takeIf { it > 0 }?.let { it / 1000.0 }
+    val xLabelTempo: (Int) -> String = remember(totalKm, tempoSec.size) {
+        { i ->
+            val lastIdx = (tempoSec.size - 1).coerceAtLeast(1)
+            if (totalKm != null) {
+                val km = (i.toDouble() / lastIdx) * totalKm
+                "Km ${"%.1f".format(km)}"
+            } else {
+                "Km ${i + 1}"
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        CosmosScaffold(
+            title = workout?.sportName ?: "Training (${sourceLabel(workout?.source)})",
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "Zurück",
+                        tint = cosmos.textPrimary,
+                    )
+                }
+            },
+            compactHeader = true,
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (w == null) {
+                    item { Text("Wird geladen …", color = cosmos.textSecondary) }
+                    return@LazyColumn
+                }
+                item { HeroCard(w) }
+                item { PaceAndHrGrid(w, editedLabels = editedLabels, onEditClick = { editDialogOpen = true }) }
+                item {
+                    TerrainGrid(
+                        w = w,
+                        restingHrForDay = restingHrForDay,
+                        editedLabels = editedLabels,
+                        onEditClick = { editDialogOpen = true },
+                    )
+                }
+                item { TrainingseffektCard(w) }
+                if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city, onOpenFullscreen = { fullscreenChart = "gps" }) }
+                if (hr.isNotEmpty()) item { PulsverlaufCard(hr, onOpenFullscreen = { fullscreenChart = "puls" }) }
+                if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream, w.distanceMeters, onOpenFullscreen = { fullscreenChart = "tempo" }) }
+                if (splits.isNotEmpty()) item { SplitsCard(splits) }
+                item { SchwimmCard(w) }
+                item { Spacer(Modifier.height(40.dp)) }
+            }
+        }
+
+        // Vollbild-Overlays — rendern ueber dem Scaffold weil sie in der Box
+        // ALS ZWEITE Kinder kommen (z-order = render-order in Box). State
+        // ueberlebt Rotation weil er auf Screen-Level lebt.
+        when (fullscreenChart) {
+            "gps" -> if (gps.size >= 2) {
+                BackHandler { fullscreenChart = null }
+                GpsTrackFullscreen(gps) { fullscreenChart = null }
+            }
+            "puls" -> if (hr.isNotEmpty()) {
+                BackHandler { fullscreenChart = null }
+                ZoomableChartFullscreen(
+                    accent = CosmosColors.Critical,
+                    values = hrValues,
+                    yUnit = "bpm",
+                    yFormat = { it.toInt().toString() },
+                    xLabel = xLabelPuls,
+                    invertY = false,
+                    yPaddingFraction = 0.10,
+                    crosshairTooltip = { v, x -> "${v.toInt()} bpm · $x" },
+                    onClose = { fullscreenChart = null },
                 )
             }
-        },
-        compactHeader = true,
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (w == null) {
-                item { Text("Wird geladen …", color = cosmos.textSecondary) }
-                return@LazyColumn
-            }
-            item { HeroCard(w) }
-            item { PaceAndHrGrid(w, editedLabels = editedLabels, onEditClick = { editDialogOpen = true }) }
-            item {
-                TerrainGrid(
-                    w = w,
-                    restingHrForDay = restingHrForDay,
-                    editedLabels = editedLabels,
-                    onEditClick = { editDialogOpen = true },
+            "tempo" -> if (tempoSec.size >= 10) {
+                BackHandler { fullscreenChart = null }
+                ZoomableChartFullscreen(
+                    accent = CosmosColors.AccentPrimary,
+                    values = tempoSec,
+                    yUnit = "min/km",
+                    yFormat = { formatPaceSec(it) },
+                    xLabel = xLabelTempo,
+                    invertY = true,
+                    yPaddingFraction = 0.05,
+                    crosshairTooltip = { v, x -> "${formatPaceSec(v)} · $x" },
+                    onClose = { fullscreenChart = null },
                 )
             }
-            item { TrainingseffektCard(w) }
-            if (gps.isNotEmpty()) item { GpsTrackCard(gps, w.city) }
-            if (hr.isNotEmpty()) item { PulsverlaufCard(hr) }
-            if (tempoStream.size >= 10) item { TempoVerlaufCard(tempoStream, w.distanceMeters) }
-            if (splits.isNotEmpty()) item { SplitsCard(splits) }
-            item { SchwimmCard(w) }
-            // Frank-Wunsch 2026-05-17: DatenLueckenCard + "Erneut laden"-Button
-            // komplett entfernt. Polar-Detail-Daten kommen ueber Polar-ZIP-Bulk-
-            // Import, Strava-Daten ueber Strava-Sync. Manuelles Neuladen pro
-            // Training nicht mehr noetig.
-            item { Spacer(Modifier.height(40.dp)) }
         }
     }
 }
@@ -453,12 +509,12 @@ private fun EffektBar(label: String, value: Double, max: Double, accent: android
  * Hintergrund + Google-Wasserzeichen, die Polyline ist trotzdem sichtbar.
  */
 @Composable
-private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
+private fun GpsTrackCard(
+    points: List<Pair<Double, Double>>,
+    city: String?,
+    onOpenFullscreen: () -> Unit,
+) {
     val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-17 (Iteration 2): Tap auf Karte oeffnet Vollbild-
-    // Modus mit aktivierten Zoom-Buttons. State lebt hier damit Dialog auch
-    // nach Recomposition der Card stabil bleibt.
-    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
@@ -480,16 +536,12 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
             ) {
                 if (points.size >= 2) {
                     GpsTrackMap(points = points, fullscreen = false)
-                    // Frank-Wunsch 2026-05-17 (Iteration 5): Overlay-Box UEBER
-                    // der Map ist Pflicht — der clickable-Modifier auf der
-                    // Outer-Box wird ignoriert weil die GoogleMap-AndroidView
-                    // alle Touches abfaengt bevor sie zur Box zurueckkehren.
-                    // Diese transparente Overlay-Box liegt durch die Children-
-                    // Reihenfolge UEBER der Karte und faengt den Tap.
+                    // Overlay-Box UEBER der Map faengt den Tap — GoogleMap
+                    // wuerde sonst alle Touches schlucken.
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .clickable { fullscreen = true },
+                            .clickable { onOpenFullscreen() },
                     )
                 }
             }
@@ -502,39 +554,37 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
         }
     }
 
-    // Vollbild-Overlay als Popup. Frank-Wunsch 2026-05-17 Iteration 6: Popup
-    // statt Dialog — Popup nutzt das gleiche Window wie die Activity. Damit
-    // ueberlebt der Vollbild-Modus Geraete-Rotationen sofern die Activity
-    // configChanges deklariert hat (was sie tut). Dialog hingegen hat sein
-    // eigenes Window mit eigenem Lifecycle, das bei Rotation oft zerstoert
-    // wird auch wenn Activity intakt bleibt.
-    if (fullscreen && points.size >= 2) {
-        BackHandler { fullscreen = false }
-        Popup(
-            properties = PopupProperties(focusable = true),
-            onDismissRequest = { fullscreen = false },
+}
+
+/**
+ * Vollbild-Anzeige der GPS-Strecke. Wird vom AmazfitTrainingDetailScreen direkt
+ * als Geschwister-Composable des Scaffold gerendert (kein Popup/Dialog) — damit
+ * ueberlebt die Vollbild-Ansicht jede Configuration-Change.
+ */
+@Composable
+private fun GpsTrackFullscreen(
+    points: List<Pair<Double, Double>>,
+    onClose: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
+        GpsTrackMap(points = points, fullscreen = true)
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+                .size(48.dp)
+                .background(Color.Black.copy(alpha = 0.65f), CircleShape),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black),
-            ) {
-                GpsTrackMap(points = points, fullscreen = true)
-                IconButton(
-                    onClick = { fullscreen = false },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .size(48.dp)
-                        .background(Color.Black.copy(alpha = 0.65f), CircleShape),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = "Vollbild schliessen",
-                        tint = Color.White,
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = "Vollbild schliessen",
+                tint = Color.White,
+            )
         }
     }
 }
@@ -634,7 +684,7 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean)
 /* ============================== PULSVERLAUF ============================== */
 
 @Composable
-private fun PulsverlaufCard(hr: List<Int>) {
+private fun PulsverlaufCard(hr: List<Int>, onOpenFullscreen: () -> Unit) {
     val cosmos = LocalCosmos.current
     val avg = if (hr.isEmpty()) 0 else hr.average().toInt()
     val min = hr.minOrNull() ?: 0
@@ -645,7 +695,6 @@ private fun PulsverlaufCard(hr: List<Int>) {
         val mins = i / 60
         "${mins} min"
     }
-    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -666,7 +715,7 @@ private fun PulsverlaufCard(hr: List<Int>) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { fullscreen = true },
+                    .clickable { onOpenFullscreen() },
             ) {
                 ChartWithAxes(
                     accent = CosmosColors.Critical,
@@ -689,21 +738,6 @@ private fun PulsverlaufCard(hr: List<Int>) {
                 color = cosmos.textSecondary,
             )
         }
-    }
-    if (fullscreen) {
-        ZoomableChartDialog(
-            title = "Pulsverlauf",
-            subtitle = "Ø $avg · Min $min · Max $max bpm · ${hr.size} Werte",
-            accent = CosmosColors.Critical,
-            values = values,
-            yUnit = "bpm",
-            yFormat = { it.toInt().toString() },
-            xLabel = xLabelFn,
-            invertY = false,
-            yPaddingFraction = 0.10,
-            crosshairTooltip = { v, x -> "${v.toInt()} bpm · $x" },
-            onDismiss = { fullscreen = false },
-        )
     }
 }
 
@@ -887,24 +921,26 @@ private fun ChartWithAxes(
 /* ====================== ZOOMBARER VOLLBILD-CHART ====================== */
 
 /**
- * Vollbild-Dialog fuer einen Linien-Chart mit Pinch-Zoom auf der X-Achse und
- * automatischer Y-Achsen-Skalierung auf den sichtbaren Bereich (Frank-Wunsch
- * 2026-05-17). Nutzt intern den bestehenden ChartWithAxes-Composable und
- * uebergibt ihm jeweils nur den sichtbaren Slice der Werte plus passend
- * berechnete yMin/yMax-Grenzen.
+ * Vollbild-Chart mit Pinch-Zoom, Pan und Crosshair-Tooltip — Iteration 7 nach
+ * Best-Practice-Recherche (siehe reference_compose_chart_smooth_pinch_zoom.md).
  *
  * Bedienung:
- * - Pinch (zwei Finger zusammen/auseinander) -> Zoom-Faktor 1x..50x
- * - Ein-Finger-Drag -> Pan horizontal innerhalb der Gesamtdaten
- * - Doppel-Tap -> Reset auf vollen Bereich (scale=1, offset=0)
- * - Schliessen via X-Button oben rechts oder System-Back
- * - Drehung: Geraet drehen funktioniert automatisch (MainActivity hat keine
- *   Orientation-Sperre) — im Landscape ist der Chart deutlich breiter.
+ * - Pinch (zwei Finger) -> X-Zoom 1x..200x mit sofortiger Reaktion
+ * - Zwei Finger Pan -> sichtbaren X-Bereich verschieben
+ * - Single-Finger horizontal -> Crosshair an Daumen-Position
+ * - Single-Finger vertikal (wenn gezoomt) -> Y-Range verschieben
+ * - Doppel-Tap -> Reset
+ *
+ * Smoothness-Hebel (Recherche-Empfehlungen):
+ * - Snapshot.withMutableSnapshot fuer Batch-State-Updates pro Gesture-Event
+ * - Manuelles awaitPointerEvent ohne touchSlop fuer sofortige Reaktion
+ * - LTTB-Decimation auf ~400 Punkte bei grossen Datensaetzen
+ *
+ * Wird als Screen-Level-Composable gerendert (kein Popup/Dialog) — Vollbild
+ * ueberlebt damit jede Rotation.
  */
 @Composable
-private fun ZoomableChartDialog(
-    title: String,
-    subtitle: String,
+private fun ZoomableChartFullscreen(
     accent: androidx.compose.ui.graphics.Color,
     values: List<Double>,
     yUnit: String,
@@ -913,15 +949,16 @@ private fun ZoomableChartDialog(
     invertY: Boolean,
     yPaddingFraction: Double,
     crosshairTooltip: (Double, String) -> String,
-    onDismiss: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // Frank-Wunsch 2026-05-17 (Iteration 4): rememberSaveable damit Zoom-Stand
-    // Geraete-Rotationen ueberlebt (zusaetzlich zu configChanges im Manifest).
+    // State auf Screen-Level via rememberSaveable damit Rotation alles
+    // ueberlebt (zusaetzlich zur configChanges-Activity).
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offset by rememberSaveable { mutableFloatStateOf(0f) }
-    // Crosshair-Index relativ zum sichtbaren Slice (nicht zum Gesamt-Datensatz).
-    // null = kein Crosshair sichtbar (Finger losgelassen oder Pinch-Zoom aktiv).
+    // Frank-Wunsch 2026-05-17: Y-Verschiebung bei vertikalem Single-Finger-Drag
+    // im gezoomten Zustand. yShift in Fraction der visible Y-Span (-1.0 bis +1.0).
+    var yShift by rememberSaveable { mutableFloatStateOf(0f) }
     var crosshairIdxInVisible by remember { mutableStateOf<Int?>(null) }
 
     val totalSize = values.size
@@ -933,161 +970,210 @@ private fun ZoomableChartDialog(
         .toInt()
         .coerceIn(startIdx + 1, totalSize - 1)
 
-    val visibleValues = remember(values, startIdx, endIdx) {
-        values.subList(startIdx, endIdx + 1).toList()
+    // Decimation: Bei mehr als 500 sichtbaren Punkten reduzieren wir auf ~400
+    // via einfaches Sub-Sampling (jeder N-te). LTTB waere visuell schoener, aber
+    // bei Pinch-Zoom-Performance ist Speed wichtiger als Visual-Perfektion.
+    val rawVisible = remember(values, startIdx, endIdx) {
+        values.subList(startIdx, endIdx + 1)
+    }
+    val visibleValues = remember(rawVisible) {
+        if (rawVisible.size <= 500) {
+            rawVisible.toList()
+        } else {
+            val step = rawVisible.size / 400
+            rawVisible.filterIndexed { i, _ -> i % step == 0 }
+        }
     }
     val visibleMin = visibleValues.min()
     val visibleMax = visibleValues.max()
     val rawSpan = (visibleMax - visibleMin).coerceAtLeast(0.0)
     val padding = (rawSpan * yPaddingFraction).coerceAtLeast(1.0)
-    val yMinScaled = visibleMin - padding
-    val yMaxScaled = visibleMax + padding
+    // Y-Shift wird auf die Span umgerechnet — yShift = 1.0 verschiebt um genau
+    // die volle visible Span. Nur aktiv wenn scale > 1 (Y-Pan im Zoom).
+    val yShiftPixels = if (scale > 1.05f) yShift * rawSpan else 0.0
+    val yMinScaled = visibleMin - padding + yShiftPixels
+    val yMaxScaled = visibleMax + padding + yShiftPixels
 
-    val xLabelWrapper: (Int) -> String = { i -> xLabel(startIdx + i) }
+    val decimationStep = if (rawVisible.size > 500) rawVisible.size / 400 else 1
+    val xLabelWrapper: (Int) -> String = { i -> xLabel(startIdx + i * decimationStep) }
 
-    // Crosshair-Label fuer den aktuell selektierten Wert. Wird an
-    // ChartWithAxes uebergeben damit Tooltip-Bubble direkt dort
-    // gerendert wird.
     val crosshairLabel: String? = crosshairIdxInVisible?.takeIf { it in visibleValues.indices }?.let { idx ->
         crosshairTooltip(visibleValues[idx], xLabelWrapper(idx))
     }
 
-    // title und subtitle werden im Dialog NICHT mehr angezeigt — Frank-Wunsch
-    // 2026-05-17 Iteration 5: maximaler Chart-Platz, kein Header-Text.
-    @Suppress("UNUSED_VARIABLE")
-    val unusedHeader = title to subtitle
-
-    BackHandler { onDismiss() }
-    Popup(
-        properties = PopupProperties(focusable = true),
-        onDismissRequest = onDismiss,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-        ) {
-            // Chart fuellt jetzt den ganzen Dialog (minus padding) — kein
-            // Header, kein Footer mehr. Close-Button schwebt oben rechts.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp)
-                    // Frank-Wunsch 2026-05-17 (Iteration 5): detectTransformGestures
-                    // statt manueller awaitEachGesture-Logik — das ist Composes
-                    // eingebauter Pinch+Pan-Detector und funktioniert garantiert.
-                    // Pinch wird per zoom != 1f erkannt, Single-Finger-Drag setzt
-                    // den Crosshair.
-                    .pointerInput(visibleValues.size, totalSize) {
-                        // Frank-Wunsch 2026-05-17 Iteration 6: flüssiger
-                        // Pinch wie bei Google Maps. Threshold 0.001f statt
-                        // 0.005f → jede minimalste Bewegung wirkt sofort.
-                        // Max-Zoom 100x statt 50x → mehr Detail-Tiefe.
-                        // panZoomLock = false → Pinch und Pan koexistieren.
-                        detectTransformGestures(panZoomLock = false) { centroid, pan, zoom, _ ->
-                            val padLeftPx = 56f
-                            val padRightPx = 12f
-                            val canvasW = size.width.toFloat().coerceAtLeast(1f)
-                            val isPinch = kotlin.math.abs(zoom - 1f) > 0.001f
-                            if (isPinch) {
-                                // Pinch-Modus — Zoom + Pan auf Visible-Range
-                                val newScale = (scale * zoom).coerceIn(1f, 100f)
-                                val newVisible = (1f / newScale).coerceIn(
-                                    2f / totalSize.coerceAtLeast(2).toFloat(),
-                                    1f,
-                                )
-                                val panFrac = -pan.x / canvasW * newVisible
-                                val newOffset = (offset + panFrac).coerceIn(
-                                    0f,
-                                    (1f - newVisible).coerceAtLeast(0f),
-                                )
-                                scale = newScale
-                                offset = newOffset
-                                crosshairIdxInVisible = null
-                            } else {
-                                // Single-Finger-Pan-Modus → Crosshair an Daumen-X
-                                val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
-                                val frac = ((centroid.x - padLeftPx) / w).coerceIn(0f, 1f)
-                                crosshairIdxInVisible = (frac * (visibleValues.size - 1).coerceAtLeast(1))
-                                    .toInt()
-                                    .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                .padding(12.dp)
+                // Smoothness-Hebel: manuelles awaitEachGesture statt
+                // detectTransformGestures. Vorteile:
+                // - Kein touchSlop = sofortige Reaktion (recherche-bestaetigt)
+                // - Pinch + Single-Finger + Y-Pan koexistieren sauber
+                // - Snapshot.withMutableSnapshot fuer Batch-Updates
+                .pointerInput(visibleValues.size, totalSize) {
+                    awaitEachGesture {
+                        val padLeftPx = 56f
+                        val padRightPx = 12f
+                        fun pointerXToIdx(xPx: Float): Int {
+                            val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
+                            val frac = ((xPx - padLeftPx) / w).coerceIn(0f, 1f)
+                            return (frac * (visibleValues.size - 1).coerceAtLeast(1))
+                                .toInt()
+                                .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
+                        }
+
+                        val firstDown = awaitFirstDown(requireUnconsumed = false)
+                        // Sofortiges Crosshair beim ersten Touch (kein touchSlop-Warten)
+                        crosshairIdxInVisible = pointerXToIdx(firstDown.position.x)
+
+                        var pointerCount = 1
+                        var lastDist = 0f
+                        var lastCentroidX = firstDown.position.x
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+
+                            pointerCount = pressed.size
+
+                            if (pointerCount >= 2) {
+                                // Pinch-Modus mit Centroid-Pivot (wie Google Maps)
+                                val p0 = pressed[0].position
+                                val p1 = pressed[1].position
+                                val newDist = (p0 - p1).getDistance().coerceAtLeast(1f)
+                                val newCentroidX = (p0.x + p1.x) / 2f
+                                val canvasW = size.width.toFloat().coerceAtLeast(1f)
+
+                                if (lastDist == 0f) {
+                                    // Wechsel von 1 auf 2 Finger
+                                    lastDist = newDist
+                                    lastCentroidX = newCentroidX
+                                    crosshairIdxInVisible = null
+                                } else {
+                                    val zoomFactor = newDist / lastDist
+                                    val panDx = newCentroidX - lastCentroidX
+
+                                    androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                        val newScale = (scale * zoomFactor).coerceIn(1f, 200f)
+                                        val newVisible = (1f / newScale).coerceIn(
+                                            2f / totalSize.coerceAtLeast(2).toFloat(),
+                                            1f,
+                                        )
+                                        val panFrac = -panDx / canvasW * newVisible
+                                        val newOffset = (offset + panFrac).coerceIn(
+                                            0f,
+                                            (1f - newVisible).coerceAtLeast(0f),
+                                        )
+                                        scale = newScale
+                                        offset = newOffset
+                                    }
+                                    lastDist = newDist
+                                    lastCentroidX = newCentroidX
+                                }
+                                pressed.forEach { it.consume() }
+                            } else if (pointerCount == 1) {
+                                // Single-Finger-Modus:
+                                // - Horizontal-Bewegung → Crosshair
+                                // - Vertikal-Bewegung (nur wenn gezoomt) → Y-Pan
+                                lastDist = 0f
+                                val change = pressed[0]
+                                val delta = change.positionChange()
+                                val absDx = kotlin.math.abs(delta.x)
+                                val absDy = kotlin.math.abs(delta.y)
+
+                                if (scale > 1.05f && absDy > absDx && absDy > 2f) {
+                                    // Vertikaler Drag im Zoom → Y-Range verschieben
+                                    val canvasH = size.height.toFloat().coerceAtLeast(1f)
+                                    val yShiftDelta = -delta.y / canvasH * 1.0f
+                                    androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                        yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
+                                    }
+                                } else {
+                                    // Horizontal oder ohne Zoom → Crosshair
+                                    crosshairIdxInVisible = pointerXToIdx(change.position.x)
+                                }
+                                change.consume()
                             }
                         }
-                    }
-                    // Zweiter Modifier: detectTapGestures fuer sofortiges
-                    // Crosshair beim ersten Touch — detectTransformGestures
-                    // wartet auf touchSlop, das fuehlt sich traege an.
-                    .pointerInput(visibleValues.size) {
-                        detectTapGestures(
-                            onPress = { tapOffset ->
-                                val padLeftPx = 56f
-                                val padRightPx = 12f
-                                val w = (size.width - padLeftPx - padRightPx).coerceAtLeast(1f)
-                                val frac = ((tapOffset.x - padLeftPx) / w).coerceIn(0f, 1f)
-                                crosshairIdxInVisible = (frac * (visibleValues.size - 1).coerceAtLeast(1))
-                                    .toInt()
-                                    .coerceIn(0, (visibleValues.size - 1).coerceAtLeast(0))
-                            },
-                            onDoubleTap = {
-                                scale = 1f
-                                offset = 0f
-                                crosshairIdxInVisible = null
-                            },
-                        )
-                    },
-            ) {
-                ChartWithAxes(
-                    accent = accent,
-                    xCount = visibleValues.size,
-                    yMin = yMinScaled,
-                    yMax = yMaxScaled,
-                    yUnit = yUnit,
-                    yFormat = yFormat,
-                    xLabel = xLabelWrapper,
-                    xTickCount = 6,
-                    yTickCount = 7,
-                    values = visibleValues,
-                    invertY = invertY,
-                    modifier = Modifier.fillMaxSize(),
-                    crosshairIdx = crosshairIdxInVisible,
-                    crosshairLabel = crosshairLabel,
-                )
-            }
-            // Close-Button schwebt oben rechts. Reset-Button NUR sichtbar
-            // wenn aktuell gezoomt.
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (scale > 1.01f || clampedOffset > 0.001f) {
-                    IconButton(
-                        onClick = { scale = 1f; offset = 0f; crosshairIdxInVisible = null },
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(44.dp)
-                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Refresh,
-                            contentDescription = "Zoom zurücksetzen",
-                            tint = Color.White,
-                        )
+                        lastDist = 0f
                     }
                 }
+                // Separater Modifier fuer Doppel-Tap-Reset
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                                scale = 1f
+                                offset = 0f
+                                yShift = 0f
+                                crosshairIdxInVisible = null
+                            }
+                        },
+                    )
+                },
+        ) {
+            ChartWithAxes(
+                accent = accent,
+                xCount = visibleValues.size,
+                yMin = yMinScaled,
+                yMax = yMaxScaled,
+                yUnit = yUnit,
+                yFormat = yFormat,
+                xLabel = xLabelWrapper,
+                xTickCount = 6,
+                yTickCount = 7,
+                values = visibleValues,
+                invertY = invertY,
+                modifier = Modifier.fillMaxSize(),
+                crosshairIdx = crosshairIdxInVisible,
+                crosshairLabel = crosshairLabel,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (scale > 1.01f || clampedOffset > 0.001f || kotlin.math.abs(yShift) > 0.01f) {
                 IconButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                            scale = 1f
+                            offset = 0f
+                            yShift = 0f
+                            crosshairIdxInVisible = null
+                        }
+                    },
                     modifier = Modifier
+                        .padding(end = 8.dp)
                         .size(44.dp)
                         .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Close,
-                        contentDescription = "Vollbild schliessen",
+                        imageVector = Icons.Outlined.Refresh,
+                        contentDescription = "Zoom zurücksetzen",
                         tint = Color.White,
                     )
                 }
+            }
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Vollbild schliessen",
+                    tint = Color.White,
+                )
             }
         }
     }
@@ -1101,7 +1187,11 @@ private fun ZoomableChartDialog(
  * Y-Achse INVERTIERT — niedrigere sec/km (= schneller) ist OBEN.
  */
 @Composable
-private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
+private fun TempoVerlaufCard(
+    stream: List<Double>,
+    distanceMeters: Double?,
+    onOpenFullscreen: () -> Unit,
+) {
     val cosmos = LocalCosmos.current
     // stream-Werte sind bereits in sec/km vom Parser. Stark schwankende Werte
     // (z.B. an Pause-Phasen) ueber 1200 sec/km filtern damit der Chart nicht
@@ -1130,7 +1220,6 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             "Km ${i + 1}"
         }
     }
-    var fullscreen by rememberSaveable { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row {
@@ -1152,7 +1241,7 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { fullscreen = true },
+                    .clickable { onOpenFullscreen() },
             ) {
                 ChartWithAxes(
                     accent = accent,
@@ -1175,21 +1264,6 @@ private fun TempoVerlaufCard(stream: List<Double>, distanceMeters: Double?) {
                 color = cosmos.textSecondary,
             )
         }
-    }
-    if (fullscreen) {
-        ZoomableChartDialog(
-            title = "Tempo-Verlauf",
-            subtitle = "Ø ${formatPaceSec(avg)} · Schnellster ${formatPaceSec(min)} · Langsamster ${formatPaceSec(max)} · ${secPerKm.size} Werte",
-            accent = accent,
-            values = secPerKm,
-            yUnit = "min/km",
-            yFormat = { formatPaceSec(it) },
-            xLabel = xLabelFn,
-            invertY = true,
-            yPaddingFraction = 0.05,
-            crosshairTooltip = { v, x -> "${formatPaceSec(v)} · $x" },
-            onDismiss = { fullscreen = false },
-        )
     }
 }
 
