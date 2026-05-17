@@ -13,6 +13,7 @@
 - [Text-Verbesserung (Tampermonkey-Style)](#text-verbesserung-tampermonkey-style)
 
 **UI & Navigation:**
+- [Compose Chart Smooth Pinch-Zoom (Google-Maps-Smoothness)](#compose-chart-smooth-pinch-zoom-google-maps-smoothness-via-graphicslayer-kritisch) ⭐⭐⭐ NEU 2026-05-17
 - [HorizontalPager fuer Wisch-Navigation](#horizontalpager-fuer-wisch-navigation-zwischen-tabs-wichtig) ⭐
 - [Pinch-to-Zoom + Pager: awaitEachGesture](#pinch-to-zoom--horizontalpager-awaiteachgesture-pflicht-kritisch) ⭐⭐
 - [Scroll-Pattern: LazyRow](#scroll-pattern-lazyrow-statt-rowhorizontalscroll)
@@ -53,6 +54,65 @@
 
 **CLI & Terminal:**
 - [Terminal-Input leeren ohne Interrupt: Ctrl+U ist der einzige sichere Weg](#terminal-input-leeren-ohne-interrupt-ctrlu-ist-der-einzige-sichere-weg-kritisch) ⭐⭐
+
+---
+
+## Compose Chart Smooth Pinch-Zoom (Google-Maps-Smoothness via graphicsLayer) (KRITISCH)
+
+> Frank-Bestätigung 2026-05-17 (Entropie Reductor v0.9.94): **"Glatte Eins. Genauso gut wie bei Google Maps funktioniert es jetzt."** Verifiziert auf Samsung Galaxy Z Fold 6 mit 3598 GPS-Punkten.
+
+### Der Schlüssel-Trick
+**graphicsLayer-GPU-Transform während aktiver Pinch-Geste.** Während Pinch wird die gesamte Chart-Box vom GPU uniform skaliert (wie Google Maps eine Bitmap-Tile). KEIN Re-Compute der Polyline, kein Y-Auto-Scale, kein Achsen-Neuzeichnen. Erst beim Loslassen wird der Pinch-Faktor mathematisch in echtes scale/offset konvertiert.
+
+### Pattern (vollständig in `~/.claude/projects/C--Users-barwa-proggs/memory/reference_compose_chart_smooth_pinch_zoom.md`)
+
+```kotlin
+// Live-Pinch-States (nur während Geste, kein rememberSaveable)
+var pinchScale by remember { mutableFloatStateOf(1f) }
+var pinchPanX by remember { mutableFloatStateOf(0f) }
+var pinchOriginX by remember { mutableFloatStateOf(0.5f) }
+var pinchOriginY by remember { mutableFloatStateOf(0.5f) }
+var isPinching by remember { mutableStateOf(false) }
+
+// graphicsLayer-Wrapper um die Chart-Box
+Box(modifier = Modifier.graphicsLayer {
+    if (isPinching) {
+        scaleX = pinchScale
+        scaleY = pinchScale       // UNIFORM wie Google Maps
+        translationX = pinchPanX
+        translationY = pinchPanY
+        transformOrigin = TransformOrigin(pinchOriginX, pinchOriginY)
+    }
+}) { ChartContent(...) }
+```
+
+### Pinch-End-Mathematik (Pivot-Erhaltung)
+```kotlin
+val dataPivotFrac = offset + pivotFracCanvas / scale
+val newScale = (scale * pinchScale).coerceIn(1f, 200f)
+val newVisible = 1f / newScale
+val newOffset = (dataPivotFrac - pivotFracCanvas * newVisible).coerceIn(0f, 1f - newVisible)
+```
+
+### Was NICHT wichtig war (Anti-Learnings)
+- `derivedStateOf` für visibleValues → Mikro-Optimierung ohne spürbaren Effekt
+- `drawWithCache` für Polyline → bei graphicsLayer-Ansatz irrelevant
+- LTTB-Decimation → hilft minimal aber nicht smoothness-relevant
+- Threshold-Tuning auf 0.001f → bei graphicsLayer egal
+
+### Wichtige Details
+- `pinchScale.coerceIn(0.001f, 1000f)` WÄHREND Pinch (nicht clampen!)
+- `coerceIn(1f, 200f)` erst beim Commit
+- `Snapshot.withMutableSnapshot {}` für Batch-State-Updates
+- Direction-Lock für Single-Finger (X=Crosshair, Y=Pan)
+- 3 Schichten Defense in Depth gegen Rotation: configChanges + Screen-Level-State + rememberSaveable
+
+### Wiederverwendbar für
+ALLE zukünftigen Compose Charts mit Pinch-Zoom-Anforderung: Puls, Tempo, Höhenmeter, Cadence, Power, Kalorien, beliebige Time-Series. Template-Code in der Memory.
+
+### Verifikations-Historie
+- v0.9.93: Initial-Implementation. Frank: "etwas smoother, noch nicht Google Maps"
+- v0.9.94: + Paint-Caching + weite Pinch-Range. Frank: **"glatte Eins"** ✅
 
 ---
 
