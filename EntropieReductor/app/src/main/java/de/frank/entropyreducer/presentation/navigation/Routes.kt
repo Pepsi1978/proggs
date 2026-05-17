@@ -8,6 +8,25 @@ object Routes {
     const val SCIENTIST = "scientist"
     const val BIOMARKER = "biomarker"
 
+    // Sub-Bereiche pro Top-Level-Tab (Frank-Wunsch 2026-05-17).
+    // Jeder Tab hat 3 Sub-Bereiche (Index 1..3), erst noch leere Platzhalter-Screens
+    // damit Frank spaeter Inhalte einbauen kann.
+    const val TASKS_SUB_PATTERN = "tasks/sub/{index}"
+    const val ANALYSIS_SUB_PATTERN = "analysis/sub/{index}"
+    const val SCIENTIST_SUB_PATTERN = "scientist/sub/{index}"
+    const val BIOMARKER_SUB_PATTERN = "biomarker/sub/{index}"
+    fun tasksSub(index: Int): String = "tasks/sub/$index"
+    fun analysisSub(index: Int): String = "analysis/sub/$index"
+    fun scientistSub(index: Int): String = "scientist/sub/$index"
+    fun biomarkerSub(index: Int): String = "biomarker/sub/$index"
+    fun subRouteFor(parentTab: String, index: Int): String = when (parentTab) {
+        TASKS -> tasksSub(index)
+        ANALYSIS -> analysisSub(index)
+        SCIENTIST -> scientistSub(index)
+        BIOMARKER -> biomarkerSub(index)
+        else -> tasksSub(index)
+    }
+
     // Stage-3-Spezialansichten (siehe Spec §14)
     const val EXPERIMENT_CALENDAR = "experiment_calendar"
     const val INSIGHT_BOARD = "insight_board"

@@ -75,6 +75,7 @@ fun AnalysisScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
     currentTab: String,
+    onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: AnalysisViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -105,6 +106,7 @@ fun AnalysisScreen(
                 micState = de.frank.entropyreducer.presentation.components.MicState.IDLE,
                 onTabSelected = onSwitchTab,
                 onMicClick = {},
+                onSubAreaSelected = onOpenSubArea,
             )
         },
     ) { padding ->

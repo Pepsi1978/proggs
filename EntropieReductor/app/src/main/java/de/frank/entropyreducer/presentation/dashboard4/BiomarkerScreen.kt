@@ -74,6 +74,7 @@ fun BiomarkerHostScreen(
     onOpenAllTrainings: () -> Unit = {},
     onOpenOuraDetail: (String) -> Unit = {},
     onOpenHealthConnectDetail: (String) -> Unit = {},
+    onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     // Performance-Audit E2 (2026-05-10): collectAsStateWithLifecycle statt
@@ -149,6 +150,7 @@ fun BiomarkerHostScreen(
                 micState = MicState.IDLE,
                 onTabSelected = onSwitchTab,
                 onMicClick = { onSwitchTab(Routes.TASKS) },
+                onSubAreaSelected = onOpenSubArea,
             )
         },
         // Frank-Wunsch 2026-05-09 (analog zum Aufgaben-Screen, fuenfte Praezisierung):

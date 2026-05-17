@@ -94,6 +94,7 @@ fun ScientistScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
     currentTab: String,
+    onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: ScientistViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -164,6 +165,7 @@ fun ScientistScreen(
                 onMicClick = {
                     if (micPerm.check()) vm.onMicClick() else micPerm.request()
                 },
+                onSubAreaSelected = onOpenSubArea,
             )
         },
     ) { padding ->

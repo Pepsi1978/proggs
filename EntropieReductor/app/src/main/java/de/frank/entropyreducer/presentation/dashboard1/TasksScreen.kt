@@ -117,6 +117,7 @@ fun TasksScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
     currentTab: String,
+    onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
     vm: TasksViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -256,6 +257,7 @@ fun TasksScreen(
                 onMicClick = {
                     if (micPerm.check()) vm.onMicClick() else micPerm.request()
                 },
+                onSubAreaSelected = onOpenSubArea,
             )
         },
         // Frank-Wunsch 2026-05-09 (vierte Praezisierung): Backup-Statuszeile

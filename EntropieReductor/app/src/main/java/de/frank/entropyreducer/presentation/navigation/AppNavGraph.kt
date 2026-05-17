@@ -83,11 +83,18 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
         startDestination = Routes.TASKS,
         modifier = modifier,
     ) {
+        // Sub-Area-Navigation (Frank-Wunsch 2026-05-17): Klick auf ein Sub-Icon
+        // im Sub-Mode der Bottom-Bar navigiert zum jeweiligen weissen Platzhalter.
+        val onOpenSubArea: (String, Int) -> Unit = { parent, index ->
+            nav.navigate(Routes.subRouteFor(parent, index))
+        }
+
         composable(Routes.TASKS) {
             TasksScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
                 onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.TASKS,
+                onOpenSubArea = onOpenSubArea,
             )
         }
         composable(Routes.ANALYSIS) {
@@ -95,6 +102,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
                 onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.ANALYSIS,
+                onOpenSubArea = onOpenSubArea,
             )
         }
         composable(Routes.SCIENTIST) {
@@ -102,6 +110,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
                 onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.SCIENTIST,
+                onOpenSubArea = onOpenSubArea,
             )
         }
         composable(Routes.BIOMARKER) {
@@ -121,7 +130,40 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                 onOpenHealthConnectDetail = { metricKey ->
                     nav.navigate(Routes.healthConnectDetail(metricKey))
                 },
+                onOpenSubArea = onOpenSubArea,
             )
+        }
+
+        // Sub-Bereich-Platzhalter (4 Tabs × 3 Indizes = 12 Targets, hier ueber 4
+        // Pattern-Routen mit {index}-Argument).
+        val subAreaComposables = listOf(
+            Routes.TASKS_SUB_PATTERN to Routes.TASKS,
+            Routes.ANALYSIS_SUB_PATTERN to Routes.ANALYSIS,
+            Routes.SCIENTIST_SUB_PATTERN to Routes.SCIENTIST,
+            Routes.BIOMARKER_SUB_PATTERN to Routes.BIOMARKER,
+        )
+        subAreaComposables.forEach { (pattern, parent) ->
+            composable(
+                route = pattern,
+                arguments = listOf(navArgument("index") { type = NavType.IntType }),
+            ) { backStackEntry ->
+                val index = backStackEntry.arguments?.getInt("index") ?: 1
+                SubAreaScreen(
+                    parentTab = parent,
+                    subIndex = index,
+                    onBack = { nav.popBackStack(); Unit },
+                    onSwitchSub = { p, i ->
+                        nav.navigate(Routes.subRouteFor(p, i)) {
+                            // Sub-zu-Sub-Wechsel ersetzt den aktuellen Sub-Eintrag
+                            // im Back-Stack, damit "Zurueck" zuverlaessig zum Parent
+                            // fuehrt — nicht durch eine Kette von Sub-Bereichen.
+                            popUpTo(pattern) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onSwitchTab = { route -> nav.tabSwitch(route) },
+                )
+            }
         }
         composable(Routes.AMAZFIT_TRAININGS) {
             AmazfitTrainingsScreen(
