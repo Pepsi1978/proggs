@@ -18,6 +18,21 @@ val skBase: JFile = JFile(System.getProperty("user.home"))
 val skKeystoreSrc: JFile = skBase.resolve("entropiereductor.debug.keystore")
 val rootKeystoreDst: JFile = rootProject.file("debug-shared.keystore")
 
+// Frank-Wunsch 2026-05-17: Google-Maps-API-Key fuer Satelliten-Karte im
+// Trainings-Detail. Liegt als Klartext in ~/SK/EntropieReductor/maps-api-key.txt
+// (eine Zeile, nur der Key). Bei Build wird er hier gelesen und als
+// manifestPlaceholder gesetzt — landet damit nie im Repo.
+val skMapsKeyFile: JFile = skBase.resolve("maps-api-key.txt")
+val mapsApiKey: String = if (skMapsKeyFile.exists()) {
+    skMapsKeyFile.readText().trim()
+} else {
+    // Fallback: leerer Key. Karte zeigt grauen Hintergrund + "For development
+    // purposes only"-Wasserzeichen, Build laeuft aber durch. Sobald die
+    // Datei existiert (auch leer + neu = irgendein String), wird die Karte
+    // korrekt gerendert.
+    ""
+}
+
 val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
     val src = skKeystoreSrc
     val dst = rootKeystoreDst
@@ -57,13 +72,16 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 130
-        versionName = "0.9.84"
+        versionCode = 131
+        versionName = "0.9.85"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // OAuth-Redirect-Scheme fuer AppAuth (Whoop + Google Calendar)
         manifestPlaceholders["appAuthRedirectScheme"] = "de.frank.entropyreducer"
+        // Google-Maps-API-Key (Frank-Wunsch 2026-05-17) — Wert wird oben aus
+        // ~/SK/EntropieReductor/maps-api-key.txt gelesen, nie ins Repo committed.
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
 
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
@@ -230,6 +248,11 @@ dependencies {
 
     // Health Connect — liest Gewicht aus der Zepp-App-Bruecke (Frank-Wunsch 2026-05-10)
     implementation(libs.health.connect.client)
+
+    // Google Maps Compose (Frank-Wunsch 2026-05-17) — Satelliten-Karte mit
+    // eingezeichneter Strecke im Trainings-Detail-Screen.
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
 
     // Pruefe Internet-Konnektivitaet
     implementation(libs.core.ktx)

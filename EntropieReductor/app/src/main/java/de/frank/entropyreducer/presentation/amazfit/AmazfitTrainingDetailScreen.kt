@@ -426,6 +426,17 @@ private fun EffektBar(label: String, value: Double, max: Double, accent: android
 
 /* ============================== GPS-TRACK ============================== */
 
+/**
+ * Strecken-Karte mit Satelliten-Layer (Frank-Wunsch 2026-05-17). Zeigt die GPS-
+ * Punkte als Polyline auf einer Google-Maps-Satelliten-Karte mit Strassen-Namen
+ * (HYBRID). Start-Punkt gruen, Ziel-Punkt rot — gleiche Farben wie zuvor bei
+ * der Canvas-Vorschau. Kamera fittet automatisch auf die Strecken-Bounds, der
+ * Benutzer kann mit Zwei-Finger-Geste zoomen und mit einem Finger verschieben.
+ *
+ * API-Key kommt aus ~/SK/EntropieReductor/maps-api-key.txt ueber den manifest-
+ * Placeholder `mapsApiKey`. Bei leerem Key rendert die Karte einen grauen
+ * Hintergrund + Google-Wasserzeichen, die Polyline ist trotzdem sichtbar.
+ */
 @Composable
 private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
     val cosmos = LocalCosmos.current
@@ -441,13 +452,6 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                 Text(text = city, style = MaterialTheme.typography.labelSmall, color = cosmos.textSecondary)
             }
             Spacer(Modifier.height(8.dp))
-            // Statische Polyline-Vorschau auf Canvas. Lat/Lon werden auf eine
-            // Box mit Seitenverhältnis 16:9 normalisiert. Nord ist oben.
-            val accent = CosmosColors.Warning
-            val borderColor = cosmos.glassBorder.copy(alpha = 0.3f)
-            // Performance-Audit Loop 2 (2026-05-10): Pfad einmalig allokieren
-            // statt pro Frame. Wird im Lambda mit reset() wiederverwendet.
-            val gpsPath = remember { androidx.compose.ui.graphics.Path() }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -455,40 +459,8 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     .clip(RoundedCornerShape(12.dp))
                     .background(cosmos.glassBorder.copy(alpha = 0.08f)),
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    if (points.size < 2) return@Canvas
-                    val minLat = points.minOf { it.first }
-                    val maxLat = points.maxOf { it.first }
-                    val minLon = points.minOf { it.second }
-                    val maxLon = points.maxOf { it.second }
-                    val latRange = (maxLat - minLat).coerceAtLeast(1e-6)
-                    val lonRange = (maxLon - minLon).coerceAtLeast(1e-6)
-                    val pad = 12f
-                    val w = size.width - 2 * pad
-                    val h = size.height - 2 * pad
-                    fun toX(lon: Double) = pad + ((lon - minLon) / lonRange * w).toFloat()
-                    fun toY(lat: Double) = pad + ((maxLat - lat) / latRange * h).toFloat()
-                    // Performance-Audit Loop 2 (2026-05-10): Path-Allokation pro
-                    // Frame eliminiert. Path-Pfad wird durch Reset+moveTo+lineTo
-                    // wiederverwendet — gleiches Pixel-Output ohne GC-Druck.
-                    gpsPath.reset()
-                    gpsPath.moveTo(toX(points[0].second), toY(points[0].first))
-                    for (p in points.drop(1)) {
-                        gpsPath.lineTo(toX(p.second), toY(p.first))
-                    }
-                    drawPath(gpsPath, accent, style = Stroke(width = 4f))
-                    // Start-Punkt grün, End-Punkt rot
-                    drawCircle(
-                        color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
-                        radius = 6f,
-                        center = Offset(toX(points.first().second), toY(points.first().first)),
-                    )
-                    drawCircle(
-                        color = androidx.compose.ui.graphics.Color(0xFFEF5350),
-                        radius = 6f,
-                        center = Offset(toX(points.last().second), toY(points.last().first)),
-                    )
-                    @Suppress("UNUSED_VARIABLE") val unused = borderColor
+                if (points.size >= 2) {
+                    GpsTrackMap(points = points)
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -498,6 +470,89 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                 color = cosmos.textSecondary,
             )
         }
+    }
+}
+
+/**
+ * Eigentliche Karten-Implementierung — getrennt von der Karte ausgelagert damit
+ * der GoogleMap-Composable nicht jedes Mal neu komponiert wird wenn andere
+ * Felder der Card aktualisiert werden.
+ *
+ * Konvertiert Lat/Lon-Paare zu LatLng-Objekten, berechnet LatLngBounds und
+ * fittet die Kamera einmalig beim ersten Render. Polyline-Farbe = Warning
+ * (gleicher Akzent wie zuvor im Canvas). Marker fuer Start und Ziel.
+ */
+@Composable
+private fun GpsTrackMap(points: List<Pair<Double, Double>>) {
+    val latLngs = remember(points) {
+        points.map { com.google.android.gms.maps.model.LatLng(it.first, it.second) }
+    }
+    val bounds = remember(latLngs) {
+        val builder = com.google.android.gms.maps.model.LatLngBounds.builder()
+        latLngs.forEach { builder.include(it) }
+        builder.build()
+    }
+    val startLatLng = latLngs.first()
+    val endLatLng = latLngs.last()
+    // Initial-Kamera grob in der Mitte der Strecke. Der echte Bounds-Fit
+    // passiert nach dem ersten Layout-Pass via moveCamera in onMapLoaded.
+    val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
+        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+            com.google.android.gms.maps.model.LatLng(
+                (bounds.northeast.latitude + bounds.southwest.latitude) / 2.0,
+                (bounds.northeast.longitude + bounds.southwest.longitude) / 2.0,
+            ),
+            13f,
+        )
+    }
+    val mapProperties = remember {
+        com.google.maps.android.compose.MapProperties(
+            mapType = com.google.maps.android.compose.MapType.HYBRID,
+        )
+    }
+    val uiSettings = remember {
+        com.google.maps.android.compose.MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = false,
+            mapToolbarEnabled = false,
+            compassEnabled = false,
+        )
+    }
+    val accent = CosmosColors.Warning
+    com.google.maps.android.compose.GoogleMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        properties = mapProperties,
+        uiSettings = uiSettings,
+        onMapLoaded = {
+            // Strecken-Fit erst NACH dem ersten Layout-Pass — vorher kennt die
+            // Map ihre Pixel-Groesse nicht und newLatLngBounds wirft IllegalState.
+            runCatching {
+                cameraPositionState.move(
+                    com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(bounds, 64),
+                )
+            }
+        },
+    ) {
+        com.google.maps.android.compose.Polyline(
+            points = latLngs,
+            color = accent,
+            width = 10f,
+        )
+        com.google.maps.android.compose.Marker(
+            state = com.google.maps.android.compose.MarkerState(position = startLatLng),
+            title = "Start",
+            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_GREEN,
+            ),
+        )
+        com.google.maps.android.compose.Marker(
+            state = com.google.maps.android.compose.MarkerState(position = endLatLng),
+            title = "Ziel",
+            icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_RED,
+            ),
+        )
     }
 }
 

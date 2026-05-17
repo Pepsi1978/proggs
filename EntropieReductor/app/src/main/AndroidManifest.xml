@@ -102,6 +102,15 @@
         android:usesCleartextTraffic="false"
         tools:targetApi="35">
 
+        <!-- Google-Maps-API-Key (Frank-Wunsch 2026-05-17) — Wert kommt aus
+             ~/SK/EntropieReductor/maps-api-key.txt ueber den manifestPlaceholder
+             mapsApiKey in app/build.gradle.kts. Wird fuer die Satelliten-Karte
+             im Trainings-Detail-Screen genutzt. Bei leerem Key rendert die Karte
+             einen grauen Hintergrund + "For development purposes only"-Wasserzeichen. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"

@@ -29,6 +29,8 @@ credentials = "1.5.0-alpha06"
 googleId = "1.1.1"
 reorderable = "2.4.0"
 healthConnect = "1.1.0-alpha07"
+mapsCompose = "6.4.1"
+playServicesMaps = "19.0.0"
 
 [libraries]
 # Compose BOM
@@ -112,6 +114,12 @@ reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.r
 # Health Connect (Frank-Wunsch 2026-05-10) — liest Gewicht aus der Zepp-App ueber
 # den Health-Connect-Bridge der Zepp-App seit Januar 2025.
 health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
+
+# Google Maps Compose (Frank-Wunsch 2026-05-17): Satelliten-Karte mit
+# eingezeichneter Strecke im Trainings-Detail. maps-compose wrapped play-services-maps
+# fuer Jetpack-Compose-Verwendung. API-Key liegt in ~/SK/EntropieReductor/maps-api-key.txt.
+maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
