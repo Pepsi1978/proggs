@@ -114,6 +114,59 @@ class AmazfitRepository @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-05-17: Manuelle Override-Werte fuer ein Training
+     * speichern. Wird vom Edit-Dialog ([EditTrainingValuesDialog]) im Hero-
+     * und Detail-Screen aufgerufen.
+     *
+     * Verhalten: laedt das existierende Workout, ueberschreibt nur die Felder
+     * fuer die ein Wert (non-null) uebergeben wurde, behaelt alles andere bei.
+     * VO2max ist explizit nicht editierbar — wird im UI live aus den anderen
+     * Werten berechnet.
+     *
+     * Bei spaeterem Strava-Sync werden manuelle Werte NICHT automatisch ueber-
+     * schrieben: PolarSyncWorker.applyEntities nutzt "fresh wins if not null",
+     * d.h. ein neuer non-null-Wert wuerde den manuellen ersetzen. Wenn Frank
+     * das nicht will, einfach den Sync nicht erneut triggern.
+     *
+     * @return true wenn das Workout gefunden und aktualisiert wurde
+     */
+    suspend fun applyManualOverrides(
+        trackId: String,
+        avgPaceSecPerKm: Double? = null,
+        maxPaceSecPerKm: Double? = null,
+        avgHeartRate: Int? = null,
+        maxHeartRate: Int? = null,
+        altitudeGainMeters: Double? = null,
+        altitudeLossMeters: Double? = null,
+        cadence: Int? = null,
+        strideLengthCm: Int? = null,
+        calories: Double? = null,
+    ): Boolean {
+        val existing = workoutDao.getById(trackId)
+        if (existing == null) {
+            Log.w(TAG, "applyManualOverrides: kein Workout mit trackId=$trackId")
+            return false
+        }
+        val updated = existing.copy(
+            avgPaceSecPerKm = avgPaceSecPerKm ?: existing.avgPaceSecPerKm,
+            maxPaceSecPerKm = maxPaceSecPerKm ?: existing.maxPaceSecPerKm,
+            avgSpeedKmh = avgPaceSecPerKm?.let { 3600.0 / it } ?: existing.avgSpeedKmh,
+            maxSpeedKmh = maxPaceSecPerKm?.let { 3600.0 / it } ?: existing.maxSpeedKmh,
+            avgHeartRate = avgHeartRate ?: existing.avgHeartRate,
+            maxHeartRate = maxHeartRate ?: existing.maxHeartRate,
+            altitudeGainMeters = altitudeGainMeters ?: existing.altitudeGainMeters,
+            altitudeLossMeters = altitudeLossMeters ?: existing.altitudeLossMeters,
+            cadence = cadence ?: existing.cadence,
+            strideLengthCm = strideLengthCm ?: existing.strideLengthCm,
+            calories = calories ?: existing.calories,
+            createdAt = System.currentTimeMillis(),
+        )
+        workoutDao.upsert(updated)
+        Log.i(TAG, "Manual overrides applied to $trackId")
+        return true
+    }
+
+    /**
      * Frank-Wunsch 2026-05-17: V2-Cleanup. Behaelt nur Trainings im Fenster
      * [olderThanMs, newerThanMs] — alles davor (Uralt-Polar-Daten, ~967 Eintraege)
      * UND alles danach (die neuen Polar-Duplikate vom 17.05.-01.05.2026) wird in

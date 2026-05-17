@@ -771,6 +771,31 @@ constructor(
         _selectedDate.value = java.time.LocalDate.now()
     }
 
+    /**
+     * Frank-Wunsch 2026-05-17: Manuelle Override-Werte fuer ein Training
+     * speichern. Wird vom Edit-Dialog in der Hero-Card ausgeloest.
+     * Delegiert an AmazfitRepository.applyManualOverrides.
+     */
+    fun applyWorkoutOverrides(
+        trackId: String,
+        overrides: de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides,
+    ) {
+        viewModelScope.launch {
+            amazfitRepo.applyManualOverrides(
+                trackId = trackId,
+                avgPaceSecPerKm = overrides.avgPaceSecPerKm,
+                maxPaceSecPerKm = overrides.maxPaceSecPerKm,
+                avgHeartRate = overrides.avgHeartRate,
+                maxHeartRate = overrides.maxHeartRate,
+                altitudeGainMeters = overrides.altitudeGainMeters,
+                altitudeLossMeters = overrides.altitudeLossMeters,
+                cadence = overrides.cadence,
+                strideLengthCm = overrides.strideLengthCm,
+                calories = overrides.calories,
+            )
+        }
+    }
+
     fun shiftDay(delta: Int) {
         _selectedDate.value = _selectedDate.value.plusDays(delta.toLong())
     }

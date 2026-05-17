@@ -115,4 +115,28 @@ class AmazfitTrainingDetailViewModel @Inject constructor(
             repo.ensureWorkoutDetail(trackId, force = true)
         }
     }
+
+    /**
+     * Frank-Wunsch 2026-05-17: Manuelle Override-Werte aus dem Edit-Dialog
+     * speichern. UI-Layer ([EditTrainingValuesDialog]) liefert ein
+     * [ManualWorkoutOverrides] Objekt mit allen Eingaben — Repository macht
+     * den Merge (nur non-null Eingaben werden gespeichert).
+     */
+    fun applyManualOverrides(overrides: ManualWorkoutOverrides) {
+        if (trackId.isBlank()) return
+        viewModelScope.launch {
+            repo.applyManualOverrides(
+                trackId = trackId,
+                avgPaceSecPerKm = overrides.avgPaceSecPerKm,
+                maxPaceSecPerKm = overrides.maxPaceSecPerKm,
+                avgHeartRate = overrides.avgHeartRate,
+                maxHeartRate = overrides.maxHeartRate,
+                altitudeGainMeters = overrides.altitudeGainMeters,
+                altitudeLossMeters = overrides.altitudeLossMeters,
+                cadence = overrides.cadence,
+                strideLengthCm = overrides.strideLengthCm,
+                calories = overrides.calories,
+            )
+        }
+    }
 }

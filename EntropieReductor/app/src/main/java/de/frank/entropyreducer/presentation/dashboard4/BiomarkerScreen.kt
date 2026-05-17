@@ -281,6 +281,9 @@ fun BiomarkerHostScreen(
                             weightState = weightState,
                             onRequestWeightPermission = onRequestWeightPermission,
                             onOpenHealthConnectDetail = onOpenHealthConnectDetail,
+                            onSaveWorkoutOverrides = { trackId, overrides ->
+                                vm.applyWorkoutOverrides(trackId, overrides)
+                            },
                         )
                     }
                 }
@@ -1351,6 +1354,7 @@ private fun BiomarkerCardForId(
     weightState: WeightState = WeightState(),
     onRequestWeightPermission: () -> Unit = {},
     onOpenHealthConnectDetail: (String) -> Unit = {},
+    onSaveWorkoutOverrides: (String, de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides) -> Unit = { _, _ -> },
 ) {
     val cosmos = LocalCosmos.current
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1620,6 +1624,7 @@ private fun BiomarkerCardForId(
                 AmazfitLastTrainingHeroCard(
                     workouts = state.amazfitWorkouts,
                     onOpenDetail = onOpenTrainingDetail,
+                    onSaveOverrides = onSaveWorkoutOverrides,
                 )
 
             BiomarkerCardId.AMAZFIT_TRAININGS ->

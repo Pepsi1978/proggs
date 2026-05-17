@@ -16,11 +16,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import de.frank.entropyreducer.presentation.amazfit.EditTrainingValuesDialog
+import de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -91,12 +99,16 @@ internal fun AmazfitSectionHeader() {
 internal fun AmazfitLastTrainingHeroCard(
     workouts: List<AmazfitWorkoutEntity>,
     onOpenDetail: (String) -> Unit,
+    onSaveOverrides: (String, ManualWorkoutOverrides) -> Unit = { _, _ -> },
 ) {
     val latest = workouts.firstOrNull() ?: return
     // Frank-Wunsch 2026-05-11: KEIN GlassCard-Wrapper mehr — die gelbe Blase
-    // (LetzterLaufHero-Box mit accent-Hintergrund) ist selbst die Karte. Die
-    // weisse Aussen-Blase um die gelbe Innen-Blase wirkte wie doppelter Rand.
-    LetzterLaufHero(w = latest, onOpenDetail = { onOpenDetail(latest.trackId) })
+    // (LetzterLaufHero-Box mit accent-Hintergrund) ist selbst die Karte.
+    LetzterLaufHero(
+        w = latest,
+        onOpenDetail = { onOpenDetail(latest.trackId) },
+        onSaveOverrides = { overrides -> onSaveOverrides(latest.trackId, overrides) },
+    )
 }
 
 @Composable
@@ -190,12 +202,30 @@ internal fun AmazfitTrainingsCard(
  * synchronisiert hat — das Workout aus der App-Sicht ist nicht das tatsaechlich letzte.
  */
 @Composable
-private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
+private fun LetzterLaufHero(
+    w: AmazfitWorkoutEntity,
+    onOpenDetail: () -> Unit,
+    onSaveOverrides: (ManualWorkoutOverrides) -> Unit,
+) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     val heroShape = RoundedCornerShape(14.dp)
     val ageHours = ((System.currentTimeMillis() - w.startMs) / 3_600_000L).coerceAtLeast(0L)
     val isStale = ageHours >= 24L
+    // Frank-Wunsch 2026-05-17: Edit-Dialog auch in der Hero-Card (oben neben
+    // dem Polar-Badge). Damit kann Frank das oberste Training direkt bearbeiten
+    // ohne den Detail-Screen zu oeffnen.
+    var editOpen by remember { mutableStateOf(false) }
+    if (editOpen) {
+        EditTrainingValuesDialog(
+            workout = w,
+            onDismiss = { editOpen = false },
+            onSave = { overrides ->
+                onSaveOverrides(overrides)
+                editOpen = false
+            },
+        )
+    }
     // Frank-Wunsch 2026-05-13: Heller Rahmen wie bei allen anderen Pattern (GlassCard-Border).
     Box(
         modifier =
@@ -247,6 +277,19 @@ private fun LetzterLaufHero(w: AmazfitWorkoutEntity, onOpenDetail: () -> Unit) {
                         color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Spacer(Modifier.size(4.dp))
+                // Frank-Wunsch 2026-05-17: Stift-Icon zum manuellen Editieren.
+                IconButton(
+                    onClick = { editOpen = true },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Werte bearbeiten",
+                        tint = accent,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

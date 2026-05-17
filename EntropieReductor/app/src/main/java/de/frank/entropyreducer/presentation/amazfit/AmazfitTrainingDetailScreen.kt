@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
@@ -73,6 +74,19 @@ fun AmazfitTrainingDetailScreen(
     val workout by vm.workout.collectAsState()
     val cosmos = LocalCosmos.current
     val w = workout
+    // Frank-Wunsch 2026-05-17: Edit-Dialog fuer manuelle Werte (Pace/HR/Hoehe
+    // /Cadence/Stride/Kalorien). VO2max wird automatisch berechnet.
+    var editDialogOpen by remember { mutableStateOf(false) }
+    if (editDialogOpen && w != null) {
+        EditTrainingValuesDialog(
+            workout = w,
+            onDismiss = { editDialogOpen = false },
+            onSave = { overrides ->
+                vm.applyManualOverrides(overrides)
+                editDialogOpen = false
+            },
+        )
+    }
     // Parser auf Composable-Level (nicht in item-Lambda — dort kein @Composable-Context).
     val gps = remember(w?.gpsTrackJson) { parseGpsPoints(w?.gpsTrackJson) }
     val hr = remember(w?.heartRateSeriesJson) { parsePipeIntList(w?.heartRateSeriesJson) }
@@ -104,7 +118,7 @@ fun AmazfitTrainingDetailScreen(
                 item { Text("Wird geladen …", color = cosmos.textSecondary) }
                 return@LazyColumn
             }
-            item { HeroCard(w) }
+            item { HeroCard(w) { editDialogOpen = true } }
             item { PaceAndHrGrid(w) }
             item { TerrainGrid(w) }
             item { TrainingseffektCard(w) }
@@ -134,7 +148,7 @@ fun AmazfitTrainingDetailScreen(
 /* ============================== HERO ============================== */
 
 @Composable
-private fun HeroCard(w: AmazfitWorkoutEntity) {
+private fun HeroCard(w: AmazfitWorkoutEntity, onEditWorkout: () -> Unit) {
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -186,6 +200,21 @@ private fun HeroCard(w: AmazfitWorkoutEntity) {
                         color = accent,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Spacer(Modifier.size(6.dp))
+                // Frank-Wunsch 2026-05-17: Stift-Icon zum manuellen Editieren
+                // der Einzelwerte (Pace, Puls, Hoehe, Cadence, Stride, Kalorien).
+                // VO2max ist NICHT editierbar — wird automatisch berechnet.
+                IconButton(
+                    onClick = onEditWorkout,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Werte bearbeiten",
+                        tint = accent,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
