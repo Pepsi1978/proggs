@@ -137,6 +137,28 @@ class EntropyReducerApp : Application(), Configuration.Provider {
             }
         }
 
+        // Frank-Wunsch 2026-05-17: Sport-Rename V1. Einmalige Umbenennung der
+        // Polar-Codes 18 (Indoor-Rudern) und entspr. Rudergeraet zu Crosstrainer.
+        // Frank's Polar zeichnet Crosstrainer als Indoor-Rudern auf — diese
+        // Migration korrigiert alle bisherigen Workouts. Source-Maps fuer
+        // zukuenftige Imports sind bereits angepasst.
+        applicationScope.launch {
+            kotlinx.coroutines.delay(6000L)
+            runCatching {
+                if (!appSettings.isSportRenameV1Done()) {
+                    val renamedA = amazfitRepository.renameSportName("Indoor-Rudern", "Crosstrainer")
+                    val renamedB = amazfitRepository.renameSportName("Rudergeraet", "Crosstrainer")
+                    appSettings.setSportRenameV1Done(true)
+                    android.util.Log.i(
+                        "EntropyReducerApp",
+                        "Sport-Rename-V1 fertig: $renamedA Indoor-Rudern + $renamedB Rudergeraet -> Crosstrainer",
+                    )
+                }
+            }.onFailure {
+                android.util.Log.w("EntropyReducerApp", "Sport-Rename-V1 fehlgeschlagen", it)
+            }
+        }
+
         // Frank-Wunsch 2026-05-17: V2-Cleanup vor der Strava-only-Phase.
         // Behaelt nur Trainings der letzten ~2 Jahre bis 30.03.2026 17:25 Berlin —
         // alles davor (Uralt-Polar-Daten) UND alles danach (Polar-Duplikate vom

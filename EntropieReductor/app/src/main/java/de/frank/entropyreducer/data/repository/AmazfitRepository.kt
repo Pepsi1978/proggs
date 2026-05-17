@@ -114,6 +114,20 @@ class AmazfitRepository @Inject constructor(
     }
 
     /**
+     * Frank-Wunsch 2026-05-17: Umbenennung aller Workouts mit altem sportName.
+     * Wird vom Sport-Rename-V1-Migrator beim App-Start aufgerufen.
+     * Idempotent — bei zweitem Aufruf 0 Zeilen geaendert.
+     */
+    suspend fun renameSportName(oldName: String, newName: String): Int {
+        val changed = workoutDao.renameSportName(oldName, newName)
+        if (changed > 0) {
+            Log.i(TAG, "Sport-Rename: $changed Workouts '$oldName' -> '$newName'")
+            syncCoordinatorLazy.get().requestSync()
+        }
+        return changed
+    }
+
+    /**
      * Frank-Wunsch 2026-05-17: Manuelle Override-Werte fuer ein Training
      * speichern. Wird vom Edit-Dialog ([EditTrainingValuesDialog]) im Hero-
      * und Detail-Screen aufgerufen.

@@ -146,6 +146,16 @@ interface AmazfitWorkoutDao {
             "WHERE sportType = :sportType AND sportName != :sportName",
     )
     suspend fun updateSportNameByType(sportType: Int, sportName: String): Int
+
+    /**
+     * Frank-Wunsch 2026-05-17: einmalige Umbenennung. Alle Workouts deren
+     * sportName auf einen alten Begriff matched, bekommen den neuen Namen.
+     * Idempotent — wenn niemand mehr den alten Namen hat, 0 Zeilen geaendert.
+     */
+    @Query(
+        "UPDATE amazfit_workouts SET sportName = :newName WHERE sportName = :oldName",
+    )
+    suspend fun renameSportName(oldName: String, newName: String): Int
 }
 
 /**

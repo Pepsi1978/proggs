@@ -446,7 +446,9 @@ object PolarSampleMapper {
         "STRETCHING" to "Stretching",
         "ELLIPTICAL" to "Crosstrainer",
         "ROWING" to "Rudern",
-        "INDOOR_ROWING" to "Rudergeraet",
+        // Frank-Wunsch 2026-05-17: Indoor-Rudern wird als Crosstrainer gefuehrt
+        // (sein Polar-Crosstrainer wird als INDOOR_ROWING kategorisiert).
+        "INDOOR_ROWING" to "Crosstrainer",
         "CLIMBING" to "Klettern",
         "INDOOR_CLIMBING" to "Bouldern",
         "BOULDERING" to "Bouldern",

@@ -36,6 +36,7 @@ import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.presentation.amazfit.EditTrainingValuesDialog
 import de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides
 import de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay
+import de.frank.entropyreducer.presentation.amazfit.isVo2MaxSport
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -492,11 +493,11 @@ internal fun AmazfitWorkoutRow(
         // VO2Max-Wert anzeigen — das ist der aussagekraeftigere Trainings-
         // Indikator pro Lauf.
         //
-        // Frank-Wunsch 2026-05-17: VO₂max-Beschriftung IMMER zeigen — auch
-        // wenn kein Ruhepuls-Wert verfuegbar ist (= "—"). Frank will den Wert
-        // pro Training auf einen Blick sehen koennen, plus Vergleichbarkeit
-        // zwischen Hero-Liste und Alle-Trainings-Liste.
-        val vo2 = formatHeroVo2Max(workout, restingHrForDay)
+        // Frank-Wunsch 2026-05-17: VO₂max-Zeile NUR bei Lauf-basierten Sportarten
+        // anzeigen. Bei Crosstrainer/Rudern/Krafttraining/etc. komplett weglassen
+        // damit Frank auf einen Blick sieht "das war kein Laufen".
+        val showVo2 = isVo2MaxSport(workout.sportName)
+        val vo2 = if (showVo2) formatHeroVo2Max(workout, restingHrForDay) else null
         Column(horizontalAlignment = Alignment.End) {
             workout.avgHeartRate?.let {
                 Text(
@@ -506,11 +507,13 @@ internal fun AmazfitWorkoutRow(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Text(
-                text = "VO₂max $vo2",
-                color = cosmos.textSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            if (vo2 != null) {
+                Text(
+                    text = "VO₂max $vo2",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
         }
     }
 }

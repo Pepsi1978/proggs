@@ -278,16 +278,15 @@ private fun TerrainGrid(
         onItemClick = onEditClick,
     )
     Spacer(Modifier.height(8.dp))
-    StatsGrid(
-        items = listOf(
-            "Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"),
-            // Frank-Wunsch 2026-05-17: VO2max nutzt Tages-Ruhepuls aus dem
-            // Whoop-Snapshot (nicht mehr hardcoded 65). Wenn kein Ruhepuls-
-            // Wert fuer den Tag → "—".
-            "VO₂Max" to estimateVo2Max(w, restingHrForDay),
-        ),
-        onItemClick = onEditClick,
-    )
+    // Frank-Wunsch 2026-05-17: VO2max-Box nur bei Lauf-basierten Sportarten
+    // anzeigen. Bei Crosstrainer/Rudern/Krafttraining/etc. komplett weglassen
+    // damit Frank sofort sieht "das war kein Laufen".
+    val showVo2 = de.frank.entropyreducer.presentation.amazfit.isVo2MaxSport(w.sportName)
+    val statsItems = buildList {
+        add("Kalorien" to (w.calories?.let { "%.0f kcal".format(it) } ?: "—"))
+        if (showVo2) add("VO₂Max" to estimateVo2Max(w, restingHrForDay))
+    }
+    StatsGrid(items = statsItems, onItemClick = onEditClick)
 }
 
 @Composable

@@ -22,6 +22,30 @@ import kotlin.math.absoluteValue
  * Trainings (Polar-Bulk-Import) gibt es keine Ruhepuls-Daten — VO2max bleibt
  * leer, was korrekt ist.
  */
+/**
+ * Frank-Wunsch 2026-05-17: VO2max-Anzeige nur bei Sportarten wo die ACSM-Lauf-
+ * Formel `0.2 * Speed + 3.5` sinnvolle Werte liefert. Bei Crosstrainer/Rudern/
+ * Krafttraining/Yoga/Schwimmen/Radfahren fehlen entweder echte Distanz (Indoor)
+ * oder die Formel passt biomechanisch nicht.
+ *
+ * Whitelist via Substring-Match (lowercase): "lauf" matched Laufen, Trailrunning,
+ * Laufband, "Laufen (Strasse)", "Laufen (virtuell)"; "trail" matched Trailrunning;
+ * "walk"/"wandern" matchen die Geh-Sportarten.
+ *
+ * Beispiele:
+ *  - "Laufen", "Trailrunning", "Laufband" → true
+ *  - "Wandern", "Walking" → true
+ *  - "Crosstrainer", "Krafttraining", "Yoga", "Rudern" → false
+ */
+fun isVo2MaxSport(sportName: String?): Boolean {
+    if (sportName.isNullOrBlank()) return false
+    val lower = sportName.lowercase()
+    return lower.contains("lauf") ||
+        lower.contains("trail") ||
+        lower.contains("walk") ||
+        lower.contains("wandern")
+}
+
 fun findRestingHrForWorkoutDay(
     snapshots: List<BiomarkerSnapshotEntity>,
     workoutStartMs: Long,

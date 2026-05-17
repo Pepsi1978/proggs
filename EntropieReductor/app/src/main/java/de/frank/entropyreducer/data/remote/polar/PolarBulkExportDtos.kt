@@ -174,7 +174,9 @@ object PolarBulkSportMap {
         "12" to "Wandern",
         "15" to "Snowboard",
         "17" to "Rudern",
-        "18" to "Indoor-Rudern",
+        // Frank-Wunsch 2026-05-17: "Indoor-Rudern" wird als "Crosstrainer" gefuehrt
+        // (sein Polar zeichnet Crosstrainer-Workouts mit diesem Polar-Sportcode auf).
+        "18" to "Crosstrainer",
         "23" to "Crosstrainer",
         "27" to "Funktionelles Training",
         "32" to "Fussball",
