@@ -20,10 +20,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DirectionsRun
+import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
@@ -42,7 +45,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -440,6 +446,10 @@ private fun EffektBar(label: String, value: Double, max: Double, accent: android
 @Composable
 private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
     val cosmos = LocalCosmos.current
+    // Frank-Wunsch 2026-05-17 (Iteration 2): Tap auf Karte oeffnet Vollbild-
+    // Modus mit aktivierten Zoom-Buttons. State lebt hier damit Dialog auch
+    // nach Recomposition der Card stabil bleibt.
+    var fullscreen by remember { mutableStateOf(false) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Text(
@@ -460,15 +470,67 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
                     .background(cosmos.glassBorder.copy(alpha = 0.08f)),
             ) {
                 if (points.size >= 2) {
-                    GpsTrackMap(points = points)
+                    GpsTrackMap(points = points, fullscreen = false)
+                    // Fullscreen-Button oben rechts, halbtransparent damit die
+                    // Karte darunter nicht verdeckt wird. Klickbar ist nur das
+                    // Icon — die Map-Gesten (Pinch/Drag) bleiben darunter aktiv.
+                    IconButton(
+                        onClick = { fullscreen = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(36.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Fullscreen,
+                            contentDescription = "Karte im Vollbild öffnen",
+                            tint = Color.White,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "${points.size} GPS-Punkte · grün = Start, rot = Ziel",
+                text = "${points.size} GPS-Punkte · grün = Start, rot = Ziel · Tap auf Vollbild zum Zoomen",
                 style = MaterialTheme.typography.labelSmall,
                 color = cosmos.textSecondary,
             )
+        }
+    }
+
+    // Vollbild-Overlay als Dialog. usePlatformDefaultWidth=false sorgt dafuer
+    // dass der Dialog die GANZE Screen-Groesse einnimmt (Default waere ~80%).
+    // System-Back schliesst automatisch via onDismissRequest.
+    if (fullscreen && points.size >= 2) {
+        Dialog(
+            onDismissRequest = { fullscreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+            ) {
+                GpsTrackMap(points = points, fullscreen = true)
+                // Schliessen-Button oben links. Halbtransparenter Hintergrund
+                // damit der Button auf Satellit-Bild (helle wie dunkle Bereiche)
+                // sichtbar bleibt.
+                IconButton(
+                    onClick = { fullscreen = false },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .size(48.dp)
+                        .background(Color.Black.copy(alpha = 0.65f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Vollbild schliessen",
+                        tint = Color.White,
+                    )
+                }
+            }
         }
     }
 }
@@ -483,7 +545,7 @@ private fun GpsTrackCard(points: List<Pair<Double, Double>>, city: String?) {
  * (gleicher Akzent wie zuvor im Canvas). Marker fuer Start und Ziel.
  */
 @Composable
-private fun GpsTrackMap(points: List<Pair<Double, Double>>) {
+private fun GpsTrackMap(points: List<Pair<Double, Double>>, fullscreen: Boolean) {
     val latLngs = remember(points) {
         points.map { com.google.android.gms.maps.model.LatLng(it.first, it.second) }
     }
@@ -510,12 +572,19 @@ private fun GpsTrackMap(points: List<Pair<Double, Double>>) {
             mapType = com.google.maps.android.compose.MapType.HYBRID,
         )
     }
-    val uiSettings = remember {
+    // Frank-Wunsch 2026-05-17: Im Vollbild Zoom-Buttons + Kompass sichtbar,
+    // in der eingebetteten Kachel ohne (zu wenig Platz, lenkt vom Trainings-
+    // Detail ab). Gesten (Pinch/Drag/Rotate) sind in beiden Modi aktiv.
+    val uiSettings = remember(fullscreen) {
         com.google.maps.android.compose.MapUiSettings(
-            zoomControlsEnabled = false,
+            zoomControlsEnabled = fullscreen,
             myLocationButtonEnabled = false,
-            mapToolbarEnabled = false,
-            compassEnabled = false,
+            mapToolbarEnabled = fullscreen,
+            compassEnabled = fullscreen,
+            zoomGesturesEnabled = true,
+            scrollGesturesEnabled = true,
+            rotationGesturesEnabled = true,
+            tiltGesturesEnabled = fullscreen,
         )
     }
     val accent = CosmosColors.Warning
