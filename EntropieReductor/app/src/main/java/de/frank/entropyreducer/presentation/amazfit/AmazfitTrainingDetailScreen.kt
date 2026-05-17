@@ -101,13 +101,32 @@ fun AmazfitTrainingDetailScreen(
     // Labels die manuell editiert wurden — wird an alle StatsGrid-Aufrufe
     // weitergereicht. Labels MUESSEN exakt mit den Stat-Card-Labels
     // uebereinstimmen.
-    val editedLabels: Set<String> = remember(w?.manualOverrideFields) {
-        w?.manualOverrideFields
+    //
+    // Fallback fuer Bestandsdaten: Trainings die VOR Einfuehrung der
+    // manualOverrideFields-Spalte editiert wurden haben manualOverridesMs
+    // gesetzt aber manualOverrideFields == null. Fuer diese zeigen wir alle
+    // 9 editierbaren Labels als geschuetzt — wir wissen nicht WELCHE der
+    // Felder Frank damals editiert hat, also markieren wir alle damit
+    // wenigstens sichtbar ist dass dieses Training manuelle Edits hat.
+    val editedLabels: Set<String> = remember(w?.manualOverrideFields, w?.manualOverridesMs) {
+        val explicit = w?.manualOverrideFields
             ?.split(",")
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?.toSet()
-            ?: emptySet()
+        if (!explicit.isNullOrEmpty()) {
+            explicit
+        } else if (w?.manualOverridesMs != null) {
+            setOf(
+                "Ø Pace", "Maximale Pace",
+                "Ø Puls", "Maximalpuls",
+                "Höhe ↑", "Höhe ↓",
+                "Schrittfrequenz", "Schrittlänge",
+                "Kalorien",
+            )
+        } else {
+            emptySet()
+        }
     }
 
     CosmosScaffold(
