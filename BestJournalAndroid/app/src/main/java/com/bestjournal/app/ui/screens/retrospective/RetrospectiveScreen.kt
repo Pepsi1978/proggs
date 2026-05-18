@@ -671,6 +671,8 @@ fun RetrospectiveScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                com.bestjournal.app.ui.components.AiOutputDisclaimer()
             }
         }
     }

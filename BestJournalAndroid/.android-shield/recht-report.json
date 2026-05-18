@@ -6,8 +6,17 @@
 		"strings": "29007fdc1187",
 		"uebersetzer": "e7205988a2f3"
 	},
-	"auditedLanguages": ["de"],
-	"auditedJurisdictions": ["DE", "AT", "CH", "EU", "GB", "US"],
+	"auditedLanguages": [
+		"de"
+	],
+	"auditedJurisdictions": [
+		"DE",
+		"AT",
+		"CH",
+		"EU",
+		"GB",
+		"US"
+	],
 	"generatedAt": "2026-05-18",
 	"appVersion": "0.21.8",
 	"synthesizerNotes": "Aggregiert aus Worker B1 (paywall/churn), B2 (legal-docs/privacy/consent), B3 (marketing/advertising). 3 Duplikate entfernt (4-vs-5-Profil-Cluster: T-PW-001 und T-PW-002 als Verweise auf AM-Cluster konsolidiert). openFindingsCount berechnet ohne deadUrls und COMPLIANT-Eintraege.",
@@ -115,7 +124,11 @@
 				"currentText": "bei 4 Profilen also bis zu 600 pro Tag",
 				"context": "AiLimitsDialog — Rechenlogik (ai_limits_dialog_body). Steht im Widerspruch zu anderen Strings die 5 Profile nennen. Dieser String ist als einziger mit konkreter Rechenlogik (150 × 4 = 600) vermutlich korrekt.",
 				"rationale": "Drei verschiedene Screens (Settings, Churn, AiLimitsDialog) zeigen verschiedene Zahlen fuer dasselbe Feature. Dieser String sagt '4', churn_offer_feature_perspectives sagt '5'. Solange Diskrepanz besteht: §5 UWG Irreführungsverbot. HINWEIS: Primaere Behandlung via advertisingMismatch-Cluster AM-001/AM-002/AM-003 (4-vs-5-Problem). Dieser T-003 ist der Referenz-String mit korrekter Rechenlogik.",
-				"relatedFindingIds": ["AM-001", "AM-002", "AM-003"],
+				"relatedFindingIds": [
+					"AM-001",
+					"AM-002",
+					"AM-003"
+				],
 				"invasivityLevel": "text-only",
 				"suggestedFixes": [
 					{
@@ -456,7 +469,9 @@
 				"codeReality": "4 KI-Profile im Code (AiRateLimiter).",
 				"gap": "Churn-Screen behauptet 5; Code liefert 4. Churn-Kontext ist hoechstes Risiko: Nutzer erwaegt aktiv Kuendigung, jedes falsche Versprechen zur Retention ist unlautere Geschaeftspraxis.",
 				"affectsAllScreens": false,
-				"affectedStringKeys": ["churn_offer_feature_perspectives"],
+				"affectedStringKeys": [
+					"churn_offer_feature_perspectives"
+				],
 				"norm": "UWG §5 Abs. 1 Nr. 1, UWG §4a (aggressive Geschäftspraktiken im Churn-Kontext), EU UCPD Art. 6",
 				"rationale": "Im Churn-Kontext prüfen Nutzer Aussagen besonders sorgfältig. Ein durch '5 Profile' Versprechen gehaltener Nutzer der dann nur 4 findet hat einen konkreten Irrefuehrungsanspruch. Hoechstes Risikovorkommen des 4-vs-5-Problems.",
 				"suggestedFixes": [
@@ -497,7 +512,9 @@
 				"codeReality": "4 KI-Profile im Code.",
 				"gap": "Onboarding ist erster Eindruck. '5 Perspektiven' als Sektions-Titel waehrend Onboarding setzt Basiserwartung von 5 die nie erfuellt wird.",
 				"affectsAllScreens": false,
-				"affectedStringKeys": ["onboarding_perspectives_title"],
+				"affectedStringKeys": [
+					"onboarding_perspectives_title"
+				],
 				"norm": "UWG §5 Abs. 1 Nr. 1, Play Store Misrepresentation Policy (Onboarding-Aussagen gleichwertig mit Store-Listing-Aussagen)",
 				"rationale": "First-Use Onboarding hat hoechstes Prüfungsgewicht. Kaufentscheidung/Trial-Entscheidung wird hier direktest beeinflusst. '5 Perspektiven' als Sektions-Titel bei 4 tatsaechlichen Profilen ist direkter §5-UWG-Verstoß.",
 				"suggestedFixes": [
@@ -901,7 +918,10 @@
 				"description": "ai_generated_badge ('KI-generiert') und ai_generated_tooltip existieren als String-Ressourcen. Ob das Badge auf ALLEN KI-generierten Inhalten angezeigt wird (Dashboard, Retrospektiven, ImproveText, TTS, Zusammenfassungen) ist nicht aus Strings allein verifizierbar.",
 				"legalBasis": "EU AI Act Art. 50 Abs. 1 (Transparency obligations), ab Anwendbarkeit 2025/2026",
 				"evidence": {
-					"strings": ["ai_generated_badge", "ai_generated_tooltip"],
+					"strings": [
+						"ai_generated_badge",
+						"ai_generated_tooltip"
+					],
 					"concern": "Strings existieren, aber Code-Review noetig um Vollabdeckung zu bestaetigen"
 				},
 				"recommendation": "Code-Review in DashboardViewModel, RetrospectiveViewModel, ImproveTextUseCase, SummarizeUseCase: Sicherstellen dass ai_generated_badge auf allen KI-Ausgabe-Bloecken angezeigt wird.",
@@ -928,12 +948,30 @@
 				"sourceWorkerId": "URL-001",
 				"url": "https://pepsi1978.github.io/proggs/bestjournal/",
 				"stringKey": "settings_legal_online_url",
-				"usedFor": ["Privacy Policy", "Impressum", "AGB/Nutzungsbedingungen"],
+				"usedFor": [
+					"Privacy Policy",
+					"Impressum",
+					"AGB/Nutzungsbedingungen"
+				],
 				"category": "legal-hub",
-				"checkedByUrlChecker": false,
-				"needsHttpCheck": true,
-				"concern": "Einzige URL fuer alle 3 Pflichtdokumente. Fehlende Sub-Anker fuer direkten Zugriff auf einzelne Dokumente. Nicht im ConsentScreen verlinkt. Falls URL dead: alle 3 Pflichtdokumente nicht erreichbar = kritisches Compliance-Problem.",
-				"queuedForPhase": "1B-late (url-checker subagent)"
+				"checkedByUrlChecker": true,
+				"needsHttpCheck": false,
+				"concern": "Einzige URL fuer alle 3 Pflichtdokumente. Fehlende Sub-Anker fuer direkten Zugriff auf einzelne Dokumente. Nicht im ConsentScreen verlinkt. AGB/Nutzungsbedingungen noch nicht auf der Seite.",
+				"queuedForPhase": "completed",
+				"httpStatus": 200,
+				"httpStatusOk": true,
+				"containsPrivacyPolicy": true,
+				"containsImprint": true,
+				"containsTerms": false,
+				"availableAnchors": [],
+				"separatePages": [
+					"privacy-en.html",
+					"privacy-de.html",
+					"privacy-ko.html",
+					"account-deletion.html"
+				],
+				"checkTimestamp": "2026-05-18T19:00:00Z",
+				"recommendation": "URL erreichbar (HTTP 200), Privacy Policy und Impressum sind vorhanden. AGB/Nutzungsbedingungen fehlen auf der Seite. Fuer Deep-Linking HTML-Anchors (#impressum, #datenschutz, #agb) ergaenzen und AGB-Dokument nachpflegen."
 			}
 		],
 		"playStorePolicies": [

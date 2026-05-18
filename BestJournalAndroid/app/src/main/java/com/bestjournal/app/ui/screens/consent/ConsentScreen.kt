@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.consent
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -372,6 +375,11 @@ fun ConsentScreen(
 
                 Spacer(Modifier.height(10.dp))
 
+                // Inline URL footer — opens legal docs directly in browser
+                ConsentLegalFooter()
+
+                Spacer(Modifier.height(6.dp))
+
                 Text(
                     text = stringResource(R.string.consent_footer_version),
                     style = MaterialTheme.typography.labelSmall.copy(
@@ -540,5 +548,101 @@ private fun DocLinkChip(label: String, onClick: () -> Unit) {
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
         )
+    }
+}
+
+/**
+ * Inline footer row with three browser-links to legal documents.
+ * Locale-aware: picks de/en/ko URL strings depending on device language,
+ * with German as fallback. Opens the URL via ACTION_VIEW intent.
+ */
+@Composable
+private fun ConsentLegalFooter() {
+    val context = LocalContext.current
+    val locale = java.util.Locale.getDefault().language
+
+    fun urlFor(de: Int, en: Int, ko: Int): String = stringResource(
+        when (locale) {
+            "en" -> en
+            "ko" -> ko
+            else -> de
+        }
+    )
+
+    val datenschutzUrl = urlFor(
+        R.string.legal_url_datenschutz_de,
+        R.string.legal_url_datenschutz_en,
+        R.string.legal_url_datenschutz_ko,
+    )
+    val impressumUrl = urlFor(
+        R.string.legal_url_impressum_de,
+        R.string.legal_url_impressum_en,
+        R.string.legal_url_impressum_ko,
+    )
+    val agbUrl = urlFor(
+        R.string.legal_url_agb_de,
+        R.string.legal_url_agb_en,
+        R.string.legal_url_agb_ko,
+    )
+
+    fun openUrl(url: String) {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        TextButton(
+            onClick = { openUrl(datenschutzUrl) },
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.consent_footer_link_datenschutz),
+                color = OnSurfaceMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
+            )
+        }
+        Text(
+            text = "·",
+            color = OnSurfaceMuted.copy(alpha = 0.5f),
+            fontSize = 11.sp,
+        )
+        TextButton(
+            onClick = { openUrl(impressumUrl) },
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.consent_footer_link_impressum),
+                color = OnSurfaceMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
+            )
+        }
+        Text(
+            text = "·",
+            color = OnSurfaceMuted.copy(alpha = 0.5f),
+            fontSize = 11.sp,
+        )
+        TextButton(
+            onClick = { openUrl(agbUrl) },
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.consent_footer_link_agb),
+                color = OnSurfaceMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
+            )
+        }
     }
 }

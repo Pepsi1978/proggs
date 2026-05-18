@@ -1450,6 +1450,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 onClick = { selectedAdvice = Pair(advice, catName) },
                             )
                         }
+
+                        item(key = "ai_output_disclaimer") {
+                            com.bestjournal.app.ui.components.AiOutputDisclaimer()
+                        }
                     }
                 }
             }

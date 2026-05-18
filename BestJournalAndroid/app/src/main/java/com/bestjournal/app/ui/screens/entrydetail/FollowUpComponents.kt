@@ -208,6 +208,13 @@ fun FollowUpInlineCard(
                     }
                 }
             }
+            // EU AI Act Art. 50 — KI-generiert Badge fuer Follow-up
+            if (fuHasImproved && selectedTabFu == 0) {
+                com.bestjournal.app.ui.components.AiGeneratedBadge(
+                    compact = true,
+                    modifier = androidx.compose.ui.Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -277,6 +284,10 @@ fun FollowUpInlineCard(
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
+            }
+            // HWG §3 — Kein Therapie-Ersatz (nur wenn KI-Inhalt sichtbar)
+            if (fuHasImproved && selectedTabFu == 0) {
+                com.bestjournal.app.ui.components.AiOutputDisclaimer()
             }
         }
     }

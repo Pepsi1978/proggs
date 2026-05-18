@@ -1485,4 +1485,24 @@
     <string name="settings_legal_online_label">Online-Version:</string>
     <!-- Public URL of the legal documents page on GitHub Pages. Same in every language. -->
     <string name="settings_legal_online_url" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/</string>
+
+    <!-- Legal-Dokument-Deep-Links auf docs/bestjournal/ (GitHub Pages) -->
+    <string name="legal_url_datenschutz_de" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/privacy-de.html</string>
+    <string name="legal_url_datenschutz_en" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/privacy-en.html</string>
+    <string name="legal_url_datenschutz_ko" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/privacy-ko.html</string>
+    <string name="legal_url_agb_de" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/agb-de.html</string>
+    <string name="legal_url_agb_en" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/agb-en.html</string>
+    <string name="legal_url_agb_ko" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/agb-ko.html</string>
+    <string name="legal_url_impressum_de" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/imprint-de.html</string>
+    <string name="legal_url_impressum_en" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/imprint-en.html</string>
+    <string name="legal_url_impressum_ko" translatable="false">https://pepsi1978.github.io/proggs/bestjournal/imprint-ko.html</string>
+
+    <!-- AI Output Health Disclaimer (eingeblendet unter jedem KI-Ausgabe-Bereich) -->
+    <string name="ai_output_health_disclaimer">Keine Therapie — ersetzt keine professionelle Beratung.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ist ein Tagebuch und kein Therapieangebot. KI-Analysen sind Anregungen zur Selbstreflexion und ersetzen keine professionelle psychologische oder medizinische Beratung. Bei akuten Problemen wende dich an eine Fachperson oder die Krisenhilfe in deinen Einstellungen.</string>
+
+    <!-- ConsentScreen Inline-Link-Footer (MD-001/002/003) -->
+    <string name="consent_footer_link_datenschutz">Datenschutz</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">Nutzungsbedingungen</string>
 </resources>

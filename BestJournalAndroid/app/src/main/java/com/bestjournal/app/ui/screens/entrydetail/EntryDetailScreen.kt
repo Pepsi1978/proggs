@@ -338,7 +338,10 @@ fun EntryDetailScreen(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // EU AI Act Art. 50 — KI-generiert Label (Pflicht ab 02.08.2026)
+                            com.bestjournal.app.ui.components.AiGeneratedBadge(compact = true)
+                            Spacer(modifier = Modifier.height(12.dp))
                             entry.summary
                                 .lines()
                                 .filter { it.trimStart().startsWith("\u2022") }
@@ -385,6 +388,8 @@ fun EntryDetailScreen(
                                         }
                                     }
                                 }
+                            // HWG §3 — Kein Therapie-Ersatz
+                            com.bestjournal.app.ui.components.AiOutputDisclaimer()
                         }
                     }
                 }
@@ -425,6 +430,13 @@ fun EntryDetailScreen(
                                     else MaterialTheme.colorScheme.outline,
                             )
                         }
+                    }
+                    // EU AI Act Art. 50 — KI-generiert Badge nur wenn Verbesserter-Tab aktiv
+                    if (hasImproved && selectedTab == 0) {
+                        com.bestjournal.app.ui.components.AiGeneratedBadge(
+                            compact = true,
+                            modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
                     }
                 }
 
@@ -618,6 +630,10 @@ fun EntryDetailScreen(
                                     color = NeonRed,
                                 )
                             }
+                        }
+                        // HWG §3 — Kein Therapie-Ersatz (nur wenn KI-Inhalt sichtbar)
+                        if (hasImproved && selectedTab == 0) {
+                            com.bestjournal.app.ui.components.AiOutputDisclaimer()
                         }
                     }
                 }

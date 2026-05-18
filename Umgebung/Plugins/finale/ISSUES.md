@@ -319,4 +319,43 @@ Quelldateien werden mit absolutem Pfad referenziert.
 
 ---
 
+## FIN-014 — Roentgen-Skill scannt `app/src/main/assets/` nicht
+
+- **Severity:** kritisch (4 von 6 MissingDocs-Findings waren false positives)
+- **Status:** offen — zu fixen beim Plugin-Update
+- **Entdeckt:** 2026-05-18, Phase 2-C Bundle 4 Vorbereitung
+- **Symptom:** Roentgen-Skill und in der Folge der Rechtssicherheits-Skill
+  haben den `app/src/main/assets/legal/`-Ordner komplett uebersehen. Die App
+  hat dort **81 Legal-HTML-Dateien** (27 Sprachen × 3 Dokumente: PRIVACY,
+  IMPRESSUM/IMPRINT, NUTZUNGSBEDINGUNGEN/TERMS). Roentgen scannt aber nur
+  Quellcode (`*.kt`), `AndroidManifest.xml`, `build.gradle*` und
+  `res/values/strings.xml`. Folge: CF-005 (Privacy fehlt), MD-001 (Privacy
+  Hub-URL only), MD-002 (Impressum nur Hub-URL), MD-003 (AGB fehlt!) waren
+  alle Fehlbefunde. MD-003 wurde sogar als 🟥 eskaliert — tatsaechlich
+  existieren die AGB unter `assets/legal/de/NUTZUNGSBEDINGUNGEN.html` und
+  in 26 weiteren Sprachen.
+- **Ursache:** Roentgen-Skill hat keinen Inventory-Step fuer
+  `assets/`-Ordner. Web-Inhalte, Legal-Dokumente, Marketing-Texte und
+  Help-Dateien werden oft als HTML/MD in `assets/` ausgeliefert. Der Skill
+  ignoriert das vollstaendig.
+- **Korrekturvorschlag (Plugin-Update):**
+  1. In `app-roentgen/SKILL.md` einen Pflicht-Inventory-Step `layer-1.5
+     assets-scan` einfuegen:
+     - Glob `app/src/main/assets/**/*.{html,htm,md,txt}` ausfuehren.
+     - Pro File: Sprach-Detektion (aus Pfad-Locale-Segment), Doktyp-
+       Detektion (privacy, imprint, terms, help, marketing, sonstige).
+     - Diese Inventar-Liste in `roentgen-report.json` unter `layer1_5_assets`
+       einbauen.
+  2. Im Recht-Skill bei `findings.missingDocs`-Generierung VORHER pruefen ob
+     der Doktyp im Inventar steht. Falls ja: Finding entweder weglassen
+     ODER auf „Doc existiert, evtl. Deep-Link-Verbesserung" downgraden.
+  3. Synthesizer-Logik ergaenzen: bei `missingDocs`-Findings einen
+     `assetExistenceCheck`-Step der gegen das Inventar abprueft.
+- **Betroffene Dateien:**
+  - `~/.claude/skills/app-roentgen/SKILL.md` (Layer-1.5 hinzufuegen)
+  - `~/.claude/skills/app-roentgen/scripts/feature-scan.sh` (Assets-Glob)
+  - `~/.claude/skills/rechtssicherheit/SKILL.md` (missingDocs-Verifikation)
+
+---
+
 <!-- Weitere Issues werden hier waehrend des Laufs angehaengt. -->

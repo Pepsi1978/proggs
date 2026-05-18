@@ -262,3 +262,18 @@ App-Architektur-Klarstellung von Frank (relevant für Phase 3 + zukünftige Audi
 - Umlaut-Verifikation: OK
 - Counter-Update: fixedThisRun 14->22, skippedThisRun 0->1, openFindingsCount 15->6
 - Status:            completed
+
+---
+
+## 2026-05-18T19:00:00Z · Phase 1B-late · URL-Checker URL-001
+
+- Subagent: url-checker (general-purpose, Sonnet 4.6)
+- URL: https://pepsi1978.github.io/proggs/bestjournal/
+- HTTP-Status: 200 OK
+- Privacy Policy auf Seite: ja (separate Seiten: privacy-en.html, privacy-de.html, privacy-ko.html)
+- Impressum auf Seite: ja (Kontaktadresse Frank Barwandt vorhanden)
+- AGB/Nutzungsbedingungen auf Seite: nein (fehlen komplett)
+- Verfügbare Anchors: keine (#impressum, #datenschutz, #agb nicht vorhanden)
+- Separate Seiten: privacy-en.html, privacy-de.html, privacy-ko.html, account-deletion.html
+- Empfehlung: URL erreichbar und grundlegend nutzbar. AGB-Dokument muss noch ergänzt werden. HTML-Anchors für Deep-Linking empfohlen (#impressum, #datenschutz, #agb).
+- recht-report.json Update: URL-001 checkedByUrlChecker=true, httpStatus=200, containsPrivacyPolicy=true, containsImprint=true, containsTerms=false
