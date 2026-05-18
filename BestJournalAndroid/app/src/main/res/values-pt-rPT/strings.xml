@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Melhoria diária de texto por IA</string>
-    <string name="settings_premium_feature_improve_desc">Cada entrada fica mais expressiva</string>
+    <string name="settings_premium_feature_improve_desc">A IA melhora as tuas entradas a pedido.</string>
     <string name="settings_premium_feature_dashboard">Análises diárias no painel</string>
-    <string name="settings_premium_feature_dashboard_desc">O teu painel cresce junto contigo</string>
-    <string name="settings_premium_feature_5_perspectives">5 perspectivas de IA</string>
+    <string name="settings_premium_feature_dashboard_desc">O teu painel cresce com as tuas entradas.</string>
+    <string name="settings_premium_feature_5_perspectives">Todos os perfis de IA (4 predefinidos + ilimitados próprios)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Da clareza ao autoconhecimento</string>
     <string name="settings_premium_feature_reviews">Retrospetivas semanal, mensal e anual</string>
     <string name="settings_premium_feature_reviews_desc">A IA conta sua história</string>
     <string name="settings_premium_feature_patterns">Detecção de padrões</string>
-    <string name="settings_premium_feature_patterns_desc">A IA encontra conexões que não percebes</string>
+    <string name="settings_premium_feature_patterns_desc">A IA torna visíveis padrões e ligações nas tuas entradas.</string>
     <string name="settings_premium_feature_pdf">Exportar PDF com fotos</string>
     <string name="settings_premium_feature_pdf_desc">Todas as entradas com fotos como documento</string>
     <string name="settings_premium_feature_voice">Reconhecimento de voz mais preciso</string>
@@ -817,10 +817,10 @@
     <string name="onboarding_goals_select">Escolha uma ou mais metas</string>
     <string name="onboarding_how_step3_title">Adicione fotos</string>
     <string name="onboarding_how_title">É bem simples</string>
-    <string name="onboarding_perspectives_title">5 perspectivas sobre\na tua vida</string>
+    <string name="onboarding_perspectives_title">Diferentes perspectivas sobre\na tua vida</string>
     <string name="onboarding_premium_feature_pdf">Exportar PDF com fotos, salve as tuas entradas como documento</string>
     <string name="onboarding_premium_profiles">5 perfis inteligentes de painel para uma visão profunda da tua vida</string>
-    <string name="onboarding_try_premium">Experimente Premium por 8 dias</string>
+    <string name="onboarding_try_premium">8 dias grátis — depois a partir de 3,99 €/mês</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -837,7 +837,7 @@
     <string name="paywall_yearly_note">Depois %1$s por ano\nCancelável a qualquer momento durante o teste</string>
     <string name="paywall_most_popular">Mais popular</string>
     <string name="paywall_monthly_plan">Subscrição mensal, %1$s por mês</string>
-    <string name="paywall_yearly_savings">Economize %1$d\u00A0%% em relação à mensal, cancelável a qualquer momento</string>
+    <string name="paywall_yearly_savings">Poupa %1$d%% em relação à subscrição mensal — cancelável a qualquer momento até ao final do período.</string>
     <string name="paywall_lifetime_title">Compra única</string>
     <string name="paywall_lifetime_desc">Paga uma vez, utiliza tudo permanentemente</string>
     <string name="paywall_lifetime_note">Sem subscrição, sem renovação</string>
@@ -854,8 +854,8 @@
     <string name="paywall_feature_profiles">Perfis de análise personalizados ilimitados</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Encontra sua calma interior</string>
-    <string name="paywall_headline_stress_sub">Reconhece o que te pesa antes que te tome</string>
+    <string name="paywall_headline_stress">Mais clareza no dia a dia</string>
+    <string name="paywall_headline_stress_sub">Reconhece o que te ocupa diariamente e coloca-o em palavras.</string>
     <string name="paywall_headline_clarity">Entenda-se melhor</string>
     <string name="paywall_headline_clarity_sub">A IA reconhece padrões que passam despercebidos</string>
     <string name="paywall_headline_growth">Descobre o que há de bom em cada dia</string>
@@ -870,7 +870,7 @@
     <string name="paywall_exit_special_offer">Temos uma oferta\nespecial para ti:</string>
     <string name="paywall_exit_discount">Desconto por %1$d meses</string>
     <string name="paywall_exit_price_comparison">Só %1$s em vez de %2$s por mês</string>
-    <string name="paywall_exit_start_discount">Iniciar subscrição mensal com 50\u00A0% de desconto</string>
+    <string name="paywall_exit_start_discount">Com obrigação de pagamento — 2 meses a metade do preço</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -896,9 +896,9 @@
     <string name="churn_sorry_title">Que pena que estás a sair</string>
     <string name="churn_sorry_body">Antes de cancelar, podes contar por quê? Isso ajuda nós a melhorar o app.</string>
     <string name="churn_exclusive_offer">Oferta exclusiva</string>
-    <string name="churn_offer_subtitle">Só para ti, porque és importante</string>
+    <string name="churn_offer_subtitle">A nossa oferta para ti</string>
     <string name="churn_offer_feature_ai">Análises de IA todos os dias</string>
-    <string name="churn_offer_feature_perspectives">Todas as 5 perspectivas</string>
+    <string name="churn_offer_feature_perspectives">Todos os perfis de IA (4 predefinidos + ilimitados próprios)</string>
     <string name="churn_offer_feature_voice">Reconhecimento de voz Premium</string>
     <string name="churn_offer_auto_renew">Se renova automaticamente, cancelável a qualquer momento</string>
     <string name="churn_accept_offer">Aceitar a oferta</string>
@@ -918,7 +918,7 @@ Com Premium: até 150 por dia.</string>
     <string name="ai_limit_yearly">Subscrição anual, %1$s/ano (economize 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Não, obrigado, continuar sem IA</string>
     <string name="ai_banner_title">O teu diário conta com o apoio da IA</string>
-    <string name="ai_banner_body">• Os textos ditados são melhorados automaticamente\n• Resumos para cada entrada\n• Conselhos de vida inteligentes a partir dos seus padrões\n• Tudo incluído no seu período de teste gratuito</string>
+    <string name="ai_banner_body">• Os textos ditados são melhorados automaticamente\n• Resumos para cada entrada\n• Conselhos de vida inteligentes a partir dos teus padrões\n• Tudo incluído no teu período de teste gratuito Todas as saídas de IA são sugestões, não aconselhamento profissional.</string>
     <string name="cd_mic_start">Iniciar gravação</string>
     <string name="cd_mic_stop">Parar gravação</string>
     <string name="entry_improve_limit_daily">Atingiste o limite diário. Amanhã há mais!</string>
@@ -1338,7 +1338,21 @@ O que queres fazer?</string>
     <string name="journal_improve">Melhorar texto</string>
     <string name="journal_state_improving">A melhorar…</string>
     <string name="journal_state_transcribing">A transcrever…</string>
-    <string name="paywall_consent_dialog_body">Após concluíres uma subscrição ou compra, tens em princípio 14 dias de direito de retratação.\n\nPara que possas usar as funcionalidades Premium imediatamente, começamos a disponibilizá-las logo após a tua compra. Com o teu consentimento abaixo, renuncias ao direito de retratação de 14 dias com conhecimento das consequências.\n\nSem este consentimento não podemos ativar as funcionalidades Premium de imediato.</string>
+    <string name="paywall_consent_dialog_body">Direito de rescisão segundo o §355 BGB:
+
+Tens o direito de rescindir este contrato no prazo de 14 dias sem indicar qualquer motivo.
+
+O prazo de rescisão é de 14 dias a partir da data de celebração do contrato.
+
+Para exerceres o teu direito de rescisão, deves informar-nos (Frank Barwandt, Stettiner Straße 41, 35410 Hungen, Alemanha, dev.app.support@gmail.com) da tua decisão de rescindir este contrato através de uma declaração inequívoca (por exemplo, uma carta enviada por correio ou e-mail).
+
+Podes utilizar o formulário de rescisão em https://ec.europa.eu/consumers/odr, mas tal não é obrigatório.
+
+Para cumprires o prazo de rescisão, é suficiente que envies a comunicação relativa ao exercício do direito de rescisão antes de expirar o prazo de rescisão.
+
+Consequências da rescisão segundo o §356 BGB:
+
+Se rescindires este contrato, devolveremos todos os pagamentos que recebemos de ti, incluindo as despesas de entrega (exceto os custos adicionais resultantes da escolha de um tipo de entrega diferente do tipo de entrega padrão mais económico que oferecemos), sem demora e o mais tardar no prazo de 14 dias a partir do dia em que recebermos a notificação da tua rescisão deste contrato.</string>
     <string name="paywall_consent_dialog_cancel">Cancelar</string>
     <string name="paywall_consent_dialog_checkbox">Concordo que a disponibilização das funcionalidades Premium começa imediatamente após a encomenda. Sei que com isso perco o meu direito de retratação de 14 dias.</string>
     <string name="paywall_consent_dialog_confirm">Subscrever com pagamento agora</string>
@@ -1386,7 +1400,7 @@ O que queres fazer?</string>
     <string name="paywall_monthly_label">Mensal</string>
     <string name="paywall_restore_button">Restaurar compras</string>
     <string name="paywall_subscribe_button">Subscrever</string>
-    <string name="paywall_subtitle">Tira partido de todos os benefícios Premium</string>
+    <string name="paywall_subtitle">Desbloqueia todas as funcionalidades Premium</string>
     <string name="paywall_title">Atualizar para Premium</string>
     <string name="paywall_yearly_label">Anual</string>
     <string name="prompt_char_count_label">%1$d caracteres</string>
@@ -1405,9 +1419,13 @@ O que queres fazer?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Quota diária de IA generosa para utilização intensiva.</string>
+    <string name="ai_limits_disclaimer">Quota diária de IA para utilização intensiva.</string>
     <string name="ai_limits_dialog_title">Como funciona a quota diária de IA?</string>
-    <string name="ai_limits_dialog_body" formatted="false">COM SUBSCRIÇÃO PREMIUM\n\nPor dia, tens disponível:\n• Até 150 análises de dashboard por perfil de IA (com 4 perfis, até 600 por dia)\n• Até 150 melhorias de texto\n\nComo funciona em detalhe:\n• Pedidos 1 a 30: na qualidade de IA mais elevada\n• Pedidos 31 a 100: na qualidade padrão rápida\n• No 101.º pedido: pausa única de 30 min\n• Pedidos 101 a 150: qualidade padrão rápida\n• A partir do 151.º: sem mais pedidos até amanhã\n\nAlém disso, para todos os utilizadores:\n• No máximo 50 pedidos de IA por hora — depois pausa de 5 min\n\nQuando são renovadas as quotas?\nTodos os dias à meia-noite (hora local) começa uma nova quota completa.\n\n──────────\n\nSEM SUBSCRIÇÃO\n\n• 5 análises de dashboard por semana por perfil\n• 5 melhorias de texto por semana\n• Sempre na qualidade padrão rápida\n• Renovadas todas as segundas-feiras à meia-noite (hora local)\n\n──────────\n\nMais de 99% dos utilizadores provavelmente nunca encontrarão estes limites.</string>
+    <string name="ai_limits_dialog_body">150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.
+
+Reseta à meia-noite (hora local).
+
+A maioria dos utilizadores não chegará a estes limites no dia a dia.</string>
     <string name="ai_limits_dialog_close">Compreendido</string>
     <string name="theme_neutral">Neutro</string>
     <string name="theme_profile">Cor do perfil — cor do perfil do dashboard</string>
@@ -1416,4 +1434,20 @@ O que queres fazer?</string>
     <string name="theme_one_dark">Ateliê</string>
     <string name="theme_nord">Noite Polar</string>
     <string name="theme_gruvbox">Âmbar</string>
+
+    <string name="permission_rationale_microphone">Para poderes ditar as tuas entradas do diário por voz, precisamos de acesso ao teu microfone.</string>
+    <string name="permission_rationale_camera">Para poderes adicionar fotografias às tuas entradas, precisamos de acesso à tua câmara.</string>
+    <string name="permission_rationale_location">Para poderes dar contexto de localização às tuas entradas, precisamos da localização aproximada. Podes recusar a qualquer momento ou desativar mais tarde.</string>
+    <string name="permission_rationale_notifications">Para te podermos lembrar da tua escrita diária, precisamos de permissão para enviar notificações.</string>
+    <string name="consent_info_system_backup_title">Cópia de segurança do sistema Android</string>
+    <string name="consent_info_system_backup_body">Se tiveres a cópia de segurança do sistema Android ativada nas definições do dispositivo, o Android faz cópias de segurança automáticas dos dados do teu diário na área de backup da tua conta Google. Podes desativar isso a qualquer momento nas definições do dispositivo — consulta a política de privacidade para mais detalhes.</string>
+    <string name="settings_open_system_backup_settings_label">Gerir cópia de segurança do sistema Android</string>
+    <string name="settings_open_system_backup_settings_desc">Abre as definições do sistema Android onde podes ativar ou desativar a cópia de segurança automática do Best Journal.</string>
+    <string name="error_no_backup_settings_available">Definições de backup não disponíveis neste dispositivo.</string>
+    <string name="consent_footer_link_datenschutz">Privacidade</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">Termos de Utilização</string>
+    <string name="ai_output_health_disclaimer">Não é terapia — não substitui aconselhamento profissional.</string>
+    <string name="ai_output_health_disclaimer_long">O Best Journal é um diário e não um serviço de terapia. As análises de IA são sugestões para a autorreflexão e não substituem aconselhamento psicológico ou médico profissional. Em caso de problemas urgentes, contacta um profissional de saúde ou a linha de apoio em crise nas tuas definições.</string>
+
 </resources>

@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">ปรับปรุงข้อความ AI ทุกวัน</string>
-    <string name="settings_premium_feature_improve_desc">บันทึกทุกชิ้นสื่อสารได้ดีขึ้น</string>
+    <string name="settings_premium_feature_improve_desc">AI ปรับปรุงบันทึกของคุณตามต้องการ</string>
     <string name="settings_premium_feature_dashboard">การวิเคราะห์แดชบอร์ดทุกวัน</string>
-    <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดเติบโตไปกับคุณ</string>
-    <string name="settings_premium_feature_5_perspectives">5 มุมมอง AI</string>
+    <string name="settings_premium_feature_dashboard_desc">แดชบอร์ดของคุณเติบโตไปพร้อมกับบันทึก</string>
+    <string name="settings_premium_feature_5_perspectives">โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)</string>
     <string name="settings_premium_feature_5_perspectives_desc">ตั้งแต่ความชัดเจนถึงการรู้จักตนเอง</string>
     <string name="settings_premium_feature_reviews">ทบทวนรายสัปดาห์ เดือน และปี</string>
     <string name="settings_premium_feature_reviews_desc">AI เล่าเรื่องของคุณ</string>
     <string name="settings_premium_feature_patterns">รู้จักแพตเทิร์น</string>
-    <string name="settings_premium_feature_patterns_desc">AI พบความเชื่อมโยงที่คุณไม่สังเกต</string>
+    <string name="settings_premium_feature_patterns_desc">AI ช่วยให้เห็นรูปแบบและความเชื่อมโยงในบันทึกของคุณ</string>
     <string name="settings_premium_feature_pdf">ส่งออก PDF พร้อมภาพ</string>
     <string name="settings_premium_feature_pdf_desc">บันทึกพร้อมภาพเป็นเอกสาร</string>
     <string name="settings_premium_feature_voice">การรู้จำเสียงแม่นยำกว่า</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">เลือกหนึ่งหรือหลายเป้าหมาย</string>
     <string name="onboarding_how_step3_title">เพิ่มภาพถ่าย</string>
     <string name="onboarding_how_title">ง่ายแค่นี้</string>
-    <string name="onboarding_perspectives_title">5 มุมมองต่อ\nชีวิตของคุณ</string>
+    <string name="onboarding_perspectives_title">มุมมองที่หลากหลายต่อ\nชีวิตของคุณ</string>
     <string name="onboarding_premium_feature_pdf">ส่งออก PDF พร้อมภาพ เก็บบันทึกเป็นเอกสาร</string>
     <string name="onboarding_premium_profiles">5 โปรไฟล์แดชบอร์ดอัจฉริยะให้มุมมองลึก</string>
-    <string name="onboarding_try_premium">ทดลอง Premium 8 วัน</string>
+    <string name="onboarding_try_premium">ฟรี 8 วัน — จากนั้นเริ่มต้น 3.99 €/เดือน</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,7 +833,7 @@
     <string name="paywall_yearly_note">หลังจากนั้น %1$s ต่อปี\nยกเลิกได้ในช่วงทดลอง</string>
     <string name="paywall_most_popular">ยอดนิยม</string>
     <string name="paywall_monthly_plan">รายเดือน %1$s ต่อเดือน</string>
-    <string name="paywall_yearly_savings">ประหยัด %1$d\u00A0%% เมื่อเทียบรายเดือน ยกเลิกได้ทุกเมื่อ</string>
+    <string name="paywall_yearly_savings">ประหยัด %1$d %% เมื่อเทียบกับรายเดือน — ยกเลิกได้ทุกเมื่อก่อนสิ้นสุดสัญญา</string>
     <string name="paywall_lifetime_title">ซื้อครั้งเดียว</string>
     <string name="paywall_lifetime_desc">จ่ายครั้งเดียว ใช้ทุกอย่างตลอดไป</string>
     <string name="paywall_lifetime_note">ไม่มีการสมัคร ไม่มีการต่ออายุ</string>
@@ -850,8 +850,8 @@
     <string name="paywall_feature_profiles">โปรไฟล์วิเคราะห์ที่กำหนดเองไม่จำกัด</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">หาความสงบภายใน</string>
-    <string name="paywall_headline_stress_sub">รู้ว่าอะไรทำให้เหนื่อยก่อนจะล้น</string>
+    <string name="paywall_headline_stress">ความชัดเจนมากขึ้นในชีวิตประจำวัน</string>
+    <string name="paywall_headline_stress_sub">รู้ว่าอะไรที่ครอบครองความคิดคุณและจัดการมันได้ตรงจุด</string>
     <string name="paywall_headline_clarity">เข้าใจตนเองดียิ่งขึ้น</string>
     <string name="paywall_headline_clarity_sub">AI รู้จักแพตเทิร์นที่ซ่อน</string>
     <string name="paywall_headline_growth">ค้นพบสิ่งดีทุกวัน</string>
@@ -866,7 +866,7 @@
     <string name="paywall_exit_special_offer">เรามีข้อเสนอพิเศษ\nสำหรับคุณ:</string>
     <string name="paywall_exit_discount">ส่วนลด %1$d เดือน</string>
     <string name="paywall_exit_price_comparison">เพียง %1$s แทน %2$s ต่อเดือน</string>
-    <string name="paywall_exit_start_discount">เริ่มรายเดือนด้วยส่วนลด 50\u00A0%</string>
+    <string name="paywall_exit_start_discount">ชำระเงิน — 2 เดือนในราคาครึ่งหนึ่ง</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -892,9 +892,9 @@
     <string name="churn_sorry_title">เสียดายที่คุณจะไป</string>
     <string name="churn_sorry_body">ก่อนยกเลิก บอกเหตุผลได้ไหม? ช่วยให้เราปรับปรุงแอป</string>
     <string name="churn_exclusive_offer">ข้อเสนอเฉพาะ</string>
-    <string name="churn_offer_subtitle">สำหรับคุณเท่านั้น เพราะคุณสำคัญ</string>
+    <string name="churn_offer_subtitle">ข้อเสนอสำหรับคุณ</string>
     <string name="churn_offer_feature_ai">การวิเคราะห์ AI ทุกวัน</string>
-    <string name="churn_offer_feature_perspectives">ครบทั้ง 5 มุมมอง</string>
+    <string name="churn_offer_feature_perspectives">โปรไฟล์ AI ทั้งหมด (4 ที่กำหนดไว้ + ไม่จำกัดแบบกำหนดเอง)</string>
     <string name="churn_offer_feature_voice">การรู้จำเสียง Premium</string>
     <string name="churn_offer_auto_renew">ต่ออายุอัตโนมัติ ยกเลิกได้ทุกเมื่อ</string>
     <string name="churn_accept_offer">รับข้อเสนอ</string>
@@ -914,7 +914,10 @@
     <string name="ai_limit_yearly">รายปี %1$s ต่อปี (ประหยัด 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">ไม่เป็นไร ใช้ต่อโดยไม่มี AI</string>
     <string name="ai_banner_title">บันทึกของคุณได้รับการช่วยเหลือจาก AI</string>
-    <string name="ai_banner_body">• ข้อความที่พูดถูกปรับปรุงอัตโนมัติ\n• สรุปสำหรับทุกบันทึก\n• คำแนะนำชีวิตฉลาดจากแพตเทิร์น\n• ทั้งหมดรวมในทดลองฟรี</string>
+    <string name="ai_banner_body">• ข้อความที่พูดถูกปรับปรุงอัตโนมัติ
+• สรุปสำหรับทุกบันทึก
+• คำแนะนำชีวิตฉลาดจากรูปแบบของคุณ ผลลัพธ์ AI ทั้งหมดเป็นข้อเสนอแนะ ไม่ใช่คำปรึกษาวิชาชีพ
+• ทั้งหมดรวมในช่วงทดลองฟรี</string>
     <string name="cd_mic_start">เริ่มบันทึก</string>
     <string name="cd_mic_stop">หยุดบันทึก</string>
     <string name="entry_improve_limit_daily">ถึงขีดจำกัดของวันแล้ว พรุ่งนี้เจอกันใหม่!</string>
@@ -1250,6 +1253,8 @@
     <string name="consent_toggle_tts_body">อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา)</string>
     <string name="consent_toggle_drive_title">การสำรองข้อมูล Google Drive</string>
     <string name="consent_toggle_drive_body">บันทึกรายการแบบเข้ารหัสใน Google Drive ของคุณเอง คุณรักษาการควบคุมเต็มรูปแบบ — ไฟล์อยู่ในบัญชีของคุณ ไม่ใช่ที่เรา</string>
+    <string name="consent_info_system_backup_title">Android System Backup</string>
+    <string name="consent_info_system_backup_body">หากคุณเปิดใช้งาน Android System Backup ในการตั้งค่าอุปกรณ์ Android จะสำรองข้อมูลไดอารีของคุณโดยอัตโนมัติในพื้นที่สำรองข้อมูลของ Google Account ของคุณ คุณสามารถปิดใช้งานได้ทุกเมื่อในการตั้งค่าอุปกรณ์ — ดูรายละเอียดในนโยบายความเป็นส่วนตัว</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
     <string name="consent_toggle_do_not_sell_body">การเลือกไม่เข้าร่วมของแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน การประมวลผลข้อมูลเสริมทั้งหมดจะถูกปิดใช้งาน — เหลือเพียงฟีเจอร์ภายในเครื่อง</string>
     <string name="consent_btn_accept_all">ยอมรับทั้งหมด</string>
@@ -1258,6 +1263,10 @@
     <string name="consent_saved_snackbar">บันทึกการตั้งค่าแล้ว</string>
     <string name="consent_revoke_snackbar">เพิกถอนความยินยอมแล้ว</string>
     <string name="consent_footer_version">การเลือกของคุณสามารถเปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="permission_rationale_microphone">เพื่อให้คุณบันทึกรายการไดอารีด้วยเสียง เราต้องการสิทธิ์เข้าถึงไมโครโฟนของคุณ</string>
+    <string name="permission_rationale_camera">เพื่อให้คุณเพิ่มรูปภาพในรายการ เราต้องการสิทธิ์เข้าถึงกล้องของคุณ</string>
+    <string name="permission_rationale_location">เพื่อให้คุณเพิ่มบริบทสถานที่ในรายการ เราต้องการตำแหน่งโดยประมาณ คุณสามารถปฏิเสธหรือปิดใช้งานได้ทุกเมื่อ</string>
+    <string name="permission_rationale_notifications">เพื่อให้เราแจ้งเตือนคุณเกี่ยวกับการเขียนประจำวัน เราต้องการสิทธิ์ในการส่งการแจ้งเตือน</string>
     <string name="consent_details_expand">รายละเอียด</string>
     <string name="settings_open_privacy_sheet">ปรับแต่งการตั้งค่าความเป็นส่วนตัว</string>
     <string name="settings_privacy_section_header">ความเป็นส่วนตัวและการยินยอม</string>
@@ -1269,6 +1278,9 @@
     <string name="settings_ai_tts_subtitle">ส่งข้อความไปยัง Microsoft สหรัฐอเมริกา เพื่อส่งออกเสียง</string>
     <string name="settings_drive_backup_title">การสำรองข้อมูล Google Drive</string>
     <string name="settings_drive_backup_subtitle">บันทึกรายการแบบเข้ารหัสใน Drive ของคุณ</string>
+    <string name="settings_open_system_backup_settings_label">จัดการ Android System Backup</string>
+    <string name="settings_open_system_backup_settings_desc">เปิดการตั้งค่าระบบ Android ซึ่งคุณสามารถเปิดหรือปิดการสำรองข้อมูลอัตโนมัติสำหรับ Best Journal ได้</string>
+    <string name="error_no_backup_settings_available">ไม่สามารถใช้งานการตั้งค่าสำรองข้อมูลบนอุปกรณ์นี้ได้</string>
 
     <!-- DEBUG-only test data seeder (button in journal top bar, only visible in debug builds) -->
     <string name="dev_seed_create_label">สร้างรายการทดสอบ 70 รายการ</string>
@@ -1330,7 +1342,7 @@
     <string name="journal_improve">ปรับปรุงข้อความ</string>
     <string name="journal_state_improving">กำลังปรับปรุง…</string>
     <string name="journal_state_transcribing">กำลังแปลงเป็นข้อความ…</string>
-    <string name="paywall_consent_dialog_body">โดยหลักการแล้วคุณมีสิทธิ์ยกเลิกภายใน 14 วันหลังจากสมัครสมาชิกหรือซื้อสินค้า\n\nเพื่อให้คุณใช้ฟีเจอร์ Premium ได้ทันที เราจะเริ่มให้บริการทันทีหลังจากที่คุณซื้อ โดยการให้ความยินยอมด้านล่าง คุณสละสิทธิ์การยกเลิกภายใน 14 วันโดยรับทราบผลที่ตามมา\n\nหากไม่มีความยินยอมนี้ เราไม่สามารถเปิดใช้ฟีเจอร์ Premium ได้ทันที</string>
+    <string name="paywall_consent_dialog_body">โดยหลักการแล้วคุณมีสิทธิ์ยกเลิกภายใน 14 วันหลังจากสมัครสมาชิกหรือซื้อสินค้า\n\nเพื่อให้คุณใช้ฟีเจอร์ Premium ได้ทันที เราจะเริ่มให้บริการทันทีหลังจากที่คุณซื้อ โดยการให้ความยินยอมด้านล่าง คุณสละสิทธิ์การยกเลิกภายใน 14 วันโดยรับทราบผลที่ตามมา\n\nหากไม่มีความยินยอมนี้ เราไม่สามารถเปิดใช้ฟีเจอร์ Premium ได้ทันที\n\nผู้ให้บริการฟีเจอร์ Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, ประเทศเยอรมนี อีเมลสำหรับยกเลิก: dev.app.support@gmail.com\n\nหากคุณไม่ได้แจ้งยกเลิกก่อนเริ่มให้บริการและ Premium เริ่มทำงานแล้ว ระยะเวลาการยกเลิก 14 วันของคุณจะเริ่มนับตั้งแต่วันที่ทำสัญญา คุณสามารถแจ้งยกเลิกทางอีเมลโดยไม่ต้องมีแบบฟอร์มใดๆ หรือใช้แบบฟอร์มยกเลิกมาตรฐาน EU (https://www.bmuv.de/widerruf — แบบฟอร์ม EU ภายนอก)</string>
     <string name="paywall_consent_dialog_cancel">ยกเลิก</string>
     <string name="paywall_consent_dialog_checkbox">ฉันยินยอมให้เริ่มให้บริการฟีเจอร์ Premium ทันทีหลังจากสั่งซื้อ และรับทราบว่าฉันจะสูญเสียสิทธิ์การยกเลิกภายใน 14 วัน</string>
     <string name="paywall_consent_dialog_confirm">สมัครสมาชิกแบบชำระเงินทันที</string>
@@ -1378,7 +1390,7 @@
     <string name="paywall_monthly_label">รายเดือน</string>
     <string name="paywall_restore_button">กู้คืนการซื้อ</string>
     <string name="paywall_subscribe_button">สมัครสมาชิก</string>
-    <string name="paywall_subtitle">ใช้ประโยชน์ Premium ทั้งหมด</string>
+    <string name="paywall_subtitle">ปลดล็อกฟีเจอร์ Premium ทั้งหมด</string>
     <string name="paywall_title">อัปเกรดเป็น Premium</string>
     <string name="paywall_yearly_label">รายปี</string>
     <string name="prompt_char_count_label">%1$d อักขระ</string>
@@ -1397,9 +1409,39 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">โควต้า AI รายวันที่ใจกว้างสำหรับการใช้งานอย่างเข้มข้น</string>
+    <string name="ai_limits_disclaimer">โควต้า AI รายวันสำหรับการใช้งานอย่างเข้มข้น</string>
     <string name="ai_limits_dialog_title">โควต้า AI รายวันทำงานอย่างไร?</string>
-    <string name="ai_limits_dialog_body" formatted="false">ด้วยการสมัครสมาชิก Premium\n\nสิ่งที่คุณได้รับต่อวัน:\n• การวิเคราะห์แดชบอร์ดสูงสุด 150 ครั้งต่อโปรไฟล์ AI (4 โปรไฟล์ = สูงสุด 600 ครั้งต่อวัน)\n• การปรับปรุงข้อความสูงสุด 150 ครั้ง\n\nรายละเอียด:\n• คำขอที่ 1-30: คุณภาพ AI สูงสุด\n• คำขอที่ 31-100: คุณภาพมาตรฐานรวดเร็ว\n• คำขอที่ 101: หยุดพัก 30 นาทีครั้งเดียว\n• คำขอที่ 101-150: คุณภาพมาตรฐานรวดเร็ว\n• ตั้งแต่คำขอที่ 151: ไม่รับคำขออีกจนถึงวันพรุ่งนี้\n\nสำหรับผู้ใช้ทุกคน:\n• สูงสุด 50 คำขอ AI ต่อชั่วโมง — จากนั้นพักชั่วคราว 5 นาที\n\nโควต้าจะรีเซ็ตเมื่อไหร่?\nทุกวันเวลา 0:00 น. (เวลาท้องถิ่นของคุณ) โควต้าเต็มใหม่จะเริ่มต้น\n\n──────────\n\nไม่มีการสมัครสมาชิก\n\n• 5 การวิเคราะห์แดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์\n• 5 การปรับปรุงข้อความต่อสัปดาห์\n• คุณภาพมาตรฐานรวดเร็วเสมอ\n• รีเซ็ตทุกวันจันทร์เวลา 0:00 น. (เวลาท้องถิ่นของคุณ)\n\n──────────\n\nผู้ใช้มากกว่า 99% อาจไม่เคยพบข้อจำกัดเหล่านี้เลย</string>
+    <string name="ai_limits_dialog_body" formatted="false">ด้วยการสมัครสมาชิก Premium
+
+สิ่งที่คุณได้รับต่อวัน:
+• 150 คำขอต่อวันต่อโปรไฟล์ — 4 โปรไฟล์ที่กำหนดไว้รวม 600/วัน บวก 150/วันสำหรับโปรไฟล์กำหนดเองแต่ละรายการที่คุณสร้าง
+• การปรับปรุงข้อความสูงสุด 150 ครั้ง
+
+รายละเอียด:
+• คำขอที่ 1-30: คุณภาพ AI สูงสุด
+• คำขอที่ 31-100: คุณภาพมาตรฐานรวดเร็ว
+• คำขอที่ 101: หยุดพัก 30 นาทีครั้งเดียว
+• คำขอที่ 101-150: คุณภาพมาตรฐานรวดเร็ว
+• ตั้งแต่คำขอที่ 151: ไม่รับคำขออีกจนถึงวันพรุ่งนี้
+
+สำหรับผู้ใช้ทุกคน:
+• สูงสุด 50 คำขอ AI ต่อชั่วโมง — จากนั้นพักชั่วคราว 5 นาที
+
+โควต้าจะรีเซ็ตเมื่อไหร่?
+ทุกวันเวลา 0:00 น. (เวลาท้องถิ่นของคุณ) โควต้าเต็มใหม่จะเริ่มต้น
+
+──────────
+
+ไม่มีการสมัครสมาชิก
+
+• 5 การวิเคราะห์แดชบอร์ดต่อสัปดาห์ต่อโปรไฟล์
+• 5 การปรับปรุงข้อความต่อสัปดาห์
+• คุณภาพมาตรฐานรวดเร็วเสมอ
+• รีเซ็ตทุกวันจันทร์เวลา 0:00 น. (เวลาท้องถิ่นของคุณ)
+
+──────────
+
+ผู้ใช้ส่วนใหญ่ในชีวิตประจำวันจะไม่ถึงขีดจำกัดเหล่านี้</string>
     <string name="ai_limits_dialog_close">เข้าใจแล้ว</string>
     <string name="theme_neutral">เป็นกลาง</string>
     <string name="theme_profile">สีโปรไฟล์ — สีโปรไฟล์แดชบอร์ด</string>
@@ -1408,4 +1450,9 @@
     <string name="theme_one_dark">สตูดิโอ</string>
     <string name="theme_nord">คืนขั้วโลก</string>
     <string name="theme_gruvbox">อำพัน</string>
+    <string name="ai_output_health_disclaimer">ไม่ใช่การบำบัด — ไม่สามารถแทนที่คำปรึกษาจากผู้เชี่ยวชาญได้</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal คือไดอารีและไม่ใช่บริการบำบัด การวิเคราะห์โดย AI เป็นแรงบันดาลใจสำหรับการสะท้อนตนเอง และไม่สามารถแทนที่คำปรึกษาทางจิตวิทยาหรือการแพทย์จากผู้เชี่ยวชาญได้ หากมีปัญหาเฉพาะหน้า โปรดติดต่อผู้เชี่ยวชาญหรือสายด่วนช่วยเหลือวิกฤตในการตั้งค่าของคุณ</string>
+    <string name="consent_footer_link_datenschutz">นโยบายความเป็นส่วนตัว</string>
+    <string name="consent_footer_link_impressum">ข้อมูลผู้ให้บริการ</string>
+    <string name="consent_footer_link_agb">ข้อกำหนดการใช้งาน</string>
 </resources>

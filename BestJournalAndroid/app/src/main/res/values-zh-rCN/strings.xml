@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">每日 AI 文本改进</string>
-    <string name="settings_premium_feature_improve_desc">每条都更有表现力</string>
+    <string name="settings_premium_feature_improve_desc">AI 可按需润色你的日记条目。</string>
     <string name="settings_premium_feature_dashboard">每日仪表盘分析</string>
-    <string name="settings_premium_feature_dashboard_desc">你的面板与你一同成长</string>
-    <string name="settings_premium_feature_5_perspectives">5 种 AI 视角</string>
+    <string name="settings_premium_feature_dashboard_desc">你的面板随日记一同成长。</string>
+    <string name="settings_premium_feature_5_perspectives">所有 AI 配置文件（4 个预设 + 无限自定义）</string>
     <string name="settings_premium_feature_5_perspectives_desc">从清晰到自我认识</string>
     <string name="settings_premium_feature_reviews">每周、每月、每年的回顾</string>
     <string name="settings_premium_feature_reviews_desc">AI 讲述你的故事</string>
     <string name="settings_premium_feature_patterns">规律识别</string>
-    <string name="settings_premium_feature_patterns_desc">AI 找出你没留意到的关联</string>
+    <string name="settings_premium_feature_patterns_desc">AI 可让你日记条目中的规律和关联一目了然</string>
     <string name="settings_premium_feature_pdf">带照片的 PDF 导出</string>
     <string name="settings_premium_feature_pdf_desc">把带图片的条目导出成文档</string>
     <string name="settings_premium_feature_voice">更准的语音识别</string>
@@ -816,10 +816,10 @@
     <string name="onboarding_goals_select">选择一个或多个目标</string>
     <string name="onboarding_how_step3_title">添加照片</string>
     <string name="onboarding_how_title">就是这么简单</string>
-    <string name="onboarding_perspectives_title">看自己生活的\n5 种角度</string>
+    <string name="onboarding_perspectives_title">从多个角度\n看你的生活</string>
     <string name="onboarding_premium_feature_pdf">带照片的 PDF 导出，把条目保存成文档</string>
     <string name="onboarding_premium_profiles">5 种面板模板，让你深入看自己的生活</string>
-    <string name="onboarding_try_premium">试用高级版 8 天</string>
+    <string name="onboarding_try_premium">8 天免费体验 — 之后低至 3.99 €/月</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -836,7 +836,7 @@
     <string name="paywall_yearly_note">之后每年 %1$s\n试用期内随时可取消</string>
     <string name="paywall_most_popular">最受欢迎</string>
     <string name="paywall_monthly_plan">月度订阅，每月 %1$s</string>
-    <string name="paywall_yearly_savings">比月度订阅省 %1$d\u00A0%%，随时可取消</string>
+    <string name="paywall_yearly_savings">比月付省 %1$d%% — 可在合同到期时随时取消。</string>
     <string name="paywall_lifetime_title">一次付清</string>
     <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">没有订阅，没有续费</string>
@@ -853,8 +853,8 @@
     <string name="paywall_feature_profiles">无限个自定义分析档案</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">找回内心的宁静</string>
-    <string name="paywall_headline_stress_sub">在被压垮之前看清那些让你累的事</string>
+    <string name="paywall_headline_stress">让日常更清晰</string>
+    <string name="paywall_headline_stress_sub">找出每天牵动你情绪的事，把它说清楚。</string>
     <string name="paywall_headline_clarity">更懂自己</string>
     <string name="paywall_headline_clarity_sub">AI 看出你没察觉的规律</string>
     <string name="paywall_headline_growth">发现每一天里的好</string>
@@ -869,7 +869,7 @@
     <string name="paywall_exit_special_offer">给你的\n特别优惠：</string>
     <string name="paywall_exit_discount">%1$d 个月的折扣</string>
     <string name="paywall_exit_price_comparison">每月只需 %1$s，原价 %2$s</string>
-    <string name="paywall_exit_start_discount">以 50\u00A0% 折扣开始月度订阅</string>
+    <string name="paywall_exit_start_discount">付费订阅 — 2 个月半价</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -895,9 +895,9 @@
     <string name="churn_sorry_title">舍不得你离开</string>
     <string name="churn_sorry_body">取消前能告诉我们原因吗？这能帮我们把应用做得更好。</string>
     <string name="churn_exclusive_offer">专属优惠</string>
-    <string name="churn_offer_subtitle">只给你，因为你重要</string>
+    <string name="churn_offer_subtitle">我们为你准备的优惠</string>
     <string name="churn_offer_feature_ai">每日 AI 分析</string>
-    <string name="churn_offer_feature_perspectives">5 种视角全部</string>
+    <string name="churn_offer_feature_perspectives">所有 AI 配置文件（4 个预设 + 无限自定义）</string>
     <string name="churn_offer_feature_voice">高级版语音识别</string>
     <string name="churn_offer_auto_renew">自动续订，随时可取消</string>
     <string name="churn_accept_offer">接受优惠</string>
@@ -917,7 +917,7 @@
     <string name="ai_limit_yearly">年度订阅，每年 %1$s （省 37\u00A0%%）</string>
     <string name="ai_limit_no_thanks">不用了，继续不用 AI</string>
     <string name="ai_banner_title">日记由 AI 协助</string>
-    <string name="ai_banner_body">• 口述的文字会自动润色\n• 每条条目生成摘要\n• 根据你的规律给出聪明的生活建议\n• 在你的免费试用期里全部包含</string>
+    <string name="ai_banner_body">• 口述的文字会自动润色\n• 每条条目生成摘要\n• 根据你的规律给出智能生活建议。所有 AI 输出仅供参考，不构成专业建议。\n• 在你的免费试用期里全部包含</string>
     <string name="cd_mic_start">开始录音</string>
     <string name="cd_mic_stop">停止录音</string>
     <string name="entry_improve_limit_daily">今日上限已到。明天继续！</string>
@@ -1335,7 +1335,7 @@
     <string name="journal_improve">润色文字</string>
     <string name="journal_state_improving">优化中…</string>
     <string name="journal_state_transcribing">转录中…</string>
-    <string name="paywall_consent_dialog_body">完成订阅或购买后，你原则上享有 14 天的撤回权。\n\n为让你立即使用高级功能，我们将在购买后立即开始提供服务。在下方同意即表示你了解并放弃 14 天撤回权。\n\n若不同意，我们将无法立即为你开通高级功能。</string>
+    <string name="paywall_consent_dialog_body">完成订阅或购买后，你原则上享有 14 天的撤回权（§ 355 BGB）。\n\n为让你立即使用高级功能，我们将在购买后立即开始提供服务。在下方同意即表示你了解并依据 § 356 Abs. 5 BGB 放弃 14 天的撤回权。\n\n若不同意，我们将无法立即为你开通高级功能。\n\n高级功能提供方：Frank Barwandt，c/o Impressumservice Dein-Impressum，Stettiner Straße 41，35410 Hungen，德国。撤回邮箱：dev.app.support@gmail.com。\n\n如果你未在服务提供前行使撤回权且已开始高级订阅，撤回期自合同签订之日起算 14 天。你可以通过电子邮件或 EU 标准撤回表格（https://www.bmuv.de/widerruf）随时撤回。</string>
     <string name="paywall_consent_dialog_cancel">取消</string>
     <string name="paywall_consent_dialog_checkbox">我同意在下单后立即开始提供高级功能。我了解这意味着我放弃 14 天的撤回权。</string>
     <string name="paywall_consent_dialog_confirm">立即付费订阅</string>
@@ -1383,7 +1383,7 @@
     <string name="paywall_monthly_label">每月</string>
     <string name="paywall_restore_button">恢复购买</string>
     <string name="paywall_subscribe_button">订阅</string>
-    <string name="paywall_subtitle">享受所有 Premium 权益</string>
+    <string name="paywall_subtitle">解锁所有高级功能</string>
     <string name="paywall_title">升级到 Premium</string>
     <string name="paywall_yearly_label">每年</string>
     <string name="prompt_char_count_label">%1$d 个字符</string>
@@ -1402,9 +1402,9 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">每日大量 AI 配额，满足高强度使用需求。</string>
+    <string name="ai_limits_disclaimer">AI 每日配额，满足高强度使用需求。</string>
     <string name="ai_limits_dialog_title">AI 每日配额是如何运作的？</string>
-    <string name="ai_limits_dialog_body" formatted="false">高级订阅\n\n每天可使用：\n• 每个 AI 配置文件最多 150 次仪表盘分析（4 个配置文件即每天最多 600 次）\n• 最多 150 次文本改写\n\n详细说明：\n• 第 1〜30 次请求：最高 AI 质量\n• 第 31〜100 次请求：快速标准质量\n• 第 101 次请求：一次性暂停 30 分钟\n• 第 101〜150 次请求：快速标准质量\n• 第 151 次起：今日不再接受请求\n\n所有用户均适用：\n• 每小时最多 50 次 AI 请求——之后暂停 5 分钟\n\n配额何时重置？\n每天 0:00（你的本地时间）开始新的完整配额。\n\n──────────\n\n无订阅\n\n• 每个档案每周 5 次仪表盘分析\n• 每周 5 次文本改写\n• 始终为快速标准质量\n• 每周一 0:00（你的本地时间）重置\n\n──────────\n\n超过 99% 的用户可能从不会遇到这些限制。</string>
+    <string name="ai_limits_dialog_body" formatted="false">高级订阅\n\n每天可使用：\n• 每个 AI 配置文件每天最多 150 次请求——4 个预设配置文件合计每天最多 600 次，每个自定义配置文件另享每天 150 次\n• 最多 150 次文本润色\n\n详细说明：\n• 第 1～30 次请求：最高 AI 质量\n• 第 31～100 次请求：快速标准质量\n• 第 101 次请求：一次性暂停 30 分钟\n• 第 101～150 次请求：快速标准质量\n• 第 151 次起：今日不再接受请求\n\n所有用户均适用：\n• 每小时最多 50 次 AI 请求——之后暂停 5 分钟\n\n配额何时重置？\n每天 0:00（你的本地时间）开始新的完整配额。\n\n──────────\n\n无订阅\n\n• 每个配置文件每周 5 次仪表盘分析\n• 每周 5 次文本润色\n• 始终为快速标准质量\n• 每周一 0:00（你的本地时间）重置\n\n──────────\n\n日常使用的绝大多数用户不会触及这些上限。</string>
     <string name="ai_limits_dialog_close">知道了</string>
     <string name="theme_neutral">中性</string>
     <string name="theme_profile">配置文件颜色——仪表盘配置文件的颜色</string>
@@ -1413,4 +1413,19 @@
     <string name="theme_one_dark">工坊</string>
     <string name="theme_nord">极夜</string>
     <string name="theme_gruvbox">琥珀</string>
+
+<string name="permission_rationale_microphone">为了让你能够用语音输入日记，我们需要访问你的麦克风。</string>
+    <string name="permission_rationale_camera">为了让你能够为日记条目添加照片，我们需要访问你的摄像头。</string>
+    <string name="permission_rationale_location">为了让你能够为条目添加位置信息，我们需要获取你的大致位置。你可以随时拒绝或稍后关闭。</string>
+    <string name="permission_rationale_notifications">为了提醒你每日写作，我们需要获得发送通知的权限。</string>
+    <string name="consent_info_system_backup_title">Android 系统备份</string>
+    <string name="consent_info_system_backup_body">如果你在设备设置中启用了 Android 系统备份，Android 会自动将你的日记数据备份到 Google 账户的备份区域。你可以随时在设备设置中关闭此功能——详情请参阅隐私政策。</string>
+    <string name="settings_open_system_backup_settings_label">管理 Android 系统备份</string>
+    <string name="settings_open_system_backup_settings_desc">打开 Android 系统设置，在那里你可以开启或关闭 Best Journal 的自动备份。</string>
+    <string name="error_no_backup_settings_available">此设备上无法使用备份设置。</string>
+    <string name="consent_footer_link_datenschutz">隐私政策</string>
+    <string name="consent_footer_link_impressum">版权声明</string>
+    <string name="consent_footer_link_agb">使用条款</string>
+    <string name="ai_output_health_disclaimer">非治疗建议——不能替代专业咨询。</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal 是日记应用，不提供心理治疗服务。AI 分析仅为自我反思的参考，不能替代专业的心理或医疗建议。如遇紧急情况，请联系专业人士或你设置中的危机援助热线。</string>
 </resources>

@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">每日 AI 文字改善</string>
-    <string name="settings_premium_feature_improve_desc">每條都更有表現力</string>
+    <string name="settings_premium_feature_improve_desc">AI 可依你的要求潤色每一則日記。</string>
     <string name="settings_premium_feature_dashboard">每日儀表板分析</string>
-    <string name="settings_premium_feature_dashboard_desc">你的面板與你一同成長</string>
-    <string name="settings_premium_feature_5_perspectives">5 種 AI 視角</string>
+    <string name="settings_premium_feature_dashboard_desc">你的儀表板會隨著你的日記一起成長。</string>
+    <string name="settings_premium_feature_5_perspectives">所有 AI 分析設定檔（4 個預設 + 無限自訂）</string>
     <string name="settings_premium_feature_5_perspectives_desc">從清晰到自我認識</string>
     <string name="settings_premium_feature_reviews">每週、每月、每年的回顧</string>
     <string name="settings_premium_feature_reviews_desc">AI 講述你的故事</string>
     <string name="settings_premium_feature_patterns">規律識別</string>
-    <string name="settings_premium_feature_patterns_desc">AI 找出你沒留意到的關聯</string>
+    <string name="settings_premium_feature_patterns_desc">AI 能從你的日記中找出規律與關聯。</string>
     <string name="settings_premium_feature_pdf">帶照片的 PDF 匯出</string>
     <string name="settings_premium_feature_pdf_desc">把帶圖片的條目匯出成文件</string>
     <string name="settings_premium_feature_voice">更準的語音識別</string>
@@ -816,10 +816,10 @@
     <string name="onboarding_goals_select">選擇一個或多個目標</string>
     <string name="onboarding_how_step3_title">新增照片</string>
     <string name="onboarding_how_title">就是這麼簡單</string>
-    <string name="onboarding_perspectives_title">看自己生活的\n5 種角度</string>
+    <string name="onboarding_perspectives_title">從不同角度\n看見自己的生活</string>
     <string name="onboarding_premium_feature_pdf">帶照片的 PDF 匯出，把條目儲存成文件</string>
     <string name="onboarding_premium_profiles">5 種面板模板，讓你深入看自己的生活</string>
-    <string name="onboarding_try_premium">試用高階版 8 天</string>
+    <string name="onboarding_try_premium">免費試用 8 天 — 之後每月僅 3.99 €</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -836,7 +836,7 @@
     <string name="paywall_yearly_note">之後每年 %1$s\n試用期內隨時可取消</string>
     <string name="paywall_most_popular">最受歡迎</string>
     <string name="paywall_monthly_plan">月度訂閱，每月 %1$s</string>
-    <string name="paywall_yearly_savings">比月度訂閱省 %1$d\u00A0%%,隨時可取消</string>
+    <string name="paywall_yearly_savings">比月費方案省 %1$d\u00A0%% — 可隨時取消，於訂閱效期屆滿前生效。</string>
     <string name="paywall_lifetime_title">一次付清</string>
     <string name="paywall_lifetime_desc">一次付款，永久使用</string>
     <string name="paywall_lifetime_note">沒有訂閱，沒有續費</string>
@@ -853,8 +853,8 @@
     <string name="paywall_feature_profiles">無限個自訂分析檔案</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">找回內心的寧靜</string>
-    <string name="paywall_headline_stress_sub">在被壓垮之前看清那些讓你累的事</string>
+    <string name="paywall_headline_stress">讓日常更清晰</string>
+    <string name="paywall_headline_stress_sub">找出每天真正佔據你心思的事，並清楚說出來。</string>
     <string name="paywall_headline_clarity">更懂自己</string>
     <string name="paywall_headline_clarity_sub">AI 看出你沒察覺的規律</string>
     <string name="paywall_headline_growth">發現每一天裡的好</string>
@@ -869,7 +869,7 @@
     <string name="paywall_exit_special_offer">給你的\n特別優惠：</string>
     <string name="paywall_exit_discount">%1$d 個月的折扣</string>
     <string name="paywall_exit_price_comparison">每月只需 %1$s,原價 %2$s</string>
-    <string name="paywall_exit_start_discount">以 50\u00A0% 折扣開始月度訂閱</string>
+    <string name="paywall_exit_start_discount">付費開始 — 兩個月半價</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -895,9 +895,9 @@
     <string name="churn_sorry_title">捨不得你離開</string>
     <string name="churn_sorry_body">取消前能告訴我們原因嗎？這能幫我們把應用做得更好。</string>
     <string name="churn_exclusive_offer">專屬優惠</string>
-    <string name="churn_offer_subtitle">只給你，因為你重要</string>
+    <string name="churn_offer_subtitle">專屬於你的優惠</string>
     <string name="churn_offer_feature_ai">每日 AI 分析</string>
-    <string name="churn_offer_feature_perspectives">5 種視角全部</string>
+    <string name="churn_offer_feature_perspectives">所有 AI 分析設定檔（4 個預設 + 無限自訂）</string>
     <string name="churn_offer_feature_voice">高階版語音識別</string>
     <string name="churn_offer_auto_renew">自動續訂，隨時可取消</string>
     <string name="churn_accept_offer">接受優惠</string>
@@ -917,7 +917,7 @@
     <string name="ai_limit_yearly">年度訂閱，每年 %1$s (省 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">不用了，繼續不用 AI</string>
     <string name="ai_banner_title">日記由 AI 協助</string>
-    <string name="ai_banner_body">• 口述的文字會自動潤色\n• 每條條目生成摘要\n• 根據你的規律給出聰明的生活建議\n• 在你的免費試用期裡全部包含</string>
+    <string name="ai_banner_body">• 語音輸入的文字會自動潤色\n• 每則日記自動生成摘要\n• 根據你的規律提供智慧生活建議。所有 AI 輸出僅供參考，非專業建議。\n• 免費試用期間全部包含</string>
     <string name="cd_mic_start">開始錄音</string>
     <string name="cd_mic_stop">停止錄音</string>
     <string name="entry_improve_limit_daily">今日上限已到。明天繼續！</string>
@@ -1335,7 +1335,7 @@
     <string name="journal_improve">潤色文字</string>
     <string name="journal_state_improving">優化中…</string>
     <string name="journal_state_transcribing">轉錄中…</string>
-    <string name="paywall_consent_dialog_body">完成訂閱或購買後，你原則上享有 14 天的撤回權。\n\n為讓你立即使用進階功能，我們將在購買後立即開始提供服務。在下方同意即表示你了解並放棄 14 天撤回權。\n\n若不同意，我們將無法立即為你開通進階功能。</string>
+    <string name="paywall_consent_dialog_body">完成訂閱或購買後，你原則上享有 14 天的撤回權（§ 355 BGB）。\n\n為讓你能立即使用進階功能，我們將在你購買後即時開始提供服務。點選下方同意，即表示你知悉並放棄 14 天的撤回權（§ 356 第 5 款 BGB）。\n\n若不同意，我們將無法立即為你開通進階功能。\n\n進階功能提供者：Frank Barwandt，c/o Impressumservice Dein-Impressum，Stettiner Straße 41，35410 Hungen，德國。撤回郵件：dev.app.support@gmail.com。\n\n若你未在服務開始前聲明撤回，且高級訂閱已啟動，14 天的撤回期將從簽約當日起算。你可以透過電子郵件以任意形式聲明撤回，或使用 EU 標準撤回表格（https://www.bmuv.de/widerruf — 外部 EU 表格）。</string>
     <string name="paywall_consent_dialog_cancel">取消</string>
     <string name="paywall_consent_dialog_checkbox">我同意在下單後立即開始提供進階功能。我了解這意味著我放棄 14 天的撤回權。</string>
     <string name="paywall_consent_dialog_confirm">立即付費訂閱</string>
@@ -1383,7 +1383,7 @@
     <string name="paywall_monthly_label">每月</string>
     <string name="paywall_restore_button">恢復購買</string>
     <string name="paywall_subscribe_button">訂閱</string>
-    <string name="paywall_subtitle">享受所有 Premium 權益</string>
+    <string name="paywall_subtitle">解鎖所有進階功能</string>
     <string name="paywall_title">升級到 Premium</string>
     <string name="paywall_yearly_label">每年</string>
     <string name="prompt_char_count_label">%1$d 個字元</string>
@@ -1402,9 +1402,9 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">每日充裕 AI 配額，滿足高強度使用需求。</string>
+    <string name="ai_limits_disclaimer">密集使用的每日 AI 配額。</string>
     <string name="ai_limits_dialog_title">AI 每日配額是如何運作的？</string>
-    <string name="ai_limits_dialog_body" formatted="false">高級訂閱\n\n每天可使用：\n• 每個 AI 設定檔最多 150 次儀表板分析（4 個設定檔即每天最多 600 次）\n• 最多 150 次文字改寫\n\n詳細說明：\n• 第 1〜30 次請求：最高 AI 品質\n• 第 31〜100 次請求：快速標準品質\n• 第 101 次請求：一次性暫停 30 分鐘\n• 第 101〜150 次請求：快速標準品質\n• 第 151 次起：今日不再接受請求\n\n所有使用者均適用：\n• 每小時最多 50 次 AI 請求——之後暫停 5 分鐘\n\n配額何時重置？\n每天 0:00（你的當地時間）開始新的完整配額。\n\n──────────\n\n無訂閱\n\n• 每個檔案每週 5 次儀表板分析\n• 每週 5 次文字改寫\n• 始終為快速標準品質\n• 每週一 0:00（你的當地時間）重置\n\n──────────\n\n超過 99% 的使用者可能從不會遇到這些限制。</string>
+    <string name="ai_limits_dialog_body" formatted="false">有訂閱 PREMIUM\n\n每天可使用：\n• 每個 AI 設定檔每天 150 次請求 — 4 個預設設定檔合計 600 次／天，加上每個自訂設定檔各 150 次／天。\n• 最多 150 次文字潤色\n\n詳細說明：\n• 第 1〜30 次請求：最高 AI 品質\n• 第 31〜100 次請求：快速標準品質\n• 第 101 次請求：一次性暫停 30 分鐘\n• 第 101〜150 次請求：快速標準品質\n• 第 151 次起：今日不再接受請求\n\n所有使用者均適用：\n• 每小時最多 50 次 AI 請求——之後暫停 5 分鐘\n\n配額何時重置？\n每天 0:00（你的當地時間）開始新的完整配額。\n\n──────────\n\n無訂閱\n\n• 每個設定檔每週 5 次儀表板分析\n• 每週 5 次文字潤色\n• 始終為快速標準品質\n• 每週一 0:00（你的當地時間）重置\n\n──────────\n\n大多數日常使用者不會達到這些上限。</string>
     <string name="ai_limits_dialog_close">明白了</string>
     <string name="theme_neutral">中性</string>
     <string name="theme_profile">設定檔顏色——儀表板設定檔的顏色</string>
@@ -1413,4 +1413,27 @@
     <string name="theme_one_dark">工房</string>
     <string name="theme_nord">極夜</string>
     <string name="theme_gruvbox">琥珀</string>
+
+    <!-- Permission rationale strings -->
+    <string name="permission_rationale_microphone">為了讓你能以語音方式記錄日記，我們需要存取你的麥克風。</string>
+    <string name="permission_rationale_camera">為了讓你能為日記新增照片，我們需要存取你的相機。</string>
+    <string name="permission_rationale_location">為了讓你能為日記標記位置，我們需要取得你的大略位置。你可以隨時拒絕或在之後關閉此權限。</string>
+    <string name="permission_rationale_notifications">為了能提醒你每天記錄，我們需要傳送通知的權限。</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android 系統備份</string>
+    <string name="consent_info_system_backup_body">若你已在裝置設定中啟用 Android 系統備份，Android 會自動將你的日記資料備份至 Google 帳號的備份空間。你可以隨時在裝置設定中停用此功能 — 詳情請參閱隱私政策。</string>
+    <string name="settings_open_system_backup_settings_label">管理 Android 系統備份</string>
+    <string name="settings_open_system_backup_settings_desc">開啟 Android 系統設定，你可以在此為 Best Journal 開啟或關閉自動備份。</string>
+    <string name="error_no_backup_settings_available">此裝置不支援備份設定。</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">隱私政策</string>
+    <string name="consent_footer_link_impressum">法律聲明</string>
+    <string name="consent_footer_link_agb">使用條款</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">非心理治療 — 不能取代專業諮詢。</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal 是一款日記應用程式，並非心理治療服務。AI 分析僅供自我反思參考，不能取代專業心理或醫療建議。若你有急迫需求，請聯繫專業人士或你設定中的危機求助資源。</string>
+
 </resources>

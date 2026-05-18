@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Щоденне покращення тексту ШІ</string>
-    <string name="settings_premium_feature_improve_desc">Кожен запис стає виразнішим</string>
+    <string name="settings_premium_feature_improve_desc">ИИ улучшает твои записи по запросу.</string>
     <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
-    <string name="settings_premium_feature_dashboard_desc">Ваша панель росте разом із вами</string>
-    <string name="settings_premium_feature_5_perspectives">5 перспектив ШІ</string>
+    <string name="settings_premium_feature_dashboard_desc">Твой дашборд растёт вместе с твоими записями.</string>
+    <string name="settings_premium_feature_5_perspectives">Все профили ИИ (4 встроенных + неограниченно своих)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Від ясності до самопізнання</string>
     <string name="settings_premium_feature_reviews">Підсумки тижня, місяця і року</string>
     <string name="settings_premium_feature_reviews_desc">ШІ розповідає вашу історію</string>
     <string name="settings_premium_feature_patterns">Розпізнавання закономірностей</string>
-    <string name="settings_premium_feature_patterns_desc">ШІ знаходить зв\'язки, яких ви не помічаєте</string>
+    <string name="settings_premium_feature_patterns_desc">ИИ может находить закономерности и взаимосвязи в твоих записях</string>
     <string name="settings_premium_feature_pdf">Експорт у PDF з фото</string>
     <string name="settings_premium_feature_pdf_desc">Усі записи з фото як документ</string>
     <string name="settings_premium_feature_voice">Точніше розпізнавання мови</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">Виберіть одну або кілька цілей</string>
     <string name="onboarding_how_step3_title">Додайте фото</string>
     <string name="onboarding_how_title">Усе дуже просто</string>
-    <string name="onboarding_perspectives_title">5 точок зору на\nваше життя</string>
+    <string name="onboarding_perspectives_title">Разные взгляды на\nтвою жизнь</string>
     <string name="onboarding_premium_feature_pdf">Експорт у PDF з фото, збережіть записи як документ</string>
     <string name="onboarding_premium_profiles">5 розумних профілів панелі для глибокого погляду на життя</string>
-    <string name="onboarding_try_premium">Спробуйте Преміум 8 днів</string>
+    <string name="onboarding_try_premium">8 дней бесплатно — затем от 3,99 €/мес</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,7 +833,7 @@
     <string name="paywall_yearly_note">Потім %1$s на рік\nУ пробний період можна скасувати в будь-який момент</string>
     <string name="paywall_most_popular">Найпопулярніший вибір</string>
     <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
-    <string name="paywall_yearly_savings">Заощадьте %1$d\u00A0%% порівняно з місячною, скасування будь-коли</string>
+    <string name="paywall_yearly_savings">Экономия %1$d %% по сравнению с месячной — отмена в любое время до окончания срока.</string>
     <string name="paywall_lifetime_title">Разова покупка</string>
     <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
     <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
@@ -850,8 +850,8 @@
     <string name="paywall_feature_profiles">Необмежені власні профілі аналізу</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Знайдіть внутрішній спокій</string>
-    <string name="paywall_headline_stress_sub">Розпізнайте, що обтяжує, поки не накрило</string>
+    <string name="paywall_headline_stress">Больше ясности в повседневной жизни</string>
+    <string name="paywall_headline_stress_sub">Замечай, что занимает тебя каждый день, и формулируй это чётко.</string>
     <string name="paywall_headline_clarity">Зрозумійте себе краще</string>
     <string name="paywall_headline_clarity_sub">ШІ розпізнає закономірності, які вислизають</string>
     <string name="paywall_headline_growth">Відкрийте добре в кожному дні</string>
@@ -866,7 +866,7 @@
     <string name="paywall_exit_special_offer">У нас особлива\nпропозиція для вас:</string>
     <string name="paywall_exit_discount">Знижка на %1$d місяців</string>
     <string name="paywall_exit_price_comparison">Лише %1$s замість %2$s на місяць</string>
-    <string name="paywall_exit_start_discount">Почати місячну підписку зі знижкою 50\u00A0%</string>
+    <string name="paywall_exit_start_discount">Оформить с оплатой — 2 месяца за полцены</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -892,9 +892,9 @@
     <string name="churn_sorry_title">Шкода, що ви йдете</string>
     <string name="churn_sorry_body">Перед скасуванням поділіться причиною? Це допомагає нам покращувати додаток.</string>
     <string name="churn_exclusive_offer">Ексклюзивна пропозиція</string>
-    <string name="churn_offer_subtitle">Тільки для вас, адже ви важливі</string>
+    <string name="churn_offer_subtitle">Наше предложение для тебя</string>
     <string name="churn_offer_feature_ai">Щоденні аналізи ШІ</string>
-    <string name="churn_offer_feature_perspectives">Усі 5 точок зору</string>
+    <string name="churn_offer_feature_perspectives">Все профили ИИ (4 встроенных + неограниченно своих)</string>
     <string name="churn_offer_feature_voice">Преміум-розпізнавання мови</string>
     <string name="churn_offer_auto_renew">Автоматично продовжується, скасування будь-коли</string>
     <string name="churn_accept_offer">Прийняти пропозицію</string>
@@ -914,7 +914,7 @@
     <string name="ai_limit_yearly">Річна підписка, %1$s/рік (економія 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Ні, дякую, далі без ШІ</string>
     <string name="ai_banner_title">Ваш щоденник підтримується ШІ</string>
-    <string name="ai_banner_body">• Надиктовані тексти покращуються автоматично\n• Короткі описи для кожного запису\n• Розумні життєві поради на основі ваших закономірностей\n• Усе включено у безкоштовний пробний період</string>
+    <string name="ai_banner_body">• Продиктованные тексты автоматически улучшаются\n• Краткое содержание для каждой записи\n• Умные советы на основе твоих закономерностей. Все результаты ИИ — это подсказки, не профессиональные рекомендации.\n• Всё включено в бесплатный пробный период</string>
     <string name="cd_mic_start">Почати запис</string>
     <string name="cd_mic_stop">Зупинити запис</string>
     <string name="entry_improve_limit_daily">Денний ліміт досягнуто. Завтра продовжимо!</string>
@@ -1270,9 +1270,16 @@
     <string name="consent_saved_snackbar">Налаштування збережено</string>
     <string name="consent_revoke_snackbar">Згоду відкликано</string>
     <string name="consent_footer_version">Ваш вибір можна змінити будь-коли в Налаштуваннях.</string>
+    <string name="consent_footer_link_datenschutz">Конфиденциальность</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">Условия использования</string>
     <string name="consent_details_expand">Докладніше</string>
     <string name="settings_open_privacy_sheet">Налаштувати параметри конфіденційності</string>
     <string name="settings_privacy_section_header">Конфіденційність і згоди</string>
+    <string name="permission_rationale_microphone">Чтобы ты мог диктовать записи голосом, нам нужен доступ к микрофону.</string>
+    <string name="permission_rationale_camera">Чтобы ты мог добавлять фото к записям, нам нужен доступ к камере.</string>
+    <string name="permission_rationale_location">Чтобы ты мог добавлять контекст местоположения к записям, нам нужно приблизительное местоположение. Ты можешь отказаться или отключить это в любой момент.</string>
+    <string name="permission_rationale_notifications">Чтобы мы могли напоминать тебе о ежедневных записях, нам нужно разрешение на уведомления.</string>
     <string name="settings_ai_groq_title">Мовлення в текст (Groq)</string>
     <string name="settings_ai_groq_subtitle">Надсилати голосові записи до Groq США для транскрипції</string>
     <string name="settings_ai_gemini_title">Роздуми від ШІ (Gemini)</string>
@@ -1344,7 +1351,7 @@
     <string name="journal_improve">Покращити текст</string>
     <string name="journal_state_improving">Покращення…</string>
     <string name="journal_state_transcribing">Транскрибування…</string>
-    <string name="paywall_consent_dialog_body">Після оформлення підписки або покупки ти маєш право на відмову протягом 14 днів.\n\nЩоб ти міг одразу користуватися функціями Premium, ми починаємо надання послуги відразу після оплати. Надаючи згоду нижче, ти свідомо відмовляєшся від 14-денного права на відмову.\n\nБез цієї згоди ми не можемо одразу активувати функції Premium.</string>
+    <string name="paywall_consent_dialog_body">После оформления подписки или покупки у тебя есть право на отказ в течение 14 дней (§ 355 BGB).\n\nЧтобы ты мог сразу пользоваться Premium-функциями, мы начинаем предоставление услуги сразу после оплаты. Давая согласие ниже, ты осознанно отказываешься от 14-дневного права на отказ (§ 356 Abs. 5 BGB).\n\nБез этого согласия мы не можем немедленно активировать Premium-функции.\n\nПоставщик Premium-функций: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. E-Mail для отказа: dev.app.support@gmail.com.\n\nЕсли ты не заявишь об отказе до начала предоставления услуги и подписка Premium будет активирована, 14-дневный срок отказа начнётся с даты заключения договора. Отказ можно оформить в свободной форме по электронной почте или воспользоваться типовой формой ЕС (https://www.bmuv.de/widerruf — внешний образец ЕС).</string>
     <string name="paywall_consent_dialog_cancel">Скасувати</string>
     <string name="paywall_consent_dialog_checkbox">Я погоджуюся, що надання функцій Premium розпочнеться одразу після замовлення. Я розумію, що таким чином втрачаю 14-денне право на відмову.</string>
     <string name="paywall_consent_dialog_confirm">Оформити підписку зараз із зобов\'язанням оплати</string>
@@ -1392,7 +1399,7 @@
     <string name="paywall_monthly_label">Щомісяця</string>
     <string name="paywall_restore_button">Відновити покупки</string>
     <string name="paywall_subscribe_button">Підписатися</string>
-    <string name="paywall_subtitle">Користуйся всіма перевагами Premium</string>
+    <string name="paywall_subtitle">Открой все возможности Premium</string>
     <string name="paywall_title">Перейти на Premium</string>
     <string name="paywall_yearly_label">Щороку</string>
     <string name="prompt_char_count_label">%1$d символів</string>
@@ -1411,9 +1418,9 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Щедрый дневной лимит ИИ для интенсивного использования.</string>
+    <string name="ai_limits_disclaimer">Дневной лимит ИИ для интенсивного использования.</string>
     <string name="ai_limits_dialog_title">Как работает дневной лимит ИИ?</string>
-    <string name="ai_limits_dialog_body" formatted="false">С ПОДПИСКОЙ PREMIUM\n\nКаждый день вам доступно:\n• До 150 анализов дашборда на профиль ИИ (при 4 профилях — до 600 в день)\n• До 150 улучшений текста\n\nКак это работает подробно:\n• Запросы 1–30: в наивысшем качестве ИИ\n• Запросы 31–100: в быстром стандартном качестве\n• На 101-м запросе: единовременная пауза 30 мин\n• Запросы 101–150: быстрое стандартное качество\n• С 151-го запроса: нет новых запросов до завтра\n\nТакже для всех пользователей:\n• Не более 50 запросов ИИ в час — затем пауза 5 мин\n\nКогда сбрасываются лимиты?\nКаждый день в полночь (по местному времени) начинается новый полный лимит.\n\n──────────\n\nБЕЗ ПОДПИСКИ\n\n• 5 анализов дашборда в неделю на профиль\n• 5 улучшений текста в неделю\n• Всегда в быстром стандартном качестве\n• Сброс каждый понедельник в полночь (по местному времени)\n\n──────────\n\nБолее 99% пользователей, вероятно, никогда не столкнутся с этими ограничениями.</string>
+    <string name="ai_limits_dialog_body" formatted="false">С ПОДПИСКОЙ PREMIUM\n\nКаждый день тебе доступно:\n• 150 запросов в день на профиль — для 4 встроенных вместе 600/день, плюс 150/день для каждого собственного профиля.\n• До 150 улучшений текста\n\nКак это работает подробно:\n• Запросы 1–30: в наивысшем качестве ИИ\n• Запросы 31–100: в быстром стандартном качестве\n• На 101-м запросе: единовременная пауза 30 мин\n• Запросы 101–150: быстрое стандартное качество\n• С 151-го запроса: новых запросов нет до завтра\n\nТакже для всех пользователей:\n• Не более 50 запросов ИИ в час — затем пауза 5 мин\n\nКогда сбрасываются лимиты?\nКаждый день в полночь (по местному времени) начинается новый полный лимит.\n\n──────────\n\nБЕЗ ПОДПИСКИ\n\n• 5 анализов дашборда в неделю на профиль\n• 5 улучшений текста в неделю\n• Всегда в быстром стандартном качестве\n• Сброс каждый понедельник в полночь (по местному времени)\n\n──────────\n\nБольшинство пользователей в повседневной жизни никогда не достигнут этих ограничений.</string>
     <string name="ai_limits_dialog_close">Понятно</string>
     <string name="theme_neutral">Нейтральный</string>
     <string name="theme_profile">Цвет профиля — цвет профиля дашборда</string>
@@ -1422,4 +1429,11 @@
     <string name="theme_one_dark">Ателье</string>
     <string name="theme_nord">Полярная ночь</string>
     <string name="theme_gruvbox">Янтарь</string>
+    <string name="consent_info_system_backup_title">Android System-Backup</string>
+    <string name="consent_info_system_backup_body">Если ты включил Android System-Backup в настройках устройства, Android автоматически сохраняет данные твоего дневника в резервную область твоего аккаунта Google. Ты можешь отключить это в любой момент в настройках устройства — подробнее см. в политике конфиденциальности.</string>
+    <string name="settings_open_system_backup_settings_label">Управление Android System-Backup</string>
+    <string name="settings_open_system_backup_settings_desc">Открывает системные настройки Android, в которых ты можешь включить или отключить автоматическое резервное копирование для Best Journal.</string>
+    <string name="error_no_backup_settings_available">Настройки резервного копирования на этом устройстве недоступны.</string>
+    <string name="ai_output_health_disclaimer">Не является терапией — не заменяет профессиональную консультацию.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal — это дневник, а не терапевтическое предложение. Анализы ИИ — это импульсы для саморефлексии и не заменяют профессиональную психологическую или медицинскую консультацию. При острых проблемах обратись к специалисту или воспользуйся кризисной помощью в настройках.</string>
 </resources>
