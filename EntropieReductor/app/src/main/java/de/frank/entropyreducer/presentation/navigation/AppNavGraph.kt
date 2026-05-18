@@ -34,6 +34,7 @@ import de.frank.entropyreducer.presentation.settings.memory.MemoryScreen
 import de.frank.entropyreducer.presentation.settings.models.ModelsScreen
 import de.frank.entropyreducer.presentation.settings.profile.ProfileScreen
 import de.frank.entropyreducer.presentation.settings.prompts.PromptsScreen
+import de.frank.entropyreducer.presentation.tagebuch.TagebuchScreen
 
 /**
  * Tab-Switch mit State-Erhaltung (Frank-Wunsch 2026-05-09 Performance):
@@ -175,21 +176,39 @@ private fun AppNavHostInner(
                 arguments = listOf(navArgument("index") { type = NavType.IntType }),
             ) { backStackEntry ->
                 val index = backStackEntry.arguments?.getInt("index") ?: 1
-                SubAreaScreen(
-                    parentTab = parent,
-                    subIndex = index,
-                    onBack = { nav.popBackStack(); Unit },
-                    onSwitchSub = { p, i ->
-                        nav.navigate(Routes.subRouteFor(p, i)) {
-                            // Sub-zu-Sub-Wechsel ersetzt den aktuellen Sub-Eintrag
-                            // im Back-Stack, damit "Zurueck" zuverlaessig zum Parent
-                            // fuehrt — nicht durch eine Kette von Sub-Bereichen.
-                            popUpTo(pattern) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
-                    onSwitchTab = { route -> nav.tabSwitch(route) },
-                )
+                // Frank-Wunsch 2026-05-18: Aufgaben-Sub-Bereich 1 ist das
+                // Tagebuch (statt weisser Platzhalter). Andere Sub-Bereiche
+                // bleiben weisser Platzhalter — werden in spaeteren Sessions
+                // mit Inhalt befuellt.
+                val isTagebuch = parent == Routes.TASKS && index == 1
+                if (isTagebuch) {
+                    TagebuchScreen(
+                        onBack = { nav.popBackStack(); Unit },
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                    )
+                } else {
+                    SubAreaScreen(
+                        parentTab = parent,
+                        subIndex = index,
+                        onBack = { nav.popBackStack(); Unit },
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                // Sub-zu-Sub-Wechsel ersetzt den aktuellen Sub-Eintrag
+                                // im Back-Stack, damit "Zurueck" zuverlaessig zum Parent
+                                // fuehrt — nicht durch eine Kette von Sub-Bereichen.
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                    )
+                }
             }
         }
         composable(Routes.AMAZFIT_TRAININGS) {
