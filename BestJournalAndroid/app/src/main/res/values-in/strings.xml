@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Peningkatan teks AI harian</string>
-    <string name="settings_premium_feature_improve_desc">Setiap entri lebih ekspresif</string>
+    <string name="settings_premium_feature_improve_desc">AI memperbaiki entri kamu sesuai permintaan.</string>
     <string name="settings_premium_feature_dashboard">Analisis dashboard harian</string>
-    <string name="settings_premium_feature_dashboard_desc">Dasbormu tumbuh bersamamu</string>
-    <string name="settings_premium_feature_5_perspectives">5 sudut pandang AI</string>
+    <string name="settings_premium_feature_dashboard_desc">Dasbor kamu berkembang bersama entri-entrimu.</string>
+    <string name="settings_premium_feature_5_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Dari kejernihan hingga pengenalan diri</string>
     <string name="settings_premium_feature_reviews">Tinjauan mingguan, bulanan, tahunan</string>
     <string name="settings_premium_feature_reviews_desc">AI menceritakan kisahmu</string>
     <string name="settings_premium_feature_patterns">Pengenalan pola</string>
-    <string name="settings_premium_feature_patterns_desc">AI menemukan keterkaitan yang luput</string>
+    <string name="settings_premium_feature_patterns_desc">AI bisa membuat pola dan keterkaitan dalam entri kamu terlihat jelas.</string>
     <string name="settings_premium_feature_pdf">Ekspor PDF dengan foto</string>
     <string name="settings_premium_feature_pdf_desc">Entri bergambar sebagai dokumen</string>
     <string name="settings_premium_feature_voice">Pengenalan suara lebih akurat</string>
@@ -814,10 +814,16 @@
     <string name="onboarding_goals_select">Pilih satu atau beberapa target</string>
     <string name="onboarding_how_step3_title">Tambahkan foto</string>
     <string name="onboarding_how_title">Sesederhana ini</string>
-    <string name="onboarding_perspectives_title">5 sudut pandang\nuntuk hidupmu</string>
+    <string name="onboarding_perspectives_title">Berbagai sudut pandang tentang\nkehidupanmu</string>
     <string name="onboarding_premium_feature_pdf">Ekspor PDF dengan foto, simpan entrimu sebagai dokumen</string>
     <string name="onboarding_premium_profiles">5 profil dasbor cerdas untuk wawasan dalam</string>
-    <string name="onboarding_try_premium">Coba Premium 8 hari</string>
+    <string name="onboarding_try_premium">8 hari gratis — lalu mulai dari Rp 59.000/bulan</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">Agar kamu bisa mendiktekan entri jurnalmu lewat suara, kami butuh akses ke mikrofon kamu.</string>
+    <string name="permission_rationale_camera">Agar kamu bisa menambahkan foto ke entri, kami butuh akses ke kamera kamu.</string>
+    <string name="permission_rationale_location">Agar kamu bisa menambahkan konteks lokasi ke entri, kami butuh lokasi perkiraan kamu. Kamu bisa menolak atau menonaktifkannya kapan saja.</string>
+    <string name="permission_rationale_notifications">Agar kami bisa mengingatkan kamu untuk menulis setiap hari, kami butuh izin notifikasi.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -834,7 +840,7 @@
     <string name="paywall_yearly_note">Setelah itu %1$s per tahun\nBisa dibatalkan selama uji coba</string>
     <string name="paywall_most_popular">Paling populer</string>
     <string name="paywall_monthly_plan">Langganan bulanan %1$s per bulan</string>
-    <string name="paywall_yearly_savings">Hemat %1$d\u00A0%% dibanding bulanan, bisa dibatalkan kapan saja</string>
+    <string name="paywall_yearly_savings">Hemat %1$d%% dibanding langganan bulanan \u2014 bisa dibatalkan kapan saja sebelum periode berakhir.</string>
     <string name="paywall_lifetime_title">Beli sekali</string>
     <string name="paywall_lifetime_desc">Bayar sekali, pakai semua secara permanen</string>
     <string name="paywall_lifetime_note">Tanpa langganan, tanpa perpanjangan</string>
@@ -851,8 +857,8 @@
     <string name="paywall_feature_profiles">Profil analisis khusus tanpa batas</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Temukan ketenangan batin</string>
-    <string name="paywall_headline_stress_sub">Kenali apa yang membebani sebelum mengalahkanmu</string>
+    <string name="paywall_headline_stress">Lebih jernih dalam keseharian</string>
+    <string name="paywall_headline_stress_sub">Kenali apa yang paling menyibukkan pikiranmu sehari-hari dan ungkapkan dengan tepat.</string>
     <string name="paywall_headline_clarity">Pahami dirimu lebih baik</string>
     <string name="paywall_headline_clarity_sub">AI mengenali pola yang tersembunyi</string>
     <string name="paywall_headline_growth">Temukan hal baik di setiap hari</string>
@@ -867,7 +873,7 @@
     <string name="paywall_exit_special_offer">Ada tawaran khusus\nuntuk kamu:</string>
     <string name="paywall_exit_discount">Diskon selama %1$d bulan</string>
     <string name="paywall_exit_price_comparison">Hanya %1$s, bukan %2$s per bulan</string>
-    <string name="paywall_exit_start_discount">Mulai langganan bulanan dengan diskon 50\u00A0%</string>
+    <string name="paywall_exit_start_discount">Berbayar \u2014 2 bulan dengan harga setengah</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -893,9 +899,9 @@
     <string name="churn_sorry_title">Sayang kamu pergi</string>
     <string name="churn_sorry_body">Sebelum membatalkan, mau beri tahu alasannya? Itu membantu kami memperbaiki aplikasi.</string>
     <string name="churn_exclusive_offer">Penawaran eksklusif</string>
-    <string name="churn_offer_subtitle">Hanya untukmu, karena kamu penting</string>
+    <string name="churn_offer_subtitle">Penawaran kami untukmu</string>
     <string name="churn_offer_feature_ai">Analisis AI harian</string>
-    <string name="churn_offer_feature_perspectives">Semua 5 sudut pandang</string>
+    <string name="churn_offer_feature_perspectives">Semua profil AI (4 bawaan + tak terbatas milik sendiri)</string>
     <string name="churn_offer_feature_voice">Pengenalan suara Premium</string>
     <string name="churn_offer_auto_renew">Diperpanjang otomatis, bisa dibatalkan kapan saja</string>
     <string name="churn_accept_offer">Terima penawaran</string>
@@ -915,7 +921,7 @@ Dengan Premium: hingga 150 per hari.</string>
     <string name="ai_limit_yearly">Langganan tahunan, %1$s/tahun (hemat 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Tidak, lanjut tanpa AI</string>
     <string name="ai_banner_title">Jurnalmu didukung AI</string>
-    <string name="ai_banner_body">• Teks yang didikte diperbaiki otomatis\n• Ringkasan untuk setiap entri\n• Saran hidup cerdas dari polamu\n• Semuanya termasuk dalam uji coba gratismu</string>
+    <string name="ai_banner_body">• Teks yang didikte diperbaiki otomatis\n• Ringkasan untuk setiap entri\n• Saran hidup cerdas dari pola-polamu. Semua keluaran AI bersifat saran, bukan konsultasi profesional.\n• Semuanya termasuk dalam masa uji coba gratismu</string>
     <string name="cd_mic_start">Mulai rekam</string>
     <string name="cd_mic_stop">Hentikan rekaman</string>
     <string name="entry_improve_limit_daily">Batas harian tercapai. Besok lanjut lagi!</string>
@@ -1259,8 +1265,16 @@ Apa yang ingin kamu lakukan?</string>
     <string name="consent_saved_snackbar">Pengaturan tersimpan</string>
     <string name="consent_revoke_snackbar">Persetujuan dicabut</string>
     <string name="consent_footer_version">Pilihanmu dapat diubah kapan saja di Pengaturan.</string>
+    <string name="consent_footer_link_datenschutz">Kebijakan Privasi</string>
+    <string name="consent_footer_link_impressum">Impresum</string>
+    <string name="consent_footer_link_agb">Ketentuan Penggunaan</string>
     <string name="consent_details_expand">Detail</string>
     <string name="settings_open_privacy_sheet">Sesuaikan pengaturan privasi</string>
+    <string name="settings_open_system_backup_settings_label">Kelola pencadangan sistem Android</string>
+    <string name="settings_open_system_backup_settings_desc">Membuka pengaturan sistem Android tempat kamu bisa mengaktifkan atau menonaktifkan pencadangan otomatis untuk Best Journal.</string>
+    <string name="error_no_backup_settings_available">Pengaturan pencadangan tidak tersedia di perangkat ini.</string>
+    <string name="consent_info_system_backup_title">Pencadangan Sistem Android</string>
+    <string name="consent_info_system_backup_body">Jika kamu mengaktifkan Pencadangan Sistem Android di pengaturan perangkat, Android akan mencadangkan data jurnalmu secara otomatis ke area cadangan akun Google-mu. Kamu bisa menonaktifkannya kapan saja di pengaturan perangkat — lihat kebijakan privasi untuk detail lebih lanjut.</string>
     <string name="settings_privacy_section_header">Privasi &amp; Persetujuan</string>
     <string name="settings_ai_groq_title">Ucapan-ke-teks (Groq)</string>
     <string name="settings_ai_groq_subtitle">Kirim rekaman suara ke Groq AS untuk transkripsi</string>
@@ -1331,7 +1345,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="journal_improve">Tingkatkan teks</string>
     <string name="journal_state_improving">Sedang ditingkatkan…</string>
     <string name="journal_state_transcribing">Sedang ditranskripsi…</string>
-    <string name="paywall_consent_dialog_body">Pada dasarnya kamu memiliki hak pembatalan 14 hari setelah menyelesaikan langganan atau pembelian.\n\nAgar kamu bisa langsung menggunakan fitur Premium, kami mulai menyediakannya segera setelah pembelianmu. Dengan persetujuanmu di bawah ini, kamu melepaskan hak pembatalan 14 hari dengan mengetahui konsekuensinya.\n\nTanpa persetujuan ini kami tidak bisa langsung mengaktifkan fitur Premium.</string>
+    <string name="paywall_consent_dialog_body">Pada dasarnya kamu memiliki hak pembatalan 14 hari setelah menyelesaikan langganan atau pembelian (§ 355 BGB).\n\nAgar kamu bisa langsung menggunakan fitur Premium, kami mulai menyediakannya segera setelah pembelianmu. Dengan persetujuanmu di bawah ini, kamu melepaskan hak pembatalan 14 hari dengan mengetahui konsekuensinya (§ 356 Abs. 5 BGB).\n\nTanpa persetujuan ini kami tidak bisa langsung mengaktifkan fitur Premium.\n\nPenyedia fitur Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Jerman. E-mail untuk pembatalan: dev.app.support@gmail.com.\n\nJika kamu tidak menyatakan pembatalan sebelum penyediaan dimulai dan langganan Premium berjalan, masa 14 hari dimulai pada hari penutupan kontrak. Kamu bisa menyampaikan pembatalan secara bebas bentuk melalui e-mail atau menggunakan formulir pembatalan standar EU (https://www.bmuv.de/widerruf — formulir eksternal EU).</string>
     <string name="paywall_consent_dialog_cancel">Batal</string>
     <string name="paywall_consent_dialog_checkbox">Saya setuju bahwa penyediaan fitur Premium dimulai segera setelah pemesanan. Saya menyadari bahwa dengan ini saya kehilangan hak pembatalan 14 hari.</string>
     <string name="paywall_consent_dialog_confirm">Berlangganan berbayar sekarang</string>
@@ -1379,7 +1393,7 @@ Apa yang ingin kamu lakukan?</string>
     <string name="paywall_monthly_label">Bulanan</string>
     <string name="paywall_restore_button">Pulihkan pembelian</string>
     <string name="paywall_subscribe_button">Berlangganan</string>
-    <string name="paywall_subtitle">Nikmati semua manfaat Premium</string>
+    <string name="paywall_subtitle">Aktifkan semua fitur Premium</string>
     <string name="paywall_title">Upgrade ke Premium</string>
     <string name="paywall_yearly_label">Tahunan</string>
     <string name="prompt_char_count_label">%1$d karakter</string>
@@ -1398,9 +1412,9 @@ Apa yang ingin kamu lakukan?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Kuota AI harian yang besar untuk penggunaan intensif.</string>
+    <string name="ai_limits_disclaimer">Kuota AI harian untuk penggunaan intensif.</string>
     <string name="ai_limits_dialog_title">Bagaimana kuota AI harian bekerja?</string>
-    <string name="ai_limits_dialog_body" formatted="false">DENGAN LANGGANAN PREMIUM\n\nYang tersedia per hari:\n• Hingga 150 analisis dasbor per profil AI (4 profil = hingga 600 per hari)\n• Hingga 150 peningkatan teks\n\nDetail cara kerja:\n• Permintaan 1 hingga 30: kualitas AI tertinggi\n• Permintaan 31 hingga 100: kualitas standar cepat\n• Pada permintaan ke-101: jeda satu kali selama 30 menit\n• Permintaan 101 hingga 150: kualitas standar cepat\n• Mulai permintaan ke-151: tidak ada permintaan lagi hingga besok\n\nBerlaku untuk semua pengguna:\n• Maksimal 50 permintaan AI per jam — lalu jeda 5 menit\n\nKapan kuota direset?\nSetiap hari pukul 00:00 (waktu lokal Anda) kuota penuh baru dimulai.\n\n──────────\n\nTANPA LANGGANAN\n\n• 5 analisis dasbor per minggu per profil\n• 5 peningkatan teks per minggu\n• Selalu dalam kualitas standar cepat\n• Direset setiap Senin pukul 00:00 (waktu lokal Anda)\n\n──────────\n\nLebih dari 99% pengguna mungkin tidak pernah menemukan batasan ini.</string>
+    <string name="ai_limits_dialog_body" formatted="false">DENGAN LANGGANAN PREMIUM\n\nYang tersedia per hari:\n• 150 permintaan per hari per profil — untuk 4 profil bawaan bersama 600/hari, ditambah 150/hari untuk setiap profil yang kamu buat sendiri.\n• Hingga 150 peningkatan teks\n\nDetail cara kerja:\n• Permintaan 1 hingga 30: kualitas AI tertinggi\n• Permintaan 31 hingga 100: kualitas standar cepat\n• Pada permintaan ke-101: jeda satu kali selama 30 menit\n• Permintaan 101 hingga 150: kualitas standar cepat\n• Mulai permintaan ke-151: tidak ada permintaan lagi hingga besok\n\nBerlaku untuk semua pengguna:\n• Maksimal 50 permintaan AI per jam — lalu jeda 5 menit\n\nKapan kuota direset?\nSetiap hari pukul 00:00 (waktu lokal kamu) kuota penuh baru dimulai.\n\n──────────\n\nTANPA LANGGANAN\n\n• 5 analisis dasbor per minggu per profil\n• 5 peningkatan teks per minggu\n• Selalu dalam kualitas standar cepat\n• Direset setiap Senin pukul 00:00 (waktu lokal kamu)\n\n──────────\n\nSebagian besar pengguna dalam keseharian tidak akan mencapai batas ini.</string>
     <string name="ai_limits_dialog_close">Mengerti</string>
     <string name="theme_neutral">Netral</string>
     <string name="theme_profile">Warna profil — warna profil dasbor</string>
@@ -1409,4 +1423,6 @@ Apa yang ingin kamu lakukan?</string>
     <string name="theme_one_dark">Sanggar</string>
     <string name="theme_nord">Malam Kutub</string>
     <string name="theme_gruvbox">Ambar</string>
+    <string name="ai_output_health_disclaimer">Bukan terapi — tidak menggantikan konsultasi profesional.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal adalah buku harian dan bukan layanan terapi. Analisis AI merupakan dorongan untuk refleksi diri dan tidak menggantikan konsultasi psikologis atau medis profesional. Jika kamu menghadapi masalah mendesak, hubungi tenaga ahli atau layanan krisis di pengaturanmu.</string>
 </resources>

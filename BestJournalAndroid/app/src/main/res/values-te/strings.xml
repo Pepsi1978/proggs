@@ -401,15 +401,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">ప్రతిరోజూ AI టెక్స్ట్ మెరుగుదల</string>
-    <string name="settings_premium_feature_improve_desc">ప్రతి నమోదు మరింత వ్యక్తీకరణాత్మకంగా మారుతుంది</string>
+    <string name="settings_premium_feature_improve_desc">AI నీ నమోదులను కోరినప్పుడు మెరుగుపరుస్తుంది.</string>
     <string name="settings_premium_feature_dashboard">ప్రతిరోజూ డాష్‌బోర్డ్ విశ్లేషణలు</string>
-    <string name="settings_premium_feature_dashboard_desc">మీ డ్యాష్‌బోర్డ్ మీతో ఎదుగుతుంది</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI దృక్కోణాలు</string>
+    <string name="settings_premium_feature_dashboard_desc">నీ డ్యాష్‌బోర్డ్ నీ నమోదులతో పాటు పెరుగుతుంది.</string>
+    <string name="settings_premium_feature_5_perspectives">అన్ని AI ప్రొఫైల్‌లు (4 ముందే నిర్వచించబడినవి + అపరిమిత స్వంతవి)</string>
     <string name="settings_premium_feature_5_perspectives_desc">స్పష్టత నుండి స్వీయ-అవగాహన వరకు</string>
     <string name="settings_premium_feature_reviews">వారపు, నెలవారీ మరియు వార్షిక అవలోకనాలు</string>
     <string name="settings_premium_feature_reviews_desc">AI మీ కథను చెబుతుంది</string>
     <string name="settings_premium_feature_patterns">పర్యాయక్రమ గుర్తింపు</string>
-    <string name="settings_premium_feature_patterns_desc">AI మీకు గుర్తించలేని కనెక్షన్లను కనుగొంటుంది</string>
+    <string name="settings_premium_feature_patterns_desc">AI నీ నమోదులలో నీకు కనిపించని నమూనాలు మరియు సంబంధాలను వెలికితీయగలదు</string>
     <string name="settings_premium_feature_pdf">ఫోటోలతో PDF ఎగుమతి</string>
     <string name="settings_premium_feature_pdf_desc">అన్ని డైరీ నమోదులు చిత్రాలతో డాక్యుమెంట్‌గా</string>
     <string name="settings_premium_feature_voice">ఖచ్చితమైన వాయిస్ గుర్తింపు</string>
@@ -750,10 +750,10 @@
     <string name="onboarding_goals_select">ఒకటి లేదా అంతకంటే ఎక్కువ లక్ష్యాలను ఎంచుకోండి</string>
     <string name="onboarding_how_step3_title">ఫోటోలను జోడించండి</string>
     <string name="onboarding_how_title">ఇది ఇంత సులభం</string>
-    <string name="onboarding_perspectives_title">మీ జీవితం పై\n5 దృక్కోణాలు</string>
+    <string name="onboarding_perspectives_title">నీ జీవితంపై\nవిభిన్న కోణాలు</string>
     <string name="onboarding_premium_feature_pdf">ఫోటోలతో PDF ఎగుమతి, మీ నమోదులను డాక్యుమెంట్‌గా సేవ్ చేయండి</string>
     <string name="onboarding_premium_profiles">మీ జీవితంలోకి లోతైన అంతర్దృష్టుల కోసం 5 తెలివైన డ్యాష్‌బోర్డ్ ప్రొఫైల్‌లు</string>
-    <string name="onboarding_try_premium">8 రోజులు Premium ప్రయత్నించండి</string>
+    <string name="onboarding_try_premium">8 రోజులు ఉచితం — తర్వాత నెలకు ₹3.99 నుండి</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -770,7 +770,7 @@
     <string name="paywall_yearly_note">తర్వాత సంవత్సరానికి %1$s\nట్రయల్ దశలో ఎప్పుడైనా రద్దు చేయవచ్చు</string>
     <string name="paywall_most_popular">అత్యంత ప్రజాదరణ ఎంపిక</string>
     <string name="paywall_monthly_plan">నెలవారీ సబ్‌స్క్రిప్షన్, నెలకి %1$s</string>
-    <string name="paywall_yearly_savings">నెలవారీ సబ్‌స్క్రిప్షన్‌తో పోలిస్తే %1$d%% ఆదా చేయండి, ఎప్పుడైనా రద్దు చేయవచ్చు</string>
+    <string name="paywall_yearly_savings">నెలవారీ సభ్యత్వంతో పోలిస్తే %1$d%% ఆదా — సంబంధిత ఒప్పంద వ్యవధి ముగింపులో ఎప్పుడైనా రద్దు చేయవచ్చు.</string>
     <string name="paywall_lifetime_title">ఒకసారి కొనుగోలు</string>
     <string name="paywall_lifetime_desc">ఒకసారి చెల్లించు, అన్నీ శాశ్వతంగా ఉపయోగించు</string>
     <string name="paywall_lifetime_note">సబ్‌స్క్రిప్షన్ లేదు, పొడిగింపు లేదు</string>
@@ -785,8 +785,8 @@
     <string name="paywall_feature_noads">ప్రకటనలు లేకుండా అంతరాయం లేకుండా మాట్లాడండి లేదా రాయండి</string>
     <string name="paywall_feature_profiles">అపరిమిత అనుకూల విశ్లేషణ ప్రొఫైల్స్</string>
 
-    <string name="paywall_headline_stress">మీ అంతర్గత శాంతిని కనుగొనండి</string>
-    <string name="paywall_headline_stress_sub">మిమ్మల్ని అధిగమించే ముందు ఏమి ఒత్తిడి పెడుతోందో గుర్తించండి</string>
+    <string name="paywall_headline_stress">రోజువారీ జీవితంలో స్పష్టత</string>
+    <string name="paywall_headline_stress_sub">నిన్ను నిత్యం వేధించేది ఏమిటో గుర్తించి దాన్ని స్పష్టంగా చెప్పుకో.</string>
     <string name="paywall_headline_clarity">మిమ్మల్ని మీరే బాగా అర్థం చేసుకోండి</string>
     <string name="paywall_headline_clarity_sub">AI మీకు గుప్తంగా ఉన్న పర్యాయక్రమాలను గుర్తిస్తుంది</string>
     <string name="paywall_headline_growth">ప్రతి రోజులో మంచిది కనుగొనండి</string>
@@ -800,7 +800,7 @@
     <string name="paywall_exit_special_offer">మాకు మీ కోసం\nప్రత్యేక ఆఫర్ ఉంది:</string>
     <string name="paywall_exit_discount">%1$d నెలలకి రాయితీ</string>
     <string name="paywall_exit_price_comparison">నెలకి %2$s బదులు కేవలం %1$s</string>
-    <string name="paywall_exit_start_discount">50% రాయితీతో నెలవారీ సబ్‌స్క్రిప్షన్ ప్రారంభించండి</string>
+    <string name="paywall_exit_start_discount">చెల్లింపు అవసరం — 2 నెలలు సగం ధరకు</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -826,9 +826,9 @@
     <string name="churn_sorry_title">మీరు వెళ్లిపోతున్నందుకు విచారం</string>
     <string name="churn_sorry_body">రద్దు చేసే ముందు, ఎందుకో మాకు చెబుతారా? ఆప్‌ని మెరుగుపరచడానికి ఇది మాకు సహాయపడుతుంది.</string>
     <string name="churn_exclusive_offer">ప్రత్యేక ఆఫర్</string>
-    <string name="churn_offer_subtitle">మీరు మాకు ముఖ్యం కాబట్టి మీ కోసం మాత్రమే</string>
+    <string name="churn_offer_subtitle">నీ కోసం మా ప్రత్యేక ఆఫర్</string>
     <string name="churn_offer_feature_ai">ప్రతిరోజూ AI విశ్లేషణలు</string>
-    <string name="churn_offer_feature_perspectives">అన్ని 5 దృక్కోణాలు</string>
+    <string name="churn_offer_feature_perspectives">అన్ని AI ప్రొఫైల్‌లు (4 ముందే నిర్వచించబడినవి + అపరిమిత స్వంతవి)</string>
     <string name="churn_offer_feature_voice">Premium వాయిస్ గుర్తింపు</string>
     <string name="churn_offer_auto_renew">స్వయంచాలకంగా పునరుద్ధరిస్తుంది, ఎప్పుడైనా రద్దు చేయవచ్చు</string>
     <string name="churn_accept_offer">ఆఫర్ స్వీకరించండి</string>
@@ -848,7 +848,7 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="ai_limit_yearly">వార్షిక సబ్‌స్క్రిప్షన్, %1$s/సంవత్సరం (37%% ఆదా)</string>
     <string name="ai_limit_no_thanks">వద్దు ధన్యవాదాలు, AI లేకుండా కొనసాగించండి</string>
     <string name="ai_banner_title">మీ డైరీకి AI మద్దతు ఇస్తుంది</string>
-    <string name="ai_banner_body">• డిక్టేట్ చేసిన టెక్స్ట్‌లు స్వయంచాలకంగా మెరుగుపడతాయి\n• ప్రతి నమోదుకి సారాంశాలు\n• మీ పర్యాయక్రమాల నుండి తెలివైన జీవిత సలహాలు\n• అన్నీ మీ ఉచిత ట్రయల్ దశలో చేరి ఉన్నాయి</string>
+    <string name="ai_banner_body">• డిక్టేట్ చేసిన టెక్స్ట్‌లు స్వయంచాలకంగా మెరుగుపడతాయి\n• ప్రతి నమోదుకి సారాంశాలు\n• నీ నమూనాల నుండి తెలివైన జీవిత సలహాలు. అన్ని AI అవుట్‌పుట్‌లు సూచనలు మాత్రమే — నిపుణుల సలహాకు ప్రత్యామ్నాయం కాదు.\n• అన్నీ నీ ఉచిత ట్రయల్ దశలో అందుబాటులో ఉన్నాయి</string>
     <string name="cd_mic_start">రికార్డింగ్ ప్రారంభించండి</string>
     <string name="cd_mic_stop">రికార్డింగ్ ఆపండి</string>
     <string name="entry_improve_limit_daily">రోజువారీ పరిమితి చేరుకుంది. రేపు కొనసాగుతుంది!</string>
@@ -1267,7 +1267,7 @@ Premium తో: రోజుకు 150 వరకు.</string>
 
     <!-- Paywall / consent strings -->
     <string name="paywall_title">ప్రీమియమ్‌కు అప్‌గ్రేడ్ చేయండి</string>
-    <string name="paywall_subtitle">అన్ని ప్రీమియమ్ సౌకర్యాలను ఆస్వాదించండి</string>
+    <string name="paywall_subtitle">అన్ని Premium ఫీచర్లు అన్‌లాక్ చేయి</string>
     <string name="paywall_monthly_label">నెలవారీ</string>
     <string name="paywall_yearly_label">వార్షిక</string>
     <string name="paywall_lifetime_label">జీవితకాలం</string>
@@ -1275,7 +1275,7 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="paywall_restore_button">కొనుగోలు పునరుద్ధరించండి</string>
     <string name="paywall_cancel_anytime">ఎప్పుడైనా రద్దు చేయవచ్చు</string>
     <string name="paywall_consent_dialog_title">ఉచిత రద్దు హక్కు</string>
-    <string name="paywall_consent_dialog_body">మీరు ఒక సభ్యత్వాన్ని కొనుగోలు చేస్తున్నారు. §355 BGB ప్రకారం మీకు 14 రోజులలోపు ఉచితంగా రద్దు చేసుకునే హక్కు ఉంది. §356 BGB ప్రకారం డిజిటల్ కంటెంట్ విషయంలో మీరు సమ్మతి ఇస్తే ఈ హక్కు రద్దవుతుంది.</string>
+    <string name="paywall_consent_dialog_body">సభ్యత్వం లేదా కొనుగోలు పూర్తయిన తర్వాత నీకు మూలంగా 14 రోజుల రద్దు హక్కు ఉంటుంది (§ 355 BGB).\n\nనీవు Premium ఫీచర్లు వెంటనే ఉపయోగించగలిగేందుకు, నీ కొనుగోలు తర్వాత వెంటనే అందుబాటు ప్రారంభమవుతుంది. దిగువ నీ సమ్మతితో నీవు 14 రోజుల రద్దు హక్కును పరిణామాలు తెలిసి వదులుకుంటున్నావు (§ 356 Abs. 5 BGB).\n\nఈ సమ్మతి లేకుండా మేము Premium ఫీచర్లు వెంటనే అన్‌లాక్ చేయలేము.\n\nPremium ఫీచర్ల అందజేతదారు: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. రద్దు కోసం ఇ-మెయిల్: dev.app.support@gmail.com.\n\nనీవు అందజేత ముందే రద్దు హక్కు వినియోగించకపోతే మరియు Premium సభ్యత్వం ప్రారంభమైతే, నీ 14 రోజుల రద్దు గడువు ఒప్పంద కుదుర్పు రోజు నుండి మొదలవుతుంది. రద్దును సాధారణ ఇ-మెయిల్ ద్వారా లేదా EU నమూనా రద్దు ఫారమ్ ద్వారా చేయవచ్చు (https://www.bmuv.de/widerruf — బాహ్య EU నమూనా).</string>
     <string name="paywall_consent_dialog_checkbox">డౌన్‌లోడ్ ప్రారంభమైన తర్వాత డిజిటల్ కంటెంట్‌కు సంబంధించి నా రద్దు హక్కు రద్దవుతుందని నేను అంగీకరిస్తున్నాను.</string>
     <string name="paywall_consent_dialog_confirm">అంగీకరించి కొనండి</string>
     <string name="paywall_consent_dialog_cancel">రద్దు చేయండి</string>
@@ -1343,9 +1343,9 @@ Premium తో: రోజుకు 150 వరకు.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">సహేతుకమైన దైనందిన AI కోటా, తీవ్ర వినియోగం కోసం.</string>
+    <string name="ai_limits_disclaimer">AI దినసరి కోటా అధిక వినియోగం కోసం.</string>
     <string name="ai_limits_dialog_title">దైనందిన AI కోటా ఎలా పని చేస్తుంది?</string>
-    <string name="ai_limits_dialog_body" formatted="false">ప్రీమియం సభ్యత్వంతో\n\nరోజుకు అందుబాటులో ఉంటుంది:\n• ప్రతి AI ప్రొఫైల్‌కు 150 వరకు డ్యాష్‌బోర్డ్ విశ్లేషణలు (4 ప్రొఫైల్‌లు = రోజుకు 600 వరకు)\n• 150 వరకు వచన మెరుగుదలలు\n\nవివరాలు:\n• అభ్యర్థనలు 1 నుండి 30: అత్యధిక AI నాణ్యత\n• అభ్యర్థనలు 31 నుండి 100: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 101వ అభ్యర్థనకు: ఒకసారి 30 నిమిషాల విరామం\n• అభ్యర్థనలు 101 నుండి 150: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 151వ అభ్యర్థన నుండి: రేపటివరకు మరిన్ని అభ్యర్థనలు లేవు\n\nఅందరు వినియోగదారులకు వర్తిస్తుంది:\n• గంటకు గరిష్టంగా 50 AI అభ్యర్థనలు — తర్వాత 5 నిమిషాల విరామం\n\nకోటా ఎప్పుడు రీసెట్ అవుతుంది?\nప్రతిరోజూ 0:00 (మీ స్థానిక సమయం) వద్ద కొత్త పూర్తి కోటా మొదలవుతుంది.\n\n──────────\n\nసభ్యత్వం లేకుండా\n\n• ప్రతి ప్రొఫైల్‌కు వారానికి 5 డ్యాష్‌బోర్డ్ విశ్లేషణలు\n• వారానికి 5 వచన మెరుగుదలలు\n• ఎల్లప్పుడూ వేగవంతమైన ప్రామాణిక నాణ్యతలో\n• ప్రతి సోమవారం 0:00 (మీ స్థానిక సమయం) రీసెట్\n\n──────────\n\n99% కంటే ఎక్కువ మంది వినియోగదారులు ఈ పరిమితులను ఎప్పుడూ ఎదుర్కోకపోవచ్చు.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM సభ్యత్వంతో\n\nరోజుకు అందుబాటులో ఉంటుంది:\n• రోజుకు ప్రతి ప్రొఫైల్‌కు 150 అభ్యర్థనలు — 4 ముందే నిర్వచించిన ప్రొఫైల్‌లకు కలిపి 600/రోజు, నీవు సృష్టించే ప్రతి స్వంత ప్రొఫైల్‌కు 150/రోజు.\n• 150 వరకు వచన మెరుగుదలలు\n\nఇది ఎలా పని చేస్తుందో:\n• అభ్యర్థనలు 1 నుండి 30: అత్యధిక AI నాణ్యత\n• అభ్యర్థనలు 31 నుండి 100: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 101వ అభ్యర్థనకు: ఒకసారి 30 నిమిషాల విరామం\n• అభ్యర్థనలు 101 నుండి 150: వేగవంతమైన ప్రామాణిక నాణ్యత\n• 151వ అభ్యర్థన నుండి: రేపటివరకు మరిన్ని అభ్యర్థనలు లేవు\n\nఅందరు వినియోగదారులకు వర్తిస్తుంది:\n• గంటకు గరిష్టంగా 50 AI అభ్యర్థనలు — తర్వాత 5 నిమిషాల విరామం\n\nకోటా ఎప్పుడు రీసెట్ అవుతుంది?\nప్రతిరోజూ 0:00 (నీ స్థానిక సమయం) వద్ద కొత్త పూర్తి కోటా మొదలవుతుంది.\n\n──────────\n\nసభ్యత్వం లేకుండా\n\n• ప్రతి ప్రొఫైల్‌కు వారానికి 5 డ్యాష్‌బోర్డ్ విశ్లేషణలు\n• వారానికి 5 వచన మెరుగుదలలు\n• ఎల్లప్పుడూ వేగవంతమైన ప్రామాణిక నాణ్యతలో\n• ప్రతి సోమవారం 0:00 (నీ స్థానిక సమయం) రీసెట్\n\n──────────\n\nసాధారణ వినియోగంలో చాలా మంది వినియోగదారులు ఈ పరిమితులను ఎప్పుడూ ఎదుర్కోరు.</string>
     <string name="ai_limits_dialog_close">అర్థమైంది</string>
     <string name="theme_neutral">తటస్థ</string>
     <string name="theme_profile">ప్రొఫైల్ రంగు — డ్యాష్‌బోర్డ్ ప్రొఫైల్ రంగు</string>
@@ -1354,4 +1354,34 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="theme_one_dark">కార్యశాల</string>
     <string name="theme_nord">ధ్రువ రాత్రి</string>
     <string name="theme_gruvbox">అంబర్</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PERMISSION RATIONALES
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="permission_rationale_microphone">నీ డైరీ నమోదులను గళంతో చెప్పేందుకు మైక్రోఫోన్ ఉపయోగించాల్సి ఉంటుంది.</string>
+    <string name="permission_rationale_camera">నీ నమోదులకు ఫోటోలు జోడించేందుకు కెమెరా ఉపయోగించాల్సి ఉంటుంది.</string>
+    <string name="permission_rationale_location">నీ నమోదులకు స్థల సందర్భం ఇవ్వాలంటే అంచనా స్థానం అవసరం. నీవు ఎప్పుడైనా నిరాకరించవచ్చు లేదా తర్వాత ఆపవచ్చు.</string>
+    <string name="permission_rationale_notifications">నీ రోజువారీ రాత గురించి నిన్ను గుర్తు చేయడానికి నోటిఫికేషన్ అనుమతి అవసరం.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SYSTEM BACKUP CONSENT / SETTINGS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_info_system_backup_title">Android System-Backup</string>
+    <string name="consent_info_system_backup_body">నీవు పరికర సెట్టింగ్‌లలో Android System-Backup ప్రారంభించి ఉంటే, Android నీ డైరీ డేటాను నీ Google ఖాతాలోని బ్యాకప్ విభాగంలో స్వయంచాలకంగా సేవ్ చేస్తుంది. నీవు పరికర సెట్టింగ్‌లలో దీన్ని ఎప్పుడైనా నిలిపివేయవచ్చు — వివరాల కోసం గోప్యతా విధానం చూడు.</string>
+    <string name="settings_open_system_backup_settings_label">Android System-Backup నిర్వహించు</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal కోసం స్వయంచాలక Backup ఆన్ లేదా ఆఫ్ చేయగల Android సిస్టమ్ సెట్టింగ్‌లను తెరుస్తుంది.</string>
+    <string name="error_no_backup_settings_available">ఈ పరికరంలో Backup సెట్టింగ్‌లు అందుబాటులో లేవు.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT FOOTER LINKS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_footer_link_datenschutz">గోప్యతా విధానం</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">వినియోగ నిబంధనలు</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI OUTPUT HEALTH DISCLAIMERS (HWG-sensitive)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_output_health_disclaimer">చికిత్స కాదు — నిపుణుల సలహాకు ప్రత్యామ్నాయం కాదు.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ఒక డైరీ మాత్రమే — చికిత్సా సేవ కాదు. AI విశ్లేషణలు స్వీయపరిశీలనకు సూచనలు మాత్రమే మరియు నిపుణుల మానసిక లేదా వైద్య సలహాకు ప్రత్యామ్నాయం కాదు. తీవ్రమైన సమస్యల విషయంలో నీ సెట్టింగ్‌లలో ఉన్న సంక్షోభ సహాయ సమాచారాన్ని లేదా నిపుణుడిని సంప్రదించు.</string>
 </resources>

@@ -396,15 +396,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">ദൈനംദിന AI ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ</string>
-    <string name="settings_premium_feature_improve_desc">ഓരോ എൻട്രിയും കൂടുതൽ ആകർഷകമായ്</string>
+    <string name="settings_premium_feature_improve_desc">AI ആവശ്യപ്പെടുമ്പോൾ നിന്റെ എൻട്രികൾ മെച്ചപ്പെടുത്തും.</string>
     <string name="settings_premium_feature_dashboard">ദൈനംദിന ഡാഷ്‌ബോർഡ് വിശകലനങ്ങൾ</string>
-    <string name="settings_premium_feature_dashboard_desc">നിങ്ങളോടൊപ്പം ഡാഷ്ബോർഡ് വളരുന്നു</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI കാഴ്ചപ്പാടുകൾ</string>
+    <string name="settings_premium_feature_dashboard_desc">നിന്റെ ഡാഷ്‌ബോർഡ് നിന്റെ എൻട്രികൾക്കൊപ്പം വളരുന്നു.</string>
+    <string name="settings_premium_feature_5_perspectives">എല്ലാ AI പ്രൊഫൈലുകളും (4 നിർദ്ദിഷ്ടം + പരിധിയില്ലാത്ത സ്വന്തം)</string>
     <string name="settings_premium_feature_5_perspectives_desc">വ്യക്തതയിൽ നിന്ന് ആത്മജ്ഞാനം വരെ</string>
     <string name="settings_premium_feature_reviews">ആഴ്ച, മാസ, വർഷ അവലോകനങ്ങൾ</string>
     <string name="settings_premium_feature_reviews_desc">AI നിങ്ങളുടെ കഥ പറയുന്നു</string>
     <string name="settings_premium_feature_patterns">പാറ്റേൺ തിരിച്ചറിയൽ</string>
-    <string name="settings_premium_feature_patterns_desc">AI നിങ്ങൾ ശ്രദ്ധിക്കാത്ത ബന്ധങ്ങൾ കണ്ടെത്തുന്നു</string>
+    <string name="settings_premium_feature_patterns_desc">AI നിന്റെ എൻട്രികളിലെ പ്രവണതകളും ബന്ധങ്ങളും ദൃശ്യമാക്കും</string>
     <string name="settings_premium_feature_pdf">ഫോട്ടോകളോടെ PDF Export</string>
     <string name="settings_premium_feature_pdf_desc">എല്ലാ ഡയറി എൻട്രികളും ചിത്രങ്ങളും ഡോക്യുമെൻറ്ആയി</string>
     <string name="settings_premium_feature_voice">കൂടുതൽ കൃത്യമായ ശബ്ദ തിരിച്ചറിയൽ</string>
@@ -772,10 +772,10 @@
     <string name="onboarding_goals_select">ഒന്നോ അനേകം ലക്ഷ്യങ്ങൾ തിരഞ്ഞെടുക്കൂ</string>
     <string name="onboarding_how_step3_title">ഫോട്ടോ ചേർക്കൂ</string>
     <string name="onboarding_how_title">ഇത്ര ലളിതം</string>
-    <string name="onboarding_perspectives_title">നിങ്ങളുടെ ജീവിതം\n5 കാഴ്ചപ്പാടുകളിൽ</string>
+    <string name="onboarding_perspectives_title">നിന്റെ ജീവിതത്തിന്\nവിവിധ കാഴ്ചപ്പാടുകൾ</string>
     <string name="onboarding_premium_feature_pdf">ഫോട്ടോകളോടെ PDF Export, നിങ്ങളുടെ എൻട്രികൾ ഒരു ഡോക്യുമെൻ്‍ോ ആക്കൂ</string>
     <string name="onboarding_premium_profiles">ജീവിതത്തിൽ ആഴമായ ഉൾക്കാഴ്ചകൾക്ക് 5 ബുദ്ധിമാൻ ഡാഷ്ബോർഡ് പ്രൊഫൈലുകൾ</string>
-    <string name="onboarding_try_premium">8 ദിവസം Premium ഉപയോഗിക്കൂ</string>
+    <string name="onboarding_try_premium">8 ദിവസം സൗജന്യം — പിന്നെ 3,99 €/മാസം മുതൽ</string>
 
     <!-- PAYWALL -->
     <string name="paywall_prices_loading">വിലകൾ ലോഡ് ചെയ്യുന്നു\u2026</string>
@@ -790,7 +790,7 @@
     <string name="paywall_yearly_note">ശേഷം %1$s/വർഷം\nട്രയൽ കാലത്ത് എപ്പോൾ വേണമെങ്കിലും റദ്ദ് ആകാം</string>
     <string name="paywall_most_popular">ഏറ്റവും ജനപ്രിയം</string>
     <string name="paywall_monthly_plan">മാസ സബ്സ്ക്രിപ്ഷൻ, %1$s/മാസം</string>
-    <string name="paywall_yearly_savings">മാസ സബ്സ്ക്രിപ്ഷനേക്കാൾ %1$d%% ലാഭം, എപ്പോൾ വേണമെങ്കിലും റദ്ദ്</string>
+    <string name="paywall_yearly_savings">മാസ സബ്‌സ്‌ക്രിപ്ഷനേക്കാൾ %1$d%% ലാഭം — കരാർ കാലാവധി അവസാനിക്കുമ്പോൾ എപ്പോൾ വേണമെങ്കിലും റദ്ദ് ചെയ്യാം.</string>
     <string name="paywall_lifetime_title">ഒറ്റ വാങ്ങൽ</string>
     <string name="paywall_lifetime_desc">ഒറ്റത്തവണ പണമടയ്ക്കുക, എല്ലാം ശാശ്വതമായി ഉപയോഗിക്കുക</string>
     <string name="paywall_lifetime_note">സബ്സ്ക്രിപ്ഷൻ ഇല്ല, പുതുക്കൽ ഇല്ല</string>
@@ -807,8 +807,8 @@
     <string name="paywall_feature_profiles">പരിധിയില്ലാത്ത ഇഷ്ടാനുസൃത വിശകലന പ്രൊഫൈലുകൾ</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">ആന്തരിക ശാന്തി കണ്ടെത്തൂ</string>
-    <string name="paywall_headline_stress_sub">നിങ്ങളെ ഭാരപ്പെടുത്തുന്നത് ഒഴുക്കി കളയുന്നതിന് മുൻപ് തിരിച്ചറിയൂ</string>
+    <string name="paywall_headline_stress">ദൈനംദിന ജീവിതത്തിൽ കൂടുതൽ വ്യക്തത</string>
+    <string name="paywall_headline_stress_sub">നിന്നെ ദിനവും ഉൽകണ്ഠപ്പെടുത്തുന്നത് എന്താണെന്ന് തിരിച്ചറിഞ്ഞ് അത് ഒറ്റ വാക്കിൽ പറഞ്ഞുവെക്കൂ.</string>
     <string name="paywall_headline_clarity">സ്വയം കൂടുതൽ മനസ്സിലാക്കൂ</string>
     <string name="paywall_headline_clarity_sub">AI നിങ്ങൾ ശ്രദ്ധിക്കാത്ത പാറ്റേണുകൾ കണ്ടെത്തുന്നു</string>
     <string name="paywall_headline_growth">ഓരോ ദിവസത്തിലും നന്മ കണ്ടെത്തൂ</string>
@@ -823,7 +823,7 @@
     <string name="paywall_exit_special_offer">നിങ്ങൾക്ക് ഒരു\nപ്രത്യേക ഓഫർ ഉണ്ട്:</string>
     <string name="paywall_exit_discount">%1$d മാസം ഡിസ്കൌണ്ട്</string>
     <string name="paywall_exit_price_comparison">%2$s-ന് പകരം %1$s/മാസം മാത്രം</string>
-    <string name="paywall_exit_start_discount">50% ഡിസ്കൌണ്ടോടെ മാസ സബ്സ്ക്രിപ്ഷൻ ആരംഭിക്കൂ</string>
+    <string name="paywall_exit_start_discount">പണം നൽകണം — 2 മാസം പകുതി വിലയ്ക്ക്</string>
 
     <!-- CHURN FLOW DIALOG -->
     <string name="churn_your_sub">നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ</string>
@@ -847,9 +847,9 @@
     <string name="churn_sorry_title">നിങ്ങൾ പോകുന്നത് ദുഃഖകരം</string>
     <string name="churn_sorry_body">റദ്ദ് ചെയ്യുന്നതിന് മുൻപ്, കാരണം പറയുമോ? ആപ്പ് മെച്ചപ്പെടുത്താൻ ഇത് സഹായിക്കുന്നു.</string>
     <string name="churn_exclusive_offer">എക്സ്ക്ലൂസീവ് ഓഫർ</string>
-    <string name="churn_offer_subtitle">നിങ്ങൾ ഞങ്ങൾക്ക് പ്രധാനം, അതിനാൽ ഇത് നിങ്ങൾക്ക് മാത്രം</string>
+    <string name="churn_offer_subtitle">നിനക്കായി ഞങ്ങളുടെ ഓഫർ</string>
     <string name="churn_offer_feature_ai">ദൈനംദിന AI വിശകലനങ്ങൾ</string>
-    <string name="churn_offer_feature_perspectives">5 കാഴ്ചപ്പാടുകൾ</string>
+    <string name="churn_offer_feature_perspectives">എല്ലാ AI പ്രൊഫൈലുകളും (4 നിർദ്ദിഷ്ടം + പരിധിയില്ലാത്ത സ്വന്തം)</string>
     <string name="churn_offer_feature_voice">Premium ശബ്ദ തിരിച്ചറിയൽ</string>
     <string name="churn_offer_auto_renew">സ്വയം പുതുക്കുന്നു, എപ്പോൾ വേണമെങ്കിലും റദ്ദ്</string>
     <string name="churn_accept_offer">ഓഫർ സ്വീകരിക്കുക</string>
@@ -867,7 +867,7 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="ai_limit_yearly">വർഷ സബ്സ്ക്രിപ്ഷൻ, %1$s/വർഷം (37%% ലാഭം)</string>
     <string name="ai_limit_no_thanks">വേണ്ട, AI ഇല്ലാതെ തുടരുക</string>
     <string name="ai_banner_title">നിങ്ങളുടെ ഡയറി AI ൽ</string>
-    <string name="ai_banner_body">• ഡിക്‌ടേറ്റ് ചെയ്ത ടെക്സ്റ്റ് സ്വയം മെച്ചപ്പെടുന്നു\n• ഓരോ എൻട്രിക്കും സംഗ്രഹങ്ങൾ\n• നിങ്ങളുടെ പാറ്റേണുകളിൽ നിന്ന് ബുദ്ധിമാൻ ജീവിത ഉപദേശം\n• സൗജന്യ ട്രയൽ കാലത്ത് എല്ലാം ഉൾക്കൊള്ളുന്നു</string>
+    <string name="ai_banner_body">• ഡിക്‌ടേറ്റ് ചെയ്ത ടെക്‌സ്‌റ്റ് സ്വയം മെച്ചപ്പെടുന്നു\n• ഓരോ എൻട്രിക്കും സംഗ്രഹങ്ങൾ\n• നിന്റെ പ്രവണതകളിൽ നിന്ന് ബുദ്ധിപൂർവ്വമായ ജീവിത ഉപദേശം. എല്ലാ AI ഔട്ട്‌പുട്ടും നിർദ്ദേശങ്ങളാണ്, പ്രൊഫഷണൽ ഉപദേശമല്ല.\n• നിന്റെ സൗജന്യ ട്രയൽ കാലയളവിൽ എല്ലാം ഉൾക്കൊള്ളുന്നു</string>
     <string name="cd_mic_start">റെക്കോർഡിംഗ് ആരംഭിക്കൂ</string>
     <string name="cd_mic_stop">റെക്കോർഡിംഗ് നിർത്തൂ</string>
     <string name="entry_improve_limit_daily">ദൈനംദിന പരിധി എത്തി. നാളെ തുടരാം!</string>
@@ -1273,7 +1273,7 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
 
     <!-- Paywall / consent strings -->
     <string name="paywall_title">പ്രീമിയത്തിലേക്ക് അപ്‌ഗ്രേഡ് ചെയ്യുക</string>
-    <string name="paywall_subtitle">എല്ലാ പ്രീമിയം സൗകര്യങ്ങളും ആസ്വദിക്കുക</string>
+    <string name="paywall_subtitle">എല്ലാ പ്രീമിയം ഫീച്ചറുകളും അൺലോക്ക് ചെയ്യൂ</string>
     <string name="paywall_monthly_label">പ്രതിമാസം</string>
     <string name="paywall_yearly_label">വാർഷികം</string>
     <string name="paywall_lifetime_label">ജീവിതകാലം</string>
@@ -1281,7 +1281,7 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="paywall_restore_button">വാങ്ങൽ പുനഃസ്ഥാപിക്കുക</string>
     <string name="paywall_cancel_anytime">എപ്പോൾ വേണമെങ്കിലും റദ്ദാക്കാം</string>
     <string name="paywall_consent_dialog_title">സൗജന്യ റദ്ദാക്കൽ അവകാശം</string>
-    <string name="paywall_consent_dialog_body">നിങ്ങൾ ഒരു സബ്‌സ്‌ക്രിപ്ഷൻ വാങ്ങുകയാണ്. §355 BGB പ്രകാരം 14 ദിവസത്തിനുള്ളിൽ സൗജന്യമായി റദ്ദാക്കാനുള്ള അവകാശം നിങ്ങൾക്കുണ്ട്. §356 BGB പ്രകാരം ഡിജിറ്റൽ ഉള്ളടക്കത്തിന്റെ കാര്യത്തിൽ നിങ്ങൾ സമ്മതം നൽകുകയാണെങ്കിൽ ഈ അവകാശം നഷ്ടമാകും.</string>
+    <string name="paywall_consent_dialog_body">ഒരു സബ്‌സ്‌ക്രിപ്ഷൻ അല്ലെങ്കിൽ വാങ്ങൽ പൂർത്തിയാക്കിയ ശേഷം §355 BGB പ്രകാരം 14 ദിവസത്തിനുള്ളിൽ റദ്ദാക്കാനുള്ള അവകാശം നിനക്കുണ്ട്.\n\nപ്രീമിയം ഫീച്ചറുകൾ ഉടൻ ലഭ്യമാക്കുന്നതിനായി, നിന്റെ വാങ്ങലിനു ശേഷം ഉടൻ ഞങ്ങൾ നൽകൽ ആരംഭിക്കും. ചുവടെയുള്ള നിന്റെ സമ്മതത്തോടെ, §356 Abs. 5 BGB പ്രകാരം 14 ദിവസത്തെ റദ്ദാക്കൽ അവകാശം നിനക്ക് ഉണ്ടെന്നറിഞ്ഞ് നീ ഉപേക്ഷിക്കുന്നു.\n\nഈ സമ്മതം ഇല്ലാതെ ഞങ്ങൾക്ക് പ്രീമിയം ഫീച്ചറുകൾ ഉടൻ തുറക്കാൻ കഴിയില്ല.\n\nപ്രീമിയം ഫീച്ചറുകളുടെ ദാതാവ്: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, ജർമ്മനി. റദ്ദാക്കലിനുള്ള ഇ-മെയിൽ: dev.app.support@gmail.com.\n\nനൽകൽ ആരംഭിക്കുന്നതിന് മുൻപ് റദ്ദാക്കൽ അവകാശം ഉപയോഗിക്കാതെ പ്രീമിയം സബ്‌സ്‌ക്രിപ്ഷൻ ആരംഭിച്ചാൽ, കരാർ ഉറപ്പിച്ച ദിവസം മുതൽ 14 ദിവസത്തെ അവകാശ കാലാവധി ആരംഭിക്കും. ഇ-മെയിൽ വഴി ഔപചാരിക രൂപമില്ലാതെ റദ്ദ് ചെയ്യാം അല്ലെങ്കിൽ EU മാതൃകാ ഫോം ഉപയോഗിക്കാം (https://www.bmuv.de/widerruf — ബാഹ്യ EU മാതൃക).</string>
     <string name="paywall_consent_dialog_checkbox">ഡൗൺലോഡ് ആരംഭിക്കുമ്പോൾ ഡിജിറ്റൽ ഉള്ളടക്കത്തിനുള്ള എന്റെ റദ്ദാക്കൽ അവകാശം നഷ്ടമാകുമെന്ന് ഞാൻ സമ്മതിക്കുന്നു.</string>
     <string name="paywall_consent_dialog_confirm">സമ്മതിക്കുകയും വാങ്ങുകയും ചെയ്യുക</string>
     <string name="paywall_consent_dialog_cancel">റദ്ദാക്കുക</string>
@@ -1349,9 +1349,9 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">തീവ്ര ഉപയോഗത്തിനായി ഉദാരമായ ദൈനംദിന AI ക്വോട്ട.</string>
+    <string name="ai_limits_disclaimer">തീവ്ര ഉപയോഗത്തിനായി AI ദൈനംദിന ക്വോട്ട.</string>
     <string name="ai_limits_dialog_title">ദൈനംദിന AI ക്വോട്ട എങ്ങനെ പ്രവർത്തിക്കുന്നു?</string>
-    <string name="ai_limits_dialog_body" formatted="false">പ്രീമിയം സബ്‌സ്‌ക്രിപ്‌ഷനോടൊപ്പം\n\nദിവസേന നിങ്ങൾക്ക് ലഭ്യം:\n• ഓരോ AI പ്രൊഫൈലിനും 150 ഡാഷ്‌ബോർഡ് വിശകലനങ്ങൾ (4 പ്രൊഫൈലുകളിൽ അതായത് ദിനേന 600 വരെ)\n• 150 ടെക്‌സ്‌റ്റ് മെച്ചപ്പെടുത്തലുകൾ\n\nഇത് വിശദമായി എങ്ങനെ പ്രവർത്തിക്കുന്നു:\n• അഭ്യർത്ഥനകൾ 1 മുതൽ 30 വരെ: ഏറ്റവും ഉയർന്ന AI ഗുണനിലവാരത്തിൽ\n• അഭ്യർത്ഥനകൾ 31 മുതൽ 100 വരെ: വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരത്തിൽ\n• 101-ാം അഭ്യർത്ഥനയിൽ: ഒരു തവണ 30 മിനിറ്റ് ഇടവേള\n• അഭ്യർത്ഥനകൾ 101 മുതൽ 150 വരെ: വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരം\n• 151-ാം അഭ്യർത്ഥനക്കു ശേഷം: നാളെ വരെ കൂടുതൽ അഭ്യർത്ഥനകൾ ഇല്ല\n\nകൂടാതെ എല്ലാ ഉപയോക്താക്കൾക്കും:\n• മണിക്കൂറിൽ പരമാവധി 50 AI അഭ്യർത്ഥനകൾ — പിന്നെ 5 മിനിറ്റ് ഇടവേള\n\nക്വോട്ടകൾ എപ്പോൾ പുനഃക്രമീകരിക്കുന്നു?\nദിവസേന 0:00 മണിക്ക് (നിങ്ങളുടെ പ്രാദേശിക സമയം) ഒരു പുതിയ മുഴുവൻ ക്വോട്ടയും ആരംഭിക്കുന്നു.\n\n──────────\n\nസബ്‌സ്‌ക്രിപ്‌ഷൻ ഇല്ലാതെ\n\n• ഓരോ പ്രൊഫൈലിനും ആഴ്‌ചയിൽ 5 ഡാഷ്‌ബോർഡ് വിശകലനങ്ങൾ\n• ആഴ്‌ചയിൽ 5 ടെക്‌സ്‌റ്റ് മെച്ചപ്പെടുത്തലുകൾ\n• എപ്പോഴും വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരത്തിൽ\n• എല്ലാ തിങ്കളാഴ്‌ചയും 0:00 മണിക്ക് (നിങ്ങളുടെ പ്രാദേശിക സമയം) പുനഃക്രമീകരിക്കൽ\n\n──────────\n\n99%-ലധികം ഉപയോക്താക്കൾ ഈ പരിമിതികൾ ഒരിക്കലും അനുഭവിക്കാൻ ഇടയില്ല.</string>
+    <string name="ai_limits_dialog_body" formatted="false">പ്രീമിയം സബ്‌സ്‌ക്രിപ്‌ഷനോടൊപ്പം\n\nദിനം‌പ്രതി നിനക്ക് ലഭ്യം:\n• ഓരോ AI പ്രൊഫൈലിനും ദിവസം 150 അഭ്യർത്ഥനകൾ — 4 നിർദ്ദിഷ്ട പ്രൊഫൈലുകൾ ചേർന്ന് 600/ദിവസം, കൂടാതെ നീ സൃഷ്ടിക്കുന്ന ഓരോ സ്വന്തം പ്രൊഫൈലിനും 150/ദിവസം.\n• 150 ടെക്‌സ്‌റ്റ് മെച്ചപ്പെടുത്തലുകൾ\n\nഇത് വിശദമായി എങ്ങനെ പ്രവർത്തിക്കുന്നു:\n• അഭ്യർത്ഥനകൾ 1 മുതൽ 30: ഏറ്റവും ഉയർന്ന AI ഗുണനിലവാരത്തിൽ\n• അഭ്യർത്ഥനകൾ 31 മുതൽ 100: വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരത്തിൽ\n• 101-ാം അഭ്യർത്ഥനയിൽ: ഒരു തവണ 30 മിനിറ്റ് ഇടവേള\n• അഭ്യർത്ഥനകൾ 101 മുതൽ 150: വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരം\n• 151-ാം അഭ്യർത്ഥനക്കു ശേഷം: നാളെ വരെ കൂടുതൽ അഭ്യർത്ഥനകൾ ഇല്ല\n\nകൂടാതെ എല്ലാ ഉപയോക്താക്കൾക്കും:\n• മണിക്കൂറിൽ പരമാവധി 50 AI അഭ്യർത്ഥനകൾ — പിന്നെ 5 മിനിറ്റ് ഇടവേള\n\nക്വോട്ടകൾ എപ്പോൾ പുനഃക്രമീകരിക്കും?\nദിനംതോറും 0:00 മണിക്ക് (നിന്റെ പ്രാദേശിക സമയം) ഒരു പുതിയ മുഴുവൻ ക്വോട്ടയും ആരംഭിക്കും.\n\n──────────\n\nസബ്‌സ്‌ക്രിപ്‌ഷൻ ഇല്ലാതെ\n\n• ഓരോ പ്രൊഫൈലിനും ആഴ്‌ചയിൽ 5 ഡാഷ്‌ബോർഡ് വിശകലനങ്ങൾ\n• ആഴ്‌ചയിൽ 5 ടെക്‌സ്‌റ്റ് മെച്ചപ്പെടുത്തലുകൾ\n• എപ്പോഴും വേഗത്തിലുള്ള സ്റ്റാൻഡേർഡ് ഗുണനിലവാരത്തിൽ\n• എല്ലാ തിങ്കളാഴ്‌ചയും 0:00 മണിക്ക് (നിന്റെ പ്രാദേശിക സമയം) പുനഃക്രമീകരിക്കൽ\n\n──────────\n\nദൈനംദിന ജീവിതത്തിൽ ഭൂരിഭാഗം ഉപയോക്താക്കൾക്കും ഈ പരിധി ഒരിക്കലും അനുഭവിക്കേണ്ടി വരില്ല.</string>
     <string name="ai_limits_dialog_close">മനസ്സിലായി</string>
     <string name="theme_neutral">നിഷ്‌പക്ഷ</string>
     <string name="theme_profile">പ്രൊഫൈൽ നിറം — ഡാഷ്‌ബോർഡ് പ്രൊഫൈലിന്റെ നിറം</string>
@@ -1360,4 +1360,26 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="theme_one_dark">ശില്പശാല</string>
     <string name="theme_nord">ധ്രുവ രാത്രി</string>
     <string name="theme_gruvbox">ആംബർ</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">ഡയറി എൻട്രികൾ ശബ്ദം ഉപയോഗിച്ച് ഡിക്‌ടേറ്റ് ചെയ്യാൻ നിന്റെ മൈക്രോഫോണിലേക്ക് ആക്‌സസ് ആവശ്യമാണ്.</string>
+    <string name="permission_rationale_camera">എൻട്രികളിൽ ഫോട്ടോ ചേർക്കാൻ നിന്റെ ക്യാമറയിലേക്ക് ആക്‌സസ് ആവശ്യമാണ്.</string>
+    <string name="permission_rationale_location">എൻട്രികൾക്ക് ഒരു സ്ഥലസന്ദർഭം നൽകാൻ ഏകദേശ ലൊക്കേഷൻ ആവശ്യമാണ്. ഇത് ഏത് സമയത്തും നിരസിക്കാം അല്ലെങ്കിൽ പിന്നീട് ഓഫ് ചെയ്യാം.</string>
+    <string name="permission_rationale_notifications">ദൈനംദിന എഴുത്ത് ഓർമ്മിപ്പിക്കാൻ അറിയിപ്പ് അനുമതി ആവശ്യമാണ്.</string>
+
+    <!-- System Backup consent -->
+    <string name="consent_info_system_backup_title">Android സിസ്റ്റം ബാക്കപ്പ്</string>
+    <string name="consent_info_system_backup_body">ഉപകരണ ക്രമീകരണങ്ങളിൽ Android സിസ്റ്റം ബാക്കപ്പ് സജ്ഗമമാക്കിയിട്ടുണ്ടെങ്കിൽ, Android നിന്റെ ഡയറി ഡേറ്റ നിന്റെ Google അക്കൗണ്ടിന്റെ ബാക്കപ്പ് ഏരിയയിൽ സ്വയം സേവ് ചെയ്യും. ഉപകരണ ക്രമീകരണങ്ങളിൽ ഇത് ഏത് സമയത്തും ഓഫ് ചെയ്യാം — വിശദ വിവരങ്ങൾക്ക് സ്വകാര്യതാ നയം കാണൂ.</string>
+    <string name="settings_open_system_backup_settings_label">Android സിസ്റ്റം ബാക്കപ്പ് നിയന്ത്രിക്കുക</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal-ന്റെ ഓട്ടോമാറ്റിക് ബാക്കപ്പ് ഓൺ/ഓഫ് ചെയ്യാൻ Android സിസ്റ്റം ക്രമീകരണങ്ങൾ തുറക്കും.</string>
+    <string name="error_no_backup_settings_available">ഈ ഉപകരണത്തിൽ ബാക്കപ്പ് ക്രമീകരണങ്ങൾ ലഭ്യമല്ല.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">സ്വകാര്യത</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">ഉപയോഗ നിബന്ധനകൾ</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">തെറാപ്പിയല്ല — പ്രൊഫഷണൽ ഉപദേശം മാറ്റിവെക്കുന്നില്ല.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ഒരു ഡയറിയാണ്, തെറാപ്പി ഓഫറല്ല. AI വിശകലനങ്ങൾ സ്വയം-പ്രതിഫലനത്തിനുള്ള നിർദ്ദേശങ്ങളാണ്, അവ പ്രൊഫഷണൽ മനഃശാസ്ത്ര അല്ലെങ്കിൽ വൈദ്യ ഉപദേശം മാറ്റിവെക്കുന്നില്ല. അടിയന്തര പ്രശ്നങ്ങളുണ്ടെങ്കിൽ ഒരു വിദഗ്ധനെ സമീപിക്കൂ അല്ലെങ്കിൽ ക്രമീകരണങ്ങളിലെ ക്രൈസിസ് ഹെൽപ്‌ലൈൻ ഉപയോഗിക്കൂ.</string>
 </resources>

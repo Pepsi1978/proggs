@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">தினசரி AI உரை மேம்பாடு</string>
-    <string name="settings_premium_feature_improve_desc">ஒவ்வொரு பதிவும் மிகவும் வலிமையாகிறது</string>
+    <string name="settings_premium_feature_improve_desc">KI விரும்பும்போது உன் பதிவுகளை மேம்படுத்துகிறது.</string>
     <string name="settings_premium_feature_dashboard">தினசரி டாஷ்போர்டு பகுப்பாய்வுகள்</string>
-    <string name="settings_premium_feature_dashboard_desc">உங்கள் டாஷ்போர்டு உங்களுடன் வளர்கிறது</string>
-    <string name="settings_premium_feature_5_perspectives">5 KI கோணங்கள்</string>
+    <string name="settings_premium_feature_dashboard_desc">உன் டாஷ்போர்டு உன் பதிவுகளுடன் வளர்கிறது.</string>
+    <string name="settings_premium_feature_5_perspectives">அனைத்து KI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
     <string name="settings_premium_feature_5_perspectives_desc">தெளிவிலிருந்து சுய அறிவு வரை</string>
     <string name="settings_premium_feature_reviews">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
     <string name="settings_premium_feature_reviews_desc">KI உங்கள் கதையை சொல்கிறது</string>
     <string name="settings_premium_feature_patterns">வடிவ கண்டறிதல்</string>
-    <string name="settings_premium_feature_patterns_desc">KI நீங்கள் கவனிக்காத தொடர்புகளை கண்டறிகிறது</string>
+    <string name="settings_premium_feature_patterns_desc">KI உன் பதிவுகளில் வடிவங்களையும் தொடர்புகளையும் தெளிவாக்கும்</string>
     <string name="settings_premium_feature_pdf">புகைப்படங்களுடன் PDF ஏற்றுமதி</string>
     <string name="settings_premium_feature_pdf_desc">படங்களுடன் அனைத்து நாட்குறிப்பு பதிவுகளும் ஆவணமாக</string>
     <string name="settings_premium_feature_voice">மிகவும் துல்லியமான குரல் அங்கீகாரம்</string>
@@ -842,10 +842,10 @@
     <string name="onboarding_goals_select">ஒன்று அல்லது பல இலக்குகளை தேர்வு செய்யவும்</string>
     <string name="onboarding_how_step3_title">புகைப்படங்களை சேர்க்கவும்</string>
     <string name="onboarding_how_title">இவ்வளவு எளிதானது</string>
-    <string name="onboarding_perspectives_title">உங்கள் வாழ்வில்\n5 கோணங்கள்</string>
+    <string name="onboarding_perspectives_title">உன் வாழ்வில்\nவெவ்வேறு கோணங்கள்</string>
     <string name="onboarding_premium_feature_pdf">புகைப்படங்களுடன் PDF ஏற்றுமதி, உங்கள் பதிவுகளை ஆவணமாக காப்பிடுங்கள்</string>
     <string name="onboarding_premium_profiles">உங்கள் வாழ்வில் ஆழமான நுண்ணறிவுகளுக்கான 5 அறிவார்ந்த டாஷ்போர்டு சுயவிவரங்கள்</string>
-    <string name="onboarding_try_premium">8 நாட்கள் Premium சோதனை</string>
+    <string name="onboarding_try_premium">8 நாட்கள் இலவசம் — பிறகு மாதம் 3.99 € முதல்</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -862,7 +862,7 @@
     <string name="paywall_yearly_note">பிறகு ஆண்டுக்கு %1$s\nசோதனை காலத்தில் எப்போதும் ரத்து செய்யலாம்</string>
     <string name="paywall_most_popular">மிகவும் பிரபலமான தேர்வு</string>
     <string name="paywall_monthly_plan">மாத சந்தா, மாதத்திற்கு %1$s</string>
-    <string name="paywall_yearly_savings">மாத சந்தாவுடன் ஒப்பிட்டு %1$d%% சேமிக்கவும், எப்போதும் ரத்து செய்யலாம்</string>
+    <string name="paywall_yearly_savings">மாத சந்தாவுடன் ஒப்பிடும்போது %1$d%% சேமிப்பு — ஒப்பந்த முடிவில் எப்போதும் ரத்து செய்யலாம்.</string>
     <string name="paywall_lifetime_title">ஒரு முறை வாங்கல்</string>
     <string name="paywall_lifetime_desc">ஒருமுறை பணம் செலுத்தி, அனைத்தையும் நிரந்தரமாக பயன்படுத்து</string>
     <string name="paywall_lifetime_note">சந்தா இல்லை, புதுப்பிப்பு இல்லை</string>
@@ -879,8 +879,8 @@
     <string name="paywall_feature_profiles">வரம்பற்ற தனிப்பட்ட பகுப்பாய்வு சுயவிவரங்கள்</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">உங்கள் உள் அமைதியை கண்டுபிடியுங்கள்</string>
-    <string name="paywall_headline_stress_sub">உங்களை சுமைப்படுத்துவதை அது உங்களை மூழ்கடிப்பதற்கு முன்பே அறியுங்கள்</string>
+    <string name="paywall_headline_stress">அன்றாட வாழ்வில் அதிக தெளிவு</string>
+    <string name="paywall_headline_stress_sub">உன்னை அன்றாடம் என்ன ஆக்கிரமிக்கிறது என்பதை அறிந்து சுருக்கிச் சொல்.</string>
     <string name="paywall_headline_clarity">உங்களை சிறப்பாக புரிந்துகொள்ளுங்கள்</string>
     <string name="paywall_headline_clarity_sub">KI உங்களுக்கு மறைந்திருக்கும் வடிவங்களை கண்டறிகிறது</string>
     <string name="paywall_headline_growth">ஒவ்வொரு நாளிலும் நல்லதை கண்டுபிடியுங்கள்</string>
@@ -895,7 +895,7 @@
     <string name="paywall_exit_special_offer">உங்களுக்காக ஒரு சிறப்பு\nவாய்ப்பு இருக்கிறது:</string>
     <string name="paywall_exit_discount">%1$d மாதங்களுக்கு தள்ளுபடி</string>
     <string name="paywall_exit_price_comparison">மாதத்திற்கு %2$s பதிலாக வெறும் %1$s</string>
-    <string name="paywall_exit_start_discount">50% தள்ளுபடியில் மாத சந்தா தொடங்கு</string>
+    <string name="paywall_exit_start_discount">கட்டண கடமை — 2 மாதங்கள் பாதி விலையில்</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -921,9 +921,9 @@
     <string name="churn_sorry_title">நீங்கள் செல்வது வருந்தத்தக்கது</string>
     <string name="churn_sorry_body">ரத்து செய்வதற்கு முன்பு, ஏன் என்று சொல்ல முடியுமா? App-ஐ மேம்படுத்த இது உதவும்.</string>
     <string name="churn_exclusive_offer">பிரத்யேக வாய்ப்பு</string>
-    <string name="churn_offer_subtitle">உங்களுக்காக மட்டும், நீங்கள் எங்களுக்கு முக்கியம்</string>
+    <string name="churn_offer_subtitle">உனக்கான எங்கள் சலுகை</string>
     <string name="churn_offer_feature_ai">தினசரி AI பகுப்பாய்வுகள்</string>
-    <string name="churn_offer_feature_perspectives">அனைத்து 5 கோணங்களும்</string>
+    <string name="churn_offer_feature_perspectives">அனைத்து KI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
     <string name="churn_offer_feature_voice">Premium குரல் அங்கீகாரம்</string>
     <string name="churn_offer_auto_renew">தானாக புதுப்பிக்கப்படும், எப்போதும் ரத்து செய்யலாம்</string>
     <string name="churn_accept_offer">வாய்ப்பை ஏற்றுக்கொள்</string>
@@ -943,7 +943,7 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="ai_limit_yearly">ஆண்டு சந்தா, %1$s/ஆண்டு (37%% சேமிக்கவும்)</string>
     <string name="ai_limit_no_thanks">வேண்டாம், KI இல்லாமல் தொடரவும்</string>
     <string name="ai_banner_title">உங்கள் நாட்குறிப்பு KI ஆல் ஆதரிக்கப்படுகிறது</string>
-    <string name="ai_banner_body">• கூறிய உரைகள் தானாக மேம்படுத்தப்படுகின்றன\n• ஒவ்வொரு பதிவிற்கும் சுருக்கங்கள்\n• உங்கள் வடிவங்களிலிருந்து அறிவார்ந்த வாழ்க்கை ஆலோசனை\n• உங்கள் இலவச சோதனை காலத்தில் அனைத்தும் சேர்க்கப்பட்டுள்ளது</string>
+    <string name="ai_banner_body">• படியெடுத்த உரைகள் தானாக மேம்படுத்தப்படும்\n• ஒவ்வொரு பதிவிற்கும் சுருக்கம்\n• உன் வடிவங்களிலிருந்து அறிவார்ந்த வாழ்க்கை ஆலோசனைகள். எல்லா KI வெளியீடுகளும் தூண்டுதல்களே, தொழில்முறை ஆலோசனை அல்ல.\n• உன் இலவச சோதனை காலத்தில் அனைத்தும் சேர்க்கப்பட்டுள்ளது</string>
     <string name="cd_mic_start">பதிவை தொடங்கு</string>
     <string name="cd_mic_stop">பதிவை நிறுத்து</string>
     <string name="entry_improve_limit_daily">நாள் வரம்பு அடைந்தது. நாளை தொடரலாம்!</string>
@@ -1363,7 +1363,7 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
 
     <!-- Paywall / consent strings -->
     <string name="paywall_title">பிரீமியத்திற்கு மேம்படுத்தவும்</string>
-    <string name="paywall_subtitle">அனைத்து பிரீமியம் வசதிகளையும் அனுபவிக்கவும்</string>
+    <string name="paywall_subtitle">அனைத்து Premium வசதிகளையும் திறக்க</string>
     <string name="paywall_monthly_label">மாதாந்திரம்</string>
     <string name="paywall_yearly_label">ஆண்டுதோறும்</string>
     <string name="paywall_lifetime_label">வாழ்நாள் முழுவதும்</string>
@@ -1371,7 +1371,7 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="paywall_restore_button">வாங்கியதை மீட்டமைக்கவும்</string>
     <string name="paywall_cancel_anytime">எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்</string>
     <string name="paywall_consent_dialog_title">இலவச ரத்துசெய்யும் உரிமை</string>
-    <string name="paywall_consent_dialog_body">நீங்கள் ஒரு சந்தாவை வாங்குகிறீர்கள். §355 BGB படி 14 நாட்களுக்குள் இலவசமாக ரத்துசெய்யும் உரிமை உங்களுக்கு உண்டு. §356 BGB படி டிஜிட்டல் உள்ளடக்கத்தின் விஷயத்தில் நீங்கள் சம்மதிக்கும்போது இந்த உரிமை இல்லாமல் போகும்.</string>
+    <string name="paywall_consent_dialog_body">சந்தா அல்லது கொள்முதல் முடிந்த பிறகு நீ அடிப்படையில் 14 நாட்கள் திரும்பப் பெறும் உரிமை (§ 355 BGB) கொண்டிருக்கிறாய்.\n\nPremium வசதிகளை உடனடியாக பயன்படுத்த நீ அனுமதித்தால், வாங்கியவுடனேயே வழங்கல் தொடங்கும். கீழே சம்மதிப்பதன் மூலம் நீ இதன் விளைவுகளை அறிந்து உன் 14 நாட்கள் திரும்பப் பெறும் உரிமையை (§ 356 Abs. 5 BGB) விட்டுவிடுகிறாய்.\n\nஇந்த சம்மதம் இல்லாமல் Premium வசதிகளை உடனடியாக திறக்க முடியாது.\n\nPremium வசதிகளை வழங்குபவர்: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany. திரும்பப் பெற மின்னஞ்சல்: dev.app.support@gmail.com.\n\nவழங்கல் தொடங்குவதற்கு முன் திரும்பப் பெறும் உரிமையை நீ பயன்படுத்தாவிட்டால், ஒப்பந்த தேதியிலிருந்து 14 நாட்கள் கணக்கிடப்படும். மின்னஞ்சல் மூலம் அல்லது EU மாதிரி படிவம் பயன்படுத்தி திரும்பப் பெறலாம் (https://www.bmuv.de/widerruf — வெளிப்புற EU மாதிரி).</string>
     <string name="paywall_consent_dialog_checkbox">பதிவிறக்கம் தொடங்கியதும் டிஜிட்டல் உள்ளடக்கத்திற்கான என் ரத்துசெய்யும் உரிமை இல்லாமல் போகும் என்று நான் ஒப்புக்கொள்கிறேன்.</string>
     <string name="paywall_consent_dialog_confirm">ஒப்புக்கொண்டு வாங்கவும்</string>
     <string name="paywall_consent_dialog_cancel">ரத்துசெய்யவும்</string>
@@ -1439,9 +1439,9 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">தீவிர பயன்பாட்டிற்காக தாராளமான தினசரி AI ஒதுக்கீடு.</string>
+    <string name="ai_limits_disclaimer">தீவிர பயன்பாட்டுக்கான AI தினசரி ஒதுக்கீடு.</string>
     <string name="ai_limits_dialog_title">தினசரி AI ஒதுக்கீடு எப்படி செயல்படுகிறது?</string>
-    <string name="ai_limits_dialog_body" formatted="false">பிரீமியம் சந்தாவுடன்\n\nதினசரி கிடைப்பது:\n• ஒவ்வொரு AI சுயவிவரத்திற்கும் 150 வரை டாஷ்போர்டு பகுப்பாய்வுகள் (4 சுயவிவரங்கள் = தினசரி 600 வரை)\n• 150 வரை உரை மேம்பாடுகள்\n\nவிவரங்கள்:\n• கோரிக்கைகள் 1 முதல் 30 வரை: உயர்ந்த AI தரம்\n• கோரிக்கைகள் 31 முதல் 100 வரை: வேகமான நிலையான தரம்\n• 101வது கோரிக்கையில்: ஒரு முறை 30 நிமிட இடைவேளை\n• கோரிக்கைகள் 101 முதல் 150 வரை: வேகமான நிலையான தரம்\n• 151வது கோரிக்கையிலிருந்து: நாளை வரை மேலும் கோரிக்கைகள் இல்லை\n\nஅனைத்து பயனர்களுக்கும் பொருந்தும்:\n• மணிக்கு அதிகபட்சம் 50 AI கோரிக்கைகள் — பின்னர் 5 நிமிட இடைவேளை\n\nஒதுக்கீடு எப்போது மீட்டமைக்கப்படும்?\nதினசரி 0:00 மணிக்கு (உங்கள் உள்ளூர் நேரம்) புதிய முழு ஒதுக்கீடு தொடங்கும்.\n\n──────────\n\nசந்தா இல்லாமல்\n\n• ஒவ்வொரு சுயவிவரத்திற்கும் வாரத்திற்கு 5 டாஷ்போர்டு பகுப்பாய்வுகள்\n• வாரத்திற்கு 5 உரை மேம்பாடுகள்\n• எப்போதும் வேகமான நிலையான தரத்தில்\n• ஒவ்வொரு திங்கள்கிழமை 0:00 மணிக்கு (உங்கள் உள்ளூர் நேரம்) மீட்டமைக்கப்படும்\n\n──────────\n\n99%-க்கும் அதிகமான பயனர்கள் இந்த வரம்புகளை எப்போதும் சந்திக்க மாட்டார்கள்.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM சந்தாவுடன்\n\nதினசரி கிடைப்பவை:\n• ஒவ்வொரு சுயவிவரத்திற்கும் 150 கோரிக்கைகள் — 4 முன்வரையறை சுயவிவரங்களுக்கு சேர்த்து 600/நாள், மேலும் நீ உருவாக்கும் ஒவ்வொரு சொந்த சுயவிவரத்திற்கும் 150/நாள்.\n• 150 வரை உரை மேம்பாடுகள்\n\nவிரிவான விவரம்:\n• கோரிக்கைகள் 1 முதல் 30 வரை: உயர்ந்த AI தரம்\n• கோரிக்கைகள் 31 முதல் 100 வரை: வேகமான நிலையான தரம்\n• 101வது கோரிக்கையில்: ஒருமுறை 30 நிமிட இடைவேளை\n• கோரிக்கைகள் 101 முதல் 150 வரை: வேகமான நிலையான தரம்\n• 151வது கோரிக்கையிலிருந்து: நாளை வரை மேலும் கோரிக்கைகள் இல்லை\n\nஅனைத்து பயனர்களுக்கும் பொருந்தும்:\n• மணிக்கு அதிகபட்சம் 50 AI கோரிக்கைகள் — பிறகு 5 நிமிட இடைவேளை\n\nஒதுக்கீடு எப்போது மீட்டமைக்கப்படும்?\nதினசரி 0:00 மணிக்கு (உன் உள்ளூர் நேரம்) புதிய முழு ஒதுக்கீடு தொடங்கும்.\n\n──────────\n\nசந்தா இல்லாமல்\n\n• ஒவ்வொரு சுயவிவரத்திற்கும் வாரத்திற்கு 5 டாஷ்போர்டு பகுப்பாய்வுகள்\n• வாரத்திற்கு 5 உரை மேம்பாடுகள்\n• எப்போதும் வேகமான நிலையான தரத்தில்\n• ஒவ்வொரு திங்கட்கிழமை 0:00 மணிக்கு (உன் உள்ளூர் நேரம்) மீட்டமைக்கப்படும்\n\n──────────\n\nபெரும்பாலான பயனர்கள் அன்றாட வாழ்வில் இந்த வரம்புகளை அடைய மாட்டார்கள்.</string>
     <string name="ai_limits_dialog_close">புரிந்தது</string>
     <string name="theme_neutral">நடுநிலை</string>
     <string name="theme_profile">சுயவிவர நிறம் — டாஷ்போர்டு சுயவிவரத்தின் நிறம்</string>
@@ -1450,4 +1450,18 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="theme_one_dark">பணிமனை</string>
     <string name="theme_nord">துருவ இரவு</string>
     <string name="theme_gruvbox">அம்பர்</string>
+    <string name="permission_rationale_microphone">நாட்குறிப்பு பதிவுகளை குரலால் படிக்க உன் மைக்ரோஃபோனை அணுக அனுமதி தேவை.</string>
+    <string name="permission_rationale_camera">பதிவுகளில் புகைப்படங்கள் சேர்க்க உன் கேமராவை அணுக அனுமதி தேவை.</string>
+    <string name="permission_rationale_location">பதிவுகளுக்கு இட சூழல் கொடுக்க தோராயமான இருப்பிடம் தேவை. எப்போது வேண்டுமானாலும் மறுக்கலாம் அல்லது பின்னர் முடக்கலாம்.</string>
+    <string name="permission_rationale_notifications">தினசரி எழுதுவதற்கு உன்னை நினைவூட்ட அறிவிப்பு அனுமதி தேவை.</string>
+    <string name="consent_info_system_backup_title">Android கணினி காப்புப்பிரதி</string>
+    <string name="consent_info_system_backup_body">சாதன அமைப்புகளில் Android கணினி காப்புப்பிரதியை இயக்கியிருந்தால், Android உன் நாட்குறிப்பு தரவை Google கணக்கின் காப்பு பகுதியில் தானாக சேமிக்கும். இதை சாதன அமைப்புகளில் எப்போதும் முடக்கலாம் — விவரங்களுக்கு தனியுரிமைக் கொள்கையைப் பார்.</string>
+    <string name="settings_open_system_backup_settings_label">Android கணினி காப்புப்பிரதி நிர்வகி</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal-க்கான தானியங்கி காப்புப்பிரதியை இயக்க அல்லது முடக்க Android கணினி அமைப்புகளைத் திறக்கும்.</string>
+    <string name="error_no_backup_settings_available">இந்த சாதனத்தில் காப்புப்பிரதி அமைப்புகள் கிடைக்கவில்லை.</string>
+    <string name="consent_footer_link_datenschutz">தனியுரிமை</string>
+    <string name="consent_footer_link_impressum">வெளியீட்டாளர் தகவல்</string>
+    <string name="consent_footer_link_agb">பயன்பாட்டு விதிமுறைகள்</string>
+    <string name="ai_output_health_disclaimer">சிகிச்சை அல்ல — தொழில்முறை ஆலோசனையை மாற்றாது.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ஒரு நாட்குறிப்பு, சிகிச்சை சேவை அல்ல. KI பகுப்பாய்வுகள் சுய சிந்தனைக்கான தூண்டுதல்களே, தொழில்முறை உளவியல் அல்லது மருத்துவ ஆலோசனையை மாற்றாது. அவசர சிக்கல்கள் ஏற்பட்டால் நிபுணரிடம் அல்லது உன் அமைப்புகளில் உள்ள நெருக்கடி உதவியை அணுகு.</string>
 </resources>

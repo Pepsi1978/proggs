@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">ದೈನಂದಿನ AI ಪಠ್ಯ ಸುಧಾರಣೆ</string>
-    <string name="settings_premium_feature_improve_desc">ಪ್ರತಿ ನಮೂದು ಹೆಚ್ಚು ಅಭಿವ್ಯಕ್ತವಾಗುತ್ತದೆ</string>
+    <string name="settings_premium_feature_improve_desc">AI ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಬಯಸಿದಾಗ ಸುಧಾರಿಸುತ್ತದೆ.</string>
     <string name="settings_premium_feature_dashboard">ದೈನಂದಿನ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು</string>
-    <string name="settings_premium_feature_dashboard_desc">ನಿಮ್ಮ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನಿಮ್ಮೊಂದಿಗೆ ಬೆಳೆಯುತ್ತದೆ</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI ದೃಷ್ಟಿಕೋನಗಳು</string>
+    <string name="settings_premium_feature_dashboard_desc">ನಿಮ್ಮ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ನಿಮ್ಮ ನಮೂದುಗಳೊಂದಿಗೆ ಬೆಳೆಯುತ್ತದೆ.</string>
+    <string name="settings_premium_feature_5_perspectives">ಎಲ್ಲ AI ಪ್ರೊಫೈಲ್‌ಗಳು (4 ಪೂರ್ವನಿರ್ಧಾರಿತ + ಅಪರಿಮಿತ ಸ್ವಂತ)</string>
     <string name="settings_premium_feature_5_perspectives_desc">ಸ್ಪಷ್ಟತೆಯಿಂದ ಸ್ವಯಂ-ಅರಿವಿನವರೆಗೆ</string>
     <string name="settings_premium_feature_reviews">ವಾರ, ತಿಂಗಳು ಮತ್ತು ವರ್ಷದ ಅವಲೋಕನಗಳು</string>
     <string name="settings_premium_feature_reviews_desc">AI ನಿಮ್ಮ ಕಥೆಯನ್ನು ಹೇಳುತ್ತದೆ</string>
     <string name="settings_premium_feature_patterns">ಮಾದರಿ ಗುರುತಿಸುವಿಕೆ</string>
-    <string name="settings_premium_feature_patterns_desc">AI ನಿಮಗೆ ಗಮನಿಸಲಾಗದ ಸಂಪರ್ಕಗಳನ್ನು ಕಂಡುಹಿಡಿಯುತ್ತದೆ</string>
+    <string name="settings_premium_feature_patterns_desc">AI ನಿಮ್ಮ ನಮೂದುಗಳಲ್ಲಿ ಮಾದರಿಗಳು ಮತ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಗೋಚರಿಸಬಹುದು.</string>
     <string name="settings_premium_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ PDF ರಫ್ತು</string>
     <string name="settings_premium_feature_pdf_desc">ಎಲ್ಲಾ ಡೈರಿ ನಮೂದುಗಳು ಚಿತ್ರಗಳೊಂದಿಗೆ ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ</string>
     <string name="settings_premium_feature_voice">ನಿಖರ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
@@ -817,10 +817,10 @@
     <string name="onboarding_goals_select">ಒಂದು ಅಥವಾ ಹೆಚ್ಚು ಗುರಿಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ</string>
     <string name="onboarding_how_step3_title">ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಿ</string>
     <string name="onboarding_how_title">ಇದು ಇಷ್ಟು ಸರಳ</string>
-    <string name="onboarding_perspectives_title">ನಿಮ್ಮ ಜೀವನದ ಮೇಲೆ\n5 ದೃಷ್ಟಿಕೋನಗಳು</string>
+    <string name="onboarding_perspectives_title">ನಿಮ್ಮ ಜೀವನದ ಮೇಲೆ\nಎಲ್ಲ AI ಪ್ರೊಫೈಲ್‌ಗಳು</string>
     <string name="onboarding_premium_feature_pdf">ಫೋಟೋಗಳೊಂದಿಗೆ PDF ರಫ್ತು, ನಿಮ್ಮ ನಮೂದುಗಳನ್ನು ಡಾಕ್ಯುಮೆಂಟ್ ಆಗಿ ಉಳಿಸಿ</string>
     <string name="onboarding_premium_profiles">ನಿಮ್ಮ ಜೀವನಕ್ಕೆ ಆಳವಾದ ಒಳನೋಟಗಳಿಗಾಗಿ 5 ಬುದ್ಧಿವಂತ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
-    <string name="onboarding_try_premium">8 ದಿನ Premium ಪ್ರಯತ್ನಿಸಿ</string>
+    <string name="onboarding_try_premium">8 ದಿನ ಉಚಿತ — ನಂತರ ತಿಂಗಳಿಗೆ ₹3.99 ರಿಂದ</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -837,7 +837,7 @@
     <string name="paywall_yearly_note">ನಂತರ ವರ್ಷಕ್ಕೆ %1$s\nಪ್ರಯೋಗ ಹಂತದಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
     <string name="paywall_most_popular">ಅತ್ಯಂತ ಜನಪ್ರಿಯ ಆಯ್ಕೆ</string>
     <string name="paywall_monthly_plan">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ, ತಿಂಗಳಿಗೆ %1$s</string>
-    <string name="paywall_yearly_savings">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆಗೆ ಹೋಲಿಸಿದರೆ %1$d%% ಉಳಿಸಿ, ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
+    <string name="paywall_yearly_savings">ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆಗೆ ಹೋಲಿಸಿದರೆ %1$d%% ಉಳಿಸಿ — ಒಪ್ಪಂದ ಅವಧಿ ಮುಗಿಯುವ ಸಮಯದಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು.</string>
     <string name="paywall_lifetime_title">ಒಂದು ಬಾರಿಯ ಖರೀದಿ</string>
     <string name="paywall_lifetime_desc">ಒಮ್ಮೆ ಪಾವತಿಸು, ಎಲ್ಲವನ್ನೂ ಶಾಶ್ವತವಾಗಿ ಬಳಸು</string>
     <string name="paywall_lifetime_note">ಚಂದಾದಾರಿಕೆ ಇಲ್ಲ, ನವೀಕರಣ ಇಲ್ಲ</string>
@@ -854,8 +854,8 @@
     <string name="paywall_feature_profiles">ಅಪರಿಮಿತ ಕಸ್ಟಮ್ ವಿಶ್ಲೇಷಣಾ ಪ್ರೊಫೈಲ್‌ಗಳು</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">ನಿಮ್ಮ ಆಂತರಿಕ ಶಾಂತಿ ಹುಡುಕಿ</string>
-    <string name="paywall_headline_stress_sub">ನಿಮ್ಮನ್ನು ಅಭಿಭೂತಗೊಳಿಸುವ ಮೊದಲು ಏನು ಒತ್ತಡಿಸುತ್ತಿದೆ ಎಂದು ಗುರುತಿಸಿ</string>
+    <string name="paywall_headline_stress">ದೈನಂದಿನ ಜೀವನದಲ್ಲಿ ಹೆಚ್ಚು ಸ್ಪಷ್ಟತೆ</string>
+    <string name="paywall_headline_stress_sub">ಪ್ರತಿದಿನ ನಿಮ್ಮನ್ನು ಆಕ್ರಮಿಸಿಕೊಳ್ಳುವುದನ್ನು ಗುರುತಿಸಿ ಮತ್ತು ಅದನ್ನು ಸ್ಪಷ್ಟಪಡಿಸಿ.</string>
     <string name="paywall_headline_clarity">ನಿಮ್ಮನ್ನು ಉತ್ತಮವಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ</string>
     <string name="paywall_headline_clarity_sub">AI ನಿಮಗೆ ಗುಪ್ತವಾಗಿರುವ ಮಾದರಿಗಳನ್ನು ಗುರುತಿಸುತ್ತದೆ</string>
     <string name="paywall_headline_growth">ಪ್ರತಿ ದಿನದಲ್ಲಿ ಒಳ್ಳೆಯದನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ</string>
@@ -870,7 +870,7 @@
     <string name="paywall_exit_special_offer">ನಮ್ಮಲ್ಲಿ ನಿಮಗಾಗಿ\nವಿಶೇಷ ಆಫರ್ ಇದೆ:</string>
     <string name="paywall_exit_discount">%1$d ತಿಂಗಳಿಗೆ ರಿಯಾಯಿತಿ</string>
     <string name="paywall_exit_price_comparison">ತಿಂಗಳಿಗೆ %2$s ಬದಲು ಕೇವಲ %1$s</string>
-    <string name="paywall_exit_start_discount">50% ರಿಯಾಯಿತಿಯೊಂದಿಗೆ ಮಾಸಿಕ ಚಂದಾದಾರಿಕೆ ಪ್ರಾರಂಭಿಸಿ</string>
+    <string name="paywall_exit_start_discount">ಶುಲ್ಕ ಅನ್ವಯ — 2 ತಿಂಗಳು ಅರ್ಧ ಬೆಲೆಯಲ್ಲಿ</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -896,9 +896,9 @@
     <string name="churn_sorry_title">ನೀವು ಹೋಗುತ್ತಿರುವುದು ವಿಷಾದನೀಯ</string>
     <string name="churn_sorry_body">ರದ್ದುಗೊಳಿಸುವ ಮೊದಲು, ಏಕೆ ಎಂದು ನಮಗೆ ಹೇಳುವಿರಾ? ಆಪ್ ಅನ್ನು ಸುಧಾರಿಸಲು ಇದು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.</string>
     <string name="churn_exclusive_offer">ವಿಶೇಷ ಆಫರ್</string>
-    <string name="churn_offer_subtitle">ನೀವು ನಮಗೆ ಮುಖ್ಯವಾದ್ದರಿಂದ ನಿಮಗಾಗಿ ಮಾತ್ರ</string>
+    <string name="churn_offer_subtitle">ನಿಮಗಾಗಿ ನಮ್ಮ ಕೊಡುಗೆ</string>
     <string name="churn_offer_feature_ai">ದೈನಂದಿನ AI ವಿಶ್ಲೇಷಣೆಗಳು</string>
-    <string name="churn_offer_feature_perspectives">ಎಲ್ಲಾ 5 ದೃಷ್ಟಿಕೋನಗಳು</string>
+    <string name="churn_offer_feature_perspectives">ಎಲ್ಲ AI ಪ್ರೊಫೈಲ್‌ಗಳು (4 ಪೂರ್ವನಿರ್ಧಾರಿತ + ಅಪರಿಮಿತ ಸ್ವಂತ)</string>
     <string name="churn_offer_feature_voice">Premium ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
     <string name="churn_offer_auto_renew">ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಿಸುತ್ತದೆ, ಯಾವಾಗಲಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
     <string name="churn_accept_offer">ಆಫರ್ ಸ್ವೀಕರಿಸಿ</string>
@@ -918,7 +918,7 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="ai_limit_yearly">ವಾರ್ಷಿಕ ಚಂದಾದಾರಿಕೆ, ವರ್ಷಕ್ಕೆ %1$s (37%% ಉಳಿಸಿ)</string>
     <string name="ai_limit_no_thanks">ಬೇಡ ಧನ್ಯವಾದಗಳು, AI ಇಲ್ಲದೆ ಮುಂದುವರಿಸಿ</string>
     <string name="ai_banner_title">ನಿಮ್ಮ ಡೈರಿಗೆ AI ಬೆಂಬಲ ನೀಡುತ್ತದೆ</string>
-    <string name="ai_banner_body">• ಡಿಕ್ಟೇಟ್ ಮಾಡಿದ ಪಠ್ಯಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸುಧಾರಿಸಲ್ಪಡುತ್ತವೆ\n• ಪ್ರತಿ ನಮೂದಿಗೆ ಸಾರಾಂಶಗಳು\n• ನಿಮ್ಮ ಮಾದರಿಗಳಿಂದ ಬುದ್ಧಿವಂತ ಜೀವನ ಸಲಹೆಗಳು\n• ಎಲ್ಲವೂ ನಿಮ್ಮ ಉಚಿತ ಪ್ರಯೋಗ ಹಂತದಲ್ಲಿ ಸೇರಿವೆ</string>
+    <string name="ai_banner_body">• ಡಿಕ್ಟೇಟ್ ಮಾಡಿದ ಪಠ್ಯಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸುಧಾರಿಸಲ್ಪಡುತ್ತವೆ\n• ಪ್ರತಿ ನಮೂದಿಗೆ ಸಾರಾಂಶಗಳು\n• ನಿಮ್ಮ ಮಾದರಿಗಳಿಂದ ಬುದ್ಧಿವಂತ ಜೀವನ ಸಲಹೆಗಳು. ಎಲ್ಲ AI ಫಲಿತಾಂಶಗಳು ಸೂಚನೆಗಳು ಮಾತ್ರ, ವೃತ್ತಿಪರ ಸಲಹೆ ಅಲ್ಲ.\n• ಎಲ್ಲವೂ ನಿಮ್ಮ ಉಚಿತ ಪ್ರಯೋಗ ಹಂತದಲ್ಲಿ ಸೇರಿವೆ</string>
     <string name="cd_mic_start">ರೆಕಾರ್ಡಿಂಗ್ ಪ್ರಾರಂಭಿಸಿ</string>
     <string name="cd_mic_stop">ರೆಕಾರ್ಡಿಂಗ್ ನಿಲ್ಲಿಸಿ</string>
     <string name="entry_improve_limit_daily">ದೈನಂದಿನ ಮಿತಿ ತಲುಪಿದೆ. ನಾಳೆ ಮುಂದುವರಿಯುತ್ತದೆ!</string>
@@ -1338,7 +1338,7 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="journal_improve">ಸುಧಾರಿಸಿ</string>
     <string name="journal_state_improving">ಸುಧಾರಿಸಲಾಗುತ್ತಿದೆ…</string>
     <string name="journal_state_transcribing">ಟ್ರಾನ್ಸ್‌ಕ್ರೈಬ್ ಆಗುತ್ತಿದೆ…</string>
-    <string name="paywall_consent_dialog_body">ನೀವು Best Journal ನ Premium ಸೇವೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲು ಹೊರಟಿದ್ದೀರಿ. ಖರೀದಿ ದೃಢೀಕರಿಸಿದ ನಂತರ, ನಿಮ್ಮಿಂದ ತಕ್ಷಣ ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ. ರದ್ದುಮಾಡದ ಹೊರತು ಸದಸ್ಯತ್ವ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತದೆ. ಡಿಜಿಟಲ್ ವಿಷಯ ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದ ನಂತರ ಹಿಂದಿರುಗಿಸುವ ಹಕ್ಕು ಅವಸಾನಗೊಳ್ಳುತ್ತದೆ.</string>
+    <string name="paywall_consent_dialog_body">ಚಂದಾದಾರಿಕೆ ಅಥವಾ ಖರೀದಿ ಮುಗಿಸಿದ ನಂತರ ನಿಮಗೆ ಮೂಲತಃ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಹಕ್ಕಿದೆ (§ 355 BGB).\n\nನೀವು Premium ಕಾರ್ಯಗಳನ್ನು ತಕ್ಷಣ ಬಳಸಲು ಸಾಧ್ಯವಾಗಲು, ನಿಮ್ಮ ಖರೀದಿಯ ತಕ್ಷಣ ಒದಗಿಸುವಿಕೆ ಪ್ರಾರಂಭಿಸುತ್ತೇವೆ. ಕೆಳಗಿನ ನಿಮ್ಮ ಒಪ್ಪಿಗೆಯ ಮೂಲಕ ನೀವು ಪರಿಣಾಮಗಳ ಅರಿವಿನೊಂದಿಗೆ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಹಕ್ಕನ್ನು ಬಿಟ್ಟುಕೊಡುತ್ತಿದ್ದೀರಿ (§ 356 Abs. 5 BGB).\n\nಈ ಒಪ್ಪಿಗೆ ಇಲ್ಲದೆ ನಾವು Premium ಕಾರ್ಯಗಳನ್ನು ತಕ್ಷಣ ತೆರೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ.\n\nPremium ಕಾರ್ಯಗಳ ಒದಗಿಸುವವರು: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳಲು ಇಮೇಲ್: dev.app.support@gmail.com.\n\nಒದಗಿಸುವ ಮೊದಲು ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳದಿದ್ದರೆ ಮತ್ತು Premium ಚಂದಾದಾರಿಕೆ ಪ್ರಾರಂಭವಾದರೆ, ನಿಮ್ಮ 14 ದಿನಗಳ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳುವ ಅವಧಿ ಒಪ್ಪಂದದ ದಿನಾಂಕದಂದು ಪ್ರಾರಂಭವಾಗುತ್ತದೆ. ಇಮೇಲ್ ಮೂಲಕ ಅನೌಪಚಾರಿಕವಾಗಿ ಅಥವಾ EU ಮಾದರಿ ಫಾರ್ಮ್ ಬಳಸಿ ಹಿಂದೆ ತೆಗೆದುಕೊಳ್ಳಬಹುದು (https://www.bmuv.de/widerruf — ಬಾಹ್ಯ EU ಮಾದರಿ).</string>
     <string name="paywall_consent_dialog_cancel">ರದ್ದುಮಾಡಿ</string>
     <string name="paywall_consent_dialog_checkbox">ಡೌನ್‌ಲೋಡ್ ಪ್ರಾರಂಭವಾದ ನಂತರ, ಹಿಂದಿರುಗಿಸುವ ಹಕ್ಕು ಅವಸಾನಗೊಳ್ಳುತ್ತದೆ ಎಂದು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ (§ 356 Abs. 5 BGB ಪ್ರಕಾರ).</string>
     <string name="paywall_consent_dialog_confirm">ಒಪ್ಪಿ ಖರೀದಿಸಿ</string>
@@ -1386,7 +1386,7 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="paywall_monthly_label">ಮಾಸಿಕ</string>
     <string name="paywall_restore_button">ಖರೀದಿಗಳನ್ನು ಮರುಸ್ಥಾಪಿಸಿ</string>
     <string name="paywall_subscribe_button">ಚಂದಾದಾರರಾಗಿ</string>
-    <string name="paywall_subtitle">ಎಲ್ಲ Premium ಲಾಭಗಳನ್ನು ಪಡೆಯಿರಿ</string>
+    <string name="paywall_subtitle">ಎಲ್ಲ Premium ಕಾರ್ಯಗಳನ್ನು ತೆರೆಯಿರಿ</string>
     <string name="paywall_title">Premium ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ</string>
     <string name="paywall_yearly_label">ವಾರ್ಷಿಕ</string>
     <string name="prompt_char_count_label">%1$d ಅಕ್ಷರಗಳು</string>
@@ -1405,7 +1405,7 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">ತೀವ್ರ ಬಳಕೆಗಾಗಿ ಉದಾರವಾದ ದೈನಂದಿನ AI ಕೋಟಾ.</string>
+    <string name="ai_limits_disclaimer">ತೀವ್ರ ಬಳಕೆಗಾಗಿ AI ದೈನಂದಿನ ಕೋಟಾ.</string>
     <string name="ai_limits_dialog_title">ದೈನಂದಿನ AI ಕೋಟಾ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ?</string>
     <string name="ai_limits_dialog_body" formatted="false">ಪ್ರೀಮಿಯಂ ಚಂದಾದೊಂದಿಗೆ\n\nಪ್ರತಿ ದಿನ ನಿಮಗೆ ಲಭ್ಯ:\n• ಪ್ರತಿ AI ಪ್ರೊಫೈಲ್‌ಗೆ 150 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು (4 ಪ್ರೊಫೈಲ್‌ಗಳೊಂದಿಗೆ ಅಂದರೆ ದಿನಕ್ಕೆ 600 ವರೆಗೆ)\n• 150 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು\n\nಇದು ವಿವರವಾಗಿ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ:\n• ವಿನಂತಿಗಳು 1 ರಿಂದ 30: ಅತ್ಯುನ್ನತ AI ಗುಣಮಟ್ಟದಲ್ಲಿ\n• ವಿನಂತಿಗಳು 31 ರಿಂದ 100: ವೇಗದ ಮಾನಕ ಗುಣಮಟ್ಟದಲ್ಲಿ\n• 101ನೇ ವಿನಂತಿಯಲ್ಲಿ: ಒಂದು ಬಾರಿ 30 ನಿಮಿಷದ ವಿರಾಮ\n• ವಿನಂತಿಗಳು 101 ರಿಂದ 150: ವೇಗದ ಮಾನಕ ಗುಣಮಟ್ಟ\n• ವಿನಂತಿ 151 ನಂತರ: ನಾಳೆ ವರೆಗೆ ಮತ್ತಷ್ಟು ವಿನಂತಿಗಳಿಲ್ಲ\n\nಅಲ್ಲದೆ ಎಲ್ಲ ಬಳಕೆದಾರರಿಗೆ:\n• ಗಂಟೆಗೆ ಗರಿಷ್ಠ 50 AI ವಿನಂತಿಗಳು — ನಂತರ 5 ನಿಮಿಷದ ವಿರಾಮ\n\nಕೋಟಾ ಯಾವಾಗ ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ?\nಪ್ರತಿ ದಿನ 0:00 ಗಂಟೆಗೆ (ನಿಮ್ಮ ಸ್ಥಳೀಯ ಸಮಯ) ಹೊಸ ಪೂರ್ಣ ಕೋಟಾ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.\n\n──────────\n\nಚಂದಾ ಇಲ್ಲದೆ\n\n• ಪ್ರತಿ ಪ್ರೊಫೈಲ್‌ಗೆ ವಾರಕ್ಕೆ 5 ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ವಿಶ್ಲೇಷಣೆಗಳು\n• ವಾರಕ್ಕೆ 5 ಪಠ್ಯ ಸುಧಾರಣೆಗಳು\n• ಯಾವಾಗಲೂ ವೇಗದ ಮಾನಕ ಗುಣಮಟ್ಟದಲ್ಲಿ\n• ಪ್ರತಿ ಸೋಮವಾರ 0:00 ಗಂಟೆಗೆ (ನಿಮ್ಮ ಸ್ಥಳೀಯ ಸಮಯ) ಮರುಹೊಂದಿಸಲಾಗುತ್ತದೆ\n\n──────────\n\n99% ಕ್ಕಿಂತ ಹೆಚ್ಚು ಬಳಕೆದಾರರು ಈ ಮಿತಿಗಳನ್ನು ಎಂದಿಗೂ ತಲುಪುವ ಸಾಧ್ಯತೆ ಇಲ್ಲ.</string>
     <string name="ai_limits_dialog_close">ಅರ್ಥವಾಯಿತು</string>
@@ -1416,4 +1416,19 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="theme_one_dark">ಕಾರ್ಯಾಗಾರ</string>
     <string name="theme_nord">ಧ್ರುವ ರಾತ್ರಿ</string>
     <string name="theme_gruvbox">ಅಂಬರ್</string>
+
+    <string name="permission_rationale_microphone">ನಿಮ್ಮ ಡೈರಿ ನಮೂದುಗಳನ್ನು ಮಾತಿನ ಮೂಲಕ ದಾಖಲಿಸಲು ನಾವು ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶ ಬೇಕು.</string>
+    <string name="permission_rationale_camera">ನಿಮ್ಮ ನಮೂದುಗಳಿಗೆ ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಲು ನಾವು ನಿಮ್ಮ ಕ್ಯಾಮೆರಾ ಪ್ರವೇಶ ಬೇಕು.</string>
+    <string name="permission_rationale_location">ನಿಮ್ಮ ನಮೂದುಗಳಿಗೆ ಸ್ಥಳ ಸಂದರ್ಭ ನೀಡಲು ನಾವು ಅಂದಾಜು ಸ್ಥಳ ಬೇಕು. ನೀವು ಇದನ್ನು ಯಾವಾಗಲಾದರೂ ತಿರಸ್ಕರಿಸಬಹುದು ಅಥವಾ ನಂತರ ಆಫ್ ಮಾಡಬಹುದು.</string>
+    <string name="permission_rationale_notifications">ನಿಮ್ಮ ದೈನಂದಿನ ಬರವಣಿಗೆಯ ಬಗ್ಗೆ ನಿಮ್ಮನ್ನು ನೆನಪಿಸಲು ನಾವು ಅಧಿಸೂಚನೆ ಅನುಮತಿ ಬೇಕು.</string>
+    <string name="consent_info_system_backup_title">Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್</string>
+    <string name="consent_info_system_backup_body">ನೀವು ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್ ಸಕ್ರಿಯಗೊಳಿಸಿದ್ದರೆ, Android ನಿಮ್ಮ ಡೈರಿ ಡೇಟಾವನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನಿಮ್ಮ Google ಖಾತೆಯ ಬ್ಯಾಕಪ್ ಪ್ರದೇಶಕ್ಕೆ ಸಂರಕ್ಷಿಸುತ್ತದೆ. ನೀವು ಇದನ್ನು ನಿಮ್ಮ ಸಾಧನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಯಾವಾಗಲಾದರೂ ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬಹುದು — ವಿವರಗಳಿಗೆ ಗೌಪ್ಯತಾ ನೀತಿ ನೋಡಿ.</string>
+    <string name="settings_open_system_backup_settings_label">Android ಸಿಸ್ಟಂ ಬ್ಯಾಕಪ್ ನಿರ್ವಹಿಸಿ</string>
+    <string name="settings_open_system_backup_settings_desc">Android ಸಿಸ್ಟಂ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ತೆರೆಯುತ್ತದೆ, ಅಲ್ಲಿ ನೀವು Best Journal ಗಾಗಿ ಸ್ವಯಂಚಾಲಿತ ಬ್ಯಾಕಪ್ ಆನ್ ಅಥವಾ ಆಫ್ ಮಾಡಬಹುದು.</string>
+    <string name="error_no_backup_settings_available">ಈ ಸಾಧನದಲ್ಲಿ ಬ್ಯಾಕಪ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ.</string>
+    <string name="consent_footer_link_datenschutz">ಗೌಪ್ಯತೆ</string>
+    <string name="consent_footer_link_impressum">ಇಂಪ್ರೆಸಮ್</string>
+    <string name="consent_footer_link_agb">ಬಳಕೆ ನಿಯಮಗಳು</string>
+    <string name="ai_output_health_disclaimer">ಚಿಕಿತ್ಸೆ ಅಲ್ಲ — ವೃತ್ತಿಪರ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal ಒಂದು ಡೈರಿ ಮತ್ತು ಚಿಕಿತ್ಸಾ ಸೇವೆ ಅಲ್ಲ. AI ವಿಶ್ಲೇಷಣೆಗಳು ಸ್ವಯಂ-ಪ್ರತಿಫಲನಕ್ಕಾಗಿ ಸೂಚನೆಗಳು ಮಾತ್ರ ಮತ್ತು ವೃತ್ತಿಪರ ಮಾನಸಿಕ ಅಥವಾ ವೈದ್ಯಕೀಯ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ. ತೀವ್ರ ಸಮಸ್ಯೆಗಳ ಸಮಯದಲ್ಲಿ ತಜ್ಞರನ್ನು ಅಥವಾ ನಿಮ್ಮ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿನ ಬಿಕ್ಕಟ್ಟು ಸಹಾಯ ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.</string>
 </resources>

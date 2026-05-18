@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">تحسين نصي بالذكاء الاصطناعي يوميًا</string>
-    <string name="settings_premium_feature_improve_desc">كل تسجيل يصبح أكثر تعبيرا</string>
+    <string name="settings_premium_feature_improve_desc">يحسّن الذكاء الاصطناعي تسجيلاتك عند الطلب.</string>
     <string name="settings_premium_feature_dashboard">تحليلات لوحة التحكم اليومية</string>
-    <string name="settings_premium_feature_dashboard_desc">لوحة تحكمك تنمو معك</string>
-    <string name="settings_premium_feature_5_perspectives">5 زوايا ذكاء اصطناعي</string>
+    <string name="settings_premium_feature_dashboard_desc">تنمو لوحة التحكم مع تسجيلاتك.</string>
+    <string name="settings_premium_feature_5_perspectives">جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)</string>
     <string name="settings_premium_feature_5_perspectives_desc">من الوضوح إلى معرفة الذات</string>
     <string name="settings_premium_feature_reviews">مراجعات أسبوعية وشهرية وسنوية</string>
     <string name="settings_premium_feature_reviews_desc">الذكاء الاصطناعي يروي قصّتك</string>
     <string name="settings_premium_feature_patterns">اكتشاف الأنماط</string>
-    <string name="settings_premium_feature_patterns_desc">الذكاء الاصطناعي يجد الروابط التي تفوتك</string>
+    <string name="settings_premium_feature_patterns_desc">يستطيع الذكاء الاصطناعي الكشف عن الأنماط والترابطات في تسجيلاتك</string>
     <string name="settings_premium_feature_pdf">تصدير PDF مع الصور</string>
     <string name="settings_premium_feature_pdf_desc">تسجيلات مع صور كمستند</string>
     <string name="settings_premium_feature_voice">تعرّف صوتي أدقّ</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">اختر هدفا أو أكثر</string>
     <string name="onboarding_how_step3_title">أضف صورا</string>
     <string name="onboarding_how_title">بهذه البساطة</string>
-    <string name="onboarding_perspectives_title">5 زوايا\nلحياتك</string>
+    <string name="onboarding_perspectives_title">زوايا مختلفة\nعلى حياتك</string>
     <string name="onboarding_premium_feature_pdf">تصدير PDF مع الصور، احفظ تسجيلاتك كمستند</string>
     <string name="onboarding_premium_profiles">5 ملفّات لوحة تحكم ذكية لرؤى عميقة في حياتك</string>
-    <string name="onboarding_try_premium">جرّب المميّز لمدّة 8 أيّام</string>
+    <string name="onboarding_try_premium">8 أيام مجاناً — ثم ابتداءً من 3٫99 € شهرياً</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,7 +833,7 @@
     <string name="paywall_yearly_note">ثمّ %1$s سنويا\nيمكن الإلغاء أثناء التجربة</string>
     <string name="paywall_most_popular">الأكثر اختيارا</string>
     <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
-    <string name="paywall_yearly_savings">وفّر %1$d\u00A0%% مقارنة بالشهري، إلغاء في أيّ وقت</string>
+    <string name="paywall_yearly_savings" formatted="false">وفّر %1$d%% مقارنةً بالاشتراك الشهري — الإلغاء ممكن في أي وقت عند انتهاء فترة العقد.</string>
     <string name="paywall_lifetime_title">دفعة واحدة</string>
     <string name="paywall_lifetime_desc">ادفع مرة واحدة، استخدم كل شيء بشكل دائم</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
@@ -850,8 +850,8 @@
     <string name="paywall_feature_profiles">ملفات تحليل شخصية غير محدودة</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">استعد سكينتك</string>
-    <string name="paywall_headline_stress_sub">اكتشف ما يثقلك قبل أن يتجاوزك</string>
+    <string name="paywall_headline_stress">وضوح أكبر في حياتك اليومية</string>
+    <string name="paywall_headline_stress_sub">اكتشف ما يشغل تفكيرك كل يوم وعبّر عنه بدقة.</string>
     <string name="paywall_headline_clarity">افهم نفسك أكثر</string>
     <string name="paywall_headline_clarity_sub">الذكاء الاصطناعي يكشف الأنماط التي تفوتك</string>
     <string name="paywall_headline_growth">اكتشف الجميل في كلّ يوم</string>
@@ -866,7 +866,7 @@
     <string name="paywall_exit_special_offer">لدينا عرض خاصّ\nمن أجلك:</string>
     <string name="paywall_exit_discount">خصم لمدّة %1$d أشهر</string>
     <string name="paywall_exit_price_comparison">فقط %1$s بدلا من %2$s شهريا</string>
-    <string name="paywall_exit_start_discount">ابدأ الاشتراك الشهري بخصم 50\u00A0%</string>
+    <string name="paywall_exit_start_discount">مدفوع — شهران بنصف الثمن</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -892,9 +892,9 @@
     <string name="churn_sorry_title">يؤسفنا رحيلك</string>
     <string name="churn_sorry_body">قبل الإلغاء، هل تخبرنا بالسبب؟ هذا يساعدنا على تحسين التطبيق.</string>
     <string name="churn_exclusive_offer">عرض حصري</string>
-    <string name="churn_offer_subtitle">لك أنت، لأنّك مهمّ لنا</string>
+    <string name="churn_offer_subtitle">عرضنا الخاص لك</string>
     <string name="churn_offer_feature_ai">تحليلات الذكاء الاصطناعي اليومية</string>
-    <string name="churn_offer_feature_perspectives">كلّ الزوايا الخمس</string>
+    <string name="churn_offer_feature_perspectives">جميع ملفّات الذكاء الاصطناعي (4 محددة مسبقاً + غير محدودة مخصصة)</string>
     <string name="churn_offer_feature_voice">تعرّف صوتي مميّز</string>
     <string name="churn_offer_auto_renew">يتجدّد تلقائيا، يمكن الإلغاء في أيّ وقت</string>
     <string name="churn_accept_offer">قبول العرض</string>
@@ -914,7 +914,7 @@
     <string name="ai_limit_yearly">اشتراك سنوي، %1$s سنويا (وفّر 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">لا شكرا، أتابع بدون ذكاء اصطناعي</string>
     <string name="ai_banner_title">مذكراتك مدعومة بالذكاء الاصطناعي</string>
-    <string name="ai_banner_body">• تحسين تلقائي للنصوص المملاة\n• ملخّص لكلّ تسجيل\n• نصائح حياتية ذكية من أنماطك\n• كلّ ذلك خلال التجربة المجانية</string>
+    <string name="ai_banner_body">• تحسين تلقائي للنصوص المملاة\n• ملخّص لكلّ تسجيل\n• اقتراحات حياتية ذكية مستمدّة من أنماطك. جميع مخرجات الذكاء الاصطناعي هي اقتراحات وليست استشارة متخصصة.\n• كل ذلك ضمن تجربتك المجانية</string>
     <string name="cd_mic_start">بدء التسجيل</string>
     <string name="cd_mic_stop">إيقاف التسجيل</string>
     <string name="entry_improve_limit_daily">تمّ بلوغ الحدّ اليومي. نواصل غدا!</string>
@@ -1350,7 +1350,7 @@
     <string name="journal_improve">تحسين النص</string>
     <string name="journal_state_improving">جارٍ التحسين…</string>
     <string name="journal_state_transcribing">جارٍ التحويل إلى نص…</string>
-    <string name="paywall_consent_dialog_body">يحق لك في الأصل الرجوع عن قرارك خلال 14 يوماً بعد إتمام الاشتراك أو الشراء.\n\nلنتمكن من تفعيل ميزات Premium فوراً، سنبدأ بتقديمها مباشرة بعد شرائك. بموافقتك أدناه، أنت تتنازل عن حقك في الرجوع خلال 14 يوماً مع علمك بالعواقب.\n\nبدون هذه الموافقة لا يمكننا تفعيل ميزات Premium فوراً.</string>
+    <string name="paywall_consent_dialog_body">بعد إتمام الاشتراك أو الشراء، يحق لك أصلاً حق سحب لمدة 14 يوماً (§ 355 BGB).\n\nلكي تتمكن من استخدام ميزات Premium فوراً، سنبدأ بتوفيرها مباشرة بعد شرائك. بموافقتك أدناه، تتنازل — مع علمك بالعواقب — عن حق السحب خلال 14 يوماً (§ 356 Abs. 5 BGB).\n\nبدون هذه الموافقة لا يمكننا تفعيل ميزات Premium فوراً.\n\nمزوّد ميزات Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. البريد الإلكتروني للسحب: dev.app.support@gmail.com.\n\nإذا لم تُعلن حق السحب قبل التوفير وبدأ اشتراك Premium، تبدأ مهلة السحب البالغة 14 يوماً من يوم إبرام العقد. يمكنك الإعلان عن السحب بحرية الشكل عبر البريد الإلكتروني، أو استخدام نموذج السحب الأوروبي القياسي (https://www.bmuv.de/widerruf — نموذج EU الخارجي القياسي).</string>
     <string name="paywall_consent_dialog_cancel">إلغاء</string>
     <string name="paywall_consent_dialog_checkbox">أوافق على أن يبدأ تقديم ميزات Premium فوراً بعد الطلب. أعلم أنني بذلك أفقد حقي في الرجوع خلال 14 يوماً.</string>
     <string name="paywall_consent_dialog_confirm">اشترك الآن بشكل مدفوع</string>
@@ -1398,7 +1398,7 @@
     <string name="paywall_monthly_label">شهريًا</string>
     <string name="paywall_restore_button">استعادة المشتريات</string>
     <string name="paywall_subscribe_button">اشترك</string>
-    <string name="paywall_subtitle">استمتع بكل مزايا Premium</string>
+    <string name="paywall_subtitle">افتح جميع الميزات المميّزة</string>
     <string name="paywall_title">الترقية إلى Premium</string>
     <string name="paywall_yearly_label">سنويًا</string>
     <string name="prompt_char_count_label">%1$d حرفًا</string>
@@ -1417,9 +1417,9 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">حصة يومية سخية من الذكاء الاصطناعي للاستخدام المكثف.</string>
+    <string name="ai_limits_disclaimer">حصّة يومية من الذكاء الاصطناعي للاستخدام المكثّف.</string>
     <string name="ai_limits_dialog_title">كيف تعمل الحصة اليومية للذكاء الاصطناعي؟</string>
-    <string name="ai_limits_dialog_body" formatted="false">مع الاشتراك المميز\n\nيتوفر لك يوميًا:\n• ما يصل إلى 150 تحليلًا للوحة التحكم لكل ملف تعريف ذكاء اصطناعي (4 ملفات تعريف = ما يصل إلى 600 يوميًا)\n• ما يصل إلى 150 تحسينًا للنص\n\nالتفاصيل:\n• الطلبات 1-30: أعلى جودة للذكاء الاصطناعي\n• الطلبات 31-100: جودة قياسية سريعة\n• الطلب 101: إيقاف مؤقت لمرة واحدة مدته 30 دقيقة\n• الطلبات 101-150: جودة قياسية سريعة\n• من الطلب 151: لا مزيد من الطلبات حتى الغد\n\nينطبق على جميع المستخدمين:\n• بحد أقصى 50 طلب ذكاء اصطناعي في الساعة - ثم إيقاف مؤقت لمدة 5 دقائق\n\nمتى يُعاد تعيين الحصص؟\nكل يوم عند 0:00 (بتوقيتك المحلي) تبدأ حصة جديدة كاملة.\n\n──────────\n\nبدون اشتراك\n\n• 5 تحليلات للوحة التحكم في الأسبوع لكل ملف تعريف\n• 5 تحسينات للنص في الأسبوع\n• دائمًا بجودة قياسية سريعة\n• يُعاد تعيينها كل يوم اثنين عند 0:00 (بتوقيتك المحلي)\n\n──────────\n\nأكثر من 99% من المستخدمين على الأرجح لن يصطدموا بهذه القيود أبدًا.</string>
+    <string name="ai_limits_dialog_body" formatted="false">مع الاشتراك المميّز\n\nيتوفّر لك يوميًا:\n• 150 طلبًا في اليوم لكل ملف — للملفّات الأربعة المحددة مسبقًا معًا 600/اليوم، بالإضافة إلى 150/اليوم لكل ملف مخصّص تنشئه.\n• ما يصل إلى 150 تحسينًا للنص\n\nكيف يسير ذلك بالتفصيل:\n• الطلبات 1 إلى 30: بأعلى جودة للذكاء الاصطناعي\n• الطلبات 31 إلى 100: بجودة قياسية سريعة\n• عند الطلب 101: إيقاف مؤقت لمرة واحدة مدّته 30 دقيقة\n• الطلبات 101 إلى 150: جودة قياسية سريعة\n• من الطلب 151: لا مزيد من الطلبات حتى الغد\n\nينطبق أيضًا على جميع المستخدمين:\n• بحد أقصى 50 طلب ذكاء اصطناعي في الساعة — ثم إيقاف مؤقت لمدة 5 دقائق\n\nمتى تُعاد الحصص؟\nكل يوم عند 0:00 (بتوقيتك المحلي) تبدأ حصّة جديدة كاملة.\n\n──────────\n\nبدون اشتراك\n\n• 5 تحليلات للوحة التحكم في الأسبوع لكل ملف تعريف\n• 5 تحسينات للنص في الأسبوع\n• دائمًا بجودة قياسية سريعة\n• تُعاد كل يوم اثنين عند 0:00 (بتوقيتك المحلي)\n\n──────────\n\nمعظم المستخدمين في حياتهم اليومية لن يصلوا إلى هذه الحدود.</string>
     <string name="ai_limits_dialog_close">حسنًا</string>
     <string name="theme_neutral">محايد</string>
     <string name="theme_profile">لون الملف الشخصي — لون ملف تعريف لوحة التحكم</string>
@@ -1428,4 +1428,26 @@
     <string name="theme_one_dark">المرسم</string>
     <string name="theme_nord">الليل القطبي</string>
     <string name="theme_gruvbox">الكهرمان</string>
+
+    <!-- Permission rationale strings -->
+    <string name="permission_rationale_microphone">لكي تتمكّن من إملاء تسجيلات يومياتك بالصوت، نحتاج إلى الوصول إلى الميكروفون.</string>
+    <string name="permission_rationale_camera">لكي تتمكّن من إضافة صور إلى تسجيلاتك، نحتاج إلى الوصول إلى الكاميرا.</string>
+    <string name="permission_rationale_location">لكي تتمكّن من إضافة سياق المكان إلى تسجيلاتك، نحتاج إلى الموقع التقريبي. يمكنك الرفض في أي وقت أو التعطيل لاحقاً.</string>
+    <string name="permission_rationale_notifications">لكي نتمكّن من تذكيرك بكتابة يومياتك اليومية، نحتاج إلى إذن لإرسال الإشعارات.</string>
+
+    <!-- System backup consent strings -->
+    <string name="consent_info_system_backup_title">النسخ الاحتياطي لنظام Android</string>
+    <string name="consent_info_system_backup_body">إذا كنت قد فعّلتَ النسخ الاحتياطي لنظام Android في إعدادات جهازك، فسيقوم Android تلقائيًا بحفظ بيانات يومياتك في منطقة النسخ الاحتياطي لحساب Google الخاص بك. يمكنك تعطيل ذلك في أي وقت من إعدادات جهازك — راجع سياسة الخصوصية لمزيد من التفاصيل.</string>
+    <string name="settings_open_system_backup_settings_label">إدارة النسخ الاحتياطي لنظام Android</string>
+    <string name="settings_open_system_backup_settings_desc">يفتح إعدادات نظام Android، حيث يمكنك تشغيل النسخ الاحتياطي التلقائي لـ Best Journal أو إيقافه.</string>
+    <string name="error_no_backup_settings_available">إعدادات النسخ الاحتياطي غير متوفّرة على هذا الجهاز.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">الخصوصية</string>
+    <string name="consent_footer_link_impressum">معلومات قانونية</string>
+    <string name="consent_footer_link_agb">شروط الاستخدام</string>
+
+    <!-- AI health disclaimers (HWG-compliant) -->
+    <string name="ai_output_health_disclaimer">ليس علاجًا — لا يُغني عن المشورة المتخصصة.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal هو تطبيق يوميات وليس عرضًا علاجيًا. تحليلات الذكاء الاصطناعي هي مقترحات للتأمل الذاتي ولا تُغني عن الاستشارة النفسية أو الطبية المتخصصة. في حال وجود مشكلات حادة، تواصل مع متخصص أو خط أزمات الطوارئ في إعداداتك.</string>
 </resources>

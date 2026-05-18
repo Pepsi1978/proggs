@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">दररोज AI मजकूर सुधारणा</string>
-    <string name="settings_premium_feature_improve_desc">प्रत्येक नोंद अधिक प्रभावशाली होते</string>
+    <string name="settings_premium_feature_improve_desc">AI तुमच्या विनंतीनुसार नोंदी सुधारतो.</string>
     <string name="settings_premium_feature_dashboard">दररोज डॅशबोर्ड विश्लेषण</string>
-    <string name="settings_premium_feature_dashboard_desc">तुमचा डॅशबोर्ड तुमच्यासोबत वाढतो</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI दृष्टिकोन</string>
+    <string name="settings_premium_feature_dashboard_desc">तुमचा डॅशबोर्ड तुमच्या नोंदींसोबत वाढतो.</string>
+    <string name="settings_premium_feature_5_perspectives">सर्व AI प्रोफाइल (4 पूर्वनिर्धारित + अमर्याद स्वतःचे)</string>
     <string name="settings_premium_feature_5_perspectives_desc">स्पष्टतेपासून आत्म-ज्ञानापर्यंत</string>
     <string name="settings_premium_feature_reviews">साप्ताहिक, मासिक आणि वार्षिक आढावे</string>
     <string name="settings_premium_feature_reviews_desc">AI तुमची गोष्ट सांगतो</string>
     <string name="settings_premium_feature_patterns">नमुना ओळख</string>
-    <string name="settings_premium_feature_patterns_desc">AI असे संबंध शोधतो जे तुम्हाला लक्षात येत नाहीत</string>
+    <string name="settings_premium_feature_patterns_desc">AI तुमच्या नोंदींमधील नमुने आणि संबंध दृश्यमान करू शकतो</string>
     <string name="settings_premium_feature_pdf">फोटोसह PDF निर्यात</string>
     <string name="settings_premium_feature_pdf_desc">सर्व दैनंदिनी नोंदी फोटोसह दस्तऐवज म्हणून</string>
     <string name="settings_premium_feature_voice">अधिक अचूक वाक् ओळख</string>
@@ -923,10 +923,10 @@ herleitung — सामग्रीचा स्रोत:
     <string name="onboarding_goals_select">एक किंवा अधिक लक्ष्ये निवडा</string>
     <string name="onboarding_how_step3_title">फोटो जोडा</string>
     <string name="onboarding_how_title">हे इतके सोपे आहे</string>
-    <string name="onboarding_perspectives_title">तुमच्या जीवनावर\n5 दृष्टिकोन</string>
+    <string name="onboarding_perspectives_title">तुमच्या जीवनावर\nवेगवेगळे दृष्टिकोन</string>
     <string name="onboarding_premium_feature_pdf">फोटोसह PDF निर्यात, तुमच्या नोंदी दस्तऐवज म्हणून सुरक्षित करा</string>
     <string name="onboarding_premium_profiles">तुमच्या जीवनात सखोल दृष्टीसाठी 5 बुद्धिमान डॅशबोर्ड प्रोफाइल</string>
-    <string name="onboarding_try_premium">8 दिवस Premium वापरून पाहा</string>
+    <string name="onboarding_try_premium">8 दिवस मोफत — नंतर ₹3.99/महिन्यापासून</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -943,7 +943,7 @@ herleitung — सामग्रीचा स्रोत:
     <string name="paywall_yearly_note">नंतर दरवर्षी %1$s\nचाचणी काळात कधीही रद्द करता येते</string>
     <string name="paywall_most_popular">सर्वाधिक लोकप्रिय निवड</string>
     <string name="paywall_monthly_plan">मासिक सदस्यत्व, %1$s प्रति महिना</string>
-    <string name="paywall_yearly_savings">मासिक सदस्यत्वाच्या तुलनेत %1$d%% बचत, कधीही रद्द करता येते</string>
+    <string name="paywall_yearly_savings">मासिक सदस्यतेपेक्षा %1$d%% बचत — कधीही रद्द करता येते, संबंधित करार कालावधी संपल्यावर.</string>
     <string name="paywall_lifetime_title">एकवेळ खरेदी</string>
     <string name="paywall_lifetime_desc">एकदा पैसे भर, सर्वकाही कायमस्वरूपी वापर</string>
     <string name="paywall_lifetime_note">कोणतेही सदस्यत्व नाही, कोणती नूतनीकरण नाही</string>
@@ -960,8 +960,8 @@ herleitung — सामग्रीचा स्रोत:
     <string name="paywall_feature_profiles">अमर्यादित सानुकूल विश्लेषण प्रोफाइल</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">तुमची आंतरिक शांती मिळवा</string>
-    <string name="paywall_headline_stress_sub">तुम्हाला काय त्रास देते ते ओळखा, अभिभूत होण्यापूर्वी</string>
+    <string name="paywall_headline_stress">दैनंदिन जीवनात अधिक स्पष्टता</string>
+    <string name="paywall_headline_stress_sub">तुम्हाला दररोज काय व्यापते ते ओळखा आणि नेमके सांगा.</string>
     <string name="paywall_headline_clarity">स्वतःला अधिक चांगले समजून घ्या</string>
     <string name="paywall_headline_clarity_sub">AI असे नमुने ओळखतो जे तुम्हाला लपलेले राहतात</string>
     <string name="paywall_headline_growth">प्रत्येक दिवसातील चांगले शोधा</string>
@@ -976,7 +976,7 @@ herleitung — सामग्रीचा स्रोत:
     <string name="paywall_exit_special_offer">आमच्याकडे तुमच्यासाठी\nएक खास ऑफर आहे:</string>
     <string name="paywall_exit_discount">%1$d महिन्यांसाठी सूट</string>
     <string name="paywall_exit_price_comparison">फक्त %1$s प्रति महिना, %2$s ऐवजी</string>
-    <string name="paywall_exit_start_discount">50% सूटसह मासिक सदस्यत्व सुरू करा</string>
+    <string name="paywall_exit_start_discount">देय — 2 महिने अर्ध्या किमतीत</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -1002,9 +1002,9 @@ herleitung — सामग्रीचा स्रोत:
     <string name="churn_sorry_title">तुम्ही जात आहात, हे वाईट वाटले</string>
     <string name="churn_sorry_body">रद्द करण्यापूर्वी, तुम्ही आम्हाला का सांगाल? हे आम्हाला App सुधारण्यास मदत करते.</string>
     <string name="churn_exclusive_offer">विशेष ऑफर</string>
-    <string name="churn_offer_subtitle">फक्त तुमच्यासाठी, कारण तुम्ही आमच्यासाठी महत्त्वाचे आहात</string>
+    <string name="churn_offer_subtitle">तुमच्यासाठी आमची ऑफर</string>
     <string name="churn_offer_feature_ai">दररोज AI विश्लेषण</string>
-    <string name="churn_offer_feature_perspectives">सर्व 5 दृष्टिकोन</string>
+    <string name="churn_offer_feature_perspectives">सर्व AI प्रोफाइल (4 पूर्वनिर्धारित + अमर्याद स्वतःचे)</string>
     <string name="churn_offer_feature_voice">Premium वाक् ओळख</string>
     <string name="churn_offer_auto_renew">आपोआप नूतनीकरण होते, कधीही रद्द करता येते</string>
     <string name="churn_accept_offer">ऑफर स्वीकारा</string>
@@ -1024,7 +1024,7 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="ai_limit_yearly">वार्षिक सदस्यत्व, %1$s/वर्ष (37%% बचत)</string>
     <string name="ai_limit_no_thanks">नको, AI शिवाय पुढे जा</string>
     <string name="ai_banner_title">तुमची दैनंदिनी AI द्वारे समर्थित आहे</string>
-    <string name="ai_banner_body">• सांगितलेले मजकूर आपोआप सुधारले जातात\n• प्रत्येक नोंदीसाठी सारांश\n• तुमच्या नमुन्यांमधून बुद्धिमान जीवन सल्ले\n• सर्व तुमच्या विनामूल्य चाचणी काळात समाविष्ट</string>
+    <string name="ai_banner_body">• सांगितलेले मजकूर आपोआप सुधारले जातात\n• प्रत्येक नोंदीसाठी सारांश\n• तुमच्या नमुन्यांमधून बुद्धिमान जीवन सल्ले. सर्व AI आउटपुट सूचना आहेत, व्यावसायिक सल्ला नाही.\n• सर्व तुमच्या विनामूल्य चाचणी काळात समाविष्ट</string>
     <string name="cd_mic_start">रेकॉर्डिंग सुरू करा</string>
     <string name="cd_mic_stop">रेकॉर्डिंग थांबवा</string>
     <string name="entry_improve_limit_daily">दैनंदिन मर्यादा गाठली. उद्या पुन्हा!</string>
@@ -1450,7 +1450,7 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="journal_improve">सुधारा</string>
     <string name="journal_state_improving">सुधारत आहे…</string>
     <string name="journal_state_transcribing">ट्रान्सक्राइब होत आहे…</string>
-    <string name="paywall_consent_dialog_body">तुम्ही Best Journal च्या Premium सेवा सक्रिय करणार आहात. खरेदीची पुष्टी केल्यावर, तुम्हाला त्वरित शुल्क आकारले जाईल. सदस्यता रद्द करेपर्यंत आपोआप नूतनीकरण होत राहील. डिजिटल सामग्री डाउनलोड सुरू होताच परतावा हक्क संपतो.</string>
+    <string name="paywall_consent_dialog_body">सदस्यता किंवा खरेदी पूर्ण केल्यावर तुम्हाला मूलभूतपणे 14 दिवसांचा रद्दीकरण अधिकार आहे (§ 355 BGB).\n\nजेणेकरून तुम्ही Premium सुविधा लगेच वापरू शकाल, खरेदीनंतर लगेच सेवा उपलब्ध करून दिली जाते. खाली संमती देऊन तुम्ही जाणीवपूर्वक 14 दिवसांच्या रद्दीकरण अधिकारावर (§ 356 Abs. 5 BGB) सोडून देत आहात.\n\nही संमती दिल्याशिवाय आम्ही Premium सुविधा लगेच सक्रिय करू शकत नाही.\n\nPremium सुविधांचे प्रदाता: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany. रद्दीकरणासाठी ईमेल: dev.app.support@gmail.com.\n\nसेवा सुरू होण्यापूर्वी रद्दीकरण अधिकार न वापरल्यास आणि Premium सदस्यता सुरू झाल्यास, तुमचा 14 दिवसांचा रद्दीकरण कालावधी करार झाल्याच्या दिवशी सुरू होतो. तुम्ही ईमेलद्वारे किंवा EU नमुना रद्दीकरण फॉर्मद्वारे रद्द करू शकता (https://www.bmuv.de/widerruf — बाह्य EU नमुना).</string>
     <string name="paywall_consent_dialog_cancel">रद्द करा</string>
     <string name="paywall_consent_dialog_checkbox">मला समजते की डाउनलोड सुरू झाल्यावर, परतावा हक्क संपतो (§ 356 Abs. 5 BGB नुसार).</string>
     <string name="paywall_consent_dialog_confirm">सहमत आहे आणि खरेदी करा</string>
@@ -1498,7 +1498,7 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="paywall_monthly_label">मासिक</string>
     <string name="paywall_restore_button">खरेदी पुनर्संचयित करा</string>
     <string name="paywall_subscribe_button">सदस्यता घ्या</string>
-    <string name="paywall_subtitle">सर्व Premium फायदे वापरा</string>
+    <string name="paywall_subtitle">सर्व Premium सुविधा अनलॉक करा</string>
     <string name="paywall_title">Premium वर अपग्रेड करा</string>
     <string name="paywall_yearly_label">वार्षिक</string>
     <string name="prompt_char_count_label">%1$d अक्षरे</string>
@@ -1517,9 +1517,9 @@ Premium सह: दररोज 150 पर्यंत.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">सखोल वापरासाठी उदार दैनंदिन AI कोटा.</string>
+    <string name="ai_limits_disclaimer">सखोल वापरासाठी AI दैनंदिन कोटा.</string>
     <string name="ai_limits_dialog_title">दैनंदिन AI कोटा कसा काम करतो?</string>
-    <string name="ai_limits_dialog_body" formatted="false">प्रीमियम सदस्यत्वासह\n\nदररोज उपलब्ध:\n• प्रत्येक AI प्रोफाइलसाठी 150 पर्यंत डॅशबोर्ड विश्लेषणे (4 प्रोफाइल = दररोज 600 पर्यंत)\n• 150 पर्यंत मजकूर सुधारणा\n\nतपशील:\n• विनंत्या 1 ते 30: सर्वोच्च AI गुणवत्ता\n• विनंत्या 31 ते 100: जलद मानक गुणवत्ता\n• 101व्या विनंतीवर: एकदाचा 30 मिनिटांचा विराम\n• विनंत्या 101 ते 150: जलद मानक गुणवत्ता\n• 151व्या विनंतीपासून: उद्यापर्यंत आणखी विनंत्या नाही\n\nसर्व वापरकर्त्यांना लागू:\n• प्रति तास जास्तीत जास्त 50 AI विनंत्या — नंतर 5 मिनिटांचा विराम\n\nकोटा कधी रीसेट होतो?\nदररोज 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) नवीन पूर्ण कोटा सुरू होतो.\n\n──────────\n\nसदस्यत्वाशिवाय\n\n• दर आठवड्याला प्रति प्रोफाइल 5 डॅशबोर्ड विश्लेषणे\n• दर आठवड्याला 5 मजकूर सुधारणा\n• नेहमी जलद मानक गुणवत्तेत\n• दर सोमवारी 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) रीसेट\n\n──────────\n\n99% पेक्षा जास्त वापरकर्त्यांना कदाचित हे निर्बंध कधीच लागणार नाहीत.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM सदस्यतेसह\n\nदररोज उपलब्ध:\n• दररोज प्रति प्रोफाइल 150 विनंत्या — 4 पूर्वनिर्धारितांसाठी एकत्र 600/दिवस, आणि तुम्ही तयार केलेल्या प्रत्येक स्वतःच्या प्रोफाइलसाठी 150/दिवस.\n• 150 पर्यंत मजकूर सुधारणा\n\nतपशीलवार प्रक्रिया:\n• विनंत्या 1 ते 30: सर्वोच्च AI गुणवत्ता\n• विनंत्या 31 ते 100: जलद मानक गुणवत्ता\n• 101व्या विनंतीवर: एकदाचा 30 मिनिटांचा विराम\n• विनंत्या 101 ते 150: जलद मानक गुणवत्ता\n• 151व्या विनंतीपासून: उद्यापर्यंत आणखी विनंत्या नाही\n\nसर्व वापरकर्त्यांना लागू:\n• प्रति तास जास्तीत जास्त 50 AI विनंत्या — नंतर 5 मिनिटांचा विराम\n\nकोटा कधी रीसेट होतो?\nदररोज 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) नवीन पूर्ण कोटा सुरू होतो.\n\n──────────\n\nसदस्यतेशिवाय\n\n• दर आठवड्याला प्रति प्रोफाइल 5 डॅशबोर्ड विश्लेषणे\n• दर आठवड्याला 5 मजकूर सुधारणा\n• नेहमी जलद मानक गुणवत्तेत\n• दर सोमवारी 0:00 वाजता (तुमच्या स्थानिक वेळेनुसार) रीसेट\n\n──────────\n\nदैनंदिन वापरातील बहुतेक वापरकर्त्यांना हे मर्यादा कधीही लागणार नाहीत.</string>
     <string name="ai_limits_dialog_close">समजले</string>
     <string name="theme_neutral">तटस्थ</string>
     <string name="theme_profile">प्रोफाइल रंग — डॅशबोर्ड प्रोफाइलचा रंग</string>
@@ -1528,4 +1528,26 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <string name="theme_one_dark">कार्यशाळा</string>
     <string name="theme_nord">ध्रुवीय रात्र</string>
     <string name="theme_gruvbox">अंबर</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">तुम्ही तुमच्या डायरी नोंदी आवाजाने लिहू शकण्यासाठी आम्हाला मायक्रोफोनचा अ‍ॅक्सेस आवश्यक आहे.</string>
+    <string name="permission_rationale_camera">तुम्ही तुमच्या नोंदींमध्ये फोटो जोडू शकण्यासाठी आम्हाला कॅमेऱ्याचा अ‍ॅक्सेस आवश्यक आहे.</string>
+    <string name="permission_rationale_location">तुम्ही तुमच्या नोंदींना स्थान संदर्भ देऊ शकण्यासाठी आम्हाला अंदाजे स्थान आवश्यक आहे. तुम्ही हे कधीही नाकारू किंवा नंतर बंद करू शकता.</string>
+    <string name="permission_rationale_notifications">तुम्हाला दैनंदिन लेखनाची आठवण करून देण्यासाठी आम्हाला सूचनांची परवानगी आवश्यक आहे.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android सिस्टम बॅकअप</string>
+    <string name="consent_info_system_backup_body">तुम्ही डिव्हाइस सेटिंग्जमध्ये Android सिस्टम बॅकअप सक्रिय केल्यास, Android तुमचा डायरी डेटा तुमच्या Google खात्याच्या बॅकअप क्षेत्रात आपोआप सुरक्षित करतो. तुम्ही हे डिव्हाइस सेटिंग्जमध्ये कधीही बंद करू शकता — तपशीलांसाठी गोपनीयता धोरण पहा.</string>
+    <string name="settings_open_system_backup_settings_label">Android सिस्टम बॅकअप व्यवस्थापित करा</string>
+    <string name="settings_open_system_backup_settings_desc">Android सिस्टम सेटिंग्ज उघडतो, जिथे तुम्ही Best Journal साठी आपोआप बॅकअप चालू किंवा बंद करू शकता.</string>
+    <string name="error_no_backup_settings_available">या डिव्हाइसवर बॅकअप सेटिंग्ज उपलब्ध नाहीत.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">गोपनीयता</string>
+    <string name="consent_footer_link_impressum">परिचय</string>
+    <string name="consent_footer_link_agb">वापर अटी</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">थेरपी नाही — व्यावसायिक सल्ल्याची जागा घेत नाही.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal एक डायरी आहे, थेरपी सेवा नाही. AI विश्लेषण स्वयंचिंतनासाठी सूचना आहेत आणि व्यावसायिक मनोवैज्ञानिक किंवा वैद्यकीय सल्ल्याची जागा घेत नाहीत. तातडीच्या समस्यांसाठी एखाद्या तज्ञाशी किंवा तुमच्या सेटिंग्जमधील संकट सहाय्याशी संपर्क साधा.</string>
 </resources>
