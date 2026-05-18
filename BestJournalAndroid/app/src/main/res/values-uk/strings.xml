@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Щоденне покращення тексту ШІ</string>
-    <string name="settings_premium_feature_improve_desc">Кожен запис стає виразнішим</string>
+    <string name="settings_premium_feature_improve_desc">ШІ вдосконалює твої записи на прохання.</string>
     <string name="settings_premium_feature_dashboard">Щоденні аналізи панелі</string>
-    <string name="settings_premium_feature_dashboard_desc">Ваша панель росте разом із вами</string>
-    <string name="settings_premium_feature_5_perspectives">5 перспектив ШІ</string>
+    <string name="settings_premium_feature_dashboard_desc">Твій дашборд зростає разом із твоїми записами.</string>
+    <string name="settings_premium_feature_5_perspectives">Усі профілі ШІ (4 готові + необмежено власних)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Від ясності до самопізнання</string>
     <string name="settings_premium_feature_reviews">Підсумки тижня, місяця і року</string>
     <string name="settings_premium_feature_reviews_desc">ШІ розповідає вашу історію</string>
     <string name="settings_premium_feature_patterns">Розпізнавання закономірностей</string>
-    <string name="settings_premium_feature_patterns_desc">ШІ знаходить зв\'язки, яких ви не помічаєте</string>
+    <string name="settings_premium_feature_patterns_desc">ШІ може виявляти закономірності та зв\'язки у твоїх записах.</string>
     <string name="settings_premium_feature_pdf">Експорт у PDF з фото</string>
     <string name="settings_premium_feature_pdf_desc">Усі записи з фото як документ</string>
     <string name="settings_premium_feature_voice">Точніше розпізнавання мови</string>
@@ -816,10 +816,10 @@
     <string name="onboarding_goals_select">Виберіть одну або кілька цілей</string>
     <string name="onboarding_how_step3_title">Додайте фото</string>
     <string name="onboarding_how_title">Усе дуже просто</string>
-    <string name="onboarding_perspectives_title">5 точок зору на\nваше життя</string>
+    <string name="onboarding_perspectives_title">Різні точки зору на\nтвоє життя</string>
     <string name="onboarding_premium_feature_pdf">Експорт у PDF з фото, збережіть записи як документ</string>
     <string name="onboarding_premium_profiles">5 розумних профілів панелі для глибокого погляду на життя</string>
-    <string name="onboarding_try_premium">Спробуйте Преміум 8 днів</string>
+    <string name="onboarding_try_premium">8 днів безкоштовно — від 3,99 €/місяць</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -836,7 +836,7 @@
     <string name="paywall_yearly_note">Потім %1$s на рік\nУ пробний період можна скасувати в будь-який момент</string>
     <string name="paywall_most_popular">Найпопулярніший вибір</string>
     <string name="paywall_monthly_plan">Місячна підписка, %1$s на місяць</string>
-    <string name="paywall_yearly_savings">Заощадьте %1$d\u00A0%% порівняно з місячною, скасування будь-коли</string>
+    <string name="paywall_yearly_savings">Заощадьте %1$d%% порівняно з місячною — скасування будь-коли до кінця строку.</string>
     <string name="paywall_lifetime_title">Разова покупка</string>
     <string name="paywall_lifetime_desc">Оплати один раз, користуйся завжди</string>
     <string name="paywall_lifetime_note">Без підписки, без продовжень</string>
@@ -853,8 +853,8 @@
     <string name="paywall_feature_profiles">Необмежені власні профілі аналізу</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Знайдіть внутрішній спокій</string>
-    <string name="paywall_headline_stress_sub">Розпізнайте, що обтяжує, поки не накрило</string>
+    <string name="paywall_headline_stress">Більше ясності у повсякденні</string>
+    <string name="paywall_headline_stress_sub">Розпізнай, що тебе щодня займає, і сформулюй це чітко.</string>
     <string name="paywall_headline_clarity">Зрозумійте себе краще</string>
     <string name="paywall_headline_clarity_sub">ШІ розпізнає закономірності, які вислизають</string>
     <string name="paywall_headline_growth">Відкрийте добре в кожному дні</string>
@@ -869,7 +869,7 @@
     <string name="paywall_exit_special_offer">У нас особлива\nпропозиція для вас:</string>
     <string name="paywall_exit_discount">Знижка на %1$d місяців</string>
     <string name="paywall_exit_price_comparison">Лише %1$s замість %2$s на місяць</string>
-    <string name="paywall_exit_start_discount">Почати місячну підписку зі знижкою 50\u00A0%</string>
+    <string name="paywall_exit_start_discount">Платна підписка — 2 місяці за половину ціни</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -895,9 +895,9 @@
     <string name="churn_sorry_title">Шкода, що ви йдете</string>
     <string name="churn_sorry_body">Перед скасуванням поділіться причиною? Це допомагає нам покращувати додаток.</string>
     <string name="churn_exclusive_offer">Ексклюзивна пропозиція</string>
-    <string name="churn_offer_subtitle">Тільки для вас, адже ви важливі</string>
+    <string name="churn_offer_subtitle">Наша пропозиція для тебе</string>
     <string name="churn_offer_feature_ai">Щоденні аналізи ШІ</string>
-    <string name="churn_offer_feature_perspectives">Усі 5 точок зору</string>
+    <string name="churn_offer_feature_perspectives">Усі профілі ШІ (4 готові + необмежено власних)</string>
     <string name="churn_offer_feature_voice">Преміум-розпізнавання мови</string>
     <string name="churn_offer_auto_renew">Автоматично продовжується, скасування будь-коли</string>
     <string name="churn_accept_offer">Прийняти пропозицію</string>
@@ -917,7 +917,7 @@
     <string name="ai_limit_yearly">Річна підписка, %1$s/рік (економія 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Ні, дякую, далі без ШІ</string>
     <string name="ai_banner_title">Ваш щоденник підтримується ШІ</string>
-    <string name="ai_banner_body">• Надиктовані тексти покращуються автоматично\n• Короткі описи для кожного запису\n• Розумні життєві поради на основі ваших закономірностей\n• Усе включено у безкоштовний пробний період</string>
+    <string name="ai_banner_body">• Надиктовані тексти покращуються автоматично\n• Короткі описи для кожного запису\n• Розумні підказки для рефлексії на основі твоїх закономірностей. Усі результати ШІ є пропозиціями, а не професійною консультацією.\n• Усе включено у безкоштовний пробний період</string>
     <string name="cd_mic_start">Почати запис</string>
     <string name="cd_mic_stop">Зупинити запис</string>
     <string name="entry_improve_limit_daily">Денний ліміт досягнуто. Завтра продовжимо!</string>
@@ -1347,7 +1347,7 @@
     <string name="journal_improve">Покращити текст</string>
     <string name="journal_state_improving">Покращення…</string>
     <string name="journal_state_transcribing">Транскрибування…</string>
-    <string name="paywall_consent_dialog_body">Після оформлення підписки або покупки ти маєш право на відмову протягом 14 днів.\n\nЩоб ти міг одразу користуватися функціями Premium, ми починаємо надання послуги відразу після оплати. Надаючи згоду нижче, ти свідомо відмовляєшся від 14-денного права на відмову.\n\nБез цієї згоди ми не можемо одразу активувати функції Premium.</string>
+    <string name="paywall_consent_dialog_body">Після оформлення підписки або покупки ти маєш принципове право на відмову протягом 14 днів (§ 355 BGB).\n\nЩоб ти міг одразу користуватися функціями Premium, ми починаємо надання послуги безпосередньо після твоєї оплати. Надаючи згоду нижче, ти усвідомлено відмовляєшся від 14-денного права на відмову (§ 356 абз. 5 BGB).\n\nБез цієї згоди ми не можемо одразу активувати функції Premium.\n\nПостачальник функцій Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Німеччина. E-Mail для відмови: dev.app.support@gmail.com.\n\nЯкщо ти не заявиш про відмову до початку надання послуги і підписку Premium буде активовано, 14-денний строк відмови починається з дня укладення договору. Відмову можна подати у довільній формі електронною поштою або скористатись типовою формою ЄС для відмови (https://www.bmuv.de/widerruf — зовнішня форма ЄС).</string>
     <string name="paywall_consent_dialog_cancel">Скасувати</string>
     <string name="paywall_consent_dialog_checkbox">Я погоджуюся, що надання функцій Premium розпочнеться одразу після замовлення. Я розумію, що таким чином втрачаю 14-денне право на відмову.</string>
     <string name="paywall_consent_dialog_confirm">Оформити підписку зараз із зобов\'язанням оплати</string>
@@ -1395,7 +1395,7 @@
     <string name="paywall_monthly_label">Щомісяця</string>
     <string name="paywall_restore_button">Відновити покупки</string>
     <string name="paywall_subscribe_button">Підписатися</string>
-    <string name="paywall_subtitle">Користуйся всіма перевагами Premium</string>
+    <string name="paywall_subtitle">Відкрий усі функції Premium</string>
     <string name="paywall_title">Перейти на Premium</string>
     <string name="paywall_yearly_label">Щороку</string>
     <string name="prompt_char_count_label">%1$d символів</string>
@@ -1414,9 +1414,9 @@
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Щедрий денний ліміт ШІ для інтенсивного використання.</string>
+    <string name="ai_limits_disclaimer">Денний ліміт ШІ для інтенсивного використання.</string>
     <string name="ai_limits_dialog_title">Як працює денний ліміт ШІ?</string>
-    <string name="ai_limits_dialog_body" formatted="false">З ПІДПИСКОЮ PREMIUM\n\nКожного дня тобі доступно:\n• До 150 аналізів дашборда на профіль ШІ (при 4 профілях — до 600 на день)\n• До 150 покращень тексту\n\nЯк це працює детально:\n• Запити 1–30: у найвищій якості ШІ\n• Запити 31–100: у швидкій стандартній якості\n• На 101-му запиті: одноразова пауза 30 хв\n• Запити 101–150: швидка стандартна якість\n• З 151-го запиту: нових запитів до завтра немає\n\nТакож для всіх користувачів:\n• Не більше 50 запитів ШІ на годину — потім пауза 5 хв\n\nКоли скидаються ліміти?\nКожного дня опівночі (за місцевим часом) починається новий повний ліміт.\n\n──────────\n\nБЕЗ ПІДПИСКИ\n\n• 5 аналізів дашборда на тиждень на профіль\n• 5 покращень тексту на тиждень\n• Завжди у швидкій стандартній якості\n• Скидання щопонеділка опівночі (за місцевим часом)\n\n──────────\n\nПонад 99% користувачів, імовірно, ніколи не зіткнуться з цими обмеженнями.</string>
+    <string name="ai_limits_dialog_body" formatted="false">З ПІДПИСКОЮ PREMIUM\n\nКожного дня тобі доступно:\n• 150 запитів на день на профіль — для 4 готових разом 600/день, плюс 150/день для кожного власного профілю, який ти створюєш.\n• До 150 покращень тексту\n\nЯк це працює детально:\n• Запити 1–30: у найвищій якості ШІ\n• Запити 31–100: у швидкій стандартній якості\n• На 101-му запиті: одноразова пауза 30 хв\n• Запити 101–150: швидка стандартна якість\n• З 151-го запиту: нових запитів до завтра немає\n\nТакож для всіх користувачів:\n• Не більше 50 запитів ШІ на годину — потім пауза 5 хв\n\nКоли скидаються ліміти?\nКожного дня опівночі (за місцевим часом) починається новий повний ліміт.\n\n──────────\n\nБЕЗ ПІДПИСКИ\n\n• 5 аналізів дашборда на тиждень на профіль\n• 5 покращень тексту на тиждень\n• Завжди у швидкій стандартній якості\n• Скидання щопонеділка опівночі (за місцевим часом)\n\n──────────\n\nБільшість користувачів у повсякденному житті не досягнуть цих меж.</string>
     <string name="ai_limits_dialog_close">Зрозуміло</string>
     <string name="theme_neutral">Нейтральний</string>
     <string name="theme_profile">Колір профілю — колір профілю дашборда</string>
@@ -1425,4 +1425,26 @@
     <string name="theme_one_dark">Ательє</string>
     <string name="theme_nord">Полярна ніч</string>
     <string name="theme_gruvbox">Бурштин</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">Щоб ти міг диктувати записи голосом, нам потрібен доступ до мікрофона.</string>
+    <string name="permission_rationale_camera">Щоб ти міг додавати фото до своїх записів, нам потрібен доступ до камери.</string>
+    <string name="permission_rationale_location">Щоб ти міг прив'язати запис до місця, нам потрібне приблизне місцезнаходження. Ти можеш відмовитись зараз або вимкнути це пізніше.</string>
+    <string name="permission_rationale_notifications">Щоб ми могли нагадувати тобі про щоденний запис, нам потрібен дозвіл на сповіщення.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Системне резервне копіювання Android</string>
+    <string name="consent_info_system_backup_body">Якщо ти увімкнув системне резервне копіювання Android у налаштуваннях пристрою, Android автоматично зберігає дані твого щоденника в область резервного копіювання твого облікового запису Google. Ти можеш вимкнути це в налаштуваннях пристрою будь-коли — деталі в Політиці конфіденційності.</string>
+    <string name="settings_open_system_backup_settings_label">Керування системним резервним копіюванням Android</string>
+    <string name="settings_open_system_backup_settings_desc">Відкриває системні налаштування Android, де ти можеш увімкнути або вимкнути автоматичне резервне копіювання для Best Journal.</string>
+    <string name="error_no_backup_settings_available">Налаштування резервного копіювання недоступні на цьому пристрої.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Конфіденційність</string>
+    <string name="consent_footer_link_impressum">Вихідні дані</string>
+    <string name="consent_footer_link_agb">Умови використання</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">Не терапія — не замінює професійної консультації.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal — це щоденник, а не терапевтичний сервіс. Аналізи ШІ є пропозиціями для саморефлексії і не замінюють професійної психологічної або медичної консультації. При гострих проблемах звернись до фахівця або скористайся кризовою допомогою в налаштуваннях.</string>
 </resources>

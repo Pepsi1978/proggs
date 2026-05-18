@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Günlük YZ metin iyileştirme</string>
-    <string name="settings_premium_feature_improve_desc">Her giriş daha anlamlı olur</string>
+    <string name="settings_premium_feature_improve_desc">İstediğinde YZ girişlerini geliştirir.</string>
     <string name="settings_premium_feature_dashboard">Günlük gösterge paneli analizleri</string>
-    <string name="settings_premium_feature_dashboard_desc">Panelin seninle büyür</string>
-    <string name="settings_premium_feature_5_perspectives">5 YZ bakış açısı</string>
+    <string name="settings_premium_feature_dashboard_desc">Gösterge panelin girişlerinle birlikte büyür.</string>
+    <string name="settings_premium_feature_5_perspectives">Tüm YZ profilleri (4 hazır + sınırsız kişisel)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Netlikten öz farkındalığa</string>
     <string name="settings_premium_feature_reviews">Haftalık, aylık ve yıllık geri bakış</string>
     <string name="settings_premium_feature_reviews_desc">YZ senin hikâyeni anlatır</string>
     <string name="settings_premium_feature_patterns">Örüntü tanıma</string>
-    <string name="settings_premium_feature_patterns_desc">YZ fark etmediğin bağlantıları bulur</string>
+    <string name="settings_premium_feature_patterns_desc">YZ, girişlerindeki örüntüleri ve bağlantıları görünür kılar.</string>
     <string name="settings_premium_feature_pdf">Fotoğraflı PDF dışa aktarım</string>
     <string name="settings_premium_feature_pdf_desc">Tüm girişler fotoğraflarla belge olarak</string>
     <string name="settings_premium_feature_voice">Daha kesin ses tanıma</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">Bir ya da birkaç hedef seç</string>
     <string name="onboarding_how_step3_title">Fotoğraf ekle</string>
     <string name="onboarding_how_title">Bu kadar basit</string>
-    <string name="onboarding_perspectives_title">Hayatına 5 bakış</string>
+    <string name="onboarding_perspectives_title">Hayatına farklı\nbakış açıları</string>
     <string name="onboarding_premium_feature_pdf">Fotoğraflı PDF dışa aktarım, girişlerini belge olarak sakla</string>
     <string name="onboarding_premium_profiles">Hayatına derin bir bakış için 5 akıllı panel profili</string>
-    <string name="onboarding_try_premium">Premium\'u 8 gün dene</string>
+    <string name="onboarding_try_premium">8 gün ücretsiz — sonra aylık 3,99 €\'dan itibaren</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,7 +833,7 @@
     <string name="paywall_yearly_note">Sonrasında yılda %1$s\nDeneme süresinde istediğin zaman iptal</string>
     <string name="paywall_most_popular">En popüler seçim</string>
     <string name="paywall_monthly_plan">Aylık abonelik, ayda %1$s</string>
-    <string name="paywall_yearly_savings">Aylığa göre %1$d\u00A0%% tasarruf et, istediğin zaman iptal</string>
+    <string name="paywall_yearly_savings">Aylık aboneliğe göre %1$d %% tasarruf et — dönem sonunda istediğin zaman iptal</string>
     <string name="paywall_lifetime_title">Tek seferlik satın alma</string>
     <string name="paywall_lifetime_desc">Bir kez öde, her şeyi kalıcı olarak kullan</string>
     <string name="paywall_lifetime_note">Abonelik yok, yenileme yok</string>
@@ -850,8 +850,8 @@
     <string name="paywall_feature_profiles">Sınırsız özel analiz profili</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">İç huzurunu bul</string>
-    <string name="paywall_headline_stress_sub">Seni bunaltmadan önce neyin yorduğunu tanı</string>
+    <string name="paywall_headline_stress">Günlük yaşamda daha fazla netlik</string>
+    <string name="paywall_headline_stress_sub">Seni her gün meşgul edeni fark et ve net bir şekilde ifade et.</string>
     <string name="paywall_headline_clarity">Kendini daha iyi anla</string>
     <string name="paywall_headline_clarity_sub">YZ gizli kalan örüntüleri tanır</string>
     <string name="paywall_headline_growth">Her günde iyiyi keşfet</string>
@@ -866,7 +866,7 @@
     <string name="paywall_exit_special_offer">Sana özel bir\nteklifimiz var:</string>
     <string name="paywall_exit_discount">%1$d ay için indirim</string>
     <string name="paywall_exit_price_comparison">Ayda %2$s yerine sadece %1$s</string>
-    <string name="paywall_exit_start_discount">Aylık aboneliği %50 indirimle başlat</string>
+    <string name="paywall_exit_start_discount">Ücretli — 2 ay yarı fiyatına</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -892,9 +892,9 @@
     <string name="churn_sorry_title">Gitmene üzüldük</string>
     <string name="churn_sorry_body">İptal etmeden önce nedenini söyler misin? Uygulamayı geliştirmemize yardım eder.</string>
     <string name="churn_exclusive_offer">Özel teklif</string>
-    <string name="churn_offer_subtitle">Sadece sana, çünkü sen önemlisin</string>
+    <string name="churn_offer_subtitle">Sana özel teklifimiz</string>
     <string name="churn_offer_feature_ai">Günlük YZ analizleri</string>
-    <string name="churn_offer_feature_perspectives">5 bakış açısının tamamı</string>
+    <string name="churn_offer_feature_perspectives">Tüm YZ profilleri (4 hazır + sınırsız kişisel)</string>
     <string name="churn_offer_feature_voice">Premium ses tanıma</string>
     <string name="churn_offer_auto_renew">Otomatik yenilenir, istediğin zaman iptal</string>
     <string name="churn_accept_offer">Teklifi kabul et</string>
@@ -914,7 +914,7 @@ Premium ile: günlük 150\'ye kadar.</string>
     <string name="ai_limit_yearly">Yıllık abonelik, %1$s/yıl (37\u00A0%% tasarruf)</string>
     <string name="ai_limit_no_thanks">Hayır, teşekkürler, YZ olmadan devam</string>
     <string name="ai_banner_title">Günlüğün YZ desteğiyle</string>
-    <string name="ai_banner_body">• Dikte edilen metinler otomatik iyileştirilir\n• Her giriş için özet\n• Örüntülerine göre akıllı yaşam tavsiyeleri\n• Ücretsiz deneme sürecinde her şey dahil</string>
+    <string name="ai_banner_body">• Dikte edilen metinler otomatik iyileştirilir\n• Her giriş için özet\n• Örüntülerinden akıllı yaşam önerileri. Tüm YZ çıktıları öneri niteliğindedir, profesyonel danışmanlık değildir.\n• Ücretsiz deneme sürecinde her şey dahil</string>
     <string name="cd_mic_start">Kaydı başlat</string>
     <string name="cd_mic_stop">Kaydı durdur</string>
     <string name="entry_improve_limit_daily">Günlük limit doldu. Yarın devam!</string>
@@ -1334,7 +1334,7 @@ Ne yapmak istersin?</string>
     <string name="journal_improve">Metni geliştir</string>
     <string name="journal_state_improving">Geliştiriliyor…</string>
     <string name="journal_state_transcribing">Metne dönüştürülüyor…</string>
-    <string name="paywall_consent_dialog_body">Abonelik veya satın alma işleminin tamamlanmasının ardından prensip olarak 14 günlük cayma hakkına sahipsin.\n\nPremium özelliklerini hemen kullanabilmen için satın alma işleminin hemen ardından sunumu başlatıyoruz. Aşağıdaki onayınla, sonuçlarından haberdar olarak 14 günlük cayma hakkından feragat etmiş olursun.\n\nBu onay olmadan Premium özellikleri hemen etkinleştiremeyiz.</string>
+    <string name="paywall_consent_dialog_body">Abonelik veya satın alma işlemini tamamladıktan sonra kural olarak 14 günlük cayma hakkına sahipsin (§ 355 BGB).\n\nPremium özelliklerini hemen kullanabilmen için satın alma işleminin hemen ardından sunumu başlatıyoruz. Aşağıdaki onayınla, sonuçlarından haberdar olarak 14 günlük cayma hakkından feragat etmiş olursun (§ 356 Abs. 5 BGB).\n\nBu onay olmadan Premium özelliklerini hemen etkinleştiremeyiz.\n\nPremium özelliklerini sunan taraf: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Almanya. Cayma bildirimi için e-posta: dev.app.support@gmail.com.\n\nBereitstellung başlamadan önce cayma hakkını kullanmadıysan ve Premium aboneliği başlatıldıysa, 14 günlük cayma süresi sözleşme tarihinden itibaren başlar. Cayma bildirimini e-posta yoluyla serbest biçimde iletebilir ya da AB örnek cayma formunu kullanabilirsin (https://www.bmuv.de/widerruf — harici AB formu).</string>
     <string name="paywall_consent_dialog_cancel">İptal</string>
     <string name="paywall_consent_dialog_checkbox">Premium özelliklerin sunumunun sipariş hemen ardından başladığını kabul ediyorum. Bu nedenle 14 günlük cayma hakkımı kaybettiğimin farkındayım.</string>
     <string name="paywall_consent_dialog_confirm">Şimdi ücretli olarak abone ol</string>
@@ -1382,7 +1382,7 @@ Ne yapmak istersin?</string>
     <string name="paywall_monthly_label">Aylık</string>
     <string name="paywall_restore_button">Satın alımları geri yükle</string>
     <string name="paywall_subscribe_button">Abone ol</string>
-    <string name="paywall_subtitle">Tüm Premium avantajlarından yararlan</string>
+    <string name="paywall_subtitle">Tüm Premium özelliklerinin kilidini aç</string>
     <string name="paywall_title">Premium’a yükselt</string>
     <string name="paywall_yearly_label">Yıllık</string>
     <string name="prompt_char_count_label">%1$d karakter</string>
@@ -1401,9 +1401,9 @@ Ne yapmak istersin?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Yoğun kullanım için cömert günlük YZ kotası.</string>
+    <string name="ai_limits_disclaimer">Yoğun kullanım için günlük YZ kotası.</string>
     <string name="ai_limits_dialog_title">Günlük YZ kotası nasıl çalışır?</string>
-    <string name="ai_limits_dialog_body" formatted="false">PREMIUM ABONELIKLE\n\nHer gün kullanımına açık:\n• YZ profili başına 150 adede kadar gösterge paneli analizi (4 profille günde 600\'e kadar)\n• 150 adede kadar metin geliştirme\n\nAyrıntılı işleyiş:\n• 1–30. istekler: en yüksek YZ kalitesinde\n• 31–100. istekler: hızlı standart kalitede\n• 101. istekte: tek seferlik 30 dak. mola\n• 101–150. istekler: hızlı standart kalite\n• 151. istekten itibaren: yarına kadar istek yok\n\nAyrıca tüm kullanıcılar için:\n• Saatte en fazla 50 YZ isteği — ardından 5 dak. mola\n\nKotalar ne zaman sıfırlanır?\nHer gün gece yarısı (yerel saatinle) yeni tam kota başlar.\n\n──────────\n\nABONELİK OLMADAN\n\n• Profil başına haftada 5 gösterge paneli analizi\n• Haftada 5 metin geliştirme\n• Her zaman hızlı standart kalitede\n• Her Pazartesi gece yarısı (yerel saatinle) sıfırlanır\n\n──────────\n\nKullanıcıların %99\'undan fazlası bu sınırlarla muhtemelen hiç karşılaşmaz.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM ABONELİKLE\n\nHer gün kullanımına açık:\n• Günde 150 istek hakkı profil başına — 4 hazır profille 600/gün, oluşturduğun her kişisel profil için ek 150/gün.\n• 150 adede kadar metin geliştirme\n\nAyrıntılı işleyiş:\n• 1–30. istekler: en yüksek YZ kalitesinde\n• 31–100. istekler: hızlı standart kalitede\n• 101. istekte: tek seferlik 30 dak. mola\n• 101–150. istekler: hızlı standart kalite\n• 151. istekten itibaren: yarına kadar istek yok\n\nAyrıca tüm kullanıcılar için:\n• Saatte en fazla 50 YZ isteği — ardından 5 dak. mola\n\nKotalar ne zaman sıfırlanır?\nHer gün gece yarısı (yerel saatinle) yeni tam kota başlar.\n\n──────────\n\nABONELİK OLMADAN\n\n• Profil başına haftada 5 gösterge paneli analizi\n• Haftada 5 metin geliştirme\n• Her zaman hızlı standart kalitede\n• Her Pazartesi gece yarısı (yerel saatinle) sıfırlanır\n\n──────────\n\nGünlük yaşamda kullanıcıların büyük çoğunluğu bu sınırlarla hiç karşılaşmaz.</string>
     <string name="ai_limits_dialog_close">Anladım</string>
     <string name="theme_neutral">Nötr</string>
     <string name="theme_profile">Profil rengi — gösterge paneli profil rengi</string>
@@ -1412,4 +1412,26 @@ Ne yapmak istersin?</string>
     <string name="theme_one_dark">Atölye</string>
     <string name="theme_nord">Kutup Gecesi</string>
     <string name="theme_gruvbox">Kehribar</string>
+
+    <!-- Permission rationales -->
+    <string name="permission_rationale_microphone">Günlük girişlerini sesle dikte edebilmek için mikrofonuna erişmemiz gerekiyor.</string>
+    <string name="permission_rationale_camera">Girişlerine fotoğraf ekleyebilmek için kamerana erişmemiz gerekiyor.</string>
+    <string name="permission_rationale_location">Girişlerine konum bağlamı ekleyebilmek için yaklaşık konumuna ihtiyacımız var. Bunu istediğin zaman reddedebilir veya daha sonra kapatabilirsin.</string>
+    <string name="permission_rationale_notifications">Günlük yazma alışkanlığını hatırlatabilmek için bildirim iznine ihtiyacımız var.</string>
+
+    <!-- System backup consent -->
+    <string name="consent_info_system_backup_title">Android Sistem Yedekleme</string>
+    <string name="consent_info_system_backup_body">Cihaz ayarlarında Android Sistem Yedekleme etkinse Android, günlük verilerini otomatik olarak Google Hesabının yedekleme alanına kaydeder. Bunu cihaz ayarlarından istediğin zaman devre dışı bırakabilirsin — ayrıntılar için Gizlilik Politikasına bakabilirsin.</string>
+    <string name="settings_open_system_backup_settings_label">Android Sistem Yedeklemeyi yönet</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal için otomatik yedeklemeyi açıp kapatabildiğin Android sistem ayarlarını açar.</string>
+    <string name="error_no_backup_settings_available">Bu cihazda yedekleme ayarları kullanılamıyor.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Gizlilik</string>
+    <string name="consent_footer_link_impressum">Künye</string>
+    <string name="consent_footer_link_agb">Kullanım Koşulları</string>
+
+    <!-- AI health disclaimers -->
+    <string name="ai_output_health_disclaimer">Terapi değildir — profesyonel danışmanlığın yerini almaz.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal bir günlük uygulamasıdır, terapi hizmeti sunmaz. YZ analizleri öz yansıma için öneri niteliğindedir; profesyonel psikolojik veya tıbbi danışmanlığın yerini tutmaz. Acil bir durumda bir uzmana veya ayarlarındaki kriz yardım hattına başvur.</string>
 </resources>

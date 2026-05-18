@@ -404,15 +404,15 @@
 
     
     <string name="settings_premium_feature_improve">દૈનિક AI લખાણ સુધારણા</string>
-    <string name="settings_premium_feature_improve_desc">દરેક નોંધ વધુ અભિવ્યક્ત બને</string>
+    <string name="settings_premium_feature_improve_desc">AI ઇચ્છા મુજબ તમારી નોંધો સુધારે છે.</string>
     <string name="settings_premium_feature_dashboard">દૈનિક ડેશબોર્ડ વિશ્લેષણો</string>
-    <string name="settings_premium_feature_dashboard_desc">ડૅશબોર્ડ તમારી સાથે વધે</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI દ્રષ્ટિકોણ</string>
+    <string name="settings_premium_feature_dashboard_desc">તમારું ડૅશબોર્ડ તમારી નોંધો સાથે વધે છે.</string>
+    <string name="settings_premium_feature_5_perspectives">બધા AI પ્રોફાઇલ (4 પૂર્વ-વ્યાખ્યાયિત + અમર્યાદિત પોતાના)</string>
     <string name="settings_premium_feature_5_perspectives_desc">સ્પષ્ટતાથી આત્મ-જ્ઞાન સુધી</string>
     <string name="settings_premium_feature_reviews">સાપ્તાહિક, માસિક અને વાર્ષિક અવલોકન</string>
     <string name="settings_premium_feature_reviews_desc">AI તમારી વાર્તા કહે</string>
     <string name="settings_premium_feature_patterns">પૅટર્ન ઓળખ</string>
-    <string name="settings_premium_feature_patterns_desc">AI એ જોડાણો ઓળખે છે જે તમને ન દેખાય</string>
+    <string name="settings_premium_feature_patterns_desc">AI તમારી નોંધોમાં રૂઢિઓ અને સંબંધો દૃશ્યમાન કરી શકે છે</string>
     <string name="settings_premium_feature_pdf">ફોટો સહ PDF Export</string>
     <string name="settings_premium_feature_pdf_desc">ફોટો સાથે document તરીકે ડાયરી</string>
     <string name="settings_premium_feature_voice">ચોક્કસ વાણી ઓળખ</string>
@@ -791,10 +791,10 @@
     <string name="onboarding_goals_select">♻</string>
     <string name="onboarding_how_step3_title">♻</string>
     <string name="onboarding_how_title">♻</string>
-    <string name="onboarding_perspectives_title">5 ♻\n♻</string>
+    <string name="onboarding_perspectives_title">તમારા જીવન પર\nવિવિધ દ્રષ્ટિકોણ</string>
     <string name="onboarding_premium_feature_pdf">PDF ♻</string>
     <string name="onboarding_premium_profiles">5 AI ♻</string>
-    <string name="onboarding_try_premium">8 ♻ Premium</string>
+    <string name="onboarding_try_premium">8 દિવસ મફત — ત્યારબાદ ₹3.99/મહિનાથી</string>
 
     
     <string name="paywall_prices_loading">♻\u2026</string>
@@ -809,7 +809,7 @@
     <string name="paywall_yearly_note">♻ %1$s ♻\n♻</string>
     <string name="paywall_most_popular">♻</string>
     <string name="paywall_monthly_plan">♻, %1$s/♻</string>
-    <string name="paywall_yearly_savings">♻ %1$d%% ♻</string>
+    <string name="paywall_yearly_savings">માસિક સબ્સ્ક્રિપ્શન કરતાં %1$d%% બચત — ગમે ત્યારે રદ કરી શકો.</string>
     <string name="paywall_lifetime_title">♻</string>
     <string name="paywall_lifetime_desc">એક વખત ચૂકવ, બધું કાયમ માટે વાપર</string>
     <string name="paywall_lifetime_note">♻</string>
@@ -826,8 +826,8 @@
     <string name="paywall_feature_profiles">અમર્યાદિત કસ્ટમ વિશ્લેષણ પ્રોફાઇલ</string>
 
     
-    <string name="paywall_headline_stress">♻</string>
-    <string name="paywall_headline_stress_sub">♻</string>
+    <string name="paywall_headline_stress">રોજિંદા જીવનમાં વધુ સ્પષ્ટતા</string>
+    <string name="paywall_headline_stress_sub">જે તમને રોજ સ્પર્શે છે તે ઓળખો અને સ્પષ્ટ રીતે વ્યક્ત કરો.</string>
     <string name="paywall_headline_clarity">♻</string>
     <string name="paywall_headline_clarity_sub">AI ♻</string>
     <string name="paywall_headline_growth">♻</string>
@@ -842,7 +842,7 @@
     <string name="paywall_exit_special_offer">♻\n♻:</string>
     <string name="paywall_exit_discount">♻ %1$d ♻</string>
     <string name="paywall_exit_price_comparison">♻ %1$s ♻ %2$s/♻</string>
-    <string name="paywall_exit_start_discount">50% ડિસ્કાઉન્ટ સાથે માસિક સબ્સ્ક્રિપ્શન શરૂ કરો</string>
+    <string name="paywall_exit_start_discount">ચૂકવણી-આધારિત — 2 મહિના અડધા ભાવે</string>
 
     
     <string name="churn_your_sub">♻</string>
@@ -866,9 +866,9 @@
     <string name="churn_sorry_title">♻</string>
     <string name="churn_sorry_body">♻</string>
     <string name="churn_exclusive_offer">♻</string>
-    <string name="churn_offer_subtitle">♻</string>
+    <string name="churn_offer_subtitle">તમારા માટે અમારી ઑફર</string>
     <string name="churn_offer_feature_ai">દૈનિક AI વિશ્લેષણ</string>
-    <string name="churn_offer_feature_perspectives">5 ♻</string>
+    <string name="churn_offer_feature_perspectives">બધા AI પ્રોફાઇલ (4 પૂર્વ-વ્યાખ્યાયિત + અમર્યાદિત પોતાના)</string>
     <string name="churn_offer_feature_voice">Premium ♻</string>
     <string name="churn_offer_auto_renew">♻</string>
     <string name="churn_accept_offer">♻</string>
@@ -886,7 +886,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="ai_limit_yearly">♻, %1$s/♻ (37%% ♻)</string>
     <string name="ai_limit_no_thanks">♻ AI ♻</string>
     <string name="ai_banner_title">AI ♻</string>
-    <string name="ai_banner_body">• ♻\n• ♻\n• ♻\n• ♻</string>
+    <string name="ai_banner_body">• ઉચ્ચારેલ ટેક્સ્ટ આપોઆપ સુધારાય છે\n• દરેક નોંધ માટે સારાંશ\n• તમારી રૂઢિઓ પરથી સ્માર્ટ જીવન-સૂચનો. બધા AI-આઉટપુટ સૂચનો છે, વ્યાવસાયિક સલાહ નહીં.\n• તમારા મફત ટ્રાયલ સમયગાળામાં સઘળું સામેલ</string>
     <string name="cd_mic_start">♻</string>
     <string name="cd_mic_stop">♻</string>
     <string name="entry_improve_limit_daily">♻!</string>
@@ -1292,7 +1292,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="journal_improve">સુધારો</string>
     <string name="journal_state_improving">સુધારી રહ્યું છે…</string>
     <string name="journal_state_transcribing">ટ્રાન્સક્રાઇબ થઈ રહ્યું છે…</string>
-    <string name="paywall_consent_dialog_body">તમે Best Journal ની Premium સેવાઓ સક્રિય કરવા જઈ રહ્યા છો. ખરીદી કન્ફર્મ કરવા પર, તમારી પાસેથી તરત ચાર્જ લેવામાં આવશે. સભ્યપદ રદ ન ​​કરો ત્યાં સુધી આપોઆપ નવીકરણ થશે. ડિજિટલ સામગ્રી ડાઉનલોડ શરૂ થતાં પરત કરવાનો અધિકાર સમાપ્ત થઈ જાય છે.</string>
+    <string name="paywall_consent_dialog_body">સબ્સ્ક્રિપ્શન અથવા ખરીદી પૂર્ણ કર્યા પછી, તમને સૈદ્ધાંતિક રીતે 14 દિવસનો ઉપાડ-અધિકાર (§ 355 BGB) મળે છે.\n\nજેથી તમે Premium સુવિધાઓ તરત ઉપયોગ કરી શકો, અમે ખરીદી પછી તુરંત સેવા ચાલુ કરીએ છીએ. નીચે સંમત થઈ, તમે સ્વૈચ્છિક રીતે 14 દિવસના ઉપાડ-અધિકાર (§ 356 Abs. 5 BGB) ત્યાગ કરો છો.\n\nઆ સંમત્તિ વિના, અમે Premium સુવિધાઓ તાત્કાલિક અનલૉક કરી શકતા નથી.\n\nPremium સુવિધાઓ પ્રદાતા: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. ઉપાડ માટે ઇ-મેઇલ: dev.app.support@gmail.com.\n\nજો તમે સેવા ચાલુ થાય તે પહેલાં ઉપાડ-અધિકારનો ઉપયોગ ન કરો અને Premium સબ્સ્ક્રિપ્શન શરૂ થઈ જાય, તો 14 દિવસની ઉપાડ-મુદ્દત કરાર-દિવસ થી ગણાય. ઉપાડ ઇ-મેઇલ દ્વારા ઔપચારિક રીતે નોંધાવી શકો, અથવા EU-નમૂના-ઉપાડ-ફોર્મ ઉપયોગ કરો (https://www.bmuv.de/widerruf — EU-બાહ્ય નમૂનો).</string>
     <string name="paywall_consent_dialog_cancel">રદ કરો</string>
     <string name="paywall_consent_dialog_checkbox">હું સમજું છું કે ડાઉનલોડ શરૂ થયા પછી, પરત કરવાનો અધિકાર સમાપ્ત થઈ જાય છે (§ 356 Abs. 5 BGB મુજબ).</string>
     <string name="paywall_consent_dialog_confirm">સંમત છું અને ખરીદો</string>
@@ -1340,7 +1340,7 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="paywall_monthly_label">માસિક</string>
     <string name="paywall_restore_button">ખરીદીઓ પુનઃસ્થાપિત કરો</string>
     <string name="paywall_subscribe_button">સબ્સ્ક્રાઇબ કરો</string>
-    <string name="paywall_subtitle">બધા Premium લાભો માણો</string>
+    <string name="paywall_subtitle">બધી Premium સુવિધાઓ અનલૉક કરો</string>
     <string name="paywall_title">Premium પર અપગ્રેડ કરો</string>
     <string name="paywall_yearly_label">વાર્ષિક</string>
     <string name="prompt_char_count_label">%1$d અક્ષરો</string>
@@ -1359,9 +1359,9 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">સઘન ઉપયોગ માટે ઉદાર દૈનિક AI ક્વોટા.</string>
+    <string name="ai_limits_disclaimer">સઘન ઉપયોગ માટે AI દૈનિક ક્વોટા.</string>
     <string name="ai_limits_dialog_title">દૈનિક AI ક્વોટા કેવી રીતે કામ કરે છે?</string>
-    <string name="ai_limits_dialog_body" formatted="false">પ્રીમિયમ સબ્સ્ક્રિપ્શન સાથે\n\nદરરોજ તમારા માટે ઉપલબ્ધ:\n• દરેક AI પ્રોફાઇલ દીઠ 150 ડેશબોર્ડ વિશ્લેષણ (4 પ્રોફાઇલ સાથે એટલે કે દરરોજ 600 સુધી)\n• 150 ટેક્સ્ટ સુધારા\n\nઆ વિગતવાર કેવી રીતે કામ કરે:\n• વિનંતીઓ 1 થી 30: સર્વોચ્ચ AI ગુણવત્તામાં\n• વિનંતીઓ 31 થી 100: ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• 101મી વિનંતી પર: એક વખત 30 મિનિટનો વિરામ\n• વિનંતીઓ 101 થી 150: ઝડપી પ્રમાણભૂત ગુણવત્તા\n• 151 વિનંતી પછી: કાલ સુધી વધુ વિનંતીઓ નહીં\n\nઉપરાંત તમામ વપરાશકર્તાઓ માટે:\n• દર કલાકે વધુમાં વધુ 50 AI વિનંતીઓ — પછી 5 મિનિટનો વિરામ\n\nક્વોટા ક્યારે ફરીથી સેટ થાય?\nદરરોજ 0:00 વાગ્યે (તમારો સ્થાનિક સમય) નવો સંપૂર્ણ ક્વોટા શરૂ થાય.\n\n──────────\n\nસબ્સ્ક્રિપ્શન વિના\n\n• દર અઠવાડિયે પ્રત્યેક પ્રોફાઇલ માટે 5 ડેશબોર્ડ વિશ્લેષણ\n• દર અઠવાડિયે 5 ટેક્સ્ટ સુધારા\n• હંમેશા ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• દર સોમવારે 0:00 વાગ્યે (તમારો સ્થાનિક સમય) ફરીથી સેટ\n\n──────────\n\n99% થી વધુ વપરાશકર્તાઓ ક્યારેય આ મર્યાદાઓ સુધી પહોંચે નહીં.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM સબ્સ્ક્રિપ્શન સાથે\n\nદરરોજ તમારા માટે ઉપલબ્ધ:\n• દરરોજ પ્રત્યેક પ્રોફાઇલ દીઠ 150 વિનંતીઓ — 4 પૂર્વ-વ્યાખ્યાયિત પ્રોફાઇલ માટે 600/દિવસ, વત્તા તમે બનાવેલ દરેક પ્રોફાઇલ માટે 150/દિવસ.\n• 150 ટેક્સ્ટ-સુધારા સુધી\n\nવિગતે આ કેવી રીતે થાય:\n• વિનંતીઓ 1 થી 30: સર્વોચ્ચ AI ગુણવત્તામાં\n• વિનંતીઓ 31 થી 100: ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• 101મી વિનંતી: એક વખત 30 મિનિટનો વિરામ\n• વિનંતીઓ 101 થી 150: ઝડપી પ્રમાણભૂત ગુણવત્તા\n• 151 વિનંતી પછી: કાલ સુધી વધુ વિનંતીઓ નહીં\n\nઉપરાંત, બધા વપરાશકર્તા માટે:\n• દર કલાકે વધુમાં વધુ 50 AI વિનંતીઓ — ત્યારબાદ 5 મિનિટનો વિરામ\n\nક્વોટા ક્યારે ફરીથી સેટ થાય?\nદરરોજ 0:00 વાગ્યે (તમારો સ્થાનિક સમય) નવો સંપૂર્ણ ક્વોટા શરૂ થાય.\n\n──────────\n\nSUBSCRIPTION વિના\n\n• દર અઠવાડિયે દરેક પ્રોફાઇલ માટે 5 ડૅશબોર્ડ-વિશ્લેષણ\n• દર અઠવાડિયે 5 ટેક્સ્ટ-સુધારા\n• હંમેશા ઝડપી પ્રમાણભૂત ગુણવત્તામાં\n• દર સોમવારે 0:00 વાગ્યે (તમારો સ્થાનિક સમય) ફરીથી સેટ\n\n──────────\n\nરોજના ઉપયોગમાં મોટા ભાગના વપરાશકર્તા ક્યારેય આ મર્યાદા સુધી પહોંચતા નથી.</string>
     <string name="ai_limits_dialog_close">સમજ્યો</string>
     <string name="theme_neutral">તટસ્થ</string>
     <string name="theme_profile">પ્રોફાઇલ રંગ — ડેશબોર્ડ પ્રોફાઇલનો રંગ</string>
@@ -1370,4 +1370,19 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="theme_one_dark">કારીગરી</string>
     <string name="theme_nord">ધ્રુવ રાત</string>
     <string name="theme_gruvbox">અંબર</string>
+
+    <string name="permission_rationale_microphone">જેથી તમે અવાજ દ્વારા ડાયરી-નોંધો ઉચ્ચારી શકો, અમને તમારા માઇક્રોફોનની ઍક્સેસ જોઈએ.</string>
+    <string name="permission_rationale_camera">જેથી તમે નોંધોમાં ફોટો ઉમેરી શકો, અમને તમારા કૅમેરાની ઍક્સેસ જોઈએ.</string>
+    <string name="permission_rationale_location">જેથી તમે નોંધોને સ્થળ-સંદર્ભ આપી શકો, અમને અંદાજ સ્થળ જોઈએ. તમે આ ગમે ત્યારે નકારી અથવા બાદમાં બંધ કરી શકો.</string>
+    <string name="permission_rationale_notifications">જેથી અમે તમને રોજ લખવા માટે યાદ કરાવી શકીએ, અમને સૂચનાઓ માટે પરવાનગી જોઈએ.</string>
+    <string name="consent_info_system_backup_title">Android System-Backup</string>
+    <string name="consent_info_system_backup_body">જો તમે ઉપકરણ-સેટિંગ્સમાં Android System-Backup ચાલુ કર્યું હોય, તો Android તમારા ડાયરી-ડેટાને આપોઆપ તમારા Google ખાતાના Backup-વિભાગમાં સાચવે છે. તમે ઉપકરણ-સેટિંગ્સમાં ગમે ત્યારે આ બંધ કરી શકો — વિગત માટે ગોપનીયતા-નીતિ જુઓ.</string>
+    <string name="settings_open_system_backup_settings_label">Android System-Backup સંચાલિત કરો</string>
+    <string name="settings_open_system_backup_settings_desc">Android સિસ્ટમ-સેટિંગ્સ ખોલે છે, જ્યાં તમે Best Journal માટે આપોઆપ Backup ચાલુ-બંધ કરી શકો.</string>
+    <string name="error_no_backup_settings_available">આ ઉપકરણ પર Backup-સેટિંગ્સ ઉપલબ્ધ નથી.</string>
+    <string name="consent_footer_link_datenschutz">ગોપનીયતા</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">ઉપયોગ-શરતો</string>
+    <string name="ai_output_health_disclaimer">ઉપચાર નથી — વ્યાવસાયિક સલાહ-સ્થાન નથી.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal એ ડાયરી છે, ઉપચાર-સેવા નથી. AI-વિશ્લેષણ સ્વ-ચિંતન માટે સૂચનો છે અને વ્યાવસાયિક મનોવૈજ્ઞાનિક અથવા તબીબી સલાહ-સ્થાન નથી. તીવ્ર સમસ્યાઓ વખતે, કૃપા કરી નિષ્ણાત અથવા તમારા સેટિંગ્સ-ની કટોકટી-સહાય-સ્થળ પર સંપર્ક કરો.</string>
 </resources>
