@@ -1,0 +1,102 @@
+{
+  "skill_name": "übersetzung",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Uebersetze die Strings fuer BestJournal nur auf Franzoesisch. Es geht um die neuen Strings die ich heute eingefuegt habe.",
+      "expected_output": "Skill triggert. Phase 1.3 erkennt 'nur Franzoesisch' und 'nur neue Strings'. Phase 2 Schritt A laedt nur fr.md. Schritt B ruft check_apostrophes.py mit --locale fr auf. Schritt C committet mit Sprach-Code im Commit. Andere 29 Locales werden nicht angefasst.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Die Datei references/languages/fr.md wird mit dem Read-Tool gelesen",
+        "Andere Sprach-Dateien (z.B. references/languages/ja.md, references/languages/de.md) werden NICHT gelesen",
+        "Das Validator-Script scripts/validators/check_apostrophes.py wird mit Parameter --locale fr aufgerufen",
+        "Eine Datei values-fr/strings.xml wird erstellt oder aktualisiert",
+        "Andere Sprach-Verzeichnisse wie values-ja, values-de, values-zh-rCN bleiben unangetastet",
+        "Die Commit-Message enthaelt 'French' oder 'fr' oder 'Translate' und einen Locale-Hinweis"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Uebersetze alle Strings auf Persisch fuer meine Wellness-App.",
+      "expected_output": "Skill triggert. fa.md wird geladen. check_native_digits.py wird mit --locale fa aufgerufen (Persisch wurde in Stufe 3 hinzugefuegt). RTL-Marker werden beachtet. Persische Buchstaben (پ چ ژ گ) werden korrekt verwendet, keine Arabisch-Verwechslung.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Die Datei references/languages/fa.md wird mit dem Read-Tool gelesen",
+        "Das Validator-Script scripts/validators/check_native_digits.py wird mit Parameter --locale fa aufgerufen",
+        "Die uebersetzten Strings enthalten persische Buchstaben (π چ ژ گ) wenn linguistisch passend",
+        "Die uebersetzten Strings nutzen arabische Ziffern 0-9, NICHT persisch-indische Ziffern ۰۱۲۳۴۵۶۷۸۹",
+        "Eine Datei values-fa/strings.xml wird erstellt",
+        "RTL-Sicherheits-Regeln werden eingehalten: keine Pfeil-Zeichen wie → in den Strings, BiDi-Marker wo noetig"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Mach mir bitte die japanische Uebersetzung fuer die Strings von BestJournal.",
+      "expected_output": "Skill triggert. ja.md wird geladen. check_cjk_punctuation.py wird mit --locale ja aufgerufen. Half-width Punctuation wird zu full-width konvertiert (Komma 、 nicht ，). です/ます-Konsistenz wird gepflegt.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Die Datei references/languages/ja.md wird mit dem Read-Tool gelesen",
+        "Das Validator-Script scripts/validators/check_cjk_punctuation.py wird mit Parameter --locale ja aufgerufen",
+        "Die uebersetzten Strings verwenden das japanische Komma 、 (U+3001) nicht das chinesische ， (U+FF0C)",
+        "Die uebersetzten Strings verwenden full-width Satzzeichen 。！？ nach CJK-Zeichen, nicht half-width . ! ?",
+        "Der Hoeflichkeits-Stil ist konsistent: entweder durchgaengig です/ます ODER durchgaengig だ-Form, nicht gemischt",
+        "Eine Datei values-ja/strings.xml wird erstellt"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Tamilische Uebersetzung fuer die App bitte. Achte auf die Laengen, Tamil wird oft zu lang.",
+      "expected_output": "Skill triggert. ta.md wird geladen. check_native_digits.py wird mit --locale ta aufgerufen. check_length_pacing.py wird aufgerufen und warnt bei Strings >+40% Laenge. SHORTER-Kommentare werden im LLM-Verbesserungs-Pass ergaenzt.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Die Datei references/languages/ta.md wird mit dem Read-Tool gelesen",
+        "Das Validator-Script scripts/validators/check_native_digits.py wird mit Parameter --locale ta aufgerufen",
+        "Das Validator-Script scripts/validators/check_length_pacing.py wird mit --locale ta und beiden --source und --target Parametern aufgerufen",
+        "Strings die laenger als +40% gegenueber dem deutschen Original sind, erhalten einen XML-Kommentar <!-- SHORTER: ... -->",
+        "Eine Datei values-ta/strings.xml wird erstellt",
+        "Die Tamilischen Strings verwenden NICHT Sanskrit-Lehnwoerter wenn natives Tamil verfuegbar ist"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Uebersetze die neuen Strings auf Portugiesisch — wir brauchen Brasilien UND Portugal getrennt.",
+      "expected_output": "Skill triggert. Erst pt-BR.md, dann pt-PT.md werden geladen (in zwei getrennten Durchgaengen). check_pt_variants.py wird ZWEIMAL aufgerufen: einmal mit --locale pt-BR fuer Brasilien-Datei, einmal mit --locale pt-PT fuer Portugal-Datei. Keine Cross-Kontamination.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Beide Dateien references/languages/pt-BR.md UND references/languages/pt-PT.md werden gelesen (sequentiell, nicht parallel)",
+        "Das Validator-Script scripts/validators/check_pt_variants.py wird mindestens ZWEIMAL aufgerufen (einmal pro Variante)",
+        "Die Datei values-pt-rBR/strings.xml enthaelt brasilianisches Vokabular wie 'usuario' oder 'voce', NICHT europaeisches wie 'utilizador' oder 'tu'",
+        "Die Datei values-pt-rPT/strings.xml enthaelt europaeisches Vokabular wie 'utilizador' oder 'definicoes', NICHT brasilianisches wie 'usuario' oder 'configuracoes'",
+        "Es entstehen zwei separate Commits (einer pro Variante) oder ein gemeinsamer Commit der beide Varianten erwaehnt",
+        "check_apostrophes.py wird fuer beide Portugiesisch-Varianten aufgerufen (Apostrophe sind auch in PT moeglich)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Lokalisiere die App komplett in alle Sprachen die wir unterstuetzen.",
+      "expected_output": "Skill triggert. Phase 1.7 zeigt Plan mit allen 30 Locales. Phase 2 laeuft 30 Mal durch (Schritt A+B+C pro Sprache). Nach jeder Sprache: Commit + Push. Am Ende: Zusammenfassung in der Tabelle mit Status pro Sprache.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Phase 1.7 zeigt einen Plan mit der Zahl '30 Locales' oder '30 Sprachen' oder einer Aufzaehlung aller 30 Codes",
+        "Die Datei references/languages/*.md wird fuer JEDE der 30 Sprachen genau einmal gelesen",
+        "Es werden 30 separate Commits erstellt (einer pro Sprache, fortlaufend nummeriert)",
+        "Alle 30 values-*/strings.xml-Verzeichnisse werden befuellt",
+        "Die Abschluss-Zusammenfassung listet jeden der 30 Locales mit Status (fertig/uebersprungen/Fehler)",
+        "Bei sprach-spezifischen Validatoren wird der jeweils passende aufgerufen (Native-Ziffern fuer indische, CJK fuer Ostasien, etc.)"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Uebersetze die Strings auf Franzoesisch. Eine Eingabe enthaelt einen CDATA-Block mit HTML-Promo — der CDATA-Inhalt soll unangetastet bleiben, denn dort sind Apostrophe und HTML-Tags legal ohne Escape.",
+      "expected_output": "Skill triggert. fr.md wird geladen. check_apostrophes.py wird mit --locale fr aufgerufen. Der CDATA-Block bleibt im Output strukturell unveraendert (Wrapper <![CDATA[...]]> erhalten), aber INHALTLICH ins Franzoesische uebersetzt. Apostrophe innerhalb CDATA werden NICHT escaped. Apostrophe ausserhalb CDATA werden escaped.",
+      "files": ["evals/files/sample_strings_de.xml"],
+      "expectations": [
+        "Der String 'html_promo' enthaelt im Output noch immer <![CDATA[ und ]]> Wrapper",
+        "Innerhalb des CDATA-Blocks im Output erscheinen keine \\' (Apostroph-Backslash-Escapes) — Apostrophe sind dort unmodifiziert",
+        "HTML-Tags wie <b>...</b> innerhalb CDATA bleiben unverändert erhalten",
+        "Strings AUSSERHALB des CDATA-Blocks mit Apostrophen werden korrekt mit \\' eskapiert",
+        "check_apostrophes.py meldet bei diesem String NICHT 'Apostroph escaped in html_promo' (CDATA-Schutz funktioniert)"
+      ]
+    }
+  ]
+}

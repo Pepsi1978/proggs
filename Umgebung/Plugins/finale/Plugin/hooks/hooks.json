@@ -1,0 +1,41 @@
+{
+	"description": "finale hooks: skill-symlink-verification at session start, destructive-bash-guard in plugin output dirs, strings.xml lint after write/edit.",
+	"hooks": {
+		"SessionStart": [
+			{
+				"matcher": "startup|clear|compact|resume",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"",
+						"async": false
+					}
+				]
+			}
+		],
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse-bash.sh\"",
+						"async": false
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write|MultiEdit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse-strings-xml.sh\"",
+						"async": false
+					}
+				]
+			}
+		]
+	}
+}
