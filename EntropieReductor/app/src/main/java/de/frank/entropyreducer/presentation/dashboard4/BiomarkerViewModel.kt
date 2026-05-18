@@ -979,6 +979,17 @@ private fun buildChartData(
     // (Laufen/Trail/Walk) berechnen. Pro Workout den Whoop-Ruhepuls fuer
     // den Workout-Tag suchen (Vortag-Fallback), dann ACSM-Formel anwenden.
     // Wert ist ml/(kg·min). Sortiert nach Workout-Start aufsteigend.
+    //
+    // Frank-Wunsch 2026-05-18 (Nachtrag): Loesch-Robustheit. mapNotNull filtert
+    // automatisch Workouts ohne VO2max-Wert raus (z.B. Krafttraining,
+    // Crosstrainer, Yoga — computeVo2MaxOrNull liefert null wenn isVo2MaxSport
+    // false ist). Wenn Frank das letzte VO2-faehige Training oder ein anderes
+    // VO2max-Training loescht, wird durch Room's invalidation tracker der
+    // amazfitWorkouts-Flow neu emittet → buildChartData laeuft neu → die
+    // Liste vo2MaxAll hat einen Eintrag weniger → lastOrNull() in
+    // MiniVo2MaxCard zeigt automatisch den naechst-juengsten VO2max-Wert.
+    // Wenn das juengste Training z.B. Krafttraining ist, taucht es gar nicht
+    // erst auf — die Mini-Karte zeigt den juengsten Trail-/Lauf-Wert.
     val vo2MaxAll: List<Pair<Long, Double>> =
         amazfitWorkouts
             .mapNotNull { w ->
