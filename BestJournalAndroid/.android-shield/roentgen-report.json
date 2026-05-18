@@ -1,0 +1,637 @@
+{
+	"schema_version": "2.1",
+	"audit_date": "2026-05-18",
+	"app": {
+		"name": "BestJournal",
+		"package": "com.bestjournal.app",
+		"version_name": "0.21.8",
+		"version_code": 289,
+		"min_sdk": 26,
+		"target_sdk": 36,
+		"compile_sdk": 36
+	},
+	"auditor": "app-roentgen via finale plugin Phase 1A",
+	"effort": "xhigh",
+
+	"layer1_manifest": {
+		"permissions": [
+			"android.permission.INTERNET",
+			"android.permission.ACCESS_NETWORK_STATE",
+			"android.permission.RECORD_AUDIO",
+			"android.permission.CAMERA",
+			"android.permission.ACCESS_COARSE_LOCATION",
+			"android.permission.POST_NOTIFICATIONS",
+			"android.permission.RECEIVE_BOOT_COMPLETED"
+		],
+		"features_required_false": [
+			"android.hardware.camera",
+			"android.hardware.camera.autofocus",
+			"android.hardware.microphone"
+		],
+		"receivers": [
+			{ "name": "ReminderReceiver", "exported": false },
+			{ "name": "WeeklyReviewReceiver", "exported": false },
+			{ "name": "MonthlyReviewReceiver", "exported": false },
+			{ "name": "YearlyReviewReceiver", "exported": false },
+			{
+				"name": "BootReminderReceiver",
+				"exported": true,
+				"intents": ["BOOT_COMPLETED", "TIMEZONE_CHANGED", "TIME_SET"]
+			}
+		],
+		"providers": [
+			{ "name": "FileProvider", "authority": "${applicationId}.fileprovider" }
+		],
+		"backup": {
+			"allowBackup": true,
+			"hasBackupRules": true,
+			"hasDataExtractionRules": true
+		}
+	},
+
+	"layer2_dependencies": {
+		"kotlin": "2.1.0",
+		"agp": "8.7.3",
+		"compose_bom": "2025.01.01",
+		"room": "2.7.0",
+		"hilt": "2.55",
+		"firebase_bom": "34.11.0",
+		"play_billing": "7.1.1",
+		"sherpa_onnx": "1.12.34 (local AAR)",
+		"security_crypto": true,
+		"biometric": true,
+		"google_drive_api": true,
+		"workmanager": true,
+		"coil": true,
+		"firebase_ai_logic": true,
+		"firebase_remote_config": true,
+		"notes": [
+			"Sherpa-ONNX as local AAR means no Play Store auto-update path for STT engine",
+			"Firebase AI Logic uses Gemini Flash 2.5 / Lite via Firebase SDK (not direct REST)"
+		]
+	},
+
+	"layer3_architecture": {
+		"pattern": "MVVM + Hilt + Repository + UseCases",
+		"key_viewmodels": [
+			"JournalViewModel",
+			"DashboardViewModel",
+			"PaywallViewModel",
+			"SettingsViewModel",
+			"OnboardingViewModel",
+			"ConsentViewModel"
+		],
+		"key_repositories": [
+			"JournalRepository",
+			"BillingRepository",
+			"AiRepository",
+			"BackupRepository",
+			"ConsentRepository"
+		],
+		"room_database": "JournalDatabase (entities: JournalEntry, AudioEntry, PhotoEntry, ProfileEntity)",
+		"workers": [
+			"ReminderWorker",
+			"WeeklyReviewWorker",
+			"MonthlyReviewWorker",
+			"YearlyReviewWorker"
+		],
+		"rate_limiter": "AiRateLimiter (4-tier: Flash 2.5 → Lite → Cooldown → Blocked)",
+		"usage_tracker": "AiUsageTracker (per-scenario weekly dashboard quota since v0.21.8)",
+		"subscription_state": {
+			"sealed_class": "SubscriptionState (Free | Subscribed)",
+			"enum": "SubscriptionType (NONE | MONTHLY | YEARLY | LIFETIME)"
+		}
+	},
+
+	"layer4_screens": {
+		"screens": [
+			"OnboardingScreen (5-page HorizontalPager)",
+			"ConsentScreen",
+			"JournalScreen (main list)",
+			"EntryDetailScreen",
+			"DashboardScreen",
+			"PaywallScreen",
+			"SettingsScreen",
+			"ProfilesScreen",
+			"BackupScreen"
+		],
+		"dialogs": [
+			"AiLimitsDialog (rate limit info)",
+			"ChurnFlowDialog (4-step cancellation flow)",
+			"DeleteAccountConfirmDialog",
+			"WiderrufsbelehrungDialog (before purchase)",
+			"ExitIntentDialog (50% off + 2 bonus days)"
+		],
+		"navigation_notes": "Pure Compose NavHost, no XML navigation graph"
+	},
+
+	"layer4b_wortlaut_mapping": {
+		"paywall": {
+			"title": "Upgrade auf Premium",
+			"subtitle": "Nutze alle Premium-Vorteile",
+			"yearly_label_format": "Jahresabo, %1$s pro Jahr",
+			"yearly_savings_format": "Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar",
+			"free_note_line1": "Die App funktioniert auch ohne Abo,",
+			"free_note_line2": "mit eingeschränkten Limits.",
+			"ai_disclaimer": "Großzügiges KI-Tageskontingent für intensive Nutzung.",
+			"exit_bonus_days_format": "+ %1$d Tage extra Testzeit",
+			"exit_discount_format": "Rabatt für %1$d Monate",
+			"exit_price_comparison_format": "Nur %1$s statt %2$s pro Monat",
+			"exit_start_cta": "Monatsabo mit 50% Rabatt starten",
+			"widerrufsbelehrung_title": "Widerrufsbelehrung",
+			"widerrufsbelehrung_body_prefix": "Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB)...",
+			"widerrufsbelehrung_checkbox_prefix": "Ich stimme zu, dass die Bereitstellung der Premium-Funktionen sofort nach Bestellung beginnt. Mir ist bekannt, dass ich ...",
+			"widerrufsbelehrung_confirm": "Jetzt zahlungspflichtig abonnieren"
+		},
+		"settings_premium": {
+			"active": "Premium-Abo aktiv",
+			"cancelled": "Premium-Abo gekündigt",
+			"lifetime": "Lifetime-Zugang aktiv",
+			"lifetime_desc": "Einmalkauf, alle Features dauerhaft freigeschaltet.",
+			"desc": "Alle Features freigeschaltet, KI jeden Tag, PDF-Export und mehr.",
+			"cancelled_desc_prefix": "Deine Premium-Funktionen bleiben bis zum Ende des Abrechnungszeitraums verfügbar. Du kannst die Kündigung jederzeit über...",
+			"feature_profiles": "Unbegrenzte individuelle KI-Profile",
+			"feature_5_perspectives": "4 besondere KI-Profile",
+			"feature_5_perspectives_key_note": "KEY NAME says '5_perspectives' but VALUE says '4 besondere KI-Profile' — DISCREPANCY",
+			"feature_improve": "Tägliche KI-Textverbesserung",
+			"feature_dashboard": "Tägliche Dashboard-Analysen",
+			"feature_reviews": "Alle Rückblicke ausführlich mit KI erstellt",
+			"feature_patterns": "Muster-Erkennung",
+			"feature_pdf": "PDF-Export mit Fotos",
+			"feature_voice": "Präzisere Spracherkennung",
+			"feature_followups": "Unbegrenzte Nachträge"
+		},
+		"churn_flow": {
+			"step0_title": "churn_your_sub",
+			"step0_cancel_link_alpha": "0.35f (sehr schwach sichtbar)",
+			"step1_title": "Schade, dass du gehst",
+			"step1_body": "Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.",
+			"step1_reasons": [
+				"churn_reason_too_expensive",
+				"churn_reason_unused",
+				"churn_reason_features",
+				"churn_reason_other"
+			],
+			"step2_title": "Exklusives Angebot",
+			"step2_subtitle": "Nur für dich, weil du uns wichtig bist",
+			"step2_feature_ai": "Tägliche KI-Analysen",
+			"step2_feature_perspectives": "Alle 5 Perspektiven",
+			"step2_feature_perspectives_note": "SAYS 5, but app has 4 profiles — DISCREPANCY vs settings_premium_feature_5_perspectives",
+			"step2_feature_voice": "Premium-Spracherkennung",
+			"step2_discount_badge_format": "%1$d%% SPAREN",
+			"step2_cta": "Angebot annehmen",
+			"step2_auto_renew": "Verlängert sich automatisch, jederzeit kündbar",
+			"step3_sorry_title": "Bist du sicher?",
+			"step3_stay": "Doch lieber bleiben",
+			"step3_pause": "Oder Abo bei Google Play pausieren",
+			"step3_switch_yearly": "Oder zum Jahresabo wechseln und noch mehr sparen",
+			"google_play_redirect": "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten."
+		},
+		"consent": {
+			"accept_all": "Einverstanden und loslegen",
+			"disable_stats": "Statistiken deaktivieren und fortfahren",
+			"minimum_only": "Alle ablehnen",
+			"groq_title": "Sprache-zu-Text (Groq Whisper)",
+			"gemini_title": "KI-Reflexionen (Google Gemini)",
+			"tts_title": "Vorlesen (Microsoft Edge TTS)",
+			"drive_title": "Google Drive Backup",
+			"ccpa_title": "Datenschutz-Wahlrechte (Kalifornien)",
+			"data_controller_card_includes": "Gemini (Google, USA), Edge TTS (Microsoft, USA), Groq (USA, EU SCCs)"
+		},
+		"ai_limits_dialog": {
+			"title": "Wie funktioniert das KI-Tageskontingent?",
+			"disclaimer": "Großzügiges KI-Tageskontingent für intensive Nutzung.",
+			"body_prefix": "MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• Bis zu 150 Dashboard-Analysen pro KI-Profil (bei 4 Profilen also..."
+		},
+		"onboarding_trial": {
+			"profiles": "4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben",
+			"feature_improve": "KI-Textverbesserung täglich, jeder Eintrag wird klarer und ausdrucksstärker",
+			"feature_dashboard": "Automatische Dashboard-Updates bei jedem neuen Eintrag"
+		},
+		"account_deletion": {
+			"title": "Konto und Daten löschen",
+			"subtitle": "Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.",
+			"confirm_title": "Wirklich alle App-Daten löschen?",
+			"confirm_body_prefix": "Dieser Vorgang ist unwiderruflich und löscht:\\n\\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\\n• D...",
+			"confirm_button": "Ja, alles löschen"
+		}
+	},
+
+	"layer4c_translation_context": {
+		"format_strings_requiring_context": [
+			{
+				"key": "paywall_from_per_day",
+				"args": ["%1$s = Preis (z.B. 29,99 €)"],
+				"slot": "Jahresabo-Zeile unter Preis-Badge"
+			},
+			{
+				"key": "paywall_instead_per_month",
+				"args": ["%1$d = Prozentsatz (z.B. 25)"],
+				"slot": "Ersparnis-Badge"
+			},
+			{
+				"key": "paywall_yearly_savings",
+				"args": ["%1$d = Prozentsatz"],
+				"slot": "Jahresabo-Vorteilszeile"
+			},
+			{
+				"key": "paywall_exit_bonus_days",
+				"args": ["%1$d = 2"],
+				"slot": "Exit-Intent Bonus"
+			},
+			{
+				"key": "paywall_exit_discount",
+				"args": ["%1$d = 2 (Monate)"],
+				"slot": "Exit-Intent Rabatt-Beschreibung"
+			},
+			{
+				"key": "paywall_exit_price_comparison",
+				"args": ["%1$s = Rabattpreis, %2$s = Normalpreis"],
+				"slot": "Exit-Intent Preisvergleich"
+			},
+			{
+				"key": "churn_discount_badge",
+				"args": ["%1$d = RETENTION_DISCOUNT_PERCENT = 25"],
+				"slot": "Retention-Offer Badge"
+			},
+			{
+				"key": "dashboard_limit_cooldown",
+				"args": ["%1$d = Minuten bis Freigabe"],
+				"slot": "Dashboard Cooldown-Toast"
+			}
+		],
+		"plural_candidates": [
+			"paywall_exit_bonus_days (1 Tag / X Tage — no plural defined, hardcoded 2)",
+			"paywall_exit_discount (1 Monat / X Monate — no plural defined, hardcoded 2)"
+		],
+		"du_sie_consistency": "Durchgehend 'du' (Kleinschreibung) — konsistent",
+		"translatable_false_candidates": [
+			"settings_about_version: 'Best Journal V0.21.8' — enthält Versionsnummer",
+			"settings_about_copyright: '© Barwandt Digital Labs' — Markenname",
+			"GROQ_BASE_URL, GROQ_TRANSCRIPTION_MODEL — Constants.kt, keine string resources"
+		],
+		"notes": "26 Sprachversionen vorhanden (values-*/ Ordner). Alle Format-Strings mit %1$s/%1$d müssen in allen 26 Sprachen korrekte CLDR-Pluralregeln einhalten."
+	},
+
+	"layer4d_legal_text_inventory": {
+		"widerrufsbelehrung": {
+			"present": true,
+			"location": "PaywallScreen — Dialog vor Kauf-Bestätigung",
+			"string_key": "paywall_consent_dialog_body",
+			"references_bgb_355": true,
+			"checkbox_required": true,
+			"checkbox_key": "paywall_consent_dialog_checkbox",
+			"note": "Widerrufsbelehrung-Mechanik vorhanden. Volltext nicht vollständig ausgelesen (strings.xml Extraktion war abgeschnitten bei 629 Einträgen) — manuell verifizieren ob §312g-Pflichtangaben vollständig."
+		},
+		"account_deletion_dsgvo": {
+			"present": true,
+			"keyword_unwiderruflich": true,
+			"location": "SettingsScreen → settings_delete_account_confirm_body",
+			"dsgvo_art17_compliant": true
+		},
+		"consent_screen": {
+			"present": true,
+			"granular_toggles": [
+				"Analytics/Firebase",
+				"Groq Whisper STT",
+				"Google Gemini",
+				"Microsoft Edge TTS",
+				"Google Drive Backup",
+				"CCPA Do-Not-Sell"
+			],
+			"opt_out_button": "Alle ablehnen (consent_btn_minimum_only)",
+			"note": "3 gleichrangige Schaltflächen (Einverstanden / Statistiken deaktivieren / Alle ablehnen) — kein Darkpattern erkennbar"
+		},
+		"ccpa": {
+			"present": true,
+			"do_not_sell_toggle": true,
+			"pref_key": "ccpa_do_not_sell",
+			"note": "Implementierung vorhanden. California-specific consent toggle sichtbar."
+		},
+		"health_disclaimer": {
+			"present": "NICHT VERIFIZIERT — keine explizite health_disclaimer-Ressource gefunden in extrahierten 629 Strings"
+		},
+		"ai_disclaimer": {
+			"present": true,
+			"eu_ai_act_mention": "NICHT VERIFIZIERT",
+			"ftc_mention": "NICHT VERIFIZIERT",
+			"ai_limits_dialog_present": true,
+			"location": "AiLimitsDisclaimerRow, Paywall, Settings"
+		},
+		"subscription_auto_renewal": {
+			"disclosed": true,
+			"strings": [
+				"churn_offer_auto_renew: 'Verlängert sich automatisch, jederzeit kündbar'",
+				"paywall_yearly_savings: '...jederzeit kündbar'"
+			]
+		},
+		"privacy_policy_link": {
+			"present": "NICHT VERIFIZIERT — kein privacy_policy_url in extrahierten Strings gefunden",
+			"note": "Muss vor Release manuell verifiziert werden"
+		},
+		"terms_link": {
+			"present": "NICHT VERIFIZIERT"
+		},
+		"impressum": {
+			"present": "NICHT VERIFIZIERT — kein impressum_* String in extrahierten Strings"
+		}
+	},
+
+	"layer5_paywall_deep": {
+		"plans": [
+			{
+				"type": "MONTHLY",
+				"price": "3,99 €",
+				"product_id": "NICHT_VERIFIZIERT (BillingManager.kt nicht vollständig gelesen)",
+				"billing_library": "play-billing 7.1.1"
+			},
+			{
+				"type": "YEARLY",
+				"price": "29,99 €",
+				"product_id": "NICHT_VERIFIZIERT"
+			},
+			{
+				"type": "LIFETIME",
+				"price": "79,99 €",
+				"product_id": "NICHT_VERIFIZIERT",
+				"type_billing": "ONE_TIME_PURCHASE"
+			}
+		],
+		"retention_offer": {
+			"monthly_price": "2,99 €",
+			"yearly_price": "22,49 €",
+			"discount_percent": 25,
+			"offer_id_monthly": "retention-monthly-75",
+			"offer_id_yearly": "retention-yearly-75",
+			"note": "Offer-ID sagt '-75' was auf 75% Rabatt hindeutet, aber RETENTION_DISCOUNT_PERCENT=25 — Inkonsistenz in Benennung, kein sichtbarer UX-Fehler"
+		},
+		"exit_intent": {
+			"discount_months": 2,
+			"discount_percent": 50,
+			"trial_bonus_days": 2,
+			"half_price_calculation": "monthly × 0.5 (computed at runtime)",
+			"trigger": "User attempts to dismiss Paywall without purchasing"
+		},
+		"trial": {
+			"base_days": 8,
+			"exit_intent_bonus_days": 2,
+			"effective_days_max": 10,
+			"calculation": "calendar days since first use date",
+			"limits_trial": {
+				"premium_limit_per_session": 20,
+				"cooldown_trigger": 81,
+				"hard_limit": 101,
+				"cooldown_minutes": 30
+			}
+		},
+		"freemium": {
+			"weekly_dashboard_limit": "5 per profile/scenario (since v0.21.8)",
+			"weekly_text_limit": 5,
+			"weekly_review_count": 2,
+			"model": "Gemini Lite only",
+			"note": "Before v0.21.8 limit was global; upgrade effectively reset old counters"
+		},
+		"premium": {
+			"daily_limit_per_profile": 150,
+			"example_4_profiles": "600 analyses/day total",
+			"cooldown_trigger": 101,
+			"hard_limit": 151,
+			"cooldown_minutes": 30,
+			"hourly_spam_limit": 50,
+			"model": "Gemini Flash 2.5"
+		},
+		"subscription_states": [
+			"Free (no sub, not in trial)",
+			"Trial (calendar days < 8 + bonus)",
+			"Subscribed (active Play Billing subscription)",
+			"Cancelled (active until period end)",
+			"Lifetime (one-time purchase)"
+		],
+		"churn_flow_steps": [
+			"Step 0: Overview (Subscription details, subtle cancel link at alpha=0.35f)",
+			"Step 1: Reason selection (too expensive / unused / features / other, min 3 chars free text)",
+			"Step 2: Retention offer (25% off, skipped if isAlreadyOnRetentionPlan=true)",
+			"Step 3: Final confirmation (stay / pause / switch to yearly / confirm cancel)"
+		]
+	},
+
+	"layer6_hidden_features": {
+		"background_workers": [
+			"ReminderWorker (daily reminders)",
+			"WeeklyReviewWorker",
+			"MonthlyReviewWorker",
+			"YearlyReviewWorker"
+		],
+		"boot_receiver": "BootReminderReceiver (restores alarms after reboot, timezone/time changes)",
+		"file_provider": "FileProvider for photo/video sharing",
+		"remote_config": {
+			"key_groq_api_key": "groq_api_key",
+			"note": "Groq API key delivered via Firebase Remote Config — not hardcoded. Security-positive pattern."
+		},
+		"local_stt": {
+			"engine": "Sherpa-ONNX Whisper (local AAR v1.12.34)",
+			"fallback": "Groq Whisper API (whisper-large-v3-turbo)",
+			"consent_gate": "consent_toggle_groq_title must be enabled for cloud STT"
+		},
+		"biometric": "Biometric API for app lock / secure SharedPreferences access",
+		"security_crypto": "EncryptedSharedPreferences for sensitive preferences",
+		"drive_backup": "Google Drive API for journal backup/restore",
+		"analytics": {
+			"provider": "Firebase Analytics",
+			"churn_events": [
+				"trackChurnFlowOpened",
+				"trackChurnReasonSelected",
+				"trackChurnOfferShown",
+				"trackChurnOfferAccepted",
+				"trackChurnPaused",
+				"trackChurnConfirmed"
+			],
+			"consent_gate": "Analytics requires consent (first consent toggle)"
+		},
+		"feature_flags": "Firebase Remote Config (confirmed: groq_api_key; other flags not fully audited)",
+		"notification_channels": "NICHT_VERIFIZIERT (reminder notifications assumed, channel names not extracted)",
+		"debug_menus": "NICHT_VERIFIZIERT"
+	},
+
+	"layer7_marketing_claims_matrix": [
+		{
+			"claim": "Unbegrenzte Dashboard-Analysen (settings_premium_feature_dashboard: 'Tägliche Dashboard-Analysen')",
+			"source": "strings.xml @ settings_premium_feature_dashboard",
+			"code_reality": "SUB_HARD_LIMIT=151/day per profile, SUB_COOLDOWN_AT=101 (30-min cooldown), SPAM_HOURLY_AI_LIMIT_PREMIUM=50",
+			"gap": "MITTEL: 'Tägliche Analysen' ohne Limit-Hinweis — konkrete Zahlen nur im ai_limits_dialog_body sichtbar, nicht direkt in Premium-Feature-Liste",
+			"risk": "MITTEL",
+			"fix": "Entweder 'Bis zu 150 Dashboard-Analysen täglich pro Profil' oder Link zum Limits-Dialog in Feature-Liste ergänzen"
+		},
+		{
+			"claim": "Unbegrenzte individuelle KI-Profile (settings_premium_feature_profiles)",
+			"source": "strings.xml @ settings_premium_feature_profiles",
+			"code_reality": "Tatsächliche Profil-Begrenzung nicht aus Code extrahiert — Wert unklar",
+			"gap": "MITTEL: 'Unbegrenzte Profile' muss gegen DB-Schema / ProfileViewModel verifiziert werden",
+			"risk": "MITTEL",
+			"fix": "Manuell ProfileRepository/ProfileViewModel prüfen — falls Max-Profile-Konstante existiert, Claim anpassen"
+		},
+		{
+			"claim": "4 besondere KI-Profile (settings_premium_feature_5_perspectives) vs. 'Alle 5 Perspektiven' (churn_offer_feature_perspectives)",
+			"source": "strings.xml @ settings_premium_feature_5_perspectives und churn_offer_feature_perspectives",
+			"code_reality": "OnboardingScreen Page 3 zeigt 5 Profiles (Summary, Entropy, Insight, Goals, Custom). ai_limits_dialog_body sagt 'bei 4 Profilen'. settings-Feature sagt '4 besondere KI-Profile'. Churn sagt '5 Perspektiven'.",
+			"gap": "HOCH: Direkte Widersprüche zwischen 3 Screens (Settings=4, Churn=5, ai_limits=4, Onboarding-Page=5 sichtbar). Mindestens ein String muss falsch sein.",
+			"risk": "HOCH",
+			"fix": "Entscheiden: Wie viele Profile gibt es wirklich? String churn_offer_feature_perspectives auf korrekte Zahl setzen. Schlüssel settings_premium_feature_5_perspectives umbenennen."
+		},
+		{
+			"claim": "Großzügiges KI-Tageskontingent für intensive Nutzung (ai_limits_disclaimer)",
+			"source": "strings.xml @ ai_limits_disclaimer",
+			"code_reality": "Konkrete Limits: 150/Tag/Profil Premium, 5/Woche/Profil Free. 'Großzügig' ist subjektiv aber vertretbar für Premium.",
+			"gap": "NIEDRIG: Subjektives Adjektiv, durch Dialog erklärbar",
+			"risk": "NIEDRIG",
+			"fix": "Kein Fix nötig, Info-Dialog vorhanden"
+		},
+		{
+			"claim": "Präzisere Spracherkennung (settings_premium_feature_voice)",
+			"source": "strings.xml @ settings_premium_feature_voice",
+			"code_reality": "Free: nur Sherpa-ONNX lokal. Premium: Groq Whisper-large-v3-turbo (Cloud, höhere Qualität). Consent-Gate aktiv.",
+			"gap": "NIEDRIG: 'Präzisere' ist eine qualitative Aussage — Groq Whisper ist empirisch besser als On-Device-Modell. Vertretbar.",
+			"risk": "NIEDRIG",
+			"fix": "Kein Fix nötig"
+		},
+		{
+			"claim": "Unbegrenzte Nachträge (follow_up_premium_title, settings_premium_feature_followups)",
+			"source": "strings.xml",
+			"code_reality": "MAX_REFRESHES_PER_ENTRY=5 in Constants.kt (aber dieser Wert bezieht sich auf AI-Refreshes, nicht Follow-ups). Tatsächliche Follow-up-Begrenzung für Premium nicht extrahiert.",
+			"gap": "MITTEL: 'Unbegrenzt' muss gegen EntryDetailViewModel/FollowUpRepository verifiziert werden",
+			"risk": "MITTEL",
+			"fix": "Manuell EntryDetailViewModel prüfen ob MAX_FOLLOWUPS-Konstante existiert"
+		},
+		{
+			"claim": "Die App funktioniert auch ohne Abo, mit eingeschränkten Limits (paywall_free_note + paywall_with_limited)",
+			"source": "strings.xml @ paywall_free_note, paywall_with_limited",
+			"code_reality": "Free: 5 Dashboard/Woche/Profil, 5 Text-Verbesserungen/Woche global, 2 Reviews/Woche, Trial: 8 Tage Premium-Nutzung. App bleibt nach Trial nutzbar als Freemium.",
+			"gap": "KEINE: Aussage stimmt mit Code überein",
+			"risk": "KEIN",
+			"fix": "Kein Fix nötig"
+		},
+		{
+			"claim": "14-tägiges Widerrufsrecht (paywall_consent_dialog_body)",
+			"source": "strings.xml @ paywall_consent_dialog_body",
+			"code_reality": "Dialog vorhanden, Checkbox Pflicht vor Kauf. §355 BGB referenziert.",
+			"gap": "KEINE: Widerrufsbelehrung-Mechanik korrekt implementiert",
+			"risk": "KEIN",
+			"fix": "Volltext der paywall_consent_dialog_body manuell gegen §355 BGB + §312g Pflichtinhalt prüfen"
+		}
+	],
+
+	"critical_findings": [
+		{
+			"id": "CF-001",
+			"severity": "KRITISCH",
+			"category": "Security",
+			"title": "R8/ProGuard deaktiviert im Release-Build",
+			"detail": "app/build.gradle.kts Release-Config: isMinifyEnabled=false, isShrinkResources=false. Code ist nicht obfuskiert. Klassen, Methoden, Strings und Algorithmen sind im AAB/APK vollständig lesbar. Angreifer können Billing-Logik, Rate-Limiter-Konstanten und API-Endpunkte per Decompilierung einsehen.",
+			"affected_file": "app/build.gradle.kts (Release buildType)",
+			"fix": "isMinifyEnabled=true, isShrinkResources=true in Release-Config. ProGuard-Regeln für Room, Hilt, Firebase, Play Billing ergänzen. Verifizieren mit: ./gradlew assembleRelease gefolgt von apkanalyzer."
+		},
+		{
+			"id": "CF-002",
+			"severity": "HOCH",
+			"category": "Marketing / UWG §5",
+			"title": "4 vs 5 Perspektiven — direkter Widerspruch zwischen Screens",
+			"detail": "churn_offer_feature_perspectives='Alle 5 Perspektiven', settings_premium_feature_5_perspectives='4 besondere KI-Profile', ai_limits_dialog_body='bei 4 Profilen also...', onboarding Page 3 zeigt 5 Profile-Chips. Mindestens ein String ist falsch. Dies kann als irreführende Werbung eingestuft werden (§5 UWG, Google Play Policy Accuracy).",
+			"affected_strings": [
+				"churn_offer_feature_perspectives",
+				"settings_premium_feature_5_perspectives",
+				"ai_limits_dialog_body"
+			],
+			"fix": "Anzahl der tatsächlich nutzbaren Profile in ProfileRepository verifizieren. Alle drei Strings auf denselben Wert setzen."
+		},
+		{
+			"id": "CF-003",
+			"severity": "MITTEL",
+			"category": "UI/UX Transparency",
+			"title": "Kündigungs-Link in ChurnFlowDialog Step 0 extrem schwach sichtbar",
+			"detail": "churn_cancel_sub (Kündigungs-Link) wird mit alpha=0.35f gerendert — sehr schwach sichtbar. Dies könnte als Dark Pattern eingestuft werden (EU UCPD, §4a UWG).",
+			"affected_file": "ChurnFlowDialog.kt Step 0",
+			"fix": "Alpha auf mindestens 0.6f erhöhen oder Link als regulären TextButton darstellen"
+		},
+		{
+			"id": "CF-004",
+			"severity": "MITTEL",
+			"category": "Marketing / Transparency",
+			"title": "Per-Profil-Wochenquota Free-Tier nicht im UI kommuniziert",
+			"detail": "Seit v0.21.8 ist das Free-Dashboard-Limit 5/Woche PRO Profil (nicht global). Dies bedeutet: N Profile × 5/Woche = N×5 Analysen gesamt. Die Änderung wird nirgends im UI erklärt (ai_limits_dialog_body referenziert das alte Modell nicht explizit).",
+			"affected_file": "AiUsageTracker.kt, strings.xml @ ai_limits_dialog_body",
+			"fix": "ai_limits_dialog_body aktualisieren: explizit '5 Dashboard-Analysen pro Woche pro Profil' beschreiben"
+		},
+		{
+			"id": "CF-005",
+			"severity": "MITTEL",
+			"category": "Legal / Vollständigkeit",
+			"title": "Privacy Policy Link, Impressum und AGB nicht in extrahierten Strings gefunden",
+			"detail": "In den 629 extrahierten Strings aus strings.xml keine privacy_policy_url, impressum_*, agb_* Einträge gefunden. Entweder in nicht-extrahierten Strings oder fehlend. DSGVO Art. 13/14, §5 TMG-äquivalent und Google Play Policy erfordern erreichbare Datenschutzerklärung.",
+			"affected_file": "strings.xml (nicht vollständig auditiert, nur 629 von N Strings)",
+			"fix": "Vollständige strings.xml auf privacy_policy_url suchen. Wenn fehlend: URL in ConsentScreen oder Settings ergänzen."
+		},
+		{
+			"id": "CF-006",
+			"severity": "INFO",
+			"category": "Security / Positive",
+			"title": "Groq API Key via Remote Config — korrekte Praxis",
+			"detail": "Der Groq API-Key wird nicht hardcoded, sondern via Firebase Remote Config (REMOTE_CONFIG_GROQ_KEY='groq_api_key') geliefert. Kein Secret im APK.",
+			"affected_file": "Constants.kt",
+			"fix": "Keine Aktion nötig. Sicherstellen dass Remote Config nur für authentifizierte Apps zugänglich ist."
+		},
+		{
+			"id": "CF-007",
+			"severity": "INFO",
+			"category": "Legal / Positive",
+			"title": "Widerrufsbelehrung vor Kauf korrekt implementiert",
+			"detail": "PaywallScreen zeigt Widerrufsbelehrung-Dialog mit Checkbox (paywall_consent_dialog_checkbox) vor Kaufabschluss. §355 BGB referenziert. Volltext muss manuell gegen Pflichtinhalte §312g BGB geprüft werden.",
+			"affected_file": "PaywallScreen.kt, strings.xml",
+			"fix": "Volltext manuell verifizieren."
+		},
+		{
+			"id": "CF-008",
+			"severity": "INFO",
+			"category": "Legal / Positive",
+			"title": "DSGVO Art. 17 Konto-Löschung korrekt implementiert",
+			"detail": "settings_delete_account_confirm_body enthält 'unwiderruflich' (Pflichtbegriff DSGVO Art. 17). Bestätigung-Dialog vorhanden.",
+			"affected_file": "SettingsScreen.kt, strings.xml",
+			"fix": "Keine Aktion nötig."
+		}
+	],
+
+	"dont_miss_checklist_summary": {
+		"manifest_permissions_audited": true,
+		"r8_proguard_checked": true,
+		"billing_integration_verified": "TEILWEISE (product IDs nicht extrahiert)",
+		"trial_logic_verified": true,
+		"freemium_limits_verified": true,
+		"consent_screen_present": true,
+		"widerrufsbelehrung_present": true,
+		"account_deletion_dsgvo": true,
+		"ccpa_implementation": true,
+		"churn_flow_documented": true,
+		"exit_intent_documented": true,
+		"ai_rate_limiter_documented": true,
+		"privacy_policy_link": "NICHT_VERIFIZIERT",
+		"impressum": "NICHT_VERIFIZIERT",
+		"notification_channels": "NICHT_VERIFIZIERT",
+		"health_disclaimer": "NICHT_VERIFIZIERT",
+		"eu_ai_act_disclaimer": "NICHT_VERIFIZIERT",
+		"proguard_rules_reviewed": false,
+		"all_26_languages_spot_checked": false
+	},
+
+	"meta": {
+		"audit_complete": true,
+		"layers_audited": "1, 2, 3, 4, 4b, 4c, 4d, 5, 6, 7",
+		"layers_partial": [
+			"4d (Privacy Policy/Impressum URLs not found)",
+			"5 (BillingManager.kt product IDs not extracted)",
+			"6 (notification channels, debug menus not audited)"
+		],
+		"tool_issues": [
+			"FIN-003: feature-scan.sh Windows incompatibility (ripgrep missing, sed POSIX error, arithmetic syntax error line 238)"
+		],
+		"next_consumer": "Phase 1B — Rechtssicherheits-Skill (Subagent B)"
+	}
+}

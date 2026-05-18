@@ -1,0 +1,382 @@
+{
+	"meta": {
+		"worker": "B2",
+		"phase": "1B",
+		"scope": "legal-docs-privacy-consent-permissions-backup",
+		"generatedAt": "2026-05-18",
+		"inputFiles": [
+			"app/src/main/AndroidManifest.xml",
+			"app/src/main/res/values/strings.xml",
+			"app/src/main/res/xml/backup_rules.xml",
+			"app/src/main/res/xml/data_extraction_rules.xml",
+			".android-shield/roentgen-report.json"
+		],
+		"tokenBudgetUsed": "~65000",
+		"notes": "HTTP-URL-Verifizierung bewusst ausgelassen (url-checker-Subagent zustaendig). Kein paywall/marketing scope (Worker B3). Kein Code-Change, kein Commit."
+	},
+
+	"summary": {
+		"criticalCount": 0,
+		"highCount": 1,
+		"mediumCount": 7,
+		"lowCount": 0,
+		"positiveCount": 5,
+		"openByScope": 8,
+		"verdict": "CONDITIONAL_PASS — keine kritischen Blocker fuer Play Store. 1 HIGH-Finding (Backup-Privacy ohne Consent-Gate) sollte vor Public Release adressiert werden. 7 MEDIUM-Findings sind Play-Store-konforme Verbesserungen."
+	},
+
+	"findings": {
+		"missingDocs": [
+			{
+				"id": "MD-001",
+				"severity": "MEDIUM",
+				"title": "Privacy Policy nur ueber generische Hub-URL erreichbar — kein Deep-Link in ConsentScreen",
+				"description": "Die Datenschutzerklaerung existiert als Titel-String (legal_title_datenschutz) und ist ueber settings_legal_online_url (https://pepsi1978.github.io/proggs/bestjournal/) erreichbar. Sie ist NICHT per eigenem Deep-Link im ConsentScreen verlinkt — der Consent-String setzt voraus, dass der Nutzer sie gelesen hat, verlinkt sie aber nicht direkt. Im ConsentScreen (consent_confirmation) wird auf 'Datenschutzerklaerung' verwiesen, ohne clickbaren Link.",
+				"legalBasis": "DSGVO Art. 13 Abs. 1 (Informationspflicht bei Erhebung), Art. 7 Abs. 2 (Einwilligung muss von anderen Erklaerungen klar unterscheidbar sein)",
+				"evidence": {
+					"string": "settings_legal_online_url",
+					"value": "https://pepsi1978.github.io/proggs/bestjournal/",
+					"consentString": "consent_confirmation: 'Mit Loslegen bestaetigst du, dass du die Datenschutzerklaerung ... gelesen hast'",
+					"location": "Settings > Rechtliche Dokumente"
+				},
+				"recommendation": "Im ConsentScreen direkte Inline-Links auf Datenschutz, AGB und Impressum einbauen (SpannableString / ClickableLink). Optional: separate Deep-Link-URL-Strings fuer jeden Rechtstext.",
+				"httpCheckRequired": true,
+				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
+			},
+			{
+				"id": "MD-002",
+				"severity": "MEDIUM",
+				"title": "Impressum nur ueber generische Hub-URL, kein Play-Store-Pflichtfeld-Link",
+				"description": "Impressum (legal_title_impressum) ist als Titel vorhanden, aber nur ueber eine generische GitHub-Pages-URL erreichbar. TMG §5 / DDG §5 verlangt 'leicht erkennbar, unmittelbar erreichbar und staendig verfuegbar'. Der Weg: Settings > Rechtliche Dokumente > Online-Version ist 3 Ebenen tief. Play Store Developer Policy verlangt zudem korrekte Impressumsangaben im Store-Eintrag selbst.",
+				"legalBasis": "TMG §5 / DDG §5 (Impressumspflicht fuer Telemedien), Play Store Developer Distribution Agreement Section 9.1",
+				"evidence": {
+					"string": "legal_title_impressum",
+					"accessPath": "Settings > Rechtliche Dokumente > Online-Version (3 Ebenen tief)",
+					"url": "https://pepsi1978.github.io/proggs/bestjournal/"
+				},
+				"recommendation": "Impressum-Direktlink als eigene String-Ressource anlegen. Im Settings-Screen prominent positionieren. GitHub-Pages-Seite um Impressum-Anker erweiterung (#impressum). Play-Store-Eintrag: Impressum-URL als 'Website' oder 'Datenschutzrichtlinie' eintragen.",
+				"httpCheckRequired": true,
+				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
+			},
+			{
+				"id": "MD-003",
+				"severity": "MEDIUM",
+				"title": "AGB/Nutzungsbedingungen kein eigenstaendiger Deep-Link",
+				"description": "Nutzungsbedingungen (legal_title_nutzungsbedingungen) existieren als Titel-String. Zugang nur ueber generische Hub-URL. Fuer Abo-Abschluesse verlangt §356 BGB und Play Store Billing Policy, dass AGB zum Zeitpunkt des Kaufs klar verlinkt sind. Der ConsentScreen verlinkt die AGB nicht per Tap.",
+				"legalBasis": "BGB §305 Abs. 2 (Einbeziehung von AGB), §356 BGB, Play Store Developer Policy (Subscription billing requirements)",
+				"evidence": {
+					"string": "legal_title_nutzungsbedingungen",
+					"paywallConsentDialog": "paywall_consent_dialog_body verweist auf Widerrufsrecht, aber kein AGB-Link"
+				},
+				"recommendation": "Im Paywall-Consent-Dialog und im ConsentScreen: Clickbarer Link 'Nutzungsbedingungen' mit eigener Deep-Link-URL. Play-Store-Eintrag: AGB-URL pflegen.",
+				"httpCheckRequired": true,
+				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
+			},
+			{
+				"id": "MD-004",
+				"severity": "MEDIUM",
+				"title": "Health-Disclaimer existiert, aber NICHT am Verwendungszeitpunkt von KI-Inhalten",
+				"description": "Ein Health-Disclaimer existiert (settings_crisis_dialog_body: 'Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung. KI-generierte Analysen sind keine Therapie.'). Er ist jedoch nur in Settings > Krisenhilfe eingebettet — NICHT beim Generieren von KI-Analysen (Dashboard, Retrospektive, TextImprove). HWG §3 und die Google Play Health Apps Policy verlangen Health-Hinweise an dem Ort, wo health-adjacent Inhalte prasentiert werden.",
+				"legalBasis": "HWG §3 (irrefuehrende Heilmittelwerbung), EU MDR Anhang XVI, Google Play Health Apps Policy (Prominent disclosure at point of health content display), US FTC Health Claims Policy",
+				"evidence": {
+					"string": "settings_crisis_dialog_body",
+					"location": "Settings > Krisenhilfe (nicht am KI-Analyse-Ausgabepunkt)",
+					"aiAnalysisScreens": [
+						"DashboardScreen",
+						"RetrospectiveScreen",
+						"ImproveTextScreen"
+					]
+				},
+				"recommendation": "Health-Disclaimer als CollapsibleBanner oder Footnote direkt unter jede KI-generierte Analyse einbauen: 'Keine Therapie — ersetzt keine professionelle Beratung.' Bestehender Crisis-Dialog kann als Tieflink bleiben.",
+				"httpCheckRequired": false
+			},
+			{
+				"id": "MD-005",
+				"severity": "MEDIUM",
+				"title": "EU AI Act Art. 50 — Badge vorhanden, aber Abdeckung aller KI-Ausgaben nicht verifiziert",
+				"description": "ai_generated_badge ('KI-generiert') und ai_generated_tooltip ('Dieser Inhalt wurde von einem KI-System (Google Gemini) erstellt und kann Fehler enthalten') existieren als String-Ressourcen. Es ist nicht aus den Strings allein verifizierbar, ob das Badge auf ALLEN KI-generierten Inhalten angezeigt wird: Dashboard-Analysen, Retrospektiven, ImproveText-Ergebnisse, TTS-Inhalte, Zusammenfassungen. EU AI Act Art. 50 Abs. 1 verlangt Kennzeichnung bei synthetischen Audio-, Bild-, Video- und Textinhalten.",
+				"legalBasis": "EU AI Act Art. 50 Abs. 1 (Transparency obligations for providers of AI systems), ab Anwendbarkeit 2025/2026",
+				"evidence": {
+					"strings": ["ai_generated_badge", "ai_generated_tooltip"],
+					"concern": "Strings existieren, aber Code-Review noetig um Vollabdeckung zu bestaetigen"
+				},
+				"recommendation": "Code-Review in DashboardViewModel, RetrospectiveViewModel, ImproveTextUseCase, SummarizeUseCase: Sicherstellen, dass jeder KI-Ausgabe-Block ai_generated_badge anzeigt. Auch TTS-Inhalte aus Gemini kennzeichnen.",
+				"httpCheckRequired": false
+			},
+			{
+				"id": "MD-006",
+				"severity": "MEDIUM",
+				"title": "FTC AI Endorsement Disclosure fuer US-Markt nicht nachweisbar",
+				"description": "Seit FTC 'Guides Concerning the Use of Endorsements and Testimonials' (2023 Update) und FTC AI Disclosure Guidance (2024) muessen AI-generierte Inhalte die wie persoenliche Empfehlungen oder Testimonials wirken koennten, fuer US-User als AI-generated kennzeichnen. Die ai_generated_badge-Strings koennen dies abdecken, aber eine explizite FTC-Compliance-Formulierung ('Generated by AI') in englischen Lokalisierungen fehlt in der deutschen strings.xml. Nicht verifizierbar ohne en-Lokalisierungsdateien.",
+				"legalBasis": "FTC Guides §255.5, FTC AI Endorsement Guidance (2024), California AB 2602 (digital replicas)",
+				"evidence": {
+					"note": "strings.xml ist die deutsche Basis. Englische Lokalisierung (values-en/) nicht in diesem Worker-Scope geprueft."
+				},
+				"recommendation": "In values-en/strings.xml: ai_generated_badge = 'AI-Generated', ai_generated_tooltip = 'This content was created by an AI system (Google Gemini) and may contain errors. Please verify independently.' FTC-Compliance durch explizite AI-Disclosure-Formulierung sichern.",
+				"httpCheckRequired": false
+			}
+		],
+
+		"textual": [
+			{
+				"id": "T-LG-001",
+				"severity": "HIGH",
+				"title": "Kein Play Store Permission Rationale fuer 4 sensible Berechtigungen",
+				"description": "Das AndroidManifest.xml deklariert 7 Berechtigungen. Fuer die 4 sensiblen Laufzeit-Permissions (RECORD_AUDIO, CAMERA, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS) existieren KEINE permission_rationale_*-Strings in strings.xml. Google Play Store Policy (Permissions Policy, Stand 2024) verlangt fuer jede sensible Permission eine user-visible Begruendung, die erklaert WARUM die App die Berechtigung benoetigt. Fehlt dies, kann die App bei Play Store Policy Reviews zurueckgewiesen werden.",
+				"legalBasis": "Google Play Developer Policy — Permissions (https://play.google.com/about/privacy-security-deception/permissions/), Android Permission Best Practices (developer.android.com/training/permissions/requesting#explain)",
+				"evidence": {
+					"manifestPermissions": [
+						"android.permission.RECORD_AUDIO — fuer Whisper/Groq STT",
+						"android.permission.CAMERA — Zweck unklar (Journal-Fotos?)",
+						"android.permission.ACCESS_COARSE_LOCATION — fuer Standort-Tagging?",
+						"android.permission.POST_NOTIFICATIONS — fuer Reminder",
+						"android.permission.INTERNET — keine Rationale noetig (normal permission)",
+						"android.permission.ACCESS_NETWORK_STATE — keine Rationale noetig (normal permission)",
+						"android.permission.RECEIVE_BOOT_COMPLETED — keine Rationale noetig (normal permission)"
+					],
+					"missingStrings": [
+						"permission_rationale_microphone (oder aequivalent)",
+						"permission_rationale_camera (oder aequivalent)",
+						"permission_rationale_location (oder aequivalent)",
+						"permission_rationale_notifications (oder aequivalent)"
+					]
+				},
+				"recommendation": "Folgende Strings in strings.xml hinzufuegen und im Permission-Request-Dialog anzeigen:\n- 'Das Mikrofon wird benoetigt, um Tagebucheintraege per Spracheingabe diktieren zu koennen.'\n- 'Die Kamera wird benoetigt, um Fotos zu deinen Tagebucheintraegen hinzuzufuegen.'\n- 'Der ungefaehre Standort wird benoetigt, um deinen Eintraegen einen Ortskontext hinzuzufuegen. Du kannst dies jederzeit deaktivieren.'\n- 'Benachrichtigungen werden benoetigt, um dich an dein taegliches Schreiben zu erinnern.'\nFuer CAMERA: Zweck in-App verifizieren und Rationale entsprechend formulieren.",
+				"affectedPermissions": [
+					"RECORD_AUDIO",
+					"CAMERA",
+					"ACCESS_COARSE_LOCATION",
+					"POST_NOTIFICATIONS"
+				]
+			},
+			{
+				"id": "T-LG-002",
+				"severity": "HIGH",
+				"title": "entropy_journal_db in Google Auto Backup ohne separates Consent-Gate",
+				"description": "backup_rules.xml und data_extraction_rules.xml schliessen dashboard_db, retrospective_db und entropy_journal_secure_prefs aus dem Backup aus — aber entropy_journal_db (die Haupt-Tagebuchdatenbank mit persoenlichen Eintraegen, Stimmungsanalysen, Audio-Pfaden) ist durch Auslassung in BEIDEN Backups enthalten. Das bedeutet: Persoenliche Tagebuchinhalte werden automatisch per Google Auto Backup (Android ≤11) und per Device-Transfer (Android ≥12) gespeichert/uebertragen. Der Nutzer hat keinen separaten Consent-Point speziell fuer dieses Backup — der Drive-Backup-Toggle im ConsentScreen betrifft die manuelle Drive-Sicherung ueber die Google Drive API, NICHT den Android-System-Backup.",
+				"legalBasis": "DSGVO Art. 13 Abs. 1 lit. e (Empfaenger der Daten), Art. 46 (Dritttransfer bei Device-zu-Device wenn Google-Server involviert), DSGVO Art. 5 Abs. 1 lit. b (Zweckbindung — automatisches Backup ≠ explizite Drive-Backup-Einwilligung)",
+				"evidence": {
+					"backup_rules_xml": "entropy_journal_db nicht in exclude-Liste — durch Auslassung eingeschlossen",
+					"data_extraction_rules_xml": "entropy_journal_db nicht in exclude-Liste fuer cloud-backup und device-transfer",
+					"consented": "consent_toggle_drive: Nutzer kann Drive-Backup ablehnen — betrifft aber nur explizite Drive API Aufrufe, nicht Android System Backup",
+					"riskContent": "Persoenliche Tagebucheintraege, KI-Analysen, Stimmungsverlaeufe, Audio-Metadaten"
+				},
+				"recommendation": "Option A (empfohlen): entropy_journal_db in backup_rules.xml und data_extraction_rules.xml explizit ausschliessen. Eigene verschluesselte Backup-Loesung via Drive API (bereits vorhanden) als einzigen Backup-Weg nutzen — dann hat der Nutzer volle Kontrolle. Option B (akzeptabel): Dokumentation in Datenschutzerklaerung, dass Android Auto Backup aktiv ist, mit Opt-out-Hinweis (Android System-Settings). Option A ist DSGVO-konformer.",
+				"affectedFiles": [
+					"app/src/main/res/xml/backup_rules.xml",
+					"app/src/main/res/xml/data_extraction_rules.xml"
+				]
+			},
+			{
+				"id": "T-LG-003",
+				"severity": "POSITIVE",
+				"title": "DSGVO Art. 17 Konto-Loeschung — vollstaendig und korrekt implementiert",
+				"description": "Die Konto-Loeschung (settings_delete_account_confirm_body) listet explizit alle geloeschten Datenkategorien auf (lokale Eintraege, Cloud-Daten, Analysedaten, Abo-Daten), kennzeichnet den Vorgang korrekt als 'unwiderruflich', behandelt Drive-Fehlerszenarien mit Retry/Abort-Optionen, und schliesst KI-generierte Inhalte ein. Der DSGVO-Kommentar im Code (// Delete-Account error states (DSGVO Art. 17 / CCPA Right to Delete)) zeigt bewusstes Compliance-Design.",
+				"legalBasis": "DSGVO Art. 17 (Recht auf Loeschung), CCPA §1798.105 (Right to Delete), Play Store Account Deletion Policy",
+				"evidence": {
+					"strings": [
+						"settings_delete_account_confirm_body",
+						"settings_delete_account_drive_error_body",
+						"settings_delete_account_retry_button",
+						"settings_delete_account_abort_button"
+					],
+					"note": "Alle Error-States abgedeckt, Nutzer kann bei Drive-Fehler Retry oder Abort waehlen"
+				},
+				"recommendation": "Kein Handlungsbedarf. Play Store Account Deletion Policy-Anforderung erfuellt."
+			},
+			{
+				"id": "T-LG-004",
+				"severity": "POSITIVE",
+				"title": "Widerrufsbelehrung §355/§356 BGB — vollstaendig mit Pflicht-Checkbox",
+				"description": "paywall_consent_dialog_body enthaelt vollstaendige Widerrufsbelehrung mit korrekten Paragraphenangaben (§355 BGB, §356 Abs. 5 BGB). Die Pflicht-Checkbox (paywall_consent_dialog_checkbox) formuliert den Verzicht praezise: 'Ich stimme zu, dass die Bereitstellung der Premium-Funktionen sofort nach Bestellung beginnt. Mir ist bekannt, dass ich dadurch mein 14-taegiges Widerrufsrecht verliere.' Dies entspricht den Anforderungen des BGH und der EU-Verbraucherrechte-Richtlinie.",
+				"legalBasis": "§355 BGB (Widerrufsrecht), §356 Abs. 5 BGB (Erloeschen bei sofortiger Bereitstellung digitaler Inhalte), EU-Verbraucherrechte-Richtlinie 2011/83/EU Art. 14 Abs. 4",
+				"evidence": {
+					"strings": [
+						"paywall_consent_dialog_body",
+						"paywall_consent_dialog_checkbox",
+						"paywall_consent_dialog_confirm_button"
+					]
+				},
+				"recommendation": "Kein Handlungsbedarf. Widerrufsbelehrung ist korrekt und vollstaendig."
+			},
+			{
+				"id": "T-LG-005",
+				"severity": "POSITIVE",
+				"title": "§356a BGB Widerrufsbutton digital — vollstaendig implementiert",
+				"description": "Die App implementiert einen digitalen Widerrufsbutton-Flow (settings_revocation_*-Strings) mit E-Mail-Bestaetigung. Dies erfuellt §356a BGB (Pflicht-Widerrufsbutton fuer digitale Vertraege ab 2022). Der Flow beinhaltet: Button-Text, Bestaetigung der Einleitung, E-Mail-Bestaetigung mit Datum und Transaktionsdetails.",
+				"legalBasis": "§356a BGB (Pflicht-Schaltflaeche fuer Widerruf bei Online-Abschluessen), VRRL 2011/83/EU",
+				"evidence": {
+					"strings": [
+						"settings_revocation_button",
+						"settings_revocation_initiated_message",
+						"settings_revocation_email_subject",
+						"settings_revocation_email_body"
+					]
+				},
+				"recommendation": "Kein Handlungsbedarf. §356a BGB-Anforderung erfuellt."
+			},
+			{
+				"id": "T-LG-006",
+				"severity": "POSITIVE",
+				"title": "CCPA Do-Not-Sell — dual implementiert in ConsentScreen und Settings",
+				"description": "CCPA-Opt-Out ist sowohl im initialen ConsentScreen (consent_toggle_do_not_sell_title: 'Datenschutz-Wahlrechte (Kalifornien)') als auch persistent in Settings (settings_ccpa_do_not_sell_title + settings_ccpa_do_not_sell_subtitle) verfuegbar. Der Settings-String erklaert korrekt, dass der Toggle 'alle optionalen Cloud-Funktionen deaktiviert'. Dies entspricht CCPA §1798.120 (Right to Opt-Out of Sale) und dem California Privacy Rights Act (CPRA) 2023.",
+				"legalBasis": "CCPA §1798.120, CPRA (California Privacy Rights Act 2023), Colorado CPA, Virginia VCDPA",
+				"evidence": {
+					"strings": [
+						"consent_toggle_do_not_sell_title",
+						"settings_ccpa_do_not_sell_title",
+						"settings_ccpa_do_not_sell_subtitle"
+					],
+					"note": "Beschraenkung auf Kalifornien korrekt kommuniziert. Technische Umsetzung (Deaktivierung Cloud-Funktionen) angemessen."
+				},
+				"recommendation": "Kein Handlungsbedarf. CCPA/CPRA-Anforderung erfuellt. Hinweis: Colorado CPA und Virginia VCDPA haben aehnliche Anforderungen — bestehende Implementierung deckt diese implizit ab."
+			},
+			{
+				"id": "T-LG-007",
+				"severity": "POSITIVE",
+				"title": "DSGVO-Consent-Screen — granular, fair, kein Dark Pattern",
+				"description": "Der ConsentScreen implementiert 6 granulare Toggles (Analytics, Groq, Gemini, TTS, Drive, CCPA) mit drei gleichberechtigten Buttons (Alle akzeptieren / Meine Auswahl speichern / Alle ablehnen). Dies entspricht dem DSGVO Art. 7 Abs. 2 (Unterscheidbarkeit), Art. 4 Nr. 11 (freiwillige, informierte, eindeutige Einwilligung) und den EDPB-Leitlinien zu Dark Patterns (05/2022).",
+				"legalBasis": "DSGVO Art. 4 Nr. 11, Art. 7, EDPB Guidelines 03/2022 on Dark patterns, EDPB Guidelines 05/2022",
+				"evidence": {
+					"strings": [
+						"consent_toggle_analytics",
+						"consent_toggle_groq",
+						"consent_toggle_gemini",
+						"consent_toggle_tts",
+						"consent_toggle_drive",
+						"consent_toggle_do_not_sell"
+					],
+					"buttons": [
+						"consent_button_accept_all",
+						"consent_button_save_selection",
+						"consent_button_decline_all"
+					]
+				},
+				"recommendation": "Kein Handlungsbedarf. Consent-Design entspricht Best Practice. Empfehlung: Direkte Inline-Links auf Datenschutz/AGB/Impressum im Consent-Text hinzufuegen (siehe MD-001)."
+			}
+		],
+
+		"deadUrls": [
+			{
+				"id": "URL-001",
+				"url": "https://pepsi1978.github.io/proggs/bestjournal/",
+				"sourceString": "settings_legal_online_url",
+				"usedFor": ["Privacy Policy", "Impressum", "AGB/Nutzungsbedingungen"],
+				"category": "legal-hub",
+				"needsHttpCheck": true,
+				"concern": "Einzige URL fuer alle 3 Pflichtdokumente. Fehlende Sub-Anker fuer direkten Zugriff auf einzelne Dokumente. Nicht im ConsentScreen verlinkt."
+			}
+		],
+
+		"backupPrivacyAudit": {
+			"allowBackup": true,
+			"backupRulesFile": "app/src/main/res/xml/backup_rules.xml",
+			"dataExtractionRulesFile": "app/src/main/res/xml/data_extraction_rules.xml",
+			"includedInBackup": [
+				{
+					"db": "entropy_journal_db",
+					"contains": "persoenliche Tagebucheintraege, KI-Analysen, Stimmungsverlaeufe, Audio-Metadaten",
+					"risk": "HIGH — persoenliche Daten automatisch zu Google Backup ohne separaten Consent-Point",
+					"findingRef": "T-LG-002"
+				}
+			],
+			"correctlyExcluded": [
+				"dashboard_db (+ WAL/SHM)",
+				"retrospective_db (+ WAL/SHM)",
+				"entropy_journal_secure_prefs (EncryptedSharedPreferences — korrekt ausgeschlossen)"
+			],
+			"assessment": "backup_rules.xml und data_extraction_rules.xml schliessen die richtigen Caches/abgeleiteten DBs aus, aber die kritische Hauptdatenbank entropy_journal_db ist enthalten. Separates Consent-Gate fehlt."
+		},
+
+		"permissionsAudit": {
+			"declared": 7,
+			"normalPermissions": [
+				"INTERNET",
+				"ACCESS_NETWORK_STATE",
+				"RECEIVE_BOOT_COMPLETED"
+			],
+			"sensitivePermissions": {
+				"RECORD_AUDIO": {
+					"purpose": "Spracheingabe fuer Tagebuch-Diktat (Whisper/Groq STT)",
+					"rationaleStringPresent": false,
+					"findingRef": "T-LG-001"
+				},
+				"CAMERA": {
+					"purpose": "Vermutlich Foto-Anhaenge zu Eintraegen — in Manifest-Kommentaren nicht erlaeutert",
+					"rationaleStringPresent": false,
+					"findingRef": "T-LG-001"
+				},
+				"ACCESS_COARSE_LOCATION": {
+					"purpose": "Standort-Tagging fuer Eintraege — kein android:maxSdkVersion gesetzt",
+					"rationaleStringPresent": false,
+					"findingRef": "T-LG-001"
+				},
+				"POST_NOTIFICATIONS": {
+					"purpose": "Taeglich-Schreiben-Reminder via BootReminderReceiver",
+					"rationaleStringPresent": false,
+					"findingRef": "T-LG-001"
+				}
+			},
+			"networkSecurityConfig": true,
+			"exportedComponents": [
+				{
+					"component": "BootReminderReceiver",
+					"exported": true,
+					"permission": "android.permission.RECEIVE_BOOT_COMPLETED",
+					"riskLevel": "LOW — Permission-geschuetzt"
+				}
+			]
+		},
+
+		"dsGVOComplianceMatrix": {
+			"art13_informationspflicht": "PARTIAL — Dokumente existieren, aber nicht am Erhebungspunkt verlinkt",
+			"art7_einwilligung": "PASS — granularer Consent-Screen, drei gleichberechtigte Buttons",
+			"art17_loeschung": "PASS — vollstaendige Loeschung mit Error-Handling",
+			"art22_automatisierteEntscheidung": "UNVERIFIED — KI-Analysen koennen als Profilierung gelten; keine explizite Art-22-Offenlegung gefunden",
+			"art46_drittlandtransfer": "PARTIAL — Groq (US) und Google Gemini (US) als Empfaenger in Consent benannt; SCCs nicht in App verifizierbar",
+			"art5_zweckbindung": "MEDIUM CONCERN — Google Auto Backup von entropy_journal_db (T-LG-002)",
+			"widerrufsrecht_355_bGB": "PASS — vollstaendige Widerrufsbelehrung mit Pflicht-Checkbox",
+			"widerrufsbutton_356a_bGB": "PASS — digitaler Widerrufsbutton-Flow implementiert"
+		}
+	},
+
+	"openByScope": 8,
+
+	"prioritizedRecommendations": [
+		{
+			"priority": 1,
+			"findingId": "T-LG-001",
+			"action": "Permission-Rationale-Strings fuer RECORD_AUDIO, CAMERA, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS in strings.xml hinzufuegen und in Permission-Request-Dialogen anzeigen.",
+			"effort": "LOW",
+			"risk": "HIGH — Play Store Policy Rejection moeglich"
+		},
+		{
+			"priority": 2,
+			"findingId": "T-LG-002",
+			"action": "entropy_journal_db aus backup_rules.xml und data_extraction_rules.xml explizit ausschliessen. Eigene Drive-Backup-Loesung als einzigen Backup-Weg dokumentieren.",
+			"effort": "LOW",
+			"risk": "HIGH — DSGVO Art. 5/13 Compliance"
+		},
+		{
+			"priority": 3,
+			"findingId": "MD-001 + MD-002 + MD-003",
+			"action": "Direkte Inline-Links auf Datenschutz, AGB und Impressum im ConsentScreen und im paywall_consent_dialog einbauen. Separate Anker oder URLs pro Dokument auf GitHub Pages.",
+			"effort": "MEDIUM",
+			"risk": "MEDIUM — DSGVO Art. 13, TMG §5"
+		},
+		{
+			"priority": 4,
+			"findingId": "MD-004",
+			"action": "Health-Disclaimer als Footnote/Banner unter KI-Analyse-Ausgaben in Dashboard, Retrospektive und ImproveText einbauen.",
+			"effort": "LOW",
+			"risk": "MEDIUM — Play Health Apps Policy"
+		},
+		{
+			"priority": 5,
+			"findingId": "MD-005",
+			"action": "Code-Review: Sicherstellen, dass ai_generated_badge auf allen KI-Ausgabe-Komponenten angezeigt wird.",
+			"effort": "LOW",
+			"risk": "MEDIUM — EU AI Act Art. 50"
+		}
+	]
+}

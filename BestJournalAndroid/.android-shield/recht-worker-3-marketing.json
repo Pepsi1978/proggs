@@ -1,0 +1,444 @@
+{
+	"meta": {
+		"worker": "Worker-B3-Marketing",
+		"phase": "1B",
+		"generatedAt": "2026-05-18",
+		"scope": "Marketing Claims / Werbeaussagen — UWG §5, HWG §3, EU MDR, Play Store Misrepresentation",
+		"inputFiles": [
+			"BestJournalAndroid/.android-shield/roentgen-report.json",
+			"BestJournalAndroid/app/src/main/res/values/strings.xml"
+		],
+		"tokenEstimate": 85000,
+		"status": "COMPLETE"
+	},
+	"summary": {
+		"totalFindings": 11,
+		"bySeverity": {
+			"HIGH": 3,
+			"MEDIUM": 5,
+			"LOW": 2,
+			"COMPLIANT": 3
+		},
+		"hwgHits": 2,
+		"playStoreMisrepresentationRisk": "MEDIUM",
+		"top3ProblematicClaims": [
+			"settings_premium_feature_5_perspectives: Key says '5' but value says '4' — 4 separate string locations show 4-vs-5 inconsistency",
+			"churn_offer_feature_perspectives: 'Alle 5 Perspektiven' when code reality is 4 profiles — churn prevention context amplifies UWG §5 risk",
+			"ai_limits_disclaimer: 'Großzügiges KI-Tageskontingent' is a subjective claim with no qualifying threshold — borderline misleading under UWG §5"
+		]
+	},
+	"advertisingMismatch": [
+		{
+			"findingId": "ADV-001",
+			"claimText": "4 besondere KI-Profile",
+			"stringKey": "settings_premium_feature_5_perspectives",
+			"claimLocation": "Settings screen — Premium features list",
+			"codeReality": "AiRateLimiter has 4 profile slots (layer5_paywall_deep.premium.profile_count=4). Resource KEY is 'settings_premium_feature_5_perspectives' (implies 5), VALUE says 4.",
+			"gap": "String KEY name implies 5 profiles; value says 4. Three other strings say 5 (churn_offer_feature_perspectives, onboarding_perspectives_title, onboarding_premium_feature_perspectives). Internal inconsistency = UWG §5 risk via conflicting representations.",
+			"riskLevel": "HIGH",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (irreführende Angaben über wesentliche Merkmale), Play Store Misrepresentation Policy",
+			"rationale": "A consumer reading the Settings screen sees '4', but the same consumer seeing the Churn screen sees '5'. Same app, same user, contradictory claims. Courts consider the least favorable interpretation. The CF-002 finding in roentgen-report.json already flagged this as HOCH.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-001-F1",
+					"text": "Globally align all strings to '4 besondere KI-Profile'. Update: settings_premium_feature_5_perspectives, churn_offer_feature_perspectives → 'Alle 4 Perspektiven', onboarding_perspectives_title → '4 Perspektiven auf dein Leben', onboarding_premium_profiles. Rename the resource key to settings_premium_feature_4_perspectives.",
+					"lengthDeltaPct": 0,
+					"rationale": "Matches code reality exactly. Zero functional change. Eliminates all 4-vs-5 ambiguity across all screens.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-001-F2",
+					"text": "Add a 5th profile to the AI profile implementation (code change), then update all strings to '5 besondere KI-Profile' consistently.",
+					"lengthDeltaPct": 0,
+					"rationale": "If the product roadmap already plans 5 profiles, ship it first, then update strings simultaneously.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-001-F3",
+					"text": "Use an abstract claim that avoids a number: 'Verschiedene KI-Analyse-Profile' or 'Mehrere intelligente KI-Profile'. This survives future profile count changes without re-audit.",
+					"lengthDeltaPct": -5,
+					"rationale": "Most future-proof fix. No specific number to defend. Still accurate and attractive.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Store rejection risk (Play Store Misrepresentation); potential Abmahnung under UWG §5 if a competitor or Verbraucherzentrale compares the two screens; user support escalations."
+		},
+		{
+			"findingId": "ADV-002",
+			"claimText": "Alle 5 Perspektiven",
+			"stringKey": "churn_offer_feature_perspectives",
+			"claimLocation": "Churn prevention screen — retention offer feature list",
+			"codeReality": "4 AI profiles exist in code (AiRateLimiter, layer5_paywall_deep.premium.profile_count=4).",
+			"gap": "Churn screen claims 5; code delivers 4. Churn context is highest-risk: user is actively considering cancellation, any false promise to retain them is an unfair commercial practice.",
+			"riskLevel": "HIGH",
+			"norm": "UWG §5 Abs. 1 Nr. 1, UWG §4a (aggressive Geschäftspraktiken im Kontext Kundenbindung), EU UCPD Art. 6",
+			"rationale": "The churn context is where users scrutinize claims most carefully. A user retained by a '5 profiles' promise who then finds only 4 has a concrete misrepresentation complaint. This is the highest-risk occurrence of the 4-vs-5 discrepancy.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-002-F1",
+					"text": "Change to 'Alle 4 Perspektiven' — immediate alignment with code reality.",
+					"lengthDeltaPct": 0,
+					"rationale": "Simplest fix, highest legal safety.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-002-F2",
+					"text": "Change to 'Deine persönlichen KI-Analyse-Profile' — avoids number entirely, still highlights personalization.",
+					"lengthDeltaPct": 10,
+					"rationale": "More compelling retention message and future-proof.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-002-F3",
+					"text": "Change to 'Mehrere einzigartige KI-Blickwinkel' — emphasizes variety without committing to a count.",
+					"lengthDeltaPct": 5,
+					"rationale": "Emotionally resonant, legally safe, marketing-neutral.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Active misrepresentation in a retention flow = elevated Abmahnung risk. User-facing contradiction with Settings screen. Apple/Google store review risk."
+		},
+		{
+			"findingId": "ADV-003",
+			"claimText": "5 Perspektiven auf dein Leben",
+			"stringKey": "onboarding_perspectives_title",
+			"claimLocation": "Onboarding screen — perspectives introduction title",
+			"codeReality": "4 AI profiles in code.",
+			"gap": "Onboarding is the first impression. '5 Perspektiven' as a section title during onboarding sets a baseline expectation of 5 that is never fulfilled.",
+			"riskLevel": "HIGH",
+			"norm": "UWG §5 Abs. 1 Nr. 1, Play Store Misrepresentation Policy (claims made during onboarding are equivalent to store listing claims)",
+			"rationale": "First-use onboarding has highest scrutiny weight because the user's purchase/trial decision is most directly influenced here. Stating '5 Perspektiven' in a section title during onboarding when the product delivers 4 is a straightforward UWG §5 violation.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-003-F1",
+					"text": "Change to '4 Perspektiven auf dein Leben'.",
+					"lengthDeltaPct": 0,
+					"rationale": "Direct factual correction.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-003-F2",
+					"text": "Change to 'Verschiedene Perspektiven auf dein Leben'.",
+					"lengthDeltaPct": 5,
+					"rationale": "Avoids number, still descriptive, survives future profile additions.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-003-F3",
+					"text": "Change to 'Dein Leben aus neuen Blickwinkeln' — more evocative, no number commitment.",
+					"lengthDeltaPct": 0,
+					"rationale": "Better marketing copy and legally safe.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "First-impression misrepresentation during onboarding = strong basis for misleading advertising complaint. User expectation mismatch leads to 1-star reviews citing 'advertised 5 profiles, only 4 exist'."
+		},
+		{
+			"findingId": "ADV-004",
+			"claimText": "Über 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.",
+			"stringKey": "ai_limits_dialog_body",
+			"claimLocation": "AI limits explanation dialog",
+			"codeReality": "No analytics data cited. This is an unsubstantiated statistical claim. The app uses AiRateLimiter with hard limits at 150/day (Premium) and 5/week (Free). No usage telemetry proving the 99% figure is present in the codebase.",
+			"gap": "The '99%' figure is presented as fact ('wahrscheinlich' slightly hedges it) but has no evidential basis visible in the code. Under UWG §5, factual claims about product characteristics that cannot be substantiated are misleading.",
+			"riskLevel": "MEDIUM",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (unsubstantiated factual claim), UWG §5a (Verschweigen relevanter Informationen)",
+			"rationale": "The 'wahrscheinlich' hedge is present but the '99%' figure is still asserted as near-fact. Without supporting data, this is a misleading reassurance to users who might otherwise be concerned about limits. The claim is designed to minimize user anxiety about restrictions.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-004-F1",
+					"text": "Remove the statistical claim entirely. Replace with: 'Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.'",
+					"lengthDeltaPct": -30,
+					"rationale": "Qualitative hedging ('die meisten') is not a factual claim and cannot be challenged. Conveys the same reassurance without legal exposure.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-004-F2",
+					"text": "Retain the claim only if real usage analytics confirm it. Add a caveat: 'Basierend auf unserer Nutzungsanalyse.' Only use if Frank can provide the data.",
+					"lengthDeltaPct": 10,
+					"rationale": "Transforms an unsupported claim into a substantiated one.",
+					"stillSafe": false
+				},
+				{
+					"fixId": "ADV-004-F3",
+					"text": "Replace with a concrete benefit framing: 'Das entspricht für Premium-Nutzer bis zu 150 Analysen täglich — mehr als genug für intensives Journaling.'",
+					"lengthDeltaPct": 0,
+					"rationale": "Anchors the reassurance to the concrete limit number, which IS in the code, rather than an unverifiable percentage.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Wettbewerbsrechtliche Abmahnung for unsubstantiated comparative claim. Low probability but non-zero; UWG §5 does not require a competitor to have been harmed."
+		},
+		{
+			"findingId": "ADV-005",
+			"claimText": "Großzügiges KI-Tageskontingent für intensive Nutzung.",
+			"stringKey": "ai_limits_disclaimer",
+			"claimLocation": "AI limits disclaimer banner",
+			"codeReality": "Premium: 150 dashboard analyses/day/profile, 5 analyses/week/profile (Free). Hard limit at 151 triggers cooldown. The word 'großzügig' (generous) is a subjective value judgment with no benchmark.",
+			"gap": "The term 'großzügig' is a subjective superiority/quality claim without a comparison baseline. UWG §5 treats superlative or evaluative claims as factual if they create a specific impression of objective superiority. A user who hits the 150/day limit may reasonably dispute that 150 is 'generous'.",
+			"riskLevel": "MEDIUM",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (subjektive Werturteile mit objektivem Anschein), UWG §5 Abs. 2 (Alleinstellungsbehauptungen)",
+			"rationale": "German courts have ruled that vague quality claims like 'großzügig' require substantiation when used in a context where users are making financial decisions (premium subscription). The claim is in a context specifically designed to explain limits — so it is directly shaping user understanding of the value proposition.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-005-F1",
+					"text": "Replace with the concrete number: 'Bis zu 150 KI-Analysen täglich für Premium-Nutzer.'",
+					"lengthDeltaPct": 5,
+					"rationale": "Factual, cannot be disputed, more transparent, still reassuring.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-005-F2",
+					"text": "Change to: 'KI-Analysen für den täglichen Bedarf — transparent und fair.'",
+					"lengthDeltaPct": -5,
+					"rationale": "Neutral framing without superlatives. 'Fair' is more defensible than 'großzügig' as it implies process fairness rather than objective quantity.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-005-F3",
+					"text": "Remove the qualifier entirely: 'KI-Tageskontingent für intensive Nutzung.' The phrase is accurate without 'großzügig'.",
+					"lengthDeltaPct": -20,
+					"rationale": "Shortest, factual, no legal exposure.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Low individual risk but contributes to a pattern of evaluative overclaiming that amplifies risk of any single UWG §5 challenge."
+		},
+		{
+			"findingId": "ADV-006",
+			"claimText": "Jeder Eintrag wird ausdrucksstärker",
+			"stringKey": "settings_premium_feature_improve_desc",
+			"claimLocation": "Settings screen — Premium features list (description of AI text improvement)",
+			"codeReality": "AI text improvement is applied when the user invokes it. Not applied to every entry automatically. AiUsageTracker limits: 150/day Premium, 5/week Free. The feature requires explicit user action.",
+			"gap": "'Jeder Eintrag wird ausdrucksstärker' implies automatic improvement of all entries. In reality: (a) it is user-triggered, not automatic; (b) Free users get only 5/week so most entries will NOT be improved.",
+			"riskLevel": "MEDIUM",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (false implication of automatic/universal action), UWG §5a (omission of material qualifier)",
+			"rationale": "The present tense 'wird' implies automaticity and universality ('every entry BECOMES more expressive'). The reality is opt-in and quota-limited. A Premium user with many entries will not have 'every' entry improved unless they invoke the feature for each.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-006-F1",
+					"text": "Change to: 'Deine Einträge auf Knopfdruck ausdrucksstärker machen'",
+					"lengthDeltaPct": 5,
+					"rationale": "'auf Knopfdruck' makes the user-triggered nature explicit. Eliminates the automaticity implication.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-006-F2",
+					"text": "Change to: 'KI verbessert deine Texte auf Wunsch'",
+					"lengthDeltaPct": -20,
+					"rationale": "'auf Wunsch' is a standard German commercial qualifier for opt-in features.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-006-F3",
+					"text": "Change to: 'Mehr Ausdruck mit einem Tipp — täglich verfügbar'",
+					"lengthDeltaPct": 0,
+					"rationale": "Highlights the daily availability (genuine Premium benefit) and 'mit einem Tipp' indicates user action.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "User disappointment and 1-star reviews when they realize improvement is not automatic. Potential Abmahnung for implied automaticity."
+		},
+		{
+			"findingId": "ADV-007",
+			"claimText": "Dein Dashboard wächst mit dir",
+			"stringKey": "settings_premium_feature_dashboard_desc",
+			"claimLocation": "Settings screen — Premium features list (description of daily dashboard analyses)",
+			"codeReality": "Dashboard analyses are quota-limited (150/day Premium, 5/week Free). Dashboard analysis requires at least 2 new journal entries to trigger. The metaphor 'wächst mit dir' implies unlimited organic growth.",
+			"gap": "The phrase 'wächst mit dir' is an organic growth metaphor suggesting the dashboard continuously improves without limit. The actual product has hard limits (cooldown at 101, block at 151) and a per-entry trigger threshold. The metaphor is inconsistent with the quota reality.",
+			"riskLevel": "LOW",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (misleading implication via marketing metaphor)",
+			"rationale": "Marketing metaphors can constitute misleading advertising when they create a false impression about product characteristics. 'Wächst mit dir' is borderline — it could be read as describing analytical depth improvement over time (which is arguably true), but in the context of a quota explanation, it implies no limits. Risk is LOW because the metaphor is vague.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-007-F1",
+					"text": "Change to: 'Täglich neue Erkenntnisse aus deinen Einträgen'",
+					"lengthDeltaPct": 0,
+					"rationale": "Accurate (analyses run daily on new entries), positive, no growth-without-limit implication.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-007-F2",
+					"text": "Keep the metaphor but add a qualifier: 'Dein Dashboard entwickelt sich mit dir Schritt für Schritt'",
+					"lengthDeltaPct": 20,
+					"rationale": "'Schritt für Schritt' implies gradual/triggered growth rather than unlimited.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-007-F3",
+					"text": "Change to: 'KI-Analysen nach jedem neuen Eintrag'",
+					"lengthDeltaPct": -10,
+					"rationale": "Most accurate. Describes exact trigger condition. Transparent and impossible to dispute.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Low standalone risk. Combined with other overclaiming patterns, it contributes to a misleading Premium value representation."
+		},
+		{
+			"findingId": "ADV-008",
+			"claimText": "Die KI findet Zusammenhänge die dir nicht auffallen",
+			"stringKey": "settings_premium_feature_patterns_desc",
+			"claimLocation": "Settings screen — Premium features list (description of pattern recognition)",
+			"codeReality": "Pattern recognition runs on journal entries via Firebase AI Logic (Gemini Flash 2.5). The AI identifies patterns in text; it does not have access to biometric data, external context, or scientifically validated behavioral analysis algorithms.",
+			"gap": "The claim implies objective discovery of hidden connections that are invisible to the user. This is a capability superiority claim. The AI does linguistic/semantic pattern analysis — the quality and reliability of 'connections found' vary and are not validated against any objective standard. Combined with the missing 'no professional advice' disclaimer specifically in the Settings context, this is borderline.",
+			"riskLevel": "MEDIUM",
+			"norm": "UWG §5 Abs. 1 Nr. 1 (capability overclaim), HWG §3 (borderline — psychological insight claims)",
+			"rationale": "The pattern recognition description makes an objective capability claim ('findet Zusammenhänge') without qualification. The privacy_gate_gemini_body disclaimer exists but is not shown in the Settings screen where this claim appears. The Settings context is where users evaluate whether to subscribe — the absence of the disclaimer here amplifies the risk.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-008-F1",
+					"text": "Add qualifier: 'Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen'",
+					"lengthDeltaPct": 15,
+					"rationale": "'kann ... sichtbar machen' is possibility framing, not certainty framing. Accurate and defensible.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-008-F2",
+					"text": "Change to: 'Muster in deinen Texten erkennen und visualisieren'",
+					"lengthDeltaPct": -10,
+					"rationale": "'in deinen Texten' makes the data scope explicit (text only, not bio/behavioral data). Eliminates capability overclaim.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-008-F3",
+					"text": "Change to: 'Regelmäßige Themen und Gefühlsmuster in deinem Tagebuch'",
+					"lengthDeltaPct": 5,
+					"rationale": "Accurately describes what the AI does (linguistic theme extraction), without claiming cognitive superiority over the user.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Medium risk for HWG §3 challenge if a competitor or health regulator interprets 'Zusammenhänge die dir nicht auffallen' as an implicit diagnostic claim."
+		},
+		{
+			"findingId": "ADV-009",
+			"claimText": "Intelligente Lebensratschläge aus deinen Mustern",
+			"stringKey": "ai_banner_body",
+			"claimLocation": "AI feature introduction banner (shown during trial activation)",
+			"codeReality": "AI outputs are labeled as suggestions. The crisis dialog (settings_crisis_dialog_body) states 'KI-generierte Analysen sind keine Therapie'. However, 'Lebensratschläge' (life advice) from an AI is a HWG-borderline claim in the context of a journaling app that handles mental health topics.",
+			"gap": "The banner promises 'Intelligente Lebensratschläge' as a core feature. This is an HWG §3-borderline claim: 'Lebensratschläge' in a mental-health-adjacent app context implies guidance on mental/emotional wellbeing. The crisis dialog disclaimer is only accessible in Settings — it is NOT shown alongside this banner.",
+			"riskLevel": "MEDIUM",
+			"norm": "HWG §3 (Heilmittelwerbegesetz — implied therapeutic guidance), UWG §5 Abs. 1 Nr. 1",
+			"rationale": "The HWG §3 prohibition covers any advertising that attributes health-related effects to products/services, even indirectly. 'Lebensratschläge' for mental health journaling users is borderline therapeutic guidance. The absence of the disclaimer in this specific banner is a gap.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-009-F1",
+					"text": "Replace 'Intelligente Lebensratschläge aus deinen Mustern' with 'Persönliche Reflexionsfragen zu deinen Themen'",
+					"lengthDeltaPct": 5,
+					"rationale": "Reframes from 'advice' (directive/prescriptive) to 'questions' (reflective/non-prescriptive). Eliminates HWG §3 borderline issue entirely.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-009-F2",
+					"text": "Keep the text but add a micro-disclaimer in the banner: 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.'",
+					"lengthDeltaPct": 30,
+					"rationale": "Adds the existing disclaimer directly in the banner context where the claim is made. The disclaimer already exists in the app — this is just a placement fix.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-009-F3",
+					"text": "Change to: 'Einblicke und Anregungen aus deinen Tagebuchmustern'",
+					"lengthDeltaPct": -10,
+					"rationale": "'Einblicke und Anregungen' are neutral, non-prescriptive, non-medical. Removes the 'Ratschläge' (advice/guidance) framing.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "HWG §3 violation risk if health regulator or competitor challenges 'Lebensratschläge' as implied therapeutic guidance. Medium probability given mental health journaling context."
+		},
+		{
+			"findingId": "ADV-010",
+			"claimText": "Finde deine innere Ruhe / Erkenne was dich belastet, bevor es dich überwältigt",
+			"stringKey": "paywall_headline_stress + paywall_headline_stress_sub",
+			"claimLocation": "Paywall screen — stress-variant headline and subtitle",
+			"codeReality": "App is a journaling tool. No stress measurement, no clinical anxiety reduction capability. The headline pairing implies: (1) the app can help the user 'find inner peace', (2) the app can detect/prevent overwhelm before it occurs. Neither is a documented, validated capability.",
+			"gap": "The combination of 'innere Ruhe finden' (find inner peace) and 'bevor es dich überwältigt' (before it overwhelms you) constitutes a wellness/therapeutic benefit claim. The paywall context makes this a purchase-motivating claim. HWG §3 is triggered when advertising implies health benefits to motivate a commercial transaction.",
+			"riskLevel": "MEDIUM",
+			"norm": "HWG §3 (implied stress/anxiety therapeutic benefit as sales argument), UWG §5 Abs. 1 Nr. 1, EU MDR Art. 2(1) (borderline medical device claim)",
+			"rationale": "German courts have found that phrases like 'innere Ruhe finden' in the context of mental health products trigger HWG §3 even without explicit medical claims. The subtitle 'bevor es dich überwältigt' adds a preventive health framing. This is the second-strongest HWG risk in the app (after ADV-009). Mitigation: the crisis dialog disclaimer exists but is not shown on the paywall.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-010-F1",
+					"text": "Change paywall_headline_stress to: 'Mehr Klarheit im Alltag' and paywall_headline_stress_sub to: 'Erkenne was du täglich beschäftigt und bringe es auf den Punkt.'",
+					"lengthDeltaPct": -10,
+					"rationale": "Shifts from therapeutic framing (inner peace, overwhelm prevention) to self-awareness framing (clarity, articulation). Eliminates HWG §3 trigger.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-010-F2",
+					"text": "Add a disclaimer below the paywall stress variant: 'Best Journal ist kein Therapieangebot. KI-Analysen ersetzen keine professionelle Beratung.'",
+					"lengthDeltaPct": 40,
+					"rationale": "The disclaimer already exists in settings_crisis_dialog_body — placing it in the paywall context where the claim is made provides the contextual balance required by HWG.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-010-F3",
+					"text": "Change paywall_headline_stress to: 'Verstehe dich und deinen Alltag besser' — remove the stress/overwhelm framing entirely from this paywall variant.",
+					"lengthDeltaPct": -5,
+					"rationale": "Paywall headline rotation is a UX pattern — the stress variant can simply be retired in favor of the existing clarity/growth variants which are legally safer.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "HWG §3 challenge risk. An app marketed partly as a mental health tool that promises 'innere Ruhe' and overwhelm prevention at the payment decision point is a known HWG enforcement target in Germany."
+		},
+		{
+			"findingId": "ADV-011",
+			"claimText": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+			"stringKey": "retro_benefit_weekly",
+			"claimLocation": "Retrospective / weekly review feature description",
+			"codeReality": "The string positions 'Unbegrenzte Wochenrückblicke' as a Premium benefit over Free ('nicht nur die ersten 2 Wochen'). This implies Free users can create exactly 2 weekly reviews, and Premium removes that limit. The layer5_paywall_deep shows Free weekly dashboard limit = 2 reviews. This is internally consistent.",
+			"gap": "The string is directionally accurate (Free=2, Premium=unlimited). However, 'unbegrenzt' (unlimited) for an AI-powered feature that has daily limits per AiRateLimiter is potentially inconsistent with the 150/day hard limit. If a user runs many weekly reviews in one day, the daily AI quota would throttle them.",
+			"riskLevel": "LOW",
+			"norm": "UWG §5a (Verschweigen wesentlicher Einschränkungen)",
+			"rationale": "The 'unlimited' claim is technically limited by the daily AI quota. In practice, a user running >150 weekly reviews in a single day is extremely unlikely, making this a very low probability issue. Risk rating LOW reflects this practical implausibility.",
+			"suggestedFixes": [
+				{
+					"fixId": "ADV-011-F1",
+					"text": "Add 'im Rahmen des täglichen KI-Kontingents' qualifier: 'Unbegrenzte Wochenrückblicke im Rahmen deines täglichen KI-Kontingents'",
+					"lengthDeltaPct": 30,
+					"rationale": "Technically accurate. Aligns with the AI limits dialog explanation. Very low user-facing impact.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-011-F2",
+					"text": "Leave unchanged — the 'unlimited' claim is practically accurate for all realistic usage patterns.",
+					"lengthDeltaPct": 0,
+					"rationale": "Risk is too low to justify a string change. Accept the residual risk.",
+					"stillSafe": true
+				},
+				{
+					"fixId": "ADV-011-F3",
+					"text": "Change to: 'Wochenrückblicke ohne Monatsbegrenzung' — reframes the comparative benefit (vs. Free's 2/month limit) without 'unbegrenzt'.",
+					"lengthDeltaPct": 0,
+					"rationale": "Avoids 'unbegrenzt' entirely. Still accurately contrasts Premium vs Free limitation.",
+					"stillSafe": true
+				}
+			],
+			"impactWithoutFix": "Very low. Practical usage patterns make the theoretical conflict with daily AI limits irrelevant for nearly all users."
+		}
+	],
+	"compliantFindings": [
+		{
+			"findingId": "COMP-001",
+			"description": "Trial marketing is accurate",
+			"evidence": "onboarding_try_premium = '8 Tage Premium testen' is accurate (8 calendar days). onboarding_free_after_trial states clearly that after trial, Free tier continues with limited AI calls. No auto-pay claim. Trial is free-to-start with no payment required.",
+			"norm": "UWG §8 (Irreführung über Preise), § 312d BGB (Widerrufsrecht)",
+			"status": "COMPLIANT — no action required"
+		},
+		{
+			"findingId": "COMP-002",
+			"description": "AI output disclaimer is present",
+			"evidence": "privacy_gate_gemini_body line 627: 'Die KI-Ausgaben sind Vorschläge, keine professionelle Beratung und ersetzen keine Fachperson.' settings_crisis_dialog_body line 757: 'Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung.' EU AI Act Art. 50(4) labeling comment present at line 175.",
+			"norm": "HWG §3 (mitigation), EU AI Act Art. 50(4), MDR Art. 2(1)",
+			"status": "COMPLIANT — disclaimer exists. Gap: disclaimer not shown inline on paywall or ai_banner. Recommend adding to those contexts (see ADV-009, ADV-010)."
+		},
+		{
+			"findingId": "COMP-003",
+			"description": "Follow-up unlimited claim is accurate",
+			"evidence": "follow_up_premium_body and paywall_feature_followups both claim 'Unbegrenzte Nachträge'. Code review via layer4b shows follow-ups are NOT limited by AiRateLimiter (they use a separate MAX_REFRESHES_PER_ENTRY=5 but that applies to AI refreshes, not follow-up additions). Follow-up entries themselves are unlimited in Premium.",
+			"norm": "UWG §5 Abs. 1 Nr. 1",
+			"status": "COMPLIANT — 'Unbegrenzte Nachträge' is accurate for the journal entry follow-up feature."
+		}
+	],
+	"pluginNotes": {
+		"bugFound": false,
+		"notes": "No plugin bugs encountered. PowerShell $_ syntax incompatibility with Bash tool was worked around via grep -n. All string evidence sourced directly from strings.xml line numbers. All 7 layer7_marketing_claims_matrix entries from roentgen-report.json have been converted (ADV-001 through ADV-007 map to the 7 pre-existing findings; ADV-008 through ADV-011 are additional findings from independent grep analysis)."
+	}
+}

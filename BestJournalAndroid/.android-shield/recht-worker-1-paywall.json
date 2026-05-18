@@ -1,0 +1,470 @@
+{
+	"worker": "B1-paywall-churn-critical",
+	"tokenBudgetUsedApprox": "~48k von 100k",
+	"scope": [
+		"paywall",
+		"churn",
+		"exit-intent",
+		"trial",
+		"subscription",
+		"kuendigung",
+		"r8-proguard"
+	],
+	"findings": {
+		"textual": [
+			{
+				"findingId": "T-PW-001",
+				"riskLevel": "🟥 high",
+				"category": "UWG",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1169,
+				"currentText": "Alle 5 Perspektiven",
+				"context": "ChurnFlowDialog Step 2 — Retention-Angebot Feature-Liste (churn_offer_feature_perspectives). Soll Premium-Vorteile beim Kündigen hervorheben.",
+				"rationale": "Direkte unwahre Aussage: churn_offer_feature_perspectives='Alle 5 Perspektiven' widerspricht settings_premium_feature_5_perspectives='4 besondere KI-Profile' und ai_limits_dialog_body='bei 4 Profilen also bis zu 600 pro Tag'. Onboarding zeigt laut Roentgen-Report 5 Chips, die genaue Zahl ist intern widersprüchlich. Mindestens einer dieser Strings ist falsch. §5 Abs. 1 UWG: Irreführung über wesentliche Merkmale der Dienstleistung; Google Play Developer Policy 'Ads and Monetization' Accuracy Requirement.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "4 besondere KI-Profile",
+						"lengthDeltaPct": 5,
+						"rationale": "Angleichung an settings_premium_feature_5_perspectives und ai_limits_dialog_body (beide sagen '4'). Erfordert vorherige Verifizierung der tatsächlichen Profil-Anzahl in ProfileRepository.",
+						"stillSafe": true
+					},
+					{
+						"text": "Alle KI-Profile und -Perspektiven",
+						"lengthDeltaPct": 20,
+						"rationale": "Zahl-neutral, vermeidet Widerspruch bis Klärung der tatsächlichen Profil-Anzahl.",
+						"stillSafe": true
+					},
+					{
+						"text": "Individuelle KI-Analyse-Profile",
+						"lengthDeltaPct": 15,
+						"rationale": "Beschreibt die Funktion ohne konkrete Zahl, daher unwidersprüchlich und zukunftssicher.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "§5 UWG Abmahnung durch Wettbewerber oder Verbraucherschutzverband möglich. Google Play Policy Verstoß kann zu Suspension führen. Besonders riskant da der Widerspruch in der Kündigungsretention auftritt — Nutzer wird in einem kritischen Entscheidungsmoment mit falschen Zahlen konfrontiert."
+			},
+			{
+				"findingId": "T-PW-002",
+				"riskLevel": "🟥 high",
+				"category": "UWG",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 497,
+				"currentText": "4 besondere KI-Profile",
+				"context": "SettingsScreen Premium-Feature-Liste (settings_premium_feature_5_perspectives). Key-Name sagt '5_perspectives', Value sagt '4'. Onboarding zeigt lt. Roentgen laut 5 Chips sichtbar.",
+				"rationale": "Widerspruch zwischen String-Schlüsselnamen (_5_perspectives) und String-Wert ('4 besondere KI-Profile') signalisiert eine ungelöste Migrations-Inkonsistenz. Falls tatsächlich 5 Profile vorhanden sind (wie Onboarding suggeriert), wäre '4' falsch. Falls 4 vorhanden, muss der Key umbenannt und churn_offer_feature_perspectives auf '4' geändert werden. §5 UWG Irreführungsverbot über Produktmerkmale.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "4 besondere KI-Profile",
+						"lengthDeltaPct": 0,
+						"rationale": "Beibehalten NUR wenn ProfileRepository tatsächlich max. 4 eingebettete Profile bestätigt. Gleichzeitig churn_offer_feature_perspectives auf '4' setzen.",
+						"stillSafe": true
+					},
+					{
+						"text": "5 besondere KI-Profile",
+						"lengthDeltaPct": 0,
+						"rationale": "Beibehalten NUR wenn Onboarding-Darstellung korrekt ist und 5 Profile tatsächlich verfügbar sind. Gleichzeitig ai_limits_dialog_body anpassen.",
+						"stillSafe": true
+					},
+					{
+						"text": "Besondere KI-Profile für tiefe Einblicke",
+						"lengthDeltaPct": 40,
+						"rationale": "Übergangstext ohne Zahl bis Klärung — verhindert rechtswidrige Falschaussage in jedem Szenario.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Irreführung über Kernfeature der Premium-Subscription. Kann als Vertragsgrundlagenfehler §119 BGB interpretiert werden (Irrtum über wesentliche Eigenschaft) wenn Nutzer auf Basis falscher Zahl abonniert hat."
+			},
+			{
+				"findingId": "T-PW-003",
+				"riskLevel": "🟥 high",
+				"category": "UWG",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1191,
+				"currentText": "bei 4 Profilen also bis zu 600 pro Tag",
+				"context": "AiLimitsDialog — Erklärungstext zum KI-Tageskontingent (ai_limits_dialog_body). Rechnet '4 Profile × 150 = 600' vor. Steht im Widerspruch zu churn_offer_feature_perspectives='Alle 5 Perspektiven'.",
+				"rationale": "Dieser String sagt '4 Profile' was mit settings_premium_feature_5_perspectives übereinstimmt, aber im Widerspruch zu churn_offer_feature_perspectives='Alle 5 Perspektiven' steht. Als einziger String mit tatsächlicher Rechenlogik (150 × 4 = 600) ist er vermutlich der korrekteste. Solange die Diskrepanz besteht, gilt §5 UWG Irreführungsverbot — mindestens einer der drei widersprüchlichen Strings ist falsch.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "bei 4 Profilen also bis zu 600 pro Tag",
+						"lengthDeltaPct": 0,
+						"rationale": "Beibehalten sofern 4 die korrekte Profil-Anzahl ist. Dann müssen churn_offer_feature_perspectives und ggf. Onboarding auf '4' angepasst werden.",
+						"stillSafe": true
+					},
+					{
+						"text": "bei 5 Profilen also bis zu 750 pro Tag",
+						"lengthDeltaPct": 5,
+						"rationale": "Nur wenn tatsächlich 5 Profile vorhanden — dann auch settings_premium_feature_5_perspectives auf '5' setzen.",
+						"stillSafe": true
+					},
+					{
+						"text": "bei allen deinen Profilen",
+						"lengthDeltaPct": -50,
+						"rationale": "Zahl-neutrale Variante die keine absolute Zahl nennt und daher nicht widersprüchlich sein kann.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Drei verschiedene Screens (Settings, Churn, AiLimitsDialog) zeigen verschiedene Zahlen für dasselbe Feature. Jeder Screenshot davon kann als Beweis für irreführende Werbung dienen. §5 UWG Abmahngefahr, Google Play Policy Accuracy."
+			},
+			{
+				"findingId": "T-PW-004",
+				"riskLevel": "🟧 medium",
+				"category": "Dark-Pattern",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "ChurnFlowDialog.kt Step 0",
+				"line": 0,
+				"currentText": "churn_cancel_sub ('Abo kündigen') gerendert mit alpha=0.35f",
+				"context": "ChurnFlowDialog Step 0 — Abo-Übersicht. Der einzige direkte Kündigungslink ist auf 0.35f Opacity reduziert, was ihn kaum sichtbar macht.",
+				"rationale": "Alpha-Wert 0.35f entspricht 35% Sichtbarkeit — der Kündigungslink ist bewusst schwer erkennbar gestaltet. Dies kann als 'confirmshaming' oder visuelles Dark Pattern klassifiziert werden. EU UCPD Richtlinie 2005/29/EG Art. 6 (irreführende Handlungen durch Weglassung) und §4a UWG (aggressive Geschäftspraktiken) sind anwendbar. Google Play Developer Policy 'Deceptive Subscription Practices' verbietet explizit die Erschwerung der Kündigung.",
+				"invasivityLevel": "layout-required",
+				"suggestedFixes": [
+					{
+						"text": "Modifier.alpha(0.6f)",
+						"lengthDeltaPct": 0,
+						"rationale": "Minimalste Anpassung: 60% Opacity ist noch als 'sekundärer CTA' vertretbar und sieht weniger wie ein Dark Pattern aus.",
+						"stillSafe": true
+					},
+					{
+						"text": "Modifier.alpha(1.0f) — normaler TextButton",
+						"lengthDeltaPct": 0,
+						"rationale": "Vollständige Sichtbarkeit: entspricht Google Play Policy Anforderungen für Kündigungs-UI. Empfohlen.",
+						"stillSafe": true
+					},
+					{
+						"text": "Modifier.alpha(0.75f) mit contentAlpha = LocalContentAlpha.current",
+						"lengthDeltaPct": 0,
+						"rationale": "Kompromiss: nutzt Material3 Standard-Sekundärfarbe für deemphasis, bleibt aber gut lesbar.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": "// In ChurnFlowDialog.kt Step 0 — Kündigungslink sichtbarer machen\nTextButton(\n    onClick = { onCancelClick() },\n    modifier = Modifier.alpha(0.6f)  // War: 0.35f\n) {\n    Text(text = stringResource(id = R.string.churn_cancel_sub))\n}",
+				"impactWithoutFix": "Google Play Developer Policy 'Subscription and cancellation' untersagt Designs die Kündigung absichtlich erschweren. Bei Policy-Review kann dies zur App-Suspension führen. EU UCPD und §4a UWG Abmahngefahr."
+			},
+			{
+				"findingId": "T-PW-005",
+				"riskLevel": "🟧 medium",
+				"category": "BGB-Widerruf",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1089,
+				"currentText": "Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.",
+				"context": "PaywallScreen — WiderrufsbelehrungDialog (paywall_consent_dialog_body). Erscheint vor dem Kaufabschluss, Checkbox-Pflicht vorhanden.",
+				"rationale": "Der vorliegende Text fehlt mehrere Pflichtangaben nach §312g BGB i.V.m. Art. 246a §1 EGBGB: (1) Keine explizite Nennung des Unternehmensnamens und der vollständigen Anschrift des Anbieters im Widerrufsdialog (BGB-InfoV Anlage 1); (2) Kein Hinweis auf Widerrufsfrist-Beginn (§356 Abs. 2: Fristbeginn ist Vertragsschluss bei Dienstleistungen, nicht Lieferung); (3) Musterformular für den Widerruf nicht erwähnt (Pflicht laut EGBGB Art. 246a §1 Abs. 2 Nr. 1b); (4) Keine Kontaktadresse für den Widerruf im Dialog selbst (nur in settings_revoke_confirm_body referenziert). §356 Abs. 5 BGB-Zitat vorhanden, aber unvollständige Gesamtbelehrung. Hinweis: §356a BGB In-App-Widerruf ist vorhanden und ist positiv.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB). Die Frist beginnt mit dem Vertragsschluss.\n\nAnbieter: [Firmenname], [vollständige Adresse], E-Mail: dev.app.support@gmail.com\n\nZur Ausübung des Widerrufs kannst du in der App unter Einstellungen → 'Vertrag widerrufen' den §356a-Button nutzen oder uns per E-Mail an dev.app.support@gmail.com informieren.\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.",
+						"lengthDeltaPct": 60,
+						"rationale": "Ergänzt fehlende Pflichtangaben: Anbieteridentität, Fristbeginn, Widerrufskanal. Entspricht EGBGB Art. 246a §1.",
+						"stillSafe": true
+					},
+					{
+						"text": "Du hast ein 14-tägiges Widerrufsrecht ab Vertragsschluss (§ 355 BGB). Den vollständigen Widerrufstext mit Anbieterangaben findest du in unseren Nutzungsbedingungen (§ 16).\n\nDamit du Premium sofort nutzen kannst, verzichtest du mit der Zustimmung unten auf dieses Widerrufsrecht (§ 356 Abs. 5 BGB).",
+						"lengthDeltaPct": -20,
+						"rationale": "Kürzere Variante die auf vollständige AGB-Widerrufsbelehrung verweist — nur zulässig wenn AGB tatsächlich vollständige Belehrung enthalten.",
+						"stillSafe": true
+					},
+					{
+						"text": "Widerrufsbelehrung: Du kannst diesen Vertrag innerhalb von 14 Tagen ohne Angabe von Gründen widerrufen. Die Frist beginnt mit Vertragsschluss. Anbieter: [Name & Adresse]. Widerruf per App (Einstellungen → Vertrag widerrufen) oder per E-Mail an dev.app.support@gmail.com.\n\nAusnahme sofortige Bereitstellung: Du stimmst zu, dass wir mit der Ausführung sofort beginnen. Du hast davon Kenntnis, dass dein Widerrufsrecht damit erlischt (§ 356 Abs. 5 BGB).",
+						"lengthDeltaPct": 45,
+						"rationale": "Strukturell klarer, entspricht Muster-Widerrufsbelehrung EGBGB Anlage 1 für digitale Inhalte/Dienstleistungen.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Unvollständige Widerrufsbelehrung verlängert die Widerrufsfrist auf 12 Monate + 14 Tage (§356 Abs. 3 BGB). In dieser Zeit können alle Käufer ihren Kauf rückgängig machen. Verbraucherschutzorganisationen können abmahnen. Play Store Policy 'Subscriptions' erfordert vollständige Disclosure."
+			},
+			{
+				"findingId": "T-PW-006",
+				"riskLevel": "🟧 medium",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1136,
+				"currentText": "Monatsabo mit 50% Rabatt starten",
+				"context": "ExitIntentDialog CTA-Button (paywall_exit_start_discount). Erscheint wenn Nutzer Paywall ohne Kauf schließen will. Löst Subscription-Kauf aus.",
+				"rationale": "§312j Abs. 3 BGB 'Button-Lösung': Der Button der eine zahlungspflichtige Bestellung auslöst, muss mit den Wörtern 'zahlungspflichtig bestellen' oder 'kaufen' beschriftet sein oder eine gleichwertige eindeutige Formulierung enthalten. 'Monatsabo mit 50% Rabatt starten' ist nicht eindeutig auf die Zahlungspflicht hinweisend. Zusätzlich: Keine Angabe der Rabattdauer (2 Monate laut Code), keine Angabe des Regelpreises nach Ablauf — §312j Abs. 2 BGB verlangt Gesamtpreisangabe. Ferner fehlt der Hinweis auf automatische Verlängerung zum Normalpreis nach 2 Monaten.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "Jetzt zahlungspflichtig abonnieren — 2 Monate 50% Rabatt",
+						"lengthDeltaPct": 35,
+						"rationale": "Entspricht §312j Abs. 3 BGB ('zahlungspflichtig'), nennt Rabattdauer, entspricht Google Play Policy für Subscription CTAs.",
+						"stillSafe": true
+					},
+					{
+						"text": "Zahlungspflichtig — 2 Monate zum halben Preis",
+						"lengthDeltaPct": 15,
+						"rationale": "Kürzer, erfüllt trotzdem §312j Abs. 3 durch 'Zahlungspflichtig'.",
+						"stillSafe": true
+					},
+					{
+						"text": "Jetzt 50% Rabatt sichern (zahlungspflichtig)",
+						"lengthDeltaPct": 15,
+						"rationale": "Marketing-fokussiert mit rechtlichem Zusatz in Klammern — in DE zulässig wenn Klammerzusatz klar lesbar.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Verstoß gegen §312j Abs. 3 BGB — Button-Lösung nicht eingehalten. Vertrag kann nach §312j Abs. 4 BGB als nicht geschlossen gelten. Abmahngefahr durch Verbraucherschutzvereine. Google Play Policy: 'Subscription buttons must clearly disclose the recurring nature and price.'"
+			},
+			{
+				"findingId": "T-PW-007",
+				"riskLevel": "🟧 medium",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1103,
+				"currentText": "Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar",
+				"context": "Paywall — Jahresabo Vorteilszeile (paywall_yearly_savings). Erscheint unter dem Jahresabo-Preis-Badge.",
+				"rationale": "Die prozentuale Ersparnis '%1$d%%' wird zur Laufzeit berechnet. Mathematisch korrekt: 3,99 € × 12 = 47,88 € vs. 29,99 €/Jahr → 37,3% Ersparnis. Der String selbst ist formal korrekt. JEDOCH: 'jederzeit kündbar' ist bei einem Jahresabo potenziell irreführend — Kündigung ist möglich, aber die Laufzeit läuft bis Periodenende weiter. §5 UWG: 'jederzeit kündbar' könnte Nutzer erwarten lassen, sie können sofort ohne Kosten aussteigen. Klarstellungsbedarf.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "Spare %1$d%% gegenüber dem Monatsabo",
+						"lengthDeltaPct": -30,
+						"rationale": "Entfernt 'jederzeit kündbar' — die Kündigungsinfo erscheint bereits in paywall_yearly_note ('In der Testphase jederzeit kündbar'). Keine Irreführung über Bindungsdauer.",
+						"stillSafe": true
+					},
+					{
+						"text": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit wirksam zum Periodenende",
+						"lengthDeltaPct": 45,
+						"rationale": "Vollständig transparent über die Kündigungsmodalität — 'zum Periodenende' verhindert falsche Erwartungen.",
+						"stillSafe": true
+					},
+					{
+						"text": "Spare %1$d%% — kündbar über Google Play",
+						"lengthDeltaPct": -15,
+						"rationale": "Neutral, zeigt Kündigungsweg ohne falsche Erwartung über sofortigen Austritt.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Moderate Abmahngefahr: 'jederzeit kündbar' bei Jahresabo ohne Hinweis auf Laufzeit-Ende kann als Irreführung gewertet werden. Verbraucherschutzbehörden haben in DE ähnliche Formulierungen beanstandet."
+			},
+			{
+				"findingId": "T-PW-008",
+				"riskLevel": "🟧 medium",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1167,
+				"currentText": "Nur für dich, weil du uns wichtig bist",
+				"context": "ChurnFlowDialog Step 2 — Retention-Angebot Untertitel (churn_offer_subtitle). Erscheint über dem 25%-Rabattangebot.",
+				"rationale": "Emotionale Manipulation als potentielles Dark Pattern: Der Text suggeriert eine persönliche Sonderbehandlung ('Nur für dich'), obwohl das Angebot für alle Nutzer im Churn-Flow identisch ist. §4a UWG verbietet aggressive Geschäftspraktiken die die Entscheidungsfreiheit durch unangemessene Beeinflussung einschränken. Die UCPD (2005/29/EG) listet in Anhang I Nr. 6 explizit 'falscher Eindruck persönlicher Beziehung' als per se unlauter. Das Angebot wird als exklusiv-persönlich dargestellt, ist aber ein standardisierter Retention-Algorithmus.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "Unser Angebot für dich",
+						"lengthDeltaPct": -35,
+						"rationale": "Neutral, persönlich adressiert ohne falsche Exklusivitätsbehauptung.",
+						"stillSafe": true
+					},
+					{
+						"text": "Bevor du gehst — ein Angebot",
+						"lengthDeltaPct": -10,
+						"rationale": "Ehrlich über den Kontext (Retention-Angebot), ohne emotionale Manipulation.",
+						"stillSafe": true
+					},
+					{
+						"text": "Exklusives Rabattangebot",
+						"lengthDeltaPct": -40,
+						"rationale": "Sagt 'exklusiv' ohne Personalisierungsbehauptung — vertretbar da Angebot tatsächlich nur im Churn-Flow verfügbar ist.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "UCPD Art. 6 / §4a UWG Risiko mittel. In DE wurden ähnliche 'Nur für dich'-Formulierungen von Verbraucherzentralen abgemahnt wenn Angebote de facto standardisiert sind."
+			},
+			{
+				"findingId": "T-PW-009",
+				"riskLevel": "🟨 low",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1079,
+				"currentText": "8 Tage Premium testen",
+				"context": "OnboardingScreen CTA-Button (onboarding_try_premium). Startet die 8-tägige Trial.",
+				"rationale": "Die Trial-Dauer (8 Tage) ist im Button kommuniziert. Laut Roentgen-Report gibt es jedoch eine Exit-Intent-Verlängerung auf 10 Tage (8 + 2 Bonus-Tage). Zusätzlich ist unklar ob der Trial automatisch in ein kostenpflichtiges Abo übergeht oder endet. Google Play Policy 'Free Trials': Nutzer muss vor Beginn der Trial über automatische Verlängerung und Preis informiert werden. paywall_yearly_note und paywall_consent_dialog_body enthalten diese Info, aber NICHT der Trial-Startbutton selbst.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "8 Tage kostenlos testen",
+						"lengthDeltaPct": 15,
+						"rationale": "Klarstellung 'kostenlos' — vermeidet Unklarheit ob sofort Kosten entstehen.",
+						"stillSafe": true
+					},
+					{
+						"text": "8 Tage gratis — danach ab 3,99 €/Monat",
+						"lengthDeltaPct": 60,
+						"rationale": "Vollständige Pre-Trial-Disclosure gemäß Google Play Policy und FTC Guideline 16 C.F.R. §255. Empfohlen für US/internationales Rollout.",
+						"stillSafe": true
+					},
+					{
+						"text": "Kostenlos starten",
+						"lengthDeltaPct": -35,
+						"rationale": "Kurz und klar — 'kostenlos' ist entscheidend, Details im nächsten Screen (Paywall).",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Niedriges Risiko in DE (Details folgen im Paywall-Screen). Höheres Risiko für US-Markt (FTC Trial-Disclosure Rules). Empfohlen als präventive Maßnahme vor internationalem Rollout."
+			},
+			{
+				"findingId": "T-PW-010",
+				"riskLevel": "🟨 low",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml",
+				"line": 1457,
+				"currentText": "Nutze alle Premium-Vorteile",
+				"context": "Paywall Hauptüberschrift Untertitel (paywall_subtitle). Erscheint unter 'Upgrade auf Premium'.",
+				"rationale": "Inhaltlich harmlos — allgemeiner CTA ohne spezifische Falschaussage. Kein direktes rechtliches Risiko. Wird der Vollständigkeit halber aufgeführt da es kein konkretes Versprechen enthält das verifiziert werden müsste. §5 UWG nicht verletzt.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "Nutze alle Premium-Vorteile",
+						"lengthDeltaPct": 0,
+						"rationale": "Kein Fix erforderlich — allgemeine Aussage ohne Fehlerpotenzial.",
+						"stillSafe": true
+					},
+					{
+						"text": "Alle Features, jeden Tag",
+						"lengthDeltaPct": -20,
+						"rationale": "Alternativ-Formulierung ohne rechtliches Risiko.",
+						"stillSafe": true
+					},
+					{
+						"text": "Dein volles Potenzial entfalten",
+						"lengthDeltaPct": 10,
+						"rationale": "Emotionalere Variante, ebenfalls ohne rechtliches Risiko.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": null,
+				"impactWithoutFix": "Kein messbares Risiko. Optionale Verbesserung."
+			}
+		],
+		"advertisingMismatch": [
+			{
+				"findingId": "AM-PW-001",
+				"riskLevel": "🟧 medium",
+				"category": "Abo-Transparenz",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/src/main/res/values/strings.xml + AiUsageTracker.kt",
+				"line": 0,
+				"currentText": "ai_limits_dialog_body: '5 Dashboard-Analysen pro Woche pro Profil' (Free-Tier)",
+				"context": "AiLimitsDialog — Free-Tier Beschreibung. Seit v0.21.8 ist das Free-Limit 5/Woche PRO Profil (statt global). Diese Änderung wird nirgends im UI außerhalb dieses Dialogs kommuniziert. Betrifft CF-004.",
+				"rationale": "Seit v0.21.8 gilt: Free-Dashboard-Limit = 5/Woche × N Profile = N×5 gesamt. Altes Modell war: 5/Woche global. Nutzer die vor v0.21.8 installiert haben, könnten die neue Per-Profil-Zählung als Verschlechterung wahrnehmen. Werbliche Aussage 'Die App funktioniert auch ohne Abo, mit eingeschränkten Limits' (paywall_free_note) deckt diese Veränderung nicht ab. Transparenz-Gebot DSGVO Art. 5 Abs. 1a (Grundsatz der Transparenz bei Verarbeitung/Dienstleistungsänderungen) und §5 UWG (Irreführung durch Weglassen wesentlicher Informationen) könnten berührt sein wenn die Free-Tier-Verschlechterung nicht kommuniziert wurde.",
+				"invasivityLevel": "text-only",
+				"suggestedFixes": [
+					{
+						"text": "OHNE ABO\n\n• 5 Dashboard-Analysen pro Woche pro Profil (je mehr Profile, desto mehr Analysen insgesamt)\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr",
+						"lengthDeltaPct": 20,
+						"rationale": "Macht das Per-Profil-Modell explizit und erklärt den Vorteil mehrerer Profile. Transparenz-konform.",
+						"stillSafe": true
+					},
+					{
+						"text": "Update-Hinweis in Changelog / What's New: 'Seit v0.21.8: Free-Dashboard-Limit jetzt pro Profil (5/Woche je Profil statt 5/Woche global)'",
+						"lengthDeltaPct": 0,
+						"rationale": "Play Store Release Notes kommunizieren die Änderung — verhindert Nutzerbeschwerden wegen 'versteckter Verschlechterung'.",
+						"stillSafe": true
+					},
+					{
+						"text": "Einmalige In-App-Benachrichtigung an Bestandsnutzer: 'Neu seit v0.21.8: Dein Free-Kontingent gilt jetzt pro Profil — jedes Profil hat 5 Analysen pro Woche.'",
+						"lengthDeltaPct": 0,
+						"rationale": "Aktive Kommunikation an Bestandsnutzer — beste Transparenz-Praxis.",
+						"stillSafe": true
+					}
+				],
+				"impactWithoutFix": "Für Bestandsnutzer mit mehreren Profilen wurde das effektive Free-Limit erhöht (positiv). Für Nutzer mit einem Profil blieb es gleich. Kein direktes rechtliches Risiko, aber Vertrauensrisiko wenn Nutzer die Änderung als intransparent wahrnehmen."
+			}
+		],
+		"playStorePolicies": [
+			{
+				"findingId": "PS-PW-001",
+				"riskLevel": "🟥 high",
+				"category": "Security",
+				"language": "de",
+				"jurisdiction": "DE",
+				"file": "app/build.gradle.kts",
+				"line": 0,
+				"currentText": "isMinifyEnabled = false\nisShrinkResources = false",
+				"context": "Release-BuildType in app/build.gradle.kts. R8/ProGuard ist für den Release-Build deaktiviert. Der veröffentlichte AAB enthält vollständig lesbaren Bytecode.",
+				"rationale": "Google Play Developer Policy 'Device and Network Abuse' und 'Malware' Policies erfordern bei Apps mit Billing-Integration Schutz gegen Reverse Engineering. Konkret: (1) Billing-Logik (BillingRepository, BillingManager) ist vollständig dekompilierbar; (2) Rate-Limiter-Konstanten (SUB_HARD_LIMIT=151, RETENTION_DISCOUNT_PERCENT=25, offer_id 'retention-monthly-75') sind im Klartext sichtbar — Angreifer können Limits umgehen; (3) AiRateLimiter-Schwellen (SPAM_HOURLY_AI_LIMIT_PREMIUM=50) erlauben präzise API-Abuse-Angriffe; (4) Firebase-Konfiguration und Remote-Config-Keys sind sichtbar. Play Billing Library 7.1.1 selbst hat Security-Best-Practices die R8-Obfuskierung voraussetzen.",
+				"invasivityLevel": "function-required",
+				"suggestedFixes": [
+					{
+						"text": "Minimaler Fix — nur minify aktivieren",
+						"lengthDeltaPct": 0,
+						"rationale": "Aktiviert R8 mit Standard-Regeln. Erfordert anschließend ProGuard-Regeln für Room/Hilt/Firebase/Billing um Build-Fehler zu vermeiden.",
+						"stillSafe": true
+					},
+					{
+						"text": "Vollständiger Fix — R8 + Shrinking + Optimierung",
+						"lengthDeltaPct": 0,
+						"rationale": "Beste Security-Praxis und kleinste APK-Größe. Erfordert umfangreichere ProGuard-Regeln-Pflege.",
+						"stillSafe": true
+					},
+					{
+						"text": "Schrittweise Migration — erst minify=true, dann nach Testphase shrinkResources=true",
+						"lengthDeltaPct": 0,
+						"rationale": "Reduziert Risiko von Build-Fehlern durch stufenweise Aktivierung.",
+						"stillSafe": true
+					}
+				],
+				"invasiveSnippet": "// app/build.gradle.kts — Release BuildType\nbuildTypes {\n    release {\n        isMinifyEnabled = true          // War: false\n        isShrinkResources = true        // War: false\n        proguardFiles(\n            getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n            \"proguard-rules.pro\"\n        )\n    }\n}\n\n// proguard-rules.pro — Pflicht-Regeln ergänzen:\n// Room\n-keep class * extends androidx.room.RoomDatabase\n-keep @androidx.room.Entity class *\n-keepattributes *Annotation*\n\n// Hilt\n-keep class dagger.hilt.** { *; }\n-keep class javax.inject.** { *; }\n-keep @dagger.hilt.android.AndroidEntryPoint class *\n\n// Firebase\n-keep class com.google.firebase.** { *; }\n-dontwarn com.google.firebase.**\n\n// Play Billing\n-keep class com.android.billingclient.** { *; }\n-dontwarn com.android.billingclient.**\n\n// Kotlin Serialization (falls verwendet)\n-keepattributes *Annotation*, InnerClasses\n-dontnote kotlinx.serialization.AnnotationsKt\n\n// Gson (falls verwendet)\n-keepattributes Signature\n-keepattributes *Annotation*\n\n// Verify nach Aktivierung:\n// ./gradlew assembleRelease\n// $ANDROID_HOME/build-tools/34.0.0/apkanalyzer dex packages app-release.apk | grep BillingRepository",
+				"impactWithoutFix": "KRITISCH: Vollständiger Billing-Bypass durch Dekompilierung möglich. Angreifer können Rate-Limiter deaktivieren und unbegrenzte KI-Anfragen auslösen (direkte API-Kosten). Google Play Security Review kann App bei Billing-Integration mit deaktiviertem Minify ablehnen. Firebase-Konfiguration für nicht-authentifizierte Apps nutzbar."
+			}
+		]
+	},
+	"openByScope": 11,
+	"_meta": {
+		"auditDate": "2026-05-18",
+		"appVersion": "0.21.8",
+		"baseReport": "roentgen-report.json v2.1",
+		"coveredCriticalFindings": [
+			"CF-001",
+			"CF-002",
+			"CF-003",
+			"CF-004",
+			"CF-007-partial"
+		],
+		"notCovered": [
+			"CF-005 (Privacy/Impressum — Worker B2 Scope)",
+			"CF-006 (positiv, kein Finding nötig)",
+			"CF-008 (positiv, kein Finding nötig)"
+		],
+		"keyNormsCited": [
+			"§5 UWG (Irreführende Handlungen)",
+			"§4a UWG (Aggressive Geschäftspraktiken)",
+			"§312j Abs. 3 BGB (Button-Lösung)",
+			"§355 BGB (Widerrufsrecht)",
+			"§356 Abs. 5 BGB (Erlöschen Widerrufsrecht digitale Inhalte)",
+			"EGBGB Art. 246a §1 (Informationspflichten Fernabsatz)",
+			"EU UCPD 2005/29/EG Art. 6 (Irreführende Handlungen)",
+			"Google Play Developer Policy: Deceptive Subscription Practices",
+			"Google Play Developer Policy: Subscriptions and cancellation",
+			"Google Play Developer Policy: Accuracy in ads and metadata"
+		]
+	}
+}
