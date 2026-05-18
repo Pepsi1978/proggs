@@ -253,6 +253,20 @@ class AmazfitRepository @Inject constructor(
         workoutDao.observeById(trackId)
 
     /**
+     * Frank-Wunsch 2026-05-18: Loescht ein einzelnes Workout. Wird aus dem
+     * Training-Detail-Screen ueber das 3-Punkte-Menue aufgerufen.
+     * Triggert anschliessend einen Sync-Pulse damit alle Dashboards die
+     * Aenderung sofort mitbekommen (z.B. VO2max-Fallback in Aufgabe 7).
+     */
+    suspend fun deleteWorkoutByTrackId(trackId: String): Int {
+        val deleted = workoutDao.deleteByTrackId(trackId)
+        if (deleted > 0) {
+            syncCoordinatorLazy.get().requestSync()
+        }
+        return deleted
+    }
+
+    /**
      * Korrigiert bestehende Workout-Eintraege deren sportName auf einer veralteten
      * Mapping-Logik basiert. Frank-Wunsch 2026-05-10: Die T-Rex 3 sendet ALLE
      * Workouts mit source="run.NNN.huami.com", was den source-Prefix-Check als

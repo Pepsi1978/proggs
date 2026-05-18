@@ -166,4 +166,17 @@ class AmazfitTrainingDetailViewModel @Inject constructor(
             )
         }
     }
+
+    /**
+     * Frank-Wunsch 2026-05-18: Aktuelles Workout aus der Detail-Ansicht
+     * loeschen. UI ruft das aus dem 3-Punkte-Menue "Aktivitaet loeschen"
+     * auf und navigiert nach erfolgreichem Loeschen zurueck.
+     */
+    fun deleteCurrentWorkout(onDeleted: () -> Unit) {
+        if (trackId.isBlank()) return
+        viewModelScope.launch {
+            repo.deleteWorkoutByTrackId(trackId)
+            onDeleted()
+        }
+    }
 }

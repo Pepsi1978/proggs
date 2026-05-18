@@ -29,11 +29,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +109,37 @@ fun AmazfitTrainingDetailScreen(
             },
         )
     }
+
+    // Frank-Wunsch 2026-05-18: 3-Punkte-Menue oben rechts mit "Aktivitaet
+    // loeschen". Loest einen Bestaetigungs-Dialog aus und navigiert nach
+    // erfolgreichem Loeschen automatisch zurueck.
+    var menuExpanded by remember { mutableStateOf(false) }
+    var deleteDialogOpen by remember { mutableStateOf(false) }
+    if (deleteDialogOpen && w != null) {
+        AlertDialog(
+            onDismissRequest = { deleteDialogOpen = false },
+            title = { Text("Aktivität löschen?") },
+            text = {
+                Text(
+                    "Möchtest du dieses Training wirklich komplett entfernen? " +
+                        "Diese Aktion kann nicht rückgängig gemacht werden.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteDialogOpen = false
+                        vm.deleteCurrentWorkout(onDeleted = onBack)
+                    },
+                ) {
+                    Text("Löschen", color = CosmosColors.Critical)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteDialogOpen = false }) { Text("Abbrechen") }
+            },
+        )
+    }
     // Parser auf Composable-Level (nicht in item-Lambda — dort kein @Composable-Context).
     val gps = remember(w?.gpsTrackJson) { parseGpsPoints(w?.gpsTrackJson) }
     val hr = remember(w?.heartRateSeriesJson) { parsePipeIntList(w?.heartRateSeriesJson) }
@@ -164,6 +200,36 @@ fun AmazfitTrainingDetailScreen(
                         contentDescription = "Zurück",
                         tint = cosmos.textPrimary,
                     )
+                }
+            },
+            actions = {
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Mehr",
+                            tint = cosmos.textPrimary,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Aktivität löschen") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteOutline,
+                                    contentDescription = null,
+                                    tint = CosmosColors.Critical,
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                deleteDialogOpen = true
+                            },
+                        )
+                    }
                 }
             },
             compactHeader = true,

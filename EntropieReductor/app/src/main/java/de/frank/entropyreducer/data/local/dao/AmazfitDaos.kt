@@ -75,6 +75,16 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Frank-Wunsch 2026-05-18: Loescht ein einzelnes Workout per trackId.
+     * Wird aus dem Training-Detail-Screen ueber das 3-Punkte-Menue
+     * "Aktivitaet loeschen" aufgerufen.
+     *
+     * @return 1 wenn das Workout existierte und geloescht wurde, sonst 0
+     */
+    @Query("DELETE FROM amazfit_workouts WHERE trackId = :trackId")
+    suspend fun deleteByTrackId(trackId: String): Int
+
+    /**
      * Frank-Wunsch 2026-05-17: Sandwich-Delete fuer den V2-Cleanup. Loescht alle
      * Workouts deren startMs ausserhalb des Fensters [olderThanMs, newerThanMs]
      * liegt. Beide Grenzen INKLUSIV — Eintraege mit startMs == olderThanMs oder
