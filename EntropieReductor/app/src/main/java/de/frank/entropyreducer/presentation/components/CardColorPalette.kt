@@ -109,16 +109,21 @@ fun ColorPaletteBar(
     val currentColor =
         cardColorOverrideForIndex(selectedIndex) ?: cosmos.glassBg
 
+    // Frank-Wunsch 2026-05-18 (Folgeauftrag 4): Label + Farbsymbol gehoeren
+    // visuell zusammen — beide bündig rechts an der Kante. Vorher war das
+    // Label linksbündig und das Symbol rechts: man konnte nicht sofort
+    // erkennen dass die Beschriftung zum Symbol gehoert.
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
     ) {
         Text(
             text = "Hintergrundfarbe",
             style = MaterialTheme.typography.labelMedium,
             color = cosmos.textSecondary,
-            modifier = Modifier.weight(1f),
         )
+        Spacer(Modifier.size(10.dp))
         Box(
             modifier =
                 Modifier.size(32.dp)
