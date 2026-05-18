@@ -252,7 +252,9 @@ Der finale Bericht wird in der App-Wurzel als `app-roentgen-AUDIT-YYYY-MM-DD.md`
 
 ## Bekannte Limitierungen (Known Limitations)
 
-> **FIX V6 (Audit 5):** Folgende Punkte sind dokumentierte Trade-Offs, keine Bugs:
+> **FIX V6 + W5 (Audit 5+6):** Folgende Punkte sind dokumentierte Trade-Offs, keine Bugs:
+>
+> - **`<integer-array>` und `<bool>`/`<color>` in strings.xml werden NICHT exportiert** (FIX W5): Diese Resource-Typen enthalten keine UI-Texte und sind fuer Werbeaussagen-/Rechtsaudit irrelevant. `<string>`, `<plurals>` und `<string-array>` werden vollstaendig erfasst.
 >
 > - **audit-report-template.md ist ~1200 Zeilen** (Section-Skeleton mit allen 7 Schichten + 4 Sub-Layern + Checkliste). Beim Schreiben des finalen Berichts laedt Claude die komplette Datei in den Kontext. Bei sehr grossen Apps (>3000 Kotlin-Dateien) plus den Reference-Dateien kann Context-Druck entstehen. Loesung: Bericht inkrementell pro Schicht schreiben statt komplett auf einmal.
 > - **17 Reference-Dateien** sind absichtlich granular (Progressive Disclosure) — Claude laedt nur was sie braucht. Wenn eine Schicht uebersprungen wird, bleibt die zugehoerige Reference ungeladen.

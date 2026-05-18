@@ -81,9 +81,11 @@ GREP_R() {
         # rg parsts grep-OR ('a\|b') anders — wir verlassen uns auf grep-Syntax
         # und uebergeben sie ueber --regexp + --hidden=false. rg matched UTF-8
         # standardmaessig und respektiert .gitignore.
-        rg --type kotlin --regexp "$pattern" "$@" 2>/dev/null
+        # FIX W2 (Audit 6): vorher nur --type kotlin. Java-Legacy-SDKs (RevenueCat
+        # Java, Firebase Java, alte Modules) blieben unsichtbar. Jetzt beide Sprachen.
+        rg --type kotlin --type java --regexp "$pattern" "$@" 2>/dev/null
     else
-        grep -rn --include='*.kt' "$pattern" "$@" . 2>/dev/null
+        grep -rn --include='*.kt' --include='*.java' "$pattern" "$@" . 2>/dev/null
     fi
 }
 
@@ -566,8 +568,9 @@ count_in_file() {
         echo "### 7.1 Sprach-Varianten"
         echo ""
         echo "\`\`\`"
-        # FIX T7: Multi-Module-faehig (find statt ls), Fallback auf app/ wenn keine Module
-        { find_locale_dirs; ls -d app/src/main/res/values-* 2>/dev/null; } | sort -u || echo "(keine uebersetzten Sprachen)"
+        # FIX W3 (Audit 6): Legacy-ls-Fallback entfernt — find_locale_dirs deckt Single-Module
+        # bereits ab (findet auch app/src/main/res/values-*). Der ls war ein Duplikat.
+        find_locale_dirs | sort -u || echo "(keine uebersetzten Sprachen)"
         echo "\`\`\`"
         echo ""
 
@@ -619,8 +622,9 @@ count_in_file() {
         echo "### 4b.2 String-Anzahl pro Sprache"
         echo ""
         echo "\`\`\`"
-        # FIX T7: Multi-Module-faehig — find sammelt aus allen Modulen, sort -u dedupliziert
-        for f in $({ find_translated_strings_xml; find_default_strings_xml; ls app/src/main/res/values*/strings.xml 2>/dev/null; } | sort -u); do
+        # FIX W3 (Audit 6): Legacy-ls-Fallback entfernt — find_translated_strings_xml +
+        # find_default_strings_xml decken Single-Module bereits ab.
+        for f in $({ find_translated_strings_xml; find_default_strings_xml; } | sort -u); do
             COUNT=$(grep -c '<string name=' "$f" 2>/dev/null | tr -d '[:space:]')
             printf "%-60s %s\n" "$f" "$COUNT"
         done

@@ -31,6 +31,9 @@ from pathlib import Path
 
 SCHEMA_VERSION = "2.1"
 
+# FIX W4 (Audit 6): konfigurierbare Default-Sprache (war vorher hardcoded "de" mitten im Code)
+DEFAULT_LANG = "de"
+
 
 def short_hash(text: str) -> str:
     """SHA1 trunkiert auf 8 Zeichen — fuer Inkremental-Pruefung."""
@@ -215,8 +218,11 @@ def find_translations(app_dir: Path) -> dict:
         # Build-Output ueberspringen
         if "/build/" in str(f).replace("\\", "/"):
             continue
-        # Nur src/main/res-Pfade akzeptieren (vermeidet Test-Resources, Sample-Code etc.)
-        if "src/main/res" not in str(f).replace("\\", "/"):
+        # Nur Production-Resource-Pfade akzeptieren (vermeidet Test-Resources, Sample-Code etc.)
+        # FIX W1 (Audit 6): vorher nur "src/main/res" — KMP-Apps mit androidMain/res
+        # wurden komplett ignoriert. Jetzt beide Konventionen unterstuetzt.
+        path_str = str(f).replace("\\", "/")
+        if "src/main/res" not in path_str and "src/androidMain/res" not in path_str:
             continue
         lang = parent_name.replace("values-", "")
         files_per_lang.setdefault(lang, []).append(f)
@@ -409,13 +415,22 @@ def cldr_required_quantities(lang: str) -> list:
 
 def main():
     if len(sys.argv) < 2:
-        print("Aufruf: python3 export-json.py <pfad-zur-android-app>", file=sys.stderr)
+        print("Aufruf: python3 export-json.py <pfad-zur-android-app> [--default-lang LANG]", file=sys.stderr)
+        print("  --default-lang LANG  Setzt die Default-Sprache (Standard: de)", file=sys.stderr)
         sys.exit(1)
 
     app_dir = Path(sys.argv[1]).resolve()
     if not app_dir.is_dir():
         print(f"Fehler: {app_dir} ist kein Verzeichnis", file=sys.stderr)
         sys.exit(1)
+
+    # FIX W4 (Audit 6): Default-Sprache konfigurierbar statt hardcoded "de"
+    global DEFAULT_LANG
+    DEFAULT_LANG = "de"
+    if "--default-lang" in sys.argv:
+        idx = sys.argv.index("--default-lang")
+        if idx + 1 < len(sys.argv):
+            DEFAULT_LANG = sys.argv[idx + 1]
 
     info = find_app_root(app_dir)
     if not info["manifest"]:
@@ -502,7 +517,11 @@ def main():
         "sdks": sdks,
         "strings": {
             "total": len(default_strings["strings"]),
-            "default_language": "de",
+            # FIX W4 (Audit 6): vorher hardcoded "de". Jetzt CLI-konfigurierbar via
+            # --default-lang ODER fallback auf "de" (Project-Konvention: Hauptsprache
+            # in values/ ist immer DE bei den geprueften Apps). Apps mit anderer
+            # Default-Sprache: python3 export-json.py <dir> --default-lang en
+            "default_language": DEFAULT_LANG,
             "items": default_strings["strings"],
         },
         "plurals": {
