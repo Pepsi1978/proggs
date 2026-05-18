@@ -90,8 +90,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true          // PS-001: R8 aktiviert (war: false)
+            isShrinkResources = true        // PS-001: Ressourcen-Shrinking aktiviert (war: false)
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

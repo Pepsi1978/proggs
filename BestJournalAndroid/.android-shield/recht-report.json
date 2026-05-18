@@ -921,7 +921,10 @@
 					"CH": "DSG Art. 8 (Datensicherheit): aehnliche Anforderungen an technische Schutzmassnahmen. Gleiches Risiko.",
 					"GB": "UK GDPR Art. 32: identisch mit EU DSGVO. Gleiches Risiko.",
 					"US": "CCPA §1798.150 (Security breach liability): unzureichend geschuetzte App erhoehtes Haftungsrisiko bei Datenpanne. FTC Act §5: inadaequate App-Sicherheit als unfair practice klassifiziert."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T17:30:00Z",
+				"appliedFixText": "isMinifyEnabled=true, isShrinkResources=true in app/build.gradle.kts. proguard-rules.pro: Hilt/Dagger Keep-Regeln + Kotlin Coroutines + Kotlin Reflect dontwarn ergaenzt."
 			}
 		]
 	},
@@ -940,7 +943,7 @@
 			"relatedFindingId": "AM-001"
 		}
 	],
-	"openFindingsCount": 23,
+	"openFindingsCount": 22,
 	"openFindingsBreakdown": {
 		"textual": {
 			"total": 9,
@@ -964,13 +967,14 @@
 		},
 		"playStorePolicies": {
 			"total": 1,
-			"high": 1
+			"high": 0,
+			"applied": 1
 		}
 	},
-	"totalHighFindings": 7,
+	"totalHighFindings": 6,
 	"totalMediumFindings": 18,
 	"totalLowFindings": 4,
-	"fixedThisRun": 6,
+	"fixedThisRun": 7,
 	"skippedThisRun": 0,
 	"userAlternativesApplied": 0,
 	"invasiveChangesApplied": 0,

@@ -60,6 +60,29 @@
 # Gson (used by Google API client for JSON parsing)
 -keep class com.google.gson.** { *; }
 
+# Hilt / Dagger (PS-001: R8 activation — 2026-05-18)
+# AGP+KSP auto-generates some rules, but explicit keeps are required for:
+#   - @AndroidEntryPoint classes (Activity, Fragment, Service, BroadcastReceiver)
+#   - @HiltViewModel annotated ViewModels
+#   - Hilt internal component infrastructure
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+-keep @dagger.hilt.android.HiltAndroidApp class * { *; }
+-keep @androidx.hilt.navigation.compose.HiltViewModelFactory class * { *; }
+-keepclasseswithmembers class * {
+    @dagger.hilt.android.lifecycle.HiltViewModel <init>(...);
+}
+-dontwarn dagger.hilt.**
+-dontwarn javax.inject.**
+
+# Kotlin Coroutines (required for reflection-based coroutine context)
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.**
+
+# Kotlin serialization / stdlib reflection
+-dontwarn kotlin.reflect.jvm.internal.**
+
 # --- DEFENSIVE R8 ADDITIONS (2026-04-18) ---
 # Pure additions: -keep rules never break functionality, they only prevent
 # shrinking/obfuscation. APK grows marginally (~50-200 KB).

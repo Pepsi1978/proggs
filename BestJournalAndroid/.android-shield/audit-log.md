@@ -3,6 +3,36 @@
 Append-only Logbuch. Jeder Eintrag dokumentiert Phase, Subagent, Modell, Skill-SHA,
 Status und ggf. Diff-Hash. Wird ueber alle Laeufe hinweg gefuehrt.
 
+## 2026-05-18T17:35Z · Phase 2-B-3 · PS-001 R8/ProGuard aktiviert
+
+- Subagent:     fix-applier (general-purpose, Sonnet 4.6, effort: max)
+- Finding:      PS-001 (Google Play Security Policy — R8/ProGuard nicht aktiviert)
+- Dateien geändert (2 Edits):
+
+  **B1 — app/build.gradle.kts**
+  * `isMinifyEnabled = false` → `true`   (Release-BuildType)
+  * `isShrinkResources = false` → `true` (Release-BuildType)
+  * Kommentare: `// PS-001: R8 aktiviert (war: false)` / `// PS-001: Ressourcen-Shrinking aktiviert (war: false)`
+
+  **B2 — app/proguard-rules.pro**
+  * Neu eingefügt vor `# --- DEFENSIVE R8 ADDITIONS (2026-04-18) ---`:
+    - Hilt/Dagger: `dagger.hilt.**`, `javax.inject.**`, `@AndroidEntryPoint`, `@HiltAndroidApp`, `@HiltViewModelFactory`, `@HiltViewModel <init>` Keep-Regeln
+    - Kotlin Coroutines: `-keep class kotlinx.coroutines.**` + `-dontwarn kotlinx.coroutines.**`
+    - Kotlin Reflect: `-dontwarn kotlin.reflect.jvm.internal.**`
+  * Bereits vorhandene Rules (bestätigt ausreichend): Moshi, Retrofit, OkHttp, Room, Google Drive API, Google Sign-In, Sherpa-ONNX, Play Billing, Security Crypto, Biometric, Firebase, Gson, native JNI, Application & BroadcastReceivers, Kotlin Metadata
+  * Coil + Lottie: embedded ProGuard rules in AAR — keine manuellen Rules nötig
+
+- Sicherheitsanalyse:
+  * Gap vor Fix: Hilt/Dagger-Keep-Regeln fehlten (AGP+KSP auto-generiert nur Basis, nicht alle Ebenen)
+  * Defensive R8 Additions vom 2026-04-18 bereits vorhanden — nur Hilt/Coroutines/Reflect fehlten
+  * Fix vollständig: alle kritischen JNI/DI/Coroutine-Klassen geschützt
+- Counter-Update: fixedThisRun 6->7, openFindingsCount 23->22
+  openFindingsBreakdown.playStorePolicies: high 1->0 (applied: 1)
+  totalHighFindings: 7->6
+- Status: completed
+
+---
+
 ## 2026-05-18T16:50Z · Phase 2-B-2 · T-002 Android-System-Backup Transparenz angewendet
 
 - Subagent:     fix-applier (general-purpose, Sonnet 4.6, effort: max)
