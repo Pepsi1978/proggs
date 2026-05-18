@@ -1,6 +1,6 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 30 Locales (29 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenz. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: Uebersetzt Android strings.xml in alle 30 Locales (29 Sprachen — Portugiesisch zaehlt als pt-BR und pt-PT) aus der mitgelieferten Referenz. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet mit 15 parallelen Workern (Continuous-Spawning nach FIN-023): sobald 1 Worker fertig ist, startet SOFORT der naechste fuer die naechste Sprache — keine Wellengruppen. Verifikation und Commit nach jedem Worker-Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
 ---
 
 # Uebersetzungs-Skill: Android strings.xml in 30 Locales (29 Sprachen)
@@ -183,10 +183,45 @@ Starte jetzt mit Englisch...
 
 ---
 
-## Phase 2: Uebersetzungs-Schleife — Sprache fuer Sprache
+## Continuous-Spawning-Pattern fuer Uebersetzungen (FIN-023 Frank-Direktive 2026-05-18)
 
-Diese Phase ist das Herzstuck des Skills. Fuer JEDES der 30 Locales werden drei
-Schritte ausgefuehrt: Uebersetzen, Verifizieren, Speichern.
+PFLICHT-Architektur fuer Multi-Sprachen-Uebersetzungen:
+
+1. **15 Worker IMMER parallel** (nicht 10, nicht sequentiell)
+2. **Continuous-Spawning**: sobald 1 Worker fertig → SOFORT naechster Worker
+   fuer die naechste Sprache. NIE auf alle 15 warten bis eine neue Welle startet.
+3. **Token-Cap 100k pro Worker** (FIN-004)
+4. **Vordergrund-Sichtbarkeit** (FIN-028):
+   - Beim Start der ersten 15 Worker ein klarer Status-Block ausgeben:
+     ```
+     Welle 1 (15 Workers): ar, bn, en, es, fr, gu, hi, it, ja, kn, ko, ml,
+     mr, nl, pl — alle gestartet
+     ```
+   - Pro Worker: descriptive `description`-Feld
+     z.B. `"Translate: ar — 31 Strings × Devanagari-Validierung"`
+   - Live-Stats nach jeder Fertig-Notification:
+     `"X von 30 fertig, Y noch laufend, naechste Sprache: [code]"`
+
+5. **Bei 30 Locales total:**
+   - Start: 15 Worker gleichzeitig
+   - Nach erster Fertig-Notification: 1 neuer Worker (16. Locale) SOFORT
+   - Nach zweiter Fertig-Notification: 1 neuer Worker (17. Locale) SOFORT
+   - ... bis alle 30 gestartet
+   - Sobald alle 30 gestartet: nur noch warten + commit pro Worker-Notification
+
+Frank-Originalwortlaut 2026-05-18:
+"Du laesst immer 15 Subagents gleichzeitig laufen. Das beim Roentgenskill,
+das gleiche beim Strings-Creator-Skill und das gleiche beim Uebersetzer-Skill.
+Sobald 1 Worker fertig: SOFORT naechster fuer die naechste Sprache."
+
+KEIN sequentielles "alle 15 fertig, dann Welle 2" — das ist Verschwendung.
+
+---
+
+## Phase 2: Uebersetzungs-Schleife — 15 parallele Worker (Continuous-Spawning)
+
+Diese Phase ist das Herzstück des Skills. Alle 30 Locales werden über 15 parallele
+Worker abgearbeitet — mit sofortigem Nachrücken sobald ein Worker fertig ist.
 
 Die Reihenfolge der Locales folgt dem Inhaltsverzeichnis in `übersetzung-global.md`:
 
@@ -500,16 +535,239 @@ hinzu"), siehe **`HOW_TO_ADD_LANGUAGE.md`** (im Skill-Ordner). Dort steht die
 
 ---
 
+## Umlaut-Pflicht (FIN-011 + FIN-027 Frank-Direktive 2026-05-18)
+
+### Grundregel
+
+In der **deutschen Quell-strings.xml** und in ALLEN deutschen Texten innerhalb der
+App MÜSSEN echte Umlaute verwendet werden: ä ö ü Ä Ö Ü ß. NIEMALS die
+ASCII-Substitution ae/oe/ue/ss. Dies gilt auch für:
+- Alle Status-Meldungen die der Skill ausgibt (Deutsch)
+- Alle Kommentare in XML-Dateien auf Deutsch
+- Alle Audit-Berichte und Doku-Outputs des Skills
+- Den Skill-Body selbst (diese Datei)
+
+### Quell-Check vor der Übersetzung (FIN-027 NEU)
+
+Bevor die erste Sprache gestartet wird: die deutsche Quelldatei auf
+ASCII-Umlaut-Substitutionen prüfen.
+
+```bash
+# Grep auf häufige ASCII-Substitutionen in deutschen Strings
+grep -n '\b\(fuer\|Groesse\|koennen\|muessen\|waere\|Aenderung\|uebersetzen\|oeffentlich\|Uebersicht\)\b' \
+  "[APP_DIR]/app/src/main/res/values/strings.xml"
+```
+
+Wenn Treffer gefunden werden:
+- **STOP** — Quelle ist fehlerhaft
+- Dem Orchestrator (Haupt-Claude) melden: `"UMLAUT-FEHLER in Quell-strings.xml: [Zeilen]"`
+- NICHT mit der Übersetzung beginnen bis die Quelle repariert ist
+- Grund: Fehler in der Quelle pflanzen sich in alle 30 Locales fort
+
+### Output-Check nach jeder Übersetzung (FIN-027 NEU)
+
+Nach dem Schreiben jeder Zieldatei: einen abschließenden Grep auf deutsche
+Teilbereiche der Ausgabe (z.B. Kommentare, Transliteration-Hinweise):
+
+```python
+import re
+
+def check_umlaut_substitutions(path):
+    """
+    Prüft ob ASCII-Substitutionen (ae/oe/ue/ss) in deutschen Kommentaren
+    oder Metadaten-Bereichen der Zieldatei vorhanden sind.
+    Betrifft nicht den übersetzten Text (der ist in der Zielsprache).
+    """
+    pattern = re.compile(
+        r'\b(fuer|Groesse|koennen|muessen|waere|wird|werde|uebersetzen|'
+        r'oeffentlich|Aenderung|Uebersicht|Haeufig|ausserdem)\b'
+    )
+    with open(path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    hits = [(i+1, line.strip()) for i, line in enumerate(lines)
+            if pattern.search(line)]
+    if hits:
+        print(f'UMLAUT-WARNUNG in {path}:')
+        for lineno, text in hits:
+            print(f'  Zeile {lineno}: {text}')
+        return False
+    return True
+```
+
+Wenn Treffer in deutschen Kommentaren/Metadaten: Korrigieren, dann weiter.
+Bei übersetzen Inhalten (Zielsprache ist nicht Deutsch): ignorieren — der
+Pattern greift nur auf Deutsch.
+
+### Für Zielsprachen
+
+Für Zielsprachen gelten ihre eigenen Konventionen:
+- Französisch: ç, é, è, ê, à, î, ô, ù
+- Spanisch: ñ, á, é, í, ó, ú, ¿, ¡
+- Polnisch: ą, ć, ę, ł, ń, ó, ś, ż, ź
+- Türkisch: ç, ğ, ı, İ, ö, ş, ü
+- usw. (je nach Zielsprache die sprachspezifischen Sonderzeichen verwenden)
+
+**Pflicht-Grep nach jedem Edit auf die deutsche Quell-strings.xml:**
+
+```bash
+grep -n '\b\(fuer\|Groesse\|koennen\|muessen\|waere\|wird\|werde\)\b' \
+  "[APP_DIR]/app/src/main/res/values/strings.xml"
+```
+
+Wenn Treffer gefunden werden die NICHT englische Wörter sind (z.B. `value`, `queue`,
+`true`, `werden`): Den betroffenen Bereich mit echten Umlauten neu schreiben.
+Vor dem Commit muss dieser Check sauber durchlaufen.
+
+---
+
+## XML-Validierungs-Pflicht (FIN-016)
+
+### VOR jedem Edit auf eine Ziel-strings.xml (PFLICHT)
+
+1. Die Zieldatei komplett lesen.
+2. XML-Struktur per Python validieren:
+
+```python
+import xml.etree.ElementTree as ET
+try:
+    ET.parse('[PFAD_ZUR_DATEI]')
+    print('XML OK')
+except ET.ParseError as e:
+    print(f'VORBESTEHENDER XML-FEHLER: {e}')
+    # STOPP — vorher den Schaden melden, NICHT fortsetzen
+```
+
+Wenn die Datei schon vor dem Edit kaputt ist: **SOFORT stoppen und dem Benutzer
+den vorbestehenden Schaden melden.** Niemals auf einer bereits kaputten Datei weiterarbeiten.
+
+3. Insertion-Punkte für neue Strings **IMMER** zwischen vollständig geschlossenen
+   `</string>`-Tags wählen. Niemals innerhalb des Werts eines anderen Tags inserieren.
+
+### NACH jedem Edit auf eine Ziel-strings.xml (PFLICHT)
+
+Erneut per Python validieren:
+
+```python
+import xml.etree.ElementTree as ET
+try:
+    ET.parse('[PFAD_ZUR_DATEI]')
+    print('XML OK — Edit sauber')
+except ET.ParseError as e:
+    print(f'XML BESCHÄDIGT DURCH EDIT: {e}')
+    # SOFORT zurückrollen — NICHT committen, NICHT fortsetzen
+```
+
+Wenn nach dem Edit ein Parse-Fehler entsteht: **Edit sofort zurückrollen (Datei auf
+vorherigen Stand zurückschreiben), dann Fehler dem Benutzer melden.** Auf keinen Fall
+mit einer kaputten XML-Datei committen oder zur nächsten Sprache weitergehen.
+
+### Verbot: Tags-in-Tags (FIN-016)
+
+Niemals ein `<string>`-Tag innerhalb des Werts eines anderen `<string>`-Tags einbauen.
+Das zerstört die gesamte XML-Datei für den AAPT-Compiler.
+
+**Pflicht-Check nach jedem Edit:**
+
+```python
+import re
+with open('[PFAD_ZUR_DATEI]', 'r', encoding='utf-8') as f:
+    content = f.read()
+# Erkennt verschachtelte <string>-Tags
+if re.search(r'<string[^>]*>[^<]*<string', content):
+    print('KRITISCH: Verschachtelte <string>-Tags gefunden — sofort zurückrollen!')
+```
+
+Wenn dieser Check anschlägt: **Sofort zurückrollen.** Dies ist die häufigste
+App-zerstörende Fehlklasse beim Einfügen von Übersetzungen.
+
+---
+
+## Apostroph-Escape-Pflicht (FIN-017 + FIN-018)
+
+Unescapte Apostrophe (`'`) in `<string>`-Werten verursachen einen AAPT-Build-Fehler
+der die gesamte App unbaubar macht. Betroffen sind besonders: fr, it, es, en,
+pt-rBR, pt-rPT, uk und alle anderen Sprachen mit romanischen Lehnwörtern.
+
+### Pflicht-Schritt nach dem Schreiben jeder Zieldatei
+
+Nach dem Schreiben in `values-{fr,it,es,en,pt-rBR,pt-rPT,uk,...}/strings.xml`
+diesen Python-Helper ausführen:
+
+```python
+import re, os
+
+def escape_apostrophes_in_xml_strings(path):
+    """
+    Escaped alle unescapten Apostrophe in <string>-Werten einer Android strings.xml.
+    Bereits escapte \\' werden nicht doppelt escaped.
+    Gibt True zurück wenn Änderungen vorgenommen wurden, sonst False.
+    """
+    with open(path, 'r', encoding='utf-8') as f:
+        txt = f.read()
+    # Pattern: <string ...>(WERT)</string>
+    pat = re.compile(r'(<string[^>]*>)([^<]*)(</string>)', re.DOTALL)
+    def fix_value(m):
+        opening, value, closing = m.group(1), m.group(2), m.group(3)
+        new_value = []
+        i = 0
+        while i < len(value):
+            c = value[i]
+            if c == '\\' and i+1 < len(value):
+                # Bereits escaptes Zeichen — unverändert übernehmen
+                new_value.append(c)
+                new_value.append(value[i+1])
+                i += 2
+            elif c == "'":
+                new_value.append("\\'")
+                i += 1
+            else:
+                new_value.append(c)
+                i += 1
+        return opening + ''.join(new_value) + closing
+    new_txt = pat.sub(fix_value, txt)
+    if new_txt != txt:
+        # Atomares Schreiben: temp → rename verhindert Datei-Korruption bei Abbruch
+        import tempfile
+        dir_name = os.path.dirname(path)
+        with tempfile.NamedTemporaryFile('w', dir=dir_name, suffix='.tmp',
+                                         delete=False, encoding='utf-8',
+                                         newline='\n') as tmp:
+            tmp.write(new_txt)
+            tmp_path = tmp.name
+        os.replace(tmp_path, path)
+        return True
+    return False
+
+# Aufruf-Beispiel:
+# changed = escape_apostrophes_in_xml_strings('[APP_DIR]/app/src/main/res/values-fr/strings.xml')
+# print('Apostrophe gefixt' if changed else 'Alles bereits korrekt escaped')
+```
+
+**Wann aufrufen:** Nach jedem Schreiben einer `strings.xml` — vor dem XML-Validierungs-Check
+(Schritt NACH dem Edit, siehe oben) und vor dem Commit.
+
+**Reihenfolge der Checks nach jedem Sprach-Edit:**
+1. `escape_apostrophes_in_xml_strings(pfad)` — Apostrophe escapen
+2. Tags-in-Tags-Check — Verschachtelungs-Prüfung
+3. XML-Parse-Check — Strukturelle Gültigkeit
+4. Erst wenn alle 3 grün: committen
+
+---
+
 ## Qualitaets-Prinzipien
 
 Diese Prinzipien erklaeren WARUM der Skill so arbeitet wie er arbeitet:
 
-### Warum sequentiell statt parallel?
+### Warum 15 parallele Worker statt sequentiell? (FIN-023)
 
-Uebersetzungsqualitaet braucht vollen Kontext. Wenn 30 Locales parallel uebersetzt
-werden, bekommt jede nur einen Bruchteil der Aufmerksamkeit. Sequentiell bedeutet:
-jede Sprache bekommt den vollstaendigen Prompt-Kontext, die volle Verifikation, und
-das Ergebnis wird sofort committed — ein Rettungspunkt nach jeder Sprache.
+15 Worker parallel maximieren den Durchsatz bei gleichbleibender Qualität. Jeder
+Worker bekommt seinen eigenen vollständigen Prompt-Kontext (sprach-spezifische Datei
++ Universal-Prompt) — Parallelität geht nicht auf Kosten der Verifikation.
+Continuous-Spawning stellt sicher, dass keine CPU-Zeit auf "warten bis Welle fertig"
+verloren geht. Frank-Direktive 2026-05-18: "Sobald 1 Worker fertig: SOFORT nächster."
+
+**Vorher (sequentiell, 30 Sprachen):** 30 × ~3 Min = ~90 Min Gesamtdauer
+**Jetzt (15 Worker, Continuous-Spawning):** ~3 Min × ceil(30/15) = ~6-9 Min Gesamtdauer
 
 ### Warum der zweite Durchlauf?
 

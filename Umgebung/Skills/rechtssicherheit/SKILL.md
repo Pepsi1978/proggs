@@ -392,6 +392,47 @@ Pruef-Aspekte:
 
 #### 5e. Rechtstexte und UI-Links
 
+##### Pre-Existence-Check vor missingDocs-Findings (FIN-010)
+
+> Diesen Check IMMER ausfuehren BEVOR ein `missingDocs`-Finding erstellt wird.
+> Verhindert False-Positive-Befunde wenn Legal-Dokumente in `assets/` liegen
+> (FIN-014: 4 von 6 missingDocs-Findings waren False Positives bei BestJournalAndroid).
+
+**Ablauf:**
+
+1. Pruefe ob `roentgen-report.json` einen `layer1_5_assets`-Block enthaelt.
+   - Wenn JA: Lies die Liste der dort inventarisierten Dateien.
+   - Wenn NEIN: Fuehre selbst einen Quick-Glob durch:
+     `Glob app/src/main/assets/**/*.{html,htm,md,txt}` am `<APP_DIR>`.
+
+2. Fuer jeden potenziellen `missingDocs`-Befund (Datenschutz, AGB, Impressum, Widerruf usw.):
+   a. Prüfe ob ein passender Eintrag im Assets-Inventar existiert
+      (Typ: privacy, imprint, terms, widerruf, help, sonstige).
+   b. Wenn **im Assets-Inventar vorhanden**:
+      - KEIN `missingDocs`-Finding erstellen.
+      - Stattdessen: Pruefe die Abdeckung der Locales.
+        - Alle Pflicht-Locales enthalten? → kein Finding.
+        - Mindestens eine Pflicht-Locale fehlt? → 🟡 **MITTEL** `coverage-gap`-Finding
+          mit expliziter Liste der fehlenden Locales.
+          Beispiel-Format:
+          ```
+          type: coverage-gap
+          doc: NUTZUNGSBEDINGUNGEN
+          existsIn: [de, en, fr, es, ...]
+          missingIn: [ar, hi, pt-BR, ...]
+          severity: 🟡 MITTEL
+          note: "Dokument existiert in assets/legal/, fehlt aber in N Locales."
+          ```
+   c. Wenn **nicht im Assets-Inventar vorhanden**:
+      - Regulaeres `missingDocs`-Finding mit dem normalen Schweregrad-Schema erstellen.
+
+**Was NIEMALS passieren darf (FIN-010):**
+- `missingDocs`-Finding erstellen ohne vorherigen Assets-Glob oder Pruefung von
+  `layer1_5_assets` im Roentgen-Output
+- Dokument als fehlend markieren nur weil es nicht in `res/values/strings.xml` vorkommt
+- `coverage-gap`-Findings mit 🔴 BLOCKER bewerten, wenn das Dokument grundsaetzlich
+  existiert — BLOCKER ist nur zulassig wenn das Dokument vollstaendig fehlt
+
 **Inhaltliche Pflichtangaben pro Dokument** (Datenschutzerklaerung, AGB, Impressum, Widerruf,
 Account-/Datenloeschung): vollstaendige Checklisten in `references/pflichtdokumente.md`.
 Diese Checklisten sind die Grundlage fuer die Bewertung jedes Pflichtdokuments — pruefe jedes
@@ -459,6 +500,41 @@ Skript-Ergebnis fuer den Bericht (Schritt 6) verwenden:
 
 Wichtig: Dieser Schritt 5j MUSS vor Schritt 6 (Bericht) laufen, damit die Compliance-Befunde
 in den Bericht-Block aufgenommen werden koennen.
+
+### Schritt 5k — Cluster-Clarification-Logik (FIN-008)
+
+> Diesen Schritt IMMER nach Abschluss aller Sub-Schritte 5a–5j und VOR dem
+> Berichtsschreiben (Schritt 6) durchfuehren.
+
+Wenn mehrere Strings oder Findings inhaltlich widersprüchlich wirken
+(z.B. "4 Perspektiven" in einem String vs. "5 Perspektiven" in einem anderen,
+oder zwei Befunde die sich gegenseitig ausschliessen), gilt folgende Logik:
+
+**Erkennungsmerkmal:** Ein Cluster-Finding liegt vor wenn
+- mindestens 2 Befunde denselben Feature-Bereich betreffen UND
+- die beobachteten Werte unvereinbar sind (z.B. verschiedene Zahlen, ja/nein-Widerspruch) UND
+- die Code-Realitaet aus dem Repo-Scan nicht eindeutig aufloest welcher Wert korrekt ist.
+
+**Pflicht-Vorgehen bei erkanntem Cluster-Finding:**
+
+1. `needs-clarification: true` Flag im Finding setzen (NICHT auf Basis einer Vermutung
+   einen Schweregrad vergeben).
+2. Schweregrad vorlaeufig auf 🟡 **MITTEL** setzen (niemals sofort 🔴 BLOCKER).
+3. Eine `clarificationQuestion`-Sektion in den Finding-Eintrag einbauen mit einer
+   konkreten, einzeiligen Frage an den Benutzer. Beispiel-Format:
+   ```
+   clarificationQuestion: "Was ist die echte App-Realitaet — 4 oder 5 Perspektiven?
+   Bitte Quellcode-Stelle oder Screenshot nennen."
+   ```
+4. Den Finding im Bericht als **[Klaerung noetig]**-Badge kennzeichnen und an den Anfang
+   der MITTEL-Gruppe setzen, damit der Benutzer ihn nicht übersieht.
+5. Erst nachdem der Benutzer geantwortet hat: Schweregrad auf Basis der geklärten
+   Code-Realitaet neu bewerten (kann dann auch 🔴 BLOCKER werden).
+
+**Was NIEMALS passieren darf (FIN-008):**
+- Widersprüchliche Strings blind auf 🔴 hochstufen, nur weil ein Wert abweicht
+- Cluster-Finding still verwerfen weil "wahrscheinlich korrekt"
+- `clarificationQuestion` fehlt, obwohl `needs-clarification: true` gesetzt
 
 ### Schritt 6 — Berichtsvorlage
 
@@ -622,3 +698,129 @@ Am Ende IMMER:
 5. `<WORKSPACE_ROOT>/tools/rechtssicherheit.md` commit+push
 6. Disclaimer wiederholen
 7. Intelligenz-Vorschlaege (Direktive #2) falls Muster erkannt — z.B. "alle geprueften Apps haben denselben Impressum-Fehler — soll ich einen Hook bauen der das automatisch checkt?"
+
+---
+
+## Output-Konventionen (Frank-Direktive 2026-05-18 FIN-025)
+
+### Kategorie-ID-Schema (A–G + Z)
+
+Jedes Finding bekommt eine **kategorisierte ID** bestehend aus Buchstabe + fortlaufender Nummer.
+Die Nummerierung beginnt innerhalb jeder Kategorie bei 1 (A1, A2, … B1, B2, … usw.).
+
+| Präfix | Kategorie | Rechtsgrundlage / Thema |
+|--------|-----------|------------------------|
+| **A** | HWG / Heilversprechen / Gesundheit | HWG, Heilmittelwerbegesetz, Health-Claims |
+| **B** | UWG / Werbung / Irreführung | UWG §5, §5a, §7, Werbeaussagen, Dark-Ads |
+| **C** | DSGVO / Datenschutz / Consent | DSGVO, GDPR, CCPA, PIPL, PDPA, LGPD, POPIA & Äquivalente |
+| **D** | BGB / Widerruf / Vertrag | BGB §312k, Widerrufsbelehrung, AGB, IAP, Abo-Laufzeiten |
+| **E** | Play-Store-Policy | Google Play User Data Policy, Enforcement, Data Safety |
+| **F** | Dark-Pattern / UX-Tricks | Consent-Nudging, vorgewählte Checkboxen, Abonnement-Fallen |
+| **G** | Missing-Docs | Fehlende Pflichtdokumente (DSE, AGB, Impressum, Widerruf, Deletion) |
+| **Z** | Sonstige / Cross-cutting | Alles was keiner Kategorie A–G eindeutig zuzuordnen ist |
+
+**Pflicht-Mapping im Synthesizer-Schritt (vor Schritt 6):**
+
+```
+HWG-Findings       → A
+UWG-Findings       → B
+DSGVO-Findings     → C
+BGB-Findings       → D
+Play-Store-Findings → E
+Dark-Pattern-Findings → F
+MissingDoc-Findings → G
+Alles andere       → Z
+```
+
+Wenn ein Finding mehrere Kategorien berührt (z.B. DSGVO + Dark-Pattern): primäre
+Rechtsverletzung entscheidet. Das andere wird als `crossRef`-Feld im Finding vermerkt.
+
+### ANSI-Farb-Codes (CLI-Output)
+
+Alle Finding-Karten verwenden ANSI-Escape-Codes fuer farbige Header im Terminal.
+
+| Schweregrad | ANSI-Sequenz | Beispiel |
+|-------------|-------------|---------|
+| 🔴 BLOCKER / high | `\033[1;91m` … `\033[0m` | roter, fetter Text |
+| 🟧 HOCH / medium | `\033[1;93m` … `\033[0m` | oranger, fetter Text |
+| 🟨 MITTEL / low | `\033[33m` … `\033[0m` | gelber Text |
+| ✅ COMPLIANT / positiv | `\033[32m` … `\033[0m` | grüner Text |
+
+Vollständige Escape-Beispiele:
+
+```bash
+# BLOCKER (rot, fett):
+echo -e "\033[1;91m[B3] 🔴 BLOCKER — UWG §5 Irreführung\033[0m"
+
+# HOCH (orange, fett):
+echo -e "\033[1;93m[C7] 🟧 HOCH — DSGVO Consent fehlt\033[0m"
+
+# MITTEL (gelb):
+echo -e "\033[33m[G2] 🟨 MITTEL — Impressum unvollständig\033[0m"
+
+# COMPLIANT (grün):
+echo -e "\033[32m[D1] ✅ COMPLIANT — Widerruf korrekt platziert\033[0m"
+```
+
+Diese Codes gelten für CLI-Ausgaben und Script-Outputs. Im Markdown-Bericht
+(Schritt 6, `berichtsvorlage.template.md`) werden stattdessen die Emoji-Symbole
+(🔴 / 🟧 / 🟨 / ✅) verwendet — ANSI-Codes werden in gerenderten Markdown-Dateien
+nicht korrekt dargestellt.
+
+### Karten-Layout-Template (Phase-2-Karten, Frank-Standard)
+
+Jedes Finding wird als Karte ausgegeben. Das Plugin übernimmt dieses Format direkt.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ [ANSI-Farbe je nach Severity] [ID] [Severity-Symbol] [Kategorie]│
+│ Datei: <pfad>:<zeile>                                           │
+├─────────────────────────────────────────────────────────────────┤
+│ AKTUELL: "<wörtlicher Text oder Code-Zeile>"                    │
+│ PROBLEM: <ein-Satz-Begründung>                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ [a] "<Vorschlag a>" (Δ -X% kürzer)                              │
+│ [b] "<Vorschlag b>" (Δ +Y% stärker)                             │
+│ [c] Eigene Formulierung                                         │
+│ [skip] Überspringen                                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Befüllungsregeln:**
+
+| Feld | Inhalt |
+|------|--------|
+| `[ID]` | Kategorie-Buchstabe + fortlaufende Nummer, z.B. `B3`, `C12`, `G1` |
+| `[Severity-Symbol]` | `🔴` / `🟧` / `🟨` / `✅` entsprechend Schweregrad |
+| `[Kategorie]` | Ausgeschriebene Kategorie, z.B. `UWG / Werbung` |
+| `Datei:` | Relativer Pfad ab `<APP_DIR>`, mit Zeilennummer wenn bekannt; `n/a` wenn nicht lokalisierbar |
+| `AKTUELL:` | Wörtlicher Text aus dem Quell-String oder der Code-Zeile (in Anführungszeichen) |
+| `PROBLEM:` | Genau ein Satz. Keine Floskeln. Direkte Rechtsnorm oder Risiko benennen |
+| `[a]` / `[b]` | Konkrete alternative Formulierungen. `Δ` zeigt Längenveränderung in Prozent |
+| `[c]` | Immer als Option anbieten — Frank will eigene Formulierung wählen können |
+| `[skip]` | Immer als Option anbieten — nicht jedes Finding muss sofort gefixt werden |
+
+**Beispiel (ausgefüllt):**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ \033[1;91mB3 🔴 BLOCKER — UWG / Werbung\033[0m                  │
+│ Datei: app/src/main/res/values/strings.xml:247                  │
+├─────────────────────────────────────────────────────────────────┤
+│ AKTUELL: "Werde in 7 Tagen zum Experten!"                       │
+│ PROBLEM: Qualitative Erfolgsgarantie ohne Nachweis (UWG §5 I)   │
+├─────────────────────────────────────────────────────────────────┤
+│ [a] "Übe täglich mit deinem KI-Coach." (Δ -40%)                 │
+│ [b] "Verbessere dein Schreiben Schritt für Schritt." (Δ -20%)   │
+│ [c] Eigene Formulierung                                         │
+│ [skip] Überspringen                                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Was NIEMALS passieren darf (FIN-025):**
+- Finding-ID ohne Kategorie-Buchstaben ausgeben (z.B. nur `#3` statt `B3`)
+- ANSI-Farb-Code und Emoji-Symbol mischen (ANSI für CLI, Emoji für Markdown — nie beide gleichzeitig im selben Output)
+- `AKTUELL:`-Feld leer lassen oder mit paraphrasiertem statt wörtlichem Text befüllen
+- `PROBLEM:`-Feld mit mehr als einem Satz befüllen
+- Optionen `[c]` oder `[skip]` weglassen — Frank entscheidet, nicht der Skill
+- Karten-Layout für Compliance-Status-Meldungen verwenden (nur für Findings mit Handlungsbedarf)

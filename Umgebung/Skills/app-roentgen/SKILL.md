@@ -86,6 +86,38 @@ Liest `app/src/main/AndroidManifest.xml` und extrahiert alles was deklariert ist
 → **Detail-Anleitung**: `references/layer-1-manifest.md`
 → **Permission-zu-Feature-Tabelle**: `references/permission-feature-map.md`
 
+### Schicht 1.5 — Assets-Scan: Welche Legal- und Web-Dokumente liefert die App aus? (FIN-014)
+
+Glob `app/src/main/assets/**/*.{html,htm,md,txt}` ausfuehren. Ergebnis in `roentgen-report.json` unter Key `layer1_5_assets` eintragen. Dieser Schritt MUSS vor Schicht 2 abgeschlossen sein, damit der Rechtssicherheits-Skill keine falschen `missingDocs`-Findings erzeugt.
+
+**Sprach-Detection** aus dem Pfad-Locale-Segment (Beispiel: `assets/legal/de/DATENSCHUTZ.html` → Sprache `de`). Wenn kein Locale-Segment vorhanden → `default`.
+
+**Doktyp-Detection** aus dem Dateinamen (case-insensitive):
+
+| Muster im Dateinamen | Doktyp |
+|----------------------|--------|
+| `DATENSCHUTZ`, `PRIVACY`, `PRIVACY_POLICY` | `privacy` |
+| `IMPRESSUM`, `IMPRINT`, `LEGAL_NOTICE` | `imprint` |
+| `NUTZUNGSBEDINGUNGEN`, `TERMS`, `TOS`, `AGB` | `terms` |
+| `HEALTH_DISCLAIMER`, `MEDICAL`, `HEALTH` | `health-disclaimer` |
+| alles andere | `other` |
+
+**Output-Schema** in `roentgen-report.json`:
+
+```json
+"layer1_5_assets": {
+  "privacy":           { "de": "assets/legal/de/DATENSCHUTZ.html", "en": "assets/legal/en/PRIVACY.html" },
+  "imprint":           { "de": "assets/legal/de/IMPRESSUM.html" },
+  "terms":             { "de": "assets/legal/de/NUTZUNGSBEDINGUNGEN.html", "en": "assets/legal/en/TERMS.html" },
+  "health-disclaimer": {},
+  "other":             [ "assets/help/onboarding.html" ]
+}
+```
+
+**Konsum durch den Rechtssicherheits-Skill:** Der Recht-Skill liest `layer1_5_assets` VOR der `missingDocs`-Generierung. Wenn der gesuchte Doktyp in der Map vorhanden ist, wird das Finding entweder weggelassen oder auf `"Doc existiert — Deep-Link-Verbesserung pruefen"` heruntergestuft (statt 🟥 `missingDoc`).
+
+→ **Skript-Implementierung**: `scripts/feature-scan.sh` Abschnitt „ASSETS-SCAN (FIN-014)"
+
 ### Schicht 2 — Dependency-Analyse: Was kann die App technisch?
 
 Liest `build.gradle.kts`, `libs.versions.toml`, `settings.gradle.kts`. Jede Bibliothek impliziert Capabilities (firebase-messaging → Push, play-billing → Paywall, mlkit-* → KI/ML, room-runtime → Datenbank). Auch Pruefung ob Dependencies aktiv genutzt werden oder tot sind.
@@ -213,6 +245,44 @@ Risiko-Stufen: KRITISCH / HOCH / MITTEL / NIEDRIG nach UWG §5, EU UCPD, Google 
 
 → **Detail-Anleitung**: `references/layer-7-marketing-claim-audit.md`
 
+## 15 parallele Worker — Standard-Architektur (FIN-023, Frank-Direktive 2026-05-18)
+
+Statt die 7 Schichten sequenziell abzuarbeiten, werden **15 spezialisierte Worker parallel** gestartet. Jeder Worker hat Token-Cap 100k. Sobald ein Worker abgeschlossen ist, wird sofort der nächste für den nächsten Layer oder das nächste Modul gespawnt (Continuous-Spawning). Der Synthesizer aggregiert am Ende alle 14 Fach-Worker-Ergebnisse zu `roentgen-report.json`.
+
+### Die 15 Worker im Überblick
+
+| # | Worker-Name | Zuständigkeit |
+|---|------------|--------------|
+| 1 | **Manifest-Worker** | `AndroidManifest.xml` — Permissions, Activities, Services, Receivers, ContentProvider, Intent-Filter, Deep-Links, Backup-Konfiguration |
+| 2 | **Build-Config-Worker** | `build.gradle.kts`, `libs.versions.toml`, `settings.gradle.kts` — Dependencies, Plugins, Version-Catalog, aktive vs. tote Libs |
+| 3 | **Architecture-Worker** | Module-Struktur, ViewModels, Repositories, UseCases, Hilt-Module, Room-Entities, Dagger-Graphen |
+| 4 | **Screens-Worker** | Alle Compose-Screens und Activity-Klassen identifizieren, Navigation-Routen, Click-Handler, Side-Effects |
+| 5 | **Dialogs-Worker** | Alle Dialoge, Bottom-Sheets, Snackbars, Toasts, Error-States, Empty-States, Loading-States |
+| 6 | **Paywall-Worker** | BillingClient, Subscription-Logik, alle 22 RTDN-Typen, Trial/Promo/Win-Back, Abbruchpfade, Subscription-State-Machine |
+| 7 | **Permissions-Rationale-Worker** | Permission-Rationale-Dialoge pro Permission (Title/Body/Allow/Deny), Consent-Banner, Health-Disclaimer, AI-Disclaimer |
+| 8 | **Strings-Inventory-Worker-A** | `strings.xml` Einträge 1–500 (alle String-Keys + 1:1-Wortlaute + Format-Args + xliff:g) |
+| 9 | **Strings-Inventory-Worker-B** | `strings.xml` Einträge 501–1000 |
+| 10 | **Strings-Inventory-Worker-C** | `strings.xml` Eintrag 1001 bis Ende (inkl. aller `values-*/strings.xml` Sprachvarianten) |
+| 11 | **Compose-Literals-Worker** | Hardcoded Texte direkt in `.kt`-Dateien (nicht über `stringResource`) — für den `string-extraktor`-Skill |
+| 12 | **Assets-Worker** | `assets/**/*.{html,htm,md,txt}` — Legal-Dokumente, Onboarding-HTML, Sprach-Detection, Doktyp-Detection (FIN-014) |
+| 13 | **Hidden-Features-Worker** | WorkManager-Worker, BootReceiver, FileProvider, Widget-Provider, Quick-Tile, App-Shortcuts, Notification-Channels, Debug-Menüs, Feature-Flags, A/B-Varianten, Account-Deletion-Flow |
+| 14 | **Marketing-Claims-Worker** | Werbeaussagen aus allen Quellen (strings.xml User-facing, Onboarding, Push-Templates, Settings) + Play-Store-Listing-Texte + Risikobewertung nach UWG §5 / EU UCPD / Google Play Policy |
+| 15 | **Synthesizer** | Aggregiert die Ergebnisse der Worker 1–14, schreibt `roentgen-report.json` (Schema 2.1) und `app-roentgen-AUDIT-YYYY-MM-DD.md`, führt Vollständigkeits-Validierung durch |
+
+### Continuous-Spawning-Regel
+
+- Für größere Apps (>3 Module oder >1000 Strings) gilt: sobald ein Worker sein Ergebnis zurückgibt, wird sofort ein Folge-Worker für das nächste Modul/das nächste String-Segment gespawnt.
+- Beispiel: Modul-1-Screens-Worker fertig → sofort Modul-2-Screens-Worker starten, während die anderen Worker noch laufen.
+- Workers 8/9/10 (Strings A/B/C) laufen grundsätzlich parallel, nie sequenziell.
+- Der Synthesizer (Worker 15) startet erst wenn **alle** anderen 14 Worker zurückgemeldet haben.
+
+### Datei-Ownership (kein Worker darf die Datei eines anderen überschreiben)
+
+| Worker-Gruppe | Schreibt in |
+|--------------|------------|
+| Worker 1–14 | jeweils eigenen Temp-Slot in `roentgen-checkpoint.json` (Feld `worker_results[N]`) |
+| Synthesizer (15) | `roentgen-report.json` + `app-roentgen-AUDIT-YYYY-MM-DD.md` |
+
 ## Master-Skript fuer den ersten Scan
 
 Statt alle Greppable-Patterns einzeln auszufuehren, gibt es ein Master-Skript das den ersten Scan automatisiert macht und einen strukturierten Initial-Bericht erzeugt:
@@ -304,6 +374,40 @@ Da der Bericht spaeter als juristische Grundlage dienen kann, gilt:
 | `string-extraktor` | Komplementaer zu Schicht 4c — der Extraktor findet hardcoded Strings, der Roentgen-Skill katalogisiert sie inklusive Slot-Zuordnung |
 | `app-monetizer` | Konsumiert die Paywall-Tiefenanalyse (Schicht 5) als Input |
 | `superintelligenz` | Bei sehr grossen Apps (>500 Kotlin-Dateien) parallele Researcher fuer einzelne Schichten spawnen |
+
+## Umlaut-Pflicht im Skill-Output (FIN-027, Frank-Direktive 2026-05-18)
+
+In allen deutschen Texten die der Skill produziert MÜSSEN echte Umlaute verwendet werden:
+
+**Pflicht:** ä ö ü Ä Ö Ü ß
+**Verboten:** ae oe ue Ae Oe Ue ss (als Umlaut-Ersatz)
+
+### Wo die Pflicht gilt
+
+| Output-Datei | Betroffene Felder |
+|-------------|------------------|
+| `roentgen-report.json` | `rationale`-Felder, `claim`-Texte, `description`-Felder, alle deutschen Kommentare |
+| `app-roentgen-AUDIT-YYYY-MM-DD.md` | Alle deutschen Fließtext-Abschnitte, Tabellen-Einträge, Zusammenfassungen |
+| `app-roentgen-initial-scan.md` | Vollständig |
+| `audit-log.md` | Alle Einträge |
+| `roentgen-checkpoint.json` | Deutsche Status-/Beschreibungsfelder |
+| Alle sonstigen Frank-sichtbaren Texte | Vollständig |
+
+### Ausnahmen (ASCII bleibt erlaubt)
+
+- Dateinamen und Verzeichnispfade
+- Code-Variablen, Funktionsnamen, String-Resource-Keys
+- 1:1-zitierte Wortlaute aus dem Quellcode (die werden unverändert übernommen)
+- Eigennamen und Markennamen die "ae/oe/ue" als lateinische Transkription enthalten (z.B. "Goethe")
+
+### Verifikation nach jedem Skill-Output
+
+```bash
+# Grep auf verdächtige ASCII-Substitutionen in deutschen Text-Blöcken
+grep -nE '\b(ae|oe|ue|ss)\b' <output-datei> | grep -v '#\|//\|R\.string\|strings\.xml'
+```
+
+Falls Treffer in zweifelsfreien deutschen Wörtern (z.B. "uebersetzen", "ausfuehren", "Strasse"): Auto-Convert vor Abgabe des Berichts. Bei Eigennamen und Code-Bezeichnern: unverändert lassen.
 
 ## Was NIEMALS passieren darf
 

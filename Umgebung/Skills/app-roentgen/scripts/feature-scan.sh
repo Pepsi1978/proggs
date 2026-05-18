@@ -42,6 +42,14 @@ command -v rg >/dev/null 2>&1 && HAS_RG=1
 HAS_JQ=0
 command -v jq >/dev/null 2>&1 && HAS_JQ=1
 
+# FIN-003: RG_CMD fuer direkten rg/grep-RE-Aufruf (Assets-Scan, einfache Grep-Stellen)
+# GREP_R() deckt .kt/.java-Suchen ab; RG_CMD ist fuer einfache find-aehnliche Glob-Scans.
+if command -v rg >/dev/null 2>&1; then
+    RG_CMD="rg"
+else
+    RG_CMD="grep -RE"
+fi
+
 if [ "$HAS_RG" = "0" ]; then
     echo "Hinweis: ripgrep (rg) nicht gefunden — falle auf grep zurueck (5-10x langsamer)." >&2
     echo "         Installation: 'brew install ripgrep' (macOS) oder 'winget install ripgrep'" >&2
@@ -315,6 +323,189 @@ count_in_file() {
         echo "Kein AndroidManifest.xml gefunden — manueller Check noetig."
         echo ""
     fi
+
+    # === SCHICHT 1.5: ASSETS-SCAN (FIN-014) ======================================
+    # Scannt app/src/main/assets/ nach ausgelieferten Legal- und Web-Dokumenten.
+    # Ergebnis fliesst in roentgen-report.json unter Key "layer1_5_assets".
+    # Der Rechtssicherheits-Skill liest diesen Block VOR der missingDocs-Generierung
+    # um False-Positives zu vermeiden (z.B. 81 legal HTML in 27 Sprachen = kein Fund).
+    echo "## Schicht 1.5 — Assets-Scan (Legal- und Web-Dokumente)"
+    echo ""
+
+    # Hilfsfunktion: Doktyp-Detection aus Dateinamen (case-insensitive)
+    _asset_doctype() {
+        local fname
+        fname=$(basename "$1" | tr '[:lower:]' '[:upper:]')
+        case "$fname" in
+            *DATENSCHUTZ*|*PRIVACY*|*PRIVACY_POLICY*) echo "privacy" ;;
+            *IMPRESSUM*|*IMPRINT*|*LEGAL_NOTICE*)      echo "imprint" ;;
+            *NUTZUNGSBEDINGUNGEN*|*TERMS*|*TOS*|*AGB*) echo "terms" ;;
+            *HEALTH_DISCLAIMER*|*MEDICAL*|*HEALTH*)    echo "health-disclaimer" ;;
+            *)                                          echo "other" ;;
+        esac
+    }
+
+    # Hilfsfunktion: Sprach-Detection aus Pfad-Locale-Segment
+    # Beispiel: assets/legal/de/DATENSCHUTZ.html -> "de"
+    _asset_locale() {
+        local p="$1"
+        # Suche nach zweistelligem Locale-Segment im Pfad (z.B. /de/, /en/, /fr/)
+        local loc
+        loc=$(echo "$p" | grep -oE '/[a-z]{2}/' | head -1 | tr -d '/')
+        if [[ -n "$loc" ]]; then
+            echo "$loc"
+        else
+            echo "default"
+        fi
+    }
+
+    ASSETS_DIR="app/src/main/assets"
+    if [[ -d "$ASSETS_DIR" ]]; then
+        echo "Assets-Verzeichnis: \`$ASSETS_DIR\`"
+        echo ""
+
+        # Alle relevanten Dateitypen finden (portabel mit find, kein Bash-Glob noetig)
+        ASSET_FILES=$(find "$ASSETS_DIR" \( -name '*.html' -o -name '*.htm' -o -name '*.md' -o -name '*.txt' \) -type f 2>/dev/null | sort)
+
+        if [[ -z "$ASSET_FILES" ]]; then
+            echo "Keine html/htm/md/txt-Dateien in assets/ gefunden."
+            echo ""
+        else
+            # Zaehl-Uebersicht
+            ASSET_COUNT=$(echo "$ASSET_FILES" | wc -l | tr -d ' ')
+            echo "Gefundene Dateien: $ASSET_COUNT"
+            echo ""
+
+            # Doktyp-Karten aufbauen (privacy, imprint, terms, health-disclaimer, other)
+            declare -A PRIVACY_MAP IMPRINT_MAP TERMS_MAP HEALTH_MAP
+            OTHER_LIST=""
+
+            while IFS= read -r f; do
+                doctype=$(_asset_doctype "$f")
+                locale=$(_asset_locale "$f")
+                rel="${f#./}"
+                case "$doctype" in
+                    privacy)           PRIVACY_MAP["$locale"]="$rel" ;;
+                    imprint)           IMPRINT_MAP["$locale"]="$rel" ;;
+                    terms)             TERMS_MAP["$locale"]="$rel" ;;
+                    health-disclaimer) HEALTH_MAP["$locale"]="$rel" ;;
+                    other)             OTHER_LIST="$OTHER_LIST\n  - $rel" ;;
+                esac
+            done <<< "$ASSET_FILES"
+
+            echo "### 1.5.1 Privacy-Dokumente"
+            if [[ ${#PRIVACY_MAP[@]} -gt 0 ]]; then
+                for loc in "${!PRIVACY_MAP[@]}"; do echo "  [$loc] ${PRIVACY_MAP[$loc]}"; done | sort
+            else
+                echo "  (keine gefunden)"
+            fi
+            echo ""
+
+            echo "### 1.5.2 Impressum-Dokumente"
+            if [[ ${#IMPRINT_MAP[@]} -gt 0 ]]; then
+                for loc in "${!IMPRINT_MAP[@]}"; do echo "  [$loc] ${IMPRINT_MAP[$loc]}"; done | sort
+            else
+                echo "  (keine gefunden)"
+            fi
+            echo ""
+
+            echo "### 1.5.3 Terms/AGB-Dokumente"
+            if [[ ${#TERMS_MAP[@]} -gt 0 ]]; then
+                for loc in "${!TERMS_MAP[@]}"; do echo "  [$loc] ${TERMS_MAP[$loc]}"; done | sort
+            else
+                echo "  (keine gefunden)"
+            fi
+            echo ""
+
+            echo "### 1.5.4 Health-Disclaimer-Dokumente"
+            if [[ ${#HEALTH_MAP[@]} -gt 0 ]]; then
+                for loc in "${!HEALTH_MAP[@]}"; do echo "  [$loc] ${HEALTH_MAP[$loc]}"; done | sort
+            else
+                echo "  (keine gefunden)"
+            fi
+            echo ""
+
+            if [[ -n "$OTHER_LIST" ]]; then
+                echo "### 1.5.5 Sonstige Assets"
+                echo -e "$OTHER_LIST"
+                echo ""
+            fi
+
+            # JSON-Output fuer roentgen-report.json (layer1_5_assets)
+            # Wird vom Rechtssicherheits-Skill als missingDocs-Guard ausgewertet.
+            echo "### 1.5.6 JSON-Export (layer1_5_assets)"
+            echo ""
+            echo '```json'
+            echo '{'
+            echo '  "layer1_5_assets": {'
+
+            # privacy
+            printf '    "privacy": {'
+            FIRST=1
+            for loc in $(echo "${!PRIVACY_MAP[@]}" | tr ' ' '\n' | sort); do
+                [[ "$FIRST" = "0" ]] && printf ','
+                printf '"%s": "%s"' "$loc" "${PRIVACY_MAP[$loc]}"
+                FIRST=0
+            done
+            printf '},\n'
+
+            # imprint
+            printf '    "imprint": {'
+            FIRST=1
+            for loc in $(echo "${!IMPRINT_MAP[@]}" | tr ' ' '\n' | sort); do
+                [[ "$FIRST" = "0" ]] && printf ','
+                printf '"%s": "%s"' "$loc" "${IMPRINT_MAP[$loc]}"
+                FIRST=0
+            done
+            printf '},\n'
+
+            # terms
+            printf '    "terms": {'
+            FIRST=1
+            for loc in $(echo "${!TERMS_MAP[@]}" | tr ' ' '\n' | sort); do
+                [[ "$FIRST" = "0" ]] && printf ','
+                printf '"%s": "%s"' "$loc" "${TERMS_MAP[$loc]}"
+                FIRST=0
+            done
+            printf '},\n'
+
+            # health-disclaimer
+            printf '    "health-disclaimer": {'
+            FIRST=1
+            for loc in $(echo "${!HEALTH_MAP[@]}" | tr ' ' '\n' | sort); do
+                [[ "$FIRST" = "0" ]] && printf ','
+                printf '"%s": "%s"' "$loc" "${HEALTH_MAP[$loc]}"
+                FIRST=0
+            done
+            printf '},\n'
+
+            # other (array)
+            printf '    "other": ['
+            FIRST=1
+            if [[ -n "$OTHER_LIST" ]]; then
+                while IFS= read -r f; do
+                    rel="${f#./}"
+                    [[ "$FIRST" = "0" ]] && printf ','
+                    printf '"%s"' "$rel"
+                    FIRST=0
+                done < <(echo "$ASSET_FILES" | while IFS= read -r f; do
+                    [[ "$(_asset_doctype "$f")" = "other" ]] && echo "$f"
+                done)
+            fi
+            printf ']\n'
+
+            echo '  }'
+            echo '}'
+            echo '```'
+            echo ""
+        fi
+
+        unset PRIVACY_MAP IMPRINT_MAP TERMS_MAP HEALTH_MAP
+    else
+        echo "Kein \`app/src/main/assets/\`-Verzeichnis gefunden — Assets-Scan uebersprungen."
+        echo ""
+    fi
+    # === ENDE SCHICHT 1.5 ========================================================
 
     # === SCHICHT 2: DEPENDENCIES ===
     echo "## Schicht 2 — Dependencies"

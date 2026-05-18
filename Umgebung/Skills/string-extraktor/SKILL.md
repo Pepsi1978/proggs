@@ -143,14 +143,54 @@ Glob: **/ui/**/*ViewModel.kt
 Glob: **/ui/**/*Component*.kt
 ```
 
-### 1.3 Master-Scan via Script
+### 1.3 Master-Scan via Script — 15 parallele Worker (FIN-023)
+
+> **Frank-Direktive FIN-023 (2026-05-18): "Immer 15 oder so parallele
+> Subagents beim Strings erstellen." PFLICHT fuer alle Projekte mit mehr
+> als einem Modul oder mehr als ca. 20 Kotlin-Dateien.**
+
+#### Worker-Aufteilung (Standard — an Projektstruktur anpassen)
+
+```
+Worker  1 — ui/screens/dashboard/*
+Worker  2 — ui/screens/entry/*
+Worker  3 — ui/screens/settings/*
+Worker  4 — ui/screens/onboarding/*
+Worker  5 — ui/screens/retrospective/*
+Worker  6 — ui/screens/paywall/*
+Worker  7 — ui/screens/profiles/*
+Worker  8 — ui/screens/consent/*
+Worker  9 — ui/components/* (erste Haelfte alphabetisch)
+Worker 10 — ui/components/* (zweite Haelfte alphabetisch)
+Worker 11 — data/* (Repositories, DataSources, DTOs)
+Worker 12 — domain/* (UseCases, Models)
+Worker 13 — util/* (Extensions, Helpers, Formatters)
+Worker 14 — di/* + navigation/* + sonstige Verzeichnisse
+Worker 15 — Synthesizer: aggregiert alle Worker-Reports zu einem
+             Strings-Inventory, entfernt Duplikate, erstellt
+             die finale Scan-Zusammenfassung
+```
+
+**Bei flacher Struktur (weniger Verzeichnisse):** Dateien alphabetisch
+auf 14 Worker aufteilen, Worker 15 bleibt Synthesizer. Niemals weniger
+als 10 Worker für Projekte mit 30+ Kotlin-Dateien.
+
+**Token-Cap pro Worker: 100k.** Bei Überschreitung den Worker-Scope
+halbieren und einen zusätzlichen Worker spawnen.
+
+**Continuous-Spawning-Regel:** Schlägt ein Worker nach 3 Versuchen fehl
+(z.B. Timeout, leeres Verzeichnis), wird er ohne den fehlenden Scope
+ersetzt — die anderen 14 laufen weiter. Der Synthesizer markiert den
+fehlenden Scope als `manual-review-needed`.
+
+#### Start-Kommando (alle 15 Workers gleichzeitig)
 
 ```bash
-# Aus dem Skill-Verzeichnis:
-bash scripts/scan-strings.sh <APP_DIR>
+# Worker 1-14 parallel spawnen (jeder bekommt seinen Scope-Pfad):
+bash scripts/scan-strings.sh <APP_DIR>/<worker-scope>
 
-# Oder mit vollem Pfad (falls anderswo gerufen):
-bash ~/.claude/skills/string-extraktor/scripts/scan-strings.sh <APP_DIR>
+# Worker 15 (Synthesizer) startet sobald mindestens 12 Worker
+# ihre Reports zurückgeliefert haben.
 ```
 
 Das Skript fasst die 9 Grep-Muster aus `string-best-practices.md` Kap. 2
@@ -159,6 +199,19 @@ Placeholders, TopAppBar, Error-Calls, Enum-Labels) und erzeugt einen
 strukturierten Bericht. Spart Token bei grossen Apps. Bei kleinen Apps oder
 gezielter Prüfung einzelner Screens reichen die Patterns einzeln aus
 `string-best-practices.md` Kap. 2.
+
+**Synthesizer-Output-Format:**
+```
+=== STRINGS-INVENTORY (aggregiert aus 15 Workern) ===
+Worker  1 (dashboard):     N Strings, M Duplikate entfernt
+Worker  2 (entry):         N Strings, M Duplikate entfernt
+...
+Worker 14 (di/nav):        N Strings, M Duplikate entfernt
+Worker 15 (Synthesizer):   Gesamt X unique Strings
+                            Duplikate gesamt: Y
+                            Manual-review-needed: Z Scopes
+===================================================
+```
 
 ### 1.4 Unicode-Escape-Scan (PFLICHT)
 
@@ -241,10 +294,32 @@ Issues offen (brauchen Entscheidung).
 
 ---
 
-## Phase 3: CREATE — Fehlende Strings erstellen
+## Phase 3: CREATE — Fehlende Strings erstellen (15 parallele Worker, FIN-023)
 
-**3.1 Reihenfolge — Screen fuer Screen** (nicht alle auf einmal). Reihenfolge:
-Haupt-Screens → Dialoge/Overlays → Onboarding → Edge-Cases.
+> **Frank-Direktive FIN-023 gilt auch hier:** Die in Phase 1 gefundenen
+> hardcodierten Strings werden in 15 Bundles aufgeteilt und von 15 parallelen
+> Worker-Subagents gleichzeitig nach strings.xml migriert.
+
+**3.0 Bundle-Aufteilung vor Migrations-Start**
+
+Der Synthesizer aus Phase 1 liefert das Strings-Inventory. Dieses wird in
+15 gleichgrosse Bundles aufgeteilt (nach Screen-/Verzeichniszugehörigkeit,
+nicht nach Zeilennummer). Jeder Worker bekommt sein Bundle + den vollständigen
+Kontext (Phase-0-Entscheidungen, bestehendes strings.xml, Glossar).
+
+Worker-Übergabe-Prompt-Pflichtfelder:
+- `scope_directory`: Welches Verzeichnis gehört diesem Worker
+- `strings_to_migrate`: Exakte Liste der Strings aus dem Inventory
+- `existing_keys`: Aktuelle keys aus strings.xml (keine Duplikate)
+- `anrede`: Du/Sie aus Phase 0
+- `gender_strategy`: Strategie aus Phase 0
+- `umlaut_directive`: "FIN-027 aktiv — echte Umlaute, kein ae/oe/ue"
+
+Nach Abschluss aller 15 Worker: Synthesizer merged alle neuen Strings in
+die finale strings.xml, prüft auf Doppel-Keys und gibt den Build-Check frei.
+
+**3.1 Reihenfolge innerhalb jedes Workers** (nicht alle auf einmal). Reihenfolge
+pro Worker: Haupt-Screens → Dialoge/Overlays → Onboarding → Edge-Cases.
 
 ### 3.2 Fuer jeden String: 6 Schritte
 
@@ -434,6 +509,68 @@ trennen sie in eine separate Datei (Crowdin/Phrase/Lokalise-Standard).
 
 **Auto-Detektion:** `validate_extracted.py --suggest-donottranslate` schlaegt
 Kandidaten vor. Volle Details: `references/praevention-setup.md` Abschnitt 6.5.
+
+---
+
+## Umlaut-Pflicht (Frank-Direktive FIN-027, 2026-05-18)
+
+> **Beim Erstellen und Migrieren von strings.xml-Einträgen MÜSSEN echte deutsche
+> Umlaute verwendet werden. ASCII-Substitutionen sind in allen Zielwerten verboten.**
+
+### Pflicht-Zeichen
+
+| Verboten | Korrekt |
+|----------|---------|
+| ae | ä |
+| oe | ö |
+| ue | ü |
+| Ae | Ä |
+| Oe | Ö |
+| Ue | Ü |
+| ss (wo ß orthografisch korrekt ist) | ß |
+
+### Auto-Convert beim Migrieren
+
+Falls ein Quell-String (hardcodierter Text im Kotlin-Code) ASCII-Substitutionen
+enthielt, werden diese beim Übertragen in strings.xml **automatisch konvertiert**:
+
+```
+"fuer" → "für"     "Groesse" → "Größe"     "ueberblick" → "Überblick"
+"koennen" → "können"   "muss" → "muss" (kein ß, korrekt)   "Strasse" → prüfen!
+```
+
+### Unsicherheits-Markierung (needs-review)
+
+Bei Zweideutigkeit — z.B. "Strasse" als Eigenname (Straße? Straße? unklarer Kontext)
+oder "Masse" (Masse = Gewicht vs. Maße = Abmessungen) — den Eintrag mit einem
+Kommentar markieren statt blind zu konvertieren:
+
+```xml
+<!-- needs-review: "Strasse" — Eigenname oder Straße? Bitte prüfen. -->
+<string name="map_label_street">Strasse</string>
+```
+
+Blindes Konvertieren bei Eigennamen, Markennamen oder technischen Bezeichnern
+ist **VERBOTEN**.
+
+### Verifikation nach jedem Extract-Output (PFLICHT)
+
+Nach jedem Worker-Run und nach dem Synthesizer-Merge:
+
+```bash
+# Grep auf ASCII-Substitutionen in den neuen strings.xml-Einträgen:
+grep -nE '\b(ae|oe|ue|Ae|Oe|Ue)\b' app/src/main/res/values/strings.xml
+```
+
+Treffer die KEIN `needs-review`-Kommentar darüber haben = Fehler, der sofort
+korrigiert werden muss. Null Treffer ohne Kommentar = Verifikation bestanden.
+
+### Zusammenspiel mit Phase 3.2 Schritt 6
+
+Phase 3.2 Schritt 6 ("Deutsche Sprach-Validierung") Punkt 2 lautet bereits
+"Umlaute direkt (kein Unicode-Escape, kein `ae/oe/ue`)". FIN-027 verstärkt
+das zusätzlich mit dem Auto-Convert-Schritt und der Pflicht-Verifikation per
+Grep nach jedem Worker-Output.
 
 ---
 
