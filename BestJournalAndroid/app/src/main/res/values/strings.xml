@@ -494,7 +494,7 @@
     <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
-    <string name="settings_premium_feature_5_perspectives">4 besondere KI-Profile</string>
+    <string name="settings_premium_feature_5_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
     <string name="settings_premium_feature_reviews">Alle Rückblicke ausführlich mit KI erstellt</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
@@ -681,6 +681,11 @@
     <string name="consent_toggle_drive_body">Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.</string>
     <string name="consent_toggle_do_not_sell_title">Datenschutz-Wahlrechte (Kalifornien)</string>
     <string name="consent_toggle_do_not_sell_body">Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\n\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.</string>
+
+    <!-- Android System-Backup Info-Block (kein Toggle, nur Hinweis für Transparenz) -->
+    <string name="consent_info_system_backup_title">Android System-Backup</string>
+    <string name="consent_info_system_backup_body">Wenn du Android System-Backup in den Geräte-Einstellungen aktiviert hast, sichert Android deine Tagebuch-Daten automatisch in den Backup-Bereich deines Google-Kontos. Du kannst das in deinen Geräte-Einstellungen jederzeit deaktivieren — siehe Datenschutzerklärung für Details.</string>
+
     <string name="consent_btn_accept_all">Alle akzeptieren</string>
     <string name="consent_btn_save_selection">Meine Auswahl speichern</string>
     <string name="consent_btn_minimum_only">Alle ablehnen</string>
@@ -688,6 +693,12 @@
     <string name="consent_revoke_snackbar">Einwilligung widerrufen</string>
     <string name="consent_footer_version">Deine Auswahl ist jederzeit in den Einstellungen änderbar.</string>
     <string name="consent_details_expand">Details</string>
+
+    <!-- Permission rationales (Play Store policy + DSGVO Art. 13) -->
+    <string name="permission_rationale_microphone">Damit du deine Tagebucheinträge per Sprache diktieren kannst, brauchen wir Zugriff auf dein Mikrofon.</string>
+    <string name="permission_rationale_camera">Damit du Fotos zu deinen Einträgen hinzufügen kannst, brauchen wir Zugriff auf deine Kamera.</string>
+    <string name="permission_rationale_location">Damit du deinen Einträgen einen Ortskontext geben kannst, brauchen wir den ungefähren Standort. Du kannst das jederzeit ablehnen oder später abschalten.</string>
+    <string name="permission_rationale_notifications">Damit wir dich an dein tägliches Schreiben erinnern dürfen, brauchen wir die Erlaubnis für Benachrichtigungen.</string>
 
     <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
     <string name="settings_open_privacy_sheet">Datenschutz-Einstellungen anpassen</string>
@@ -709,6 +720,11 @@
     <string name="settings_ccpa_do_not_sell_subtitle">Nur relevant für Einwohner des US-Bundesstaats Kalifornien. Bei Aktivierung werden alle optionalen Cloud-Funktionen deaktiviert — nur lokale Features bleiben aktiv.</string>
     <string name="settings_ccpa_do_not_sell_confirmation">Kalifornien-Datenschutzoption aktiviert — alle Cloud-Dienste sind deaktiviert.</string>
     <string name="settings_ccpa_do_not_sell_off_confirmation">Kalifornien-Datenschutzoption deaktiviert.</string>
+
+    <!-- Android System-Backup Settings-Eintrag (DSGVO Art. 13 Transparenz) -->
+    <string name="settings_open_system_backup_settings_label">Android System-Backup verwalten</string>
+    <string name="settings_open_system_backup_settings_desc">Öffnet die Android-Systemeinstellungen, in denen du das automatische Backup für Best Journal an- und ausschalten kannst.</string>
+    <string name="error_no_backup_settings_available">Backup-Einstellungen auf diesem Gerät nicht verfügbar.</string>
 
     <!-- Settings: Datenschutz-Abschnitt -->
     <string name="settings_privacy_header">Datenschutz</string>
@@ -1073,7 +1089,7 @@
     <string name="onboarding_goals_select">Wähle ein oder mehrere Ziele</string>
     <string name="onboarding_how_step3_title">Füge Fotos und Videos hinzu</string>
     <string name="onboarding_how_title">So einfach geht es</string>
-    <string name="onboarding_perspectives_title">5 Perspektiven auf\ndein Leben</string>
+    <string name="onboarding_perspectives_title">Verschiedene Blickwinkel auf\ndein Leben</string>
     <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
     <string name="onboarding_premium_profiles">4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
     <string name="onboarding_try_premium">8 Tage Premium testen</string>
@@ -1166,7 +1182,7 @@
     <string name="churn_exclusive_offer">Exklusives Angebot</string>
     <string name="churn_offer_subtitle">Nur für dich, weil du uns wichtig bist</string>
     <string name="churn_offer_feature_ai">Tägliche KI-Analysen</string>
-    <string name="churn_offer_feature_perspectives">Alle 5 Perspektiven</string>
+    <string name="churn_offer_feature_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
     <string name="churn_offer_feature_voice">Premium-Spracherkennung</string>
     <string name="churn_offer_auto_renew">Verlängert sich automatisch, jederzeit kündbar</string>
     <string name="churn_accept_offer">Angebot annehmen</string>
@@ -1188,7 +1204,7 @@
     <!-- AI Limits disclaimer + explanation dialog (Paywall + Settings Premium-Bereich) -->
     <string name="ai_limits_disclaimer">Großzügiges KI-Tageskontingent für intensive Nutzung.</string>
     <string name="ai_limits_dialog_title">Wie funktioniert das KI-Tageskontingent?</string>
-    <string name="ai_limits_dialog_body" formatted="false">MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• Bis zu 150 Dashboard-Analysen pro KI-Profil (bei 4 Profilen also bis zu 600 pro Tag)\n• Bis zu 150 Text-Verbesserungen\n\nWie das im Detail abläuft:\n• Anfragen 1 bis 30: in höchster KI-Qualität\n• Anfragen 31 bis 100: in schneller Standard-Qualität\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\n• Anfragen 101 bis 150: schnelle Standard-Qualität\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\n\nAußerdem gilt für alle Nutzer:\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\n\nWann werden die Kontingente zurückgesetzt?\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\n\n──────────\n\nOHNE ABO\n\n• 5 Dashboard-Analysen pro Woche pro Profil\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\n\n──────────\n\nÜber 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.</string>
+    <string name="ai_limits_dialog_body" formatted="false">MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\n• Bis zu 150 Text-Verbesserungen\n\nWie das im Detail abläuft:\n• Anfragen 1 bis 30: in höchster KI-Qualität\n• Anfragen 31 bis 100: in schneller Standard-Qualität\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\n• Anfragen 101 bis 150: schnelle Standard-Qualität\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\n\nAußerdem gilt für alle Nutzer:\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\n\nWann werden die Kontingente zurückgesetzt?\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\n\n──────────\n\nOHNE ABO\n\n• 5 Dashboard-Analysen pro Woche pro Profil\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\n\n──────────\n\nÜber 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.</string>
     <string name="ai_limits_dialog_close">Verstanden</string>
 
     <string name="ai_banner_title">Dein Tagebuch wird von KI unterstützt</string>

@@ -3,6 +3,70 @@
 Append-only Logbuch. Jeder Eintrag dokumentiert Phase, Subagent, Modell, Skill-SHA,
 Status und ggf. Diff-Hash. Wird ueber alle Laeufe hinweg gefuehrt.
 
+## 2026-05-18T16:50Z · Phase 2-B-2 · T-002 Android-System-Backup Transparenz angewendet
+
+- Subagent:     fix-applier (general-purpose, Sonnet 4.6, effort: max)
+- Finding:      T-002 (DSGVO Art. 5/13 — Android System-Backup Transparenz)
+- Frank-Wahl:   Option 2+ (Backup behalten + vollständige Transparenz + Direktlink)
+- Dateien geändert (5 Edits):
+
+  **A2 — strings.xml: 2 Consent-Info-Strings**
+  * consent_info_system_backup_title  — nach Zeile 683
+  * consent_info_system_backup_body   — nach Zeile 683
+
+  **A3.1 — strings.xml: 3 Settings-Strings**
+  * settings_open_system_backup_settings_label — vor settings_privacy_header
+  * settings_open_system_backup_settings_desc  — vor settings_privacy_header
+  * error_no_backup_settings_available         — vor settings_privacy_header
+
+  **A1.1 — DATENSCHUTZ.html §2-Tabelle**
+  * Neue Zeile nach "Tagebuchdaten (Backup)"-Zeile:
+    "Tagebuch-Datenbank (Android System-Backup)" / "Google Drive Backup-Bereich" / "Automatische Geräte-Sicherung" / "Geräte-Setting"
+
+  **A1.2 — DATENSCHUTZ.html §5.3a**
+  * Alte 3-Satz-Version ersetzt durch detaillierte Version mit 5-Punkt-Liste:
+    Welche Daten / Wohin / Wann / Wie deaktivieren / Verhältnis zu App-Backup
+  * Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung über Geräte-Setting)
+
+  **A3.2 — SettingsScreen.kt Privacy-Sektion**
+  * LegalDocumentRow mit ACTION_BACKUP_SETTINGS → Fallback ACTION_PRIVACY_SETTINGS → Toast
+  * Eingesetzt nach dem PrivacySheet-Button-Block, vor "Delete account"-Block
+  * Kein neuer Import (android.provider.Settings vollqualifiziert inline)
+
+- Umlaut-Verifikation:
+  * DATENSCHUTZ.html: ü(Geräte), ä(Einstellungen), ö(können), ü(Übertragen), ß(schließlich) ✓
+  * strings.xml: ä(Geräte), ö(können), ü(übersetzt) ✓ — kein ae/oe/ue/ss
+  * SettingsScreen.kt: nur R.string.*-Referenzen, kein Hardcode-Deutsch ✓
+- Counter-Update: fixedThisRun 5->6, openFindingsCount 24->23
+  openFindingsBreakdown.textual: total 10->9, high 3->2
+- Status: completed
+
+---
+
+## 2026-05-18T(aktuell) · Phase 2-B-1 · T-001 Permission-Rationale angewendet
+
+- Subagent:     fix-applier (general-purpose, Sonnet 4.6, effort: max)
+- Finding:      T-001 (Play-Store-Policy + DSGVO Art. 13)
+- Frank-Wahl:   Variante [2] warmer Du-Stil, echte Umlaute
+- Datei:        app/src/main/res/values/strings.xml
+- Neue Strings (4):
+  * permission_rationale_microphone  — Zeile 693
+  * permission_rationale_camera      — Zeile 694
+  * permission_rationale_location    — Zeile 695
+  * permission_rationale_notifications — Zeile 696
+- Insertion-Punkt: nach `consent_details_expand` (Z. 690), vor Settings-Screen-v4-Kommentar (Z. 698)
+  Block-Kommentar: `<!-- Permission rationales (Play Store policy + DSGVO Art. 13) -->`
+- Umlaut-Verifikation: OK — ä/ü/ü direkt in allen 4 Strings, kein ae/oe/ue/ss
+- Diff-Hash strings.xml: f100c842 -> e6e4b9ea (git-Objekt-Hash)
+- Counter-Update:        fixedThisRun 4->5 (T-001), openFindingsCount 25->24
+- Status:                completed
+
+Hinweis für Phase 3: Diese 4 neuen Strings müssen in alle 27 Locales
+übersetzt werden (delta-Pipeline). Nur die 4 neuen Keys, nicht die ganze Datei.
+
+Folgefrage offen: shouldShowRequestPermissionRationale()-Code-Anbindung
+nicht verifiziert — Phase 5 oder Plugin-Update als T-NEU eintragen.
+
 ---
 
 ## 2026-05-18T12:49Z · Phase 0 · Skill-Verifikation
@@ -95,3 +159,20 @@ Status und ggf. Diff-Hash. Wird ueber alle Laeufe hinweg gefuehrt.
 - Jurisdiktionen: DE, AT, CH, EU, GB, US
 - Status: `completed`
 
+
+## 2026-05-18T14:25:24Z - Phase 2-A - Cluster 4-vs-5 angewendet
+
+- Subagent:     fix-applier (general-purpose, Sonnet 4.6, bypassPermissions)
+- Cluster:      AM-001, AM-002, AM-003, T-003 + onboarding_premium_feature_perspectives
+- Frank-Wahl:   Eigene Formulierung (Bundle 1c+2b+3c+4a+5b)
+- Datei:        app/src/main/res/values/strings.xml
+- Substitutionen:
+  * settings_premium_feature_5_perspectives   : alt: 4 besondere KI-Profile -> neu: Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)      [applied]
+  * churn_offer_feature_perspectives          : alt: Alle 5 Perspektiven -> neu: Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)           [applied]
+  * onboarding_perspectives_title             : alt: 5 Perspektiven auf dein Leben -> neu: Verschiedene Blickwinkel auf dein Leben              [applied]
+  * onboarding_premium_feature_perspectives   : n/a -> Key existiert nicht in strings.xml                                                       [not-found]
+  * ai_limits_dialog_body (partial Auszug)    : alt: bei 4 Profilen also bis zu 600 pro Tag -> neu: 150/Tag pro Profil-Satz                     [applied]
+- Verifikation post-edit: OK - alle 4 angewandten Werte per Grep bestaetigt
+- Diff-Hash strings.xml:  sha256:92f5efacd584
+- Counter-Update:         fixedThisRun 0->4, openFindingsCount 29->25
+- Status:                 completed (4 applied, 1 not-found/skipped)

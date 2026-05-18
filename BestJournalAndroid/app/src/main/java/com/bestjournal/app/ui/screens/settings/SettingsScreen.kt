@@ -3427,6 +3427,37 @@ fun SettingsScreen(
                         // The separate standalone entry that used to live here has been
                         // removed to avoid a duplicate row under Privacy on American English.
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // T-002: Android System-Backup transparency link (DSGVO Art. 13)
+                        // Opens Android backup settings so users can manage automatic backup.
+                        LegalDocumentRow(
+                            label = stringResource(R.string.settings_open_system_backup_settings_label),
+                            onClick = {
+                                try {
+                                    context.startActivity(
+                                        android.content.Intent(android.provider.Settings.ACTION_BACKUP_SETTINGS).apply {
+                                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                    )
+                                } catch (e: Exception) {
+                                    try {
+                                        context.startActivity(
+                                            android.content.Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS).apply {
+                                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                        )
+                                    } catch (e2: Exception) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            R.string.error_no_backup_settings_available,
+                                            android.widget.Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        )
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Delete account button

@@ -11,7 +11,6 @@
 	"generatedAt": "2026-05-18",
 	"appVersion": "0.21.8",
 	"synthesizerNotes": "Aggregiert aus Worker B1 (paywall/churn), B2 (legal-docs/privacy/consent), B3 (marketing/advertising). 3 Duplikate entfernt (4-vs-5-Profil-Cluster: T-PW-001 und T-PW-002 als Verweise auf AM-Cluster konsolidiert). openFindingsCount berechnet ohne deadUrls und COMPLIANT-Eintraege.",
-
 	"findings": {
 		"textual": [
 			{
@@ -56,7 +55,16 @@
 					"CH": "DSG Art. 19 (Informationspflicht): Identisches Erfordernis zur Zweckangabe bei Berechtigungsanfragen. Gleiches Risiko.",
 					"GB": "UK GDPR Art. 13 (identisch mit EU DSGVO): Permission-Rationale erfordert. ICO Guidance empfiehlt explizite Zweckangabe. Gleiches Risiko.",
 					"US": "Kein Bundesgesetz, aber California CPRA §1798.100 und FTC Act §5 (unfair/deceptive practices) erfordern Transparenz ueber Datenzwecke. Play Store Policy gilt global — Rejection-Risiko identisch weltweit."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T14:34:33Z",
+				"appliedFixText": "4 strings hinzugefuegt (Variante 2 Du-Stil)",
+				"appliedStringKeys": [
+					"permission_rationale_microphone",
+					"permission_rationale_camera",
+					"permission_rationale_location",
+					"permission_rationale_notifications"
+				]
 			},
 			{
 				"findingId": "T-002",
@@ -90,7 +98,10 @@
 					"CH": "DSG Art. 6 (Grundsaetze der Datenbearbeitung), Art. 19: Schweizer DSG 2023 hat aehnliche Anforderungen an Zweckbindung und Transparenz. Risiko identisch.",
 					"GB": "UK GDPR Art. 5(1)(b) und Art. 13(1)(e): identisch mit EU DSGVO. ICO enforcement moeglich. Gleiches Risiko.",
 					"US": "California CPRA §1798.100(a): Nutzer hat Recht zu wissen, welche personenbezogenen Daten erhoben werden. Fehlendes Disclosure ueber Auto-Backup koennte als Verstoß gewertet werden. Geringes direktes Risiko, aber Transparenz-Best-Practice."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T16:50:00Z",
+				"appliedFixText": "Option 2+: DATENSCHUTZ.html §2-Tabelle + §5.3a erweitert (detaillierte Transparenz), strings.xml +5 Strings (consent_info + settings_open + error), SettingsScreen.kt LegalDocumentRow mit ACTION_BACKUP_SETTINGS-Fallback-Kette"
 			},
 			{
 				"findingId": "T-003",
@@ -125,7 +136,10 @@
 					"CH": "UWG CH Art. 3 lit. b (falsche Angaben): gleiches Risiko.",
 					"GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5 (misleading actions): identisches Risiko.",
 					"US": "FTC Act §5 (unfair/deceptive practices): unsubstantiated oder widersprüchliche Produktmerkmalsangaben koennen als deceptive advertising gewertet werden."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T14:25:07Z",
+				"appliedFixText": "150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst."
 			},
 			{
 				"findingId": "T-004",
@@ -359,7 +373,6 @@
 				"impactWithoutFix": "Kein messbares Risiko. Optionale Verbesserung."
 			}
 		],
-
 		"advertisingMismatch": [
 			{
 				"findingId": "AM-001",
@@ -404,7 +417,10 @@
 					"CH": "UWG CH Art. 3 lit. b: falsche Angaben über Produkteigenschaften. Gleiches Risiko.",
 					"GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5. Gleiches Risiko.",
 					"US": "FTC Act §5 (deceptive advertising). Play Store Policy global anwendbar. Gleiches Rejection-Risiko."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T14:25:07Z",
+				"appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
 			},
 			{
 				"findingId": "AM-002",
@@ -442,7 +458,10 @@
 					"CH": "UWG CH Art. 3 lit. b + Art. 4 lit. a (unlautere Retentions-Taktiken). Gleiches Risiko.",
 					"GB": "CPUTRs 2008 Reg. 5+7. Gleiches Risiko.",
 					"US": "FTC Negative Option Rule + FTC Act §5. Gleiches Risiko."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T14:25:07Z",
+				"appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
 			},
 			{
 				"findingId": "AM-003",
@@ -480,7 +499,10 @@
 					"CH": "Gleiches Risiko via UWG CH.",
 					"GB": "Gleiches Risiko via CPUTRs.",
 					"US": "Gleiches Rejection-Risiko via Play Store Policy. FTC Act §5 anwendbar."
-				}
+				},
+				"status": "applied",
+				"appliedAt": "2026-05-18T14:25:07Z",
+				"appliedFixText": "Verschiedene Blickwinkel auf dein Leben"
 			},
 			{
 				"findingId": "AM-004",
@@ -752,7 +774,6 @@
 				"impactWithoutFix": "Sehr geringes Risiko. Praktische Nutzungsmuster machen theoretischen Konflikt irrelevant."
 			}
 		],
-
 		"missingDocs": [
 			{
 				"findingId": "MD-001",
@@ -853,7 +874,6 @@
 				"httpCheckRequired": false
 			}
 		],
-
 		"deadUrls": [
 			{
 				"findingId": "URL-001",
@@ -868,7 +888,6 @@
 				"queuedForPhase": "1B-late (url-checker subagent)"
 			}
 		],
-
 		"playStorePolicies": [
 			{
 				"findingId": "PS-001",
@@ -906,7 +925,6 @@
 			}
 		]
 	},
-
 	"duplicatesRemoved": 2,
 	"duplicateDetails": [
 		{
@@ -922,12 +940,11 @@
 			"relatedFindingId": "AM-001"
 		}
 	],
-
-	"openFindingsCount": 29,
+	"openFindingsCount": 23,
 	"openFindingsBreakdown": {
 		"textual": {
-			"total": 10,
-			"high": 3,
+			"total": 9,
+			"high": 2,
 			"medium": 5,
 			"low": 2
 		},
@@ -953,8 +970,7 @@
 	"totalHighFindings": 7,
 	"totalMediumFindings": 18,
 	"totalLowFindings": 4,
-
-	"fixedThisRun": 0,
+	"fixedThisRun": 6,
 	"skippedThisRun": 0,
 	"userAlternativesApplied": 0,
 	"invasiveChangesApplied": 0,
@@ -963,7 +979,6 @@
 		"newFindings": 0,
 		"resolvedFindings": 0
 	},
-
 	"positiveFindings": [
 		{
 			"id": "POS-001",

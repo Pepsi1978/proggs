@@ -65,6 +65,7 @@
   <tr><td>Einstellungen und Präferenzen</td><td>Lokal auf deinem Gerät</td><td>App-Konfiguration</td><td>Kern</td></tr>
   <tr><td>Sprachaufnahmen (Cloud-Transkription)</td><td>Groq, Inc. (USA)</td><td>Umwandlung Sprache → Text</td><td><strong>Optional</strong></td></tr>
   <tr><td>Tagebuchdaten (Backup)</td><td>Google Drive (App-Data-Ordner)</td><td>Wiederherstellung, Geräteübergang</td><td><strong>Optional</strong></td></tr>
+  <tr><td>Tagebuch-Datenbank (Android System-Backup)</td><td>Google Drive Backup-Bereich des Geräte-Kontos</td><td>Automatische Geräte-Sicherung (Android-Funktion)</td><td><strong>Geräte-Setting</strong></td></tr>
   <tr><td>Textausschnitte (Vorlesen)</td><td>Microsoft Bing Speech (USA)</td><td>Umwandlung Text → Sprache</td><td><strong>Optional</strong></td></tr>
   <tr><td>KI-Anfragen (manuell + automatisch)</td><td>Firebase AI / Google Gemini (USA)</td><td>Dashboard, Wochen-/Monats-/Jahresrückblicke</td><td><strong>Optional</strong></td></tr>
   <tr><td>E-Mail, Anmelde-ID</td><td>Google / Firebase Authentication</td><td>Account</td><td><strong>Optional</strong></td></tr>
@@ -166,10 +167,15 @@
 <strong>Löschung des Backups:</strong> Über <strong>„Einstellungen → Backup → Cloud-Backup löschen"</strong>.</p>
 
 <h3>5.3a Android-System-Backup (automatisch)</h3>
-<p>Zusätzlich zum App-internen Drive-Backup unterstützt die App das <strong>Android-System-Backup</strong> (<code>allowBackup="true"</code>). Ist bei dir unter <strong>Android-Einstellungen → Google → Sicherung</strong> die automatische Sicherung aktiviert, werden App-Einstellungen und bestimmte Dateien automatisch im Google-Drive-Speicher deines Kontos gesichert (verschlüsselt, max. 25 MB).</p>
-<p><strong>Welche Daten ausgeschlossen sind:</strong> Sprachaufnahmen und Medien sind in den Backup-Regeln (<code>backup_rules.xml</code>, <code>data_extraction_rules.xml</code>) von der automatischen Sicherung <strong>ausgenommen</strong>, damit keine ungewollten Daten in der Cloud landen.<br>
-<strong>Deaktivierung:</strong> In den Android-Systemeinstellungen unter „Google → Sicherung".<br>
-<strong>Rechtsgrundlage:</strong> Einwilligung durch Google-Kontoeinstellungen (Art. 6 Abs. 1 lit. a DSGVO).</p>
+<p>Zusätzlich zum App-internen Drive-Backup unterstützt die App das <strong>Android-System-Backup</strong> (<code>allowBackup="true"</code>). Wenn du auf deinem Android-Gerät die geräteweite Sicherung aktiviert hast (<strong>Android-Einstellungen → System → Sicherung → „Auf Google Drive sichern"</strong>), wird ein Teil der App-Daten von Best Journal — einschließlich deiner Tagebuch-Datenbank — automatisch in den von Google bereitgestellten Sicherungsspeicher deines Geräte-Google-Kontos übertragen. Diese Sicherung ist eine Funktion von Android und Google, nicht von Best Journal.</p>
+<ul>
+  <li><strong>Welche Daten:</strong> Tagebucheinträge, Profile, App-Einstellungen aus der lokalen SQLite-Datenbank.</li>
+  <li><strong>Wohin:</strong> der von Google bereitgestellte Backup-Bereich deines Geräte-Google-Kontos — <em>nicht</em> dein normales „Mein Drive". Die Backup-Datei ist für andere Apps unsichtbar.</li>
+  <li><strong>Wann:</strong> automatisch, in der Regel alle ~24 Stunden, nur im WLAN und beim Laden.</li>
+  <li><strong>Wie du es deaktivierst:</strong> In den Android-Einstellungen unter „System → Sicherung → ‚Auf Google Drive sichern' ausschalten" — für alle Apps geräteweit, oder für Best Journal einzeln in der App-Liste in dieser Einstellung. Alternativ kannst du dein Geräte-Google-Konto vom Gerät entfernen.</li>
+  <li><strong>Verhältnis zum App-internen Drive-Backup:</strong> Das verschlüsselte Drive-Backup (Toggle „Google Drive Backup" in der App, siehe oben) ist davon unabhängig und wird von dir explizit ausgelöst.</li>
+</ul>
+<p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) über deine geräteweite Google-Backup-Einstellung. Das Setzen dieser Einstellung erfolgt außerhalb der App in deinen Geräte-Einstellungen.</p>
 
 <h3>5.4 Google Sign-In (optional)</h3>
 <p><strong>Anbieter:</strong> Google Ireland Limited<br>
