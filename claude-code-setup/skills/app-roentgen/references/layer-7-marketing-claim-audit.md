@@ -2,7 +2,7 @@
 
 ## Zweck und juristischer Rahmen
 
-Schicht 7 ist die finale Synthese: Hier werden ALLE Werbeaussagen aus ALLEN Quellen gegen das Feature-Inventar (Schicht 1-6) gepruet. Output ist eine Matrix die fuer jede Aussage sagt: passt sie zum Code, oder ist sie irrefuehrend?
+Schicht 7 ist die finale Synthese: Hier werden ALLE Werbeaussagen aus ALLEN Quellen gegen das Feature-Inventar (Schicht 1-6) geprueft. Output ist eine Matrix die fuer jede Aussage sagt: passt sie zum Code, oder ist sie irrefuehrend?
 
 Rechtlicher Rahmen Stand 2026:
 
@@ -18,10 +18,22 @@ Rechtlicher Rahmen Stand 2026:
 | **FTC Endorsement Guides (US)** | USA | KI-Claims brauchen Substanz, Affiliate-Disclosure |
 | **FTC Junk Fees Rule (US 2025)** | USA | Pflicht-Gebuehren upfront ausweisen |
 
+## 7.0 Multi-Module-Hinweis (FIX T7)
+
+> **Pfad-Annahme:** Die Bash-Snippets in diesem Layer benutzen aus Lesbarkeitsgruenden `app/src/main/...`. Bei **Multi-Module-Apps** (z.B. `feature/auth/`, `feature/journal/`, `core/ui/` mit jeweils eigenen `src/main/res/values/strings.xml`) MUSS jede Stelle die `app/src/main/res/values/...` enthaelt projektweit gesucht werden:
+>
+> ```bash
+> # Statt:  cat app/src/main/res/values/strings.xml
+> # Multi-Module-faehig:
+> find . -path '*/src/main/res/values/strings.xml' -not -path '*/build/*' | xargs cat
+> ```
+>
+> Das gleiche Muster gilt fuer `values-*/strings.xml` (alle Sprachen) und `AndroidManifest.xml` (jedes Modul kann eigene Permissions deklarieren). Das `feature-scan.sh` Skript hat dafuer die Helper `find_default_strings_xml`, `find_translated_strings_xml` und `find_locale_dirs` — diese werden automatisch verwendet wenn das Skript laeuft. Manuelle Audits muessen den Pfad anpassen.
+
 ## 7.1 Quellen aller Werbeaussagen sammeln
 
 ```bash
-# 1. Alle UI-Strings (Hauptsprache)
+# 1. Alle UI-Strings (Hauptsprache) — bei Multi-Module siehe 7.0
 cat app/src/main/res/values/strings.xml > /tmp/claims_de.txt
 
 # 2. Alle uebersetzten Sprachen

@@ -1,5 +1,11 @@
 # Schicht 4c — Translation-Context (Grundlage fuer den Uebersetzungs-Skill)
 
+> **Pfad-Annahme (Multi-Module-Hinweis):** Die Bash-Snippets in diesem Layer benutzen aus Lesbarkeitsgruenden `app/src/main/res/values/strings.xml`. Bei Multi-Module-Apps (Feature-Module mit eigenen `src/main/res/values/`) projektweit suchen:
+> ```bash
+> find . -path '*/src/main/res/values*/strings.xml' -not -path '*/build/*'
+> ```
+> Das `feature-scan.sh` Skript hat dafuer `find_default_strings_xml`, `find_translated_strings_xml` und `find_locale_dirs` und nutzt sie automatisch. Manuelle Audits muessen die Pfad-Anpassung selbst vornehmen.
+
 ## Warum diese Schicht existiert
 
 Der Uebersetzungs-Skill braucht mehr als nur den Original-Wortlaut. Er braucht den **Kontext** unter dem der String erscheint, damit eine korrekte Uebersetzung moeglich ist:

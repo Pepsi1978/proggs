@@ -4,6 +4,8 @@ description: |
   Durchleuchtet eine Android-App systematisch wie ein Roentgengeraet — extrahiert ALLE Funktionen, Bildschirme, Klick-Pfade, Paywall-Stufen und Hidden Features aus dem Quellcode, damit Werbeaussagen 1:1 gegen die Code-Realitaet geprueft werden koennen (UWG §5, EU UCPD, Google Play Policy).
 
   Nutze diesen Skill IMMER bei: "App durchleuchten", "App roentgen", "Roentgen-Skill", "X-Ray", "Durchleuchten", "Werbeaussagen pruefen", "Werbeaussagen-Audit", "UWG-Audit", "Paywall-Audit", "Marketing-Compliance", "Feature-Audit", "Feature-Inventar", "App-Architektur extrahieren", "alle Funktionen einer App auflisten", "App komplett analysieren", "App-Analyse fuer Rechtssicherheit", "stimmt was wir versprechen mit der App ueberein", "was kann die App genau", "Compliance-Pruefung". Funktioniert fuer beliebige Android-Apps (Kotlin/Compose bevorzugt, Java/XML auch unterstuetzt). Erzeugt einen strukturierten Audit-Bericht mit 1:1-Wortlauten, Paywall-Inventar, Permission-Mapping und Werbeaussage-vs-Feature-Matrix.
+
+  NICHT triggern fuer iOS-only-Apps, reine Flutter-/React-Native-/KMP-iOS-Builds, Web-Apps oder Backend-Services — der Skill liest Android-spezifische Patterns (AndroidManifest.xml, strings.xml, BillingClient, Compose) und liefert bei Nicht-Android-Codebases keine sinnvollen Ergebnisse. Bei Hybrid-Apps mit Android-Anteil (z.B. Flutter-Projekt mit `android/`-Ordner): nur den `android/`-Unterordner als Eingabe geben.
 allowed-tools:
   - Bash
   - Read

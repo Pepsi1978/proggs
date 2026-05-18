@@ -65,7 +65,7 @@ Diese helfen Claude beim Wiederaufnahmen besser einzuschaetzen wie weit der Scan
 - `kotlin_files_total` (int)
 - `cldr_plural_languages_audited` (int)
 
-## Mogliche `current_phase`-Werte
+## Mögliche `current_phase`-Werte
 
 ```
 1_manifest
@@ -105,8 +105,8 @@ Der finale Bericht `app-roentgen-AUDIT-YYYY-MM-DD.md` DARF dagegen ins Repo — 
 
 ## Versionierung
 
-Wenn das Schema in Zukunft erweitert wird (z.B. neue Statistik-Felder fuer Layer 4f oder 4g), wird die `schema`-Version erhoeht. Aeltere Checkpoints bleiben dabei lesbar (additive Aenderungen) — Claude pruefe beim Einlesen `schema` und faellt bei unbekannten zukuenftigen Versionen sauber zurueck auf Schicht 1 zurueck mit Benutzer-Hinweis.
+Wenn das Schema in Zukunft erweitert wird (z.B. neue Statistik-Felder fuer Layer 4f oder 4g), wird die `schema`-Version erhöht. Ältere Checkpoints bleiben dabei lesbar (additive Änderungen) — Claude prüft beim Einlesen `schema` und fällt bei unbekannten zukünftigen Versionen sauber zurück auf Schicht 1 mit Benutzer-Hinweis.
 
 ## Quellen
-- [Anthropic Skill Best Practice 2026 — Multi-Phase Workflows](https://code.claude.com/docs/en/skills)
-- [JSON-Checkpoint-Pattern, MCP Market: checkpoint-plan-manager](https://mcpmarket.com/tools/skills/checkpoint-plan-manager)
+
+Anthropic Skills-Konzept und Progressive Disclosure: siehe offizielle Claude Code Dokumentation unter `code.claude.com/docs` (Skills-Sektion). Das Multi-Phase-Checkpoint-Pattern ist eine projekteigene Konvention dieses Skills — keine externe Referenz, die Logik ist hier in dieser Datei vollstaendig dokumentiert.

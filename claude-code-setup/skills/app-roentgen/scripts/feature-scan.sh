@@ -86,6 +86,36 @@ GREP_R() {
         grep -rn --include='*.kt' "$pattern" "$@" . 2>/dev/null
     fi
 }
+
+# === Multi-Module-Unterstuetzung (FIX T7) ====================================
+# Moderne Android-Apps haben oft mehrere Module mit eigenen strings.xml:
+#   app/src/main/res/values/strings.xml          (Single-Module)
+#   feature/auth/src/main/res/values/strings.xml (Feature-Modul)
+#   core/ui/src/main/res/values/strings.xml      (Library-Modul)
+# Diese Helper-Funktionen finden alle strings.xml-Dateien projektweit, nicht nur
+# unter app/. Wenn der Auditor die alten 'app/src/main/'-Pfade noch braucht
+# (Single-Module): er funktioniert weiterhin als Fallback.
+
+# Findet alle Default-Locale strings.xml im Projekt (Multi-Module-faehig)
+find_default_strings_xml() {
+    find . -path '*/src/main/res/values/strings.xml' -not -path '*/build/*' 2>/dev/null
+}
+
+# Findet alle Locale-Verzeichnisse (values-*) projektweit
+find_locale_dirs() {
+    find . -type d -path '*/src/main/res/values-*' -not -path '*/build/*' 2>/dev/null
+}
+
+# Findet alle Locale-strings.xml (multi-module-faehig)
+find_translated_strings_xml() {
+    find . -path '*/src/main/res/values-*/strings.xml' -not -path '*/build/*' 2>/dev/null
+}
+
+# Listet alle Modul-Wurzeln (Verzeichnisse die ein src/main/ enthalten)
+find_module_roots() {
+    find . -type d -name main -path '*/src/main' -not -path '*/build/*' 2>/dev/null \
+        | sed 's|/src/main$||' | sort -u
+}
 # =============================================================================
 
 # Manifest finden (kann an mehreren Stellen liegen)
@@ -125,8 +155,17 @@ DATE=$(date +%Y-%m-%d)
 
 # Helper: zaehle Treffer fuer Pattern (gibt 0 zurueck bei Fehler)
 count_grep() {
+    # FIX T6: vorher nutzte count_grep direkt grep -rln und umging den GREP_R-Helper
+    # (Inkonsistenz: andere Stellen profitierten vom ripgrep-Speedup, count_grep nicht).
+    # GREP_R wird erst weiter unten definiert — count_grep wird aber erst danach genutzt.
+    # Bei sehr grossen Apps (>3000 Kotlin-Dateien) bringt das 5-10x Speedup.
     local pattern="$1"
-    local count=$(grep -rln --include='*.kt' "$pattern" . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    local count
+    if [ "${HAS_RG:-0}" = "1" ]; then
+        count=$(rg --type kotlin -l "$pattern" 2>/dev/null | wc -l)
+    else
+        count=$(grep -rln --include='*.kt' "$pattern" . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+    fi
     echo "${count:-0}"
 }
 
@@ -319,7 +358,10 @@ count_in_file() {
     echo "### 3.3 UseCases / Interactors"
     echo ""
     echo "\`\`\`"
-    find . -name '*UseCase.kt' -o -name '*Interactor.kt' -not -path '*/build/*' -not -path '*/test/*' 2>/dev/null | sort | head -50 || echo "(keine gefunden)"
+    # FIX T5: vorher 'find . -name X -o -name Y -not -path ...' — POSIX-find bindet -not nur an
+    # den letzten -name-Term. UseCase.kt-Dateien in build/test wurden ungefiltert mitgenommen.
+    # Jetzt mit Klammern \( ... \): beide Name-Patterns werden gleich gefiltert.
+    find . \( -name '*UseCase.kt' -o -name '*Interactor.kt' \) -not -path '*/build/*' -not -path '*/test/*' 2>/dev/null | sort | head -50 || echo "(keine gefunden)"
     echo "\`\`\`"
     echo ""
 
@@ -487,7 +529,8 @@ count_in_file() {
         echo "### 7.1 Sprach-Varianten"
         echo ""
         echo "\`\`\`"
-        ls -d app/src/main/res/values-* 2>/dev/null | sort || echo "(keine uebersetzten Sprachen)"
+        # FIX T7: Multi-Module-faehig (find statt ls), Fallback auf app/ wenn keine Module
+        { find_locale_dirs; ls -d app/src/main/res/values-* 2>/dev/null; } | sort -u || echo "(keine uebersetzten Sprachen)"
         echo "\`\`\`"
         echo ""
 
@@ -539,7 +582,8 @@ count_in_file() {
         echo "### 4b.2 String-Anzahl pro Sprache"
         echo ""
         echo "\`\`\`"
-        for f in $(ls app/src/main/res/values*/strings.xml 2>/dev/null | sort); do
+        # FIX T7: Multi-Module-faehig — find sammelt aus allen Modulen, sort -u dedupliziert
+        for f in $({ find_translated_strings_xml; find_default_strings_xml; ls app/src/main/res/values*/strings.xml 2>/dev/null; } | sort -u); do
             COUNT=$(grep -c '<string name=' "$f" 2>/dev/null | tr -d '[:space:]')
             printf "%-60s %s\n" "$f" "$COUNT"
         done
@@ -747,7 +791,8 @@ count_in_file() {
             echo "**Quantitaeten pro Sprache und Plural-Key:**"
             echo ""
             echo "\`\`\`"
-            for lang_dir in $(ls -d app/src/main/res/values*/ 2>/dev/null | sort); do
+            # FIX T7: Multi-Module-faehig
+            for lang_dir in $({ find_locale_dirs; find . -type d -path '*/src/main/res/values' -not -path '*/build/*' 2>/dev/null; ls -d app/src/main/res/values*/ 2>/dev/null; } | sort -u); do
                 lang=$(basename "$lang_dir" | sed 's/values//' | sed 's/^-//')
                 [[ -z "$lang" ]] && lang="default"
                 f="$lang_dir/strings.xml"
