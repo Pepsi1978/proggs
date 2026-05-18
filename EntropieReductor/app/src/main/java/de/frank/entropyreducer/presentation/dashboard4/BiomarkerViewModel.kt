@@ -850,42 +850,33 @@ constructor(
             val stravaCount = stravaJob.await()
             _refreshing.value = false
 
+            // Frank-Wunsch 2026-05-18: Footer aufgeraeumt.
+            // (1) Amazfit-Eintrag entfernt — der Wert war redundant mit Strava
+            //     (der "Amazfit"-Sync ruft intern mergeFromStrava, daher ist
+            //     "Amazfit 7" und "Strava 7" derselbe Zaehler).
+            // (2) HC zu "Health Connect" ausgeschrieben.
+            // (3) Bei jeder Quelle "0" statt "✗" wenn keine neuen Werte —
+            //     egal ob der Sync fehlschlug oder einfach nichts Neues kam.
             val parts = mutableListOf<String>()
-            whoopRes.fold(
-                onSuccess = { c -> parts.add("Whoop $c") },
-                onFailure = {
-                    val msg = it.message.orEmpty()
-                    parts.add(
-                        when {
-                            it is IllegalStateException && msg.contains("Access-Token") ->
-                                "Whoop ✗ (abgelaufen)"
-                            it is IllegalStateException && msg.contains("Client-Secret") ->
-                                "Whoop ✗ (Secret fehlt)"
-                            else -> "Whoop ✗"
-                        }
-                    )
-                },
-            )
-            // Amazfit-Sync ist die Hülle die u.a. Strava-Daten in die DB schreibt.
-            amazfitRes.fold(
-                onSuccess = { c -> parts.add("Amazfit $c") },
-                onFailure = { parts.add("Amazfit ✗") },
-            )
-            parts.add(if (stravaCount >= 0) "Strava $stravaCount" else "Strava ✗")
-            ouraRes.fold(
-                onSuccess = { m ->
-                    val total = if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
-                    parts.add("Oura $total")
-                },
-                onFailure = { parts.add("Oura ✗") },
-            )
-            val hcStatus =
-                when {
-                    !healthConnect.isAvailable() -> "HC —"
-                    !_weight.value.permissionGranted -> "HC ✗ (Permission)"
-                    else -> "HC ↻"
+            val whoopCount = whoopRes.getOrNull() ?: 0
+            parts.add("Whoop $whoopCount")
+            parts.add("Strava ${stravaCount.coerceAtLeast(0)}")
+            val ouraCount =
+                ouraRes.getOrNull()?.let { m ->
+                    if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
+                } ?: 0
+            parts.add("Oura $ouraCount")
+            val hcCount =
+                if (!healthConnect.isAvailable() || !_weight.value.permissionGranted) {
+                    0
+                } else {
+                    _weight.value.history30d.size
                 }
-            parts.add(hcStatus)
+            parts.add("Health Connect $hcCount")
+            // amazfitRes weiterhin awaiten damit der DB-Sync nicht abgebrochen
+            // wird — Resultat wird aber nicht mehr im Footer angezeigt.
+            @Suppress("UNUSED_VARIABLE")
+            val amazfitResult = amazfitRes
             val summary = parts.joinToString(" · ")
             // Frank-Wunsch 2026-05-17: Permanenter Footer mit Datum+Uhrzeit.
             // Bleibt sichtbar bis zum naechsten Refresh.
