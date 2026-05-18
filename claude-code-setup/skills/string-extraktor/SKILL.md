@@ -1,6 +1,6 @@
 ---
 name: string-extraktor
-description: Findet ALLE hardcodierten Strings in Android-Apps (Compose und XML) und erstellt sie nach deutschen Sprach- und Typografie-Regeln als strings.xml-Ressourcen. Pflicht-VORSTUFE zum uebersetzung-Skill — qualitaet der deutschen Originale entscheidet ueber alle spaeteren Uebersetzungen. Nutze diesen Skill IMMER wenn der Benutzer sagt "Strings finden", "Strings erstellen", "String-Extraktion", "hardcodierte Strings", "i18n Audit", "strings.xml auffuellen", "Strings ueberpruefen", "sind alle Strings da?" oder "Internationalisierung vorbereiten". Auch fuer Voice-Schreibweisen wie "String Extraktor", "String Extractor", "i18n". Funktioniert fuer jedes Android-Projekt (Multi-Module unterstuetzt). Deckt auch Funktionalitaets-Checks ab ("pruefe ob Strings Funktionen kaputt machen" -> Phase 5) und Praevention-Setup ("Pre-Commit-Hook fuer i18n" -> Phase 6).
+description: Findet ALLE hardcodierten Strings in Android-Apps (Compose und XML) und erstellt sie nach deutschen Sprach- und Typografie-Regeln als strings.xml-Ressourcen. Pflicht-VORSTUFE zum uebersetzung-Skill — Qualität der deutschen Originale entscheidet über alle späteren Übersetzungen. Nutze diesen Skill IMMER wenn der Benutzer sagt "Strings finden", "Strings erstellen", "String-Extraktion", "hardcodierte Strings", "i18n Audit fuer App", "strings.xml auffüllen", "Strings überprüfen", "sind alle Strings da?" oder "Internationalisierung vorbereiten". Auch fuer Voice-Schreibweisen wie "String Extraktor", "String Extractor". Funktioniert fuer jedes Android-Projekt (Multi-Module unterstützt). Deckt auch Funktionalitäts-Checks ab ("prüfe ob Strings Funktionen kaputt machen" -> Phase 5) und Praevention-Setup ("Pre-Commit-Hook fuer i18n" -> Phase 6). NICHT verwenden fuer: Übersetzung deutscher Strings in andere Sprachen (-> uebersetzung-Skill), reine UI-Design-Audits (-> designer-Skill). Dieser Skill ERSTELLT deutsche Strings, der uebersetzung-Skill KONSUMIERT sie.
 ---
 
 # String-Extraktor — Deutsche Strings finden, pruefen, erstellen
@@ -23,7 +23,7 @@ Er uebersetzt NICHT in andere Sprachen — dafuer gibt es den `uebersetzung`-Ski
 ## Skill-Architektur
 
 ```
-SKILL.md (diese Datei)         Kernablauf, Phasen 0-6 als Uebersicht
+SKILL.md (diese Datei)         Kernablauf, Phasen 0-6 als Übersicht
 ├── references/                Detail-Inhalte (Progressive Disclosure)
 │   ├── string-best-practices.md     Allgemeine Android-i18n-Patterns
 │   ├── deutsche-sprache.md           Deutsche Orthographie, Typografie, UX
@@ -31,12 +31,14 @@ SKILL.md (diese Datei)         Kernablauf, Phasen 0-6 als Uebersicht
 │   ├── funktions-check.md            Phase 5 — Funktions-Regression-Checks
 │   ├── praevention-setup.md          Phase 6 — Pre-Commit, CI, Lint, donottranslate
 │   └── ast-scanning.md               Detekt-Rule fuer AST-basierten Compose-Scan
-├── scripts/                   Ausfuehrbare Werkzeuge
+├── scripts/                   Ausführbare Werkzeuge
 │   ├── scan-strings.sh               Phase-1-Scanner (9 Patterns + Unicode)
+│   ├── validate.sh                   Cross-Platform-Wrapper (findet python3/python automatisch)
 │   ├── validate_extracted.py         Post-Extraktion-Validator (Duplikate, Escapes, Format-Args)
-│   └── pre-commit-hook.sh            Erweiterter Pre-Commit-Hook
+│   └── pre-commit-hook.sh            Erweiterter Pre-Commit-Hook (Kotlin + XML)
 └── evals/                     Regressions-Tests
-    └── eval-set.json                 3 Test-Szenarien
+    ├── eval-set.json                 6 Test-Szenarien
+    └── README.md                     Anleitung wie Evals laufen
 ```
 
 **Wann welche Referenz laden:**
@@ -96,8 +98,20 @@ Default fuer neue Apps: Strategie 1+2.
 **0.3 Region:** `values-de/` (DACH-Standard) als Basis. Nur bei expliziter
 Zielregion `values-de-rAT/` (Jaenner) oder `values-de-rCH/` (kein ß, CHF) extra.
 
-**0.4 Entscheidungen in strings.xml festschreiben** — Kommentar-Header mit
-Anrede/Gender/Region plus `xmlns:xliff` + `tools:locale="de"` im `<resources>`-Tag.
+**0.4 Entscheidungen in strings.xml festschreiben:**
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sprach-Konfiguration:
+  - Anrede: Du (informell, modern)
+  - Gender: Partizip-Substantive + geschlechtsneutrale Begriffe
+  - Region: de (DACH-Standard)
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+           xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+           tools:locale="de">
+```
 
 **0.5 Phase-0-Report:** Anrede, Gender, Region kurz an den Benutzer melden.
 
@@ -132,6 +146,10 @@ Glob: **/ui/**/*Component*.kt
 ### 1.3 Master-Scan via Script
 
 ```bash
+# Aus dem Skill-Verzeichnis:
+bash scripts/scan-strings.sh <APP_DIR>
+
+# Oder mit vollem Pfad (falls anderswo gerufen):
 bash ~/.claude/skills/string-extraktor/scripts/scan-strings.sh <APP_DIR>
 ```
 
@@ -139,7 +157,7 @@ Das Skript fasst die 9 Grep-Muster aus `string-best-practices.md` Kap. 2
 zusammen (Compose Text, Templates, Toasts, Snackbars, ContentDescriptions,
 Placeholders, TopAppBar, Error-Calls, Enum-Labels) und erzeugt einen
 strukturierten Bericht. Spart Token bei grossen Apps. Bei kleinen Apps oder
-gezielter Pruefung einzelner Screens reichen die Patterns einzeln aus
+gezielter Prüfung einzelner Screens reichen die Patterns einzeln aus
 `string-best-practices.md` Kap. 2.
 
 ### 1.4 Unicode-Escape-Scan (PFLICHT)
@@ -197,10 +215,16 @@ Duplikate.
 
 **2.2 Automatische Validierung:**
 ```bash
-python3 scripts/validate_extracted.py \
-    app/src/main/res/values/strings.xml --code-dir app/src/main/java
+# Cross-Platform (empfohlen — findet python3/python automatisch):
+bash scripts/validate.sh app/src/main/res/values/strings.xml --code-dir app/src/main/java
+
+# Oder direkt (Plattform-abhängig):
+python3 scripts/validate_extracted.py app/src/main/res/values/strings.xml --code-dir app/src/main/java  # macOS/Linux
+python scripts/validate_extracted.py app/src/main/res/values/strings.xml --code-dir app/src/main/java   # Windows
 ```
-Prueft alle 11 Punkte plus Format-String-Mismatches.
+Prüft alle 11 Punkte plus Format-String-Mismatches. Mit `--strict` werden auch
+Warnungen als Fehler gewertet (sinnvoll fuer CI). Mit `--suggest-donottranslate`
+listet das Script Kandidaten fuer `donottranslate.xml` auf.
 
 **2.3 Glossar-Konsistenz** (Term Base) — Haeufigkeitsscan der Substantive zeigt
 Synonym-Verdacht (z.B. "Eintrag" 87x vs "Notiz" 12x oder "Stimmung" 45x vs "Mood" 3x).
@@ -264,9 +288,16 @@ in nicht-Composable-Lambdas.
 `deutsche-sprache.md` Teil D):
 1. Anrede konsistent mit Phase-0 (Du/Sie)
 2. Umlaute direkt (kein Unicode-Escape, kein `ae/oe/ue`)
-3. Typografische deutsche Anfuehrungszeichen statt Schreibmaschinen-Quotes
+3. Typografische deutsche Anführungszeichen statt Schreibmaschinen-Quotes
 4. Kein Punkt bei Buttons/Labels/Titeln
 5. Kein Denglisch (`geshared`, `geliked`, `canceln`)
+
+**Nach jedem Screen kurz validieren** (Mini-Check, Sekunden):
+```bash
+bash scripts/validate.sh app/src/main/res/values/strings.xml
+```
+Das fängt Duplikate, falsche Anführungszeichen und unnummerierte Platzhalter
+sofort ab — bevor der Fehler in weiteren Screens kopiert wird.
 
 ### 3.3 Mengenangaben: Plurals statt if/else
 
@@ -301,18 +332,19 @@ Screen: SettingsScreen.kt
 
 ## Phase 4: VERIFY — Zweiter Durchlauf + Pseudolokalisierung
 
-**4.1 Zweiter Scan:** Die 9 Grep-Muster aus Phase 1 nochmal anwenden. Keine
-Treffer mehr erwartet.
+**4.1 Zweiter Scan:** Die 9 Grep-Muster aus Phase 1 PLUS den Unicode-Escape-Scan
+aus Phase 1.4 nochmal anwenden. Keine Treffer mehr erwartet.
 
 **4.2 Build-Check:** `./gradlew assembleDebug 2>&1 | tail -20`
 
 **4.3 Automatischer Validator:**
 ```bash
-python3 scripts/validate_extracted.py \
+bash scripts/validate.sh \
     app/src/main/res/values/strings.xml \
     --code-dir app/src/main/java --suggest-donottranslate
 ```
-Prueft Duplikate, Escapes, Format-Args, donottranslate-Kandidaten.
+Prüft Duplikate, Escapes, Format-Args, donottranslate-Kandidaten. Mit `--strict`
+werden Warnungen auch als Fehler gewertet (CI-Modus).
 
 **4.4 Pseudolokalisierung (`en-XA`)** — deckt die letzten 5% auf, die Regex
 nicht findet (dynamisch zusammengebaut, in Drittbibliotheken, in PDF-Vorlagen):

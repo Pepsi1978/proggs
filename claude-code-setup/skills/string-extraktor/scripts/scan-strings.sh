@@ -66,6 +66,12 @@ cat > "$OUT" <<HEADER
 
 HEADER
 
+# Vollstaendiger Filter — passt zu Phase 1.6 in SKILL.md:
+# Log/Timber/println/@Preview (nie sichtbar), test-Verzeichnisse (nicht in Produktion),
+# analytics.log (Bezeichner), getString("...")-Aufrufe bei SharedPreferences (interne Keys),
+# jsonObject.getString (Daten-Keys), Regex(...) (technisch), const val TAG (Logging).
+FILTER_OUT='/test/\|/androidTest/\|Log\.\|Timber\.\|println\|@Preview\|analytics\.\|getString("[^"]*")\|jsonObject\.\|Regex(\|const val TAG'
+
 count_hits() {
     local pattern="$1"
     local glob="$2"
@@ -74,8 +80,7 @@ count_hits() {
         if [ -d "$dir" ]; then
             local c
             c=$(grep -rEn "$pattern" "$dir" --include="$glob" 2>/dev/null \
-                | grep -v '/test/\|/androidTest/' \
-                | grep -v 'Log\.\|Timber\.\|println\|@Preview' \
+                | grep -v "$FILTER_OUT" \
                 | wc -l || true)
             count=$((count + c))
         fi
@@ -98,8 +103,7 @@ dump_hits() {
             echo '```'
             for dir in $SRC_DIRS; do
                 [ -d "$dir" ] && grep -rEn "$pattern" "$dir" --include="$glob" 2>/dev/null \
-                    | grep -v '/test/\|/androidTest/' \
-                    | grep -v 'Log\.\|Timber\.\|println\|@Preview' \
+                    | grep -v "$FILTER_OUT" \
                     | head -50 || true
             done
             echo '```'

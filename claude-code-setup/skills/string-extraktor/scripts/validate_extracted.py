@@ -13,11 +13,16 @@
 #   - donottranslate.xml-Kandidaten (URLs, app_name, brand_name in strings.xml)
 #   - Format-String-Mismatches (wenn Code-Aufrufe gegeben sind)
 #
-# Aufruf:
-#   python3 validate_extracted.py <strings.xml>
-#   python3 validate_extracted.py <strings.xml> --donottranslate <donottranslate.xml>
-#   python3 validate_extracted.py <strings.xml> --suggest-donottranslate
-#   python3 validate_extracted.py <strings.xml> --code-dir <app/src/main/java>
+# Aufruf (Cross-Platform):
+#   bash scripts/validate.sh <strings.xml>           # automatisch python3/python finden
+#   python3 validate_extracted.py <strings.xml>      # macOS/Linux direkt
+#   python validate_extracted.py <strings.xml>       # Windows direkt
+#
+# Optionen:
+#   --donottranslate <donottranslate.xml>   # Zusaetzliche XML pruefen
+#   --suggest-donottranslate                # Vorschlaege fuer donottranslate.xml
+#   --code-dir <app/src/main/java>          # Format-Arg-Cross-Check gegen Code
+#   --strict                                # WARN-Issues auch als Fehler werten
 #
 # Exit-Code:
 #   0 = alle Checks bestanden (keine Issues)

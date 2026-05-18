@@ -190,8 +190,12 @@ Bei einem bestehenden Projekt: Diese Strings aus `strings.xml` nach
 funktioniert weiter):
 
 ```bash
-# Beispiel: app_name und alle url_* Strings verschieben
-python3 scripts/validate_extracted.py --suggest-donottranslate values/strings.xml
+# Cross-Platform (empfohlen):
+bash scripts/validate.sh values/strings.xml --suggest-donottranslate
+
+# Oder direkt (Plattform-abhängig):
+python3 scripts/validate_extracted.py values/strings.xml --suggest-donottranslate  # macOS/Linux
+python scripts/validate_extracted.py values/strings.xml --suggest-donottranslate   # Windows
 ```
 
 ---

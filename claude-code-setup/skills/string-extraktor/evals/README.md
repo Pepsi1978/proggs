@@ -1,13 +1,25 @@
 # Evals fuer den string-extraktor Skill
 
 Dieses Verzeichnis enthaelt automatisierte Tests fuer den Skill. Sie pruefen
-dass aenderungen an der SKILL.md oder den References nicht versehentlich
+dass Aenderungen an der SKILL.md oder den References nicht versehentlich
 funktionierende Faelle kaputt machen (Regressions-Tests).
 
 ## Was ist hier drin
 
-- `eval-set.json` — 3 Test-Szenarien (Simple-Screen, Plurals+Platzhalter, Enum-Trap)
+- `eval-set.json` — 6 Test-Szenarien, decken die Phasen 0, 1, 2, 3, 5 ab
 - `README.md` — Diese Datei
+
+## Assertion-Types
+
+Das Eval-Schema nutzt einheitlich diese 5 Types:
+
+| Type | Bedeutung |
+|------|-----------|
+| `pattern_exists` | Pattern muss mindestens 1x vorkommen |
+| `pattern_count_gte` | Pattern muss mindestens N-mal vorkommen (Feld `target`) |
+| `pattern_all` | ALLE Matches muessen valide sein (z.B. snake_case fuer alle Keys) |
+| `absence` | Pattern darf NICHT vorkommen (z.B. unnummerierte `%s`) |
+| `manual_check` | Subjektive Bewertung — Feld `criterion` beschreibt was erwartet wird |
 
 ## Wann die Evals laufen lassen
 
@@ -57,32 +69,32 @@ python -m scripts.run_loop \
 
 Output landet als HTML-Report im Browser.
 
-## Die 3 Test-Szenarien
+## Die 6 Test-Szenarien
 
-### Eval 1: simple-compose-screen
-Ein typischer SettingsScreen mit 5 hardcodierten Strings.
-**Was getestet wird:**
-- Erkennt der Skill alle 5 Strings?
-- Erstellt er korrekt snake_case-Keys?
-- Halt er die Du-Form aus dem Sprach-Kontext ein?
-- Markiert er das Email-Beispiel als `translatable="false"`?
+### Eval 1: simple-compose-screen (Phase 3-CREATE)
+SettingsScreen mit 5 hardcodierten Strings. Testet ob Skill alle Strings findet,
+snake_case-Keys erstellt, Du-Form einhaelt und Email-Beispiel als `translatable="false"` markiert.
 
-### Eval 2: plurals-and-placeholders
-JournalScreen mit if/else-Konstrukt fuer Plurals und Template-Strings.
-**Was getestet wird:**
-- Erkennt der Skill das if/else als Plural-Kandidat?
-- Erstellt er korrekte `<plurals>` mit `one` + `other` (CLDR-Deutsch)?
-- Nummeriert er Platzhalter (`%1$s` nicht `%s`)?
-- Setzt er XLIFF-Tags mit `id` + `example`?
-- Wechselt der Code zu `pluralStringResource()`?
+### Eval 2: plurals-and-placeholders (Phase 3-CREATE)
+JournalScreen mit if/else-Plural-Konstrukt und Template-Strings. Testet Plural-
+Erkennung, CLDR-konformes `one`/`other`, Platzhalter-Nummerierung und XLIFF-Tags.
 
-### Eval 3: enum-displayname-trap
-Mood-Enum dessen `displayName` sowohl fuer UI als auch fuer DB verwendet wird.
-**Was getestet wird:**
-- Erkennt der Skill das Phase-5.2-Risiko (Daten-Verlust durch Lokalisierung)?
-- Schlaegt er die `@StringRes`-Refactoring vor?
-- Warnt er vor `enum.name` statt `displayName` fuer DB-Speicherung?
-- Fuehrt er die Phase-5-Pruefung automatisch durch?
+### Eval 3: enum-displayname-trap (Phase 5-FUNKTIONS-CHECK)
+Mood-Enum mit displayName fuer UI UND Room. Testet ob Skill das Phase-5.2-Risiko
+erkennt und @StringRes-Refactoring + enum.name fuer DB-Speicherung vorschlaegt.
+
+### Eval 4: unicode-escape-detection (Phase 1-SCAN)
+DashboardScreen mit 4 Unicode-Escape-Umlauten (`Ü`, `Müll`, `Grüße`, `Straße`).
+Testet ob Skill diese versteckten Umlaute findet und in echte ä/ö/ü umwandelt.
+
+### Eval 5: existing-xml-audit (Phase 2-AUDIT)
+Bestehende strings.xml mit 5 Qualitaets-Issues: unnummerierte Platzhalter, URL
+ohne translatable=false, veraltete Rechtschreibung (muß/daß), Duplikate, Denglisch.
+Testet automatische Fixes und Benutzer-Meldung fuer subjektive Entscheidungen.
+
+### Eval 6: language-context-detection (Phase 0-SPRACH-KONTEXT)
+strings.xml mit Du/Sie-Mix und Partizip+Neutral-Gender-Strategie. Testet ob
+Skill die Inkonsistenz erkennt UND die Gender-Strategie korrekt klassifiziert.
 
 ## Verhalten bei Eval-Fehlschlag
 

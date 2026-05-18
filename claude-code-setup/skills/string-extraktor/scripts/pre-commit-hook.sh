@@ -43,9 +43,10 @@ done
 
 # === Dateien sammeln ===
 if [ "$MODE" = "staged" ]; then
-    FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$' || true)
+    # Pattern 9 deckt XML-Layouts ab (android:text in res/values/), nicht nur Kotlin
+    FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(kt|xml)$' || true)
 elif [ "$MODE" = "all" ]; then
-    FILES=$(find . -name "*.kt" -not -path "*/build/*" -not -path "*/test/*" -not -path "*/androidTest/*")
+    FILES=$(find . \( -name "*.kt" -o -name "*.xml" \) -not -path "*/build/*" -not -path "*/test/*" -not -path "*/androidTest/*")
 fi
 
 if [ -z "$FILES" ]; then
@@ -67,13 +68,15 @@ declare -a PATTERNS=(
     "TopAppBar|TopAppBar.*title\s*=.*Text\(\s*\""
     "Error-Call|error\(\s*\"[^\"]*[a-zA-Z]"
     "Enum-Label|enum class[^{]*\{[^}]*\"[^\"]*[a-zA-Z]"
+    "XML-android-text|android:(text|hint|contentDescription|title)=\"[^@][^\"]+\""
 )
 
 # === Unicode-Escape-Pattern (PFLICHT) ===
 UNICODE_ESCAPE_PATTERN='\\u00(dc|fc|d6|f6|c4|e4|df)'
 
 # === Ausschluesse: Was NICHT als hardcoded String gezaehlt wird ===
-EXCLUDE_PATTERN='stringResource|@Preview|@Suppress|// |Log\.|Timber\.|println\(|Regex\(|const val TAG|"\\u'
+# Erweitert: analytics, getString (interne Keys), jsonObject (Daten-Keys)
+EXCLUDE_PATTERN='stringResource|@Preview|@Suppress|// |Log\.|Timber\.|println\(|Regex\(|const val TAG|analytics\.|getString\(\"|jsonObject\.|"\\u'
 
 # === Scan ===
 ERRORS=0
