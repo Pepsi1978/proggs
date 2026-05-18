@@ -225,15 +225,26 @@ fun TagebuchScreen(
                 }
             }
 
-            // Frank-Wunsch 2026-05-18 Folgeauftrag:
-            // - Standard: nur Mikrofon-Button zentriert sichtbar.
-            // - Klick auf Mic blendet "Schreiben" (links) und "Aufnehmen"
-            //   (rechts) ein. Schreiben oeffnet den Text-Dialog,
-            //   Aufnehmen startet die Whisper-Aufnahme (siehe A12).
+            // Frank-Wunsch 2026-05-18 (Folgeauftrag 2):
+            // - Standard: nur EIN Mikrofon-Toggle-Button zentriert sichtbar.
+            //   Dieser Toggle ist NUR der Öffner — er hat keine eigene Aufnahme-
+            //   funktion. Klick faltet die zwei echten Aktionen auf.
+            // - Nach Klick: das Toggle-Mikrofon VERSCHWINDET, stattdessen
+            //   erscheinen LINKS der Stift (Schreiben) und RECHTS das echte
+            //   Aufnehmen-Mikrofon. Frank waehlt eine der beiden Aktionen.
             Row(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (!actionsExpanded) {
+                    FabIconButton(
+                        icon = Icons.Outlined.Mic,
+                        label = "Mikrofon",
+                        backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
+                        iconTint = TagebuchAccent,
+                        onClick = { actionsExpanded = true },
+                    )
+                }
                 if (actionsExpanded) {
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
@@ -246,13 +257,6 @@ fun TagebuchScreen(
                         },
                     )
                 }
-                FabIconButton(
-                    icon = Icons.Outlined.Mic,
-                    label = "Mikrofon",
-                    backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
-                    iconTint = TagebuchAccent,
-                    onClick = { actionsExpanded = !actionsExpanded },
-                )
                 if (actionsExpanded) {
                     // A12: echte Whisper-Aufnahme via Groq Large V3 Turbo.
                     // Permission wird beim ersten Tap erfragt; Voice-State

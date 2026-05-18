@@ -38,6 +38,7 @@ import de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides
 import de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay
 import de.frank.entropyreducer.presentation.amazfit.isVo2MaxSport
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.LocalCardBackgroundOverride
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
@@ -235,11 +236,16 @@ private fun LetzterLaufHero(
         )
     }
     // Frank-Wunsch 2026-05-13: Heller Rahmen wie bei allen anderen Pattern (GlassCard-Border).
+    // Frank-Wunsch 2026-05-18 (Folgeauftrag 2): Wenn Frank ueber die Farbpalette
+    // im Training-Detail eine Farbe ausgewaehlt hat, soll diese den hellgelben
+    // Standard-Hintergrund ersetzen. LocalCardBackgroundOverride wird im
+    // BiomarkerScreen pro Karte gesetzt — null = Standard (hellgelb bleibt).
+    val heroBackground = LocalCardBackgroundOverride.current ?: accent.copy(alpha = 0.10f)
     Box(
         modifier =
             Modifier.fillMaxWidth()
                 .clip(heroShape)
-                .background(accent.copy(alpha = 0.10f))
+                .background(heroBackground)
                 .border(BorderStroke(1.dp, cosmos.glassBorder), heroShape)
                 .clickable { onOpenDetail() }
                 .padding(14.dp)
