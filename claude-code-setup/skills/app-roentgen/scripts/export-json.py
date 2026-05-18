@@ -69,12 +69,22 @@ def find_app_root(app_dir: Path) -> dict:
             break
 
     # Package-Name aus Gradle extrahieren
+    # FIX V5 (Audit 5): vorher 'applicationId|namespace' — bei Groovy DSL mit beidem
+    # nahm der Regex das erste Vorkommen (oft namespace im android{}-Block oben).
+    # Jetzt: zuerst applicationId suchen (das ist der echte Package-Name am Play Store),
+    # dann fallback auf namespace (R-Class-Namespace, oft = applicationId).
     if info["build_gradle"]:
         try:
             content = (app_dir / info["build_gradle"]).read_text(encoding="utf-8", errors="replace")
-            m = re.search(r'(applicationId|namespace)\s*=?\s*["\']([^"\']+)["\']', content)
+            # 1. Versuch: applicationId (verbindlicher Package-Name fuer Distribution)
+            m = re.search(r'\bapplicationId\s*=?\s*["\']([^"\']+)["\']', content)
             if m:
-                info["package_name"] = m.group(2)
+                info["package_name"] = m.group(1)
+            else:
+                # 2. Fallback: namespace (oft identisch, aber technisch was anderes)
+                m = re.search(r'\bnamespace\s*=?\s*["\']([^"\']+)["\']', content)
+                if m:
+                    info["package_name"] = m.group(1)
         except Exception:
             pass
 
@@ -182,13 +192,51 @@ def parse_strings_xml(path: Path) -> dict:
 
 
 def find_translations(app_dir: Path) -> dict:
-    """Findet alle Sprach-Varianten und parst sie."""
+    """Findet alle Sprach-Varianten und parst sie.
+
+    FIX V2 (Audit 5): vorher nur 'app/src/main/res/values-*/strings.xml' — das war
+    Single-Module-blind. Bei Multi-Module-Apps mit eigenen res-Verzeichnissen
+    (z.B. 'feature/journal/src/main/res/values-de/strings.xml') wurden alle
+    Translations aus Feature-Modulen ignoriert. Jetzt projektweit via rglob,
+    Build-Verzeichnisse gefiltert. Analog zu den Shell-Helpern find_translated_strings_xml.
+
+    Bei Multi-Module mit GLEICHER Locale in mehreren Modulen (z.B. values-de in app/
+    UND in feature/) werden die Strings MERGED — das App-Modul gewinnt bei
+    Schluessel-Konflikten (Standard-Build-Verhalten).
+    """
     translations = {}
-    values_dirs = sorted(app_dir.glob("app/src/main/res/values-*/strings.xml"))
-    for f in values_dirs:
-        lang = f.parent.name.replace("values-", "")
-        translations[lang] = parse_strings_xml(f)
-    return translations
+    files_per_lang = {}
+    # rglob findet ueberall, /build/ explizit ausschliessen
+    for f in app_dir.rglob("strings.xml"):
+        # Nur values-XX Verzeichnisse, nicht values/ (Hauptsprache)
+        parent_name = f.parent.name
+        if not parent_name.startswith("values-"):
+            continue
+        # Build-Output ueberspringen
+        if "/build/" in str(f).replace("\\", "/"):
+            continue
+        # Nur src/main/res-Pfade akzeptieren (vermeidet Test-Resources, Sample-Code etc.)
+        if "src/main/res" not in str(f).replace("\\", "/"):
+            continue
+        lang = parent_name.replace("values-", "")
+        files_per_lang.setdefault(lang, []).append(f)
+
+    # Pro Sprache: alle Dateien parsen, dann mergen (app/ gewinnt bei Konflikten)
+    for lang, files in files_per_lang.items():
+        # app/ vor anderen Modulen sortieren
+        files.sort(key=lambda p: (0 if "/app/" in str(p).replace("\\", "/") else 1, str(p)))
+        merged = {"strings": [], "plurals": [], "arrays": []}
+        seen_keys = {"strings": set(), "plurals": set(), "arrays": set()}
+        for f in files:
+            parsed = parse_strings_xml(f)
+            for kind in ("strings", "plurals", "arrays"):
+                for item in parsed[kind]:
+                    if item["key"] not in seen_keys[kind]:
+                        merged[kind].append(item)
+                        seen_keys[kind].add(item["key"])
+        translations[lang] = merged
+    # Sortiert zurueckgeben fuer stabile Reihenfolge im JSON-Export
+    return dict(sorted(translations.items()))
 
 
 def scan_permissions(manifest_path: Path) -> list:

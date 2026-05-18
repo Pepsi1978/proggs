@@ -12,7 +12,6 @@ allowed-tools:
   - Grep
   - Glob
   - Write
-  - Edit
 ---
 
 # App-Roentgen: Vollstaendiges Architektur- und Werbeaussagen-Audit fuer Android-Apps
@@ -250,6 +249,14 @@ Der finale Bericht wird in der App-Wurzel als `app-roentgen-AUDIT-YYYY-MM-DD.md`
 6. **Werbeaussage-vs-Feature-Matrix** (sortiert nach Risiko)
 7. **Don't-Miss-Checkliste** mit Haken pro Punkt (siehe `references/dont-miss-checklist.md`)
 8. **Empfohlene naechste Schritte** (was muss vor Release gefixt werden)
+
+## Bekannte Limitierungen (Known Limitations)
+
+> **FIX V6 (Audit 5):** Folgende Punkte sind dokumentierte Trade-Offs, keine Bugs:
+>
+> - **audit-report-template.md ist ~1200 Zeilen** (Section-Skeleton mit allen 7 Schichten + 4 Sub-Layern + Checkliste). Beim Schreiben des finalen Berichts laedt Claude die komplette Datei in den Kontext. Bei sehr grossen Apps (>3000 Kotlin-Dateien) plus den Reference-Dateien kann Context-Druck entstehen. Loesung: Bericht inkrementell pro Schicht schreiben statt komplett auf einmal.
+> - **17 Reference-Dateien** sind absichtlich granular (Progressive Disclosure) — Claude laedt nur was sie braucht. Wenn eine Schicht uebersprungen wird, bleibt die zugehoerige Reference ungeladen.
+> - **`feature-scan.sh` ist ein Shell-Skript** — auf Windows nur in Git Bash, nicht PowerShell. JSON-Export per Python ist plattformunabhaengig.
 
 ## Checkpoint-Mechanik fuer lange Audits (KRITISCH bei grossen Apps)
 

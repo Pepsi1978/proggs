@@ -328,7 +328,9 @@ count_in_file() {
         echo "### 2.2 Implementations / API"
         echo ""
         echo "\`\`\`"
-        find . -name 'build.gradle*' -not -path '*/build/*' 2>/dev/null | xargs grep -hE '^\s+(implementation|api|kapt|ksp)\s' 2>/dev/null | sort -u || echo "(keine gefunden)"
+        # FIX V3 (Audit 5): vorher 'find | xargs grep' — Spaces in Pfaden brachen den Aufruf
+        # (SC2038). Jetzt mit -print0 + xargs -0 robust gegen Sonderzeichen in Dateinamen.
+        find . -name 'build.gradle*' -not -path '*/build/*' -print0 2>/dev/null | xargs -0 grep -hE '^\s+(implementation|api|kapt|ksp)\s' 2>/dev/null | sort -u || echo "(keine gefunden)"
         echo "\`\`\`"
         echo ""
     fi
