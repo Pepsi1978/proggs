@@ -47,7 +47,6 @@ import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.IsolatedThemeToggleIcon
 import de.frank.entropyreducer.presentation.components.MicState
-import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
 import de.frank.entropyreducer.presentation.components.charts.RecoveryRing
 import de.frank.entropyreducer.presentation.components.charts.SleepStageColors
@@ -239,12 +238,9 @@ fun BiomarkerHostScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            item("hdr_status", span = { GridItemSpan(2) }) {
-                StatusBar(
-                    percent = state.statusBreakdown?.total ?: 0,
-                    breakdown = state.statusBreakdown,
-                )
-            }
+            // Frank-Wunsch 2026-05-18: "Zustand jetzt"-Balken nur im Aufgaben-
+            // und Analyse-Tab sichtbar. Im Biomarker-Bereich entfernt damit
+            // der Fokus auf die Biomarker selbst liegt.
             item("hdr_date", span = { GridItemSpan(2) }) { DateSelectorBar(state, vm) }
 
             // ============ VERSCHIEBBARE KARTEN (Frank-Wunsch 2026-05-10) ============

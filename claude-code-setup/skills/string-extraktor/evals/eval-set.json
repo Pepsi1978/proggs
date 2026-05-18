@@ -1,0 +1,151 @@
+{
+	"skill_name": "string-extraktor",
+	"version": "1.0",
+	"description": "Eval-Set fuer den string-extraktor Skill. Jeder Eval ist ein realistisches Test-Szenario mit Eingabe-Dateien und erwarteter Verhalten.",
+	"evals": [
+		{
+			"id": 1,
+			"name": "simple-compose-screen",
+			"prompt": "Extrahiere alle hardcodierten Strings aus dem SettingsScreen und lege sie als String-Ressourcen in strings.xml an. Die App nutzt die Du-Form und ist auf Deutsch.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/SettingsScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun SettingsScreen(onSave: () -> Unit) {\n    Column {\n        TopAppBar(title = { Text(\"Einstellungen\") })\n        Text(\"Allgemeine Einstellungen\")\n        OutlinedTextField(\n            value = \"\",\n            onValueChange = {},\n            label = { Text(\"E-Mail-Adresse\") },\n            placeholder = { Text(\"max.mustermann@example.de\") }\n        )\n        Button(onClick = onSave) {\n            Text(\"Speichern\")\n        }\n        Icon(\n            imageVector = Icons.Default.Settings,\n            contentDescription = \"Einstellungen oeffnen\"\n        )\n    }\n}\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Findet 5 hardcodierte Strings (Einstellungen, Allgemeine Einstellungen, E-Mail-Adresse, Speichern, Einstellungen oeffnen) plus 1 technischer String (E-Mail-Beispiel). Erstellt strings.xml-Eintraege mit snake_case-Keys, ersetzt im Code mit stringResource(). Beispiel-Key fuer Email-Beispiel sollte als translatable=\"false\" markiert werden.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "strings.xml enthaelt mindestens 5 neue String-Eintraege",
+					"type": "count_gte",
+					"target": 5
+				},
+				{
+					"id": 2,
+					"text": "Kein 'Text(\"Speichern\")' mehr in SettingsScreen.kt",
+					"type": "absence",
+					"pattern": "Text\\(\\s*\"Speichern\""
+				},
+				{
+					"id": 3,
+					"text": "Alle neuen Strings nutzen snake_case-Keys",
+					"type": "pattern_all",
+					"pattern": "name=\"[a-z][a-z0-9_]*\""
+				},
+				{
+					"id": 4,
+					"text": "Du-Form wird konsistent verwendet (kein 'Sie' in neuen Strings ausser Konfig-Marker)",
+					"type": "absence",
+					"pattern": ">Sie [a-z]"
+				}
+			]
+		},
+		{
+			"id": 2,
+			"name": "plurals-and-placeholders",
+			"prompt": "Pruefe diesen JournalScreen — die Zaehler-Strings sind hardcoded. Extrahiere sie als Plurals nach CLDR-Regeln. Die App nutzt Du-Form.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/JournalScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun JournalScreen(entryCount: Int, userName: String) {\n    Column {\n        Text(\"Hallo $userName!\")\n        val countText = if (entryCount == 1) \"1 Eintrag\" else \"$entryCount Eintraege\"\n        Text(countText)\n        Text(\"Heute hast du %d neue Erinnerungen.\")\n        Snackbar { Text(\"Speichern fehlgeschlagen: $userName\") }\n    }\n}\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:tools=\"http://schemas.android.com/tools\"\n           xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\"\n           tools:locale=\"de\">\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt dass 'Eintrag/Eintraege' eine Plural-Konstruktion ist und erstellt <plurals> mit one+other. Erkennt Template-String 'Hallo $userName' und extrahiert mit Platzhalter %1$s + xliff:g. Erkennt unnummerierte %d und ersetzt mit %1$d. Aktualisiert Code zu pluralStringResource() und stringResource() mit Args.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "strings.xml enthaelt mindestens 1 <plurals>-Eintrag",
+					"type": "pattern_exists",
+					"pattern": "<plurals name="
+				},
+				{
+					"id": 2,
+					"text": "Plurals haben sowohl 'one' als auch 'other' Kategorie",
+					"type": "pattern_count_gte",
+					"pattern": "quantity=\"(one|other)\"",
+					"target": 2
+				},
+				{
+					"id": 3,
+					"text": "Alle Platzhalter sind nummeriert (%1$s nicht %s)",
+					"type": "absence",
+					"pattern": "(?<!\\d\\$)(?<!\\$)%[sdfu](?![0-9])"
+				},
+				{
+					"id": 4,
+					"text": "Platzhalter haben xliff:g-Tag",
+					"type": "pattern_exists",
+					"pattern": "<xliff:g id="
+				},
+				{
+					"id": 5,
+					"text": "Code nutzt pluralStringResource fuer den Zaehler",
+					"type": "pattern_exists",
+					"pattern": "pluralStringResource"
+				}
+			]
+		},
+		{
+			"id": 3,
+			"name": "enum-displayname-trap",
+			"prompt": "Extrahiere die hardcodierten Mood-Labels. ACHTUNG: Sie werden auch in Room gespeichert — finde das Risiko und schlage einen Fix vor.",
+			"files": [
+				{
+					"path": "app/src/main/java/com/example/Mood.kt",
+					"content": "package com.example\n\nenum class Mood(val displayName: String) {\n    HAPPY(\"Gluecklich\"),\n    SAD(\"Traurig\"),\n    NEUTRAL(\"Neutral\")\n}\n"
+				},
+				{
+					"path": "app/src/main/java/com/example/MoodScreen.kt",
+					"content": "package com.example\n\nimport androidx.compose.material3.*\nimport androidx.compose.runtime.Composable\n\n@Composable\nfun MoodScreen(currentMood: Mood) {\n    Text(\"Aktuelle Stimmung: ${currentMood.displayName}\")\n}\n\n// In MoodViewModel.kt:\n// prefs.putString(\"mood\", currentMood.displayName) // BUG!\n"
+				},
+				{
+					"path": "app/src/main/res/values/strings.xml",
+					"content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">Test-App</string>\n</resources>\n"
+				}
+			],
+			"expected_behavior": "Erkennt das Enum-Serialisierungs-Risiko (Phase 5.2): displayName wird sowohl fuer UI als auch fuer DB-Speicherung verwendet — Datenverlust bei Sprachwechsel. Schlaegt vor: Trennung von Anzeige (@StringRes) und Speicherung (enum.name). Erstellt 3 String-Ressourcen mood_happy, mood_sad, mood_neutral. Refactored Enum zu @StringRes-Property. Aendert prefs.putString zu enum.name.",
+			"assertions": [
+				{
+					"id": 1,
+					"text": "Enum hat jetzt @StringRes-Property statt String",
+					"type": "pattern_exists",
+					"pattern": "@StringRes\\s+val\\s+\\w+\\s*:\\s*Int"
+				},
+				{
+					"id": 2,
+					"text": "Enum-Werte verweisen auf R.string.mood_*",
+					"type": "pattern_count_gte",
+					"pattern": "R\\.string\\.mood_",
+					"target": 3
+				},
+				{
+					"id": 3,
+					"text": "Funktionalitaets-Check-Warnung wurde dem Benutzer gezeigt",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'Datenverlust', 'Enum-Serialisierung' oder 'Phase 5.2' in der Antwort"
+				},
+				{
+					"id": 4,
+					"text": "Vorschlag enum.name statt displayName fuer prefs.putString",
+					"type": "manual_check",
+					"criterion": "Erwaehnt 'enum.name' oder 'currentMood.name' fuer Datenspeicherung"
+				}
+			]
+		}
+	],
+	"metadata": {
+		"created": "2026-05-18",
+		"purpose": "Regressions-Test gegen den string-extraktor Skill bei Aenderungen. Bei jedem Skill-Update sollten diese 3 Evals weiterhin bestanden werden.",
+		"manual_run": "claude --skill string-extraktor 'Prompt aus eval' (mit gemockten Eingabedateien)",
+		"automated_run": "Via skill-creator Eval-Loop: python -m scripts.run_loop --eval-set evals/eval-set.json --skill-path . --model claude-opus-4-7"
+	}
+}
