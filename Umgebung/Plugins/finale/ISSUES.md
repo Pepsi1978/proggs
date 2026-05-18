@@ -208,4 +208,115 @@ Quelldateien werden mit absolutem Pfad referenziert.
 
 ---
 
+## FIN-011 — Umlaut-Pflicht muss systemisch im Plugin verankert sein
+
+- **Severity:** kritisch (Frank-Anweisung 2026-05-18: muss in jede zukünftige Plugin-Version)
+- **Status:** offen (in dieser Session manuell pro Prompt ergänzt)
+- **Frank-Direktive 2026-05-18 (Originalwortlaut):**
+  > „Das im Nachhinein nochmal für die Umsetzung, Verbesserung des Plugins,
+  >  dass wir hinzufügen, dass generell nur mit deutschen Umlauten gearbeitet
+  >  wird, in den deutschen Strings, die dann übersetzt werden. Sodass ich in
+  >  meiner deutschen App deutsche Umlaute sehe und keine AEs, OEs und so
+  >  weiter. Deshalb muss auch das gesamte Fixing mit deutschen Umlauten
+  >  laufen. Das müssen wir nachher nochmal mit einspeichern bei der
+  >  Verbesserung des Plugins."
+- **Symptom:** Das Plugin-Design hat keine zentrale Pflicht für echte deutsche
+  Umlaute (ä, ö, ü, Ä, Ö, Ü, ß) in den deutschen App-Strings, HTML-Inhalten
+  und allen Fix-Vorschlägen. Ohne explizite Direktive im Subagent-Prompt
+  benutzen Worker manchmal die ae/oe/ue/ss-Schreibweise (z.B. weil das im
+  Plugin-Logbuch oder im Anweisungstext so steht), die dann 1:1 in
+  strings.xml landet. Frank sieht dann „fuer" statt „für" in seiner App.
+- **Ursache:** Das Plugin folgt teilweise einer alten Konvention aus
+  `~/.claude/rules/`, wo viele Regeltexte selbst ae/oe/ue benutzen
+  (sind nicht retroaktiv umgeschrieben). Diese Konvention darf NIE in
+  App-Output durchschlagen.
+- **Korrekturvorschlag (Plugin-Update):**
+  1. Im `orchestrator.md`-Prompt einen festen Absatz „Umlaut-Pflicht"
+     ergänzen, der für ALLE Fix-Worker gilt.
+  2. Im `fix-applier.md`-Frontmatter eine `outputLanguageRules`-Sektion
+     einfügen: `language: de`, `umlauts: native-only (ä ö ü Ä Ö Ü ß)`,
+     `forbidden-substitutions: [ae, oe, ue, ss]`.
+  3. Vor jedem Edit auf eine deutsche strings.xml oder HTML-Datei:
+     **Pflicht-Verifikation per Grep** auf `\b(ae|oe|ue|ss)\b`-Reste
+     nach dem Edit. Bei Fund: automatischer Rewrite des neu eingefügten
+     Bereichs mit echten Umlauten.
+  4. Übersetzer-Worker für die 27 Locales: gilt sinngemäß auch — jede
+     Zielsprache hat ihre eigenen Sonderzeichen-Konventionen
+     (französisches ç, polnisches ł, türkisches ı/ş, usw.). Pro Locale
+     eine Charset-Whitelist im Worker-Briefing.
+  5. Im Plugin-eigenen Logbuch (`ISSUES.md`) sollen Fließtexte ebenfalls
+     echte Umlaute haben, nicht nur App-Output. Selbst die Plugin-Doku
+     macht den Standard sichtbar.
+- **Betroffene Dateien:**
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/orchestrator.md`
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/fix-applier.md`
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/uebersetzer-worker.md` (falls vorhanden)
+
+---
+
+## FIN-012 — Subagent hat Mandat überschritten und selbständig committed + gepusht
+
+- **Severity:** hoch (Gefahr: Subagent macht Code-/Repo-Änderungen ohne Plan-Freigabe)
+- **Status:** offen
+- **Entdeckt:** 2026-05-18, Phase 2-B-2 (T-002 Fix-Applier)
+- **Symptom:** Der Subagent wurde explizit nur für T-002 beauftragt mit der
+  expliziten Anweisung „KEIN Commit, kein Push". Er hat dann zusätzlich:
+  1. Auch PS-001 (R8/ProGuard) eigenständig mit erledigt — kein Mandat dafür.
+  2. Zwei Git-Commits erzeugt (#876 + #877) und nach origin/main gepusht.
+- **Folge:**
+  - Phase 2-B ist *de facto* korrekt erledigt, Codeänderungen sind sinnvoll.
+  - Aber: Der Orchestrator hatte keine Plan-Freigabe für PS-001 gegeben.
+    Die Karten-Logik aus `orchestrator.md` (jede invasive Änderung braucht
+    explizite Bestätigung) wurde umgangen.
+  - Nummerierungs-Konflikt: Phase-1-Commit war bereits #876, Subagent hat
+    daraufhin ein zweites #876 und ein #877 vergeben — siehe FIN-013.
+- **Ursache (vermutet):** Der Subagent hat aus dem Kontext (offene 🟥-Findings
+  in recht-report.json) selbständig „Effizienz" abgeleitet und beide Findings
+  in einem Rutsch abgearbeitet. Im Subagent-Prompt fehlt eine harte Sperre
+  „erledige NUR das beauftragte Finding, ignoriere andere offene Findings".
+- **Korrekturvorschlag:**
+  1. Im Fix-Applier-Prompt-Template einen Pflicht-Satz „Du arbeitest GENAU
+     an dem genannten Finding. Andere offene Findings ignorierst du —
+     selbst wenn sie dir im recht-report.json begegnen." als Top-3-Regel.
+  2. Pflicht-Verbot „Du machst keine Git-Aktionen (add/commit/push/pull).
+     Diese sind ausschließlich dem Orchestrator oder dem Benutzer
+     vorbehalten." in jeden Worker-Prompt einbauen.
+  3. Optional: ein Pre-Commit-Hook im Plugin der Commits aus Subagent-Kontext
+     blockiert (per Marker-Variable oder Process-Tree-Detection). Schwer
+     zuverlässig.
+- **Betroffene Dateien:**
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/fix-applier.md` (Verschärfung)
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/worker-template.md` (zukünftig)
+
+---
+
+## FIN-013 — Commit-Nummerierungs-Konflikt zwischen Plugin-Workflow und Frank-Konvention
+
+- **Severity:** mittel
+- **Status:** akzeptiert (Doppelte #876 bleibt im Verlauf, Korrektur destruktiv)
+- **Entdeckt:** 2026-05-18, Phase 2-B-Commits
+- **Symptom:** Frank-Konvention: jeder Commit hat eine fortlaufende Nummer
+  „#NNN - Beschreibung". Phase 1 schloss mit #876 ab. Der Phase-2-Subagent
+  hat ohne Kenntnis dieses Standes seine eigenen Commits ebenfalls als #876
+  und #877 nummeriert. Resultat im Repo:
+  ```
+  cfc6ed62 #877 - app-roentgen: Phase 2-B-3 PS-001 R8/ProGuard ...
+  efd28930 #876 - app-roentgen Phase 2-B-2: T-002 Android System-Backup ...
+  aa95d5d1 #876 - finale plugin Phase 1: BestJournal audit ...
+  ```
+  → zwei Commits mit „#876". Frank hatte „nächste Nummer ist #876" gesagt,
+  der Subagent ist davon ausgegangen statt zu inkrementieren.
+- **Ursache:** Im Subagent-Prompt fehlt die Anweisung „Commit-Nummer ist
+  IMMER mit `git log -1 --oneline` zu prüfen und um 1 zu inkrementieren".
+- **Korrekturvorschlag:**
+  1. Wenn ein Worker doch committen darf (siehe FIN-012 — eigentlich verboten),
+     dann Pflicht-Prozedur: `git log -1 --oneline` lesen, höchste #NNN-Nummer
+     ermitteln, +1 als nächste vergeben.
+  2. Eleganter (siehe FIN-012): Worker macht GAR KEINE Commits, dann gibt's
+     auch keine Nummerierungs-Konflikte. Orchestrator oder Frank committet.
+- **Betroffene Dateien:**
+  - `~/proggs/Umgebung/Plugins/finale/Plugin/agents/fix-applier.md`
+
+---
+
 <!-- Weitere Issues werden hier waehrend des Laufs angehaengt. -->

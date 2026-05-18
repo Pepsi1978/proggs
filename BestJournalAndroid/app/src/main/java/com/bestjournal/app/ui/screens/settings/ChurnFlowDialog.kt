@@ -501,11 +501,11 @@ private fun StepOverview(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Cancel link — intentionally very subtle, small, low contrast
+        // Cancel link — intentionally subtle, but readable (alpha 0.8f per Frank-Wahl Option [3])
         Text(
             text = stringResource(R.string.churn_cancel_sub),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             modifier = Modifier.clickable { onCancelSubscription() }.padding(vertical = 4.dp),
         )
     }

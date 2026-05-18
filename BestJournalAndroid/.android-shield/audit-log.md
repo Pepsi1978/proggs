@@ -206,3 +206,59 @@ nicht verifiziert — Phase 5 oder Plugin-Update als T-NEU eintragen.
 - Diff-Hash strings.xml:  sha256:92f5efacd584
 - Counter-Update:         fixedThisRun 0->4, openFindingsCount 29->25
 - Status:                 completed (4 applied, 1 not-found/skipped)
+
+## 2026-05-18T00:00:00Z · Phase 2-C-Bundle1 · 5 Paywall-Texte angewendet
+
+- Subagent:     fix-applier (general-purpose, Sonnet 4.6, effort: max)
+- Bundle:       T-004 + T-005 + T-006 + T-009 + T-010
+- Frank-Wahl:   T-004 [a] Voll-EGBGB | T-005 [b] | T-006 eigener Wortlaut | T-009 [b] | T-010 [b]
+- Datei:        app/src/main/res/values/strings.xml
+- Substitutionen:
+  * paywall_consent_dialog_body   (T-004): APPEND Voll-Belehrung (Anbieter+Fristbeginn+EU-Muster)
+  * paywall_exit_start_discount   (T-005): "Monatsabo mit 50% Rabatt starten" -> "Zahlungspflichtig — 2 Monate zum halben Preis"
+  * paywall_yearly_savings        (T-006): Frank-Wortlaut "Spare ... — Kündigung jederzeit möglich zum jeweiligen Vertragsende."
+  * onboarding_try_premium        (T-009): "8 Tage Premium testen" -> "8 Tage gratis — danach ab 3,99 €/Monat"
+  * paywall_subtitle              (T-010): "Nutze alle Premium-Vorteile" -> "Schalte alle Premium-Funktionen frei"
+- Umlaut-Verifikation: OK (Straße, für, erklärst, 14-tägige, erklären, Kündigung, möglich — alle echte Umlaute; kein fuer/koennen/oe/ue im neuen Text)
+- Diff-Hash strings.xml: sha256:92f5efacd584 -> neu (5 Edits)
+- Counter-Update:    fixedThisRun 7->12, openFindingsCount 22->17, textual total 9->4, textual medium 5->2, textual low 2->0
+- Status:            completed
+
+## 2026-05-18T00:00:00Z · Phase 2-C-Bundle2 · Churn-Flow + Dark-Pattern
+
+- Subagent:     fix-applier (general-purpose, claude-sonnet-4-6, effort: max)
+- Bundle:       T-007 + T-008
+- Frank-Wahl:   T-007 [3] alpha(0.8f) Kompromiss | T-008 [a] "Unser Angebot fuer dich"
+- Dateien:
+  * BestJournalAndroid/app/src/main/java/com/bestjournal/app/ui/screens/settings/ChurnFlowDialog.kt -- Modifier.alpha(0.35f) -> 0.8f im Cancel-Link (Zeile 508)
+  * app/src/main/res/values/strings.xml -- churn_offer_subtitle Neuwortlaut (Zeile 1183)
+- Umlaut-Verifikation: OK (Stichprobe: echtes "fuer" mit Umlaut in churn_offer_subtitle)
+- Counter-Update:    fixedThisRun 12->14, openFindingsCount 17->15
+- Status:            completed
+
+## 2026-05-18T18:10:00Z · Phase 2-C-Bundle3 · Marketing-Claims (9 Findings)
+
+App-Architektur-Klarstellung von Frank (relevant für Phase 3 + zukünftige Audits):
+- Free-Tier:    1 individuelles Analyse-Profil  (5 Analysen/Woche)
+- Premium-Tier: 4 vordefinierte + unbegrenzt eigene Profile  (je 150/Tag)
+
+- Subagent:     fix-applier (general-purpose, claude-sonnet-4-6, effort: max)
+- Bundle:       AM-004 bis AM-012 (9 Findings)
+- Frank-Wahl:   AM-004 [a] | AM-005 [b] | AM-006 eigen | AM-007 [a] | AM-008 [b]
+                AM-009 [a] (2 Keys) | AM-010 [a]+Verifikation | AM-011 [c] eigen | AM-012 SKIP
+- Datei:        app/src/main/res/values/strings.xml
+- Edits:
+  * ai_limits_dialog_body (AM-004 PARTIAL): „99% aller Nutzer..." → „Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen."
+  * ai_limits_dialog_body (AM-010 VERIFY):  „5 Dashboard-Analysen pro Woche pro Profil" bestätigt (no-op)
+  * ai_limits_disclaimer (AM-005):          „Großzügiges..." → „KI-Tageskontingent für intensive Nutzung."
+  * settings_premium_feature_improve_desc (AM-006): Frank-eigen „KI verbessert deine Einträge auf Wunsch."
+  * settings_premium_feature_patterns_desc (AM-007): neuer Wortlaut „...Muster und Zusammenhänge in deinen Einträgen sichtbar machen"
+  * ai_banner_body (AM-008 PARTIAL):        Inline-Disclaimer angehängt an Lebensratschläge-Bullet
+  * paywall_headline_stress (AM-009):       „Finde deine innere Ruhe" → „Mehr Klarheit im Alltag"
+  * paywall_headline_stress_sub (AM-009):   neuer Untertitel „Erkenne was dich täglich beschäftigt..."
+  * settings_premium_feature_dashboard_desc (AM-011): Frank-eigen „Dein Dashboard wächst mit deinen Einträgen."
+- Skips:
+  * AM-012 retro_benefit_weekly — Frank-Begründung: faktisch korrekt (Anzahl historischer Rückblicke)
+- Umlaut-Verifikation: OK
+- Counter-Update: fixedThisRun 14->22, skippedThisRun 0->1, openFindingsCount 15->6
+- Status:            completed

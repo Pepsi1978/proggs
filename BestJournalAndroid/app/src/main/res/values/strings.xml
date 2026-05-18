@@ -491,15 +491,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Tägliche KI-Textverbesserung</string>
-    <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
+    <string name="settings_premium_feature_improve_desc">KI verbessert deine Einträge auf Wunsch.</string>
     <string name="settings_premium_feature_dashboard">Tägliche Dashboard-Analysen</string>
-    <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
+    <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit deinen Einträgen.</string>
     <string name="settings_premium_feature_5_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
     <string name="settings_premium_feature_reviews">Alle Rückblicke ausführlich mit KI erstellt</string>
     <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
     <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
-    <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
+    <string name="settings_premium_feature_patterns_desc">Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen</string>
     <string name="settings_premium_feature_pdf">PDF-Export mit Fotos</string>
     <string name="settings_premium_feature_pdf_desc">Alle Tagebucheinträge mit Bilder als Dokument</string>
     <string name="settings_premium_feature_voice">Präzisere Spracherkennung</string>
@@ -1092,7 +1092,7 @@
     <string name="onboarding_perspectives_title">Verschiedene Blickwinkel auf\ndein Leben</string>
     <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
     <string name="onboarding_premium_profiles">4 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
-    <string name="onboarding_try_premium">8 Tage Premium testen</string>
+    <string name="onboarding_try_premium">8 Tage gratis — danach ab 3,99 €/Monat</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -1102,7 +1102,7 @@
 
     <!-- § 356 Abs. 5 BGB Sofort-Verzichts-Dialog (M1 Audit v6, 2026-04-28) — VOR launchPurchaseFlow -->
     <string name="paywall_consent_dialog_title">Widerrufsbelehrung</string>
-    <string name="paywall_consent_dialog_body">Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.</string>
+    <string name="paywall_consent_dialog_body">Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.\n\nAnbieter der Premium-Funktionen: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. E-Mail für Widerruf: dev.app.support@gmail.com.\n\nFalls du das Widerrufsrecht nicht vor Bereitstellung erklärst und das Premium-Abo gestartet wird, beginnt deine 14-tägige Widerrufsfrist am Tag des Vertragsabschlusses. Du kannst den Widerruf formfrei per E-Mail erklären oder das EU-Muster-Widerrufsformular nutzen (https://www.bmuv.de/widerruf — externes EU-Muster).</string>
     <string name="paywall_consent_dialog_checkbox">Ich stimme zu, dass die Bereitstellung der Premium-Funktionen sofort nach Bestellung beginnt. Mir ist bekannt, dass ich dadurch mein 14-tägiges Widerrufsrecht verliere.</string>
     <string name="paywall_consent_dialog_confirm">Jetzt zahlungspflichtig abonnieren</string>
     <string name="paywall_consent_dialog_cancel">Abbrechen</string>
@@ -1116,7 +1116,7 @@
     <string name="paywall_yearly_note">Danach %1$s pro Jahr\nIn der Testphase jederzeit kündbar</string>
     <string name="paywall_most_popular">Beliebteste Wahl</string>
     <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
-    <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar</string>
+    <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.</string>
     <string name="paywall_lifetime_title">Einmalkauf</string>
     <string name="paywall_lifetime_desc">Einmal zahlen, alles nutzen</string>
     <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
@@ -1133,8 +1133,8 @@
     <string name="paywall_feature_profiles">Unbegrenzte individuelle KI-Profile</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Finde deine innere Ruhe</string>
-    <string name="paywall_headline_stress_sub">Erkenne was dich belastet, bevor es dich überwältigt</string>
+    <string name="paywall_headline_stress">Mehr Klarheit im Alltag</string>
+    <string name="paywall_headline_stress_sub">Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.</string>
     <string name="paywall_headline_clarity">Verstehe dich selbst besser</string>
     <string name="paywall_headline_clarity_sub">Die KI erkennt Muster, die dir verborgen bleiben</string>
     <string name="paywall_headline_growth">Entdecke das Gute in jedem Tag</string>
@@ -1149,7 +1149,7 @@
     <string name="paywall_exit_special_offer">Wir haben ein besonderes\nAngebot für dich:</string>
     <string name="paywall_exit_discount">Rabatt für %1$d Monate</string>
     <string name="paywall_exit_price_comparison">Nur %1$s statt %2$s pro Monat</string>
-    <string name="paywall_exit_start_discount">Monatsabo mit 50% Rabatt starten</string>
+    <string name="paywall_exit_start_discount">Zahlungspflichtig — 2 Monate zum halben Preis</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -1180,7 +1180,7 @@
     <string name="churn_sorry_title">Schade, dass du gehst</string>
     <string name="churn_sorry_body">Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.</string>
     <string name="churn_exclusive_offer">Exklusives Angebot</string>
-    <string name="churn_offer_subtitle">Nur für dich, weil du uns wichtig bist</string>
+    <string name="churn_offer_subtitle">Unser Angebot für dich</string>
     <string name="churn_offer_feature_ai">Tägliche KI-Analysen</string>
     <string name="churn_offer_feature_perspectives">Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)</string>
     <string name="churn_offer_feature_voice">Premium-Spracherkennung</string>
@@ -1202,13 +1202,13 @@
     <string name="ai_limit_no_thanks">Nein danke, weiter ohne KI</string>
 
     <!-- AI Limits disclaimer + explanation dialog (Paywall + Settings Premium-Bereich) -->
-    <string name="ai_limits_disclaimer">Großzügiges KI-Tageskontingent für intensive Nutzung.</string>
+    <string name="ai_limits_disclaimer">KI-Tageskontingent für intensive Nutzung.</string>
     <string name="ai_limits_dialog_title">Wie funktioniert das KI-Tageskontingent?</string>
-    <string name="ai_limits_dialog_body" formatted="false">MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\n• Bis zu 150 Text-Verbesserungen\n\nWie das im Detail abläuft:\n• Anfragen 1 bis 30: in höchster KI-Qualität\n• Anfragen 31 bis 100: in schneller Standard-Qualität\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\n• Anfragen 101 bis 150: schnelle Standard-Qualität\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\n\nAußerdem gilt für alle Nutzer:\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\n\nWann werden die Kontingente zurückgesetzt?\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\n\n──────────\n\nOHNE ABO\n\n• 5 Dashboard-Analysen pro Woche pro Profil\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\n\n──────────\n\nÜber 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.</string>
+    <string name="ai_limits_dialog_body" formatted="false">MIT PREMIUM-ABO\n\nPro Tag stehen dir zur Verfügung:\n• 150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst.\n• Bis zu 150 Text-Verbesserungen\n\nWie das im Detail abläuft:\n• Anfragen 1 bis 30: in höchster KI-Qualität\n• Anfragen 31 bis 100: in schneller Standard-Qualität\n• Bei der 101. Anfrage: einmalige 30-Min-Pause\n• Anfragen 101 bis 150: schnelle Standard-Qualität\n• Ab Anfrage 151: keine weiteren Anfragen bis morgen\n\nAußerdem gilt für alle Nutzer:\n• Höchstens 50 KI-Anfragen pro Stunde — danach 5-Min-Pause\n\nWann werden die Kontingente zurückgesetzt?\nJeden Tag um 0:00 Uhr (deine Lokalzeit) startet ein neues volles Kontingent.\n\n──────────\n\nOHNE ABO\n\n• 5 Dashboard-Analysen pro Woche pro Profil\n• 5 Text-Verbesserungen pro Woche\n• Immer in schneller Standard-Qualität\n• Zurückgesetzt jeden Montag um 0:00 Uhr (deine Lokalzeit)\n\n──────────\n\nDie meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.</string>
     <string name="ai_limits_dialog_close">Verstanden</string>
 
     <string name="ai_banner_title">Dein Tagebuch wird von KI unterstützt</string>
-    <string name="ai_banner_body">• Diktierte Texte werden automatisch verbessert\n• Zusammenfassungen für jeden Eintrag\n• Intelligente Lebensratschläge aus deinen Mustern\n• Alles in deiner kostenlosen Testphase enthalten</string>
+    <string name="ai_banner_body">• Diktierte Texte werden automatisch verbessert\n• Zusammenfassungen für jeden Eintrag\n• Intelligente Lebensratschläge aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.\n• Alles in deiner kostenlosen Testphase enthalten</string>
     <string name="cd_mic_start">Aufnahme starten</string>
     <string name="cd_mic_stop">Aufnahme stoppen</string>
     <string name="entry_improve_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
@@ -1470,7 +1470,7 @@
     <string name="paywall_monthly_label">Monatlich</string>
     <string name="paywall_restore_button">Käufe wiederherstellen</string>
     <string name="paywall_subscribe_button">Abonnieren</string>
-    <string name="paywall_subtitle">Nutze alle Premium-Vorteile</string>
+    <string name="paywall_subtitle">Schalte alle Premium-Funktionen frei</string>
     <string name="paywall_title">Upgrade auf Premium</string>
     <string name="paywall_yearly_label">Jährlich</string>
     <string name="prompt_char_count_label">%1$d Zeichen</string>
