@@ -218,5 +218,7 @@ Im Audit pruefen ob fuer jeden State eine UI-Komponente existiert.
 - [Subscription lifecycle | Android Developers](https://developer.android.com/google/play/billing/lifecycle/subscriptions)
 - [RTDN Reference | Android Developers](https://developer.android.com/google/play/billing/rtdn-reference)
 - [purchases.subscriptionsv2 | Play Developer API](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2)
-- [Migrate to Billing Library 7 | Android Developers](https://developer.android.com/google/play/billing/migrate-gpblv7)
+- [Migrate to Billing Library 8 (Juni 2025) | Android Developers](https://developer.android.com/google/play/billing/migrate-gpblv8)
+- [Migrate to Billing Library 7 (Vorgaenger, Archiv)](https://developer.android.com/google/play/billing/migrate-gpblv7)
+- [RevenueCat — Play Billing 8 Migration Guide](https://www.revenuecat.com/blog/engineering/play-billing-8-migration/)
 - [Google Play Subscription Policy](https://support.google.com/googleplay/android-developer/answer/9900533)

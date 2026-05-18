@@ -3,14 +3,31 @@ name: app-roentgen
 description: |
   Durchleuchtet eine Android-App systematisch wie ein Roentgengeraet — extrahiert ALLE Funktionen, Bildschirme, Klick-Pfade, Paywall-Stufen und Hidden Features aus dem Quellcode, damit Werbeaussagen 1:1 gegen die Code-Realitaet geprueft werden koennen (UWG §5, EU UCPD, Google Play Policy).
 
-  Nutze diesen Skill IMMER bei: "App durchleuchten", "App roentgen", "Roentgen-Skill", "X-Ray", "Durchleuchten", "Werbeaussagen pruefen", "Werbeaussagen-Audit", "UWG-Audit", "Paywall-Audit", "Marketing-Compliance", "Feature-Audit", "Feature-Inventar", "App-Architektur extrahieren", "alle Funktionen einer App auflisten", "App komplett analysieren", "App-Analyse fuer Rechtssicherheit", "stimmt was wir versprechen mit der App ueberein", "was kann die App genau", "Compliance-Pruefung".
-
-  Funktioniert fuer beliebige Android-Apps (Kotlin/Compose bevorzugt, Java/XML auch unterstuetzt). Erzeugt einen strukturierten Audit-Bericht mit 1:1-Wortlauten, Paywall-Inventar, Permission-Mapping und einer Werbeaussage-vs-Feature-Matrix.
-
-  NICHT verwenden fuer: reine DSGVO-/Datenschutz-Pruefungen (-> rechtssicherheit-Skill), String-Extraktion (-> string-extraktor-Skill), Lokalisierung (-> uebersetzung-Skill), Monetarisierungs-Beratung (-> app-monetizer-Skill). Diese Skills KONSUMIEREN den Roentgen-Output, fuehren ihn aber nicht selbst durch.
+  Nutze diesen Skill IMMER bei: "App durchleuchten", "App roentgen", "Roentgen-Skill", "X-Ray", "Durchleuchten", "Werbeaussagen pruefen", "Werbeaussagen-Audit", "UWG-Audit", "Paywall-Audit", "Marketing-Compliance", "Feature-Audit", "Feature-Inventar", "App-Architektur extrahieren", "alle Funktionen einer App auflisten", "App komplett analysieren", "App-Analyse fuer Rechtssicherheit", "stimmt was wir versprechen mit der App ueberein", "was kann die App genau", "Compliance-Pruefung". Funktioniert fuer beliebige Android-Apps (Kotlin/Compose bevorzugt, Java/XML auch unterstuetzt). Erzeugt einen strukturierten Audit-Bericht mit 1:1-Wortlauten, Paywall-Inventar, Permission-Mapping und Werbeaussage-vs-Feature-Matrix.
+allowed-tools:
+  - Bash
+  - Read
+  - Grep
+  - Glob
+  - Write
+  - Edit
 ---
 
 # App-Roentgen: Vollstaendiges Architektur- und Werbeaussagen-Audit fuer Android-Apps
+
+## Abgrenzung zu anderen Skills
+
+Dieser Skill ist eine GRUNDLAGEN-Schicht — sein Output wird von anderen Skills konsumiert. Nicht aufrufen wenn die Hauptaufgabe ein anderes Ziel hat:
+
+| Anfragetyp | Richtiger Skill |
+|-----------|----------------|
+| Reine DSGVO-/Datenschutz-/Impressums-Pruefung | `rechtssicherheit` |
+| Hardcoded Strings finden + neue Strings erstellen | `string-extraktor` |
+| Bestehende deutsche Strings in andere Sprachen uebersetzen | `uebersetzung` |
+| Monetarisierungs-/Conversion-Beratung (Paywall-Optimierung) | `app-monetizer` |
+| UI/UX-Design-Audit (Farben, Typografie, Material 3) | `designer` |
+
+Wenn Werbeaussagen-Audit, Feature-Inventar oder Paywall-Compliance gefragt sind: **dieser Skill**. Wenn die nachgelagerten Skills explizit den Roentgen-Output brauchen, ist es legitim diesen zuerst zu fahren und dann den anderen — aber nicht "DSGVO-Check" mit diesem Skill anfangen.
 
 ## Kernzweck
 
@@ -234,58 +251,9 @@ Der finale Bericht wird in der App-Wurzel als `app-roentgen-AUDIT-YYYY-MM-DD.md`
 
 ## Checkpoint-Mechanik fuer lange Audits (KRITISCH bei grossen Apps)
 
-Ein vollstaendiger Roentgen-Audit einer mittelgrossen App (500-1500 Kotlin-Dateien) dauert typisch 30-90 Minuten und durchlaeuft mehrere Schichten. Wenn die Session unterbrochen wird (Kontext-Kompaktierung, Crash, Token-Limit, manueller Stop), startet ohne Checkpoint alles von vorn — bei einem zweistuendigen Audit kostet das mehrere tausend Token unnoetig.
+Audits einer mittelgrossen App (500-1500 Kotlin-Dateien) dauern 30-90 Minuten. Vor JEDER neuen Schicht (1, 2, 3, 3b optional, 4, 4b-4e, 5, 6, 7) MUSS eine Checkpoint-Datei `<app-dir>/app-roentgen-checkpoint.json` geschrieben werden. Bei Wiederaufnahme: Checkpoint lesen, bei `current_phase` fortsetzen, erledigte Phasen NICHT erneut bearbeiten.
 
-### Pflicht-Verhalten
-
-Vor JEDER neuen Schicht (1, 2, 3, 4, 4b, 4c, 4d, 4e, 5, 6, 7) eine Checkpoint-Datei in der App-Wurzel schreiben:
-
-```
-<app-dir>/app-roentgen-checkpoint.json
-```
-
-### Format
-
-```json
-{
-  "schema": "1.0",
-  "audit_started_at": "2026-05-18T10:30:00Z",
-  "audit_app_dir": "/path/to/app",
-  "audit_app_version": "0.10.2",
-  "current_phase": "4b_wortlaut_mapping",
-  "completed_phases": [
-    "1_manifest",
-    "2_dependencies",
-    "3_architektur",
-    "4_screens"
-  ],
-  "screens_inventoried": 47,
-  "paywall_screens_found": 7,
-  "permissions_extracted": 18,
-  "subscription_states_covered": 5,
-  "last_updated_at": "2026-05-18T11:12:33Z"
-}
-```
-
-### Bei Wiederaufnahme
-
-1. Checkpoint-Datei einlesen
-2. `current_phase` finden und dort FORTSETZEN — bereits erledigte Phasen NICHT erneut bearbeiten
-3. Bei jedem Phase-Abschluss `completed_phases` ergaenzen und `current_phase` auf die naechste setzen
-4. Nach finalem Bericht: Checkpoint-Datei loeschen ODER mit `"final": true` markieren
-
-### Gitignore
-
-Die Checkpoint-Datei gehoert NICHT ins Repo. Wenn die App-Wurzel keine `.gitignore` hat oder den Eintrag nicht enthaelt, am Anfang des Audits ergaenzen:
-
-```
-# app-roentgen Audit-Artefakte
-app-roentgen-checkpoint.json
-app-roentgen-initial-scan.md
-app-roentgen-export.json
-```
-
-Der finale Bericht `app-roentgen-AUDIT-YYYY-MM-DD.md` DARF dagegen ins Repo — er ist das Audit-Ergebnis.
+→ **Komplettes JSON-Schema, Phasen-Liste, Gitignore-Hinweise**: `references/checkpoint-format.md`
 
 ## Vollstaendigkeits-Validierung (PFLICHT)
 

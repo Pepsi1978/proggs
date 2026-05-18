@@ -59,7 +59,7 @@ grep -E '^[a-zA-Z]' gradle/libs.versions.toml
 
 | Dependency | Capability |
 |-----------|-----------|
-| com.android.billingclient:billing-ktx | Google Play Billing v6/7 — Subscription/IAP |
+| com.android.billingclient:billing-ktx | Google Play Billing v6/7/v8 — Subscription/IAP. **Bei v8 (06/2025) wurden APIs entfernt — siehe `layer-5-paywall.md` Abschnitt 5.0 fuer Migration-Check.** |
 | com.google.android.play:review-ktx | In-App-Review-Dialog |
 | com.google.android.play:app-update-ktx | In-App-Updates |
 | com.google.android.play:integrity | Play Integrity API |

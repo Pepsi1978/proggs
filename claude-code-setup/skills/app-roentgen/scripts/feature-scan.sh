@@ -3,6 +3,10 @@
 # Aufruf: bash feature-scan.sh <pfad-zur-android-app>
 # Schreibt strukturierten Initial-Bericht in <app>/app-roentgen-initial-scan.md
 
+# Kein 'set -e' (partial-failure ist gewollt — grep gibt 1 zurueck bei keinen Treffern,
+# das soll den Scan nicht abbrechen). 'set -u' faengt vergessene Variablen, 'pipefail'
+# faengt Fehler in Pipelines. Style-Warnings (SC2126, SC2155) sind bewusst akzeptiert.
+# shellcheck disable=SC2155,SC2126,SC2086
 set -uo pipefail
 
 APP_DIR="${1:-}"
@@ -32,7 +36,7 @@ if [ ${#PREFLIGHT_MISSING[@]} -gt 0 ]; then
     exit 1
 fi
 
-# Optionale Tools erkennen (Skript laeuft auch ohne, ist aber schneller mit)
+# Optionale Tools erkennen (Skript laeuft auch ohne, ist aber schneller / nuetzlicher mit)
 HAS_RG=0
 command -v rg >/dev/null 2>&1 && HAS_RG=1
 HAS_JQ=0
@@ -42,6 +46,21 @@ if [ "$HAS_RG" = "0" ]; then
     echo "Hinweis: ripgrep (rg) nicht gefunden — falle auf grep zurueck (5-10x langsamer)." >&2
     echo "         Installation: 'brew install ripgrep' (macOS) oder 'winget install ripgrep'" >&2
 fi
+if [ "$HAS_JQ" = "0" ]; then
+    echo "Hinweis: jq nicht gefunden — JSON-Pretty-Print im Bericht wird uebersprungen." >&2
+fi
+
+# json_pretty filtert JSON-Strings durch jq wenn verfuegbar, sonst unveraendert. Erlaubt
+# spaeter (z.B. wenn der Audit JSON-Schnipsel vom export-json.py einbettet) maschinen-
+# lesbare und gleichzeitig menschlich gut lesbare Bloecke. Wird in Schicht 7 (Marketing)
+# fuer eingebettete JSON-Statistik genutzt — verhindert tote HAS_JQ-Variable (SC2034).
+json_pretty() {
+    if [ "$HAS_JQ" = "1" ]; then
+        jq '.' 2>/dev/null || cat
+    else
+        cat
+    fi
+}
 # =============================================================================
 
 # Defense in Depth: || exit verhindert dass das Skript im AUFRUFER-Verzeichnis weiterlaeuft
@@ -336,10 +355,19 @@ count_in_file() {
     echo "\`\`\`"
     echo ""
 
-    echo "### 4.2 Compose-Funktionen die mit Uppercase + 'Screen(' enden"
+    echo "### 4.2 Compose-Funktionen mit Uppercase-Namen (Screen/Dialog/Sheet/...)"
     echo ""
     echo "\`\`\`"
-    grep -rn '@Composable' --include='*.kt' . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | xargs -I {} echo {} 2>/dev/null | head -50
+    # FIX R4: vorher 'xargs -I {} echo {}' — das hat nur die grep-Ausgabe unveraendert echoed,
+    # KEINE Funktionsnamen extrahiert. Section 4.2 war seit Tag 1 irrefuehrend.
+    # Jetzt: Composable-Definitionen direkt finden, Funktionsname extrahieren.
+    # Pattern: Zeile nach '@Composable' (oder gleiche Zeile) mit 'fun <UpperCamelCase>(...'
+    grep -rEnA1 '^[[:space:]]*@Composable[[:space:]]*$' --include='*.kt' . 2>/dev/null \
+        | grep -v '/build/' | grep -v '/test/' \
+        | grep -oE 'fun [A-Z][A-Za-z0-9_]*\(' \
+        | sed 's/fun \([^(]*\)(/\1/' \
+        | sort -u | head -50 \
+        || echo "(keine gefunden)"
     echo "\`\`\`"
     echo ""
 

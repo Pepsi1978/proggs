@@ -92,6 +92,25 @@ Wenn eine Permission deklariert ist aber das implizierte Feature nicht im Code z
 |-----------|---------------------|---------------|
 | `FOREGROUND_SERVICE` | Vordergrund-Service erlaubt | `Service.startForeground` |
 | `FOREGROUND_SERVICE_*` (Android 14+) | Spezifischer Service-Typ (mediaPlayback, location, dataSync, etc.) | `<service android:foregroundServiceType="...">` |
+| `FOREGROUND_SERVICE_MEDIA_PROCESSING` (Android 14, **DEPRECATED in 15**) | Media-Processing-FGS | bei API 35: muss durch `dataSync` oder `specialUse` ersetzt werden |
+| `RUN_USER_INITIATED_JOBS` (Android 14+, prominenter ab 15) | User-Initiated Data Transfer Jobs (z.B. grosse Datei-Uploads die der Nutzer aktiv startet) | `JobInfo.Builder.setUserInitiated(true)`, JobScheduler |
+
+### Android 15 (API 35) — neue Permission-Klassen
+
+| Permission | Implizierte Features | Code-Patterns / Notiz |
+|-----------|---------------------|----------------------|
+| **Photo Picker (kein neues Permission-Pattern, aber API-Wechsel)** | Embedded Photo Picker statt vollem READ_MEDIA_IMAGES | `ActivityResultContracts.PickVisualMedia.PickMultipleVisualMedia`. Apps die READ_MEDIA_IMAGES wegen Galerie-Auswahl deklariert hatten, koennen oft auf Picker umsteigen (Privacy-Improvement). |
+| **Partial-Storage statt MANAGE_EXTERNAL_STORAGE** | Apps muessen begruenden warum All-Files-Access noetig ist (verschaerfte Play-Console-Pruefung) | Bei MANAGE_EXTERNAL_STORAGE: Begruendung in Play Console + Datenschutz-Erklaerung Pflicht |
+| `MANAGE_OWN_CALLS` (verschaerfter Scope ab API 35) | Nur fuer VoIP-Apps die eigene Audio-Sessions verwalten | `ConnectionService` |
+| **Foreground-Service-Typ `specialUse` Restriktion** | Apps die `specialUse` deklarieren MUESSEN seit Android 15 zusaetzlich `<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE">` setzen und Play-Console-Begruendung liefern | im Manifest pruefen + Play-Console-Submission-Form |
+| **NFC-Wallet Default-Service** (API 35+) | `BIND_NFC_SERVICE` + Wallet-Role | `HostApduService` mit role="wallet" |
+
+**Audit-Hinweise fuer Android 15:**
+
+- Wenn `compileSdk >= 35`: Pruefen ob `mediaProcessing`-FGS-Typ noch verwendet wird → MIGRATION-Befund
+- Wenn `targetSdk >= 35` und MANAGE_EXTERNAL_STORAGE deklariert: Play-Console-Form ausgefuellt? → Befund
+- Foreground-Service mit `specialUse`: Property-Tag im Manifest vorhanden? → Befund
+- Photo Picker statt READ_MEDIA_IMAGES wo moeglich? → Verbesserungsvorschlag (Privacy-Score)
 
 ### Display und Overlays
 

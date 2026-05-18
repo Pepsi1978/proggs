@@ -1,5 +1,7 @@
 ---
-app_roentgen_schema_version: "2.0"
+# WICHTIG: Diese Version muss synchron mit scripts/export-json.py SCHEMA_VERSION bleiben.
+# Bei Aenderung beide Stellen anpassen.
+app_roentgen_schema_version: "2.1"
 app_name: "<APP-NAME>"
 audit_date: "YYYY-MM-DD"
 app_version_code: "<Version-Code>"
@@ -38,6 +40,12 @@ checklist_total_points: 82
 >
 > Bei Bedarf kann zusaetzlich ein `app-roentgen-export.json` mit strukturierten Daten
 > erzeugt werden (siehe `scripts/export-json.py`).
+>
+> **WICHTIG zur Section-Nummerierung (historisch gewachsen):** Die Inhaltsverzeichnis-Nummern
+> entsprechen NICHT 1:1 den Schicht-Nummern in `SKILL.md`. Section 1 = Zusammenfassung,
+> Section 2 = Schicht 1 (Manifest), Section 3 = Schicht 2 (Deps), ..., Section N+1 = Schicht N.
+> Beim Aendern der Sub-Layer (4b/4c/4d/4e) entsprechend an Section 5b/5c/5d/5e arbeiten.
+> Section 4b im Template entspricht der NEUEN Schicht 3b (Compose Compiler Reports — optional).
 
 ---
 
@@ -47,6 +55,7 @@ checklist_total_points: 82
 2. [Schicht 1 — Manifest-Analyse](#2-schicht-1--manifest-analyse)
 3. [Schicht 2 — Dependency-Analyse](#3-schicht-2--dependency-analyse)
 4. [Schicht 3 — Architektur-Inventar](#4-schicht-3--architektur-inventar)
+4b. [Schicht 3b — Compose Compiler Reports (OPTIONAL, nur wenn baubar)](#4b-schicht-3b--compose-compiler-reports)
 5. [Schicht 4 — Bildschirm-Karte und Klick-Pfade](#5-schicht-4--bildschirm-karte-und-klick-pfade)
 5b. [Schicht 4b — Wortlaut-Mapping pro Bereich](#5b-schicht-4b--wortlaut-mapping-pro-bereich) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
 5c. [Schicht 4c — Translation-Context](#5c-schicht-4c--translation-context) **(GRUNDLAGE FUER UEBERSETZUNGS-SKILL)**
@@ -55,7 +64,7 @@ checklist_total_points: 82
 6. [Schicht 5 — Paywall-Tiefenanalyse](#6-schicht-5--paywall-tiefenanalyse) **(WICHTIGSTER ABSCHNITT)**
 7. [Schicht 6 — Hidden Features](#7-schicht-6--hidden-features)
 8. [Schicht 7 — Werbeaussage-vs-Feature-Matrix](#8-schicht-7--werbeaussage-vs-feature-matrix)
-9. [Don't-Miss-Checkliste (82 Punkte)](#9-dont-miss-checkliste)
+9. [Don't-Miss-Checkliste (82 Punkte — Anzahl in `references/dont-miss-checklist.md` aktualisieren falls geaendert)](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
 ---
@@ -255,6 +264,43 @@ ___
 | # | Befund | Risiko | Datei | Empfehlung |
 |---|--------|--------|-------|-----------|
 | | | | | |
+
+---
+
+## 4b. Schicht 3b — Compose Compiler Reports (OPTIONAL)
+
+> Diese Sektion wird NUR ausgefuellt wenn der Layer 3b durchgefuehrt wurde (Build-Zugriff erforderlich). Details in `references/layer-3b-compose-compiler-reports.md`.
+
+### 4b.0 Wurde Layer 3b durchgefuehrt?
+
+- [ ] JA — Compose Compiler Reports aktiviert + Build gelaufen
+- [ ] NEIN — Standard Layer 3 (grep-basiert) reicht aus
+
+### 4b.1 Composable-Inventar (aus `composables.txt`)
+
+| Modul | Composable | Restartable | Skippable | Unstable Params | Datei |
+|-------|-----------|-------------|-----------|-----------------|-------|
+| | | | | | |
+
+### 4b.2 NavGraph-Extraktion (aus generated/ksp/.../NavGraphs.kt — falls compose-destinations)
+
+| Route | Destination-Klasse | Argument-Typen | Deep-Link | Datei |
+|-------|--------------------|----------------|-----------|-------|
+| | | | | |
+
+### 4b.3 Diskrepanz: grep-Layer-3 vs. Compiler-Layer-3b
+
+| Kategorie | grep (Layer 3) | Compiler (Layer 3b) | Differenz |
+|-----------|---------------|---------------------|-----------|
+| @Composable Functions | N | M | +/-K |
+| ViewModels (mit @HiltViewModel) | N | M | +/-K |
+| NavHost-Routen | N | M | +/-K |
+
+### 4b.4 Audit-Befunde Schicht 3b
+
+| # | Befund | Datei | Empfehlung |
+|---|--------|-------|-----------|
+| | | | |
 
 ---
 

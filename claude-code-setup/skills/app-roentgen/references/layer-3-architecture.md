@@ -6,6 +6,8 @@ Schicht 3 extrahiert das Skelett der App: ViewModels (Feature-Logik-Cluster), Re
 
 **Coverage-Beitrag: ~30 Prozent fuer Architektur, ~80 Prozent fuer "was kann die App technisch tun"**
 
+> **Optional fuer maximal vollstaendiges Composable-Inventar (Goldstandard 2026)**: Wenn das Projekt baubar ist, ergaenzend `references/layer-3b-compose-compiler-reports.md` einsetzen. Compose Compiler Reports liefern nachweislich alle `@Composable`-Funktionen direkt vom Compiler — die grep-Patterns hier sind robust ohne Build, aber nicht garantiert 100% vollstaendig bei dynamisch generierten Composables.
+
 ## 3.1 ViewModels — Ein VM = Ein Feature-Cluster
 
 ```bash
