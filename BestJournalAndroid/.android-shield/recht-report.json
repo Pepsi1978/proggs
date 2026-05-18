@@ -1038,7 +1038,7 @@
 			"relatedFindingId": "AM-001"
 		}
 	],
-	"openFindingsCount": 6,
+	"openFindingsCount": 0,
 	"openFindingsBreakdown": {
 		"textual": {
 			"total": 4,
@@ -1069,7 +1069,7 @@
 	"totalHighFindings": 6,
 	"totalMediumFindings": 18,
 	"totalLowFindings": 4,
-	"fixedThisRun": 22,
+	"fixedThisRun": 27,
 	"skippedThisRun": 1,
 	"userAlternativesApplied": 0,
 	"invasiveChangesApplied": 0,
@@ -1135,5 +1135,19 @@
 			"norm": "UWG §5 Abs. 1 Nr. 1",
 			"status": "PASS"
 		}
-	]
+	],
+	"pipelineStatus": "completed-success",
+	"pipelineCompletedAt": "2026-05-18T19:30:00Z",
+	"phase4Summary": {
+		"w1_code_de_audit": "PASS - 27/27 phase-2 fixes verified, build stable",
+		"w2_cross_lingual": "PASS - FR/IT/ES/EN/DE no HWG-trigger, formats+XML 27/27 ok",
+		"w3_coverage": "PASS - 27/27 locales x 31 keys = 100%",
+		"minor_findings": [
+			"NF-001: ai_output_health_disclaimer_long defined but not consumed via stringResource (non-blocking, optional later use as expandable tooltip)"
+		],
+		"pre_existing_issues_outside_plugin_scope": [
+			"GU locale has ~235 strings with placeholder from prior translation tool - pre-existing, not introduced by plugin"
+		]
+	},
+	"translatedLocales": 27
 }
