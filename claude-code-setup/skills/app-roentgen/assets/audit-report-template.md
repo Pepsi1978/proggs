@@ -23,7 +23,7 @@ sections:
   layer_5_paywall: true
   layer_6_hidden_features: true
   layer_7_marketing_claims: true
-checklist_total_points: 96
+checklist_total_points: 92
 ---
 
 # App-Roentgen Audit-Bericht — <APP-NAME>
@@ -69,7 +69,7 @@ checklist_total_points: 96
 9. [Don't-Miss-Checkliste](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
-> Hinweis zur Checkliste: 96 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
+> Hinweis zur Checkliste: 92 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
 
 ---
 
@@ -1094,7 +1094,7 @@ ___
 
 ## 9. Don't-Miss-Checkliste
 
-> Pflicht-Pruefung — alle 96 Punkte ausgefuellt? Siehe `references/dont-miss-checklist.md` fuer Detail.
+> Pflicht-Pruefung — alle 92 Punkte ausgefuellt? Siehe `references/dont-miss-checklist.md` fuer Detail.
 
 ### Block A — Manifest (8)
 - [ ] A1. AndroidManifest.xml gelesen und alle Permissions katalogisiert?

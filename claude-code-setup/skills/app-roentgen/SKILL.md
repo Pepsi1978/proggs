@@ -268,7 +268,7 @@ Audits einer mittelgrossen App (500-1500 Kotlin-Dateien) dauern 30-90 Minuten. V
 
 ## Vollstaendigkeits-Validierung (PFLICHT)
 
-Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 96 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
+Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 92 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
 
 → **Liste**: `references/dont-miss-checklist.md`
 

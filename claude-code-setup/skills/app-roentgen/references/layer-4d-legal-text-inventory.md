@@ -35,7 +35,7 @@ Pro Runtime-Permission der App MUSS dokumentiert sein:
 grep -rn 'rememberPermissionState\|rememberMultiplePermissionsState\|requestPermissions\|checkSelfPermission\|shouldShowRequestPermissionRationale' --include='*.kt' --include='*.java' .
 
 # Rationale-Strings in strings.xml
-grep -E '<string name="[^"]*(?:permission|rationale|allow)[^"]*"' app/src/main/res/values/strings.xml -i
+grep -E '<string name="[^"]*(permission|rationale|allow)[^"]*"' app/src/main/res/values/strings.xml -i
 
 # Permission-Beschreibungen aus dem Manifest
 grep -A 2 '<uses-permission' app/src/main/AndroidManifest.xml
@@ -76,7 +76,7 @@ grep -rn 'ConsentScreen\|ConsentDialog\|TrackingConsent\|CookieBanner\|GdprConse
 grep -rn 'UserMessagingPlatform\|ConsentInformation' --include='*.kt' --include='*.java' .
 
 # Strings
-grep -E '<string name="[^"]*(?:consent|tracking|analytics|cookie|gdpr|datenschutz_zustimm)[^"]*"' app/src/main/res/values/strings.xml -i
+grep -E '<string name="[^"]*(consent|tracking|analytics|cookie|gdpr|datenschutz_zustimm)[^"]*"' app/src/main/res/values/strings.xml -i
 ```
 
 ### Pflicht-Output
@@ -111,7 +111,7 @@ Implementierung: Firebase Consent Mode v2 / Google UMP / Eigene Loesung / KEINE
 
 ```bash
 # Link-Strings
-grep -E '<string name="[^"]*(?:terms|privacy|imprint|impressum|agb|datenschutz|legal)[^"]*"' app/src/main/res/values/strings.xml -i
+grep -E '<string name="[^"]*(terms|privacy|imprint|impressum|agb|datenschutz|legal)[^"]*"' app/src/main/res/values/strings.xml -i
 
 # URL-Strings (translatable=false-Kandidaten)
 grep -E '<string[^>]*>https?://' app/src/main/res/values/strings.xml | head -20
@@ -191,7 +191,7 @@ Falls Health-relevant:
 grep -rln 'GenerativeModel\|GeminiClient\|OpenAI\|Anthropic\|generateContent\|chat\.completions\|GPT\|LLM' --include='*.kt' --include='*.java' . | head -20
 
 # AI-Strings in strings.xml
-grep -iE '<string name="[^"]*"[^>]*>[^<]*(?:KI|AI|kuenstliche Intelligenz|artificial intelligence|chatbot|assistent)' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*"[^>]*>[^<]*(KI|AI|kuenstliche Intelligenz|artificial intelligence|chatbot|assistent)' app/src/main/res/values/strings.xml | head -20
 ```
 
 ### Pflicht-Output
@@ -230,7 +230,7 @@ KI-SDK verwendet: Google Gemini / OpenAI / Anthropic / On-Device-ML / Keine
 grep -rln 'AdMob\|AdSense\|MoPub\|FacebookAd\|InterstitialAd\|RewardedAd\|BannerAd' --include='*.kt' --include='*.java' .
 
 # Werbe-Strings
-grep -iE '<string name="[^"]*"[^>]*>[^<]*(?:werbung|anzeige|gesponsert|sponsored|ad |advertisement|werbeanzeige)' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*"[^>]*>[^<]*(werbung|anzeige|gesponsert|sponsored|ad |advertisement|werbeanzeige)' app/src/main/res/values/strings.xml | head -20
 
 # AffiliateLink-Indikatoren
 grep -rn 'affiliate\|sponsor\|partnerprogramm\|tracking_id\|utm_' --include='*.kt' --include='*.xml' . | head -20
@@ -271,7 +271,7 @@ Affiliate-Links vorhanden: JA / NEIN
 grep -rn 'deleteAccount\|removeUser\|clearAllData\|gdprDelete\|requestAccountDeletion\|FirebaseAuth.*delete' --include='*.kt' --include='*.java' .
 
 # Strings
-grep -iE '<string name="[^"]*(?:delete_account|account_delete|kontoloesch|konto_loesch|gdpr|datenloesch)[^"]*"' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*(delete_account|account_delete|kontoloesch|konto_loesch|gdpr|datenloesch)[^"]*"' app/src/main/res/values/strings.xml | head -20
 ```
 
 ### Pflicht-Output
@@ -311,7 +311,7 @@ Web-URL-Loeschung vorhanden: JA / NEIN (Pflicht seit 2024)
 ```bash
 grep -rn 'newsletter\|mailingList\|marketing_opt_in\|emailOptIn' --include='*.kt' --include='*.xml' . -i
 
-grep -iE '<string name="[^"]*(?:newsletter|mailing|marketing|opt_in)[^"]*"' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*(newsletter|mailing|marketing|opt_in)[^"]*"' app/src/main/res/values/strings.xml | head -20
 ```
 
 ### Pflicht-Output
@@ -344,7 +344,7 @@ Newsletter-Feature vorhanden: JA / NEIN
 
 ```bash
 # Billing-Confirmation-Strings
-grep -iE '<string name="[^"]*(?:purchase|kauf|abo_confirm|subscription_confirm)[^"]*"' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*(purchase|kauf|abo_confirm|subscription_confirm)[^"]*"' app/src/main/res/values/strings.xml | head -20
 ```
 
 ### Pflicht-Output
@@ -377,7 +377,7 @@ grep -iE '<string name="[^"]*(?:purchase|kauf|abo_confirm|subscription_confirm)[
 ### Such-Patterns
 
 ```bash
-grep -iE '<string name="[^"]*(?:widerruf|withdraw|refund|cancellation_right)[^"]*"' app/src/main/res/values/strings.xml | head -20
+grep -iE '<string name="[^"]*(widerruf|withdraw|refund|cancellation_right)[^"]*"' app/src/main/res/values/strings.xml | head -20
 ```
 
 ### Pflicht-Output
@@ -414,7 +414,7 @@ grep -E 'android.permission.ACCESS_(FINE|COARSE|BACKGROUND)_LOCATION' app/src/ma
 grep -rn 'LocationManager\|FusedLocationProviderClient\|getLastLocation\|requestLocationUpdates' --include='*.kt' --include='*.java' . | head -10
 
 # Strings
-grep -iE '<string name="[^"]*(?:location|standort|gps)[^"]*"' app/src/main/res/values/strings.xml | head -10
+grep -iE '<string name="[^"]*(location|standort|gps)[^"]*"' app/src/main/res/values/strings.xml | head -10
 ```
 
 ### Pflicht-Output
@@ -446,7 +446,7 @@ Standort-Permissions im Manifest: FINE / COARSE / BACKGROUND / Keine
 grep -rn 'IARC\|USK\|PEGI\|ageRating\|contentRating' --include='*.kt' --include='*.xml' .
 
 # Adult-Content-Marker
-grep -iE '<string name="[^"]*(?:age_rating|altersfreigabe|adult|erwachsen)[^"]*"' app/src/main/res/values/strings.xml
+grep -iE '<string name="[^"]*(age_rating|altersfreigabe|adult|erwachsen)[^"]*"' app/src/main/res/values/strings.xml
 ```
 
 ### Pflicht-Output

@@ -251,8 +251,8 @@ Asset-Markdown-Dateien: <N>
 
 | Datei | Sprachvariante | Zweck | Eingebettete Wortlaute (1:1) |
 |-------|---------------|-------|----------------------------|
-| `assets/help.html` | DE | Help-Center In-App | (Pflicht: kompletten HTML-Inhalt zitieren oder Inline-Texte extrahieren) |
-| `assets/onboarding_intro.md` | DE | Onboarding-Schritt 3 | ... |
+| `assets/help.html` (Beispiel) | DE | Help-Center In-App | (Pflicht: kompletten HTML-Inhalt zitieren oder Inline-Texte extrahieren) |
+| `assets/<beliebiger-name>.md` (Beispiel) | DE | Onboarding-Schritt 3 | (FIX X11: Platzhalter — der echte Dateiname haengt von der App ab) |
 
 #### Externe URLs
 

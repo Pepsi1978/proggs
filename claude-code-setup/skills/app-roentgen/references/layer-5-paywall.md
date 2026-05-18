@@ -293,7 +293,7 @@ grep -rn 'AppCheck\|FirebaseAuth\.getCurrentUser' --include='*.kt' .
 ```
 
 Im Audit dokumentieren:
-- Wo wird Subscription-Status server-side gepruet?
+- Wo wird Subscription-Status server-side geprueft?
 - Welche Felder kommen zurueck (expiryTime, autoRenewing, state)?
 - Was wenn Server nicht erreichbar (Offline)?
   - Cached letzter Status? Wie lange?

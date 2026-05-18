@@ -31,7 +31,9 @@ from pathlib import Path
 
 SCHEMA_VERSION = "2.1"
 
-# FIX W4 (Audit 6): konfigurierbare Default-Sprache (war vorher hardcoded "de" mitten im Code)
+# FIX W4 (Audit 6) + X9 (Audit 7): DEFAULT_LANG ist konfigurierbar via --default-lang.
+# Wird in main() ggf. ueberschrieben. Hier nur einmalige Definition (vorher gab es
+# eine doppelte Zuweisung — X9-Fix entfernt das redundante "global DEFAULT_LANG = de").
 DEFAULT_LANG = "de"
 
 
@@ -44,9 +46,14 @@ def find_app_root(app_dir: Path) -> dict:
     """Findet Manifest, strings.xml, build.gradle."""
     info = {"manifest": None, "strings_xml": None, "build_gradle": None, "package_name": None}
 
+    # FIX X3 (Audit 7): KMP-Pfade (src/androidMain/...) ergaenzt — vorher fanden
+    # KMP-Projekte weder Manifest noch Default-strings.xml und produzierten leeren
+    # Export.
     for candidate in [
         app_dir / "app/src/main/AndroidManifest.xml",
         app_dir / "src/main/AndroidManifest.xml",
+        app_dir / "app/src/androidMain/AndroidManifest.xml",
+        app_dir / "src/androidMain/AndroidManifest.xml",
         app_dir / "AndroidManifest.xml",
     ]:
         if candidate.is_file():
@@ -56,6 +63,8 @@ def find_app_root(app_dir: Path) -> dict:
     for candidate in [
         app_dir / "app/src/main/res/values/strings.xml",
         app_dir / "src/main/res/values/strings.xml",
+        app_dir / "app/src/androidMain/res/values/strings.xml",
+        app_dir / "src/androidMain/res/values/strings.xml",
     ]:
         if candidate.is_file():
             info["strings_xml"] = str(candidate.relative_to(app_dir))
@@ -424,13 +433,16 @@ def main():
         print(f"Fehler: {app_dir} ist kein Verzeichnis", file=sys.stderr)
         sys.exit(1)
 
-    # FIX W4 (Audit 6): Default-Sprache konfigurierbar statt hardcoded "de"
+    # FIX W4 + X6/X9 (Audit 6+7): --default-lang via CLI. X6 fixt silent fallback bei
+    # fehlendem Wert (jetzt: exit 1 mit Fehlermeldung). X9 entfernt die doppelte
+    # Zuweisung DEFAULT_LANG = "de" — sie steht jetzt nur noch oben am Modul.
     global DEFAULT_LANG
-    DEFAULT_LANG = "de"
     if "--default-lang" in sys.argv:
         idx = sys.argv.index("--default-lang")
-        if idx + 1 < len(sys.argv):
-            DEFAULT_LANG = sys.argv[idx + 1]
+        if idx + 1 >= len(sys.argv) or sys.argv[idx + 1].startswith("--"):
+            print("Fehler: --default-lang braucht einen Sprach-Code (z.B. --default-lang en)", file=sys.stderr)
+            sys.exit(1)
+        DEFAULT_LANG = sys.argv[idx + 1]
 
     info = find_app_root(app_dir)
     if not info["manifest"]:

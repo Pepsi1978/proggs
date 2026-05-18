@@ -1,4 +1,4 @@
-# Don't-Miss-Checkliste: 96 Punkte fuer 100% Coverage
+# Don't-Miss-Checkliste: 92 Punkte fuer 100% Coverage
 
 ## Zweck
 
@@ -64,8 +64,8 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 [ ] E4. Alle 7 Subscription-States geprueft ob im Code behandelt?
 [ ] E5. Cancel-Flow vollstaendig (Klick-Anzahl, Survey, Bestaetigung, Win-Back)?
 [ ] E6. Trial-Mechanik dokumentiert (Free-Trial vs Intro-Pricing, Eligibility)?
-[ ] E7. Server-Side Subscription-Validation gepruet (Cloud Function, RTDN)?
-[ ] E8. Edge-Cases gepruet (acknowledge, PENDING, ITEM_ALREADY_OWNED, BILLING_UNAVAILABLE)?
+[ ] E7. Server-Side Subscription-Validation geprueft (Cloud Function, RTDN)?
+[ ] E8. Edge-Cases geprueft (acknowledge, PENDING, ITEM_ALREADY_OWNED, BILLING_UNAVAILABLE)?
 [ ] E9. Restore-Purchase-Button vorhanden und funktional?
 [ ] E10. Cancel-Button-Visualitaet kein Dark Pattern (gleich gross wie Purchase)?
 ```
@@ -184,9 +184,9 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 ## Selbst-Pruefung am Ende
 
 Wenn die Checkliste durch ist:
-- 96 Punkte gesamt
+- 92 Punkte gesamt
 - Wie viele [X]: ___
 - Wie viele [ ] mit "NICHT_VERIFIZIERT (Grund)": ___ — diese sind OK wenn der Grund nachvollziehbar ist
 - Wie viele [ ] ohne Begruendung: ___ — sollte 0 sein
 
-Nur wenn alle 96 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.
+Nur wenn alle 92 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.

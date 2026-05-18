@@ -99,46 +99,47 @@ GREP_R() {
 # (Single-Module): er funktioniert weiterhin als Fallback.
 
 # Findet alle Default-Locale strings.xml im Projekt (Multi-Module-faehig)
+# FIX X2 (Audit 7): KMP-Projekte mit src/androidMain/res werden jetzt auch erkannt
 find_default_strings_xml() {
-    find . -path '*/src/main/res/values/strings.xml' -not -path '*/build/*' 2>/dev/null
+    find . \( -path '*/src/main/res/values/strings.xml' -o -path '*/src/androidMain/res/values/strings.xml' \) -not -path '*/build/*' 2>/dev/null
 }
 
 # Findet alle Locale-Verzeichnisse (values-*) projektweit
+# FIX X2 (Audit 7): KMP-Pfad ergaenzt
 find_locale_dirs() {
-    find . -type d -path '*/src/main/res/values-*' -not -path '*/build/*' 2>/dev/null
+    find . -type d \( -path '*/src/main/res/values-*' -o -path '*/src/androidMain/res/values-*' \) -not -path '*/build/*' 2>/dev/null
 }
 
 # Findet alle Locale-strings.xml (multi-module-faehig)
+# FIX X2 (Audit 7): KMP-Pfad ergaenzt
 find_translated_strings_xml() {
-    find . -path '*/src/main/res/values-*/strings.xml' -not -path '*/build/*' 2>/dev/null
+    find . \( -path '*/src/main/res/values-*/strings.xml' -o -path '*/src/androidMain/res/values-*/strings.xml' \) -not -path '*/build/*' 2>/dev/null
 }
 
-# Listet alle Modul-Wurzeln (Verzeichnisse die ein src/main/ enthalten)
-# FIX U4: vorher unused — jetzt im Modul-Inventar-Block (Schicht 2/3) verwendet
+# Listet alle Modul-Wurzeln (Verzeichnisse die ein src/main/ ODER src/androidMain enthalten)
+# FIX X2 (Audit 7): KMP-Module mit src/androidMain werden mitgezaehlt
 find_module_roots() {
-    find . -type d -name main -path '*/src/main' -not -path '*/build/*' 2>/dev/null \
-        | sed 's|/src/main$||' | sort -u
+    find . -type d \( -path '*/src/main' -o -path '*/src/androidMain' \) -not -path '*/build/*' 2>/dev/null \
+        | sed -E 's|/src/(main|androidMain)$||' | sort -u
 }
 
 # Findet die englische strings.xml in irgendeinem Modul (fuer EN-Vergleich)
-# FIX U4: ersetzt hardcoded "app/src/main/res/values-en/strings.xml"
+# FIX X2 (Audit 7): KMP-Pfad ergaenzt
 find_en_strings_xml() {
-    find . -path '*/src/main/res/values-en/strings.xml' -not -path '*/build/*' 2>/dev/null | head -1
+    find . \( -path '*/src/main/res/values-en/strings.xml' -o -path '*/src/androidMain/res/values-en/strings.xml' \) -not -path '*/build/*' 2>/dev/null | head -1
 }
 
 # Listet alle Regional-Varianten (z.B. pt-rBR, zh-rCN) projektweit
-# FIX U4: ersetzt 'ls -d app/src/main/res/values-*/'
+# FIX X2 (Audit 7): KMP-Pfade in find_locale_dirs werden automatisch mit gescannt
 find_regional_locales() {
-    find . -type d -path '*/src/main/res/values-*' -not -path '*/build/*' 2>/dev/null \
-        | grep -oE 'values-[a-z]{2,3}-r[A-Z]{2}' | sed 's/values-//' | sort -u
+    find_locale_dirs | grep -oE 'values-[a-z]{2,3}-r[A-Z]{2}' | sed 's/values-//' | sort -u
 }
 
 # Findet eine spezifische Locale-strings.xml in irgendeinem Modul
-# FIX U4: ersetzt hardcoded "app/src/main/res/values-$LOCALE/strings.xml"
-# Aufruf: find_locale_strings_xml "de" oder "pt-rBR"
+# FIX X2 (Audit 7): KMP-Pfad ergaenzt
 find_locale_strings_xml() {
     local loc="$1"
-    find . -path "*/src/main/res/values-$loc/strings.xml" -not -path '*/build/*' 2>/dev/null | head -1
+    find . \( -path "*/src/main/res/values-$loc/strings.xml" -o -path "*/src/androidMain/res/values-$loc/strings.xml" \) -not -path '*/build/*' 2>/dev/null | head -1
 }
 # =============================================================================
 
@@ -179,16 +180,15 @@ DATE=$(date +%Y-%m-%d)
 
 # Helper: zaehle Treffer fuer Pattern (gibt 0 zurueck bei Fehler)
 count_grep() {
-    # FIX T6: vorher nutzte count_grep direkt grep -rln und umging den GREP_R-Helper
-    # (Inkonsistenz: andere Stellen profitierten vom ripgrep-Speedup, count_grep nicht).
-    # GREP_R wird erst weiter unten definiert — count_grep wird aber erst danach genutzt.
-    # Bei sehr grossen Apps (>3000 Kotlin-Dateien) bringt das 5-10x Speedup.
+    # FIX T6: vorher nutzte count_grep direkt grep -rln und umging den GREP_R-Helper.
+    # FIX X4 (Audit 7): Wie GREP_R jetzt auch Java mitscannen — Java-Legacy-SDKs
+    # waren in der Capability-Tabelle (Section 2.4) unsichtbar.
     local pattern="$1"
     local count
     if [ "${HAS_RG:-0}" = "1" ]; then
-        count=$(rg --type kotlin -l "$pattern" 2>/dev/null | wc -l)
+        count=$(rg --type kotlin --type java -l "$pattern" 2>/dev/null | wc -l)
     else
-        count=$(grep -rln --include='*.kt' "$pattern" . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
+        count=$(grep -rln --include='*.kt' --include='*.java' "$pattern" . 2>/dev/null | grep -v '/build/' | grep -v '/test/' | wc -l)
     fi
     echo "${count:-0}"
 }
@@ -439,16 +439,20 @@ count_in_file() {
     echo "### 4.2 Compose-Funktionen mit Uppercase-Namen (Screen/Dialog/Sheet/...)"
     echo ""
     echo "\`\`\`"
-    # FIX R4: vorher 'xargs -I {} echo {}' — das hat nur die grep-Ausgabe unveraendert echoed,
-    # KEINE Funktionsnamen extrahiert. Section 4.2 war seit Tag 1 irrefuehrend.
-    # Jetzt: Composable-Definitionen direkt finden, Funktionsname extrahieren.
-    # Pattern: Zeile nach '@Composable' (oder gleiche Zeile) mit 'fun <UpperCamelCase>(...'
-    grep -rEnA1 '^[[:space:]]*@Composable[[:space:]]*$' --include='*.kt' . 2>/dev/null \
-        | grep -v '/build/' | grep -v '/test/' \
-        | grep -oE 'fun [A-Z][A-Za-z0-9_]*\(' \
-        | sed 's/fun \([^(]*\)(/\1/' \
-        | sort -u | head -50 \
-        || echo "(keine gefunden)"
+    # FIX R4 + X7 (Audit 7): vorher nur @Composable allein auf eigener Zeile gematched.
+    # Same-line-Style `@Composable fun ScreenName(` (haeufigster Compose-Stil) wurde
+    # uebersehen. Jetzt beide Patterns mit grep -E vereinigt.
+    # Variante A: @Composable auf eigener Zeile, Funktion in Folgezeile
+    # Variante B: @Composable + fun in derselben Zeile
+    {
+        grep -rEnA1 '^[[:space:]]*@Composable[[:space:]]*$' --include='*.kt' . 2>/dev/null \
+            | grep -v '/build/' | grep -v '/test/' \
+            | grep -oE 'fun [A-Z][A-Za-z0-9_]*\('
+        grep -rEn '@Composable[[:space:]]+fun[[:space:]]+[A-Z]' --include='*.kt' . 2>/dev/null \
+            | grep -v '/build/' | grep -v '/test/' \
+            | grep -oE 'fun [A-Z][A-Za-z0-9_]*\('
+    } | sed 's/fun \([^(]*\)(/\1/' | sort -u | head -50 \
+        || echo "(keine gefunden — XML-only-App ohne Compose? Layer 4 nutzt klassische View-Patterns)"
     echo "\`\`\`"
     echo ""
 
