@@ -466,15 +466,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Daily AI text improvement</string>
-    <string name="settings_premium_feature_improve_desc">Every entry becomes more expressive</string>
+    <string name="settings_premium_feature_improve_desc">AI improves your entries on request.</string>
     <string name="settings_premium_feature_dashboard">Daily dashboard analyses</string>
-    <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with you</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI perspectives</string>
+    <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with your entries.</string>
+    <string name="settings_premium_feature_5_perspectives">All AI profiles (4 predefined + unlimited custom)</string>
     <string name="settings_premium_feature_5_perspectives_desc">From clarity to self-discovery</string>
     <string name="settings_premium_feature_reviews">Weekly, monthly, and yearly reviews</string>
     <string name="settings_premium_feature_reviews_desc">The AI tells your story</string>
     <string name="settings_premium_feature_patterns">Pattern recognition</string>
-    <string name="settings_premium_feature_patterns_desc">The AI finds connections you don\'t notice</string>
+    <string name="settings_premium_feature_patterns_desc">The AI can reveal patterns and connections in your entries</string>
     <string name="settings_premium_feature_pdf">PDF export with photos</string>
     <string name="settings_premium_feature_pdf_desc">All journal entries with photos as a document</string>
     <string name="settings_premium_feature_voice">More precise voice recognition</string>
@@ -836,10 +836,10 @@
     <string name="onboarding_goals_select">Choose one or more goals</string>
     <string name="onboarding_how_step3_title">Add photos</string>
     <string name="onboarding_how_title">This is how it works</string>
-    <string name="onboarding_perspectives_title">5 Perspectives on\nyour life</string>
+    <string name="onboarding_perspectives_title">Different perspectives on\nyour life</string>
     <string name="onboarding_premium_feature_pdf">PDF export with photos — save your entries as a document</string>
     <string name="onboarding_premium_profiles">5 smart dashboard profiles for deep insights into your life</string>
-    <string name="onboarding_try_premium">Try Premium for 8 days</string>
+    <string name="onboarding_try_premium">8 days free — then from 3.99/month</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -850,7 +850,7 @@
     <!-- § 356(5) German Civil Code immediate-supply waiver dialog (M1 Audit v6, 2026-04-28).
          Shown before launchPurchaseFlow. Confirmation gates the actual Google Play Billing sheet. -->
     <string name="paywall_consent_dialog_title">Right of Withdrawal</string>
-    <string name="paywall_consent_dialog_body">After completing a subscription or purchase you have a 14-day right of withdrawal under § 355 of the German Civil Code (BGB).\n\nTo unlock the premium features immediately, we begin providing them right after your purchase. By giving your consent below you knowingly waive your 14-day right of withdrawal (§ 356(5) BGB).\n\nWithout this consent we cannot unlock the premium features instantly.</string>
+    <string name="paywall_consent_dialog_body">After completing a subscription or purchase you have a 14-day right of withdrawal under § 355 of the German Civil Code (BGB).\n\nTo unlock the premium features immediately, we begin providing them right after your purchase. By giving your consent below you knowingly waive your 14-day right of withdrawal (§ 356(5) BGB).\n\nWithout this consent we cannot unlock the premium features instantly.\n\nProvider: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Germany · E-mail: dev.app.support@gmail.com\n\nTo exercise your right of withdrawal, you can use the model withdrawal form provided by the EU: https://www.bmuv.de/widerruf\n\nIn order to comply with the withdrawal period, it is sufficient to send the notification of your intention to exercise the right of withdrawal before the end of the withdrawal period.</string>
     <string name="paywall_consent_dialog_checkbox">I agree that the premium features are provided to me immediately upon purchase. I am aware that this waives my 14-day right of withdrawal.</string>
     <string name="paywall_consent_dialog_confirm">Subscribe — payment required</string>
     <string name="paywall_consent_dialog_cancel">Cancel</string>
@@ -864,7 +864,7 @@
     <string name="paywall_yearly_note">Then %1$s per year\nCancel anytime during the trial</string>
     <string name="paywall_most_popular">Most popular</string>
     <string name="paywall_monthly_plan">Monthly, %1$s per month</string>
-    <string name="paywall_yearly_savings">Save %1$d%% compared to monthly, cancel anytime</string>
+    <string name="paywall_yearly_savings">Save %1$d%% compared to monthly — cancellation possible at any time before the next renewal date.</string>
     <string name="paywall_lifetime_title">One-time purchase</string>
     <string name="paywall_lifetime_desc">Pay once, use everything permanently</string>
     <string name="paywall_lifetime_note">No subscription, no renewal</string>
@@ -881,8 +881,8 @@
     <string name="paywall_feature_profiles">Unlimited custom analysis profiles</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Find your inner peace</string>
-    <string name="paywall_headline_stress_sub">Recognize what\'s weighing you down before it overwhelms you</string>
+    <string name="paywall_headline_stress">More clarity in everyday life</string>
+    <string name="paywall_headline_stress_sub">Recognize what keeps you busy each day and put it into words.</string>
     <string name="paywall_headline_clarity">Understand yourself better</string>
     <string name="paywall_headline_clarity_sub">The AI recognizes patterns that stay hidden from you</string>
     <string name="paywall_headline_growth">Discover the good in every day</string>
@@ -897,7 +897,7 @@
     <string name="paywall_exit_special_offer">We have a special\noffer for you:</string>
     <string name="paywall_exit_discount">Discount for %1$d months</string>
     <string name="paywall_exit_price_comparison">Only %1$s instead of %2$s per month</string>
-    <string name="paywall_exit_start_discount">Start monthly with 50% discount</string>
+    <string name="paywall_exit_start_discount">Payment required — 2 months at half price</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -927,9 +927,9 @@
     <string name="churn_sorry_title">Sorry to see you go</string>
     <string name="churn_sorry_body">Before you cancel, would you tell us why? This helps us improve the app.</string>
     <string name="churn_exclusive_offer">Exclusive offer</string>
-    <string name="churn_offer_subtitle">Just for you, because you matter to us</string>
+    <string name="churn_offer_subtitle">Our offer for you</string>
     <string name="churn_offer_feature_ai">Daily AI analyses</string>
-    <string name="churn_offer_feature_perspectives">All 5 perspectives</string>
+    <string name="churn_offer_feature_perspectives">All AI profiles (4 predefined + unlimited custom)</string>
     <string name="churn_offer_feature_voice">Premium voice recognition</string>
     <string name="churn_offer_auto_renew">Renews automatically, cancel anytime</string>
     <string name="churn_accept_offer">Accept offer</string>
@@ -949,7 +949,7 @@ With Premium: up to 150 per day.</string>
     <string name="ai_limit_yearly">Yearly, %1$s/year (save 37%%)</string>
     <string name="ai_limit_no_thanks">No thanks, continue without AI</string>
     <string name="ai_banner_title">Your journal is powered by AI</string>
-    <string name="ai_banner_body">• Dictated texts are automatically improved\n• Summaries for every entry\n• Smart life advice from your patterns\n• All included in your free trial</string>
+    <string name="ai_banner_body">• Dictated texts are automatically improved\n• Summaries for every entry\n• Smart life advice from your patterns\n• All included in your free trial\nAll AI outputs are suggestions, not professional advice.</string>
     <string name="cd_mic_start">Start recording</string>
     <string name="cd_mic_stop">Stop recording</string>
     <string name="entry_improve_limit_daily">Daily limit reached. Try again tomorrow!</string>
@@ -1370,7 +1370,7 @@ With Premium: up to 150 per day.</string>
     <string name="paywall_monthly_label">Monthly</string>
     <string name="paywall_restore_button">Restore purchases</string>
     <string name="paywall_subscribe_button">Subscribe</string>
-    <string name="paywall_subtitle">Enjoy all premium benefits</string>
+    <string name="paywall_subtitle">Unlock all premium features</string>
     <string name="paywall_title">Upgrade to Premium</string>
     <string name="paywall_yearly_label">Yearly</string>
     <string name="prompt_char_count_label">%1$d characters</string>
@@ -1389,9 +1389,9 @@ With Premium: up to 150 per day.</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Generous daily AI quota for intensive use.</string>
+    <string name="ai_limits_disclaimer">Daily AI quota for intensive use.</string>
     <string name="ai_limits_dialog_title">How does the daily AI quota work?</string>
-    <string name="ai_limits_dialog_body" formatted="false">WITH PREMIUM\n\nYour daily allowance:\n• Up to 150 dashboard analyses per AI profile (with 4 profiles: up to 600 per day)\n• Up to 150 text improvements\n\nHow it works in detail:\n• Requests 1 to 30: highest AI quality\n• Requests 31 to 100: fast standard quality\n• At request 101: one-time 30-min pause\n• Requests 101 to 150: fast standard quality\n• From request 151: no more requests until tomorrow\n\nFor all users:\n• Max 50 AI requests per hour — then a 5-min pause\n\nWhen do quotas reset?\nEvery day at midnight (your local time) a full new quota starts.\n\n──────────\n\nWITHOUT SUBSCRIPTION\n\n• 5 dashboard analyses per week per profile\n• 5 text improvements per week\n• Always at fast standard quality\n• Resets every Monday at midnight (your local time)\n\n──────────\n\nOver 99% of users will probably never hit these limits.</string>
+    <string name="ai_limits_dialog_body" formatted="false">WITH PREMIUM\n\nYour daily allowance:\n• Up to 150 dashboard analyses per AI profile (with 4 profiles: up to 600 per day)\n• Up to 150 text improvements\n\nHow it works in detail:\n• Requests 1 to 30: highest AI quality\n• Requests 31 to 100: fast standard quality\n• At request 101: one-time 30-min pause\n• Requests 101 to 150: fast standard quality\n• From request 151: no more requests until tomorrow\n\nFor all users:\n• Max 50 AI requests per hour — then a 5-min pause\n\nWhen do quotas reset?\nEvery day at midnight (your local time) a full new quota starts.\n\n──────────\n\nWITHOUT SUBSCRIPTION\n\n• 5 dashboard analyses per week per profile\n• 5 text improvements per week\n• Always at fast standard quality\n• Resets every Monday at midnight (your local time)\n\n──────────\n\nMost users in everyday life won\'t reach these limits.</string>
     <string name="ai_limits_dialog_close">Got it</string>
     <string name="theme_neutral">Neutral</string>
     <string name="theme_profile">Profile color — color of the dashboard profile</string>
@@ -1400,4 +1400,26 @@ With Premium: up to 150 per day.</string>
     <string name="theme_one_dark">Atelier</string>
     <string name="theme_nord">Polar Night</string>
     <string name="theme_gruvbox">Amber</string>
+
+    <!-- Permission rationale strings -->
+    <string name="permission_rationale_microphone">To let you dictate your journal entries by voice, we need access to your microphone.</string>
+    <string name="permission_rationale_camera">To let you add photos to your entries, we need access to your camera.</string>
+    <string name="permission_rationale_location">To let you add a location context to your entries, we need approximate location. You can decline this at any time or turn it off later.</string>
+    <string name="permission_rationale_notifications">To remind you of your daily writing, we need permission for notifications.</string>
+
+    <!-- System backup info -->
+    <string name="consent_info_system_backup_title">Android System Backup</string>
+    <string name="consent_info_system_backup_body">If you have Android System Backup enabled in your device settings, Android automatically backs up your journal data to the backup area of your Google account. You can disable this at any time in your device settings — see the privacy policy for details.</string>
+    <string name="settings_open_system_backup_settings_label">Manage Android System Backup</string>
+    <string name="settings_open_system_backup_settings_desc">Opens the Android system settings where you can turn automatic backup for Best Journal on or off.</string>
+    <string name="error_no_backup_settings_available">Backup settings not available on this device.</string>
+
+    <!-- AI health disclaimers -->
+    <string name="ai_output_health_disclaimer">Not therapy — no substitute for professional advice.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal is a diary, not a therapy service. AI analyses are suggestions for self-reflection and are not a substitute for professional psychological or medical advice. For acute problems, contact a professional or the crisis support in your settings.</string>
+
+    <!-- Legal footer links -->
+    <string name="consent_footer_link_datenschutz">Privacy</string>
+    <string name="consent_footer_link_impressum">Legal Notice</string>
+    <string name="consent_footer_link_agb">Terms of Use</string>
 </resources>
