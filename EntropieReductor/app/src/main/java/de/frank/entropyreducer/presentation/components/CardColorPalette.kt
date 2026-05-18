@@ -10,15 +10,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,13 +89,14 @@ fun cardColorOverrideForIndex(index: Int?): Color? {
 }
 
 /**
- * Farb-Palette-Bar, horizontal scrollbar. Zeigt alle 30 Toene als runde
- * Kreise — der aktuell ausgewaehlte Kreis hat einen kraeftigeren Border.
- * Klick auf einen Kreis ruft [onPick] mit dem Farb-Index auf.
+ * Kompakte Farb-Palette-Zeile: links das Label "Hintergrundfarbe", rechts
+ * EIN Farbsymbol das die aktuelle Auswahl zeigt. Klick auf das Symbol oeffnet
+ * einen Dialog mit allen 30 Farben in einem Grid.
  *
- * Frank-Wunsch 2026-05-18: Wird oben im Detail-Sheet jedes Patterns
- * eingebaut. Auswahl wirkt sich beim Zurueck-Navigieren auf den
- * Karten-Hintergrund im Uebersichts-Screen aus.
+ * Frank-Wunsch 2026-05-18 (Folgeauftrag 3): Vorher war die ganze Palette
+ * permanent als horizontal scrollbare Leiste sichtbar — Frank wollte ein
+ * unauffaelliges Symbol stattdessen, das auf Klick ein kleines Auswahlfenster
+ * oeffnet.
  */
 @Composable
 fun ColorPaletteBar(
@@ -96,38 +105,92 @@ fun ColorPaletteBar(
     modifier: Modifier = Modifier,
 ) {
     val cosmos = LocalCosmos.current
-    Column(modifier = modifier.fillMaxWidth()) {
+    var dialogOpen by remember { mutableStateOf(false) }
+    val currentColor =
+        cardColorOverrideForIndex(selectedIndex) ?: cosmos.glassBg
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
-            text = "Hintergrundfarbe für diese Karte",
+            text = "Hintergrundfarbe",
             style = MaterialTheme.typography.labelMedium,
             color = cosmos.textSecondary,
+            modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.height(8.dp))
-        Row(
+        Box(
             modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(cosmos.glassBg)
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-                    .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LIGHT_CARD_COLORS.forEachIndexed { idx, color ->
-                val isSelected = idx == selectedIndex
-                Box(
-                    modifier =
-                        Modifier.size(36.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) cosmos.textPrimary else cosmos.glassBorder,
-                                shape = CircleShape,
-                            )
-                            .clickable { onPick(idx) },
-                )
-            }
-        }
+                Modifier.size(32.dp)
+                    .clip(CircleShape)
+                    .background(currentColor)
+                    .border(
+                        width = 1.5.dp,
+                        color = cosmos.glassBorder,
+                        shape = CircleShape,
+                    )
+                    .clickable { dialogOpen = true },
+        )
+    }
+
+    if (dialogOpen) {
+        ColorPaletteDialog(
+            selectedIndex = selectedIndex,
+            onPick = { idx ->
+                onPick(idx)
+                dialogOpen = false
+            },
+            onDismiss = { dialogOpen = false },
+        )
     }
 }
+
+/**
+ * Auswahl-Dialog: alle 30 Farben in einem 5-Spalten-Grid. Tap auf eine Farbe
+ * waehlt sie aus und schliesst den Dialog automatisch.
+ */
+@Composable
+private fun ColorPaletteDialog(
+    selectedIndex: Int,
+    onPick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Hintergrundfarbe waehlen") },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .heightIn(min = 240.dp, max = 360.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(count = LIGHT_CARD_COLORS.size, key = { it }) { idx ->
+                    val color = LIGHT_CARD_COLORS[idx]
+                    val isSelected = idx == selectedIndex
+                    Box(
+                        modifier =
+                            Modifier.size(44.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color =
+                                        if (isSelected) cosmos.textPrimary
+                                        else cosmos.glassBorder,
+                                    shape = CircleShape,
+                                )
+                                .clickable { onPick(idx) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schliessen") }
+        },
+    )
+}
+

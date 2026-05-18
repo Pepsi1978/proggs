@@ -170,9 +170,19 @@ fun TagebuchScreen(
         bottomBar = {
             CosmosBottomBar(
                 currentTab = Routes.TASKS,
-                micState = MicState.IDLE,
+                micState =
+                    when (voiceState) {
+                        VoiceCaptureState.RECORDING -> MicState.RECORDING
+                        VoiceCaptureState.PROCESSING -> MicState.PROCESSING
+                        VoiceCaptureState.IDLE -> MicState.IDLE
+                    },
                 onTabSelected = { route -> onSwitchTab(route) },
-                onMicClick = { /* siehe FAB unten */ },
+                // Frank-Wunsch 2026-05-18 (Folgeauftrag 3): Der untere Mic-
+                // Button in der BottomBar ist der EINZIGE Mic-Knopf. Sein
+                // Klick faltet die zwei Aktions-Buttons (Stift + Aufnehmen-Mic)
+                // direkt darueber auf — vorher ist im Tagebuch-Bereich
+                // KEIN Mikrofon zu sehen.
+                onMicClick = { actionsExpanded = !actionsExpanded },
                 onSubAreaSelected = { parent, index -> onSwitchSub(parent, index) },
                 forcedSubMode = Routes.TASKS,
             )
@@ -225,27 +235,17 @@ fun TagebuchScreen(
                 }
             }
 
-            // Frank-Wunsch 2026-05-18 (Folgeauftrag 2):
-            // - Standard: nur EIN Mikrofon-Toggle-Button zentriert sichtbar.
-            //   Dieser Toggle ist NUR der Öffner — er hat keine eigene Aufnahme-
-            //   funktion. Klick faltet die zwei echten Aktionen auf.
-            // - Nach Klick: das Toggle-Mikrofon VERSCHWINDET, stattdessen
-            //   erscheinen LINKS der Stift (Schreiben) und RECHTS das echte
-            //   Aufnehmen-Mikrofon. Frank waehlt eine der beiden Aktionen.
-            Row(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                if (!actionsExpanded) {
-                    FabIconButton(
-                        icon = Icons.Outlined.Mic,
-                        label = "Mikrofon",
-                        backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
-                        iconTint = TagebuchAccent,
-                        onClick = { actionsExpanded = true },
-                    )
-                }
-                if (actionsExpanded) {
+            // Frank-Wunsch 2026-05-18 (Folgeauftrag 3):
+            // KEIN eigener Mic-FAB im Tagebuch-Bereich. Der BottomBar-Mic-
+            // Button (in der Statusleiste unten) ist der einzige Mic-Trigger.
+            // Sein Klick setzt actionsExpanded=true → es erscheinen direkt
+            // ueber der BottomBar (rechts: Aufnehmen-Mic, links: Schreiben).
+            // Standardmaessig ist im Tagebuch-Bereich NICHTS zu sehen.
+            if (actionsExpanded) {
+                Row(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                ) {
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
@@ -256,11 +256,7 @@ fun TagebuchScreen(
                             actionsExpanded = false
                         },
                     )
-                }
-                if (actionsExpanded) {
                     // A12: echte Whisper-Aufnahme via Groq Large V3 Turbo.
-                    // Permission wird beim ersten Tap erfragt; Voice-State
-                    // (IDLE/RECORDING/PROCESSING) bestimmt Icon + Verhalten.
                     val (recordIcon, recordLabel) = when (voiceState) {
                         VoiceCaptureState.IDLE ->
                             Icons.Outlined.Mic to "Aufnehmen"
