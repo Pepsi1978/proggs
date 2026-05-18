@@ -1,6 +1,13 @@
 ---
 name: app-roentgen
-description: Durchleuchtet eine Android-App systematisch und vollstaendig wie ein Roentgengeraet — extrahiert ALLE Funktionen, Bildschirme, Klick-Pfade, Paywall-Stufen und Hidden Features aus dem Quellcode, damit Werbeaussagen 1:1 gegen die tatsaechliche Funktionalitaet geprueft werden koennen. Nutze diesen Skill IMMER wenn der Benutzer sagt "App durchleuchten", "App roentgen", "Roentgen-Skill", "App-Architektur extrahieren", "Feature-Inventar", "was kann die App genau", "Werbeaussagen pruefen", "Werbeaussagen-Audit", "UWG-Audit", "Paywall-Audit", "Marketing-Compliance", "Feature-Audit", "Compliance-Pruefung", "App-Analyse fuer Rechtssicherheit", "rechtssichere Werbung pruefen", "stimmt was wir versprechen mit der App ueberein", "App komplett analysieren", "alle Funktionen einer App auflisten", oder generell jede Android-App systematisch durchleuchtet werden soll. Auch triggern bei Voice-Schreibweisen wie "Roentgen", "X-Ray", "Durchleuchten" im Kontext von Apps. Funktioniert fuer beliebige Android-Apps (modernes Kotlin/Compose bevorzugt, Java/XML wird auch unterstuetzt). Erzeugt einen sehr detaillierten strukturierten Audit-Bericht mit allen Bildschirmen, Klick-Pfaden, Paywall-Stufen, Permissions-Mappings und einer Werbeaussage-vs-Feature-Matrix.
+description: |
+  Durchleuchtet eine Android-App systematisch wie ein Roentgengeraet — extrahiert ALLE Funktionen, Bildschirme, Klick-Pfade, Paywall-Stufen und Hidden Features aus dem Quellcode, damit Werbeaussagen 1:1 gegen die Code-Realitaet geprueft werden koennen (UWG §5, EU UCPD, Google Play Policy).
+
+  Nutze diesen Skill IMMER bei: "App durchleuchten", "App roentgen", "Roentgen-Skill", "X-Ray", "Durchleuchten", "Werbeaussagen pruefen", "Werbeaussagen-Audit", "UWG-Audit", "Paywall-Audit", "Marketing-Compliance", "Feature-Audit", "Feature-Inventar", "App-Architektur extrahieren", "alle Funktionen einer App auflisten", "App komplett analysieren", "App-Analyse fuer Rechtssicherheit", "stimmt was wir versprechen mit der App ueberein", "was kann die App genau", "Compliance-Pruefung".
+
+  Funktioniert fuer beliebige Android-Apps (Kotlin/Compose bevorzugt, Java/XML auch unterstuetzt). Erzeugt einen strukturierten Audit-Bericht mit 1:1-Wortlauten, Paywall-Inventar, Permission-Mapping und einer Werbeaussage-vs-Feature-Matrix.
+
+  NICHT verwenden fuer: reine DSGVO-/Datenschutz-Pruefungen (-> rechtssicherheit-Skill), String-Extraktion (-> string-extraktor-Skill), Lokalisierung (-> uebersetzung-Skill), Monetarisierungs-Beratung (-> app-monetizer-Skill). Diese Skills KONSUMIEREN den Roentgen-Output, fuehren ihn aber nicht selbst durch.
 ---
 
 # App-Roentgen: Vollstaendiges Architektur- und Werbeaussagen-Audit fuer Android-Apps
@@ -72,6 +79,7 @@ Liest `build.gradle.kts`, `libs.versions.toml`, `settings.gradle.kts`. Jede Bibl
 Extrahiert alle ViewModels, Repositories, UseCases, Hilt-Module, Room-Entities, Workers (WorkManager). Das ergibt das Skelett der App: welche Daten existieren, welche Business-Logik laeuft, welche Background-Jobs gibt es. Jeder ViewModel = ein Feature-Cluster.
 
 → **Detail-Anleitung**: `references/layer-3-architecture.md`
+→ **Optional — Goldstandard 2026 (Compose Compiler Reports + KSP-NavGraph + ast-grep + mobsfscan)**: `references/layer-3b-compose-compiler-reports.md`. Bei zugaenglichem Build empfohlen — liefert nachweislich vollstaendiges Composable-Inventar direkt vom Compiler statt grep-Heuristik.
 
 ### Schicht 4 — Bildschirm-Karte: Was sieht der Nutzer?
 
@@ -224,9 +232,64 @@ Der finale Bericht wird in der App-Wurzel als `app-roentgen-AUDIT-YYYY-MM-DD.md`
 7. **Don't-Miss-Checkliste** mit Haken pro Punkt (siehe `references/dont-miss-checklist.md`)
 8. **Empfohlene naechste Schritte** (was muss vor Release gefixt werden)
 
+## Checkpoint-Mechanik fuer lange Audits (KRITISCH bei grossen Apps)
+
+Ein vollstaendiger Roentgen-Audit einer mittelgrossen App (500-1500 Kotlin-Dateien) dauert typisch 30-90 Minuten und durchlaeuft mehrere Schichten. Wenn die Session unterbrochen wird (Kontext-Kompaktierung, Crash, Token-Limit, manueller Stop), startet ohne Checkpoint alles von vorn — bei einem zweistuendigen Audit kostet das mehrere tausend Token unnoetig.
+
+### Pflicht-Verhalten
+
+Vor JEDER neuen Schicht (1, 2, 3, 4, 4b, 4c, 4d, 4e, 5, 6, 7) eine Checkpoint-Datei in der App-Wurzel schreiben:
+
+```
+<app-dir>/app-roentgen-checkpoint.json
+```
+
+### Format
+
+```json
+{
+  "schema": "1.0",
+  "audit_started_at": "2026-05-18T10:30:00Z",
+  "audit_app_dir": "/path/to/app",
+  "audit_app_version": "0.10.2",
+  "current_phase": "4b_wortlaut_mapping",
+  "completed_phases": [
+    "1_manifest",
+    "2_dependencies",
+    "3_architektur",
+    "4_screens"
+  ],
+  "screens_inventoried": 47,
+  "paywall_screens_found": 7,
+  "permissions_extracted": 18,
+  "subscription_states_covered": 5,
+  "last_updated_at": "2026-05-18T11:12:33Z"
+}
+```
+
+### Bei Wiederaufnahme
+
+1. Checkpoint-Datei einlesen
+2. `current_phase` finden und dort FORTSETZEN — bereits erledigte Phasen NICHT erneut bearbeiten
+3. Bei jedem Phase-Abschluss `completed_phases` ergaenzen und `current_phase` auf die naechste setzen
+4. Nach finalem Bericht: Checkpoint-Datei loeschen ODER mit `"final": true` markieren
+
+### Gitignore
+
+Die Checkpoint-Datei gehoert NICHT ins Repo. Wenn die App-Wurzel keine `.gitignore` hat oder den Eintrag nicht enthaelt, am Anfang des Audits ergaenzen:
+
+```
+# app-roentgen Audit-Artefakte
+app-roentgen-checkpoint.json
+app-roentgen-initial-scan.md
+app-roentgen-export.json
+```
+
+Der finale Bericht `app-roentgen-AUDIT-YYYY-MM-DD.md` DARF dagegen ins Repo — er ist das Audit-Ergebnis.
+
 ## Vollstaendigkeits-Validierung (PFLICHT)
 
-Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 40 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
+Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 82 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
 
 → **Liste**: `references/dont-miss-checklist.md`
 

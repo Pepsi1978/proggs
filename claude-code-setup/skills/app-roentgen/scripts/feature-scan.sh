@@ -17,7 +17,57 @@ if [[ ! -d "$APP_DIR" ]]; then
     exit 1
 fi
 
-cd "$APP_DIR"
+# === Preflight-Check (FIX H4) =================================================
+# Pflicht-Tools VOR der eigentlichen Arbeit pruefen. Ohne diesen Check faellt
+# das Skript erst mitten im Scan auf — nach 30+ Sekunden Wartezeit auf einen
+# defekten grep, mit Muell-Output. Mit dem Check: klare Fehlermeldung in 50ms.
+PREFLIGHT_MISSING=()
+for _tool in grep find sort sed awk; do
+    command -v "$_tool" >/dev/null 2>&1 || PREFLIGHT_MISSING+=("$_tool")
+done
+if [ ${#PREFLIGHT_MISSING[@]} -gt 0 ]; then
+    echo "FEHLER: Diese Pflicht-Tools fehlen: ${PREFLIGHT_MISSING[*]}" >&2
+    echo "Hinweis: Auf Windows Git Bash, macOS und Linux sollten diese Tools" >&2
+    echo "  standardmaessig vorhanden sein. Falls nicht, PATH pruefen." >&2
+    exit 1
+fi
+
+# Optionale Tools erkennen (Skript laeuft auch ohne, ist aber schneller mit)
+HAS_RG=0
+command -v rg >/dev/null 2>&1 && HAS_RG=1
+HAS_JQ=0
+command -v jq >/dev/null 2>&1 && HAS_JQ=1
+
+if [ "$HAS_RG" = "0" ]; then
+    echo "Hinweis: ripgrep (rg) nicht gefunden — falle auf grep zurueck (5-10x langsamer)." >&2
+    echo "         Installation: 'brew install ripgrep' (macOS) oder 'winget install ripgrep'" >&2
+fi
+# =============================================================================
+
+# Defense in Depth: || exit verhindert dass das Skript im AUFRUFER-Verzeichnis weiterlaeuft
+# wenn cd fehlschlaegt (z.B. Permission-Denied, defekter Symlink). Ohne diesen Guard
+# wuerde der Scan dann das falsche Verzeichnis durchforsten und Muell-Output erzeugen.
+cd "$APP_DIR" || {
+    echo "Fehler: cd nach '$APP_DIR' fehlgeschlagen (Permission?)." >&2
+    exit 1
+}
+
+# === ripgrep-Fallback (FIX M5) ================================================
+# Helper-Funktion: nutzt rg wenn verfuegbar (5-10x schneller), sonst grep.
+# Beide Varianten respektieren --include='*.kt' und Multi-Pattern-Syntax.
+GREP_R() {
+    # $1 = pattern, $2+ = optionale grep-Args (z.B. -l, -i, -A 5)
+    local pattern="$1"; shift
+    if [ "$HAS_RG" = "1" ]; then
+        # rg parsts grep-OR ('a\|b') anders — wir verlassen uns auf grep-Syntax
+        # und uebergeben sie ueber --regexp + --hidden=false. rg matched UTF-8
+        # standardmaessig und respektiert .gitignore.
+        rg --type kotlin --regexp "$pattern" "$@" 2>/dev/null
+    else
+        grep -rn --include='*.kt' "$pattern" "$@" . 2>/dev/null
+    fi
+}
+# =============================================================================
 
 # Manifest finden (kann an mehreren Stellen liegen)
 MANIFEST=""

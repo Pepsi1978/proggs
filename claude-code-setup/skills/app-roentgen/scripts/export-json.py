@@ -16,15 +16,20 @@ Output:
 
 from __future__ import annotations
 
+import sys
+
+# Verhindert dass scripts/__pycache__/ angelegt wird (Skill-Verzeichnis bleibt sauber).
+# Muss VOR den anderen Imports stehen damit kein .pyc fuer das Hauptscript entsteht.
+sys.dont_write_bytecode = True
+
 import hashlib
 import json
 import os
 import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-SCHEMA_VERSION = "2.0"
+SCHEMA_VERSION = "2.1"
 
 
 def short_hash(text: str) -> str:
@@ -253,32 +258,103 @@ def detect_sdks(app_dir: Path) -> dict:
 
 
 def cldr_required_quantities(lang: str) -> list:
-    """Gibt zurueck welche Plural-Quantitaeten eine Sprache benoetigt (CLDR-vereinfacht)."""
+    """Gibt zurueck welche Plural-Quantitaeten eine Sprache benoetigt.
+
+    Basis: Unicode CLDR Plural Rules (https://www.unicode.org/cldr/charts/latest/
+    supplemental/language_plural_rules.html). Deckt mindestens die 30 Android-Locales
+    aus dem uebersetzung-Skill ab plus die wichtigsten Welt-Sprachen.
+
+    FIX M3: Vorherige Tabelle hatte nur 21 Eintraege und fehlte u.a. id/th/vi/lt/lv/
+    ro/fil/hi/bn/ka/he-via-iw etc. — Folge: Plural-Audit lieferte fuer diese Sprachen
+    den Falschwert ["one", "other"] (Fallback), uebersah also tatsaechliche CLDR-Luecken.
+    """
     table = {
+        # === one, other (Germanic, Romance, Turkic, Indo-Aryan einfach) ===
         "de": ["one", "other"],
         "en": ["one", "other"],
         "es": ["one", "other"],
         "it": ["one", "other"],
         "nl": ["one", "other"],
-        "pt": ["one", "other"],
-        "tr": ["one", "other"],
-        "zh": ["other"],
+        "pt": ["one", "other"],         # pt-PT, allgemein
+        "sv": ["one", "other"],
+        "no": ["one", "other"],
+        "nb": ["one", "other"],
+        "nn": ["one", "other"],
+        "da": ["one", "other"],
+        "fi": ["one", "other"],
+        "et": ["one", "other"],
+        "hu": ["one", "other"],
+        "tr": ["one", "other"],         # CLDR offiziell nur "other", aber DE-Faktum: one+other
+        "el": ["one", "other"],
+        "bg": ["one", "other"],
+        "mk": ["one", "other"],
+        "sq": ["one", "other"],
+        "is": ["one", "other"],
+        "ca": ["one", "other"],
+        "eu": ["one", "other"],
+        "af": ["one", "other"],
+        "sw": ["one", "other"],
+        "am": ["one", "other"],
+        "ka": ["one", "other"],
+        "hy": ["one", "other"],
+        "ne": ["one", "other"],
+        # Indo-Arische / Dravidische
+        "hi": ["one", "other"],
+        "bn": ["one", "other"],
+        "gu": ["one", "other"],
+        "kn": ["one", "other"],
+        "ml": ["one", "other"],
+        "mr": ["one", "other"],
+        "ta": ["one", "other"],
+        "te": ["one", "other"],
+        "ur": ["one", "other"],
+        "fa": ["one", "other"],
+        # === nur "other" (keine Plural-Unterscheidung) ===
+        "zh": ["other"],                # zh-rCN, zh-rTW
         "ja": ["other"],
         "ko": ["other"],
+        "th": ["other"],
+        "vi": ["other"],
+        "id": ["other"],                # Android-Locale: "in" (legacy)
+        "in": ["other"],                # Android-legacy fuer Indonesisch
+        "ms": ["other"],
+        "fil": ["one", "other"],        # Filipino: laut CLDR doch Plural-Unterscheidung
+        "tl": ["one", "other"],
+        "my": ["other"],
+        "lo": ["other"],
+        "km": ["other"],
+        # === one, many, other (Romanisch komplex) ===
         "fr": ["one", "many", "other"],
         "pt-rBR": ["one", "many", "other"],
+        # === one, few, other ===
+        "ro": ["one", "few", "other"],
+        "hr": ["one", "few", "other"],
+        "sr": ["one", "few", "other"],
+        "bs": ["one", "few", "other"],
+        # === one, few, many, other (Slavisch komplex) ===
         "ru": ["one", "few", "many", "other"],
         "uk": ["one", "few", "many", "other"],
+        "be": ["one", "few", "many", "other"],
         "pl": ["one", "few", "many", "other"],
         "cs": ["one", "few", "many", "other"],
         "sk": ["one", "few", "many", "other"],
-        "ar": ["zero", "one", "two", "few", "many", "other"],
-        "he": ["one", "two", "many", "other"],
-        "cy": ["zero", "one", "two", "few", "many", "other"],
-        "ga": ["one", "two", "few", "many", "other"],
+        "lt": ["one", "few", "many", "other"],
+        "mt": ["one", "few", "many", "other"],
+        # === Baltisch (zero, one, other) ===
+        "lv": ["zero", "one", "other"],
+        # === Slowenisch (eigene Regel: one, two, few, other) ===
         "sl": ["one", "two", "few", "other"],
+        # === Hebraeisch ===
+        "he": ["one", "two", "many", "other"],
+        "iw": ["one", "two", "many", "other"],  # Android-Legacy-Code fuer Hebraeisch
+        # === Arabisch (alle sechs) ===
+        "ar": ["zero", "one", "two", "few", "many", "other"],
+        # === Walisisch (alle sechs) ===
+        "cy": ["zero", "one", "two", "few", "many", "other"],
+        # === Irisch (fuenf) ===
+        "ga": ["one", "two", "few", "many", "other"],
     }
-    # Base-Sprache extrahieren (z.B. pt-rPT -> pt)
+    # Region-Variante zuerst pruefen (z.B. pt-rBR), dann Base-Sprache (pt -> pt)
     base = lang.split("-")[0]
     return table.get(lang, table.get(base, ["one", "other"]))
 
@@ -340,9 +416,15 @@ def main():
     untranslatable = [s for s in default_strings["strings"] if not s["translatable"]]
 
     # Top-Glossar (haeufige deutsche Substantive)
+    # FIX K1: Der vorherige Regex [A-ZAEOUE]/[a-zaeoeueszsz] war broken — er enthielt
+    # nur die ASCII-Buchstaben "A,E,O,U,E" bzw. "a,e,o,u,e,s,z,s,z" und matchte
+    # damit KEINE deutschen Umlaute. Folge: alle deutschen Substantive mit ä/ö/ü/ß
+    # ("Pruefung", "Loeschung", "Erweiterung", "Groesse") fehlten im Glossar.
+    # Jetzt korrekt mit Ä-Ü und ä-ü + ß.
     glossary = {}
+    glossary_re = re.compile(r"\b[A-ZÄÖÜ][a-zäöüß]{3,}\b")
     for s in default_strings["strings"]:
-        for word in re.findall(r"\b[A-ZAEOUE][a-zaeoeueszsz]{3,}\b", s["plain"]):
+        for word in glossary_re.findall(s["plain"]):
             glossary[word] = glossary.get(word, 0) + 1
     top_glossary = sorted(glossary.items(), key=lambda x: -x[1])[:30]
 

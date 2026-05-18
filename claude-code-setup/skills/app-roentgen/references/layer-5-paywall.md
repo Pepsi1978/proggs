@@ -6,17 +6,55 @@ Werbeaussagen rund um Subscription-Modelle sind die haeufigste Quelle fuer recht
 
 Im finalen Audit-Bericht bekommt Schicht 5 einen eigenen Hauptabschnitt mit eigenem Inhaltsverzeichnis.
 
+## 5.0 BillingClient-Version-Detection (PFLICHT, neu seit v8)
+
+Vor allen anderen Patterns: zuerst die BillingClient-Version pruefen. Seit **Google Play Billing v8 (30. Juni 2025)** sind einige Aufrufe ENTFERNT worden. Wenn die App noch eine alte Version nutzt oder noch alte Aufrufe enthaelt, sind das eigene Audit-Befunde.
+
+```bash
+# Version aus Gradle-Catalog oder build.gradle.kts
+grep -rn 'play-services-billing\|billing-ktx\|com\.android\.billingclient' \
+  --include='*.gradle*' --include='*.toml' .
+
+# Builder-Pattern (gibt indirekt die Major-Version preis durch verwendete APIs)
+grep -rn 'BillingClient\.newBuilder\(\|BillingClient\.Builder' --include='*.kt' .
+```
+
+### Was sich mit v8 geaendert hat — IM AUDIT MARKIEREN
+
+| Aufruf | v7 (alt) | v8 (06/2025) | Audit-Aktion |
+|--------|----------|--------------|--------------|
+| `queryPurchaseHistoryAsync` | vorhanden | **ENTFERNT (kein Ersatz)** | Wenn im Code vorhanden → **KRITISCH** (Code ist broken bei v8) |
+| `setObfuscatedAccountId` | empfohlen | weiterhin empfohlen | OK |
+| Auto-Reconnect | manuell via `startConnection` | **automatisch** | Wenn manuell mit Retry-Loop: kann entfernt werden |
+| Kotlin-Extensions | partial | **vollstaendig** | Bei Java-Aufrufen: Modernisierungs-Hinweis |
+| `RecurrenceMode` | enum | **erweitert** (neue Offer-Kombinationen) | Pruefen ob neue Phasen-Kombis behandelt werden |
+
+```bash
+# v8-Migration-Pflicht-Check: alte API darf nicht mehr aufgerufen werden
+grep -rn 'queryPurchaseHistoryAsync' --include='*.kt' --include='*.java' .
+# Wenn Treffer: AUDIT-BEFUND "KRITISCH — broken bei Play Billing v8"
+
+# Connection-Pattern: bei v8 unnoetig (automatisch)
+grep -rn 'startConnection\b' --include='*.kt' . | grep -v 'test/'
+# Wenn Treffer + v8 erkannt: Hinweis "vereinfachbar mit v8 Auto-Reconnect"
+```
+
+Quellen:
+- [RevenueCat — Play Billing 8 Migration Guide (Juli 2025)](https://www.revenuecat.com/blog/engineering/play-billing-8-migration/)
+- [Qonversion — BillingClient v8 Release Notes](https://qonversion.io/blog/google-play-billing-library-8-0-release-notes-and-action-checklist)
+
 ## 5.1 Alle Paywall-relevanten Code-Pfade finden
 
 ```bash
 # Core Billing-Setup (Google Play Billing Library)
 grep -rln 'BillingClient\|BillingFlowParams\|ProductDetails\|SkuDetails' --include='*.kt' . | sort
 
-# Verbindung zum Billing-Service
+# Verbindung zum Billing-Service (bei v8 oft nicht mehr noetig)
 grep -rn 'startConnection\|endConnection\|onBillingSetupFinished' --include='*.kt' .
 
-# Produkt-Abfrage
+# Produkt-Abfrage (queryPurchaseHistoryAsync wurde in v8 ENTFERNT, siehe 5.0!)
 grep -rn 'queryProductDetailsAsync\|querySkuDetailsAsync\|queryPurchasesAsync' --include='*.kt' .
+grep -rn 'queryPurchaseHistoryAsync' --include='*.kt' .  # MUSS bei v8 leer sein
 
 # Subscription-spezifische Felder
 grep -rn 'SubscriptionOfferDetails\|offerToken\|basePlanId\|pricingPhases' --include='*.kt' .
