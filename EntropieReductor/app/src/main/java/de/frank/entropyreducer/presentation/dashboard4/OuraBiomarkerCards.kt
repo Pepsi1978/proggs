@@ -138,7 +138,18 @@ internal fun OuraSleepScoreCard(
         }
     val score = effective?.score
     val color = scoreColor(score)
-    val last30Scores = history.takeLast(30).mapNotNull { it.score }
+    // Performance-Audit (Frank-Wunsch 2026-05-18): takeLast+mapNotNull pro
+    // Recomposition vermeiden — die Aggregate werden 3x im Composable gebraucht
+    // (Score-Trend + 7-Tage-Mini-Chart + 30-Tage-Avg). Vorher: 3x O(N) pro
+    // Scroll-Frame. Jetzt: 1x pro neue history-Liste.
+    val aggregates =
+        remember(history) {
+            val last30AsDouble = history.takeLast(30).mapNotNull { it.score?.toDouble() }
+            val last7AsDouble = history.takeLast(7).mapNotNull { it.score?.toDouble() }
+            last30AsDouble to last7AsDouble
+        }
+    val last30Doubles = aggregates.first
+    val last7Doubles = aggregates.second
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             CardHeader(title = "Schlaf-Score", color = cosmos.textPrimary)
@@ -146,17 +157,17 @@ internal fun OuraSleepScoreCard(
             ScoreWithTrend(
                 score = score?.toDouble(),
                 color = color,
-                last30 = last30Scores.map { it.toDouble() },
+                last30 = last30Doubles,
             )
             StaleDataLabel(entryDay = effective?.day, selectedDate = selectedDate)
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
-                values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
+                values = last7Doubles,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
                 colorFor = { scoreColor(it.toInt()) },
             )
-            ThirtyDayAverageLabel(values = last30Scores.map { it.toDouble() })
+            ThirtyDayAverageLabel(values = last30Doubles)
         }
     }
 }
@@ -195,7 +206,15 @@ internal fun OuraActivityCard(
     val cosmos = LocalCosmos.current
     val score = activity?.score
     val color = scoreColor(score)
-    val last30Scores = history.takeLast(30).mapNotNull { it.score }
+    // Performance-Audit (Frank-Wunsch 2026-05-18): siehe OuraSleepScoreCard.
+    val aggregates =
+        remember(history) {
+            val last30AsDouble = history.takeLast(30).mapNotNull { it.score?.toDouble() }
+            val last7AsDouble = history.takeLast(7).mapNotNull { it.score?.toDouble() }
+            last30AsDouble to last7AsDouble
+        }
+    val last30Doubles = aggregates.first
+    val last7Doubles = aggregates.second
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
             CardHeader(title = "Aktivität", color = cosmos.textPrimary)
@@ -203,7 +222,7 @@ internal fun OuraActivityCard(
             ScoreWithTrend(
                 score = score?.toDouble(),
                 color = color,
-                last30 = last30Scores.map { it.toDouble() },
+                last30 = last30Doubles,
             )
             if (activity != null) {
                 Spacer(Modifier.height(8.dp))
@@ -217,7 +236,7 @@ internal fun OuraActivityCard(
             }
             Spacer(Modifier.height(10.dp))
             HistoryMiniChartWithLabels(
-                values = history.takeLast(7).mapNotNull { it.score?.toDouble() },
+                values = last7Doubles,
                 maxValue = 100.0,
                 formatLabel = { "%.0f".format(it) },
                 colorFor = { scoreColor(it.toInt()) },
@@ -240,9 +259,17 @@ internal fun OuraResilienceCard(
     val level = resilience?.level
     val germanLabel = levelToGerman(level)
     val color = levelToColor(level, cosmos.textSecondary)
-    val rankNumeric: (String?) -> Double? = ::levelToRank
-    val last30Ranks = history.takeLast(30).mapNotNull { rankNumeric(it.level) }
-    val currentRank = rankNumeric(level)
+    // Performance-Audit (Frank-Wunsch 2026-05-18): rank-Listen aus history nur
+    // bei history-Aenderung berechnen, nicht pro Recomposition. Verhindert
+    // O(N) bei jedem Scroll-Frame.
+    val rankAggregates =
+        remember(history) {
+            val last30 = history.takeLast(30).mapNotNull { levelToRank(it.level) }
+            val last7 = history.takeLast(7).mapNotNull { levelToRank(it.level) }
+            last30 to last7
+        }
+    val last30Ranks = rankAggregates.first
+    val currentRank = levelToRank(level)
 
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         Column {
@@ -265,7 +292,7 @@ internal fun OuraResilienceCard(
             // Mini-Balken auf Rang-Basis (0 bis 4) mit gekuerzten Level-Labels
             // unter den Balken — pro Balken steht ein Buchstabe (E/A/S/T/X)
             // damit man den Verlauf sieht ohne dass es ueberladen wirkt.
-            val rankValues = history.takeLast(7).mapNotNull { rankNumeric(it.level) }
+            val rankValues = rankAggregates.second
             if (rankValues.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 HistoryMiniChartWithLabels(

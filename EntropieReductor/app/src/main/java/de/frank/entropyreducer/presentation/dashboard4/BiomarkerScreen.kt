@@ -264,6 +264,14 @@ fun BiomarkerHostScreen(
             items(
                 items = localOrder,
                 key = { it },
+                // Performance-Audit (Frank-Wunsch 2026-05-18): contentType
+                // ermoeglicht Item-Recycling pro Typ. LazyVerticalGrid kann
+                // Mini-Cards untereinander und volle Cards untereinander
+                // wiederverwenden statt jedes Card-Layout neu zu inflaten.
+                // Bei 25+ Cards spuerbar weniger Ruckeln beim Scrollen.
+                contentType = { id ->
+                    if (id in BiomarkerCardId.MINI_CARD_IDS) "mini" else "wide"
+                },
                 span = { id ->
                     if (id in BiomarkerCardId.MINI_CARD_IDS) GridItemSpan(1) else GridItemSpan(2)
                 },
