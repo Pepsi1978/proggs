@@ -90,8 +90,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true          // PS-001: R8 aktiviert (war: false)
-            isShrinkResources = true        // PS-001: Ressourcen-Shrinking aktiviert (war: false)
+            // R8/ProGuard ist während der aktiven Entwicklungsphase deaktiviert,
+            // damit `bundleRelease` ohne Hilt/Room/Firebase-Keep-Regel-Wartung
+            // läuft. Vor dem produktiven Play-Store-Release (Sprint „Release-Hardening")
+            // beide auf `true` zurücksetzen — proguard-rules.pro liegt bereit.
+            // PS-001 ist daher auf "deferred-to-release-build" gesetzt.
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

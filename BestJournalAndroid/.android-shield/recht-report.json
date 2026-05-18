@@ -1008,9 +1008,18 @@
 					"GB": "UK GDPR Art. 32: identisch mit EU DSGVO. Gleiches Risiko.",
 					"US": "CCPA §1798.150 (Security breach liability): unzureichend geschuetzte App erhoehtes Haftungsrisiko bei Datenpanne. FTC Act §5: inadaequate App-Sicherheit als unfair practice klassifiziert."
 				},
-				"status": "applied",
+				"status": "deferred-to-release-build",
 				"appliedAt": "2026-05-18T17:30:00Z",
-				"appliedFixText": "isMinifyEnabled=true, isShrinkResources=true in app/build.gradle.kts. proguard-rules.pro: Hilt/Dagger Keep-Regeln + Kotlin Coroutines + Kotlin Reflect dontwarn ergaenzt."
+				"appliedFixText": "isMinifyEnabled=true, isShrinkResources=true in app/build.gradle.kts. proguard-rules.pro: Hilt/Dagger Keep-Regeln + Kotlin Coroutines + Kotlin Reflect dontwarn ergaenzt.",
+				"deferredAt": "2026-05-18T18:50:00Z",
+				"deferredReason": "Frank-Direktive 2026-05-18: R8 waehrend aktiver Entwicklungsphase wieder deaktiviert (isMinifyEnabled=false). Reaktivierung beim Release-Sprint vor Play-Store-Upload. proguard-rules.pro bleibt im Repo, sofort einsetzbar.",
+				"reactivationChecklist": [
+					"buildTypes.release.isMinifyEnabled = true",
+					"buildTypes.release.isShrinkResources = true",
+					"./gradlew bundleRelease (Build-Test)",
+					"apkanalyzer (Obfuskierungs-Verifikation)",
+					"App-Funktionalitaet manuell pruefen (Hilt-Injection, Room-Queries, Firebase, Play-Billing)"
+				]
 			}
 		]
 	},
