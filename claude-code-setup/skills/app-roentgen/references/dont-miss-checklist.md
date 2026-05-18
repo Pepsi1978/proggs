@@ -189,4 +189,4 @@ Wenn die Checkliste durch ist:
 - Wie viele [ ] mit "NICHT_VERIFIZIERT (Grund)": ___ — diese sind OK wenn der Grund nachvollziehbar ist
 - Wie viele [ ] ohne Begruendung: ___ — sollte 0 sein
 
-Nur wenn alle 92 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.
+Nur wenn alle 92 Punkte entweder geprueft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.

@@ -1107,25 +1107,25 @@ ___
 - [ ] A8. Mehrere Manifest-Varianten geprueft?
 
 ### Block B — Dependencies (6)
-- [ ] B1-B6 (siehe Detail)
+- [ ] B1-B6: einzelne Punkte siehe `references/dont-miss-checklist.md` Block B — jeder Punkt einzeln in der Checkliste-Datei abhaken, dann hier den Block als Ganzes markieren
 
 ### Block C — Architektur (7)
-- [ ] C1-C7
+- [ ] C1-C7: einzelne Punkte siehe `references/dont-miss-checklist.md` Block C
 
 ### Block D — Bildschirme und Flows (8)
-- [ ] D1-D8
+- [ ] D1-D8: einzelne Punkte siehe `references/dont-miss-checklist.md` Block D
 
 ### Block E — Paywall (10)
-- [ ] E1-E10
+- [ ] E1-E10: einzelne Punkte siehe `references/dont-miss-checklist.md` Block E
 
 ### Block F — Hidden Features (10)
-- [ ] F1-F10
+- [ ] F1-F10: einzelne Punkte siehe `references/dont-miss-checklist.md` Block F
 
 ### Block G — Compliance und Privacy (6)
-- [ ] G1-G6
+- [ ] G1-G6: einzelne Punkte siehe `references/dont-miss-checklist.md` Block G
 
 ### Block H — Werbeaussagen-Audit (5)
-- [ ] H1-H5
+- [ ] H1-H5: einzelne Punkte siehe `references/dont-miss-checklist.md` Block H
 
 ### Block I — Wortlaut-Erfassung 1:1 (8)
 - [ ] I1. Fuer JEDEN Screen eine Wortlaut-Tabelle mit allen UI-Elementen erstellt?
@@ -1167,7 +1167,7 @@ ___
 - [ ] L5. WebView- + Asset-HTML/MD-Inhalte + PDF-Vorlagen erfasst?
 - [ ] L6. Marketing-Materialien als Frank-Aufgabe gelistet?
 
-**Gesamt: ___ / 82 gepruefft, ___ NICHT_VERIFIZIERT mit Begruendung**
+**Gesamt: ___ / 92 geprueft, ___ NICHT_VERIFIZIERT mit Begruendung**
 
 ---
 

@@ -13,6 +13,18 @@ Diese Datei sammelt ALLE Greppable-Patterns aus den Schichten 1-7 an einer Stell
 > **Temp-Pfade:** `/tmp/` ist Bash-Default. Plattformneutral: `${TMPDIR:-/tmp}` (Bash) oder `$env:TEMP` (PowerShell).
 >
 > **Multi-Module:** Patterns mit `app/src/main/...` decken nur Single-Module-Apps ab. Bei Multi-Module-Apps siehe die Helper-Funktionen in `scripts/feature-scan.sh` (`find_default_strings_xml`, `find_translated_strings_xml`, `find_locale_dirs`, `find_module_roots`, `find_en_strings_xml`, `find_regional_locales`, `find_locale_strings_xml`).
+>
+> **FIX Y1 (Audit 8) — Kotlin + Java:** Die Patterns in dieser Datei zeigen aus Lesbarkeitsgruenden nur `--include='*.kt'` bzw. `--type kotlin`. Wenn die App auch **Java-Code** enthaelt (Legacy-Module, alte SDKs wie Firebase-Java, RevenueCat-Java, Apollo-Java), MUSS bei jeder Pattern-Anwendung `--include='*.java'` bzw. `--type java` ergaenzt werden:
+>
+> ```bash
+> # Statt:  grep -rn 'pattern' --include='*.kt' .
+> # Java+Kotlin: grep -rn 'pattern' --include='*.kt' --include='*.java' .
+>
+> # Statt:  rg 'pattern' --type kotlin
+> # Java+Kotlin: rg 'pattern' --type kotlin --type java
+> ```
+>
+> Das `feature-scan.sh` Skript hat die Helper-Funktionen `GREP_R` und `count_grep` bereits auf Kotlin+Java umgestellt — bei manuellen Aufrufen aus dieser Datei muss man es selbst ergaenzen. Wenn die App AUSSCHLIESSLICH Kotlin nutzt (kein Java), darf der Java-Filter weggelassen werden.
 
 Alle Patterns sind fuer **ripgrep (rg)** oder **grep** auf einem POSIX-Shell formatiert. Auf Windows Git Bash funktionieren sie identisch.
 
