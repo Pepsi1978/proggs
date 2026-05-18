@@ -1,5 +1,7 @@
 # Schicht 4 — Bildschirm-Karte: Was sieht und tut der Nutzer?
 
+> **FIX AA3 (Audit 10) — Compose-Kotlin-Hinweis:** Die Compose-Patterns dieser Schicht (`@Composable`, `clickable`, `onClick`, `AlertDialog`) sind per Design Kotlin-only — Compose hat keine Java-API. Bei klassischen Java/XML-Layouts gelten andere Patterns (Activity/Fragment, `findViewById`, `setOnClickListener`, AlertDialog.Builder) — diese werden ergaenzend in Schicht 4b und 4c abgedeckt. Bei reinen XML-Layouts: `--include='*.xml'` fuer View-Definitionen, `--include='*.java'` fuer Activity-Logik.
+
 ## Zweck
 
 Schicht 4 dokumentiert JEDE einzelne UI-Aktion: jeden Bildschirm, jeden Klick, jeden Side-Effect der zu einer Aktion fuehrt. Damit kann am Ende fuer eine Werbeaussage wie "Export mit einem Klick" praezise verifiziert werden ob das stimmt — oder ob es eigentlich 4 Klicks sind.

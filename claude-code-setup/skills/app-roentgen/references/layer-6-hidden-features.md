@@ -1,5 +1,7 @@
 # Schicht 6 — Hidden Features aufdecken
 
+> **FIX AA6 (Audit 10) — Kotlin + Java:** Patterns mit `--include='*.kt'` muessen bei Java-Hybrid-Apps um `--include='*.java'` ergaenzt werden (Java-WorkManager-Worker, Java-AppWidgetProvider, Java-AccessibilityService, Java-NotificationListenerService). Reine Kotlin-Apps koennen den Java-Filter weglassen.
+
 ## Zweck
 
 Hidden Features sind Funktionen die nicht offensichtlich aus der Top-Level-UI zu erkennen sind. Sie sind oft die Quelle von Audit-Luecken: Werbeaussagen sagen "wir haben Feature X nicht" — aber ein Feature-Flag, ein Debug-Menue oder ein Background-Job tut genau das. Im Audit duerfen sie nicht uebersehen werden.

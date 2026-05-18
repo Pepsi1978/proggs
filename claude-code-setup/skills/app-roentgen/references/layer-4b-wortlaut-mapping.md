@@ -1,5 +1,7 @@
 # Schicht 4b — Wortlaut-Mapping pro Bereich (PFLICHT)
 
+> **FIX AA4 (Audit 10) — Kotlin + Java:** Wortlaut-Patterns mit `--include='*.kt'` muessen bei Java-Hybrid-Apps um `--include='*.java'` ergaenzt werden (Activity/Fragment mit `getString(R.string....)`, AlertDialog.Builder mit `.setTitle(...).setMessage(...)`, Toast mit `Toast.makeText(...)`). Reine Kotlin-Apps koennen den Java-Filter weglassen.
+
 ## Warum diese Schicht existiert
 
 Der Rechtssicherheits-Skill prueft jede Formulierung gegen UWG, EU UCPD, DSGVO, Google Play Policy und weitere Rechtsnormen. **Schon ein einziges falsches Wort kann eine Abmahnung ausloesen.** Beispiele aus der Praxis:

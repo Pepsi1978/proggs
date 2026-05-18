@@ -1,5 +1,7 @@
 # Schicht 3b — Compose Compiler Reports + KSP-NavGraph (Goldstandard 2026)
 
+> **FIX AA2 (Audit 10) — Compose-Kotlin-Hinweis:** Diese Schicht ist per Design Kotlin-only (Jetpack Compose hat keine Java-API). Falls die App KEINE Compose-Komponenten nutzt (klassische View-Layouts in XML), kann diese Schicht ganz uebersprungen werden — die Compose Compiler Reports waeren leer.
+
 ## Warum diese Schicht optional, aber empfohlen ist
 
 Die grep-basierte Architektur-Extraktion aus Schicht 3 ist robust und funktioniert ohne Build-Tools — aber sie hat eine prinzipielle Schwaeche: Sie kann nicht zuverlaessig unterscheiden zwischen einem echten `@Composable Screen` und einem in einem Kommentar, einem String-Literal oder einer Test-Datei. Wenn die App zugaenglich ist und gebaut werden kann, liefern die **Compose Compiler Reports** ein nachweislich vollstaendiges Composable-Inventar — direkt vom Compiler, ohne Heuristik.

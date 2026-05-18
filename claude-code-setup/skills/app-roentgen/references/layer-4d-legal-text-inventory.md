@@ -1,5 +1,7 @@
 # Schicht 4d — Legal-Text-Inventar (Grundlage fuer den Rechtssicherheits-Skill)
 
+> **FIX AA5 (Audit 10) — Kotlin + Java:** Patterns mit `--include='*.kt'` muessen bei Java-Hybrid-Apps um `--include='*.java'` ergaenzt werden (Permission-Requests via `requestPermissions(...)`, AccountManager-Java-APIs, klassische AlertDialog.Builder fuer Account-Deletion-Confirms). Reine Kotlin-Apps koennen den Java-Filter weglassen.
+
 ## Warum diese Schicht existiert
 
 Die meisten Abmahnungen treffen Apps nicht bei den Marketing-Werbeaussagen (Layer 7), sondern bei rechtlich obligatorischen Texten:

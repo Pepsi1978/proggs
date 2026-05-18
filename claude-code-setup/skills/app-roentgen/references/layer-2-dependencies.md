@@ -1,5 +1,7 @@
 # Schicht 2 — Dependency-Analyse: Was kann die App technisch?
 
+> **FIX AA1 (Audit 10) — Kotlin + Java:** Die Patterns in dieser Datei (z.B. RemoteConfig-Code-Nutzung auf Zeile 163) zeigen aus Lesbarkeitsgruenden nur `--include='*.kt'`. Bei Apps mit Java-Anteilen MUSS `--include='*.java'` ergaenzt werden — Java-Legacy-Module rufen Firebase RemoteConfig, Crashlytics & andere SDKs haeufig aus `.java`-Dateien auf. Reine Kotlin-Apps koennen den Java-Filter weglassen.
+
 ## Zweck
 
 Jede Bibliothek im Build-System impliziert technische Faehigkeiten. Eine App mit `firebase-messaging` MUSS Push-Notifications koennen, eine App mit `play-billing` MUSS In-App-Purchases unterstuetzen. Die Dependency-Liste ist die "Capability-Karte" der App.
