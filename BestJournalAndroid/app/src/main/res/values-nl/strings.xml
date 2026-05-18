@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Dagelijkse AI-tekstverbetering</string>
-    <string name="settings_premium_feature_improve_desc">Elke notitie wordt expressiever</string>
+    <string name="settings_premium_feature_improve_desc">De AI verbetert je notities op verzoek.</string>
     <string name="settings_premium_feature_dashboard">Dagelijkse dashboard-analyses</string>
-    <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit met je mee</string>
-    <string name="settings_premium_feature_5_perspectives">5 AI-perspectieven</string>
+    <string name="settings_premium_feature_dashboard_desc">Je dashboard groeit mee met je notities.</string>
+    <string name="settings_premium_feature_5_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Van helderheid tot zelfkennis</string>
     <string name="settings_premium_feature_reviews">Week-, maand- en jaarterugblik</string>
     <string name="settings_premium_feature_reviews_desc">De AI vertelt jouw verhaal</string>
     <string name="settings_premium_feature_patterns">Patroondetectie</string>
-    <string name="settings_premium_feature_patterns_desc">De AI vindt verbanden die jou ontgaan</string>
+    <string name="settings_premium_feature_patterns_desc">De AI maakt patronen en verbanden in je notities zichtbaar</string>
     <string name="settings_premium_feature_pdf">Pdf-export met foto\'s</string>
     <string name="settings_premium_feature_pdf_desc">Alle dagboeknotities met foto\'s als document</string>
     <string name="settings_premium_feature_voice">Nauwkeurigere spraakherkenning</string>
@@ -895,10 +895,10 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="onboarding_goals_select">Kies een of meer doelen</string>
     <string name="onboarding_how_step3_title">Voeg foto\'s toe</string>
     <string name="onboarding_how_title">Zo eenvoudig gaat het</string>
-    <string name="onboarding_perspectives_title">5 perspectieven op\njouw leven</string>
+    <string name="onboarding_perspectives_title">Verschillende invalshoeken op\njouw leven</string>
     <string name="onboarding_premium_feature_pdf">Pdf-export met foto\'s, bewaar je notities als document</string>
     <string name="onboarding_premium_profiles">5 slimme dashboardprofielen voor een diepe blik op je leven</string>
-    <string name="onboarding_try_premium">Probeer Premium 8 dagen</string>
+    <string name="onboarding_try_premium">8 dagen gratis — daarna vanaf € 3,99/maand</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -915,7 +915,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="paywall_yearly_note">Daarna %1$s per jaar\nTijdens de proefperiode op elk moment opzegbaar</string>
     <string name="paywall_most_popular">Meest gekozen</string>
     <string name="paywall_monthly_plan">Maandabonnement, %1$s per maand</string>
-    <string name="paywall_yearly_savings">Bespaar %1$d\u00A0%% ten opzichte van maandelijks, op elk moment opzegbaar</string>
+    <string name="paywall_yearly_savings">Bespaar %1$d%% ten opzichte van maandelijks \u2014 opzegbaar tot aan het einde van de contractperiode.</string>
     <string name="paywall_lifetime_title">Eenmalige aankoop</string>
     <string name="paywall_lifetime_desc">Eenmaal betalen, alles permanent gebruiken</string>
     <string name="paywall_lifetime_note">Geen abonnement, geen verlenging</string>
@@ -932,8 +932,8 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="paywall_feature_profiles">Onbeperkt persoonlijke analyseprofielen</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Vind je innerlijke rust</string>
-    <string name="paywall_headline_stress_sub">Herken wat je belast voordat het je overweldigt</string>
+    <string name="paywall_headline_stress">Meer helderheid in het dagelijks leven</string>
+    <string name="paywall_headline_stress_sub">Herken wat je dagelijks bezighoudt en breng het onder woorden.</string>
     <string name="paywall_headline_clarity">Begrijp jezelf beter</string>
     <string name="paywall_headline_clarity_sub">De AI herkent patronen die jou ontgaan</string>
     <string name="paywall_headline_growth">Ontdek het goede in elke dag</string>
@@ -948,7 +948,7 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="paywall_exit_special_offer">We hebben een bijzondere\naanbieding voor je:</string>
     <string name="paywall_exit_discount">Korting voor %1$d maanden</string>
     <string name="paywall_exit_price_comparison">Slechts %1$s in plaats van %2$s per maand</string>
-    <string name="paywall_exit_start_discount">Maandabonnement starten met 50\u00A0% korting</string>
+    <string name="paywall_exit_start_discount">Met betalingsverplichting \u2014 2 maanden voor de halve prijs</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -974,9 +974,9 @@ Minstens 10 inzichten in totaal, maar elk inzicht moet inhoudelijk bij de opdrac
     <string name="churn_sorry_title">Jammer dat je vertrekt</string>
     <string name="churn_sorry_body">Voor je opzegt, mag je ons vertellen waarom? Dat helpt ons de app te verbeteren.</string>
     <string name="churn_exclusive_offer">Exclusieve aanbieding</string>
-    <string name="churn_offer_subtitle">Alleen voor jou, omdat jij belangrijk bent</string>
+    <string name="churn_offer_subtitle">Ons aanbod voor jou</string>
     <string name="churn_offer_feature_ai">Dagelijkse AI-analyses</string>
-    <string name="churn_offer_feature_perspectives">Alle 5 perspectieven</string>
+    <string name="churn_offer_feature_perspectives">Alle AI-profielen (4 voorgedefinieerd + onbeperkt eigen)</string>
     <string name="churn_offer_feature_voice">Premium-spraakherkenning</string>
     <string name="churn_offer_auto_renew">Wordt automatisch verlengd, op elk moment opzegbaar</string>
     <string name="churn_accept_offer">Aanbieding accepteren</string>
@@ -996,7 +996,7 @@ Met Premium: tot 150 per dag.</string>
     <string name="ai_limit_yearly">Jaarabonnement, %1$s/jaar (bespaar 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Nee bedankt, verder zonder AI</string>
     <string name="ai_banner_title">Je dagboek wordt ondersteund door AI</string>
-    <string name="ai_banner_body">• Gedicteerde teksten worden automatisch verbeterd\n• Samenvattingen voor elke notitie\n• Slimme levenstips op basis van jouw patronen\n• Alles inbegrepen in je gratis proefperiode</string>
+    <string name="ai_banner_body">• Gedicteerde teksten worden automatisch verbeterd\n• Samenvattingen voor elke notitie\n• Slimme levensinzichten op basis van jouw patronen. Alle AI-uitvoer is ter inspiratie, geen professioneel advies.\n• Alles inbegrepen in je gratis proefperiode</string>
     <string name="cd_mic_start">Opname starten</string>
     <string name="cd_mic_stop">Opname stoppen</string>
     <string name="entry_improve_limit_daily">Daglimiet bereikt. Morgen gaat het weer verder!</string>
@@ -1418,7 +1418,7 @@ Wat wil je doen?</string>
     <string name="journal_improve">Tekst verbeteren</string>
     <string name="journal_state_improving">Wordt verbeterd…</string>
     <string name="journal_state_transcribing">Wordt getranscribeerd…</string>
-    <string name="paywall_consent_dialog_body">Na het afsluiten van een abonnement of aankoop heb je in principe 14 dagen herroepingsrecht.\n\nZodat je de Premium-functies meteen kunt gebruiken, starten we de levering direct na je aankoop. Met je toestemming hieronder zie je bewust af van je herroepingsrecht van 14 dagen.\n\nZonder deze toestemming kunnen we de Premium-functies niet meteen activeren.</string>
+    <string name="paywall_consent_dialog_body">Na het afsluiten van een abonnement of aankoop heb je in principe 14 dagen herroepingsrecht.\n\nZodat je de Premium-functies meteen kunt gebruiken, starten we de levering direct na je aankoop. Met je toestemming hieronder zie je bewust af van je herroepingsrecht van 14 dagen.\n\nZonder deze toestemming kunnen we de Premium-functies niet meteen activeren.\n\nAanbieder van de Premium-functies: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Duitsland. E-mail voor herroeping: dev.app.support@gmail.com.\n\nAls je het herroepingsrecht niet voor de levering inroept en het Premium-abonnement gestart wordt, begint je herroepingstermijn van 14 dagen op de dag van de contractsluiting. Je kunt de herroeping vormvrij per e-mail melden of het EU-modelformulier voor herroeping gebruiken (https://www.bmuv.de/widerruf — extern EU-model).</string>
     <string name="paywall_consent_dialog_cancel">Annuleren</string>
     <string name="paywall_consent_dialog_checkbox">Ik ga ermee akkoord dat de levering van de Premium-functies direct na bestelling begint. Ik begrijp dat ik hiermee afzie van mijn herroepingsrecht van 14 dagen.</string>
     <string name="paywall_consent_dialog_confirm">Nu abonneren met betalingsverplichting</string>
@@ -1466,7 +1466,7 @@ Wat wil je doen?</string>
     <string name="paywall_monthly_label">Maandelijks</string>
     <string name="paywall_restore_button">Aankopen herstellen</string>
     <string name="paywall_subscribe_button">Abonneren</string>
-    <string name="paywall_subtitle">Geniet van alle Premium-voordelen</string>
+    <string name="paywall_subtitle">Ontgrendel alle Premium-functies</string>
     <string name="paywall_title">Upgrade naar Premium</string>
     <string name="paywall_yearly_label">Jaarlijks</string>
     <string name="prompt_char_count_label">%1$d tekens</string>
@@ -1485,9 +1485,9 @@ Wat wil je doen?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Royaal dagelijks AI-contingent voor intensief gebruik.</string>
+    <string name="ai_limits_disclaimer">Dagelijks AI-contingent voor intensief gebruik.</string>
     <string name="ai_limits_dialog_title">Hoe werkt het dagelijkse AI-contingent?</string>
-    <string name="ai_limits_dialog_body" formatted="false">MET PREMIUM ABONNEMENT\n\nPer dag heb je beschikbaar:\n• Tot 150 dashboard-analyses per AI-profiel (met 4 profielen dus tot 600 per dag)\n• Tot 150 tekstverbeteringen\n\nHoe dit precies werkt:\n• Verzoeken 1 t/m 30: in de hoogste AI-kwaliteit\n• Verzoeken 31 t/m 100: in snelle standaardkwaliteit\n• Bij het 101e verzoek: eenmalige pauze van 30 min\n• Verzoeken 101 t/m 150: snelle standaardkwaliteit\n• Vanaf verzoek 151: geen verdere verzoeken tot morgen\n\nBovendien geldt voor alle gebruikers:\n• Maximaal 50 AI-verzoeken per uur — daarna 5 min pauze\n\nWanneer worden de contingenten gereset?\nElke dag om middernacht (jouw lokale tijd) begint een nieuw volledig contingent.\n\n──────────\n\nZONDER ABONNEMENT\n\n• 5 dashboard-analyses per week per profiel\n• 5 tekstverbeteringen per week\n• Altijd in snelle standaardkwaliteit\n• Gereset elke maandag om middernacht (jouw lokale tijd)\n\n──────────\n\nMeer dan 99% van alle gebruikers zal deze limieten waarschijnlijk nooit tegenkomen.</string>
+    <string name="ai_limits_dialog_body" formatted="false">MET PREMIUM ABONNEMENT\n\nPer dag heb je beschikbaar:\n• 150 verzoeken per dag per profiel — voor de 4 voorgedefinieerde profielen samen 600/dag, plus 150/dag voor elk eigen profiel dat je aanmaakt.\n• Tot 150 tekstverbeteringen\n\nHoe dit precies werkt:\n• Verzoeken 1 t/m 30: in de hoogste AI-kwaliteit\n• Verzoeken 31 t/m 100: in snelle standaardkwaliteit\n• Bij het 101e verzoek: eenmalige pauze van 30 min\n• Verzoeken 101 t/m 150: snelle standaardkwaliteit\n• Vanaf verzoek 151: geen verdere verzoeken tot morgen\n\nBovendien geldt voor alle gebruikers:\n• Maximaal 50 AI-verzoeken per uur — daarna 5 min pauze\n\nWanneer worden de contingenten gereset?\nElke dag om 00:00 uur (jouw lokale tijd) begint een nieuw volledig contingent.\n\n──────────\n\nZONDER ABONNEMENT\n\n• 5 dashboard-analyses per week per profiel\n• 5 tekstverbeteringen per week\n• Altijd in snelle standaardkwaliteit\n• Gereset elke maandag om 00:00 uur (jouw lokale tijd)\n\n──────────\n\nDe meeste gebruikers in het dagelijks leven zullen deze limieten niet bereiken.</string>
     <string name="ai_limits_dialog_close">Begrepen</string>
     <string name="theme_neutral">Neutraal</string>
     <string name="theme_profile">Profielkleur — kleur van het dashboardprofiel</string>
@@ -1496,4 +1496,26 @@ Wat wil je doen?</string>
     <string name="theme_one_dark">Atelier</string>
     <string name="theme_nord">Poolnacht</string>
     <string name="theme_gruvbox">Amber</string>
+
+    <!-- Permission rationale dialogs -->
+    <string name="permission_rationale_microphone">Om je dagboeknotities per spraak te dicteren, hebben we toegang tot je microfoon nodig.</string>
+    <string name="permission_rationale_camera">Om foto\'s aan je notities toe te voegen, hebben we toegang tot je camera nodig.</string>
+    <string name="permission_rationale_location">Om je notities een locatiecontext te geven, hebben we je geschatte locatie nodig. Je kunt dit altijd weigeren of later uitschakelen.</string>
+    <string name="permission_rationale_notifications">Om je aan je dagelijkse schrijven te mogen herinneren, hebben we toestemming voor meldingen nodig.</string>
+
+    <!-- Consent: Android system backup -->
+    <string name="consent_info_system_backup_title">Android systeemback-up</string>
+    <string name="consent_info_system_backup_body">Als je Android systeemback-up hebt ingeschakeld in de apparaatinstellingen, slaat Android je dagboekgegevens automatisch op in het back-upgedeelte van je Google-account. Je kunt dit op elk moment uitschakelen in je apparaatinstellingen — zie de privacyverklaring voor meer informatie.</string>
+    <string name="settings_open_system_backup_settings_label">Android systeemback-up beheren</string>
+    <string name="settings_open_system_backup_settings_desc">Opent de Android-systeeminstellingen, waar je de automatische back-up voor Best Journal kunt in- en uitschakelen.</string>
+    <string name="error_no_backup_settings_available">Back-upinstellingen zijn op dit apparaat niet beschikbaar.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Privacy</string>
+    <string name="consent_footer_link_impressum">Colofon</string>
+    <string name="consent_footer_link_agb">Gebruiksvoorwaarden</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">Geen therapie — vervangt geen professioneel advies.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal is een dagboek en geen therapeutisch aanbod. AI-analyses zijn suggesties voor zelfreflectie en vervangen geen professionele psychologische of medische begeleiding. Neem bij acute problemen contact op met een professional of de crisishulp in je instellingen.</string>
 </resources>

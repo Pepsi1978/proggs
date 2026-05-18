@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">毎日のAIテキスト改善</string>
-    <string name="settings_premium_feature_improve_desc">どの記録もより表現豊かに</string>
+    <string name="settings_premium_feature_improve_desc">AIがご希望に応じて日記の記録を改善します。</string>
     <string name="settings_premium_feature_dashboard">毎日のダッシュボード分析</string>
-    <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたと共に成長</string>
-    <string name="settings_premium_feature_5_perspectives">5つのAI視点</string>
+    <string name="settings_premium_feature_dashboard_desc">ダッシュボードがあなたの記録とともに進化します。</string>
+    <string name="settings_premium_feature_5_perspectives">すべてのAIプロフィール（4種類のプリセット＋無制限のオリジナル）</string>
     <string name="settings_premium_feature_5_perspectives_desc">明晰さから自己認識まで</string>
     <string name="settings_premium_feature_reviews">週・月・年の振り返り</string>
     <string name="settings_premium_feature_reviews_desc">AIがあなたの物語を語ります</string>
     <string name="settings_premium_feature_patterns">パターン認識</string>
-    <string name="settings_premium_feature_patterns_desc">AIが見えないつながりを見つけます</string>
+    <string name="settings_premium_feature_patterns_desc">AIがあなたの記録の中にあるパターンやつながりを見える化します。</string>
     <string name="settings_premium_feature_pdf">写真つきPDF出力</string>
     <string name="settings_premium_feature_pdf_desc">写真つきの記録を文書として</string>
     <string name="settings_premium_feature_voice">より正確な音声認識</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">1つ以上の目標を選んでください</string>
     <string name="onboarding_how_step3_title">写真を追加</string>
     <string name="onboarding_how_title">とても簡単です</string>
-    <string name="onboarding_perspectives_title">人生への\n5つの視点</string>
+    <string name="onboarding_perspectives_title">人生へのさまざまな\n視点</string>
     <string name="onboarding_premium_feature_pdf">写真つきPDF出力で、記録を文書として保存</string>
     <string name="onboarding_premium_profiles">人生を深く見る5つの知的ダッシュボードプロフィール</string>
-    <string name="onboarding_try_premium">プレミアムを8日間お試し</string>
+    <string name="onboarding_try_premium">8日間無料体験 — その後は月額3.99ユーロから</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -850,8 +850,8 @@
     <string name="paywall_feature_profiles">無制限のカスタム分析プロフィール</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">心の静けさを見つけて</string>
-    <string name="paywall_headline_stress_sub">押しつぶされる前に、負担を見つける</string>
+    <string name="paywall_headline_stress">日常にもっと明瞭さを</string>
+    <string name="paywall_headline_stress_sub">毎日気になっていることを整理して、すっきり言語化しましょう。</string>
     <string name="paywall_headline_clarity">自分をより深く理解する</string>
     <string name="paywall_headline_clarity_sub">AIが見えにくいパターンを見つけます</string>
     <string name="paywall_headline_growth">毎日の中の良いものを見つけて</string>
@@ -866,7 +866,7 @@
     <string name="paywall_exit_special_offer">特別なお知らせが\nあります：</string>
     <string name="paywall_exit_discount">%1$dか月の割引</string>
     <string name="paywall_exit_price_comparison">月%2$sが、%1$sに</string>
-    <string name="paywall_exit_start_discount">月額プランを50\u00A0%オフで開始</string>
+    <string name="paywall_exit_start_discount">有料 — 2ヶ月間半額でスタート</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -892,9 +892,9 @@
     <string name="churn_sorry_title">お別れは残念です</string>
     <string name="churn_sorry_body">解約の前に、理由を教えてもらえますか？ アプリを良くするのに役立ちます。</string>
     <string name="churn_exclusive_offer">特別なご提案</string>
-    <string name="churn_offer_subtitle">大切なあなたのために</string>
+    <string name="churn_offer_subtitle">あなたへのご提案</string>
     <string name="churn_offer_feature_ai">毎日のAI分析</string>
-    <string name="churn_offer_feature_perspectives">5つの視点すべて</string>
+    <string name="churn_offer_feature_perspectives">すべてのAIプロフィール（4種類のプリセット＋無制限のオリジナル）</string>
     <string name="churn_offer_feature_voice">プレミアム音声認識</string>
     <string name="churn_offer_auto_renew">自動更新、いつでも解約可能</string>
     <string name="churn_accept_offer">ご提案を受ける</string>
@@ -914,7 +914,10 @@ Premiumでは：1日最大150件。</string>
     <string name="ai_limit_yearly">年額プラン、年%1$s(37\u00A0%%お得)</string>
     <string name="ai_limit_no_thanks">いいえ、AIなしで続ける</string>
     <string name="ai_banner_title">あなたの日記はAIがサポート</string>
-    <string name="ai_banner_body">• 話した文章を自動で改善\n• 各記録の要約\n• あなたのパターンからの賢い生活のヒント\n• 無料のお試し期間にすべて含まれます</string>
+    <string name="ai_banner_body">• ディクテーションしたテキストを自動改善
+• 各記録の要約
+• あなたのパターンからのインサイト。すべてのAI出力はあくまで参考であり、専門的なアドバイスの代替にはなりません。
+• 無料体験期間中はすべてが含まれます</string>
     <string name="cd_mic_start">録音開始</string>
     <string name="cd_mic_stop">録音停止</string>
     <string name="entry_improve_limit_daily">今日の上限に達しました。明日続きをどうぞ！</string>
@@ -1332,7 +1335,7 @@ Premiumでは：1日最大150件。</string>
     <string name="journal_improve">文章を改善</string>
     <string name="journal_state_improving">改善中…</string>
     <string name="journal_state_transcribing">文字起こし中…</string>
-    <string name="paywall_consent_dialog_body">ご購入またはご契約の完了後、原則として14日間のキャンセル権があります。\n\nプレミアム機能をすぐにご利用いただけるよう、ご購入直後からサービスの提供を開始します。下記にご同意いただくことで、14日間のキャンセル権を放棄することになります。\n\nご同意いただけない場合、プレミアム機能を即時にご利用いただくことはできません。</string>
+    <string name="paywall_consent_dialog_body">ご購入またはサブスクリプション契約後、原則として14日間の撤回権があります（§ 355 BGB）。\n\nご購入直後からプレミアム機能をご利用いただけるよう、契約成立直後にサービスの提供を開始します。下記にご同意いただくことで、14日間の撤回権を放棄することになります（§ 356 Abs. 5 BGB）。\n\nご同意いただけない場合、プレミアム機能を即時にご利用いただくことはできません。\n\nプレミアム機能の提供者：Frank Barwandt、c/o Impressumservice Dein-Impressum、Stettiner Straße 41、35410 Hungen、ドイツ。撤回通知の連絡先：dev.app.support@gmail.com。\n\nサービス提供開始前に撤回権を行使されない場合、サブスクリプション開始日から14日間の撤回期間が始まります。撤回は任意の形式（メール等）で行うか、EUの撤回書式をご利用いただけます（https://www.bmuv.de/widerruf — 外部EUサンプルフォーム）。</string>
     <string name="paywall_consent_dialog_cancel">キャンセル</string>
     <string name="paywall_consent_dialog_checkbox">プレミアム機能のご提供がご注文直後に開始されることに同意します。これにより14日間のキャンセル権を失うことを理解しています。</string>
     <string name="paywall_consent_dialog_confirm">今すぐ有料登録する</string>
@@ -1380,7 +1383,7 @@ Premiumでは：1日最大150件。</string>
     <string name="paywall_monthly_label">月額</string>
     <string name="paywall_restore_button">購入を復元</string>
     <string name="paywall_subscribe_button">登録</string>
-    <string name="paywall_subtitle">すべてのPremium特典を利用</string>
+    <string name="paywall_subtitle">すべてのプレミアム機能をアンロック</string>
     <string name="paywall_title">Premiumにアップグレード</string>
     <string name="paywall_yearly_label">年額</string>
     <string name="prompt_char_count_label">%1$d文字</string>
@@ -1399,9 +1402,39 @@ Premiumでは：1日最大150件。</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">集中的なご利用のための充実した日次AIクォータ。</string>
+    <string name="ai_limits_disclaimer">集中的なご利用向けのAI日次クォータです。</string>
     <string name="ai_limits_dialog_title">日次AIクォータの仕組みは？</string>
-    <string name="ai_limits_dialog_body" formatted="false">PREMIUM プランご利用の場合\n\n1日あたりの利用可能数：\n• AIプロフィールごとに最大150回のダッシュボード分析（4プロフィールの場合、1日最大600回）\n• 最大150回のテキスト改善\n\n詳細な仕組み：\n• リクエスト1〜30回目：最高品質のAI\n• リクエスト31〜100回目：高速スタンダード品質\n• 101回目のリクエスト：1回限りの30分休止\n• リクエスト101〜150回目：高速スタンダード品質\n• 151回目以降：翌日まで新たなリクエスト不可\n\nまた、すべてのユーザー共通：\n• 1時間あたり最大50回のAIリクエスト — その後5分間の休止\n\nクォータはいつリセットされますか？\n毎日0時（あなたの現地時刻）に新しいフルクォータが開始されます。\n\n──────────\n\nプランなしの場合\n\n• プロフィールごとに週5回のダッシュボード分析\n• 週5回のテキスト改善\n• 常に高速スタンダード品質\n• 毎週月曜日0時（あなたの現地時刻）にリセット\n\n──────────\n\nユーザーの99%以上は、これらの制限に達することはないでしょう。</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUMプランご利用の場合
+
+1日あたりの利用可能数：
+• プロフィールごとに最大150回のAIリクエスト — 4種類のプリセット合計で600回/日、オリジナルプロフィールはそれぞれ追加で150回/日。
+• 最大150回のテキスト改善
+
+詳細な仕組み：
+• リクエスト1〜30回目：最高品質のAI
+• リクエスト31〜100回目：高速スタンダード品質
+• 101回目のリクエスト：1回限りの30分休止
+• リクエスト101〜150回目：高速スタンダード品質
+• 151回目以降：翌日まで新たなリクエスト不可
+
+また、すべてのユーザー共通：
+• 1時間あたり最大50回のAIリクエスト — その後5分間の休止
+
+クォータはいつリセットされますか？
+毎日0時（あなたの現地時刻）に新しいフルクォータが開始されます。
+
+──────────
+
+プランなしの場合
+
+• プロフィールごとに週5回のダッシュボード分析
+• 週5回のテキスト改善
+• 常に高速スタンダード品質
+• 毎週月曜日0時（あなたの現地時刻）にリセット
+
+──────────
+
+ほとんどの方は日常的なご利用でこれらの上限に達することはないでしょう。</string>
     <string name="ai_limits_dialog_close">了解しました</string>
     <string name="theme_neutral">ニュートラル</string>
     <string name="theme_profile">プロフィールカラー — ダッシュボードプロフィールの色</string>
@@ -1410,4 +1443,27 @@ Premiumでは：1日最大150件。</string>
     <string name="theme_one_dark">アトリエ</string>
     <string name="theme_nord">極夜</string>
     <string name="theme_gruvbox">琥珀</string>
+
+    <!-- Permission rationales -->
+    <string name="permission_rationale_microphone">音声で日記を入力するには、マイクへのアクセスが必要です。</string>
+    <string name="permission_rationale_camera">記録に写真を追加するには、カメラへのアクセスが必要です。</string>
+    <string name="permission_rationale_location">記録に場所のコンテキストを追加するには、おおよその位置情報が必要です。いつでも拒否または後から無効にできます。</string>
+    <string name="permission_rationale_notifications">毎日の記録をお知らせするには、通知の許可が必要です。</string>
+
+    <!-- System backup info -->
+    <string name="consent_info_system_backup_title">Androidシステムバックアップ</string>
+    <string name="consent_info_system_backup_body">Androidシステムバックアップをデバイス設定で有効にしている場合、AndroidはあなたのGoogleアカウントのバックアップ領域に日記データを自動的にバックアップします。デバイス設定でいつでも無効にできます — 詳細はプライバシーポリシーをご覧ください。</string>
+    <string name="settings_open_system_backup_settings_label">Androidシステムバックアップを管理</string>
+    <string name="settings_open_system_backup_settings_desc">Best JournalのAndroid自動バックアップをオン・オフできるAndroidシステム設定を開きます。</string>
+    <string name="error_no_backup_settings_available">このデバイスではバックアップ設定を利用できません。</string>
+
+    <!-- Legal footer links -->
+    <string name="consent_footer_link_datenschutz">プライバシーポリシー</string>
+    <string name="consent_footer_link_impressum">運営者情報</string>
+    <string name="consent_footer_link_agb">利用規約</string>
+
+    <!-- AI health disclaimers -->
+    <string name="ai_output_health_disclaimer">本サービスはセラピーではなく、専門的なカウンセリングの代替にはなりません。</string>
+    <string name="ai_output_health_disclaimer_long">Best Journalは日記アプリであり、セラピーサービスではありません。AIによる分析は自己省察のための参考情報であり、専門的な心理的・医療的アドバイスの代替にはなりません。深刻な問題を抱えている場合は、専門家または設定内の危機サポートにご連絡ください。</string>
+
 </resources>

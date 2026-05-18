@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">매일 AI 텍스트 개선</string>
-    <string name="settings_premium_feature_improve_desc">모든 기록이 더 또렷해져요</string>
+    <string name="settings_premium_feature_improve_desc">원하실 때 AI가 기록을 개선해 드려요.</string>
     <string name="settings_premium_feature_dashboard">매일 대시보드 분석</string>
-    <string name="settings_premium_feature_dashboard_desc">대시보드가 당신과 함께 자라요</string>
-    <string name="settings_premium_feature_5_perspectives">AI 5가지 관점</string>
+    <string name="settings_premium_feature_dashboard_desc">대시보드가 기록과 함께 성장해요.</string>
+    <string name="settings_premium_feature_5_perspectives">모든 AI 프로필 (4가지 기본 + 무제한 직접 제작)</string>
     <string name="settings_premium_feature_5_perspectives_desc">명료함부터 자기 이해까지</string>
     <string name="settings_premium_feature_reviews">주간·월간·연간 돌아보기</string>
     <string name="settings_premium_feature_reviews_desc">AI가 당신의 이야기를 들려줘요</string>
     <string name="settings_premium_feature_patterns">흐름 읽기</string>
-    <string name="settings_premium_feature_patterns_desc">AI가 놓치는 연결을 찾아 줘요</string>
+    <string name="settings_premium_feature_patterns_desc">AI가 기록 속 패턴과 연결고리를 보여드려요.</string>
     <string name="settings_premium_feature_pdf">사진 포함 PDF 내보내기</string>
     <string name="settings_premium_feature_pdf_desc">사진이 담긴 모든 기록을 문서로</string>
     <string name="settings_premium_feature_voice">더 정확한 음성 인식</string>
@@ -813,10 +813,10 @@
     <string name="onboarding_goals_select">하나 이상의 목표를 고르세요</string>
     <string name="onboarding_how_step3_title">사진 추가</string>
     <string name="onboarding_how_title">아주 간단해요</string>
-    <string name="onboarding_perspectives_title">삶을 바라보는\n5가지 관점</string>
+    <string name="onboarding_perspectives_title">삶을 바라보는\n다양한 시각</string>
     <string name="onboarding_premium_feature_pdf">사진 포함 PDF 내보내기로 기록을 문서로 보관</string>
     <string name="onboarding_premium_profiles">삶을 깊이 들여다보는 5가지 대시보드 프로필</string>
-    <string name="onboarding_try_premium">프리미엄 8일 체험</string>
+    <string name="onboarding_try_premium">8일 무료 체험 — 이후 월 3.99€부터</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -833,7 +833,7 @@
     <string name="paywall_yearly_note">이후 연 %1$s\n체험 기간 동안 언제든 해지 가능</string>
     <string name="paywall_most_popular">가장 인기 있는 선택</string>
     <string name="paywall_monthly_plan">월 요금제, 월 %1$s</string>
-    <string name="paywall_yearly_savings">월 요금제보다 %1$d\u00A0%% 절약, 언제든 해지 가능</string>
+    <string name="paywall_yearly_savings">월 요금제 대비 %1$d%% 절약 — 각 계약 만료 시점에 언제든 해지 가능.</string>
     <string name="paywall_lifetime_title">한 번 결제</string>
     <string name="paywall_lifetime_desc">한 번 결제로 모든 기능을 계속 사용</string>
     <string name="paywall_lifetime_note">구독 없음, 갱신 없음</string>
@@ -849,9 +849,7 @@
     <string name="paywall_feature_noads">광고 없이 말하고 적기</string>
     <string name="paywall_feature_profiles">무제한 맞춤 분석 프로필</string>
 
-    <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">내 안의 고요함을 찾아요</string>
-    <string name="paywall_headline_stress_sub">압도되기 전에 나를 짓누르는 것을 알아차려요</string>
+    <!-- Paywall personalized headlines<string name="paywall_headline_stress">일상 속 더 큰 명료함</string></str<string name="paywall_headline_stress_sub">매일 나를 사로잡는 것을 인식하고 간결하게 정리해 보세요.</string></string>
     <string name="paywall_headline_clarity">자신을 더 잘 이해해요</string>
     <string name="paywall_headline_clarity_sub">AI가 숨겨진 흐름을 알아차려요</string>
     <string name="paywall_headline_growth">하루의 좋은 것을 발견해요</string>
@@ -865,8 +863,7 @@
     <string name="paywall_exit_wait">잠깐만요!</string>
     <string name="paywall_exit_special_offer">당신을 위한 특별한\n제안이 있어요:</string>
     <string name="paywall_exit_discount">%1$d개월 할인</string>
-    <string name="paywall_exit_price_comparison">월 %2$s 대신 %1$s</string>
-    <string name="paywall_exit_start_discount">월 요금제를 50\u00A0% 할인으로 시작</string>
+    <string name="paywall_exit_price_comparison">월 %2$s 대신 %1<string name="paywall_exit_start_discount">결제 시작 — 2개월 반값 할인</string>할인으로 시작</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -891,10 +888,8 @@
     <string name="churn_reason_other">다른 이유</string>
     <string name="churn_sorry_title">떠나시다니 아쉬워요</string>
     <string name="churn_sorry_body">해지 전에 이유를 알려 주실 수 있을까요? 앱을 더 좋게 만드는 데 도움이 돼요.</string>
-    <string name="churn_exclusive_offer">특별 제안</string>
-    <string name="churn_offer_subtitle">소중한 분께 드려요</string>
-    <string name="churn_offer_feature_ai">매일 AI 분석</string>
-    <string name="churn_offer_feature_perspectives">5가지 관점 모두</string>
+    <string name="churn_exclusive_offer">특별 제안</str<string name="churn_offer_subtitle">특별히 준비한 혜택이에요</string></string>
+    <string name="churn_offer_feature_ai">매일 AI 분석</<string name="churn_offer_feature_perspectives">모든 AI 프로필 (4가지 기본 + 무제한 직접 제작)</string> 모두</string>
     <string name="churn_offer_feature_voice">프리미엄 음성 인식</string>
     <string name="churn_offer_auto_renew">자동 갱신, 언제든 해지</string>
     <string name="churn_accept_offer">제안 받아들이기</string>
@@ -914,7 +909,10 @@ Premium: 하루 최대 150회.</string>
     <string name="ai_limit_yearly">연 요금제, 연 %1$s (37\u00A0%% 절약)</string>
     <string name="ai_limit_no_thanks">괜찮아요, AI 없이 계속할게요</string>
     <string name="ai_banner_title">일기는 AI의 도움을 받아요</string>
-    <string name="ai_banner_body">• 말한 글이 자동으로 다듬어져요\n• 모든 기록에 요약\n• 흐름에서 얻는 똑똑한 삶의 조언\n• 무료 체험 기간에 모두 포함</string>
+    <string name="ai_banner_body">• 받아쓴 텍스트 자동 개선
+• 모든 기록 요약
+• 나의 패턴에서 얻는 스마트한 삶의 조언. AI 출력물은 제안일 뿐, 전문 상담이 아니에요.
+• 무료 체험 기간에 모두 포함</string>
     <string name="cd_mic_start">녹음 시작</string>
     <string name="cd_mic_stop">녹음 중지</string>
     <string name="entry_improve_limit_daily">오늘 한도에 도달했어요. 내일 이어가요!</string>
@@ -1332,7 +1330,15 @@ Premium: 하루 최대 150회.</string>
     <string name="journal_improve">글 다듬기</string>
     <string name="journal_state_improving">다듬는 중…</string>
     <string name="journal_state_transcribing">변환하는 중…</string>
-    <string name="paywall_consent_dialog_body">구독 또는 구매 완료 후 원칙적으로 14일간의 철회권이 있어요.\n\n프리미엄 기능을 바로 이용할 수 있도록 구매 즉시 서비스 제공을 시작합니다. 아래에 동의하시면 14일간의 철회권을 포기하게 돼요.\n\n동의하지 않으시면 프리미엄 기능을 즉시 이용하실 수 없어요.</string>
+    <string name="paywall_consent_dialog_body">구독 또는 구매 완료 후 원칙적으로 14일간의 철회권이 있어요 (§ 355 BGB).
+
+프리미엄 기능을 즉시 이용하실 수 있도록 구매 즉시 서비스 제공을 시작합니다. 아래에 동의하시면 그 결과를 인지한 상태로 14일간의 철회권을 포기하게 됩니다 (§ 356 Abs. 5 BGB).
+
+동의하지 않으시면 프리미엄 기능을 즉시 이용하실 수 없어요.
+
+프리미엄 기능 제공자: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. 철회 이메일: dev.app.support@gmail.com.
+
+프리미엄 구독이 시작되면 계약 체결일로부터 14일간의 철회 기간이 시작돼요. 이메일로 자유로운 형식으로 철회를 표시하거나 EU 표준 철회 양식을 이용하실 수 있어요 (https://www.bmuv.de/widerruf — 외부 EU 양식).</string>
     <string name="paywall_consent_dialog_cancel">취소</string>
     <string name="paywall_consent_dialog_checkbox">주문 즉시 프리미엄 기능 제공이 시작됨에 동의합니다. 이로 인해 14일간의 철회권을 잃게 됨을 알고 있어요.</string>
     <string name="paywall_consent_dialog_confirm">지금 유료 구독하기</string>
@@ -1379,8 +1385,7 @@ Premium: 하루 최대 150회.</string>
     <string name="paywall_lifetime_label">일회성</string>
     <string name="paywall_monthly_label">월간</string>
     <string name="paywall_restore_button">구매 복원</string>
-    <string name="paywall_subscribe_button">구독</string>
-    <string name="paywall_subtitle">모든 Premium 혜택 이용</string>
+    <string name="paywall_s<string name="paywall_subtitle">모든 프리미엄 기능 잠금 해제</string>btitle">모든 Premium 혜택 이용</string>
     <string name="paywall_title">Premium으로 업그레이드</string>
     <string name="paywall_yearly_label">연간</string>
     <string name="prompt_char_count_label">%1$d자</string>
@@ -1397,11 +1402,39 @@ Premium: 하루 최대 150회.</string>
     </plurals>
     <plurals name="datetime_years_relative">
         <item quantity="one">vor %1$d Jahr</item>
-        <item quantity="other">vor %1$d Jahren</item>
-    </plurals>
-    <string name="ai_limits_disclaimer">집중적인 사용을 위한 넉넉한 일일 AI 할당량.</string>
+        <item quantity="other">vor %1$d <string name="ai_limits_disclaimer">집중 사용을 위한 AI 일일 이용 한도.</string>적인 사용을 위한 넉넉한 일일 AI 할당량.</string>
     <string name="ai_limits_dialog_title">일일 AI 할당량은 어떻게 작동하나요?</string>
-    <string name="ai_limits_dialog_body" formatted="false">PREMIUM 구독 시\n\n매일 이용 가능한 양:\n• AI 프로필당 최대 150회 대시보드 분석（4개 프로필 기준 하루 최대 600회）\n• 최대 150회 텍스트 개선\n\n세부 작동 방식:\n• 요청 1〜30회: 최고 AI 품질\n• 요청 31〜100회: 빠른 표준 품질\n• 101번째 요청 시: 1회 30분 휴식\n• 요청 101〜150회: 빠른 표준 품질\n• 151번째부터: 내일까지 추가 요청 불가\n\n또한 모든 사용자 공통:\n• 시간당 최대 50회 AI 요청 — 이후 5분 휴식\n\n할당량은 언제 초기화되나요?\n매일 자정（현지 시각）에 새로운 전체 할당량이 시작됩니다.\n\n──────────\n\n구독 없이\n\n• 프로필당 주 5회 대시보드 분석\n• 주 5회 텍스트 개선\n• 항상 빠른 표준 품질\n• 매주 월요일 자정（현지 시각）에 초기화\n\n──────────\n\n사용자의 99% 이상은 이러한 제한에 도달하지 않을 것입니다.</string>
+    <string name="ai_limits_dialog_body" formatted="false">PREMIUM 구독 시
+
+매일 이용 가능한 양:
+• 프로필당 하루 최대 150회 — 기본 4개 프로필 합산 600회/일, 직접 만든 프로필은 각 150회/일 추가.
+• 최대 150회 텍스트 개선
+
+세부 작동 방식:
+• 요청 1〜30회: 최고 AI 품질
+• 요청 31〜100회: 빠른 표준 품질
+• 101번째 요청 시: 1회 30분 휴식
+• 요청 101〜150회: 빠른 표준 품질
+• 151번째부터: 내일까지 추가 요청 불가
+
+또한 모든 사용자 공통:
+• 시간당 최대 50회 AI 요청 — 이후 5분 휴식
+
+할당량은 언제 초기화되나요?
+매일 자정 (현지 시각)에 새로운 전체 할당량이 시작됩니다.
+
+──────────
+
+구독 없이
+
+• 프로필당 주 5회 대시보드 분석
+• 주 5회 텍스트 개선
+• 항상 빠른 표준 품질
+• 매주 월요일 자정 (현지 시각)에 초기화
+
+──────────
+
+일상적으로 사용하는 대부분의 사용자는 이 한도에 도달하지 않을 거예요.</string>
     <string name="ai_limits_dialog_close">확인</string>
     <string name="theme_neutral">뉴트럴</string>
     <string name="theme_profile">프로필 색상 — 대시보드 프로필 색상</string>
@@ -1410,4 +1443,27 @@ Premium: 하루 최대 150회.</string>
     <string name="theme_one_dark">아틀리에</string>
     <string name="theme_nord">극야</string>
     <string name="theme_gruvbox">호박</string>
+
+    <!-- Permission rationale -->
+    <string name="permission_rationale_microphone">일기를 음성으로 받아쓸 수 있도록 마이크 접근 권한이 필요해요.</string>
+    <string name="permission_rationale_camera">기록에 사진을 추가할 수 있도록 카메라 접근 권한이 필요해요.</string>
+    <string name="permission_rationale_location">기록에 장소 정보를 추가할 수 있도록 대략적인 위치 접근 권한이 필요해요. 언제든지 거부하거나 나중에 끌 수 있어요.</string>
+    <string name="permission_rationale_notifications">매일 쓰기를 리마인드해 드리려면 알림 권한이 필요해요.</string>
+
+    <!-- System backup consent info -->
+    <string name="consent_info_system_backup_title">Android 시스템 백업</string>
+    <string name="consent_info_system_backup_body">기기 설정에서 Android 시스템 백업을 활성화하신 경우, Android가 일기 데이터를 Google 계정의 백업 영역에 자동으로 저장해요. 기기 설정에서 언제든지 비활성화할 수 있어요 — 자세한 내용은 개인정보 처리방침을 참조해 주세요.</string>
+    <string name="settings_open_system_backup_settings_label">Android 시스템 백업 관리</string>
+    <string name="settings_open_system_backup_settings_desc">Best Journal의 자동 백업을 켜거나 끌 수 있는 Android 시스템 설정을 열어요.</string>
+    <string name="error_no_backup_settings_available">이 기기에서는 백업 설정을 사용할 수 없어요.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">개인정보 처리방침</string>
+    <string name="consent_footer_link_impressum">발행인 정보</string>
+    <string name="consent_footer_link_agb">이용약관</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">치료가 아니에요 — 전문 상담을 대체하지 않아요.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal은 일기 앱이며 치료 서비스가 아니에요. AI 분석은 자기 성찰을 위한 제안이며 전문적인 심리 또는 의료 상담을 대체하지 않아요. 급박한 문제가 있으시면 전문가나 설정 내 위기 상담 정보를 이용해 주세요.</string>
+
 </resources>

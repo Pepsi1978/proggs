@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">প্রতিদিন AI টেক্সট উন্নতি</string>
-    <string name="settings_premium_feature_improve_desc">প্রতিটি লেখা আরো অভিব্যক্তিপূর্ণ হয়</string>
+    <string name="settings_premium_feature_improve_desc">চাইলেই এআই তোমার লেখা উন্নত করে দেয়।</string>
     <string name="settings_premium_feature_dashboard">প্রতিদিন ড্যাশবোর্ড বিশ্লেষণ</string>
-    <string name="settings_premium_feature_dashboard_desc">তোমার ড্যাশবোর্ড তোমার সাথে বেড়ে উঠে</string>
-    <string name="settings_premium_feature_5_perspectives">5টি এআই-দৃষ্টিকোণ</string>
+    <string name="settings_premium_feature_dashboard_desc">তোমার লেখার সাথে সাথে তোমার ড্যাশবোর্ডও বাড়তে থাকে।</string>
+    <string name="settings_premium_feature_5_perspectives">সব এআই-প্রোফাইল (4টি পূর্বনির্ধারিত + সীমাহীন নিজস্ব)</string>
     <string name="settings_premium_feature_5_perspectives_desc">স্পষ্টতা থেকে আত্ম-উপলব্ধি পর্যন্ত</string>
     <string name="settings_premium_feature_reviews">সাপ্তাহিক, মাসিক আর বার্ষিক পর্যালোচনা</string>
     <string name="settings_premium_feature_reviews_desc">এআই তোমার গল্প বলে</string>
     <string name="settings_premium_feature_patterns">প্যাটার্ন চিনতে পারা</string>
-    <string name="settings_premium_feature_patterns_desc">এআই এমন সংযোগ খুঁজে পায় যা তোমার চোখে পড়ে না</string>
+    <string name="settings_premium_feature_patterns_desc">এআই তোমার লেখায় লুকানো প্যাটার্ন ও সংযোগ দৃশ্যমান করে তুলতে পারে।</string>
     <string name="settings_premium_feature_pdf">ছবি সহ পিডিএফ এক্সপোর্ট</string>
     <string name="settings_premium_feature_pdf_desc">সব দিনলিপির লেখা ছবি সহ নথি হিসেবে</string>
     <string name="settings_premium_feature_voice">আরো নির্ভুল ভয়েস রিকগনিশন</string>
@@ -817,10 +817,10 @@
     <string name="onboarding_goals_select">এক বা একাধিক লক্ষ্য বেছে নাও</string>
     <string name="onboarding_how_step3_title">ছবি যোগ করো</string>
     <string name="onboarding_how_title">এত সহজে হয়</string>
-    <string name="onboarding_perspectives_title">তোমার জীবনের\n5টি দৃষ্টিকোণ</string>
+    <string name="onboarding_perspectives_title">তোমার জীবনের\nবিভিন্ন দৃষ্টিভঙ্গি</string>
     <string name="onboarding_premium_feature_pdf">ছবি সহ পিডিএফ-এক্সপোর্ট, তোমার লেখা নথি হিসেবে সুরক্ষিত করো</string>
     <string name="onboarding_premium_profiles">তোমার জীবনের গভীর অন্তর্দৃষ্টির জন্য 5টি স্মার্ট ড্যাশবোর্ড-প্রোফাইল</string>
-    <string name="onboarding_try_premium">8 দিন Premium পরীক্ষা করো</string>
+    <string name="onboarding_try_premium">৮ দিন বিনামূল্যে — তারপর মাত্র ৩.৯৯ €/মাস থেকে</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -837,7 +837,7 @@
     <string name="paywall_yearly_note">তারপর বছরে %1$s\nপরীক্ষার সময়ে যেকোনো সময় বাতিলযোগ্য</string>
     <string name="paywall_most_popular">সবচেয়ে জনপ্রিয় পছন্দ</string>
     <string name="paywall_monthly_plan">মাসিক সাবস্ক্রিপশন, মাসে %1$s</string>
-    <string name="paywall_yearly_savings">মাসিক সাবস্ক্রিপশনের তুলনায় %1$d%% সাশ্রয় করো, যেকোনো সময় বাতিলযোগ্য</string>
+    <string name="paywall_yearly_savings">মাসিক সাবস্ক্রিপশনের তুলনায় %1$d%% সাশ্রয় — চুক্তির মেয়াদ শেষে যেকোনো সময় বাতিল করা যায়।</string>
     <string name="paywall_lifetime_title">একবার কেনাকাটা</string>
     <string name="paywall_lifetime_desc">একবার পরিশোধ করো, সব কিছু স্থায়ীভাবে ব্যবহার করো</string>
     <string name="paywall_lifetime_note">কোনো সাবস্ক্রিপশন নয়, কোনো পুনর্নবীকরণ নয়</string>
@@ -854,8 +854,8 @@
     <string name="paywall_feature_profiles">অসীম কাস্টম বিশ্লেষণ প্রোফাইল</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">তোমার ভেতরের শান্তি খুঁজে পাও</string>
-    <string name="paywall_headline_stress_sub">তোমাকে অভিভূত করার আগে কী চাপ দিচ্ছে তা চিনতে পারো</string>
+    <string name="paywall_headline_stress">দৈনন্দিন জীবনে আরো স্পষ্টতা</string>
+    <string name="paywall_headline_stress_sub">প্রতিদিন কী তোমাকে ব্যস্ত রাখে তা চিনে নাও এবং মূল বিষয়ে আসো।</string>
     <string name="paywall_headline_clarity">নিজেকে ভালো বুঝো</string>
     <string name="paywall_headline_clarity_sub">এআই তোমার কাছে লুকানো প্যাটার্ন চিনতে পারে</string>
     <string name="paywall_headline_growth">প্রতিটি দিনে ভালো আবিষ্কার করো</string>
@@ -870,7 +870,7 @@
     <string name="paywall_exit_special_offer">আমাদের তোমার জন্য\nএকটি বিশেষ অফার আছে:</string>
     <string name="paywall_exit_discount">%1$d মাসের জন্য ছাড়</string>
     <string name="paywall_exit_price_comparison">মাসে %2$s এর বদলে মাত্র %1$s</string>
-    <string name="paywall_exit_start_discount">50% ছাড়ে মাসিক সাবস্ক্রিপশন শুরু করো</string>
+    <string name="paywall_exit_start_discount">পেমেন্টযোগ্য — ২ মাস অর্ধেক দামে</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -896,9 +896,9 @@
     <string name="churn_sorry_title">তুমি যাচ্ছো দুঃখের বিষয়</string>
     <string name="churn_sorry_body">বাতিল করার আগে, আমাদের বলবে কেন? এটি আমাদের অ্যাপ উন্নত করতে সাহায্য করে।</string>
     <string name="churn_exclusive_offer">বিশেষ অফার</string>
-    <string name="churn_offer_subtitle">শুধু তোমার জন্য, কারণ তুমি আমাদের কাছে গুরুত্বপূর্ণ</string>
+    <string name="churn_offer_subtitle">তোমার জন্য আমাদের অফার</string>
     <string name="churn_offer_feature_ai">প্রতিদিন AI বিশ্লেষণ</string>
-    <string name="churn_offer_feature_perspectives">5টি দৃষ্টিকোণের সবগুলি</string>
+    <string name="churn_offer_feature_perspectives">সব এআই-প্রোফাইল (4টি পূর্বনির্ধারিত + সীমাহীন নিজস্ব)</string>
     <string name="churn_offer_feature_voice">Premium-ভয়েস রিকগনিশন</string>
     <string name="churn_offer_auto_renew">স্বয়ংক্রিয়ভাবে নবীকরণ হয়, যেকোনো সময় বাতিলযোগ্য</string>
     <string name="churn_accept_offer">অফার গ্রহণ করো</string>
@@ -918,7 +918,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="ai_limit_yearly">বার্ষিক সাবস্ক্রিপশন, %1$s/বছর (37%% সাশ্রয়)</string>
     <string name="ai_limit_no_thanks">না ধন্যবাদ, এআই ছাড়াই এগিয়ে যাও</string>
     <string name="ai_banner_title">তোমার দিনলিপি এআই দ্বারা সমর্থিত</string>
-    <string name="ai_banner_body">• ডিক্টেট করা লেখা স্বয়ংক্রিয়ভাবে উন্নত হয়\n• প্রতিটি লেখার জন্য সারসংক্ষেপ\n• তোমার প্যাটার্ন থেকে স্মার্ট জীবন-পরামর্শ\n• তোমার বিনামূল্যে পরীক্ষার সময়ে সব অন্তর্ভুক্ত</string>
+    <string name="ai_banner_body">• ডিক্টেট করা লেখা স্বয়ংক্রিয়ভাবে উন্নত হয়\n• প্রতিটি লেখার জন্য সারসংক্ষেপ\n• তোমার লেখায় প্যাটার্ন ও সংযোগ আবিষ্কার করো\n• সব এআই-আউটপুট হলো স্ব-প্রতিফলনের পরামর্শ, কোনো পেশাদার পরামর্শ নয়</string>
     <string name="cd_mic_start">রেকর্ডিং শুরু করো</string>
     <string name="cd_mic_stop">রেকর্ডিং থামাও</string>
     <string name="entry_improve_limit_daily">দৈনিক সীমা শেষ। আগামীকাল আবার চলবে!</string>
@@ -1266,6 +1266,14 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="consent_saved_snackbar">সেটিং সংরক্ষিত হয়েছে</string>
     <string name="consent_revoke_snackbar">সম্মতি প্রত্যাহার করা হয়েছে</string>
     <string name="consent_footer_version">আপনার নির্বাচন সেটিংসে যেকোনো সময় পরিবর্তন করা যায়।</string>
+    <string name="consent_footer_link_datenschutz">গোপনীয়তা নীতি</string>
+    <string name="consent_footer_link_impressum">ইমপ্রেসুম</string>
+    <string name="consent_footer_link_agb">ব্যবহারের শর্তাবলী</string>
+    <string name="consent_info_system_backup_title">Android সিস্টেম ব্যাকআপ</string>
+    <string name="consent_info_system_backup_body">Android স্বয়ংক্রিয়ভাবে অ্যাপের ডেটা Google-এর সার্ভারে ব্যাকআপ করতে পারে, যদি তুমি Google অ্যাকাউন্ট দিয়ে সাইন ইন করো এবং Google-এর ব্যাকআপ সেবা সক্রিয় করা থাকে। এতে তোমার ডায়েরির এন্ট্রি এবং সেটিংস অন্তর্ভুক্ত থাকতে পারে। এটি Best Journal-এর নিজস্ব Google Drive ব্যাকআপ থেকে আলাদা। তুমি Android সিস্টেম সেটিংসে এই ব্যাকআপ নিয়ন্ত্রণ করতে পারো।</string>
+    <string name="settings_open_system_backup_settings_label">Android সিস্টেম ব্যাকআপ পরিচালনা করো</string>
+    <string name="settings_open_system_backup_settings_desc">Android সিস্টেম সেটিংস খুলবে যেখানে তুমি স্বয়ংক্রিয় ব্যাকআপ সক্রিয় বা নিষ্ক্রিয় করতে পারবে।</string>
+    <string name="error_no_backup_settings_available">এই ডিভাইসে ব্যাকআপ সেটিংস পাওয়া যাচ্ছে না।</string>
     <string name="consent_details_expand">বিস্তারিত</string>
     <string name="settings_open_privacy_sheet">গোপনীয়তা সেটিংস কাস্টমাইজ করুন</string>
     <string name="settings_privacy_section_header">গোপনীয়তা এবং সম্মতি</string>
@@ -1339,7 +1347,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
 
     <!-- Paywall / consent strings -->
     <string name="paywall_title">প্রিমিয়ামে আপগ্রেড করো</string>
-    <string name="paywall_subtitle">সমস্ত প্রিমিয়াম সুবিধা উপভোগ করো</string>
+    <string name="paywall_subtitle">সব Premium সুবিধা আনলক করো</string>
     <string name="paywall_monthly_label">মাসিক</string>
     <string name="paywall_yearly_label">বার্ষিক</string>
     <string name="paywall_lifetime_label">একবারেই</string>
@@ -1347,7 +1355,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="paywall_restore_button">ক্রয় পুনরুদ্ধার করো</string>
     <string name="paywall_cancel_anytime">যেকোনো সময় বাতিল করো</string>
     <string name="paywall_consent_dialog_title">বিনামূল্যে বাতিলের অধিকার</string>
-    <string name="paywall_consent_dialog_body">তুমি একটি সাবস্ক্রিপশন কিনছো। §355 BGB অনুযায়ী তোমার 14 দিনের মধ্যে বিনামূল্যে বাতিলের অধিকার আছে। §356 BGB অনুযায়ী ডিজিটাল বিষয়বস্তুর ক্ষেত্রে এই অধিকার বাতিল হয়ে যায় যদি তুমি সম্মতি দাও।</string>
+    <string name="paywall_consent_dialog_body">সাবস্ক্রিপশন বা ক্রয় সম্পন্ন করার পর আপনার মূলত ১৪ দিনের প্রত্যাহারের অধিকার রয়েছে (§ 355 BGB)।\n\nআপনি যাতে Premium সুবিধাগুলো সঙ্গে সঙ্গে ব্যবহার করতে পারেন, সেজন্য আমরা আপনার ক্রয়ের পরপরই সেগুলো সক্রিয় করি। নিচে সম্মতি দিলে আপনি সচেতনভাবে আপনার ১৪ দিনের প্রত্যাহারের অধিকার ছেড়ে দিচ্ছেন (§ 356 Abs. 5 BGB)।\n\nএই সম্মতি ছাড়া আমরা Premium সুবিধাগুলো তাৎক্ষণিকভাবে সক্রিয় করতে পারব না।\n\nPremium সুবিধার সরবরাহকারী: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. প্রত্যাহারের জন্য ই-মেইল: dev.app.support@gmail.com।\n\nযদি সরবরাহ শুরু হওয়ার আগে প্রত্যাহার না করেন এবং Premium সাবস্ক্রিপশন শুরু হয়ে যায়, তাহলে চুক্তি সম্পাদনের দিন থেকে আপনার ১৪ দিনের প্রত্যাহারের মেয়াদ শুরু হবে। আপনি ই-মেইলে যেকোনো রূপে প্রত্যাহার করতে পারবেন বা EU-Muster-Widerrufsformular ব্যবহার করতে পারবেন (https://www.bmuv.de/widerruf — বাহ্যিক EU-নমুনা)।</string>
     <string name="paywall_consent_dialog_checkbox">আমি সম্মত যে ডিজিটাল বিষয়বস্তুর সাথে ডাউনলোড শুরু হলে আমার বাতিলের অধিকার বাতিল হবে।</string>
     <string name="paywall_consent_dialog_confirm">সম্মত হও এবং কিনো</string>
     <string name="paywall_consent_dialog_cancel">বাতিল করো</string>
@@ -1415,9 +1423,9 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">নিবিড় ব্যবহারের জন্য উদার দৈনিক AI কোটা।</string>
+    <string name="ai_limits_disclaimer">নিবিড় ব্যবহারের জন্য এআই দৈনিক কোটা।</string>
     <string name="ai_limits_dialog_title">দৈনিক AI কোটা কীভাবে কাজ করে?</string>
-    <string name="ai_limits_dialog_body" formatted="false">প্রিমিয়াম সদস্যতায়\n\nপ্রতিদিন পাওয়া যায়:\n• প্রতিটি AI প্রোফাইলের জন্য 150টি পর্যন্ত ড্যাশবোর্ড বিশ্লেষণ (4টি প্রোফাইল = প্রতিদিন 600টি পর্যন্ত)\n• 150টি পর্যন্ত টেক্সট উন্নতি\n\nবিস্তারিত:\n• অনুরোধ 1 থেকে 30: সর্বোচ্চ AI মান\n• অনুরোধ 31 থেকে 100: দ্রুত স্ট্যান্ডার্ড মান\n• 101তম অনুরোধে: একবার 30 মিনিটের বিরতি\n• অনুরোধ 101 থেকে 150: দ্রুত স্ট্যান্ডার্ড মান\n• 151তম অনুরোধ থেকে: আজকের জন্য আর কোনো অনুরোধ নেই\n\nসব ব্যবহারকারীর জন্য:\n• প্রতি ঘণ্টায় সর্বোচ্চ 50টি AI অনুরোধ — তারপর 5 মিনিটের বিরতি\n\nকোটা কখন রিসেট হয়?\nপ্রতিদিন 0:00 (আপনার স্থানীয় সময়) থেকে নতুন পূর্ণ কোটা শুরু হয়।\n\n──────────\n\nসদস্যতা ছাড়া\n\n• প্রতি সপ্তাহে প্রতি প্রোফাইলে 5টি ড্যাশবোর্ড বিশ্লেষণ\n• প্রতি সপ্তাহে 5টি টেক্সট উন্নতি\n• সর্বদা দ্রুত স্ট্যান্ডার্ড মানে\n• প্রতি সোমবার 0:00 (আপনার স্থানীয় সময়) রিসেট হয়\n\n──────────\n\n99%-এরও বেশি ব্যবহারকারী সম্ভবত কখনো এই সীমাগুলোর মুখোমুখি হবেন না।</string>
+    <string name="ai_limits_dialog_body" formatted="false">প্রিমিয়াম সাবস্ক্রিপশনে\n\nপ্রতিদিন পাওয়া যায়:\n• প্রতি প্রোফাইলে প্রতিদিন 150টি অনুরোধ — ৪টি পূর্বনির্ধারিত প্রোফাইল মিলে ৬০০/দিন, আর তোমার নিজস্ব প্রতিটি প্রোফাইলের জন্য ১৫০/দিন।\n• সর্বোচ্চ 150টি টেক্সট উন্নতি\n\nবিস্তারিত প্রক্রিয়া:\n• অনুরোধ ১ থেকে ৩০: সর্বোচ্চ এআই মানে\n• অনুরোধ ৩১ থেকে ১০০: দ্রুত স্ট্যান্ডার্ড মানে\n• ১০১তম অনুরোধে: একবার ৩০ মিনিটের বিরতি\n• অনুরোধ ১০১ থেকে ১৫০: দ্রুত স্ট্যান্ডার্ড মানে\n• ১৫১তম অনুরোধ থেকে: আজকের জন্য আর কোনো অনুরোধ নেই\n\nসব ব্যবহারকারীর ক্ষেত্রে:\n• প্রতি ঘণ্টায় সর্বোচ্চ ৫০টি এআই অনুরোধ — তারপর ৫ মিনিটের বিরতি\n\nকোটা কখন রিসেট হয়?\nপ্রতিদিন ০:০০ (তোমার স্থানীয় সময়) থেকে নতুন পূর্ণ কোটা শুরু হয়।\n\n──────────\n\nসাবস্ক্রিপশন ছাড়া\n\n• প্রতি সপ্তাহে প্রতি প্রোফাইলে ৫টি ড্যাশবোর্ড বিশ্লেষণ\n• প্রতি সপ্তাহে ৫টি টেক্সট উন্নতি\n• সর্বদা দ্রুত স্ট্যান্ডার্ড মানে\n• প্রতি সোমবার ০:০০ (তোমার স্থানীয় সময়) রিসেট হয়\n\n──────────\n\nস্বাভাবিক ব্যবহারে বেশিরভাগ ব্যবহারকারী এই সীমায় পৌঁছাবেন না।</string>
     <string name="ai_limits_dialog_close">বুঝলাম</string>
     <string name="theme_neutral">নিরপেক্ষ</string>
     <string name="theme_profile">প্রোফাইল রঙ — ড্যাশবোর্ড প্রোফাইলের রঙ</string>
@@ -1426,4 +1434,14 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="theme_one_dark">কর্মশালা</string>
     <string name="theme_nord">মেরু রাত</string>
     <string name="theme_gruvbox">অ্যাম্বার</string>
+
+    <!-- Permission rationale strings -->
+    <string name="permission_rationale_microphone">তুমি যাতে কণ্ঠস্বর দিয়ে তোমার ডায়েরির এন্ট্রি ডিক্টেট করতে পারো, সেজন্য আমাদের তোমার মাইক্রোফোনের অ্যাক্সেস দরকার।</string>
+    <string name="permission_rationale_camera">তুমি যাতে তোমার এন্ট্রিতে ছবি যোগ করতে পারো, সেজন্য আমাদের তোমার ক্যামেরার অ্যাক্সেস দরকার।</string>
+    <string name="permission_rationale_location">তুমি যাতে তোমার এন্ট্রিতে অবস্থানের প্রসঙ্গ যোগ করতে পারো, সেজন্য আমাদের আনুমানিক অবস্থান জানা দরকার। তুমি যেকোনো সময় এটি প্রত্যাখ্যান করতে বা পরে বন্ধ করতে পারো।</string>
+    <string name="permission_rationale_notifications">আমরা যাতে তোমাকে প্রতিদিনের লেখার কথা মনে করিয়ে দিতে পারি, সেজন্য আমাদের বিজ্ঞপ্তির অনুমতি দরকার।</string>
+
+    <!-- AI health disclaimer strings (HWG §3, EU AI Act Art. 50) -->
+    <string name="ai_output_health_disclaimer">কোনো থেরাপি নয় — পেশাদার পরামর্শের বিকল্প নয়।</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal একটি ডায়েরি, কোনো থেরাপি সেবা নয়। এআই বিশ্লেষণ স্ব-প্রতিফলনের জন্য পরামর্শ, এটি কোনো পেশাদার মনস্তাত্ত্বিক বা চিকিৎসা পরামর্শের বিকল্প নয়। জরুরি সমস্যায় কোনো বিশেষজ্ঞ বা সেটিংসে থাকা সংকট সহায়তার সাথে যোগাযোগ করো।</string>
 </resources>

@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Codzienna poprawa tekstu AI</string>
-    <string name="settings_premium_feature_improve_desc">Każdy wpis zyskuje wyrazistość</string>
+    <string name="settings_premium_feature_improve_desc">AI ulepsza Twoje wpisy na życzenie.</string>
     <string name="settings_premium_feature_dashboard">Codzienne analizy panelu</string>
-    <string name="settings_premium_feature_dashboard_desc">Panel rośnie razem z Tobą</string>
-    <string name="settings_premium_feature_5_perspectives">5 perspektyw SI</string>
+    <string name="settings_premium_feature_dashboard_desc">Twój panel rośnie razem z Twoimi wpisami.</string>
+    <string name="settings_premium_feature_5_perspectives">Wszystkie profile AI (4 predefiniowane + nieograniczone własne)</string>
     <string name="settings_premium_feature_5_perspectives_desc">Od jasności do samowiedzy</string>
     <string name="settings_premium_feature_reviews">Podsumowania tygodniowe, miesięczne i roczne</string>
     <string name="settings_premium_feature_reviews_desc">SI opowiada Twoją historię</string>
     <string name="settings_premium_feature_patterns">Wykrywanie wzorców</string>
-    <string name="settings_premium_feature_patterns_desc">SI znajdzie powiązania, których nie zauważasz</string>
+    <string name="settings_premium_feature_patterns_desc">AI może ujawniać wzorce i powiązania w Twoich wpisach.</string>
     <string name="settings_premium_feature_pdf">Eksport PDF ze zdjęciami</string>
     <string name="settings_premium_feature_pdf_desc">Wszystkie wpisy ze zdjęciami jako dokument</string>
     <string name="settings_premium_feature_voice">Dokładniejsze rozpoznawanie mowy</string>
@@ -819,10 +819,10 @@
     <string name="onboarding_goals_select">Wybierz jeden lub więcej celów</string>
     <string name="onboarding_how_step3_title">Dodaj zdjęcia</string>
     <string name="onboarding_how_title">Tak to wygląda</string>
-    <string name="onboarding_perspectives_title">5 perspektyw na\nTwoje życie</string>
+    <string name="onboarding_perspectives_title">Różne perspektywy na\nTwoje życie</string>
     <string name="onboarding_premium_feature_pdf">Eksport PDF ze zdjęciami, zachowaj wpisy jako dokument</string>
     <string name="onboarding_premium_profiles">5 inteligentnych profili panelu dla głębokiego spojrzenia na życie</string>
-    <string name="onboarding_try_premium">Wypróbuj Premium 8 dni</string>
+    <string name="onboarding_try_premium">8 dni za darmo — potem od 3,99 €/miesiąc</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -839,7 +839,7 @@
     <string name="paywall_yearly_note">Potem %1$s rocznie\nW okresie próbnym anulujesz w każdej chwili</string>
     <string name="paywall_most_popular">Najczęściej wybierane</string>
     <string name="paywall_monthly_plan">Subskrypcja miesięczna, %1$s miesięcznie</string>
-    <string name="paywall_yearly_savings">Oszczędź %1$d%% w porównaniu z miesięczną, anulujesz w każdej chwili</string>
+    <string name="paywall_yearly_savings">Oszczędź %1$d%% w porównaniu z planem miesięcznym — możesz anulować w każdej chwili do końca okresu rozliczeniowego.</string>
     <string name="paywall_lifetime_title">Zakup jednorazowy</string>
     <string name="paywall_lifetime_desc">Zapłać raz, korzystaj na stałe</string>
     <string name="paywall_lifetime_note">Bez subskrypcji, bez odnowień</string>
@@ -856,8 +856,8 @@
     <string name="paywall_feature_profiles">Nieograniczone własne profile analizy</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Znajdź wewnętrzny spokój</string>
-    <string name="paywall_headline_stress_sub">Rozpoznaj, co Cię obciąża, zanim Cię przytłoczy</string>
+    <string name="paywall_headline_stress">Więcej jasności na co dzień</string>
+    <string name="paywall_headline_stress_sub">Rozpoznaj, co Cię codziennie zajmuje, i ujmij to w słowa.</string>
     <string name="paywall_headline_clarity">Lepiej zrozum siebie</string>
     <string name="paywall_headline_clarity_sub">SI rozpoznaje wzorce, które umykają</string>
     <string name="paywall_headline_growth">Odkryj dobre w każdym dniu</string>
@@ -872,7 +872,7 @@
     <string name="paywall_exit_special_offer">Mamy dla Ciebie\nwyjątkową ofertę:</string>
     <string name="paywall_exit_discount">Rabat na %1$d miesięcy</string>
     <string name="paywall_exit_price_comparison">Tylko %1$s zamiast %2$s miesięcznie</string>
-    <string name="paywall_exit_start_discount">Rozpocznij subskrypcję miesięczną z 50% rabatem</string>
+    <string name="paywall_exit_start_discount">Subskrypcja płatna — 2 miesiące w połowie ceny</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -898,9 +898,9 @@
     <string name="churn_sorry_title">Szkoda, że odchodzisz</string>
     <string name="churn_sorry_body">Zanim anulujesz, powiesz nam dlaczego? Pomaga nam to ulepszać aplikację.</string>
     <string name="churn_exclusive_offer">Oferta specjalna</string>
-    <string name="churn_offer_subtitle">Tylko dla Ciebie, bo jesteś ważny</string>
+    <string name="churn_offer_subtitle">Nasza oferta dla Ciebie</string>
     <string name="churn_offer_feature_ai">Codzienne analizy AI</string>
-    <string name="churn_offer_feature_perspectives">Wszystkie 5 perspektyw</string>
+    <string name="churn_offer_feature_perspectives">Wszystkie profile AI (4 predefiniowane + nieograniczone własne)</string>
     <string name="churn_offer_feature_voice">Rozpoznawanie mowy Premium</string>
     <string name="churn_offer_auto_renew">Odnawia się automatycznie, anulujesz w każdej chwili</string>
     <string name="churn_accept_offer">Przyjmij ofertę</string>
@@ -920,7 +920,7 @@ Z Premium: do 150 dziennie.</string>
     <string name="ai_limit_yearly">Subskrypcja roczna, %1$s/rok (oszczędzasz 37%%)</string>
     <string name="ai_limit_no_thanks">Nie dziękuję, dalej bez SI</string>
     <string name="ai_banner_title">Twój dziennik wspiera SI</string>
-    <string name="ai_banner_body">• Dyktowane teksty są poprawiane automatycznie\n• Podsumowania dla każdego wpisu\n• Inteligentne rady życiowe na podstawie Twoich wzorców\n• Wszystko w cenie darmowego okresu próbnego</string>
+    <string name="ai_banner_body">• Dyktowane teksty są poprawiane automatycznie\n• Podsumowania dla każdego wpisu\n• Inteligentne porady życiowe na podstawie Twoich wzorców. Wszystkie wyniki AI to sugestie, nie profesjonalne doradztwo.\n• Wszystko w cenie darmowego okresu próbnego</string>
     <string name="cd_mic_start">Rozpocznij nagranie</string>
     <string name="cd_mic_stop">Zatrzymaj nagranie</string>
     <string name="entry_improve_limit_daily">Limit dzienny osiągnięty. Jutro dalej!</string>
@@ -1276,6 +1276,18 @@ Co chcesz zrobić?</string>
     <string name="consent_saved_snackbar">Ustawienie zapisane</string>
     <string name="consent_revoke_snackbar">Zgoda wycofana</string>
     <string name="consent_footer_version">Twój wybór można zmienić w każdej chwili w Ustawieniach.</string>
+    <string name="consent_footer_link_datenschutz">Prywatność</string>
+    <string name="consent_footer_link_impressum">Impressum</string>
+    <string name="consent_footer_link_agb">Warunki użytkowania</string>
+    <string name="consent_info_system_backup_title">Kopia zapasowa systemu Android</string>
+    <string name="consent_info_system_backup_body">Jeśli masz włączoną kopię zapasową systemu Android w ustawieniach urządzenia, Android automatycznie tworzy kopię zapasową danych Twojego dziennika na koncie Google. Możesz to wyłączyć w dowolnym momencie w ustawieniach urządzenia — szczegóły w polityce prywatności.</string>
+    <string name="permission_rationale_microphone">Aby móc dyktować wpisy głosowo, potrzebujemy dostępu do Twojego mikrofonu.</string>
+    <string name="permission_rationale_camera">Aby móc dodawać zdjęcia do wpisów, potrzebujemy dostępu do Twojego aparatu.</string>
+    <string name="permission_rationale_location">Aby móc nadać wpisom kontekst miejsca, potrzebujemy przybliżonej lokalizacji. Możesz to odrzucić w dowolnej chwili lub wyłączyć później.</string>
+    <string name="permission_rationale_notifications">Aby móc przypominać Ci o codziennym pisaniu, potrzebujemy zgody na powiadomienia.</string>
+    <string name="settings_open_system_backup_settings_label">Zarządzaj kopią zapasową systemu Android</string>
+    <string name="settings_open_system_backup_settings_desc">Otwiera ustawienia systemowe Androida, gdzie możesz włączyć lub wyłączyć automatyczną kopię zapasową dla Best Journal.</string>
+    <string name="error_no_backup_settings_available">Ustawienia kopii zapasowej niedostępne na tym urządzeniu.</string>
     <string name="consent_details_expand">Szczegóły</string>
     <string name="settings_open_privacy_sheet">Dostosuj ustawienia prywatności</string>
     <string name="settings_privacy_section_header">Prywatność i zgody</string>
@@ -1350,7 +1362,7 @@ Co chcesz zrobić?</string>
     <string name="journal_improve">Popraw tekst</string>
     <string name="journal_state_improving">Ulepszanie…</string>
     <string name="journal_state_transcribing">Transkrypcja…</string>
-    <string name="paywall_consent_dialog_body">Po zawarciu subskrypcji lub dokonaniu zakupu masz co do zasady 14-dniowe prawo do odstąpienia od umowy.\n\nAby umożliwić Ci natychmiastowe korzystanie z funkcji Premium, rozpoczynamy dostawę niezwłocznie po Twoim zakupie. Wyrażając zgodę poniżej, świadomie rezygnujesz z 14-dniowego prawa do odstąpienia od umowy.\n\nBez tej zgody nie możemy natychmiast odblokować funkcji Premium.</string>
+    <string name="paywall_consent_dialog_body">Po zawarciu subskrypcji lub dokonaniu zakupu masz co do zasady 14-dniowe prawo do odstąpienia od umowy (§ 355 BGB).\n\nAby umożliwić Ci natychmiastowe korzystanie z funkcji Premium, rozpoczynamy dostawę niezwłocznie po Twoim zakupie. Wyrażając zgodę poniżej, świadomie rezygnujesz z 14-dniowego prawa do odstąpienia od umowy (§ 356 ust. 5 BGB).\n\nBez tej zgody nie możemy natychmiast odblokować funkcji Premium.\n\nDostawca funkcji Premium: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Niemcy. E-mail do odstąpienia: dev.app.support@gmail.com.\n\nJeśli nie złożysz oświadczenia o rezygnacji przed rozpoczęciem dostawy i subskrypcja Premium zostanie uruchomiona, Twój 14-dniowy termin do odstąpienia biegnie od dnia zawarcia umowy. Możesz odstąpić od umowy w dowolnej formie e-mailem lub skorzystać z wzoru formularza UE (https://www.bmuv.de/widerruf — zewnętrzny wzór UE).</string>
     <string name="paywall_consent_dialog_cancel">Anuluj</string>
     <string name="paywall_consent_dialog_checkbox">Wyrażam zgodę, aby dostarczanie funkcji Premium rozpoczęło się natychmiast po złożeniu zamówienia. Wiem, że w ten sposób tracę 14-dniowe prawo do odstąpienia od umowy.</string>
     <string name="paywall_consent_dialog_confirm">Subskrybuj teraz z obowiązkiem zapłaty</string>
@@ -1398,7 +1410,7 @@ Co chcesz zrobić?</string>
     <string name="paywall_monthly_label">Miesięcznie</string>
     <string name="paywall_restore_button">Przywróć zakupy</string>
     <string name="paywall_subscribe_button">Subskrybuj</string>
-    <string name="paywall_subtitle">Korzystaj ze wszystkich korzyści Premium</string>
+    <string name="paywall_subtitle">Odblokuj wszystkie funkcje Premium</string>
     <string name="paywall_title">Przejdź na Premium</string>
     <string name="paywall_yearly_label">Rocznie</string>
     <string name="prompt_char_count_label">%1$d znaków</string>
@@ -1417,9 +1429,9 @@ Co chcesz zrobić?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Hojny dzienny limit AI dla intensywnego użytkowania.</string>
+    <string name="ai_limits_disclaimer">Dzienny limit AI dla intensywnego użytkowania.</string>
     <string name="ai_limits_dialog_title">Jak działa dzienny limit AI?</string>
-    <string name="ai_limits_dialog_body" formatted="false">Z SUBSKRYPCJĄ PREMIUM\n\nKażdego dnia masz do dyspozycji:\n• Do 150 analiz pulpitu na profil AI (przy 4 profilach nawet do 600 dziennie)\n• Do 150 ulepszeń tekstu\n\nJak to działa w szczegółach:\n• Zapytania 1–30: w najwyższej jakości AI\n• Zapytania 31–100: w szybkiej jakości standardowej\n• Przy 101. zapytaniu: jednorazowa przerwa 30 min\n• Zapytania 101–150: szybka jakość standardowa\n• Od 151. zapytania: brak kolejnych do jutra\n\nPonadto dla wszystkich użytkowników:\n• Maksymalnie 50 zapytań AI na godzinę — potem przerwa 5 min\n\nKiedy limity są odnawiane?\nKażdego dnia o północy (czas lokalny) zaczyna się nowy pełny limit.\n\n──────────\n\nBEZ SUBSKRYPCJI\n\n• 5 analiz pulpitu tygodniowo na profil\n• 5 ulepszeń tekstu tygodniowo\n• Zawsze w szybkiej jakości standardowej\n• Odnawiane w każdy poniedziałek o północy (czas lokalny)\n\n──────────\n\nPonad 99% użytkowników prawdopodobnie nigdy nie dotrze do tych limitów.</string>
+    <string name="ai_limits_dialog_body" formatted="false">Z SUBSKRYPCJĄ PREMIUM\n\nKażdego dnia masz do dyspozycji:\n• 150 zapytań dziennie na profil — dla 4 predefiniowanych łącznie 600/dzień, plus 150/dzień dla każdego własnego profilu.\n• Do 150 ulepszeń tekstu\n\nJak to działa w szczegółach:\n• Zapytania 1–30: w najwyższej jakości AI\n• Zapytania 31–100: w szybkiej jakości standardowej\n• Przy 101. zapytaniu: jednorazowa przerwa 30 min\n• Zapytania 101–150: szybka jakość standardowa\n• Od 151. zapytania: brak kolejnych do jutra\n\nPonadto dla wszystkich użytkowników:\n• Maksymalnie 50 zapytań AI na godzinę — potem przerwa 5 min\n\nKiedy limity są odnawiane?\nKażdego dnia o północy (czas lokalny) zaczyna się nowy pełny limit.\n\n──────────\n\nBEZ SUBSKRYPCJI\n\n• 5 analiz pulpitu tygodniowo na profil\n• 5 ulepszeń tekstu tygodniowo\n• Zawsze w szybkiej jakości standardowej\n• Odnawiane w każdy poniedziałek o północy (czas lokalny)\n\n──────────\n\nWiększość użytkowników w codziennym życiu nigdy nie osiągnie tych limitów.</string>
     <string name="ai_limits_dialog_close">Rozumiem</string>
     <string name="theme_neutral">Neutralny</string>
     <string name="theme_profile">Kolor profilu — kolor profilu pulpitu</string>
@@ -1428,4 +1440,6 @@ Co chcesz zrobić?</string>
     <string name="theme_one_dark">Atelier</string>
     <string name="theme_nord">Polarna Noc</string>
     <string name="theme_gruvbox">Bursztyn</string>
+    <string name="ai_output_health_disclaimer">Nie terapia — nie zastępuje profesjonalnego doradztwa.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal to dziennik, a nie oferta terapeutyczna. Analizy AI to sugestie do autorefleksji i nie zastępują profesjonalnego doradztwa psychologicznego ani medycznego. W przypadku poważnych problemów zwróć się do specjalisty lub skontaktuj się z pomocą kryzysową dostępną w ustawieniach.</string>
 </resources>

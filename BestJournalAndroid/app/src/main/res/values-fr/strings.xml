@@ -419,15 +419,15 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">Amélioration de texte par IA quotidienne</string>
-    <string name="settings_premium_feature_improve_desc">Chaque entrée devient plus expressive</string>
+    <string name="settings_premium_feature_improve_desc">L\'IA améliore tes entrées sur demande.</string>
     <string name="settings_premium_feature_dashboard">Analyses du tableau de bord quotidiennes</string>
-    <string name="settings_premium_feature_dashboard_desc">Ton tableau de bord grandit avec toi</string>
-    <string name="settings_premium_feature_5_perspectives">5 perspectives IA</string>
+    <string name="settings_premium_feature_dashboard_desc">Ton tableau de bord s\'enrichit à chaque entrée.</string>
+    <string name="settings_premium_feature_5_perspectives">Tous les profils IA (4 prédéfinis + illimités personnels)</string>
     <string name="settings_premium_feature_5_perspectives_desc">De la clarté à la connaissance de soi</string>
     <string name="settings_premium_feature_reviews">Rétrospectives hebdo, mensuelles et annuelles</string>
     <string name="settings_premium_feature_reviews_desc">L\'IA raconte ton histoire</string>
     <string name="settings_premium_feature_patterns">Détection de schémas</string>
-    <string name="settings_premium_feature_patterns_desc">L\'IA trouve des liens qui t\'échappent</string>
+    <string name="settings_premium_feature_patterns_desc">L\'IA peut rendre visibles les schémas et les liens dans tes entrées.</string>
     <string name="settings_premium_feature_pdf">Export PDF avec photos</string>
     <string name="settings_premium_feature_pdf_desc">Toutes tes entrées de journal avec photos en document</string>
     <string name="settings_premium_feature_voice">Reconnaissance vocale plus précise</string>
@@ -822,10 +822,10 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="onboarding_goals_select">Choisis un ou plusieurs objectifs</string>
     <string name="onboarding_how_step3_title">Ajoute des photos</string>
     <string name="onboarding_how_title">C\'est tout simple</string>
-    <string name="onboarding_perspectives_title">5 perspectives sur\nta vie</string>
+    <string name="onboarding_perspectives_title">Différents regards sur\nta vie</string>
     <string name="onboarding_premium_feature_pdf">Export PDF avec photos, sauvegarde tes entrées en document</string>
     <string name="onboarding_premium_profiles">5 profils de tableau de bord intelligents pour des aperçus profonds de ta vie</string>
-    <string name="onboarding_try_premium">Essaye Premium 8 jours</string>
+    <string name="onboarding_try_premium">8 jours gratuits — puis à partir de 3,99 €/mois</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
@@ -842,7 +842,7 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="paywall_yearly_note">Ensuite %1$s par an\nRésiliable à tout moment pendant la période d\'essai</string>
     <string name="paywall_most_popular">Choix le plus populaire</string>
     <string name="paywall_monthly_plan">Abonnement mensuel, %1$s par mois</string>
-    <string name="paywall_yearly_savings">Économise %1$d\u202F%% par rapport au mensuel, résiliable à tout moment</string>
+    <string name="paywall_yearly_savings">Économise %1$d %% par rapport à l'abonnement mensuel — résiliation possible à tout moment à la fin de la période contractuelle.</string>
     <string name="paywall_lifetime_title">Achat unique</string>
     <string name="paywall_lifetime_desc">Paye une fois, utilise tout en permanence</string>
     <string name="paywall_lifetime_note">Pas d\'abonnement, pas de reconduction</string>
@@ -859,8 +859,8 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="paywall_feature_profiles">Profils d’analyse personnalisés illimités</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">Trouve ton calme intérieur</string>
-    <string name="paywall_headline_stress_sub">Repère ce qui te pèse avant que ça te submerge</string>
+    <string name="paywall_headline_stress">Plus de clarté au quotidien</string>
+    <string name="paywall_headline_stress_sub">Repère ce qui t\'occupe chaque jour et mets-le en mots.</string>
     <string name="paywall_headline_clarity">Comprends-toi mieux</string>
     <string name="paywall_headline_clarity_sub">L\'IA repère les schémas qui t\'échappent</string>
     <string name="paywall_headline_growth">Découvre le bon dans chaque journée</string>
@@ -875,7 +875,7 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="paywall_exit_special_offer">Nous avons une offre\nspéciale pour toi\u00A0:</string>
     <string name="paywall_exit_discount">Réduction pour %1$d mois</string>
     <string name="paywall_exit_price_comparison">Seulement %1$s au lieu de %2$s par mois</string>
-    <string name="paywall_exit_start_discount">Lancer l\'abonnement mensuel avec 50\u202F% de réduction</string>
+    <string name="paywall_exit_start_discount">Paiement requis — 2 mois à moitié prix</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -901,9 +901,9 @@ Retourne UNIQUEMENT un tableau JSON valide. Aucun texte avant ou après.</string
     <string name="churn_sorry_title">Dommage que tu partes</string>
     <string name="churn_sorry_body">Avant de résilier, tu veux bien nous dire pourquoi\u202F? Ça nous aide à améliorer l\'appli.</string>
     <string name="churn_exclusive_offer">Offre exclusive</string>
-    <string name="churn_offer_subtitle">Rien que pour toi, parce que tu comptes</string>
+    <string name="churn_offer_subtitle">Notre offre pour toi</string>
     <string name="churn_offer_feature_ai">Analyses IA quotidiennes</string>
-    <string name="churn_offer_feature_perspectives">Les 5 perspectives</string>
+    <string name="churn_offer_feature_perspectives">Tous les profils IA (4 prédéfinis + illimités personnels)</string>
     <string name="churn_offer_feature_voice">Reconnaissance vocale premium</string>
     <string name="churn_offer_auto_renew">Se renouvelle automatiquement, résiliable à tout moment</string>
     <string name="churn_accept_offer">Accepter l\'offre</string>
@@ -923,7 +923,7 @@ Avec Premium : jusqu\'à 150 par jour.</string>
     <string name="ai_limit_yearly">Abonnement annuel, %1$s/an (économise 37\u202F%%)</string>
     <string name="ai_limit_no_thanks">Non merci, continuer sans IA</string>
     <string name="ai_banner_title">Ton journal est soutenu par l\'IA</string>
-    <string name="ai_banner_body">• Les textes dictés sont améliorés automatiquement\n• Résumés pour chaque entrée\n• Conseils de vie intelligents à partir de tes schémas\n• Tout inclus pendant ta période d\'essai gratuite</string>
+    <string name="ai_banner_body">• Les textes dictés sont améliorés automatiquement\n• Résumés pour chaque entrée\n• Aperçus intelligents à partir de tes schémas. Toutes les suggestions IA sont des pistes de réflexion, pas un avis professionnel.\n• Tout inclus pendant ta période d'essai gratuite</string>
     <string name="cd_mic_start">Lancer l\'enregistrement</string>
     <string name="cd_mic_stop">Arrêter l\'enregistrement</string>
     <string name="entry_improve_limit_daily">Limite quotidienne atteinte. À demain\u202F!</string>
@@ -1356,7 +1356,7 @@ Que veux-tu faire ?</string>
 
     <!-- Paywall consent dialog (German § 356(5) BGB withdrawal waiver) -->
     <string name="paywall_consent_dialog_title">Droit de rétractation</string>
-    <string name="paywall_consent_dialog_body">Après la conclusion d\'un abonnement ou d\'un achat, tu disposes en principe d\'un droit de rétractation de 14 jours en vertu du § 355 du Code civil allemand (BGB).\n\nPour que tu puisses utiliser immédiatement les fonctions Premium, nous commençons à les fournir dès ton achat. En donnant ton consentement ci-dessous, tu renonces en toute connaissance de cause à ton droit de rétractation de 14 jours (§ 356, alinéa 5 BGB).\n\nSans ce consentement, nous ne pouvons pas activer les fonctions Premium immédiatement.</string>
+    <string name="paywall_consent_dialog_body">Tu disposes en principe d'un droit de rétractation de 14 jours après la conclusion d'un abonnement ou d'un achat (§ 355 BGB).\n\nPour que tu puisses utiliser immédiatement les fonctions Premium, nous commençons à les fournir dès ton achat. En donnant ton consentement ci-dessous, tu renonces en toute connaissance de cause à ton droit de rétractation de 14 jours (§ 356, alinéa 5 BGB).\n\nSans ce consentement, nous ne pouvons pas activer les fonctions Premium immédiatement.\n\nPrestataire des fonctions Premium : Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Allemagne. E-mail pour la rétractation : dev.app.support@gmail.com.\n\nSi tu ne déclares pas ton droit de rétractation avant la mise à disposition et que l'abonnement Premium démarre, ton délai de rétractation de 14 jours commence le jour de la conclusion du contrat. Tu peux déclarer la rétractation librement par e-mail ou utiliser le formulaire type de rétractation de l'UE (https://www.bmuv.de/widerruf — formulaire type UE externe).</string>
     <string name="paywall_consent_dialog_checkbox">J\'accepte que les fonctions Premium me soient fournies immédiatement après l\'achat. Je suis conscient(e) qu\'ainsi je renonce à mon droit de rétractation de 14 jours.</string>
     <string name="paywall_consent_dialog_confirm">S\'abonner — paiement requis</string>
     <string name="paywall_consent_dialog_cancel">Annuler</string>
@@ -1393,7 +1393,7 @@ Que veux-tu faire ?</string>
     <string name="paywall_monthly_label">Mensuel</string>
     <string name="paywall_restore_button">Restaurer les achats</string>
     <string name="paywall_subscribe_button">S’abonner</string>
-    <string name="paywall_subtitle">Profite de tous les avantages Premium</string>
+    <string name="paywall_subtitle">Accède à toutes les fonctions Premium</string>
     <string name="paywall_title">Passer à Premium</string>
     <string name="paywall_yearly_label">Annuel</string>
     <string name="prompt_char_count_label">%1$d caractères</string>
@@ -1412,9 +1412,9 @@ Que veux-tu faire ?</string>
         <item quantity="one">vor %1$d Jahr</item>
         <item quantity="other">vor %1$d Jahren</item>
     </plurals>
-    <string name="ai_limits_disclaimer">Généreux quota IA quotidien pour une utilisation intensive.</string>
+    <string name="ai_limits_disclaimer">Quota IA quotidien pour une utilisation intensive.</string>
     <string name="ai_limits_dialog_title">Comment fonctionne le quota IA quotidien ?</string>
-    <string name="ai_limits_dialog_body" formatted="false">AVEC L\'ABONNEMENT PREMIUM\n\nTon quota quotidien :\n• Jusqu\'à 150 analyses de tableau de bord par profil IA (avec 4 profils : jusqu\'à 600 par jour)\n• Jusqu\'à 150 améliorations de texte\n\nComment ça fonctionne en détail :\n• Requêtes 1 à 30 : qualité IA maximale\n• Requêtes 31 à 100 : qualité standard rapide\n• À la 101e requête : pause unique de 30 min\n• Requêtes 101 à 150 : qualité standard rapide\n• À partir de la 151e requête : plus de requêtes jusqu\'à demain\n\nPour tous les utilisateurs :\n• Maximum 50 requêtes IA par heure — puis pause de 5 min\n\nQuand les quotas se réinitialisent-ils ?\nChaque jour à minuit (ton heure locale) un nouveau quota complet commence.\n\n──────────\n\nSANS ABONNEMENT\n\n• 5 analyses de tableau de bord par semaine par profil\n• 5 améliorations de texte par semaine\n• Toujours en qualité standard rapide\n• Réinitialisé chaque lundi à minuit (ton heure locale)\n\n──────────\n\nPlus de 99 % des utilisateurs n\'atteindront probablement jamais ces limites.</string>
+    <string name="ai_limits_dialog_body" formatted="false">AVEC L'ABONNEMENT PREMIUM\n\nTon quota quotidien :\n• 150 analyses par jour et par profil — pour les 4 profils prédéfinis 600/jour au total, plus 150/jour pour chaque profil personnel créé.\n• Jusqu'à 150 améliorations de texte\n\nComment ça fonctionne en détail :\n• Requêtes 1 à 30 : qualité IA maximale\n• Requêtes 31 à 100 : qualité standard rapide\n• À la 101e requête : pause unique de 30 min\n• Requêtes 101 à 150 : qualité standard rapide\n• À partir de la 151e requête : plus de requêtes jusqu'à demain\n\nPour tous les utilisateurs :\n• Maximum 50 requêtes IA par heure — puis pause de 5 min\n\nQuand les quotas se réinitialisent-ils ?\nChaque jour à minuit (ton heure locale) un nouveau quota complet commence.\n\n──────────\n\nSANS ABONNEMENT\n\n• 5 analyses de tableau de bord par semaine par profil\n• 5 améliorations de texte par semaine\n• Toujours en qualité standard rapide\n• Réinitialisé chaque lundi à minuit (ton heure locale)\n\n──────────\n\nLa plupart des utilisateurs au quotidien n'atteindront probablement jamais ces limites.</string>
     <string name="ai_limits_dialog_close">Compris</string>
     <string name="theme_neutral">Neutre</string>
     <string name="theme_profile">Couleur de profil — couleur du profil de tableau de bord</string>
@@ -1423,4 +1423,26 @@ Que veux-tu faire ?</string>
     <string name="theme_one_dark">Atelier</string>
     <string name="theme_nord">Nuit Polaire</string>
     <string name="theme_gruvbox">Ambre</string>
+
+    <!-- Permissions rationale -->
+    <string name="permission_rationale_microphone">Pour pouvoir dicter tes entrées de journal par la voix, nous avons besoin d'accéder à ton microphone.</string>
+    <string name="permission_rationale_camera">Pour pouvoir ajouter des photos à tes entrées, nous avons besoin d'accéder à ta caméra.</string>
+    <string name="permission_rationale_location">Pour pouvoir associer un contexte de lieu à tes entrées, nous avons besoin de ta position approximative. Tu peux refuser à tout moment ou désactiver cela plus tard.</string>
+    <string name="permission_rationale_notifications">Pour pouvoir te rappeler d'écrire chaque jour, nous avons besoin de ta permission pour les notifications.</string>
+
+    <!-- System backup -->
+    <string name="consent_info_system_backup_title">Sauvegarde système Android</string>
+    <string name="consent_info_system_backup_body">Si tu as activé la sauvegarde système Android dans les paramètres de ton appareil, Android sauvegarde automatiquement tes données de journal dans l'espace de sauvegarde de ton compte Google. Tu peux désactiver cela à tout moment dans les paramètres de ton appareil — voir la politique de confidentialité pour plus de détails.</string>
+    <string name="settings_open_system_backup_settings_label">Gérer la sauvegarde système Android</string>
+    <string name="settings_open_system_backup_settings_desc">Ouvre les paramètres système Android dans lesquels tu peux activer ou désactiver la sauvegarde automatique pour Best Journal.</string>
+    <string name="error_no_backup_settings_available">Paramètres de sauvegarde non disponibles sur cet appareil.</string>
+
+    <!-- Consent footer links -->
+    <string name="consent_footer_link_datenschutz">Confidentialité</string>
+    <string name="consent_footer_link_impressum">Mentions légales</string>
+    <string name="consent_footer_link_agb">Conditions d'utilisation</string>
+
+    <!-- AI health disclaimer -->
+    <string name="ai_output_health_disclaimer">Pas une thérapie — ne remplace pas un avis professionnel.</string>
+    <string name="ai_output_health_disclaimer_long">Best Journal est un journal et non une offre thérapeutique. Les analyses IA sont des suggestions de réflexion personnelle et ne remplacent pas un conseil psychologique ou médical professionnel. En cas de problèmes aigus, adresse-toi à un spécialiste ou à l'aide d'urgence dans tes paramètres.</string>
 </resources>
