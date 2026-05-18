@@ -1211,9 +1211,15 @@ private fun ZoomableChartFullscreen(
                                         // Frank-Wunsch 2026-05-17 Iteration 9:
                                         // Inhalt folgt dem Finger (Strava-Pattern):
                                         // Finger nach oben -> Graph wandert nach oben.
-                                        // delta.y < 0 (oben) -> yShift < 0 -> yMin/yMax sinken
-                                        // -> Linie verschiebt sich visuell nach oben.
-                                        val yShiftDelta = delta.y / canvasH * 1.0f
+                                        //
+                                        // Frank-Wunsch 2026-05-18: Bei invertY=true
+                                        // (Tempo-Chart: niedrigere Werte oben) muss
+                                        // das Vorzeichen umgedreht werden, sonst
+                                        // wandert der Inhalt entgegengesetzt zum
+                                        // Finger. Pulsverlauf (invertY=false) blieb
+                                        // korrekt, Tempoverlauf war verkehrt herum.
+                                        val rawDelta = delta.y / canvasH * 1.0f
+                                        val yShiftDelta = if (invertY) -rawDelta else rawDelta
                                         androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
                                             yShift = (yShift + yShiftDelta).coerceIn(-2f, 2f)
                                         }

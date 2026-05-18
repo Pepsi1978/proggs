@@ -20,7 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,9 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.components.VoiceCaptureState
+import de.frank.entropyreducer.presentation.components.VoiceCaptureViewModel
+import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -91,6 +98,26 @@ fun TagebuchScreen(
 
     var inputDialogOpen by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<TagebuchEntry?>(null) }
+    // Frank-Wunsch 2026-05-18 Folgeauftrag: Erst nur Mic-Button anzeigen.
+    // Klick auf Mic legt rechts "Aufnehmen" und links "Schreiben" frei.
+    var actionsExpanded by remember { mutableStateOf(false) }
+    // A12: echte Whisper-Aufnahme via Groq + Gemini-Text-Verbesserung.
+    val voiceVm: VoiceCaptureViewModel = hiltViewModel()
+    val voiceState by voiceVm.state.collectAsState()
+    val voiceError by voiceVm.error.collectAsState()
+    val improveVm: TagebuchImproveViewModel = hiltViewModel()
+    val improveState by improveVm.state.collectAsState()
+    val improvedText by improveVm.improvedText.collectAsState()
+    val improveError by improveVm.error.collectAsState()
+    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    val micPermission = rememberMicPermissionState(
+        onAllGranted = {
+            voiceVm.toggle { transcript ->
+                pendingTranscript = transcript
+                actionsExpanded = false
+            }
+        },
+    )
 
     if (inputDialogOpen) {
         TextInputDialog(
@@ -100,6 +127,29 @@ fun TagebuchScreen(
                     addTagebuchEntry(context, TagebuchEntry.create(text))
                 }
                 inputDialogOpen = false
+            },
+        )
+    }
+    // A12: Transkript-Dialog nach Whisper-Aufnahme — Frank kann den Text
+    // editieren, optional via Gemini verbessern lassen und speichern.
+    val pending = pendingTranscript
+    if (pending != null) {
+        TranscriptDialog(
+            initialText = pending,
+            improvedText = improvedText,
+            isImproving = improveState == ImproveState.RUNNING,
+            errorMessage = improveError ?: voiceError,
+            onImprove = { text -> improveVm.improve(text) },
+            onSave = { text ->
+                scope.launch {
+                    addTagebuchEntry(context, TagebuchEntry.create(text))
+                }
+                pendingTranscript = null
+                improveVm.clearImproved()
+            },
+            onDismiss = {
+                pendingTranscript = null
+                improveVm.clearImproved()
             },
         )
     }
@@ -175,30 +225,80 @@ fun TagebuchScreen(
                 }
             }
 
-            // Mic + Stift Buttons unten — analog zum BestJournalFrank-Layout.
-            // Mic ist Platzhalter (echte Whisper-Aufnahme folgt spaeter).
+            // Frank-Wunsch 2026-05-18 Folgeauftrag:
+            // - Standard: nur Mikrofon-Button zentriert sichtbar.
+            // - Klick auf Mic blendet "Schreiben" (links) und "Aufnehmen"
+            //   (rechts) ein. Schreiben oeffnet den Text-Dialog,
+            //   Aufnehmen startet die Whisper-Aufnahme (siehe A12).
             Row(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                if (actionsExpanded) {
+                    FabIconButton(
+                        icon = Icons.Outlined.Edit,
+                        label = "Schreiben",
+                        backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
+                        iconTint = TagebuchAccent,
+                        onClick = {
+                            inputDialogOpen = true
+                            actionsExpanded = false
+                        },
+                    )
+                }
                 FabIconButton(
                     icon = Icons.Outlined.Mic,
-                    label = "Aufnehmen",
+                    label = "Mikrofon",
                     backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
                     iconTint = TagebuchAccent,
-                    onClick = {
-                        // Erste Iteration: Mic oeffnet erstmal den Text-Dialog.
-                        // Echte Whisper-Aufnahme folgt in der naechsten Session.
-                        inputDialogOpen = true
-                    },
+                    onClick = { actionsExpanded = !actionsExpanded },
                 )
-                FabIconButton(
-                    icon = Icons.Outlined.Edit,
-                    label = "Schreiben",
-                    backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
-                    iconTint = TagebuchAccent,
-                    onClick = { inputDialogOpen = true },
-                )
+                if (actionsExpanded) {
+                    // A12: echte Whisper-Aufnahme via Groq Large V3 Turbo.
+                    // Permission wird beim ersten Tap erfragt; Voice-State
+                    // (IDLE/RECORDING/PROCESSING) bestimmt Icon + Verhalten.
+                    val (recordIcon, recordLabel) = when (voiceState) {
+                        VoiceCaptureState.IDLE ->
+                            Icons.Outlined.Mic to "Aufnehmen"
+                        VoiceCaptureState.RECORDING ->
+                            Icons.Outlined.Stop to "Stop"
+                        VoiceCaptureState.PROCESSING ->
+                            Icons.Outlined.Mic to "Transkribiere…"
+                    }
+                    FabIconButton(
+                        icon = recordIcon,
+                        label = recordLabel,
+                        backgroundColor =
+                            if (voiceState == VoiceCaptureState.RECORDING)
+                                Color(0xFFE53935).copy(alpha = 0.22f)
+                            else TagebuchAccent.copy(alpha = 0.18f),
+                        iconTint =
+                            if (voiceState == VoiceCaptureState.RECORDING)
+                                Color(0xFFE53935)
+                            else TagebuchAccent,
+                        onClick = {
+                            when (voiceState) {
+                                VoiceCaptureState.IDLE -> {
+                                    if (micPermission.check()) {
+                                        voiceVm.toggle { transcript ->
+                                            pendingTranscript = transcript
+                                            actionsExpanded = false
+                                        }
+                                    } else {
+                                        micPermission.request()
+                                    }
+                                }
+                                VoiceCaptureState.RECORDING -> {
+                                    voiceVm.toggle { transcript ->
+                                        pendingTranscript = transcript
+                                        actionsExpanded = false
+                                    }
+                                }
+                                VoiceCaptureState.PROCESSING -> Unit
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -305,6 +405,101 @@ private fun TextInputDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
             TextButton(
                 onClick = { if (text.isNotBlank()) onSave(text.trim()) },
                 enabled = text.isNotBlank(),
+            ) {
+                Text("Speichern", color = TagebuchAccent)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+    )
+}
+
+@Composable
+private fun TranscriptDialog(
+    initialText: String,
+    improvedText: String?,
+    isImproving: Boolean,
+    errorMessage: String?,
+    onImprove: (String) -> Unit,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var editableText by remember(initialText) { mutableStateOf(initialText) }
+    var useImproved by remember { mutableStateOf(false) }
+    val activeText = if (useImproved && improvedText != null) improvedText else editableText
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Eintrag von der Aufnahme") },
+        text = {
+            Column {
+                if (improvedText != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = if (useImproved) "Verbessert" else "Original",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TagebuchAccent,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        TextButton(onClick = { useImproved = !useImproved }) {
+                            Text(if (useImproved) "Original zeigen" else "Verbessert zeigen")
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+                OutlinedTextField(
+                    value = activeText,
+                    onValueChange = {
+                        if (useImproved) {
+                            // Verbesserter Text war bisher read-only — bei Tippen
+                            // schalten wir zurueck auf Original-Edit.
+                            useImproved = false
+                            editableText = it
+                        } else {
+                            editableText = it
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                )
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFE53935),
+                    )
+                }
+                if (improvedText == null) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = { onImprove(editableText) },
+                            enabled = !isImproving && editableText.isNotBlank(),
+                        ) {
+                            if (isImproving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.size(8.dp))
+                                Text("Wird verbessert…")
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoFixHigh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.size(6.dp))
+                                Text("Text verbessern (Gemini)")
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (activeText.isNotBlank()) onSave(activeText.trim()) },
+                enabled = activeText.isNotBlank(),
             ) {
                 Text("Speichern", color = TagebuchAccent)
             }

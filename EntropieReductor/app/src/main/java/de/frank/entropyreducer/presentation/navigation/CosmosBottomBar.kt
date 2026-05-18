@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.MonitorHeart
@@ -232,11 +233,7 @@ private fun SubModeRow(
     // den Positionen Aufgaben/Analyse/Forscher, Biomarker bleibt rechts.
     val parentMeta = parentMetaFor(parentTab)
     val slots = listOf(Routes.TASKS, Routes.ANALYSIS, Routes.SCIENTIST, Routes.BIOMARKER)
-    val subIcons = listOf(
-        SubIconMeta(Icons.Outlined.Inbox, "1"),
-        SubIconMeta(Icons.Outlined.Tune, "2"),
-        SubIconMeta(Icons.Outlined.Insights, "3"),
-    )
+    val subIcons = subIconsFor(parentTab)
 
     // Pre-compute: pro Slot entweder Parent oder Sub-Icon (mit Index 1..3).
     val items: List<SlotItem> = buildList {
@@ -326,6 +323,25 @@ private fun TabItem(
             )
         }
     }
+}
+
+/**
+ * Frank-Wunsch 2026-05-18: Sub-Icons koennen pro Parent-Tab unterschiedlich
+ * sein. Aktuell ist nur Sub-Bereich 1 des Aufgaben-Tabs explizit belegt
+ * ("Entropie" mit Tagebuch-Buch-Icon). Andere Sub-Bereiche bleiben generisch
+ * 2/3 mit Standard-Icons bis sie inhaltlich belegt werden.
+ */
+private fun subIconsFor(parentTab: String): List<SubIconMeta> = when (parentTab) {
+    Routes.TASKS -> listOf(
+        SubIconMeta(Icons.Outlined.Book, "Entropie"),
+        SubIconMeta(Icons.Outlined.Tune, "2"),
+        SubIconMeta(Icons.Outlined.Insights, "3"),
+    )
+    else -> listOf(
+        SubIconMeta(Icons.Outlined.Inbox, "1"),
+        SubIconMeta(Icons.Outlined.Tune, "2"),
+        SubIconMeta(Icons.Outlined.Insights, "3"),
+    )
 }
 
 private data class ParentMeta(val label: String, val icon: ImageVector)
