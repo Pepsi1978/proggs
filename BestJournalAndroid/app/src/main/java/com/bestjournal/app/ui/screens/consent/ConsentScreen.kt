@@ -561,28 +561,26 @@ private fun ConsentLegalFooter() {
     val context = LocalContext.current
     val locale = java.util.Locale.getDefault().language
 
-    fun urlFor(de: Int, en: Int, ko: Int): String = stringResource(
+    val datenschutzUrl = stringResource(
         when (locale) {
-            "en" -> en
-            "ko" -> ko
-            else -> de
+            "en" -> R.string.legal_url_datenschutz_en
+            "ko" -> R.string.legal_url_datenschutz_ko
+            else -> R.string.legal_url_datenschutz_de
         }
     )
-
-    val datenschutzUrl = urlFor(
-        R.string.legal_url_datenschutz_de,
-        R.string.legal_url_datenschutz_en,
-        R.string.legal_url_datenschutz_ko,
+    val impressumUrl = stringResource(
+        when (locale) {
+            "en" -> R.string.legal_url_impressum_en
+            "ko" -> R.string.legal_url_impressum_ko
+            else -> R.string.legal_url_impressum_de
+        }
     )
-    val impressumUrl = urlFor(
-        R.string.legal_url_impressum_de,
-        R.string.legal_url_impressum_en,
-        R.string.legal_url_impressum_ko,
-    )
-    val agbUrl = urlFor(
-        R.string.legal_url_agb_de,
-        R.string.legal_url_agb_en,
-        R.string.legal_url_agb_ko,
+    val agbUrl = stringResource(
+        when (locale) {
+            "en" -> R.string.legal_url_agb_en
+            "ko" -> R.string.legal_url_agb_ko
+            else -> R.string.legal_url_agb_de
+        }
     )
 
     fun openUrl(url: String) {

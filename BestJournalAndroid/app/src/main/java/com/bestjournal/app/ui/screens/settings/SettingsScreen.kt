@@ -1,5 +1,8 @@
 package com.bestjournal.app.ui.screens.settings
 
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOutSine
@@ -3435,23 +3438,21 @@ fun SettingsScreen(
                             label = stringResource(R.string.settings_open_system_backup_settings_label),
                             onClick = {
                                 try {
-                                    context.startActivity(
-                                        android.content.Intent(android.provider.Settings.ACTION_BACKUP_SETTINGS).apply {
-                                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                    )
+                                    // ACTION_BACKUP_SETTINGS ist @hide in der Android-API,
+                                    // deshalb der direkte Action-String. Funktioniert seit API 8 stabil.
+                                    val backupIntent: Intent = Intent("android.settings.BACKUP_SETTINGS")
+                                    backupIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    context.startActivity(backupIntent)
                                 } catch (e: Exception) {
                                     try {
-                                        context.startActivity(
-                                            android.content.Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS).apply {
-                                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                            }
-                                        )
+                                        val privacyIntent: Intent = Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS)
+                                        privacyIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        context.startActivity(privacyIntent)
                                     } catch (e2: Exception) {
-                                        android.widget.Toast.makeText(
+                                        Toast.makeText(
                                             context,
                                             R.string.error_no_backup_settings_available,
-                                            android.widget.Toast.LENGTH_LONG
+                                            Toast.LENGTH_LONG
                                         ).show()
                                     }
                                 }

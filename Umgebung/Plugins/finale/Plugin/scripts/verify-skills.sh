@@ -12,8 +12,22 @@
 # Schreibt menschenlesbare Diagnosen nach stderr.
 # Exit-Code: 0 wenn alle Skills OK, 1 wenn mindestens ein Skill kaputt.
 #
-# Aufruf: bash scripts/verify-skills.sh [plugin-root]
-# Default plugin-root = Verzeichnis ueber scripts/
+# ARGUMENTE:
+#   $1  (optional) App-Root — absoluter Pfad zur App die geprueft werden soll
+#                  (z. B. /c/Users/barwa/proggs/BestJournalAndroid).
+#                  Wird fuer app-spezifische Sanity-Checks verwendet
+#                  (z. B. AndroidManifest.xml-Pruefung), sobald diese
+#                  implementiert sind. Aktuell noch ungenutzt.
+#
+# PLUGIN-ROOT:
+#   Wird IMMER aus SCRIPT_DIR/.. abgeleitet — nicht per Argument ueberschreibbar.
+#   (FIN-001 Frank-Direktive 2026-05-18: SCRIPT_DIR/.. ist der einzige
+#   zuverlaessige Weg zum Plugin-Root, da $CLAUDE_PLUGIN_ROOT in der
+#   Subagent-Bash-Umgebung nicht gesetzt wird.)
+#
+# BEISPIELE:
+#   bash scripts/verify-skills.sh
+#   bash scripts/verify-skills.sh /c/Users/barwa/proggs/BestJournalAndroid
 
 set -u
 
@@ -22,8 +36,9 @@ set -u
 # -----------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_ROOT="${1:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"   # IMMER aus SCRIPT_DIR/.. — nicht ueberschreibbar
 SKILLS_DIR="$PLUGIN_ROOT/skills"
+APP_ROOT="${1:-}"   # optional, nur fuer app-spezifische Pruefungen
 
 # Welche Skills gehoeren ins Plugin und welches ist ihr erwartetes echtes Ziel?
 # Reihenfolge entscheidet ueber JSON-Reihenfolge.

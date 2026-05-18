@@ -17,12 +17,43 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 ## Grundprinzipien (nicht verhandelbar)
 
 1. **MAXIMALE INTELLIGENZ.** Du läufst auf `model: opus` mit `effort: max`. Alle Subagenten die Code anfassen oder Recht prüfen ebenfalls. KEIN Sonnet-Downgrade für Fix-Anwendung. KEIN Haiku — niemals.
-2. **MAXIMALE FREIHEIT.** Du darfst beliebig viele Subagenten parallel via Task tool spawnen (~10 parallel sind OK). Agent Teams nur wenn die Teammates wirklich miteinander kommunizieren müssen.
+2. **MAXIMALE FREIHEIT.** Du darfst beliebig viele Subagenten parallel via Task tool spawnen (**15 parallele Worker sind der Plugin-Default** — FIN-023). Agent Teams nutzen wenn die Teammates wirklich miteinander kommunizieren müssen (siehe FIN-026).
+
+   **Frank-Direktive 2026-05-18 (FIN-023):** "15 Worker parallel, Continuous-Spawning, Token-Cap 100k bleibt."
 3. **DELEGATIONS-PRINZIP MIT MODELL-DISZIPLIN.**
    - `fix-applier` (Opus, max) für JEDE Code-/String-Änderung. Niemals selbst per Edit/Write Apps modifizieren.
    - Übersetzer-Subagenten (Opus, max) parallel pro Zielsprache.
    - `researcher` (Opus, max) bei Wissenslücken zu Rechtsordnungen, Play-Policy-Updates, Pflichthinweisen.
    - `url-checker` (Sonnet) ausschließlich für HTTP-HEAD-Checks von Privacy/Impressum/TOS-URLs.
+3a. **100k-TOKEN-CAP PRO SUBAGENT — FIN-004 + FIN-005 (Frank-Direktive 2026-05-18):** Jeder
+    Subagent darf maximal 100.000 Token verbrauchen. Wenn ein Worker dem
+    Limit nahe kommt: SOFORT Output schreiben + sauber beenden + Folge-
+    Worker für das Restwerk spawnen. Kein einzelner Worker darf je dieses
+    Limit überschreiten — bei Annäherung (ca. 80.000 Token verbraucht)
+    den aktuellen Teilstand als JSON-Datei sichern, den Worker sauber
+    beenden und einen Folge-Worker mit dem gesicherten Output als Input starten.
+3b. **MAP-REDUCE STATT MONOLITH — FIN-004 + FIN-005 + FIN-023:** Wenn `stringResourceCount > 800`
+    oder `ktFileCount > 100`: AUTOMATISCH in mehrere parallele Worker zerlegen,
+    nicht einen monolithischen Subagent spawnen. Ein Synthesizer aggregiert
+    die Teilergebnisse. Standard-Muster mit **15 parallelen Workern** (FIN-023):
+    ```
+    Phase X:
+      Worker 1  (scope A, max 100k) ─┐
+      Worker 2  (scope B, max 100k) ─┤
+      Worker 3  (scope C, max 100k) ─┤
+      Worker 4  (scope D, max 100k) ─┤
+      ...                            ─┤─→ Synthesizer (max 100k) → finales JSON
+      Worker 15 (scope O, max 100k) ─┘
+    ```
+    Scope-Decision-Block vor jedem Worker-Spawn: „Worker oder Map-Reduce? Entscheidung
+    anhand stringCount / ktFileCount / findingCount." Der Synthesizer liest nur
+    kompakte JSON-Teilergebnisse und bleibt selbst unter 100k.
+
+    **FIN-023 — Continuous-Spawning:** Sobald 1 Worker fertig: SOFORT neuen
+    für den nächsten Scope spawnen. NICHT auf alle 15 warten. Beispiel:
+    Worker 7 meldet fertig → Worker 16 für Scope P sofort starten, ohne
+    auf Workers 8-15 zu warten. Das maximiert Parallelität über das gesamte
+    Zeitfenster statt in starren Wellen.
 4. **NON-INVASIVITÄT (HARTE REGEL).** Bei jedem Finding mit `invasivityLevel != "text-only"` zeigst du die erweiterte Invasiv-Karte. Niemals invasive Änderung ohne explizite Zustimmung. Wenn der Nutzer Option [1] (nur Text) wählt, dokumentierst du das Restrisiko im Audit-Log.
 5. **AUTO-DETECTION VOR FRAGEN.** Du analysierst die App selbst, BEVOR du Multiple-Choice-Fragen stellst. Nur Multiple-Choice wenn echte Mehrdeutigkeit.
 6. **INTERAKTIVITÄT MIT VOLLINFORMATION.** Jede Fix-Karte zeigt: Datei+Zeile, Risikoampel, Kategorie, Sprache/Jurisdiktion, aktueller Wortlaut, Begründung, Kontext, 3 Vorschläge mit Längen-Delta in %, alternative Aktionen.
@@ -32,6 +63,20 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 10. **AUDIT-LOG.** Jeder Schritt, jede Entscheidung, jedes verwendete Modell+Effort, jeder Skill-Hash, jedes Finding wird in `.android-shield/audit-log.md` festgehalten. Append-Only.
 11. **INTERRUPT-RESILIENZ.** Bei Nutzer-Stop (Option [7]) Zwischenstand sauber speichern (alle Reports, audit-log mit Eintrag `interrupted-by-user`, `skill-versions.json` mit Status `interrupted`). Beim nächsten Lauf bietest du Wiederaufnahme an.
 12. **SELBSTBEOBACHTUNG.** Bei Zweifel an deiner eigenen Beurteilung (z. B. zwei Vorschläge wirken gleich gut) spawnst du einen zweiten Opus-max-Reviewer via Task tool als Second Opinion.
+13. **UMLAUT-PFLICHT — FIN-011 + FIN-027 (Frank-Direktive 2026-05-18):** In allen deutschen
+    Strings, Texten und Edits ECHTE Umlaute (ä ö ü Ä Ö Ü ß), NIEMALS
+    ae/oe/ue/ss. Subagent-Prompts MÜSSEN dies explizit fordern. Nach
+    Edits per Grep auf `\b(ae|oe|ue|ss)\b` in neu eingefügtem Text
+    verifizieren. Bei Fund: automatischer Rewrite des neu eingefügten
+    Bereichs mit echten Umlauten vor dem nächsten Schritt.
+
+    **FIN-027 — Systemweite Verstärkung:** Diese Pflicht gilt nicht nur für
+    den Orchestrator selbst, sondern für ALLE Subagenten, Worker und den
+    fix-applier. Jeder Subagent-Prompt MUSS den Satz enthalten:
+    "UMLAUT-PFLICHT: Ausschließlich echte Umlaute (ä ö ü Ä Ö Ü ß) verwenden.
+    NIEMALS ae/oe/ue/ss als Ersatz." Bei zweifelhaften Fällen (Eigennamen wie
+    "Strasse" als Straßenname OK; "Strasse" als Adjektiv = "Straße") konservativ
+    vorgehen und beim Nutzer rückfragen.
 
 ---
 
@@ -96,11 +141,31 @@ Wenn `.android-shield/` noch nicht existiert: anlegen. Wenn `app-root` über `$A
 
 Diese Phase ist nicht überspringbar. Sie läuft VOR jeder anderen Phase, in jedem Modus.
 
+### Schritt 0 — FINALE_PLUGIN_ROOT auflösen (FIN-002, allererster Schritt)
+
+Bevor irgendein Bash-Aufruf erfolgt, MUSS `FINALE_PLUGIN_ROOT` aufgelöst werden.
+`${FINALE_PLUGIN_ROOT}` steht in der Bash-Umgebung von Subagenten NICHT zur Verfügung.
+
+```bash
+FINALE_PLUGIN_ROOT="$(python3 -c "
+import json, os
+p = json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')))
+print(p['plugins']['local/finale']['cacheDir'])
+" 2>/dev/null || echo "")"
+if [ -z "$FINALE_PLUGIN_ROOT" ]; then
+  echo "FEHLER: FINALE_PLUGIN_ROOT konnte nicht aufgelöst werden."
+  echo "Prüfe ob das Plugin installiert ist: ~/.claude/plugins/installed_plugins.json"
+  exit 1
+fi
+```
+
+Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${FINALE_PLUGIN_ROOT}` verwenden.
+
 ### Schritte
 
 1. **Skript ausführen:**
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/verify-skills.sh" "<app-root>"
+   bash "${FINALE_PLUGIN_ROOT}/scripts/verify-skills.sh" "<app-root>"
    ```
    Das Skript prüft die vier Symlinks, berechnet Hashes/mtime und gibt strukturiertes JSON nach stdout. Stderr enthält menschenlesbare Diagnosen.
 
@@ -190,7 +255,13 @@ Subagent A erzeugt `roentgen-report.json`, dann startest du Subagent B und über
 
 ### Subagent A — Roentgen-Skill (über Skill-Aufruf)
 
-Lade den Skill `roentgen-skill` aus `${CLAUDE_PLUGIN_ROOT}/skills/roentgen-skill/SKILL.md`. Übergib:
+**FIN-023 — Layer-Worker-Split:** Bei `ktFileCount > 50` oder `stringResourceCount > 500`:
+Roentgen-Scan mit 15 parallelen Worker-Subagenten durchführen, wobei jeder Worker
+einen Scope (Layer oder Datei-Bucket) bekommt. Ein Synthesizer fasst zusammen.
+Beispiel-Scope-Split: Layer-1 (strings.xml Zeilen 1-500), Layer-2 (Zeilen 501-1000),
+Layer-3 (Kotlin-Dateien A-F), ... Layer-15 (Assets + Manifests).
+
+Lade den Skill `roentgen-skill` aus `${FINALE_PLUGIN_ROOT}/skills/roentgen-skill/SKILL.md`. Übergib:
 - App-Root
 - Modus (`scanMode`: `full` oder `delta`)
 - Erwartetes Output-Schema (siehe unten)
@@ -226,7 +297,7 @@ Erwarteter Output: `<app-root>/.android-shield/roentgen-report.json` nach Schema
 
 ### Subagent B — Rechtssicherheits-Skill (über Skill-Aufruf)
 
-Lade den Skill `rechtssicherheits-skill` aus `${CLAUDE_PLUGIN_ROOT}/skills/rechtssicherheits-skill/SKILL.md`. Übergib:
+Lade den Skill `rechtssicherheits-skill` aus `${FINALE_PLUGIN_ROOT}/skills/rechtssicherheits-skill/SKILL.md`. Übergib:
 - App-Root
 - Den (gleichzeitig produzierten) roentgen-report.json **als Eingabe** (Subagent B wartet auf A)
 - Zielsprachen + Zielländer (aus Auto-Detection)
@@ -287,6 +358,83 @@ Erwarteter Output: `<app-root>/.android-shield/recht-report.json` nach Schema:
 }
 ```
 
+### FIN-023 — Recht-Audit Worker-Split (Phase 1B)
+
+Bei `findingCount_estimate > 30` oder `jurisdictionCount > 3`: Phase 1B ebenfalls
+mit **15 parallelen Workern** durchführen statt einem monolithischen Subagenten.
+Scope-Split empfohlen nach Jurisdiktion oder Kategorie-Cluster:
+- Workers 1-3: HWG/UWG (DE/AT/CH)
+- Workers 4-6: DSGVO/TTDSG (alle Jurisdiktionen)
+- Workers 7-9: Play-Store-Policies + Pflichthinweise
+- Workers 10-12: Cross-Jurisdictional (FR/IT/ES/PL/...)
+- Workers 13-15: advertisingMismatch + deadUrls + missingDocs
+
+**FIN-026 — Agent Teams in Phase 1B:**
+Bei >5 parallelen Workern in Phase 1B: nutze Agent Teams (TeamCreate) statt
+einzelner Subagents.
+- **Team-Leader** (model: opus, effort: max) = Quality-Gate: prüft Output jedes
+  Worker-Members BEVOR der Output als final akzeptiert wird. Kann Workers
+  kommandieren ("re-do mit anderer Strategie"), Cross-Jurisdictional-Konflikte
+  auflösen und die Synthesizer-Funktion übernehmen.
+- **Workers** (model: opus, effort: max) = Spezialisten für ihre Kategorie/Jurisdiktion.
+- Team-Members können untereinander kommunizieren (z. B. Worker 3 teilt
+  Worker 7 mit: "HWG-Finding T-003 betrifft auch FR-Wording").
+- **Achtung:** 3-4× teurer als einzelne Subagents. Nur bei wirklich komplexen
+  Phasen mit >5 Workers und echtem Koordinationsbedarf einsetzen.
+
+### Synthesizer-Verifikations-Pflichten nach Subagent B — FIN-007 + FIN-009 + FIN-025
+
+Bevor der Synthesizer die finalen Findings in `recht-report.json` schreibt, MÜSSEN
+zwei Pflicht-Verifikationsschritte durchgeführt werden:
+
+**FIN-007 — Assets-Inventar-Abgleich vor `missingDocs`-Einträgen:**
+```bash
+# Assets-Inventar generieren (HTML, MD, TXT in app/src/main/assets/)
+find "<app-root>/app/src/main/assets" -type f \( -iname "*.html" -o -iname "*.htm" \
+  -o -iname "*.md" -o -iname "*.txt" \) 2>/dev/null
+```
+Für jedes potenzielle `missingDocs`-Finding (privacy, imprint, terms, help):
+- Prüfe ob ein inhaltlich passendes Dokument im Assets-Inventar existiert
+  (Locale-Segment im Pfad, z. B. `assets/legal/de/NUTZUNGSBEDINGUNGEN.html`).
+- Falls vorhanden: Finding NICHT als "fehlendes Dokument" eintragen.
+  Stattdessen ggf. ein `🟨 low`-Finding "Dokument existiert, aber kein Deep-Link
+  aus dem UI" anlegen — sofern das der tatsächliche Mangel ist.
+- Bei Diskrepanz zwischen Scan-Ergebnis und Assets-Inventar: Finding als
+  `"status": "needs-clarification"` markieren statt blind als 🟥 eskalieren.
+
+**FIN-009 — String-Key-Existenz-Prüfung vor `affectedStringKeys`-Einträgen:**
+Bevor ein Finding einen `affectedStringKeys`-Array erhält, Pflicht-Grep:
+```bash
+grep -n 'name="<KEY>"' "<app-root>/app/src/main/res/values/strings.xml"
+```
+- Key gefunden → Finding wie gewohnt eintragen.
+- Key NICHT gefunden → Finding mit Warnung `"stringKeyNotFound": true` markieren.
+  Rationale ergänzen: „Key aus Scan-Extraktion — Existenz in strings.xml nicht
+  bestätigt. Manuell prüfen vor Anwendung."
+- Massenhaft nicht-gefundene Keys → an den Orchestrator melden, Phase 1A
+  möglicherweise unvollständig (Stichwort FIN-003 feature-scan.sh-Fehler).
+
+**FIN-025 — Kategorie-ID-Schema (Pflicht-Konversion im Synthesizer):**
+Interne Worker-IDs (T-/AM-/MD-/PS- etc.) werden im Synthesizer auf das
+standardisierte Kategorie-ID-Schema konvertiert. Jede Finding-ID im
+`recht-report.json` MUSS nach diesem Schema aufgebaut sein:
+
+| Präfix | Kategorie | Beispiele |
+|--------|-----------|-----------|
+| **A1-A99** | HWG / Heilversprechen / Gesundheit | A1, A12, A47 |
+| **B1-B99** | UWG / Werbung / Irreführung | B1, B5, B23 |
+| **C1-C99** | DSGVO / Datenschutz / Consent | C1, C8, C31 |
+| **D1-D99** | BGB / Widerruf / Vertrag | D1, D4, D19 |
+| **E1-E99** | Play-Store-Policy | E1, E3, E11 |
+| **F1-F99** | Dark-Pattern / UX-Tricks | F1, F6, F22 |
+| **G1-G99** | Missing-Docs (Privacy, Impressum, AGB fehlt) | G1, G2, G7 |
+| **Z1-Z99** | Sonstige / Cross-cutting | Z1, Z15 |
+
+Nummerierung innerhalb einer Kategorie: aufsteigend in der Reihenfolge wie
+die Findings gefunden wurden. Kategorie-Zähler resettet NICHT zwischen Phasen —
+A1 aus Phase 1 bleibt A1 in Phase 4. Neue Findings in Phase 4: erhalten die
+nächste freie Nummer in ihrer Kategorie (z. B. A48 wenn A1-A47 schon vergeben).
+
 ### Nach Phase 1
 
 Ausgabe an Nutzer:
@@ -316,6 +464,99 @@ Iteriere durch alle Findings in dieser Reihenfolge:
 1. 🟥 zuerst (sortiert nach Datei/Zeile)
 2. 🟧 zweiter Block
 3. 🟨 zuletzt
+
+### Karten-Layout mit Kategorie-ID — FIN-025
+
+Jede Karte (Standard und Invasiv) MUSS die Kategorie-ID (FIN-025-Schema) im Header zeigen.
+ANSI-Farben nach Risiko-Level:
+- 🟥 hoch → roter Header (`\033[91m`)
+- 🟧 mittel → orange (`\033[93m`)
+- 🟨 niedrig → gelb (`\033[33m`)
+
+Beispiel-Karte mit korrektem Kategorie-ID-Format:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ A1 🟥 HWG §3 (Heilversprechen)                                  │
+│ Datei: app/src/main/res/values/strings.xml:1191                 │
+├─────────────────────────────────────────────────────────────────┤
+│ AKTUELL: "Finde deine innere Ruhe"                              │
+│ PROBLEM: Therapeutik-Versprechen im Paywall-Headline            │
+├─────────────────────────────────────────────────────────────────┤
+│ [a] "Mehr Klarheit im Alltag" (Δ −8%)                           │
+│ [b] "Klarere Gedanken jeden Tag" (Δ −5%)                        │
+│ [c] Eigene Formulierung                                         │
+│ [skip] Überspringen                                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Anchor-Format für den Nutzer: kurze ID ("A1", "B5", "C12") — nicht die alten
+T-/AM-/MD-/PS-IDs. Der Nutzer kann "A1 überspringen" oder "B5 Vorschlag 2"
+sagen und der Orchestrator versteht es eindeutig.
+
+### Pflicht-Validations nach Fix-Applier-Run — FIN-024 + FIN-027
+
+**Nach JEDEM Fix-Applier-Run** (egal ob Standard- oder Invasiv-Karte) MÜSSEN
+diese zwei Checks durchgeführt werden:
+
+**FIN-024 — Quick-Validation-Step:**
+```
+- Wenn .kt-Datei geändert:
+    Quick-Compile-Check: ./gradlew :app:compileDebugKotlin (nur betroffenes Modul)
+- Wenn values-*/strings.xml geändert:
+    aapt-Validate: ./gradlew :app:processDebugResources
+- Wenn build.gradle.kts geändert:
+    Load-Test: ./gradlew help
+- Bei FAIL:
+    Fix als "broken" markieren (status: "applied-broken" im Audit-Log)
+    Neuen Worker für Re-Fix sofort spawnen
+    Karte erneut zeigen mit Fehler-Detail oben
+- Bei PASS: weiter mit nächstem Finding
+```
+
+**FIN-027 — Umlaut-Check nach Fix:**
+```
+Nach jeder fix-applier-Anwendung die deutsche Strings betrifft:
+  Grep auf \b(ae|oe|ue|ss)\b im neu eingefügten Text
+  Falls Treffer in deutschem Wort:
+    Auto-Convert: ae→ä, oe→ö, ue→ü, ss→ß
+    Stop bei zweifelhaften Fällen (z. B. "Strasse" als Eigenname OK,
+    "strasse" als Adjektiv/Nomen = "Straße" → nachfragen)
+  Ergebnis in Audit-Log vermerken ("umlaut-check: passed | 3 auto-fixes")
+```
+
+### Bundle-Karten für Cluster — FIN-006
+
+Bevor die erste Einzel-Karte ausgegeben wird, prüfe das `recht-report.json` auf Cluster:
+Ein Cluster liegt vor wenn MINDESTENS EINE dieser Bedingungen erfüllt ist:
+- Mehrere Findings teilen identische `relatedFindingIds`-Verknüpfungen (bidirektional).
+- Mehrere Findings tragen `"affectsAllScreens": true` in derselben `category`.
+
+Bei einem erkannten Cluster EINE Bundle-Karte ausgeben statt N Einzelkarten:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  BUNDLE #<B> — <N> zusammengehörige Findings               │
+│  Findings: <T-003, T-007, T-011, ...>                         │
+│  Gemeinsames Muster: <z. B. „Alle Paywall-CTAs versprechen     │
+│    garantierten Erfolg — UWG §5">                              │
+│  Risiko gesamt: <🟥 N × hoch>                                  │
+│                                                                  │
+│  EINHEITLICHE LÖSUNG (auf alle <N> Findings anwendbar):        │
+│  [1] "<Vorschlag 1>" — auf alle Stellen anwenden              │
+│  [2] "<Vorschlag 2>" — auf alle Stellen anwenden              │
+│  [3] "<Vorschlag 3>" — auf alle Stellen anwenden              │
+│                                                                  │
+│  ALTERNATIVE AKTIONEN:                                           │
+│  [4] Bundle aufsplitten — jedes Finding einzeln behandeln      │
+│  [5] Alle Findings im Bundle überspringen                       │
+│  [6] Workflow abbrechen                                          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+Wird Option [1]/[2]/[3] gewählt, übergibt der Orchestrator dem `fix-applier` die
+vollständige Liste aller Bundle-Findings. Der `fix-applier` wendet den gewählten
+Vorschlag auf jede Fundstelle an (eine Batch-Operation, NICHT N separate Aufrufe).
+Bei Option [4] fallen die Findings zurück in die normale Einzelkarten-Queue.
 
 ### Standard-Karte (text-only)
 
@@ -422,14 +663,80 @@ Lade den Skill, übergib App-Root und Liste der NEU geänderten oder hinzugefüg
 
 Strings-Änderungen werden über den `fix-applier` angewendet (gleicher Workflow wie Phase 2, aber meist ohne Karte — reine Verschiebung Hardcode → strings.xml ist immer text-only und kann automatisch laufen, **außer** der Wert ändert sich semantisch).
 
-### 3b — Übersetzer-Skill (`uebersetzer-skill`) — parallel pro Sprache
+### 3b — Übersetzer-Skill (`uebersetzer-skill`) — Continuous-Spawning-Pattern (FIN-015)
 
-Auto-Detection: aus `values-*/-Verzeichnissen` Zielsprachen ableiten. Für jede Zielsprache ≠ DE einen Übersetzer-Subagent via Task tool spawnen (parallel, bis ~10 gleichzeitig).
+Auto-Detection: aus `values-*/-Verzeichnissen` Zielsprachen ableiten.
+
+**Continuous-Spawning-Pattern (PFLICHT — kein Wellen-Warten):**
+1. Die ersten **15** Übersetzer-Worker sofort parallel im Background starten
+   (FIN-023): `run_in_background: true` für jeden Worker-Task-Aufruf.
+2. Sobald EIN Worker fertig gemeldet wird: SOFORT den nächsten Worker für
+   die nächste noch nicht gestartete Sprache spawnen.
+3. NICHT auf alle 15 warten, dann Welle 2 starten — das wäre suboptimal.
+   Beispiel: Sobald Worker "ar" fertig → Worker "bn" sofort starten, ohne
+   auf die noch laufenden Workers 2-14 zu warten.
+4. Ergebnis: Bei 26 Zielsprachen × ~5 Min pro Sprache ≈ **~10 Min Gesamtzeit**
+   statt ~4 Stunden bei sequenziellem oder wellenweisem Vorgehen.
+
+**FIN-026 — Agent Teams in Phase 3b:**
+Bei >10 Zielsprachen oder wenn Cross-Lingual-Konflikte wahrscheinlich (z. B.
+medizinische App in FR/IT/ES mit HWG-nahen Texten): Agent Teams statt einzelner
+Subagents nutzen.
+- **Team-Leader** (model: opus, effort: max) = koordiniert Übersetzungs-Worker,
+  löst Cross-Lingual-Konflikte auf ("DE 'innere Ruhe' → FR 'paix intérieure' OK,
+  aber IT 'pace interiore' triggert IT-Heilversprechen-Regel → anpassen"),
+  übernimmt Synthesizer-Funktion.
+- **Workers** (model: opus, effort: max) = je 1-2 Sprachen pro Worker-Member.
+- Workers können Team-Leader fragen: "Soll ich bei Zweideutigkeit den
+  konservativeren oder den natürlicheren Wortlaut wählen?"
+- **Achtung:** 3-4× teurer als einzelne Subagents.
+
+Umsetzung (Pseudo-Ablauf):
+```
+queue = [en, fr, es, it, pt, nl, pl, cs, sk, hu, ro, bg, hr, da, fi,
+         nb, sv, el, tr, ru, uk, ja, ko, zh-rCN, zh-rTW, ar]  # alle ≠ de
+running = {}
+
+# Initiale Welle: max 15 gleichzeitig starten (FIN-023)
+for lang in queue[:15]:
+    running[lang] = Task(uebersetzer-worker, lang, run_in_background=True)
+    queue.remove(lang)
+
+# Continuous: sobald einer fertig → nächster rein
+while running or queue:
+    finished = wait_for_any(running)
+    collect_result(finished)
+    running.remove(finished)
+    if queue:
+        next_lang = queue.pop(0)
+        running[next_lang] = Task(uebersetzer-worker, next_lang, run_in_background=True)
+```
+
+**FIN-028 — Worker-Sichtbarkeit (Frank-Direktive 2026-05-18):**
+Frank will sehen was läuft. Kompromiss zwischen Background-Effizienz und Sichtbarkeit:
+
+1. Beim Start jeder Welle EINEN klaren Status-Block ausgeben:
+   ```
+   Welle 1 (15 Workers gestartet):
+     ar, bn, en, es, fr, gu, hi, it, ja, kn, ko, ml, mr, nl, pl
+     — alle im Background gestartet
+   ```
+2. Jeder Worker-Task bekommt ein beschreibendes `description`-Feld:
+   `"Translate: ar — 31 Strings × Arabisch-RTL-Validierung"`
+3. Zwischen Worker-Notifications druckt der Orchestrator Live-Stats:
+   `"12 von 26 abgeschlossen, 3 noch laufend, 11 ausstehend"`
+4. Background bleibt aktiviert für Continuous-Spawning — kein Wechsel zu
+   Foreground-Blocking nur für Sichtbarkeit.
 
 Jeder Worker:
 - Bekommt: Delta-Liste der zu übersetzenden Strings, Längenbudget ±15%, Zielsprache, Zielland(je)
+- Bekommt zusätzlich: explizite Umlaut-/Sonderzeichen-Direktive für die Zielsprache
+  (ä/ö/ü für DE, ç/é/è für FR, ł/ż/ź für PL, ı/ş/ğ für TR, usw.)
+- Bekommt: UMLAUT-PFLICHT-Direktive (FIN-027) explizit im Prompt
 - Liefert: Übersetzungen mit Längen-Delta, `uebersetzungs-plan.json` pro Sprache
 - Wendet selbst NICHT an — gibt nur an `fix-applier` weiter
+- Darf maximal 100.000 Token verbrauchen (FIN-004/FIN-023); bei Limit → Teilstand
+  sichern, Folge-Worker für Reststrings spawnen
 
 ### 3c — Cross-Lingual-Rechtsprüfung
 
@@ -448,6 +755,62 @@ Roentgen + Recht erneut aufrufen, diesmal im `delta`-Modus (Skills entscheiden o
 - `resolvedFindings`: Findings, die seit dem letzten Lauf weg sind
 
 `openFindingsCount` wird neu berechnet.
+
+### Worker W4 — Build-Validation (FIN-022 + FIN-024)
+
+**Zweck:** Sicherstellen, dass die per Phase 3 eingefügten Übersetzungen den Build nicht
+brechen. Verhindert, dass das Plugin `"completed"` meldet, obwohl die App nicht mehr
+kompiliert.
+
+**FIN-024 — Frank-Anmerkung 2026-05-18:**
+"Beim assembleDebug wurden 6 Fehler entdeckt die das Plugin hätte schon in Phase 2
+finden müssen. Direktive 3: robust fixen, dass das nie wieder passieren kann."
+
+Konsequenz: W4 führt IMMER `./gradlew assembleDebug` (echter Build, kein --dry-run)
+durch — nicht nur den aapt-Check. Der --dry-run ist weiterhin als schneller
+Vorab-Check erlaubt, aber das echte assembleDebug MUSS laufen und MUSS erfolgreich sein
+bevor Phase 5 startet. APK-Pfad (`app-debug.apk`) wird im Audit-Log vermerkt.
+
+**Triggerbedingung:** W4 läuft genau dann, wenn in der vorherigen Iteration mindestens
+eine `values-*/strings.xml`-Datei durch Phase 3 (Übersetzung) oder Phase 2 (Fix-Applier)
+geändert wurde. Bei reinem Re-Audit ohne String-Änderungen: W4 überspringen.
+
+**Ablauf:**
+
+```bash
+# Schritt 1 — Gradle dry-run (bevorzugt, wenn Gradle im PATH)
+cd "<app-root>"
+./gradlew assembleDebug --dry-run 2>&1 | tail -40
+
+# Schritt 2 — Fallback: aapt-Validation aller values-*-Dateien
+#   (wenn Gradle nicht verfügbar oder dry-run schlägt fehl)
+for f in app/src/main/res/values-*/strings.xml; do
+  aapt2 compile --output-dir /tmp/aapt-check "$f" 2>&1 || echo "FEHLER: $f"
+done
+```
+
+**Bei Build-Fail (FIN-024):**
+
+1. Pipeline-Status auf `"build-broken"` setzen (NICHT `"completed"`).
+2. Neues Finding erstellen:
+   ```json
+   {
+     "id": "build-broken-by-translation",
+     "severity": "critical",
+     "category": "build-integrity",
+     "affectedFile": "<Pfad zur kaputten strings.xml>",
+     "summary": "Übersetzung hat Build-Fehler eingeführt",
+     "detail": "<gradle/aapt-Fehlermeldung, erste 20 Zeilen>",
+     "autoStop": true
+   }
+   ```
+2. **AUTO-STOP:** Pipeline wird NICHT mit Phase 5 fortgesetzt. Stattdessen:
+   - Dem Nutzer den Build-Fehler vollständig anzeigen
+   - Fix-Karte für das kaputte Finding (invasivityLevel: `"text-only"`) präsentieren
+   - Nach manuellem Fix erneut W4 ausführen, bevor Phase 5 startet
+
+**Bei Build-Success:** Finding `"build-broken-by-translation"` (falls aus Vorrun
+vorhanden) als `resolved` markieren. `openFindingsCount` entsprechend aktualisieren.
 
 ---
 

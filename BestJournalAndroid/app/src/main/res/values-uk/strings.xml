@@ -1429,7 +1429,7 @@
     <!-- Permission rationale -->
     <string name="permission_rationale_microphone">Щоб ти міг диктувати записи голосом, нам потрібен доступ до мікрофона.</string>
     <string name="permission_rationale_camera">Щоб ти міг додавати фото до своїх записів, нам потрібен доступ до камери.</string>
-    <string name="permission_rationale_location">Щоб ти міг прив'язати запис до місця, нам потрібне приблизне місцезнаходження. Ти можеш відмовитись зараз або вимкнути це пізніше.</string>
+    <string name="permission_rationale_location">Щоб ти міг прив\'язати запис до місця, нам потрібне приблизне місцезнаходження. Ти можеш відмовитись зараз або вимкнути це пізніше.</string>
     <string name="permission_rationale_notifications">Щоб ми могли нагадувати тобі про щоденний запис, нам потрібен дозвіл на сповіщення.</string>
 
     <!-- System backup consent -->
