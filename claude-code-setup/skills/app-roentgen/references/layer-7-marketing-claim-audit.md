@@ -18,7 +18,9 @@ Rechtlicher Rahmen Stand 2026:
 | **FTC Endorsement Guides (US)** | USA | KI-Claims brauchen Substanz, Affiliate-Disclosure |
 | **FTC Junk Fees Rule (US 2025)** | USA | Pflicht-Gebuehren upfront ausweisen |
 
-## 7.0 Multi-Module-Hinweis (FIX T7)
+## 7.0 Plattform-Hinweise (FIX T7 + AA7)
+
+> **FIX AA7 (Audit 10) — Kotlin + Java:** Code-Realitaets-Patterns in Abschnitt 7.3 (`AdMob`, `GenerativeModel`, `FirebaseAnalytics` etc.) zeigen `--include='*.kt'`. Bei Apps mit Java-Anteilen `--include='*.java'` ergaenzen — Java-Legacy-Module nutzen diese SDKs haeufig direkt aus `.java`-Dateien.
 
 > **Pfad-Annahme:** Die Bash-Snippets in diesem Layer benutzen aus Lesbarkeitsgruenden `app/src/main/...`. Bei **Multi-Module-Apps** (z.B. `feature/auth/`, `feature/journal/`, `core/ui/` mit jeweils eigenen `src/main/res/values/strings.xml`) MUSS jede Stelle die `app/src/main/res/values/...` enthaelt projektweit gesucht werden:
 >
