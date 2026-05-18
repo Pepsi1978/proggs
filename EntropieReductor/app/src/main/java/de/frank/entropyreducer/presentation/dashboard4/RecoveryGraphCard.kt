@@ -32,7 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.time.Instant
@@ -123,6 +125,18 @@ internal fun RecoveryGraphCard(
     if (sheetOpen) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { sheetOpen = false }, sheetState = sheetState) {
+            // Frank-Wunsch 2026-05-18 Folgeauftrag: Farbpalette oben im Sheet,
+            // Auswahl persistiert auf RECOVERY_GRAPH.
+            val cardColors = rememberCardColors()
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                ColorPaletteBar(
+                    selectedIndex = cardColors.colors[BiomarkerCardId.RECOVERY_GRAPH] ?: 0,
+                    onPick = { idx ->
+                        cardColors.setColor(BiomarkerCardId.RECOVERY_GRAPH, idx)
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             RecoveryHistorySheetContent(rows = derived.historyRows)
         }
     }

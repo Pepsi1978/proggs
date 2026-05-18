@@ -32,9 +32,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
+import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import java.text.SimpleDateFormat
@@ -242,11 +244,31 @@ fun HealthConnectDetailScreen(
             }
         },
     ) { padding ->
+        // Frank-Wunsch 2026-05-18 Folgeauftrag: Farbpalette oben in jedem
+        // Gewichts-Detail-Screen. Mapping HC-MetricKey -> CardId fuer die
+        // jeweilige Mini-Karte im Uebersichts-Screen.
+        val cardColorAccess = rememberCardColors()
+        val targetCardId = when (metricKey) {
+            HealthConnectMetricKey.WEIGHT -> BiomarkerCardId.MINI_WEIGHT
+            HealthConnectMetricKey.BODY_FAT -> BiomarkerCardId.MINI_BODY_FAT
+            HealthConnectMetricKey.LEAN_BODY_MASS -> BiomarkerCardId.MINI_LEAN_BODY_MASS
+            HealthConnectMetricKey.BODY_WATER -> BiomarkerCardId.MINI_BODY_WATER
+            HealthConnectMetricKey.BONE_MASS -> BiomarkerCardId.MINI_BONE_MASS
+            HealthConnectMetricKey.MUSCLE_MASS -> BiomarkerCardId.MINI_MUSCLE_MASS
+            else -> metricKey
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                ColorPaletteBar(
+                    selectedIndex = cardColorAccess.colors[targetCardId] ?: 0,
+                    onPick = { idx -> cardColorAccess.setColor(targetCardId, idx) },
+                )
+            }
             item {
                 HcDetailHeader(
                     title = spec.title,

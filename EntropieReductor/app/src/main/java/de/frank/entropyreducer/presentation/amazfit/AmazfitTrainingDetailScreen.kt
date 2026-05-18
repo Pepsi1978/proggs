@@ -72,8 +72,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.rememberCardColors
+import de.frank.entropyreducer.presentation.dashboard4.BiomarkerCardId
 import de.frank.entropyreducer.presentation.dashboard4.formatDistance
 import de.frank.entropyreducer.presentation.dashboard4.formatDuration
 import de.frank.entropyreducer.presentation.dashboard4.formatPace
@@ -234,11 +237,22 @@ fun AmazfitTrainingDetailScreen(
             },
             compactHeader = true,
         ) { padding ->
+            // Frank-Wunsch 2026-05-18 Folgeauftrag: Farbpalette oben im
+            // Training-Hero-Detail. Auswahl persistiert auf AMAZFIT_LAST_HERO.
+            val cardColorAccess = rememberCardColors()
+            val heroCardId = BiomarkerCardId.AMAZFIT_LAST_HERO
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                item {
+                    ColorPaletteBar(
+                        selectedIndex = cardColorAccess.colors[heroCardId] ?: 0,
+                        onPick = { idx -> cardColorAccess.setColor(heroCardId, idx) },
+                    )
+                }
                 if (w == null) {
                     item { Text("Wird geladen …", color = cosmos.textSecondary) }
                     return@LazyColumn

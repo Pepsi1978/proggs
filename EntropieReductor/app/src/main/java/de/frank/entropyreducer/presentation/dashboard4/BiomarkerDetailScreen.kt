@@ -534,11 +534,18 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
  * (z.B. `BiomarkerCardId.HRV`) im Uebersichts-Screen einfaerben — ein
  * Pattern, eine Farbe, ueberall sichtbar.
  */
-private fun cardIdsForMetricKey(metricKey: String): List<String> = when (metricKey) {
+internal fun cardIdsForMetricKey(metricKey: String): List<String> = when (metricKey) {
     MetricKey.HRV -> listOf(BiomarkerCardId.HRV, BiomarkerCardId.MINI_HRV)
     MetricKey.RHR -> listOf(BiomarkerCardId.RHR, BiomarkerCardId.MINI_RHR)
+    // Schlafdauer und Schlafphasen teilen sich den Detail-Screen — Farbe
+    // gilt fuer Mini-, volle Schlafdauer- und Schlafphasen-Karte gemeinsam
+    // (Frank-Wunsch 2026-05-18 Folgeauftrag).
     MetricKey.SLEEP_TOTAL ->
-        listOf(BiomarkerCardId.SLEEP_TOTAL, BiomarkerCardId.MINI_SLEEP_TOTAL)
+        listOf(
+            BiomarkerCardId.SLEEP_TOTAL,
+            BiomarkerCardId.MINI_SLEEP_TOTAL,
+            BiomarkerCardId.SLEEP_STAGES,
+        )
     MetricKey.SLEEP_PERF ->
         listOf(BiomarkerCardId.SLEEP_PERFORMANCE, BiomarkerCardId.MINI_SLEEP_PERFORMANCE)
     MetricKey.VO2MAX -> listOf(BiomarkerCardId.MINI_VO2MAX)
@@ -546,9 +553,14 @@ private fun cardIdsForMetricKey(metricKey: String): List<String> = when (metricK
     MetricKey.SLEEP_AWAKE -> listOf(BiomarkerCardId.SLEEP_WAKE_GRAPH)
     MetricKey.RECOVERY -> listOf(BiomarkerCardId.GESAMTERHOLUNG, BiomarkerCardId.RECOVERY_GRAPH)
     MetricKey.SLEEP_RESTORATIVE -> listOf(BiomarkerCardId.SLEEP_RESTORATIVE)
-    MetricKey.SKIN_TEMP_DELTA -> listOf(BiomarkerCardId.SKIN_TEMP_DELTA)
+    // Skin-Temp und Skin-Temp-Delta teilen den Detail-Screen — beide Karten
+    // werden gemeinsam eingefaerbt.
+    MetricKey.SKIN_TEMP ->
+        listOf(BiomarkerCardId.SKIN_TEMP, BiomarkerCardId.SKIN_TEMP_DELTA)
+    MetricKey.SKIN_TEMP_DELTA ->
+        listOf(BiomarkerCardId.SKIN_TEMP, BiomarkerCardId.SKIN_TEMP_DELTA)
     // Fallback: der metricKey selbst ist auch die Card-ID (gilt fuer
-    // RESPIRATORY, SPO2, SKIN_TEMP, SLEEP_EFFICIENCY, SLEEP_CONSISTENCY,
+    // RESPIRATORY, SPO2, SLEEP_EFFICIENCY, SLEEP_CONSISTENCY,
     // SLEEP_DEBT, STRAIN, KILOJOULES, ...).
     else -> listOf(metricKey)
 }

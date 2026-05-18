@@ -35,9 +35,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.dashboard4.AmazfitWorkoutRow
+import de.frank.entropyreducer.presentation.dashboard4.BiomarkerCardId
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
@@ -74,6 +77,11 @@ fun AmazfitTrainingsScreen(
         },
         compactHeader = true,
     ) { padding ->
+        // Frank-Wunsch 2026-05-18 Folgeauftrag: Farbpalette oben in der
+        // Trainings-Liste. Auswahl persistiert auf AMAZFIT_TRAININGS.
+        val cardColorAccess = rememberCardColors()
+        val trainingsCardId = BiomarkerCardId.AMAZFIT_TRAININGS
+
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -81,6 +89,12 @@ fun AmazfitTrainingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            item {
+                ColorPaletteBar(
+                    selectedIndex = cardColorAccess.colors[trainingsCardId] ?: 0,
+                    onPick = { idx -> cardColorAccess.setColor(trainingsCardId, idx) },
+                )
+            }
             // Header mit T-Rex-3-Marker + Anzahl Trainings
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {

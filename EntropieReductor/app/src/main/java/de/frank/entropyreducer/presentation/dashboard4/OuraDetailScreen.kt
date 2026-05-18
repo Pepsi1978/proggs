@@ -37,8 +37,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
+import de.frank.entropyreducer.presentation.components.rememberCardColors
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
@@ -117,6 +119,12 @@ fun OuraDetailScreen(
     val avg30 = last30.takeIf { it.isNotEmpty() }?.average()
     val trendDelta = if (current != null && avg30 != null) current - avg30 else null
 
+    // Frank-Wunsch 2026-05-18 Folgeauftrag: Farbpalette oben auf jedem
+    // Oura-Detail-Screen (Readiness, Schlaf-Score, Aktivitaet, Resilienz).
+    val cardColorAccess = rememberCardColors()
+    val ouraCardId = metricKey
+    val ouraColorIndex = cardColorAccess.colors[ouraCardId] ?: 0
+
     CosmosScaffold(
         title = title,
         navigationIcon = {
@@ -130,6 +138,12 @@ fun OuraDetailScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                ColorPaletteBar(
+                    selectedIndex = ouraColorIndex,
+                    onPick = { idx -> cardColorAccess.setColor(ouraCardId, idx) },
+                )
+            }
             item { OuraDetailHeader(title = title, current = current, unit = unit, trendDelta = trendDelta, isResilience = metricKey == OuraMetricKey.RESILIENCE) }
             item { OuraRangeSwitcher(current = range, onChange = { range = it }) }
             if (filtered.isNotEmpty()) {
