@@ -561,24 +561,41 @@ internal fun formatDuration(seconds: Long): String {
  * vorliegt → "—" statt mit Hardcoded-65 zu raten.
  */
 internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity, restingHrForDay: Int?): String {
-    val avgHr = w.avgHeartRate ?: return "—"
-    val distance = w.distanceMeters ?: return "—"
-    val duration = w.durationSeconds ?: return "—"
-    if (duration < 60 || distance < 100 || avgHr < 80 || avgHr > 220) return "—"
-    // Frank-Wunsch 2026-05-17 (revidiert): Fallback 60 bpm wenn kein Whoop-
-    // Ruhepuls fuer den Tag verfuegbar — so bekommen auch alte Polar-Bulk-
-    // Trainings (vor Whoop-Anschaffung) einen VO2max-Schaetzwert.
+    val v = computeVo2MaxOrNull(w, restingHrForDay) ?: return "—"
+    return "%.1f".format(v).replace(".", ",")
+}
+
+/**
+ * Frank-Wunsch 2026-05-18: Reine Double-Variante der VO2max-Berechnung — wird
+ * gebraucht damit der Biomarker-VO2max-Mini-Pattern und der zugehoerige Detail-
+ * Screen die letzten Trainings als Verlauf zeichnen koennen. Liefert den Wert
+ * in ml/(kg·min) oder null wenn das Training nicht VO2max-faehig ist (Sportart
+ * nicht Laufen/Trail/Walk, fehlende Distanz/Dauer/Puls, oder Wert ausserhalb
+ * physiologisch plausibler Spanne 20-80).
+ *
+ * Pflicht-Vorpruefung mit [isVo2MaxSport] — Krafttraining, Yoga, Crosstrainer
+ * etc. liefern keinen sinnvollen Wert.
+ */
+internal fun computeVo2MaxOrNull(
+    w: AmazfitWorkoutEntity,
+    restingHrForDay: Int?,
+): Double? {
+    if (!isVo2MaxSport(w.sportName)) return null
+    val avgHr = w.avgHeartRate ?: return null
+    val distance = w.distanceMeters ?: return null
+    val duration = w.durationSeconds ?: return null
+    if (duration < 60 || distance < 100 || avgHr < 80 || avgHr > 220) return null
     val restingHr = restingHrForDay ?: 60
     val frankMaxHr = 180
-    if (frankMaxHr <= restingHr) return "—"
+    if (frankMaxHr <= restingHr) return null
     val durationMin = duration / 60.0
     val speedMperMin = distance / durationMin
     val vo2Workout = 0.2 * speedMperMin + 3.5
     val hrReserve = (avgHr - restingHr).toDouble() / (frankMaxHr - restingHr).toDouble()
-    if (hrReserve <= 0.1) return "—"
+    if (hrReserve <= 0.1) return null
     val vo2Max = vo2Workout / hrReserve + 2.0
-    if (vo2Max < 20 || vo2Max > 80) return "—"
-    return "%.1f".format(vo2Max).replace(".", ",")
+    if (vo2Max < 20 || vo2Max > 80) return null
+    return vo2Max
 }
 
 internal fun formatPace(secPerKm: Double): String {

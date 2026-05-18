@@ -51,6 +51,12 @@ object BiomarkerCardId {
     const val HRV = "hrv"
     const val RHR = "rhr"
 
+    // Frank-Wunsch 2026-05-18: VO2max als eigene Mini-Karte. Wert kommt nicht
+    // aus dem Whoop-Snapshot, sondern wird im VM aus den juengsten VO2max-
+    // faehigen Workouts (Laufen/Trail/Walk) berechnet — siehe vo2MaxHistory
+    // im BiomarkerUiState und MiniVo2MaxCard im BiomarkerScreen.
+    const val MINI_VO2MAX = "mini_vo2max"
+
     // Koerper-Block (Atmung, Sauerstoff, Hauttemperatur)
     const val RESPIRATORY = "respiratory"
     const val SPO2 = "spo2"
@@ -110,6 +116,7 @@ object BiomarkerCardId {
             MINI_RHR,
             MINI_SLEEP_TOTAL,
             MINI_SLEEP_PERFORMANCE,
+            MINI_VO2MAX,
             SLEEP_RESTORATIVE,
             SKIN_TEMP_DELTA,
             MINI_WEIGHT,
@@ -126,6 +133,7 @@ object BiomarkerCardId {
             RECOVERY_GRAPH,
             MINI_HRV,
             MINI_RHR,
+            MINI_VO2MAX,
             MINI_SLEEP_TOTAL,
             MINI_SLEEP_PERFORMANCE,
             MINI_WEIGHT,

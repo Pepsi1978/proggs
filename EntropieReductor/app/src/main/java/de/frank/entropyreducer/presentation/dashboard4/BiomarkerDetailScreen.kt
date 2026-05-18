@@ -77,10 +77,19 @@ fun BiomarkerDetailScreen(
         DetailRange.ALL -> Long.MIN_VALUE
     }
 
-    val filtered = state.history.filter { it.capturedAt >= cutoff }
-    val pointsAll = filtered.mapNotNull { snap ->
-        spec.extract(snap)?.let { snap.capturedAt to it }
-    }
+    // Frank-Wunsch 2026-05-18: VO2max-Werte kommen nicht aus dem
+    // BiomarkerSnapshot, sondern aus AmazfitWorkouts × Whoop-Snapshots —
+    // vorberechnet im VM. Spezialfall: precomputed-Liste aus chartData
+    // nutzen statt extract-Lookup ueber state.history.
+    val pointsAll: List<Pair<Long, Double>> =
+        if (metricKey == MetricKey.VO2MAX) {
+            (state.chartData.fullPoints["vo2max"] ?: emptyList())
+                .filter { it.first >= cutoff }
+        } else {
+            state.history
+                .filter { it.capturedAt >= cutoff }
+                .mapNotNull { snap -> spec.extract(snap)?.let { snap.capturedAt to it } }
+        }
     val values = pointsAll.map { it.second }
     val minV = values.minOrNull()
     val maxV = values.maxOrNull()
@@ -478,6 +487,17 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         accent = CosmosColors.AccentSecondary,
         extract = { it.sleepCycleCount?.toDouble() },
         format = { "%.0f x".format(it) },
+    )
+    // Frank-Wunsch 2026-05-18: VO2max wird NICHT aus dem BiomarkerSnapshot
+    // gelesen — die Werte kommen aus chartData["vo2max"], berechnet aus
+    // VO2-faehigen Workouts. extract liefert hier null, der DetailScreen
+    // hat einen Spezialfall der die precomputed-Liste direkt nutzt.
+    MetricKey.VO2MAX -> MetricSpec(
+        title = "VO2max",
+        unit = "ml/(kg·min)",
+        accent = CosmosColors.AccentSecondary,
+        extract = { null },
+        format = { "${"%.1f".format(it).replace('.', ',')} ml/min" },
     )
     else -> MetricSpec(
         title = "Unbekannt",

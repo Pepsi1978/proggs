@@ -735,6 +735,7 @@ constructor(
                         fullHistory = all,
                         history30Days = last30,
                         todayStartMs = todayStartMs,
+                        amazfitWorkouts = amazfit.workouts,
                     )
 
                 BiomarkerUiState(
@@ -922,6 +923,8 @@ private fun buildChartData(
     fullHistory: List<BiomarkerSnapshotEntity>,
     history30Days: List<BiomarkerSnapshotEntity>,
     todayStartMs: Long,
+    amazfitWorkouts: List<de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity> =
+        emptyList(),
 ): BiomarkerChartData {
     // Liste aller Metric-Extractor-Paare. Jeder Extractor liest einen Wert aus dem
     // Snapshot und liefert ihn als Double (oder null). Reihenfolge ist irrelevant.
@@ -980,6 +983,27 @@ private fun buildChartData(
             .filter { it.capturedAt < todayStartMs }
             .mapNotNull { snap -> snap.dayKilojoules?.let { snap.capturedAt to (it / 4.184) } }
             .dedupByTimestamp()
+
+    // Frank-Wunsch 2026-05-18: VO2max-Verlauf aus VO2max-faehigen Workouts
+    // (Laufen/Trail/Walk) berechnen. Pro Workout den Whoop-Ruhepuls fuer
+    // den Workout-Tag suchen (Vortag-Fallback), dann ACSM-Formel anwenden.
+    // Wert ist ml/(kg·min). Sortiert nach Workout-Start aufsteigend.
+    val vo2MaxAll: List<Pair<Long, Double>> =
+        amazfitWorkouts
+            .mapNotNull { w ->
+                val restingHr =
+                    de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay(
+                        fullHistory,
+                        w.startMs,
+                    )
+                de.frank.entropyreducer.presentation.dashboard4
+                    .computeVo2MaxOrNull(w, restingHr)
+                    ?.let { w.startMs to it }
+            }
+            .sortedBy { it.first }
+    val seventyDaysAgoMs = todayStartMs - 70L * 24 * 60 * 60 * 1000
+    pointsLast70["vo2max"] = vo2MaxAll.filter { it.first >= seventyDaysAgoMs }
+    fullPoints["vo2max"] = vo2MaxAll
 
     // Erholsamer Schlaf 30-Tage-Schnitt (RestorativeSleepCard).
     val restorativeAvg =

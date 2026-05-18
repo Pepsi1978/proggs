@@ -686,6 +686,10 @@ internal object MetricKey {
     const val SLEEP_RESTORATIVE = "sleep_restorative"
     const val SKIN_TEMP_DELTA = "skin_temp_delta"
     const val SLEEP_CYCLES = "sleep_cycles"
+    // Frank-Wunsch 2026-05-18: VO2max aus VO2-faehigen Workouts (Laufen,
+    // Trail, Walk). Wert wird im BiomarkerViewModel berechnet und in
+    // chartData["vo2max"] abgelegt.
+    const val VO2MAX = "vo2max"
 }
 
 /**
@@ -1434,6 +1438,7 @@ private fun BiomarkerCardForId(
             // ein festes 2x2-Grid (KEY_VALUE_GRID).
             BiomarkerCardId.MINI_HRV -> MiniHrvCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_RHR -> MiniRhrCard(state, onOpenMetricDetail)
+            BiomarkerCardId.MINI_VO2MAX -> MiniVo2MaxCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_TOTAL -> MiniSleepTotalCard(state, onOpenMetricDetail)
             BiomarkerCardId.MINI_SLEEP_PERFORMANCE ->
                 MiniSleepPerformanceCard(state, onOpenMetricDetail)
@@ -1808,6 +1813,52 @@ private fun effectiveSleepMinutes(snap: BiomarkerSnapshotEntity?): Int {
     val total = snap.sleepTotalMinutes ?: return 0
     val awake = snap.sleepAwakeMinutes ?: 0
     return (total - awake).coerceAtLeast(0)
+}
+
+/**
+ * Frank-Wunsch 2026-05-18: VO2max-Mini-Karte. Zeigt den letzten verfuegbaren
+ * VO2max-Wert aus den juengsten VO2-faehigen Workouts (Laufen/Trail/Walk),
+ * formatiert mit einer Nachkommastelle. Delta ist die Abweichung vom
+ * 90-Tage-Mittel (Frank-Wunsch: ausnahmsweise 90 statt 30 Tage, weil
+ * VO2max-Werte langsamer schwanken als HRV/RHR).
+ *
+ * Klick oeffnet die Detail-Ansicht (MetricKey.VO2MAX). Die Detail-Page nutzt
+ * den vorberechneten Cache aus state.chartData.fullPoints["vo2max"].
+ */
+@Composable
+private fun MiniVo2MaxCard(state: BiomarkerUiState, onOpenDetail: (String) -> Unit) {
+    // Aggregate aus dem chartData-Cache lesen — keine eigene Berechnung pro
+    // Recomposition. Die Liste ist nach Workout-Start aufsteigend sortiert,
+    // also ist der letzte Eintrag der juengste VO2max-Wert.
+    val full = state.chartData.fullPoints["vo2max"] ?: emptyList()
+    val latest = full.lastOrNull()?.second
+    val ninetyDaysAgoMs =
+        remember { System.currentTimeMillis() - 90L * 24 * 60 * 60 * 1000 }
+    val avg90 =
+        remember(full) {
+            full
+                .filter { it.first >= ninetyDaysAgoMs }
+                .map { it.second }
+                .takeIf { it.isNotEmpty() }
+                ?.average()
+        }
+    val deltaText =
+        if (latest != null && avg90 != null) {
+            val diff = latest - avg90
+            val sign = if (diff >= 0) "+" else ""
+            "${sign}${"%.1f".format(diff).replace('.', ',')}"
+        } else {
+            ""
+        }
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = "VO2max",
+        value = latest?.let { "${"%.1f".format(it).replace('.', ',')}" } ?: "—",
+        delta = deltaText,
+        deltaPositive = (latest ?: 0.0) >= (avg90 ?: 0.0),
+        footnote = "vs. 90-Tage-Mittel",
+        onClick = { onOpenDetail(MetricKey.VO2MAX) },
+    )
 }
 
 @Composable
