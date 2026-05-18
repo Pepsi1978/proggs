@@ -357,28 +357,36 @@ private fun CardHeader(title: String, color: Color) {
     }
 }
 
-/** Score in grosser Zahl plus Plus/Minus-Badge zum 30-Tage-Durchschnitt. */
+/**
+ * Score in grosser Zahl, rechtsbuendig. Frank-Wunsch 2026-05-18: nur die Zahl ohne "/100", der
+ * Wert steht rechts. Hinter dem Wert die Abweichung zum 30-Tage-Mittel als reiner Text ohne
+ * Hintergrundfeld — Plus in Gruen, Minus in Rot.
+ */
 @Composable
 private fun ScoreWithTrend(score: Double?, color: Color, last30: List<Double>) {
-    Row(verticalAlignment = Alignment.Bottom) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.Bottom,
+    ) {
         Text(
             text = score?.toInt()?.toString() ?: "—",
             color = color,
             fontSize = 38.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(
-            text = if (score != null) " /100" else "",
-            color = color,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-        )
-        Spacer(Modifier.weight(1f))
         if (score != null && last30.size >= 2) {
             val avg = last30.average()
             val delta = score - avg
-            TrendBadge(delta = delta, formatter = { "%+.1f".format(it) })
+            val deltaColor =
+                if (delta >= 0) CosmosColors.Success else CosmosColors.Critical
+            Text(
+                text = "%+.1f".format(delta),
+                color = deltaColor,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 10.dp, bottom = 8.dp),
+            )
         }
     }
 }
