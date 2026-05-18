@@ -81,6 +81,8 @@ fun BiomarkerHostScreen(
     // (Lifecycle < STARTED). Spart CPU/Akku bei Tab-Wechseln und Sperrbildschirm.
     val state by vm.state.collectAsStateWithLifecycle()
     val cardOrder by vm.cardOrder.collectAsStateWithLifecycle()
+    // Frank-Wunsch 2026-05-18: per Karte gewaehlte Hintergrundfarbe.
+    val cardColorMap by vm.cardColors.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
     // themeVm + themeMode wurden hier oben gelesen — bei jedem Theme-Toggle
     // rekomponierte der ganze Screen. Jetzt liest IsolatedThemeToggleIcon den
@@ -276,21 +278,35 @@ fun BiomarkerHostScreen(
                     // Frank-Wunsch 2026-05-10: KEIN sichtbares Drag-Handle mehr — die
                     // ganze Karte ist long-press-draggable. Tap auf die Karte oeffnet
                     // weiterhin den Detail-Screen (Compose unterscheidet Tap vs. Long-Press).
-                    Box(modifier = Modifier.fillMaxWidth().longPressDraggableHandle()) {
-                        BiomarkerCardForId(
-                            id = id,
-                            state = state,
-                            onOpenMetricDetail = onOpenMetricDetail,
-                            onOpenTrainingDetail = onOpenTrainingDetail,
-                            onOpenAllTrainings = onOpenAllTrainings,
-                            onOpenOuraDetail = onOpenOuraDetail,
-                            weightState = weightState,
-                            onRequestWeightPermission = onRequestWeightPermission,
-                            onOpenHealthConnectDetail = onOpenHealthConnectDetail,
-                            onSaveWorkoutOverrides = { trackId, overrides ->
-                                vm.applyWorkoutOverrides(trackId, overrides)
-                            },
-                        )
+                    //
+                    // Frank-Wunsch 2026-05-18: individuelle Hintergrundfarbe pro
+                    // Karte via CompositionLocal — alle GlassCards in dieser
+                    // Card lesen automatisch den Override.
+                    val cardOverride =
+                        de.frank.entropyreducer.presentation.components
+                            .cardColorOverrideForIndex(cardColorMap[id])
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        de.frank.entropyreducer.presentation.components.LocalCardBackgroundOverride
+                            provides cardOverride,
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().longPressDraggableHandle(),
+                        ) {
+                            BiomarkerCardForId(
+                                id = id,
+                                state = state,
+                                onOpenMetricDetail = onOpenMetricDetail,
+                                onOpenTrainingDetail = onOpenTrainingDetail,
+                                onOpenAllTrainings = onOpenAllTrainings,
+                                onOpenOuraDetail = onOpenOuraDetail,
+                                weightState = weightState,
+                                onRequestWeightPermission = onRequestWeightPermission,
+                                onOpenHealthConnectDetail = onOpenHealthConnectDetail,
+                                onSaveWorkoutOverrides = { trackId, overrides ->
+                                    vm.applyWorkoutOverrides(trackId, overrides)
+                                },
+                            )
+                        }
                     }
                 }
             }

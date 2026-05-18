@@ -235,6 +235,7 @@ constructor(
     private val ouraRepo: OuraRepository,
     private val scheduler: BackgroundScheduler,
     private val cardOrderRepo: BiomarkerCardOrderRepository,
+    private val cardColorRepo: de.frank.entropyreducer.data.repository.CardColorRepository,
     private val syncCoordinator: SyncCoordinator,
     private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
@@ -250,6 +251,24 @@ constructor(
     // erfolgreichen Permission-Grant aktualisiert.
     private val _weight = MutableStateFlow(WeightState())
     val weight: StateFlow<WeightState> = _weight
+
+    /**
+     * Frank-Wunsch 2026-05-18: Map cardId -> ColorIndex (0-29). Wird vom
+     * BiomarkerScreen genutzt um pro Karte den Hintergrund-Override zu setzen
+     * (siehe [LIGHT_CARD_COLORS] und [GlassCard.backgroundOverride]).
+     * Leere Map = noch keine Farben gewaehlt → alle Karten Standard.
+     */
+    val cardColors: StateFlow<Map<String, Int>> =
+        cardColorRepo.cardColors.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            emptyMap(),
+        )
+
+    /** Setzt die Hintergrundfarbe einer Karte. Index 0 = Standard (Override entfernt). */
+    fun setCardColor(cardId: String, colorIndex: Int) {
+        viewModelScope.launch { cardColorRepo.setCardColor(cardId, colorIndex) }
+    }
 
     init {
         viewModelScope.launch { refreshWeight() }

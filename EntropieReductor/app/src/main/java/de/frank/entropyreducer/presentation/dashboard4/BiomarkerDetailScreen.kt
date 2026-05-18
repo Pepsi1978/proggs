@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.presentation.components.ColorPaletteBar
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.charts.InteractiveLineChart
@@ -65,9 +66,17 @@ fun BiomarkerDetailScreen(
     vm: BiomarkerViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val cardColors by vm.cardColors.collectAsState()
     val cosmos = LocalCosmos.current
     val spec = metricSpecFor(metricKey)
     var range by remember { mutableStateOf(DetailRange.ALL) }
+
+    // Frank-Wunsch 2026-05-18: Farb-Auswahl pro Pattern. Wirkt sich auf BEIDE
+    // Karten (Mini + volle) aus, weil Mini- und volle Karte denselben Pattern
+    // visuell darstellen — eine gemeinsame Farbe haelt das Layout konsistent.
+    val cardIdsForMetric = cardIdsForMetricKey(metricKey)
+    val selectedColorIndex =
+        cardIdsForMetric.firstNotNullOfOrNull { id -> cardColors[id] } ?: 0
 
     val now = System.currentTimeMillis()
     val cutoff = when (range) {
@@ -108,6 +117,16 @@ fun BiomarkerDetailScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                // Frank-Wunsch 2026-05-18: Farbpalette oben — Auswahl wirkt
+                // sich auf den Karten-Hintergrund im Uebersichts-Screen aus.
+                ColorPaletteBar(
+                    selectedIndex = selectedColorIndex,
+                    onPick = { idx ->
+                        cardIdsForMetric.forEach { id -> vm.setCardColor(id, idx) }
+                    },
+                )
+            }
             item {
                 // Range-Switcher
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -506,6 +525,32 @@ private fun metricSpecFor(key: String): MetricSpec = when (key) {
         extract = { null },
         format = { "%.1f".format(it) },
     )
+}
+
+/**
+ * Frank-Wunsch 2026-05-18: Mapping MetricKey -> Card-IDs. Wenn Frank im
+ * Detail-Screen eine Farbe waehlt, soll diese sowohl die Mini-Karte (z.B.
+ * `BiomarkerCardId.MINI_HRV`) als auch die ggf. vorhandene volle Karte
+ * (z.B. `BiomarkerCardId.HRV`) im Uebersichts-Screen einfaerben — ein
+ * Pattern, eine Farbe, ueberall sichtbar.
+ */
+private fun cardIdsForMetricKey(metricKey: String): List<String> = when (metricKey) {
+    MetricKey.HRV -> listOf(BiomarkerCardId.HRV, BiomarkerCardId.MINI_HRV)
+    MetricKey.RHR -> listOf(BiomarkerCardId.RHR, BiomarkerCardId.MINI_RHR)
+    MetricKey.SLEEP_TOTAL ->
+        listOf(BiomarkerCardId.SLEEP_TOTAL, BiomarkerCardId.MINI_SLEEP_TOTAL)
+    MetricKey.SLEEP_PERF ->
+        listOf(BiomarkerCardId.SLEEP_PERFORMANCE, BiomarkerCardId.MINI_SLEEP_PERFORMANCE)
+    MetricKey.VO2MAX -> listOf(BiomarkerCardId.MINI_VO2MAX)
+    MetricKey.SLEEP_DEEP -> listOf(BiomarkerCardId.SLEEP_DEEP_GRAPH)
+    MetricKey.SLEEP_AWAKE -> listOf(BiomarkerCardId.SLEEP_WAKE_GRAPH)
+    MetricKey.RECOVERY -> listOf(BiomarkerCardId.GESAMTERHOLUNG, BiomarkerCardId.RECOVERY_GRAPH)
+    MetricKey.SLEEP_RESTORATIVE -> listOf(BiomarkerCardId.SLEEP_RESTORATIVE)
+    MetricKey.SKIN_TEMP_DELTA -> listOf(BiomarkerCardId.SKIN_TEMP_DELTA)
+    // Fallback: der metricKey selbst ist auch die Card-ID (gilt fuer
+    // RESPIRATORY, SPO2, SKIN_TEMP, SLEEP_EFFICIENCY, SLEEP_CONSISTENCY,
+    // SLEEP_DEBT, STRAIN, KILOJOULES, ...).
+    else -> listOf(metricKey)
 }
 
 private enum class DetailRange(val label: String) {
