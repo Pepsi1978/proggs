@@ -1,5 +1,7 @@
 # Schicht 5 — Paywall-Tiefenanalyse: DER WICHTIGSTE BEREICH
 
+> **FIX AA8 (Audit 11) — Kotlin + Java (Billing):** Patterns mit `--include='*.kt'` gelten primaer fuer `billing-ktx` (moderne Coroutine-API). Bei Apps mit Java-`BillingClient`-Implementierungen (Java-`PurchasesUpdatedListener`, Java-`BillingClientStateListener`, klassischer Callback-Stil) MUSS `--include='*.java'` ergaenzt werden. Der `queryPurchaseHistoryAsync`-Check (Section 5.0) ist sprachunabhaengig — auch in Java-Code pruefen.
+
 ## Warum diese Schicht besondere Aufmerksamkeit braucht
 
 Werbeaussagen rund um Subscription-Modelle sind die haeufigste Quelle fuer rechtliche Probleme: UWG §5 (Irrefuehrung), EU UCPD (Unfair Commercial Practices), Google Play Subscription Policy. Diese Schicht muss JEDE Stufe der Paywall, JEDEN Abbruchpfad, JEDEN Trial-Schritt, JEDEN Promo-Code, JEDEN Win-Back-Flow erfassen — und gegen die Pflichtangaben pruefen.
