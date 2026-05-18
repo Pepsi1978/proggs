@@ -46,29 +46,54 @@ def find_app_root(app_dir: Path) -> dict:
     """Findet Manifest, strings.xml, build.gradle."""
     info = {"manifest": None, "strings_xml": None, "build_gradle": None, "package_name": None}
 
-    # FIX X3 (Audit 7): KMP-Pfade (src/androidMain/...) ergaenzt — vorher fanden
-    # KMP-Projekte weder Manifest noch Default-strings.xml und produzierten leeren
-    # Export.
-    for candidate in [
+    # FIX X3 (Audit 7) + Z5 (Audit 9): Statische Kandidatenliste deckte nur app/ und
+    # src/ ab — Custom-Module wie shared/, core/, feature-auth/ wurden uebersehen
+    # auch wenn sie src/main bzw. src/androidMain enthielten. Jetzt: statische Liste
+    # zuerst (fuer Single-Module-Apps am schnellsten), dann rglob-Fallback projektweit
+    # mit Praeferenz fuer app/-Module (haeufigste Konvention).
+    static_manifest_candidates = [
         app_dir / "app/src/main/AndroidManifest.xml",
         app_dir / "src/main/AndroidManifest.xml",
         app_dir / "app/src/androidMain/AndroidManifest.xml",
         app_dir / "src/androidMain/AndroidManifest.xml",
         app_dir / "AndroidManifest.xml",
-    ]:
+    ]
+    for candidate in static_manifest_candidates:
         if candidate.is_file():
             info["manifest"] = str(candidate.relative_to(app_dir))
             break
+    # Z5-Fallback: projektweit suchen wenn statische Kandidaten leer (KMP-only, Custom-Module)
+    if not info["manifest"]:
+        for candidate in sorted(app_dir.rglob("AndroidManifest.xml")):
+            cp = str(candidate).replace("\\", "/")
+            if "/build/" in cp or "/test/" in cp:
+                continue
+            if "/src/main/" in cp or "/src/androidMain/" in cp:
+                info["manifest"] = str(candidate.relative_to(app_dir))
+                break
 
-    for candidate in [
+    static_strings_candidates = [
         app_dir / "app/src/main/res/values/strings.xml",
         app_dir / "src/main/res/values/strings.xml",
         app_dir / "app/src/androidMain/res/values/strings.xml",
         app_dir / "src/androidMain/res/values/strings.xml",
-    ]:
+    ]
+    for candidate in static_strings_candidates:
         if candidate.is_file():
             info["strings_xml"] = str(candidate.relative_to(app_dir))
             break
+    # Z5-Fallback: projektweit suchen wenn statische Kandidaten leer
+    if not info["strings_xml"]:
+        for candidate in sorted(app_dir.rglob("strings.xml")):
+            cp = str(candidate).replace("\\", "/")
+            if "/build/" in cp or "/test/" in cp:
+                continue
+            # Nur Default-Sprache (values/), nicht values-XX/
+            if candidate.parent.name != "values":
+                continue
+            if "/src/main/res/" in cp or "/src/androidMain/res/" in cp:
+                info["strings_xml"] = str(candidate.relative_to(app_dir))
+                break
 
     for candidate in [
         app_dir / "app/build.gradle.kts",

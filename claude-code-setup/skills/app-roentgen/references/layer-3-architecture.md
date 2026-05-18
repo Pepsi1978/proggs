@@ -6,6 +6,8 @@ Schicht 3 extrahiert das Skelett der App: ViewModels (Feature-Logik-Cluster), Re
 
 **Coverage-Beitrag: ~30 Prozent fuer Architektur, ~80 Prozent fuer "was kann die App technisch tun"**
 
+> **FIX Z1 (Audit 9) — Kotlin + Java:** Die Patterns hier zeigen aus Lesbarkeitsgruenden nur `--include='*.kt'` bzw. `--type kotlin`. Bei Apps mit Java-Anteilen (Legacy-Modulen, alten SDKs wie Firebase-Java, RevenueCat-Java) MUSS `--include='*.java'` bzw. `--type java` ergaenzt werden — sonst werden Java-ViewModels, Java-Repositories, Java-Workers stillschweigend uebersehen. Reine Kotlin-Apps koennen den Java-Filter weglassen.
+
 > **Optional fuer maximal vollstaendiges Composable-Inventar (Goldstandard 2026)**: Wenn das Projekt baubar ist, ergaenzend `references/layer-3b-compose-compiler-reports.md` einsetzen. Compose Compiler Reports liefern nachweislich alle `@Composable`-Funktionen direkt vom Compiler — die grep-Patterns hier sind robust ohne Build, aber nicht garantiert 100% vollstaendig bei dynamisch generierten Composables.
 
 ## 3.1 ViewModels — Ein VM = Ein Feature-Cluster
@@ -20,7 +22,7 @@ Jeder ViewModel ist typischerweise einem Bildschirm zugeordnet (DashboardViewMod
 - Zugeordneter Bildschirm
 - Konstruktor-Dependencies (was injiziert wird)
 - StateFlow/MutableStateFlow-Felder (= UI-State)
-- Public-Funktionen (= mogliche Aktionen die der Bildschirm ausloesen kann)
+- Public-Funktionen (= moegliche Aktionen die der Bildschirm ausloesen kann)
 
 Beispiel:
 ```kotlin
@@ -124,7 +126,7 @@ Pro Entity dokumentieren:
 
 Pro DAO dokumentieren:
 - Welche Tabelle
-- @Query-Methoden (= mogliche Lese-Operationen)
+- @Query-Methoden (= moegliche Lese-Operationen)
 - @Insert/@Update/@Delete-Methoden (= Schreib-Operationen)
 - Welche Repository-Methoden nutzen es
 

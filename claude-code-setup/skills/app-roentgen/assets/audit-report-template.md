@@ -69,7 +69,7 @@ checklist_total_points: 92
 9. [Don't-Miss-Checkliste](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
-> Hinweis zur Checkliste: 92 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
+> Hinweis zur Checkliste: 92 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` sich aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
 
 ---
 

@@ -226,7 +226,7 @@ grep -rn '\.setText("[A-Za-zÄÖÜäöü0-9][^"]\{3,\}"' --include='*.kt' --incl
 grep -rn 'Toast\.makeText([^,]*,\s*"' --include='*.kt' --include='*.java' .
 ```
 
-Hardcoded Texte werden im Bericht als **eigene Tabelle "Nicht-internationalisierte Wortlaute"** aufgelistet — sie sind oft Quellen versteckter Werbeaussagen die die Uebersetzungs-Pipeline nicht erfasst hat.
+Hardcoded Texte werden im Bericht als **eigene Tabelle "Nicht-internationalisierte Wortlaute"** aufgelistet — sie sind oft Quellen versteckter Werbeaussagen, welche die Uebersetzungs-Pipeline nicht erfasst hat.
 
 ## 4b.4 Rekursive Menue-Aufloesung (PFLICHT — egal wie tief)
 
