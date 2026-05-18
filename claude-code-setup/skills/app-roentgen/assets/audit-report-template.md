@@ -23,7 +23,7 @@ sections:
   layer_5_paywall: true
   layer_6_hidden_features: true
   layer_7_marketing_claims: true
-checklist_total_points: 82
+checklist_total_points: 96
 ---
 
 # App-Roentgen Audit-Bericht — <APP-NAME>
@@ -51,23 +51,25 @@ checklist_total_points: 82
 
 ## Inhaltsverzeichnis
 
+> **FIX U1:** Die Anchor-Targets verwenden EINEN Bindestrich, nicht zwei. GitHub-Markdown-Renderer entfernt em-dash (`—`) komplett aus Headings statt ihn als Bindestrich zu uebernehmen. ToC-Links muessen das nachbilden, sonst sind sie broken.
+
 1. [Zusammenfassung fuer den Benutzer](#1-zusammenfassung-fuer-den-benutzer)
-2. [Schicht 1 — Manifest-Analyse](#2-schicht-1--manifest-analyse)
-3. [Schicht 2 — Dependency-Analyse](#3-schicht-2--dependency-analyse)
-4. [Schicht 3 — Architektur-Inventar](#4-schicht-3--architektur-inventar)
-4b. [Schicht 3b — Compose Compiler Reports](#4b-schicht-3b--compose-compiler-reports)
-5. [Schicht 4 — Bildschirm-Karte und Klick-Pfade](#5-schicht-4--bildschirm-karte-und-klick-pfade)
-5b. [Schicht 4b — Wortlaut-Mapping pro Bereich](#5b-schicht-4b--wortlaut-mapping-pro-bereich) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
-5c. [Schicht 4c — Translation-Context](#5c-schicht-4c--translation-context) **(GRUNDLAGE FUER UEBERSETZUNGS-SKILL)**
-5d. [Schicht 4d — Legal-Text-Inventar](#5d-schicht-4d--legal-text-inventar) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
-5e. [Schicht 4e — Externe Inhalte](#5e-schicht-4e--externe-inhalte)
-6. [Schicht 5 — Paywall-Tiefenanalyse](#6-schicht-5--paywall-tiefenanalyse) **(WICHTIGSTER ABSCHNITT)**
-7. [Schicht 6 — Hidden Features](#7-schicht-6--hidden-features)
-8. [Schicht 7 — Werbeaussage-vs-Feature-Matrix](#8-schicht-7--werbeaussage-vs-feature-matrix)
+2. [Schicht 1 — Manifest-Analyse](#2-schicht-1-manifest-analyse)
+3. [Schicht 2 — Dependency-Analyse](#3-schicht-2-dependency-analyse)
+4. [Schicht 3 — Architektur-Inventar](#4-schicht-3-architektur-inventar)
+4b. [Schicht 3b — Compose Compiler Reports](#4b-schicht-3b-compose-compiler-reports)
+5. [Schicht 4 — Bildschirm-Karte und Klick-Pfade](#5-schicht-4-bildschirm-karte-und-klick-pfade)
+5b. [Schicht 4b — Wortlaut-Mapping pro Bereich](#5b-schicht-4b-wortlaut-mapping-pro-bereich) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
+5c. [Schicht 4c — Translation-Context](#5c-schicht-4c-translation-context) **(GRUNDLAGE FUER UEBERSETZUNGS-SKILL)**
+5d. [Schicht 4d — Legal-Text-Inventar](#5d-schicht-4d-legal-text-inventar) **(GRUNDLAGE FUER RECHTSSICHERHEIT)**
+5e. [Schicht 4e — Externe Inhalte](#5e-schicht-4e-externe-inhalte)
+6. [Schicht 5 — Paywall-Tiefenanalyse](#6-schicht-5-paywall-tiefenanalyse) **(WICHTIGSTER ABSCHNITT)**
+7. [Schicht 6 — Hidden Features](#7-schicht-6-hidden-features)
+8. [Schicht 7 — Werbeaussage-vs-Feature-Matrix](#8-schicht-7-werbeaussage-vs-feature-matrix)
 9. [Don't-Miss-Checkliste](#9-dont-miss-checkliste)
 10. [Empfohlene naechste Schritte](#10-empfohlene-naechste-schritte)
 
-> Hinweis zur Checkliste: 82 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
+> Hinweis zur Checkliste: 96 Punkte — falls die Anzahl in `references/dont-miss-checklist.md` aendert, diesen Hinweis und das Frontmatter-Feld `checklist_total_points` synchron halten.
 
 ---
 
@@ -1092,7 +1094,7 @@ ___
 
 ## 9. Don't-Miss-Checkliste
 
-> Pflicht-Pruefung — alle 82 Punkte ausgefuellt? Siehe `references/dont-miss-checklist.md` fuer Detail.
+> Pflicht-Pruefung — alle 96 Punkte ausgefuellt? Siehe `references/dont-miss-checklist.md` fuer Detail.
 
 ### Block A — Manifest (8)
 - [ ] A1. AndroidManifest.xml gelesen und alle Permissions katalogisiert?

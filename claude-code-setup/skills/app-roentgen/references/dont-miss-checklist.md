@@ -1,4 +1,4 @@
-# Don't-Miss-Checkliste: 82 Punkte fuer 100% Coverage
+# Don't-Miss-Checkliste: 96 Punkte fuer 100% Coverage
 
 ## Zweck
 
@@ -184,9 +184,9 @@ Format pro Punkt: **Status [JA / NEIN / NICHT_VERIFIZIERT (Grund)]**.
 ## Selbst-Pruefung am Ende
 
 Wenn die Checkliste durch ist:
-- 82 Punkte gesamt
+- 96 Punkte gesamt
 - Wie viele [X]: ___
 - Wie viele [ ] mit "NICHT_VERIFIZIERT (Grund)": ___ — diese sind OK wenn der Grund nachvollziehbar ist
 - Wie viele [ ] ohne Begruendung: ___ — sollte 0 sein
 
-Nur wenn alle 82 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.
+Nur wenn alle 96 Punkte entweder gepruefft oder mit Begruendung als "nicht zutreffend" markiert sind, gilt der Audit als vollstaendig.

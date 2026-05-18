@@ -112,9 +112,31 @@ find_translated_strings_xml() {
 }
 
 # Listet alle Modul-Wurzeln (Verzeichnisse die ein src/main/ enthalten)
+# FIX U4: vorher unused — jetzt im Modul-Inventar-Block (Schicht 2/3) verwendet
 find_module_roots() {
     find . -type d -name main -path '*/src/main' -not -path '*/build/*' 2>/dev/null \
         | sed 's|/src/main$||' | sort -u
+}
+
+# Findet die englische strings.xml in irgendeinem Modul (fuer EN-Vergleich)
+# FIX U4: ersetzt hardcoded "app/src/main/res/values-en/strings.xml"
+find_en_strings_xml() {
+    find . -path '*/src/main/res/values-en/strings.xml' -not -path '*/build/*' 2>/dev/null | head -1
+}
+
+# Listet alle Regional-Varianten (z.B. pt-rBR, zh-rCN) projektweit
+# FIX U4: ersetzt 'ls -d app/src/main/res/values-*/'
+find_regional_locales() {
+    find . -type d -path '*/src/main/res/values-*' -not -path '*/build/*' 2>/dev/null \
+        | grep -oE 'values-[a-z]{2,3}-r[A-Z]{2}' | sed 's/values-//' | sort -u
+}
+
+# Findet eine spezifische Locale-strings.xml in irgendeinem Modul
+# FIX U4: ersetzt hardcoded "app/src/main/res/values-$LOCALE/strings.xml"
+# Aufruf: find_locale_strings_xml "de" oder "pt-rBR"
+find_locale_strings_xml() {
+    local loc="$1"
+    find . -path "*/src/main/res/values-$loc/strings.xml" -not -path '*/build/*' 2>/dev/null | head -1
 }
 # =============================================================================
 
@@ -200,13 +222,26 @@ count_in_file() {
     JAVA_FILES=$(find . -name '*.java' -not -path '*/build/*' -not -path '*/test/*' 2>/dev/null | wc -l)
     XML_FILES=$(find . -name '*.xml' -path '*/res/*' -not -path '*/build/*' 2>/dev/null | wc -l)
     GRADLE_FILES=$(find . -name 'build.gradle*' -not -path '*/build/*' 2>/dev/null | wc -l)
+    # FIX U4: find_module_roots wird jetzt produktiv genutzt — zeigt Multi-Module-Struktur
+    MODULES=$(find_module_roots)
+    MODULE_COUNT=$(echo "$MODULES" | grep -c '.' 2>/dev/null || echo 0)
     echo "| Datei-Typ | Anzahl |"
     echo "|-----------|--------|"
     echo "| Kotlin (.kt) | $KOTLIN_FILES |"
     echo "| Java (.java) | $JAVA_FILES |"
     echo "| Resource XML | $XML_FILES |"
     echo "| build.gradle* | $GRADLE_FILES |"
+    echo "| Gradle-Module (mit src/main/) | $MODULE_COUNT |"
     echo ""
+    if [[ "$MODULE_COUNT" -gt 1 ]]; then
+        echo "**Multi-Module-App erkannt** ($MODULE_COUNT Module). Alle Layer-Scans wurden mit den Multi-Module-Helpern (find_*_strings_xml, find_locale_dirs, find_module_roots) durchgefuehrt — sie aggregieren ueber alle Module."
+        echo ""
+        echo "**Gefundene Module:**"
+        echo "\`\`\`"
+        echo "$MODULES"
+        echo "\`\`\`"
+        echo ""
+    fi
 
     # === SCHICHT 1: MANIFEST ===
     echo "## Schicht 1 — Manifest-Daten"
@@ -849,7 +884,9 @@ count_in_file() {
         echo "\`\`\`"
         echo ""
 
-        EN_FILE="app/src/main/res/values-en/strings.xml"
+        # FIX U4: Multi-Module-faehig — sucht englische strings.xml in allen Modulen
+        EN_FILE=$(find_en_strings_xml)
+        EN_FILE="${EN_FILE:-app/src/main/res/values-en/strings.xml}"
         if [[ -f "$EN_FILE" ]]; then
             echo "**Top-30 englische Schlagwoerter (lowercase, >3 Zeichen):**"
             echo ""
@@ -866,7 +903,8 @@ count_in_file() {
         echo "### 4c.8 Region-Differenzen (Verdacht fehlende Lokalisierung)"
         echo ""
         # Alle Sprachen mit Regional-Code finden, dann nach Basissprache gruppieren
-        REGIONAL_LANGS=$(ls -d app/src/main/res/values-*/ 2>/dev/null | grep -oE 'values-[a-z]{2,3}-r[A-Z]{2}' | sed 's/values-//' | sort -u)
+        # FIX U4: Multi-Module-faehig via find_regional_locales (statt 'ls' das nur app/ scannt)
+        REGIONAL_LANGS=$(find_regional_locales)
         if [[ -n "$REGIONAL_LANGS" ]]; then
             # Basissprache extrahieren und Varianten gruppieren
             BASE_LANGS=$(echo "$REGIONAL_LANGS" | sed 's/-r.*//' | sort -u)
@@ -887,8 +925,9 @@ count_in_file() {
                         for ((j=i+1; j<${#VAR_ARR[@]}; j++)); do
                             VA="${VAR_ARR[$i]}"
                             VB="${VAR_ARR[$j]}"
-                            FA="app/src/main/res/values-$VA/strings.xml"
-                            FB="app/src/main/res/values-$VB/strings.xml"
+                            # FIX U4: Multi-Module-faehig via find_locale_strings_xml
+                            FA=$(find_locale_strings_xml "$VA"); FA="${FA:-app/src/main/res/values-$VA/strings.xml}"
+                            FB=$(find_locale_strings_xml "$VB"); FB="${FB:-app/src/main/res/values-$VB/strings.xml}"
                             [[ ! -f "$FA" ]] || [[ ! -f "$FB" ]] && continue
                             CA=$(grep -c '<string name=' "$FA" 2>/dev/null | tr -d '[:space:]')
                             CB=$(grep -c '<string name=' "$FB" 2>/dev/null | tr -d '[:space:]')

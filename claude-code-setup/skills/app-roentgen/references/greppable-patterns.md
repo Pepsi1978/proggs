@@ -4,6 +4,16 @@
 
 Diese Datei sammelt ALLE Greppable-Patterns aus den Schichten 1-7 an einer Stelle. Sie ist der Werkzeugkasten — wenn ein bestimmter Bereich noch tiefer untersucht werden soll, hier nachschauen.
 
+## Plattform-Hinweise (PFLICHT lesen vor Copy-Paste)
+
+> **FIX U5 — Bash-only-Hinweis:** Alle Patterns hier sind fuer **POSIX-Shells** geschrieben (Bash, Zsh, Git Bash auf Windows, macOS Terminal, Linux). Sie nutzen `grep`, `find`, `awk`, `sed`, `xargs` und temporaere Dateien unter `/tmp/`.
+>
+> **PowerShell / CMD funktioniert NICHT direkt** — wenn du die Patterns auf Windows in PowerShell ausfuehren willst, brauchst du entweder Git Bash (empfohlen) oder PowerShell-Aequivalente (`Select-String` statt `grep`, `Get-ChildItem -Recurse` statt `find`, `$env:TEMP` statt `/tmp/`).
+>
+> **Temp-Pfade:** `/tmp/` ist Bash-Default. Plattformneutral: `${TMPDIR:-/tmp}` (Bash) oder `$env:TEMP` (PowerShell).
+>
+> **Multi-Module:** Patterns mit `app/src/main/...` decken nur Single-Module-Apps ab. Bei Multi-Module-Apps siehe die Helper-Funktionen in `scripts/feature-scan.sh` (`find_default_strings_xml`, `find_translated_strings_xml`, `find_locale_dirs`, `find_module_roots`, `find_en_strings_xml`, `find_regional_locales`, `find_locale_strings_xml`).
+
 Alle Patterns sind fuer **ripgrep (rg)** oder **grep** auf einem POSIX-Shell formatiert. Auf Windows Git Bash funktionieren sie identisch.
 
 ## Generelle Tipps

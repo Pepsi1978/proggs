@@ -232,7 +232,7 @@ Parallel zum Markdown-Bericht kann ein strukturierter JSON-Export erzeugt werden
 python3 ~/.claude/skills/app-roentgen/scripts/export-json.py <pfad-zur-android-app>
 ```
 
-Output: `<app-dir>/app-roentgen-export.json` mit Schema-Version 2.0.
+Output: `<app-dir>/app-roentgen-export.json` mit Schema-Version 2.1.
 
 Der Export enthaelt: alle Strings mit Hash + Translatable-Flag + Format-Args + xliff:g-IDs + Slot-Laenge, Plurals mit CLDR-Vollstaendigkeitspruefung pro Sprache, Glossar, Du/Sie-Konsistenz, SDK-Erkennung (AI/Ads/Billing/Health/WebView/Firebase), Permission-Liste.
 
@@ -259,7 +259,7 @@ Audits einer mittelgrossen App (500-1500 Kotlin-Dateien) dauern 30-90 Minuten. V
 
 ## Vollstaendigkeits-Validierung (PFLICHT)
 
-Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 82 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
+Bevor der Bericht als fertig gilt, MUSS die `dont-miss-checklist.md` durchgegangen werden — alle 96 Punkte muessen geprueft sein. Jeder Punkt der nicht geprueft werden konnte wird mit "NICHT_VERIFIZIERT — Grund" markiert. Das ist die letzte Verteidigungslinie gegen unvollstaendige Audits.
 
 → **Liste**: `references/dont-miss-checklist.md`
 
