@@ -229,6 +229,11 @@ constructor(
             )
         workoutDao.upsert(updated)
         Log.i(TAG, "Manual overrides applied to $trackId (fields=$mergedFields)")
+        // Frank-Wunsch 2026-05-19: Sofort Drive-Backup ausloesen sobald ein
+        // manueller Wert geaendert wird — der Edit darf bei einem Reinstall
+        // nicht verloren gehen. Debounce in requestSync() (1500 ms) sorgt fuer
+        // Coalescing wenn Frank mehrere Felder kurz hintereinander editiert.
+        syncCoordinatorLazy.get().requestSync()
         return true
     }
 
@@ -620,7 +625,16 @@ constructor(
             "Strava-Merge: $newCount neu eingefuegt, $replaceCount aktualisiert/ueberschrieben, " +
                 "$protectedCount mit manuellen Edits (nur Streams aktualisiert)",
         )
-        return newCount + replaceCount + protectedCount
+        // Frank-Wunsch 2026-05-19: Sobald ueber Strava ein neuer/aktualisierter
+        // Eintrag reinkommt automatisch Drive-Backup triggern — damit das
+        // Workouts-Backup (entropy_reducer_workouts_v1.json) immer den aktuellen
+        // Stand abbildet. Debounce in requestSync() (1500 ms) sorgt dafuer dass
+        // mehrere Merges hintereinander nur EINEN Upload ausloesen.
+        val touched = newCount + replaceCount + protectedCount
+        if (touched > 0) {
+            syncCoordinatorLazy.get().requestSync()
+        }
+        return touched
     }
 
     /**

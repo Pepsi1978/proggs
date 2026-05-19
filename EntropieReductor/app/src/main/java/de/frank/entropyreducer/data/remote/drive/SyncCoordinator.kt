@@ -10,6 +10,8 @@ import de.frank.entropyreducer.data.local.dao.ScientistSessionDao
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,40 +25,40 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
-/**
- * Public State des Sync-Vorgangs — beobachtet von der UI für Status-Anzeigen.
- */
+/** Public State des Sync-Vorgangs — beobachtet von der UI für Status-Anzeigen. */
 sealed interface SyncStatus {
     data object Idle : SyncStatus
-    data object Pending : SyncStatus     // Änderung erfasst, Debounce laeuft
-    data object Running : SyncStatus     // Upload ist gerade aktiv
+
+    data object Pending : SyncStatus // Änderung erfasst, Debounce laeuft
+
+    data object Running : SyncStatus // Upload ist gerade aktiv
+
     data class Synced(val atEpochMs: Long) : SyncStatus
+
     data class Failed(val reason: String) : SyncStatus
 }
 
 /**
- * Verhindert Job-Stacking: jede Änderung am Datenbestand führt zu einem
- * Sync-Trigger. Ein laufender Sync wird NICHT abgebrochen, ein bereits
- * geplanter (Pending) Sync wird hingegen mit dem neueren Trigger zusammengelegt.
+ * Verhindert Job-Stacking: jede Änderung am Datenbestand führt zu einem Sync-Trigger. Ein laufender
+ * Sync wird NICHT abgebrochen, ein bereits geplanter (Pending) Sync wird hingegen mit dem neueren
+ * Trigger zusammengelegt.
  *
  * Konzepte:
- *  - Ein Mutex schuetzt den Upload selbst — nie zwei gleichzeitig.
- *  - Ein Debounce-Window von 1500ms sammelt schnelle, aufeinanderfolgende
- *    Aenderungen (Stop-Recording + KI-Antwort + Status-Update) zu einem
- *    einzigen Upload zusammen.
- *  - Nach erfolgreichem Upload prüfen wir, ob waehrenddessen eine neue
- *    Änderung kam. Wenn ja: noch ein Upload, weil der erste den neuen
- *    Stand noch nicht hatte.
+ * - Ein Mutex schuetzt den Upload selbst — nie zwei gleichzeitig.
+ * - Ein Debounce-Window von 1500ms sammelt schnelle, aufeinanderfolgende Aenderungen
+ *   (Stop-Recording + KI-Antwort + Status-Update) zu einem einzigen Upload zusammen.
+ * - Nach erfolgreichem Upload prüfen wir, ob waehrenddessen eine neue Änderung kam. Wenn ja: noch
+ *   ein Upload, weil der erste den neuen Stand noch nicht hatte.
  *
- * Frank-Wunsch 2026-05-09 (Abend): BackupPayload v2 enthaelt jetzt nicht nur
- * Aufgaben sondern AUCH Insights, Memories, Hypothesen, Forscher-Sessions und
- * Forscher-Messages. Vollstaendige Wiederherstellbarkeit nach Reinstall.
+ * Frank-Wunsch 2026-05-09 (Abend): BackupPayload v2 enthaelt jetzt nicht nur Aufgaben sondern AUCH
+ * Insights, Memories, Hypothesen, Forscher-Sessions und Forscher-Messages. Vollstaendige
+ * Wiederherstellbarkeit nach Reinstall.
  */
 @Singleton
-class SyncCoordinator @Inject constructor(
+class SyncCoordinator
+@Inject
+constructor(
     private val secrets: EncryptedSecretsStore,
     private val backupManager: DriveBackupManager,
     private val entryRepoLazy: Lazy<EntryRepository>,
@@ -67,8 +69,10 @@ class SyncCoordinator @Inject constructor(
     private val scientistMessageDaoLazy: Lazy<ScientistMessageDao>,
     private val hypothesisMessageDaoLazy: Lazy<HypothesisMessageDao>,
     private val cardOrderRepoLazy: Lazy<BiomarkerCardOrderRepository>,
-    private val healthConnectValueDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
-    private val amazfitWorkoutDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao>,
+    private val healthConnectValueDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
+    private val amazfitWorkoutDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao>,
     private val json: Json,
 ) {
 
@@ -81,8 +85,8 @@ class SyncCoordinator @Inject constructor(
     val status: StateFlow<SyncStatus> = _status.asStateFlow()
 
     /**
-     * Wird vom Repository nach jeder Mutation aufgerufen. Wenn Backup deaktiviert
-     * oder kein Account verbunden, wird der Trigger ignoriert — ohne Fehler.
+     * Wird vom Repository nach jeder Mutation aufgerufen. Wenn Backup deaktiviert oder kein Account
+     * verbunden, wird der Trigger ignoriert — ohne Fehler.
      */
     fun requestSync() {
         if (!secrets.driveBackupEnabled || secrets.driveAccountEmail == null) return
@@ -131,60 +135,89 @@ class SyncCoordinator @Inject constructor(
             // verschoben, beim Restore passiert dann auch nichts.
             val cardOrder = cardOrderRepoLazy.get().rawSavedOrder.first()
             // Frank-Wunsch 2026-05-10 abend: Cross-Device-HC-Cache mit ins Backup.
-            val hcValues = healthConnectValueDaoLazy.get().getAll().map {
-                BackupHealthConnectValue(metric = it.metric, timestampMs = it.timestampMs, value = it.value)
-            }
-            // Frank-Wunsch 2026-05-11: Cross-Device-Sicherung aller Sport-Trainings
-            // inkl. Detail-Streams (GPS, Pulsverlauf, Tempoverlauf, Splits). Zepp
-            // loescht serverseitig nach ~30 Tagen — durch das Backup bleiben die
-            // Daten fuer immer erhalten und das Restore auf dem S23 Ultra braucht
-            // keinen Zepp-API-Call mehr (kein Re-Login, kein Kicken aus der
-            // Zepp-Handy-App).
-            // Frank-Bugfix 2026-05-16: observeAll().first() laed ALLE Workout-
-            // Felder inkl. der grossen Stream-Spalten (Pulsverlauf-JSON,
-            // GPS-Track-JSON, Pace-Stream-JSON) in den RAM. Bei 956 Workouts
-            // sind das 100+ MB nur fuer die DB-Liste, plus dann nochmal so
-            // viel fuer .map { toBackup() }. Auf Android's 256-MB-Heap-Limit
-            // pro App ist das fast garantiert OOM.
-            // getAllForBackupSlim selektiert auf SQL-Ebene nur die kleinen
-            // Metadaten-Spalten -> ~3 MB RAM statt 100+ MB.
-            val amazfitWorkouts = amazfitWorkoutDaoLazy.get()
-                .getAllForBackupSlim()
-                .map { it.toBackup() }
-
-            val payload = BackupPayload(
-                version = 5,
-                exportedAt = System.currentTimeMillis(),
-                entries = entries,
-                insights = insights,
-                memories = memories,
-                hypotheses = hypotheses,
-                scientistSessions = sessions,
-                scientistMessages = sessMessages,
-                hypothesisMessages = hypMessages,
-                biomarkerCardOrder = cardOrder,
-                healthConnectValues = hcValues,
-                amazfitWorkouts = amazfitWorkouts,
-            )
+            val hcValues =
+                healthConnectValueDaoLazy.get().getAll().map {
+                    BackupHealthConnectValue(
+                        metric = it.metric,
+                        timestampMs = it.timestampMs,
+                        value = it.value,
+                    )
+                }
+            // Frank-Wunsch 2026-05-19: Workouts kommen ab jetzt aus der SEPARATEN
+            // Datei `entropy_reducer_workouts_v1.json` — Haupt-Backup haelt die Liste
+            // nur noch leer fuer Backwards-Compat (alte v5-Restores funktionieren).
+            // Slim-Workouts (ohne Streams) sind im Hauptbackup nicht mehr noetig.
+            val payload =
+                BackupPayload(
+                    version = 6,
+                    exportedAt = System.currentTimeMillis(),
+                    entries = entries,
+                    insights = insights,
+                    memories = memories,
+                    hypotheses = hypotheses,
+                    scientistSessions = sessions,
+                    scientistMessages = sessMessages,
+                    hypothesisMessages = hypMessages,
+                    biomarkerCardOrder = cardOrder,
+                    healthConnectValues = hcValues,
+                    amazfitWorkouts = emptyList(),
+                )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird
             // (z.B. nach einem Bulk-Import) fangen wir den OOM ab und melden
             // SyncStatus.Failed — die App crasht NICHT mehr in der Endlos-
             // schleife wenn ein einziger Upload-Versuch fehlschlaegt.
-            try {
-                val text = json.encodeToString(BackupPayload.serializer(), payload)
-                backupManager.upload(text)
-                    .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
-                    .onFailure { ex ->
-                        _status.value = SyncStatus.Failed(ex.message ?: "Backup fehlgeschlagen")
-                    }
-            } catch (oom: OutOfMemoryError) {
-                // Speicher freigeben falls moeglich, dann Fail-State setzen.
-                System.gc()
-                _status.value = SyncStatus.Failed("Backup zu gross fuer Upload (OOM) — Streams werden im naechsten Build ausgeschlossen")
-            } catch (t: Throwable) {
-                if (t is kotlinx.coroutines.CancellationException) throw t
-                _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
+            val mainOk =
+                try {
+                    val text = json.encodeToString(BackupPayload.serializer(), payload)
+                    val result = backupManager.upload(text)
+                    result.isSuccess
+                } catch (oom: OutOfMemoryError) {
+                    System.gc()
+                    _status.value = SyncStatus.Failed("Backup zu gross fuer Upload (OOM)")
+                    false
+                } catch (t: Throwable) {
+                    if (t is kotlinx.coroutines.CancellationException) throw t
+                    _status.value = SyncStatus.Failed(t.message ?: "Backup fehlgeschlagen")
+                    false
+                }
+
+            // Frank-Wunsch 2026-05-19: Sport-Trainings in EIGENER Drive-Datei
+            // hochladen — inkl. ALLER Streams (GPS, Puls, Pace, Splits). Damit
+            // ist der Trainingsverlauf nach `adb uninstall` automatisch wieder da.
+            // Nach 2-Jahres-Retention (~104 Workouts) liegt das Volumen sicher
+            // unter 15 MB.
+            if (mainOk) {
+                try {
+                    val workoutEntities = amazfitWorkoutDaoLazy.get().observeAll().first()
+                    val workoutBackups = workoutEntities.map { it.toBackup() }
+                    val workoutsPayload =
+                        WorkoutsBackupPayload(
+                            version = 1,
+                            exportedAt = System.currentTimeMillis(),
+                            workouts = workoutBackups,
+                        )
+                    val workoutsText =
+                        json.encodeToString(WorkoutsBackupPayload.serializer(), workoutsPayload)
+                    backupManager
+                        .uploadWorkouts(workoutsText)
+                        .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
+                        .onFailure { ex ->
+                            _status.value =
+                                SyncStatus.Failed(
+                                    "Workouts-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                )
+                        }
+                } catch (oom: OutOfMemoryError) {
+                    System.gc()
+                    _status.value = SyncStatus.Failed("Workouts-Backup zu gross (OOM)")
+                } catch (t: Throwable) {
+                    if (t is kotlinx.coroutines.CancellationException) throw t
+                    _status.value =
+                        SyncStatus.Failed(
+                            "Workouts-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
+                        )
+                }
             }
         }
         // Wenn waehrend des Uploads neue Aenderungen kamen: noch einen Run.

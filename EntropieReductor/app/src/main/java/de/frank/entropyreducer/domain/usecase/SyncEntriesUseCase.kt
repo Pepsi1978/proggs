@@ -10,26 +10,28 @@ import de.frank.entropyreducer.data.remote.drive.BackupPayload
 import de.frank.entropyreducer.data.remote.drive.DriveRestoreManager
 import de.frank.entropyreducer.data.remote.drive.DriveSession
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
+import de.frank.entropyreducer.data.remote.drive.WorkoutsBackupPayload
 import de.frank.entropyreducer.data.remote.drive.toEntity
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
 
 /**
- * High-Level UseCase für manuelles Backup + Restore. Die "automatische"
- * Variante (jede Änderung triggert ein Backup) laeuft über den
- * [SyncCoordinator]; dieser UseCase ist für explizite Aktionen aus den
- * Einstellungen.
+ * High-Level UseCase für manuelles Backup + Restore. Die "automatische" Variante (jede Änderung
+ * triggert ein Backup) laeuft über den [SyncCoordinator]; dieser UseCase ist für explizite Aktionen
+ * aus den Einstellungen.
  *
- * Frank-Wunsch 2026-05-09 (Abend): Restore zieht jetzt vollstaendig — nicht nur
- * Aufgaben (v1) sondern auch Insights, Memories, Hypothesen, Forscher-Sessions
- * und Forscher-/Hypothese-Messages (v2). Bei v1-Backups bleiben die neuen
- * Listen leer und nur Aufgaben kommen zurueck — keine Fehler, abwaerts-kompatibel.
+ * Frank-Wunsch 2026-05-09 (Abend): Restore zieht jetzt vollstaendig — nicht nur Aufgaben (v1)
+ * sondern auch Insights, Memories, Hypothesen, Forscher-Sessions und Forscher-/Hypothese-Messages
+ * (v2). Bei v1-Backups bleiben die neuen Listen leer und nur Aufgaben kommen zurueck — keine
+ * Fehler, abwaerts-kompatibel.
  */
-class SyncEntriesUseCase @Inject constructor(
+class SyncEntriesUseCase
+@Inject
+constructor(
     private val coordinator: SyncCoordinator,
     private val restoreManager: DriveRestoreManager,
     private val driveSession: DriveSession,
@@ -55,25 +57,27 @@ class SyncEntriesUseCase @Inject constructor(
      * Vom Drive heruntergeladene Daten mit dem lokalen Bestand mergen.
      *
      * Strategien pro Entity-Typ:
-     *  - Aufgaben + Insights + Memories: Last-Write-Wins per `updatedAt`.
-     *    Wenn lokal nicht vorhanden, einfuegen. Wenn lokal vorhanden und
-     *    Backup juenger, ueberschreiben.
-     *  - Hypothesen + Sessions + Messages: Existenz-basiert. Wenn lokal nicht
-     *    vorhanden, einfuegen. Wenn lokal vorhanden, NICHT ueberschreiben
-     *    (Messages aendern sich nach Erstellung nicht; Hypothesen und Sessions
-     *    haben kein updatedAt-Feld — konservative Strategie um lokale
-     *    Aenderungen nicht zu zerstoeren).
+     * - Aufgaben + Insights + Memories: Last-Write-Wins per `updatedAt`. Wenn lokal nicht
+     *   vorhanden, einfuegen. Wenn lokal vorhanden und Backup juenger, ueberschreiben.
+     * - Hypothesen + Sessions + Messages: Existenz-basiert. Wenn lokal nicht vorhanden, einfuegen.
+     *   Wenn lokal vorhanden, NICHT ueberschreiben (Messages aendern sich nach Erstellung nicht;
+     *   Hypothesen und Sessions haben kein updatedAt-Feld — konservative Strategie um lokale
+     *   Aenderungen nicht zu zerstoeren).
      *
      * Returns: aggregierte Counts ueber alle Entity-Typen.
      */
     suspend fun restoreFromDrive(): Result<RestoreOutcome> {
         val downloadResult = restoreManager.fetchLatest()
-        val raw = downloadResult.getOrElse { return Result.failure(it) }
-            ?: return Result.success(RestoreOutcome.NoBackup)
+        val raw =
+            downloadResult.getOrElse {
+                return Result.failure(it)
+            } ?: return Result.success(RestoreOutcome.NoBackup)
 
-        val payload = runCatching {
-            json.decodeFromString(BackupPayload.serializer(), raw)
-        }.getOrElse { return Result.failure(it) }
+        val payload =
+            runCatching { json.decodeFromString(BackupPayload.serializer(), raw) }
+                .getOrElse {
+                    return Result.failure(it)
+                }
 
         var inserted = 0
         var updated = 0
@@ -83,8 +87,14 @@ class SyncEntriesUseCase @Inject constructor(
             val incoming = backupEntry.toEntity()
             val existing = entryRepo.get(incoming.id)
             when {
-                existing == null -> { entryRepo.upsert(incoming); inserted++ }
-                incoming.updatedAt > existing.updatedAt -> { entryRepo.upsert(incoming); updated++ }
+                existing == null -> {
+                    entryRepo.upsert(incoming)
+                    inserted++
+                }
+                incoming.updatedAt > existing.updatedAt -> {
+                    entryRepo.upsert(incoming)
+                    updated++
+                }
                 else -> Unit
             }
         }
@@ -95,8 +105,14 @@ class SyncEntriesUseCase @Inject constructor(
             val all = insightDao.getByConfidenceDesc().first()
             val existing = all.firstOrNull { it.id == incoming.id }
             when {
-                existing == null -> { insightDao.upsert(incoming); inserted++ }
-                incoming.updatedAt > existing.updatedAt -> { insightDao.upsert(incoming); updated++ }
+                existing == null -> {
+                    insightDao.upsert(incoming)
+                    inserted++
+                }
+                incoming.updatedAt > existing.updatedAt -> {
+                    insightDao.upsert(incoming)
+                    updated++
+                }
                 else -> Unit
             }
         }
@@ -107,8 +123,14 @@ class SyncEntriesUseCase @Inject constructor(
             val all = memoryDao.getAll().first()
             val existing = all.firstOrNull { it.id == incoming.id }
             when {
-                existing == null -> { memoryDao.upsert(incoming); inserted++ }
-                incoming.updatedAt > existing.updatedAt -> { memoryDao.upsert(incoming); updated++ }
+                existing == null -> {
+                    memoryDao.upsert(incoming)
+                    inserted++
+                }
+                incoming.updatedAt > existing.updatedAt -> {
+                    memoryDao.upsert(incoming)
+                    updated++
+                }
                 else -> Unit
             }
         }
@@ -172,14 +194,15 @@ class SyncEntriesUseCase @Inject constructor(
         // weil HC-Werte immutable sind (selber Timestamp = selber Messwert).
         if (payload.healthConnectValues.isNotEmpty()) {
             val now = System.currentTimeMillis()
-            val entities = payload.healthConnectValues.map {
-                de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity(
-                    metric = it.metric,
-                    timestampMs = it.timestampMs,
-                    value = it.value,
-                    createdAt = now,
-                )
-            }
+            val entities =
+                payload.healthConnectValues.map {
+                    de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity(
+                        metric = it.metric,
+                        timestampMs = it.timestampMs,
+                        value = it.value,
+                        createdAt = now,
+                    )
+                }
             healthConnectValueDao.upsertAll(entities)
             inserted += entities.size
         }
@@ -206,7 +229,57 @@ class SyncEntriesUseCase @Inject constructor(
             )
         }
         if (!workoutCleanupDone && payload.amazfitWorkouts.isNotEmpty()) {
-            val merged = payload.amazfitWorkouts.map { backupWorkout ->
+            val merged =
+                payload.amazfitWorkouts.map { backupWorkout ->
+                    val freshFromBackup = backupWorkout.toEntity()
+                    val existing = amazfitWorkoutDao.getById(freshFromBackup.trackId)
+                    if (existing == null) {
+                        freshFromBackup
+                    } else {
+                        freshFromBackup.copy(
+                            gpsTrackJson = freshFromBackup.gpsTrackJson ?: existing.gpsTrackJson,
+                            heartRateSeriesJson =
+                                freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                            paceSeriesJson =
+                                freshFromBackup.paceSeriesJson ?: existing.paceSeriesJson,
+                            paceStreamJson =
+                                freshFromBackup.paceStreamJson ?: existing.paceStreamJson,
+                            splitsJson = freshFromBackup.splitsJson ?: existing.splitsJson,
+                        )
+                    }
+                }
+            amazfitWorkoutDao.upsertAll(merged)
+            inserted += merged.size
+        }
+
+        // Frank-Wunsch 2026-05-19: Separate Workouts-Datei (entropy_reducer_workouts_v1.json)
+        // restoren — enthaelt im Gegensatz zum Hauptbackup auch GPS-Track,
+        // Pulsverlauf, Pace und Splits. Nur einlesen wenn vorhanden und nicht
+        // durch die Cleanup-Migration unterdrueckt.
+        val workoutsInserted = restoreWorkoutsBackup(skipDueToCleanup = workoutCleanupDone)
+        inserted += workoutsInserted
+
+        driveSession.end()
+        return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-19: Liest die separate Workouts-Backup-Datei aus dem Drive-
+     * appDataFolder und schreibt sie in die DB. Streams aus dem Backup gewinnen, fehlende Streams
+     * werden mit dem lokalen Stand gefuellt (kein Datenverlust).
+     */
+    private suspend fun restoreWorkoutsBackup(skipDueToCleanup: Boolean): Int {
+        if (skipDueToCleanup) return 0
+        val raw = restoreManager.fetchWorkouts().getOrNull() ?: return 0
+        val workoutsPayload =
+            runCatching { json.decodeFromString(WorkoutsBackupPayload.serializer(), raw) }
+                .getOrElse {
+                    android.util.Log.w("SyncEntries", "Workouts-Backup nicht lesbar", it)
+                    return 0
+                }
+        if (workoutsPayload.workouts.isEmpty()) return 0
+        val merged =
+            workoutsPayload.workouts.map { backupWorkout ->
                 val freshFromBackup = backupWorkout.toEntity()
                 val existing = amazfitWorkoutDao.getById(freshFromBackup.trackId)
                 if (existing == null) {
@@ -214,19 +287,20 @@ class SyncEntriesUseCase @Inject constructor(
                 } else {
                     freshFromBackup.copy(
                         gpsTrackJson = freshFromBackup.gpsTrackJson ?: existing.gpsTrackJson,
-                        heartRateSeriesJson = freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
+                        heartRateSeriesJson =
+                            freshFromBackup.heartRateSeriesJson ?: existing.heartRateSeriesJson,
                         paceSeriesJson = freshFromBackup.paceSeriesJson ?: existing.paceSeriesJson,
                         paceStreamJson = freshFromBackup.paceStreamJson ?: existing.paceStreamJson,
                         splitsJson = freshFromBackup.splitsJson ?: existing.splitsJson,
                     )
                 }
             }
-            amazfitWorkoutDao.upsertAll(merged)
-            inserted += merged.size
-        }
-
-        driveSession.end()
-        return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
+        amazfitWorkoutDao.upsertAll(merged)
+        android.util.Log.i(
+            "SyncEntries",
+            "Restore: ${merged.size} Workouts aus separatem Backup wiederhergestellt",
+        )
+        return merged.size
     }
 
     /** Hat das Drive-Konto bereits ein Backup? */
@@ -234,6 +308,7 @@ class SyncEntriesUseCase @Inject constructor(
 
     sealed interface RestoreOutcome {
         data object NoBackup : RestoreOutcome
+
         data class Merged(val inserted: Int, val updated: Int) : RestoreOutcome
     }
 }
