@@ -6,6 +6,9 @@ import android.net.Uri
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
@@ -13,59 +16,58 @@ import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
-import net.openid.appauth.ClientSecretBasic
 import net.openid.appauth.ClientSecretPost
 import net.openid.appauth.ResponseTypeValues
 import net.openid.appauth.TokenResponse
 import org.json.JSONException
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.coroutines.resume
 
 /**
- * OAuth-2.0-Wrapper auf Basis von AppAuth für Google Calendar und Whoop.
- * Spec §15.4 und §15.5.
+ * OAuth-2.0-Wrapper auf Basis von AppAuth für Google Calendar und Whoop. Spec §15.4 und §15.5.
  *
  * SETUP:
- *  - Google Calendar: Authorization-Endpoint und Token-Endpoint sind festverdrahtet,
- *    Client-ID kommt aus den BuildConfig-Konstanten oder Settings.
- *  - Whoop: Endpoints festverdrahtet auf api.prod.whoop.com, Client-ID/Secret und
- *    Redirect-URI muss Frank im Whoop-Developer-Dashboard hinterlegen.
+ * - Google Calendar: Authorization-Endpoint und Token-Endpoint sind festverdrahtet, Client-ID kommt
+ *   aus den BuildConfig-Konstanten oder Settings.
+ * - Whoop: Endpoints festverdrahtet auf api.prod.whoop.com, Client-ID/Secret und Redirect-URI muss
+ *   Frank im Whoop-Developer-Dashboard hinterlegen.
  *
- * Persistenz: Der gesamte AuthState wird als JSON in EncryptedSharedPreferences gespeichert.
- * Bei jedem `freshAccessToken()` aktualisiert AppAuth den State automatisch (via Refresh-Token).
+ * Persistenz: Der gesamte AuthState wird als JSON in EncryptedSharedPreferences gespeichert. Bei
+ * jedem `freshAccessToken()` aktualisiert AppAuth den State automatisch (via Refresh-Token).
  */
 @Singleton
-class OAuthService @Inject constructor(
+class OAuthService
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
     private val secrets: EncryptedSecretsStore,
 ) {
 
     /** Konfiguration für Google Calendar. Endpoints von Google's OpenID-Connect-Discovery. */
-    val googleConfig = AuthorizationServiceConfiguration(
-        Uri.parse("https://accounts.google.com/o/oauth2/v2/auth"),
-        Uri.parse("https://oauth2.googleapis.com/token"),
-    )
+    val googleConfig =
+        AuthorizationServiceConfiguration(
+            Uri.parse("https://accounts.google.com/o/oauth2/v2/auth"),
+            Uri.parse("https://oauth2.googleapis.com/token"),
+        )
 
     /** Konfiguration für Whoop. Spec §15.4. */
-    val whoopConfig = AuthorizationServiceConfiguration(
-        Uri.parse("https://api.prod.whoop.com/oauth/oauth2/auth"),
-        Uri.parse("https://api.prod.whoop.com/oauth/oauth2/token"),
-    )
+    val whoopConfig =
+        AuthorizationServiceConfiguration(
+            Uri.parse("https://api.prod.whoop.com/oauth/oauth2/auth"),
+            Uri.parse("https://api.prod.whoop.com/oauth/oauth2/token"),
+        )
 
     // Polar AccessLink V3 + V4 OAuth-Configs entfernt 2026-05-17 (Frank-Wunsch:
     // Polar nur noch ueber ZIP-Bulk-Import, keine API-Anbindung mehr).
 
     /**
-     * Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17).
-     * mobile/authorize oeffnet Strava-App falls installiert, sonst Browser.
-     * Strava ist Confidential Client — verlangt Client-Secret bei Token-Exchange
-     * UND beim Refresh — ClientSecretPost analog zu Whoop.
+     * Strava (Frank-Wunsch 2026-05-16, revived 2026-05-17). mobile/authorize oeffnet Strava-App
+     * falls installiert, sonst Browser. Strava ist Confidential Client — verlangt Client-Secret bei
+     * Token-Exchange UND beim Refresh — ClientSecretPost analog zu Whoop.
      */
-    val stravaConfig = AuthorizationServiceConfiguration(
-        Uri.parse("https://www.strava.com/oauth/mobile/authorize"),
-        Uri.parse("https://www.strava.com/oauth/token"),
-    )
+    val stravaConfig =
+        AuthorizationServiceConfiguration(
+            Uri.parse("https://www.strava.com/oauth/mobile/authorize"),
+            Uri.parse("https://www.strava.com/oauth/token"),
+        )
 
     /** Gemeinsamer AuthorizationService — leichtgewichtig, kann pro Aufruf erzeugt werden. */
     fun newService(): AuthorizationService = AuthorizationService(context)
@@ -73,28 +75,33 @@ class OAuthService @Inject constructor(
     /* ============================ Google Calendar ============================ */
 
     /**
-     * Baut den Authorization-Intent für Google Calendar. Die UI startet ihn
-     * via ActivityResultContract.
+     * Baut den Authorization-Intent für Google Calendar. Die UI startet ihn via
+     * ActivityResultContract.
      */
     fun buildGoogleAuthIntent(clientId: String): Intent {
-        val request = AuthorizationRequest.Builder(
-            googleConfig,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(GOOGLE_REDIRECT_URI),
-        )
-            .setScopes(GOOGLE_SCOPE_CALENDAR_READONLY, "email")
-            .setPrompt("consent")
-            // Fordert Refresh-Token an — Pflicht für Background-Sync.
-            .setAdditionalParameters(mapOf("access_type" to "offline"))
-            .build()
+        val request =
+            AuthorizationRequest.Builder(
+                    googleConfig,
+                    clientId,
+                    ResponseTypeValues.CODE,
+                    Uri.parse(GOOGLE_REDIRECT_URI),
+                )
+                .setScopes(GOOGLE_SCOPE_CALENDAR_READONLY, "email")
+                .setPrompt("consent")
+                // Fordert Refresh-Token an — Pflicht für Background-Sync.
+                .setAdditionalParameters(mapOf("access_type" to "offline"))
+                .build()
         return newService().getAuthorizationRequestIntent(request)
     }
 
     fun loadGoogleAuthState(): AuthState {
         val json = secrets.googleAuthStateJson
         return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
+            try {
+                AuthState.jsonDeserialize(json)
+            } catch (e: JSONException) {
+                AuthState()
+            }
         } else AuthState()
     }
 
@@ -110,8 +117,8 @@ class OAuthService @Inject constructor(
     }
 
     /**
-     * Verarbeitet das Ergebnis des Authorization-Intents. Tauscht den Code gegen
-     * Tokens und speichert den AuthState.
+     * Verarbeitet das Ergebnis des Authorization-Intents. Tauscht den Code gegen Tokens und
+     * speichert den AuthState.
      */
     suspend fun handleGoogleAuthResult(intent: Intent, clientId: String): Result<Unit> {
         val resp = AuthorizationResponse.fromIntent(intent)
@@ -124,21 +131,25 @@ class OAuthService @Inject constructor(
         // freshGoogleAccessToken würde silent failen und der Nutzer denkt verbunden.
         val state = AuthState(resp, ex)
         val tokenResult = exchangeToken(resp.createTokenExchangeRequest())
-        return tokenResult.onSuccess { tokenResp ->
-            state.update(tokenResp, null)
-            saveGoogleAuthState(state)
-            secrets.googleAccessToken = tokenResp.accessToken
-            secrets.googleRefreshToken = tokenResp.refreshToken
-            secrets.googleTokenExpiryEpochSec = tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
-        }.onFailure {
-            // Bei Token-Fehler: vorhandenen State löschen, damit kein Halb-Zustand entsteht.
-            clearGoogleAuthState()
-        }.map { Unit }
+        return tokenResult
+            .onSuccess { tokenResp ->
+                state.update(tokenResp, null)
+                saveGoogleAuthState(state)
+                secrets.googleAccessToken = tokenResp.accessToken
+                secrets.googleRefreshToken = tokenResp.refreshToken
+                secrets.googleTokenExpiryEpochSec =
+                    tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
+            }
+            .onFailure {
+                // Bei Token-Fehler: vorhandenen State löschen, damit kein Halb-Zustand entsteht.
+                clearGoogleAuthState()
+            }
+            .map { Unit }
     }
 
     /**
-     * Liefert ein gueltiges Access-Token für Google Calendar. Refreshed transparent
-     * wenn das Token abgelaufen ist.
+     * Liefert ein gueltiges Access-Token für Google Calendar. Refreshed transparent wenn das Token
+     * abgelaufen ist.
      */
     suspend fun freshGoogleAccessToken(): String? {
         val state = loadGoogleAuthState()
@@ -164,22 +175,30 @@ class OAuthService @Inject constructor(
     fun buildWhoopAuthIntent(clientId: String, redirectUri: String): Intent {
         // Diagnostik: volle Client-ID + Laenge — UUIDs sind nicht geheim, tauchen in der
         // OAuth-URL im Browser ohnehin auf. Hilft den "client_does_not_exist"-Bug einzugrenzen.
-        Log.d(TAG, "Whoop: buildAuthIntent — clientId='$clientId' (Länge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES")
-        val request = AuthorizationRequest.Builder(
-            whoopConfig,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(redirectUri),
+        Log.d(
+            TAG,
+            "Whoop: buildAuthIntent — clientId='$clientId' (Länge=${clientId.length}), redirect='$redirectUri', scopes=$WHOOP_SCOPES",
         )
-            .setScopes(*WHOOP_SCOPES.toTypedArray())
-            .build()
+        val request =
+            AuthorizationRequest.Builder(
+                    whoopConfig,
+                    clientId,
+                    ResponseTypeValues.CODE,
+                    Uri.parse(redirectUri),
+                )
+                .setScopes(*WHOOP_SCOPES.toTypedArray())
+                .build()
         return newService().getAuthorizationRequestIntent(request)
     }
 
     fun loadWhoopAuthState(): AuthState {
         val json = secrets.whoopAuthStateJson
         return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
+            try {
+                AuthState.jsonDeserialize(json)
+            } catch (e: JSONException) {
+                AuthState()
+            }
         } else AuthState()
     }
 
@@ -199,57 +218,77 @@ class OAuthService @Inject constructor(
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
         if (ex != null) {
-            Log.e(TAG, "Whoop: AuthorizationException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}")
+            Log.e(
+                TAG,
+                "Whoop: AuthorizationException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}",
+            )
         }
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Whoop-Authorization-Antwort"))
         }
-        Log.d(TAG, "Whoop: Authorization OK — code-Länge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}")
+        Log.d(
+            TAG,
+            "Whoop: Authorization OK — code-Länge=${resp.authorizationCode?.length ?: 0}, state=${resp.state}",
+        )
         // Spiegel zur Google-Logik: AuthState erst nach erfolgreichem Token-Exchange.
         val state = AuthState(resp, ex)
         // Whoop verlangt Client-Secret beim Token-Exchange (Confidential-Client).
-        val tokenRequest = if (clientSecret != null) {
-            resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
-        } else {
-            resp.createTokenExchangeRequest()
-        }
-        Log.d(TAG, "Whoop: Token-Exchange-Request gebaut — additionalParams-Keys=${tokenRequest.additionalParameters.keys}")
-        val tokenResult = exchangeToken(tokenRequest)
-        return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "Whoop: Token-Exchange erfolgreich — access-Länge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}")
-            state.update(tokenResp, null)
-            saveWhoopAuthState(state)
-            secrets.whoopAccessToken = tokenResp.accessToken
-            secrets.whoopRefreshToken = tokenResp.refreshToken
-            secrets.whoopTokenExpiryEpochSec = tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
-        }.onFailure { failure ->
-            Log.e(TAG, "Whoop: Token-Exchange fehlgeschlagen — class=${failure.javaClass.simpleName}, message=${failure.message}", failure)
-            if (failure is AuthorizationException) {
-                Log.e(TAG, "Whoop: AuthException-Details — type=${failure.type} code=${failure.code} error=${failure.error} desc=${failure.errorDescription} uri=${failure.errorUri}")
+        val tokenRequest =
+            if (clientSecret != null) {
+                resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
+            } else {
+                resp.createTokenExchangeRequest()
             }
-            clearWhoopAuthState()
-        }.map { Unit }
+        Log.d(
+            TAG,
+            "Whoop: Token-Exchange-Request gebaut — additionalParams-Keys=${tokenRequest.additionalParameters.keys}",
+        )
+        val tokenResult = exchangeToken(tokenRequest)
+        return tokenResult
+            .onSuccess { tokenResp ->
+                Log.i(
+                    TAG,
+                    "Whoop: Token-Exchange erfolgreich — access-Länge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}, expires=${tokenResp.accessTokenExpirationTime}",
+                )
+                state.update(tokenResp, null)
+                saveWhoopAuthState(state)
+                secrets.whoopAccessToken = tokenResp.accessToken
+                secrets.whoopRefreshToken = tokenResp.refreshToken
+                secrets.whoopTokenExpiryEpochSec =
+                    tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
+            }
+            .onFailure { failure ->
+                Log.e(
+                    TAG,
+                    "Whoop: Token-Exchange fehlgeschlagen — class=${failure.javaClass.simpleName}, message=${failure.message}",
+                    failure,
+                )
+                if (failure is AuthorizationException) {
+                    Log.e(
+                        TAG,
+                        "Whoop: AuthException-Details — type=${failure.type} code=${failure.code} error=${failure.error} desc=${failure.errorDescription} uri=${failure.errorUri}",
+                    )
+                }
+                clearWhoopAuthState()
+            }
+            .map { Unit }
     }
 
     /**
-     * Liefert ein gueltiges Access-Token fuer Whoop. Refreshed transparent wenn das
-     * alte abgelaufen ist.
+     * Liefert ein gueltiges Access-Token fuer Whoop. Refreshed transparent wenn das alte abgelaufen
+     * ist.
      *
-     * Whoop ist ein Confidential Client — beim Refresh-Request MUSS das
-     * Client-Secret mitgeschickt werden. AppAuth's einfache
-     * performActionWithFreshTokens(service) Variante schickt es NICHT mit, was zu
-     * einem stillen invalid_client-Fehler bei jedem Refresh fuehrt — und damit
-     * dazu dass der Nutzer sich ca. jede Stunde neu anmelden muss.
+     * Whoop ist ein Confidential Client — beim Refresh-Request MUSS das Client-Secret mitgeschickt
+     * werden. AppAuth's einfache performActionWithFreshTokens(service) Variante schickt es NICHT
+     * mit, was zu einem stillen invalid_client-Fehler bei jedem Refresh fuehrt — und damit dazu
+     * dass der Nutzer sich ca. jede Stunde neu anmelden muss.
      *
-     * Direktive 3 — Resilient Bugfixing, vier Schichten:
-     *   Schicht 1 (Praeventiv) — ClientSecretPost beim Refresh mitsenden
-     *   Schicht 2 (Reaktiv) — bei fehlendem Secret KLARE Exception werfen statt
-     *                         silent null zurueckgeben
-     *   Schicht 3 (Selbstheilend) — bei Refresh-Fehler AuthState resetten, damit
-     *                               UI-Anzeige nicht widerspruechlich bleibt
-     *                               (Settings sagen "verbunden", Banner sagt "anmelden")
-     *   Schicht 4 (Diagnose) — detaillierte Logs damit naechster Vorfall in 30s
-     *                          diagnostiziert werden kann
+     * Direktive 3 — Resilient Bugfixing, vier Schichten: Schicht 1 (Praeventiv) — ClientSecretPost
+     * beim Refresh mitsenden Schicht 2 (Reaktiv) — bei fehlendem Secret KLARE Exception werfen
+     * statt silent null zurueckgeben Schicht 3 (Selbstheilend) — bei Refresh-Fehler AuthState
+     * resetten, damit UI-Anzeige nicht widerspruechlich bleibt (Settings sagen "verbunden", Banner
+     * sagt "anmelden") Schicht 4 (Diagnose) — detaillierte Logs damit naechster Vorfall in 30s
+     * diagnostiziert werden kann
      */
     suspend fun freshWhoopAccessToken(): String? {
         val state = loadWhoopAuthState()
@@ -261,7 +300,7 @@ class OAuthService @Inject constructor(
         if (clientSecret.isNullOrBlank()) {
             Log.e(TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
             throw IllegalStateException(
-                "Whoop-Client-Secret fehlt — bitte in den API-Schlüssel-Settings neu eingeben.",
+                "Whoop-Client-Secret fehlt — bitte in den API-Schlüssel-Settings neu eingeben."
             )
         }
         // Schicht 4 — DIAGNOSE-SONDEN (erweitert): Vor dem Refresh den AuthState
@@ -281,13 +320,16 @@ class OAuthService @Inject constructor(
             Log.d(TAG, "Whoop-Refresh: needsRefresh=$needsRefresh expiryDeltaMs=$expiryDeltaMs")
         }
         if (rt.isNullOrBlank()) {
-            Log.e(TAG, "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.")
+            Log.e(
+                TAG,
+                "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.",
+            )
             // Frank's Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh
             // nicht moeglich. NICHT clearWhoopAuthState() rufen — der State bleibt,
             // die Settings zeigen weiter "verbunden", die DB-Daten bleiben sichtbar.
             // UI zeigt im Banner ehrlich an: "Refresh-Token fehlt — neu anmelden".
             throw IllegalStateException(
-                "Whoop-Refresh-Token fehlt — bitte unter API-Schlüssel neu anmelden.",
+                "Whoop-Refresh-Token fehlt — bitte unter API-Schlüssel neu anmelden."
             )
         }
         val clientAuth = ClientSecretPost(clientSecret)
@@ -299,7 +341,11 @@ class OAuthService @Inject constructor(
             state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
                 if (ex != null) {
                     // Schicht 4 — Diagnose: alles was Whoop geschickt hat in den Log
-                    Log.e(TAG, "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}", ex)
+                    Log.e(
+                        TAG,
+                        "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}",
+                        ex,
+                    )
                     // Schicht 3 — Frank-Wunsch 2026-05-09: NICHT mehr clearen.
                     // Wenn der Refresh fehlschlaegt, bleibt der AuthState bestehen.
                     // Vorteile: alte DB-Daten bleiben sichtbar, Settings zeigen
@@ -308,7 +354,10 @@ class OAuthService @Inject constructor(
                     // aber besser als Datenverlust.
                     cont.resume(null)
                 } else {
-                    Log.d(TAG, "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken?.length ?: 0})")
+                    Log.d(
+                        TAG,
+                        "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken?.length ?: 0})",
+                    )
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
                     cont.resume(accessToken)
@@ -325,28 +374,32 @@ class OAuthService @Inject constructor(
     /* =================================== Strava =================================== */
 
     /**
-     * Strava-OAuth analog zu Whoop. Rotierende Refresh-Tokens — der AuthState
-     * haelt sie automatisch aktuell, aber wir muessen nach jedem Refresh den
-     * State persistieren (saveStravaAuthState).
+     * Strava-OAuth analog zu Whoop. Rotierende Refresh-Tokens — der AuthState haelt sie automatisch
+     * aktuell, aber wir muessen nach jedem Refresh den State persistieren (saveStravaAuthState).
      */
     fun buildStravaAuthIntent(clientId: String, redirectUri: String): Intent {
         Log.d(TAG, "Strava: buildAuthIntent — clientId='$clientId' redirect='$redirectUri'")
-        val request = AuthorizationRequest.Builder(
-            stravaConfig,
-            clientId,
-            ResponseTypeValues.CODE,
-            Uri.parse(redirectUri),
-        )
-            .setScopes(*STRAVA_SCOPES.toTypedArray())
-            .setAdditionalParameters(mapOf("approval_prompt" to "auto"))
-            .build()
+        val request =
+            AuthorizationRequest.Builder(
+                    stravaConfig,
+                    clientId,
+                    ResponseTypeValues.CODE,
+                    Uri.parse(redirectUri),
+                )
+                .setScopes(*STRAVA_SCOPES.toTypedArray())
+                .setAdditionalParameters(mapOf("approval_prompt" to "auto"))
+                .build()
         return newService().getAuthorizationRequestIntent(request)
     }
 
     fun loadStravaAuthState(): AuthState {
         val json = secrets.stravaAuthStateJson
         return if (json != null) {
-            try { AuthState.jsonDeserialize(json) } catch (e: JSONException) { AuthState() }
+            try {
+                AuthState.jsonDeserialize(json)
+            } catch (e: JSONException) {
+                AuthState()
+            }
         } else AuthState()
     }
 
@@ -362,38 +415,51 @@ class OAuthService @Inject constructor(
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
         if (ex != null) {
-            Log.e(TAG, "Strava: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}")
+            Log.e(
+                TAG,
+                "Strava: AuthException type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription}",
+            )
         }
         if (resp == null) {
             return Result.failure(ex ?: IllegalStateException("Keine Strava-Authorization-Antwort"))
         }
         if (clientSecret.isNullOrBlank()) {
-            return Result.failure(IllegalStateException("Strava-Client-Secret fehlt — bitte in den API-Settings eintragen"))
+            return Result.failure(
+                IllegalStateException(
+                    "Strava-Client-Secret fehlt — bitte in den API-Settings eintragen"
+                )
+            )
         }
         val state = AuthState(resp, ex)
         val tokenRequest = resp.createTokenExchangeRequest(mapOf("client_secret" to clientSecret))
         val tokenResult = exchangeToken(tokenRequest)
-        return tokenResult.onSuccess { tokenResp ->
-            Log.i(TAG, "Strava: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}")
-            state.update(tokenResp, null)
-            saveStravaAuthState(state)
-            val athleteIdRaw = tokenResp.additionalParameters["athlete"]
-            athleteIdRaw?.let { json ->
-                val match = Regex("\"id\"\\s*:\\s*(\\d+)").find(json)
-                match?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
-                    secrets.stravaAthleteId = it
-                    Log.d(TAG, "Strava: athleteId=$it gespeichert")
+        return tokenResult
+            .onSuccess { tokenResp ->
+                Log.i(
+                    TAG,
+                    "Strava: Token-Exchange OK — access-Laenge=${tokenResp.accessToken?.length ?: 0}, refresh-vorhanden=${tokenResp.refreshToken != null}",
+                )
+                state.update(tokenResp, null)
+                saveStravaAuthState(state)
+                val athleteIdRaw = tokenResp.additionalParameters["athlete"]
+                athleteIdRaw?.let { json ->
+                    val match = Regex("\"id\"\\s*:\\s*(\\d+)").find(json)
+                    match?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
+                        secrets.stravaAthleteId = it
+                        Log.d(TAG, "Strava: athleteId=$it gespeichert")
+                    }
                 }
             }
-        }.onFailure { failure ->
-            Log.e(TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
-            clearStravaAuthState()
-        }.map { Unit }
+            .onFailure { failure ->
+                Log.e(TAG, "Strava: Token-Exchange fehlgeschlagen — ${failure.message}", failure)
+                clearStravaAuthState()
+            }
+            .map { Unit }
     }
 
     /**
-     * Frischer Access-Token fuer Strava. Strava ist Confidential Client —
-     * Client-Secret beim Refresh PFLICHT (sonst invalid_client).
+     * Frischer Access-Token fuer Strava. Strava ist Confidential Client — Client-Secret beim
+     * Refresh PFLICHT (sonst invalid_client).
      */
     suspend fun freshStravaAccessToken(): String? {
         val state = loadStravaAuthState()
@@ -405,7 +471,7 @@ class OAuthService @Inject constructor(
         if (clientSecret.isNullOrBlank()) {
             Log.e(TAG, "Strava-Refresh: Client-Secret fehlt")
             throw IllegalStateException(
-                "Strava-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben.",
+                "Strava-Client-Secret fehlt — bitte in den API-Schluessel-Settings neu eingeben."
             )
         }
         val clientAuth = ClientSecretPost(clientSecret)
@@ -413,7 +479,11 @@ class OAuthService @Inject constructor(
         return suspendCancellableCoroutine { cont ->
             state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
                 if (ex != null) {
-                    Log.e(TAG, "Strava-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}", ex)
+                    Log.e(
+                        TAG,
+                        "Strava-Token-Refresh fehlgeschlagen — type=${ex.type} error=${ex.error} desc=${ex.errorDescription}",
+                        ex,
+                    )
                     cont.resume(null)
                 } else {
                     Log.d(TAG, "Strava-Token-Refresh OK — Laenge=${accessToken?.length ?: 0}")
@@ -428,37 +498,53 @@ class OAuthService @Inject constructor(
     /* ================================== Helper ================================== */
 
     private suspend fun exchangeToken(
-        request: net.openid.appauth.TokenRequest,
+        request: net.openid.appauth.TokenRequest
     ): Result<TokenResponse> = suspendCancellableCoroutine { cont ->
         val service = newService()
-        Log.d(TAG, "exchangeToken — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}")
+        Log.d(
+            TAG,
+            "exchangeToken — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}",
+        )
         service.performTokenRequest(request) { resp, ex ->
             if (resp != null) {
                 cont.resume(Result.success(resp))
             } else {
-                Log.e(TAG, "exchangeToken FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}")
-                cont.resume(Result.failure(ex ?: IllegalStateException("Token-Exchange fehlgeschlagen")))
+                Log.e(
+                    TAG,
+                    "exchangeToken FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}",
+                )
+                cont.resume(
+                    Result.failure(ex ?: IllegalStateException("Token-Exchange fehlgeschlagen"))
+                )
             }
             service.dispose()
         }
     }
 
     /**
-     * Wie exchangeToken, aber mit expliziter ClientAuthentication (HTTP Basic
-     * Auth fuer Polar — Polar verlangt das beim Token-Endpoint).
+     * Wie exchangeToken, aber mit expliziter ClientAuthentication (HTTP Basic Auth fuer Polar —
+     * Polar verlangt das beim Token-Endpoint).
      */
     private suspend fun exchangeTokenWithAuth(
         request: net.openid.appauth.TokenRequest,
         clientAuth: net.openid.appauth.ClientAuthentication,
     ): Result<TokenResponse> = suspendCancellableCoroutine { cont ->
         val service = newService()
-        Log.d(TAG, "exchangeTokenWithAuth — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}")
+        Log.d(
+            TAG,
+            "exchangeTokenWithAuth — endpoint=${request.configuration.tokenEndpoint}, grantType=${request.grantType}",
+        )
         service.performTokenRequest(request, clientAuth) { resp, ex ->
             if (resp != null) {
                 cont.resume(Result.success(resp))
             } else {
-                Log.e(TAG, "exchangeTokenWithAuth FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}")
-                cont.resume(Result.failure(ex ?: IllegalStateException("Token-Exchange fehlgeschlagen")))
+                Log.e(
+                    TAG,
+                    "exchangeTokenWithAuth FAIL — type=${ex?.type} code=${ex?.code} error=${ex?.error} desc=${ex?.errorDescription} uri=${ex?.errorUri}",
+                )
+                cont.resume(
+                    Result.failure(ex ?: IllegalStateException("Token-Exchange fehlgeschlagen"))
+                )
             }
             service.dispose()
         }
@@ -471,23 +557,33 @@ class OAuthService @Inject constructor(
         // Whoop's Parser aber nicht — daher beide URIs einheitlich auf "://".
         const val GOOGLE_REDIRECT_URI = "de.frank.entropyreducer://oauth/google/callback"
         const val WHOOP_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/whoop/callback"
-        const val GOOGLE_SCOPE_CALENDAR_READONLY = "https://www.googleapis.com/auth/calendar.readonly"
-        val WHOOP_SCOPES = listOf(
-            "read:recovery",
-            "read:cycles",
-            "read:sleep",
-            "read:workout",
-            "read:profile",
-            "offline",
-        )
+        const val GOOGLE_SCOPE_CALENDAR_READONLY =
+            "https://www.googleapis.com/auth/calendar.readonly"
+        val WHOOP_SCOPES =
+            listOf(
+                "read:recovery",
+                "read:cycles",
+                "read:sleep",
+                "read:workout",
+                "read:profile",
+                "offline",
+            )
 
         // Polar V3/V4 Konstanten entfernt 2026-05-17 (Frank-Wunsch).
 
         /** Strava Redirect-URI + Scopes. */
-        const val STRAVA_REDIRECT_URI_DEFAULT = "de.frank.entropyreducer://oauth/strava/callback"
-        val STRAVA_SCOPES = listOf(
-            "activity:read_all",
-            "read",
-        )
+        // Frank-Befund 2026-05-16 (#763), erneut 2026-05-19: Strava parst die
+        // Redirect-URI streng als URL und vergleicht den HOST-Teil mit der
+        // "Authorization Callback Domain" auf der Strava-API-Seite. Bei
+        // `de.frank.entropyreducer://oauth/strava/callback` ist host="oauth" —
+        // das matched nicht zur typischen Callback-Domain. Loesung: host="localhost"
+        // einbauen, dann traegt Frank im Strava-Dashboard einfach "localhost" als
+        // Callback Domain ein (Default-Hinweis im Strava-Formular). Whoop und
+        // Google akzeptieren das gleiche Pattern, daher kein Konflikt.
+        // Fehlermeldung ohne diesen Host:
+        //   {"resource":"Application","field":"redirect_uri","code":"invalid"}
+        const val STRAVA_REDIRECT_URI_DEFAULT =
+            "de.frank.entropyreducer://localhost/oauth/strava/callback"
+        val STRAVA_SCOPES = listOf("activity:read_all", "read")
     }
 }
