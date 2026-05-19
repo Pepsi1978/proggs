@@ -204,10 +204,6 @@ internal fun AmazfitTrainingsCard(
  * Hero-Pattern für den letzten Lauf — Frank-Wunsch 2026-05-09: "schoenes Fenster mit allen Werten
  * in Patterns". Sportart-Icon + Datum + T-Rex-3-Badge oben, dann Distanz und Dauer GROSS, darunter
  * ein 2x2-Pattern mit Pace, Puls, Kalorien, Höhenmeter.
- *
- * Frank-Befund 2026-05-16: Wenn das juengste Workout in der DB aelter als 24h ist, blenden wir
- * eine Stale-Warnung ein. So sieht Frank sofort dass die Watch noch nicht mit der Zepp-Cloud
- * synchronisiert hat — das Workout aus der App-Sicht ist nicht das tatsaechlich letzte.
  */
 @Composable
 private fun LetzterLaufHero(
@@ -219,8 +215,6 @@ private fun LetzterLaufHero(
     val cosmos = LocalCosmos.current
     val accent = CosmosColors.Warning
     val heroShape = RoundedCornerShape(14.dp)
-    val ageHours = ((System.currentTimeMillis() - w.startMs) / 3_600_000L).coerceAtLeast(0L)
-    val isStale = ageHours >= 24L
     // Frank-Wunsch 2026-05-17: Edit-Dialog auch in der Hero-Card (oben neben
     // dem Polar-Badge). Damit kann Frank das oberste Training direkt bearbeiten
     // ohne den Detail-Screen zu oeffnen.
@@ -348,35 +342,6 @@ private fun LetzterLaufHero(
                     modifier = Modifier.weight(1f),
                     onClick = { editOpen = true },
                 )
-            }
-            // Frank-Wunsch 2026-05-16: Stale-Hinweis wenn juengstes Training aelter als
-            // 24 Stunden ist. Trick: Workouts kommen aus der Zepp-Cloud — wenn die Watch
-            // sich nicht zur Zepp-App synchronisiert, bleiben neue Trainings dort haengen.
-            if (isStale) {
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CosmosColors.Critical.copy(alpha = 0.18f))
-                            .padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    Column {
-                        Text(
-                            text = "Hinweis: aelter als 24h",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = CosmosColors.Critical,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(Modifier.size(2.dp))
-                        Text(
-                            text =
-                                "Falls du seitdem trainiert hast: Zepp-App oeffnen, Watch synchronisieren, dann hier Refresh druecken.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = cosmos.textSecondary,
-                        )
-                    }
-                }
             }
         }
     }
@@ -562,9 +527,9 @@ internal fun formatDuration(seconds: Long): String {
  * empirische +2 Korrektur.
  */
 /**
- * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop-
- * Snapshot fuer den Workout-Tag). Wenn fuer den Tag KEIN Ruhepuls-Wert
- * vorliegt → "—" statt mit Hardcoded-65 zu raten.
+ * Frank-Wunsch 2026-05-17: Ruhepuls kommt jetzt aus den Tages-Daten (Whoop- Snapshot fuer den
+ * Workout-Tag). Wenn fuer den Tag KEIN Ruhepuls-Wert vorliegt → "—" statt mit Hardcoded-65 zu
+ * raten.
  */
 internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity, restingHrForDay: Int?): String {
     val v = computeVo2MaxOrNull(w, restingHrForDay) ?: return "—"
@@ -572,20 +537,16 @@ internal fun formatHeroVo2Max(w: AmazfitWorkoutEntity, restingHrForDay: Int?): S
 }
 
 /**
- * Frank-Wunsch 2026-05-18: Reine Double-Variante der VO2max-Berechnung — wird
- * gebraucht damit der Biomarker-VO2max-Mini-Pattern und der zugehoerige Detail-
- * Screen die letzten Trainings als Verlauf zeichnen koennen. Liefert den Wert
- * in ml/(kg·min) oder null wenn das Training nicht VO2max-faehig ist (Sportart
- * nicht Laufen/Trail/Walk, fehlende Distanz/Dauer/Puls, oder Wert ausserhalb
- * physiologisch plausibler Spanne 20-80).
+ * Frank-Wunsch 2026-05-18: Reine Double-Variante der VO2max-Berechnung — wird gebraucht damit der
+ * Biomarker-VO2max-Mini-Pattern und der zugehoerige Detail- Screen die letzten Trainings als
+ * Verlauf zeichnen koennen. Liefert den Wert in ml/(kg·min) oder null wenn das Training nicht
+ * VO2max-faehig ist (Sportart nicht Laufen/Trail/Walk, fehlende Distanz/Dauer/Puls, oder Wert
+ * ausserhalb physiologisch plausibler Spanne 20-80).
  *
- * Pflicht-Vorpruefung mit [isVo2MaxSport] — Krafttraining, Yoga, Crosstrainer
- * etc. liefern keinen sinnvollen Wert.
+ * Pflicht-Vorpruefung mit [isVo2MaxSport] — Krafttraining, Yoga, Crosstrainer etc. liefern keinen
+ * sinnvollen Wert.
  */
-internal fun computeVo2MaxOrNull(
-    w: AmazfitWorkoutEntity,
-    restingHrForDay: Int?,
-): Double? {
+internal fun computeVo2MaxOrNull(w: AmazfitWorkoutEntity, restingHrForDay: Int?): Double? {
     if (!isVo2MaxSport(w.sportName)) return null
     val avgHr = w.avgHeartRate ?: return null
     val distance = w.distanceMeters ?: return null
