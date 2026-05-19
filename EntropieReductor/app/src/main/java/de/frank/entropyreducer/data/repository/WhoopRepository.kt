@@ -136,8 +136,14 @@ constructor(
                 }
 
                 val recByCycleId = recoveries.associateBy { it.cycleId }
-                // Sleeps haben keine direkte cycle_id im Public-Schema — wir matchen über das
-                // Datum.
+                // Bug-Fix 2026-05-19: Recovery hat ein offizielles sleep_id-Feld das den
+                // exakten Sleep verlinkt. Vorher matchte mapToSnapshot Sleep nur ueber
+                // cycle.start.localDate, was bei Cycles deren start morgens liegt die
+                // FOLGENDE Nacht statt der vorherigen zugeordnet hat. Folge: zwei Cycles
+                // konnten am Ende denselben Sleep referenzieren und auf demselben Datum
+                // landen — z.B. 19.05 morgens zeigte zwei Eintraege (94% und 71%) waehrend
+                // der 18.05 komplett fehlte. Mit sleepById ist die Zuordnung eindeutig.
+                val sleepById = sleeps.filter { !it.id.isNullOrBlank() }.associateBy { it.id!! }
                 val sleepByDate =
                     sleeps
                         .filter { it.nap != true && !it.start.isNullOrBlank() }
@@ -154,7 +160,7 @@ constructor(
                         }
 
                 val snapshots = cycles.mapNotNull { cycle ->
-                    mapToSnapshot(cycle, recByCycleId[cycle.id], sleepByDate)
+                    mapToSnapshot(cycle, recByCycleId[cycle.id], sleepById, sleepByDate)
                 }
                 snapshots.forEach { dao.upsert(it) }
 
@@ -197,12 +203,16 @@ constructor(
     private fun mapToSnapshot(
         cycle: WhoopCycle,
         recovery: WhoopRecovery?,
+        sleepById: Map<String, WhoopSleep>,
         sleepByDate: Map<String, WhoopSleep?>,
     ): BiomarkerSnapshotEntity? {
         val startStr = cycle.start ?: return null
         val cycleStartInstant = Instant.parse(startStr)
         val date = cycleStartInstant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
-        val sleep = sleepByDate[date]
+        // Bug-Fix 2026-05-19: zuerst ueber Recovery.sleepId matchen (eindeutige
+        // Whoop-API-Verknuepfung Recovery → Sleep). Fallback auf sleepByDate[date] nur
+        // wenn kein sleepId vorhanden ist (alte Daten / Recovery ohne Score-State).
+        val sleep = recovery?.sleepId?.let { sleepById[it] } ?: sleepByDate[date]
         val sleepScore = sleep?.score
         // Frank-Wunsch 2026-05-13: capturedAt = AUFWACH-Zeit, NICHT cycle.start.
         // Whoop-Cycles starten am Vortag-Abend (~17:00). Die HRV-/Recovery-Messung
