@@ -14,11 +14,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
+import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
 import de.frank.entropyreducer.presentation.dashboard1.TasksScreen
 import de.frank.entropyreducer.presentation.dashboard2.AnalysisScreen
 import de.frank.entropyreducer.presentation.dashboard3.ScientistScreen
-import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingDetailScreen
-import de.frank.entropyreducer.presentation.amazfit.AmazfitTrainingsScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerDetailScreen
 import de.frank.entropyreducer.presentation.dashboard4.BiomarkerHostScreen
 import de.frank.entropyreducer.presentation.dashboard4.HealthConnectDetailScreen
@@ -42,14 +42,12 @@ import de.frank.entropyreducer.presentation.tagebuch.TagebuchScreen
  * - launchSingleTop verhindert mehrfache Composable-Instanzen des Ziel-Tabs
  * - restoreState = true holt den gespeicherten State des Ziel-Tabs zurueck
  *
- * Effekt: ViewModels, Scroll-Position, Filter, Suchanfragen ueberleben Tab-Switches.
- * Vorher wurde bei jedem Tab-Switch alles neu initialisiert — das hat geruckelt.
+ * Effekt: ViewModels, Scroll-Position, Filter, Suchanfragen ueberleben Tab-Switches. Vorher wurde
+ * bei jedem Tab-Switch alles neu initialisiert — das hat geruckelt.
  */
 private fun NavController.tabSwitch(route: String) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id) {
-            saveState = true
-        }
+        popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
@@ -79,16 +77,13 @@ private fun AppNavHost(
 }
 
 @Composable
-private fun AppNavHostInner(
-    nav: androidx.navigation.NavHostController,
-    modifier: Modifier,
-) {
+private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier: Modifier) {
 
     // Frank-Wunsch 2026-05-11: Settings-Icon im Widget oeffnet direkt den
     // Widget-Settings-Screen. ACTION_FOCUS / ACTION_RESCHEDULE werden in
     // TasksScreen behandelt — hier nur ACTION_SETTINGS + ACTION_OPEN.
-    val widgetLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
-        .collectAsState()
+    val widgetLink by
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsState()
     LaunchedEffect(widgetLink) {
         val link = widgetLink ?: return@LaunchedEffect
         when (link.action) {
@@ -106,11 +101,7 @@ private fun AppNavHostInner(
         }
     }
 
-    NavHost(
-        navController = nav,
-        startDestination = Routes.TASKS,
-        modifier = modifier,
-    ) {
+    NavHost(navController = nav, startDestination = Routes.TASKS, modifier = modifier) {
         // Sub-Area-Navigation (Frank-Wunsch 2026-05-17): Klick auf ein Sub-Icon
         // im Sub-Mode der Bottom-Bar navigiert zum jeweiligen weissen Platzhalter.
         val onOpenSubArea: (String, Int) -> Unit = { parent, index ->
@@ -152,9 +143,7 @@ private fun AppNavHostInner(
                     nav.navigate(Routes.amazfitTrainingDetail(trackId))
                 },
                 onOpenAllTrainings = { nav.navigate(Routes.AMAZFIT_TRAININGS) },
-                onOpenOuraDetail = { metricKey ->
-                    nav.navigate(Routes.ouraDetail(metricKey))
-                },
+                onOpenOuraDetail = { metricKey -> nav.navigate(Routes.ouraDetail(metricKey)) },
                 onOpenHealthConnectDetail = { metricKey ->
                     nav.navigate(Routes.healthConnectDetail(metricKey))
                 },
@@ -164,18 +153,34 @@ private fun AppNavHostInner(
 
         // Sub-Bereich-Platzhalter (4 Tabs × 3 Indizes = 12 Targets, hier ueber 4
         // Pattern-Routen mit {index}-Argument).
-        val subAreaComposables = listOf(
-            Routes.TASKS_SUB_PATTERN to Routes.TASKS,
-            Routes.ANALYSIS_SUB_PATTERN to Routes.ANALYSIS,
-            Routes.SCIENTIST_SUB_PATTERN to Routes.SCIENTIST,
-            Routes.BIOMARKER_SUB_PATTERN to Routes.BIOMARKER,
-        )
+        val subAreaComposables =
+            listOf(
+                Routes.TASKS_SUB_PATTERN to Routes.TASKS,
+                Routes.ANALYSIS_SUB_PATTERN to Routes.ANALYSIS,
+                Routes.SCIENTIST_SUB_PATTERN to Routes.SCIENTIST,
+                Routes.BIOMARKER_SUB_PATTERN to Routes.BIOMARKER,
+            )
         subAreaComposables.forEach { (pattern, parent) ->
             composable(
                 route = pattern,
                 arguments = listOf(navArgument("index") { type = NavType.IntType }),
             ) { backStackEntry ->
                 val index = backStackEntry.arguments?.getInt("index") ?: 1
+                // Bugfix 2026-05-19: Klick auf das Parent-Tab-Icon vom Sub-Screen
+                // aus muss VERLAESSLICH den Parent-Screen zeigen — nicht den Sub
+                // wieder einblenden. Vorher: tabSwitch mit restoreState=true hat
+                // bei popUpTo den gespeicherten Sub-State faelschlich wieder
+                // angewendet, sodass die Entropie-Liste sichtbar blieb obwohl
+                // der Benutzer auf "Aufgaben" geklickt hat. Jetzt: wenn das
+                // Tab-Ziel der eigene Parent ist, einfach popBackStack zum
+                // Parent — sonst regulaerer Tab-Wechsel mit State-Erhaltung.
+                val onSwitchTabFromSub: (String) -> Unit = { route ->
+                    if (route == parent) {
+                        nav.popBackStack(parent, inclusive = false)
+                    } else {
+                        nav.tabSwitch(route)
+                    }
+                }
                 // Frank-Wunsch 2026-05-18: Aufgaben-Sub-Bereich 1 ist das
                 // Tagebuch (statt weisser Platzhalter). Andere Sub-Bereiche
                 // bleiben weisser Platzhalter — werden in spaeteren Sessions
@@ -183,20 +188,26 @@ private fun AppNavHostInner(
                 val isTagebuch = parent == Routes.TASKS && index == 1
                 if (isTagebuch) {
                     TagebuchScreen(
-                        onBack = { nav.popBackStack(); Unit },
+                        onBack = {
+                            nav.popBackStack()
+                            Unit
+                        },
                         onSwitchSub = { p, i ->
                             nav.navigate(Routes.subRouteFor(p, i)) {
                                 popUpTo(pattern) { inclusive = true }
                                 launchSingleTop = true
                             }
                         },
-                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                        onSwitchTab = onSwitchTabFromSub,
                     )
                 } else {
                     SubAreaScreen(
                         parentTab = parent,
                         subIndex = index,
-                        onBack = { nav.popBackStack(); Unit },
+                        onBack = {
+                            nav.popBackStack()
+                            Unit
+                        },
                         onSwitchSub = { p, i ->
                             nav.navigate(Routes.subRouteFor(p, i)) {
                                 // Sub-zu-Sub-Wechsel ersetzt den aktuellen Sub-Eintrag
@@ -206,17 +217,18 @@ private fun AppNavHostInner(
                                 launchSingleTop = true
                             }
                         },
-                        onSwitchTab = { route -> nav.tabSwitch(route) },
+                        onSwitchTab = onSwitchTabFromSub,
                     )
                 }
             }
         }
         composable(Routes.AMAZFIT_TRAININGS) {
             AmazfitTrainingsScreen(
-                onBack = { nav.popBackStack(); Unit },
-                onOpenDetail = { trackId ->
-                    nav.navigate(Routes.amazfitTrainingDetail(trackId))
+                onBack = {
+                    nav.popBackStack()
+                    Unit
                 },
+                onOpenDetail = { trackId -> nav.navigate(Routes.amazfitTrainingDetail(trackId)) },
             )
         }
         composable(
@@ -224,7 +236,10 @@ private fun AppNavHostInner(
             arguments = listOf(navArgument("trackId") { type = NavType.StringType }),
         ) {
             AmazfitTrainingDetailScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
             )
         }
         composable(
@@ -234,7 +249,10 @@ private fun AppNavHostInner(
             val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
             BiomarkerDetailScreen(
                 metricKey = metricKey,
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
             )
         }
         composable(
@@ -244,7 +262,10 @@ private fun AppNavHostInner(
             val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
             OuraDetailScreen(
                 metricKey = metricKey,
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
             )
         }
         composable(
@@ -254,50 +275,127 @@ private fun AppNavHostInner(
             val metricKey = backStackEntry.arguments?.getString("metricKey") ?: ""
             HealthConnectDetailScreen(
                 metricKey = metricKey,
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
             )
         }
 
         // Stage-3-Spezialansichten
         composable(Routes.EXPERIMENT_CALENDAR) {
-            ExperimentCalendarScreen(onBack = { nav.popBackStack(); Unit })
+            ExperimentCalendarScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
         }
         composable(Routes.INSIGHT_BOARD) {
-            InsightBoardScreen(onBack = { nav.popBackStack(); Unit })
+            InsightBoardScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
         }
         composable(Routes.REPERTOIRE) {
             RepertoireScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
                 onOpenInsight = { nav.navigate(Routes.INSIGHT_BOARD) },
             )
         }
 
         composable(Routes.SETTINGS_HOME) {
             SettingsHomeScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                },
                 onOpen = { route -> nav.navigate(route) },
             )
         }
-        composable(Routes.SETTINGS_API) { ApiKeysScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_MODELS) { ModelsScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_PROFILE) { ProfileScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_PROMPTS) { PromptsScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_MEMORY) { MemoryScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_CODEX) { CodexScreen(onBack = { nav.popBackStack(); Unit }) }
-        composable(Routes.SETTINGS_EXPORT) { ExportScreen(onBack = { nav.popBackStack(); Unit }) }
+        composable(Routes.SETTINGS_API) {
+            ApiKeysScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_MODELS) {
+            ModelsScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_PROFILE) {
+            ProfileScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_PROMPTS) {
+            PromptsScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_MEMORY) {
+            MemoryScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_CODEX) {
+            CodexScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
+        composable(Routes.SETTINGS_EXPORT) {
+            ExportScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
         composable(Routes.SETTINGS_TRIGGERS) {
             de.frank.entropyreducer.presentation.settings.triggers.KiTriggersScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
             )
         }
         composable(Routes.SETTINGS_ARCHIVE) {
             de.frank.entropyreducer.presentation.settings.archive.ArchiveScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
             )
         }
         composable(Routes.SETTINGS_WIDGET) {
             de.frank.entropyreducer.presentation.settings.WidgetSettingsScreen(
-                onBack = { nav.popBackStack(); Unit },
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
             )
         }
     }

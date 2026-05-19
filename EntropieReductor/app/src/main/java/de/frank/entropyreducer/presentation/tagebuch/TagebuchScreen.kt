@@ -16,15 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Stop
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,11 +35,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,21 +72,18 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import androidx.compose.runtime.rememberCoroutineScope
 
 /**
  * Tagebuch-Bereich (Frank-Wunsch 2026-05-18) — Sub-Bereich 1 des Aufgaben-Tabs.
  *
- * Erste Iteration (MVP): Texteingabe ueber Stift-Button, Persistierung im
- * DataStore als JSON-Liste, Liste der Eintraege nach Datum sortiert,
- * Detail-Sheet beim Tap auf einen Eintrag. Mikrofon-Button ist als
- * Platzhalter vorhanden — Whisper-Aufnahme, Gemini-Text-Verbesserung,
- * TTS-Vorlesen und Symbol-Kategorien folgen in einer naechsten Iteration
- * (1:1-Portierung der BestJournalFrank-Tagebuchfunktion ist umfangreich).
+ * Erste Iteration (MVP): Texteingabe ueber Stift-Button, Persistierung im DataStore als JSON-Liste,
+ * Liste der Eintraege nach Datum sortiert, Detail-Sheet beim Tap auf einen Eintrag. Mikrofon-Button
+ * ist als Platzhalter vorhanden — Whisper-Aufnahme, Gemini-Text-Verbesserung, TTS-Vorlesen und
+ * Symbol-Kategorien folgen in einer naechsten Iteration (1:1-Portierung der
+ * BestJournalFrank-Tagebuchfunktion ist umfangreich).
  *
- * Die App-Farbe folgt der Aufgaben-Akzentfarbe (orange) damit der Tab
- * visuell in den Aufgaben-Bereich passt. CosmosBottomBar laeuft im
- * Sub-Mode mit forcedSubMode=TASKS.
+ * Die App-Farbe folgt der Aufgaben-Akzentfarbe (orange) damit der Tab visuell in den
+ * Aufgaben-Bereich passt. CosmosBottomBar laeuft im Sub-Mode mit forcedSubMode=TASKS.
  */
 @Composable
 fun TagebuchScreen(
@@ -109,23 +109,35 @@ fun TagebuchScreen(
     val improveState by improveVm.state.collectAsState()
     val improvedText by improveVm.improvedText.collectAsState()
     val improveError by improveVm.error.collectAsState()
+    // Frank-Wunsch 2026-05-19: Auto-Ueberschrift via Gemini (max 3 Woerter).
+    // Wird nach jedem neuen Eintrag und nach jedem Edit asynchron gesetzt.
+    val titleVm: TagebuchTitleViewModel = hiltViewModel()
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
-    val micPermission = rememberMicPermissionState(
-        onAllGranted = {
-            voiceVm.toggle { transcript ->
-                pendingTranscript = transcript
-                actionsExpanded = false
+    val micPermission =
+        rememberMicPermissionState(
+            onAllGranted = {
+                voiceVm.toggle { transcript ->
+                    pendingTranscript = transcript
+                    actionsExpanded = false
+                }
             }
-        },
-    )
+        )
+
+    // Helper: Eintrag speichern und parallel den Auto-Titel via Gemini erzeugen.
+    // Fallback-Titel bleibt bei Fehler (kein API-Key, kein Netz) bestehen.
+    val saveNewEntry: (String) -> Unit = { rawText ->
+        val entry = TagebuchEntry.create(rawText)
+        scope.launch { addTagebuchEntry(context, entry) }
+        titleVm.generateTitle(rawText) { newTitle ->
+            scope.launch { updateTagebuchEntry(context, entry.id, title = newTitle) }
+        }
+    }
 
     if (inputDialogOpen) {
         TextInputDialog(
             onDismiss = { inputDialogOpen = false },
             onSave = { text ->
-                scope.launch {
-                    addTagebuchEntry(context, TagebuchEntry.create(text))
-                }
+                saveNewEntry(text)
                 inputDialogOpen = false
             },
         )
@@ -141,9 +153,7 @@ fun TagebuchScreen(
             errorMessage = improveError ?: voiceError,
             onImprove = { text -> improveVm.improve(text) },
             onSave = { text ->
-                scope.launch {
-                    addTagebuchEntry(context, TagebuchEntry.create(text))
-                }
+                saveNewEntry(text)
                 pendingTranscript = null
                 improveVm.clearImproved()
             },
@@ -158,6 +168,14 @@ fun TagebuchScreen(
         EntryDetailDialog(
             entry = current,
             onDismiss = { selectedEntry = null },
+            onSave = { updatedText ->
+                // Text aktualisieren, Titel neu von Gemini generieren lassen.
+                scope.launch { updateTagebuchEntry(context, current.id, text = updatedText) }
+                titleVm.generateTitle(updatedText) { newTitle ->
+                    scope.launch { updateTagebuchEntry(context, current.id, title = newTitle) }
+                }
+                selectedEntry = null
+            },
             onDelete = {
                 scope.launch { deleteTagebuchEntry(context, current.id) }
                 selectedEntry = null
@@ -257,14 +275,12 @@ fun TagebuchScreen(
                         },
                     )
                     // A12: echte Whisper-Aufnahme via Groq Large V3 Turbo.
-                    val (recordIcon, recordLabel) = when (voiceState) {
-                        VoiceCaptureState.IDLE ->
-                            Icons.Outlined.Mic to "Aufnehmen"
-                        VoiceCaptureState.RECORDING ->
-                            Icons.Outlined.Stop to "Stop"
-                        VoiceCaptureState.PROCESSING ->
-                            Icons.Outlined.Mic to "Transkribiere…"
-                    }
+                    val (recordIcon, recordLabel) =
+                        when (voiceState) {
+                            VoiceCaptureState.IDLE -> Icons.Outlined.Mic to "Aufnehmen"
+                            VoiceCaptureState.RECORDING -> Icons.Outlined.Stop to "Stop"
+                            VoiceCaptureState.PROCESSING -> Icons.Outlined.Mic to "Transkribiere…"
+                        }
                     FabIconButton(
                         icon = recordIcon,
                         label = recordLabel,
@@ -273,8 +289,7 @@ fun TagebuchScreen(
                                 Color(0xFFE53935).copy(alpha = 0.22f)
                             else TagebuchAccent.copy(alpha = 0.18f),
                         iconTint =
-                            if (voiceState == VoiceCaptureState.RECORDING)
-                                Color(0xFFE53935)
+                            if (voiceState == VoiceCaptureState.RECORDING) Color(0xFFE53935)
                             else TagebuchAccent,
                         onClick = {
                             when (voiceState) {
@@ -361,10 +376,9 @@ private fun FabIconButton(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier =
-                Modifier.size(56.dp)
-                    .clip(CircleShape)
-                    .background(backgroundColor)
-                    .clickable { onClick() },
+                Modifier.size(56.dp).clip(CircleShape).background(backgroundColor).clickable {
+                    onClick()
+                },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -395,9 +409,7 @@ private fun TextInputDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth().height(180.dp),
                 placeholder = {
-                    Text(
-                        "Beschreibe deine innere, mentale oder emotionale Entropie ...",
-                    )
+                    Text("Beschreibe deine innere, mentale oder emotionale Entropie ...")
                 },
             )
         },
@@ -508,15 +520,57 @@ private fun TranscriptDialog(
     )
 }
 
+/**
+ * Detail-Dialog fuer einen Tagebucheintrag.
+ *
+ * Frank-Wunsch 2026-05-19:
+ * - Text ist bearbeitbar (OutlinedTextField) — Fehler im Eintrag koennen nachtraeglich korrigiert
+ *   werden.
+ * - Rechts oben ein 3-Punkte-Menue mit "Eintrag loeschen".
+ * - Speichern-Button erscheint nur wenn der Text geaendert wurde.
+ */
 @Composable
 private fun EntryDetailDialog(
     entry: TagebuchEntry,
     onDismiss: () -> Unit,
+    onSave: (updatedText: String) -> Unit,
     onDelete: () -> Unit,
 ) {
+    var editableText by remember(entry.id) { mutableStateOf(entry.text) }
+    var menuOpen by remember { mutableStateOf(false) }
+    val hasChanges = editableText.trim() != entry.text.trim() && editableText.isNotBlank()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(entry.title.ifBlank { "Tagebucheintrag" }) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = entry.title.ifBlank { "Tagebucheintrag" },
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(imageVector = Icons.Outlined.MoreVert, contentDescription = "Mehr")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Eintrag löschen") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE53935),
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onDelete()
+                            },
+                        )
+                    }
+                }
+            }
+        },
         text = {
             Column {
                 Text(
@@ -525,15 +579,30 @@ private fun EntryDetailDialog(
                     color = LocalCosmos.current.textSecondary,
                 )
                 Spacer(Modifier.height(8.dp))
-                Text(text = entry.text, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = editableText,
+                    onValueChange = { editableText = it },
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDelete) {
-                Text("Löschen", color = Color(0xFFE53935))
+            if (hasChanges) {
+                TextButton(
+                    onClick = { onSave(editableText.trim()) },
+                    enabled = editableText.isNotBlank(),
+                ) {
+                    Text("Speichern", color = TagebuchAccent)
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Schließen") }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
+        dismissButton = {
+            if (hasChanges) {
+                TextButton(onClick = onDismiss) { Text("Abbrechen") }
+            }
+        },
     )
 }
 
@@ -550,8 +619,7 @@ data class TagebuchEntry(
             // Title = erste 30-40 Zeichen oder erste Zeile, ohne Punkt-Suffix.
             val firstLine = text.lineSequence().firstOrNull().orEmpty()
             val title =
-                if (firstLine.length <= 40) firstLine.trim()
-                else firstLine.take(40).trim() + "…"
+                if (firstLine.length <= 40) firstLine.trim() else firstLine.take(40).trim() + "…"
             return TagebuchEntry(
                 id = UUID.randomUUID().toString(),
                 timestampMs = System.currentTimeMillis(),
@@ -569,21 +637,21 @@ private fun tagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
     context.tagebuchStore.data.map { prefs ->
         val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
         runCatching {
-            val arr = JSONArray(raw)
-            buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    add(
-                        TagebuchEntry(
-                            id = o.optString("id"),
-                            timestampMs = o.optLong("ts"),
-                            title = o.optString("title"),
-                            text = o.optString("text"),
-                        ),
-                    )
+                val arr = JSONArray(raw)
+                buildList(arr.length()) {
+                    for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        add(
+                            TagebuchEntry(
+                                id = o.optString("id"),
+                                timestampMs = o.optLong("ts"),
+                                title = o.optString("title"),
+                                text = o.optString("text"),
+                            )
+                        )
+                    }
                 }
             }
-        }
             .getOrDefault(emptyList())
             .sortedByDescending { it.timestampMs }
     }
@@ -604,24 +672,49 @@ private suspend fun deleteTagebuchEntry(context: Context, id: String) {
     }
 }
 
+/**
+ * Aktualisiert Text und/oder Titel eines bestehenden Eintrags. Felder die als `null` uebergeben
+ * werden, bleiben unveraendert. Wird sowohl vom Edit-Dialog (Text-Aenderung) als auch vom
+ * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
+ */
+private suspend fun updateTagebuchEntry(
+    context: Context,
+    id: String,
+    text: String? = null,
+    title: String? = null,
+) {
+    if (text == null && title == null) return
+    context.tagebuchStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id == id) {
+                e.copy(text = text ?: e.text, title = title ?: e.title)
+            } else {
+                e
+            }
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+}
+
 private fun parseEntries(raw: String?): List<TagebuchEntry> {
     if (raw.isNullOrBlank()) return emptyList()
     return runCatching {
-        val arr = JSONArray(raw)
-        buildList(arr.length()) {
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                add(
-                    TagebuchEntry(
-                        id = o.optString("id"),
-                        timestampMs = o.optLong("ts"),
-                        title = o.optString("title"),
-                        text = o.optString("text"),
-                    ),
-                )
+            val arr = JSONArray(raw)
+            buildList(arr.length()) {
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    add(
+                        TagebuchEntry(
+                            id = o.optString("id"),
+                            timestampMs = o.optLong("ts"),
+                            title = o.optString("title"),
+                            text = o.optString("text"),
+                        )
+                    )
+                }
             }
         }
-    }
         .getOrDefault(emptyList())
 }
 
