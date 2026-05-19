@@ -24,6 +24,7 @@ constructor(@ApplicationContext private val context: Context, private val sessio
 
     private val mainFileName = "entropy_reducer_entries_v1.json"
     private val workoutsFileName = "entropy_reducer_workouts_v1.json"
+    private val healthFileName = "entropy_reducer_health_v1.json"
 
     /** Haupt-Backup (Aufgaben/Insights/Memories/etc.). */
     suspend fun fetchLatest(): Result<String?> = fetchFile(mainFileName)
@@ -33,6 +34,13 @@ constructor(@ApplicationContext private val context: Context, private val sessio
      * Pulsverlauf, Pace, Splits). Eigene Datei `entropy_reducer_workouts_v1.json` im appDataFolder.
      */
     suspend fun fetchWorkouts(): Result<String?> = fetchFile(workoutsFileName)
+
+    /**
+     * Frank-Wunsch 2026-05-19 (Erweiterung): Separates Whoop+Oura-Health-Backup. Eigene Datei
+     * `entropy_reducer_health_v1.json` mit Daily-Recovery/HRV, Whoop-Workouts und allen 6
+     * Oura-Tabellen (Readiness, Sleep, Activity, Resilience, SleepDetail, PersonalInfo).
+     */
+    suspend fun fetchHealth(): Result<String?> = fetchFile(healthFileName)
 
     private suspend fun fetchFile(fileName: String): Result<String?> =
         withContext(Dispatchers.IO) { fetchFileInternal(fileName, retryOn401 = true) }

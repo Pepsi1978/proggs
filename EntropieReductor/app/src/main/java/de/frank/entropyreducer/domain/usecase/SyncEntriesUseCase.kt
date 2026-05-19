@@ -45,6 +45,15 @@ constructor(
     private val cardOrderRepo: BiomarkerCardOrderRepository,
     private val healthConnectValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
     private val amazfitWorkoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
+    // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura im Health-Backup.
+    private val biomarkerSnapshotDao: de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao,
+    private val whoopWorkoutDao: de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao,
+    private val ouraReadinessDao: de.frank.entropyreducer.data.local.dao.OuraReadinessDao,
+    private val ouraDailySleepDao: de.frank.entropyreducer.data.local.dao.OuraDailySleepDao,
+    private val ouraActivityDao: de.frank.entropyreducer.data.local.dao.OuraActivityDao,
+    private val ouraResilienceDao: de.frank.entropyreducer.data.local.dao.OuraResilienceDao,
+    private val ouraSleepDetailDao: de.frank.entropyreducer.data.local.dao.OuraSleepDetailDao,
+    private val ouraPersonalInfoDao: de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao,
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
     private val json: Json,
@@ -259,6 +268,12 @@ constructor(
         val workoutsInserted = restoreWorkoutsBackup(skipDueToCleanup = workoutCleanupDone)
         inserted += workoutsInserted
 
+        // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura-Backup wiederherstellen.
+        // Eigene Datei `entropy_reducer_health_v1.json`. Nicht-Existenz ist OK
+        // (Erst-Restore vor erstem Health-Upload).
+        val healthInserted = restoreHealthBackup()
+        inserted += healthInserted
+
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
     }
@@ -301,6 +316,73 @@ constructor(
             "Restore: ${merged.size} Workouts aus separatem Backup wiederhergestellt",
         )
         return merged.size
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-19 (Erweiterung): Liest `entropy_reducer_health_v1.json` und schreibt
+     * Whoop + Oura-Daten in die DB. Strategie: idempotenter Upsert pro Tabelle (Primaerschluessel
+     * sind id/day) — lokale Daten werden ueberschrieben falls im Backup derselbe Eintrag existiert.
+     * Wenn das Backup leer ist oder noch nicht existiert, passiert nichts (kein Datenverlust).
+     */
+    private suspend fun restoreHealthBackup(): Int {
+        val raw = restoreManager.fetchHealth().getOrNull() ?: return 0
+        val payload =
+            runCatching {
+                    json.decodeFromString(
+                        de.frank.entropyreducer.data.remote.drive.HealthBackupPayload.serializer(),
+                        raw,
+                    )
+                }
+                .getOrElse {
+                    android.util.Log.w("SyncEntries", "Health-Backup nicht lesbar", it)
+                    return 0
+                }
+        var count = 0
+        // Whoop Daily Recovery
+        payload.whoopSnapshots
+            .map { it.toEntity() }
+            .forEach { snap ->
+                biomarkerSnapshotDao.upsert(snap)
+                count++
+            }
+        // Whoop Workouts
+        if (payload.whoopWorkouts.isNotEmpty()) {
+            val list = payload.whoopWorkouts.map { it.toEntity() }
+            whoopWorkoutDao.upsertAll(list)
+            count += list.size
+        }
+        // Oura 6 Tabellen
+        if (payload.ouraReadiness.isNotEmpty()) {
+            val list = payload.ouraReadiness.map { it.toEntity() }
+            ouraReadinessDao.upsertAll(list)
+            count += list.size
+        }
+        if (payload.ouraDailySleep.isNotEmpty()) {
+            val list = payload.ouraDailySleep.map { it.toEntity() }
+            ouraDailySleepDao.upsertAll(list)
+            count += list.size
+        }
+        if (payload.ouraActivity.isNotEmpty()) {
+            val list = payload.ouraActivity.map { it.toEntity() }
+            ouraActivityDao.upsertAll(list)
+            count += list.size
+        }
+        if (payload.ouraResilience.isNotEmpty()) {
+            val list = payload.ouraResilience.map { it.toEntity() }
+            ouraResilienceDao.upsertAll(list)
+            count += list.size
+        }
+        if (payload.ouraSleepDetail.isNotEmpty()) {
+            val list = payload.ouraSleepDetail.map { it.toEntity() }
+            ouraSleepDetailDao.upsertAll(list)
+            count += list.size
+        }
+        payload.ouraPersonalInfo?.let {
+            ouraPersonalInfoDao.upsert(it.toEntity())
+            count++
+        }
+        android.util.Log.i("SyncEntries", "Restore: $count Whoop+Oura-Eintraege wiederhergestellt")
+        return count
     }
 
     /** Hat das Drive-Konto bereits ein Backup? */

@@ -73,6 +73,23 @@ constructor(
         Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
     private val amazfitWorkoutDaoLazy:
         Lazy<de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao>,
+    // Frank-Wunsch 2026-05-19: Whoop + Oura ins separate Health-Backup
+    // (entropy_reducer_health_v1.json). Whoop liefert nur ~90 Tage rueckwirkend,
+    // Oura ~6 Monate — ohne Backup gehen aeltere Recovery- und Schlaf-Daten
+    // nach Reinstall verloren.
+    private val biomarkerSnapshotDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao>,
+    private val whoopWorkoutDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao>,
+    private val ouraReadinessDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.OuraReadinessDao>,
+    private val ouraDailySleepDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.OuraDailySleepDao>,
+    private val ouraActivityDaoLazy: Lazy<de.frank.entropyreducer.data.local.dao.OuraActivityDao>,
+    private val ouraResilienceDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.OuraResilienceDao>,
+    private val ouraSleepDetailDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.OuraSleepDetailDao>,
+    private val ouraPersonalInfoDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao>,
     private val json: Json,
 ) {
 
@@ -121,7 +138,10 @@ constructor(
             // wichtigen Wissens-Daten. Aufgaben (entries) plus alles was in
             // ScientistDatabase persistent ist — Insights, Memories, Hypothesen,
             // Forscher-Sessions, Forscher- und Hypothese-Messages.
-            val entries = entryRepoLazy.get().getActive().first().map { it.toBackup() }
+            // Frank-Wunsch 2026-05-19: ALLE Eintraege sichern, auch archivierte
+            // (Bereich "Entropie"). getActive() filtert ARCHIVIERT raus — dadurch
+            // gingen archivierte Eintraege bei Reinstall verloren.
+            val entries = entryRepoLazy.get().getAllForBackup().map { it.toBackup() }
             val insights = insightDaoLazy.get().getByConfidenceDesc().first().map { it.toBackup() }
             val memories = memoryDaoLazy.get().getAll().first().map { it.toBackup() }
             val hypotheses = hypothesisDaoLazy.get().getAll().first().map { it.toBackup() }
@@ -216,6 +236,63 @@ constructor(
                     _status.value =
                         SyncStatus.Failed(
                             "Workouts-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
+                        )
+                }
+            }
+
+            // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura ins EIGENE Drive-
+            // Backup-File `entropy_reducer_health_v1.json` hochladen. Volumen klein
+            // (keine GPS-Streams) — pro Tag 2 KB Whoop-Recovery + 4 KB Oura.
+            // 2 Jahre = ca. 4 MB Total.
+            if (mainOk) {
+                try {
+                    val whoopSnapshots =
+                        biomarkerSnapshotDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val whoopWorkouts =
+                        whoopWorkoutDaoLazy.get().observeAll().first().map { it.toBackup() }
+                    val ouraReadiness =
+                        ouraReadinessDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val ouraDailySleep =
+                        ouraDailySleepDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val ouraActivity =
+                        ouraActivityDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val ouraResilience =
+                        ouraResilienceDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val ouraSleepDetail =
+                        ouraSleepDetailDaoLazy.get().getAll().first().map { it.toBackup() }
+                    val ouraPersonalInfo = ouraPersonalInfoDaoLazy.get().get()?.toBackup()
+                    val healthPayload =
+                        HealthBackupPayload(
+                            version = 1,
+                            exportedAt = System.currentTimeMillis(),
+                            whoopSnapshots = whoopSnapshots,
+                            whoopWorkouts = whoopWorkouts,
+                            ouraReadiness = ouraReadiness,
+                            ouraDailySleep = ouraDailySleep,
+                            ouraActivity = ouraActivity,
+                            ouraResilience = ouraResilience,
+                            ouraSleepDetail = ouraSleepDetail,
+                            ouraPersonalInfo = ouraPersonalInfo,
+                        )
+                    val healthText =
+                        json.encodeToString(HealthBackupPayload.serializer(), healthPayload)
+                    backupManager
+                        .uploadHealth(healthText)
+                        .onSuccess { _status.value = SyncStatus.Synced(System.currentTimeMillis()) }
+                        .onFailure { ex ->
+                            _status.value =
+                                SyncStatus.Failed(
+                                    "Health-Backup fehlgeschlagen: ${ex.message ?: ex.javaClass.simpleName}"
+                                )
+                        }
+                } catch (oom: OutOfMemoryError) {
+                    System.gc()
+                    _status.value = SyncStatus.Failed("Health-Backup zu gross (OOM)")
+                } catch (t: Throwable) {
+                    if (t is kotlinx.coroutines.CancellationException) throw t
+                    _status.value =
+                        SyncStatus.Failed(
+                            "Health-Backup fehlgeschlagen: ${t.message ?: t.javaClass.simpleName}"
                         )
                 }
             }

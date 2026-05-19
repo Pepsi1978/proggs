@@ -42,6 +42,13 @@ constructor(
      */
     private val workoutsFileName = "entropy_reducer_workouts_v1.json"
 
+    /**
+     * Frank-Wunsch 2026-05-19 (Erweiterung): SEPARATES Backup fuer Whoop- und Oura-Daten. Whoop
+     * liefert nur ~90 Tage rueckwirkend ueber die API, Oura ~6 Monate — ohne Backup waeren aeltere
+     * Recovery-, HRV- und Schlaf-Daten nach Reinstall fuer immer verloren.
+     */
+    private val healthFileName = "entropy_reducer_health_v1.json"
+
     /** Lade Haupt-Backup hoch (Aufgaben/Insights/Memories/etc.) */
     suspend fun upload(jsonContent: String): Result<Unit> =
         uploadFile(mainFileName, jsonContent, label = "main")
@@ -49,6 +56,10 @@ constructor(
     /** Lade Workouts-Backup hoch (separate Datei). Frank-Wunsch 2026-05-19. */
     suspend fun uploadWorkouts(jsonContent: String): Result<Unit> =
         uploadFile(workoutsFileName, jsonContent, label = "workouts")
+
+    /** Lade Whoop+Oura-Health-Backup hoch (separate Datei). Frank-Wunsch 2026-05-19. */
+    suspend fun uploadHealth(jsonContent: String): Result<Unit> =
+        uploadFile(healthFileName, jsonContent, label = "health")
 
     private suspend fun uploadFile(
         fileName: String,

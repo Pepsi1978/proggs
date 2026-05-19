@@ -1,13 +1,21 @@
 package de.frank.entropyreducer.data.remote.drive
 
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
+import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisEntity
 import de.frank.entropyreducer.data.local.entities.HypothesisMessageEntity
 import de.frank.entropyreducer.data.local.entities.InsightEntity
 import de.frank.entropyreducer.data.local.entities.MemoryEntryEntity
+import de.frank.entropyreducer.data.local.entities.OuraActivityEntity
+import de.frank.entropyreducer.data.local.entities.OuraDailySleepEntity
+import de.frank.entropyreducer.data.local.entities.OuraPersonalInfoEntity
+import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
+import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
+import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistSessionEntity
+import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
@@ -608,4 +616,505 @@ fun BackupAmazfitWorkout.toEntity(): AmazfitWorkoutEntity =
         city = city,
         paceStreamJson = paceStreamJson,
         createdAt = createdAt,
+    )
+
+// =========================================================================
+// Health-Backup (Frank-Wunsch 2026-05-19): separate Drive-Datei
+// `entropy_reducer_health_v1.json` fuer Whoop- und Oura-Daten. Verhindert
+// Datenverlust nach Reinstall — Whoop liefert nur 90 Tage rueckwirkend,
+// Oura nur 6 Monate. Volumen ca. 1-3 MB fuer 2 Jahre (keine GPS-Streams,
+// nur Daily-Summary plus 5-Min-Schlafphasen-Strings).
+// =========================================================================
+
+/**
+ * Komplettes Health-Backup mit Whoop (Daily Recovery + Workouts) und Oura (6 Tabellen). Wird als
+ * eigene Drive-Datei `entropy_reducer_health_v1.json` im appDataFolder gespeichert, parallel zum
+ * Haupt- und Workouts-Backup.
+ *
+ * version: 1 = initiale Version (Frank-Wunsch 2026-05-19).
+ */
+@Serializable
+data class HealthBackupPayload(
+    val version: Int = 1,
+    val exportedAt: Long,
+    val whoopSnapshots: List<BackupBiomarkerSnapshot> = emptyList(),
+    val whoopWorkouts: List<BackupWhoopWorkout> = emptyList(),
+    val ouraReadiness: List<BackupOuraReadiness> = emptyList(),
+    val ouraDailySleep: List<BackupOuraDailySleep> = emptyList(),
+    val ouraActivity: List<BackupOuraActivity> = emptyList(),
+    val ouraResilience: List<BackupOuraResilience> = emptyList(),
+    val ouraSleepDetail: List<BackupOuraSleepDetail> = emptyList(),
+    val ouraPersonalInfo: BackupOuraPersonalInfo? = null,
+)
+
+// ---------- Whoop Datenklassen ----------
+
+/** 1:1 Spiegel der BiomarkerSnapshotEntity (Whoop Daily Recovery). */
+@Serializable
+data class BackupBiomarkerSnapshot(
+    val id: String,
+    val capturedAt: Long,
+    val recoveryScore: Int? = null,
+    val hrvMs: Double? = null,
+    val restingHeartRate: Int? = null,
+    val sleepPerformance: Int? = null,
+    val sleepTotalMinutes: Int? = null,
+    val sleepRemMinutes: Int? = null,
+    val sleepDeepMinutes: Int? = null,
+    val sleepLightMinutes: Int? = null,
+    val sleepAwakeMinutes: Int? = null,
+    val sleepDisturbances: Int? = null,
+    val dayStrain: Double? = null,
+    val dayKilojoules: Double? = null,
+    val createdAt: Long,
+    val respiratoryRate: Double? = null,
+    val sleepConsistencyPercent: Int? = null,
+    val sleepEfficiencyPercent: Int? = null,
+    val sleepNeedMinutes: Int? = null,
+    val sleepDebtMinutes: Int? = null,
+    val spo2Percent: Double? = null,
+    val skinTempCelsius: Double? = null,
+    val averageHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
+    val sleepCycleCount: Int? = null,
+)
+
+/** 1:1 Spiegel der WhoopWorkoutEntity. */
+@Serializable
+data class BackupWhoopWorkout(
+    val id: String,
+    val dateKey: String,
+    val startMs: Long,
+    val endMs: Long,
+    val sportId: Int? = null,
+    val sportName: String? = null,
+    val strain: Double? = null,
+    val kilojoule: Double? = null,
+    val averageHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
+    val percentRecorded: Double? = null,
+    val distanceMeter: Double? = null,
+    val altitudeGainMeter: Double? = null,
+    val zoneZeroMilli: Long? = null,
+    val zoneOneMilli: Long? = null,
+    val zoneTwoMilli: Long? = null,
+    val zoneThreeMilli: Long? = null,
+    val zoneFourMilli: Long? = null,
+    val zoneFiveMilli: Long? = null,
+    val createdAt: Long,
+)
+
+// ---------- Oura Datenklassen ----------
+
+@Serializable
+data class BackupOuraReadiness(
+    val day: String,
+    val capturedAt: Long,
+    val score: Int? = null,
+    val temperatureDeviation: Double? = null,
+    val temperatureTrendDeviation: Double? = null,
+    val activityBalance: Int? = null,
+    val bodyTemperature: Int? = null,
+    val hrvBalance: Int? = null,
+    val previousDayActivity: Int? = null,
+    val previousNight: Int? = null,
+    val recoveryIndex: Int? = null,
+    val restingHeartRate: Int? = null,
+    val sleepBalance: Int? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class BackupOuraDailySleep(
+    val day: String,
+    val capturedAt: Long,
+    val score: Int? = null,
+    val deepSleepScore: Int? = null,
+    val efficiencyScore: Int? = null,
+    val latencyScore: Int? = null,
+    val remSleepScore: Int? = null,
+    val restfulnessScore: Int? = null,
+    val timingScore: Int? = null,
+    val totalSleepScore: Int? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class BackupOuraActivity(
+    val day: String,
+    val capturedAt: Long,
+    val score: Int? = null,
+    val activeCalories: Int? = null,
+    val totalCalories: Int? = null,
+    val targetCalories: Int? = null,
+    val steps: Int? = null,
+    val walkingDistanceMeters: Int? = null,
+    val highActivitySeconds: Int? = null,
+    val mediumActivitySeconds: Int? = null,
+    val lowActivitySeconds: Int? = null,
+    val nonWearSeconds: Int? = null,
+    val restingSeconds: Int? = null,
+    val sedentarySeconds: Int? = null,
+    val inactivityAlerts: Int? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class BackupOuraResilience(
+    val day: String,
+    val capturedAt: Long,
+    val level: String? = null,
+    val sleepRecovery: Double? = null,
+    val daytimeRecovery: Double? = null,
+    val stress: Double? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class BackupOuraSleepDetail(
+    val id: String,
+    val day: String,
+    val capturedAt: Long,
+    val bedtimeStart: String? = null,
+    val bedtimeEnd: String? = null,
+    val type: String? = null,
+    val totalSleepSeconds: Int? = null,
+    val timeInBedSeconds: Int? = null,
+    val awakeSeconds: Int? = null,
+    val lightSeconds: Int? = null,
+    val deepSeconds: Int? = null,
+    val remSeconds: Int? = null,
+    val efficiency: Int? = null,
+    val latencySeconds: Int? = null,
+    val restlessPeriods: Int? = null,
+    val averageBreath: Double? = null,
+    val averageHeartRate: Double? = null,
+    val averageHrv: Int? = null,
+    val lowestHeartRate: Int? = null,
+    val sleepPhase5Min: String? = null,
+    val createdAt: Long,
+)
+
+@Serializable
+data class BackupOuraPersonalInfo(
+    val id: Long = 1L,
+    val ouraUserId: String? = null,
+    val age: Int? = null,
+    val weightKg: Double? = null,
+    val heightMeters: Double? = null,
+    val biologicalSex: String? = null,
+    val email: String? = null,
+    val capturedAt: Long,
+)
+
+// ---------- Entity → Backup Mappings ----------
+
+fun BiomarkerSnapshotEntity.toBackup(): BackupBiomarkerSnapshot =
+    BackupBiomarkerSnapshot(
+        id = id,
+        capturedAt = capturedAt,
+        recoveryScore = recoveryScore,
+        hrvMs = hrvMs,
+        restingHeartRate = restingHeartRate,
+        sleepPerformance = sleepPerformance,
+        sleepTotalMinutes = sleepTotalMinutes,
+        sleepRemMinutes = sleepRemMinutes,
+        sleepDeepMinutes = sleepDeepMinutes,
+        sleepLightMinutes = sleepLightMinutes,
+        sleepAwakeMinutes = sleepAwakeMinutes,
+        sleepDisturbances = sleepDisturbances,
+        dayStrain = dayStrain,
+        dayKilojoules = dayKilojoules,
+        createdAt = createdAt,
+        respiratoryRate = respiratoryRate,
+        sleepConsistencyPercent = sleepConsistencyPercent,
+        sleepEfficiencyPercent = sleepEfficiencyPercent,
+        sleepNeedMinutes = sleepNeedMinutes,
+        sleepDebtMinutes = sleepDebtMinutes,
+        spo2Percent = spo2Percent,
+        skinTempCelsius = skinTempCelsius,
+        averageHeartRate = averageHeartRate,
+        maxHeartRate = maxHeartRate,
+        sleepCycleCount = sleepCycleCount,
+    )
+
+fun WhoopWorkoutEntity.toBackup(): BackupWhoopWorkout =
+    BackupWhoopWorkout(
+        id = id,
+        dateKey = dateKey,
+        startMs = startMs,
+        endMs = endMs,
+        sportId = sportId,
+        sportName = sportName,
+        strain = strain,
+        kilojoule = kilojoule,
+        averageHeartRate = averageHeartRate,
+        maxHeartRate = maxHeartRate,
+        percentRecorded = percentRecorded,
+        distanceMeter = distanceMeter,
+        altitudeGainMeter = altitudeGainMeter,
+        zoneZeroMilli = zoneZeroMilli,
+        zoneOneMilli = zoneOneMilli,
+        zoneTwoMilli = zoneTwoMilli,
+        zoneThreeMilli = zoneThreeMilli,
+        zoneFourMilli = zoneFourMilli,
+        zoneFiveMilli = zoneFiveMilli,
+        createdAt = createdAt,
+    )
+
+fun OuraReadinessEntity.toBackup(): BackupOuraReadiness =
+    BackupOuraReadiness(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        temperatureDeviation = temperatureDeviation,
+        temperatureTrendDeviation = temperatureTrendDeviation,
+        activityBalance = activityBalance,
+        bodyTemperature = bodyTemperature,
+        hrvBalance = hrvBalance,
+        previousDayActivity = previousDayActivity,
+        previousNight = previousNight,
+        recoveryIndex = recoveryIndex,
+        restingHeartRate = restingHeartRate,
+        sleepBalance = sleepBalance,
+        createdAt = createdAt,
+    )
+
+fun OuraDailySleepEntity.toBackup(): BackupOuraDailySleep =
+    BackupOuraDailySleep(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        deepSleepScore = deepSleepScore,
+        efficiencyScore = efficiencyScore,
+        latencyScore = latencyScore,
+        remSleepScore = remSleepScore,
+        restfulnessScore = restfulnessScore,
+        timingScore = timingScore,
+        totalSleepScore = totalSleepScore,
+        createdAt = createdAt,
+    )
+
+fun OuraActivityEntity.toBackup(): BackupOuraActivity =
+    BackupOuraActivity(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        activeCalories = activeCalories,
+        totalCalories = totalCalories,
+        targetCalories = targetCalories,
+        steps = steps,
+        walkingDistanceMeters = walkingDistanceMeters,
+        highActivitySeconds = highActivitySeconds,
+        mediumActivitySeconds = mediumActivitySeconds,
+        lowActivitySeconds = lowActivitySeconds,
+        nonWearSeconds = nonWearSeconds,
+        restingSeconds = restingSeconds,
+        sedentarySeconds = sedentarySeconds,
+        inactivityAlerts = inactivityAlerts,
+        createdAt = createdAt,
+    )
+
+fun OuraResilienceEntity.toBackup(): BackupOuraResilience =
+    BackupOuraResilience(
+        day = day,
+        capturedAt = capturedAt,
+        level = level,
+        sleepRecovery = sleepRecovery,
+        daytimeRecovery = daytimeRecovery,
+        stress = stress,
+        createdAt = createdAt,
+    )
+
+fun OuraSleepDetailEntity.toBackup(): BackupOuraSleepDetail =
+    BackupOuraSleepDetail(
+        id = id,
+        day = day,
+        capturedAt = capturedAt,
+        bedtimeStart = bedtimeStart,
+        bedtimeEnd = bedtimeEnd,
+        type = type,
+        totalSleepSeconds = totalSleepSeconds,
+        timeInBedSeconds = timeInBedSeconds,
+        awakeSeconds = awakeSeconds,
+        lightSeconds = lightSeconds,
+        deepSeconds = deepSeconds,
+        remSeconds = remSeconds,
+        efficiency = efficiency,
+        latencySeconds = latencySeconds,
+        restlessPeriods = restlessPeriods,
+        averageBreath = averageBreath,
+        averageHeartRate = averageHeartRate,
+        averageHrv = averageHrv,
+        lowestHeartRate = lowestHeartRate,
+        sleepPhase5Min = sleepPhase5Min,
+        createdAt = createdAt,
+    )
+
+fun OuraPersonalInfoEntity.toBackup(): BackupOuraPersonalInfo =
+    BackupOuraPersonalInfo(
+        id = id,
+        ouraUserId = ouraUserId,
+        age = age,
+        weightKg = weightKg,
+        heightMeters = heightMeters,
+        biologicalSex = biologicalSex,
+        email = email,
+        capturedAt = capturedAt,
+    )
+
+// ---------- Backup → Entity Mappings ----------
+
+fun BackupBiomarkerSnapshot.toEntity(): BiomarkerSnapshotEntity =
+    BiomarkerSnapshotEntity(
+        id = id,
+        capturedAt = capturedAt,
+        recoveryScore = recoveryScore,
+        hrvMs = hrvMs,
+        restingHeartRate = restingHeartRate,
+        sleepPerformance = sleepPerformance,
+        sleepTotalMinutes = sleepTotalMinutes,
+        sleepRemMinutes = sleepRemMinutes,
+        sleepDeepMinutes = sleepDeepMinutes,
+        sleepLightMinutes = sleepLightMinutes,
+        sleepAwakeMinutes = sleepAwakeMinutes,
+        sleepDisturbances = sleepDisturbances,
+        dayStrain = dayStrain,
+        dayKilojoules = dayKilojoules,
+        createdAt = createdAt,
+        respiratoryRate = respiratoryRate,
+        sleepConsistencyPercent = sleepConsistencyPercent,
+        sleepEfficiencyPercent = sleepEfficiencyPercent,
+        sleepNeedMinutes = sleepNeedMinutes,
+        sleepDebtMinutes = sleepDebtMinutes,
+        spo2Percent = spo2Percent,
+        skinTempCelsius = skinTempCelsius,
+        averageHeartRate = averageHeartRate,
+        maxHeartRate = maxHeartRate,
+        sleepCycleCount = sleepCycleCount,
+    )
+
+fun BackupWhoopWorkout.toEntity(): WhoopWorkoutEntity =
+    WhoopWorkoutEntity(
+        id = id,
+        dateKey = dateKey,
+        startMs = startMs,
+        endMs = endMs,
+        sportId = sportId,
+        sportName = sportName,
+        strain = strain,
+        kilojoule = kilojoule,
+        averageHeartRate = averageHeartRate,
+        maxHeartRate = maxHeartRate,
+        percentRecorded = percentRecorded,
+        distanceMeter = distanceMeter,
+        altitudeGainMeter = altitudeGainMeter,
+        zoneZeroMilli = zoneZeroMilli,
+        zoneOneMilli = zoneOneMilli,
+        zoneTwoMilli = zoneTwoMilli,
+        zoneThreeMilli = zoneThreeMilli,
+        zoneFourMilli = zoneFourMilli,
+        zoneFiveMilli = zoneFiveMilli,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraReadiness.toEntity(): OuraReadinessEntity =
+    OuraReadinessEntity(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        temperatureDeviation = temperatureDeviation,
+        temperatureTrendDeviation = temperatureTrendDeviation,
+        activityBalance = activityBalance,
+        bodyTemperature = bodyTemperature,
+        hrvBalance = hrvBalance,
+        previousDayActivity = previousDayActivity,
+        previousNight = previousNight,
+        recoveryIndex = recoveryIndex,
+        restingHeartRate = restingHeartRate,
+        sleepBalance = sleepBalance,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraDailySleep.toEntity(): OuraDailySleepEntity =
+    OuraDailySleepEntity(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        deepSleepScore = deepSleepScore,
+        efficiencyScore = efficiencyScore,
+        latencyScore = latencyScore,
+        remSleepScore = remSleepScore,
+        restfulnessScore = restfulnessScore,
+        timingScore = timingScore,
+        totalSleepScore = totalSleepScore,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraActivity.toEntity(): OuraActivityEntity =
+    OuraActivityEntity(
+        day = day,
+        capturedAt = capturedAt,
+        score = score,
+        activeCalories = activeCalories,
+        totalCalories = totalCalories,
+        targetCalories = targetCalories,
+        steps = steps,
+        walkingDistanceMeters = walkingDistanceMeters,
+        highActivitySeconds = highActivitySeconds,
+        mediumActivitySeconds = mediumActivitySeconds,
+        lowActivitySeconds = lowActivitySeconds,
+        nonWearSeconds = nonWearSeconds,
+        restingSeconds = restingSeconds,
+        sedentarySeconds = sedentarySeconds,
+        inactivityAlerts = inactivityAlerts,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraResilience.toEntity(): OuraResilienceEntity =
+    OuraResilienceEntity(
+        day = day,
+        capturedAt = capturedAt,
+        level = level,
+        sleepRecovery = sleepRecovery,
+        daytimeRecovery = daytimeRecovery,
+        stress = stress,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraSleepDetail.toEntity(): OuraSleepDetailEntity =
+    OuraSleepDetailEntity(
+        id = id,
+        day = day,
+        capturedAt = capturedAt,
+        bedtimeStart = bedtimeStart,
+        bedtimeEnd = bedtimeEnd,
+        type = type,
+        totalSleepSeconds = totalSleepSeconds,
+        timeInBedSeconds = timeInBedSeconds,
+        awakeSeconds = awakeSeconds,
+        lightSeconds = lightSeconds,
+        deepSeconds = deepSeconds,
+        remSeconds = remSeconds,
+        efficiency = efficiency,
+        latencySeconds = latencySeconds,
+        restlessPeriods = restlessPeriods,
+        averageBreath = averageBreath,
+        averageHeartRate = averageHeartRate,
+        averageHrv = averageHrv,
+        lowestHeartRate = lowestHeartRate,
+        sleepPhase5Min = sleepPhase5Min,
+        createdAt = createdAt,
+    )
+
+fun BackupOuraPersonalInfo.toEntity(): OuraPersonalInfoEntity =
+    OuraPersonalInfoEntity(
+        id = id,
+        ouraUserId = ouraUserId,
+        age = age,
+        weightKg = weightKg,
+        heightMeters = heightMeters,
+        biologicalSex = biologicalSex,
+        email = email,
+        capturedAt = capturedAt,
     )

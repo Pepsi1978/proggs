@@ -18,42 +18,70 @@ interface EntropyEntryDao {
     @Query("SELECT * FROM entropy_entries WHERE id = :id")
     suspend fun getById(id: String): EntropyEntryEntity?
 
-    @Query("SELECT * FROM entropy_entries WHERE status != :archived ORDER BY priorityScore DESC, createdAt DESC")
+    @Query(
+        "SELECT * FROM entropy_entries WHERE status != :archived ORDER BY priorityScore DESC, createdAt DESC"
+    )
     fun getActive(archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
 
-    @Query("SELECT * FROM entropy_entries WHERE timeBucket = :bucket AND status != :archived ORDER BY priorityScore DESC")
-    fun getByTimeBucket(bucket: TimeBucket, archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
+    @Query(
+        "SELECT * FROM entropy_entries WHERE timeBucket = :bucket AND status != :archived ORDER BY priorityScore DESC"
+    )
+    fun getByTimeBucket(
+        bucket: TimeBucket,
+        archived: EntryStatus = EntryStatus.ARCHIVIERT,
+    ): Flow<List<EntropyEntryEntity>>
 
-    @Query("SELECT * FROM entropy_entries WHERE category = :cat AND status != :archived ORDER BY priorityScore DESC")
-    fun getByCategory(cat: EntropyCategory, archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
+    @Query(
+        "SELECT * FROM entropy_entries WHERE category = :cat AND status != :archived ORDER BY priorityScore DESC"
+    )
+    fun getByCategory(
+        cat: EntropyCategory,
+        archived: EntryStatus = EntryStatus.ARCHIVIERT,
+    ): Flow<List<EntropyEntryEntity>>
 
-    @Query("SELECT * FROM entropy_entries WHERE status = :resolved AND resolvedAt >= :sinceMillis ORDER BY resolvedAt DESC")
-    fun getRecentlyResolved(resolved: EntryStatus = EntryStatus.REDUZIERT, sinceMillis: Long): Flow<List<EntropyEntryEntity>>
+    @Query(
+        "SELECT * FROM entropy_entries WHERE status = :resolved AND resolvedAt >= :sinceMillis ORDER BY resolvedAt DESC"
+    )
+    fun getRecentlyResolved(
+        resolved: EntryStatus = EntryStatus.REDUZIERT,
+        sinceMillis: Long,
+    ): Flow<List<EntropyEntryEntity>>
 
-    @Query("SELECT * FROM entropy_entries WHERE status = :archived ORDER BY resolvedAt DESC, updatedAt DESC")
+    @Query(
+        "SELECT * FROM entropy_entries WHERE status = :archived ORDER BY resolvedAt DESC, updatedAt DESC"
+    )
     fun getArchived(archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
 
     @Query("SELECT * FROM entropy_entries WHERE status = :resolved AND resolvedAt < :beforeMillis")
-    suspend fun getResolvedBefore(resolved: EntryStatus = EntryStatus.REDUZIERT, beforeMillis: Long): List<EntropyEntryEntity>
+    suspend fun getResolvedBefore(
+        resolved: EntryStatus = EntryStatus.REDUZIERT,
+        beforeMillis: Long,
+    ): List<EntropyEntryEntity>
 
     @Query("SELECT * FROM entropy_entries WHERE status != :archived ORDER BY priorityScore DESC")
-    fun getByPriorityDesc(archived: EntryStatus = EntryStatus.ARCHIVIERT): Flow<List<EntropyEntryEntity>>
+    fun getByPriorityDesc(
+        archived: EntryStatus = EntryStatus.ARCHIVIERT
+    ): Flow<List<EntropyEntryEntity>>
 
     @Query("SELECT COUNT(*) FROM entropy_entries WHERE status = :status")
     fun countByStatus(status: EntryStatus): Flow<Int>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entry: EntropyEntryEntity)
+    /**
+     * Frank-Wunsch 2026-05-19: ALLE Eintraege fuer das Drive-Backup — auch archivierte. getActive()
+     * filtert ARCHIVIERT raus damit der Tasks-Screen sauber bleibt, aber das Backup MUSS auch das
+     * Archiv (Bereich "Entropie") enthalten, sonst gehen archivierte Eintraege bei Reinstall
+     * verloren.
+     */
+    @Query("SELECT * FROM entropy_entries ORDER BY createdAt ASC")
+    suspend fun getAllForBackup(): List<EntropyEntryEntity>
 
-    @Update
-    suspend fun update(entry: EntropyEntryEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entry: EntropyEntryEntity)
 
-    @Delete
-    suspend fun delete(entry: EntropyEntryEntity)
+    @Update suspend fun update(entry: EntropyEntryEntity)
 
-    @Query("DELETE FROM entropy_entries WHERE id = :id")
-    suspend fun deleteById(id: String)
+    @Delete suspend fun delete(entry: EntropyEntryEntity)
 
-    @Query("DELETE FROM entropy_entries")
-    suspend fun deleteAll()
+    @Query("DELETE FROM entropy_entries WHERE id = :id") suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM entropy_entries") suspend fun deleteAll()
 }
