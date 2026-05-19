@@ -21,35 +21,33 @@ import de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.polar.PolarBulkImporter
 import java.io.File
-import java.io.FileInputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * One-Shot-Worker fuer den Polar-Bulk-Import (Frank-Wunsch 2026-05-16).
  *
- * Importiert die per E-Mail erhaltene Polar-Flow-Export-ZIP in die App.
- * Streamt die ZIP via PolarBulkImporter, batched die Entities in 50er-
- * Bloecken in die DB via withTransaction (deutlich schneller als pro
- * Eintrag), zeigt waehrend des Imports eine Foreground-Notification mit
+ * Importiert die per E-Mail erhaltene Polar-Flow-Export-ZIP in die App. Streamt die ZIP via
+ * PolarBulkImporter, batched die Entities in 50er- Bloecken in die DB via withTransaction (deutlich
+ * schneller als pro Eintrag), zeigt waehrend des Imports eine Foreground-Notification mit
  * Fortschritt.
  *
  * Warum Foreground-Worker:
- *  - Bei 3000 Trainings dauert der Import 30-60 Sekunden
- *  - Android killt Background-Worker aggressiv wenn der Bildschirm ausgeht
- *  - Mit Foreground-Notification haelt das System den Worker am Leben
+ * - Bei 3000 Trainings dauert der Import 30-60 Sekunden
+ * - Android killt Background-Worker aggressiv wenn der Bildschirm ausgeht
+ * - Mit Foreground-Notification haelt das System den Worker am Leben
  *
  * Input-Daten (via workData):
- *  - KEY_ZIP_URI: String — content://-URI zur ZIP-Datei (vom File-Picker)
+ * - KEY_ZIP_URI: String — content://-URI zur ZIP-Datei (vom File-Picker)
  *
  * Direktive 3 (Resilient Bugfixing):
- *  - Wenn die ZIP-Datei nicht gelesen werden kann: Result.failure (kein Retry,
- *    der User muss die Datei neu auswaehlen)
- *  - Wenn einzelne Trainings nicht geparst werden koennen: weiterlaufen, am
- *    Ende den Zaehler "uebersprungen" in der Notification anzeigen
+ * - Wenn die ZIP-Datei nicht gelesen werden kann: Result.failure (kein Retry, der User muss die
+ *   Datei neu auswaehlen)
+ * - Wenn einzelne Trainings nicht geparst werden koennen: weiterlaufen, am Ende den Zaehler
+ *   "uebersprungen" in der Notification anzeigen
  */
 @HiltWorker
-class PolarBulkImportWorker @AssistedInject constructor(
+class PolarBulkImportWorker
+@AssistedInject
+constructor(
     @Assisted private val appContext: Context,
     @Assisted params: WorkerParameters,
     private val importer: PolarBulkImporter,
@@ -73,7 +71,8 @@ class PolarBulkImportWorker @AssistedInject constructor(
         // ankommt (z.B. enqueued Worker vor #774), brechen wir SOFORT ab
         // mit klarer Fehlermeldung — kein Versuch mehr, Drive zu lesen.
         if (zipUri.scheme != "file") {
-            val msg = "Polar-Bulk-Worker erhielt ungueltige URI-Quelle '${zipUri.scheme}://' — erwartet wird file://. Bitte ZIP-Datei nochmal auswaehlen."
+            val msg =
+                "Polar-Bulk-Worker erhielt ungueltige URI-Quelle '${zipUri.scheme}://' — erwartet wird file://. Bitte ZIP-Datei nochmal auswaehlen."
             Log.e(TAG, msg)
             showFailureNotification("Quelle nicht unterstuetzt. Bitte erneut ZIP auswaehlen.")
             return Result.failure()
@@ -83,22 +82,25 @@ class PolarBulkImportWorker @AssistedInject constructor(
 
         // Cache-Datei fuer spaeteres Aufraeumen merken (nur wenn file:// und
         // im App-Cache liegt — fremde Dateien loeschen wir natuerlich nicht)
-        val cacheFileToCleanup: File? = if (zipUri.scheme == "file") {
-            val path = zipUri.path
-            if (path != null && path.contains("/polar-bulk-import/")) File(path) else null
-        } else null
+        val cacheFileToCleanup: File? =
+            if (zipUri.scheme == "file") {
+                val path = zipUri.path
+                if (path != null && path.contains("/polar-bulk-import/")) File(path) else null
+            } else null
 
         return try {
             var totalSkipped = 0
-            val allEntities = importer.import(zipUri) { progress ->
-                val message = if (progress.finished) {
-                    "Fertig — ${progress.entitiesParsed} Trainings importiert (${progress.skipped} uebersprungen)"
-                } else {
-                    "${progress.entitiesParsed} Trainings importiert (${progress.skipped} uebersprungen)"
+            val allEntities =
+                importer.import(zipUri) { progress ->
+                    val message =
+                        if (progress.finished) {
+                            "Fertig — ${progress.entitiesParsed} Trainings importiert (${progress.skipped} uebersprungen)"
+                        } else {
+                            "${progress.entitiesParsed} Trainings importiert (${progress.skipped} uebersprungen)"
+                        }
+                    setForegroundAsync(buildForegroundInfo(message))
+                    totalSkipped = progress.skipped
                 }
-                setForegroundAsync(buildForegroundInfo(message))
-                totalSkipped = progress.skipped
-            }
 
             // Frank-Bugfix 2026-05-16 (Iteration 5): NUR alte non-Polar-Trainings
             // loeschen wenn der Import wirklich Daten geliefert hat. Wenn 0
@@ -106,8 +108,13 @@ class PolarBulkImportWorker @AssistedInject constructor(
             // sollen die alten Eintraege NICHT geloescht werden — sonst hat
             // Frank am Ende eine LEERE Liste statt der frueheren T-Rex-3-Daten.
             if (allEntities.isEmpty()) {
-                Log.e(TAG, "Polar-Bulk-Import: 0 Trainings geparst von $totalSkipped Eintraegen — alte Daten bleiben erhalten")
-                showFailureNotification("Polar-ZIP konnte nicht gelesen werden — Format-Problem. Alte Trainings bleiben.")
+                Log.e(
+                    TAG,
+                    "Polar-Bulk-Import: 0 Trainings geparst von $totalSkipped Eintraegen — alte Daten bleiben erhalten",
+                )
+                showFailureNotification(
+                    "Polar-ZIP konnte nicht gelesen werden — Format-Problem. Alte Trainings bleiben."
+                )
                 cacheFileToCleanup?.let { runCatching { it.delete() } }
                 return Result.failure()
             }
@@ -124,15 +131,26 @@ class PolarBulkImportWorker @AssistedInject constructor(
                 val existing = workoutDao.getById(fresh.trackId)
                 if (existing?.manualOverridesMs != null) {
                     protectedCount++
-                    Log.d(TAG, "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert")
+                    Log.d(
+                        TAG,
+                        "Polar-Bulk: ${fresh.trackId} hat manuelle Edits — Eintrag bleibt unveraendert",
+                    )
                     null
                 } else fresh
             }
 
-            appDatabase.withTransaction {
-                workoutDao.upsertAll(safeEntities)
-            }
-            Log.i(TAG, "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)")
+            appDatabase.withTransaction { workoutDao.upsertAll(safeEntities) }
+            Log.i(
+                TAG,
+                "Polar-Bulk-Import erfolgreich: ${safeEntities.size} Trainings geschrieben, $totalSkipped uebersprungen, $protectedCount manuell editiert (geschuetzt)",
+            )
+
+            // Frank-Wunsch 2026-05-19: Sofort 2-Jahres-Retention anwenden — Polar-ZIPs
+            // enthalten typischerweise die GESAMTE Polar-Historie (>5 Jahre). Ohne diesen
+            // Schnitt wuerden sie immer wieder alle alten Trainings reinholen und die App
+            // wird langsam. 730 Tage analog zur Konstante in AmazfitRepository.
+            val retentionThresholdMs = System.currentTimeMillis() - 730L * 24L * 60L * 60L * 1000L
+            workoutDao.deleteOlderThan(retentionThresholdMs)
 
             // Cache aufraeumen (nur unsere eigene Datei)
             cacheFileToCleanup?.let { runCatching { it.delete() } }
@@ -152,16 +170,25 @@ class PolarBulkImportWorker @AssistedInject constructor(
 
     private fun buildForegroundInfo(progressText: String): ForegroundInfo {
         ensureChannel()
-        val notification: Notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setContentTitle("Polar-Historie wird importiert")
-            .setContentText(progressText)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setProgress(0, 0, true)  // unbestimmter Fortschritt — wir wissen die Gesamtzahl erst am Ende
-            .build()
+        val notification: Notification =
+            NotificationCompat.Builder(appContext, CHANNEL_ID)
+                .setContentTitle("Polar-Historie wird importiert")
+                .setContentText(progressText)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setProgress(
+                    0,
+                    0,
+                    true,
+                ) // unbestimmter Fortschritt — wir wissen die Gesamtzahl erst am Ende
+                .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
         } else {
             ForegroundInfo(NOTIFICATION_ID, notification)
         }
@@ -169,29 +196,32 @@ class PolarBulkImportWorker @AssistedInject constructor(
 
     private fun showCompletionNotification(imported: Int, skipped: Int) {
         ensureChannel()
-        val text = if (skipped > 0) {
-            "$imported Trainings importiert, $skipped uebersprungen"
-        } else {
-            "$imported Trainings erfolgreich importiert"
-        }
-        val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setContentTitle("Polar-Historie importiert")
-            .setContentText(text)
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setAutoCancel(true)
-            .build()
+        val text =
+            if (skipped > 0) {
+                "$imported Trainings importiert, $skipped uebersprungen"
+            } else {
+                "$imported Trainings erfolgreich importiert"
+            }
+        val notification =
+            NotificationCompat.Builder(appContext, CHANNEL_ID)
+                .setContentTitle("Polar-Historie importiert")
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setAutoCancel(true)
+                .build()
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID + 1, notification)
     }
 
     private fun showFailureNotification(reason: String) {
         ensureChannel()
-        val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setContentTitle("Polar-Import fehlgeschlagen")
-            .setContentText(reason.take(120))
-            .setSmallIcon(android.R.drawable.stat_notify_error)
-            .setAutoCancel(true)
-            .build()
+        val notification =
+            NotificationCompat.Builder(appContext, CHANNEL_ID)
+                .setContentTitle("Polar-Import fehlgeschlagen")
+                .setContentText(reason.take(120))
+                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setAutoCancel(true)
+                .build()
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID + 2, notification)
     }
@@ -199,13 +229,9 @@ class PolarBulkImportWorker @AssistedInject constructor(
     private fun ensureChannel() {
         val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Polar-Import",
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                description = "Fortschritt und Ergebnis des Polar-Historien-Imports"
-            }
+            val channel =
+                NotificationChannel(CHANNEL_ID, "Polar-Import", NotificationManager.IMPORTANCE_LOW)
+                    .apply { description = "Fortschritt und Ergebnis des Polar-Historien-Imports" }
             nm.createNotificationChannel(channel)
         }
     }

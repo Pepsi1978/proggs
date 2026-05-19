@@ -120,21 +120,22 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         applicationScope.launch {
             kotlinx.coroutines.delay(5000L)
             runCatching {
-                if (!appSettings.isWorkoutCleanupV1Done()) {
-                    amazfitRepository.cleanupAllWorkoutsForMigration()
-                    appSettings.setWorkoutCleanupV1Done(true)
-                    android.util.Log.i(
+                    if (!appSettings.isWorkoutCleanupV1Done()) {
+                        amazfitRepository.cleanupAllWorkoutsForMigration()
+                        appSettings.setWorkoutCleanupV1Done(true)
+                        android.util.Log.i(
+                            "EntropyReducerApp",
+                            "Workout-Cleanup-Migration v1 abgeschlossen — Backup wird mit leerem Stand ueberschrieben",
+                        )
+                    }
+                }
+                .onFailure {
+                    android.util.Log.w(
                         "EntropyReducerApp",
-                        "Workout-Cleanup-Migration v1 abgeschlossen — Backup wird mit leerem Stand ueberschrieben",
+                        "Workout-Cleanup-Migration fehlgeschlagen",
+                        it,
                     )
                 }
-            }.onFailure {
-                android.util.Log.w(
-                    "EntropyReducerApp",
-                    "Workout-Cleanup-Migration fehlgeschlagen",
-                    it,
-                )
-            }
         }
 
         // Frank-Wunsch 2026-05-17: Sport-Rename V1. Einmalige Umbenennung der
@@ -145,29 +146,33 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         applicationScope.launch {
             kotlinx.coroutines.delay(6000L)
             runCatching {
-                if (!appSettings.isSportRenameV1Done()) {
-                    val renamedA = amazfitRepository.renameSportName("Indoor-Rudern", "Crosstrainer")
-                    val renamedB = amazfitRepository.renameSportName("Rudergeraet", "Crosstrainer")
-                    appSettings.setSportRenameV1Done(true)
-                    android.util.Log.i(
-                        "EntropyReducerApp",
-                        "Sport-Rename-V1 fertig: $renamedA Indoor-Rudern + $renamedB Rudergeraet -> Crosstrainer",
-                    )
+                    if (!appSettings.isSportRenameV1Done()) {
+                        val renamedA =
+                            amazfitRepository.renameSportName("Indoor-Rudern", "Crosstrainer")
+                        val renamedB =
+                            amazfitRepository.renameSportName("Rudergeraet", "Crosstrainer")
+                        appSettings.setSportRenameV1Done(true)
+                        android.util.Log.i(
+                            "EntropyReducerApp",
+                            "Sport-Rename-V1 fertig: $renamedA Indoor-Rudern + $renamedB Rudergeraet -> Crosstrainer",
+                        )
+                    }
+                    if (!appSettings.isSportRenameV2Done()) {
+                        val renamed =
+                            amazfitRepository.renameSportName(
+                                "Funktionelles Training",
+                                "Trailrunning",
+                            )
+                        appSettings.setSportRenameV2Done(true)
+                        android.util.Log.i(
+                            "EntropyReducerApp",
+                            "Sport-Rename-V2 fertig: $renamed Funktionelles Training -> Trailrunning",
+                        )
+                    }
                 }
-                if (!appSettings.isSportRenameV2Done()) {
-                    val renamed = amazfitRepository.renameSportName(
-                        "Funktionelles Training",
-                        "Trailrunning",
-                    )
-                    appSettings.setSportRenameV2Done(true)
-                    android.util.Log.i(
-                        "EntropyReducerApp",
-                        "Sport-Rename-V2 fertig: $renamed Funktionelles Training -> Trailrunning",
-                    )
+                .onFailure {
+                    android.util.Log.w("EntropyReducerApp", "Sport-Rename fehlgeschlagen", it)
                 }
-            }.onFailure {
-                android.util.Log.w("EntropyReducerApp", "Sport-Rename fehlgeschlagen", it)
-            }
         }
 
         // Frank-Wunsch 2026-05-17: V2-Cleanup vor der Strava-only-Phase.
@@ -182,28 +187,54 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         applicationScope.launch {
             kotlinx.coroutines.delay(7000L)
             runCatching {
-                if (!appSettings.isWorkoutCleanupV2Done()) {
-                    val zone = java.time.ZoneId.of("Europe/Berlin")
-                    val newerThanMs = java.time.LocalDateTime.of(2026, 3, 30, 17, 26, 0)
-                        .atZone(zone).toInstant().toEpochMilli()
-                    val olderThanMs = System.currentTimeMillis() -
-                        2L * 365L * 24L * 60L * 60L * 1000L
-                    val deleted = amazfitRepository
-                        .cleanupWorkoutsKeepRange(olderThanMs, newerThanMs)
-                    appSettings.setWorkoutCleanupV2Done(true)
+                    if (!appSettings.isWorkoutCleanupV2Done()) {
+                        val zone = java.time.ZoneId.of("Europe/Berlin")
+                        val newerThanMs =
+                            java.time.LocalDateTime.of(2026, 3, 30, 17, 26, 0)
+                                .atZone(zone)
+                                .toInstant()
+                                .toEpochMilli()
+                        val olderThanMs =
+                            System.currentTimeMillis() - 2L * 365L * 24L * 60L * 60L * 1000L
+                        val deleted =
+                            amazfitRepository.cleanupWorkoutsKeepRange(olderThanMs, newerThanMs)
+                        appSettings.setWorkoutCleanupV2Done(true)
+                        android.util.Log.i(
+                            "EntropyReducerApp",
+                            "Workout-Cleanup-V2 abgeschlossen — $deleted Trainings geloescht " +
+                                "(Fenster: $olderThanMs .. $newerThanMs)",
+                        )
+                    }
+                }
+                .onFailure {
+                    android.util.Log.w("EntropyReducerApp", "Workout-Cleanup-V2 fehlgeschlagen", it)
+                }
+        }
+
+        // Frank-Wunsch 2026-05-19: Permanente 2-Jahres-Retention fuer Trainings.
+        // Polar-Bulk-Import brachte 957 Workouts (zurueck bis 2018), die App wurde
+        // dadurch sichtbar langsam. Im Gegensatz zu V2-Cleanup oben (einmalige
+        // Migration mit Fixdatum) laeuft pruneTrainingsOlderThan2Years() bei JEDEM
+        // Start gegen die aktuelle Uhrzeit minus 730 Tage — damit ist das Fenster
+        // rollierend und Re-Imports koennen die Liste nicht mehr aufblaehen.
+        // 8-Sekunden-Delay: nach V2-Cleanup (7s), damit V2 zuerst sein Fixdatum-
+        // Fenster anwendet und V3 nur noch nachsortiert was V2 stehen liess.
+        applicationScope.launch {
+            kotlinx.coroutines.delay(8000L)
+            runCatching {
+                    val deleted = amazfitRepository.pruneTrainingsOlderThan2Years()
                     android.util.Log.i(
                         "EntropyReducerApp",
-                        "Workout-Cleanup-V2 abgeschlossen — $deleted Trainings geloescht " +
-                            "(Fenster: $olderThanMs .. $newerThanMs)",
+                        "Trainings-Retention (2 Jahre): $deleted Trainings entfernt",
                     )
                 }
-            }.onFailure {
-                android.util.Log.w(
-                    "EntropyReducerApp",
-                    "Workout-Cleanup-V2 fehlgeschlagen",
-                    it,
-                )
-            }
+                .onFailure {
+                    android.util.Log.w(
+                        "EntropyReducerApp",
+                        "Trainings-Retention fehlgeschlagen",
+                        it,
+                    )
+                }
         }
 
         // Bei jedem App-Foreground-Wechsel Whoop-Sync triggern wenn verbunden.
