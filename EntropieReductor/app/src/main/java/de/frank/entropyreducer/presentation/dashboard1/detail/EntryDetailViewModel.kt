@@ -83,17 +83,18 @@ constructor(
      * Reaktiver Flow auf den Eintrag. Wenn der Eintrag aus der DB verschwindet (z.B. nach Löschen),
      * liefert der Flow null — die UI navigiert dann zurück.
      */
-    private val entryFlow = entryIdFlow.flatMapLatest { id ->
-        if (id.isBlank()) flowOf(null)
-        else
-            kotlinx.coroutines.flow.flow {
-                // Re-fetchen bei jeder externen Modifikation. Wir pollen nicht —
-                // stattdessen reicht ein Single-Read pro Trigger; spätere Updates
-                // kommen über reloadTrigger.
-                emit(entries.get(id))
-                reloadTrigger.collect { emit(entries.get(id)) }
-            }
-    }
+    private val entryFlow: kotlinx.coroutines.flow.Flow<EntropyEntryEntity?> =
+        entryIdFlow.flatMapLatest { id ->
+            if (id.isBlank()) flowOf<EntropyEntryEntity?>(null)
+            else
+                kotlinx.coroutines.flow.flow<EntropyEntryEntity?> {
+                    // Re-fetchen bei jeder externen Modifikation. Wir pollen nicht —
+                    // stattdessen reicht ein Single-Read pro Trigger; spätere Updates
+                    // kommen über reloadTrigger.
+                    emit(entries.get(id))
+                    reloadTrigger.collect { emit(entries.get(id)) }
+                }
+        }
 
     /** Trigger der ein Re-Read des Eintrags auslöst (nach setStatus etc.). */
     private val reloadTrigger = MutableStateFlow(0L)
