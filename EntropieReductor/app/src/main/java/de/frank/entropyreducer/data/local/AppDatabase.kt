@@ -79,7 +79,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             HealthConnectValueEntity::class,
             de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity::class,
         ],
-    version = 20,
+    version = 21,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -515,6 +515,21 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     db.execSQL(
                         "CREATE INDEX IF NOT EXISTS index_entropy_entry_followups_entryId_createdAt ON entropy_entry_followups(entryId, createdAt)"
+                    )
+                }
+            }
+
+        /**
+         * Schema 20 -> 21 (Frank-Wunsch 2026-05-20): Neue Spalte `category` in saved_prompts.
+         * Bestehende Prompts werden auf AUFGABEN gesetzt (Standard-Fall vor der Kategorisierung).
+         * Pro Bereich der App (Aufgaben, Entropie, Thesen, Analyse, Forscher, Codex) wirken nun nur
+         * die Prompts der jeweiligen Kategorie, statt aller aktiven Prompts global.
+         */
+        val MIGRATION_20_21: Migration =
+            object : Migration(20, 21) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE saved_prompts ADD COLUMN category TEXT NOT NULL DEFAULT 'AUFGABEN'"
                     )
                 }
             }

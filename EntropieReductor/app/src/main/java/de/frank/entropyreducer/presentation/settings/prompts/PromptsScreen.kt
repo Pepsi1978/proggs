@@ -1,6 +1,10 @@
 package de.frank.entropyreducer.presentation.settings.prompts
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,16 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +33,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,22 +41,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
+import de.frank.entropyreducer.domain.model.PromptCategory
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.settings.PromptsViewModel
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 
+/**
+ * Eigene Prompts mit Kategorien (Frank-Wunsch 2026-05-20). Pro App-Bereich (Aufgaben, Entropie,
+ * Thesen, Analyse, Forscher, Codex) ein eigenes Akkordeon mit eigenem "+"-Knopf — neue Prompts
+ * landen direkt in der jeweiligen Kategorie, ohne dass der User die Kategorie nochmal in einem
+ * Dropdown wählen muss.
+ */
 @Composable
 fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     val prompts by vm.prompts.collectAsState()
     val cosmos = LocalCosmos.current
     var editing by remember { mutableStateOf<SavedPromptEntity?>(null) }
-    var creating by remember { mutableStateOf(false) }
+    var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }
+    val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
+
+    val byCategory: Map<PromptCategory, List<SavedPromptEntity>> =
+        remember(prompts) {
+            PromptCategory.entries.associateWith { cat -> prompts.filter { it.category == cat } }
+        }
 
     CosmosScaffold(
         title = "Eigene Prompts",
@@ -62,59 +81,60 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
             }
         },
     ) { padding ->
-        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(prompts, key = { it.id }) { p ->
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(p.name, style = MaterialTheme.typography.titleMedium, color = cosmos.textPrimary,
-                                    modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = p.isActive,
-                                    onCheckedChange = { vm.toggle(p) },
-                                    // Frank-Reklamation 2026-05-08: aktivierter Switch
-                                    // sah aus wie ein einfarbig blaues Feld weil Thumb +
-                                    // Track die gleiche Akzentfarbe hatten. Jetzt: Thumb
-                                    // ist weiss + Track ist die Akzentfarbe — klar als
-                                    // Schalter erkennbar.
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = androidx.compose.ui.graphics.Color.White,
-                                        checkedTrackColor = CosmosColors.AccentPrimary,
-                                        checkedBorderColor = CosmosColors.AccentPrimary,
-                                    ),
-                                )
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                p.content.take(140) + if (p.content.length > 140) "…" else "",
-                                style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary,
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                IconButton(onClick = { editing = p }) {
-                                    Icon(Icons.Outlined.Edit, "Bearbeiten", tint = CosmosColors.AccentPrimary)
+                item {
+                    Text(
+                        text =
+                            "Prompts wirken nur in ihrer Kategorie — jeder Bereich der App bekommt seine eigenen Verhaltensregeln.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                PromptCategory.entries.forEach { cat ->
+                    item(key = "cat-${cat.name}") {
+                        val expanded = expandedMap.value[cat] ?: false
+                        val items = byCategory[cat].orEmpty()
+                        CategoryAccordion(
+                            category = cat,
+                            count = items.size,
+                            expanded = expanded,
+                            onToggle = {
+                                val m = expandedMap.value.toMutableMap()
+                                m[cat] = !expanded
+                                expandedMap.value = m
+                            },
+                            onAdd = { creatingInCategory = cat },
+                            content = {
+                                if (items.isEmpty()) {
+                                    Text(
+                                        text =
+                                            "Noch keine Prompts in dieser Kategorie. Tippe auf das + im Kopf, um einen neuen anzulegen.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = cosmos.textSecondary,
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                    )
+                                } else {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        items.forEach { p ->
+                                            PromptRow(
+                                                prompt = p,
+                                                onToggle = { vm.toggle(p) },
+                                                onEdit = { editing = p },
+                                                onDelete = { vm.delete(p) },
+                                            )
+                                        }
+                                    }
                                 }
-                                IconButton(onClick = { vm.delete(p) }) {
-                                    Icon(Icons.Outlined.DeleteOutline, "Löschen", tint = CosmosColors.Critical)
-                                }
-                            }
-                        }
+                            },
+                        )
                     }
                 }
                 item { Spacer(Modifier.height(80.dp)) }
-            }
-
-            FloatingActionButton(
-                onClick = { creating = true },
-                containerColor = CosmosColors.AccentPrimary,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-            ) {
-                Icon(Icons.Outlined.Add, "Neuer Prompt", tint = Color.Black)
             }
         }
     }
@@ -123,37 +143,188 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
         EditDialog(
             initialName = p.name,
             initialContent = p.content,
-            onSave = { name, content -> vm.save(p.copy(name = name, content = content, updatedAt = System.currentTimeMillis())); editing = null },
+            category = p.category,
+            onSave = { name, content ->
+                vm.save(
+                    p.copy(name = name, content = content, updatedAt = System.currentTimeMillis())
+                )
+                editing = null
+            },
             onCancel = { editing = null },
         )
     }
-    if (creating) {
+    creatingInCategory?.let { cat ->
         EditDialog(
             initialName = "",
             initialContent = "",
-            onSave = { n, c -> vm.create(n, c); creating = false },
-            onCancel = { creating = false },
+            category = cat,
+            onSave = { n, c ->
+                vm.create(n, c, cat)
+                creatingInCategory = null
+            },
+            onCancel = { creatingInCategory = null },
         )
     }
 }
 
 @Composable
-private fun EditDialog(initialName: String, initialContent: String, onSave: (String, String) -> Unit, onCancel: () -> Unit) {
+private fun CategoryAccordion(
+    category: PromptCategory,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onAdd: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { onToggle() },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = category.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.size(8.dp))
+                Box(
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(50))
+                            .background(CosmosColors.AccentPrimary.copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "$count",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CosmosColors.AccentPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onAdd) {
+                    Icon(
+                        Icons.Outlined.Add,
+                        contentDescription = "Neuer Prompt in ${category.label}",
+                        tint = CosmosColors.AccentPrimary,
+                    )
+                }
+                Icon(
+                    imageVector =
+                        if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
+                    tint = cosmos.textSecondary,
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.padding(top = 8.dp)) { content() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PromptRow(
+    prompt: SavedPromptEntity,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(cosmos.glassBg)
+                .padding(12.dp)
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    prompt.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = prompt.isActive,
+                    onCheckedChange = { onToggle() },
+                    colors =
+                        SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = CosmosColors.AccentPrimary,
+                            checkedBorderColor = CosmosColors.AccentPrimary,
+                        ),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = prompt.content.take(140) + if (prompt.content.length > 140) "…" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Outlined.Edit,
+                        contentDescription = "Bearbeiten",
+                        tint = CosmosColors.AccentPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Outlined.DeleteOutline,
+                        contentDescription = "Löschen",
+                        tint = CosmosColors.Critical,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditDialog(
+    initialName: String,
+    initialContent: String,
+    category: PromptCategory,
+    onSave: (String, String) -> Unit,
+    onCancel: () -> Unit,
+) {
     var name by remember { mutableStateOf(initialName) }
     var content by remember { mutableStateOf(initialContent) }
     AlertDialog(
         onDismissRequest = onCancel,
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank() && content.isNotBlank()) onSave(name.trim(), content.trim()) },
-                colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentPrimary, contentColor = Color.Black),
-            ) { Text("Speichern") }
+                onClick = {
+                    if (name.isNotBlank() && content.isNotBlank())
+                        onSave(name.trim(), content.trim())
+                },
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = CosmosColors.AccentPrimary,
+                        contentColor = Color.Black,
+                    ),
+            ) {
+                Text("Speichern")
+            }
         },
         dismissButton = { TextButton(onClick = onCancel) { Text("Abbrechen") } },
-        title = { Text("Prompt bearbeiten") },
+        title = { Text("Prompt: ${category.label}") },
         text = {
             Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = content,

@@ -62,6 +62,7 @@ constructor(
         de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao,
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
+    private val promptRepo: de.frank.entropyreducer.data.repository.PromptRepository,
     private val json: Json,
 ) {
 
@@ -341,6 +342,33 @@ constructor(
                     entropyEntryFollowupDao.upsert(b.toEntity())
                     inserted++
                 }
+            }
+        }
+
+        // --- Saved Prompts (v8+, Frank-Wunsch 2026-05-20) ---
+        // Existenz-Strategie pro id. Bei unbekannter Kategorie fallback auf AUFGABEN
+        // (siehe TypeConverter.toPromptCategory).
+        if (payload.savedPrompts.isNotEmpty()) {
+            val existingPromptIds = promptRepo.getAll().first().map { it.id }.toHashSet()
+            for (b in payload.savedPrompts) {
+                if (b.id in existingPromptIds) continue
+                val cat =
+                    runCatching {
+                            de.frank.entropyreducer.domain.model.PromptCategory.valueOf(b.category)
+                        }
+                        .getOrDefault(de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN)
+                promptRepo.upsert(
+                    de.frank.entropyreducer.data.local.entities.SavedPromptEntity(
+                        id = b.id,
+                        name = b.name,
+                        content = b.content,
+                        isActive = b.isActive,
+                        createdAt = b.createdAt,
+                        updatedAt = b.updatedAt,
+                        category = cat,
+                    )
+                )
+                inserted++
             }
         }
 

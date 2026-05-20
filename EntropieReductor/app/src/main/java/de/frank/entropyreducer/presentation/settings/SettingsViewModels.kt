@@ -509,7 +509,12 @@ class PromptsViewModel @Inject constructor(private val repo: PromptRepository) :
 
     fun delete(entity: SavedPromptEntity) = viewModelScope.launch { repo.delete(entity) }
 
-    fun create(name: String, content: String) = viewModelScope.launch {
+    fun create(
+        name: String,
+        content: String,
+        category: de.frank.entropyreducer.domain.model.PromptCategory =
+            de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN,
+    ) = viewModelScope.launch {
         val now = System.currentTimeMillis()
         repo.upsert(
             SavedPromptEntity(
@@ -519,6 +524,7 @@ class PromptsViewModel @Inject constructor(private val repo: PromptRepository) :
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
+                category = category,
             )
         )
     }

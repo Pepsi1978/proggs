@@ -45,7 +45,7 @@ class GenieCodexSynthesizer @Inject constructor(
 
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
-        val activePrompts = prompts.getActive().first()
+        val activePrompts = prompts.getActiveByCategory(de.frank.entropyreducer.domain.model.PromptCategory.CODEX).first()
         val activeEntries = entries.getActive().first()
         val confirmedInsights = insightDao.getConfirmed().first()
         val activeHypotheses = hypothesisDao.getByStatus(HypothesisStatus.AKTIV).first()

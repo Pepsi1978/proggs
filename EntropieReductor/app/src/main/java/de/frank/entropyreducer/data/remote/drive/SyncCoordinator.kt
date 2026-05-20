@@ -96,6 +96,7 @@ constructor(
     private val appContext: android.content.Context,
     private val entropyEntryFollowupDaoLazy:
         Lazy<de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao>,
+    private val promptRepoLazy: Lazy<de.frank.entropyreducer.data.repository.PromptRepository>,
     private val json: Json,
 ) {
 
@@ -203,6 +204,18 @@ constructor(
             }
             val entropyFollowupBackups =
                 entropyEntryFollowupDaoLazy.get().getAllForBackup().map { it.toBackup() }
+            val savedPromptBackups =
+                promptRepoLazy.get().getAll().first().map { p ->
+                    BackupSavedPrompt(
+                        id = p.id,
+                        name = p.name,
+                        content = p.content,
+                        isActive = p.isActive,
+                        createdAt = p.createdAt,
+                        updatedAt = p.updatedAt,
+                        category = p.category.name,
+                    )
+                }
             val thesenList =
                 de.frank.entropyreducer.presentation.thesen.thesenEntriesFlow(appContext).first()
             val thesenBackups = thesenList.map { e ->
@@ -225,7 +238,7 @@ constructor(
 
             val payload =
                 BackupPayload(
-                    version = 7,
+                    version = 8,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -241,6 +254,7 @@ constructor(
                     tagebuchEntries = tagebuchBackups,
                     entropyEntryFollowups = entropyFollowupBackups,
                     thesenEntries = thesenBackups,
+                    savedPrompts = savedPromptBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

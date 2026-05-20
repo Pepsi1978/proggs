@@ -82,7 +82,7 @@ class ScientistChatUseCase @Inject constructor(
         // 2. Kontext-Blocks für System-Prompt
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
-        val activePrompts = prompts.getActive().first()
+        val activePrompts = prompts.getActiveByCategory(de.frank.entropyreducer.domain.model.PromptCategory.FORSCHER).first()
         val today = LocalDate.now().toString()
         val tomorrow = LocalDate.now().plusDays(1).toString()
         val calendarToday = calendarDao.getDay(today).first()

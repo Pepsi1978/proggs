@@ -103,6 +103,24 @@ data class BackupPayload(
      * optionale KI-Zusammenfassung und Nachtraege.
      */
     val thesenEntries: List<BackupThesenEntry> = emptyList(),
+    /**
+     * Schema v8 (Frank-Wunsch 2026-05-20): Eigene Prompts inkl. Kategorie. Pro Bereich der App
+     * wirken nur Prompts der jeweiligen Kategorie.
+     */
+    val savedPrompts: List<BackupSavedPrompt> = emptyList(),
+)
+
+/** Schema v8: gespeicherter Prompt mit Kategorie. */
+@Serializable
+data class BackupSavedPrompt(
+    val id: String,
+    val name: String,
+    val content: String,
+    val isActive: Boolean,
+    val createdAt: Long,
+    val updatedAt: Long,
+    /** Eine von PromptCategory.name. Bei unbekanntem Wert beim Restore -> AUFGABEN. */
+    val category: String = "AUFGABEN",
 )
 
 /** Schema v7: Thesen-Eintrag mit Nachtraegen und KI-Zusammenfassung. */

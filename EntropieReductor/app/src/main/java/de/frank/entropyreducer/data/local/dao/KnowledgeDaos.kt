@@ -20,6 +20,13 @@ interface SavedPromptDao {
     @Query("SELECT * FROM saved_prompts WHERE isActive = 1 ORDER BY createdAt ASC")
     fun getActive(): Flow<List<SavedPromptEntity>>
 
+    @Query(
+        "SELECT * FROM saved_prompts WHERE isActive = 1 AND category = :cat ORDER BY createdAt ASC"
+    )
+    fun getActiveByCategory(
+        cat: de.frank.entropyreducer.domain.model.PromptCategory
+    ): Flow<List<SavedPromptEntity>>
+
     @Query("SELECT * FROM saved_prompts WHERE id = :id")
     suspend fun getById(id: String): SavedPromptEntity?
 

@@ -16,8 +16,8 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 /**
- * Room TypeConverters: speichert Enums als Strings und List<String> als JSON.
- * Enums via name() — robust gegen Reordering, solange Namen stabil bleiben.
+ * Room TypeConverters: speichert Enums als Strings und List<String> als JSON. Enums via name() —
+ * robust gegen Reordering, solange Namen stabil bleiben.
  */
 class EntropyTypeConverters {
 
@@ -32,11 +32,13 @@ class EntropyTypeConverters {
     @TypeConverter
     fun toStringList(value: String?): List<String> =
         if (value.isNullOrBlank()) emptyList()
-        else runCatching { json.decodeFromString(listStringSerializer, value) }.getOrDefault(emptyList())
+        else
+            runCatching { json.decodeFromString(listStringSerializer, value) }
+                .getOrDefault(emptyList())
 
     // Enums
-    @TypeConverter
-    fun fromCategory(c: EntropyCategory): String = c.name
+    @TypeConverter fun fromCategory(c: EntropyCategory): String = c.name
+
     @TypeConverter
     fun toCategory(s: String): EntropyCategory =
         runCatching { EntropyCategory.valueOf(s) }.getOrDefault(EntropyCategory.SONSTIGES)
@@ -47,66 +49,79 @@ class EntropyTypeConverters {
     // der Enum-Namen — robust gegen Reordering, identisch zur fromStringList-Strategie.
     @TypeConverter
     fun fromCategoryList(list: List<EntropyCategory>?): String =
-        if (list.isNullOrEmpty()) "[]" else json.encodeToString(listStringSerializer, list.map { it.name })
+        if (list.isNullOrEmpty()) "[]"
+        else json.encodeToString(listStringSerializer, list.map { it.name })
 
     @TypeConverter
     fun toCategoryList(value: String?): List<EntropyCategory> =
         if (value.isNullOrBlank()) emptyList()
-        else runCatching {
-            json.decodeFromString(listStringSerializer, value)
-                .mapNotNull { name -> runCatching { EntropyCategory.valueOf(name) }.getOrNull() }
-        }.getOrDefault(emptyList())
+        else
+            runCatching {
+                    json.decodeFromString(listStringSerializer, value).mapNotNull { name ->
+                        runCatching { EntropyCategory.valueOf(name) }.getOrNull()
+                    }
+                }
+                .getOrDefault(emptyList())
 
-    @TypeConverter
-    fun fromStatus(c: EntryStatus): String = c.name
+    @TypeConverter fun fromStatus(c: EntryStatus): String = c.name
+
     @TypeConverter
     fun toStatus(s: String): EntryStatus =
         runCatching { EntryStatus.valueOf(s) }.getOrDefault(EntryStatus.OFFEN)
 
-    @TypeConverter
-    fun fromTimeBucket(c: TimeBucket): String = c.name
+    @TypeConverter fun fromTimeBucket(c: TimeBucket): String = c.name
+
     @TypeConverter
     fun toTimeBucket(s: String): TimeBucket =
         runCatching { TimeBucket.valueOf(s) }.getOrDefault(TimeBucket.HEUTE)
 
-    @TypeConverter
-    fun fromEntrySource(c: EntrySource): String = c.name
+    @TypeConverter fun fromEntrySource(c: EntrySource): String = c.name
+
     @TypeConverter
     fun toEntrySource(s: String): EntrySource =
         runCatching { EntrySource.valueOf(s) }.getOrDefault(EntrySource.NUTZER_TEXT)
 
-    @TypeConverter
-    fun fromMemorySource(c: MemorySource): String = c.name
+    @TypeConverter fun fromMemorySource(c: MemorySource): String = c.name
+
     @TypeConverter
     fun toMemorySource(s: String): MemorySource =
         runCatching { MemorySource.valueOf(s) }.getOrDefault(MemorySource.MANUELL)
 
     @TypeConverter
-    fun fromScientistRole(c: ScientistRole): String = c.name
+    fun fromPromptCategory(c: de.frank.entropyreducer.domain.model.PromptCategory): String = c.name
+
+    @TypeConverter
+    fun toPromptCategory(s: String): de.frank.entropyreducer.domain.model.PromptCategory =
+        runCatching { de.frank.entropyreducer.domain.model.PromptCategory.valueOf(s) }
+            .getOrDefault(de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN)
+
+    @TypeConverter fun fromScientistRole(c: ScientistRole): String = c.name
+
     @TypeConverter
     fun toScientistRole(s: String): ScientistRole =
         runCatching { ScientistRole.valueOf(s) }.getOrDefault(ScientistRole.NUTZER)
 
-    @TypeConverter
-    fun fromHypothesisStatus(c: HypothesisStatus): String = c.name
+    @TypeConverter fun fromHypothesisStatus(c: HypothesisStatus): String = c.name
+
     @TypeConverter
     fun toHypothesisStatus(s: String): HypothesisStatus =
         runCatching { HypothesisStatus.valueOf(s) }.getOrDefault(HypothesisStatus.VORGESCHLAGEN)
 
-    @TypeConverter
-    fun fromHypothesisOutcome(c: HypothesisOutcome?): String? = c?.name
-    @TypeConverter
-    fun toHypothesisOutcome(s: String?): HypothesisOutcome? =
-        s?.let { runCatching { HypothesisOutcome.valueOf(it) }.getOrNull() }
+    @TypeConverter fun fromHypothesisOutcome(c: HypothesisOutcome?): String? = c?.name
 
     @TypeConverter
-    fun fromStackType(c: StackType): String = c.name
+    fun toHypothesisOutcome(s: String?): HypothesisOutcome? = s?.let {
+        runCatching { HypothesisOutcome.valueOf(it) }.getOrNull()
+    }
+
+    @TypeConverter fun fromStackType(c: StackType): String = c.name
+
     @TypeConverter
     fun toStackType(s: String): StackType =
         runCatching { StackType.valueOf(s) }.getOrDefault(StackType.MORGEN)
 
-    @TypeConverter
-    fun fromShiftCode(c: ShiftCode): String = c.name
+    @TypeConverter fun fromShiftCode(c: ShiftCode): String = c.name
+
     @TypeConverter
     fun toShiftCode(s: String): ShiftCode =
         runCatching { ShiftCode.valueOf(s) }.getOrDefault(ShiftCode.UNBEKANNT)

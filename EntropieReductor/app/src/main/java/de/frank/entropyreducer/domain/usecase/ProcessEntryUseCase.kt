@@ -47,7 +47,7 @@ class ProcessEntryUseCase @Inject constructor(
         val model = settings.geminiModelFlow.first()
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
-        val activePrompts = prompts.getActive().first()
+        val activePrompts = prompts.getActiveByCategory(de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN).first()
         // Frank-Wunsch 2026-05-09: bestätigte Methoden des Insight Boards sollen
         // die Prio-Berechnung neuer Aufgaben beeinflussen — z.B. Laufen aktiviert
         // BDNF/NGF, baut mentale + körperliche + Schmerz-Entropie ab. Eine
@@ -199,7 +199,7 @@ class ProcessEntryUseCase @Inject constructor(
         val model = settings.geminiModelFlow.first()
         val profile = settings.profileTextFlow.first()
         val activeMemories = memories.getActive().first()
-        val activePrompts = prompts.getActive().first()
+        val activePrompts = prompts.getActiveByCategory(de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN).first()
         val confirmed = insights.observeConfirmed().first()
 
         val systemPrompt = systemPromptBuilder.build(

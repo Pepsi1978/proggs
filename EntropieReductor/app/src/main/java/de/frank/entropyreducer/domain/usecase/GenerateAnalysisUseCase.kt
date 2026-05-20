@@ -54,7 +54,7 @@ class GenerateAnalysisUseCase @Inject constructor(
 
         val activeEntries = entries.getActive().first()
         val activeMemories = memories.getActive().first()
-        val activePrompts = prompts.getActive().first()
+        val activePrompts = prompts.getActiveByCategory(de.frank.entropyreducer.domain.model.PromptCategory.ANALYSE).first()
 
         // 30-Tage-Fenster
         val now = System.currentTimeMillis()
