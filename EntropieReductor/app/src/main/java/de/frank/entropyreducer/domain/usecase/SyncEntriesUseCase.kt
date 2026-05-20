@@ -344,6 +344,39 @@ constructor(
             }
         }
 
+        // --- Thesen-Eintraege (v7+, Frank-Wunsch 2026-05-20) ---
+        // Spiegelt das Tagebuch-Verhalten: Existenz-Strategie, lokale Edits gewinnen.
+        if (payload.thesenEntries.isNotEmpty()) {
+            val existingThesenMap =
+                de.frank.entropyreducer.presentation.thesen
+                    .thesenEntriesFlow(appContext)
+                    .first()
+                    .associateBy { it.id }
+            for (b in payload.thesenEntries) {
+                val incoming =
+                    de.frank.entropyreducer.presentation.thesen.ThesenEntry(
+                        id = b.id,
+                        timestampMs = b.timestampMs,
+                        title = b.title,
+                        text = b.text,
+                        summary = b.summary,
+                        followups =
+                            b.followups.map { f ->
+                                de.frank.entropyreducer.presentation.thesen.ThesenFollowup(
+                                    id = f.id,
+                                    createdAtMs = f.createdAtMs,
+                                    text = f.text,
+                                )
+                            },
+                    )
+                val existing = existingThesenMap[incoming.id]
+                if (existing == null) {
+                    de.frank.entropyreducer.presentation.thesen.addThesenEntry(appContext, incoming)
+                    inserted++
+                }
+            }
+        }
+
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))
     }

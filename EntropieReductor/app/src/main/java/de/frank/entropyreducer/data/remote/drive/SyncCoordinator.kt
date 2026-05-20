@@ -203,10 +203,29 @@ constructor(
             }
             val entropyFollowupBackups =
                 entropyEntryFollowupDaoLazy.get().getAllForBackup().map { it.toBackup() }
+            val thesenList =
+                de.frank.entropyreducer.presentation.thesen.thesenEntriesFlow(appContext).first()
+            val thesenBackups = thesenList.map { e ->
+                BackupThesenEntry(
+                    id = e.id,
+                    timestampMs = e.timestampMs,
+                    title = e.title,
+                    text = e.text,
+                    summary = e.summary,
+                    followups =
+                        e.followups.map { f ->
+                            BackupThesenFollowup(
+                                id = f.id,
+                                createdAtMs = f.createdAtMs,
+                                text = f.text,
+                            )
+                        },
+                )
+            }
 
             val payload =
                 BackupPayload(
-                    version = 6,
+                    version = 7,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -221,6 +240,7 @@ constructor(
                     profileText = profileText,
                     tagebuchEntries = tagebuchBackups,
                     entropyEntryFollowups = entropyFollowupBackups,
+                    thesenEntries = thesenBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

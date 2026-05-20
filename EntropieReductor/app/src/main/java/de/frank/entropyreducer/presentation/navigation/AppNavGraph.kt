@@ -139,6 +139,17 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 }
             )
         }
+        composable(
+            route = Routes.THESEN_ENTRY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.thesen.ThesenEntryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
         composable(Routes.ANALYSIS) {
             AnalysisScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
@@ -209,6 +220,7 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 // bleiben weisser Platzhalter — werden in spaeteren Sessions
                 // mit Inhalt befuellt.
                 val isTagebuch = parent == Routes.TASKS && index == 1
+                val isThesen = parent == Routes.TASKS && index == 2
                 if (isTagebuch) {
                     TagebuchScreen(
                         onBack = {
@@ -225,6 +237,21 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                         onOpenEntry = { entryId ->
                             nav.navigate(Routes.tagebuchEntryDetail(entryId))
                         },
+                    )
+                } else if (isThesen) {
+                    de.frank.entropyreducer.presentation.thesen.ThesenScreen(
+                        onBack = {
+                            nav.popBackStack()
+                            Unit
+                        },
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onSwitchTab = onSwitchTabFromSub,
+                        onOpenEntry = { entryId -> nav.navigate(Routes.thesenEntryDetail(entryId)) },
                     )
                 } else {
                     SubAreaScreen(

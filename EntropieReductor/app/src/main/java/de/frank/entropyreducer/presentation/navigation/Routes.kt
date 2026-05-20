@@ -45,6 +45,12 @@ object Routes {
 
     fun tagebuchEntryDetail(entryId: String): String = "tagebuch/entry/$entryId"
 
+    // Vollbild-Detail eines Thesen-Eintrags (Frank-Wunsch 2026-05-20).
+    // Pfad: thesen/entry/{entryId}
+    const val THESEN_ENTRY_DETAIL_PATTERN = "thesen/entry/{entryId}"
+
+    fun thesenEntryDetail(entryId: String): String = "thesen/entry/$entryId"
+
     // Stage-3-Spezialansichten (siehe Spec §14)
     const val EXPERIMENT_CALENDAR = "experiment_calendar"
     const val INSIGHT_BOARD = "insight_board"

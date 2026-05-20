@@ -97,7 +97,28 @@ data class BackupPayload(
      * (entropy_entry_followups). Werden ueber entryId mit dem Haupteintrag verknuepft.
      */
     val entropyEntryFollowups: List<BackupEntropyFollowup> = emptyList(),
+    /**
+     * Schema v7 (Frank-Wunsch 2026-05-20): Eintraege aus dem Sub-Bereich "Thesen" (Aufgaben-Tab
+     * Index 2). Spiegelt das gleiche Format wie tagebuchEntries — jeder Eintrag hat Titel, Text,
+     * optionale KI-Zusammenfassung und Nachtraege.
+     */
+    val thesenEntries: List<BackupThesenEntry> = emptyList(),
 )
+
+/** Schema v7: Thesen-Eintrag mit Nachtraegen und KI-Zusammenfassung. */
+@Serializable
+data class BackupThesenEntry(
+    val id: String,
+    val timestampMs: Long,
+    val title: String,
+    val text: String,
+    val summary: String? = null,
+    val followups: List<BackupThesenFollowup> = emptyList(),
+)
+
+/** Schema v7: einzelner Nachtrag in den Thesen. */
+@Serializable
+data class BackupThesenFollowup(val id: String, val createdAtMs: Long, val text: String)
 
 /** Schema v6: Tagebuch-Eintrag mit Nachtraegen und KI-Zusammenfassung. */
 @Serializable
