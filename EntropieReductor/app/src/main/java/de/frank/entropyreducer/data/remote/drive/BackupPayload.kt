@@ -1165,7 +1165,8 @@ fun BackupOuraPersonalInfo.toEntity(): OuraPersonalInfoEntity =
 // Schema v6 (Frank-Wunsch 2026-05-20): Tagebuch + Profil + Entropie-Followups
 // =========================================================================
 
-fun EntropyEntryFollowupEntity.toBackup(): BackupEntropyFollowup =
+fun de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity.toBackup():
+    BackupEntropyFollowup =
     BackupEntropyFollowup(
         id = id,
         entryId = entryId,
@@ -1176,8 +1177,9 @@ fun EntropyEntryFollowupEntity.toBackup(): BackupEntropyFollowup =
         updatedAt = updatedAt,
     )
 
-fun BackupEntropyFollowup.toEntity(): EntropyEntryFollowupEntity =
-    EntropyEntryFollowupEntity(
+fun BackupEntropyFollowup.toEntity():
+    de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity =
+    de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity(
         id = id,
         entryId = entryId,
         rawText = rawText,
