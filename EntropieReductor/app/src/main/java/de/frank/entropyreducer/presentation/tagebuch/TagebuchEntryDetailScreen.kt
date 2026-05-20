@@ -127,16 +127,44 @@ fun TagebuchEntryDetailScreen(
                         .padding(bottom = bottomInset + 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // ── Zusammenfassung-Karte (Title + Text) ──
+                // ── KI-Zusammenfassung-Karte (Bullet-Points oder Knopf "Mit KI erstellen") ──
+                val summaryVm: TagebuchSummaryViewModel = hiltViewModel()
+                val summaryState by summaryVm.state.collectAsState()
+                val summaryError by summaryVm.error.collectAsState()
+                LaunchedEffect(summaryError) {
+                    summaryError?.let {
+                        snackbar.showSnackbar(it)
+                        summaryVm.clearError()
+                    }
+                }
+                val onGenerateSummary: () -> Unit = {
+                    val baseText = buildString {
+                        append(entry.text)
+                        entry.followups.forEach { f ->
+                            append("\n\nNachtrag: ")
+                            append(f.text)
+                        }
+                    }
+                    summaryVm.generateSummary(baseText) { bullets ->
+                        viewModel.updateSummary(bullets)
+                    }
+                }
+                SummaryCard(
+                    summary = entry.summary,
+                    isRunning = summaryState == SummaryState.RUNNING,
+                    onGenerate = onGenerateSummary,
+                )
+
+                // ── Eintrag-Karte (Title + Text, inline editierbar) ──
                 var titleDraft by remember(entry.id, entry.title) { mutableStateOf(entry.title) }
                 var textDraft by remember(entry.id, entry.text) { mutableStateOf(entry.text) }
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            "Zusammenfassung",
+                            "Eintrag",
                             style = MaterialTheme.typography.titleMedium,
-                            color = CosmosColors.AccentPrimary,
+                            color = CosmosColors.AccentSecondary,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -306,6 +334,112 @@ fun TagebuchEntryDetailScreen(
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
         ) {
             Snackbar(it)
+        }
+    }
+}
+
+/**
+ * KI-Zusammenfassung als Bullet-Points (analog BestJournalFrank). Bei leerer Summary wird
+ * stattdessen ein Knopf "Mit KI Zusammenfassung erstellen" gezeigt.
+ */
+@Composable
+private fun SummaryCard(summary: String?, isRunning: Boolean, onGenerate: () -> Unit) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "Zusammenfassung",
+                style = MaterialTheme.typography.titleMedium,
+                color = CosmosColors.AccentPrimary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            if (!summary.isNullOrBlank()) {
+                summary
+                    .lines()
+                    .filter { it.trimStart().startsWith("•") }
+                    .forEach { line ->
+                        val bulletText = line.trimStart().removePrefix("•").trim()
+                        Row(modifier = Modifier.padding(bottom = 4.dp)) {
+                            Text(
+                                "• ",
+                                color = cosmos.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                bulletText,
+                                color = cosmos.textPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onGenerate, enabled = !isRunning) {
+                    if (isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = CosmosColors.AccentPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Wird erstellt …", style = MaterialTheme.typography.labelMedium)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = CosmosColors.AccentPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Neu erstellen",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CosmosColors.AccentPrimary,
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text =
+                        "Noch keine Zusammenfassung. Gemini erstellt 3–5 Bullet-Points aus dem Eintrag und allen Nachträgen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onGenerate,
+                    enabled = !isRunning,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    if (isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Wird erstellt …",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.White,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Mit KI Zusammenfassung erstellen",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
         }
     }
 }

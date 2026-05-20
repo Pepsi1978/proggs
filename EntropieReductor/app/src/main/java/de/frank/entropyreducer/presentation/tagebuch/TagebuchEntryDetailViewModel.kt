@@ -86,6 +86,12 @@ constructor(
         viewModelScope.launch { updateTagebuchEntry(ctx, entryId, title = newTitle) }
     }
 
+    /** Speichert die KI-Bullet-Point-Zusammenfassung. */
+    fun updateSummary(newSummary: String) {
+        if (entryId.isBlank()) return
+        viewModelScope.launch { updateTagebuchEntry(ctx, entryId, summary = newSummary) }
+    }
+
     /** Speichert einen neuen Nachtrag. */
     fun addFollowup(text: String) {
         val clean = text.trim()

@@ -112,6 +112,10 @@ fun TagebuchScreen(
     // Frank-Wunsch 2026-05-19: Auto-Ueberschrift via Gemini (max 3 Woerter).
     // Wird nach jedem neuen Eintrag und nach jedem Edit asynchron gesetzt.
     val titleVm: TagebuchTitleViewModel = hiltViewModel()
+    // Frank-Wunsch 2026-05-20: Auto-Zusammenfassung (3-5 Bullet-Points) via Gemini.
+    // Wird nach jedem neuen Eintrag asynchron erzeugt — Detail-Screen zeigt sie als
+    // Bullet-Points statt eines leeren Platzhalters.
+    val summaryVm: TagebuchSummaryViewModel = hiltViewModel()
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
     val micPermission =
         rememberMicPermissionState(
@@ -130,6 +134,9 @@ fun TagebuchScreen(
         scope.launch { addTagebuchEntry(context, entry) }
         titleVm.generateTitle(rawText) { newTitle ->
             scope.launch { updateTagebuchEntry(context, entry.id, title = newTitle) }
+        }
+        summaryVm.generateSummary(rawText) { bullets ->
+            scope.launch { updateTagebuchEntry(context, entry.id, summary = bullets) }
         }
     }
 
@@ -603,6 +610,13 @@ data class TagebuchEntry(
      * Liste.
      */
     val followups: List<TagebuchFollowup> = emptyList(),
+    /**
+     * KI-generierte Bullet-Point-Zusammenfassung (Frank-Wunsch 2026-05-20). Eine Zeile pro
+     * Bullet-Point, beginnt mit "• ". `null` = noch keine Zusammenfassung erstellt — der Detail-
+     * Screen zeigt dann einen Knopf "Mit KI zusammenfassen". Wird automatisch bei neuen Einträgen
+     * erzeugt sobald Gemini antwortet.
+     */
+    val summary: String? = null,
 ) {
     companion object {
         fun create(text: String): TagebuchEntry {
@@ -670,13 +684,18 @@ internal suspend fun updateTagebuchEntry(
     id: String,
     text: String? = null,
     title: String? = null,
+    summary: String? = null,
 ) {
-    if (text == null && title == null) return
+    if (text == null && title == null && summary == null) return
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.map { e ->
             if (e.id == id) {
-                e.copy(text = text ?: e.text, title = title ?: e.title)
+                e.copy(
+                    text = text ?: e.text,
+                    title = title ?: e.title,
+                    summary = summary ?: e.summary,
+                )
             } else {
                 e
             }
@@ -751,6 +770,7 @@ private fun jsonToEntry(o: JSONObject): TagebuchEntry =
         title = o.optString("title"),
         text = o.optString("text"),
         followups = jsonToFollowups(o.optJSONArray("followups")),
+        summary = o.optString("summary").takeIf { it.isNotBlank() },
     )
 
 private fun jsonToFollowups(arr: JSONArray?): List<TagebuchFollowup> {
@@ -787,6 +807,9 @@ private fun serializeEntries(entries: List<TagebuchEntry>): String {
                 fArr.put(fo)
             }
             o.put("followups", fArr)
+        }
+        if (!e.summary.isNullOrBlank()) {
+            o.put("summary", e.summary)
         }
         arr.put(o)
     }
