@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -309,7 +310,7 @@ constructor(
      * unangetastet.
      */
     fun regenerateFromProfile() = viewModelScope.launch {
-        val text = kotlinx.coroutines.flow.first(settings.profileTextFlow)
+        val text = settings.profileTextFlow.first()
         if (text.isBlank()) {
             _distillError.value = "Profil ist leer — nichts zu übernehmen."
             return@launch
@@ -333,7 +334,7 @@ constructor(
         _distillError.value = null
 
         runCatching {
-                val model = kotlinx.coroutines.flow.first(settings.geminiModelFlow)
+                val model = settings.geminiModelFlow.first()
                 val response =
                     gemini.generateContent(
                         model = model,
