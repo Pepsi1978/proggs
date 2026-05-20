@@ -23,17 +23,13 @@ interface SavedPromptDao {
     @Query("SELECT * FROM saved_prompts WHERE id = :id")
     suspend fun getById(id: String): SavedPromptEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(prompt: SavedPromptEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(prompt: SavedPromptEntity)
 
-    @Update
-    suspend fun update(prompt: SavedPromptEntity)
+    @Update suspend fun update(prompt: SavedPromptEntity)
 
-    @Delete
-    suspend fun delete(prompt: SavedPromptEntity)
+    @Delete suspend fun delete(prompt: SavedPromptEntity)
 
-    @Query("SELECT COUNT(*) FROM saved_prompts")
-    suspend fun count(): Int
+    @Query("SELECT COUNT(*) FROM saved_prompts") suspend fun count(): Int
 }
 
 @Dao
@@ -47,17 +43,16 @@ interface MemoryDao {
     @Query("SELECT * FROM memory_entries WHERE source = :src ORDER BY createdAt DESC")
     fun getBySource(src: MemorySource): Flow<List<MemoryEntryEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(memory: MemoryEntryEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(memory: MemoryEntryEntity)
 
-    @Update
-    suspend fun update(memory: MemoryEntryEntity)
+    @Update suspend fun update(memory: MemoryEntryEntity)
 
-    @Delete
-    suspend fun delete(memory: MemoryEntryEntity)
+    @Delete suspend fun delete(memory: MemoryEntryEntity)
 
-    @Query("DELETE FROM memory_entries")
-    suspend fun deleteAll()
+    @Query("DELETE FROM memory_entries") suspend fun deleteAll()
+
+    @Query("DELETE FROM memory_entries WHERE source = :src")
+    suspend fun deleteBySource(src: MemorySource)
 }
 
 @Dao
@@ -71,6 +66,8 @@ interface GenieCodexDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(version: GenieCodexVersionEntity)
 
-    @Query("DELETE FROM genie_codex_versions WHERE id NOT IN (SELECT id FROM genie_codex_versions ORDER BY createdAt DESC LIMIT 10)")
+    @Query(
+        "DELETE FROM genie_codex_versions WHERE id NOT IN (SELECT id FROM genie_codex_versions ORDER BY createdAt DESC LIMIT 10)"
+    )
     suspend fun pruneOldVersions()
 }

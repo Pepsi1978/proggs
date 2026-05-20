@@ -27,7 +27,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -58,6 +57,27 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
     val cosmos = LocalCosmos.current
     var adding by remember { mutableStateOf(false) }
 
+    // Frank-Wunsch 2026-05-20: "Aus Profil — Neu generieren" loescht alle bestehenden
+    // AUS_PROFIL-Memories und ruft Gemini erneut. Wir holen uns den ProfileViewModel
+    // hier per hiltViewModel — dieselbe Instanz wie im ProfileScreen wenn Activity gleich.
+    val profileVm: de.frank.entropyreducer.presentation.settings.ProfileViewModel = hiltViewModel()
+    val distillState by profileVm.distillState.collectAsState()
+    val distillError by profileVm.distillError.collectAsState()
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    androidx.compose.runtime.LaunchedEffect(distillError) {
+        distillError?.let {
+            snackbar.showSnackbar(it)
+            profileVm.dismissDistillError()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(distillState) {
+        if (distillState == de.frank.entropyreducer.presentation.settings.DistillState.DONE) {
+            snackbar.showSnackbar("Gedächtnis aus Profil neu generiert.")
+        }
+    }
+    val isRegenerating =
+        distillState == de.frank.entropyreducer.presentation.settings.DistillState.RUNNING
+
     CosmosScaffold(
         title = "Gedächtnis",
         navigationIcon = {
@@ -66,82 +86,101 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
             }
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // 3 Buttons oben — Frank-Reklamation 2026-05-08: vorher waren die Texte
-            // zu lang für weight(1f), der 3. Button "Aus Profil neu generieren"
-            // wurde auf 4 Zeilen umgebrochen (sah aus wie "reine Kugel"). Jetzt
-            // jede Card mit Icon oben + zwei kuerzeren Zeilen darunter (Titel + Hint),
-            // gleiche Hoehe, gleiche Akzentfarbe pro Aktion.
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                MemoryActionButton(
-                    icon = Icons.Outlined.Add,
-                    title = "Hinzufügen",
-                    subtitle = "Manuell",
-                    accent = CosmosColors.AccentPrimary,
-                    onClick = { adding = true },
-                    modifier = Modifier.weight(1f),
-                )
-                MemoryActionButton(
-                    icon = Icons.Outlined.RateReview,
-                    title = "KI-Vorschläge",
-                    subtitle = "Prüfen",
-                    accent = CosmosColors.AccentSecondary,
-                    onClick = { /* Stufe 4 */ },
-                    modifier = Modifier.weight(1f),
-                )
-                MemoryActionButton(
-                    icon = Icons.Outlined.AutoFixHigh,
-                    title = "Aus Profil",
-                    subtitle = "Neu generieren",
-                    accent = CosmosColors.Success,
-                    onClick = { /* Stufe 4 */ },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                if (memories.isEmpty()) {
-                    item {
-                        Text(
-                            "Noch keine Gedächtnis-Einträge. Manuell hinzufügen oder aus dem Profil generieren.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = cosmos.textSecondary,
-                            modifier = Modifier.padding(top = 24.dp),
-                        )
-                    }
+        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 3 Buttons oben — Frank-Reklamation 2026-05-08: vorher waren die Texte
+                // zu lang für weight(1f), der 3. Button "Aus Profil neu generieren"
+                // wurde auf 4 Zeilen umgebrochen (sah aus wie "reine Kugel"). Jetzt
+                // jede Card mit Icon oben + zwei kuerzeren Zeilen darunter (Titel + Hint),
+                // gleiche Hoehe, gleiche Akzentfarbe pro Aktion.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    MemoryActionButton(
+                        icon = Icons.Outlined.Add,
+                        title = "Hinzufügen",
+                        subtitle = "Manuell",
+                        accent = CosmosColors.AccentPrimary,
+                        onClick = { adding = true },
+                        modifier = Modifier.weight(1f),
+                    )
+                    MemoryActionButton(
+                        icon = Icons.Outlined.RateReview,
+                        title = "KI-Vorschläge",
+                        subtitle = "Prüfen",
+                        accent = CosmosColors.AccentSecondary,
+                        onClick = { /* Stufe 4 */ },
+                        modifier = Modifier.weight(1f),
+                    )
+                    MemoryActionButton(
+                        icon = Icons.Outlined.AutoFixHigh,
+                        title = "Aus Profil",
+                        subtitle = if (isRegenerating) "Läuft …" else "Neu generieren",
+                        accent = CosmosColors.Success,
+                        onClick = { if (!isRegenerating) profileVm.regenerateFromProfile() },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
-                items(memories, key = { it.id }) { m ->
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
-                            Text(m.content, style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary)
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                SourcePill(m.source)
-                                if (m.source == MemorySource.KI_VORSCHLAG) {
-                                    Spacer(Modifier.width(8.dp))
-                                    ConfidenceBar(m.confidence)
-                                }
-                                Spacer(Modifier.weight(1f))
-                                Switch(
-                                    checked = m.isActive,
-                                    onCheckedChange = { vm.toggle(m) },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = CosmosColors.AccentPrimary),
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (memories.isEmpty()) {
+                        item {
+                            Text(
+                                "Noch keine Gedächtnis-Einträge. Manuell hinzufügen oder aus dem Profil generieren.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cosmos.textSecondary,
+                                modifier = Modifier.padding(top = 24.dp),
+                            )
+                        }
+                    }
+                    items(memories, key = { it.id }) { m ->
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column {
+                                Text(
+                                    m.content,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = cosmos.textPrimary,
                                 )
-                                IconButton(onClick = { vm.delete(m) }) {
-                                    Icon(Icons.Outlined.DeleteOutline, "Löschen", tint = CosmosColors.Critical)
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    SourcePill(m.source)
+                                    if (m.source == MemorySource.KI_VORSCHLAG) {
+                                        Spacer(Modifier.width(8.dp))
+                                        ConfidenceBar(m.confidence)
+                                    }
+                                    Spacer(Modifier.weight(1f))
+                                    Switch(
+                                        checked = m.isActive,
+                                        onCheckedChange = { vm.toggle(m) },
+                                        colors =
+                                            SwitchDefaults.colors(
+                                                checkedThumbColor = CosmosColors.AccentPrimary
+                                            ),
+                                    )
+                                    IconButton(onClick = { vm.delete(m) }) {
+                                        Icon(
+                                            Icons.Outlined.DeleteOutline,
+                                            "Löschen",
+                                            tint = CosmosColors.Critical,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+                    item { Spacer(Modifier.height(80.dp)) }
                 }
-                item { Spacer(Modifier.height(80.dp)) }
+            }
+            androidx.compose.material3.SnackbarHost(
+                hostState = snackbar,
+                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(16.dp),
+            ) {
+                androidx.compose.material3.Snackbar(it)
             }
         }
     }
@@ -152,9 +191,20 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
             onDismissRequest = { adding = false },
             confirmButton = {
                 Button(
-                    onClick = { if (content.isNotBlank()) { vm.add(content.trim()); adding = false } },
-                    colors = ButtonDefaults.buttonColors(containerColor = CosmosColors.AccentPrimary, contentColor = Color.Black),
-                ) { Text("Speichern") }
+                    onClick = {
+                        if (content.isNotBlank()) {
+                            vm.add(content.trim())
+                            adding = false
+                        }
+                    },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = CosmosColors.AccentPrimary,
+                            contentColor = Color.Black,
+                        ),
+                ) {
+                    Text("Speichern")
+                }
             },
             dismissButton = { TextButton(onClick = { adding = false }) { Text("Abbrechen") } },
             title = { Text("Memory hinzufügen") },
@@ -171,9 +221,9 @@ fun MemoryScreen(onBack: () -> Unit, vm: MemoryViewModel = hiltViewModel()) {
 }
 
 /**
- * Action-Button mit Icon-in-Kreis + Titel + Subtitel — für die 3 Aktionen oben
- * im Gedaechtnis-Screen. Vorher waren das schmale OutlinedButtons mit zu langen
- * Texten die sich auf 3-4 Zeilen umbrachen ("reine Kugel"-Effekt).
+ * Action-Button mit Icon-in-Kreis + Titel + Subtitel — für die 3 Aktionen oben im
+ * Gedaechtnis-Screen. Vorher waren das schmale OutlinedButtons mit zu langen Texten die sich auf
+ * 3-4 Zeilen umbrachen ("reine Kugel"-Effekt).
  */
 @Composable
 private fun MemoryActionButton(
@@ -188,16 +238,13 @@ private fun MemoryActionButton(
     GlassCard(modifier = modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 6.dp),
         ) {
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(accent.copy(alpha = 0.18f)),
+                modifier =
+                    Modifier.size(38.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center,
             ) {
                 androidx.compose.material3.Icon(
@@ -229,42 +276,51 @@ private fun MemoryActionButton(
 
 @Composable
 private fun SourcePill(source: MemorySource) {
-    val (label, color) = when (source) {
-        MemorySource.MANUELL -> "MANUELL" to CosmosColors.AccentPrimary
-        MemorySource.KI_VORSCHLAG -> "KI-VORSCHLAG" to CosmosColors.AccentSecondary
-        MemorySource.AUS_PROFIL -> "AUS PROFIL" to CosmosColors.Success
-    }
+    val (label, color) =
+        when (source) {
+            MemorySource.MANUELL -> "MANUELL" to CosmosColors.AccentPrimary
+            MemorySource.KI_VORSCHLAG -> "KI-VORSCHLAG" to CosmosColors.AccentSecondary
+            MemorySource.AUS_PROFIL -> "AUS PROFIL" to CosmosColors.Success
+        }
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
         color = color,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(color.copy(alpha = 0.15f))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+        modifier =
+            Modifier.clip(RoundedCornerShape(50))
+                .background(color.copy(alpha = 0.15f))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
     )
 }
 
 @Composable
 private fun ConfidenceBar(percent: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Vertrauen", style = MaterialTheme.typography.labelSmall, color = LocalCosmos.current.textSecondary)
+        Text(
+            "Vertrauen",
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalCosmos.current.textSecondary,
+        )
         Spacer(Modifier.width(8.dp))
         androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(width = 64.dp, height = 6.dp)
-                .clip(RoundedCornerShape(50))
-                .background(LocalCosmos.current.glassBg),
+            modifier =
+                Modifier.size(width = 64.dp, height = 6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(LocalCosmos.current.glassBg)
         ) {
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxWidth(percent / 100f)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(CosmosColors.AccentPrimary),
+                modifier =
+                    Modifier.fillMaxWidth(percent / 100f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(CosmosColors.AccentPrimary)
             )
         }
         Spacer(Modifier.width(6.dp))
-        Text("$percent %", style = MaterialTheme.typography.labelSmall, color = LocalCosmos.current.textSecondary)
+        Text(
+            "$percent %",
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalCosmos.current.textSecondary,
+        )
     }
 }
