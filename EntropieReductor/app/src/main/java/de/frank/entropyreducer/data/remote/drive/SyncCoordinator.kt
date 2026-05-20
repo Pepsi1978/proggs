@@ -90,6 +90,12 @@ constructor(
         Lazy<de.frank.entropyreducer.data.local.dao.OuraSleepDetailDao>,
     private val ouraPersonalInfoDaoLazy:
         Lazy<de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao>,
+    // Frank-Wunsch 2026-05-20: Profil + Tagebuch + Entropie-Followups ins Backup.
+    private val appSettingsLazy: Lazy<de.frank.entropyreducer.data.settings.AppSettings>,
+    @dagger.hilt.android.qualifiers.ApplicationContext
+    private val appContext: android.content.Context,
+    private val entropyEntryFollowupDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao>,
     private val json: Json,
 ) {
 
@@ -167,6 +173,37 @@ constructor(
             // Datei `entropy_reducer_workouts_v1.json` — Haupt-Backup haelt die Liste
             // nur noch leer fuer Backwards-Compat (alte v5-Restores funktionieren).
             // Slim-Workouts (ohne Streams) sind im Hauptbackup nicht mehr noetig.
+            // Frank-Wunsch 2026-05-20: Profil-Text, Tagebuch-Eintraege und
+            // Aufgaben-Nachtraege gehoeren auch ins Backup. Ohne diese drei waren
+            // sie bei Reinstall verloren — obwohl sie zur persoenlichen Wissens-
+            // domaene gehoeren (Profil-Text fliesst in jeden KI-Aufruf, Tagebuch
+            // ist Frank's Entropie-Tagebuch, Followups sind Detailkontext fuer
+            // Aufgaben).
+            val profileText = appSettingsLazy.get().profileTextFlow.first()
+            val tagebuchList =
+                de.frank.entropyreducer.presentation.tagebuch
+                    .tagebuchEntriesFlow(appContext)
+                    .first()
+            val tagebuchBackups = tagebuchList.map { e ->
+                BackupTagebuchEntry(
+                    id = e.id,
+                    timestampMs = e.timestampMs,
+                    title = e.title,
+                    text = e.text,
+                    summary = e.summary,
+                    followups =
+                        e.followups.map { f ->
+                            BackupTagebuchFollowup(
+                                id = f.id,
+                                createdAtMs = f.createdAtMs,
+                                text = f.text,
+                            )
+                        },
+                )
+            }
+            val entropyFollowupBackups =
+                entropyEntryFollowupDaoLazy.get().getAllForBackup().map { it.toBackup() }
+
             val payload =
                 BackupPayload(
                     version = 6,
@@ -181,6 +218,9 @@ constructor(
                     biomarkerCardOrder = cardOrder,
                     healthConnectValues = hcValues,
                     amazfitWorkouts = emptyList(),
+                    profileText = profileText,
+                    tagebuchEntries = tagebuchBackups,
+                    entropyEntryFollowups = entropyFollowupBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

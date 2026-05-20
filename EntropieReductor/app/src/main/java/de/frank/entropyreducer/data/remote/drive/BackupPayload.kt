@@ -82,6 +82,48 @@ data class BackupPayload(
      * damit aeltere Backups (v1-v4) weiterhin lesbar bleiben.
      */
     val amazfitWorkouts: List<BackupAmazfitWorkout> = emptyList(),
+    /**
+     * Schema v6 (Frank-Wunsch 2026-05-20): Persoenliches Profil aus den Einstellungen. Wird in
+     * jeden KI-Aufruf als Systemkontext mitgeschickt — bei Reinstall ist das ohne Backup verloren.
+     */
+    val profileText: String = "",
+    /**
+     * Schema v6 (Frank-Wunsch 2026-05-20): Eintraege aus dem Sub-Bereich "Entropie" (Tagebuch).
+     * Inkl. KI-Zusammenfassung und allen Nachtraegen pro Eintrag.
+     */
+    val tagebuchEntries: List<BackupTagebuchEntry> = emptyList(),
+    /**
+     * Schema v6 (Frank-Wunsch 2026-05-20): Nachtraege zu Aufgaben-Eintraegen
+     * (entropy_entry_followups). Werden ueber entryId mit dem Haupteintrag verknuepft.
+     */
+    val entropyEntryFollowups: List<BackupEntropyFollowup> = emptyList(),
+)
+
+/** Schema v6: Tagebuch-Eintrag mit Nachtraegen und KI-Zusammenfassung. */
+@Serializable
+data class BackupTagebuchEntry(
+    val id: String,
+    val timestampMs: Long,
+    val title: String,
+    val text: String,
+    val summary: String? = null,
+    val followups: List<BackupTagebuchFollowup> = emptyList(),
+)
+
+/** Schema v6: einzelner Nachtrag im Tagebuch. */
+@Serializable
+data class BackupTagebuchFollowup(val id: String, val createdAtMs: Long, val text: String)
+
+/** Schema v6: Nachtrag zu einer Aufgabe (entropy_entry_followups). */
+@Serializable
+data class BackupEntropyFollowup(
+    val id: String,
+    val entryId: String,
+    val rawText: String,
+    val improvedText: String? = null,
+    val isImproved: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
 /**
@@ -1117,4 +1159,30 @@ fun BackupOuraPersonalInfo.toEntity(): OuraPersonalInfoEntity =
         biologicalSex = biologicalSex,
         email = email,
         capturedAt = capturedAt,
+    )
+
+// =========================================================================
+// Schema v6 (Frank-Wunsch 2026-05-20): Tagebuch + Profil + Entropie-Followups
+// =========================================================================
+
+fun EntropyEntryFollowupEntity.toBackup(): BackupEntropyFollowup =
+    BackupEntropyFollowup(
+        id = id,
+        entryId = entryId,
+        rawText = rawText,
+        improvedText = improvedText,
+        isImproved = isImproved,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+fun BackupEntropyFollowup.toEntity(): EntropyEntryFollowupEntity =
+    EntropyEntryFollowupEntity(
+        id = id,
+        entryId = entryId,
+        rawText = rawText,
+        improvedText = improvedText,
+        isImproved = isImproved,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )

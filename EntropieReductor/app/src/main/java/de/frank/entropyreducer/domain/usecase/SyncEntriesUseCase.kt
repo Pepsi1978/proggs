@@ -56,6 +56,12 @@ constructor(
     private val ouraPersonalInfoDao: de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao,
     private val secrets: EncryptedSecretsStore,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
+    // Frank-Wunsch 2026-05-20: Profil + Tagebuch + Entropie-Followups beim Restore
+    // wiederherstellen.
+    private val entropyEntryFollowupDao:
+        de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao,
+    @dagger.hilt.android.qualifiers.ApplicationContext
+    private val appContext: android.content.Context,
     private val json: Json,
 ) {
 
@@ -273,6 +279,70 @@ constructor(
         // (Erst-Restore vor erstem Health-Upload).
         val healthInserted = restoreHealthBackup()
         inserted += healthInserted
+
+        // --- Profil-Text (v6+, Frank-Wunsch 2026-05-20) ---
+        // Profil ueberschreibt nur wenn lokal leer ODER Backup neuer wirkt.
+        // Hier konservativ: Backup gewinnt nur wenn lokal leer — sonst koennte ein
+        // alter Backup-Stand frische lokale Edits ueberschreiben.
+        if (payload.profileText.isNotBlank()) {
+            val localProfile = appSettings.profileTextFlow.first()
+            if (localProfile.isBlank()) {
+                appSettings.setProfileText(payload.profileText)
+                updated++
+            }
+        }
+
+        // --- Tagebuch-Eintraege (v6+) ---
+        // DataStore-basiert, kein DAO. Wir mergen ueber die internen Helper
+        // im TagebuchScreen.kt (internal-Sichtbarkeit).
+        if (payload.tagebuchEntries.isNotEmpty()) {
+            val existingMap =
+                de.frank.entropyreducer.presentation.tagebuch
+                    .tagebuchEntriesFlow(appContext)
+                    .first()
+                    .associateBy { it.id }
+            for (b in payload.tagebuchEntries) {
+                val incoming =
+                    de.frank.entropyreducer.presentation.tagebuch.TagebuchEntry(
+                        id = b.id,
+                        timestampMs = b.timestampMs,
+                        title = b.title,
+                        text = b.text,
+                        summary = b.summary,
+                        followups =
+                            b.followups.map { f ->
+                                de.frank.entropyreducer.presentation.tagebuch.TagebuchFollowup(
+                                    id = f.id,
+                                    createdAtMs = f.createdAtMs,
+                                    text = f.text,
+                                )
+                            },
+                    )
+                val existing = existingMap[incoming.id]
+                if (existing == null) {
+                    de.frank.entropyreducer.presentation.tagebuch.addTagebuchEntry(
+                        appContext,
+                        incoming,
+                    )
+                    inserted++
+                }
+                // Konservativ: vorhandene Eintraege NICHT ueberschreiben — Tagebuch hat kein
+                // updatedAt-Feld, und lokale Edits sollen nicht durch alte Backups verloren gehen.
+            }
+        }
+
+        // --- Aufgaben-Nachtraege (v6+) ---
+        // Existenz-basiert: id ist UUID, Doppelung quasi unmoeglich. Wenn lokal vorhanden,
+        // gewinnt der lokale Stand (Inline-Edits seit letztem Backup).
+        if (payload.entropyEntryFollowups.isNotEmpty()) {
+            for (b in payload.entropyEntryFollowups) {
+                val existing = entropyEntryFollowupDao.getById(b.id)
+                if (existing == null) {
+                    entropyEntryFollowupDao.upsert(b.toEntity())
+                    inserted++
+                }
+            }
+        }
 
         driveSession.end()
         return Result.success(RestoreOutcome.Merged(inserted = inserted, updated = updated))

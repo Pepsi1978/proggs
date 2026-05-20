@@ -32,4 +32,7 @@ interface EntropyEntryFollowupDao {
 
     @Query("DELETE FROM entropy_entry_followups WHERE entryId = :entryId")
     suspend fun deleteByEntryId(entryId: String)
+
+    @Query("SELECT * FROM entropy_entry_followups ORDER BY createdAt ASC")
+    suspend fun getAllForBackup(): List<EntropyEntryFollowupEntity>
 }
