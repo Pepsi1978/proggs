@@ -128,6 +128,17 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 }
             )
         }
+        composable(
+            route = Routes.TAGEBUCH_ENTRY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.tagebuch.TagebuchEntryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
+            )
+        }
         composable(Routes.ANALYSIS) {
             AnalysisScreen(
                 onOpenSettings = { nav.navigate(Routes.SETTINGS_HOME) },
@@ -211,6 +222,9 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                             }
                         },
                         onSwitchTab = onSwitchTabFromSub,
+                        onOpenEntry = { entryId ->
+                            nav.navigate(Routes.tagebuchEntryDetail(entryId))
+                        },
                     )
                 } else {
                     SubAreaScreen(

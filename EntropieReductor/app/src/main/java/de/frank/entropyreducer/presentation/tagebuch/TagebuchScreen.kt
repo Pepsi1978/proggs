@@ -90,6 +90,7 @@ fun TagebuchScreen(
     onBack: () -> Unit,
     onSwitchSub: (parentTab: String, index: Int) -> Unit,
     onSwitchTab: (route: String) -> Unit,
+    onOpenEntry: (entryId: String) -> Unit = {},
 ) {
     val cosmos = LocalCosmos.current
     val context = LocalContext.current
@@ -97,7 +98,6 @@ fun TagebuchScreen(
     val entries by tagebuchEntriesFlow(context).collectAsState(initial = emptyList())
 
     var inputDialogOpen by remember { mutableStateOf(false) }
-    var selectedEntry by remember { mutableStateOf<TagebuchEntry?>(null) }
     // Frank-Wunsch 2026-05-18 Folgeauftrag: Erst nur Mic-Button anzeigen.
     // Klick auf Mic legt rechts "Aufnehmen" und links "Schreiben" frei.
     var actionsExpanded by remember { mutableStateOf(false) }
@@ -163,25 +163,9 @@ fun TagebuchScreen(
             },
         )
     }
-    val current = selectedEntry
-    if (current != null) {
-        EntryDetailDialog(
-            entry = current,
-            onDismiss = { selectedEntry = null },
-            onSave = { updatedText ->
-                // Text aktualisieren, Titel neu von Gemini generieren lassen.
-                scope.launch { updateTagebuchEntry(context, current.id, text = updatedText) }
-                titleVm.generateTitle(updatedText) { newTitle ->
-                    scope.launch { updateTagebuchEntry(context, current.id, title = newTitle) }
-                }
-                selectedEntry = null
-            },
-            onDelete = {
-                scope.launch { deleteTagebuchEntry(context, current.id) }
-                selectedEntry = null
-            },
-        )
-    }
+    // Detail wird jetzt als Vollbild-Screen ueber den NavGraph aufgerufen
+    // (Frank-Wunsch 2026-05-20). Tap auf eine Eintrag-Karte navigiert direkt
+    // dorthin — kein AlertDialog mehr.
 
     CosmosScaffold(
         title = "Tagebuch",
@@ -248,7 +232,7 @@ fun TagebuchScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(items = entries, key = { it.id }) { e ->
-                        EntryCard(entry = e, onClick = { selectedEntry = e })
+                        EntryCard(entry = e, onClick = { onOpenEntry(e.id) })
                     }
                 }
             }
@@ -613,6 +597,12 @@ data class TagebuchEntry(
     val timestampMs: Long,
     val title: String,
     val text: String,
+    /**
+     * Nachträge zum Eintrag (Frank-Wunsch 2026-05-20). Werden im Vollbild- Detail-Screen als eigene
+     * Karten angezeigt. Bei alten Einträgen ohne dieses Feld liefert der JSON-Parser eine leere
+     * Liste.
+     */
+    val followups: List<TagebuchFollowup> = emptyList(),
 ) {
     companion object {
         fun create(text: String): TagebuchEntry {
@@ -625,38 +615,36 @@ data class TagebuchEntry(
                 timestampMs = System.currentTimeMillis(),
                 title = title,
                 text = text,
+                followups = emptyList(),
             )
         }
     }
 }
 
+/** Einzelner Nachtrag zu einem [TagebuchEntry]. */
+data class TagebuchFollowup(val id: String, val createdAtMs: Long, val text: String)
+
 private val Context.tagebuchStore by preferencesDataStore(name = "tagebuch_entries")
 private val KEY_ENTRIES = stringPreferencesKey("entries_json")
 
-private fun tagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
+internal fun tagebuchEntriesFlow(context: Context): Flow<List<TagebuchEntry>> =
     context.tagebuchStore.data.map { prefs ->
         val raw = prefs[KEY_ENTRIES] ?: return@map emptyList()
         runCatching {
                 val arr = JSONArray(raw)
                 buildList(arr.length()) {
-                    for (i in 0 until arr.length()) {
-                        val o = arr.getJSONObject(i)
-                        add(
-                            TagebuchEntry(
-                                id = o.optString("id"),
-                                timestampMs = o.optLong("ts"),
-                                title = o.optString("title"),
-                                text = o.optString("text"),
-                            )
-                        )
-                    }
+                    for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
                 }
             }
             .getOrDefault(emptyList())
             .sortedByDescending { it.timestampMs }
     }
 
-private suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
+/** Beobachtbarer Flow eines einzelnen Eintrags — für den Vollbild-Detail-Screen. */
+internal fun tagebuchEntryFlow(context: Context, id: String): Flow<TagebuchEntry?> =
+    tagebuchEntriesFlow(context).map { list -> list.firstOrNull { it.id == id } }
+
+internal suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing + entry
@@ -664,7 +652,7 @@ private suspend fun addTagebuchEntry(context: Context, entry: TagebuchEntry) {
     }
 }
 
-private suspend fun deleteTagebuchEntry(context: Context, id: String) {
+internal suspend fun deleteTagebuchEntry(context: Context, id: String) {
     context.tagebuchStore.edit { prefs ->
         val existing = parseEntries(prefs[KEY_ENTRIES])
         val updated = existing.filterNot { it.id == id }
@@ -677,7 +665,7 @@ private suspend fun deleteTagebuchEntry(context: Context, id: String) {
  * werden, bleiben unveraendert. Wird sowohl vom Edit-Dialog (Text-Aenderung) als auch vom
  * Gemini-Auto-Titel (Title-Aenderung) genutzt — daher die optionalen Parameter.
  */
-private suspend fun updateTagebuchEntry(
+internal suspend fun updateTagebuchEntry(
     context: Context,
     id: String,
     text: String? = null,
@@ -697,25 +685,88 @@ private suspend fun updateTagebuchEntry(
     }
 }
 
+/**
+ * Hängt einen Nachtrag an einen Tagebucheintrag an (Frank-Wunsch 2026-05-20). Der Nachtrag wird im
+ * Detail-Screen als eigene Karte angezeigt.
+ */
+internal suspend fun addTagebuchFollowup(
+    context: Context,
+    entryId: String,
+    followup: TagebuchFollowup,
+) {
+    context.tagebuchStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id == entryId) e.copy(followups = e.followups + followup) else e
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+}
+
+internal suspend fun updateTagebuchFollowup(
+    context: Context,
+    entryId: String,
+    followupId: String,
+    newText: String,
+) {
+    context.tagebuchStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id != entryId) return@map e
+            e.copy(
+                followups =
+                    e.followups.map { f -> if (f.id == followupId) f.copy(text = newText) else f }
+            )
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+}
+
+internal suspend fun deleteTagebuchFollowup(context: Context, entryId: String, followupId: String) {
+    context.tagebuchStore.edit { prefs ->
+        val existing = parseEntries(prefs[KEY_ENTRIES])
+        val updated = existing.map { e ->
+            if (e.id != entryId) e
+            else e.copy(followups = e.followups.filterNot { it.id == followupId })
+        }
+        prefs[KEY_ENTRIES] = serializeEntries(updated)
+    }
+}
+
 private fun parseEntries(raw: String?): List<TagebuchEntry> {
     if (raw.isNullOrBlank()) return emptyList()
     return runCatching {
             val arr = JSONArray(raw)
             buildList(arr.length()) {
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    add(
-                        TagebuchEntry(
-                            id = o.optString("id"),
-                            timestampMs = o.optLong("ts"),
-                            title = o.optString("title"),
-                            text = o.optString("text"),
-                        )
-                    )
-                }
+                for (i in 0 until arr.length()) add(jsonToEntry(arr.getJSONObject(i)))
             }
         }
         .getOrDefault(emptyList())
+}
+
+private fun jsonToEntry(o: JSONObject): TagebuchEntry =
+    TagebuchEntry(
+        id = o.optString("id"),
+        timestampMs = o.optLong("ts"),
+        title = o.optString("title"),
+        text = o.optString("text"),
+        followups = jsonToFollowups(o.optJSONArray("followups")),
+    )
+
+private fun jsonToFollowups(arr: JSONArray?): List<TagebuchFollowup> {
+    if (arr == null) return emptyList()
+    return buildList(arr.length()) {
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            add(
+                TagebuchFollowup(
+                    id = o.optString("id"),
+                    createdAtMs = o.optLong("ts"),
+                    text = o.optString("text"),
+                )
+            )
+        }
+    }
 }
 
 private fun serializeEntries(entries: List<TagebuchEntry>): String {
@@ -726,15 +777,28 @@ private fun serializeEntries(entries: List<TagebuchEntry>): String {
         o.put("ts", e.timestampMs)
         o.put("title", e.title)
         o.put("text", e.text)
+        if (e.followups.isNotEmpty()) {
+            val fArr = JSONArray()
+            for (f in e.followups) {
+                val fo = JSONObject()
+                fo.put("id", f.id)
+                fo.put("ts", f.createdAtMs)
+                fo.put("text", f.text)
+                fArr.put(fo)
+            }
+            o.put("followups", fArr)
+        }
         arr.put(o)
     }
     return arr.toString()
 }
 
-private fun formatTimestamp(ts: Long): String {
+internal fun formatTagebuchTimestamp(ts: Long): String {
     val dt = LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.systemDefault())
     return dt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy · HH:mm", Locale.GERMANY))
 }
+
+private fun formatTimestamp(ts: Long): String = formatTagebuchTimestamp(ts)
 
 /** Akzentfarbe — Frank-Wunsch: gleiche Farbe wie der Aufgaben-Tab (Orange). */
 private val TagebuchAccent: Color = Color(0xFFFF9800)

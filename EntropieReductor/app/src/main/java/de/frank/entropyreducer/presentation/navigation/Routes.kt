@@ -39,6 +39,12 @@ object Routes {
 
     fun entropyEntryDetail(entryId: String): String = "tasks/entry/$entryId"
 
+    // Vollbild-Detail eines Tagebuch-/Entropie-Eintrags (Frank-Wunsch 2026-05-20).
+    // Pfad: tagebuch/entry/{entryId}
+    const val TAGEBUCH_ENTRY_DETAIL_PATTERN = "tagebuch/entry/{entryId}"
+
+    fun tagebuchEntryDetail(entryId: String): String = "tagebuch/entry/$entryId"
+
     // Stage-3-Spezialansichten (siehe Spec §14)
     const val EXPERIMENT_CALENDAR = "experiment_calendar"
     const val INSIGHT_BOARD = "insight_board"
