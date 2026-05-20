@@ -16,10 +16,9 @@ import javax.inject.Singleton
 object DatabaseModule {
 
     /**
-     * Haupt-Datenbank (Aufgaben, Biomarker, Kalender, Memory, Insights etc.).
-     * Stage 1: destructive fallback ist explizit gewollt — Schema ist noch in Bewegung,
-     * Datenverlust hier ist akzeptabel weil die meisten Tabellen wieder befuellt werden
-     * (Whoop-Sync, Calendar-Sync, KI-Vorschlaege).
+     * Haupt-Datenbank (Aufgaben, Biomarker, Kalender, Memory, Insights etc.). Stage 1: destructive
+     * fallback ist explizit gewollt — Schema ist noch in Bewegung, Datenverlust hier ist akzeptabel
+     * weil die meisten Tabellen wieder befuellt werden (Whoop-Sync, Calendar-Sync, KI-Vorschlaege).
      */
     @Provides
     @Singleton
@@ -38,24 +37,23 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_16_17,
                 AppDatabase.MIGRATION_17_18,
                 AppDatabase.MIGRATION_18_19,
+                AppDatabase.MIGRATION_19_20,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     /**
-     * Forscher-Datenbank (Frank-Wunsch 2026-05-09): SEPARATE DB-Datei fuer
-     * scientist_sessions, scientist_messages, hypotheses, hypothesis_messages.
-     * Frank's eigentliches Tagebuch — diese Daten muessen ueber App-Updates und
-     * Schema-Aenderungen der Haupt-DB persistent bleiben.
+     * Forscher-Datenbank (Frank-Wunsch 2026-05-09): SEPARATE DB-Datei fuer scientist_sessions,
+     * scientist_messages, hypotheses, hypothesis_messages. Frank's eigentliches Tagebuch — diese
+     * Daten muessen ueber App-Updates und Schema-Aenderungen der Haupt-DB persistent bleiben.
      *
-     * KEIN destructive fallback hier: Wenn das Schema sich aendert, MUSS eine echte
-     * Migration geschrieben werden, sonst crasht die App beim Start. Das ist Poka-Yoke
-     * Stufe 3 (Eliminierung): Datenverlust durch versehentlichen Reset ist
-     * konzeptionell unmoeglich gemacht.
+     * KEIN destructive fallback hier: Wenn das Schema sich aendert, MUSS eine echte Migration
+     * geschrieben werden, sonst crasht die App beim Start. Das ist Poka-Yoke Stufe 3
+     * (Eliminierung): Datenverlust durch versehentlichen Reset ist konzeptionell unmoeglich
+     * gemacht.
      *
-     * Bei zukuenftigem Schema-Bump:
-     *   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, ...)
-     * hinzufuegen, jede Migration als val MIGRATION_X_Y = object : Migration(X, Y).
+     * Bei zukuenftigem Schema-Bump: .addMigrations(MIGRATION_1_2, MIGRATION_2_3, ...) hinzufuegen,
+     * jede Migration als val MIGRATION_X_Y = object : Migration(X, Y).
      */
     @Provides
     @Singleton
@@ -65,32 +63,55 @@ object DatabaseModule {
             .build()
 
     @Provides fun provideEntropyEntryDao(db: AppDatabase) = db.entropyEntryDao()
+
     @Provides fun provideSavedPromptDao(db: AppDatabase) = db.savedPromptDao()
+
     @Provides fun provideBiomarkerSnapshotDao(db: AppDatabase) = db.biomarkerSnapshotDao()
+
     @Provides fun provideSupplementLogDao(db: AppDatabase) = db.supplementLogDao()
+
     @Provides fun provideCalendarDayDao(db: AppDatabase) = db.calendarDayDao()
+
     @Provides fun provideCalendarEventDao(db: AppDatabase) = db.calendarEventDao()
+
     @Provides fun provideKiTriggerDao(db: AppDatabase) = db.kiTriggerDao()
+
     @Provides fun provideGenieCodexDao(db: AppDatabase) = db.genieCodexDao()
+
     @Provides fun provideWhoopWorkoutDao(db: AppDatabase) = db.whoopWorkoutDao()
+
     @Provides fun provideAmazfitDailyDao(db: AppDatabase) = db.amazfitDailyDao()
+
     @Provides fun provideAmazfitWorkoutDao(db: AppDatabase) = db.amazfitWorkoutDao()
+
     @Provides fun provideOuraReadinessDao(db: AppDatabase) = db.ouraReadinessDao()
+
     @Provides fun provideOuraDailySleepDao(db: AppDatabase) = db.ouraDailySleepDao()
+
     @Provides fun provideOuraActivityDao(db: AppDatabase) = db.ouraActivityDao()
+
     @Provides fun provideOuraResilienceDao(db: AppDatabase) = db.ouraResilienceDao()
+
     @Provides fun provideOuraSleepDetailDao(db: AppDatabase) = db.ouraSleepDetailDao()
+
     @Provides fun provideOuraPersonalInfoDao(db: AppDatabase) = db.ouraPersonalInfoDao()
+
     @Provides fun provideHealthConnectValueDao(db: AppDatabase) = db.healthConnectValueDao()
+
+    @Provides fun provideEntropyEntryFollowupDao(db: AppDatabase) = db.entropyEntryFollowupDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.
     @Provides fun provideMemoryDao(db: ScientistDatabase) = db.memoryDao()
+
     @Provides fun provideInsightDao(db: ScientistDatabase) = db.insightDao()
 
     // Forscher-DAOs jetzt aus der ScientistDatabase — eigene Persistenz-Domaene.
     @Provides fun provideScientistSessionDao(db: ScientistDatabase) = db.scientistSessionDao()
+
     @Provides fun provideScientistMessageDao(db: ScientistDatabase) = db.scientistMessageDao()
+
     @Provides fun provideHypothesisDao(db: ScientistDatabase) = db.hypothesisDao()
+
     @Provides fun provideHypothesisMessageDao(db: ScientistDatabase) = db.hypothesisMessageDao()
 }

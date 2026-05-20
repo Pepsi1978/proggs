@@ -1,5 +1,9 @@
 package de.frank.entropyreducer.presentation.dashboard1
 
+// Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
+// AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
+import android.Manifest
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,29 +22,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-// Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
-// AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
@@ -53,11 +51,9 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -70,8 +66,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.Canvas
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,18 +80,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.Manifest
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.remote.drive.SyncStatus
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.TimeBucket
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
@@ -108,16 +98,22 @@ import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
 import de.frank.entropyreducer.presentation.theme.color
 import de.frank.entropyreducer.presentation.theme.label
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
-/**
- * Dashboard 1 — Aufgaben (Spec §10, Referenzbild 11/21).
- */
+/** Dashboard 1 — Aufgaben (Spec §10, Referenzbild 11/21). */
 @Composable
 fun TasksScreen(
     onOpenSettings: () -> Unit,
     onSwitchTab: (String) -> Unit,
     currentTab: String,
     onOpenSubArea: (parentTab: String, index: Int) -> Unit = { _, _ -> },
+    onOpenEntryDetail: (entryId: String) -> Unit = {},
     vm: TasksViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -132,17 +128,19 @@ fun TasksScreen(
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    val micPerm = rememberMicPermissionState(
-        onAllGranted = { vm.onMicClick() },
-        onDenied = { denied ->
-            val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
-                "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Einträge per Sprache erfassen kannst."
-            } else {
-                "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
-            }
-            scope.launch { snackbar.showSnackbar(msg) }
-        },
-    )
+    val micPerm =
+        rememberMicPermissionState(
+            onAllGranted = { vm.onMicClick() },
+            onDenied = { denied ->
+                val msg =
+                    if (Manifest.permission.RECORD_AUDIO in denied) {
+                        "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Einträge per Sprache erfassen kannst."
+                    } else {
+                        "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
+                    }
+                scope.launch { snackbar.showSnackbar(msg) }
+            },
+        )
 
     // Frank-Wunsch 2026-05-11: Widget muss frisch werden wenn sich Aufgaben
     // aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne diesen
@@ -160,20 +158,20 @@ fun TasksScreen(
     val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     @OptIn(FlowPreview::class)
     LaunchedEffect(Unit) {
-        androidx.compose.runtime.snapshotFlow {
-            // Stable signature: nur Bucket-Zuordnung + Reihenfolge der IDs.
-            // Tags/Description-Aenderungen triggern kein Update — die sehen
-            // im Widget eh nicht anders aus solange Layout stabil bleibt.
-            state.entriesByBucket.entries.joinToString("|") { (bucket, list) ->
-                "$bucket=${list.joinToString(",") { it.id + ":" + it.manualBucket?.name.orEmpty() }}"
+        androidx.compose.runtime
+            .snapshotFlow {
+                // Stable signature: nur Bucket-Zuordnung + Reihenfolge der IDs.
+                // Tags/Description-Aenderungen triggern kein Update — die sehen
+                // im Widget eh nicht anders aus solange Layout stabil bleibt.
+                state.entriesByBucket.entries.joinToString("|") { (bucket, list) ->
+                    "$bucket=${list.joinToString(",") { it.id + ":" + it.manualBucket?.name.orEmpty() }}"
+                }
             }
-        }
             .distinctUntilChanged()
             .debounce(1500)
             .collect {
                 runCatching {
-                    de.frank.entropyreducer.presentation.widget.WidgetUpdater
-                        .updateAll(appCtx)
+                    de.frank.entropyreducer.presentation.widget.WidgetUpdater.updateAll(appCtx)
                 }
             }
     }
@@ -186,8 +184,8 @@ fun TasksScreen(
     //    auf Karten-Ebene koennte spaeter ergaenzt werden).
     // Nach Verarbeitung wird der Bus geleert, damit ein Configuration-Change
     // (Theme-Wechsel) den Tap nicht ein zweites Mal triggert.
-    val widgetDeepLink by de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events
-        .collectAsState()
+    val widgetDeepLink by
+        de.frank.entropyreducer.presentation.widget.WidgetDeepLinkBus.events.collectAsState()
     // Bugfix 2026-05-11: Konsolidierter Widget-Tap-Handler. Vorher zwei
     // LaunchedEffects (BucketPicker + Scroll), die race-conditions hatten —
     // einer hat den Bus gecleart bevor der andere reagieren konnte. Jetzt
@@ -198,28 +196,30 @@ fun TasksScreen(
     // erst spaeter nachladen — z.B. beim App-Start aus dem Widget heraus.
     LaunchedEffect(widgetDeepLink, state.entriesByBucket) {
         val link = widgetDeepLink ?: return@LaunchedEffect
-        val isTaskAction = link.action ==
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
-            link.action ==
-            de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
+        val isTaskAction =
+            link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_FOCUS ||
+                link.action ==
+                    de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
         if (!isTaskAction) return@LaunchedEffect
 
         // Warten bis Tasks geladen sind, sonst kann computeTaskItemIndex
         // den Index nicht finden und der Scroll waere zu briefing.
-        val tasksLoaded = state.entriesByBucket.values.any { it.isNotEmpty() } ||
-            state.resolvedEntries.isNotEmpty()
+        val tasksLoaded =
+            state.entriesByBucket.values.any { it.isNotEmpty() } ||
+                state.resolvedEntries.isNotEmpty()
         if (!tasksLoaded) return@LaunchedEffect
 
         // 1) Scroll zur Aufgabe (beide Aktionen — FOCUS und RESCHEDULE)
         val targetIndex = computeTaskItemIndex(state = state, taskId = link.taskId)
         if (targetIndex >= 0) {
-            runCatching {
-                listState.animateScrollToItem(targetIndex, scrollOffset = -120)
-            }
+            runCatching { listState.animateScrollToItem(targetIndex, scrollOffset = -120) }
         }
 
         // 2) Bei RESCHEDULE zusaetzlich den Bucket-Picker oeffnen
-        if (link.action == de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE) {
+        if (
+            link.action ==
+                de.frank.entropyreducer.presentation.widget.WidgetIntents.ACTION_RESCHEDULE
+        ) {
             bucketPickerEntryId = link.taskId
         }
 
@@ -254,9 +254,7 @@ fun TasksScreen(
                 currentTab = currentTab,
                 micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = {
-                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
-                },
+                onMicClick = { if (micPerm.check()) vm.onMicClick() else micPerm.request() },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -298,7 +296,10 @@ fun TasksScreen(
                 }
 
                 state.processingMessage?.let {
-                    GlassCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()) {
+                    GlassCard(
+                        modifier =
+                            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()
+                    ) {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodyMedium,
@@ -309,11 +310,13 @@ fun TasksScreen(
 
                 // PERFORMANCE 2026-05-09: derivedStateOf cached den all-empty Check —
                 // wird sonst bei jedem State-Update neu berechnet.
-                val isEmpty by remember(state.entriesByBucket, state.resolvedEntries) {
-                    derivedStateOf {
-                        state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
+                val isEmpty by
+                    remember(state.entriesByBucket, state.resolvedEntries) {
+                        derivedStateOf {
+                            state.entriesByBucket.values.all { it.isEmpty() } &&
+                                state.resolvedEntries.isEmpty()
+                        }
                     }
-                }
                 // Frank-Wunsch 2026-05-11: Scroll zur Widget-getappten Aufgabe
                 // wird jetzt im konsolidierten LaunchedEffect oben gehandhabt
                 // (listState ist am Top der TasksScreen-Funktion deklariert).
@@ -361,42 +364,47 @@ fun TasksScreen(
                         ALL_TIME_BUCKETS.forEach { bucket ->
                             val list = state.entriesByBucket[bucket].orEmpty()
                             if (list.isNotEmpty()) {
-                                item(
-                                    key = "header-${bucket.name}",
-                                    contentType = "bucket-header",
-                                ) { BucketHeader(bucket, list.size, list.sumOf { it.severity }) }
-                                items(
-                                    items = list,
-                                    key = { it.id },
-                                    contentType = { "entry" },
-                                ) { entry ->
+                                item(key = "header-${bucket.name}", contentType = "bucket-header") {
+                                    BucketHeader(bucket, list.size, list.sumOf { it.severity })
+                                }
+                                items(items = list, key = { it.id }, contentType = { "entry" }) {
+                                    entry ->
                                     // PERFORMANCE 2026-05-09: Lambdas mit remember(entry.id)
                                     // stabilisieren, damit EntropyEntryCard skippable bleibt
                                     // (zusammen mit @Immutable auf der Entity). Ohne diese
                                     // Stabilisierung erzeugt jede Recomposition neue Lambda-
                                     // Instanzen → alle sichtbaren Karten recomposen → Jank.
-                                    val onClick = remember(entry.id) {
-                                        { vm.openEntryDetail(entry.id) }
-                                    }
-                                    val onResolve = remember(entry.id, entry.title) {
-                                        {
-                                            vm.markEntryResolved(entry.id)
-                                            scope.launch {
-                                                val result = snackbar.showSnackbar(
-                                                    message = "Eintrag erledigt: ${entry.title}",
-                                                    actionLabel = "Rückgängig",
-                                                    duration = androidx.compose.material3.SnackbarDuration.Short,
-                                                )
-                                                if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                    vm.reopenEntry(entry.id)
+                                    val onClick =
+                                        remember(entry.id) { { onOpenEntryDetail(entry.id) } }
+                                    val onResolve =
+                                        remember(entry.id, entry.title) {
+                                            {
+                                                vm.markEntryResolved(entry.id)
+                                                scope.launch {
+                                                    val result =
+                                                        snackbar.showSnackbar(
+                                                            message =
+                                                                "Eintrag erledigt: ${entry.title}",
+                                                            actionLabel = "Rückgängig",
+                                                            duration =
+                                                                androidx.compose.material3
+                                                                    .SnackbarDuration
+                                                                    .Short,
+                                                        )
+                                                    if (
+                                                        result ==
+                                                            androidx.compose.material3
+                                                                .SnackbarResult
+                                                                .ActionPerformed
+                                                    ) {
+                                                        vm.reopenEntry(entry.id)
+                                                    }
                                                 }
+                                                Unit
                                             }
-                                            Unit
                                         }
-                                    }
-                                    val onPickBucket = remember(entry.id) {
-                                        { bucketPickerEntryId = entry.id }
-                                    }
+                                    val onPickBucket =
+                                        remember(entry.id) { { bucketPickerEntryId = entry.id } }
                                     EntropyEntryCard(
                                         entry = entry,
                                         onClick = onClick,
@@ -416,12 +424,8 @@ fun TasksScreen(
                                 key = { "resolved-${it.id}" },
                                 contentType = { "entry" },
                             ) { entry ->
-                                val onClick = remember(entry.id) {
-                                    { vm.openEntryDetail(entry.id) }
-                                }
-                                val onResolve = remember(entry.id) {
-                                    { vm.reopenEntry(entry.id) }
-                                }
+                                val onClick = remember(entry.id) { { onOpenEntryDetail(entry.id) } }
+                                val onResolve = remember(entry.id) { { vm.reopenEntry(entry.id) } }
                                 EntropyEntryCard(
                                     entry = entry,
                                     onClick = onClick,
@@ -431,7 +435,7 @@ fun TasksScreen(
                         }
                     }
                     item(key = "bottom-spacer", contentType = "spacer") {
-                        Spacer(Modifier.height(120.dp))  // Platz für Bottom-Nav
+                        Spacer(Modifier.height(120.dp)) // Platz für Bottom-Nav
                     }
                 }
             }
@@ -439,22 +443,15 @@ fun TasksScreen(
             SnackbarHost(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
-            ) { Snackbar(it) }
+            ) {
+                Snackbar(it)
+            }
         }
     }
 
-    // Detail-Bottom-Sheet — wird durch Tap auf eine Eintrag-Card geoeffnet.
-    state.detailEntry?.let { entry ->
-        EntryDetailSheet(
-            entry = entry,
-            onClose = { vm.closeEntryDetail() },
-            onSetStatus = { st -> vm.setEntryStatus(entry.id, st) },
-            onDelete = { vm.deleteEntry(entry.id) },
-            onAddFollowup = { transcript ->
-                vm.addFollowupAndReprocess(entry.id, transcript)
-            },
-        )
-    }
+    // Detail wird jetzt als Vollbild-Screen ueber den NavGraph aufgerufen
+    // (Frank-Wunsch 2026-05-20). Klick auf eine Eintrag-Card navigiert direkt
+    // — kein Bottom-Sheet mehr, kein detailEntry-State im ViewModel noetig.
 
     // Proaktiver Forscher: nach dem Erledigen eines Eintrags fragt die App
     // direkt wie der Eintrag geloest wurde. Das Insight-Board lernt daraus
@@ -502,15 +499,16 @@ private fun MethodPromptDialog(
     val notes = notesState.value
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
+        containerColor =
+            if (cosmos.isDark) CosmosColors.BgDarkAccent else CosmosColors.BgLightAccent,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Sparkle-Icon-Kreis links — visueller Anker fuer "Forscher fragt"
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(CosmosColors.AccentSecondary.copy(alpha = 0.2f)),
+                    modifier =
+                        Modifier.size(40.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(CosmosColors.AccentSecondary.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("⚛", color = CosmosColors.AccentSecondary, fontSize = 22.sp)
@@ -535,8 +533,9 @@ private fun MethodPromptDialog(
         text = {
             Column {
                 Text(
-                    text = "Der Forscher merkt sich deine Methode und legt sie als " +
-                        "bestätigte Vorgehensweise im Insight-Board ab.",
+                    text =
+                        "Der Forscher merkt sich deine Methode und legt sie als " +
+                            "bestätigte Vorgehensweise im Insight-Board ab.",
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -545,23 +544,28 @@ private fun MethodPromptDialog(
                     androidx.compose.material3.OutlinedTextField(
                         value = notes,
                         onValueChange = { notesState.value = it },
-                        placeholder = { Text("z.B. Früh schlafen + 20 min Spaziergang", color = cosmos.textSecondary) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = cosmos.textPrimary,
-                            unfocusedTextColor = cosmos.textPrimary,
-                            focusedBorderColor = CosmosColors.AccentPrimary,
-                            unfocusedBorderColor = cosmos.glassBorder,
-                        ),
+                        placeholder = {
+                            Text(
+                                "z.B. Früh schlafen + 20 min Spaziergang",
+                                color = cosmos.textSecondary,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        colors =
+                            androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = cosmos.textPrimary,
+                                unfocusedTextColor = cosmos.textPrimary,
+                                focusedBorderColor = CosmosColors.AccentPrimary,
+                                unfocusedBorderColor = cosmos.glassBorder,
+                            ),
                     )
                     // Mic-Button rechts unten — Whisper Large V3 Turbo (Frank-Wunsch
                     // 2026-05-08, ersetzt System-SpeechRecognizer).
                     de.frank.entropyreducer.presentation.components.WhisperMicButton(
                         onTranscript = { transcript ->
-                            notesState.value = if (notesState.value.isBlank()) transcript
-                            else "${notesState.value} $transcript"
+                            notesState.value =
+                                if (notesState.value.isBlank()) transcript
+                                else "${notesState.value} $transcript"
                         },
                         modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
                     )
@@ -570,10 +574,17 @@ private fun MethodPromptDialog(
         },
         confirmButton = {
             androidx.compose.material3.TextButton(
-                onClick = { onSubmit(notes); notesState.value = "" },
+                onClick = {
+                    onSubmit(notes)
+                    notesState.value = ""
+                },
                 enabled = notes.isNotBlank(),
             ) {
-                Text("Speichern", color = CosmosColors.AccentPrimary, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Speichern",
+                    color = CosmosColors.AccentPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         },
         dismissButton = {
@@ -585,10 +596,10 @@ private fun MethodPromptDialog(
 }
 
 /**
- * Detail-Bottom-Sheet (Bild 12/22). Zeigt Eintrag im Detail mit Icon-Kreis,
- * Title, Beschreibung, Schweregrad-Hinweis, 4 Status-Buttons (Offen / In Arbeit /
- * Reduziert / Archiviert), Tags, KI-Begruendung + KI-Notizen, sowie ein
- * "Löschen"-Button. Aus dem Sheet kann der Status direkt umgestellt werden.
+ * Detail-Bottom-Sheet (Bild 12/22). Zeigt Eintrag im Detail mit Icon-Kreis, Title, Beschreibung,
+ * Schweregrad-Hinweis, 4 Status-Buttons (Offen / In Arbeit / Reduziert / Archiviert), Tags,
+ * KI-Begruendung + KI-Notizen, sowie ein "Löschen"-Button. Aus dem Sheet kann der Status direkt
+ * umgestellt werden.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -600,7 +611,8 @@ private fun EntryDetailSheet(
     onAddFollowup: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState =
+        androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     // windowInsets = WindowInsets(0): Sheet uebernimmt die Insets selbst nicht — die
     // Column unten kompensiert mit eigenem Bottom-Padding. So bleibt der ganze Sheet
     // bis zum unteren Bildschirmrand sichtbar (kein doppeltes Inset-Padding).
@@ -612,11 +624,11 @@ private fun EntryDetailSheet(
         contentWindowInsets = { WindowInsets(0) },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .padding(bottom = bottomInset + 16.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = bottomInset + 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header: Title + X
@@ -666,7 +678,11 @@ private fun EntryDetailSheet(
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
                             )
-                            Text("Prio", color = cosmos.textSecondary, style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                "Prio",
+                                color = cosmos.textSecondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                     }
                     Spacer(Modifier.height(10.dp))
@@ -687,12 +703,36 @@ private fun EntryDetailSheet(
                 fontWeight = FontWeight.SemiBold,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                StatusButton("Offen", EntryStatus.OFFEN, entry.status, onSetStatus, modifier = Modifier.weight(1f))
-                StatusButton("In Arbeit", EntryStatus.IN_ARBEIT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+                StatusButton(
+                    "Offen",
+                    EntryStatus.OFFEN,
+                    entry.status,
+                    onSetStatus,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusButton(
+                    "In Arbeit",
+                    EntryStatus.IN_ARBEIT,
+                    entry.status,
+                    onSetStatus,
+                    modifier = Modifier.weight(1f),
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                StatusButton("Reduziert", EntryStatus.REDUZIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
-                StatusButton("Archiviert", EntryStatus.ARCHIVIERT, entry.status, onSetStatus, modifier = Modifier.weight(1f))
+                StatusButton(
+                    "Reduziert",
+                    EntryStatus.REDUZIERT,
+                    entry.status,
+                    onSetStatus,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusButton(
+                    "Archiviert",
+                    EntryStatus.ARCHIVIERT,
+                    entry.status,
+                    onSetStatus,
+                    modifier = Modifier.weight(1f),
+                )
             }
             // Nachtrag-per-Sprache (Frank-Wunsch 2026-05-08): Mic-Button startet
             // System-SpeechRecognizer, Transkript wird an die Beschreibung
@@ -701,17 +741,22 @@ private fun EntryDetailSheet(
             FollowupMicButton(onTranscript = onAddFollowup)
             // Tags
             if (entry.tags.isNotEmpty()) {
-                Text("Tags", style = MaterialTheme.typography.titleSmall, color = cosmos.textPrimary, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Tags",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     entry.tags.forEach { tag ->
                         Text(
                             text = tag,
                             style = MaterialTheme.typography.labelSmall,
                             color = cosmos.textSecondary,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(cosmos.glassBg)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier =
+                                Modifier.clip(RoundedCornerShape(50))
+                                    .background(cosmos.glassBg)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
                         )
                     }
                 }
@@ -755,15 +800,18 @@ private fun EntryDetailSheet(
             // bei jeder Sheet-Breite mittig sitzen.
             androidx.compose.material3.Button(
                 onClick = onDelete,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = CosmosColors.Critical,
-                    contentColor = androidx.compose.ui.graphics.Color.White,
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CosmosColors.Critical,
+                        contentColor = androidx.compose.ui.graphics.Color.White,
+                    ),
+                contentPadding =
+                    androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 12.dp,
+                        vertical = 10.dp,
+                    ),
             ) {
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Outlined.Delete,
@@ -788,11 +836,11 @@ private fun EntryDetailSheet(
 private fun FollowupMicButton(onTranscript: (String) -> Unit) {
     val cosmos = LocalCosmos.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(CosmosColors.AccentSecondary.copy(alpha = 0.18f))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Whisper Large V3 Turbo statt System-SpeechRecognizer (Frank-Wunsch 2026-05-08).
@@ -829,11 +877,14 @@ private fun StatusButton(
     val selected = status == current
     val accent = if (selected) CosmosColors.AccentPrimary else cosmos.textSecondary
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) CosmosColors.AccentPrimary.copy(alpha = 0.18f) else cosmos.glassBg)
-            .clickable { onClick(status) }
-            .padding(vertical = 10.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (selected) CosmosColors.AccentPrimary.copy(alpha = 0.18f) else cosmos.glassBg
+                )
+                .clickable { onClick(status) }
+                .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -845,30 +896,28 @@ private fun StatusButton(
     }
 }
 
-private fun severityLabel(severity: Int): String = when {
-    severity <= 3 -> "Niedrig"
-    severity <= 6 -> "Mittel"
-    severity <= 8 -> "Hoch"
-    else -> "Sehr hoch"
-}
+private fun severityLabel(severity: Int): String =
+    when {
+        severity <= 3 -> "Niedrig"
+        severity <= 6 -> "Mittel"
+        severity <= 8 -> "Hoch"
+        else -> "Sehr hoch"
+    }
 
 /**
- * Mappt einen priorityScore (0.0-100.0) auf eine Farbe fuer die grosse Prio-Zahl
- * auf der Aufgabenkarte. Skala (Frank-Wunsch 2026-05-10):
- *   80-100 -> Rot       (sehr wichtig)
- *   60-80  -> Orange
- *   40-60  -> Gelb
- *   20-40  -> Gruen
- *    0-20  -> Blau      (geringste Prio — kuehlste Farbe)
- * Achtung: Bewusst andersherum als die Severity-Bar (dort ist Rot schlecht).
+ * Mappt einen priorityScore (0.0-100.0) auf eine Farbe fuer die grosse Prio-Zahl auf der
+ * Aufgabenkarte. Skala (Frank-Wunsch 2026-05-10): 80-100 -> Rot (sehr wichtig) 60-80 -> Orange
+ * 40-60 -> Gelb 20-40 -> Gruen 0-20 -> Blau (geringste Prio — kuehlste Farbe) Achtung: Bewusst
+ * andersherum als die Severity-Bar (dort ist Rot schlecht).
  */
-private fun priorityColor(score: Double): Color = when {
-    score >= 80.0 -> CosmosColors.PriorityRed
-    score >= 60.0 -> CosmosColors.PriorityOrange
-    score >= 40.0 -> CosmosColors.PriorityYellow
-    score >= 20.0 -> CosmosColors.PriorityGreen
-    else -> CosmosColors.PriorityBlue
-}
+private fun priorityColor(score: Double): Color =
+    when {
+        score >= 80.0 -> CosmosColors.PriorityRed
+        score >= 60.0 -> CosmosColors.PriorityOrange
+        score >= 40.0 -> CosmosColors.PriorityYellow
+        score >= 20.0 -> CosmosColors.PriorityGreen
+        else -> CosmosColors.PriorityBlue
+    }
 
 @Composable
 private fun CategoryFilterRow(
@@ -892,10 +941,7 @@ private fun CategoryFilterRow(
                 onClick = onClearAll,
             )
         }
-        items(
-            items = categories,
-            key = { it.name },
-        ) { cat ->
+        items(items = categories, key = { it.name }) { cat ->
             val on = cat in active
             CategoryFilterChip(
                 label = cat.label(),
@@ -922,10 +968,10 @@ private fun CategoryFilterChip(
     val bg = if (selected) tint.copy(alpha = 0.20f) else cosmos.glassBg
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(bg, pillShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+        modifier =
+            Modifier.background(bg, pillShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 7.dp),
     ) {
         Icon(
             imageVector = icon,
@@ -943,7 +989,9 @@ private fun CategoryFilterChip(
     }
 }
 
-private fun iconForCategory(category: EntropyCategory): androidx.compose.ui.graphics.vector.ImageVector =
+private fun iconForCategory(
+    category: EntropyCategory
+): androidx.compose.ui.graphics.vector.ImageVector =
     when (category) {
         EntropyCategory.KOERPERLICH -> Icons.Outlined.Bolt
         EntropyCategory.MENTAL -> Icons.Outlined.Psychology
@@ -957,12 +1005,13 @@ private fun iconForCategory(category: EntropyCategory): androidx.compose.ui.grap
 @Composable
 private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
     val cosmos = LocalCosmos.current
-    val label = when (bucket) {
-        TimeBucket.HEUTE -> "HEUTE"
-        TimeBucket.MORGEN -> "MORGEN"
-        TimeBucket.FREIBLOCK -> "FREIBLOCK"
-        TimeBucket.SPAETER -> "SPÄTER"
-    }
+    val label =
+        when (bucket) {
+            TimeBucket.HEUTE -> "HEUTE"
+            TimeBucket.MORGEN -> "MORGEN"
+            TimeBucket.FREIBLOCK -> "FREIBLOCK"
+            TimeBucket.SPAETER -> "SPÄTER"
+        }
     val accent = bucketAccent(bucket)
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
@@ -970,10 +1019,10 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
     ) {
         // Icon-Pille mit Calendar-Icon (Soll-Design)
         Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(accent.copy(alpha = 0.18f)),
+            modifier =
+                Modifier.size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(accent.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -993,10 +1042,10 @@ private fun BucketHeader(bucket: TimeBucket, count: Int, sumSeverity: Int) {
         Spacer(Modifier.weight(1f))
         // Count-Pill rechts
         Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(accent.copy(alpha = 0.18f))
-                .padding(horizontal = 10.dp, vertical = 3.dp),
+            modifier =
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(accent.copy(alpha = 0.18f))
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
         ) {
             Text(
                 text = "$count",
@@ -1016,10 +1065,10 @@ private fun ResolvedHeader(count: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(CosmosColors.Success.copy(alpha = 0.18f)),
+            modifier =
+                Modifier.size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmosColors.Success.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1038,10 +1087,10 @@ private fun ResolvedHeader(count: Int) {
         )
         Spacer(Modifier.weight(1f))
         Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(CosmosColors.Success.copy(alpha = 0.18f))
-                .padding(horizontal = 10.dp, vertical = 3.dp),
+            modifier =
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(CosmosColors.Success.copy(alpha = 0.18f))
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
         ) {
             Text(
                 text = "$count",
@@ -1053,41 +1102,43 @@ private fun ResolvedHeader(count: Int) {
     }
 }
 
-private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector = when (bucket) {
-    TimeBucket.HEUTE -> Icons.Outlined.Today
-    TimeBucket.MORGEN -> Icons.Outlined.Event
-    TimeBucket.FREIBLOCK -> Icons.Outlined.DateRange
-    TimeBucket.SPAETER -> Icons.Outlined.HourglassEmpty
-}
+private fun bucketIcon(bucket: TimeBucket): androidx.compose.ui.graphics.vector.ImageVector =
+    when (bucket) {
+        TimeBucket.HEUTE -> Icons.Outlined.Today
+        TimeBucket.MORGEN -> Icons.Outlined.Event
+        TimeBucket.FREIBLOCK -> Icons.Outlined.DateRange
+        TimeBucket.SPAETER -> Icons.Outlined.HourglassEmpty
+    }
 
 @Composable
-private fun bucketAccent(bucket: TimeBucket): Color = when (bucket) {
-    TimeBucket.HEUTE -> CosmosColors.AccentPrimary
-    TimeBucket.MORGEN -> CosmosColors.AccentSecondary
-    TimeBucket.FREIBLOCK -> CosmosColors.CatHealth
-    TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
-}
+private fun bucketAccent(bucket: TimeBucket): Color =
+    when (bucket) {
+        TimeBucket.HEUTE -> CosmosColors.AccentPrimary
+        TimeBucket.MORGEN -> CosmosColors.AccentSecondary
+        TimeBucket.FREIBLOCK -> CosmosColors.CatHealth
+        TimeBucket.SPAETER -> LocalCosmos.current.textSecondary
+    }
 
 /**
- * Liefert die ganz leichte Hintergrund-Toenung der Aufgabenkarte je nach Bucket
- * (Frank-Wunsch 2026-05-10, zweite Iteration). GlassCard rendert die Farbe als
- * Linear-Gradient von oben-links (transparent) nach unten-rechts (voller Tint).
- * Frank wollte das Orange/Gelb/Gruen/Blau dezenter — daher hier zusaetzlich der
- * Endwert-Alpha um ~25% reduziert (light: 0.18→0.14, dark: 0.12→0.10).
- * Zusammen mit dem Verlauf wirkt das Orange jetzt sehr zurueckhaltend und nur
- * in der unteren rechten Card-Ecke schwach erkennbar.
- *  - HEUTE      = Orange-Stich
- *  - MORGEN     = Gelb-Stich
- *  - FREIBLOCK  = Gruen-Stich
- *  - SPAETER    = Blau-Stich
+ * Liefert die ganz leichte Hintergrund-Toenung der Aufgabenkarte je nach Bucket (Frank-Wunsch
+ * 2026-05-10, zweite Iteration). GlassCard rendert die Farbe als Linear-Gradient von oben-links
+ * (transparent) nach unten-rechts (voller Tint). Frank wollte das Orange/Gelb/Gruen/Blau dezenter —
+ * daher hier zusaetzlich der Endwert-Alpha um ~25% reduziert (light: 0.18→0.14, dark: 0.12→0.10).
+ * Zusammen mit dem Verlauf wirkt das Orange jetzt sehr zurueckhaltend und nur in der unteren
+ * rechten Card-Ecke schwach erkennbar.
+ * - HEUTE = Orange-Stich
+ * - MORGEN = Gelb-Stich
+ * - FREIBLOCK = Gruen-Stich
+ * - SPAETER = Blau-Stich
  */
 private fun bucketCardTint(bucket: TimeBucket, isDark: Boolean): Color {
-    val base = when (bucket) {
-        TimeBucket.HEUTE -> CosmosColors.BucketHeuteTint
-        TimeBucket.MORGEN -> CosmosColors.BucketMorgenTint
-        TimeBucket.FREIBLOCK -> CosmosColors.BucketFreiblockTint
-        TimeBucket.SPAETER -> CosmosColors.BucketSpaeterTint
-    }
+    val base =
+        when (bucket) {
+            TimeBucket.HEUTE -> CosmosColors.BucketHeuteTint
+            TimeBucket.MORGEN -> CosmosColors.BucketMorgenTint
+            TimeBucket.FREIBLOCK -> CosmosColors.BucketFreiblockTint
+            TimeBucket.SPAETER -> CosmosColors.BucketSpaeterTint
+        }
     return base.copy(alpha = if (isDark) 0.10f else 0.14f)
 }
 
@@ -1114,10 +1165,8 @@ private fun EntropyEntryCard(
     // bei jedem Bucket-Wechsel im DB-State frisch geliefert wird.
     val bucketTint = bucketCardTint(entry.timeBucket, cosmos.isDark)
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .graphicsLayer {
+        modifier =
+            Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
                 alpha = cardAlpha
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
@@ -1162,20 +1211,23 @@ private fun EntropyEntryCard(
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Spacer(Modifier.height(8.dp))
-                    // Checkbox-Stil: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn erledigt.
+                    // Checkbox-Stil: leeres Quadrat wenn offen, ausgefuelltes Haekchen wenn
+                    // erledigt.
                     // Tap toggelt — offen → erledigt (REDUZIERT), erledigt → wieder OFFEN.
-                    val checkBg = if (isResolved) CosmosColors.Success.copy(alpha = 0.85f) else androidx.compose.ui.graphics.Color.Transparent
+                    val checkBg =
+                        if (isResolved) CosmosColors.Success.copy(alpha = 0.85f)
+                        else androidx.compose.ui.graphics.Color.Transparent
                     val checkBorder = if (isResolved) CosmosColors.Success else cosmos.glassBorder
                     Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(checkBg)
-                            .border(
-                                androidx.compose.foundation.BorderStroke(2.dp, checkBorder),
-                                RoundedCornerShape(8.dp),
-                            )
-                            .clickable(onClick = onResolve),
+                        modifier =
+                            Modifier.size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(checkBg)
+                                .border(
+                                    androidx.compose.foundation.BorderStroke(2.dp, checkBorder),
+                                    RoundedCornerShape(8.dp),
+                                )
+                                .clickable(onClick = onResolve),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isResolved) {
@@ -1211,9 +1263,9 @@ private fun EntropyEntryCard(
                             text = tag,
                             style = MaterialTheme.typography.labelSmall,
                             color = cosmos.textSecondary,
-                            modifier = Modifier
-                                .background(cosmos.glassBg, pillShape)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier =
+                                Modifier.background(cosmos.glassBg, pillShape)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
                         )
                     }
                 }
@@ -1234,17 +1286,12 @@ private fun EntropyEntryCard(
 }
 
 /**
- * Kleiner Button unten rechts in der Card der das Bucket-Auswahl-Sheet oeffnet
- * (Frank-Wunsch 2026-05-09). Zeigt das Bucket-Icon mit aktiver Farbe wenn
- * Frank den Bucket manuell zugewiesen hat (manualBucket != null), sonst nur
- * dezenter Outline-Style — die KI hat entschieden.
+ * Kleiner Button unten rechts in der Card der das Bucket-Auswahl-Sheet oeffnet (Frank-Wunsch
+ * 2026-05-09). Zeigt das Bucket-Icon mit aktiver Farbe wenn Frank den Bucket manuell zugewiesen hat
+ * (manualBucket != null), sonst nur dezenter Outline-Style — die KI hat entschieden.
  */
 @Composable
-private fun BucketPickerButton(
-    isManual: Boolean,
-    bucket: TimeBucket,
-    onClick: () -> Unit,
-) {
+private fun BucketPickerButton(isManual: Boolean, bucket: TimeBucket, onClick: () -> Unit) {
     val cosmos = LocalCosmos.current
     val accent = bucketAccent(bucket)
     val bg = if (isManual) accent.copy(alpha = 0.22f) else cosmos.glassBg
@@ -1254,10 +1301,10 @@ private fun BucketPickerButton(
     val pillShape = remember { RoundedCornerShape(50) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(bg, pillShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+        modifier =
+            Modifier.background(bg, pillShape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Icon(
             imageVector = bucketIcon(bucket),
@@ -1276,9 +1323,9 @@ private fun BucketPickerButton(
 }
 
 /**
- * Bottom-Sheet zur manuellen Bucket-Zuordnung (Frank-Wunsch 2026-05-09). Zeigt
- * vier Bucket-Optionen + "KI bestimmt" als Reset. Aktive Auswahl wird in der
- * Bucket-Akzent-Farbe hervorgehoben.
+ * Bottom-Sheet zur manuellen Bucket-Zuordnung (Frank-Wunsch 2026-05-09). Zeigt vier
+ * Bucket-Optionen + "KI bestimmt" als Reset. Aktive Auswahl wird in der Bucket-Akzent-Farbe
+ * hervorgehoben.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -1289,7 +1336,8 @@ private fun BucketPickerSheet(
     onClose: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState =
+        androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onClose,
@@ -1298,10 +1346,10 @@ private fun BucketPickerSheet(
         contentWindowInsets = { WindowInsets(0) },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .padding(bottom = bottomInset + 16.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = bottomInset + 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
@@ -1319,22 +1367,29 @@ private fun BucketPickerSheet(
             Spacer(Modifier.height(4.dp))
             // Vier Bucket-Optionen
             ALL_TIME_BUCKETS.forEach { bucket ->
-                val isActive = entry.manualBucket == bucket ||
-                    (entry.manualBucket == null && entry.timeBucket == bucket)
+                val isActive =
+                    entry.manualBucket == bucket ||
+                        (entry.manualBucket == null && entry.timeBucket == bucket)
                 BucketOptionRow(
                     bucket = bucket,
                     label = bucketLabelLong(bucket),
                     description = bucketDescription(bucket),
                     isActive = isActive,
                     isManual = entry.manualBucket == bucket,
-                    onClick = { onPick(bucket); onClose() },
+                    onClick = {
+                        onPick(bucket)
+                        onClose()
+                    },
                 )
             }
             // Reset auf KI
             if (entry.manualBucket != null) {
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.OutlinedButton(
-                    onClick = { onClearManual(); onClose() },
+                    onClick = {
+                        onClearManual()
+                        onClose()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                 ) {
@@ -1371,18 +1426,18 @@ private fun BucketOptionRow(
     val bg = if (isActive) accent.copy(alpha = 0.18f) else cosmos.glassBg
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(bg)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(accent.copy(alpha = 0.2f)),
+            modifier =
+                Modifier.size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(accent.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1417,43 +1472,48 @@ private fun BucketOptionRow(
     }
 }
 
-private fun bucketLabelLong(bucket: TimeBucket): String = when (bucket) {
-    TimeBucket.HEUTE -> "Heute"
-    TimeBucket.MORGEN -> "Morgen"
-    TimeBucket.FREIBLOCK -> "Freiblock"
-    TimeBucket.SPAETER -> "Später"
-}
+private fun bucketLabelLong(bucket: TimeBucket): String =
+    when (bucket) {
+        TimeBucket.HEUTE -> "Heute"
+        TimeBucket.MORGEN -> "Morgen"
+        TimeBucket.FREIBLOCK -> "Freiblock"
+        TimeBucket.SPAETER -> "Später"
+    }
 
-private fun bucketDescription(bucket: TimeBucket): String = when (bucket) {
-    TimeBucket.HEUTE -> "max. 5 Eintraege — schwächste Aufgabe rückt nach Morgen"
-    TimeBucket.MORGEN -> "rückt morgen automatisch in Heute"
-    TimeBucket.FREIBLOCK -> "nächster freier Schichtblock"
-    TimeBucket.SPAETER -> "kein Datum — Sammelbecken"
-}
+private fun bucketDescription(bucket: TimeBucket): String =
+    when (bucket) {
+        TimeBucket.HEUTE -> "max. 5 Eintraege — schwächste Aufgabe rückt nach Morgen"
+        TimeBucket.MORGEN -> "rückt morgen automatisch in Heute"
+        TimeBucket.FREIBLOCK -> "nächster freier Schichtblock"
+        TimeBucket.SPAETER -> "kein Datum — Sammelbecken"
+    }
 
 /** Farbiger Kreis mit Material-Icon basierend auf der Entropie-Kategorie. */
 @Composable
-private fun CategoryIconCircle(
+internal fun CategoryIconCircle(
     category: de.frank.entropyreducer.domain.model.EntropyCategory,
     tint: androidx.compose.ui.graphics.Color,
 ) {
-    val icon = when (category) {
-        de.frank.entropyreducer.domain.model.EntropyCategory.KOERPERLICH -> Icons.Outlined.Bolt
-        de.frank.entropyreducer.domain.model.EntropyCategory.MENTAL -> Icons.Outlined.Psychology
-        de.frank.entropyreducer.domain.model.EntropyCategory.ZEITLICH -> Icons.Outlined.AccessTime
-        de.frank.entropyreducer.domain.model.EntropyCategory.EMOTIONAL -> Icons.Outlined.FavoriteBorder
-        de.frank.entropyreducer.domain.model.EntropyCategory.GESUNDHEITLICH -> Icons.Outlined.MedicalServices
-        de.frank.entropyreducer.domain.model.EntropyCategory.UMGEBUNG -> Icons.Outlined.Home
-        de.frank.entropyreducer.domain.model.EntropyCategory.SONSTIGES -> Icons.Outlined.MoreHoriz
-    }
+    val icon =
+        when (category) {
+            de.frank.entropyreducer.domain.model.EntropyCategory.KOERPERLICH -> Icons.Outlined.Bolt
+            de.frank.entropyreducer.domain.model.EntropyCategory.MENTAL -> Icons.Outlined.Psychology
+            de.frank.entropyreducer.domain.model.EntropyCategory.ZEITLICH ->
+                Icons.Outlined.AccessTime
+            de.frank.entropyreducer.domain.model.EntropyCategory.EMOTIONAL ->
+                Icons.Outlined.FavoriteBorder
+            de.frank.entropyreducer.domain.model.EntropyCategory.GESUNDHEITLICH ->
+                Icons.Outlined.MedicalServices
+            de.frank.entropyreducer.domain.model.EntropyCategory.UMGEBUNG -> Icons.Outlined.Home
+            de.frank.entropyreducer.domain.model.EntropyCategory.SONSTIGES ->
+                Icons.Outlined.MoreHoriz
+        }
     // PERFORMANCE 2026-05-09: clip() entfernt — background(color, CircleShape)
     // zeichnet den Kreis direkt, das Icon ist innerhalb der size(44.dp) und
     // hat selbst nur 22.dp, kein Overflow moeglich.
     val circleShape = remember { RoundedCornerShape(50) }
     Box(
-        modifier = Modifier
-            .size(44.dp)
-            .background(tint.copy(alpha = 0.15f), circleShape),
+        modifier = Modifier.size(44.dp).background(tint.copy(alpha = 0.15f), circleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -1466,12 +1526,12 @@ private fun CategoryIconCircle(
 }
 
 /**
- * 5-Segment-Severity-Bar im Regenbogen-Stil (Soll-Design). Die Segmente sind
- * gleich groß, der "ausgefuellte" Anteil ergibt sich aus severity/10. Nicht
- * gefuellte Segmente sind ausgegraut, gefuellte zeigen ihre Status-Farbe.
+ * 5-Segment-Severity-Bar im Regenbogen-Stil (Soll-Design). Die Segmente sind gleich groß, der
+ * "ausgefuellte" Anteil ergibt sich aus severity/10. Nicht gefuellte Segmente sind ausgegraut,
+ * gefuellte zeigen ihre Status-Farbe.
  */
 @Composable
-private fun SeverityRainbowBar(severity: Int) {
+internal fun SeverityRainbowBar(severity: Int) {
     val cosmos = LocalCosmos.current
     val sev = severity.coerceIn(1, 10)
     // PERFORMANCE 2026-05-09: Komplette Neuimplementierung mit Canvas — vorher
@@ -1489,11 +1549,7 @@ private fun SeverityRainbowBar(severity: Int) {
         )
     }
     val emptyColor = cosmos.glassBg
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp),
-    ) {
+    Canvas(modifier = Modifier.fillMaxWidth().height(6.dp)) {
         val segmentCount = 5
         val gap = 3.dp.toPx()
         val totalGap = gap * (segmentCount - 1)
@@ -1521,19 +1577,21 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // Bucket-Time-Label (TimeBucket)
-        val bucketLabel = when (entry.timeBucket) {
-            de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "heute"
-            de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "morgen"
-            de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Freiblock"
-            de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
-        }
-        val durationHint = entry.estimatedDurationMinutes?.let {
-            when {
-                it < 60 -> "$it min"
-                it < 24 * 60 -> "${it / 60} h"
-                else -> "${it / (24 * 60)} d"
+        val bucketLabel =
+            when (entry.timeBucket) {
+                de.frank.entropyreducer.domain.model.TimeBucket.HEUTE -> "heute"
+                de.frank.entropyreducer.domain.model.TimeBucket.MORGEN -> "morgen"
+                de.frank.entropyreducer.domain.model.TimeBucket.FREIBLOCK -> "Freiblock"
+                de.frank.entropyreducer.domain.model.TimeBucket.SPAETER -> "später"
             }
-        }
+        val durationHint =
+            entry.estimatedDurationMinutes?.let {
+                when {
+                    it < 60 -> "$it min"
+                    it < 24 * 60 -> "${it / 60} h"
+                    else -> "${it / (24 * 60)} d"
+                }
+            }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.AccessTime,
@@ -1556,9 +1614,9 @@ private fun EntryMetaRow(entry: EntropyEntryEntity, modifier: Modifier = Modifie
                 text = "Empfohlen",
                 color = CosmosColors.Success,
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .background(CosmosColors.Success.copy(alpha = 0.15f), pillShape)
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                modifier =
+                    Modifier.background(CosmosColors.Success.copy(alpha = 0.15f), pillShape)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
         // Wearable-Indikator (wenn ein Biomarker-Snapshot verlinkt ist)
@@ -1603,7 +1661,8 @@ private fun EmptyState() {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Die KI ordnet es ein, priorisiert es und plant es in deinen Schichtkalender ein.",
+            text =
+                "Die KI ordnet es ein, priorisiert es und plant es in deinen Schichtkalender ein.",
             style = MaterialTheme.typography.bodyMedium,
             color = cosmos.textSecondary,
             modifier = Modifier.padding(horizontal = 24.dp),
@@ -1612,45 +1671,41 @@ private fun EmptyState() {
 }
 
 /**
- * Kleine, dezente Statuszeile direkt unter dem Titel "Entropie Reduktor".
- * Zeigt visuell ob Drive-Backup gerade laeuft, fertig ist oder fehlgeschlagen ist
- * — und seit wann. Frank-Wunsch 2026-05-09: er will nach jedem neuen Eintrag
- * sofort sehen "okay, das ist im Backup".
+ * Kleine, dezente Statuszeile direkt unter dem Titel "Entropie Reduktor". Zeigt visuell ob
+ * Drive-Backup gerade laeuft, fertig ist oder fehlgeschlagen ist — und seit wann. Frank-Wunsch
+ * 2026-05-09: er will nach jedem neuen Eintrag sofort sehen "okay, das ist im Backup".
  */
 @Composable
 private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
     val cosmos = LocalCosmos.current
-    val (icon, tint, label) = when (syncStatus) {
-        SyncStatus.Idle -> Triple(
-            Icons.Outlined.CloudDone,
-            CosmosColors.Success,
-            if (lastBackupAtMs > 0L) "Backup: ${formatBackupTime(lastBackupAtMs)}" else "Backup eingerichtet",
-        )
-        SyncStatus.Pending -> Triple(
-            Icons.Outlined.CloudSync,
-            CosmosColors.AccentSecondary,
-            "Aenderung erfasst — Backup startet gleich",
-        )
-        SyncStatus.Running -> Triple(
-            Icons.Outlined.CloudSync,
-            CosmosColors.AccentPrimary,
-            "Backup laeuft …",
-        )
-        is SyncStatus.Synced -> Triple(
-            Icons.Outlined.CloudDone,
-            CosmosColors.Success,
-            "Im Backup gesichert: ${formatBackupTime(syncStatus.atEpochMs)}",
-        )
-        is SyncStatus.Failed -> Triple(
-            Icons.Outlined.CloudOff,
-            CosmosColors.Critical,
-            "Backup fehlgeschlagen",
-        )
-    }
+    val (icon, tint, label) =
+        when (syncStatus) {
+            SyncStatus.Idle ->
+                Triple(
+                    Icons.Outlined.CloudDone,
+                    CosmosColors.Success,
+                    if (lastBackupAtMs > 0L) "Backup: ${formatBackupTime(lastBackupAtMs)}"
+                    else "Backup eingerichtet",
+                )
+            SyncStatus.Pending ->
+                Triple(
+                    Icons.Outlined.CloudSync,
+                    CosmosColors.AccentSecondary,
+                    "Aenderung erfasst — Backup startet gleich",
+                )
+            SyncStatus.Running ->
+                Triple(Icons.Outlined.CloudSync, CosmosColors.AccentPrimary, "Backup laeuft …")
+            is SyncStatus.Synced ->
+                Triple(
+                    Icons.Outlined.CloudDone,
+                    CosmosColors.Success,
+                    "Im Backup gesichert: ${formatBackupTime(syncStatus.atEpochMs)}",
+                )
+            is SyncStatus.Failed ->
+                Triple(Icons.Outlined.CloudOff, CosmosColors.Critical, "Backup fehlgeschlagen")
+        }
     Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth(),
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -1660,31 +1715,22 @@ private fun BackupStatusBadge(syncStatus: SyncStatus, lastBackupAtMs: Long) {
             modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.width(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = cosmos.textSecondary,
-        )
+        Text(text = label, style = MaterialTheme.typography.bodySmall, color = cosmos.textSecondary)
     }
 }
 
 /**
- * Banner direkt unter dem Titel "Entropie Reduktor" wenn gerade alle offenen
- * Aufgaben mit der aktualisierten priorityScore-Doktrin neu bewertet werden
- * (Frank-Wunsch 2026-05-09 — neue 5-Farben-Skala basiert auf Entropie-
- * Reduktion). Zeigt Fortschritt "X von Y", einen schmalen Balken und am Ende
- * "Fertig: X von Y neu bewertet" fuer 3 Sekunden bevor der Banner verschwindet.
+ * Banner direkt unter dem Titel "Entropie Reduktor" wenn gerade alle offenen Aufgaben mit der
+ * aktualisierten priorityScore-Doktrin neu bewertet werden (Frank-Wunsch 2026-05-09 — neue
+ * 5-Farben-Skala basiert auf Entropie- Reduktion). Zeigt Fortschritt "X von Y", einen schmalen
+ * Balken und am Ende "Fertig: X von Y neu bewertet" fuer 3 Sekunden bevor der Banner verschwindet.
  */
 @Composable
 private fun RescoreBanner(progress: RescoreProgress) {
     val cosmos = LocalCosmos.current
     val isFinished = progress.done + progress.failed >= progress.total
     val accent = if (isFinished) CosmosColors.Success else CosmosColors.AccentPrimary
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .fillMaxWidth(),
-    ) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.AutoAwesome,
@@ -1693,14 +1739,15 @@ private fun RescoreBanner(progress: RescoreProgress) {
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(6.dp))
-            val label = when {
-                isFinished && progress.failed == 0 ->
-                    "Aufgaben mit neuer Skala neu bewertet (${progress.done} von ${progress.total})"
-                isFinished && progress.failed > 0 ->
-                    "Neu bewertet: ${progress.done} von ${progress.total} — ${progress.failed} fehlgeschlagen"
-                else ->
-                    "Aufgaben werden mit neuer Skala neu bewertet … ${progress.done} von ${progress.total}"
-            }
+            val label =
+                when {
+                    isFinished && progress.failed == 0 ->
+                        "Aufgaben mit neuer Skala neu bewertet (${progress.done} von ${progress.total})"
+                    isFinished && progress.failed > 0 ->
+                        "Neu bewertet: ${progress.done} von ${progress.total} — ${progress.failed} fehlgeschlagen"
+                    else ->
+                        "Aufgaben werden mit neuer Skala neu bewertet … ${progress.done} von ${progress.total}"
+                }
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
@@ -1710,7 +1757,9 @@ private fun RescoreBanner(progress: RescoreProgress) {
         Spacer(Modifier.height(4.dp))
         if (!isFinished && progress.total > 0) {
             LinearProgressIndicator(
-                progress = { (progress.done + progress.failed).toFloat() / progress.total.toFloat() },
+                progress = {
+                    (progress.done + progress.failed).toFloat() / progress.total.toFloat()
+                },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
                 color = accent,
                 trackColor = cosmos.glassBg,
@@ -1735,40 +1784,37 @@ private val BACKUP_TIME_OLDER_FMT: ThreadLocal<SimpleDateFormat> = ThreadLocal.w
 /** Formatiert einen Epoch-ms-Zeitstempel in "HH:mm" (heute) oder "dd.MM. HH:mm" (sonst). */
 private fun formatBackupTime(epochMs: Long): String {
     val now = System.currentTimeMillis()
-    val today0 = Date(now).run {
-        // 0:00 Lokalzeit
-        java.util.Calendar.getInstance().apply {
-            timeInMillis = now
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
-    }
-    val fmt = if (epochMs >= today0) BACKUP_TIME_TODAY_FMT.get()!! else BACKUP_TIME_OLDER_FMT.get()!!
+    val today0 =
+        Date(now).run {
+            // 0:00 Lokalzeit
+            java.util.Calendar.getInstance()
+                .apply {
+                    timeInMillis = now
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                .timeInMillis
+        }
+    val fmt =
+        if (epochMs >= today0) BACKUP_TIME_TODAY_FMT.get()!! else BACKUP_TIME_OLDER_FMT.get()!!
     return fmt.format(Date(epochMs))
 }
 
 /**
- * Berechnet den absoluten LazyColumn-Item-Index einer Aufgabe (Frank-Wunsch
- * 2026-05-11). Muss exakt die Reihenfolge der item()/items()-Aufrufe in der
- * LazyColumn nachbilden:
- *   0: briefing
- *   1: ki-question (optional)
- *   2: category-filter
- *   3..N: Pro nicht-leerem Bucket 1 Header + 1 Eintrag pro Aufgabe
- * Liefert -1 wenn die Aufgabe nicht in den aktiven Buckets gefunden wurde.
+ * Berechnet den absoluten LazyColumn-Item-Index einer Aufgabe (Frank-Wunsch 2026-05-11). Muss exakt
+ * die Reihenfolge der item()/items()-Aufrufe in der LazyColumn nachbilden: 0: briefing 1:
+ * ki-question (optional) 2: category-filter 3..N: Pro nicht-leerem Bucket 1 Header + 1 Eintrag pro
+ * Aufgabe Liefert -1 wenn die Aufgabe nicht in den aktiven Buckets gefunden wurde.
  */
-private fun computeTaskItemIndex(
-    state: TasksUiState,
-    taskId: String,
-): Int {
+private fun computeTaskItemIndex(state: TasksUiState, taskId: String): Int {
     var idx = 0
     idx++ // briefing
     if (state.kiQuestion != null) idx++ // ki-question
     idx++ // category-filter
-    val isEmpty = state.entriesByBucket.values.all { it.isEmpty() } &&
-        state.resolvedEntries.isEmpty()
+    val isEmpty =
+        state.entriesByBucket.values.all { it.isEmpty() } && state.resolvedEntries.isEmpty()
     if (isEmpty) return -1
     for (bucket in ALL_TIME_BUCKETS) {
         val list = state.entriesByBucket[bucket].orEmpty()

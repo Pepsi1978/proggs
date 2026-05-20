@@ -114,6 +114,18 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 onSwitchTab = { route -> nav.tabSwitch(route) },
                 currentTab = Routes.TASKS,
                 onOpenSubArea = onOpenSubArea,
+                onOpenEntryDetail = { entryId -> nav.navigate(Routes.entropyEntryDetail(entryId)) },
+            )
+        }
+        composable(
+            route = Routes.ENTROPY_ENTRY_DETAIL_PATTERN,
+            arguments = listOf(navArgument("entryId") { type = NavType.StringType }),
+        ) {
+            de.frank.entropyreducer.presentation.dashboard1.detail.EntryDetailScreen(
+                onBack = {
+                    nav.popBackStack()
+                    Unit
+                }
             )
         }
         composable(Routes.ANALYSIS) {
