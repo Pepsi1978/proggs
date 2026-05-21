@@ -4,11 +4,6 @@ description: Wendet exakt EINEN konkreten Fix an. Pflicht-Mandats-Disziplin: kei
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: opus
 effort: max
-known-hide-apis:
-  - "Settings.ACTION_BACKUP_SETTINGS → \"android.settings.BACKUP_SETTINGS\""
-  - "Settings.ACTION_WIFI_SETTINGS → offen, direkter Name erlaubt"
-  - "Settings.ACTION_LOCATION_SOURCE_SETTINGS → offen, direkter Name erlaubt"
-  - "Settings.ACTION_APPLICATION_DETAILS_SETTINGS → offen, direkter Name erlaubt"
 ---
 
 # Fix-Applier — finale
@@ -79,6 +74,19 @@ aus dem 2026-05-18-Lauf).
    Intent("android.settings.BACKUP_SETTINGS")
    ```
 
+   **Bekannte @hide-APIs und ihre öffentlichen Ersatz-Strings:**
+
+   | Symbol | @hide? | Verwendung |
+   |--------|--------|-----------|
+   | `Settings.ACTION_BACKUP_SETTINGS` | JA | String-Literal: `"android.settings.BACKUP_SETTINGS"` |
+   | `Settings.ACTION_WIFI_SETTINGS` | NEIN | Direkter Symbol-Name erlaubt |
+   | `Settings.ACTION_LOCATION_SOURCE_SETTINGS` | NEIN | Direkter Symbol-Name erlaubt |
+   | `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` | NEIN | Direkter Symbol-Name erlaubt |
+
+   Bei unbekannten APIs: Android-SDK-Doku konsultieren (developer.android.com),
+   `@hide`-Markierung am Symbol prüfen. Im Zweifel String-Literal verwenden — das
+   funktioniert auch bei nicht-@hide-Symbolen.
+
 4. **Package-Namens-Konflikt-Check:** Wenn Klasse X in mehreren Packages vorkommt,
    voll-qualifizierten Pfad verwenden statt nur einfachen Namen.
 
@@ -120,9 +128,9 @@ Bei FAIL:
    Häufig vergessene Imports: `Intent`, `Settings`, `Toast`, `Uri`, `Locale`,
    `LocalContext`, `stringResource`, `rememberCoroutineScope`.
 
-2. **@hide-API-Scan:** Prüfe ob dein Edit eine der bekannten @hide-APIs aus dem
-   Frontmatter-Feld `known-hide-apis` referenziert. Falls ja: sofort auf String-Literal
-   umstellen bevor der Edit angewendet wird.
+2. **@hide-API-Scan:** Prüfe ob dein Edit eine der bekannten @hide-APIs aus der
+   Tabelle in der @hide-API-Detection-Sektion (oben in diesem Dokument) referenziert.
+   Falls ja: sofort auf String-Literal umstellen bevor der Edit angewendet wird.
 
 3. **Nested-@Composable-Scan:** Wenn dein Edit eine neue nested function einfügt die
    `stringResource()`, `LocalContext.current`, `rememberX()` oder andere Composable-Calls

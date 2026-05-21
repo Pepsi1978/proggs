@@ -1,5 +1,5 @@
 {
-	"description": "finale hooks: skill-symlink-verification at session start, destructive-bash-guard in plugin output dirs, strings.xml lint after write/edit.",
+	"description": "finale hooks: skill-symlink-verification at session start, destructive-bash-guard in plugin output dirs, audit-only write protection, strings.xml lint after write/edit. Cross-Platform: .sh-Hooks via bash (Git Bash auf Windows, native auf Unix). PowerShell-Pendants existieren als .ps1 fuer Windows ohne bash — siehe README fuer Umstellung.",
 	"hooks": {
 		"SessionStart": [
 			{
@@ -20,6 +20,16 @@
 					{
 						"type": "command",
 						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse-bash.sh\"",
+						"async": false
+					}
+				]
+			},
+			{
+				"matcher": "Edit|Write|MultiEdit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/audit-only-write-guard.sh\"",
 						"async": false
 					}
 				]

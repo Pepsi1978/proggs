@@ -3,6 +3,7 @@ name: url-checker
 description: Performs lightweight HTTP HEAD checks for privacy, imprint, terms and other mandatory URLs in the finale pipeline. Returns reachability, redirect targets, and a coarse error class. Sonnet-tier, low-cost.
 tools: WebFetch, Bash
 model: sonnet
+effort: low
 ---
 
 # url-checker — HTTP-HEAD-Prüfer für Pflicht-URLs

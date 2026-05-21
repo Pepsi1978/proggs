@@ -62,7 +62,7 @@ Alle Commands akzeptieren optional einen Pfad zum Android-Projekt-Root als Argum
 finale/
 ├── .claude-plugin/plugin.json
 ├── commands/                                 ← Slash-Command-Eintritte
-│   ├── shield.md          (/finale:run)
+│   ├── run.md             (/finale:run)
 │   ├── audit-only.md
 │   ├── fix-only.md
 │   ├── strings.md
@@ -81,11 +81,34 @@ finale/
 │   └── verify-skills.sh   (Phase-0-Tor-Wächter; POSIX, JSON-Output)
 ├── hooks/
 │   ├── hooks.json
-│   ├── session-start.sh           (SessionStart: Symlink-Status, nicht blockierend)
-│   ├── pretooluse-bash.sh         (PreToolUse Bash: blockt rm -rf in .android-shield/+res/)
-│   └── posttooluse-strings-xml.sh (PostToolUse: strings.xml Apostroph-Lint)
+│   ├── session-start.sh                   (SessionStart: Symlink-Status, Post-Install-Wizard)
+│   ├── session-start.ps1                  (PowerShell-Pendant fuer Windows ohne Git-Bash)
+│   ├── pretooluse-bash.sh                 (PreToolUse Bash: blockt rm -rf, cat>, tee, cp/mv, dd auf geschuetzte Dateien)
+│   ├── pretooluse-bash.ps1                (PowerShell-Pendant)
+│   ├── audit-only-write-guard.sh          (PreToolUse Edit/Write: blockt App-Schreibversuche im audit-only-Modus)
+│   ├── audit-only-write-guard.ps1         (PowerShell-Pendant)
+│   ├── posttooluse-strings-xml.sh         (PostToolUse: strings.xml Apostroph-Lint)
+│   └── posttooluse-strings-xml.ps1        (PowerShell-Pendant)
 └── README.md
 ```
+
+### Cross-Platform-Hooks
+
+Jeder Hook hat zwei Implementierungen: `.sh` fuer Git Bash / Unix-Shells und `.ps1`
+fuer native PowerShell. **Standardmaessig sind in `hooks/hooks.json` nur die `.sh`-
+Hooks registriert** — sie funktionieren auf macOS, Linux und Windows mit Git Bash.
+
+Auf einem nativen Windows-System ohne Git Bash muessen die Hook-Aufrufe in
+`hooks/hooks.json` manuell auf die `.ps1`-Variante umgestellt werden:
+
+```diff
+- "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\""
++ "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ps1\""
+```
+
+Beide Implementierungen haben **identische Logik** — bei Aenderung der Patterns
+in der einen IMMER die andere mitziehen. Das ist Defense in Depth: die Skripte
+sind synchronisiert, der Schutz bleibt aktiv unabhaengig von der gewaehlten Shell.
 
 ---
 

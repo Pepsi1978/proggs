@@ -92,6 +92,29 @@ Du wirst über fünf verschiedene Slash-Commands aufgerufen. Jeder Command über
 | `/finale:strings` | `strings-only` | Phase 0 → 1 (nur Roentgen+Strings-Plan) → Strings-Skill anwenden → Report |
 | `/finale:translate` | `translate-only` | Phase 0 → Übersetzer-Skill + Cross-Lingual-Rechtsprüfung |
 
+### Phase-Bezeichner (formales Vokabular)
+
+Commands geben in ihrem Frontmatter `phases: [...]` die zu durchlaufenden Phasen an.
+Folgende Bezeichner sind erlaubt und MUSS der Orchestrator exakt so verstehen:
+
+| Phase-ID | Beschreibung | Genutzt von |
+|----------|--------------|-------------|
+| `0` | Skill-Verifikation | alle Modi (PFLICHT, kein Skip) |
+| `1` | Audit (Roentgen-Skill + Rechtssicherheits-Skill) | default, audit-only, fix-only (lädt) |
+| `1-roentgen-only` | Nur Roentgen-Scan + Strings-Plan, kein Rechtsaudit | strings-only |
+| `2` | Interaktiver Fix-Workflow | default, fix-only |
+| `3` | Delta-Pipeline (Vollform: 3a + 3b + 3c) | default |
+| `3a-strings` | Hardcode-zu-strings.xml-Migration | default, fix-only, strings-only |
+| `3b` | Übersetzer-Phase (parallel pro Sprache) | default, translate-only |
+| `3c` | Cross-Lingual-Rechtsprüfung pro Sprache | default, translate-only |
+| `4` | Re-Audit + Build-Validation (W4) | default, fix-only |
+| `5` | Loop-Entscheidung (openFindingsCount=0 → fertig) | default, fix-only |
+
+**Refactoring-Regel:** Wenn ein neuer Phase-Bezeichner eingeführt wird, MUSS er
+zuerst in dieser Tabelle eingetragen werden BEVOR er in einem Command-Frontmatter
+auftaucht. Sonst kann der Orchestrator den unbekannten Bezeichner nicht zuordnen
+und bricht still ab.
+
 ---
 
 ## App-Root-Auflösung (vor Phase 0)
@@ -144,7 +167,7 @@ Diese Phase ist nicht überspringbar. Sie läuft VOR jeder anderen Phase, in jed
 ### Schritt 0 — FINALE_PLUGIN_ROOT auflösen (FIN-002, allererster Schritt)
 
 Bevor irgendein Bash-Aufruf erfolgt, MUSS `FINALE_PLUGIN_ROOT` aufgelöst werden.
-`${FINALE_PLUGIN_ROOT}` steht in der Bash-Umgebung von Subagenten NICHT zur Verfügung.
+`${CLAUDE_PLUGIN_ROOT}` steht in der Bash-Umgebung von Subagenten NICHT zur Verfügung.
 
 ```bash
 FINALE_PLUGIN_ROOT="$(python3 -c "
@@ -159,7 +182,7 @@ if [ -z "$FINALE_PLUGIN_ROOT" ]; then
 fi
 ```
 
-Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${FINALE_PLUGIN_ROOT}` verwenden.
+Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${CLAUDE_PLUGIN_ROOT}` verwenden.
 
 ### Schritte
 
@@ -195,6 +218,42 @@ Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${FINALE_PLUGIN_ROOT}` verw
    > [3] Abbruch
 
 7. **Am Ende jedes Laufs** (egal ob completed / interrupted / error): `.android-shield/skill-versions.json` neu schreiben mit aktuellen Hashes + `lastRunTimestamp` + `lastRunMode` + `lastRunStatus`.
+
+### Schritt 8 — Audit-Only-Lock-Lifecycle (PFLICHT — nur im Modus `audit-only`)
+
+Wenn `mode == "audit-only"` UND die Pre-Flight-Freigabe `[F]` erteilt wurde:
+
+1. **Stale-Lock-Detection (vor Lock-Anlage):** Pruefe ob bereits eine
+   `<app-root>/.android-shield/.audit-only.lock` existiert. Wenn ja UND
+   die Datei ist aelter als 24 Stunden (mtime-Vergleich), automatisch
+   loeschen (Hinweis: vorheriger Lauf ist gecrasht). Wenn sie juenger
+   als 24h ist: Abbruch mit Frage an Nutzer ob er den Lock manuell
+   loeschen will (zwei laufende audit-only-Modi koennen sich nicht
+   sinnvoll ueberlappen).
+
+2. **Lock anlegen (vor Phase 1):** Schreibe
+   `<app-root>/.android-shield/.audit-only.lock` mit Inhalt:
+   ```
+   timestamp: <ISO-8601>
+   orchestratorPid: <PID>
+   mode: audit-only
+   ```
+   Sobald die Datei existiert, blockiert der `audit-only-write-guard`-Hook
+   alle Schreibversuche an App-Dateien (alles ausserhalb `.android-shield/`).
+
+3. **Lock loeschen (Pflicht-Cleanup):** Beim regulaeren Ende, beim Interrupt UND
+   bei Fehlern MUSS die Lock-Datei wieder geloescht werden. Implementiere als
+   `finally`-Block der in jeder Code-Verzweigung erreicht wird. Wenn die Lock-Datei
+   nicht geloescht werden konnte (z. B. Berechtigungsproblem): klare Fehlermeldung
+   an den Nutzer ausgeben mit dem Hinweis `rm <app-root>/.android-shield/.audit-only.lock`.
+
+4. **Audit-Log-Eintrag:** Beim Lock-Setzen `audit-lock: acquired @ <ts>` ins
+   Audit-Log. Beim Loeschen `audit-lock: released @ <ts>`. Bei Stale-Lock-Loeschen
+   `audit-lock: stale-cleared (was from <ts>)`.
+
+Diese drei Punkte zusammen implementieren Poka-Yoke Stufe 2 (Erzwingung):
+Selbst wenn der Orchestrator-Prompt einen Subagent vergisst zu instruieren
+"nicht in App-Dateien schreiben", blockiert der Hook jeden Versuch.
 
 ### Pre-Flight-Plan-Format
 

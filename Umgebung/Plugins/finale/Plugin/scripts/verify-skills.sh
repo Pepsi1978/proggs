@@ -15,9 +15,18 @@
 # ARGUMENTE:
 #   $1  (optional) App-Root — absoluter Pfad zur App die geprueft werden soll
 #                  (z. B. /c/Users/barwa/proggs/BestJournalAndroid).
-#                  Wird fuer app-spezifische Sanity-Checks verwendet
-#                  (z. B. AndroidManifest.xml-Pruefung), sobald diese
-#                  implementiert sind. Aktuell noch ungenutzt.
+#                  Wenn gegeben, wird ein App-Root-Sanity-Check durchgefuehrt:
+#                    - Pfad existiert UND ist ein Verzeichnis
+#                    - Enthaelt mindestens einen Android-Marker:
+#                      AndroidManifest.xml, app/src/main/AndroidManifest.xml,
+#                      settings.gradle, settings.gradle.kts
+#                  Ergebnis landet im JSON-Output unter "appRootSanity":
+#                    "not-checked" — $1 leer
+#                    "ok"          — Verzeichnis existiert + Android-Marker gefunden
+#                    "warn"        — Verzeichnis existiert, aber kein Android-Marker
+#                    "error"       — Pfad existiert nicht oder ist kein Verzeichnis
+#                  Beim SessionStart-Hook wird $1 NICHT uebergeben (sinnlos, App
+#                  ist da noch unbekannt). Nur der Orchestrator ruft mit App-Root.
 #
 # PLUGIN-ROOT:
 #   Wird IMMER aus SCRIPT_DIR/.. abgeleitet — nicht per Argument ueberschreibbar.
@@ -129,6 +138,34 @@ references_count_of() {
 
 log "Plugin-Root: $PLUGIN_ROOT"
 log "Skills-Verzeichnis: $SKILLS_DIR"
+
+# -----------------------------------------------------------------------------
+# App-Root-Sanity-Check (optional, implementiert 2026-05-21 — vorher TODO)
+# -----------------------------------------------------------------------------
+#
+# Wenn ein App-Root-Pfad uebergeben wurde, pruefe ob es plausibel eine Android-
+# App ist. Das erkennt Tippfehler/falsche Pfade frueh — bevor Phase 1 startet.
+
+APP_ROOT_SANITY="not-checked"
+APP_ROOT_PROBLEM=""
+
+if [ -n "$APP_ROOT" ]; then
+  if [ ! -d "$APP_ROOT" ]; then
+    APP_ROOT_SANITY="error"
+    APP_ROOT_PROBLEM="app-root-not-a-directory"
+    err "App-Root '$APP_ROOT': Pfad existiert nicht oder ist kein Verzeichnis"
+  elif [ -f "$APP_ROOT/AndroidManifest.xml" ] \
+    || [ -f "$APP_ROOT/app/src/main/AndroidManifest.xml" ] \
+    || [ -f "$APP_ROOT/settings.gradle.kts" ] \
+    || [ -f "$APP_ROOT/settings.gradle" ]; then
+    APP_ROOT_SANITY="ok"
+    log "App-Root '$APP_ROOT': OK (Android-Marker gefunden)"
+  else
+    APP_ROOT_SANITY="warn"
+    APP_ROOT_PROBLEM="no-android-markers-found"
+    log "App-Root '$APP_ROOT': WARN — keine Android-Marker gefunden (kein AndroidManifest.xml, kein settings.gradle*)"
+  fi
+fi
 
 if [ ! -d "$SKILLS_DIR" ]; then
   err "Skills-Verzeichnis fehlt: $SKILLS_DIR"
@@ -249,6 +286,9 @@ cat <<JSON
   "timestamp": "$ts",
   "pluginRoot": "$(json_escape "$PLUGIN_ROOT")",
   "skillsDir": "$(json_escape "$SKILLS_DIR")",
+  "appRoot": "$(json_escape "$APP_ROOT")",
+  "appRootSanity": "$(json_escape "$APP_ROOT_SANITY")",
+  "appRootProblem": "$(json_escape "$APP_ROOT_PROBLEM")",
   "skills": [
 $joined
   ]

@@ -19,7 +19,7 @@ Read-Only-Lauf: vollständige Durchleuchtung der App, vollständiger Rechtsberic
 
 ## App-Namen-Auflösung (PFLICHT vor dem Orchestrator-Spawn)
 
-Identische Logik wie in `/finale:run` (siehe shield.md): wenn der Nutzer einen App-Namen
+Identische Logik wie in `/finale:run` (siehe run.md): wenn der Nutzer einen App-Namen
 nennt statt eines Pfads, vor dem Spawn auflösen via `~/proggs/<fuzzy-match>/`. Beispiele:
 - „Best Journal Android" → `~/proggs/BestJournalAndroid/`
 - „Best Journal Frank" → `~/proggs/BestJournalFrank/`
@@ -52,5 +52,7 @@ Der Orchestrator führt Phase 0 und Phase 1 aus, erzeugt:
 
 ## Wichtig
 
-- Diese Datei-Schutz-Pflicht wird durch den Pre-Hook `block-app-writes-in-audit-only` erzwungen (siehe `hooks/hooks.json`). Versucht ein Subagent dennoch in `res/`, `src/`, `AndroidManifest.xml` zu schreiben, wird der Versuch blockiert und im Audit-Log mit `phase-violation` markiert.
+- Diese Datei-Schutz-Pflicht wird durch den Pre-Hook `audit-only-write-guard` erzwungen (siehe `hooks/hooks.json`, registriert auf `PreToolUse` mit Matcher `Edit|Write|MultiEdit`). Der Hook prueft ob die Lock-Datei `<app-root>/.android-shield/.audit-only.lock` existiert. Wenn ja UND die zu schreibende Datei NICHT unter `.android-shield/` liegt, blockiert der Hook mit Exit 2.
+- **Lock-Lifecycle (Orchestrator-Pflicht):** Beim Start des audit-only-Modus MUSS der Orchestrator die Lock-Datei `<app-root>/.android-shield/.audit-only.lock` anlegen (mit Zeitstempel als Inhalt). Am Ende des Modus (regulaer ODER abgebrochen) MUSS der Orchestrator die Lock-Datei wieder loeschen. Bei Crash bleibt eine Stale-Lock zurueck — beim naechsten Start muss der Orchestrator solche Locks (aelter als 24 Stunden) automatisch loeschen.
+- **Schreiben innerhalb `.android-shield/` ist immer erlaubt** — das ist die Plugin-Output-Domain (Reports, audit-log, skill-versions). Nur die App-Quellen (res/, src/, AndroidManifest.xml, build.gradle.kts etc.) sind gesperrt.
 - Phase 0 muss trotzdem laufen. Tote Symlinks → Abbruch wie immer.

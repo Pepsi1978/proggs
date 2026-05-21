@@ -2,9 +2,14 @@
 # pretooluse-bash.sh
 #
 # Blockiert destruktive Bash-Commands die das Plugin-Output-Verzeichnis
-# (.android-shield/) oder den Android-Ressourcen-Ordner (res/) gefaehrden
-# wuerden. Lest die Bash-Command-Eingabe aus stdin (Claude Code Hook-Konvention)
-# und entscheidet ob der Befehl durchgelassen oder blockiert wird.
+# (.android-shield/) oder Android-Ressourcen-Dateien (strings.xml,
+# AndroidManifest.xml, build.gradle.kts) gefaehrden wuerden.
+#
+# Verbessert vom 2026-05-21 (Direktive #3, Task 6):
+# - Pattern-Liste erweitert: deckt jetzt auch cat>, tee (mit -a), cp/mv mit
+#   geschuetzter Ziel-Datei und dd of= ab
+# - Geschuetzte Dateien jetzt: strings.xml, AndroidManifest.xml, build.gradle,
+#   build.gradle.kts (vorher nur strings.xml)
 #
 # Verhalten:
 # - Gefaehrlicher Befehl -> Exit 2 (Block), klare Begruendung auf stderr
@@ -18,8 +23,7 @@ if [ -z "$stdin_input" ]; then
   exit 0
 fi
 
-# Robust extrahieren ohne jq-Pflicht. Wir suchen "command":"..." im JSON-Blob.
-# Bei Fehler stillschweigend durchlassen — wir wollen nichts kaputtmachen.
+# Bash-Command aus JSON extrahieren
 cmd="$(printf '%s' "$stdin_input" | python3 -c "
 import sys, json
 try:
@@ -35,13 +39,13 @@ if [ -z "$cmd" ]; then
   exit 0
 fi
 
-# Patterns die destruktiv und gefaehrlich sind in unserem Scope.
-# Beachte: wir greifen NUR wenn der Pfad .android-shield/ oder res/values*/strings.xml
-# (oder ein leerer/absoluter rm -rf auf das App-Root) betroffen ist.
+# Geschuetzte Dateinamen als Regex-Alternativ-Pattern.
+# build.gradle.kts steht VOR build.gradle damit der laengere Match zuerst greift.
+PROTECTED='(strings\.xml|AndroidManifest\.xml|build\.gradle\.kts|build\.gradle)'
 
 block_reason=""
 
-# 1. rm -rf auf .android-shield/ oder res/
+# Pattern 1 — rm -rf auf .android-shield/ oder res/
 if printf '%s' "$cmd" | grep -E -q 'rm[[:space:]]+-r[fF][[:space:]]+.*\.android-shield(/|\b)'; then
   block_reason="rm -rf auf .android-shield/ — das wuerde alle Plugin-Reports und das audit-log loeschen"
 elif printf '%s' "$cmd" | grep -E -q 'rm[[:space:]]+-r[fF][[:space:]]+.*\bres/values'; then
@@ -50,23 +54,42 @@ elif printf '%s' "$cmd" | grep -E -q 'rm[[:space:]]+-r[fF][[:space:]]+.*\bres(/|
   block_reason="rm -rf auf res/ — das wuerde alle App-Ressourcen zerstoeren"
 fi
 
-# 2. > strings.xml (Umleitung in eine strings.xml = komplettes Ueberschreiben)
+# Pattern 2 — Shell-Umleitung (> oder >>) in geschuetzte Datei
+# Deckt ab: echo > X, cat > X, python -c "..." > X, irgendwas >> X, etc.
 if [ -z "$block_reason" ]; then
-  if printf '%s' "$cmd" | grep -E -q '>[[:space:]]*[^|&]*strings\.xml(\b|$)'; then
-    block_reason="Direkte Shell-Umleitung in eine strings.xml — destructiver Komplett-Overwrite. Nutze Edit/Write ueber den fix-applier."
+  if printf '%s' "$cmd" | grep -E -q ">>?[[:space:]]*[^|&]*$PROTECTED(\b|$)"; then
+    block_reason="Shell-Umleitung in eine geschuetzte Datei (strings.xml/AndroidManifest.xml/build.gradle) — destructiver Komplett-Overwrite. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
 
-# 3. find ... -delete im Plugin-Output
+# Pattern 3 — tee (mit oder ohne -a) in geschuetzte Datei
+if [ -z "$block_reason" ]; then
+  if printf '%s' "$cmd" | grep -E -q "tee[[:space:]]+(-a[[:space:]]+)?[^|&]*$PROTECTED(\b|$)"; then
+    block_reason="tee in eine geschuetzte Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
+  fi
+fi
+
+# Pattern 4 — cp / mv mit geschuetzter Ziel-Datei (letztes Argument)
+# Heuristik: erkennt wenn der Befehl mit cp/mv anfaengt UND mit einer geschuetzten Datei endet
+if [ -z "$block_reason" ]; then
+  if printf '%s' "$cmd" | grep -E -q "(^|[[:space:];|&])(cp|mv)[[:space:]]+[^|&;]+[[:space:]][^|&;[:space:]]*$PROTECTED([[:space:];|&]|$)"; then
+    block_reason="cp/mv mit geschuetzter Ziel-Datei — destructiver Overwrite. Nutze Edit/Write ueber den fix-applier."
+  fi
+fi
+
+# Pattern 5 — dd of= mit geschuetzter Datei
+if [ -z "$block_reason" ]; then
+  if printf '%s' "$cmd" | grep -E -q "dd[[:space:]].*of=[^[:space:]]*$PROTECTED(\b|$)"; then
+    block_reason="dd of= mit geschuetzter Ziel-Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
+  fi
+fi
+
+# Pattern 6 — find ... -delete im Plugin-Output
 if [ -z "$block_reason" ]; then
   if printf '%s' "$cmd" | grep -E -q 'find[[:space:]]+.*\.android-shield.*-delete'; then
     block_reason="find -delete auf .android-shield/ — destructiv. Audit-Log gehoert append-only."
   fi
 fi
-
-# 4. git reset --hard / git clean -fdx im App-Root waehrend Plugin laeuft
-#    Wir koennen den Kontext nicht zuverlaessig erkennen — daher nur warnen, nicht blocken.
-#    (Auskommentiert, um keine generischen Workflows zu stoeren.)
 
 if [ -n "$block_reason" ]; then
   echo "[finale] BLOCKIERT: $block_reason" >&2

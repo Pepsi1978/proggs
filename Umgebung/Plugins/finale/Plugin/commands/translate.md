@@ -19,7 +19,7 @@ Reine Übersetzungsphase: nimmt die existierenden DE-Strings aus `values/strings
 
 ## App-Namen-Auflösung (PFLICHT vor dem Orchestrator-Spawn)
 
-Identische Logik wie in `/finale:run` (siehe shield.md): wenn der Nutzer einen App-Namen
+Identische Logik wie in `/finale:run` (siehe run.md): wenn der Nutzer einen App-Namen
 nennt statt eines Pfads, vor dem Spawn auflösen via `~/proggs/<fuzzy-match>/`. Beispiele:
 - „Best Journal Android" → `~/proggs/BestJournalAndroid/`
 - „Best Journal Frank" → `~/proggs/BestJournalFrank/`
@@ -45,7 +45,7 @@ Der Orchestrator:
 1. **Phase 0** wie immer (Skill-Verifikation).
 2. **Auto-Detection der Zielsprachen** aus `values-*/-Verzeichnissen`. Wenn nur `values-en/` existiert: Multiple-Choice `[US] [UK] [EU]` für die Jurisdiktion. Bei mehreren: nur die existierenden Sprachen.
 3. **Delta-Erkennung:** welche Strings sind neu / geändert seit der letzten Übersetzung? (Vergleich `values/strings.xml` mit `values-xx/strings.xml` pro Sprache).
-4. **Parallel pro Sprache** einen Übersetzer-Subagent via Task tool spawnen (Opus, effort: max, bis ~10 gleichzeitig).
+4. **Parallel pro Sprache** einen Übersetzer-Subagent via Task tool spawnen (Opus, effort: max, bis ~15 gleichzeitig — FIN-023 Continuous-Spawning, siehe Orchestrator).
 5. **Cross-Lingual-Rechtsprüfung:** jeder übersetzte Text-Block wird vom Rechtssicherheits-Skill (`Capability: Einzelprüfung`) gegen die Jurisdiktion der Zielsprache geprüft.
    - Bei `acceptable: true`: anwenden.
    - Bei `acceptable: false` (z. B. weil ein in DE harmloses Heilversprechen in der FR-Übersetzung unter den französischen Werbe-Gesundheitsregeln eskaliert): zurück in den Fix-Workflow (Phase 2) mit diesem neuen Finding.
