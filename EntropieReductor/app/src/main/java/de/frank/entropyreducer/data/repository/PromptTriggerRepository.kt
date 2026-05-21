@@ -61,6 +61,14 @@ constructor(private val dao: PromptTriggerDao) {
 
     suspend fun deleteAllForPrompt(promptId: String) = dao.deleteByPrompt(promptId)
 
+    /**
+     * Direktive 3 Loop-2-Fix (war LOOP-2-2-Bug): orphaned Chain-Trigger
+     * loeschen wenn ihr Source-Prompt geloescht wurde. Wird von
+     * PromptRepository.delete() nach erfolgreicher Loeschung aufgerufen.
+     */
+    suspend fun deleteOrphanedChainTriggers(sourcePromptId: String) =
+        dao.deleteOrphanedChainTriggers(sourcePromptId)
+
     /** Nach Trigger-Feuer: Zeitpunkt aktualisieren und ggf. nextScheduledAt setzen. */
     suspend fun markFired(triggerId: String, firedAt: Long, nextScheduledAt: Long?) {
         val trigger = dao.getById(triggerId) ?: return

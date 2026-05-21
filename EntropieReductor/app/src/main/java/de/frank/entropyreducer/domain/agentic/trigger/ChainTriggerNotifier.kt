@@ -2,6 +2,7 @@ package de.frank.entropyreducer.domain.agentic.trigger
 
 import android.util.Log
 import dagger.Lazy
+import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
 import de.frank.entropyreducer.domain.agentic.WorkflowRunner
@@ -42,6 +43,7 @@ class ChainTriggerNotifier
 @Inject
 constructor(
     private val triggerRepo: PromptTriggerRepository,
+    private val promptRepo: PromptRepository,
     private val workflowRunnerLazy: Lazy<WorkflowRunner>,
 ) {
 
@@ -118,6 +120,16 @@ constructor(
         trigger: de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
     ) {
         try {
+            // Direktive 3 Loop-2-Fix (war LOOP-2-3-Bug Schicht 2): auch
+            // Chain-Trigger pruefen Prompt.isActive vor dem Start.
+            val targetPrompt = promptRepo.getById(trigger.promptId)
+            if (targetPrompt == null || !targetPrompt.isActive) {
+                Log.i(
+                    TAG,
+                    "Chain-Ziel ${trigger.promptId} existiert nicht oder ist deaktiviert — skip",
+                )
+                return
+            }
             Log.i(TAG, "Starte Chain-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
             workflowRunnerLazy
                 .get()

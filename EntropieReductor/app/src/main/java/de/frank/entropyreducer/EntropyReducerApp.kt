@@ -54,6 +54,10 @@ class EntropyReducerApp : Application(), Configuration.Provider {
     lateinit var agenticTriggerScheduler:
         de.frank.entropyreducer.domain.agentic.trigger.TriggerScheduler
 
+    @Inject
+    lateinit var promptExecutionRepo:
+        de.frank.entropyreducer.data.repository.PromptExecutionRepository
+
     // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
     // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
     // Callback aus dem Main-Thread herauszuholen — der Whoop-AuthState-Read trifft
@@ -104,6 +108,23 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // KEEP-Policy stellt sicher dass der bestehende Worker nicht neu gestartet
         // wird wenn er schon laeuft.
         agenticTriggerScheduler.scheduleOrUpdate()
+
+        // Direktive 3 Loop-2-Fix (war LOOP-2-1-Bug): nach App-Crash haengende
+        // prompt_executions-Eintraege mit Status RUNNING auf INTERRUPTED setzen.
+        // Sonst zeigt der HistoryScreen sie ewig als "laufend" an obwohl die App
+        // schon laengst neu gestartet wurde.
+        applicationScope.launch {
+            runCatching {
+                    promptExecutionRepo.markRunningAsInterrupted(System.currentTimeMillis())
+                }
+                .onFailure {
+                    android.util.Log.w(
+                        "EntropyReducerApp",
+                        "markRunningAsInterrupted fehlgeschlagen",
+                        it,
+                    )
+                }
+        }
 
         // Frank-Wunsch 2026-05-10: T-Rex-3-Sport-Mapping korrigieren. Bestehende
         // Workouts mit Code 7 (Trailrunning), 12 (Crosstrainer) oder 52 (Krafttraining)

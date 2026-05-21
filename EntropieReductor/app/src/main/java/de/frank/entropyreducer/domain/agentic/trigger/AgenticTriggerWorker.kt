@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
 import de.frank.entropyreducer.domain.agentic.WorkflowRunner
@@ -40,6 +41,7 @@ constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val triggerRepo: PromptTriggerRepository,
+    private val promptRepo: PromptRepository,
     private val workflowRunner: WorkflowRunner,
 ) : CoroutineWorker(appContext, params) {
 
@@ -55,6 +57,27 @@ constructor(
             Log.i(TAG, "Faellige Trigger: ${due.size}")
 
             for (trigger in due) {
+                // Direktive 3 Loop-2-Fix (war LOOP-2-3-Bug): Prompt.isActive
+                // pruefen. Wenn Frank den Prompt deaktiviert hat, soll der
+                // Auto-Trigger NICHT mehr feuern — bisher feuerte er trotzdem
+                // weil nur prompt_triggers.isActive geprueft wurde, nicht
+                // saved_prompts.isActive.
+                val prompt = promptRepo.getById(trigger.promptId)
+                if (prompt == null) {
+                    Log.w(TAG, "Trigger ${trigger.id} zeigt auf nicht-existenten Prompt — skip + reschedule")
+                    rescheduleNext(trigger, now)
+                    continue
+                }
+                if (!prompt.isActive) {
+                    Log.i(
+                        TAG,
+                        "Trigger ${trigger.id} fuer deaktivierten Prompt '${prompt.name}' " +
+                            "uebersprungen. Trigger bleibt aktiv — feuert wieder sobald " +
+                            "der Prompt aktiviert wird.",
+                    )
+                    rescheduleNext(trigger, now)
+                    continue
+                }
                 Log.i(TAG, "Starte Auto-Run fuer Prompt ${trigger.promptId} via Trigger ${trigger.id}")
                 runOne(trigger)
                 rescheduleNext(trigger, now)

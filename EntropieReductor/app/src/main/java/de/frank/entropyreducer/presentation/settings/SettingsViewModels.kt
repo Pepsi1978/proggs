@@ -610,7 +610,15 @@ constructor(
         )
     }
 
-    fun delete(entity: SavedPromptEntity) = viewModelScope.launch { repo.delete(entity) }
+    fun delete(entity: SavedPromptEntity) = viewModelScope.launch {
+        // Direktive 3 Loop-2-Fix (war LOOP-2-2-Bug): Beim Prompt-Delete auch
+        // orphaned Chain-Trigger raeumen die diesen Prompt als chainAfterPromptId
+        // referenzieren. Permissions + eigene Trigger werden via FK CASCADE
+        // automatisch geloescht, aber chainAfterPromptId ist KEIN FK (weak
+        // reference) und braucht expliziten Cleanup.
+        triggerRepo.deleteOrphanedChainTriggers(entity.id)
+        repo.delete(entity)
+    }
 
     fun create(
         name: String,

@@ -231,4 +231,13 @@ interface PromptTriggerDao {
 
     @Query("DELETE FROM prompt_triggers WHERE promptId = :promptId")
     suspend fun deleteByPrompt(promptId: String)
+
+    /**
+     * Direktive 3 Loop-2-Fix (war LOOP-2-2-Bug): chainAfterPromptId hat keinen
+     * FK weil das logisch eine WEAK reference ist (Ziel-Prompt kann existieren,
+     * muss aber nicht). Wenn der Source-Prompt geloescht wird, sind Chain-Trigger
+     * orphaned. Dieser Cleanup loescht solche Trigger explizit nach Prompt-Delete.
+     */
+    @Query("DELETE FROM prompt_triggers WHERE chainAfterPromptId = :sourcePromptId")
+    suspend fun deleteOrphanedChainTriggers(sourcePromptId: String)
 }
