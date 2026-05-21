@@ -39,6 +39,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_18_19,
                 AppDatabase.MIGRATION_19_20,
                 AppDatabase.MIGRATION_20_21,
+                AppDatabase.MIGRATION_21_22,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
@@ -100,6 +101,17 @@ object DatabaseModule {
     @Provides fun provideHealthConnectValueDao(db: AppDatabase) = db.healthConnectValueDao()
 
     @Provides fun provideEntropyEntryFollowupDao(db: AppDatabase) = db.entropyEntryFollowupDao()
+
+    // Agentic-AI DAOs (Frank-Wunsch 2026-05-21: Prompts als Agenten)
+    @Provides fun providePromptExecutionDao(db: AppDatabase) = db.promptExecutionDao()
+
+    @Provides fun providePromptExecutionStepDao(db: AppDatabase) = db.promptExecutionStepDao()
+
+    @Provides fun providePromptToolPermissionDao(db: AppDatabase) = db.promptToolPermissionDao()
+
+    @Provides fun provideTokenUsageDailyDao(db: AppDatabase) = db.tokenUsageDailyDao()
+
+    @Provides fun providePromptTriggerDao(db: AppDatabase) = db.promptTriggerDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.

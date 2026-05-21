@@ -1,16 +1,21 @@
 package de.frank.entropyreducer.data.local
 
 import androidx.room.TypeConverter
+import de.frank.entropyreducer.domain.model.ConfirmDecision
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.EntryStatus
+import de.frank.entropyreducer.domain.model.ExecutionStatus
 import de.frank.entropyreducer.domain.model.HypothesisOutcome
 import de.frank.entropyreducer.domain.model.HypothesisStatus
 import de.frank.entropyreducer.domain.model.MemorySource
 import de.frank.entropyreducer.domain.model.ScientistRole
 import de.frank.entropyreducer.domain.model.ShiftCode
 import de.frank.entropyreducer.domain.model.StackType
+import de.frank.entropyreducer.domain.model.StepType
 import de.frank.entropyreducer.domain.model.TimeBucket
+import de.frank.entropyreducer.domain.model.TriggerSource
+import de.frank.entropyreducer.domain.model.TriggerType
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -125,4 +130,36 @@ class EntropyTypeConverters {
     @TypeConverter
     fun toShiftCode(s: String): ShiftCode =
         runCatching { ShiftCode.valueOf(s) }.getOrDefault(ShiftCode.UNBEKANNT)
+
+    // Agentic-AI Converter (Frank-Wunsch 2026-05-21: Prompts als Agenten)
+
+    @TypeConverter fun fromExecutionStatus(c: ExecutionStatus): String = c.name
+
+    @TypeConverter
+    fun toExecutionStatus(s: String): ExecutionStatus =
+        runCatching { ExecutionStatus.valueOf(s) }.getOrDefault(ExecutionStatus.FAILED)
+
+    @TypeConverter fun fromStepType(c: StepType): String = c.name
+
+    @TypeConverter
+    fun toStepType(s: String): StepType =
+        runCatching { StepType.valueOf(s) }.getOrDefault(StepType.LLM_CALL)
+
+    @TypeConverter fun fromConfirmDecision(c: ConfirmDecision?): String? = c?.name
+
+    @TypeConverter
+    fun toConfirmDecision(s: String?): ConfirmDecision? =
+        s?.let { runCatching { ConfirmDecision.valueOf(it) }.getOrNull() }
+
+    @TypeConverter fun fromTriggerSource(c: TriggerSource): String = c.name
+
+    @TypeConverter
+    fun toTriggerSource(s: String): TriggerSource =
+        runCatching { TriggerSource.valueOf(s) }.getOrDefault(TriggerSource.MANUAL)
+
+    @TypeConverter fun fromTriggerType(c: TriggerType): String = c.name
+
+    @TypeConverter
+    fun toTriggerType(s: String): TriggerType =
+        runCatching { TriggerType.valueOf(s) }.getOrDefault(TriggerType.MANUAL)
 }

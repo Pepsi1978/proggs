@@ -37,6 +37,22 @@ interface SavedPromptDao {
     @Delete suspend fun delete(prompt: SavedPromptEntity)
 
     @Query("SELECT COUNT(*) FROM saved_prompts") suspend fun count(): Int
+
+    // Agentic-AI: schmale Updates fuer Modell, Token-Limit, Trust-Modus.
+    // Vermeidet das Lesen-Aendern-Schreiben-Pattern bei UI-Toggles.
+
+    @Query("UPDATE saved_prompts SET model = :model, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateModel(id: String, model: String, updatedAt: Long)
+
+    @Query(
+        "UPDATE saved_prompts SET tokenLimitPerDay = :limit, updatedAt = :updatedAt WHERE id = :id"
+    )
+    suspend fun updateTokenLimit(id: String, limit: Int?, updatedAt: Long)
+
+    @Query(
+        "UPDATE saved_prompts SET trustModeDefault = :trust, updatedAt = :updatedAt WHERE id = :id"
+    )
+    suspend fun updateTrustMode(id: String, trust: Boolean, updatedAt: Long)
 }
 
 @Dao

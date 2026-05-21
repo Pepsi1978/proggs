@@ -17,8 +17,33 @@ data class SavedPromptEntity(
      * Kategorie des Prompts (Frank-Wunsch 2026-05-20). Prompts wirken nur in ihrem Bereich —
      * "Aufgaben"-Prompts beeinflussen z.B. nur ProcessEntryUseCase. Default = AUFGABEN, weil das
      * vor der Kategorisierung der Standardfall war.
+     *
+     * Ab Agentic-AI (Frank-Wunsch 2026-05-21) wird die Kategorie NUR noch fuers UI-Sortieren
+     * verwendet, nicht mehr fuer Tool-Permissions — die laufen per prompt_tool_permissions
+     * fein-granular pro Prompt.
      */
     val category: PromptCategory = PromptCategory.AUFGABEN,
+    /**
+     * Vom Nutzer gewaehltes Gemini-Modell fuer agentic-AI-Ausfuehrungen.
+     * Beispiele: "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite".
+     * Default = flash (schnell, guenstig, ausreichend fuer die meisten Workflows).
+     * Frank-Entscheidung 2026-05-21: kein Auto-Selector, immer manuell pro Prompt.
+     */
+    val model: String = "gemini-2.5-flash",
+    /**
+     * Optionales Tages-Token-Limit fuer diesen Prompt. null = kein Limit. Bei
+     * Ueberschreitung blockiert der WorkflowRunner weitere Aufrufe mit Status
+     * BLOCKED_BY_TOKEN_LIMIT. Frank-Wunsch 2026-05-21: Sichtbarkeit ueber alle
+     * Prompts in den Einstellungen + optionales hartes Limit pro Prompt.
+     */
+    val tokenLimitPerDay: Int? = null,
+    /**
+     * Trust-Modus: wenn true, fuehrt der Prompt seine freigeschalteten Write-Tools
+     * OHNE Confirm-Dialog aus. Default = false (Sicherheit). Wird vom
+     * ConfirmationGate ueber prompt_tool_permissions.trustMode UND dieses
+     * Default-Flag entschieden — beides true = kein Dialog.
+     */
+    val trustModeDefault: Boolean = false,
 )
 
 @Entity(tableName = "memory_entries")

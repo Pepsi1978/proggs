@@ -20,8 +20,13 @@ import de.frank.entropyreducer.data.local.dao.OuraPersonalInfoDao
 import de.frank.entropyreducer.data.local.dao.OuraReadinessDao
 import de.frank.entropyreducer.data.local.dao.OuraResilienceDao
 import de.frank.entropyreducer.data.local.dao.OuraSleepDetailDao
+import de.frank.entropyreducer.data.local.dao.PromptExecutionDao
+import de.frank.entropyreducer.data.local.dao.PromptExecutionStepDao
+import de.frank.entropyreducer.data.local.dao.PromptToolPermissionDao
+import de.frank.entropyreducer.data.local.dao.PromptTriggerDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
+import de.frank.entropyreducer.data.local.dao.TokenUsageDailyDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
 import de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
@@ -38,8 +43,13 @@ import de.frank.entropyreducer.data.local.entities.OuraPersonalInfoEntity
 import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
 import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
+import de.frank.entropyreducer.data.local.entities.PromptExecutionEntity
+import de.frank.entropyreducer.data.local.entities.PromptExecutionStepEntity
+import de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity
+import de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
+import de.frank.entropyreducer.data.local.entities.TokenUsageDailyEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 
 /**
@@ -78,8 +88,14 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             OuraPersonalInfoEntity::class,
             HealthConnectValueEntity::class,
             de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity::class,
+            // Agentic-AI Tabellen (Frank-Wunsch 2026-05-21)
+            PromptExecutionEntity::class,
+            PromptExecutionStepEntity::class,
+            PromptToolPermissionEntity::class,
+            TokenUsageDailyEntity::class,
+            PromptTriggerEntity::class,
         ],
-    version = 21,
+    version = 22,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -131,6 +147,17 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun entropyEntryFollowupDao():
         de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
+
+    // Agentic-AI DAOs (Frank-Wunsch 2026-05-21)
+    abstract fun promptExecutionDao(): PromptExecutionDao
+
+    abstract fun promptExecutionStepDao(): PromptExecutionStepDao
+
+    abstract fun promptToolPermissionDao(): PromptToolPermissionDao
+
+    abstract fun tokenUsageDailyDao(): TokenUsageDailyDao
+
+    abstract fun promptTriggerDao(): PromptTriggerDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -530,6 +557,182 @@ abstract class AppDatabase : RoomDatabase() {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         "ALTER TABLE saved_prompts ADD COLUMN category TEXT NOT NULL DEFAULT 'AUFGABEN'"
+                    )
+                }
+            }
+
+        /**
+         * Schema 21 -> 22 (Frank-Wunsch 2026-05-21): Agentic-AI-Prompts. Erweitert saved_prompts
+         * um 3 Spalten (model, tokenLimitPerDay, trustModeDefault) und legt 5 neue Tabellen an:
+         *
+         * - prompt_executions: Audit-Log aller Prompt-Ausfuehrungen mit Snapshot des Prompts
+         * - prompt_execution_steps: Feinkoernige Schritte im ReAct-Loop
+         * - prompt_tool_permissions: Write-Tool-Freischaltung pro Prompt
+         * - token_usage_daily: Tagesaggregierte Tokens fuer Balkendiagramm-Performance
+         * - prompt_triggers: Auto-Ausfuehrungs-Konfig (CRON/EVENT/CHAIN, WorkManager-basiert)
+         *
+         * Foreign-Key-Strategie:
+         * - prompt_executions hat KEINEN FK auf saved_prompts.id — Audit ueberlebt Loeschung
+         * - alle anderen 4 Tabellen haben FK auf saved_prompts.id mit ON DELETE CASCADE
+         * - prompt_execution_steps hat FK auf prompt_executions.id mit ON DELETE CASCADE
+         *
+         * Sicherheit: alle ADD COLUMNs haben Defaults (kein Datenverlust). Bestehende Prompts
+         * bekommen model='gemini-2.5-flash', tokenLimitPerDay=NULL, trustModeDefault=0.
+         */
+        val MIGRATION_21_22: Migration =
+            object : Migration(21, 22) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // 1) saved_prompts erweitern (3 neue Spalten mit Defaults — kein Datenverlust)
+                    db.execSQL(
+                        "ALTER TABLE saved_prompts ADD COLUMN model TEXT NOT NULL DEFAULT 'gemini-2.5-flash'"
+                    )
+                    db.execSQL("ALTER TABLE saved_prompts ADD COLUMN tokenLimitPerDay INTEGER")
+                    db.execSQL(
+                        "ALTER TABLE saved_prompts ADD COLUMN trustModeDefault INTEGER NOT NULL DEFAULT 0"
+                    )
+
+                    // 2) prompt_executions — Audit-Log (KEIN FK auf saved_prompts!)
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS prompt_executions (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            promptId TEXT NOT NULL,
+                            snapshotName TEXT NOT NULL,
+                            snapshotContent TEXT NOT NULL,
+                            snapshotCategory TEXT NOT NULL,
+                            snapshotModel TEXT NOT NULL,
+                            userInputContext TEXT,
+                            startedAt INTEGER NOT NULL,
+                            finishedAt INTEGER,
+                            status TEXT NOT NULL,
+                            finalAnswer TEXT,
+                            errorMessage TEXT,
+                            tokensInput INTEGER NOT NULL DEFAULT 0,
+                            tokensOutput INTEGER NOT NULL DEFAULT 0,
+                            tokensTotal INTEGER NOT NULL DEFAULT 0,
+                            toolCallCount INTEGER NOT NULL DEFAULT 0,
+                            modelUsed TEXT NOT NULL,
+                            triggerSource TEXT NOT NULL DEFAULT 'MANUAL'
+                        )
+                        """
+                            .trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_executions_promptId ON prompt_executions(promptId)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_executions_startedAt ON prompt_executions(startedAt)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_executions_status ON prompt_executions(status)"
+                    )
+
+                    // 3) prompt_execution_steps — Feinkoernige Schritte (FK CASCADE auf Execution)
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS prompt_execution_steps (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            executionId TEXT NOT NULL,
+                            stepIndex INTEGER NOT NULL,
+                            stepType TEXT NOT NULL,
+                            timestamp INTEGER NOT NULL,
+                            toolName TEXT,
+                            toolArgsJson TEXT,
+                            toolResultJson TEXT,
+                            llmTextOutput TEXT,
+                            confirmDecision TEXT,
+                            createdEntityIds TEXT NOT NULL DEFAULT '[]',
+                            updatedEntityIds TEXT NOT NULL DEFAULT '[]',
+                            deletedEntityIds TEXT NOT NULL DEFAULT '[]',
+                            error TEXT,
+                            FOREIGN KEY(executionId) REFERENCES prompt_executions(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                        )
+                        """
+                            .trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_execution_steps_executionId ON prompt_execution_steps(executionId)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_execution_steps_executionId_stepIndex ON prompt_execution_steps(executionId, stepIndex)"
+                    )
+
+                    // 4) prompt_tool_permissions — Write-Tool-Freischaltung pro Prompt
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS prompt_tool_permissions (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            promptId TEXT NOT NULL,
+                            toolName TEXT NOT NULL,
+                            granted INTEGER NOT NULL DEFAULT 0,
+                            trustMode INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(promptId) REFERENCES saved_prompts(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                        )
+                        """
+                            .trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_prompt_tool_permissions_promptId_toolName ON prompt_tool_permissions(promptId, toolName)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_tool_permissions_promptId ON prompt_tool_permissions(promptId)"
+                    )
+
+                    // 5) token_usage_daily — Tagesaggregation pro Prompt fuer Balkendiagramm
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS token_usage_daily (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            promptId TEXT NOT NULL,
+                            day TEXT NOT NULL,
+                            tokensInput INTEGER NOT NULL DEFAULT 0,
+                            tokensOutput INTEGER NOT NULL DEFAULT 0,
+                            tokensTotal INTEGER NOT NULL DEFAULT 0,
+                            runCount INTEGER NOT NULL DEFAULT 0,
+                            FOREIGN KEY(promptId) REFERENCES saved_prompts(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                        )
+                        """
+                            .trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_token_usage_daily_promptId_day ON token_usage_daily(promptId, day)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_token_usage_daily_day ON token_usage_daily(day)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_token_usage_daily_promptId ON token_usage_daily(promptId)"
+                    )
+
+                    // 6) prompt_triggers — Auto-Ausfuehrungs-Konfiguration (Stufe 3)
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS prompt_triggers (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            promptId TEXT NOT NULL,
+                            triggerType TEXT NOT NULL,
+                            cronExpression TEXT,
+                            eventCondition TEXT,
+                            chainAfterPromptId TEXT,
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            lastRunAt INTEGER,
+                            nextScheduledAt INTEGER,
+                            FOREIGN KEY(promptId) REFERENCES saved_prompts(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                        )
+                        """
+                            .trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_triggers_promptId ON prompt_triggers(promptId)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_triggers_nextScheduledAt ON prompt_triggers(nextScheduledAt)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_triggers_chainAfterPromptId ON prompt_triggers(chainAfterPromptId)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_prompt_triggers_isActive ON prompt_triggers(isActive)"
                     )
                 }
             }
