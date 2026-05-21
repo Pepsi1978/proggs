@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -495,9 +496,58 @@ Beispiel-Output:
 
 /* ----------------- Prompts ----------------- */
 @HiltViewModel
-class PromptsViewModel @Inject constructor(private val repo: PromptRepository) : ViewModel() {
+class PromptsViewModel
+@Inject
+constructor(
+    private val repo: PromptRepository,
+    private val permissionRepo:
+        de.frank.entropyreducer.data.repository.PromptToolPermissionRepository,
+    private val toolRegistry: de.frank.entropyreducer.domain.agentic.ToolRegistry,
+) : ViewModel() {
     val prompts: StateFlow<List<SavedPromptEntity>> =
         repo.getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Alle bekannten Write-Tools (fuer den Permission-Editor). Read-Tools brauchen keine Eintraege. */
+    val writeTools: List<de.frank.entropyreducer.domain.agentic.AgenticTool>
+        get() = toolRegistry.writeTools
+
+    /**
+     * Permissions des aktuell editierten Prompts als Flow — wird vom Dialog abonniert.
+     * Mapped auf eine Map<toolName, Pair<granted, trustMode>> fuer einfacheren UI-Zugriff.
+     */
+    fun permissionsForPrompt(
+        promptId: String
+    ): kotlinx.coroutines.flow.Flow<
+        Map<String, de.frank.entropyreducer.presentation.agentic.ToolPermissionState>
+    > =
+        permissionRepo
+            .getForPrompt(promptId)
+            .map { list ->
+                list.associate { p ->
+                    p.toolName to
+                        de.frank.entropyreducer.presentation.agentic.ToolPermissionState(
+                            p.granted,
+                            p.trustMode,
+                        )
+                }
+            }
+
+    fun setToolPermission(
+        promptId: String,
+        toolName: String,
+        granted: Boolean,
+        trustMode: Boolean,
+    ) = viewModelScope.launch {
+        permissionRepo.upsert(
+            de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity(
+                id = "${promptId}_${toolName}",
+                promptId = promptId,
+                toolName = toolName,
+                granted = granted,
+                trustMode = trustMode,
+            )
+        )
+    }
 
     fun save(entity: SavedPromptEntity) = viewModelScope.launch { repo.upsert(entity) }
 

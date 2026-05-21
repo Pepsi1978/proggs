@@ -23,8 +23,10 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import de.frank.entropyreducer.presentation.agentic.PromptToolPermissionsDialog
 import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
 import de.frank.entropyreducer.presentation.agentic.TokenStatsScreen
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -75,6 +77,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }
     var executePromptId by remember { mutableStateOf<String?>(null) }
     var showTokenStats by remember { mutableStateOf(false) }
+    var permissionEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
     val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
 
     if (showTokenStats) {
@@ -150,6 +153,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                                                 onEdit = { editing = p },
                                                 onDelete = { vm.delete(p) },
                                                 onExecute = { executePromptId = p.id },
+                                                onPermissions = { permissionEditFor = p },
                                             )
                                         }
                                     }
@@ -203,6 +207,17 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
         AgenticExecutionDialog(
             promptId = id,
             onDismiss = { executePromptId = null },
+        )
+    }
+    permissionEditFor?.let { p ->
+        PromptToolPermissionsDialog(
+            promptName = p.name,
+            writeTools = vm.writeTools,
+            permissionsFlow = vm.permissionsForPrompt(p.id),
+            onSet = { toolName, granted, trust ->
+                vm.setToolPermission(p.id, toolName, granted, trust)
+            },
+            onDismiss = { permissionEditFor = null },
         )
     }
 }
@@ -272,6 +287,7 @@ private fun PromptRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onExecute: () -> Unit,
+    onPermissions: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     Box(
@@ -327,6 +343,14 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.Edit,
                         contentDescription = "Bearbeiten",
+                        tint = CosmosColors.AccentPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(onClick = onPermissions, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Outlined.Tune,
+                        contentDescription = "Tool-Berechtigungen",
                         tint = CosmosColors.AccentPrimary,
                         modifier = Modifier.size(18.dp),
                     )
