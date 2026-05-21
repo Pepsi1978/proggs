@@ -8,7 +8,15 @@ import dagger.multibindings.IntoSet
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.gates.AutoApproveConfirmationGate
 import de.frank.entropyreducer.domain.agentic.gates.ConfirmationGate
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadAufgabenTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadBiomarkerTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadEntropieEintraegeTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadForscherSessionsTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadHypothesenTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadInsightsTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadMemoryTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadProfilTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadThesenTool
 
 /**
  * Hilt-Modul fuer Agentic-AI-Tools + Gates (Frank-Wunsch 2026-05-21).
@@ -35,7 +43,39 @@ abstract class AgenticModule {
     @IntoSet
     abstract fun bindReadEntropieEintraegeTool(impl: ReadEntropieEintraegeTool): AgenticTool
 
-    // Weitere Tools werden in Etappen 6 und 7 hier registriert.
+    @Binds
+    @IntoSet
+    abstract fun bindReadThesenTool(impl: ReadThesenTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadAufgabenTool(impl: ReadAufgabenTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadMemoryTool(impl: ReadMemoryTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadProfilTool(impl: ReadProfilTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadInsightsTool(impl: ReadInsightsTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadHypothesenTool(impl: ReadHypothesenTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadBiomarkerTool(impl: ReadBiomarkerTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadForscherSessionsTool(impl: ReadForscherSessionsTool): AgenticTool
+
+    // Write-Tools werden in Etappe 7 hier registriert.
 
     // Gate-Bindings — Default-Implementations (UI-Variante ueberschreibt in Etappe 9)
     @Binds
