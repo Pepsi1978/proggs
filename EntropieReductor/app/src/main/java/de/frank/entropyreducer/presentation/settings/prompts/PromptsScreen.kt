@@ -22,13 +22,15 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import de.frank.entropyreducer.presentation.agentic.PromptToolPermissionsDialog
 import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
+import de.frank.entropyreducer.presentation.agentic.AgenticHistoryScreen
+import de.frank.entropyreducer.presentation.agentic.PromptToolPermissionsDialog
 import de.frank.entropyreducer.presentation.agentic.TokenStatsScreen
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -78,6 +80,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }
     var executePromptId by remember { mutableStateOf<String?>(null) }
     var showTokenStats by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
     var permissionEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var showTemplatesConfirm by remember { mutableStateOf(false) }
     var templatesResult by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -85,6 +88,10 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
 
     if (showTokenStats) {
         TokenStatsScreen(onBack = { showTokenStats = false })
+        return
+    }
+    if (showHistory) {
+        AgenticHistoryScreen(onBack = { showHistory = false })
         return
     }
 
@@ -105,6 +112,13 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                 Icon(
                     Icons.Outlined.LibraryAdd,
                     contentDescription = "Vorlagen einfügen",
+                    tint = cosmos.textPrimary,
+                )
+            }
+            IconButton(onClick = { showHistory = true }) {
+                Icon(
+                    Icons.Outlined.History,
+                    contentDescription = "Verlauf",
                     tint = cosmos.textPrimary,
                 )
             }
