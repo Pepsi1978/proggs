@@ -84,6 +84,16 @@ constructor(
     }
 
     fun cancelCurrentRun() {
+        // Direktive 3 Loop-1-Fix (war MED-5-Bug): wenn ein Confirm-Dialog
+        // gerade offen ist (Continuation suspended), MUSS die Continuation
+        // sauber aufgeloest werden — sonst haengt sie bis zum 60s-Timeout
+        // und blockiert den naechsten Run. respond(REJECTED) loest sie sofort.
+        if (uiConfirmationGate.pendingRequest.value != null) {
+            uiConfirmationGate.respond(
+                decision = ConfirmDecision.REJECTED,
+                rejectReason = "Run vom Nutzer abgebrochen",
+            )
+        }
         currentRunJob?.cancel()
         currentRunJob = null
         _uiState.update {
@@ -212,6 +222,13 @@ constructor(
         }
 
     override fun onCleared() {
+        // Auch bei ViewModel-Cleanup haengende Continuation aufloesen
+        if (uiConfirmationGate.pendingRequest.value != null) {
+            uiConfirmationGate.respond(
+                decision = ConfirmDecision.REJECTED,
+                rejectReason = "ViewModel beendet",
+            )
+        }
         currentRunJob?.cancel()
         super.onCleared()
     }

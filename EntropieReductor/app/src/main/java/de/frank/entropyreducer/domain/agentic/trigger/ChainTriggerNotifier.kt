@@ -6,6 +6,7 @@ import de.frank.entropyreducer.data.repository.PromptTriggerRepository
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
 import de.frank.entropyreducer.domain.agentic.WorkflowRunner
 import de.frank.entropyreducer.domain.model.TriggerSource
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -47,16 +48,64 @@ constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
+     * Zyklus-Schutz (Direktive 3 Loop-1-Fix, war HIGH-2-Bug):
+     * Verhindert dass A→B→A in unter [CHAIN_COOLDOWN_MS] eine Endlosschleife
+     * ausloest. Jede promptId die als Chain-Quelle gefeuert hat landet hier
+     * mit ihrem Timestamp. Beim naechsten Aufruf wird gepueft ob die gleiche
+     * Quelle in den letzten 30 Sekunden schon Chains gestartet hat. Wenn ja:
+     * Skip und Log-Warning.
+     *
+     * Plus: max-depth via TARGET-PromptId-Tracking. Wenn die gleiche
+     * Ziel-PromptId in der letzten Cooldown-Periode mehr als 3x als
+     * Chain-Ziel war, wird sie blockiert (defense against fan-out-amplification).
+     */
+    private val recentlyFiredSources = ConcurrentHashMap<String, Long>()
+    private val targetTriggerCount = ConcurrentHashMap<String, MutableList<Long>>()
+
+    /**
      * Vom WorkflowRunner aufgerufen nach erfolgreichem Lauf. Sucht
      * Chain-Trigger und startet sie fire-and-forget.
      */
     fun notifySuccess(promptId: String) {
+        val now = System.currentTimeMillis()
+
+        // Cleanup: alte Eintraege rausnehmen (>= CHAIN_COOLDOWN_MS alt)
+        recentlyFiredSources.entries.removeIf { now - it.value > CHAIN_COOLDOWN_MS }
+        targetTriggerCount.values.forEach { list ->
+            list.removeAll { now - it > CHAIN_COOLDOWN_MS }
+        }
+
+        // Zyklus-Erkennung Schicht 1: gleiche Quelle in Cooldown blockiert
+        val lastFire = recentlyFiredSources[promptId]
+        if (lastFire != null && now - lastFire < CHAIN_COOLDOWN_MS) {
+            Log.w(
+                TAG,
+                "Chain-Notify fuer $promptId uebersprungen — schon in den letzten " +
+                    "${CHAIN_COOLDOWN_MS / 1000}s gefeuert (Zyklus-Schutz)",
+            )
+            return
+        }
+        recentlyFiredSources[promptId] = now
+
         scope.launch {
             try {
                 val chainTriggers = triggerRepo.getChainTriggersAfter(promptId)
                 if (chainTriggers.isEmpty()) return@launch
                 Log.i(TAG, "Chain-Trigger nach Erfolg von $promptId: ${chainTriggers.size}")
                 for (trigger in chainTriggers) {
+                    // Zyklus-Erkennung Schicht 2: target fan-out limit
+                    val targetCounts =
+                        targetTriggerCount.getOrPut(trigger.promptId) { mutableListOf() }
+                    if (targetCounts.size >= MAX_CHAIN_FIRES_PER_TARGET) {
+                        Log.w(
+                            TAG,
+                            "Chain-Ziel ${trigger.promptId} hat schon " +
+                                "$MAX_CHAIN_FIRES_PER_TARGET Trigger in der Cooldown-Periode — " +
+                                "weiterer Aufruf blockiert (Fan-Out-Schutz)",
+                        )
+                        continue
+                    }
+                    targetCounts.add(now)
                     launch { runChainOne(trigger) }
                 }
             } catch (t: Throwable) {
@@ -94,5 +143,9 @@ constructor(
 
     companion object {
         private const val TAG = "ChainTriggerNotifier"
+        /** Zeitfenster fuer Zyklus-Erkennung. */
+        private const val CHAIN_COOLDOWN_MS = 30_000L
+        /** Maximale Chain-Trigger fuer die gleiche Ziel-PromptId pro Cooldown-Fenster. */
+        private const val MAX_CHAIN_FIRES_PER_TARGET = 3
     }
 }

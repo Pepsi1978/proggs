@@ -50,6 +50,13 @@ data class ConfirmationRequest(
      * tool.name + args eine Default-Beschreibung.
      */
     val previewText: String? = null,
+    /**
+     * Direktive 3 Loop-1-Fix (war MED-2-Bug): true wenn der Run im Hintergrund
+     * laeuft (TriggerSource SCHEDULED/CHAINED/EVENT). Der UiConfirmationGate
+     * lehnt Background-Confirms sofort ab statt 60s zu warten — sonst wuerde
+     * jeder Background-Run mit Schreib-Tools ohne Trust hartnaeckig haengen.
+     */
+    val isBackground: Boolean = false,
 )
 
 data class ConfirmationResult(

@@ -3,11 +3,13 @@ package de.frank.entropyreducer.data.repository
 import de.frank.entropyreducer.data.local.dao.PromptExecutionDao
 import de.frank.entropyreducer.data.local.dao.TokenUsageDailyDao
 import de.frank.entropyreducer.data.local.entities.TokenUsageDailyEntity
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Repository fuer die Tages-Token-Statistik. Bedient drei verschiedene Konsumenten:
@@ -66,50 +68,82 @@ constructor(
     /**
      * Vom ExecutionLogger nach jedem Lauf aufgerufen. Inkrementiert die Tages-Statistik
      * fuer (promptId, today).
+     *
+     * Direktive 3 Loop-1-Fix (war MED-1-Bug): Atomare Upsert-Operation via
+     * SQL ON CONFLICT statt read-modify-write. Verhindert verlorene Tokens
+     * bei parallelen Runs (z.B. CRON + Chain feuern gleichzeitig).
      */
     suspend fun addTokens(promptId: String, tokensInput: Int, tokensOutput: Int) {
+        if (tokensInput == 0 && tokensOutput == 0) return
         val day = today()
         val id = "${promptId}_${day}"
-        val existing = dao.getOne(promptId, day)
-        val updated =
-            if (existing == null) {
-                TokenUsageDailyEntity(
-                    id = id,
-                    promptId = promptId,
-                    day = day,
-                    tokensInput = tokensInput,
-                    tokensOutput = tokensOutput,
-                    tokensTotal = tokensInput + tokensOutput,
-                    runCount = 1,
-                )
-            } else {
-                existing.copy(
-                    tokensInput = existing.tokensInput + tokensInput,
-                    tokensOutput = existing.tokensOutput + tokensOutput,
-                    tokensTotal = existing.tokensTotal + tokensInput + tokensOutput,
-                    runCount = existing.runCount + 1,
-                )
-            }
-        dao.upsert(updated)
+        dao.incrementUsage(
+            id = id,
+            promptId = promptId,
+            day = day,
+            tokensInput = tokensInput,
+            tokensOutput = tokensOutput,
+        )
     }
 
     /**
-     * Drift-Schutz: aus den Einstellungen aufrufbar. Loescht die Aggregations-Tabelle
-     * und baut sie neu aus prompt_executions auf. Sollte O(n)-Operation sein wobei n =
-     * Anzahl Executions in den letzten 365 Tagen.
+     * Drift-Schutz: aus den Einstellungen aufrufbar. Aggregation neu aus
+     * prompt_executions aufbauen.
+     *
+     * Wichtig (Direktive 3 Loop-1-Fix, war HIGH-1-Bug): Diese Methode war
+     * frueher ein Stub der dao.deleteAll() aufgerufen hat OHNE die Aggregation
+     * neu zu bauen — ergab kompletten Datenverlust der Tagesstatistik. Neue
+     * Implementierung:
+     *
+     *  1. Erst alle Executions laden und in Memory aggregieren (promptId+day -> Summen)
+     *  2. ERST DANACH dao.deleteAll() + Re-Insert — wenn Schritt 1 fehlschlaegt,
+     *     bleibt die alte Tabelle unangetastet (defensiv).
+     *
+     * Aggregierungs-Tag = ISO-Datum (lokale Zeitzone) vom startedAt-Zeitpunkt.
      */
     suspend fun recomputeAll() {
+        // Schritt 1: in-memory Aggregation aufbauen (KEIN destruktiver Schritt vorab).
+        val allExecutions = executionDao.getRecent(limit = 10_000).first()
+        if (allExecutions.isEmpty()) {
+            // Keine Executions vorhanden — Tabelle leeren ist defensiv ok.
+            dao.deleteAll()
+            return
+        }
+        data class Agg(
+            var tokensInput: Int = 0,
+            var tokensOutput: Int = 0,
+            var tokensTotal: Int = 0,
+            var runCount: Int = 0,
+        )
+        val aggregated = mutableMapOf<Pair<String, String>, Agg>()
+        for (exec in allExecutions) {
+            // Nur erfolgreich abgeschlossene oder zumindest token-erfassende Runs zaehlen
+            if (exec.tokensTotal == 0 && exec.tokensInput == 0 && exec.tokensOutput == 0) continue
+            val day = Instant.ofEpochMilli(exec.startedAt).atZone(zone).toLocalDate().toString()
+            val key = exec.promptId to day
+            val agg = aggregated.getOrPut(key) { Agg() }
+            agg.tokensInput += exec.tokensInput
+            agg.tokensOutput += exec.tokensOutput
+            agg.tokensTotal += exec.tokensTotal
+            agg.runCount += 1
+        }
+
+        // Schritt 2: Tabelle leeren + neu befuellen. Erst jetzt destruktiv.
         dao.deleteAll()
-        val executions = executionDao.getRecent(limit = 10_000)
-        // Hinweis: getRecent ist Flow, wir nutzen executionDao direkt mit suspend fuer
-        // Recompute. Bei Bedarf in Future-Migration eine getRecentSnapshot()-Methode
-        // anbieten — fuer Stufe 1 nutzen wir die LIMIT-Query via Flow.first().
-        // Aktueller Stand: recomputeAll wird vom Settings-Screen ueber executionDao
-        // direkt aufgerufen. Erweiterung kommt in Etappe 10 (TokenStats-Screen).
-        executions
-            .let {
-                /* placeholder - actual recompute in Etappe 10 */
-            }
+        for ((key, agg) in aggregated) {
+            val (promptId, day) = key
+            dao.upsert(
+                TokenUsageDailyEntity(
+                    id = "${promptId}_${day}",
+                    promptId = promptId,
+                    day = day,
+                    tokensInput = agg.tokensInput,
+                    tokensOutput = agg.tokensOutput,
+                    tokensTotal = agg.tokensTotal,
+                    runCount = agg.runCount,
+                )
+            )
+        }
     }
 
     /** Alte Tage prunen (Default: aelter als 365 Tage). */

@@ -211,7 +211,13 @@ constructor(
                                     contents = contents,
                                     tools = tools,
                                     generationConfig =
-                                        GeminiGenerationConfig(temperature = 0.3),
+                                        GeminiGenerationConfig(
+                                            temperature = 0.3,
+                                            // Direktive 3 Loop-1-Fix (LOW-2):
+                                            // Gemini-Output-Cap damit ein einzelner
+                                            // Call das Token-Budget nicht sprengt.
+                                            maxOutputTokens = 8192,
+                                        ),
                                 ),
                         )
                     } catch (e: Exception) {
@@ -338,6 +344,7 @@ constructor(
                         startedAt = startedAt,
                         stepIndexProvider = { stepIndex++ },
                         call = call,
+                        triggerSource = triggerSource,
                         onToolCalled = { toolCallCount++ },
                         emit = { evt -> emit(evt) },
                     )
@@ -430,6 +437,7 @@ constructor(
         startedAt: Long,
         stepIndexProvider: () -> Int,
         call: FunctionCall,
+        triggerSource: TriggerSource,
         onToolCalled: () -> Unit,
         emit: suspend (WorkflowEvent) -> Unit,
     ): GeminiPart {
@@ -485,12 +493,18 @@ constructor(
 
         // Confirmation-Gate (nur fuer Write-Tools)
         if (tool.isWriteTool) {
+            // Direktive 3 Loop-1-Fix (MED-2): Background-Runs koennen keinen
+            // User-Confirm zeigen → isBackground=true damit der Gate sofort
+            // REJECTED zurueckgibt statt 60s zu warten. Frank kann Background-
+            // Write-Tools nur per Trust-Modus erlauben.
+            val isBackground = triggerSource != TriggerSource.MANUAL
             val confirmReq =
                 ConfirmationRequest(
                     promptId = promptId,
                     executionId = executionId,
                     tool = tool,
                     args = call.args,
+                    isBackground = isBackground,
                 )
             val confirmIdx = stepIndexProvider()
             emit(WorkflowEvent.ConfirmationRequested(executionId, confirmReq))

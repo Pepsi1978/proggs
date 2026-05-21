@@ -145,6 +145,37 @@ interface TokenUsageDailyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(usage: TokenUsageDailyEntity)
 
+    /**
+     * Atomare Inkrement-Operation (Direktive 3 Loop-1-Fix, war MED-1-Bug):
+     * Statt read-modify-write in 2 separaten Queries (race condition bei
+     * parallelen Runs) wird der gesamte Upsert in EINEM SQLite-Statement
+     * ausgefuehrt. Bei Konflikt auf der ID (= promptId_day) werden die Werte
+     * der bestehenden Zeile inkrementiert.
+     *
+     * Vorsicht: erfordert SQLite ≥ 3.24 (Android ≥ 11 / API 30+). Frank's
+     * minSdk ist 26 — auf API 26-29 muss wir auf das alte Read-Modify-Write
+     * zurueckfallen. Room compiled SQL beim ersten Aufruf; der Fallback im
+     * Repository ist trotzdem als zweite Schicht sinnvoll.
+     */
+    @Query(
+        """
+        INSERT INTO token_usage_daily (id, promptId, day, tokensInput, tokensOutput, tokensTotal, runCount)
+        VALUES (:id, :promptId, :day, :tokensInput, :tokensOutput, :tokensInput + :tokensOutput, 1)
+        ON CONFLICT(id) DO UPDATE SET
+            tokensInput = tokensInput + :tokensInput,
+            tokensOutput = tokensOutput + :tokensOutput,
+            tokensTotal = tokensTotal + :tokensInput + :tokensOutput,
+            runCount = runCount + 1
+        """
+    )
+    suspend fun incrementUsage(
+        id: String,
+        promptId: String,
+        day: String,
+        tokensInput: Int,
+        tokensOutput: Int,
+    )
+
     @Query("DELETE FROM token_usage_daily") suspend fun deleteAll()
 
     @Query("DELETE FROM token_usage_daily WHERE promptId = :promptId")

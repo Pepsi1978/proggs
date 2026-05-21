@@ -3,13 +3,17 @@ package de.frank.entropyreducer.domain.agentic.gates
 import de.frank.entropyreducer.data.repository.PromptRepository
 import de.frank.entropyreducer.data.repository.PromptToolPermissionRepository
 import de.frank.entropyreducer.domain.model.ConfirmDecision
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -43,9 +47,16 @@ constructor(
     private val _pendingRequest = MutableStateFlow<ConfirmationRequest?>(null)
     val pendingRequest: StateFlow<ConfirmationRequest?> = _pendingRequest.asStateFlow()
 
-    private var pendingContinuation:
-        kotlinx.coroutines.CancellableContinuation<ConfirmationResult>? =
-        null
+    /**
+     * Thread-sicher (Direktive 3 Loop-1-Fix, war HIGH-3-Bug): vorher war
+     * pendingContinuation ein einfaches var — read+write von verschiedenen
+     * Dispatchers konnte TOCTOU verursachen. AtomicReference + zusaetzliches
+     * Mutex fuer den request-Pfad garantieren dass nur EINE Continuation
+     * gleichzeitig aktiv ist und respond() immer die richtige aufweckt.
+     */
+    private val pendingContinuationRef =
+        AtomicReference<CancellableContinuation<ConfirmationResult>?>(null)
+    private val requestMutex = Mutex()
 
     override suspend fun request(req: ConfirmationRequest): ConfirmationResult {
         // 1. Trust-Modus pruefen
@@ -59,33 +70,51 @@ constructor(
             )
         }
 
-        // 2. Alten Pending-Request (falls vorhanden) als TIMED_OUT ablehnen
-        val previous = pendingContinuation
-        if (previous != null && previous.isActive) {
-            previous.resume(
-                ConfirmationResult(
-                    decision = ConfirmDecision.TIMED_OUT,
-                    rejectReason = "Vom naechsten Confirm-Request verdraengt",
-                )
+        // 2. Background-Schutz (Direktive 3 Loop-1-Fix, war MED-2-Bug):
+        // Wenn der Run im Hintergrund laeuft (TriggerSource SCHEDULED/CHAINED/EVENT),
+        // gibt es keinen User der den Dialog beantworten kann. Statt 60s zu warten
+        // sofort als REJECTED zurueckgeben — sauber und schnell. Frank's intentionaler
+        // Schutz: Background-Runs muessen Trust-Modus pro Tool haben.
+        if (req.isBackground) {
+            return ConfirmationResult(
+                decision = ConfirmDecision.REJECTED,
+                rejectReason =
+                    "Background-Run ohne Trust-Modus — Schreib-Tools brauchen Trust " +
+                        "wenn sie ohne UI-Dialog laufen sollen.",
             )
         }
 
-        // 3. Neuer Request → Coroutine suspendieren, auf UI warten
+        // 3. Mutex-geschuetzte Pre-Verdraengung: alten Pending-Request beenden
+        requestMutex.withLock {
+            val previous = pendingContinuationRef.getAndSet(null)
+            if (previous != null && previous.isActive) {
+                previous.resume(
+                    ConfirmationResult(
+                        decision = ConfirmDecision.TIMED_OUT,
+                        rejectReason = "Vom naechsten Confirm-Request verdraengt",
+                    )
+                )
+            }
+        }
+
+        // 4. Neuer Request → Coroutine suspendieren, auf UI warten
         val timeoutResult: ConfirmationResult? =
             withTimeoutOrNull(60_000L) {
                 suspendCancellableCoroutine<ConfirmationResult> { cont ->
-                    pendingContinuation = cont
+                    pendingContinuationRef.set(cont)
                     _pendingRequest.value = req
                     cont.invokeOnCancellation {
                         _pendingRequest.value = null
-                        pendingContinuation = null
+                        // CAS: nur loeschen wenn wir noch die Aktive sind
+                        pendingContinuationRef.compareAndSet(cont, null)
                     }
                 }
             }
 
         // Cleanup falls nicht schon durch respond() passiert
         _pendingRequest.value = null
-        pendingContinuation = null
+        // Nur loeschen wenn der aktuelle Continuation derselbe ist
+        pendingContinuationRef.getAndSet(null)
 
         return timeoutResult
             ?: ConfirmationResult(
@@ -96,13 +125,15 @@ constructor(
 
     /**
      * Von der UI aufgerufen wenn Frank den Confirm-Dialog beantwortet.
+     * Thread-sicher via AtomicReference.getAndSet — selbst bei parallelem
+     * Aufruf gewinnt der erste, der zweite faengt null und kehrt ohne Wirkung
+     * zurueck.
      */
     fun respond(decision: ConfirmDecision, rejectReason: String? = null) {
-        val cont = pendingContinuation ?: return
+        val cont = pendingContinuationRef.getAndSet(null) ?: return
         if (cont.isActive) {
             cont.resume(ConfirmationResult(decision = decision, rejectReason = rejectReason))
         }
         _pendingRequest.value = null
-        pendingContinuation = null
     }
 }

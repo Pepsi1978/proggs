@@ -73,7 +73,17 @@ constructor(private val executionRepo: PromptExecutionRepository) {
         toolCallCount: Int,
         finishedAt: Long,
     ) {
-        val existing = executionRepo.getById(executionId) ?: return
+        val existing = executionRepo.getById(executionId)
+        if (existing == null) {
+            // Direktive 3 Loop-1-Fix (war MED-4-Bug): nicht silent verwerfen.
+            android.util.Log.e(
+                "ExecutionLogger",
+                "complete() fuer unbekannte executionId=$executionId — " +
+                    "Tokens und finalAnswer werden NICHT persistiert. " +
+                    "Das deutet auf einen Race oder einen geloeschten Audit-Eintrag hin.",
+            )
+            return
+        }
         executionRepo.updateExecution(
             existing.copy(
                 status = ExecutionStatus.SUCCESS,
@@ -100,7 +110,16 @@ constructor(private val executionRepo: PromptExecutionRepository) {
         toolCallCount: Int = 0,
         finishedAt: Long = System.currentTimeMillis(),
     ) {
-        val existing = executionRepo.getById(executionId) ?: return
+        val existing = executionRepo.getById(executionId)
+        if (existing == null) {
+            // Direktive 3 Loop-1-Fix (war MED-4-Bug): nicht silent verwerfen.
+            android.util.Log.e(
+                "ExecutionLogger",
+                "fail() fuer unbekannte executionId=$executionId — " +
+                    "Fehler-Begruendung wird NICHT persistiert: $errorMessage",
+            )
+            return
+        }
         executionRepo.updateExecution(
             existing.copy(
                 status = status,
