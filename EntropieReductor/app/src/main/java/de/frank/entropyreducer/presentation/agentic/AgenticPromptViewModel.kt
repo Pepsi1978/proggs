@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.domain.agentic.WorkflowEvent
 import de.frank.entropyreducer.domain.agentic.WorkflowRunner
+import de.frank.entropyreducer.domain.agentic.gates.UiConfirmationGate
+import de.frank.entropyreducer.domain.model.ConfirmDecision
 import de.frank.entropyreducer.domain.model.ExecutionStatus
 import de.frank.entropyreducer.domain.model.StepType
 import de.frank.entropyreducer.domain.model.TriggerSource
@@ -32,12 +34,29 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class AgenticPromptViewModel
 @Inject
-constructor(private val workflowRunner: WorkflowRunner) : ViewModel() {
+constructor(
+    private val workflowRunner: WorkflowRunner,
+    private val uiConfirmationGate: UiConfirmationGate,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AgenticRunUiState())
     val uiState: StateFlow<AgenticRunUiState> = _uiState.asStateFlow()
 
+    /** Lebender Stream der ausstehenden Confirmations — von der UI direkt beobachtet. */
+    val pendingConfirmationFlow: StateFlow<de.frank.entropyreducer.domain.agentic.gates.ConfirmationRequest?> =
+        uiConfirmationGate.pendingRequest
+
     private var currentRunJob: Job? = null
+
+    fun approveConfirmation() {
+        uiConfirmationGate.respond(ConfirmDecision.APPROVED)
+        _uiState.update { it.copy(pendingConfirmation = null) }
+    }
+
+    fun rejectConfirmation(reason: String? = null) {
+        uiConfirmationGate.respond(ConfirmDecision.REJECTED, reason)
+        _uiState.update { it.copy(pendingConfirmation = null) }
+    }
 
     fun runPrompt(
         promptId: String,

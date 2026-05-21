@@ -59,12 +59,71 @@ fun AgenticExecutionDialog(
     vm: AgenticPromptViewModel = hiltViewModel(),
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val pendingConfirm by vm.pendingConfirmationFlow.collectAsStateWithLifecycle()
 
     // Beim ersten Compose den Run starten (nur einmal pro promptId)
     androidx.compose.runtime.LaunchedEffect(promptId) {
         if (state.promptId != promptId || (!state.isRunning && state.finalStatus == null)) {
             vm.runPrompt(promptId, userInputContext)
         }
+    }
+
+    // Confirm-Dialog (vor dem normalen Execution-Dialog) wenn etwas ansteht
+    pendingConfirm?.let { req ->
+        AlertDialog(
+            onDismissRequest = { vm.rejectConfirmation("Dialog geschlossen") },
+            title = {
+                Text(
+                    text = "Schreibender Tool-Aufruf bestaetigen",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Werkzeug: ${req.tool.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        text = req.tool.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = "Argumente (von Gemini vorgeschlagen):",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(6.dp),
+                    ) {
+                        Text(
+                            text = req.args.toString().take(800),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(8.dp),
+                        )
+                    }
+                    req.previewText?.let { preview ->
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            text = preview,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                OutlinedButton(onClick = { vm.approveConfirmation() }) { Text("Genehmigen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.rejectConfirmation() }) { Text("Ablehnen") }
+            },
+        )
+        return
     }
 
     AlertDialog(

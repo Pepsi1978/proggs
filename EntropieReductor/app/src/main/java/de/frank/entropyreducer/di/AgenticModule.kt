@@ -6,8 +6,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import de.frank.entropyreducer.domain.agentic.AgenticTool
-import de.frank.entropyreducer.domain.agentic.gates.AutoApproveConfirmationGate
 import de.frank.entropyreducer.domain.agentic.gates.ConfirmationGate
+import de.frank.entropyreducer.domain.agentic.gates.UiConfirmationGate
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadAufgabenTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadBiomarkerTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadEntropieEintraegeTool
@@ -128,7 +128,10 @@ abstract class AgenticModule {
     @IntoSet
     abstract fun bindUpdateProfilTool(impl: UpdateProfilTool): AgenticTool
 
-    // Gate-Bindings — Default-Implementations (UI-Variante ueberschreibt in Etappe 9)
+    // Gate-Bindings — UI-Variante mit StateFlow-Bridge (Frank 2026-05-21).
+    // Im Background (z.B. WorkManager) bleibt das Verhalten gleich: wenn der
+    // Prompt oder das Tool im Trust-Modus ist, wird AUTO_APPROVED ohne UI.
+    // Sonst wartet das UI 60s auf Antwort, danach TIMED_OUT (≈ REJECTED).
     @Binds
-    abstract fun bindConfirmationGate(impl: AutoApproveConfirmationGate): ConfirmationGate
+    abstract fun bindConfirmationGate(impl: UiConfirmationGate): ConfirmationGate
 }
