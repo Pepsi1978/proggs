@@ -540,6 +540,23 @@ constructor(
         trigger: de.frank.entropyreducer.data.local.entities.PromptTriggerEntity,
         active: Boolean,
     ) = viewModelScope.launch { triggerRepo.setActive(trigger.id, active) }
+
+    /**
+     * Chain-Trigger: dieser Prompt soll nach Erfolg eines anderen Prompts laufen.
+     * (Etappe 12)
+     */
+    fun addChainTrigger(promptId: String, chainAfterPromptId: String) =
+        viewModelScope.launch {
+            triggerRepo.upsert(
+                de.frank.entropyreducer.data.local.entities.PromptTriggerEntity(
+                    id = UUID.randomUUID().toString(),
+                    promptId = promptId,
+                    triggerType = de.frank.entropyreducer.domain.model.TriggerType.CHAIN,
+                    chainAfterPromptId = chainAfterPromptId,
+                    isActive = true,
+                )
+            )
+        }
     val prompts: StateFlow<List<SavedPromptEntity>> =
         repo.getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

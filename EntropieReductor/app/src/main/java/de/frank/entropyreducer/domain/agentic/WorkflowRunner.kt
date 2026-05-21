@@ -16,6 +16,7 @@ import de.frank.entropyreducer.domain.agentic.gates.ConfirmationRequest
 import de.frank.entropyreducer.domain.agentic.gates.GateDecision
 import de.frank.entropyreducer.domain.agentic.gates.PermissionGate
 import de.frank.entropyreducer.domain.agentic.gates.TokenMeter
+import de.frank.entropyreducer.domain.agentic.trigger.ChainTriggerNotifier
 import de.frank.entropyreducer.domain.model.ConfirmDecision
 import de.frank.entropyreducer.domain.model.ExecutionStatus
 import de.frank.entropyreducer.domain.model.StepType
@@ -61,6 +62,7 @@ constructor(
     private val promptRepo: PromptRepository,
     private val permissionRepo: PromptToolPermissionRepository,
     private val secrets: EncryptedSecretsStore,
+    private val chainNotifier: ChainTriggerNotifier,
 ) {
 
     fun run(
@@ -386,6 +388,11 @@ constructor(
                             durationMillis = finishedAt - startedAt,
                         )
                     )
+                    // Frank-Wunsch 2026-05-21: Chain-Trigger nach Erfolg.
+                    // Fire-and-forget — der Chain-Notifier laeuft in seinem
+                    // eigenen Scope. Falls Kette: weitere Prompts werden im
+                    // Hintergrund mit TriggerSource.CHAINED gestartet.
+                    chainNotifier.notifySuccess(promptId)
                 }
             }
         } catch (t: Throwable) {

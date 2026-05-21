@@ -251,8 +251,11 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     triggerEditFor?.let { p ->
         TriggerConfigDialog(
             promptName = p.name,
+            promptId = p.id,
             triggersFlow = vm.triggersForPrompt(p.id),
+            allPromptsFlow = vm.prompts,
             onAddCron = { cron -> vm.addCronTrigger(p.id, cron) },
+            onAddChain = { afterId -> vm.addChainTrigger(p.id, afterId) },
             onDelete = { vm.deleteTrigger(it) },
             onToggleActive = { trigger, active -> vm.setTriggerActive(trigger, active) },
             onDismiss = { triggerEditFor = null },

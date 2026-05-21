@@ -16,6 +16,7 @@ import de.frank.entropyreducer.domain.agentic.tools.read.ReadHypothesenTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadInsightsTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadMemoryTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadProfilTool
+import de.frank.entropyreducer.domain.agentic.tools.read.ReadPromptExecutionsTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadThesenTool
 import de.frank.entropyreducer.domain.agentic.tools.write.AddFollowupToAufgabeTool
 import de.frank.entropyreducer.domain.agentic.tools.write.AddMemoryTool
@@ -84,6 +85,10 @@ abstract class AgenticModule {
     @Binds
     @IntoSet
     abstract fun bindReadForscherSessionsTool(impl: ReadForscherSessionsTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindReadPromptExecutionsTool(impl: ReadPromptExecutionsTool): AgenticTool
 
     // Write-Tools (Etappe 7) — alle haben isWriteTool=true und brauchen pro Prompt
     // einen Eintrag in prompt_tool_permissions mit granted=true

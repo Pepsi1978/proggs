@@ -12,9 +12,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,7 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
+import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.domain.agentic.trigger.SimpleCronParser
+import de.frank.entropyreducer.domain.model.TriggerType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,14 +62,21 @@ import java.util.Locale
 @Composable
 fun TriggerConfigDialog(
     promptName: String,
+    promptId: String,
     triggersFlow: kotlinx.coroutines.flow.Flow<List<PromptTriggerEntity>>,
+    allPromptsFlow: kotlinx.coroutines.flow.Flow<List<SavedPromptEntity>>,
     onAddCron: (cronExpression: String) -> Unit,
+    onAddChain: (chainAfterPromptId: String) -> Unit,
     onDelete: (PromptTriggerEntity) -> Unit,
     onToggleActive: (PromptTriggerEntity, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val triggers by triggersFlow.collectAsState(initial = emptyList())
+    val allPrompts by allPromptsFlow.collectAsState(initial = emptyList())
     var newCron by remember { mutableStateOf("") }
+    var chainAfterId by remember { mutableStateOf<String?>(null) }
+    var chainDropdownExpanded by remember { mutableStateOf(false) }
+    val chainCandidates = allPrompts.filter { it.id != promptId }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -162,7 +175,70 @@ fun TriggerConfigDialog(
                         }
                     },
                     enabled = newCron.isNotBlank() && preview != null,
-                ) { Text("Trigger anlegen") }
+                ) { Text("Cron-Trigger anlegen") }
+
+                // Chain-Trigger Bereich (Etappe 12)
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Chain-Trigger: nach Erfolg eines anderen Prompts",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(6.dp))
+                Box {
+                    val selectedPromptName =
+                        chainCandidates.firstOrNull { it.id == chainAfterId }?.name
+                            ?: "Prompt waehlen…"
+                    OutlinedTextField(
+                        value = selectedPromptName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Quell-Prompt") },
+                        trailingIcon = {
+                            IconButton(onClick = { chainDropdownExpanded = !chainDropdownExpanded }) {
+                                Icon(
+                                    Icons.Outlined.ArrowDropDown,
+                                    contentDescription = "Auswaehlen",
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    DropdownMenu(
+                        expanded = chainDropdownExpanded,
+                        onDismissRequest = { chainDropdownExpanded = false },
+                    ) {
+                        if (chainCandidates.isEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("Keine anderen Prompts vorhanden") },
+                                onClick = { chainDropdownExpanded = false },
+                                enabled = false,
+                            )
+                        } else {
+                            chainCandidates.forEach { other ->
+                                DropdownMenuItem(
+                                    text = { Text(other.name) },
+                                    onClick = {
+                                        chainAfterId = other.id
+                                        chainDropdownExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        chainAfterId?.let {
+                            onAddChain(it)
+                            chainAfterId = null
+                        }
+                    },
+                    enabled = chainAfterId != null,
+                ) { Text("Chain-Trigger anlegen") }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fertig") } },
@@ -184,17 +260,34 @@ private fun TriggerRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                val title =
+                    when (trigger.triggerType) {
+                        TriggerType.CRON -> trigger.cronExpression ?: "(kein cron-Ausdruck)"
+                        TriggerType.CHAIN -> "Nach Prompt-Erfolg (Chain)"
+                        TriggerType.EVENT -> "Event: ${trigger.eventCondition ?: "?"}"
+                        TriggerType.MANUAL -> "Manuell"
+                    }
                 Text(
-                    text = trigger.cronExpression ?: "(kein cron-Ausdruck)",
+                    text = title,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                trigger.cronExpression?.let { cron ->
-                    Text(
-                        text = SimpleCronParser.describe(cron),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                when (trigger.triggerType) {
+                    TriggerType.CRON ->
+                        trigger.cronExpression?.let { cron ->
+                            Text(
+                                text = SimpleCronParser.describe(cron),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    TriggerType.CHAIN ->
+                        Text(
+                            text = "Quell-Prompt-ID: ${trigger.chainAfterPromptId?.take(8) ?: "?"}…",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    else -> {}
                 }
                 trigger.nextScheduledAt?.let { next ->
                     Text(
