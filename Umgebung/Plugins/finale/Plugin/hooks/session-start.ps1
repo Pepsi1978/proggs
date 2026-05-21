@@ -8,7 +8,19 @@
 # Wird auf Windows-Systemen ohne Git-Bash benoetigt damit der Schutz aktiv bleibt.
 # In hooks.json optional aktivieren — siehe README "Cross-Platform-Hooks".
 
-$ErrorActionPreference = "SilentlyContinue"
+# Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante als
+# primaerer Hook. Dann beenden wir hier still, um doppelte Diagnose-Ausgaben zu
+# vermeiden. Nur wenn bash NICHT verfuegbar (native Windows ohne Git Bash) ist
+# der .ps1-Hook die einzige aktive Variante. Hardening 2026-05-21 (Direktive #3).
+try {
+    $null = Get-Command bash -ErrorAction Stop
+    exit 0   # bash verfuegbar — .sh-Hook ist der primaere
+} catch {
+    # bash nicht verfuegbar — wir sind der einzige Hook, weiter
+}
+
+# Stop statt SilentlyContinue: Fehler vom try/catch gefangen.
+$ErrorActionPreference = "Stop"
 
 try {
     $pluginRoot = $env:CLAUDE_PLUGIN_ROOT
@@ -29,9 +41,12 @@ try {
     $errFile  = Join-Path $tmpDir ".finale-verify-$pid_str.err"
 
     try {
-        # Bash-Aufruf — auf Windows ohne Git Bash schlaegt das fehl und der catch greift
+        # Bash-Aufruf — auf Windows ohne Git Bash schlaegt das fehl und der catch greift.
+        # KEIN $pluginRoot als zweites Argument: verify-skills.sh leitet PLUGIN_ROOT
+        # selbst aus SCRIPT_DIR/.. ab (FIN-001). $1 von verify-skills.sh ist optionaler
+        # App-Root, den SessionStart nicht kennt.
         $proc = Start-Process -FilePath "bash" `
-            -ArgumentList @($verify, $pluginRoot) `
+            -ArgumentList @($verify) `
             -RedirectStandardOutput $jsonFile `
             -RedirectStandardError $errFile `
             -NoNewWindow -Wait -PassThru -ErrorAction Stop

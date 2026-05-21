@@ -9,11 +9,19 @@
 # 1. Nackte Apostrophe in <string>-Werten (Pflicht-Escape: \' oder &apos;)
 # 2. Nackte doppelte Anfuehrungszeichen in <string>-Werten (Pflicht-Escape: \")
 # 3. Unmatched &-Symbole (& muss &amp; sein)
-# 4. translatable="false" Strings die troz alledem in values-xx/ landen
+#
+# Hinweis: ein vierter Check fuer translatable="false" in values-xx/ war geplant
+# aber nicht implementiert — Kommentar entfernt 2026-05-21 (Direktive #3
+# Doku-Ehrlichkeit). Wenn der Check noetig wird: hier ergaenzen und im
+# PowerShell-Pendant identisch.
 
-set -u
+# set -eu: Hardening FIN-029 (2026-05-21). Non-blocking Hook — Exit 0 am Ende.
+set -eu
 
-stdin_input="$(cat 2>/dev/null || true)"
+# DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin akzeptieren.
+# Bei groesserem Input (theoretisch >500 MB moeglich) wuerde `cat` den Speicher
+# fluten. head -c begrenzt den Read hart. Hooks sind non-blocking, exit 0 OK.
+stdin_input="$(head -c 524288 2>/dev/null || true)"
 if [ -z "$stdin_input" ]; then
   exit 0
 fi
@@ -34,9 +42,13 @@ if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
   exit 0
 fi
 
-# Nur strings.xml-Dateien interessieren uns
+# Nur strings.xml-Dateien interessieren uns.
+# Cross-Platform: deckt Forward-Slash (Claude Code Standard) UND Backslash
+# (falls Claude Code auf Windows den Pfad mit \ uebergibt) ab. Hardening
+# Wave 2.3 2026-05-21 (Direktive #3) — vorher Backslash-Pfade still ueberspruengen.
 case "$file_path" in
   *res/values*/strings.xml|*res/values/strings.xml) : ;;
+  *res\\values*\\strings.xml|*res\\values\\strings.xml) : ;;
   *) exit 0 ;;
 esac
 

@@ -9,7 +9,20 @@
 # Verhalten identisch zur .sh-Variante. Wird auf Windows-Systemen ohne
 # Git-Bash benoetigt damit der Schutz aktiv bleibt.
 
-$ErrorActionPreference = "SilentlyContinue"
+# Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante als
+# primaerer Hook. Wir beenden hier still um doppelte Block-Meldungen zu vermeiden.
+# Nur wenn bash NICHT verfuegbar (native Windows ohne Git Bash) ist der .ps1-Hook
+# der einzige aktive Guard. Hardening 2026-05-21 (Direktive #3).
+try {
+    $null = Get-Command bash -ErrorAction Stop
+    exit 0
+} catch {
+    # bash nicht verfuegbar — wir sind der einzige Guard, weiter
+}
+
+# Stop statt SilentlyContinue: Fehler in der Hook-Logik werden vom try/catch
+# unten gefangen und enden in exit 0.
+$ErrorActionPreference = "Stop"
 
 try {
     # Input-Guard: leerer stdin -> still durchwinken
@@ -17,9 +30,11 @@ try {
     if ([string]::IsNullOrWhiteSpace($stdin)) {
         exit 0
     }
+    # DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin
+    if ($stdin.Length -gt 524288) { exit 0 }
 
     # JSON parsen
-    $parsed = $stdin | ConvertFrom-Json -ErrorAction Stop
+    $parsed = $stdin | ConvertFrom-Json
     $filePath = $null
     if ($parsed.tool_input) {
         if ($parsed.tool_input.file_path) {
@@ -32,19 +47,36 @@ try {
         exit 0
     }
 
-    # Schreiben innerhalb .android-shield/ ist immer erlaubt (Plugin-Output-Domain)
-    if ($filePath -match '[/\\]\.android-shield[/\\]') {
+    # Path-Traversal-Schutz (C3 2026-05-21 Hardening): bei ../ im Pfad
+    # kanonisieren BEVOR der Whitelist-Check. Verhindert Bypass wie
+    # C:\app\..\.android-shield\..\res\values\strings.xml.
+    $realPath = $filePath
+    if ($filePath -match '\.\.[/\\]') {
+        try {
+            $realPath = [System.IO.Path]::GetFullPath($filePath)
+        } catch {
+            # Bei Fehler beim Kanonisieren: Original verwenden (Whitelist greift dann nicht — sicher).
+            $realPath = $filePath
+        }
+    }
+
+    # Schreiben innerhalb .android-shield/ ist immer erlaubt (Plugin-Output-Domain).
+    # Match auf KANONISIERTEM Pfad — sonst Traversal-Bypass.
+    if ($realPath -match '[/\\]\.android-shield[/\\]') {
         exit 0
     }
 
-    # Suche aufwaerts nach Audit-Lock
-    $dir = Split-Path -Parent $filePath
+    # Suche aufwaerts nach Audit-Lock (auf kanonisiertem Pfad)
+    $dir = Split-Path -Parent $realPath
     $lockFound = $null
     $depth = 0
     $maxDepth = 20
 
     while ($dir -and ($dir -ne (Split-Path -Parent $dir)) -and ($depth -lt $maxDepth)) {
-        $lockPath = Join-Path $dir ".android-shield/.audit-only.lock"
+        # Nested Join-Path mit nur einem Separator pro Aufruf — robuster bei
+        # strikten Pfad-Operationen (Test-Path -LiteralPath) als
+        # Forward-Slash in einem Argument-String.
+        $lockPath = Join-Path (Join-Path $dir ".android-shield") ".audit-only.lock"
         if (Test-Path $lockPath -PathType Leaf) {
             $lockFound = $lockPath
             break

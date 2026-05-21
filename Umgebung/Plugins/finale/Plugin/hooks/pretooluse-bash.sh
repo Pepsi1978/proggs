@@ -15,10 +15,14 @@
 # - Gefaehrlicher Befehl -> Exit 2 (Block), klare Begruendung auf stderr
 # - Harmloser Befehl -> Exit 0, keine Ausgabe
 
-set -u
+# set -eu: -e laesst Fehler propagieren, -u faengt unbound variables.
+# Hardening FIN-029 (2026-05-21) — vorher nur set -u.
+set -eu
 
-# Hook-Input einlesen (Claude Code schickt JSON mit { tool_input: { command: "..." } })
-stdin_input="$(cat 2>/dev/null || true)"
+# Hook-Input einlesen (Claude Code schickt JSON mit { tool_input: { command: "..." } }).
+# DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin akzeptieren. Bei
+# groesserem Input wuerde `cat` den Speicher fluten — head -c begrenzt hart.
+stdin_input="$(head -c 524288 2>/dev/null || true)"
 if [ -z "$stdin_input" ]; then
   exit 0
 fi
@@ -88,6 +92,18 @@ fi
 if [ -z "$block_reason" ]; then
   if printf '%s' "$cmd" | grep -E -q 'find[[:space:]]+.*\.android-shield.*-delete'; then
     block_reason="find -delete auf .android-shield/ — destructiv. Audit-Log gehoert append-only."
+  fi
+fi
+
+# Pattern 7 — Scripting-Sprache mit Code-Argument (-c/-e/--eval) UND geschuetztem
+# Dateinamen im Befehl. Schliesst Bypass via `python3 -c "open('strings.xml','w')..."`,
+# `node -e "...writeFileSync..."`, `perl -e "open('>strings.xml')..."` etc.
+# Konservativ: false positives akzeptabel (Read-Only-Skripte werden auch blockiert);
+# false negatives waeren das ernstere Risiko. Hardening C1 2026-05-21 (Direktive #3).
+if [ -z "$block_reason" ]; then
+  if printf '%s' "$cmd" | grep -E -q '(^|[[:space:];|&])(python3?|node|nodejs|perl|ruby|sh|pwsh|bash)[[:space:]]+(-[cei]|--eval|--exec|--command)' && \
+     printf '%s' "$cmd" | grep -E -q "$PROTECTED"; then
+    block_reason="Scripting-Sprache (python/node/perl/etc.) mit Code-Argument das eine geschuetzte Datei referenziert. Auch indirekte Schreibversuche via Scripting werden blockiert. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
 

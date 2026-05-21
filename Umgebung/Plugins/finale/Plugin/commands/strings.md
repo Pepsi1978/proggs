@@ -19,7 +19,7 @@ Reine String-Hygiene: scannt die App nach hardcodierten Texten (Compose-Literale
 
 ## App-Namen-Auflösung (PFLICHT vor dem Orchestrator-Spawn)
 
-Identische Logik wie in `/finale:run` (siehe shield.md): wenn der Nutzer einen App-Namen
+Identische Logik wie in `/finale:run` (siehe run.md): wenn der Nutzer einen App-Namen
 nennt statt eines Pfads, vor dem Spawn auflösen via `~/proggs/<fuzzy-match>/`. Beispiele:
 - „Best Journal Android" → `~/proggs/BestJournalAndroid/`
 - „Best Journal Frank" → `~/proggs/BestJournalFrank/`

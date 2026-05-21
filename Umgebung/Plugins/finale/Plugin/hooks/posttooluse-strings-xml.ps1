@@ -10,13 +10,27 @@
 # 2. Nackte doppelte Anfuehrungszeichen in <string>-Werten
 # 3. Unmatched &-Symbole (& muss &amp; sein)
 
-$ErrorActionPreference = "SilentlyContinue"
+# Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante.
+# Wir beenden hier still um doppelte Lint-Warnungen zu vermeiden.
+# Hardening 2026-05-21 (Direktive #3).
+try {
+    $null = Get-Command bash -ErrorAction Stop
+    exit 0
+} catch {
+    # bash nicht verfuegbar — weiter
+}
+
+# Stop statt SilentlyContinue: Fehler werden vom try/catch gefangen.
+# Lint ist non-blocking — Exit 0 in jedem Fall, auch wenn der Lint selbst crasht.
+$ErrorActionPreference = "Stop"
 
 try {
     $stdin = [Console]::In.ReadToEnd()
     if ([string]::IsNullOrWhiteSpace($stdin)) { exit 0 }
+    # DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin
+    if ($stdin.Length -gt 524288) { exit 0 }
 
-    $parsed = $stdin | ConvertFrom-Json -ErrorAction Stop
+    $parsed = $stdin | ConvertFrom-Json
     $filePath = $null
     if ($parsed.tool_input) {
         if ($parsed.tool_input.file_path) {

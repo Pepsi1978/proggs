@@ -114,9 +114,20 @@ mtime_of() {
 }
 
 # Liest "version:" oder "Version X.Y" aus dem ersten 30 Zeilen einer SKILL.md.
-# Liefert leeren String wenn nichts gefunden.
+# Symlink-Leak-Schutz (C5 2026-05-21 Hardening): nur Dateien innerhalb
+# ~/.claude/skills/ lesen. Verhindert dass ein praeparierter Symlink
+# (z.B. auf ~/.ssh/id_rsa oder ~/.claude/settings.json) sensitiven Inhalt
+# durch den JSON-Output leakt. Liefert leeren String wenn nichts gefunden
+# ODER der echte Pfad ausserhalb skills/ liegt.
 version_of() {
   local file="$1"
+  local real
+  real="$(realpath "$file" 2>/dev/null || readlink -f "$file" 2>/dev/null || echo "$file")"
+  # Nur lesen wenn echter Pfad in ~/.claude/skills/ (verhindert Symlink-Leak)
+  case "$real" in
+    "$HOME/.claude/skills/"*) : ;;
+    *) printf ''; return 0 ;;
+  esac
   local v
   v="$(head -n 30 "$file" 2>/dev/null | grep -iE '^(version[: ]|# *Version[: ])' | head -n 1 | sed -E 's/^[Vv]ersion[: ]+//; s/^# *Version[: ]+//' | tr -d '\r' | head -c 50)"
   printf '%s' "$v"

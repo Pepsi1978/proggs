@@ -19,7 +19,7 @@ Nutze diesen Modus wenn die App schon ein vollständiges Audit hinter sich hat (
 
 ## App-Namen-Auflösung (PFLICHT vor dem Orchestrator-Spawn)
 
-Identische Logik wie in `/finale:run` (siehe shield.md): wenn der Nutzer einen App-Namen
+Identische Logik wie in `/finale:run` (siehe run.md): wenn der Nutzer einen App-Namen
 nennt statt eines Pfads, vor dem Spawn auflösen via `~/proggs/<fuzzy-match>/`. Beispiele:
 - „Best Journal Android" → `~/proggs/BestJournalAndroid/`
 - „Best Journal Frank" → `~/proggs/BestJournalFrank/`
@@ -36,9 +36,14 @@ mode: fix-only
 appRoot: "$ARGUMENTS"
 pluginRoot: "${CLAUDE_PLUGIN_ROOT}"
 trigger: "/finale:fix-only"
-phases: [0, 2, 3, 4, 5]
+phases: [0, 2, "3a-strings", 4, 5]
 requirePreexistingAudit: true
 ```
+
+Hinweis: Phase `3a-strings` (nicht reine `3`) — fix-only soll nur neu entstandene
+Hardcodes nach `strings.xml` migrieren, KEINE Uebersetzung der 26 Sprachen
+ausloesen. Die Vollphase-`3` enthielte 3a + 3b + 3c und wuerde alle Sprachen
+neu uebersetzen — was im fix-only-Modus semantisch falsch ist.
 
 Der Orchestrator:
 1. Phase 0 wie immer (Skill-Verifikation, Pre-Flight).

@@ -106,6 +106,20 @@ aus dem 2026-05-18-Lauf).
 NACH JEDEM Edit auf einer Datei: AUSFÜHREN — nicht nur dokumentieren.
 Rollback bei FAIL ist Pflicht. Max 3 Versuche, dann Stop + Worker-Crash-Report an Orchestrator.
 
+**Performance-Optimierung Wave 2.5 (2026-05-21) — Bundle-Quick-Check:**
+Bei einem Bundle-Fix (Orchestrator-Bundle-Karte mit N Findings die mit der GLEICHEN
+Loesung auf N Stellen angewendet werden): Den Quick-Check NUR EINMAL nach Anwendung
+ALLER N Edits ausführen, nicht nach jedem einzelnen Edit innerhalb des Bundles.
+Spart bei 200-Finding-Audits bis zu 90% Gradle-Zeit (200 Edits × 10s Gradle = 33min
+→ 1 Edit-Welle + 1 Gradle = ~30s).
+
+Bei Einzel-Findings (Standard-Karte): Quick-Check wie gehabt nach jedem Edit.
+
+**Rollback-Regel bei Bundle-FAIL:** Wenn der Quick-Check NACH einem Bundle fehlschlägt,
+muessen ALLE Bundle-Edits zurueckgerollt werden — nicht nur der letzte. Pre-Bundle-
+Snapshot-Pflicht: vor dem ersten Bundle-Edit `git stash` oder Inhalts-Backup
+aller betroffenen Dateien anlegen.
+
 ### Bei .kt-Datei-Edit
 
 ```bash
@@ -266,10 +280,16 @@ Ohne Approval: Abort mit reason="invasive-without-approval".
 
 ## Output-Schema (an Orchestrator zurück)
 
+FindingIDs folgen dem FIN-025-Schema (A1-A99 fuer HWG, B1-B99 fuer UWG,
+C1-C99 fuer DSGVO, D1-D99 fuer BGB/Widerruf, E1-E99 fuer Play-Store-Policy,
+F1-F99 fuer Dark-Pattern, G1-G99 fuer Missing-Docs, Z1-Z99 fuer Sonstige).
+Interne T-/AM-/MD-Worker-IDs werden vom Synthesizer auf dieses Schema konvertiert
+BEVOR sie den fix-applier erreichen (siehe orchestrator.md Phase 1 FIN-025).
+
 ```json
 {
   "ok": true,
-  "findingId": "T-001",
+  "findingId": "B3",
   "file": "<pfad>",
   "linesChanged": 0,
   "diff": "<unified-diff, max 40 Zeilen>",

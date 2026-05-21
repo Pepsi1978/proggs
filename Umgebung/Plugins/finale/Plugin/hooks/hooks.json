@@ -1,5 +1,5 @@
 {
-	"description": "finale hooks: skill-symlink-verification at session start, destructive-bash-guard in plugin output dirs, audit-only write protection, strings.xml lint after write/edit. Cross-Platform: .sh-Hooks via bash (Git Bash auf Windows, native auf Unix). PowerShell-Pendants existieren als .ps1 fuer Windows ohne bash — siehe README fuer Umstellung.",
+	"description": "finale hooks: skill-symlink-verification at session start, destructive-bash-guard in plugin output dirs, audit-only write protection, strings.xml lint after write/edit. Cross-Platform Dual-Registration: jeder Hook hat .sh + .ps1 registriert. Die .ps1-Hooks pruefen am Anfang ob 'bash' im PATH ist und exiten still wenn ja — so laeuft auf jeder Plattform genau eine Variante. Auf Windows ohne Git Bash: .sh schlaegt fehl (Claude Code ignoriert) und .ps1 macht die Arbeit. Hardening Wave 2.3 2026-05-21 (Direktive #3).",
 	"hooks": {
 		"SessionStart": [
 			{
@@ -8,6 +8,11 @@
 					{
 						"type": "command",
 						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"",
+						"async": false
+					},
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ps1\"",
 						"async": false
 					}
 				]
@@ -21,6 +26,11 @@
 						"type": "command",
 						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse-bash.sh\"",
 						"async": false
+					},
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse-bash.ps1\"",
+						"async": false
 					}
 				]
 			},
@@ -30,6 +40,11 @@
 					{
 						"type": "command",
 						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/audit-only-write-guard.sh\"",
+						"async": false
+					},
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/audit-only-write-guard.ps1\"",
 						"async": false
 					}
 				]
@@ -42,6 +57,11 @@
 					{
 						"type": "command",
 						"command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse-strings-xml.sh\"",
+						"async": false
+					},
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse-strings-xml.ps1\"",
 						"async": false
 					}
 				]

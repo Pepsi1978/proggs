@@ -115,6 +115,31 @@ zuerst in dieser Tabelle eingetragen werden BEVOR er in einem Command-Frontmatte
 auftaucht. Sonst kann der Orchestrator den unbekannten Bezeichner nicht zuordnen
 und bricht still ab.
 
+### Modi-spezifische Parameter (Orchestrator-Input-Schema)
+
+Commands uebergeben neben `phases:` auch Modi-spezifische Parameter ans Orchestrator-
+Spawn-Payload. Folgende Parameter sind offiziell und werden vom Orchestrator
+ausgewertet — alle anderen Parameter werden still ignoriert (kein Crash):
+
+| Parameter | Typ | Default | Bedeutung |
+|-----------|-----|---------|-----------|
+| `mode` | string | (Pflicht) | `default \| audit-only \| fix-only \| strings-only \| translate-only` |
+| `appRoot` | string | aktuelles Verzeichnis | Pfad zur Android-App |
+| `pluginRoot` | string | `${CLAUDE_PLUGIN_ROOT}` | Plugin-Root (fuer Skill-Symlinks) |
+| `trigger` | string | (Info) | Slash-Command der den Lauf gestartet hat |
+| `phases` | array | (Pflicht) | Liste der zu durchlaufenden Phase-IDs (siehe Tabelle oben) |
+| `requirePreexistingAudit` | bool | false | Wenn true: vor Phase 2 Multiple-Choice falls kein `recht-report.json` existiert oder aelter 7 Tage. Beim Wert false startet Phase 2 direkt mit dem gefundenen Report. Verwendet von `/finale:fix-only`. |
+| `skipRechtAudit` | bool | false | Phase 1 nur Roentgen, kein Recht-Audit. Verwendet von `/finale:strings`. |
+| `skipTranslation` | bool | false | Phase 3 nur 3a-strings, kein 3b/3c. Verwendet von `/finale:strings`. |
+| `skipFullAudit` | bool | false | Phase 1 ueberspringen. Verwendet von `/finale:translate`. |
+| `skipFixWorkflow` | bool | false | Phase 2 ueberspringen. Verwendet von `/finale:translate`. |
+| `stopAfter` | string | null | Phase-ID nach der gestoppt wird (z.B. `"phase1-report"` fuer audit-only). |
+| `writeAllowedPaths` | array | alle | Pfade auf die geschrieben werden darf. Fuer `audit-only`: `[".android-shield/**"]` — alles ausserhalb wird vom `audit-only-write-guard`-Hook blockiert (zusaetzlich zum Lock-Mechanismus aus Phase 0 Schritt 8). |
+
+**Pflicht-Regel (Doku-Konsistenz):** Wenn ein neuer Parameter eingefuehrt wird,
+MUSS er hier dokumentiert werden BEVOR er in einem Command-Frontmatter auftaucht.
+Sonst silent-ignore und Verwirrung bei der naechsten Wartung.
+
 ---
 
 ## App-Root-Auflösung (vor Phase 0)
@@ -690,6 +715,30 @@ Bei `invasivityLevel != "text-only"`:
 | [5] | Invasiv | Skip mit Risiko-Doku |
 | [6] | Invasiv | Wie [7] in Standard |
 
+### Audit-Log-Rotation (Performance Wave 2.5, 2026-05-21)
+
+`audit-log.md` ist append-only und waechst ueber Pipeline-Laeufe. Pro Lauf entstehen
+~1-5 KB pro Finding (bei grossen Audits mit 200+ Findings: bis 1 MB pro Lauf).
+Bei N Iterations-Laeufen kann der Log mehrere MB gross werden, was Read-Times in
+Phase 4/5 verlangsamt und Kontext-Reads belastet.
+
+**Rotations-Regel (PFLICHT beim Lauf-Start):**
+
+1. Pruefe `<app-root>/.android-shield/audit-log.md`-Groesse.
+2. Wenn `> 500 KB` ODER `Zahl-der-Eintraege > 500` (Marker: `^## `): rotieren.
+3. Rotation: behalte die letzten 100 Eintraege in `audit-log.md`, verschiebe
+   den Rest in `audit-log-archive-<ISO-timestamp>.md.gz` (gz-komprimiert spart 80%).
+4. Neuer Header-Block in `audit-log.md`:
+   ```
+   > Hinweis: Aeltere Eintraege archiviert in audit-log-archive-2026-05-21T14:00.md.gz
+   > (<N>-Eintraege, gz-komprimiert). Nur die letzten 100 Eintraege stehen hier.
+   > Zum Vollverlauf das Archiv mit `gunzip` entpacken.
+   ```
+5. Archiv-Dateien werden NICHT von Phase 4/5 gelesen — nur falls Nutzer manuell nachfragt.
+
+Implementation: am Anfang von Phase 0 nach Schritt 1 (Skill-Verifikation) einbauen,
+vor dem Pre-Flight-Plan.
+
 ### Audit-Log-Eintrag pro Anwendung
 
 ```markdown
@@ -800,6 +849,35 @@ Jeder Worker:
 ### 3c — Cross-Lingual-Rechtsprüfung
 
 Nach jeder Übersetzung: `rechtssicherheits-skill` Capability `Einzelprüfung` auf den übersetzten Text mit Jurisdiktion = Zielland. Bei Fund eines neuen Findings → zurück in Phase 2 mit diesem Finding (Iteration).
+
+**Performance Wave 2.5 (2026-05-21) — Continuous-Spawning analog zu 3b:**
+Cross-Lingual-Recheck wird NICHT sequenziell pro fertige Übersetzung gestartet.
+Stattdessen: sobald Übersetzer-Worker für Sprache X fertig meldet, SOFORT einen
+Recht-Check-Worker für Sprache X im Background starten. Recheck-Worker laufen
+parallel zu weiteren Übersetzer-Workern für Sprachen Y, Z, .... Max 15 parallele
+Worker gesamt (Translate + Recheck zusammengerechnet, FIN-023 Token-Cap pro Worker
+bleibt 100k).
+
+Beispiel-Ablauf:
+```
+t=0min:    15 Translate-Worker (ar, bn, en, ..., pl) parallel gestartet
+t=4min:    ar fertig → Recheck-ar sofort gestartet
+           Translate-Workers laufen weiter (14 + 1 Recheck = 15 parallel)
+t=5min:    bn fertig → Recheck-bn
+           (13 Translate + 2 Recheck = 15 parallel)
+...
+t=10min:   alle 26 Translate fertig, 22 Rechecks laufen oder fertig
+t=11min:   alle 26 Rechecks fertig
+```
+
+Vorher (sequenziell): 26 Übersetzungen × 5 Min = 130 Min + 26 Rechecks × 1 Min = 156 Min.
+Nachher (continuous): max(Translate-Welle, Recheck-Welle) ≈ ~11 Min total.
+Erwarteter Gewinn: ~93% Wallclock-Zeit für Phase 3.
+
+**Bei Recheck-Finding (`acceptable: false`):** Worker schreibt das neue Finding in
+`recht-report.json` und meldet zurueck. Orchestrator entscheidet ob Phase 2 fuer
+dieses Finding gestartet wird ODER ob die Sprache uebersprungen wird (User-Karte).
+KEINE Blockade der noch laufenden Recheck-Worker fuer andere Sprachen.
 
 **Wichtig:** Ein Wort kann in DE harmlos sein, im Zielland aber regulatorisch eingeschränkt (z. B. medizinische Heilversprechen in DE vs. FR/IT). Daher cross-lingual prüfen, nicht nur 1:1 übersetzen.
 
