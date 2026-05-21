@@ -20,8 +20,10 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayArrow
 import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
+import de.frank.entropyreducer.presentation.agentic.TokenStatsScreen
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.AlertDialog
@@ -69,7 +71,13 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var editing by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }
     var executePromptId by remember { mutableStateOf<String?>(null) }
+    var showTokenStats by remember { mutableStateOf(false) }
     val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
+
+    if (showTokenStats) {
+        TokenStatsScreen(onBack = { showTokenStats = false })
+        return
+    }
 
     val byCategory: Map<PromptCategory, List<SavedPromptEntity>> =
         remember(prompts) {
@@ -81,6 +89,15 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Zurück", tint = cosmos.textPrimary)
+            }
+        },
+        actions = {
+            IconButton(onClick = { showTokenStats = true }) {
+                Icon(
+                    Icons.Outlined.BarChart,
+                    contentDescription = "Token-Verbrauch",
+                    tint = cosmos.textPrimary,
+                )
             }
         },
     ) { padding ->
