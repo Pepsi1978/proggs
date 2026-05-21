@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.PlayArrow
+import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.AlertDialog
@@ -66,6 +68,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     val cosmos = LocalCosmos.current
     var editing by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var creatingInCategory by remember { mutableStateOf<PromptCategory?>(null) }
+    var executePromptId by remember { mutableStateOf<String?>(null) }
     val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
 
     val byCategory: Map<PromptCategory, List<SavedPromptEntity>> =
@@ -126,6 +129,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                                                 onToggle = { vm.toggle(p) },
                                                 onEdit = { editing = p },
                                                 onDelete = { vm.delete(p) },
+                                                onExecute = { executePromptId = p.id },
                                             )
                                         }
                                     }
@@ -163,6 +167,12 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                 creatingInCategory = null
             },
             onCancel = { creatingInCategory = null },
+        )
+    }
+    executePromptId?.let { id ->
+        AgenticExecutionDialog(
+            promptId = id,
+            onDismiss = { executePromptId = null },
         )
     }
 }
@@ -231,6 +241,7 @@ private fun PromptRow(
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onExecute: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     Box(
@@ -268,6 +279,20 @@ private fun PromptRow(
             )
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(
+                    onClick = onExecute,
+                    modifier = Modifier.size(32.dp),
+                    enabled = prompt.isActive,
+                ) {
+                    Icon(
+                        Icons.Outlined.PlayArrow,
+                        contentDescription = "Ausführen",
+                        tint =
+                            if (prompt.isActive) CosmosColors.AccentPrimary
+                            else CosmosColors.AccentPrimary.copy(alpha = 0.35f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
                 IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Outlined.Edit,
