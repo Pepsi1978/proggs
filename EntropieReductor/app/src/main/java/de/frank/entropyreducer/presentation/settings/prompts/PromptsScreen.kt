@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenu
@@ -78,6 +79,8 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var executePromptId by remember { mutableStateOf<String?>(null) }
     var showTokenStats by remember { mutableStateOf(false) }
     var permissionEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
+    var showTemplatesConfirm by remember { mutableStateOf(false) }
+    var templatesResult by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
 
     if (showTokenStats) {
@@ -98,6 +101,13 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
             }
         },
         actions = {
+            IconButton(onClick = { showTemplatesConfirm = true }) {
+                Icon(
+                    Icons.Outlined.LibraryAdd,
+                    contentDescription = "Vorlagen einfügen",
+                    tint = cosmos.textPrimary,
+                )
+            }
             IconButton(onClick = { showTokenStats = true }) {
                 Icon(
                     Icons.Outlined.BarChart,
@@ -218,6 +228,52 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                 vm.setToolPermission(p.id, toolName, granted, trust)
             },
             onDismiss = { permissionEditFor = null },
+        )
+    }
+    if (showTemplatesConfirm) {
+        AlertDialog(
+            onDismissRequest = { showTemplatesConfirm = false },
+            title = { Text("Beispiel-Vorlagen einfügen?") },
+            text = {
+                Text(
+                    text =
+                        "Es werden 7 fertige Prompt-Vorlagen eingefügt " +
+                            "(Wochenanalyse, Aufgaben-Generator, Forscher-Briefing, " +
+                            "Codex-Synthese, Insight-Update, Biomarker-Spike, " +
+                            "Thesen-Konsolidierung). Vorlagen deren Name schon " +
+                            "vorhanden ist werden übersprungen. Du kannst sie " +
+                            "danach beliebig anpassen oder löschen.",
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showTemplatesConfirm = false
+                        vm.installTemplates { installed, skipped ->
+                            templatesResult = installed to skipped
+                        }
+                    },
+                ) { Text("Einfügen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTemplatesConfirm = false }) { Text("Abbrechen") }
+            },
+        )
+    }
+    templatesResult?.let { (installed, skipped) ->
+        AlertDialog(
+            onDismissRequest = { templatesResult = null },
+            title = { Text("Vorlagen installiert") },
+            text = {
+                Text(
+                    text =
+                        "$installed neue Vorlagen eingefügt, $skipped " +
+                            "übersprungen (gleichnamige Prompts existierten bereits).",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { templatesResult = null }) { Text("OK") }
+            },
         )
     }
 }

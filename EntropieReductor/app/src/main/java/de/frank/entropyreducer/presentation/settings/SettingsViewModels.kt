@@ -589,6 +589,60 @@ constructor(
 
     fun updateTrustMode(promptId: String, trust: Boolean) =
         viewModelScope.launch { repo.updateTrustMode(promptId, trust) }
+
+    /**
+     * Installiert mitgelieferte Beispiel-Vorlagen (Frank-Wunsch 2026-05-21).
+     * Pro Vorlage: wenn ein Prompt mit dem Namen schon existiert → skip.
+     * Sonst: erstellen + write-Tools (falls in Vorlage definiert) freischalten
+     * (Trust-Modus bleibt aus — Frank entscheidet bewusst).
+     *
+     * Liefert die Anzahl der tatsaechlich eingefuegten Vorlagen ueber den
+     * Result-Callback fuer UI-Feedback.
+     */
+    fun installTemplates(onResult: (installed: Int, skipped: Int) -> Unit) =
+        viewModelScope.launch {
+            val existingNames = repo.getAll().first().map { it.name }.toSet()
+            var installed = 0
+            var skipped = 0
+            for (tpl in de.frank.entropyreducer.domain.agentic.templates
+                .AgenticPromptTemplates.ALL) {
+                if (existingNames.contains(tpl.name)) {
+                    skipped++
+                    continue
+                }
+                val now = System.currentTimeMillis()
+                val newId = UUID.randomUUID().toString()
+                repo.upsert(
+                    SavedPromptEntity(
+                        id = newId,
+                        name = tpl.name,
+                        content = tpl.content,
+                        isActive = true,
+                        createdAt = now,
+                        updatedAt = now,
+                        category = tpl.category,
+                        model = tpl.model,
+                        tokenLimitPerDay = null,
+                        trustModeDefault = false,
+                    )
+                )
+                // Write-Tool-Permissions setzen (granted=true, trust=false)
+                tpl.writeToolsToGrant.forEach { toolName ->
+                    permissionRepo.upsert(
+                        de.frank.entropyreducer.data.local.entities
+                            .PromptToolPermissionEntity(
+                                id = "${newId}_${toolName}",
+                                promptId = newId,
+                                toolName = toolName,
+                                granted = true,
+                                trustMode = false,
+                            )
+                    )
+                }
+                installed++
+            }
+            onResult(installed, skipped)
+        }
 }
 
 /* ----------------- Memory ----------------- */
