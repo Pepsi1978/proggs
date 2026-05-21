@@ -62,7 +62,17 @@ constructor(
      * Chain-Ziel war, wird sie blockiert (defense against fan-out-amplification).
      */
     private val recentlyFiredSources = ConcurrentHashMap<String, Long>()
-    private val targetTriggerCount = ConcurrentHashMap<String, MutableList<Long>>()
+    /**
+     * Direktive 3 Loop-4-Fix (war L4-1-Bug): ConcurrentHashMap-Wert war eine
+     * MutableList die NICHT thread-safe ist. Bei parallelen Chain-Triggern auf
+     * dasselbe Ziel wuerde add()/removeAll() eine ConcurrentModificationException
+     * werfen. Loesung: synchronizedList() wrap — die outer-Map bleibt
+     * ConcurrentHashMap, der Wert wird intern synchronisiert. Plus: alle
+     * Zugriffe auf die List werden in synchronized(list) gehuellt um composite-
+     * Aktionen (iterieren + adden) atomar zu machen.
+     */
+    private val targetTriggerCount =
+        ConcurrentHashMap<String, MutableList<Long>>()
 
     /**
      * Vom WorkflowRunner aufgerufen nach erfolgreichem Lauf. Sucht
@@ -73,8 +83,9 @@ constructor(
 
         // Cleanup: alte Eintraege rausnehmen (>= CHAIN_COOLDOWN_MS alt)
         recentlyFiredSources.entries.removeIf { now - it.value > CHAIN_COOLDOWN_MS }
+        // Loop-4-Fix L4-1: synchronized um composite-Aktion (iterieren + remove)
         targetTriggerCount.values.forEach { list ->
-            list.removeAll { now - it > CHAIN_COOLDOWN_MS }
+            synchronized(list) { list.removeAll { now - it > CHAIN_COOLDOWN_MS } }
         }
 
         // Zyklus-Erkennung Schicht 1: gleiche Quelle in Cooldown blockiert
@@ -95,10 +106,23 @@ constructor(
                 if (chainTriggers.isEmpty()) return@launch
                 Log.i(TAG, "Chain-Trigger nach Erfolg von $promptId: ${chainTriggers.size}")
                 for (trigger in chainTriggers) {
-                    // Zyklus-Erkennung Schicht 2: target fan-out limit
+                    // Zyklus-Erkennung Schicht 2: target fan-out limit.
+                    // Loop-4-Fix L4-1: check-then-add MUSS atomar sein, sonst
+                    // koennen zwei parallel Chains denselben Slot doppelt
+                    // nehmen. synchronized(list) macht die composite-Aktion
+                    // atomar.
                     val targetCounts =
                         targetTriggerCount.getOrPut(trigger.promptId) { mutableListOf() }
-                    if (targetCounts.size >= MAX_CHAIN_FIRES_PER_TARGET) {
+                    val accepted =
+                        synchronized(targetCounts) {
+                            if (targetCounts.size >= MAX_CHAIN_FIRES_PER_TARGET) {
+                                false
+                            } else {
+                                targetCounts.add(now)
+                                true
+                            }
+                        }
+                    if (!accepted) {
                         Log.w(
                             TAG,
                             "Chain-Ziel ${trigger.promptId} hat schon " +
@@ -107,7 +131,6 @@ constructor(
                         )
                         continue
                     }
-                    targetCounts.add(now)
                     launch { runChainOne(trigger) }
                 }
             } catch (t: Throwable) {
