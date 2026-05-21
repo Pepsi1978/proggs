@@ -514,6 +514,8 @@ class PromptsViewModel @Inject constructor(private val repo: PromptRepository) :
         content: String,
         category: de.frank.entropyreducer.domain.model.PromptCategory =
             de.frank.entropyreducer.domain.model.PromptCategory.AUFGABEN,
+        model: String = "gemini-2.5-flash",
+        trustModeDefault: Boolean = false,
     ) = viewModelScope.launch {
         val now = System.currentTimeMillis()
         repo.upsert(
@@ -525,9 +527,18 @@ class PromptsViewModel @Inject constructor(private val repo: PromptRepository) :
                 createdAt = now,
                 updatedAt = now,
                 category = category,
+                model = model,
+                trustModeDefault = trustModeDefault,
             )
         )
     }
+
+    // Agentic-AI (Frank-Wunsch 2026-05-21): schmale Updates fuer Modell + Trust
+    fun updateModel(promptId: String, model: String) =
+        viewModelScope.launch { repo.updateModel(promptId, model) }
+
+    fun updateTrustMode(promptId: String, trust: Boolean) =
+        viewModelScope.launch { repo.updateTrustMode(promptId, trust) }
 }
 
 /* ----------------- Memory ----------------- */

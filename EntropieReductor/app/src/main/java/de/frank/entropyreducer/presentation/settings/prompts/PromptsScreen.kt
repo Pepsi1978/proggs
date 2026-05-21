@@ -20,8 +20,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
 import de.frank.entropyreducer.presentation.agentic.TokenStatsScreen
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -165,9 +168,17 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
             initialName = p.name,
             initialContent = p.content,
             category = p.category,
-            onSave = { name, content ->
+            initialModel = p.model,
+            initialTrust = p.trustModeDefault,
+            onSave = { name, content, model, trust ->
                 vm.save(
-                    p.copy(name = name, content = content, updatedAt = System.currentTimeMillis())
+                    p.copy(
+                        name = name,
+                        content = content,
+                        model = model,
+                        trustModeDefault = trust,
+                        updatedAt = System.currentTimeMillis(),
+                    )
                 )
                 editing = null
             },
@@ -179,8 +190,10 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
             initialName = "",
             initialContent = "",
             category = cat,
-            onSave = { n, c ->
-                vm.create(n, c, cat)
+            initialModel = "gemini-2.5-flash",
+            initialTrust = false,
+            onSave = { n, c, model, trust ->
+                vm.create(n, c, cat, model, trust)
                 creatingInCategory = null
             },
             onCancel = { creatingInCategory = null },
@@ -336,18 +349,23 @@ private fun EditDialog(
     initialName: String,
     initialContent: String,
     category: PromptCategory,
-    onSave: (String, String) -> Unit,
+    initialModel: String,
+    initialTrust: Boolean,
+    onSave: (name: String, content: String, model: String, trust: Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var content by remember { mutableStateOf(initialContent) }
+    var model by remember { mutableStateOf(initialModel) }
+    var trustMode by remember { mutableStateOf(initialTrust) }
+    var modelDropdownExpanded by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onCancel,
         confirmButton = {
             Button(
                 onClick = {
                     if (name.isNotBlank() && content.isNotBlank())
-                        onSave(name.trim(), content.trim())
+                        onSave(name.trim(), content.trim(), model, trustMode)
                 },
                 colors =
                     ButtonDefaults.buttonColors(
@@ -374,7 +392,73 @@ private fun EditDialog(
                     label = { Text("Inhalt") },
                     modifier = Modifier.height(180.dp).fillMaxWidth(),
                 )
+                Spacer(Modifier.height(12.dp))
+                // Modell-Wahl (Frank-Wunsch 2026-05-21)
+                Box {
+                    OutlinedTextField(
+                        value = modelLabel(model),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Modell") },
+                        trailingIcon = {
+                            IconButton(onClick = { modelDropdownExpanded = !modelDropdownExpanded }) {
+                                Icon(
+                                    Icons.Outlined.ArrowDropDown,
+                                    contentDescription = "Modell waehlen",
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    DropdownMenu(
+                        expanded = modelDropdownExpanded,
+                        onDismissRequest = { modelDropdownExpanded = false },
+                    ) {
+                        MODEL_OPTIONS.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(modelLabel(option)) },
+                                onClick = {
+                                    model = option
+                                    modelDropdownExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                // Trust-Modus (mit Warnhinweis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Trust-Modus",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text =
+                                "Wenn aktiv: Write-Tools laufen ohne Bestaetigungs-Dialog. " +
+                                    "Bitte NUR fuer Prompts setzen denen du voll vertraust " +
+                                    "(z.B. Background-Auto-Trigger).",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = trustMode,
+                        onCheckedChange = { trustMode = it },
+                    )
+                }
             }
         },
     )
 }
+
+private val MODEL_OPTIONS =
+    listOf("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro")
+
+private fun modelLabel(model: String): String =
+    when (model) {
+        "gemini-2.5-pro" -> "Gemini 2.5 Pro (gruendlich, teurer)"
+        "gemini-2.5-flash" -> "Gemini 2.5 Flash (schnell, ausreichend)"
+        "gemini-2.5-flash-lite" -> "Gemini 2.5 Flash Lite (sehr schnell, einfache Aufgaben)"
+        else -> model
+    }
