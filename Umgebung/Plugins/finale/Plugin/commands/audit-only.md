@@ -27,9 +27,16 @@ nennt statt eines Pfads, vor dem Spawn auflösen via `~/proggs/<fuzzy-match>/`. 
 
 Bei Mehrdeutigkeit Multiple-Choice-Frage. Bei nicht-Android-Pfad Rückfrage.
 
+## Architektur-Hinweis
+
+Identisch wie `/finale:run` (siehe `run.md`): Dieser Slash-Command laedt
+`${CLAUDE_PLUGIN_ROOT}/agents/orchestrator.md` als **System-Anweisung an den
+aktuellen Hauptagent**, NICHT als separat gespawnten Subagent. Begruendung
+in `run.md` Architektur-Hinweis (Loop 3 Klarstellung 2026-05-21).
+
 ## Was du jetzt tust
 
-Spawne den `orchestrator`-Agent via Task tool mit:
+Lade orchestrator.md als Kontext und folge dessen Phasen mit folgender Konfiguration:
 
 ```yaml
 mode: audit-only

@@ -40,25 +40,48 @@ Wenn der Nutzer einen App-Namen genannt hat (oder ein Verzeichnis-Hinweis im Arg
 3. **Kein Argument?** App-Root = aktuelles Verzeichnis (mit Hinweis im Pre-Flight-Plan dass der Default genommen wird).
 4. **Verifikation:** vor dem Spawn prüfen, dass im aufgelösten Pfad ein `AndroidManifest.xml` oder `settings.gradle` / `settings.gradle.kts` liegt. Wenn nicht: Nutzer-Rückfrage „Pfad <X> sieht nicht nach einer Android-App aus — trotzdem fortfahren?".
 
+## Architektur-Hinweis (Loop 3 Klarstellung 2026-05-21)
+
+**WICHTIG:** Dieser Slash-Command laedt `${CLAUDE_PLUGIN_ROOT}/agents/orchestrator.md`
+als **System-Anweisung an den aktuellen Hauptagenten**, NICHT als separat
+gespawnten Subagent. Grund: Phase 2 (interaktiver Karten-Workflow) erfordert
+User-Interaktion ueber mehrere Turns. Ein per Task-Tool gespawnter Subagent
+laeuft einmalig bis fertig und kann nicht ueber Turns hinweg auf Nutzer-Input
+warten — daher MUSS der Hauptagent (mit `model: opus, effort: max` aus diesem
+Frontmatter) die Orchestrator-Logik selbst fuehren.
+
+Subagents (fix-applier, researcher, url-checker, Uebersetzer-Worker) werden
+vom Hauptagent via Task-Tool gespawnt fuer abgeschlossene Teilaufgaben — das ist
+die korrekte Verwendung des Task-Tools.
+
 ## Was du jetzt tust
 
-1. **Spawne den `orchestrator`-Agent** via Task tool mit folgendem Kontext:
+1. **Lade Orchestrator-Logik als deinen Kontext:**
+   - Lies `${CLAUDE_PLUGIN_ROOT}/agents/orchestrator.md` (Read-Tool)
+   - Behandle den Inhalt als deine eigenen System-Anweisungen
+   - Loese `FINALE_PLUGIN_ROOT` selbst auf (siehe orchestrator.md Phase 0 Schritt 0
+     mit 5 Fallback-Ebenen). NICHT `${CLAUDE_PLUGIN_ROOT}` als Variable uebergeben —
+     die ist in Subagent-Bash-Umgebungen leer.
+
+2. **Setze Lauf-Parameter (mental):**
 
 ```yaml
 mode: default
-appRoot: "<aufgelöster Pfad>"   # nach App-Namen-Resolution oben
-pluginRoot: "${CLAUDE_PLUGIN_ROOT}"
+appRoot: "<aufgeloester Pfad>"    # nach App-Namen-Resolution oben
 trigger: "/finale:run"
-phases: [0, 1, 2, 3, 4, 5]      # Closed Loop bis openFindingsCount=0
+phases: [0, 1, 2, 3, 4, 5]        # Closed Loop bis openFindingsCount=0
 ```
 
-Der Orchestrator-Prompt lebt unter `${CLAUDE_PLUGIN_ROOT}/agents/orchestrator.md` und enthält die komplette Phasen-Logik, alle Karten-Layouts, das Audit-Log-Format und die Subagent-Delegation.
+3. **Phase 0 starten:** verify-skills.sh ausfuehren (via Bash-Tool), Pre-Flight-Plan zeigen.
 
-2. **Warte auf den Pre-Flight-Plan** des Orchestrators und gib die Nutzer-Eingabe (`[F]` / `[A]` / `[X]`) direkt an ihn zurück.
+4. **Auf `[F]`/`[A]`/`[X]`-Eingabe warten:** der Nutzer tippt nach dem Pre-Flight-Plan
+   eine Auswahl. Erst dann zur naechsten Phase.
 
-3. **Während der Pipeline läuft, mach NICHTS außerhalb:** keine direkten Edits, kein eigener Bash, keine Recherche an deiner Stelle. Du bist nur der Eintritts-Wrapper.
+5. **Phasen 1-5 abarbeiten:** wie in orchestrator.md spezifiziert.
+   Subagents (fix-applier, researcher etc.) per Task-Tool spawnen — DAS sind
+   die echten Subagent-Spawns.
 
-4. **Nach Abschluss** zeig die finale Status-Meldung des Orchestrators (3-Punkte-Schema + Statistik) und nichts weiter.
+6. **Nach Abschluss:** finale Status-Meldung (3-Punkte-Schema + Statistik) ausgeben.
 
 ## Wichtig
 
