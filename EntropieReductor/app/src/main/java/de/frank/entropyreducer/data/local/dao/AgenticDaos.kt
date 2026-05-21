@@ -152,10 +152,10 @@ interface TokenUsageDailyDao {
      * ausgefuehrt. Bei Konflikt auf der ID (= promptId_day) werden die Werte
      * der bestehenden Zeile inkrementiert.
      *
-     * Vorsicht: erfordert SQLite ≥ 3.24 (Android ≥ 11 / API 30+). Frank's
-     * minSdk ist 26 — auf API 26-29 muss wir auf das alte Read-Modify-Write
-     * zurueckfallen. Room compiled SQL beim ersten Aufruf; der Fallback im
-     * Repository ist trotzdem als zweite Schicht sinnvoll.
+     * Vorsicht: erfordert SQLite >= 3.24 (Android API 29+ haben SQLite 3.28,
+     * API 28 hat nur 3.22 → CRASH bei ON CONFLICT DO UPDATE). Loop-3-Fix:
+     * TokenUsageRepository.addTokens faengt die SQLiteException und faellt
+     * auf Mutex-geschuetztes Read-Modify-Write zurueck.
      */
     @Query(
         """

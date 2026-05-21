@@ -72,18 +72,70 @@ constructor(
      * Direktive 3 Loop-1-Fix (war MED-1-Bug): Atomare Upsert-Operation via
      * SQL ON CONFLICT statt read-modify-write. Verhindert verlorene Tokens
      * bei parallelen Runs (z.B. CRON + Chain feuern gleichzeitig).
+     *
+     * Direktive 3 Loop-3-Fix (war L3-1-Bug): minSdk=28 hat SQLite 3.22, ON
+     * CONFLICT DO UPDATE braucht 3.24+. Fallback auf Read-Modify-Write fuer
+     * alte SQLite-Versionen. try-catch ist sicherer als Android-API-Check —
+     * manche OEMs aktualisieren SQLite unabhaengig vom API-Level. Mutex
+     * verhindert Race bei Fallback-Pfad.
      */
     suspend fun addTokens(promptId: String, tokensInput: Int, tokensOutput: Int) {
         if (tokensInput == 0 && tokensOutput == 0) return
         val day = today()
         val id = "${promptId}_${day}"
-        dao.incrementUsage(
-            id = id,
-            promptId = promptId,
-            day = day,
-            tokensInput = tokensInput,
-            tokensOutput = tokensOutput,
-        )
+        try {
+            dao.incrementUsage(
+                id = id,
+                promptId = promptId,
+                day = day,
+                tokensInput = tokensInput,
+                tokensOutput = tokensOutput,
+            )
+        } catch (e: android.database.sqlite.SQLiteException) {
+            // SQLite < 3.24: ON CONFLICT DO UPDATE wird nicht unterstuetzt.
+            // Defensiv via Mutex+Read-Modify-Write fallback. Single-Mutex ist
+            // OK weil pro-Tag-pro-Prompt die Konkurrenz typischerweise klein ist.
+            addTokensFallback(id, promptId, day, tokensInput, tokensOutput)
+        }
+    }
+
+    private val fallbackMutex = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun addTokensFallback(
+        id: String,
+        promptId: String,
+        day: String,
+        tokensInput: Int,
+        tokensOutput: Int,
+    ) {
+        fallbackMutex.lock()
+        try {
+            val existing = dao.getOne(promptId, day)
+            if (existing == null) {
+                dao.upsert(
+                    TokenUsageDailyEntity(
+                        id = id,
+                        promptId = promptId,
+                        day = day,
+                        tokensInput = tokensInput,
+                        tokensOutput = tokensOutput,
+                        tokensTotal = tokensInput + tokensOutput,
+                        runCount = 1,
+                    )
+                )
+            } else {
+                dao.upsert(
+                    existing.copy(
+                        tokensInput = existing.tokensInput + tokensInput,
+                        tokensOutput = existing.tokensOutput + tokensOutput,
+                        tokensTotal = existing.tokensTotal + tokensInput + tokensOutput,
+                        runCount = existing.runCount + 1,
+                    )
+                )
+            }
+        } finally {
+            fallbackMutex.unlock()
+        }
     }
 
     /**

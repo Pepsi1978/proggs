@@ -49,7 +49,12 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class BackupPayload(
-    val version: Int = 5,
+    // Direktive 3 Loop-3-Fix (war L3-4-Bug): Default war hartnaeckig bei 5
+    // obwohl SyncCoordinator schon version=9 setzt. Falls jemals ein
+    // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
+    // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
+    // Schema-Version anheben damit alle Code-Pfade konsistent sind.
+    val version: Int = 9,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),

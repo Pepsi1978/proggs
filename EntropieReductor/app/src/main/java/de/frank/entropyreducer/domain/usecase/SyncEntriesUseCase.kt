@@ -121,10 +121,14 @@ constructor(
         }
 
         // --- Insights (v2+, bei v1 leere Liste) ---
+        // Direktive 3 Loop-3-Fix (war L3-3-Bug): existing-Set EINMAL vor dem
+        // Loop laden statt pro Eintrag. Bei N=100 Insights ergab das vorher
+        // 100 vollstaendige DB-Scans. ANR-Risiko entfaellt damit.
+        val existingInsightsMap =
+            insightDao.getByConfidenceDesc().first().associateBy { it.id }
         for (b in payload.insights) {
             val incoming = b.toEntity()
-            val all = insightDao.getByConfidenceDesc().first()
-            val existing = all.firstOrNull { it.id == incoming.id }
+            val existing = existingInsightsMap[incoming.id]
             when {
                 existing == null -> {
                     insightDao.upsert(incoming)
@@ -139,10 +143,11 @@ constructor(
         }
 
         // --- Memories (v2+) ---
+        // Loop-3-Fix L3-3: O(n)-Map vorab statt n×Full-Scan
+        val existingMemoriesMap = memoryDao.getAll().first().associateBy { it.id }
         for (b in payload.memories) {
             val incoming = b.toEntity()
-            val all = memoryDao.getAll().first()
-            val existing = all.firstOrNull { it.id == incoming.id }
+            val existing = existingMemoriesMap[incoming.id]
             when {
                 existing == null -> {
                     memoryDao.upsert(incoming)

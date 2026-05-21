@@ -24,8 +24,11 @@ import de.frank.entropyreducer.domain.model.TriggerSource
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -403,24 +406,39 @@ constructor(
                 }
             }
         } catch (t: Throwable) {
-            executionLogger.fail(
-                executionId,
-                ExecutionStatus.FAILED,
-                "Unerwarteter Fehler: ${t.message ?: t::class.simpleName}",
-                tokensInputTotal,
-                tokensOutputTotal,
-                toolCallCount,
-            )
+            // Direktive 3 Loop-3-Fix (war L3-2-Bug): CancellationException
+            // wird auch vom catch(Throwable) gefangen, der naechste suspending
+            // executionLogger.fail()-Aufruf wuerde sie wieder werfen ohne dass
+            // der Status persistiert wird → Eintrag bleibt RUNNING in DB.
+            // NonCancellable-Scope schuetzt den Logging-Pfad, CancellationException
+            // wird sauber als CANCELLED persistiert UND rethrown (Kotlin-Pflicht).
+            val isCancellation = t is CancellationException
+            val status =
+                if (isCancellation) ExecutionStatus.CANCELLED else ExecutionStatus.FAILED
+            val errorMsg =
+                if (isCancellation) "Run abgebrochen"
+                else "Unerwarteter Fehler: ${t.message ?: t::class.simpleName}"
+            withContext(NonCancellable) {
+                executionLogger.fail(
+                    executionId,
+                    status,
+                    errorMsg,
+                    tokensInputTotal,
+                    tokensOutputTotal,
+                    toolCallCount,
+                )
+            }
             emit(
                 WorkflowEvent.Finished(
                     executionId,
-                    ExecutionStatus.FAILED,
-                    errorMessage = t.message,
+                    status,
+                    errorMessage = errorMsg,
                     tokensTotal = tokensInputTotal + tokensOutputTotal,
                     toolCallCount = toolCallCount,
                     durationMillis = System.currentTimeMillis() - startedAt,
                 )
             )
+            if (isCancellation) throw t
         }
     }
 
