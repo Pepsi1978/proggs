@@ -40,6 +40,18 @@ interface AgenticTool {
     /**
      * true wenn das Tool Daten aendert (schreibend). Liest der PermissionGate
      * und der ConfirmationGate.
+     *
+     * WARNUNG (Loop-5-Fix L5-6): Diese Flag wird vom Tool SELBER deklariert —
+     * es gibt KEINE strukturelle Runtime-Validierung dass ein isWriteTool=false-
+     * Tool wirklich nichts schreibt. Wenn ein neues Tool faelschlich false
+     * deklariert aber repo.upsert/delete/update aufruft, umgeht es den
+     * Permission-/Confirm-Gate. Konsequenz: persoenliche Daten koennten ohne
+     * Frank's Zustimmung geaendert werden.
+     *
+     * Code-Review-Pflicht fuer neue Tools:
+     *  - isWriteTool=true wenn execute() IRGENDEINE write-Operation macht
+     *    (upsert, delete, update, insert)
+     *  - isWriteTool=false NUR bei reinen Read-Queries
      */
     val isWriteTool: Boolean
 

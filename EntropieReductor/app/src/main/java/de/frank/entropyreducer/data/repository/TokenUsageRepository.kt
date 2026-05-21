@@ -10,6 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Repository fuer die Tages-Token-Statistik. Bedient drei verschiedene Konsumenten:
@@ -108,8 +109,11 @@ constructor(
         tokensInput: Int,
         tokensOutput: Int,
     ) {
-        fallbackMutex.lock()
-        try {
+        // Loop-5-Fix (L5-7): withLock statt lock/unlock — cancellation-safe.
+        // lock() ist suspending und kann selbst gecancelt werden, dann darf
+        // finally NICHT unlock() auf einem nicht-gehaltenen Mutex aufrufen
+        // (Crash mit IllegalStateException). withLock handhabt das korrekt.
+        fallbackMutex.withLock {
             val existing = dao.getOne(promptId, day)
             if (existing == null) {
                 dao.upsert(
@@ -133,8 +137,6 @@ constructor(
                     )
                 )
             }
-        } finally {
-            fallbackMutex.unlock()
         }
     }
 

@@ -97,10 +97,17 @@ constructor(
             }
         }
 
-        // 4. Neuer Request → Coroutine suspendieren, auf UI warten
+        // 4. Neuer Request → Coroutine suspendieren, auf UI warten.
+        // Loop-5-Fix (L5-4): wir merken uns die LOKALE Continuation und
+        // nutzen sie fuer compareAndSet im Cleanup — sonst wuerde ein
+        // frischer Request der zwischen withTimeoutOrNull und der
+        // Cleanup-Zeile gestartet wird hier fuelschlich auf null gesetzt
+        // werden (Race-Window).
+        var ourContinuation: CancellableContinuation<ConfirmationResult>? = null
         val timeoutResult: ConfirmationResult? =
             withTimeoutOrNull(60_000L) {
                 suspendCancellableCoroutine<ConfirmationResult> { cont ->
+                    ourContinuation = cont
                     pendingContinuationRef.set(cont)
                     _pendingRequest.value = req
                     cont.invokeOnCancellation {
@@ -111,10 +118,11 @@ constructor(
                 }
             }
 
-        // Cleanup falls nicht schon durch respond() passiert
-        _pendingRequest.value = null
-        // Nur loeschen wenn der aktuelle Continuation derselbe ist
-        pendingContinuationRef.getAndSet(null)
+        // Cleanup nur unserer eigenen Continuation (L5-4 Fix):
+        // compareAndSet statt getAndSet — falls schon ein neuer Request
+        // ourContinuation verdraengt hat, wird sein Slot nicht beruehrt.
+        ourContinuation?.let { pendingContinuationRef.compareAndSet(it, null) }
+        _pendingRequest.compareAndSet(req, null)
 
         return timeoutResult
             ?: ConfirmationResult(

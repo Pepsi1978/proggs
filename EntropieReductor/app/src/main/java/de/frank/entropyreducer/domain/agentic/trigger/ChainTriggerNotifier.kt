@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Loest Chain-Trigger nach erfolgreichem Lauf eines Prompts aus (Frank-Wunsch
@@ -48,6 +50,15 @@ constructor(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Loop-5-Fix (L5-5): Globales Concurrency-Limit fuer Chain-Runs.
+     * Verhindert dass eine Erfolgskaskade (Prompt A loest 10 Chains aus)
+     * 10 parallele Gemini-Calls feuert die alle das Token-Budget parallel
+     * anzapfen. 2 parallel ist ein guter Kompromiss zwischen Speed und
+     * Schutz vor Token-Quota-Explosion.
+     */
+    private val concurrencyLimiter = Semaphore(permits = 2)
 
     /**
      * Zyklus-Schutz (Direktive 3 Loop-1-Fix, war HIGH-2-Bug):
@@ -131,7 +142,8 @@ constructor(
                         )
                         continue
                     }
-                    launch { runChainOne(trigger) }
+                    // L5-5: Semaphore beschraenkt globale Chain-Concurrency
+                    launch { concurrencyLimiter.withPermit { runChainOne(trigger) } }
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "ChainTriggerNotifier fehlgeschlagen", t)

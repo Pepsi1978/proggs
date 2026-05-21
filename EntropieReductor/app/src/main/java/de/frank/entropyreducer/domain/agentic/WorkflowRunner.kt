@@ -569,6 +569,19 @@ constructor(
 
         return when (result) {
             is ToolResult.Success -> {
+                // Direktive 3 Loop-5-Fix (war L5-2-Bug): Tool-Results koennen
+                // persoenliche Daten enthalten (z.B. read_profil gibt Frank's
+                // Lebensumstaende, read_entropie_eintraege Tagebuch-Texte).
+                // Wir speichern eine GEKUERZTE Version im Audit-Log — die
+                // vollen Daten gehen weiter an Gemini (per response()), aber
+                // landen nicht dauerhaft in der DB. 2000 Zeichen reichen fuer
+                // Debugging-Zwecke + Audit-Nachvollziehbarkeit.
+                val fullResultJson = result.data.toString()
+                val storedResultJson =
+                    if (fullResultJson.length > AUDIT_RESULT_MAX_CHARS)
+                        fullResultJson.take(AUDIT_RESULT_MAX_CHARS) +
+                            "… [getrimmt — Original ${fullResultJson.length} Zeichen]"
+                    else fullResultJson
                 executionLogger.logStep(
                     PromptExecutionStepEntity(
                         id = UUID.randomUUID().toString(),
@@ -577,8 +590,8 @@ constructor(
                         stepType = StepType.TOOL_CALL,
                         timestamp = System.currentTimeMillis(),
                         toolName = call.name,
-                        toolArgsJson = call.args.toString(),
-                        toolResultJson = result.data.toString(),
+                        toolArgsJson = call.args.toString().take(AUDIT_ARGS_MAX_CHARS),
+                        toolResultJson = storedResultJson,
                         createdEntityIds = result.createdEntityIds,
                         updatedEntityIds = result.updatedEntityIds,
                         deletedEntityIds = result.deletedEntityIds,
@@ -640,5 +653,15 @@ constructor(
 
         /** Frank-TODO 2026-05-21: max 5 Minuten Laufzeit pro Run. */
         const val MAX_RUN_DURATION_MILLIS = 5L * 60L * 1000L
+
+        /**
+         * Loop-5-Fix (L5-2): maximale Zeichen die im Audit-Log fuer
+         * toolResultJson und toolArgsJson gespeichert werden. Verhindert dass
+         * persoenliche Daten (z.B. Profil-Text, Tagebucheintraege) dauerhaft
+         * im prompt_execution_steps stehen. Vollwert geht an Gemini, gekuerzt
+         * an die DB.
+         */
+        private const val AUDIT_RESULT_MAX_CHARS = 2000
+        private const val AUDIT_ARGS_MAX_CHARS = 1000
     }
 }
