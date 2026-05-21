@@ -8,12 +8,15 @@
 # Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante.
 # Dann beenden wir hier still, um doppelte Block-Meldungen zu vermeiden.
 # Nur wenn bash NICHT verfuegbar ist der .ps1-Hook der einzige aktive Guard.
-# Hardening 2026-05-21 (Direktive #3).
-try {
-    $null = Get-Command bash -ErrorAction Stop
-    exit 0
-} catch {
-    # bash nicht verfuegbar — wir sind der einzige Guard, weiter
+# Override fuer Testing: FINALE_FORCE_PS1=1 erzwingt Ausfuehrung der PS-Logik
+# auch wenn bash verfuegbar ist (Wave 8 Test-Hook 2026-05-21).
+if (-not $env:FINALE_FORCE_PS1) {
+    try {
+        $null = Get-Command bash -ErrorAction Stop
+        exit 0
+    } catch {
+        # bash nicht verfuegbar — wir sind der einzige Guard, weiter
+    }
 }
 
 # Stop statt SilentlyContinue: Fehler werden vom try/catch gefangen und enden
@@ -37,8 +40,12 @@ try {
     }
     if ([string]::IsNullOrWhiteSpace($cmd)) { exit 0 }
 
-    # Geschuetzte Dateien — IDENTISCH zur .sh-Variante
+    # Geschuetzte Dateien — IDENTISCH zur .sh-Variante.
     $protected = '(strings\.xml|AndroidManifest\.xml|build\.gradle\.kts|build\.gradle)'
+    # Wave 8 Fix (2026-05-21): PATH_PREFIX + RBOUND statt \b — vorher
+    # blockierte das Pattern `> strings.xml.bak` und `> xstrings.xml` faelschlich.
+    $pathPrefix = '([^\s|&;]*/)?'
+    $rbound = '(\s|;|\||&|$)'
 
     $blockReason = $null
 
@@ -53,30 +60,30 @@ try {
         $blockReason = "rm -rf auf res/ — das wuerde alle App-Ressourcen zerstoeren"
     }
 
-    # Pattern 2 — Shell-Umleitung in geschuetzte Datei
+    # Pattern 2 — Shell-Umleitung in geschuetzte Datei (Wave 8 mit strikten Boundaries)
     if (-not $blockReason) {
-        if ($cmd -match ">>?\s*[^|&]*$protected(\b|`$)") {
+        if ($cmd -match ">>?\s+${pathPrefix}${protected}${rbound}") {
             $blockReason = "Shell-Umleitung in eine geschuetzte Datei — destructiver Komplett-Overwrite. Nutze Edit/Write ueber den fix-applier."
         }
     }
 
     # Pattern 3 — tee (mit oder ohne -a) in geschuetzte Datei
     if (-not $blockReason) {
-        if ($cmd -match "tee\s+(-a\s+)?[^|&]*$protected(\b|`$)") {
+        if ($cmd -match "tee\s+(-a\s+)?${pathPrefix}${protected}${rbound}") {
             $blockReason = "tee in eine geschuetzte Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
         }
     }
 
     # Pattern 4 — cp / mv mit geschuetzter Ziel-Datei
     if (-not $blockReason) {
-        if ($cmd -match "(^|[\s;|&])(cp|mv)\s+[^|&;]+\s[^|&;\s]*$protected([\s;|&]|`$)") {
+        if ($cmd -match "(^|[\s;|&])(cp|mv)\s+[^|&;]+\s${pathPrefix}${protected}${rbound}") {
             $blockReason = "cp/mv mit geschuetzter Ziel-Datei — destructiver Overwrite. Nutze Edit/Write ueber den fix-applier."
         }
     }
 
     # Pattern 5 — dd of= mit geschuetzter Datei
     if (-not $blockReason) {
-        if ($cmd -match "dd\s.*of=[^\s]*$protected(\b|`$)") {
+        if ($cmd -match "dd\s.*of=${pathPrefix}${protected}${rbound}") {
             $blockReason = "dd of= mit geschuetzter Ziel-Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
         }
     }

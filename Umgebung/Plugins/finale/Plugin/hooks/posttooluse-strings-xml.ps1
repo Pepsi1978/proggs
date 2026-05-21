@@ -11,13 +11,14 @@
 # 3. Unmatched &-Symbole (& muss &amp; sein)
 
 # Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante.
-# Wir beenden hier still um doppelte Lint-Warnungen zu vermeiden.
-# Hardening 2026-05-21 (Direktive #3).
-try {
-    $null = Get-Command bash -ErrorAction Stop
-    exit 0
-} catch {
-    # bash nicht verfuegbar — weiter
+# Override: FINALE_FORCE_PS1=1 fuer Testing (Wave 8 2026-05-21).
+if (-not $env:FINALE_FORCE_PS1) {
+    try {
+        $null = Get-Command bash -ErrorAction Stop
+        exit 0
+    } catch {
+        # bash nicht verfuegbar — weiter
+    }
 }
 
 # Stop statt SilentlyContinue: Fehler werden vom try/catch gefangen.

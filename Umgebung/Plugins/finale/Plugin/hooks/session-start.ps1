@@ -9,14 +9,14 @@
 # In hooks.json optional aktivieren — siehe README "Cross-Platform-Hooks".
 
 # Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante als
-# primaerer Hook. Dann beenden wir hier still, um doppelte Diagnose-Ausgaben zu
-# vermeiden. Nur wenn bash NICHT verfuegbar (native Windows ohne Git Bash) ist
-# der .ps1-Hook die einzige aktive Variante. Hardening 2026-05-21 (Direktive #3).
-try {
-    $null = Get-Command bash -ErrorAction Stop
-    exit 0   # bash verfuegbar — .sh-Hook ist der primaere
-} catch {
-    # bash nicht verfuegbar — wir sind der einzige Hook, weiter
+# primaerer Hook. Override: FINALE_FORCE_PS1=1 fuer Testing (Wave 8 2026-05-21).
+if (-not $env:FINALE_FORCE_PS1) {
+    try {
+        $null = Get-Command bash -ErrorAction Stop
+        exit 0   # bash verfuegbar — .sh-Hook ist der primaere
+    } catch {
+        # bash nicht verfuegbar — wir sind der einzige Hook, weiter
+    }
 }
 
 # Stop statt SilentlyContinue: Fehler vom try/catch gefangen.

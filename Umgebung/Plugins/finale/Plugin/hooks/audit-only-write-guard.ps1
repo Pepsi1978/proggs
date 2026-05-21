@@ -10,14 +10,14 @@
 # Git-Bash benoetigt damit der Schutz aktiv bleibt.
 
 # Idempotency-Schutz: wenn Git Bash verfuegbar ist, laeuft die .sh-Variante als
-# primaerer Hook. Wir beenden hier still um doppelte Block-Meldungen zu vermeiden.
-# Nur wenn bash NICHT verfuegbar (native Windows ohne Git Bash) ist der .ps1-Hook
-# der einzige aktive Guard. Hardening 2026-05-21 (Direktive #3).
-try {
-    $null = Get-Command bash -ErrorAction Stop
-    exit 0
-} catch {
-    # bash nicht verfuegbar — wir sind der einzige Guard, weiter
+# primaerer Hook. Override: FINALE_FORCE_PS1=1 fuer Testing (Wave 8 2026-05-21).
+if (-not $env:FINALE_FORCE_PS1) {
+    try {
+        $null = Get-Command bash -ErrorAction Stop
+        exit 0
+    } catch {
+        # bash nicht verfuegbar — wir sind der einzige Guard, weiter
+    }
 }
 
 # Stop statt SilentlyContinue: Fehler in der Hook-Logik werden vom try/catch

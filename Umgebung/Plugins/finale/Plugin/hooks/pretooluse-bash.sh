@@ -58,6 +58,14 @@ fi
 # Geschuetzte Dateinamen als Regex-Alternativ-Pattern.
 # build.gradle.kts steht VOR build.gradle damit der laengere Match zuerst greift.
 PROTECTED='(strings\.xml|AndroidManifest\.xml|build\.gradle\.kts|build\.gradle)'
+# PATH_PREFIX matcht optionalen Pfad-Anteil VOR dem Dateinamen — bewusst nur Token
+# die in `/` enden (= echte Pfad-Trenner). Verhindert dass `xstrings.xml` durch
+# Substring-Match getroffen wird.
+PATH_PREFIX='([^[:space:]|&;]*/)?'
+# RBOUND fordert dass nach dem Dateinamen ein klarer Token-Ende-Marker kommt:
+# Whitespace, ;, |, &, oder Ende. KEIN `\b` weil das vor `.bak`/.tmp` etc. matched
+# und damit `strings.xml.bak` faelschlich blockiert wurde (Debug-Loop 2 Wave 8 2026-05-21).
+RBOUND='([[:space:]]|;|\||&|$)'
 
 block_reason=""
 
@@ -70,32 +78,34 @@ elif printf '%s' "$cmd" | grep -E -q 'rm[[:space:]]+-r[fF][[:space:]]+.*\bres(/|
   block_reason="rm -rf auf res/ — das wuerde alle App-Ressourcen zerstoeren"
 fi
 
-# Pattern 2 — Shell-Umleitung (> oder >>) in geschuetzte Datei
-# Deckt ab: echo > X, cat > X, python -c "..." > X, irgendwas >> X, etc.
+# Pattern 2 — Shell-Umleitung (> oder >>) in geschuetzte Datei.
+# Wave 8 Fix (2026-05-21): vorher matched `> strings.xml.bak` (\b vor `.`) und
+# `> xstrings.xml` (Substring-Match). Jetzt mit PATH_PREFIX + RBOUND exakt.
 if [ -z "$block_reason" ]; then
-  if printf '%s' "$cmd" | grep -E -q ">>?[[:space:]]*[^|&]*$PROTECTED(\b|$)"; then
+  if printf '%s' "$cmd" | grep -E -q ">>?[[:space:]]+${PATH_PREFIX}${PROTECTED}${RBOUND}"; then
     block_reason="Shell-Umleitung in eine geschuetzte Datei (strings.xml/AndroidManifest.xml/build.gradle) — destructiver Komplett-Overwrite. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
 
 # Pattern 3 — tee (mit oder ohne -a) in geschuetzte Datei
 if [ -z "$block_reason" ]; then
-  if printf '%s' "$cmd" | grep -E -q "tee[[:space:]]+(-a[[:space:]]+)?[^|&]*$PROTECTED(\b|$)"; then
+  if printf '%s' "$cmd" | grep -E -q "tee[[:space:]]+(-a[[:space:]]+)?${PATH_PREFIX}${PROTECTED}${RBOUND}"; then
     block_reason="tee in eine geschuetzte Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
 
 # Pattern 4 — cp / mv mit geschuetzter Ziel-Datei (letztes Argument)
-# Heuristik: erkennt wenn der Befehl mit cp/mv anfaengt UND mit einer geschuetzten Datei endet
+# Wave 8 Fix: gleiche Boundary-Logik wie Pattern 2 — verhindert false-positive
+# bei `cp foo xstrings.xml` oder `cp foo strings.xml.bak`.
 if [ -z "$block_reason" ]; then
-  if printf '%s' "$cmd" | grep -E -q "(^|[[:space:];|&])(cp|mv)[[:space:]]+[^|&;]+[[:space:]][^|&;[:space:]]*$PROTECTED([[:space:];|&]|$)"; then
+  if printf '%s' "$cmd" | grep -E -q "(^|[[:space:];|&])(cp|mv)[[:space:]]+[^|&;]+[[:space:]]${PATH_PREFIX}${PROTECTED}${RBOUND}"; then
     block_reason="cp/mv mit geschuetzter Ziel-Datei — destructiver Overwrite. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
 
 # Pattern 5 — dd of= mit geschuetzter Datei
 if [ -z "$block_reason" ]; then
-  if printf '%s' "$cmd" | grep -E -q "dd[[:space:]].*of=[^[:space:]]*$PROTECTED(\b|$)"; then
+  if printf '%s' "$cmd" | grep -E -q "dd[[:space:]].*of=${PATH_PREFIX}${PROTECTED}${RBOUND}"; then
     block_reason="dd of= mit geschuetzter Ziel-Datei — destructiv. Nutze Edit/Write ueber den fix-applier."
   fi
 fi
