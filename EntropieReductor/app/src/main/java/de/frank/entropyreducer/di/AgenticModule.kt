@@ -17,6 +17,16 @@ import de.frank.entropyreducer.domain.agentic.tools.read.ReadInsightsTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadMemoryTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadProfilTool
 import de.frank.entropyreducer.domain.agentic.tools.read.ReadThesenTool
+import de.frank.entropyreducer.domain.agentic.tools.write.AddFollowupToAufgabeTool
+import de.frank.entropyreducer.domain.agentic.tools.write.AddMemoryTool
+import de.frank.entropyreducer.domain.agentic.tools.write.CreateAufgabeTool
+import de.frank.entropyreducer.domain.agentic.tools.write.CreateForscherSessionTool
+import de.frank.entropyreducer.domain.agentic.tools.write.CreateHypotheseTool
+import de.frank.entropyreducer.domain.agentic.tools.write.CreateTagebuchEintragTool
+import de.frank.entropyreducer.domain.agentic.tools.write.CreateTheseTool
+import de.frank.entropyreducer.domain.agentic.tools.write.DeleteAufgabeTool
+import de.frank.entropyreducer.domain.agentic.tools.write.UpdateAufgabeStatusTool
+import de.frank.entropyreducer.domain.agentic.tools.write.UpdateProfilTool
 
 /**
  * Hilt-Modul fuer Agentic-AI-Tools + Gates (Frank-Wunsch 2026-05-21).
@@ -75,7 +85,48 @@ abstract class AgenticModule {
     @IntoSet
     abstract fun bindReadForscherSessionsTool(impl: ReadForscherSessionsTool): AgenticTool
 
-    // Write-Tools werden in Etappe 7 hier registriert.
+    // Write-Tools (Etappe 7) — alle haben isWriteTool=true und brauchen pro Prompt
+    // einen Eintrag in prompt_tool_permissions mit granted=true
+
+    @Binds
+    @IntoSet
+    abstract fun bindCreateAufgabeTool(impl: CreateAufgabeTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindCreateTagebuchEintragTool(impl: CreateTagebuchEintragTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindCreateTheseTool(impl: CreateTheseTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindUpdateAufgabeStatusTool(impl: UpdateAufgabeStatusTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindAddFollowupToAufgabeTool(impl: AddFollowupToAufgabeTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindDeleteAufgabeTool(impl: DeleteAufgabeTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindCreateHypotheseTool(impl: CreateHypotheseTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindCreateForscherSessionTool(impl: CreateForscherSessionTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindAddMemoryTool(impl: AddMemoryTool): AgenticTool
+
+    @Binds
+    @IntoSet
+    abstract fun bindUpdateProfilTool(impl: UpdateProfilTool): AgenticTool
 
     // Gate-Bindings — Default-Implementations (UI-Variante ueberschreibt in Etappe 9)
     @Binds
