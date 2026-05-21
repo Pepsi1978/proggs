@@ -89,35 +89,26 @@ try {
         exit 0
     }
 
-    # Stale-Lock-Check (Wave 3 Hardening 2026-05-21 — Direktive #3 Loop 2 K5):
-    # Lock-Datei enthaelt PID des Orchestrators (Format: "orchestratorPid: <number>").
-    # Wenn der Prozess nicht mehr laeuft UND der Lock > 5 Min alt: stale -> Lock ignorieren
-    # und Schreiben durchlassen mit klarer Warnung. Verhindert Stunden-langes Blockieren
-    # nach Orchestrator-Crash (vorher: Lock blockierte bis 24h Stale-Detection griff).
+    # Stale-Lock-Check (Wave 6 Hardening 2026-05-21 — Lock-Format-Mismatch behoben):
+    # Wave 5 stellte das Lock-Format auf sessionToken um (LLM-Agenten haben keine
+    # stabile OS-PID), aber dieser Hook las weiter orchestratorPid -> Stale-Check
+    # war tot -> Locks blieben nach Crash fuer immer aktiv.
+    # Wave 6: nur Timestamp-basierter Stale-Check. Plus: Math.Max(0, age) gegen
+    # negative TotalMinutes durch NTP-Korrektur/VM-Resume.
     try {
-        $lockContent = Get-Content $lockFound -Raw -ErrorAction Stop
-        if ($lockContent -match 'orchestratorPid:\s*(\d+)') {
-            $lockPid = [int]$matches[1]
-            $lockAge = (Get-Date) - (Get-Item $lockFound -ErrorAction Stop).LastWriteTime
-
-            $procAlive = $false
-            try {
-                $null = Get-Process -Id $lockPid -ErrorAction Stop
-                $procAlive = $true
-            } catch {
-                $procAlive = $false
-            }
-
-            # Stale-Schwelle 30 Min (Wave 5 Anpassung 2026-05-21): frueher 5 Min war zu kurz
-            # fuer typische audit-only-Laeufe (bis 25 Min bei grossen Apps).
-            if (-not $procAlive -and $lockAge.TotalMinutes -gt 30) {
-                [Console]::Error.WriteLine("[finale] WARNUNG: Stale-Lock erkannt (PID $lockPid nicht mehr aktiv, $([math]::Round($lockAge.TotalMinutes,1)) Min alt).")
-                [Console]::Error.WriteLine("[finale] Lock wird ignoriert (Stale). Manuell loeschen: Remove-Item '$lockFound'")
-                exit 0
-            }
+        $lockAge = (Get-Date) - (Get-Item $lockFound -ErrorAction Stop).LastWriteTime
+        # Negative lock_age (NTP-Korrektur) auf 0 clippen
+        $ageMinutes = [math]::Max(0, $lockAge.TotalMinutes)
+        # Stale-Schwelle 30 Min
+        if ($ageMinutes -gt 30) {
+            [Console]::Error.WriteLine("[finale] WARNUNG: Stale-Lock erkannt ($([math]::Round($ageMinutes,1)) Min alt, ueber 30-Min-Schwelle).")
+            [Console]::Error.WriteLine("[finale] Vorheriger Orchestrator-Lauf wahrscheinlich gecrasht.")
+            [Console]::Error.WriteLine("[finale] Lock wird ignoriert. Manuell loeschen: Remove-Item '$lockFound'")
+            exit 0
         }
     } catch {
-        # Lock-Inhalt unlesbar — defensiv blockieren (besser als false-positive durchlassen)
+        # Lock-Datei nicht lesbar/zugaenglich — defensiv blockieren
+        # (besser false-positive Block als false-positive Durchlassen)
     }
 
     # Lock aktiv UND Datei nicht in .android-shield/ -> blockieren

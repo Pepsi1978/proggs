@@ -60,6 +60,16 @@ Der Orchestrator führt Phase 0 und Phase 1 aus, erzeugt:
 ## Wichtig
 
 - Diese Datei-Schutz-Pflicht wird durch den Pre-Hook `audit-only-write-guard` erzwungen (siehe `hooks/hooks.json`, registriert auf `PreToolUse` mit Matcher `Edit|Write|MultiEdit`). Der Hook prueft ob die Lock-Datei `<app-root>/.android-shield/.audit-only.lock` existiert. Wenn ja UND die zu schreibende Datei NICHT unter `.android-shield/` liegt, blockiert der Hook mit Exit 2.
-- **Lock-Lifecycle (Orchestrator-Pflicht):** Beim Start des audit-only-Modus MUSS der Orchestrator die Lock-Datei `<app-root>/.android-shield/.audit-only.lock` anlegen (mit Zeitstempel als Inhalt). Am Ende des Modus (regulaer ODER abgebrochen) MUSS der Orchestrator die Lock-Datei wieder loeschen. Bei Crash bleibt eine Stale-Lock zurueck — beim naechsten Start muss der Orchestrator solche Locks (aelter als 24 Stunden) automatisch loeschen.
+- **Lock-Lifecycle (Orchestrator-Pflicht):** Beim Start des audit-only-Modus MUSS der Orchestrator die Lock-Datei `<app-root>/.android-shield/.audit-only.lock` anlegen mit folgenden 3 Feldern:
+  ```
+  timestamp: <ISO-8601>
+  sessionToken: <UUID4>
+  mode: audit-only
+  ```
+  Der `sessionToken` (UUID4, Wave 5 Umstellung 2026-05-21) ersetzt den frueheren `orchestratorPid` — LLM-Agenten haben keine stabile OS-PID. Der Orchestrator speichert den Token in seinem eigenen Kontext und vergleicht ihn beim Loeschen.
+
+  Am Ende des Modus (regulaer ODER abgebrochen) MUSS der Orchestrator die Lock-Datei wieder loeschen.
+
+  Bei Crash bleibt eine Stale-Lock zurueck — der `audit-only-write-guard`-Hook erkennt Locks aelter als 30 Minuten (Wave 6, 2026-05-21) und ignoriert sie (Schreibvorgang wird durchgelassen mit Warnung). Der Nutzer kann den Lock manuell loeschen mit `rm <app-root>/.android-shield/.audit-only.lock`.
 - **Schreiben innerhalb `.android-shield/` ist immer erlaubt** — das ist die Plugin-Output-Domain (Reports, audit-log, skill-versions). Nur die App-Quellen (res/, src/, AndroidManifest.xml, build.gradle.kts etc.) sind gesperrt.
 - Phase 0 muss trotzdem laufen. Tote Symlinks → Abbruch wie immer.

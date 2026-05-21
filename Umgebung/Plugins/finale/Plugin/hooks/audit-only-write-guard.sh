@@ -108,25 +108,24 @@ if [ -z "$lock_found" ]; then
   exit 0   # Kein Audit-Only-Lauf aktiv
 fi
 
-# Stale-Lock-Check (Wave 3 Hardening 2026-05-21 — Direktive #3 Loop 2 K5):
-# Lock-Datei enthaelt PID des Orchestrators (Format: "orchestratorPid: <num>").
-# Wenn der Prozess nicht mehr laeuft UND der Lock > 5 Min alt: stale -> ignorieren
-# mit klarer Warnung. Vorher: Lock blockierte bis 24h Stale-Detection griff.
-lock_pid="$(grep -oE 'orchestratorPid:[[:space:]]*[0-9]+' "$lock_found" 2>/dev/null | grep -oE '[0-9]+' | head -n 1 || echo "")"
-if [ -n "$lock_pid" ]; then
-  if ! kill -0 "$lock_pid" 2>/dev/null; then
-    # Prozess tot — pruefe Alter (5 Min Stale-Schwelle)
-    now="$(date +%s 2>/dev/null || echo 0)"
-    lock_mtime="$(stat -c %Y "$lock_found" 2>/dev/null || stat -f %m "$lock_found" 2>/dev/null || echo 0)"
-    lock_age=$((now - lock_mtime))
-    # Stale-Schwelle 1800 Sek = 30 Min (Wave 5 Anpassung 2026-05-21):
-    # frueher 5 Min — zu kurz fuer typische audit-only-Laeufe (25 Min bei grossen Apps).
-    if [ "$lock_age" -gt 1800 ]; then
-      echo "[finale] WARNUNG: Stale-Lock erkannt (PID $lock_pid nicht mehr aktiv, $lock_age Sek alt)." >&2
-      echo "[finale] Lock wird ignoriert (Stale). Manuell loeschen: rm \"$lock_found\"" >&2
-      exit 0
-    fi
-  fi
+# Stale-Lock-Check (Wave 6 Hardening 2026-05-21 — Lock-Format-Mismatch behoben):
+# Frueher (Wave 3): Check auf orchestratorPid + kill -0. Wave 5 hat das Lock-Format
+# in orchestrator.md auf sessionToken umgestellt (LLM-Agenten haben keine stabile
+# OS-PID) — Hooks lasen aber weiter orchestratorPid -> Stale-Check war tot ->
+# Locks blieben nach Crash fuer immer aktiv.
+# Wave 6: nur Timestamp-basierter Stale-Check (kein PID-Check mehr).
+# Plus: Negative lock_age durch NTP-Korrektur/VM-Resume auf 0 clippen.
+now="$(date +%s 2>/dev/null || echo 0)"
+lock_mtime="$(stat -c %Y "$lock_found" 2>/dev/null || stat -f %m "$lock_found" 2>/dev/null || echo 0)"
+lock_age=$((now - lock_mtime))
+# Negative lock_age (NTP-Korrektur, VM-Resume kann Zeit zurueckdrehen) auf 0 clippen
+[ "$lock_age" -lt 0 ] && lock_age=0
+# Stale-Schwelle 1800 Sek = 30 Min (passt zu typischen audit-Laeufen bis 25 Min)
+if [ "$lock_age" -gt 1800 ]; then
+  echo "[finale] WARNUNG: Stale-Lock erkannt ($lock_age Sek alt, ueber 30-Min-Schwelle)." >&2
+  echo "[finale] Vorheriger Orchestrator-Lauf wahrscheinlich gecrasht." >&2
+  echo "[finale] Lock wird ignoriert. Manuell loeschen: rm \"$lock_found\"" >&2
+  exit 0
 fi
 
 # Lock aktiv UND Datei nicht in .android-shield/ -> blockieren
