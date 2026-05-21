@@ -105,12 +105,22 @@ data class BackupPayload(
     val thesenEntries: List<BackupThesenEntry> = emptyList(),
     /**
      * Schema v8 (Frank-Wunsch 2026-05-20): Eigene Prompts inkl. Kategorie. Pro Bereich der App
-     * wirken nur Prompts der jeweiligen Kategorie.
+     * wirken nur Prompts der jeweiligen Kategorie. Ab v9 erweitert um model,
+     * tokenLimitPerDay, trustModeDefault.
      */
     val savedPrompts: List<BackupSavedPrompt> = emptyList(),
+    /**
+     * Schema v9 (Frank-Wunsch 2026-05-21): Tool-Permissions pro Prompt — welche
+     * Schreib-Tools freigeschaltet sind und ob Trust-Modus aktiv ist.
+     */
+    val promptToolPermissions: List<BackupPromptToolPermission> = emptyList(),
+    /**
+     * Schema v9: Auto-Trigger-Konfigurationen (CRON, CHAIN, EVENT).
+     */
+    val promptTriggers: List<BackupPromptTrigger> = emptyList(),
 )
 
-/** Schema v8: gespeicherter Prompt mit Kategorie. */
+/** Schema v8/v9: gespeicherter Prompt mit Kategorie + Agentic-AI-Felder. */
 @Serializable
 data class BackupSavedPrompt(
     val id: String,
@@ -121,6 +131,50 @@ data class BackupSavedPrompt(
     val updatedAt: Long,
     /** Eine von PromptCategory.name. Bei unbekanntem Wert beim Restore -> AUFGABEN. */
     val category: String = "AUFGABEN",
+    /**
+     * Schema v9 (Frank-Wunsch 2026-05-21): Vom Nutzer gewaehltes Gemini-Modell
+     * fuer agentic-AI-Ausfuehrungen. Default "gemini-2.5-flash".
+     */
+    val model: String = "gemini-2.5-flash",
+    /**
+     * Schema v9: Optionales Tages-Token-Limit. null = kein Limit.
+     */
+    val tokenLimitPerDay: Int? = null,
+    /**
+     * Schema v9: Trust-Modus-Default fuer Write-Tools (ohne Confirm-Dialog).
+     */
+    val trustModeDefault: Boolean = false,
+)
+
+/**
+ * Schema v9 (Frank-Wunsch 2026-05-21): Tool-Permission pro Prompt. Erlaubt
+ * Cross-Device-Sicherung welche Write-Tools fuer welchen Prompt freigeschaltet
+ * sind und ob sie ohne Confirm-Dialog ausgefuehrt werden duerfen.
+ */
+@Serializable
+data class BackupPromptToolPermission(
+    val id: String,
+    val promptId: String,
+    val toolName: String,
+    val granted: Boolean = false,
+    val trustMode: Boolean = false,
+)
+
+/**
+ * Schema v9 (Frank-Wunsch 2026-05-21): Auto-Trigger-Konfiguration pro Prompt
+ * (CRON/CHAIN/EVENT). nextScheduledAt wird beim Restore neu berechnet, daher
+ * hier nicht persistiert.
+ */
+@Serializable
+data class BackupPromptTrigger(
+    val id: String,
+    val promptId: String,
+    /** TriggerType.name: MANUAL / CRON / EVENT / CHAIN. */
+    val triggerType: String,
+    val cronExpression: String? = null,
+    val eventCondition: String? = null,
+    val chainAfterPromptId: String? = null,
+    val isActive: Boolean = true,
 )
 
 /** Schema v7: Thesen-Eintrag mit Nachtraegen und KI-Zusammenfassung. */

@@ -97,6 +97,11 @@ constructor(
     private val entropyEntryFollowupDaoLazy:
         Lazy<de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao>,
     private val promptRepoLazy: Lazy<de.frank.entropyreducer.data.repository.PromptRepository>,
+    // Frank-Wunsch 2026-05-21: Agentic-AI Permissions + Triggers ins Backup
+    private val promptToolPermissionRepoLazy:
+        Lazy<de.frank.entropyreducer.data.repository.PromptToolPermissionRepository>,
+    private val promptTriggerRepoLazy:
+        Lazy<de.frank.entropyreducer.data.repository.PromptTriggerRepository>,
     private val json: Json,
 ) {
 
@@ -214,6 +219,9 @@ constructor(
                         createdAt = p.createdAt,
                         updatedAt = p.updatedAt,
                         category = p.category.name,
+                        model = p.model,
+                        tokenLimitPerDay = p.tokenLimitPerDay,
+                        trustModeDefault = p.trustModeDefault,
                     )
                 }
             val thesenList =
@@ -236,9 +244,40 @@ constructor(
                 )
             }
 
+            // Agentic-AI v9: Permissions + Triggers ueber alle Prompts
+            val allPrompts = promptRepoLazy.get().getAll().first()
+            val permissionBackups = mutableListOf<BackupPromptToolPermission>()
+            val triggerBackups = mutableListOf<BackupPromptTrigger>()
+            for (p in allPrompts) {
+                promptToolPermissionRepoLazy.get().getForPromptSnapshot(p.id).forEach { perm ->
+                    permissionBackups.add(
+                        BackupPromptToolPermission(
+                            id = perm.id,
+                            promptId = perm.promptId,
+                            toolName = perm.toolName,
+                            granted = perm.granted,
+                            trustMode = perm.trustMode,
+                        )
+                    )
+                }
+                promptTriggerRepoLazy.get().getForPrompt(p.id).first().forEach { trig ->
+                    triggerBackups.add(
+                        BackupPromptTrigger(
+                            id = trig.id,
+                            promptId = trig.promptId,
+                            triggerType = trig.triggerType.name,
+                            cronExpression = trig.cronExpression,
+                            eventCondition = trig.eventCondition,
+                            chainAfterPromptId = trig.chainAfterPromptId,
+                            isActive = trig.isActive,
+                        )
+                    )
+                }
+            }
+
             val payload =
                 BackupPayload(
-                    version = 8,
+                    version = 9,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -255,6 +294,8 @@ constructor(
                     entropyEntryFollowups = entropyFollowupBackups,
                     thesenEntries = thesenBackups,
                     savedPrompts = savedPromptBackups,
+                    promptToolPermissions = permissionBackups,
+                    promptTriggers = triggerBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

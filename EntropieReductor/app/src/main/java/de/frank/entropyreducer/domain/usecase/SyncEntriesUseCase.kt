@@ -63,6 +63,11 @@ constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
     private val promptRepo: de.frank.entropyreducer.data.repository.PromptRepository,
+    // Frank-Wunsch 2026-05-21: Agentic-AI v9 — Permissions + Triggers restorebar
+    private val promptToolPermissionRepo:
+        de.frank.entropyreducer.data.repository.PromptToolPermissionRepository,
+    private val promptTriggerRepo:
+        de.frank.entropyreducer.data.repository.PromptTriggerRepository,
     private val json: Json,
 ) {
 
@@ -346,8 +351,9 @@ constructor(
         }
 
         // --- Saved Prompts (v8+, Frank-Wunsch 2026-05-20) ---
-        // Existenz-Strategie pro id. Bei unbekannter Kategorie fallback auf AUFGABEN
-        // (siehe TypeConverter.toPromptCategory).
+        // Existenz-Strategie pro id. Bei unbekannter Kategorie fallback auf AUFGABEN.
+        // v9 (Frank 2026-05-21): zusaetzliche Felder model/tokenLimitPerDay/trustModeDefault
+        // werden uebernommen — bei alten v8-Backups defaulten sie automatisch.
         if (payload.savedPrompts.isNotEmpty()) {
             val existingPromptIds = promptRepo.getAll().first().map { it.id }.toHashSet()
             for (b in payload.savedPrompts) {
@@ -366,6 +372,68 @@ constructor(
                         createdAt = b.createdAt,
                         updatedAt = b.updatedAt,
                         category = cat,
+                        model = b.model,
+                        tokenLimitPerDay = b.tokenLimitPerDay,
+                        trustModeDefault = b.trustModeDefault,
+                    )
+                )
+                inserted++
+            }
+        }
+
+        // --- Prompt-Tool-Permissions (v9+, Frank-Wunsch 2026-05-21) ---
+        // Existenz-Strategie pro id. CASCADE-FK: nur einspielen wenn der zugehoerige
+        // Prompt schon existiert (sonst FK-Constraint-Verletzung).
+        if (payload.promptToolPermissions.isNotEmpty()) {
+            val existingPromptIds = promptRepo.getAll().first().map { it.id }.toHashSet()
+            for (b in payload.promptToolPermissions) {
+                if (b.promptId !in existingPromptIds) continue
+                val existing = promptToolPermissionRepo.getOne(b.promptId, b.toolName)
+                if (existing != null) continue
+                promptToolPermissionRepo.upsert(
+                    de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity(
+                        id = b.id,
+                        promptId = b.promptId,
+                        toolName = b.toolName,
+                        granted = b.granted,
+                        trustMode = b.trustMode,
+                    )
+                )
+                inserted++
+            }
+        }
+
+        // --- Prompt-Triggers (v9+, Frank-Wunsch 2026-05-21) ---
+        // nextScheduledAt wird vom TriggerScheduler beim naechsten Worker-Lauf neu
+        // berechnet — hier nur die statische Konfiguration einspielen.
+        if (payload.promptTriggers.isNotEmpty()) {
+            val existingPromptIds = promptRepo.getAll().first().map { it.id }.toHashSet()
+            for (b in payload.promptTriggers) {
+                if (b.promptId !in existingPromptIds) continue
+                if (promptTriggerRepo.getById(b.id) != null) continue
+                val triggerType =
+                    runCatching {
+                            de.frank.entropyreducer.domain.model.TriggerType.valueOf(b.triggerType)
+                        }
+                        .getOrDefault(de.frank.entropyreducer.domain.model.TriggerType.MANUAL)
+                val nextAt =
+                    if (triggerType == de.frank.entropyreducer.domain.model.TriggerType.CRON &&
+                            b.cronExpression != null
+                    )
+                        de.frank.entropyreducer.domain.agentic.trigger.SimpleCronParser.nextFireAt(
+                            b.cronExpression
+                        )
+                    else null
+                promptTriggerRepo.upsert(
+                    de.frank.entropyreducer.data.local.entities.PromptTriggerEntity(
+                        id = b.id,
+                        promptId = b.promptId,
+                        triggerType = triggerType,
+                        cronExpression = b.cronExpression,
+                        eventCondition = b.eventCondition,
+                        chainAfterPromptId = b.chainAfterPromptId,
+                        isActive = b.isActive,
+                        nextScheduledAt = nextAt,
                     )
                 )
                 inserted++
