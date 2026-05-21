@@ -224,8 +224,8 @@ weiteren Schreibversuche.
 rm "<app-root>/.android-shield/.audit-only.lock"
 ```
 
-Der Orchestrator erkennt Stale-Locks ab Wave 3 (>24h alt) und loescht sie
-automatisch — aber bei juengeren Locks ist manuelles Eingreifen noetig.
+Der Orchestrator erkennt Stale-Locks ab Wave 7 (>30 Min alt) und ignoriert sie
+automatisch — bei juengeren Locks ist manuelles Eingreifen noetig.
 
 ---
 
