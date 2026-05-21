@@ -1,7 +1,7 @@
 # Agentic-AI-Prompts: Gerüst für alle 3 Stufen
 
 **Datum:** 2026-05-21
-**Status:** In Arbeit (Etappe 1/15)
+**Status:** ABGESCHLOSSEN — alle 15 Etappen + Aufteilungen 8a/8b + 9/9b/9c committed (#890 – #907)
 **Vorgänger-Spec:** `../../PROMPT-PROJEKT-TODO.md`
 **Sitzungsführung:** Brainstorming-Skill (superpowers) übersprungen auf Frank's Wunsch nach Sektion 2/6 — direktes Bauen mit Etappen-Commits.
 
@@ -98,21 +98,24 @@
 
 | # | Etappe | Status |
 |---|--------|--------|
-| 1 | DB-Migration 21→22 + 5 Entities + 3 SavedPromptEntity-Felder + DAOs + Repos | In Arbeit |
-| 2 | GeminiApi erweitern um Function-Calling | Pending |
-| 3 | `AgenticTool` Interface + `ToolRegistry` + 1 Referenz-Read-Tool | Pending |
-| 4 | 3 Gates: `PermissionGate`, `TokenMeter`, `ConfirmationGate` | Pending |
-| 5 | `WorkflowRunner` (ReAct-Loop) + `ExecutionLogger` | Pending |
-| 6 | Restliche 7 Read-Tools | Pending |
-| 7 | 10 Write-Tools | Pending |
-| 8 | UI: Ausführen-Knopf, Execution-Dialog, History-Screen | Pending |
-| 9 | UI: Confirm-Dialog mit Diff, Tool-Permission-Editor | Pending |
-| 10 | TokenStats-Screen mit Balkendiagramm + Limit-Einstellung | Pending |
-| 11 | `TriggerScheduler` + WorkManager + Cron + Event-Listener | Pending |
-| 12 | Cross-Prompt-Read + Trigger-Chaining | Pending |
-| 13 | 5-7 Beispiel-Vorlagen | Pending |
-| 14 | `BackupPayload` v2 Integration | Pending |
-| 15 | AuditLog-Screen + Rollback-UI | Pending |
+| 1 | DB-Migration 21→22 + 5 Entities + 3 SavedPromptEntity-Felder + DAOs + Repos | ✅ #890 |
+| 2 | GeminiApi erweitern um Function-Calling | ✅ #891 |
+| 3 | `AgenticTool` Interface + `ToolRegistry` + 1 Referenz-Read-Tool | ✅ #892 |
+| 4 | 3 Gates: `PermissionGate`, `TokenMeter`, `ConfirmationGate` | ✅ #893 |
+| 5 | `WorkflowRunner` (ReAct-Loop) + `ExecutionLogger` | ✅ #894 |
+| 6 | Restliche 8 Read-Tools | ✅ #895 |
+| 7 | 10 Write-Tools | ✅ #896 |
+| 8a | UI: Ausführen-Knopf, Execution-Dialog | ✅ #897 |
+| 8b | UI: History-Screen | ✅ #903 |
+| 9 | EditDialog: Modell-Dropdown + Trust-Toggle | ✅ #899 |
+| 9b | UI: Permission-Editor-Dialog | ✅ #900 |
+| 9c | UI-ConfirmationGate (Sicherheit) | ✅ #901 |
+| 10 | TokenStats-Screen mit Balkendiagramm + Limit-Einstellung | ✅ #898 |
+| 11 | `TriggerScheduler` + WorkManager + Cron-Parser | ✅ #904 |
+| 12 | Cross-Prompt-Read Tool + Chain-Trigger | ✅ #905 |
+| 13 | 7 Beispiel-Vorlagen | ✅ #902 |
+| 14 | `BackupPayload` v9 (Agentic-AI restorebar) | ✅ #906 |
+| 15 | AuditLog-Polish: Filter-Chips + Pruning | ✅ #907 |
 
 ---
 

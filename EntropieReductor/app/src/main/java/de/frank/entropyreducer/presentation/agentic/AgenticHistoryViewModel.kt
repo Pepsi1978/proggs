@@ -6,11 +6,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.entities.PromptExecutionEntity
 import de.frank.entropyreducer.data.local.entities.PromptExecutionStepEntity
 import de.frank.entropyreducer.data.repository.PromptExecutionRepository
+import de.frank.entropyreducer.domain.model.ExecutionStatus
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -35,12 +37,21 @@ constructor(private val executionRepo: PromptExecutionRepository) : ViewModel() 
     private val _filterPromptId = MutableStateFlow<String?>(null)
     val filterPromptId: StateFlow<String?> = _filterPromptId.asStateFlow()
 
+    /**
+     * Status-Filter (Etappe 15): null = alle, sonst nur Eintraege mit diesem Status.
+     */
+    private val _filterStatus = MutableStateFlow<ExecutionStatus?>(null)
+    val filterStatus: StateFlow<ExecutionStatus?> = _filterStatus.asStateFlow()
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val executions: StateFlow<List<PromptExecutionEntity>> =
         _filterPromptId
             .flatMapLatest { promptId ->
                 if (promptId == null) executionRepo.getRecent(limit = 200)
                 else executionRepo.getByPrompt(promptId, limit = 200)
+            }
+            .combine(_filterStatus) { list, status ->
+                if (status == null) list else list.filter { it.status == status }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), emptyList())
 
@@ -58,6 +69,10 @@ constructor(private val executionRepo: PromptExecutionRepository) : ViewModel() 
 
     fun setFilterPromptId(promptId: String?) {
         _filterPromptId.value = promptId
+    }
+
+    fun setFilterStatus(status: ExecutionStatus?) {
+        _filterStatus.value = status
     }
 
     fun openDetail(executionId: String) {

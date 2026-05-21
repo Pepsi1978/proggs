@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +69,9 @@ fun AgenticHistoryScreen(
 ) {
     val executions by vm.executions.collectAsStateWithLifecycle()
     val selectedExecutionId by vm.selectedExecutionId.collectAsStateWithLifecycle()
+    val filterStatus by vm.filterStatus.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
+    var showPruneConfirm by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(initialPromptId) {
         vm.setFilterPromptId(initialPromptId)
@@ -79,31 +88,141 @@ fun AgenticHistoryScreen(
                 )
             }
         },
+        actions = {
+            IconButton(onClick = { showPruneConfirm = true }) {
+                Icon(
+                    Icons.Outlined.DeleteSweep,
+                    contentDescription = "Alte Eintraege loeschen",
+                    tint = cosmos.textPrimary,
+                )
+            }
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (executions.isEmpty()) {
-                Text(
-                    text =
-                        "Noch keine Ausfuehrungen. Sobald du einen Prompt mit " +
-                            "dem Play-Button startest, taucht er hier mit allen " +
-                            "Schritten auf.",
-                    modifier = Modifier.padding(20.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cosmos.textSecondary,
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding =
-                        androidx.compose.foundation.layout.PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Status-Filter-Chips (Etappe 15)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    items(executions, key = { it.id }) { exec ->
-                        ExecutionRow(exec = exec, onClick = { vm.openDetail(exec.id) })
+                    item {
+                        FilterChip(
+                            selected = filterStatus == null,
+                            onClick = { vm.setFilterStatus(null) },
+                            label = { Text("Alle") },
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterStatus == ExecutionStatus.SUCCESS,
+                            onClick = {
+                                vm.setFilterStatus(
+                                    if (filterStatus == ExecutionStatus.SUCCESS) null
+                                    else ExecutionStatus.SUCCESS
+                                )
+                            },
+                            label = { Text("Erfolge") },
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterStatus == ExecutionStatus.FAILED,
+                            onClick = {
+                                vm.setFilterStatus(
+                                    if (filterStatus == ExecutionStatus.FAILED) null
+                                    else ExecutionStatus.FAILED
+                                )
+                            },
+                            label = { Text("Fehler") },
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected =
+                                filterStatus == ExecutionStatus.BLOCKED_BY_TOKEN_LIMIT,
+                            onClick = {
+                                vm.setFilterStatus(
+                                    if (filterStatus == ExecutionStatus.BLOCKED_BY_TOKEN_LIMIT)
+                                        null
+                                    else ExecutionStatus.BLOCKED_BY_TOKEN_LIMIT
+                                )
+                            },
+                            label = { Text("Token-Block") },
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterStatus == ExecutionStatus.RUNNING,
+                            onClick = {
+                                vm.setFilterStatus(
+                                    if (filterStatus == ExecutionStatus.RUNNING) null
+                                    else ExecutionStatus.RUNNING
+                                )
+                            },
+                            label = { Text("Laufend") },
+                        )
+                    }
+                }
+
+                if (executions.isEmpty()) {
+                    Text(
+                        text =
+                            if (filterStatus != null)
+                                "Keine Eintraege mit diesem Filter."
+                            else
+                                "Noch keine Ausfuehrungen. Sobald du einen Prompt mit " +
+                                    "dem Play-Button startest, taucht er hier mit allen " +
+                                    "Schritten auf.",
+                        modifier = Modifier.padding(20.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cosmos.textSecondary,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = 16.dp,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(executions, key = { it.id }) { exec ->
+                            ExecutionRow(exec = exec, onClick = { vm.openDetail(exec.id) })
+                        }
                     }
                 }
             }
         }
+    }
+
+    if (showPruneConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPruneConfirm = false },
+            title = { Text("Alte Audit-Eintraege loeschen") },
+            text = {
+                Text(
+                    text =
+                        "Loescht die ALLEN 100 aeltesten Ausfuehrungen aus dem Verlauf. " +
+                            "Die zugehoerigen Schritte werden via CASCADE automatisch mit " +
+                            "geloescht. Token-Statistiken bleiben unveraendert. Diese " +
+                            "Aktion kann nicht rueckgaengig gemacht werden.",
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        vm.pruneOldest(100)
+                        showPruneConfirm = false
+                    },
+                ) { Text("Loeschen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPruneConfirm = false }) { Text("Abbrechen") }
+            },
+        )
     }
 
     selectedExecutionId?.let {
