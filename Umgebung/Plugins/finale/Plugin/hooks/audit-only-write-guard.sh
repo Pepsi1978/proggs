@@ -119,7 +119,9 @@ if [ -n "$lock_pid" ]; then
     now="$(date +%s 2>/dev/null || echo 0)"
     lock_mtime="$(stat -c %Y "$lock_found" 2>/dev/null || stat -f %m "$lock_found" 2>/dev/null || echo 0)"
     lock_age=$((now - lock_mtime))
-    if [ "$lock_age" -gt 300 ]; then
+    # Stale-Schwelle 1800 Sek = 30 Min (Wave 5 Anpassung 2026-05-21):
+    # frueher 5 Min — zu kurz fuer typische audit-only-Laeufe (25 Min bei grossen Apps).
+    if [ "$lock_age" -gt 1800 ]; then
       echo "[finale] WARNUNG: Stale-Lock erkannt (PID $lock_pid nicht mehr aktiv, $lock_age Sek alt)." >&2
       echo "[finale] Lock wird ignoriert (Stale). Manuell loeschen: rm \"$lock_found\"" >&2
       exit 0

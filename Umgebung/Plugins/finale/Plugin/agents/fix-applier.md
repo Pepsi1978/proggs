@@ -117,8 +117,29 @@ Bei Einzel-Findings (Standard-Karte): Quick-Check wie gehabt nach jedem Edit.
 
 **Rollback-Regel bei Bundle-FAIL:** Wenn der Quick-Check NACH einem Bundle fehlschlägt,
 muessen ALLE Bundle-Edits zurueckgerollt werden — nicht nur der letzte. Pre-Bundle-
-Snapshot-Pflicht: vor dem ersten Bundle-Edit `git stash` oder Inhalts-Backup
-aller betroffenen Dateien anlegen.
+Snapshot-Pflicht: vor dem ersten Bundle-Edit Inhalts-Backup aller betroffenen
+Dateien anlegen.
+
+**Wave 5 Klarstellung 2026-05-21:** `git stash` ist VERBOTEN (FIN-013 verbietet
+alle Git-Operationen). Das einzig zulaessige Backup-Verfahren ist Inhalts-Backup
+nach folgendem Schema:
+
+- **Backup-Pfad (verbindlich):** `<app-root>/.android-shield/bundle-backups/<ISO-timestamp>-<bundle-id>/<relativer-pfad-zur-datei>`
+- **Vor dem ersten Bundle-Edit:** alle N betroffenen Dateien per `cp` ins
+  Backup-Verzeichnis kopieren.
+- **Bei Bundle-FAIL:** alle Dateien aus dem Backup zurueckkopieren.
+- **Bei Bundle-SUCCESS:** Backup-Verzeichnis NACH erfolgreichem Quick-Check loeschen
+  (durch Orchestrator, der `bundleBackupPath` aus dem fix-applier-Output erhalten hat).
+
+Output-JSON-Erweiterung bei Bundle-Anwendungen:
+```json
+{
+  "ok": true,
+  "bundleSize": 7,
+  "bundleBackupPath": ".android-shield/bundle-backups/2026-05-21T14-30-00-B7/",
+  ...
+}
+```
 
 ### Bei .kt-Datei-Edit
 

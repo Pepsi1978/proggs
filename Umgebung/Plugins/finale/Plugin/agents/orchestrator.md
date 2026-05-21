@@ -310,11 +310,21 @@ Wenn `mode == "audit-only"` UND die Pre-Flight-Freigabe `[F]` erteilt wurde:
    `<app-root>/.android-shield/.audit-only.lock` mit Inhalt:
    ```
    timestamp: <ISO-8601>
-   orchestratorPid: <PID>
+   sessionToken: <UUID4>
    mode: audit-only
    ```
    Sobald die Datei existiert, blockiert der `audit-only-write-guard`-Hook
    alle Schreibversuche an App-Dateien (alles ausserhalb `.android-shield/`).
+
+   **Wave 5 Hinweis (2026-05-21):** Frueher wurde hier `orchestratorPid: <PID>`
+   geschrieben. Aber: der "Orchestrator" ist ein LLM-Agent, hat keine stabile
+   OS-PID. Die PID des Bash-Subprozesses der das Lock schreibt, stirbt sofort
+   danach — Stale-Lock-Check schlug fehl. Ersatz: `sessionToken: <UUID4>` —
+   ein zufaelliger Token den der Orchestrator beim Lock-Anlegen generiert
+   und in seinem eigenen Kontext speichert. Beim Lock-Loeschen vergleicht
+   er den Token mit dem in der Datei — passt nur fuer "seine eigenen" Locks.
+   Stale-Detection: nur ueber Timestamp + 30-Min-Schwelle (statt 5 Min, weil
+   normale audit-only-Laeufe bis 25 Min dauern koennen).
 
 3. **Lock loeschen (Pflicht-Cleanup):** Beim regulaeren Ende, beim Interrupt UND
    bei Fehlern MUSS die Lock-Datei wieder geloescht werden. Implementiere als
@@ -1184,19 +1194,22 @@ geschrieben werden. Direktive #3 Loop 3 Adversarial K2.
 eines App-Namens). Bevor `appRoot` in einen Shell-Befehl fliesst (z.B.
 `bash "${FINALE_PLUGIN_ROOT}/scripts/verify-skills.sh" "$appRoot"`):
 
-**Pflicht-Check:**
+**Pflicht-Check (Wave 5 Hardening 2026-05-21 — Umlaute erlauben):**
 
 ```bash
-if ! printf '%s' "$appRoot" | grep -qE '^[a-zA-Z0-9/\\_:. -]+$'; then
+# Locale-tolerantes Regex: a-z A-Z 0-9 / \ _ : . - SPACE PLUS deutsche Umlaute
+# und allgemeine Latin-1-Supplement (für FR/ES/IT Pfade mit Akzenten).
+# Verhindert weiterhin Shell-Injection via ; | & $() backticks > < ! etc.
+if ! printf '%s' "$appRoot" | LC_ALL=C.UTF-8 grep -qP '^[a-zA-Z0-9/\\_:. äöüÄÖÜß\xC0-\xFF -]+$'; then
   echo "FEHLER: appRoot enthaelt unerlaubte Zeichen: $appRoot" >&2
-  echo "Erlaubt: a-z A-Z 0-9 / \\ _ : . - SPACE" >&2
+  echo "Erlaubt: a-z A-Z 0-9 / \\ _ : . - SPACE + Umlaute (äöüÄÖÜß) + Latin-1-Supplement (à á é è etc.)" >&2
   exit 1
 fi
 ```
 
-Verhindert Shell-Injection via `;`, `|`, `&`, `$()`, backticks, `>`, `<`, etc.
-Bei legitimen Pfaden mit Sonderzeichen (z.B. Apostroph im Namen): Nutzer
-muss App umbenennen oder Pfad direkt uebergeben.
+Verhindert Shell-Injection via `;`, `|`, `&`, `$()`, backticks, `>`, `<`, `!` etc.
+Legitime Pfade mit Umlauten (deutsche App-Namen wie `~/proggs/MeineÄpp/`) und
+Akzenten (französische Apps) werden durchgelassen.
 
 **Zusaetzlich:** alle Shell-Aufrufe die `appRoot` einbetten muessen Double-Quotes
 verwenden (`"$appRoot"`, nie `$appRoot`). Pattern:

@@ -108,7 +108,9 @@ try {
                 $procAlive = $false
             }
 
-            if (-not $procAlive -and $lockAge.TotalMinutes -gt 5) {
+            # Stale-Schwelle 30 Min (Wave 5 Anpassung 2026-05-21): frueher 5 Min war zu kurz
+            # fuer typische audit-only-Laeufe (bis 25 Min bei grossen Apps).
+            if (-not $procAlive -and $lockAge.TotalMinutes -gt 30) {
                 [Console]::Error.WriteLine("[finale] WARNUNG: Stale-Lock erkannt (PID $lockPid nicht mehr aktiv, $([math]::Round($lockAge.TotalMinutes,1)) Min alt).")
                 [Console]::Error.WriteLine("[finale] Lock wird ignoriert (Stale). Manuell loeschen: Remove-Item '$lockFound'")
                 exit 0
