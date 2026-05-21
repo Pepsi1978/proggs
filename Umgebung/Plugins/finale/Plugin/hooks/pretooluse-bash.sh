@@ -19,6 +19,18 @@
 # Hardening FIN-029 (2026-05-21) — vorher nur set -u.
 set -eu
 
+# Dependency-Check (Wave 3 Hardening, Direktive #3 — Loop 2 K2):
+# python3 ist Pflicht-Tool fuer JSON-Parsing. Wenn python3 nicht im PATH ist,
+# kann der Hook den JSON-Input nicht lesen UND damit destruktive Befehle nicht
+# erkennen. Ein blockierender Hook MUSS in diesem Fall FAIL-CLOSED (exit 2),
+# nicht FAIL-OPEN (exit 0 durchlassen) — sonst kein Schutz auf python3-losen Systemen.
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "[finale] BLOCKIERT: python3 nicht im PATH — Hook kann JSON-Input nicht parsen." >&2
+  echo "[finale] Bitte python3 installieren (Linux: apt install python3 / macOS: brew install python / Windows: python.org Installer)." >&2
+  echo "[finale] Bis dahin werden ALLE Bash-Befehle blockiert (Fail-Closed Sicherheits-Default)." >&2
+  exit 2
+fi
+
 # Hook-Input einlesen (Claude Code schickt JSON mit { tool_input: { command: "..." } }).
 # DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin akzeptieren. Bei
 # groesserem Input wuerde `cat` den Speicher fluten — head -c begrenzt hart.

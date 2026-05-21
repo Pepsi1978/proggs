@@ -89,6 +89,35 @@ try {
         exit 0
     }
 
+    # Stale-Lock-Check (Wave 3 Hardening 2026-05-21 — Direktive #3 Loop 2 K5):
+    # Lock-Datei enthaelt PID des Orchestrators (Format: "orchestratorPid: <number>").
+    # Wenn der Prozess nicht mehr laeuft UND der Lock > 5 Min alt: stale -> Lock ignorieren
+    # und Schreiben durchlassen mit klarer Warnung. Verhindert Stunden-langes Blockieren
+    # nach Orchestrator-Crash (vorher: Lock blockierte bis 24h Stale-Detection griff).
+    try {
+        $lockContent = Get-Content $lockFound -Raw -ErrorAction Stop
+        if ($lockContent -match 'orchestratorPid:\s*(\d+)') {
+            $lockPid = [int]$matches[1]
+            $lockAge = (Get-Date) - (Get-Item $lockFound -ErrorAction Stop).LastWriteTime
+
+            $procAlive = $false
+            try {
+                $null = Get-Process -Id $lockPid -ErrorAction Stop
+                $procAlive = $true
+            } catch {
+                $procAlive = $false
+            }
+
+            if (-not $procAlive -and $lockAge.TotalMinutes -gt 5) {
+                [Console]::Error.WriteLine("[finale] WARNUNG: Stale-Lock erkannt (PID $lockPid nicht mehr aktiv, $([math]::Round($lockAge.TotalMinutes,1)) Min alt).")
+                [Console]::Error.WriteLine("[finale] Lock wird ignoriert (Stale). Manuell loeschen: Remove-Item '$lockFound'")
+                exit 0
+            }
+        }
+    } catch {
+        # Lock-Inhalt unlesbar — defensiv blockieren (besser als false-positive durchlassen)
+    }
+
     # Lock aktiv UND Datei nicht in .android-shield/ -> blockieren
     [Console]::Error.WriteLine("[finale] BLOCKIERT: Audit-Only-Modus aktiv (Lock: $lockFound)")
     [Console]::Error.WriteLine("[finale] Datei: $filePath")

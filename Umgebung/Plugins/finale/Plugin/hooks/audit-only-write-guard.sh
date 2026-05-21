@@ -23,6 +23,17 @@
 # fail-safe-Logik (exit 0 am Ende). FIN-029 Hardening 2026-05-21.
 set -eu
 
+# Dependency-Check (Wave 3 Hardening, Direktive #3 — Loop 2 K2):
+# python3 ist Pflicht-Tool fuer JSON-Parsing. Wenn fehlend: blockierender Hook
+# MUSS FAIL-CLOSED (exit 2) — sonst koennen alle Schreibversuche an App-Dateien
+# im audit-only-Modus durchgehen.
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "[finale] BLOCKIERT: python3 nicht im PATH — Hook kann JSON-Input nicht parsen." >&2
+  echo "[finale] Bitte python3 installieren (Linux: apt install python3 / macOS: brew install python / Windows: python.org Installer)." >&2
+  echo "[finale] Bis dahin werden ALLE Edit/Write/MultiEdit-Versuche blockiert (Fail-Closed Sicherheits-Default)." >&2
+  exit 2
+fi
+
 # Input-Guard: leerer stdin -> still durchwinken.
 # DoS-Limit (W5-A 2026-05-21 Hardening): max 512 KB stdin.
 stdin_input="$(head -c 524288 2>/dev/null || true)"
@@ -53,7 +64,14 @@ fi
 # in res/). Normaler Pfad ohne ../ wird nicht kanonisiert (Performance).
 case "$file_path" in
   *../*|*..[\\/]*)
-    real_path="$(realpath "$file_path" 2>/dev/null || readlink -f "$file_path" 2>/dev/null || echo "$file_path")"
+    # 4-Stufen-Fallback: realpath (Linux/Git-Bash) -> readlink -f (Linux/Git-Bash) ->
+    # python3 (macOS BSD ohne coreutils, Wave 3 Hardening 2026-05-21) -> echo
+    # Letzter Fallback ist UNSICHER (gibt unkanonischen Pfad zurueck), aber besser
+    # als Abbruch — auf macOS ohne realpath/readlink -f braucht python3 als Brueckentechnik.
+    real_path="$(realpath "$file_path" 2>/dev/null \
+      || readlink -f "$file_path" 2>/dev/null \
+      || python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$file_path" 2>/dev/null \
+      || echo "$file_path")"
     ;;
   *)
     real_path="$file_path"
@@ -88,6 +106,25 @@ done
 
 if [ -z "$lock_found" ]; then
   exit 0   # Kein Audit-Only-Lauf aktiv
+fi
+
+# Stale-Lock-Check (Wave 3 Hardening 2026-05-21 — Direktive #3 Loop 2 K5):
+# Lock-Datei enthaelt PID des Orchestrators (Format: "orchestratorPid: <num>").
+# Wenn der Prozess nicht mehr laeuft UND der Lock > 5 Min alt: stale -> ignorieren
+# mit klarer Warnung. Vorher: Lock blockierte bis 24h Stale-Detection griff.
+lock_pid="$(grep -oE 'orchestratorPid:[[:space:]]*[0-9]+' "$lock_found" 2>/dev/null | grep -oE '[0-9]+' | head -n 1 || echo "")"
+if [ -n "$lock_pid" ]; then
+  if ! kill -0 "$lock_pid" 2>/dev/null; then
+    # Prozess tot — pruefe Alter (5 Min Stale-Schwelle)
+    now="$(date +%s 2>/dev/null || echo 0)"
+    lock_mtime="$(stat -c %Y "$lock_found" 2>/dev/null || stat -f %m "$lock_found" 2>/dev/null || echo 0)"
+    lock_age=$((now - lock_mtime))
+    if [ "$lock_age" -gt 300 ]; then
+      echo "[finale] WARNUNG: Stale-Lock erkannt (PID $lock_pid nicht mehr aktiv, $lock_age Sek alt)." >&2
+      echo "[finale] Lock wird ignoriert (Stale). Manuell loeschen: rm \"$lock_found\"" >&2
+      exit 0
+    fi
+  fi
 fi
 
 # Lock aktiv UND Datei nicht in .android-shield/ -> blockieren

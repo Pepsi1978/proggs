@@ -195,14 +195,59 @@ Bevor irgendein Bash-Aufruf erfolgt, MUSS `FINALE_PLUGIN_ROOT` aufgelöst werden
 `${CLAUDE_PLUGIN_ROOT}` steht in der Bash-Umgebung von Subagenten NICHT zur Verfügung.
 
 ```bash
+# Hardening Loop 2 (2026-05-21): robuste Aufloesung mit 5 Fallback-Ebenen.
+# Frueher: harter KeyError bei manueller Plugin-Installation ohne installed_plugins.json.
+
 FINALE_PLUGIN_ROOT="$(python3 -c "
-import json, os
-p = json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')))
-print(p['plugins']['local/finale']['cacheDir'])
+import json, os, sys
+try:
+    path = os.path.expanduser('~/.claude/plugins/installed_plugins.json')
+    if not os.path.exists(path):
+        sys.exit(0)
+    p = json.load(open(path, encoding='utf-8'))
+    # Suche nach 'finale' in den Plugin-Keys (deckt local/finale, official/finale, custom/finale etc. ab)
+    for k, v in p.get('plugins', {}).items():
+        if 'finale' in k.lower() and isinstance(v, dict) and 'cacheDir' in v:
+            print(v['cacheDir'])
+            sys.exit(0)
+except Exception:
+    pass
+sys.exit(0)
 " 2>/dev/null || echo "")"
+
+# Fallback 1: CLAUDE_PLUGIN_ROOT env-Variable
+if [ -z "$FINALE_PLUGIN_ROOT" ] && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  if [ -f "$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json" ]; then
+    FINALE_PLUGIN_ROOT="$CLAUDE_PLUGIN_ROOT"
+  fi
+fi
+
+# Fallback 2: bekannte Standard-Pfade probieren
 if [ -z "$FINALE_PLUGIN_ROOT" ]; then
-  echo "FEHLER: FINALE_PLUGIN_ROOT konnte nicht aufgelöst werden."
-  echo "Prüfe ob das Plugin installiert ist: ~/.claude/plugins/installed_plugins.json"
+  for p in \
+    "$HOME/.claude/plugins/local/finale/Plugin" \
+    "$HOME/.claude/plugins/local/finale" \
+    "$HOME/proggs/Umgebung/Plugins/finale/Plugin"
+  do
+    if [ -d "$p" ] && [ -f "$p/.claude-plugin/plugin.json" ]; then
+      FINALE_PLUGIN_ROOT="$p"
+      break
+    fi
+  done
+fi
+
+if [ -z "$FINALE_PLUGIN_ROOT" ]; then
+  echo "FEHLER: FINALE_PLUGIN_ROOT konnte nicht aufgeloest werden." >&2
+  echo "Versuchte Quellen:" >&2
+  echo "  1. ~/.claude/plugins/installed_plugins.json (key matching 'finale')" >&2
+  echo "  2. CLAUDE_PLUGIN_ROOT env-Variable" >&2
+  echo "  3. ~/.claude/plugins/local/finale/Plugin" >&2
+  echo "  4. ~/.claude/plugins/local/finale" >&2
+  echo "  5. ~/proggs/Umgebung/Plugins/finale/Plugin" >&2
+  echo "" >&2
+  echo "Loesung: Entweder Plugin via Claude Code Plugin-Manager installieren," >&2
+  echo "oder FINALE_PLUGIN_ROOT manuell exportieren:" >&2
+  echo "  export FINALE_PLUGIN_ROOT=\"\$HOME/.claude/plugins/local/finale/Plugin\"" >&2
   exit 1
 fi
 ```
@@ -462,7 +507,7 @@ einzelner Subagents.
   auflösen und die Synthesizer-Funktion übernehmen.
 - **Workers** (model: opus, effort: max) = Spezialisten für ihre Kategorie/Jurisdiktion.
 - Team-Members können untereinander kommunizieren (z. B. Worker 3 teilt
-  Worker 7 mit: "HWG-Finding T-003 betrifft auch FR-Wording").
+  Worker 7 mit: "HWG-Finding A12 betrifft auch FR-Wording").
 - **Achtung:** 3-4× teurer als einzelne Subagents. Nur bei wirklich komplexen
   Phasen mit >5 Workers und echtem Koordinationsbedarf einsetzen.
 
@@ -620,7 +665,7 @@ Bei einem erkannten Cluster EINE Bundle-Karte ausgeben statt N Einzelkarten:
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  BUNDLE #<B> — <N> zusammengehörige Findings               │
-│  Findings: <T-003, T-007, T-011, ...>                         │
+│  Findings: <A1, B3, C12, ...>                                 │
 │  Gemeinsames Muster: <z. B. „Alle Paywall-CTAs versprechen     │
 │    garantierten Erfolg — UWG §5">                              │
 │  Risiko gesamt: <🟥 N × hoch>                                  │
@@ -739,6 +784,47 @@ Phase 4/5 verlangsamt und Kontext-Reads belastet.
 Implementation: am Anfang von Phase 0 nach Schritt 1 (Skill-Verifikation) einbauen,
 vor dem Pre-Flight-Plan.
 
+### JSON-Read-Robustheit (Wave 3 Hardening, 2026-05-21 — Direktive #3 Loop 2)
+
+Vor JEDEM Read einer `.json`-Datei im `.android-shield/`-Output-Verzeichnis MUSS
+der Orchestrator folgenden Pflicht-Ablauf einhalten:
+
+1. **Existenz pruefen:** wenn Datei fehlt → klare Meldung
+   ("Report `<name>.json` fehlt — vorheriger Lauf wahrscheinlich abgebrochen oder
+   noch nicht geschrieben"). KEIN Fallback auf leeren Report — der Nutzer muss
+   bewusst entscheiden ob er Phase 1 neu startet.
+
+2. **JSON-Validierung VOR der Verwendung:**
+   ```bash
+   python3 -c "import json, sys; json.load(open(sys.argv[1], encoding='utf-8'))" "<pfad>"
+   ```
+
+3. **Bei FAIL (kaputtes JSON, z.B. abgeschnitten nach Stromausfall):** Karte zeigen:
+   ```
+   [1] Vollscan von Phase 1 neu starten (sicherste Wahl, alle Findings neu erfassen)
+   [2] Manuelle Reparatur — Orchestrator zeigt erste 50 Zeilen des kaputten Files
+       plus Schema-Erwartung -> Nutzer entscheidet ob er manuell repariert
+   [3] Abbruch mit Hinweis: "manuell <pfad> reparieren oder loeschen"
+   ```
+
+4. **NIEMALS** einen JSON-Read OHNE try/except durchfuehren. Ein Crash waehrend
+   `json.dump()` (Stromausfall, Token-Cap, OOM) hinterlaesst sonst einen
+   abgeschnittenen File der die naechste Phase still crashen laesst.
+
+5. **Atomic Writes beim Schreiben:** zuerst `<datei>.tmp` schreiben, dann `mv`.
+   Verhindert dass ein Crash mitten im Write-Vorgang eine teilweise Datei
+   hinterlaesst. Standard-Pattern:
+   ```python
+   import json, os
+   tmp = path + '.tmp'
+   with open(tmp, 'w', encoding='utf-8') as f:
+       json.dump(data, f, indent=2, ensure_ascii=False)
+   os.replace(tmp, path)   # atomic rename, ueberlebt Crashes
+   ```
+
+Betrifft konkret: `recht-report.json`, `roentgen-report.json`, `strings-plan.json`,
+`uebersetzungs-plan.json`, `skill-versions.json`, `resume-state.json`.
+
 ### Audit-Log-Eintrag pro Anwendung
 
 ```markdown
@@ -799,25 +885,48 @@ Subagents nutzen.
   konservativeren oder den natürlicheren Wortlaut wählen?"
 - **Achtung:** 3-4× teurer als einzelne Subagents.
 
-Umsetzung (Pseudo-Ablauf):
+Umsetzung (Pseudo-Ablauf — Wave 3 erweitert um Worker-Failure-Handling 2026-05-21):
 ```
-queue = [en, fr, es, it, pt, nl, pl, cs, sk, hu, ro, bg, hr, da, fi,
-         nb, sv, el, tr, ru, uk, ja, ko, zh-rCN, zh-rTW, ar]  # alle ≠ de
+queue = auto_detect_target_locales()  # statt Hardcode-Liste, aus values-*/-Verzeichnissen
 running = {}
+retries = defaultdict(int)
+results = {}
 
 # Initiale Welle: max 15 gleichzeitig starten (FIN-023)
 for lang in queue[:15]:
     running[lang] = Task(uebersetzer-worker, lang, run_in_background=True)
     queue.remove(lang)
 
-# Continuous: sobald einer fertig → nächster rein
+# Continuous: sobald einer fertig → naechster rein
 while running or queue:
-    finished = wait_for_any(running)
-    collect_result(finished)
+    finished, result = wait_for_any(running)  # liefert (lang, dict)
+    if result['status'] == 'success':
+        results[finished] = result
+    elif result['status'] in ('failed', 'timeout', 'rate-limited'):
+        # Worker-Failure-Handling (Wave 3 Hardening — Direktive #3 Loop 2 W4):
+        if retries[finished] < 2 and result.get('retryable', True):
+            retries[finished] += 1
+            sleep(30 * retries[finished])  # exponential backoff
+            running[finished] = Task(uebersetzer-worker, finished, run_in_background=True)
+            continue  # NICHT remove — der Re-Try ersetzt den Slot
+        else:
+            # Endgueltig fehlgeschlagen — Sprache ueberspringen, ANDERE laufen weiter
+            results[finished] = {
+                'status': 'translation-skipped',
+                'reason': result.get('error', 'unknown'),
+                'retriesAttempted': retries[finished],
+            }
+            audit_log(f"Translate {finished}: skipped after {retries[finished]} retries - {result.get('error')}")
     running.remove(finished)
     if queue:
         next_lang = queue.pop(0)
         running[next_lang] = Task(uebersetzer-worker, next_lang, run_in_background=True)
+
+# Nach Abschluss: Nutzer informieren ueber uebersprungene Sprachen
+skipped = [l for l, r in results.items() if r['status'] == 'translation-skipped']
+if skipped:
+    show_card(f"{len(skipped)} Sprachen uebersprungen: {skipped}. "
+              f"Optionen: [1] manuell nachuebersetzen [2] akzeptieren [3] /finale:translate neu starten")
 ```
 
 **FIN-028 — Worker-Sichtbarkeit (Frank-Direktive 2026-05-18):**

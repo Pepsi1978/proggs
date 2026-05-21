@@ -122,8 +122,16 @@ mtime_of() {
 version_of() {
   local file="$1"
   local real
-  real="$(realpath "$file" 2>/dev/null || readlink -f "$file" 2>/dev/null || echo "$file")"
-  # Nur lesen wenn echter Pfad in ~/.claude/skills/ (verhindert Symlink-Leak)
+  # 4-Stufen-Fallback fuer Symlink-Aufloesung: realpath -> readlink -f -> python3 -> echo
+  # python3 ist Wave-3-Fallback (2026-05-21) fuer macOS BSD ohne coreutils.
+  # Wenn alle 4 scheitern (unmoeglich da python3 ohnehin Pflicht-Tool): unkanonischer
+  # Pfad als Fallback — Symlink-Schutz fail-open statt fail-closed (weil verify-skills
+  # nur Diagnose ist, nicht security-kritisch).
+  real="$(realpath "$file" 2>/dev/null \
+    || readlink -f "$file" 2>/dev/null \
+    || python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$file" 2>/dev/null \
+    || echo "$file")"
+  # Nur lesen wenn echter Pfad in ~/.claude/skills/ (verhindert Symlink-Leak C5)
   case "$real" in
     "$HOME/.claude/skills/"*) : ;;
     *) printf ''; return 0 ;;
