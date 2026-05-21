@@ -50,6 +50,10 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var appSettings: AppSettings
 
+    @Inject
+    lateinit var agenticTriggerScheduler:
+        de.frank.entropyreducer.domain.agentic.trigger.TriggerScheduler
+
     // Performance-Fix Loop 2.1: ApplicationScope (SupervisorJob + Dispatchers.IO,
     // siehe AppScopeModule.kt) wird benutzt um den ProcessLifecycleOwner ON_START-
     // Callback aus dem Main-Thread herauszuholen — der Whoop-AuthState-Read trifft
@@ -94,6 +98,12 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // dabei laeuft MIGRATION_1_2 und legt die neuen Tabellen an.
         dataMigrator.writeRescuedData(rescuedData)
         rescuedData = null
+
+        // Frank-Wunsch 2026-05-21: Agentic-AI-Trigger-Worker als PeriodicWork
+        // registrieren — pruefen alle 15 Minuten ob ein CRON-Trigger faellig ist.
+        // KEEP-Policy stellt sicher dass der bestehende Worker nicht neu gestartet
+        // wird wenn er schon laeuft.
+        agenticTriggerScheduler.scheduleOrUpdate()
 
         // Frank-Wunsch 2026-05-10: T-Rex-3-Sport-Mapping korrigieren. Bestehende
         // Workouts mit Code 7 (Trailrunning), 12 (Crosstrainer) oder 52 (Krafttraining)

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +33,7 @@ import de.frank.entropyreducer.presentation.agentic.AgenticExecutionDialog
 import de.frank.entropyreducer.presentation.agentic.AgenticHistoryScreen
 import de.frank.entropyreducer.presentation.agentic.PromptToolPermissionsDialog
 import de.frank.entropyreducer.presentation.agentic.TokenStatsScreen
+import de.frank.entropyreducer.presentation.agentic.TriggerConfigDialog
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.AlertDialog
@@ -82,6 +84,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
     var showTokenStats by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     var permissionEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
+    var triggerEditFor by remember { mutableStateOf<SavedPromptEntity?>(null) }
     var showTemplatesConfirm by remember { mutableStateOf(false) }
     var templatesResult by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val expandedMap = remember { mutableStateOf(mutableMapOf<PromptCategory, Boolean>()) }
@@ -178,6 +181,7 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                                                 onDelete = { vm.delete(p) },
                                                 onExecute = { executePromptId = p.id },
                                                 onPermissions = { permissionEditFor = p },
+                                                onTriggers = { triggerEditFor = p },
                                             )
                                         }
                                     }
@@ -242,6 +246,16 @@ fun PromptsScreen(onBack: () -> Unit, vm: PromptsViewModel = hiltViewModel()) {
                 vm.setToolPermission(p.id, toolName, granted, trust)
             },
             onDismiss = { permissionEditFor = null },
+        )
+    }
+    triggerEditFor?.let { p ->
+        TriggerConfigDialog(
+            promptName = p.name,
+            triggersFlow = vm.triggersForPrompt(p.id),
+            onAddCron = { cron -> vm.addCronTrigger(p.id, cron) },
+            onDelete = { vm.deleteTrigger(it) },
+            onToggleActive = { trigger, active -> vm.setTriggerActive(trigger, active) },
+            onDismiss = { triggerEditFor = null },
         )
     }
     if (showTemplatesConfirm) {
@@ -358,6 +372,7 @@ private fun PromptRow(
     onDelete: () -> Unit,
     onExecute: () -> Unit,
     onPermissions: () -> Unit,
+    onTriggers: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     Box(
@@ -421,6 +436,14 @@ private fun PromptRow(
                     Icon(
                         Icons.Outlined.Tune,
                         contentDescription = "Tool-Berechtigungen",
+                        tint = CosmosColors.AccentPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(onClick = onTriggers, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Outlined.Schedule,
+                        contentDescription = "Auto-Trigger",
                         tint = CosmosColors.AccentPrimary,
                         modifier = Modifier.size(18.dp),
                     )

@@ -503,7 +503,43 @@ constructor(
     private val permissionRepo:
         de.frank.entropyreducer.data.repository.PromptToolPermissionRepository,
     private val toolRegistry: de.frank.entropyreducer.domain.agentic.ToolRegistry,
+    private val triggerRepo:
+        de.frank.entropyreducer.data.repository.PromptTriggerRepository,
 ) : ViewModel() {
+
+    // Auto-Trigger (Etappe 11)
+    fun triggersForPrompt(
+        promptId: String
+    ): kotlinx.coroutines.flow.Flow<
+        List<de.frank.entropyreducer.data.local.entities.PromptTriggerEntity>
+    > = triggerRepo.getForPrompt(promptId)
+
+    fun addCronTrigger(promptId: String, cronExpression: String) =
+        viewModelScope.launch {
+            val nextAt =
+                de.frank.entropyreducer.domain.agentic.trigger.SimpleCronParser.nextFireAt(
+                    cronExpression
+                )
+            triggerRepo.upsert(
+                de.frank.entropyreducer.data.local.entities.PromptTriggerEntity(
+                    id = UUID.randomUUID().toString(),
+                    promptId = promptId,
+                    triggerType = de.frank.entropyreducer.domain.model.TriggerType.CRON,
+                    cronExpression = cronExpression,
+                    isActive = true,
+                    nextScheduledAt = nextAt,
+                )
+            )
+        }
+
+    fun deleteTrigger(
+        trigger: de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
+    ) = viewModelScope.launch { triggerRepo.delete(trigger) }
+
+    fun setTriggerActive(
+        trigger: de.frank.entropyreducer.data.local.entities.PromptTriggerEntity,
+        active: Boolean,
+    ) = viewModelScope.launch { triggerRepo.setActive(trigger.id, active) }
     val prompts: StateFlow<List<SavedPromptEntity>> =
         repo.getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
