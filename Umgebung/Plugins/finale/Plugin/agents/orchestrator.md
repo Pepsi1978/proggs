@@ -300,11 +300,12 @@ Wenn `mode == "audit-only"` UND die Pre-Flight-Freigabe `[F]` erteilt wurde:
 
 1. **Stale-Lock-Detection (vor Lock-Anlage):** Pruefe ob bereits eine
    `<app-root>/.android-shield/.audit-only.lock` existiert. Wenn ja UND
-   die Datei ist aelter als 24 Stunden (mtime-Vergleich), automatisch
-   loeschen (Hinweis: vorheriger Lauf ist gecrasht). Wenn sie juenger
-   als 24h ist: Abbruch mit Frage an Nutzer ob er den Lock manuell
-   loeschen will (zwei laufende audit-only-Modi koennen sich nicht
-   sinnvoll ueberlappen).
+   die Datei ist aelter als 30 Minuten (mtime-Vergleich; Wave 7
+   Anpassung 2026-05-21 — passt zur 30-Min-Stale-Schwelle des
+   `audit-only-write-guard`-Hooks), automatisch loeschen (Hinweis:
+   vorheriger Lauf ist gecrasht). Wenn sie juenger als 30 Min ist:
+   Abbruch mit Frage an Nutzer ob er den Lock manuell loeschen will
+   (zwei laufende audit-only-Modi koennen sich nicht sinnvoll ueberlappen).
 
 2. **Lock anlegen (vor Phase 1):** Schreibe
    `<app-root>/.android-shield/.audit-only.lock` mit Inhalt:
