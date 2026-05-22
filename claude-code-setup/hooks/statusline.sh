@@ -38,7 +38,7 @@ if [ -z "$effort" ]; then
         effort="?"
     fi
 fi
-effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
+effort_upper="${effort^^}"
 
 # Home-Pfad zu ~ kuerzen ohne Subprocess
 case "$cwd_raw" in
@@ -99,7 +99,7 @@ cwd=$(shorten_path "$cwd_raw")
 #   3. ATOMIC WRITE: tmp + mv verhindert Half-Read
 state_dir="$HOME/.claude/state"
 [ -d "$state_dir" ] || mkdir -p "$state_dir" 2>/dev/null
-now_ts=$(date +%s)
+printf -v now_ts '%(%s)T' -1
 
 # Defekte Datei mit leerer session_id IMMER entfernen (Self-Healing, Schicht 2)
 [ -f "$state_dir/rate-limits-.json" ] && rm -f "$state_dir/rate-limits-.json" 2>/dev/null
@@ -199,15 +199,10 @@ if [ $((now_ts % 600)) -lt 2 ]; then
     fi
 fi
 
-# 3. Aggregations-Logik in EINEM jq-Aufruf mit VALIDIERUNG — slurp alle State-Files,
+# 3. MAX-Logik in EINEM jq-Aufruf mit VALIDIERUNG — slurp alle State-Files,
 #    filter kaputte Eintraege (session_id leer/ungueltig, Werte nicht 0..100,
-#    Account-Fingerprint passt nicht zum aktuellen Account).
-#    - 5h-Wert: aus aktuellstem resets_at-Fenster, darin der hoechste five_h
-#      (5h zaehlt nur HOCH im selben Reset-Fenster, MAX ist also korrekt).
-#    - 7d-Wert: aus dem zeitlich AKTUELLSTEN Eintrag (max_by ts_seen).
-#      MAX waere falsch, weil 7d ein gleitendes Fenster ist und auch SINKEN kann
-#      (Frank-Bug-Report 2026-05-13: alte Session-Files mit seven_d:100 ueberschrieben
-#      die aktuellen 31% — MAX(100,31)=100, obwohl 100 schon Tage alt war).
+#    Account-Fingerprint passt nicht zum aktuellen Account),
+#    dann finde aktuellsten resets_at und hoechsten five_h/seven_d darin.
 #    Schicht 2 (Reaktiv): falls trotz Schreib-Guards Mullwerte reinrutschen
 #    werden sie hier verworfen statt blind angezeigt zu werden.
 #    Account-Filter: wenn account_fp im File leer ist (alte Files vor dem Fix),
@@ -224,7 +219,7 @@ fresh=$(jq -sr --arg fp "$account_fp" '
     else
         ($valid | map(.five_h_resets // 0) | max) as $maxR |
         ($valid | map(select((.five_h_resets // 0) == $maxR)) | max_by(.five_h // 0)) as $bestF |
-        ($valid | max_by(.ts_seen // 0) | .seven_d // 0) as $bestS |
+        ($valid | map(.seven_d // 0) | max) as $bestS |
         "\($bestF.five_h // 0)|\($bestF.five_h_resets // 0)|\($bestS)|\($bestF.session_id // "")"
     end
 ' "$state_dir"/rate-limits-*.json 2>/dev/null)
@@ -321,7 +316,7 @@ if [ -n "$five_h_resets" ] && [ "$five_h_resets" -gt 0 ] 2>/dev/null; then
 fi
 
 # Uhrzeit
-time=$(date +%H:%M)
+printf -v time '%(%H:%M)T' -1
 
 # --- Farben (ANSI 24-bit) ---
 B='\033[38;2;100;180;255m'   # Cyan-Blau    — Modell
@@ -442,3 +437,5 @@ fi
 # 6. Uhrzeit
 printf "${SEP}${TIMECOL}${ICON_TIME} ${time}${R}"
 echo
+
+exit 0

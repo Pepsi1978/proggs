@@ -321,3 +321,5 @@ fi
 hook_log "sync complete:$synced"
 write_status "Auto-Sync: Lokale Konfiguration aktualisiert:$synced"
 write_status "Auto-Sync: Hinweis -- CLAUDE.md und Rules werden erst nach Neustart von Claude Code wirksam."
+
+exit 0

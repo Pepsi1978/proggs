@@ -71,3 +71,5 @@ else
 fi
 
 echo "StopFailure logged to whiteboard at $TIMESTAMP"
+
+exit 0
