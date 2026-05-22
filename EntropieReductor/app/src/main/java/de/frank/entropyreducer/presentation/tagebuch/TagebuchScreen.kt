@@ -258,8 +258,10 @@ fun TagebuchScreen(
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
-                        backgroundColor = TagebuchAccent.copy(alpha = 0.55f),
-                        iconTint = TagebuchAccent,
+                        backgroundColor = TagebuchAccent.copy(alpha = 0.7f),
+                        // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon schwarz
+                        // wie der zentrale BottomBar-Mic.
+                        iconTint = Color.Black,
                         onClick = {
                             inputDialogOpen = true
                             actionsExpanded = false
@@ -277,11 +279,9 @@ fun TagebuchScreen(
                         label = recordLabel,
                         backgroundColor =
                             if (voiceState == VoiceCaptureState.RECORDING)
-                                Color(0xFFE53935).copy(alpha = 0.55f)
-                            else TagebuchAccent.copy(alpha = 0.55f),
-                        iconTint =
-                            if (voiceState == VoiceCaptureState.RECORDING) Color(0xFFE53935)
-                            else TagebuchAccent,
+                                Color(0xFFE53935).copy(alpha = 0.7f)
+                            else TagebuchAccent.copy(alpha = 0.7f),
+                        iconTint = Color.Black,
                         onClick = {
                             when (voiceState) {
                                 VoiceCaptureState.IDLE -> {
@@ -823,5 +823,7 @@ internal fun formatTagebuchTimestamp(ts: Long): String {
 
 private fun formatTimestamp(ts: Long): String = formatTagebuchTimestamp(ts)
 
-/** Akzentfarbe — Frank-Wunsch: gleiche Farbe wie der Aufgaben-Tab (Orange). */
-private val TagebuchAccent: Color = Color(0xFFFF9800)
+/** Akzentfarbe — Frank-Wunsch 2026-05-22 (zweite Iteration): exakt gleiche
+ * Farbe wie der Aufgaben-Tab-Sub-Modus in der BottomBar (kraeftiges Orange
+ * #EA580C, nicht das frueher genutzte hellere #FF9800). */
+private val TagebuchAccent: Color = Color(0xFFEA580C)

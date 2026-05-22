@@ -228,10 +228,13 @@ fun AnalysisScreen(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
             ) { Snackbar(it) }
-            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion in Gruen (Analyse-Akzent).
+            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion mit BottomBar-Farbe.
+            // Switcher offen → Cyan, sonst Gruen (Analyse-Sub).
+            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFF16A34A)
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
-                accent = Color(0xFF16A34A),
+                accent = micAccent,
                 onTextCommit = { text, source -> tasksVm.processCapturedText(text, source) },
                 onClose = { micActionsOpen = false },
                 modifier = Modifier.align(Alignment.BottomCenter),

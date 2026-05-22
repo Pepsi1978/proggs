@@ -127,16 +127,18 @@ fun MicCaptureActions(
         FabActionButton(
             icon = Icons.Outlined.Edit,
             label = "Schreiben",
-            background = accent.copy(alpha = 0.55f),
-            tint = accent,
+            background = accent.copy(alpha = 0.7f),
+            // Frank-Wunsch 2026-05-22 (dritte Iteration): Icon-Tint immer Schwarz,
+            // analog zum schwarzen Mic-Symbol im zentralen BottomBar-Button.
+            tint = Color.Black,
             onClick = { inputDialogOpen = true },
         )
         FabActionButton(
             icon = recordIcon,
             label = recordLabel,
-            background = if (recording) Color(0xFFE53935).copy(alpha = 0.55f)
-            else accent.copy(alpha = 0.55f),
-            tint = if (recording) Color(0xFFE53935) else accent,
+            background = if (recording) Color(0xFFE53935).copy(alpha = 0.7f)
+            else accent.copy(alpha = 0.7f),
+            tint = Color.Black,
             onClick = {
                 when (voiceState) {
                     VoiceCaptureState.IDLE -> {

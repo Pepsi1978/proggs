@@ -456,11 +456,13 @@ fun TasksScreen(
             ) {
                 Snackbar(it)
             }
-            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion in Orange
-            // (Aufgaben-Akzent). Zwei runde Buttons ueber der BottomBar.
+            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion mit BottomBar-Farbe.
+            // Switcher offen → Cyan (Uebersichts-Mic-Farbe), sonst Orange (Aufgaben-Sub).
+            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFEA580C)
             de.frank.entropyreducer.presentation.components.MicCaptureActions(
                 visible = micActionsOpen,
-                accent = Color(0xFFEA580C),
+                accent = micAccent,
                 onTextCommit = { text, source -> vm.processCapturedText(text, source) },
                 onClose = { micActionsOpen = false },
                 modifier = Modifier.align(Alignment.BottomCenter),

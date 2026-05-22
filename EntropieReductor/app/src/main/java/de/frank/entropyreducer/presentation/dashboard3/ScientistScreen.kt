@@ -59,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -103,8 +104,16 @@ fun ScientistScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val listState = rememberLazyListState()
 
+    // Frank-Wunsch 2026-05-22 Phase 2: BottomBar-Mic oeffnet die einheitlichen
+    // MicCaptureActions (zwei runde Buttons "Schreiben" und "Aufnehmen") in Lila.
+    // Der resultierende Text geht in den Forscher-Chat-Draft und wird sofort
+    // abgesendet (analog zum alten Mic-Verhalten — nur mit Auswahl davor).
+    var micActionsOpen by remember { mutableStateOf(false) }
+
+    // micPerm fuer die Hypothesen-Chat-Mic-Funktion bleibt — das Sheet-Mic ist
+    // unabhaengig vom BottomBar-Mic.
     val micPerm = rememberMicPermissionState(
-        onAllGranted = { vm.onMicClick() },
+        onAllGranted = { /* aktuell nur fuer Hypothesen-Chat-Sheet */ },
         onDenied = { denied ->
             val msg = if (Manifest.permission.RECORD_AUDIO in denied) {
                 "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen."
@@ -160,11 +169,9 @@ fun ScientistScreen(
             // entfaellt darunter).
             CosmosBottomBar(
                 currentTab = currentTab,
-                micState = state.micState,
+                micState = de.frank.entropyreducer.presentation.components.MicState.IDLE,
                 onTabSelected = onSwitchTab,
-                onMicClick = {
-                    if (micPerm.check()) vm.onMicClick() else micPerm.request()
-                },
+                onMicClick = { micActionsOpen = !micActionsOpen },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -221,6 +228,20 @@ fun ScientistScreen(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
             ) { Snackbar(it) }
+            // Frank-Wunsch 2026-05-22 Phase 2: einheitliche Mic-Aktion.
+            // Akzentfarbe folgt der BottomBar (Cyan im Switcher, Lila im Sub-Modus).
+            val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+            val accentColor = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFA78BFA)
+            de.frank.entropyreducer.presentation.components.MicCaptureActions(
+                visible = micActionsOpen,
+                accent = accentColor,
+                onTextCommit = { text, _ ->
+                    vm.setDraft(text)
+                    vm.send()
+                },
+                onClose = { micActionsOpen = false },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 
