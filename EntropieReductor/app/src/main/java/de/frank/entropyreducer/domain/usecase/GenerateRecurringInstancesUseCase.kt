@@ -8,8 +8,10 @@ import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.model.EntrySource
 import de.frank.entropyreducer.domain.model.TimeBucket
+import kotlinx.coroutines.flow.first
 import org.dmfs.rfc5545.DateTime
 import org.dmfs.rfc5545.recur.RecurrenceRule
+import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -165,6 +167,103 @@ class GenerateRecurringInstancesUseCase @Inject constructor(
         cal.set(java.util.Calendar.SECOND, 0)
         cal.set(java.util.Calendar.MILLISECOND, 0)
         return cal.timeInMillis
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-22 (Bugfix #949): Beim App-Start NICHT mehr blind
+     * generieren. Stattdessen: fuer jede Vorlage sicherstellen dass es
+     * GENAU EINE offene Instanz gibt (wenn aktiv) bzw. KEINE (wenn inaktiv).
+     *
+     * Ablauf pro Vorlage:
+     *  - Sammle alle offenen RECURRING_TEMPLATE-Eintraege fuer diese Vorlage
+     *    (ID-Praefix-Match "rec-${templateId}-").
+     *  - Vorlage inaktiv → loesche ALLE offenen.
+     *  - Vorlage aktiv UND mehrere offene → behalte die juengste, loesche Rest.
+     *  - Vorlage aktiv UND keine offene → erzeuge 1 neue fuer heute.
+     *
+     * Damit verschwinden die Duplikate die durch frueheres lastGeneratedAt=0
+     * + RRULE-Iteration entstanden sind. Solange Frank in der Liste max. eine
+     * offene Aufgabe pro Vorlage haben will (Frank-Wunsch wortwoertlich:
+     * "Sie soll in den Aufgaben dann immer nur einmal erscheinen"), ist
+     * dieser Pfad der einzig richtige Start-Cleanup.
+     *
+     * @return Anzahl der bereinigten / erzeugten Eintraege (positive = neu, negative = geloescht).
+     */
+    suspend fun cleanupAndEnsureSingle() {
+        val now = System.currentTimeMillis()
+        val allTemplates = templateRepo.getAllForBackup()
+        val allOpenEntries = entryRepo.getActive().first()
+
+        for (template in allTemplates) {
+            try {
+                val openForThis = allOpenEntries.filter {
+                    it.source == EntrySource.RECURRING_TEMPLATE &&
+                        it.id.startsWith("rec-${template.id}-") &&
+                        it.status == EntryStatus.OFFEN
+                }.sortedByDescending { it.createdAt }
+
+                if (!template.isActive) {
+                    // Inaktiv: alle offenen Instanzen weg.
+                    for (e in openForThis) entryRepo.delete(e)
+                    continue
+                }
+
+                // Aktiv: behalte juengste, loesche Rest.
+                if (openForThis.size > 1) {
+                    for (e in openForThis.drop(1)) entryRepo.delete(e)
+                }
+
+                // Aktiv UND keine offene → erzeuge 1 fuer heute.
+                if (openForThis.isEmpty()) {
+                    entryRepo.upsert(buildEntryForToday(template, now))
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Cleanup fuer Vorlage '${template.title}' (${template.id}) fehlgeschlagen: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Erzeugt eine deterministische Aufgabe fuer "heute" (Mitternacht-basiert).
+     * Mehrfache Aufrufe am selben Tag schreiben in dieselbe Row (Upsert idempotent).
+     */
+    private fun buildEntryForToday(template: RecurringTemplateEntity, nowMs: Long): EntropyEntryEntity {
+        val midnight = Calendar.getInstance().apply {
+            timeInMillis = nowMs
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val dueMs = Calendar.getInstance().apply {
+            timeInMillis = midnight
+            set(Calendar.HOUR_OF_DAY, template.timeOfDayMinutes / 60)
+            set(Calendar.MINUTE, template.timeOfDayMinutes % 60)
+        }.timeInMillis
+
+        return EntropyEntryEntity(
+            id = "rec-${template.id}-$midnight",
+            rawTranscript = "[Wiederkehrend] ${template.title}",
+            title = template.title,
+            description = template.description ?: "",
+            category = template.category,
+            severity = template.severity,
+            priorityScore = template.priorityScore.toDouble(),
+            priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
+            status = EntryStatus.OFFEN,
+            timeBucket = TimeBucket.HEUTE,
+            estimatedDurationMinutes = template.estimatedDurationMinutes,
+            createdAt = nowMs,
+            updatedAt = nowMs,
+            resolvedAt = null,
+            tags = emptyList(),
+            aiNotes = null,
+            source = EntrySource.RECURRING_TEMPLATE,
+            biomarkerSnapshotId = null,
+            durationManuallySet = template.estimatedDurationMinutes != null,
+            dueAtMs = dueMs,
+        )
     }
 
     companion object {

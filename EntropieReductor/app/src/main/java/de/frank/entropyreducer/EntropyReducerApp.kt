@@ -131,15 +131,17 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                 }
         }
 
-        // Sprint 2 (Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben generieren.
-        // Laeuft asynchron auf IO, blockiert nicht den App-Start. Idempotent —
-        // mehrfache Aufrufe am gleichen Tag erzeugen keine Duplikate.
+        // Frank-Bugfix 2026-05-22 (#949): NICHT mehr blind RRULE-basiert
+        // generieren beim App-Start — das erzeugte Duplikate, weil bei jedem
+        // Start eine neue Instanz mit anderem occurrenceMs kam. Stattdessen
+        // wird jetzt cleanup+ensure aufgerufen: max 1 offene Aufgabe pro aktiver
+        // Vorlage, 0 bei inaktiver.
         applicationScope.launch {
-            runCatching { generateRecurringInstances() }
+            runCatching { generateRecurringInstances.cleanupAndEnsureSingle() }
                 .onFailure {
                     android.util.Log.w(
                         "EntropyReducerApp",
-                        "GenerateRecurringInstances fehlgeschlagen",
+                        "RecurringCleanup fehlgeschlagen",
                         it,
                     )
                 }
