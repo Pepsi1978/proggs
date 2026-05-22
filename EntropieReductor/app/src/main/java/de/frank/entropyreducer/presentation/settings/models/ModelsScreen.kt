@@ -59,16 +59,12 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
                     title = "Gemini-Modell",
                     options = listOf(
                         // Gemini 3.x — neueste Generation
-                        "gemini-3-pro",
-                        "gemini-3-flash",
-                        "gemini-3-flash-lite",
-                        "gemini-3.1-pro",
-                        "gemini-3.1-flash",
+                        "gemini-3-flash-preview",
                         "gemini-3.1-flash-lite",
                         // Gemini 2.x — bewaehrte Generation
-                        "gemini-2.5-pro",
                         "gemini-2.5-flash",
                         "gemini-2.5-flash-lite",
+                        "gemini-2.0-flash",
                     ),
                     current = state.geminiModel,
                     onSelect = vm::setGemini,
