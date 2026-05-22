@@ -1352,7 +1352,7 @@ Que veux-tu faire ?</string>
 
     <!-- AI improvement marker -->
     <string name="ai_improved_suffix">\n\n(✨ Amélioré par l\'IA)</string>
-    <string name="ai_improved_suffix_marker" translatable="false">(✨</string>
+    <string name="ai_improved_suffix_marker">✨ Amélioré par IA</string>
 
     <!-- Paywall consent dialog (German § 356(5) BGB withdrawal waiver) -->
     <string name="paywall_consent_dialog_title">Droit de rétractation</string>

@@ -1348,7 +1348,7 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
 
     <!-- AI improvement marker -->
     <string name="ai_improved_suffix">\n\n(✨ Mejorado con IA)</string>
-    <string name="ai_improved_suffix_marker" translatable="false">(✨</string>
+    <string name="ai_improved_suffix_marker">✨ Mejorado con IA</string>
 
     <!-- Paywall consent dialog (German § 356(5) BGB withdrawal waiver) -->
     <string name="paywall_consent_dialog_title">Derecho de desistimiento</string>
