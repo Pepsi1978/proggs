@@ -156,11 +156,12 @@ class EntropyReducerRemoteViewsFactory(
         val isManual = entry.manualBucket != null
         val bucketAccent = bucketColor(palette, entry.timeBucket)
 
-        // Card-Hintergrund: Gradient-Drawable basierend auf Bucket + Theme
+        // Card-Hintergrund: Gradient-Drawable basierend auf priorityScore + Theme
+        // (Frank-Wunsch 2026-05-22 fuenfte Iteration) — vorher Bucket-basiert.
         views.setInt(
             R.id.task_card_root,
             "setBackgroundResource",
-            cardBackgroundRes(palette, entry.timeBucket),
+            cardBackgroundRes(palette, entry.priorityScore),
         )
 
         // Icon-Kreis: 18% Alpha vom catColor
@@ -351,17 +352,31 @@ internal fun bucketIconRes(bucket: TimeBucket): Int = when (bucket) {
     TimeBucket.SPAETER -> R.drawable.ic_widget_bucket_spaeter
 }
 
-internal fun cardBackgroundRes(p: SimpleWidgetPalette, bucket: TimeBucket): Int =
-    if (p.isDark) when (bucket) {
-        TimeBucket.HEUTE -> R.drawable.bg_card_heute_dark
-        TimeBucket.MORGEN -> R.drawable.bg_card_morgen_dark
-        TimeBucket.FREIBLOCK -> R.drawable.bg_card_freiblock_dark
-        TimeBucket.SPAETER -> R.drawable.bg_card_spaeter_dark
-    } else when (bucket) {
-        TimeBucket.HEUTE -> R.drawable.bg_card_heute_light
-        TimeBucket.MORGEN -> R.drawable.bg_card_morgen_light
-        TimeBucket.FREIBLOCK -> R.drawable.bg_card_freiblock_light
-        TimeBucket.SPAETER -> R.drawable.bg_card_spaeter_light
+/**
+ * Frank-Wunsch 2026-05-22 (fuenfte Iteration): Widget-Karten-Hintergrund folgt
+ * jetzt der priorityScore-Farbe (gleiche Skala wie in der App). So sieht Frank
+ * die Wichtigkeit einer Aufgabe direkt am Widget, ohne sie zu oeffnen.
+ *
+ * Skala 1:1 zur App:
+ *  - 80-100  Rot
+ *  - 60-80   Orange
+ *  - 40-60   Gelb
+ *  - 20-40   Gruen
+ *  -  0-20   Blau
+ */
+internal fun cardBackgroundRes(p: SimpleWidgetPalette, score: Double): Int =
+    if (p.isDark) when {
+        score >= 80.0 -> R.drawable.bg_card_prio_red_dark
+        score >= 60.0 -> R.drawable.bg_card_prio_orange_dark
+        score >= 40.0 -> R.drawable.bg_card_prio_yellow_dark
+        score >= 20.0 -> R.drawable.bg_card_prio_green_dark
+        else -> R.drawable.bg_card_prio_blue_dark
+    } else when {
+        score >= 80.0 -> R.drawable.bg_card_prio_red_light
+        score >= 60.0 -> R.drawable.bg_card_prio_orange_light
+        score >= 40.0 -> R.drawable.bg_card_prio_yellow_light
+        score >= 20.0 -> R.drawable.bg_card_prio_green_light
+        else -> R.drawable.bg_card_prio_blue_light
     }
 
 internal fun categoryColor(p: SimpleWidgetPalette, cat: EntropyCategory): Int = when (cat) {
