@@ -114,7 +114,7 @@
           },
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-prompt.ps1\""
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-prompt.ps1\""
           }
         ]
       }
@@ -268,7 +268,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-tool.ps1\""
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-tool.ps1\""
           }
         ]
       }
@@ -356,7 +356,7 @@
           },
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-stop.ps1\""
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-stop.ps1\""
           }
         ]
       }
