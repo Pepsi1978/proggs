@@ -55,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 10,
+    val version: Int = 11,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -132,6 +132,13 @@ data class BackupPayload(
      * Backups (v1-v9) weiterhin sauber lesbar bleiben.
      */
     val recurringTemplates: List<BackupRecurringTemplate> = emptyList(),
+    /**
+     * Schema v11 (Frank-Bugfix 2026-05-22): Tagliche Amazfit-T-Rex-3-Werte
+     * (PAI, BioCharge, Hauttemperatur, SpO2, Stress, Schritte, HRV, Ruhepuls,
+     * Schlaf-Felder). Bisher GAR NICHT im Backup — bei Reinstall verloren.
+     * Default = emptyList damit aeltere Backups (v1-v10) lesbar bleiben.
+     */
+    val amazfitDaily: List<BackupAmazfitDaily> = emptyList(),
 )
 
 /**
@@ -324,6 +331,56 @@ data class BackupAmazfitWorkout(
     val source: String? = null,
     val city: String? = null,
     val paceStreamJson: String? = null,
+    /**
+     * Schema v11 (Frank-Bugfix 2026-05-22): Schutz-Stempel fuer manuell editierte
+     * Workouts. Bevor dieses Feld im Backup landete, gingen manuell gesetzte
+     * Werte (avgHeartRate, maxHeartRate, Pace, Hoehe, Cadence, Stride, Kalorien)
+     * nach Restore + Re-Sync verloren weil `mergeFromStrava` den Schutz nur
+     * bei manualOverridesMs != null aktiviert. Default null = kein Edit oder
+     * Restore aus altem Backup-Format.
+     */
+    val manualOverridesMs: Long? = null,
+    /**
+     * Schema v11: Komma-separierte Labels der manuell editierten Felder
+     * (z.B. "Ø Puls,Maximalpuls"). Wird im Detail-Screen fuer das
+     * Schloss-Icon pro Stat-Karte gebraucht.
+     */
+    val manualOverrideFields: String? = null,
+    val createdAt: Long,
+)
+
+/**
+ * Schema v11 (Frank-Bugfix 2026-05-22): 1:1-Spiegel der AmazfitDailyEntity
+ * (PAI, BioCharge, Hauttemperatur, SpO2, Stress, Schritte, Ruhepuls, HRV,
+ * Schlaf-Felder). Vor v11 war diese Tabelle GAR NICHT im Backup — alle Werte
+ * gingen nach Reinstall verloren. Zepp-Cloud-API wurde 2026-05-17 entfernt,
+ * d.h. ohne dieses Backup-Feld waeren die historischen T-Rex-3-Daten dauerhaft
+ * weg sobald die App neu installiert wird. Volumen klein (~ein Eintrag pro
+ * Tag * 730 Tage Retention = ~365 KB JSON).
+ */
+@Serializable
+data class BackupAmazfitDaily(
+    val date: String,
+    val capturedAt: Long,
+    val paiScore: Int? = null,
+    val bioChargeScore: Int? = null,
+    val skinTempCelsius: Double? = null,
+    val spo2Percent: Double? = null,
+    val stressScore: Int? = null,
+    val respiratoryRate: Double? = null,
+    val steps: Int? = null,
+    val distanceMeters: Double? = null,
+    val activeCalories: Double? = null,
+    val activeMinutes: Int? = null,
+    val restingHeartRate: Int? = null,
+    val averageHeartRate: Int? = null,
+    val hrvMs: Double? = null,
+    val sleepTotalMinutes: Int? = null,
+    val sleepDeepMinutes: Int? = null,
+    val sleepLightMinutes: Int? = null,
+    val sleepWakeMinutes: Int? = null,
+    val sleepRemMinutes: Int? = null,
+    val sleepScore: Int? = null,
     val createdAt: Long,
 )
 
@@ -586,6 +643,13 @@ fun de.frank.entropyreducer.data.local.dao.AmazfitWorkoutBackupRow.toBackup():
         source = source,
         city = city,
         paceStreamJson = null,
+        // Slim-Projection liest die Felder nicht aus der DB (SELECT-Spalten
+        // sind explizit ohne manualOverridesMs/Fields). Default null reicht
+        // — die volle Variante AmazfitWorkoutEntity.toBackup() liefert die
+        // korrekten Werte fuer das separate Workouts-Backup. Hauptbackup
+        // nutzt die Slim-Variante ohnehin nicht mehr (siehe SyncCoordinator).
+        manualOverridesMs = null,
+        manualOverrideFields = null,
         createdAt = createdAt,
     )
 
@@ -635,6 +699,11 @@ fun AmazfitWorkoutEntity.toBackup(): BackupAmazfitWorkout =
         source = source,
         city = city,
         paceStreamJson = paceStreamJson,
+        // Schema v11: Schutz-Stempel und Feld-Tracking mitsichern damit
+        // mergeFromStrava nach Restore die manuellen Edits weiterhin schuetzt
+        // (siehe AmazfitRepository.mergeFromStrava: isManual-Check).
+        manualOverridesMs = manualOverridesMs,
+        manualOverrideFields = manualOverrideFields,
         createdAt = createdAt,
     )
 
@@ -805,6 +874,14 @@ fun BackupAmazfitWorkout.toEntity(): AmazfitWorkoutEntity =
         source = source,
         city = city,
         paceStreamJson = paceStreamJson,
+        // Schema v11: Schutz-Stempel + Feld-Labels uebernehmen damit
+        // mergeFromStrava nach dem Restore die manuellen Edits nicht
+        // ueberschreibt. Alte Backups (v1-v10) liefern hier null —
+        // der Schutz greift dann nicht und der naechste Strava-Sync
+        // gewinnt, was bei alten Backups akzeptabel ist (vorher gab es
+        // diesen Schutz auf alten Geraeten ebenfalls nicht).
+        manualOverridesMs = manualOverridesMs,
+        manualOverrideFields = manualOverrideFields,
         createdAt = createdAt,
     )
 
@@ -1379,4 +1456,62 @@ fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
         isActive = isActive,
         createdAt = createdAt,
         updatedAt = updatedAt,
+    )
+
+// =========================================================================
+// Schema v11 (Frank-Bugfix 2026-05-22): Amazfit-Daily-Werte (T-Rex 3)
+// =========================================================================
+
+fun de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity.toBackup():
+    BackupAmazfitDaily =
+    BackupAmazfitDaily(
+        date = date,
+        capturedAt = capturedAt,
+        paiScore = paiScore,
+        bioChargeScore = bioChargeScore,
+        skinTempCelsius = skinTempCelsius,
+        spo2Percent = spo2Percent,
+        stressScore = stressScore,
+        respiratoryRate = respiratoryRate,
+        steps = steps,
+        distanceMeters = distanceMeters,
+        activeCalories = activeCalories,
+        activeMinutes = activeMinutes,
+        restingHeartRate = restingHeartRate,
+        averageHeartRate = averageHeartRate,
+        hrvMs = hrvMs,
+        sleepTotalMinutes = sleepTotalMinutes,
+        sleepDeepMinutes = sleepDeepMinutes,
+        sleepLightMinutes = sleepLightMinutes,
+        sleepWakeMinutes = sleepWakeMinutes,
+        sleepRemMinutes = sleepRemMinutes,
+        sleepScore = sleepScore,
+        createdAt = createdAt,
+    )
+
+fun BackupAmazfitDaily.toEntity():
+    de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity =
+    de.frank.entropyreducer.data.local.entities.AmazfitDailyEntity(
+        date = date,
+        capturedAt = capturedAt,
+        paiScore = paiScore,
+        bioChargeScore = bioChargeScore,
+        skinTempCelsius = skinTempCelsius,
+        spo2Percent = spo2Percent,
+        stressScore = stressScore,
+        respiratoryRate = respiratoryRate,
+        steps = steps,
+        distanceMeters = distanceMeters,
+        activeCalories = activeCalories,
+        activeMinutes = activeMinutes,
+        restingHeartRate = restingHeartRate,
+        averageHeartRate = averageHeartRate,
+        hrvMs = hrvMs,
+        sleepTotalMinutes = sleepTotalMinutes,
+        sleepDeepMinutes = sleepDeepMinutes,
+        sleepLightMinutes = sleepLightMinutes,
+        sleepWakeMinutes = sleepWakeMinutes,
+        sleepRemMinutes = sleepRemMinutes,
+        sleepScore = sleepScore,
+        createdAt = createdAt,
     )

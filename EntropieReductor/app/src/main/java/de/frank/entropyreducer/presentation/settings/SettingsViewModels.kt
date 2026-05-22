@@ -277,6 +277,10 @@ constructor(
     private val memoryRepo: MemoryRepository,
     private val gemini: de.frank.entropyreducer.data.remote.GeminiApi,
     private val secrets: EncryptedSecretsStore,
+    // Frank-Bugfix 2026-05-22: Profil-Edit triggert sofort Drive-Sync —
+    // sonst geht der frisch editierte Profil-Text bei Reinstall verloren.
+    private val syncCoordinator:
+        dagger.Lazy<de.frank.entropyreducer.data.remote.drive.SyncCoordinator>,
 ) : ViewModel() {
     val profileText: StateFlow<String> =
         settings.profileTextFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
@@ -291,7 +295,10 @@ constructor(
         _distillError.value = null
     }
 
-    fun save(text: String) = viewModelScope.launch { settings.setProfileText(text) }
+    fun save(text: String) = viewModelScope.launch {
+        settings.setProfileText(text)
+        syncCoordinator.get().requestSync()
+    }
 
     /**
      * Extrahiert alle Entropie-relevanten Informationen aus dem Profiltext via Gemini (Frank-Wunsch

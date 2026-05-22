@@ -1,7 +1,9 @@
 package de.frank.entropyreducer.data.repository
 
+import dagger.Lazy
 import de.frank.entropyreducer.data.local.dao.PromptTriggerDao
 import de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.domain.model.TriggerType
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,7 +32,13 @@ import kotlinx.coroutines.flow.Flow
 @Singleton
 class PromptTriggerRepository
 @Inject
-constructor(private val dao: PromptTriggerDao) {
+constructor(
+    private val dao: PromptTriggerDao,
+    // Frank-Bugfix 2026-05-22: Jede User-Mutation triggert Drive-Backup-Sync.
+    // markFired ist interne Scheduler-State-Aktualisierung — kein Sync noetig
+    // (sonst pusht jeder Trigger-Fire das Backup mehrfach pro Stunde).
+    private val syncCoordinator: Lazy<SyncCoordinator>,
+) {
 
     fun getForPrompt(promptId: String): Flow<List<PromptTriggerEntity>> = dao.getByPrompt(promptId)
 
@@ -53,23 +61,40 @@ constructor(private val dao: PromptTriggerDao) {
     suspend fun getActiveByType(type: TriggerType): List<PromptTriggerEntity> =
         dao.getActiveByType(type)
 
-    suspend fun upsert(trigger: PromptTriggerEntity) = dao.upsert(trigger)
+    suspend fun upsert(trigger: PromptTriggerEntity) {
+        dao.upsert(trigger)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun update(trigger: PromptTriggerEntity) = dao.update(trigger)
+    suspend fun update(trigger: PromptTriggerEntity) {
+        dao.update(trigger)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun delete(trigger: PromptTriggerEntity) = dao.delete(trigger)
+    suspend fun delete(trigger: PromptTriggerEntity) {
+        dao.delete(trigger)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun deleteAllForPrompt(promptId: String) = dao.deleteByPrompt(promptId)
+    suspend fun deleteAllForPrompt(promptId: String) {
+        dao.deleteByPrompt(promptId)
+        syncCoordinator.get().requestSync()
+    }
 
     /**
      * Direktive 3 Loop-2-Fix (war LOOP-2-2-Bug): orphaned Chain-Trigger
      * loeschen wenn ihr Source-Prompt geloescht wurde. Wird von
      * PromptRepository.delete() nach erfolgreicher Loeschung aufgerufen.
      */
-    suspend fun deleteOrphanedChainTriggers(sourcePromptId: String) =
+    suspend fun deleteOrphanedChainTriggers(sourcePromptId: String) {
         dao.deleteOrphanedChainTriggers(sourcePromptId)
+        syncCoordinator.get().requestSync()
+    }
 
-    /** Nach Trigger-Feuer: Zeitpunkt aktualisieren und ggf. nextScheduledAt setzen. */
+    /**
+     * Nach Trigger-Feuer: Zeitpunkt aktualisieren und ggf. nextScheduledAt setzen.
+     * Interne Scheduler-State-Aktualisierung — bewusst KEIN Sync hier.
+     */
     suspend fun markFired(triggerId: String, firedAt: Long, nextScheduledAt: Long?) {
         val trigger = dao.getById(triggerId) ?: return
         dao.update(
@@ -83,5 +108,6 @@ constructor(private val dao: PromptTriggerDao) {
     suspend fun setActive(triggerId: String, isActive: Boolean) {
         val trigger = dao.getById(triggerId) ?: return
         dao.update(trigger.copy(isActive = isActive))
+        syncCoordinator.get().requestSync()
     }
 }

@@ -73,6 +73,11 @@ constructor(
         Lazy<de.frank.entropyreducer.data.local.dao.HealthConnectValueDao>,
     private val amazfitWorkoutDaoLazy:
         Lazy<de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao>,
+    // Schema v11 (Frank-Bugfix 2026-05-22): Tagliche T-Rex-3-Werte (PAI,
+    // BioCharge, Hauttemperatur, SpO2, Stress, Schritte, HRV, Schlaf) ins
+    // Haupt-Backup. Bisher GAR NICHT gesichert — bei Reinstall verloren.
+    private val amazfitDailyDaoLazy:
+        Lazy<de.frank.entropyreducer.data.local.dao.AmazfitDailyDao>,
     // Frank-Wunsch 2026-05-19: Whoop + Oura ins separate Health-Backup
     // (entropy_reducer_health_v1.json). Whoop liefert nur ~90 Tage rueckwirkend,
     // Oura ~6 Monate — ohne Backup gehen aeltere Recovery- und Schlaf-Daten
@@ -284,9 +289,15 @@ constructor(
             val recurringTemplateBackups =
                 recurringTemplateRepoLazy.get().getAllForBackup().map { it.toBackup() }
 
+            // Schema v11 (Frank-Bugfix 2026-05-22): Amazfit-Daily-Werte ins
+            // Haupt-Backup. Volumen klein (~ein Eintrag pro Tag, max 730 Tage
+            // Retention = ~365 KB). Idempotenter Restore via PrimaryKey=date.
+            val amazfitDailyBackups =
+                amazfitDailyDaoLazy.get().getAll().first().map { it.toBackup() }
+
             val payload =
                 BackupPayload(
-                    version = 10,
+                    version = 11,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -306,6 +317,7 @@ constructor(
                     promptToolPermissions = permissionBackups,
                     promptTriggers = triggerBackups,
                     recurringTemplates = recurringTemplateBackups,
+                    amazfitDaily = amazfitDailyBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

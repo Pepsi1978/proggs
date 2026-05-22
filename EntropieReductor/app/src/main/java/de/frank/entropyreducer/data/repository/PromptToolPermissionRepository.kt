@@ -1,7 +1,9 @@
 package de.frank.entropyreducer.data.repository
 
+import dagger.Lazy
 import de.frank.entropyreducer.data.local.dao.PromptToolPermissionDao
 import de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +23,11 @@ import kotlinx.coroutines.flow.Flow
 @Singleton
 class PromptToolPermissionRepository
 @Inject
-constructor(private val dao: PromptToolPermissionDao) {
+constructor(
+    private val dao: PromptToolPermissionDao,
+    // Frank-Bugfix 2026-05-22: Jede Mutation triggert Drive-Backup-Sync.
+    private val syncCoordinator: Lazy<SyncCoordinator>,
+) {
 
     fun getForPrompt(promptId: String): Flow<List<PromptToolPermissionEntity>> =
         dao.getByPrompt(promptId)
@@ -48,16 +54,30 @@ constructor(private val dao: PromptToolPermissionDao) {
         return perm.granted && perm.trustMode
     }
 
-    suspend fun upsert(permission: PromptToolPermissionEntity) = dao.upsert(permission)
+    suspend fun upsert(permission: PromptToolPermissionEntity) {
+        dao.upsert(permission)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun update(permission: PromptToolPermissionEntity) = dao.update(permission)
+    suspend fun update(permission: PromptToolPermissionEntity) {
+        dao.update(permission)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun delete(permission: PromptToolPermissionEntity) = dao.delete(permission)
+    suspend fun delete(permission: PromptToolPermissionEntity) {
+        dao.delete(permission)
+        syncCoordinator.get().requestSync()
+    }
 
-    suspend fun deleteAllForPrompt(promptId: String) = dao.deleteByPrompt(promptId)
+    suspend fun deleteAllForPrompt(promptId: String) {
+        dao.deleteByPrompt(promptId)
+        syncCoordinator.get().requestSync()
+    }
 
     /** Convenience: alle Permissions eines Prompts auf einmal setzen (vom Permission-Editor-UI). */
     suspend fun setAll(promptId: String, permissions: List<PromptToolPermissionEntity>) {
         permissions.forEach { dao.upsert(it) }
+        // Nur EIN Sync-Trigger fuer die ganze Batch (debounce coalesced ohnehin).
+        syncCoordinator.get().requestSync()
     }
 }

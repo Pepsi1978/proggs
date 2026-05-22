@@ -45,6 +45,9 @@ constructor(
     private val cardOrderRepo: BiomarkerCardOrderRepository,
     private val healthConnectValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
     private val amazfitWorkoutDao: de.frank.entropyreducer.data.local.dao.AmazfitWorkoutDao,
+    // Schema v11 (Frank-Bugfix 2026-05-22): Restore der T-Rex-3-Daily-Werte
+    // (PAI, BioCharge, Hauttemperatur, SpO2, Stress, Schritte, HRV, Schlaf).
+    private val amazfitDailyDao: de.frank.entropyreducer.data.local.dao.AmazfitDailyDao,
     // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura im Health-Backup.
     private val biomarkerSnapshotDao: de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao,
     private val whoopWorkoutDao: de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao,
@@ -287,6 +290,22 @@ constructor(
         // durch die Cleanup-Migration unterdrueckt.
         val workoutsInserted = restoreWorkoutsBackup(skipDueToCleanup = workoutCleanupDone)
         inserted += workoutsInserted
+
+        // --- Amazfit-Daily-Werte (v11+, Frank-Bugfix 2026-05-22) ---
+        // PAI/BioCharge/Hauttemperatur/SpO2/Stress/Schritte/HRV/Schlaf werden
+        // jetzt im Backup gesichert. Restore via upsertAll — PrimaryKey ist
+        // `date` (YYYY-MM-DD), bei Konflikt gewinnt der eingelesene Wert.
+        // Bei v1-v10-Backups ist die Liste leer (Default emptyList) -> kein
+        // Datenverlust auf der lokalen Seite.
+        if (payload.amazfitDaily.isNotEmpty()) {
+            val dailyEntities = payload.amazfitDaily.map { it.toEntity() }
+            amazfitDailyDao.upsertAll(dailyEntities)
+            inserted += dailyEntities.size
+            android.util.Log.i(
+                "SyncEntries",
+                "Restore: ${dailyEntities.size} Amazfit-Daily-Eintraege wiederhergestellt",
+            )
+        }
 
         // Frank-Wunsch 2026-05-19 (Erweiterung): Whoop + Oura-Backup wiederherstellen.
         // Eigene Datei `entropy_reducer_health_v1.json`. Nicht-Existenz ist OK

@@ -1,9 +1,11 @@
 package de.frank.entropyreducer.domain.agentic.tools.write
 
+import dagger.Lazy
 import de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
@@ -36,6 +38,9 @@ class AddFollowupToAufgabeTool
 constructor(
     private val entryRepository: EntryRepository,
     private val followupDao: EntropyEntryFollowupDao,
+    // Frank-Bugfix 2026-05-22: Nach jedem Followup sofort Drive-Sync triggern
+    // damit der KI-erstellte Nachtrag auf dem anderen Geraet sofort ankommt.
+    private val syncCoordinator: Lazy<SyncCoordinator>,
 ) : AgenticTool {
 
     override val name: String = "add_followup_to_aufgabe"
@@ -106,6 +111,7 @@ constructor(
             )
 
             followupDao.upsert(followup)
+            syncCoordinator.get().requestSync()
 
             val resultJson = buildJsonObject {
                 put("followupId", followupId)

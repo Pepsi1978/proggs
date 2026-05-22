@@ -1,7 +1,9 @@
 package de.frank.entropyreducer.domain.agentic.tools.write
 
+import dagger.Lazy
 import de.frank.entropyreducer.data.remote.Schema
 import de.frank.entropyreducer.data.remote.SchemaType
+import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.domain.agentic.AgenticTool
 import de.frank.entropyreducer.domain.agentic.ToolCategory
@@ -30,7 +32,11 @@ import kotlinx.serialization.json.put
 @Singleton
 class UpdateProfilTool
 @Inject
-constructor(private val appSettings: AppSettings) : AgenticTool {
+constructor(
+    private val appSettings: AppSettings,
+    // Frank-Bugfix 2026-05-22: Profil-Update triggert sofort Drive-Sync.
+    private val syncCoordinator: Lazy<SyncCoordinator>,
+) : AgenticTool {
 
     override val name: String = "update_profil"
 
@@ -91,6 +97,7 @@ constructor(private val appSettings: AppSettings) : AgenticTool {
             val oldLength = oldText.length
 
             appSettings.setProfileText(neuerText)
+            syncCoordinator.get().requestSync()
 
             val resultJson = buildJsonObject {
                 put("oldLength", oldLength)
