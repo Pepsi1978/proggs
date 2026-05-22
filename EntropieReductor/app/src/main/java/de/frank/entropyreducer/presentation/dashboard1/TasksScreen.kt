@@ -1150,15 +1150,33 @@ private fun bucketAccent(bucket: TimeBucket): Color =
  * - FREIBLOCK = Gruen-Stich
  * - SPAETER = Blau-Stich
  */
-private fun bucketCardTint(bucket: TimeBucket, isDark: Boolean): Color {
+/**
+ * Frank-Wunsch 2026-05-22 (vierte Iteration): Karten-Hintergrund folgt jetzt der
+ * priorityScore-Farbe statt dem Time-Bucket. So sieht Frank auf einen Blick wie
+ * wichtig eine Aufgabe ist, ohne die Prio-Zahl rechts ablesen zu muessen.
+ *
+ * Skala identisch zu priorityColor() in dieser Datei (Konsistenz mit der grossen
+ * Prio-Zahl rechts auf der Karte):
+ *  - 80-100  Rot     (sehr hohe Prio)
+ *  - 60-80   Orange
+ *  - 40-60   Gelb
+ *  - 20-40   Gruen
+ *  -  0-20   Blau    (geringste Prio)
+ *
+ * Alpha leicht hoeher als der frueher Bucket-Tint (light: 0.18, dark: 0.14),
+ * damit der Farbunterschied zwischen 35/55/85 deutlich sichtbar ist — Frank
+ * will den Stich wirklich erkennen koennen.
+ */
+private fun priorityCardTint(score: Double, isDark: Boolean): Color {
     val base =
-        when (bucket) {
-            TimeBucket.HEUTE -> CosmosColors.BucketHeuteTint
-            TimeBucket.MORGEN -> CosmosColors.BucketMorgenTint
-            TimeBucket.FREIBLOCK -> CosmosColors.BucketFreiblockTint
-            TimeBucket.SPAETER -> CosmosColors.BucketSpaeterTint
+        when {
+            score >= 80.0 -> CosmosColors.PriorityRed
+            score >= 60.0 -> CosmosColors.PriorityOrange
+            score >= 40.0 -> CosmosColors.PriorityYellow
+            score >= 20.0 -> CosmosColors.PriorityGreen
+            else -> CosmosColors.PriorityBlue
         }
-    return base.copy(alpha = if (isDark) 0.10f else 0.14f)
+    return base.copy(alpha = if (isDark) 0.14f else 0.18f)
 }
 
 @Composable
@@ -1178,18 +1196,17 @@ private fun EntropyEntryCard(
     // Off-Screen-Buffer-Allocation). Vorher: Modifier.alpha erzeugte auch bei
     // alpha = 1f gelegentlich einen Layer.
     val cardAlpha = if (isResolved) 0.55f else 1f
-    // Frank-Wunsch 2026-05-10: Karten-Hintergrund je nach Bucket dezent toenen,
-    // damit Frank auf einen Blick sieht in welchem Bucket eine Aufgabe steckt.
-    // Wird auch bei verschobenen Karten reaktiv neu berechnet, weil entry.timeBucket
-    // bei jedem Bucket-Wechsel im DB-State frisch geliefert wird.
-    val bucketTint = bucketCardTint(entry.timeBucket, cosmos.isDark)
+    // Frank-Wunsch 2026-05-22 (vierte Iteration): Karten-Hintergrund folgt der
+    // priorityScore-Farbe statt des Time-Buckets. So sieht Frank den Status der
+    // Aufgabe direkt visuell, ohne die Prio-Zahl rechts ablesen zu muessen.
+    val priorityTint = priorityCardTint(entry.priorityScore, cosmos.isDark)
     GlassCard(
         modifier =
             Modifier.fillMaxWidth().clickable(onClick = onClick).graphicsLayer {
                 alpha = cardAlpha
                 compositingStrategy = CompositingStrategy.ModulateAlpha
             },
-        tintColor = bucketTint,
+        tintColor = priorityTint,
     ) {
         Column {
             // Top-Row: Icon-Kreis links | Title+Beschreibung | Score+"Prio"+Haken
