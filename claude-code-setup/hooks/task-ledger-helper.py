@@ -44,8 +44,10 @@ MAX_ENTRIES = 500
 MAX_PROMPT_LEN = 8000
 MAX_FILES_PER_TASK = 100
 MAX_COMMITS_PER_TASK = 50
-LOCK_TIMEOUT_S = 5
-LOCK_STALE_S = 30
+# Fix L2.1: LOCK_TIMEOUT_S muss > LOCK_STALE_S sein, sonst gibt der wartende
+# Prozess auf BEVOR der stale Lock removed werden kann.
+LOCK_STALE_S = 8
+LOCK_TIMEOUT_S = 15
 RESUME_LOOKBACK_DAYS = 30
 
 
@@ -54,6 +56,12 @@ def now_iso():
 
 
 def acquire_lock(timeout=LOCK_TIMEOUT_S):
+    # Fix L2.2: ensure_dir() VOR dem ersten os.open damit FileNotFoundError
+    # nicht aus dem except FileExistsError-Block rausfaellt (graceful failure).
+    try:
+        ensure_dir()
+    except OSError:
+        return False
     start = time.time()
     while time.time() - start < timeout:
         try:
@@ -75,13 +83,19 @@ def acquire_lock(timeout=LOCK_TIMEOUT_S):
             except FileNotFoundError:
                 continue
             time.sleep(0.05)
+        except OSError:
+            # z.B. PermissionError, disk full — Hook darf nie crashen
+            return False
     return False
 
 
 def release_lock():
+    # Fix L8.1: auch PermissionError u.a. abfangen — sonst kann das im finally
+    # eines write-Aufrufs den main-try/except verlassen und die naechsten
+    # Cleanup-Schritte ueberspringen.
     try:
         LOCK_FILE.unlink()
-    except FileNotFoundError:
+    except OSError:
         pass
 
 
@@ -94,9 +108,14 @@ def read_ledger():
         return []
     entries = []
     try:
-        with open(LEDGER_FILE, "r", encoding="utf-8") as f:
+        # Fix L1.3 + L4.1: utf-8-sig akzeptiert sowohl Dateien MIT als auch
+        # OHNE UTF-8 BOM. Andere Hooks (z.B. session-guard) koennen die Datei
+        # mit BOM zurueckschreiben — wir muessen tolerant lesen.
+        with open(LEDGER_FILE, "r", encoding="utf-8-sig") as f:
             for line in f:
-                line = line.strip()
+                # Defensiv: auch BOM in einzelnen Lines abstreifen (falls
+                # die Datei mit einem BOM-Mid-File-Pattern korrumpiert wurde).
+                line = line.lstrip("﻿").strip()
                 if not line:
                     continue
                 try:
@@ -111,14 +130,18 @@ def read_ledger():
 def write_ledger(entries):
     ensure_dir()
     if len(entries) > MAX_ENTRIES:
-        entries.sort(key=lambda e: e.get("timestamp_start", ""))
-        # Behalte die juengsten MAX_ENTRIES und alle nicht-abgeschlossenen
-        kept_old_done = entries[-MAX_ENTRIES:]
+        # Fix L1.1: Sort nach timestamp_last_update (Fallback timestamp_start).
+        # Eine 3-Tage-Aufgabe mit altem timestamp_start aber juengstem update darf
+        # nicht vom Pruning weggeworfen werden — sie ist die WICHTIGSTE.
+        def _sort_key(e):
+            return e.get("timestamp_last_update") or e.get("timestamp_start", "")
+        entries.sort(key=_sort_key)
+        kept_recent = entries[-MAX_ENTRIES:]
         still_open = [e for e in entries if e.get("status") not in ("done",)]
         merged = {}
-        for e in kept_old_done + still_open:
+        for e in kept_recent + still_open:
             merged[e.get("task_id", id(e))] = e
-        entries = sorted(merged.values(), key=lambda e: e.get("timestamp_start", ""))[-MAX_ENTRIES:]
+        entries = sorted(merged.values(), key=_sort_key)[-MAX_ENTRIES:]
 
     fd, tmp_path = tempfile.mkstemp(prefix=".active-tasks-", suffix=".tmp", dir=str(LEDGER_DIR))
     try:
@@ -155,11 +178,15 @@ def cmd_add(session_id, prompt_text, cwd=None):
         return
     try:
         entries = read_ledger()
-        # Vorherige offene Tasks dieser Session als 'committed' markieren —
-        # ein neuer Prompt heisst: das vorherige Thema ist abgeschlossen oder pausiert.
+        # Vorherige offene Tasks dieser Session schliessen — ein neuer Prompt
+        # heisst: das vorherige Thema ist abgeschlossen, committed oder pausiert.
+        # Fix L1.2 + L1.6: pushed beruecksichtigen — sonst landen gepushte Tasks
+        # nur als "committed" statt "done", was den Resume-Filter verwaessert.
         for e in entries:
             if e.get("session_id") == session_id and e.get("status") in ("open", "in_progress"):
-                if e.get("commits"):
+                if e.get("commits") and e.get("pushed"):
+                    e["status"] = "done"
+                elif e.get("commits"):
                     e["status"] = "committed"
                 else:
                     e["status"] = "paused"
@@ -228,15 +255,36 @@ def cmd_update(session_id, tool_name, tool_input, tool_output_text):
             try:
                 ti = tool_input if isinstance(tool_input, dict) else {}
                 command = ti.get("command", "") or ""
-                if "git commit" in command:
+                # Fix L6.1: --dry-run nur als ECHTES Flag erkennen, nicht als
+                # Substring in einer commit-Message wie `commit -m "added --dry-run"`.
+                is_dry_run = bool(re.search(r"(?:^|\s)--dry-run(?:\s|=|$)", command))
+                if "git commit" in command and not is_dry_run:
                     m = re.search(r"\[(?:\S+)\s+([0-9a-f]{7,40})\]", tool_output_text or "")
                     if m:
                         commits = task.setdefault("commits", [])
                         h = m.group(1)
                         if h not in commits and len(commits) < MAX_COMMITS_PER_TASK:
                             commits.append(h)
-                if re.search(r"\bgit\s+push\b", command):
-                    if "rejected" not in (tool_output_text or "").lower():
+                # Fix L1.4: positive Push-Indikatoren statt nur "rejected" pruefen.
+                # git push --dry-run, Netzwerk-Errors, Auth-Errors duerfen NICHT
+                # pushed=true setzen. Echte Push-Erfolge haben "<old>..<new>" oder
+                # "main -> main" oder "Everything up-to-date" im Output.
+                if re.search(r"\bgit\s+push\b", command) and not is_dry_run:
+                    out_lower = (tool_output_text or "").lower()
+                    success_markers = [
+                        re.search(r"[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}", out_lower) is not None,
+                        "everything up-to-date" in out_lower,
+                        " -> " in out_lower and "rejected" not in out_lower,
+                    ]
+                    failure_markers = [
+                        "rejected" in out_lower,
+                        "fatal:" in out_lower,
+                        "error:" in out_lower and "warning" not in out_lower,
+                        "could not" in out_lower and "resolve" in out_lower,
+                        "permission denied" in out_lower,
+                        "authentication failed" in out_lower,
+                    ]
+                    if any(success_markers) and not any(failure_markers):
                         task["pushed"] = True
             except (AttributeError, TypeError):
                 pass

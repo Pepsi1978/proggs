@@ -300,6 +300,10 @@
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/stopfailure-logger.ps1\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/task-ledger-stop.ps1\""
           }
         ]
       }

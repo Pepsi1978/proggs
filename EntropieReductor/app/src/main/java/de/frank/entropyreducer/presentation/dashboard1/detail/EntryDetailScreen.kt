@@ -100,8 +100,8 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
     LaunchedEffect(Unit) {
         viewModel.templateCreated.collect { success ->
             snackbar.showSnackbar(
-                if (success) "Als wiederkehrende Aufgabe angelegt — im Reiter Loop bearbeiten."
-                else "Konnte keine Vorlage anlegen.",
+                if (success) "Findest du jetzt im Reiter Loop."
+                else "Konnte keine wiederkehrende Aufgabe anlegen.",
             )
         }
     }

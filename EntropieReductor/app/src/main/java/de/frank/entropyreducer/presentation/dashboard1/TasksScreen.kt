@@ -129,9 +129,14 @@ fun TasksScreen(
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
+    // Sprint 6 (Frank-Wunsch 2026-05-22 abend): Mic-Tap oeffnet jetzt ein
+    // Auswahl-Sheet (Aufnehmen/Schreiben) wie im Entropie-Reiter — der alte
+    // sofort-Recording-Pfad ist weg.
+    var captureOpen by remember { mutableStateOf(false) }
+
     val micPerm =
         rememberMicPermissionState(
-            onAllGranted = { vm.onMicClick() },
+            onAllGranted = { captureOpen = true },
             onDenied = { denied ->
                 val msg =
                     if (Manifest.permission.RECORD_AUDIO in denied) {
@@ -273,7 +278,7 @@ fun TasksScreen(
                 currentTab = currentTab,
                 micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = { if (micPerm.check()) vm.onMicClick() else micPerm.request() },
+                onMicClick = { if (micPerm.check()) captureOpen = true else micPerm.request() },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -504,6 +509,17 @@ fun TasksScreen(
             // da sind, statt das Sheet vorzeitig zu schliessen.
             bucketPickerEntryId = null
         }
+    }
+
+    // Sprint 6 (Frank-Wunsch 2026-05-22 abend): einheitliches Aufnehmen/Schreiben-Sheet.
+    if (captureOpen) {
+        de.frank.entropyreducer.presentation.components.EntryCaptureSheet(
+            onDismiss = { captureOpen = false },
+            onCommit = { text, source ->
+                vm.processCapturedText(text, source)
+                captureOpen = false
+            },
+        )
     }
 }
 

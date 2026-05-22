@@ -1,0 +1,8 @@
+# Append-only Ledger-Dateien — bei parallelem Schreiben von Mac+Windows
+# wuerden semantisch nicht-konfliktbehaftete Zeilen sonst als merge-Konflikt
+# erscheinen. merge=union vereint beide Versionen Zeile-fuer-Zeile.
+active-tasks.jsonl merge=union text eol=lf
+experience-store.jsonl merge=union text eol=lf
+trajectories.jsonl merge=union text eol=lf
+bug-cases.jsonl merge=union text eol=lf
+error-antigens.jsonl merge=union text eol=lf

@@ -764,6 +764,39 @@ class TasksViewModel @Inject constructor(
 
     fun clearCategoryFilter() { activeCategoriesFlow.value = emptySet() }
 
+    /**
+     * Sprint 6 (Frank-Wunsch 2026-05-22 abend): Mic-Sheet liefert fertigen Text
+     * (egal ob aufgenommen oder geschrieben), wir jagen ihn nur noch durch
+     * ProcessEntryUseCase. Ersetzt den alten Direct-Mic-Pfad — der bleibt nur
+     * noch als Fallback fuer das Widget.
+     */
+    fun processCapturedText(text: String, source: EntrySource) {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                micState = MicState.PROCESSING,
+                processingMessage = "Verarbeite …",
+            )
+            process(trimmed, source)
+                .onSuccess { e ->
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        micState = MicState.IDLE,
+                        processingMessage = null,
+                        recentlyCreatedId = e.id,
+                    )
+                    autoBalanceBuckets()
+                }
+                .onFailure { ex ->
+                    uiOnlyFlow.value = uiOnlyFlow.value.copy(
+                        micState = MicState.IDLE,
+                        processingMessage = null,
+                        errorMessage = ex.message ?: "KI-Verarbeitung fehlgeschlagen",
+                    )
+                }
+        }
+    }
+
     fun onMicClick() {
         val app = getApplication<Application>()
         when (uiOnlyFlow.value.micState) {

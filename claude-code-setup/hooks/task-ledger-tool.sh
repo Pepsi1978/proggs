@@ -5,6 +5,11 @@
 
 set +e
 
+# Fix L1.7 + L1.8 Cross-Platform: UTF-8 Locale + PYTHONIOENCODING erzwingen.
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+export PYTHONIOENCODING=utf-8
+
 stdin_input=$(cat)
 if [ -z "$stdin_input" ]; then exit 0; fi
 
@@ -26,7 +31,6 @@ if [ -z "$session_id" ] || [ -z "$tool_name" ]; then exit 0; fi
 HELPER="$HOME/.claude/hooks/task-ledger-helper.py"
 if [ ! -f "$HELPER" ]; then exit 0; fi
 
-export PYTHONIOENCODING=utf-8
 printf '%s' "$stdin_input" | python3 "$HELPER" update >/dev/null 2>&1 || true
 
 exit 0

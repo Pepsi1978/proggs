@@ -5,6 +5,13 @@
 $ErrorActionPreference = 'Continue'
 
 try {
+    # Fix L1.7 + L1.8: UTF-8 Encoding fuer stdin/stdout/pipe — sonst werden
+    # Umlaute und Emojis im Prompt zerstoert (Windows Default ist cp1252).
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [Console]::InputEncoding = $utf8NoBom
+    [Console]::OutputEncoding = $utf8NoBom
+    $OutputEncoding = $utf8NoBom
+
     $stdin = [Console]::In.ReadToEnd()
     if (-not $stdin -or $stdin.Trim() -eq '') { exit 0 }
 
