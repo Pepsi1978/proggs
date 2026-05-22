@@ -1056,3 +1056,45 @@ Build erfolgreich nach Fix (14s).
 **Empfehlung:** Variante 1 + 4 kombinieren. Skill-Validator ist da, muss nur
 verbindlich aufgerufen werden.
 
+
+---
+
+## ABSCHLUSS DES LAUFS (2026-05-22 17:18 GMT+2)
+
+**Ergebnis:** 🟢 ERFOLGREICH
+
+| Metrik | Wert |
+|--------|------|
+| openFindingsCount | 0 |
+| auditedLanguages | 27 (de + 26 weitere) |
+| translatable strings (DE-Referenz) | 1.104 |
+| Vollstaendigkeit pro Sprache | 100% (alle 27 Sprachen) |
+| Translation-Worker spawn | 5 + 2 (Recovery) |
+| Build-Validation | assembleDebug SUCCESS (14s) |
+| Plugin-Bugs in dieser Session | 13 (BUG #17-29) |
+
+**Plugin-Bugs dokumentiert (Loop 4):**
+| # | Schwere | Titel |
+|---|---------|-------|
+| 17 | 🟧 | Plugin-Cache veraltet: assets/ + schemas/ fehlen |
+| 18 | 🟧 | Recht-Report wird durch Code-Aenderungen veraltet, kein Auto-Refresh |
+| 19 | 🟨 | FIN-029 Worker-Count empfiehlt 15-20 auch bei Mini-Aufgaben |
+| 20 | 🟨 | Plugin sollte "fehlende Strings pro Sprache" automatisch berechnen |
+| 21 | 🟧 | Translation-Worker brauchen Pre-Check vor Insert (Duplikat-Risiko) |
+| 22 | 🟨 | Translation-Worker Insert via `replace` ist fehleranfaellig (rfind besser) |
+| 23 | 🟨 | pl hatte retro_month_more_entries als einzige Sprache fehlend |
+| 24 | 🟧 | Plugin-Subagents brauchen PYTHONIOENCODING=utf-8 als Default |
+| 25 | 🟧 | Worker brauchen Idempotenz-Guard nach Crash |
+| 26 | 🟥 | Worker D crashte trotz FIN-005-Token-Cap (Autocompact-Thrashing) |
+| 27 | 🟨 | ISO-639-1 vs. Android-Legacy-Code Mapping fehlt im Worker-Prompt |
+| 28 | 🟨 | Worker E: Urdu-Wortstellung am Satzanfang (RTL-Bidi-Falle) |
+| 29 | 🟥 | Worker A (franzoesisch) generierte unescapte Apostrophen → Build-Blocker |
+
+**Zusaetzliche Beobachtungen:** #1 (Phase 0 zu viele Sub-Schritte), #2 (uebersetzung-Skill ohne batch-mode)
+
+**Naechste Schritte (offen — fuer eigene Session):**
+- Plugin-Cache-Refresh (Plugin-Manager neu installieren) → BUG #17 lösen
+- FIN-029-Heuristik um Token-Estimate erweitern → BUG #26 vermeiden
+- Apostroph-Validator in uebersetzung-Skill verbindlich machen → BUG #29 vermeiden
+- Worker-Prompt-Template um Pre-Check + Idempotenz-Guard erweitern → BUG #21+25
+
