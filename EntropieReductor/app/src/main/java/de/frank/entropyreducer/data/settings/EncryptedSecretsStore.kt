@@ -30,13 +30,34 @@ class EncryptedSecretsStore @Inject constructor(
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
-        EncryptedSharedPreferences.create(
+        val sharedPrefs = EncryptedSharedPreferences.create(
             context,
             FILE_NAME,
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
+        // Sprint 3 (2026-05-22): Zepp-Cloud-API wurde entfernt — Plaintext-Credentials
+        // (E-Mail + Passwort) waren ein Sicherheitsrisiko und die API liefert seit
+        // Mai 2026 keine neuen Workouts mehr. Beim ersten App-Start nach Update werden
+        // alle alten Zepp-Eintraege aus den EncryptedSharedPreferences entfernt.
+        // Das Flag verhindert dass die Cleanup-Routine bei jedem Start laeuft.
+        if (!sharedPrefs.getBoolean(KEY_ZEPP_CLEANUP_DONE, false)) {
+            sharedPrefs.edit().apply {
+                remove("zepp_email")
+                remove("zepp_password")
+                remove("zepp_region")
+                remove("zepp_refresh_token")
+                remove("zepp_access_token")
+                remove("zepp_app_token")
+                remove("zepp_login_token")
+                remove("zepp_user_id")
+                remove("zepp_device_id")
+                remove("zepp_last_sync_ms")
+                putBoolean(KEY_ZEPP_CLEANUP_DONE, true)
+            }.apply()
+        }
+        sharedPrefs
     }
 
     var groqApiKey: String?
@@ -94,62 +115,12 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_WHOOP_AUTH_STATE, null)
         set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).apply() }
 
-    // Zepp / Amazfit T-Rex 3 — inoffizielle Cloud-API mit E-Mail/Passwort-Login.
-    // Frank-Wunsch 2026-05-09: Sport-Daten + PAI/BioCharge/Hauttemperatur von der
-    // T-Rex 3 in den Biomarker-Bereich einlesen. Kein OAuth — 2-Stufen-Login mit
-    // AES-CBC-verschluesseltem Body in Stufe 1, danach Token-Tausch in Stufe 2.
-    // Refresh-Token-Lebensdauer bei Zepp ist begrenzt — bei Ablauf muessen wir
-    // mit gespeicherter E-Mail + Passwort den Login wiederholen koennen.
-    var zeppEmail: String?
-        get() = prefs.getString(KEY_ZEPP_EMAIL, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_EMAIL, value).apply() }
-
-    var zeppPassword: String?
-        get() = prefs.getString(KEY_ZEPP_PASSWORD, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_PASSWORD, value).apply() }
-
-    /** Region-Code fuer Zepp-Endpoints — "de2" fuer Europa, "us2" fuer USA.
-     *  Default: "de2" weil Frank in Deutschland ist. Der AuthService schaltet
-     *  bei Login-Fehlschlag automatisch auf "us2" um (Fallback). */
-    var zeppRegion: String?
-        get() = prefs.getString(KEY_ZEPP_REGION, "de2")
-        set(value) { prefs.edit().putString(KEY_ZEPP_REGION, value).apply() }
-
-    /** Refresh-Token aus Schritt 1 des Login-Flows (Redirect-URL-Query). */
-    var zeppRefreshToken: String?
-        get() = prefs.getString(KEY_ZEPP_REFRESH, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_REFRESH, value).apply() }
-
-    /** Access-Token aus Schritt 1 — wird in Schritt 2 gegen den App-Token getauscht. */
-    var zeppAccessToken: String?
-        get() = prefs.getString(KEY_ZEPP_ACCESS, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_ACCESS, value).apply() }
-
-    /** App-Token aus Schritt 2 — wird als `apptoken`-Header in allen Daten-Calls genutzt. */
-    var zeppAppToken: String?
-        get() = prefs.getString(KEY_ZEPP_APP_TOKEN, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_APP_TOKEN, value).apply() }
-
-    /** Login-Token aus Schritt 2 — wird fuer Logout gebraucht. */
-    var zeppLoginToken: String?
-        get() = prefs.getString(KEY_ZEPP_LOGIN_TOKEN, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_LOGIN_TOKEN, value).apply() }
-
-    /** User-ID — wird in URL-Pfaden und Query-Params der Daten-Endpoints gebraucht. */
-    var zeppUserId: String?
-        get() = prefs.getString(KEY_ZEPP_USER_ID, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_USER_ID, value).apply() }
-
-    /** Stabile Geraete-ID fuer den Login (UUID) — beim ersten Login generiert,
-     *  danach bestehend lassen damit der Server uns als "selbes Geraet" erkennt. */
-    var zeppDeviceId: String?
-        get() = prefs.getString(KEY_ZEPP_DEVICE_ID, null)
-        set(value) { prefs.edit().putString(KEY_ZEPP_DEVICE_ID, value).apply() }
-
-    /** Zeitstempel der letzten erfolgreichen Zepp-Synchronisation (ms). */
-    var zeppLastSyncEpochMs: Long
-        get() = prefs.getLong(KEY_ZEPP_LAST_SYNC, 0L)
-        set(value) { prefs.edit().putLong(KEY_ZEPP_LAST_SYNC, value).apply() }
+    // Zepp / Amazfit Cloud-API wurde entfernt (Sprint 3, 2026-05-22):
+    // - API lieferte seit Mai 2026 keine neuen Workouts mehr (Zepp-App-Update)
+    // - Plaintext-Credentials (E-Mail + Passwort) in EncryptedSharedPrefs waren ein Risiko
+    // - Strava ist seit 2026-05-17 die primaere Quelle fuer Workouts
+    // Historische Daten mit source="zepp" in amazfit_workouts bleiben erhalten.
+    // Die Migration im prefs-Initializer entfernt alte Eintraege beim ersten Start.
 
     // Strava — Frank-Wunsch 2026-05-16. OAuth2 (PKCE/Standard) mit AppAuth.
     // Zepp pusht Workouts direkt zu Strava (Drittanbieter-Verknuepfung in der
@@ -293,17 +264,9 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_CALENDAR_ACCOUNT = "calendar_account_email"
         private const val KEY_LAST_RESCORE_VERSION = "last_rescore_version_code"
         private const val KEY_LAST_STARTUP_REFRESH = "last_startup_refresh_at_ms"
-        // Zepp / Amazfit T-Rex 3
-        private const val KEY_ZEPP_EMAIL = "zepp_email"
-        private const val KEY_ZEPP_PASSWORD = "zepp_password"
-        private const val KEY_ZEPP_REGION = "zepp_region"
-        private const val KEY_ZEPP_REFRESH = "zepp_refresh_token"
-        private const val KEY_ZEPP_ACCESS = "zepp_access_token"
-        private const val KEY_ZEPP_APP_TOKEN = "zepp_app_token"
-        private const val KEY_ZEPP_LOGIN_TOKEN = "zepp_login_token"
-        private const val KEY_ZEPP_USER_ID = "zepp_user_id"
-        private const val KEY_ZEPP_DEVICE_ID = "zepp_device_id"
-        private const val KEY_ZEPP_LAST_SYNC = "zepp_last_sync_ms"
+        // Zepp / Amazfit Cloud-API Felder entfernt 2026-05-22 (Sprint 3).
+        // Migration: KEY_ZEPP_CLEANUP_DONE markiert dass alte Eintraege bereits geleert wurden.
+        private const val KEY_ZEPP_CLEANUP_DONE = "zepp_cleanup_done_v1"
         // Oura Ring
         private const val KEY_OURA_PAT = "oura_personal_access_token"
         private const val KEY_OURA_LAST_SYNC = "oura_last_sync_ms"
