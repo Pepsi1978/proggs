@@ -20,36 +20,36 @@
     <string name="empty_dashboard_hint">Tippe auf das Mikrofon und sprich aus, was deine Energie kostet. Die KI ordnet es ein, priorisiert es und plant es in deinen Schichtkalender ein.</string>
 
     <!-- Mic Button -->
-    <string name="mic_idle">Tippen oder gedrueckt halten zum Aufnehmen</string>
-    <string name="mic_recording">Aufnahme laeuft … (Tippen zum Beenden)</string>
+    <string name="mic_idle">Tippen oder gedrückt halten zum Aufnehmen</string>
+    <string name="mic_recording">Aufnahme läuft … (Tippen zum Beenden)</string>
     <string name="mic_processing_transcribe">Transkribiere …</string>
     <string name="mic_processing_analyze">Verarbeite …</string>
     <string name="mic_processing_save">Speichere …</string>
 
     <!-- Settings Top-Level -->
     <string name="settings_title">Einstellungen</string>
-    <string name="settings_api_keys">API-Schluessel</string>
-    <string name="settings_api_keys_subtitle">Verwalte deine API-Schluessel und verknuepfe deine bevorzugten Anbieter.</string>
+    <string name="settings_api_keys">API-Schlüssel</string>
+    <string name="settings_api_keys_subtitle">Verwalte deine API-Schlüssel und verknüpfe deine bevorzugten Anbieter.</string>
     <string name="settings_models">KI-Modell-Auswahl</string>
-    <string name="settings_models_subtitle">Waehle das passende KI-Modell fuer deine Fragen und Aufgaben aus.</string>
-    <string name="settings_profile">Persoenliches Profil</string>
+    <string name="settings_models_subtitle">Wähle das passende KI-Modell für deine Fragen und Aufgaben aus.</string>
+    <string name="settings_profile">Persönliches Profil</string>
     <string name="settings_profile_subtitle">Passe deine Vorlieben, Ziele und Einstellungen an.</string>
     <string name="settings_prompts">Eigene Prompts</string>
     <string name="settings_prompts_subtitle">Erstelle, verwalte und organisiere deine eigenen Prompt-Vorlagen.</string>
-    <string name="settings_memory">Gedaechtnis</string>
-    <string name="settings_memory_subtitle">Entscheide, was sich das Genie merken darf und wie es dich unterstuetzt.</string>
+    <string name="settings_memory">Gedächtnis</string>
+    <string name="settings_memory_subtitle">Entscheide, was sich das Genie merken darf und wie es dich unterstützt.</string>
     <string name="settings_codex">Genie-Codex</string>
-    <string name="settings_codex_subtitle">Lege Verhaltensregeln, Werte und Antwortstil fuer das Genie fest.</string>
+    <string name="settings_codex_subtitle">Lege Verhaltensregeln, Werte und Antwortstil für das Genie fest.</string>
     <string name="settings_export">Datenexport / Datenschutz</string>
-    <string name="settings_export_subtitle">Exportiere deine Daten oder ueberwache den Datenschutz und die Loeschoptionen.</string>
+    <string name="settings_export_subtitle">Exportiere deine Daten oder überwache den Datenschutz und die Löschoptionen.</string>
 
-    <!-- API-Schluessel -->
+    <!-- API-Schlüssel -->
     <string name="api_groq_title">Groq API Key</string>
-    <string name="api_groq_subtitle">Fuer schnelle KI-Antworten ueber das Groq LLM API.</string>
+    <string name="api_groq_subtitle">Für schnelle KI-Antworten über das Groq LLM API.</string>
     <string name="api_gemini_title">Gemini API Key</string>
-    <string name="api_gemini_subtitle">Fuer fortschrittliche KI-Modelle von Google Gemini.</string>
+    <string name="api_gemini_subtitle">Für fortschrittliche KI-Modelle von Google Gemini.</string>
     <string name="api_tts_title">Google Cloud TTS API Key</string>
-    <string name="api_tts_subtitle">Fuer hochwertige Text-zu-Sprache (TTS) Ausgaben.</string>
+    <string name="api_tts_subtitle">Für hochwertige Text-zu-Sprache (TTS) Ausgaben.</string>
     <string name="api_whoop_title">Whoop OAuth</string>
     <string name="api_whoop_subtitle">Verbinde deinen Whoop-Account, um Schlaf-, Erholungs- und Belastungsdaten zu synchronisieren.</string>
     <string name="api_calendar_title">Google Calendar OAuth</string>
@@ -58,17 +58,17 @@
     <string name="api_test_connection">Verbindung testen</string>
     <string name="api_connection_ok">Verbindung erfolgreich</string>
     <string name="api_connection_failed">Verbindung fehlgeschlagen</string>
-    <string name="api_storage_hint">Deine API-Schluessel werden sicher in deinem Geraet gespeichert und mit AES-256 verschluesselt.</string>
+    <string name="api_storage_hint">Deine API-Schlüssel werden sicher in deinem Gerät gespeichert und mit AES-256 verschlüsselt.</string>
 
     <!-- Profil -->
-    <string name="profile_label">Ueber mich — was die KI ueber dich wissen soll</string>
-    <string name="profile_hint">Fuege hier alles ein, was die KI ueber dich verstehen soll. Du kannst zum Beispiel deinen vollstaendigen Memory-Export aus ChatGPT oder Claude einfuegen. Je mehr Kontext, desto besser kann die KI deine Entropie verstehen.</string>
+    <string name="profile_label">Über mich — was die KI über dich wissen soll</string>
+    <string name="profile_hint">Füge hier alles ein, was die KI über dich verstehen soll. Du kannst zum Beispiel deinen vollständigen Memory-Export aus ChatGPT oder Claude einfügen. Je mehr Kontext, desto besser kann die KI deine Entropie verstehen.</string>
     <string name="profile_save">Speichern</string>
-    <string name="profile_distill">Aus Profil ins Gedaechtnis uebernehmen</string>
+    <string name="profile_distill">Aus Profil ins Gedächtnis übernehmen</string>
 
-    <!-- Gedaechtnis -->
-    <string name="memory_add_manual">Manuell hinzufuegen</string>
-    <string name="memory_check_proposals">KI-Vorschlaege pruefen</string>
+    <!-- Gedächtnis -->
+    <string name="memory_add_manual">Manuell hinzufügen</string>
+    <string name="memory_check_proposals">KI-Vorschläge prüfen</string>
     <string name="memory_regen_from_profile">Aus Profil neu generieren</string>
     <string name="memory_source_manual">Manuell</string>
     <string name="memory_source_ki">KI-Vorschlag</string>
@@ -77,20 +77,20 @@
 
     <!-- Eintrag-Detail -->
     <string name="entry_detail_title">Eintrag im Detail</string>
-    <string name="entry_priority">Prioritaet</string>
+    <string name="entry_priority">Priorität</string>
     <string name="entry_severity_low">Niedrig</string>
     <string name="entry_severity_medium">Mittel</string>
     <string name="entry_severity_high">Hoch</string>
     <string name="entry_status">Status</string>
     <string name="entry_time_horizon">Zeithorizont</string>
     <string name="entry_tags">Tags</string>
-    <string name="entry_ai_reason">KI-Begruendung</string>
-    <string name="entry_priority_reason">Prioritaets-Begruendung</string>
+    <string name="entry_ai_reason">KI-Begründung</string>
+    <string name="entry_priority_reason">Prioritäts-Begründung</string>
     <string name="entry_ai_notes">KI-Notizen</string>
     <string name="entry_reanalyze">Erneut von KI bewerten</string>
     <string name="entry_propose_hypothesis">Als Hypothese vorschlagen</string>
-    <string name="entry_delete">Loeschen</string>
-    <string name="entry_changes_logged">Aenderungen werden in deinem Verlauf protokolliert.</string>
+    <string name="entry_delete">Löschen</string>
+    <string name="entry_changes_logged">Änderungen werden in deinem Verlauf protokolliert.</string>
 
     <!-- Status-Werte -->
     <string name="status_open">Offen</string>
@@ -99,19 +99,13 @@
     <string name="status_archived">Archiviert</string>
 
     <!-- Kategorien -->
-    <string name="cat_physical">Koerperlich</string>
+    <string name="cat_physical">Körperlich</string>
     <string name="cat_mental">Mental</string>
     <string name="cat_temporal">Zeitlich</string>
     <string name="cat_emotional">Emotional</string>
     <string name="cat_health">Gesundheitlich</string>
     <string name="cat_environment">Umgebung</string>
     <string name="cat_other">Sonstiges</string>
-
-    <!-- Coming Soon -->
-    <string name="coming_soon_title">In Kuerze verfuegbar</string>
-    <string name="coming_soon_analysis">Die Entropie-Analyse mit Trend-Charts und Mustern wird in Stufe 3 freigeschaltet.</string>
-    <string name="coming_soon_scientist">Der wissenschaftliche Dialog mit Hypothesen-Karten wird in Stufe 3 freigeschaltet.</string>
-    <string name="coming_soon_biomarker">Die Whoop-Anbindung mit Recovery-Ring und HRV-Verlauf wird in Stufe 2 freigeschaltet.</string>
 
     <!-- Stufe 4: Widget -->
     <string name="widget_description">Entropie-Reduktor Aufgaben — scrollbare Liste mit Heute/Morgen/Freiblock/Später, tippen öffnet die App.</string>
@@ -123,17 +117,17 @@
     <string name="notification_channel_recording_desc">Aktive Sprachaufnahme im Hintergrund</string>
 
     <!-- Fehler -->
-    <string name="error_no_groq_key">Du hast noch keinen Groq-Key hinterlegt. Gehe zu Einstellungen → API-Schluessel.</string>
-    <string name="error_no_gemini_key">Du hast noch keinen Gemini-Key hinterlegt. Gehe zu Einstellungen → API-Schluessel.</string>
-    <string name="error_record_permission">Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Eintraege per Sprache erfassen kannst.</string>
+    <string name="error_no_groq_key">Du hast noch keinen Groq-Key hinterlegt. Gehe zu Einstellungen → API-Schlüssel.</string>
+    <string name="error_no_gemini_key">Du hast noch keinen Gemini-Key hinterlegt. Gehe zu Einstellungen → API-Schlüssel.</string>
+    <string name="error_record_permission">Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Einträge per Sprache erfassen kannst.</string>
     <string name="error_transcription_failed">Groq-Server hat zu lange gebraucht — versuche es gleich nochmal.</string>
-    <string name="error_processing_failed">KI-Verarbeitung fehlgeschlagen. Du kannst den Eintrag spaeter erneut bewerten lassen.</string>
+    <string name="error_processing_failed">KI-Verarbeitung fehlgeschlagen. Du kannst den Eintrag später erneut bewerten lassen.</string>
 
-    <!-- Defaults fuer Prompts -->
-    <string name="default_prompt_body_first_name">Koerper zuerst</string>
-    <string name="default_prompt_body_first_content">Priorisiere Eintraege der Kategorie KOERPERLICH grundsaetzlich am hoechsten, weil koerperliche Verfassung Voraussetzung fuer jede andere Reduktion ist. Wenn ein koerperlicher Eintrag offen ist, darf kein anderer einen hoeheren Score bekommen.</string>
+    <!-- Defaults für Prompts -->
+    <string name="default_prompt_body_first_name">Körper zuerst</string>
+    <string name="default_prompt_body_first_content">Priorisiere Einträge der Kategorie KÖRPERLICH grundsätzlich am höchsten, weil körperliche Verfassung Voraussetzung für jede andere Reduktion ist. Wenn ein körperlicher Eintrag offen ist, darf kein anderer einen höheren Score bekommen.</string>
     <string name="default_prompt_shift_logic_name">Schichtdienst-Logik</string>
-    <string name="default_prompt_shift_logic_content">Frank arbeitet im Schichtsystem (4 Tagdienste, 4 frei, 4 Nachtdienste, 4 frei). Beruecksichtige bei zeitlichen Aufgaben, ob ein Eintrag in einem Frei-Block schneller erledigt werden kann. Aufgaben, die einen Frei-Block brauchen, werden im Dienst niedriger priorisiert.</string>
+    <string name="default_prompt_shift_logic_content">Frank arbeitet im Schichtsystem (4 Tagdienste, 4 frei, 4 Nachtdienste, 4 frei). Berücksichtige bei zeitlichen Aufgaben, ob ein Eintrag in einem Frei-Block schneller erledigt werden kann. Aufgaben, die einen Frei-Block brauchen, werden im Dienst niedriger priorisiert.</string>
     <string name="default_prompt_quick_wins_name">Schnelle Siege bevorzugen</string>
     <string name="default_prompt_quick_wins_content">Wenn ein Eintrag in unter 10 Minuten erledigbar ist, gib ihm einen Bonus von +15 auf den Priority Score, weil schnelle Siege psychische Entropie sofort senken.</string>
 </resources>

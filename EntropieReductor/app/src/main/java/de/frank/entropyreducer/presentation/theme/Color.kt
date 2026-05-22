@@ -89,7 +89,7 @@ fun EntropyCategory.color(): Color = when (this) {
 
 /** Lokalisiertes Anzeige-Label. */
 fun EntropyCategory.label(): String = when (this) {
-    EntropyCategory.KOERPERLICH -> "Koerperlich"
+    EntropyCategory.KOERPERLICH -> "Körperlich"
     EntropyCategory.MENTAL -> "Mental"
     EntropyCategory.ZEITLICH -> "Zeitlich"
     EntropyCategory.EMOTIONAL -> "Emotional"

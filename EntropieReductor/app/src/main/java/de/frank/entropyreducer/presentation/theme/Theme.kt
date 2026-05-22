@@ -14,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.Box
 
@@ -75,6 +78,14 @@ fun EntropieReductorTheme(
 ) {
     val scheme = if (darkTheme) DarkScheme else LightScheme
 
+    // Galaxy-Gradient-Radius dynamisch an Bildschirmbreite koppeln:
+    // 1.5x die Bildschirmbreite wirkt auf S23 Ultra (~412dp), Fold 6 (~720dp)
+    // und Tab S9 (~840dp+) konsistent — der Roentgen-Bericht hatte den
+    // hardcoded 1500f-Pixel-Wert als Problem markiert.
+    val config = LocalConfiguration.current
+    val density = LocalDensity.current
+    val gradientRadiusPx = with(density) { (config.screenWidthDp.dp * 1.5f).toPx() }
+
     val ext = CosmosThemeExt(
         isDark = darkTheme,
         backgroundBrush = if (darkTheme) {
@@ -84,7 +95,7 @@ fun EntropieReductorTheme(
                 0.6f to CosmosColors.BgDark,
                 1f to CosmosColors.BgDark,
                 center = Offset.Unspecified,
-                radius = 1500f,
+                radius = gradientRadiusPx,
             )
         } else {
             Brush.verticalGradient(
