@@ -50,6 +50,14 @@ constructor(private val dao: EntropyEntryDao, private val coordinatorLazy: Lazy<
 
     suspend fun get(id: String): EntropyEntryEntity? = dao.getById(id)
 
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): KI-Trainingsdaten fuer
+     * Dauer-Schaetzung. Liefert die letzten N Aufgaben mit MANUELL gesetzter
+     * Dauer als Few-Shot-Beispiele.
+     */
+    suspend fun getRecentManualDurationSamples(limit: Int = 8): List<EntropyEntryEntity> =
+        dao.getRecentManualDurationSamples(limit)
+
     suspend fun upsert(entry: EntropyEntryEntity) {
         dao.upsert(entry)
         coordinatorLazy.get().requestSync()

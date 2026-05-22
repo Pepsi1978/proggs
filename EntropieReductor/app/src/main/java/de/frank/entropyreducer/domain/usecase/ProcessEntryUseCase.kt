@@ -66,6 +66,22 @@ class ProcessEntryUseCase @Inject constructor(
             confirmedInsights = confirmed,
         )
 
+        // Frank-Wunsch 2026-05-22 (dritte Iteration): KI lernt aus historischen
+        // Manual-Werten. Bis zu 8 Beispiele werden als Kontext mitgeschickt,
+        // damit aehnliche Aufgaben aehnliche Dauer bekommen.
+        val durationSamples = runCatching {
+            entries.getRecentManualDurationSamples(limit = 8)
+        }.getOrDefault(emptyList())
+        val userMessage = buildString {
+            append("Hier ist meine gesprochene Notiz, transkribiert: ")
+            append(rawTranscript)
+            if (durationSamples.isNotEmpty()) {
+                appendLine()
+                appendLine()
+                appendLine(formatDurationSamples(durationSamples))
+            }
+        }
+
         return try {
             val response = gemini.generateContent(
                 model = model,
@@ -75,7 +91,7 @@ class ProcessEntryUseCase @Inject constructor(
                     contents = listOf(
                         GeminiContent(
                             role = "user",
-                            parts = listOf(GeminiPart("Hier ist meine gesprochene Notiz, transkribiert: $rawTranscript")),
+                            parts = listOf(GeminiPart(userMessage)),
                         ),
                     ),
                     generationConfig = GeminiGenerationConfig(
@@ -161,6 +177,26 @@ class ProcessEntryUseCase @Inject constructor(
         )
     }
 
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): formatiert eine Liste manuell
+     * bestaetigter Dauer-Werte als Few-Shot fuer die Gemini-Anfrage. Die KI
+     * sieht damit "Frank hat fuer XYZ 60 min angegeben" und nutzt das als
+     * Referenzwert fuer aehnliche Aufgaben.
+     */
+    private fun formatDurationSamples(samples: List<EntropyEntryEntity>): String =
+        buildString {
+            appendLine("Bisherige manuell bestaetigte Zeitschaetzungen (aus Frank's Historie — nutze als Referenz fuer aehnliche Aufgaben):")
+            samples.forEach { s ->
+                val mins = s.estimatedDurationMinutes ?: return@forEach
+                appendLine(
+                    "- \"${s.title}\" (${s.category.name}): $mins min" +
+                        if (s.description.isNotBlank() && s.description != s.title)
+                            " — ${s.description.take(80)}"
+                        else ""
+                )
+            }
+        }
+
     private fun stripMarkdownCodeFence(s: String): String {
         val trimmed = s.trim()
         return when {
@@ -217,19 +253,39 @@ class ProcessEntryUseCase @Inject constructor(
             confirmedInsights = confirmed,
         )
 
+        val now = System.currentTimeMillis()
         val entrySummary = buildString {
             appendLine("Bestehender Eintrag (zur Neubewertung):")
             appendLine("- Titel: ${entry.title}")
             appendLine("- Beschreibung: ${entry.description}")
+            // Frank-Wunsch 2026-05-22 (vierte Iteration): Der vollstaendige
+            // Originaltext fliesst in die Bewertung ein — die KI hat damit
+            // mehr Kontext als nur die kurze Description.
+            if (entry.rawTranscript.isNotBlank() && entry.rawTranscript != entry.description) {
+                appendLine("- Vollstaendiger Text: ${entry.rawTranscript}")
+            }
             appendLine("- Kategorie: ${entry.category.name}")
             appendLine("- Schwere (severity): ${entry.severity}/10")
             appendLine("- Bisheriger priorityScore: ${entry.priorityScore.toInt()}/100")
             appendLine("- Bisherige Begruendung: ${entry.priorityReason}")
-            entry.tags.takeIf { it.isNotEmpty() }?.let {
-                appendLine("- Tags: ${it.joinToString(", ")}")
-            }
             entry.estimatedDurationMinutes?.let {
                 appendLine("- Geschaetzte Dauer: $it min")
+            }
+            // Frank-Wunsch 2026-05-22 (dritte Iteration): Frist (Deadline)
+            // beeinflusst die Prio direkt. Kurze Restzeit = hoehere Prio.
+            entry.dueAtMs?.let { due ->
+                val df = java.text.SimpleDateFormat("d. MMM yyyy HH:mm", java.util.Locale.GERMAN)
+                val remainingMs = due - now
+                val hours = remainingMs / (60L * 60 * 1000)
+                val days = hours / 24
+                val remainingHuman = when {
+                    remainingMs < 0 -> "UEBERFAELLIG"
+                    days >= 2 -> "noch ca. $days Tage"
+                    hours >= 24 -> "noch ca. 1 Tag (${hours} h)"
+                    hours >= 1 -> "nur noch $hours h"
+                    else -> "WENIGER ALS 1 STUNDE"
+                }
+                appendLine("- Frist: ${df.format(java.util.Date(due))} ($remainingHuman)")
             }
             // Frank-Wunsch 2026-05-22: Nachtraege MUESSEN in die Neubewertung
             // einfliessen. Wenn Frank z.B. einen Nachtrag spricht "ist jetzt
@@ -240,6 +296,18 @@ class ProcessEntryUseCase @Inject constructor(
                 followupTexts.forEachIndexed { idx, text ->
                     appendLine("- Nachtrag ${idx + 1}: $text")
                 }
+            }
+            // Frank-Wunsch 2026-05-22 (dritte Iteration): Few-Shot aus
+            // bisherigen MANUELL bestaetigten Dauer-Werten. Hilft der KI
+            // beim Schaetzen aehnlicher Aufgaben (z.B. "Wohnung putzen"
+            // immer ~60 min wenn Frank das so eingestellt hat).
+            val samples = runCatching {
+                entries.getRecentManualDurationSamples(limit = 8)
+                    .filter { it.id != entry.id }
+            }.getOrDefault(emptyList())
+            if (samples.isNotEmpty()) {
+                appendLine()
+                appendLine(formatDurationSamples(samples))
             }
         }
 
@@ -284,8 +352,16 @@ class ProcessEntryUseCase @Inject constructor(
                 if (entry.durationManuallySet) entry.estimatedDurationMinutes
                 else parsed.estimatedDurationMinutes ?: entry.estimatedDurationMinutes
 
+            // Frank-Wunsch 2026-05-22 (dritte Iteration): Clientseitiger Frist-Floor.
+            // Auch wenn die KI eine niedrige Prio liefert, ueberschreiben wir bei
+            // sehr knapper Frist auf einen Mindestwert. Das macht die App robust
+            // gegenueber KI-Ausreissern und gibt Frank eine berechenbare Garantie:
+            // <24h zur Frist = Prio mindestens 95.
+            val baseScore = parsed.priorityScore.coerceIn(0.0, 100.0)
+            val finalScore = applyDeadlineFloor(baseScore, entry.dueAtMs)
+
             val updated = entry.copy(
-                priorityScore = parsed.priorityScore.coerceIn(0.0, 100.0),
+                priorityScore = finalScore,
                 priorityReason = parsed.priorityReason,
                 estimatedDurationMinutes = nextDuration,
                 updatedAt = System.currentTimeMillis(),
@@ -307,6 +383,34 @@ class ProcessEntryUseCase @Inject constructor(
          */
         val estimatedDurationMinutes: Int? = null,
     )
+
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist-basierte Prio-Untergrenze.
+     * Auch wenn die KI eine niedrige Prio liefert, wird sie bei kurzer Restzeit
+     * angehoben — Frank's Vorgabe: "wenn nur noch ein Tag, fast 100%".
+     *
+     * Stufen:
+     *  - ueberfaellig (dueAtMs < now)         → mindestens 98
+     *  - weniger als 24h                       → mindestens 95
+     *  - 1-2 Tage Restzeit                     → mindestens 85
+     *  - 2-3 Tage Restzeit                     → mindestens 75
+     *  - 3-7 Tage Restzeit                     → mindestens 65
+     *  - mehr als 7 Tage / keine Frist         → kein Floor, KI-Wert gilt
+     */
+    private fun applyDeadlineFloor(baseScore: Double, dueAtMs: Long?): Double {
+        if (dueAtMs == null) return baseScore
+        val remainingMs = dueAtMs - System.currentTimeMillis()
+        val hours = remainingMs / (60L * 60 * 1000)
+        val floor = when {
+            remainingMs < 0 -> 98.0
+            hours < 24 -> 95.0
+            hours < 48 -> 85.0
+            hours < 72 -> 75.0
+            hours < 24 * 7 -> 65.0
+            else -> 0.0
+        }
+        return maxOf(baseScore, floor).coerceAtMost(100.0)
+    }
 
     companion object {
         private const val PRIORITY_DOCTRINE = """
@@ -495,7 +599,7 @@ $PRIORITY_DOCTRINE
         """.trimIndent()
 
         private const val RESCORE_BASE_PROMPT =
-            "Deine Aufgabe: Bewerte einen bestehenden Entropie-Eintrag NEU nach der aktualisierten priorityScore-Doktrin. Du aenderst KEINE inhaltlichen Felder (Titel/Beschreibung/Kategorie/Tags), aktualisiere priorityScore, priorityReason und (falls noch nicht manuell gesetzt) estimatedDurationMinutes."
+            "Deine Aufgabe: Bewerte einen bestehenden Entropie-Eintrag NEU nach der aktualisierten priorityScore-Doktrin. Du aenderst KEINE inhaltlichen Felder (Titel/Beschreibung/Kategorie), aktualisiere priorityScore, priorityReason und (falls noch nicht manuell gesetzt) estimatedDurationMinutes. WICHTIG: wenn eine Frist (Deadline) gesetzt ist, MUSS die Prio entsprechend der Restzeit hoch sein — kurze Restzeit ist ein dominanter Prio-Treiber."
 
         private val RESCORE_TAIL_INSTRUCTION = """
 Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne Schluss:

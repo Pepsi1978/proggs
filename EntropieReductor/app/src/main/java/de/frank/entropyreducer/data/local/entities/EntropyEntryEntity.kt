@@ -75,4 +75,12 @@ data class EntropyEntryEntity(
      * ist — manuelle Setzungen haben immer Vorrang.
      */
     val durationManuallySet: Boolean = false,
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist (Deadline) der Aufgabe als
+     * epoch ms. null = keine Frist. Wird vom Benutzer ueber einen Datepicker gesetzt
+     * und fliesst in die Prio-Berechnung ein — kurze Restzeit erhoeht die Prio
+     * progressiv (siehe ProcessEntryUseCase). Bei < 24h Restzeit wird die Prio
+     * auf mindestens 95 angehoben (Frank's Vorgabe: "wenn nur noch ein Tag, fast 100%").
+     */
+    val dueAtMs: Long? = null,
 )

@@ -95,7 +95,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             TokenUsageDailyEntity::class,
             PromptTriggerEntity::class,
         ],
-    version = 23,
+    version = 24,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -749,6 +749,18 @@ abstract class AppDatabase : RoomDatabase() {
                     db.execSQL(
                         "ALTER TABLE entropy_entries ADD COLUMN durationManuallySet INTEGER NOT NULL DEFAULT 0"
                     )
+                }
+            }
+
+        /**
+         * Schema 23 -> 24 (Frank-Wunsch 2026-05-22 dritte Iteration): Frist
+         * (Deadline) pro Eintrag. Nullable INTEGER (epoch ms). Default NULL =
+         * keine Frist.
+         */
+        val MIGRATION_23_24: Migration =
+            object : Migration(23, 24) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE entropy_entries ADD COLUMN dueAtMs INTEGER")
                 }
             }
     }

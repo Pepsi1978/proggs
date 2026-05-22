@@ -75,6 +75,19 @@ interface EntropyEntryDao {
     @Query("SELECT * FROM entropy_entries ORDER BY createdAt ASC")
     suspend fun getAllForBackup(): List<EntropyEntryEntity>
 
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): Letzte N Aufgaben mit
+     * MANUELL gesetzter Dauer — Trainingsdaten fuer die KI. Wenn Frank
+     * fuer "Wohnung putzen" 60 min einstellt, lernt die KI fuer aehnliche
+     * Aufgaben automatisch eine vergleichbare Schaetzung.
+     */
+    @Query(
+        "SELECT * FROM entropy_entries WHERE durationManuallySet = 1 " +
+            "AND estimatedDurationMinutes IS NOT NULL " +
+            "ORDER BY updatedAt DESC LIMIT :limit"
+    )
+    suspend fun getRecentManualDurationSamples(limit: Int): List<EntropyEntryEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(entry: EntropyEntryEntity)
 
     @Update suspend fun update(entry: EntropyEntryEntity)

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -191,30 +192,45 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     }
                 }
 
-                // ── 2. Tags ──
-                // Status-Sektion (Offen/In Arbeit/Reduziert/Archiviert) raus
-                // (Frank-Wunsch 2026-05-22) — zu viele Infos in der Aufgabe.
-                if (entry.tags.isNotEmpty()) {
-                    Text(
-                        "Tags",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = cosmos.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        entry.tags.forEach { tag ->
+                // Tags-Sektion entfernt 2026-05-22 (Frank-Wunsch zweite Iteration) —
+                // die Pillen waren visuelles Rauschen ohne aktiven Nutzen.
+
+                // ── 1a. Ausfuehrlicher Originaltext (Frank-Wunsch 2026-05-22 dritte Iteration) ──
+                // Wenn Frank die Aufgabe eingesprochen oder ausfuehrlich eingegeben hat,
+                // soll der komplette Originaltext sichtbar sein — nicht nur die kurze
+                // Description aus der Hero-Karte. Nur anzeigen wenn rawTranscript
+                // tatsaechlich AUSFUEHRLICHER ist als die description (sonst doppelte
+                // Anzeige).
+                val showFullText =
+                    entry.rawTranscript.isNotBlank() &&
+                        entry.rawTranscript != entry.description &&
+                        entry.rawTranscript.length > entry.description.length
+                if (showFullText) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
                             Text(
-                                text = tag,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = cosmos.textSecondary,
-                                modifier =
-                                    Modifier.clip(RoundedCornerShape(50))
-                                        .background(cosmos.glassBg)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                "Ausfuehrliche Beschreibung",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = CosmosColors.AccentSecondary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = entry.rawTranscript,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = cosmos.textPrimary,
                             )
                         }
                     }
                 }
+
+                // ── 2. Frist-Bereich (Frank-Wunsch 2026-05-22 dritte Iteration) ──
+                // Kalendersymbol zum Setzen einer Deadline. Kurze Restzeit erhoeht
+                // die Prio progressiv, < 24h hebt sie auf mindestens 95 an.
+                DueDateCard(
+                    dueAtMs = entry.dueAtMs,
+                    onChange = viewModel::setDueDate,
+                )
 
                 // ── 3. Zeitaufwand-Regler (Frank-Wunsch 2026-05-22) ──
                 // Exponentiell skalierter Schieberegler (5 min … 4 Wochen) plus
@@ -520,6 +536,135 @@ private fun DurationEstimateCard(
                 ) { Text("Loeschen", color = cosmos.textSecondary) }
             }
         }
+    }
+}
+
+/**
+ * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist-Karte mit Kalender-Symbol.
+ * Tap auf das Symbol oeffnet einen Material-DatePicker. Anzeige der Restzeit
+ * direkt unter dem Datum — z.B. "in 3 Tagen" oder "ueberfaellig seit 2 h".
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DueDateCard(
+    dueAtMs: Long?,
+    onChange: (Long?) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    var showPicker by remember { mutableStateOf(false) }
+    val nowMs = remember { System.currentTimeMillis() }
+    val labelDate = remember(dueAtMs) {
+        dueAtMs?.let {
+            val df = java.text.SimpleDateFormat("d. MMM yyyy", java.util.Locale.GERMAN)
+            df.format(java.util.Date(it))
+        }
+    }
+    val labelRelative = remember(dueAtMs, nowMs) {
+        dueAtMs?.let { formatRelativeDeadline(it - nowMs) }
+    }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Frist",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CosmosColors.AccentPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { showPicker = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarMonth,
+                        contentDescription = "Frist setzen",
+                        tint = CosmosColors.AccentPrimary,
+                    )
+                }
+            }
+            if (dueAtMs == null) {
+                Text(
+                    "Keine Frist gesetzt — tippe auf den Kalender um eine Deadline festzulegen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = cosmos.textSecondary,
+                )
+            } else {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "$labelDate · $labelRelative",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if ((dueAtMs - nowMs) < 24L * 60 * 60 * 1000)
+                        CosmosColors.Critical
+                    else cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(6.dp))
+                androidx.compose.material3.TextButton(onClick = { onChange(null) }) {
+                    Text("Frist entfernen", color = cosmos.textSecondary)
+                }
+            }
+        }
+    }
+
+    if (showPicker) {
+        val datePickerState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = dueAtMs ?: System.currentTimeMillis(),
+        )
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        // Auf Ende des gewaehlten Tages setzen (23:59:59 Lokalzeit),
+                        // damit Frank den ganzen Tag noch Zeit hat. Sonst wuerde
+                        // 00:00 als Frist gelten und die Aufgabe waere ab Mitternacht
+                        // schon "abgelaufen".
+                        val picked = datePickerState.selectedDateMillis
+                        if (picked != null) {
+                            val cal = java.util.Calendar.getInstance()
+                            cal.timeInMillis = picked
+                            // DatePicker liefert UTC-Mitternacht → in Lokalzeit umrechnen.
+                            val localCal = java.util.Calendar.getInstance().apply {
+                                set(
+                                    cal.get(java.util.Calendar.YEAR),
+                                    cal.get(java.util.Calendar.MONTH),
+                                    cal.get(java.util.Calendar.DAY_OF_MONTH),
+                                    23, 59, 59,
+                                )
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            onChange(localCal.timeInMillis)
+                        }
+                        showPicker = false
+                    },
+                ) { Text("Setzen", color = CosmosColors.AccentPrimary) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showPicker = false }) {
+                    Text("Abbrechen", color = cosmos.textSecondary)
+                }
+            },
+        ) {
+            androidx.compose.material3.DatePicker(state = datePickerState)
+        }
+    }
+}
+
+private fun formatRelativeDeadline(diffMs: Long): String {
+    val absDiff = kotlin.math.abs(diffMs)
+    val past = diffMs < 0
+    val minutes = absDiff / (60 * 1000)
+    val hours = minutes / 60
+    val days = hours / 24
+    val weeks = days / 7
+    return when {
+        past && days >= 1 -> "ueberfaellig seit $days Tag${if (days != 1L) "en" else ""}"
+        past && hours >= 1 -> "ueberfaellig seit $hours h"
+        past -> "ueberfaellig"
+        days >= 14 -> "in $weeks Wochen"
+        days >= 2 -> "in $days Tagen"
+        days >= 1 -> "morgen"
+        hours >= 1 -> "in $hours h"
+        else -> "in $minutes min"
     }
 }
 

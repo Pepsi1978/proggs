@@ -321,6 +321,11 @@ data class BackupEntry(
      * KI-Schaetzung gelten (Rescore darf sie ueberschreiben).
      */
     val durationManuallySet: Boolean = false,
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist als epoch ms. null = keine
+     * Frist. Beeinflusst Prio-Berechnung — siehe ProcessEntryUseCase.
+     */
+    val dueAtMs: Long? = null,
 )
 
 @Serializable
@@ -425,6 +430,7 @@ fun EntropyEntryEntity.toBackup(): BackupEntry =
         manualBucket = manualBucket?.name,
         manualBucketSetAt = manualBucketSetAt,
         durationManuallySet = durationManuallySet,
+        dueAtMs = dueAtMs,
     )
 
 fun InsightEntity.toBackup(): BackupInsight =
@@ -642,6 +648,7 @@ fun BackupEntry.toEntity(): EntropyEntryEntity =
         manualBucket = manualBucket?.let { parseBucketCompat(it) },
         manualBucketSetAt = manualBucketSetAt,
         durationManuallySet = durationManuallySet,
+        dueAtMs = dueAtMs,
     )
 
 fun BackupInsight.toEntity(): InsightEntity =

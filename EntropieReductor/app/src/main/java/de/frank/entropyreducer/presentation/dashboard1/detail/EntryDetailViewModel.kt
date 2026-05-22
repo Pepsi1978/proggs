@@ -244,6 +244,28 @@ constructor(
         }
     }
 
+    /**
+     * Frank-Wunsch 2026-05-22 (dritte Iteration): Frist setzen oder loeschen. null
+     * = keine Frist mehr. Nach jeder Aenderung wird der Eintrag neu bewertet, weil
+     * die Frist direkt in die Prio-Berechnung einfliesst (kurze Restzeit = hoehere
+     * Prio, < 24h = mindestens 95).
+     */
+    fun setDueDate(epochMs: Long?) {
+        viewModelScope.launch {
+            val current = entries.get(entryId) ?: return@launch
+            entries.update(
+                current.copy(
+                    dueAtMs = epochMs,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+            reloadTrigger.value = System.currentTimeMillis()
+            // Frist-Aenderung soll sofort in die Prio einfliessen — Followups
+            // mit anhaengen falls vorhanden.
+            rescoreWithCurrentFollowups()
+        }
+    }
+
     /** Aktualisiert den editierten Text eines Nachtrags (Inline-Edit). */
     fun updateFollowupText(id: String, newText: String) {
         viewModelScope.launch {
