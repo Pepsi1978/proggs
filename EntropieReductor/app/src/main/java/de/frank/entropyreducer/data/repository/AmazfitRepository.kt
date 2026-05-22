@@ -103,6 +103,14 @@ constructor(
     }
 
     /**
+     * Frank-Bugfix 2026-05-22: Anzahl lokaler Workouts. Wird beim App-Start
+     * geprueft um zu entscheiden ob die Cleanup-Migration sofort laufen soll
+     * (lokale DB nicht leer) oder ob auf Drive-Restore gewartet werden muss
+     * (lokale DB leer = wahrscheinlich frische Installation).
+     */
+    suspend fun workoutCount(): Int = workoutDao.count()
+
+    /**
      * Frank-Wunsch 2026-05-17: Umbenennung aller Workouts mit altem sportName. Wird vom
      * Sport-Rename-V1-Migrator beim App-Start aufgerufen. Idempotent — bei zweitem Aufruf 0 Zeilen
      * geaendert.

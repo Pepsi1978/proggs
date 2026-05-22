@@ -486,9 +486,17 @@ constructor(
      * Frank-Wunsch 2026-05-19: Liest die separate Workouts-Backup-Datei aus dem Drive-
      * appDataFolder und schreibt sie in die DB. Streams aus dem Backup gewinnen, fehlende Streams
      * werden mit dem lokalen Stand gefuellt (kein Datenverlust).
+     *
+     * Frank-Bugfix 2026-05-22: `skipDueToCleanup`-Parameter wird ignoriert.
+     * Begruendung: das `workouts_v1.json` auf Drive wird vom alten Geraet NACH der
+     * Cleanup-Migration mit dem korrekten Stand neu hochgeladen. Es gibt keinen
+     * Pre-Cleanup-Stand mehr darin — Skippen wuerde den Trainings-Backup
+     * unnoetig wegwerfen. Vorher fuehrte das dazu dass Frank nach `adb uninstall`
+     * keine Trainings zurueckbekam, weil die Cleanup-Migration auf dem neuen
+     * Geraet schon gelaufen war bevor er Drive verbunden hat.
      */
+    @Suppress("UNUSED_PARAMETER")
     private suspend fun restoreWorkoutsBackup(skipDueToCleanup: Boolean): Int {
-        if (skipDueToCleanup) return 0
         val raw = restoreManager.fetchWorkouts().getOrNull() ?: return 0
         val workoutsPayload =
             runCatching { json.decodeFromString(WorkoutsBackupPayload.serializer(), raw) }

@@ -145,19 +145,40 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // Frank-Wunsch 2026-05-16: Einmalige Workout-Cleanup-Migration vor der
         // Polar-Integration. Loescht alle bestehenden Workouts und triggert einen
         // Sync damit das Drive-Backup mit dem leeren Stand ueberschrieben wird.
-        // 5-Sekunden-Delay damit etwaige Drive-Restore-Operationen am App-Start
-        // zuerst abgeschlossen sind und ihre Workouts ueberhaupt sichtbar werden,
-        // bevor die Migration sie raeumt. Idempotent via workoutCleanupV1-Flag.
+        // Idempotent via workoutCleanupV1-Flag.
+        //
+        // Frank-Bugfix 2026-05-22: Auf einem frisch installierten Geraet (z.B. nach
+        // ADB-Uninstall) ist die lokale DB leer UND das Flag noch nicht gesetzt.
+        // Frueher (5-Sekunden-Delay) lief die Migration BEVOR der Benutzer Zeit
+        // hatte Drive zu verbinden — und setzte das Flag auf true. Der spaetere
+        // Restore wurde dann wegen des Flags ausgebremst und Frank's Trainings
+        // kamen NICHT zurueck.
+        //
+        // Neue Logik:
+        //  1) Lokale Tabelle nicht leer → Migration laeuft normal (wie frueher).
+        //  2) Lokale Tabelle leer + Flag nicht gesetzt → wahrscheinlich frische
+        //     Installation. Migration UEBERSPRINGEN — wenn Frank spaeter Drive
+        //     verbindet, kommt der korrekte Stand zurueck. Wenn er nichts
+        //     verbindet bleibt die Tabelle leer (genauso wie nach Migration).
+        //  3) Delay 60s statt 5s als zusaetzliche Defense-in-Depth.
         applicationScope.launch {
-            kotlinx.coroutines.delay(5000L)
+            kotlinx.coroutines.delay(60_000L)
             runCatching {
                     if (!appSettings.isWorkoutCleanupV1Done()) {
-                        amazfitRepository.cleanupAllWorkoutsForMigration()
-                        appSettings.setWorkoutCleanupV1Done(true)
-                        android.util.Log.i(
-                            "EntropyReducerApp",
-                            "Workout-Cleanup-Migration v1 abgeschlossen — Backup wird mit leerem Stand ueberschrieben",
-                        )
+                        val localCount = amazfitRepository.workoutCount()
+                        if (localCount == 0) {
+                            android.util.Log.i(
+                                "EntropyReducerApp",
+                                "Workout-Cleanup-Migration v1 uebersprungen — lokale DB leer, evtl. frische Installation; warte auf Drive-Restore",
+                            )
+                        } else {
+                            amazfitRepository.cleanupAllWorkoutsForMigration()
+                            appSettings.setWorkoutCleanupV1Done(true)
+                            android.util.Log.i(
+                                "EntropyReducerApp",
+                                "Workout-Cleanup-Migration v1 abgeschlossen ($localCount Eintraege geraeumt) — Backup wird mit leerem Stand ueberschrieben",
+                            )
+                        }
                     }
                 }
                 .onFailure {

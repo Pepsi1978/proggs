@@ -75,6 +75,16 @@ interface AmazfitWorkoutDao {
     suspend fun deleteAll()
 
     /**
+     * Frank-Bugfix 2026-05-22: Cleanup-Migration darf nicht auf einem frisch
+     * installierten Geraet vor dem Drive-Restore laufen — sie wuerde sonst
+     * den restaurierten Stand sofort wieder loeschen. count() liefert die
+     * Anzahl Workouts in der lokalen DB; bei 0 + nicht gesetztem Cleanup-
+     * Flag wartet die Migration auf den Restore.
+     */
+    @Query("SELECT COUNT(*) FROM amazfit_workouts")
+    suspend fun count(): Int
+
+    /**
      * Frank-Wunsch 2026-05-18: Loescht ein einzelnes Workout per trackId.
      * Wird aus dem Training-Detail-Screen ueber das 3-Punkte-Menue
      * "Aktivitaet loeschen" aufgerufen.
