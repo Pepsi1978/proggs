@@ -8,7 +8,9 @@ Lauf: `/finale:run` mit App-Root `~/proggs/BestJournalAndroid`
 Effort: xhigh
 Startzeit: 2026-05-22 ~14:53
 
-## STATUS-UEBERSICHT (Commit #929, 2026-05-22)
+## STATUS-UEBERSICHT (Loop 1-4, 2026-05-22)
+
+### Loop 1+2 — Bugs #1-#16 (Commit #929)
 
 | Bug | Status | Wo umgesetzt |
 |-----|--------|--------------|
@@ -29,18 +31,45 @@ Startzeit: 2026-05-22 ~14:53
 | #15 Phase 2 Bulk-Parallel | **APPLIED** | Phase 2 Bulk-Mode + 15-20 fix-applier parallel |
 | #16 FIN-029 Parallel-First | **APPLIED** | Zentrale Direktive direkt nach FIN-026 in orchestrator.md |
 
-**ALLE 16 Bugs APPLIED** (2026-05-22). Plugin-Verbesserungen Loop 1+2 abgeschlossen.
+### Loop 4 — Bugs #17-#29 (Commit nach Frank-Resume 2026-05-22)
 
-**Neue Direktiven dieses Hardening-Laufs:**
+| Bug | Schwere | Status | Wo umgesetzt |
+|-----|---------|--------|--------------|
+| #17 Plugin-Cache veraltet (assets/schemas fehlen) | 🟧 Mittel | **APPLIED** | FIN-046 in orchestrator.md — Fallback auf ~/proggs/Umgebung/Plugins/finale/Plugin/ + manuelle Refresh-Procedure |
+| #18 Recht-Report Stale-Finding-Check | 🟧 Mittel | **APPLIED** | FIN-038 Phase 1.5 in orchestrator.md — Grep/HEAD-Check, resolved-since-audit Status, openFindingsCount-Neuberechnung |
+| #19 FIN-029 Worker-Count fuer Mini-Aufgaben | 🟨 Niedrig | **APPLIED** | FIN-039 in orchestrator.md — Units-Estimate-Heuristik (<100→3-6, <1000→5-12, sonst 15-20) |
+| #20 Auto-Job-Plan-Generator Phase 3b | 🟨 Niedrig | **APPLIED** | FIN-038 Auto-Diff-Block — job-plan.json per Sprache vor Phase 3b |
+| #21 Translation-Worker Pre-Check | 🟧 Mittel | **APPLIED** | FIN-040 Worker-Standard-Template — Pre-Check `grep -c name="{key}"` vor Insert |
+| #22 rfind statt content.replace | 🟨 Niedrig | **APPLIED** | FIN-040 Worker-Standard-Template — rfind('</resources>') Pflicht |
+| #23 Atomarer Schreibfehler (pl) | 🟨 Niedrig | **APPLIED** | FIN-045 Cross-Sprachen-Audit vor Phase 3b — vergleicht Key-Anzahl pro Sprache gegen DE-Referenz |
+| #24 PYTHONIOENCODING=utf-8 Default | 🟧 Mittel | **APPLIED** | FIN-041 in orchestrator.md — ENV-SETUP-Pflichtblock in jedem Worker-Prompt |
+| #25 Idempotenz-Guard nach Crash | 🟧 Mittel | **APPLIED** | FIN-040 Worker-Standard-Template — skipped_already_present-Feld im Output-JSON |
+| #26 Worker D Autocompact-Thrashing | 🟥 Hoch | **APPLIED** | FIN-042 in orchestrator.md — Max 5 Sprachen pro Worker (3-4 bei dichten Schriften) + Token-Disziplin |
+| #27 ISO-639-1 vs Android-Legacy Mapping | 🟨 Niedrig | **APPLIED** | FIN-043 in orchestrator.md — Mapping-Tabelle (id→in, he→iw, yi→ji, pt-BR→pt-rBR, zh-Hans→zh-rCN ...) |
+| #28 Urdu-Wortstellung RTL-Bidi-Falle | 🟨 Niedrig | **APPLIED** | FIN-032 Punkt 6 (Verstaerkung) — Sprach-Fallen-Tabelle mit Skill-Datei-Verweisen pro Sprach-Familie |
+| #29 Worker A franzoesische Apostrophen | 🟥 Hoch | **APPLIED** | FIN-044 in orchestrator.md — check_apostrophes.py nach jeder romanischen Sprache verbindlich |
+
+**ALLE 29 Bugs APPLIED** (Stand 2026-05-22 abends). Plugin-Verbesserungen Loop 1-4 abgeschlossen.
+
+**Neue Direktiven dieses Hardening-Laufs (Loop 1-4):**
 - FIN-029 Parallel-First (zentral)
 - FIN-030 Auto-Repair Phase 0
 - FIN-031 .android-shield/.gitignore Template
-- FIN-032 uebersetzung-Skill PFLICHT fuer i18n-Fixes
+- FIN-032 uebersetzung-Skill PFLICHT fuer i18n-Fixes (+ Punkt 6 mit Sprach-Fallen-Tabelle in Loop 4)
 - FIN-033 Worker-Halluzinations-Schutz
 - FIN-034 Roentgen-Schema-Compat-Layer
 - FIN-035 run-status.json Heartbeat
 - FIN-036 Post-Worker-Schema-Validation
 - FIN-037 Subagent-Selbstbeobachtungs-Pflicht
+- **FIN-038 Phase 1.5 Stale-Finding-Check + Auto-Job-Plan-Generator** (Loop 4 — BUG #18+20)
+- **FIN-039 Worker-Count-Heuristik mit Units-Dimension** (Loop 4 — BUG #19)
+- **FIN-040 Worker-Standard-Template (Pre-Check + rfind + Idempotenz)** (Loop 4 — BUG #21+22+25)
+- **FIN-041 PYTHONIOENCODING=utf-8 als Default** (Loop 4 — BUG #24)
+- **FIN-042 Max 5 Sprachen pro Translation-Worker** (Loop 4 — BUG #26)
+- **FIN-043 ISO-639-1 vs Android-Legacy-Code-Mapping** (Loop 4 — BUG #27)
+- **FIN-044 Apostroph-Validator verbindlich** (Loop 4 — BUG #29)
+- **FIN-045 Cross-Sprachen-Audit (atomarer Schreibfehler)** (Loop 4 — BUG #23)
+- **FIN-046 Plugin-Cache-Refresh-Procedure + Fallback** (Loop 4 — BUG #17)
 
 **Zusaetzlich:** Intelligenz-Vorschlag 2 umgesetzt:
 - `~/.claude/scripts/bug-doku-collector.sh` + `.ps1` (siehe `bug-doku-collector.README.md`)

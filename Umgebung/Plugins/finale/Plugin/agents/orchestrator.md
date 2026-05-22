@@ -217,6 +217,214 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
     "Strasse" als Straßenname OK; "Strasse" als Adjektiv = "Straße") konservativ
     vorgehen und beim Nutzer rückfragen.
 
+15. **FIN-038 — PHASE-1.5 STALE-FINDING-CHECK (BUG #18+20 Frank 2026-05-22):**
+
+    Bevor Phase 2 (interaktiver Fix-Workflow) startet, MUSS der Orchestrator
+    pruefen ob die in `recht-report.json` gelisteten "offenen" Findings noch
+    tatsaechlich offen sind. Code aendert sich zwischen Laeufen, Findings koennen
+    bereits geloest sein ohne Status-Update.
+
+    **Pflicht-Schritt nach Phase 1, vor Phase 2:**
+
+    Fuer jedes Finding ohne `status`-Feld oder mit `status: open`:
+
+    | Finding-Type | Re-Verifikation |
+    |--------------|----------------|
+    | `invasivityLevel: text-only` mit `currentText` | Grep nach `currentText` in App-Quellen — wenn nicht mehr da: `resolved-since-audit` |
+    | `category: missingDocs` mit Referenz-Komponente | Pruefe ob Komponente jetzt existiert (Datei + grep) |
+    | `category: deadUrls` mit `url` | curl-HEAD-Check — wenn HTTP 200: `resolved-urls-live` |
+    | `category: advertisingMismatch` | Grep nach `currentText` UND nach Feature-Vorhandensein |
+    | `category: playStorePolicies` | Pruefe ob Policy-Code-Schicht hinzugefuegt wurde |
+
+    **Output:**
+    - Status `resolved-since-audit` mit `resolutionEvidence`-Feld + `resolvedAt`-Timestamp
+    - `openFindingsCount` neu berechnen
+    - Audit-Log Eintrag: `phase1.5-stale-check: N findings auto-resolved`
+    - Pre-Flight zeigt korrigierten Stand BEVOR Frank durch alte Findings klicken muss
+
+    **Auto-Diff Pflicht-Vorbereitung (BUG #20):**
+    Plugin generiert automatisch `<app-root>/.android-shield/translation-jobs/job-plan.json`
+    bevor Phase 3b spawnt — pro Sprache eine Liste der TATSAECHLICH fehlenden Keys.
+    Worker bekommen NUR ihre Sprach-spezifische Liste, nicht eine pauschale "11 Strings"-Aussage.
+
+16. **FIN-039 — WORKER-COUNT-HEURISTIK MIT UNITS-DIMENSION (BUG #19 Frank 2026-05-22):**
+
+    FIN-029 (15-20 parallele Worker bei 15+ Aufgaben) wird um eine zweite Dimension
+    erweitert — Total-Arbeit-Schaetzung in "Units":
+
+    ```python
+    estimated_units = task_count * units_per_task
+    # units_per_task: strings-pro-sprache, findings-pro-jurisdiction, etc.
+
+    if estimated_units < 100:
+        worker_count = clamp(task_count, 3, 6)    # Spawn-Overhead dominiert
+    elif estimated_units < 1000:
+        worker_count = clamp(task_count, 5, 12)   # Mittlerer Bereich
+    else:
+        worker_count = clamp(task_count, 15, 20)  # FIN-029 voll
+    ```
+
+    Beispiele:
+    - 11 Strings * 27 Sprachen = 297 Units → 5-12 Worker (statt 15-20)
+    - 1000 Strings * 27 Sprachen = 27.000 Units → 15-20 Worker
+    - 50 Findings * 5 Jurisdiktionen = 250 Units → 5-12 Worker
+
+    **FIN-029 bleibt der Default-Maximum**, FIN-039 erlaubt nur das Reduzieren bei
+    Mini-Aufgaben damit Spawn-Overhead nicht den Speedup auffrisst.
+
+17. **FIN-040 — WORKER-STANDARD-TEMPLATE (BUG #21+22+25 Frank 2026-05-22):**
+
+    Jeder Worker-Prompt MUSS folgende Standard-Bausteine enthalten — verpflichtend,
+    nicht optional:
+
+    **a) Pre-Check vor Insert (BUG #21):**
+    ```python
+    # Vor JEDEM Insert pruefen ob Key schon existiert
+    with open(target_file, 'r', encoding='utf-8') as f:
+        existing = f.read()
+    if f'name="{key}"' in existing:
+        skipped_already_present.append(key)
+        continue  # NICHT Duplikat anlegen
+    ```
+
+    **b) rfind-Insert (BUG #22):**
+    ```python
+    # Verwende rfind statt replace fuer </resources>
+    idx = content.rfind('</resources>')
+    new_content = content[:idx] + new_strings + content[idx:]
+    ```
+    Trifft IMMER das letzte Vorkommen, robust gegen Kommentare die `</resources>` enthalten.
+
+    **c) Idempotenz-Guard (BUG #25):**
+    Bei Worker-Retry nach Crash: vorhandene Strings werden uebersprungen, nicht doppelt
+    angelegt. Worker-Output-Schema bekommt ein `skipped_already_present: dict[lang, [keys]]`-Feld
+    damit Idempotenz im JSON sichtbar wird.
+
+    **Worker-Prompt-Pflicht-Block** (als Boilerplate in jedem Worker-Prompt):
+    ```
+    ## STANDARD-INSERT-PATTERN (FIN-040, PFLICHT)
+
+    1. Pre-Check: `grep -c 'name="{key}"' target_file` — wenn >0: skip + skipped_already_present
+    2. rfind-Insert: `content[:content.rfind('</resources>')] + new + content[idx:]`
+    3. Idempotenz: Idempotent gestaltet, Crash-Retry sicher
+    ```
+
+18. **FIN-041 — PYTHONIOENCODING=utf-8 ALS DEFAULT (BUG #24 Frank 2026-05-22):**
+
+    Jeder Worker-Prompt MUSS am Anfang einen Env-Setup-Block enthalten:
+
+    ```
+    ## ENV-SETUP (PFLICHT vor jeder Python-Operation)
+
+    Bash:       export PYTHONIOENCODING=utf-8
+    PowerShell: $env:PYTHONIOENCODING="utf-8"
+
+    OHNE diese Setzung crasht Python auf Windows bei Unicode-Output (Emojis,
+    diakritische Zeichen, kyrillisch/CJK) mit "UnicodeEncodeError: charmap codec".
+    ```
+
+    Auch im Synthesizer + fix-applier-Prompt einbauen.
+
+19. **FIN-042 — MAX 5 SPRACHEN PRO TRANSLATION-WORKER (BUG #26 Frank 2026-05-22):**
+
+    Worker D-Crash 2026-05-22 ("Autocompact thrashing") zeigte: 8 Sprachen pro Worker
+    ueberlasten den Kontext. Neue harte Grenze: **maximal 5 Sprachen pro Translation-
+    Worker**, unabhaengig von FIN-029-Worker-Count-Empfehlung.
+
+    Bucket-Splitter im Orchestrator MUSS bei >5 Sprachen pro Bucket automatisch in
+    zwei kleinere Buckets aufteilen.
+
+    Bei dichten Schriften (Devanagari, Tamil, Telugu, Malayalam, Gujarati, Kannada,
+    Bengali) bevorzugt **3-4 Sprachen pro Worker** — String-Bytes sind groesser.
+
+    Worker-Prompt-Block:
+    ```
+    ## TOKEN-DISZIPLIN (FIN-042)
+
+    KEIN komplettes Lesen der strings.xml-Dateien (zu gross). Nutze rfind-Insert ohne
+    vorheriges Read. Pre-Check via `grep -c 'name="{key}"' file` statt Read.
+    ```
+
+20. **FIN-043 — ISO-639-1 vs. ANDROID-LEGACY-CODE-MAPPING (BUG #27 Frank 2026-05-22):**
+
+    Mehrere Sprachen haben unterschiedliche Codes in ISO-639-1 und Android-Legacy.
+    Worker-Prompts MUESSEN die Mapping-Tabelle enthalten:
+
+    | ISO-639-1 (uebersetzung-Skill `references/languages/`) | Android-Legacy (values-XX/) |
+    |--------------------------------------------------------|---------------------------|
+    | `id` (Indonesian)                                     | `in` → values-in/         |
+    | `he` (Hebrew)                                         | `iw` → values-iw/         |
+    | `yi` (Yiddish)                                        | `ji` → values-ji/         |
+    | `pt-BR`                                               | `pt-rBR` → values-pt-rBR/ |
+    | `pt-PT`                                               | `pt-rPT` → values-pt-rPT/ |
+    | `zh-Hans`                                             | `zh-rCN` → values-zh-rCN/ |
+    | `zh-Hant`                                             | `zh-rTW` → values-zh-rTW/ |
+
+    Worker liest Sprach-Referenz aus `~/.claude/skills/übersetzung/references/languages/<ISO>.md`,
+    schreibt aber in `app/src/main/res/values-<Android>/strings.xml`.
+
+21. **FIN-044 — APOSTROPH-VALIDATOR VERBINDLICH (BUG #29 Frank 2026-05-22):**
+
+    Nach jeder romanischen Sprache (fr/it/es/pt-rBR/pt-rPT/ca/ro/oc/...) MUSS der
+    Worker den uebersetzung-Skill-Validator `check_apostrophes.py` aufrufen:
+
+    ```bash
+    python3 ~/.claude/skills/übersetzung/scripts/validators/check_apostrophes.py \
+            app/src/main/res/values-<lang>/strings.xml
+    ```
+
+    Bei Fund eines unescapeten Apostrophes: automatisch fixen (\' setzen) und im
+    `validations_performed`-Feld des Output-JSON dokumentieren.
+
+    **Warum:** Android XML verlangt fuer nicht-quote-umschlossene Strings dass
+    Apostrophen mit `\'` escaped sind. Sonst: "Invalid unicode escape sequence"
+    Build-Blocker.
+
+    **Sprachen die Apostrophen oft brauchen:** fr (l'/d'/qu'), it (l'/d'/dell'),
+    es (selten — meist L'/D' fuer katalanische Einfluesse), pt-rBR (selten —
+    "p'ra" colloquial), pt-rPT (mehr Apostrophen als pt-rBR).
+
+22. **FIN-045 — CROSS-SPRACHEN-AUDIT (BUG #23 Frank 2026-05-22):**
+
+    Pre-Phase-3b: Orchestrator vergleicht translatable-Key-Anzahl pro Sprache
+    gegen DE-Referenz. Findet Sprachen die einen einzelnen Key vermissen
+    (atomarer Schreibfehler-Hinweis aus frueheren Laeufen).
+
+    Pflicht-Schritt vor Translation-Worker-Spawn:
+    ```python
+    de_keys = translatable_keys('values/strings.xml')
+    for lang in target_locales:
+        lang_keys = translatable_keys(f'values-{lang}/strings.xml')
+        missing = de_keys - lang_keys
+        if missing:
+            print(f"{lang}: {len(missing)} missing")
+    ```
+
+    Wenn EINE Sprache nur 1-2 Keys vermisst waehrend alle anderen vollstaendig sind:
+    Hinweis im Pre-Flight "atomarer Schreibfehler-Verdacht — beim Hinzufuegen wurde
+    diese Sprache uebersehen". Worker bekommt diese Information.
+
+23. **FIN-046 — PLUGIN-CACHE-REFRESH-PROCEDURE (BUG #17 Frank 2026-05-22):**
+
+    Plugin-Cache unter `~/.claude/plugins/cache/local/finale/0.1.0/` enthielt am
+    2026-05-22 weder `assets/` noch `schemas/`. Beide Verzeichnisse waren nur im
+    Quell-Repo `~/proggs/Umgebung/Plugins/finale/Plugin/`.
+
+    **Fallback im Orchestrator:**
+    Wenn `${FINALE_PLUGIN_ROOT}/assets/<file>` oder `${FINALE_PLUGIN_ROOT}/schemas/<file>`
+    nicht existiert: zusaetzlich `~/proggs/Umgebung/Plugins/finale/Plugin/assets|schemas/<file>`
+    als Fallback versuchen, BEVOR Inline-Default verwendet wird.
+
+    **Manuelle Refresh-Procedure (im README dokumentiert):**
+    ```bash
+    SOURCE="$HOME/proggs/Umgebung/Plugins/finale/Plugin"
+    CACHE="$HOME/.claude/plugins/cache/local/finale/0.1.0"
+    cp -r "$SOURCE/assets" "$CACHE/"
+    cp -r "$SOURCE/schemas" "$CACHE/"
+    ```
+
+    Oder via Claude Code Plugin-Manager: `/plugins refresh finale` (wenn unterstuetzt).
+
 ---
 
 ## Modi
@@ -1147,10 +1355,40 @@ Markenkonsistenz, Punctuation-Fix, etc.):
    mit `hallucination_detected: true` markieren und stattdessen den **echten** Dateiwert
    als Ausgangsbasis nehmen.
 
+6. **Sprach-Fallen ohne Skill-Kontext (BUG #28+#29 Frank 2026-05-22):**
+
+   Worker-Prompts MUESSEN explizit auf folgende Fallen hinweisen, damit die FIN-032-
+   Pflicht nicht als "Floskel" abgetan wird. Ohne Skill-Aufruf entsteht hier sofort
+   schlechte Qualitaet oder ein Build-Blocker:
+
+   | Sprach-Familie | Falle | Skill-Datei mit Loesung |
+   |----------------|-------|------------------------|
+   | Urdu (`ur`), Pashto (`ps`), Persisch (`fa`) | RTL-Bidi: Verb am Satzende, `<xliff:g>` am Satzanfang muss umstrukturiert werden | `references/languages/ur.md` |
+   | Arabisch (`ar`), Hebraeisch (`he/iw`) | RTL + `<xliff:g>` Platzhalter ohne `&lrm;`/`&rlm;` Marker brechen Layout | `references/languages/ar.md` |
+   | Franzoesisch (`fr`), Italienisch (`it`), Katalanisch (`ca`) | Apostroph `'` in `l'/d'/qu'` muss als `\'` escaped sein, sonst Android-Build-Error | `references/languages/fr.md` |
+   | Tuerkisch (`tr`) | Apostrophen nach Eigennamen (`Türkiye'nin`) ebenfalls escapen | `references/languages/tr.md` |
+   | Devanagari (`hi`, `mr`), Tamil (`ta`), Telugu (`te`), Bengali (`bn`) | Conjunct-Consonants - falsche Zeichen-Reihenfolge bricht Rendering | `references/languages/<lang>.md` |
+   | CJK (`zh-rCN`, `zh-rTW`, `ja`, `ko`) | Kein Zeilenumbruch zwischen Zeichen — `\n` an falscher Stelle bricht Wort-Mitte | `references/languages/<lang>.md` |
+
+   **Worker-Prompt-Pflichtblock (FIN-032 Verstaerkung):**
+   ```
+   ## SPRACH-FALLEN OHNE SKILL — DU WUERDEST DIESE FEHLER MACHEN
+
+   Ohne Skill-Aufruf bist du blind fuer:
+   - fr/it/ca: Apostroph-Escaping (\' Pflicht — sonst Build kaputt)
+   - ur/ar/he/fa: RTL-Bidi-Reihenfolge (Verb ans Ende — sonst unnatuerlich)
+   - hi/ta/te/bn: Conjunct-Consonants (Zeichen-Reihenfolge — sonst Rendering kaputt)
+   - zh/ja/ko: Wort-Grenzen (kein \n in Wort-Mitte — sonst sieht es muellig aus)
+
+   Der `uebersetzung`-Skill hat fuer JEDE dieser Fallen eine Loesung in
+   `references/languages/<lang>.md`. NUTZE IHN.
+   ```
+
 **Erwartete Konsequenzen:**
 - Halluzinations-Vorfaelle wie 2026-05-22 (Worker erfand gu-Texte, kn-Texte) werden eliminiert
 - Konsistenz mit der globalen Frank-Regel `feedback_uebersetzung_skill_immer_pflicht`
 - Phase 3 (Uebersetzungs-Phase) und Phase 2 (Fix) nutzen den gleichen Skill — kein Drift
+- Sprach-Fallen (BUG #28+#29) werden bewusst und nicht "vielleicht doch selbst machen"
 
 ### Audit-Log-Rotation (Performance Wave 2.5, 2026-05-21)
 
