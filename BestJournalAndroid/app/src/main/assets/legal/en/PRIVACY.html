@@ -150,10 +150,13 @@ active, they are transferred encrypted to the Drive app data folder as part of t
 backup.</p>
 <h3>3.4 Approximate location (<code>ACCESS_COARSE_LOCATION</code>)</h3>
 <p><strong>Purpose:</strong> Exclusively for the optional design feature <strong>"Sunrise/Sunset"</strong> in<br />
-settings (dark mode follows the local sun position).<br />
+settings (dark mode follows the local sun position). Sunrise and sunset times are<br />
+calculated entirely on your device using the <strong>NOAA Solar Position Algorithm</strong>.<br />
 <strong>Processing:</strong> Location is determined <strong>once</strong> when the toggle is enabled, stored<br />
-locally in app settings, and <strong>never</strong> transmitted to external services. Sunrise and<br />
-sunset times are calculated entirely on your device.</p>
+in <strong>encrypted app settings (AES256-GCM)</strong> on your device, and <strong>never</strong> transmitted<br />
+to external services. If you disable the feature in settings, no further location<br />
+request is made.<br />
+<strong>Legal basis:</strong> Consent by actively enabling the feature (Art. 6(1)(a) GDPR).</p>
 <h3>3.5 Notifications (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>Purpose:</strong> Reminders to write entries (if you enable reminders).<br />
 <strong>Processing:</strong> Generated locally on your device only.</p>
@@ -278,6 +281,7 @@ videos are usually not captured by the Android system backup due to the 25 MB si
 limit. For media, you need the separate Google Drive backup from the app (5.3).</p>
 <p><strong>Deactivation:</strong> In Android system settings under "Google → Backup".<br />
 <strong>Legal basis:</strong> Consent through Google account settings (Art. 6(1)(a) GDPR).</p>
+<div class="warning"><strong>Note on sensitive data (Art. 9 GDPR):</strong> The app optionally stores a <strong>mood tag</strong> per journal entry ("positive", "neutral", "distressing"). Such data may be classified as information about <strong>mental health status</strong> under Art. 9(1) GDPR. If you have Android system backup enabled, these mood tags are automatically transferred as part of your journal database to the Google backup storage of your device account. The transfer is encrypted by Google. If you do not want this, disable system backup for Best Journal in Android settings (see list above).</div>
 <h3>5.4 Google Sign-In (optional)</h3>
 <p><strong>Provider:</strong> Google Ireland Limited<br />
 <strong>Purpose:</strong> Convenient sign-in with your Google account (via Android Credential Manager).<br />
@@ -376,6 +380,13 @@ premium purchase, TTS error).</p>
   statistics"</strong>.</p>
 <p><strong>Reset advertising ID:</strong> In Android system settings under <strong>"Settings → Privacy →<br />
 Ads"</strong>.</p>
+<h3>5.7a Cancellation survey (Churn Survey)</h3>
+<p>When you cancel your premium subscription in the app settings, the app optionally asks for the reason in a dialog ("too expensive", "not used enough", "missing features", "other reason"). This selection is recorded as an <strong>anonymous Firebase Analytics event</strong> (event name <code>churn_reason_selected</code>), along with events such as <code>churn_flow_opened</code>, <code>churn_offer_shown</code>, <code>churn_offer_accepted</code>, <code>churn_confirmed</code>, and <code>churn_paused</code>.</p>
+<p><strong>Data collected:</strong> The selected answer category (four fixed options, no free text); no plain text of the cancellation reason; no tracing to individuals.<br />
+<strong>Purpose:</strong> Product improvement — identifying typical cancellation reasons to improve the app.<br />
+<strong>Prerequisite:</strong> These events are only recorded if you have Firebase Analytics enabled in app settings (see Section 5.7). If analytics is disabled, the selection is used locally only (for example to show a suitable retention offer) and is not transmitted to Firebase.<br />
+<strong>Legal basis:</strong> Consent (Art. 6(1)(a) GDPR, § 25(1) TDDDG) — identical to the general analytics consent. Withdrawal at any time under <strong>"Settings → Privacy → Anonymous statistics"</strong>.<br />
+<strong>International transfer:</strong> Processing in the USA based on the EU-US Data Privacy Framework and Standard Contractual Clauses (Art. 46 GDPR).</p>
 <h3>5.8 Firebase App Check (Play Integrity)</h3>
 <p><strong>Purpose:</strong> Protection against abuse and automated requests.<br />
 <strong>Data collected:</strong> Google Play device integrity token, app signature.<br />

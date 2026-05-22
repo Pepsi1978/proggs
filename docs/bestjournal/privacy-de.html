@@ -65,6 +65,7 @@
   <tr><td>Einstellungen und Präferenzen</td><td>Lokal auf deinem Gerät</td><td>App-Konfiguration</td><td>Kern</td></tr>
   <tr><td>Sprachaufnahmen (Cloud-Transkription)</td><td>Groq, Inc. (USA)</td><td>Umwandlung Sprache → Text</td><td><strong>Optional</strong></td></tr>
   <tr><td>Tagebuchdaten (Backup)</td><td>Google Drive (App-Data-Ordner)</td><td>Wiederherstellung, Geräteübergang</td><td><strong>Optional</strong></td></tr>
+  <tr><td>Tagebuch-Datenbank (Android System-Backup)</td><td>Google Drive Backup-Bereich des Geräte-Kontos</td><td>Automatische Geräte-Sicherung (Android-Funktion)</td><td><strong>Geräte-Setting</strong></td></tr>
   <tr><td>Textausschnitte (Vorlesen)</td><td>Microsoft Bing Speech (USA)</td><td>Umwandlung Text → Sprache</td><td><strong>Optional</strong></td></tr>
   <tr><td>KI-Anfragen (manuell + automatisch)</td><td>Firebase AI / Google Gemini (USA)</td><td>Dashboard, Wochen-/Monats-/Jahresrückblicke</td><td><strong>Optional</strong></td></tr>
   <tr><td>E-Mail, Anmelde-ID</td><td>Google / Firebase Authentication</td><td>Account</td><td><strong>Optional</strong></td></tr>
@@ -89,8 +90,9 @@
 <strong>Verarbeitung:</strong> Fotos werden ausschließlich lokal gespeichert und nicht automatisch hochgeladen. Bei aktivem Google-Drive-Backup werden sie, wie die übrigen Tagebuchdaten, als Teil des Backups verschlüsselt in den Drive-App-Data-Ordner übertragen.</p>
 
 <h3>3.4 Ungefährer Standort (<code>ACCESS_COARSE_LOCATION</code>)</h3>
-<p><strong>Zweck:</strong> Optionale Anzeige des ungefähren Ortes (Stadt/Region) bei einem Tagebucheintrag.<br>
-<strong>Verarbeitung:</strong> Nur auf Anfrage ermittelt, lokal beim Eintrag gespeichert und nicht an externe Dienste übermittelt.</p>
+<p><strong>Zweck:</strong> Ausschließlich für die optionale Design-Funktion <strong>„Sonnenauf-/Sonnenuntergang"</strong> in den Einstellungen (Dark Mode folgt dem lokalen Sonnenstand). Die Standortdaten werden über den NOAA-Solarposition-Algorithmus <strong>lokal auf deinem Gerät</strong> in Sonnenauf- und Sonnenuntergangszeiten umgerechnet.<br>
+<strong>Verarbeitung:</strong> Der Standort wird <strong>einmalig</strong> beim Aktivieren des Schalters ermittelt, in verschlüsselten App-Einstellungen (AES256-GCM) auf dem Gerät gespeichert und <strong>niemals</strong> an externe Dienste übermittelt. Wird die Funktion in den Einstellungen deaktiviert, findet keine erneute Standortabfrage statt.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung durch aktive Aktivierung des Features (Art. 6 Abs. 1 lit. a DSGVO).</p>
 
 <h3>3.5 Benachrichtigungen (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>Zweck:</strong> Erinnerungen an das Schreiben von Einträgen.<br>
@@ -166,10 +168,16 @@
 <strong>Löschung des Backups:</strong> Über <strong>„Einstellungen → Backup → Cloud-Backup löschen"</strong>.</p>
 
 <h3>5.3a Android-System-Backup (automatisch)</h3>
-<p>Zusätzlich zum App-internen Drive-Backup unterstützt die App das <strong>Android-System-Backup</strong> (<code>allowBackup="true"</code>). Ist bei dir unter <strong>Android-Einstellungen → Google → Sicherung</strong> die automatische Sicherung aktiviert, werden App-Einstellungen und bestimmte Dateien automatisch im Google-Drive-Speicher deines Kontos gesichert (verschlüsselt, max. 25 MB).</p>
-<p><strong>Welche Daten ausgeschlossen sind:</strong> Sprachaufnahmen und Medien sind in den Backup-Regeln (<code>backup_rules.xml</code>, <code>data_extraction_rules.xml</code>) von der automatischen Sicherung <strong>ausgenommen</strong>, damit keine ungewollten Daten in der Cloud landen.<br>
-<strong>Deaktivierung:</strong> In den Android-Systemeinstellungen unter „Google → Sicherung".<br>
-<strong>Rechtsgrundlage:</strong> Einwilligung durch Google-Kontoeinstellungen (Art. 6 Abs. 1 lit. a DSGVO).</p>
+<p>Zusätzlich zum App-internen Drive-Backup unterstützt die App das <strong>Android-System-Backup</strong> (<code>allowBackup="true"</code>). Wenn du auf deinem Android-Gerät die geräteweite Sicherung aktiviert hast (<strong>Android-Einstellungen → System → Sicherung → „Auf Google Drive sichern"</strong>), wird ein Teil der App-Daten von Best Journal — einschließlich deiner Tagebuch-Datenbank — automatisch in den von Google bereitgestellten Sicherungsspeicher deines Geräte-Google-Kontos übertragen. Diese Sicherung ist eine Funktion von Android und Google, nicht von Best Journal.</p>
+<ul>
+  <li><strong>Welche Daten:</strong> Tagebucheinträge, Profile, App-Einstellungen aus der lokalen SQLite-Datenbank.</li>
+  <li><strong>Wohin:</strong> der von Google bereitgestellte Backup-Bereich deines Geräte-Google-Kontos — <em>nicht</em> dein normales „Mein Drive". Die Backup-Datei ist für andere Apps unsichtbar.</li>
+  <li><strong>Wann:</strong> automatisch, in der Regel alle ~24 Stunden, nur im WLAN und beim Laden.</li>
+  <li><strong>Wie du es deaktivierst:</strong> In den Android-Einstellungen unter „System → Sicherung → ‚Auf Google Drive sichern' ausschalten" — für alle Apps geräteweit, oder für Best Journal einzeln in der App-Liste in dieser Einstellung. Alternativ kannst du dein Geräte-Google-Konto vom Gerät entfernen.</li>
+  <li><strong>Verhältnis zum App-internen Drive-Backup:</strong> Das verschlüsselte Drive-Backup (Toggle „Google Drive Backup" in der App, siehe oben) ist davon unabhängig und wird von dir explizit ausgelöst.</li>
+</ul>
+<p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) über deine geräteweite Google-Backup-Einstellung. Das Setzen dieser Einstellung erfolgt außerhalb der App in deinen Geräte-Einstellungen.</p>
+<div class="warning"><strong>Hinweis zu sensiblen Daten (Art. 9 DSGVO):</strong> Die App speichert pro Tagebucheintrag optional einen <strong>Stimmungswert</strong> („positiv", „neutral", „belastend"). Solche Angaben können als Daten über den <strong>psychischen Gesundheitszustand</strong> im Sinne von Art. 9 Abs. 1 DSGVO eingeordnet werden. Wenn du das geräteweite Android-System-Backup aktiviert hast, werden diese Stimmungswerte als Teil deiner Tagebuch-Datenbank automatisch in den Google-Backup-Bereich deines Geräte-Kontos übertragen. Die Übertragung erfolgt verschlüsselt durch Google. Wenn du das nicht möchtest, deaktiviere das System-Backup für Best Journal in den Android-Einstellungen (siehe Liste oben).</div>
 
 <h3>5.4 Google Sign-In (optional)</h3>
 <p><strong>Anbieter:</strong> Google Ireland Limited<br>
@@ -232,6 +240,14 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
 <strong>Erhobene Daten:</strong> Gerätetyp, Betriebssystemversion, App-Version, Nutzungshäufigkeit, ungefähre Region (Land), Firebase Instance ID, <strong>IP-Adresse (gekürzt)</strong>, <strong>Android Werbe-ID (AAID)</strong>, Ereignisdaten.<br>
 <strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG). Analytics ist <strong>standardmäßig deaktiviert</strong>. Widerruf jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong>.<br>
 <strong>Werbe-ID zurücksetzen:</strong> Android-Systemeinstellungen → <strong>„Datenschutz → Werbung"</strong>.</p>
+
+<h3>5.7a Kündigungs-Umfrage (Churn Survey)</h3>
+<p>Wenn du dein Premium-Abonnement in den App-Einstellungen kündigst, fragt die App in einem Dialog optional nach dem Grund („zu teuer", „zu wenig genutzt", „fehlende Funktionen", „anderer Grund"). Diese Auswahl wird als <strong>anonymes Firebase-Analytics-Ereignis</strong> erfasst (Ereignisname <code>churn_reason_selected</code>), zusammen mit Ereignissen wie <code>churn_flow_opened</code>, <code>churn_offer_shown</code>, <code>churn_offer_accepted</code>, <code>churn_confirmed</code> und <code>churn_paused</code>.</p>
+<p><strong>Erhobene Daten:</strong> Die ausgewählte Antwortkategorie (vier feste Optionen, kein Freitext); kein Klartext des Kündigungsgrundes; keine Rückverfolgung auf Einzelpersonen.<br>
+<strong>Zweck:</strong> Produktverbesserung — Erkennen typischer Kündigungsgründe, um die App gezielt zu verbessern.<br>
+<strong>Voraussetzung:</strong> Diese Ereignisse werden nur erfasst, wenn du Firebase Analytics in den App-Einstellungen aktiviert hast (siehe Abschnitt 5.7). Bei deaktivierten Analytics wird die Auswahl ausschließlich lokal verwendet (z. B. zur Anzeige eines passenden Retention-Angebots) und nicht an Firebase übertragen.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG) — identisch zur allgemeinen Analytics-Einwilligung. Widerruf jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong>.<br>
+<strong>Drittlandübermittlung:</strong> Verarbeitung in den USA auf Grundlage des EU-US Data Privacy Framework und Standardvertragsklauseln (Art. 46 DSGVO).</p>
 
 <h3>5.8 Firebase App Check (Play Integrity)</h3>
 <p><strong>Zweck:</strong> Schutz vor Missbrauch und automatisierten Anfragen.<br>

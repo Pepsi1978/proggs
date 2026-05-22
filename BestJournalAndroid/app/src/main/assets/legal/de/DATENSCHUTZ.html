@@ -90,8 +90,9 @@
 <strong>Verarbeitung:</strong> Fotos werden ausschließlich lokal gespeichert und nicht automatisch hochgeladen. Bei aktivem Google-Drive-Backup werden sie, wie die übrigen Tagebuchdaten, als Teil des Backups verschlüsselt in den Drive-App-Data-Ordner übertragen.</p>
 
 <h3>3.4 Ungefährer Standort (<code>ACCESS_COARSE_LOCATION</code>)</h3>
-<p><strong>Zweck:</strong> Optionale Anzeige des ungefähren Ortes (Stadt/Region) bei einem Tagebucheintrag.<br>
-<strong>Verarbeitung:</strong> Nur auf Anfrage ermittelt, lokal beim Eintrag gespeichert und nicht an externe Dienste übermittelt.</p>
+<p><strong>Zweck:</strong> Ausschließlich für die optionale Design-Funktion <strong>„Sonnenauf-/Sonnenuntergang"</strong> in den Einstellungen (Dark Mode folgt dem lokalen Sonnenstand). Die Standortdaten werden über den NOAA-Solarposition-Algorithmus <strong>lokal auf deinem Gerät</strong> in Sonnenauf- und Sonnenuntergangszeiten umgerechnet.<br>
+<strong>Verarbeitung:</strong> Der Standort wird <strong>einmalig</strong> beim Aktivieren des Schalters ermittelt, in verschlüsselten App-Einstellungen (AES256-GCM) auf dem Gerät gespeichert und <strong>niemals</strong> an externe Dienste übermittelt. Wird die Funktion in den Einstellungen deaktiviert, findet keine erneute Standortabfrage statt.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung durch aktive Aktivierung des Features (Art. 6 Abs. 1 lit. a DSGVO).</p>
 
 <h3>3.5 Benachrichtigungen (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>Zweck:</strong> Erinnerungen an das Schreiben von Einträgen.<br>
@@ -176,6 +177,7 @@
   <li><strong>Verhältnis zum App-internen Drive-Backup:</strong> Das verschlüsselte Drive-Backup (Toggle „Google Drive Backup" in der App, siehe oben) ist davon unabhängig und wird von dir explizit ausgelöst.</li>
 </ul>
 <p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO (Einwilligung) über deine geräteweite Google-Backup-Einstellung. Das Setzen dieser Einstellung erfolgt außerhalb der App in deinen Geräte-Einstellungen.</p>
+<div class="warning"><strong>Hinweis zu sensiblen Daten (Art. 9 DSGVO):</strong> Die App speichert pro Tagebucheintrag optional einen <strong>Stimmungswert</strong> („positiv", „neutral", „belastend"). Solche Angaben können als Daten über den <strong>psychischen Gesundheitszustand</strong> im Sinne von Art. 9 Abs. 1 DSGVO eingeordnet werden. Wenn du das geräteweite Android-System-Backup aktiviert hast, werden diese Stimmungswerte als Teil deiner Tagebuch-Datenbank automatisch in den Google-Backup-Bereich deines Geräte-Kontos übertragen. Die Übertragung erfolgt verschlüsselt durch Google. Wenn du das nicht möchtest, deaktiviere das System-Backup für Best Journal in den Android-Einstellungen (siehe Liste oben).</div>
 
 <h3>5.4 Google Sign-In (optional)</h3>
 <p><strong>Anbieter:</strong> Google Ireland Limited<br>
@@ -238,6 +240,14 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
 <strong>Erhobene Daten:</strong> Gerätetyp, Betriebssystemversion, App-Version, Nutzungshäufigkeit, ungefähre Region (Land), Firebase Instance ID, <strong>IP-Adresse (gekürzt)</strong>, <strong>Android Werbe-ID (AAID)</strong>, Ereignisdaten.<br>
 <strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG). Analytics ist <strong>standardmäßig deaktiviert</strong>. Widerruf jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong>.<br>
 <strong>Werbe-ID zurücksetzen:</strong> Android-Systemeinstellungen → <strong>„Datenschutz → Werbung"</strong>.</p>
+
+<h3>5.7a Kündigungs-Umfrage (Churn Survey)</h3>
+<p>Wenn du dein Premium-Abonnement in den App-Einstellungen kündigst, fragt die App in einem Dialog optional nach dem Grund („zu teuer", „zu wenig genutzt", „fehlende Funktionen", „anderer Grund"). Diese Auswahl wird als <strong>anonymes Firebase-Analytics-Ereignis</strong> erfasst (Ereignisname <code>churn_reason_selected</code>), zusammen mit Ereignissen wie <code>churn_flow_opened</code>, <code>churn_offer_shown</code>, <code>churn_offer_accepted</code>, <code>churn_confirmed</code> und <code>churn_paused</code>.</p>
+<p><strong>Erhobene Daten:</strong> Die ausgewählte Antwortkategorie (vier feste Optionen, kein Freitext); kein Klartext des Kündigungsgrundes; keine Rückverfolgung auf Einzelpersonen.<br>
+<strong>Zweck:</strong> Produktverbesserung — Erkennen typischer Kündigungsgründe, um die App gezielt zu verbessern.<br>
+<strong>Voraussetzung:</strong> Diese Ereignisse werden nur erfasst, wenn du Firebase Analytics in den App-Einstellungen aktiviert hast (siehe Abschnitt 5.7). Bei deaktivierten Analytics wird die Auswahl ausschließlich lokal verwendet (z. B. zur Anzeige eines passenden Retention-Angebots) und nicht an Firebase übertragen.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG) — identisch zur allgemeinen Analytics-Einwilligung. Widerruf jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong>.<br>
+<strong>Drittlandübermittlung:</strong> Verarbeitung in den USA auf Grundlage des EU-US Data Privacy Framework und Standardvertragsklauseln (Art. 46 DSGVO).</p>
 
 <h3>5.8 Firebase App Check (Play Integrity)</h3>
 <p><strong>Zweck:</strong> Schutz vor Missbrauch und automatisierten Anfragen.<br>

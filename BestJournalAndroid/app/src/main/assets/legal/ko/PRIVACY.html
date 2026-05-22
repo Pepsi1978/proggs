@@ -153,7 +153,8 @@ Stettiner Straße 41<br />
 
 <h3>3.4 대략적인 위치 (<code>ACCESS_COARSE_LOCATION</code>)</h3>
 <p><strong>수집·이용 목적:</strong> 설정의 <strong>"일출/일몰"</strong> 선택적 디자인 기능 전용 (다크 모드가 현지 일몰 시간을 따르는 기능).<br />
-<strong>처리 방식:</strong> 위치는 해당 토글 활성화 시 <strong>1회</strong>만 확인되어 앱 설정에 로컬 저장되며, 외부 서비스로는 <strong>절대 전송되지 않습니다</strong>. 일출·일몰 시간은 기기에서 직접 계산됩니다.</p>
+<strong>처리 방식:</strong> 위치는 해당 토글 활성화 시 <strong>1회</strong>만 확인되어 <strong>AES256-GCM</strong>으로 암호화되어 앱 설정에 로컬 저장되며, 외부 서비스로는 <strong>절대 전송되지 않습니다</strong>. 일출·일몰 시간은 <strong>NOAA 태양 위치 알고리즘</strong>을 사용하여 기기에서 직접 계산됩니다.<br />
+<strong>처리 근거:</strong> 동의 (GDPR 제6조 제1항 (a)호).</p>
 
 <h3>3.5 알림 (<code>POST_NOTIFICATIONS</code>)</h3>
 <p><strong>수집·이용 목적:</strong> 일기 작성 알림 (리마인더 활성화 시).<br />
@@ -240,6 +241,10 @@ Stettiner Straße 41<br />
 <p><strong>비활성화:</strong> Android 시스템 설정의 "Google → 백업"에서 비활성화할 수 있습니다.<br />
 <strong>처리 근거:</strong> Google 계정 설정을 통한 동의 (GDPR 제6조 제1항 (a)호).</p>
 
+<div class="warning">
+<p><strong>⚠ 참고 — 민감정보 (GDPR 제9조 / 개인정보 보호법 제23조):</strong> 일기의 <strong>감정 태그</strong>는 이용자의 기분·정서 상태를 반영할 수 있으며, GDPR 제9조 및 개인정보 보호법 제23조에서 정하는 <strong>정신건강에 관한 민감정보</strong>에 해당할 수 있습니다. Android 시스템 백업이 활성화된 경우, 이러한 데이터가 Google 계정의 Drive 저장소에 암호화되어 백업될 수 있습니다. 이 민감정보의 외부 백업을 원하지 않는 경우, Android 시스템 설정의 <strong>"Google → 백업"</strong>에서 시스템 백업을 비활성화하거나 앱 내 Google Drive 백업(<strong>설정 → 백업</strong>)만 사용하십시오.</p>
+</div>
+
 <h3>5.4 Google 로그인 (선택)</h3>
 <p><strong>제공업체:</strong> Google Ireland Limited<br />
 <strong>수집·이용 목적:</strong> Google 계정으로 편리한 로그인 (Android 자격증명 관리자를 통해).<br />
@@ -316,6 +321,12 @@ https://firebase.google.com/support/privacy</p>
 - "통계 비활성화"를 선택하면 Firebase Analytics가 비활성화됩니다 (기술적으로 <code>setAnalyticsCollectionEnabled(false)</code>를 통해 처리).<br />
 - <strong>"설정 → 개인정보 → 익명 통계"</strong>에서 언제든지 결정을 변경할 수 있습니다.</p>
 <p><strong>광고 ID 재설정:</strong> Android 시스템 설정의 <strong>"설정 → 개인정보 → 광고"</strong>에서 재설정 가능합니다.</p>
+
+<h3>5.7a 구독 취소 설문 (Firebase Analytics 동의 포함)</h3>
+<p><strong>목적:</strong> 프리미엄 구독 취소 시 선택적 취소 사유 설문.<br />
+<strong>처리 방식:</strong> 이용자가 취소 절차 중 설문에 참여하는 경우에만, 선택한 취소 사유가 Firebase Analytics 이벤트 (<code>churn_reason_selected</code>)로 기록됩니다. 설문 참여는 완전히 선택 사항입니다.<br />
+<strong>처리 근거:</strong> 제5.7조에 명시된 Firebase Analytics 동의와 동일하게 적용됩니다 (GDPR 제6조 제1항 (a)호, 개인정보 보호법 제15조 제1항 제1호).<br />
+<strong>동의 관리:</strong> <strong>"설정 → 개인정보 → 익명 통계"</strong>에서 언제든지 동의를 철회할 수 있습니다.</p>
 
 <h3>5.8 Firebase App Check (Play Integrity)</h3>
 <p><strong>수집·이용 목적:</strong> 악용 및 자동화 요청으로부터의 보호.<br />
