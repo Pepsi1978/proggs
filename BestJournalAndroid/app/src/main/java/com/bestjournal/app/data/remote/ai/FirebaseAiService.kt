@@ -18,12 +18,12 @@ import javax.inject.Singleton
 class FirebaseAiService @Inject constructor(@ApplicationContext private val context: Context) {
 
     companion object {
-        const val MODEL_FLASH = "gemini-3.1-flash-lite-preview"
+        const val MODEL_FLASH = "gemini-3.1-flash-lite"
         const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
-        // Auto-fallback target whenever MODEL_FLASH (a -preview model) fails.
+        // Auto-fallback target whenever MODEL_FLASH fails.
         // "-latest" aliases always resolve to the most recent generally-available
-        // flash-lite model — chosen as a safe net against preview deprecation,
-        // model rename, or temporary unavailability of the preview channel.
+        // flash-lite model — chosen as a safe net against model rename or
+        // temporary unavailability of the primary channel.
         const val MODEL_FLASH_FALLBACK = "gemini-flash-lite-latest"
         private const val TAG = "FirebaseAiService"
     }

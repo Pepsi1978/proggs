@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Grok V.1.5.4
+// @name         Grok V.1.5.5
 // @namespace    https://grok.com/
-// @version      1.5.4
+// @version      1.5.5
 // @description  Speech-to-Text + Gemini-Korrektur (DE) + Prompt-Builder. Mic/Buttons unten rechts. Mit Output-Preview.
 // @match        https://grok.com/*
 // @run-at       document-idle
@@ -37,7 +37,7 @@
 	// ============================================================
 	const GEMINI_KEY_STORAGE = "tm_grok_gemini_api_key";
 	let cachedGeminiKey = "";
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 
 	// ============================================================

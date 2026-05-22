@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AI Studio V.1.7.2
+// @name         AI Studio V.1.7.3
 // @namespace    https://aistudio.google.com/prompts/new_chat
-// @version      1.7.2
+// @version      1.7.3
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf ChatGPT. Mic-Button unten links. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Kein stilles Fallback. Mit Output-Preview.
@@ -47,7 +47,7 @@
 	// ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
 	const GEMINI_API_KEY_DEFAULT = "hier".trim();
 	const API_KEY_STORAGE_KEY = "googleAiStudio.geminiApiKey";
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 
 	// ============================================================

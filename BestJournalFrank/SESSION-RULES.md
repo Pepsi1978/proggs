@@ -67,7 +67,7 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 
 ## Gemini Modelle (aktuelle Liste)
 1. gemini-3-flash-preview ($0.50/$3.00)
-2. gemini-3.1-flash-lite-preview ($0.25/$1.50)
+2. gemini-3.1-flash-lite ($0.25/$1.50)
 3. gemini-2.5-flash ($0.30/$2.50)
 4. gemini-2.5-flash-lite ($0.10/$0.40)
 5. gemini-2.0-flash ($0.10/$0.40)

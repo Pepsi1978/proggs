@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Notebook LM V.1.6.4
+// @name         Notebook LM V.1.6.5
 // @namespace    https://www.notebooklm.google.com/
-// @version      1.6.4
+// @version      1.6.5
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten links. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://notebooklm.google.com/*
 // @run-at       document-idle
@@ -43,7 +43,7 @@
 	// ============================================================
 	// ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
 	const GEMINI_API_KEY_STORAGE = "notebooklm.geminiApiKey";
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 
 	// ============================================================

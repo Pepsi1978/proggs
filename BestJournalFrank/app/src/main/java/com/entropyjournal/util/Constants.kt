@@ -200,7 +200,7 @@ object Constants {
         listOf(
             GeminiModel("gemini-flash-latest", "Gemini 3 Flash", "\$0.50 / \$3.00"),
             GeminiModel(
-                "gemini-3.1-flash-lite-preview",
+                "gemini-3.1-flash-lite",
                 "Gemini 3.1 Flash Lite",
                 "\$0.25 / \$1.50",
             ),

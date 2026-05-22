@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Arena V.1.5.0
+// @name         Arena V.1.5.1
 // @namespace    https://arena.ai/
-// @version      1.5.0
+// @version      1.5.1
 // @description  Speech-to-Text + Gemini-Korrektur (DE) ohne stilles Fallback. Zeigt Output-Preview. Send-Button-Fix via React-Nudge.
 // @match        https://arena.ai/*
 // @match        https://web.arena.ai/*
@@ -38,7 +38,7 @@
 	// ============================================================
 	// 🔑 API-Key wird einmalig abgefragt und in Tampermonkey gespeichert
 	// ============================================================
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 	const STORAGE_KEYS = {
 		geminiApiKey: "arena.geminiApiKey",

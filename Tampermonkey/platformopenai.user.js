@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Platform OAI V.1.5.2
+// @name         Platform OAI V.1.5.3
 // @namespace    https://www.platform.openai.com/
-// @version      1.5.2
+// @version      1.5.3
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://platform.openai.com/chat/*
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/platformopenai.user.js
@@ -36,7 +36,7 @@
 	// 🔑 API-Key Handling
 	// ============================================================
 	// ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 	const STORAGE_KEYS = {
 		geminiApiKey: "tm-platformopenai-gemini-api-key",

@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Mistral V.1.5.4
+// @name         Mistral V.1.5.5
 // @namespace    https://chat.mistral.ai/chat
-// @version      1.5.4
+// @version      1.5.5
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://chat.mistral.ai/chat*
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/mistral.user.js
@@ -52,7 +52,7 @@
 	// 🔑 NUR HIER EINTRAGEN
 	// ============================================================
 	// ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+	const GEMINI_MODEL = "models/gemini-3.1-flash-lite";
 	const GEMINI_THINKING_LEVEL = "MEDIUM";
 	const STORAGE_KEYS = {
 		geminiApiKey: "tm-mistral-gemini-api-key",
