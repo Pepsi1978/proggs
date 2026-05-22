@@ -219,9 +219,12 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 // Tagebuch (statt weisser Platzhalter). Andere Sub-Bereiche
                 // bleiben weisser Platzhalter — werden in spaeteren Sessions
                 // mit Inhalt befuellt.
-                val isTagebuch = parent == Routes.TASKS && index == 1
-                val isThesen = parent == Routes.TASKS && index == 2
-                val isRecurring = parent == Routes.TASKS && index == 3
+                // Frank-Wunsch 2026-05-22 (zweite Iteration): Sub-Reihenfolge
+                // umsortiert. Loop liegt jetzt direkt neben Aufgaben (Sub 1),
+                // Entropie auf Sub 2, Thesen auf Sub 3.
+                val isRecurring = parent == Routes.TASKS && index == 1
+                val isTagebuch = parent == Routes.TASKS && index == 2
+                val isThesen = parent == Routes.TASKS && index == 3
                 if (isRecurring) {
                     de.frank.entropyreducer.presentation.recurring.RecurringTemplatesScreen()
                 } else if (isTagebuch) {

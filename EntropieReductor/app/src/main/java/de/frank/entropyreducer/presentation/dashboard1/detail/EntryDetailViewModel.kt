@@ -8,7 +8,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.frank.entropyreducer.data.local.dao.EntropyEntryFollowupDao
 import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
+import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
+import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.tts.TtsPlayer
 import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
@@ -71,7 +73,16 @@ constructor(
     private val followupDao: EntropyEntryFollowupDao,
     private val ttsPlayer: TtsPlayer,
     private val process: ProcessEntryUseCase,
+    // Frank-Wunsch 2026-05-22: aus einer Aufgabe direkt eine wiederkehrende Vorlage erzeugen.
+    private val recurringRepo: RecurringTemplateRepository,
 ) : AndroidViewModel(application) {
+
+    /**
+     * Frank-Wunsch 2026-05-22: Event-Flow fuer die "Vorlage angelegt"-Snackbar
+     * nach Konvertierung in eine wiederkehrende Aufgabe. true = Erfolg, false = Fehler.
+     */
+    val templateCreated: kotlinx.coroutines.flow.MutableSharedFlow<Boolean> =
+        kotlinx.coroutines.flow.MutableSharedFlow(replay = 0, extraBufferCapacity = 1)
 
     /**
      * Die entryId wird über NavArgument injiziert. Wenn null oder leer, zeigt der Screen eine leere
@@ -151,6 +162,46 @@ constructor(
                 )
             )
             reloadTrigger.value = now
+        }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-22: Erzeugt aus dem aktuellen Eintrag eine wiederkehrende
+     * Aufgaben-Vorlage mit Default-RRULE "FREQ=DAILY" um 08:00. Frank kann sie
+     * danach im Loop-Reiter editieren (Frequenz aendern, Wochentage waehlen etc.).
+     * Felder Titel/Beschreibung/Kategorie/Prio/Schwere/Dauer werden 1:1 uebernommen.
+     */
+    fun convertToRecurringTemplate() {
+        viewModelScope.launch {
+            try {
+                val current = entries.get(entryId) ?: run {
+                    templateCreated.tryEmit(false)
+                    return@launch
+                }
+                val now = System.currentTimeMillis()
+                val template = RecurringTemplateEntity(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = current.title,
+                    description = current.description.ifBlank { null },
+                    category = current.category,
+                    priorityScore = current.priorityScore.toInt().coerceIn(0, 100),
+                    severity = current.severity,
+                    estimatedDurationMinutes = current.estimatedDurationMinutes,
+                    rrule = "FREQ=DAILY",
+                    timeOfDayMinutes = 480,
+                    untilEpochMs = null,
+                    nextOccurrenceAt = null,
+                    lastGeneratedAt = 0L,
+                    occurrenceCount = 0,
+                    isActive = true,
+                    createdAt = now,
+                    updatedAt = now,
+                )
+                recurringRepo.upsert(template)
+                templateCreated.tryEmit(true)
+            } catch (t: Throwable) {
+                templateCreated.tryEmit(false)
+            }
         }
     }
 

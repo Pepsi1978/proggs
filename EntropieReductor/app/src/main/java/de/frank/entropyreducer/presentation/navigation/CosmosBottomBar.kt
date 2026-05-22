@@ -317,9 +317,9 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
     when (parentTab) {
         Routes.TASKS ->
             listOf(
+                SubIconMeta(Icons.Outlined.Repeat, "Loop"),
                 SubIconMeta(Icons.Outlined.Book, "Entropie"),
                 SubIconMeta(Icons.Outlined.Lightbulb, "Thesen"),
-                SubIconMeta(Icons.Outlined.Repeat, "Wiederkehrend"),
             )
         else ->
             listOf(

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,6 +94,15 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
         state.error?.let {
             snackbar.showSnackbar(it)
             viewModel.dismissError()
+        }
+    }
+    // Frank-Wunsch 2026-05-22: Snackbar nach "Zu Loop hinzufügen"
+    LaunchedEffect(Unit) {
+        viewModel.templateCreated.collect { success ->
+            snackbar.showSnackbar(
+                if (success) "Als wiederkehrende Aufgabe angelegt — im Reiter Loop bearbeiten."
+                else "Konnte keine Vorlage anlegen.",
+            )
         }
     }
 
@@ -323,7 +333,42 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                 // (Frank-Wunsch). TTS-Funktion bleibt im ViewModel falls spaeter
                 // wieder gebraucht, wird aktuell aber nicht mehr aus dem UI getriggert.
 
-                // ── 6. Löschen-Button ──
+                // ── 6a. "Zu Loop hinzufügen"-Button (Frank-Wunsch 2026-05-22) ──
+                // Vor dem Löschen-Button, damit Frank versehentlich nicht
+                // statt "Löschen" "Hinzufügen" trifft. Akzent-Farbe (orange)
+                // damit der visuelle Kontrast zum roten Löschen-Button klar
+                // ist.
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { viewModel.convertToRecurringTemplate() },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors =
+                        androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                            contentColor = CosmosColors.AccentPrimary,
+                        ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.5.dp,
+                        color = CosmosColors.AccentPrimary,
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Repeat,
+                        contentDescription = null,
+                        tint = CosmosColors.AccentPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Aufgabe zu wiederkehrenden hinzufügen",
+                        color = CosmosColors.AccentPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // ── 6b. Löschen-Button ──
                 Button(
                     onClick = { viewModel.deleteEntry() },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
