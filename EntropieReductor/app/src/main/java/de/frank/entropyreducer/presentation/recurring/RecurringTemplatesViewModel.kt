@@ -3,15 +3,21 @@ package de.frank.entropyreducer.presentation.recurring
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.frank.entropyreducer.data.local.entities.EntropyEntryEntity
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
+import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.repository.RecurringTemplateRepository
 import de.frank.entropyreducer.domain.model.EntropyCategory
 import de.frank.entropyreducer.domain.model.EntrySource
+import de.frank.entropyreducer.domain.model.EntryStatus
+import de.frank.entropyreducer.domain.model.TimeBucket
 import de.frank.entropyreducer.domain.usecase.GenerateRecurringInstancesUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
 
@@ -21,6 +27,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RecurringTemplatesViewModel @Inject constructor(
     private val repo: RecurringTemplateRepository,
+    private val entryRepo: EntryRepository,
     private val generator: GenerateRecurringInstancesUseCase,
 ) : ViewModel() {
 
@@ -31,30 +38,67 @@ class RecurringTemplatesViewModel @Inject constructor(
             initialValue = emptyList(),
         )
 
+    /**
+     * Frank-Wunsch 2026-05-22 Phase 2 (Bugfix #948):
+     * - Beim Toggle (egal ob aktivieren oder deaktivieren) werden ZUERST alle
+     *   noch OFFENEN RECURRING_TEMPLATE-Eintraege fuer diese Vorlage geloescht.
+     *   Damit verschwinden Duplikate die durch den frueheren lastGeneratedAt=0
+     *   Bug entstanden sind.
+     * - Beim AKTIVIEREN wird DIREKT GENAU 1 neue Aufgabe in den Aufgaben-Reiter
+     *   geschrieben (deterministische ID basierend auf dem heutigen Tag —
+     *   verhindert weitere Duplikate bei mehrfachem Toggeln am gleichen Tag).
+     * - Beim DEAKTIVIEREN passiert nur das Cleanup; keine neue Aufgabe.
+     *
+     * Damit ist die Logik: "Solange aktiv = genau eine offene Instanz in der
+     * Liste. Nach Abschluss erscheint die naechste Instanz erst beim naechsten
+     * RRULE-Termin (taeglich/woechentlich) via GenerateRecurringInstancesUseCase."
+     */
     fun toggleActive(template: RecurringTemplateEntity) {
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
             val newActive = !template.isActive
-            repo.upsert(template.copy(isActive = newActive, updatedAt = System.currentTimeMillis()))
-            // Frank-Wunsch 2026-05-22 Phase 2 (Aufgabe 5): wenn die Checkbox
-            // aktiviert wird, soll sofort eine Aufgabe in der Liste erscheinen.
-            // generator() prueft alle aktiven Vorlagen und legt faellige Instanzen
-            // an — durch lastGeneratedAt=0 wird die naechste Occurrence sofort
-            // generiert.
-            if (newActive) {
-                repo.upsert(
-                    template.copy(
-                        isActive = true,
-                        lastGeneratedAt = 0L,
-                        updatedAt = System.currentTimeMillis(),
-                    )
+
+            // 1. Cleanup: alle OFFENEN RECURRING_TEMPLATE-Eintraege fuer diese
+            // Vorlage entfernen. ID-Praefix "rec-${templateId}-" ist garantiert
+            // eindeutig pro Vorlage (siehe GenerateRecurringInstancesUseCase).
+            val openEntries = entryRepo.getActive().first()
+            val toDelete = openEntries.filter {
+                it.source == EntrySource.RECURRING_TEMPLATE &&
+                    it.id.startsWith("rec-${template.id}-") &&
+                    it.status == EntryStatus.OFFEN
+            }
+            for (e in toDelete) entryRepo.delete(e)
+
+            // 2. Template-State persistieren.
+            repo.upsert(
+                template.copy(
+                    isActive = newActive,
+                    updatedAt = now,
+                    // lastGeneratedAt=now verhindert dass der App-Start-Generator
+                    // rueckwirkende Eintraege erzeugt.
+                    lastGeneratedAt = now,
                 )
-                generator()
+            )
+
+            // 3. Wenn aktiviert: GENAU 1 Aufgabe fuer heute anlegen.
+            if (newActive) {
+                entryRepo.upsert(buildEntryForToday(template, now))
             }
         }
     }
 
     fun delete(template: RecurringTemplateEntity) {
-        viewModelScope.launch { repo.deleteById(template.id) }
+        viewModelScope.launch {
+            // Auch beim Loeschen alle offenen Instanzen aufraeumen.
+            val openEntries = entryRepo.getActive().first()
+            val toDelete = openEntries.filter {
+                it.source == EntrySource.RECURRING_TEMPLATE &&
+                    it.id.startsWith("rec-${template.id}-") &&
+                    it.status == EntryStatus.OFFEN
+            }
+            for (e in toDelete) entryRepo.delete(e)
+            repo.deleteById(template.id)
+        }
     }
 
     /** Erstellt eine neue Vorlage oder aktualisiert eine bestehende. */
@@ -116,5 +160,50 @@ class RecurringTemplatesViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    /**
+     * Frank-Wunsch 2026-05-22 (Bugfix #948): Direkt 1 Aufgabe fuer "heute"
+     * erzeugen, deterministische ID basierend auf Tages-Mitternacht. Mehrfaches
+     * Aktivieren am gleichen Tag fuehrt zur gleichen ID → kein Duplikat
+     * (Room upsert ist idempotent).
+     */
+    private fun buildEntryForToday(template: RecurringTemplateEntity, nowMs: Long): EntropyEntryEntity {
+        val midnight = Calendar.getInstance().apply {
+            timeInMillis = nowMs
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val dueMs = Calendar.getInstance().apply {
+            timeInMillis = midnight
+            set(Calendar.HOUR_OF_DAY, template.timeOfDayMinutes / 60)
+            set(Calendar.MINUTE, template.timeOfDayMinutes % 60)
+        }.timeInMillis
+
+        return EntropyEntryEntity(
+            id = "rec-${template.id}-$midnight",
+            rawTranscript = "[Wiederkehrend] ${template.title}",
+            title = template.title,
+            description = template.description ?: "",
+            category = template.category,
+            severity = template.severity,
+            priorityScore = template.priorityScore.toDouble(),
+            priorityReason = "Wiederkehrende Aufgabe aus Vorlage \"${template.title}\"",
+            status = EntryStatus.OFFEN,
+            timeBucket = TimeBucket.HEUTE,
+            estimatedDurationMinutes = template.estimatedDurationMinutes,
+            createdAt = nowMs,
+            updatedAt = nowMs,
+            resolvedAt = null,
+            tags = emptyList(),
+            aiNotes = null,
+            source = EntrySource.RECURRING_TEMPLATE,
+            biomarkerSnapshotId = null,
+            durationManuallySet = template.estimatedDurationMinutes != null,
+            dueAtMs = dueMs,
+        )
     }
 }
