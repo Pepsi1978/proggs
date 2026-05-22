@@ -37,7 +37,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +95,13 @@ fun AnalysisScreen(
     val themeVm: ThemeViewModel = hiltViewModel()
     val themeMode by themeVm.themeMode.collectAsState()
 
+    // Frank-Wunsch 2026-05-22: Einheitliches Mic-Verhalten ueber alle Reiter.
+    // Mic-Tap oeffnet zwei runde Buttons (Schreiben/Aufnehmen) in Gruen — der
+    // resultierende Text wird ueber TasksViewModel.processCapturedText als
+    // neue Aufgabe gespeichert.
+    var micActionsOpen by remember { mutableStateOf(false) }
+    val tasksVm: de.frank.entropyreducer.presentation.dashboard1.TasksViewModel = hiltViewModel()
+
     CosmosScaffold(
         title = "Analyse",
         actions = {
@@ -105,7 +115,7 @@ fun AnalysisScreen(
                 currentTab = currentTab,
                 micState = de.frank.entropyreducer.presentation.components.MicState.IDLE,
                 onTabSelected = onSwitchTab,
-                onMicClick = {},
+                onMicClick = { micActionsOpen = !micActionsOpen },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -218,6 +228,14 @@ fun AnalysisScreen(
                 hostState = snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
             ) { Snackbar(it) }
+            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion in Gruen (Analyse-Akzent).
+            de.frank.entropyreducer.presentation.components.MicCaptureActions(
+                visible = micActionsOpen,
+                accent = Color(0xFF16A34A),
+                onTextCommit = { text, source -> tasksVm.processCapturedText(text, source) },
+                onClose = { micActionsOpen = false },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }

@@ -226,7 +226,15 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 val isTagebuch = parent == Routes.TASKS && index == 2
                 val isThesen = parent == Routes.TASKS && index == 3
                 if (isRecurring) {
-                    de.frank.entropyreducer.presentation.recurring.RecurringTemplatesScreen()
+                    de.frank.entropyreducer.presentation.recurring.RecurringTemplatesScreen(
+                        onSwitchTab = onSwitchTabFromSub,
+                        onSwitchSub = { p, i ->
+                            nav.navigate(Routes.subRouteFor(p, i)) {
+                                popUpTo(pattern) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                    )
                 } else if (isTagebuch) {
                     TagebuchScreen(
                         onBack = {

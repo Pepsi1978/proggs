@@ -1,0 +1,234 @@
+package de.frank.entropyreducer.presentation.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import de.frank.entropyreducer.domain.model.EntrySource
+import de.frank.entropyreducer.presentation.theme.LocalCosmos
+
+/**
+ * Frank-Wunsch 2026-05-22: Einheitliches Mikrofon-Erlebnis ueber ALLE Reiter
+ * der App. Der Mic-Tap in der BottomBar oeffnet keine Aufnahme mehr direkt
+ * und kein eckiges BottomSheet — stattdessen erscheinen genau wie im Entropie-
+ * Reiter zwei runde Aktions-Buttons "Schreiben" und "Aufnehmen" inline ueber
+ * der BottomBar. 1:1 Optik aus TagebuchScreen, parametrisierbare Akzentfarbe
+ * pro Reiter (Aufgaben orange, Forscher lila, Analyse gruen, Biomarker rosé).
+ *
+ * Verwendung:
+ *
+ * ```
+ * Box(modifier = Modifier.fillMaxSize()) {
+ *     // ... Screen-Inhalt ...
+ *     MicCaptureActions(
+ *         visible = micActionsOpen,
+ *         accent = MyAccentColor,
+ *         onTextCommit = { text, source -> vm.processCapturedText(text, source) },
+ *         onClose = { micActionsOpen = false },
+ *         modifier = Modifier.align(Alignment.BottomCenter),
+ *     )
+ * }
+ * ```
+ *
+ * Die Composable verwaltet selbst:
+ *  - TextInputDialog (Schreiben-Pfad)
+ *  - VoiceCaptureViewModel-Toggle (Aufnehmen-Pfad)
+ *  - Mic-Permission-Anforderung
+ *
+ * Sobald ein Text via Schreiben oder Aufnehmen fertiggestellt ist, wird
+ * [onTextCommit] mit Text + Quelle aufgerufen, dann [onClose].
+ */
+@Composable
+fun MicCaptureActions(
+    visible: Boolean,
+    accent: Color,
+    onTextCommit: (text: String, source: EntrySource) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    bottomPadding: Dp = 110.dp,
+    voiceVm: VoiceCaptureViewModel = hiltViewModel(),
+) {
+    val voiceState by voiceVm.state.collectAsState()
+    var inputDialogOpen by remember { mutableStateOf(false) }
+
+    val micPermission = rememberMicPermissionState(
+        onAllGranted = {
+            voiceVm.toggle { transcript ->
+                if (transcript.isNotBlank()) {
+                    onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
+                }
+                onClose()
+            }
+        },
+    )
+
+    // Texteingabe-Dialog fuer den Schreiben-Pfad. Erscheint wenn der Benutzer
+    // den linken Button waehlt.
+    if (inputDialogOpen) {
+        TextInputDialog(
+            accent = accent,
+            onDismiss = { inputDialogOpen = false },
+            onSave = { text ->
+                inputDialogOpen = false
+                onTextCommit(text, EntrySource.NUTZER_TEXT)
+                onClose()
+            },
+        )
+    }
+
+    if (!visible) return
+
+    val recording = voiceState == VoiceCaptureState.RECORDING
+    val processing = voiceState == VoiceCaptureState.PROCESSING
+
+    val (recordIcon, recordLabel) = when {
+        recording -> Icons.Outlined.Stop to "Stop"
+        processing -> Icons.Outlined.Mic to "Transkribiere…"
+        else -> Icons.Outlined.Mic to "Aufnehmen"
+    }
+
+    Row(
+        modifier = modifier.padding(bottom = bottomPadding),
+        horizontalArrangement = Arrangement.spacedBy(32.dp),
+    ) {
+        FabActionButton(
+            icon = Icons.Outlined.Edit,
+            label = "Schreiben",
+            background = accent.copy(alpha = 0.18f),
+            tint = accent,
+            onClick = { inputDialogOpen = true },
+        )
+        FabActionButton(
+            icon = recordIcon,
+            label = recordLabel,
+            background = if (recording) Color(0xFFE53935).copy(alpha = 0.22f)
+            else accent.copy(alpha = 0.18f),
+            tint = if (recording) Color(0xFFE53935) else accent,
+            onClick = {
+                when (voiceState) {
+                    VoiceCaptureState.IDLE -> {
+                        if (micPermission.check()) {
+                            voiceVm.toggle { transcript ->
+                                if (transcript.isNotBlank()) {
+                                    onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
+                                }
+                                onClose()
+                            }
+                        } else {
+                            micPermission.request()
+                        }
+                    }
+                    VoiceCaptureState.RECORDING -> {
+                        voiceVm.toggle { transcript ->
+                            if (transcript.isNotBlank()) {
+                                onTextCommit(transcript.trim(), EntrySource.NUTZER_MIC)
+                            }
+                            onClose()
+                        }
+                    }
+                    VoiceCaptureState.PROCESSING -> Unit
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun FabActionButton(
+    icon: ImageVector,
+    label: String,
+    background: Color,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(background)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalCosmos.current.textSecondary,
+        )
+    }
+}
+
+@Composable
+private fun TextInputDialog(
+    accent: Color,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Neuer Eintrag") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                placeholder = { Text("Was steht an?") },
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (text.isNotBlank()) onSave(text.trim()) },
+                enabled = text.isNotBlank(),
+            ) {
+                Text("Speichern", color = accent, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        },
+    )
+}

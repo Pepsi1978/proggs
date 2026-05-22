@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.dashboard1
 
 // Glance-Import entfernt 2026-05-11 — Widget ist jetzt klassischer
 // AppWidgetProvider, Updates ueber WidgetUpdater.updateAll
-import android.Manifest
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,7 +92,6 @@ import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.StatusBar
 import de.frank.entropyreducer.presentation.components.ThemeToggleIcon
-import de.frank.entropyreducer.presentation.components.rememberMicPermissionState
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
@@ -129,24 +127,12 @@ fun TasksScreen(
     // darauf zugreifen koennen. Wird unten an die Haupt-LazyColumn uebergeben.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Sprint 6 (Frank-Wunsch 2026-05-22 abend): Mic-Tap oeffnet jetzt ein
-    // Auswahl-Sheet (Aufnehmen/Schreiben) wie im Entropie-Reiter — der alte
-    // sofort-Recording-Pfad ist weg.
-    var captureOpen by remember { mutableStateOf(false) }
-
-    val micPerm =
-        rememberMicPermissionState(
-            onAllGranted = { captureOpen = true },
-            onDenied = { denied ->
-                val msg =
-                    if (Manifest.permission.RECORD_AUDIO in denied) {
-                        "Mikrofon-Zugriff wurde abgelehnt. Aktiviere ihn in den System-Einstellungen, damit du Einträge per Sprache erfassen kannst."
-                    } else {
-                        "Benachrichtigungs-Zugriff fehlt — die Aufnahme braucht ihn für die Foreground-Notification."
-                    }
-                scope.launch { snackbar.showSnackbar(msg) }
-            },
-        )
+    // Frank-Wunsch 2026-05-22 (Sprint 6 Iteration): Mic-Tap oeffnet jetzt die
+    // einheitliche MicCaptureActions ueber der BottomBar — zwei runde Buttons
+    // "Schreiben" und "Aufnehmen" in Orange (1:1 wie der Entropie-Reiter).
+    // Kein eckiges BottomSheet mehr. Die Permission wird erst beim Klick auf
+    // "Aufnehmen" innerhalb der Actions geprueft.
+    var micActionsOpen by remember { mutableStateOf(false) }
 
     // Frank-Wunsch 2026-05-11: Widget muss frisch werden wenn sich Aufgaben
     // aendern (Bucket umsortiert, Karte erledigt, neue Karte). Ohne diesen
@@ -278,7 +264,7 @@ fun TasksScreen(
                 currentTab = currentTab,
                 micState = state.micState,
                 onTabSelected = onSwitchTab,
-                onMicClick = { if (micPerm.check()) captureOpen = true else micPerm.request() },
+                onMicClick = { micActionsOpen = !micActionsOpen },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -470,6 +456,15 @@ fun TasksScreen(
             ) {
                 Snackbar(it)
             }
+            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion in Orange
+            // (Aufgaben-Akzent). Zwei runde Buttons ueber der BottomBar.
+            de.frank.entropyreducer.presentation.components.MicCaptureActions(
+                visible = micActionsOpen,
+                accent = Color(0xFFEA580C),
+                onTextCommit = { text, source -> vm.processCapturedText(text, source) },
+                onClose = { micActionsOpen = false },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 
@@ -511,16 +506,6 @@ fun TasksScreen(
         }
     }
 
-    // Sprint 6 (Frank-Wunsch 2026-05-22 abend): einheitliches Aufnehmen/Schreiben-Sheet.
-    if (captureOpen) {
-        de.frank.entropyreducer.presentation.components.EntryCaptureSheet(
-            onDismiss = { captureOpen = false },
-            onCommit = { text, source ->
-                vm.processCapturedText(text, source)
-                captureOpen = false
-            },
-        )
-    }
 }
 
 @Composable
