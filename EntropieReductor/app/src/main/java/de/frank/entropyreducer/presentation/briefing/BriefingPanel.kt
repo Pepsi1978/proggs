@@ -7,20 +7,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.automirrored.outlined.Send
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +27,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,13 +41,15 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Briefing-Panel — eine kompakte Karte mit drei Tabs:
- *  - Heute: Tagesbriefing
- *  - Woche: Wochenrueckblick
- *  - Monat: Monatsrueckblick
+ * Briefing-Panel — kompakte Karte mit dem TAGESBRIEFING (Frank-Wunsch 2026-05-22).
  *
- * Pro Tab: Text-Vorschau (max ~500 Zeichen sichtbar, scrollbar wenn mehr),
- * Anhoeren-Button (TTS), Aktualisieren-Button (manuelle Generierung).
+ * Frueher gab es drei Tabs (Heute/Woche/Monat), aber Frank will im Aufgabenreiter
+ * ausschliesslich das Briefing fuer DEN aktuellen Tag sehen — keine Rueckblicke.
+ * Wochen-/Monatstexte werden im Hintergrund weiter erzeugt (BackgroundScheduler)
+ * und koennen ueber andere Screens zugaenglich gemacht werden, bleiben aber aus
+ * dem Aufgabenreiter raus.
+ *
+ * Inhalt: Text-Vorschau, Anhoeren-Button (TTS), Aktualisieren-Button.
  */
 @Composable
 fun BriefingPanel(
@@ -60,7 +57,7 @@ fun BriefingPanel(
     vm: BriefingViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
-    var selected by rememberSaveable { mutableStateOf(PlayingKind.DAILY) }
+    val selected = PlayingKind.DAILY
     val cosmos = LocalCosmos.current
 
     GlassCard(modifier = modifier.fillMaxWidth()) {
@@ -81,40 +78,14 @@ fun BriefingPanel(
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                BriefingTabChip(
-                    label = "Heute",
-                    selected = selected == PlayingKind.DAILY,
-                    onClick = { selected = PlayingKind.DAILY },
-                )
-                BriefingTabChip(
-                    label = "Woche",
-                    selected = selected == PlayingKind.WEEKLY,
-                    onClick = { selected = PlayingKind.WEEKLY },
-                )
-                BriefingTabChip(
-                    label = "Monat",
-                    selected = selected == PlayingKind.MONTHLY,
-                    onClick = { selected = PlayingKind.MONTHLY },
-                )
-            }
-            Spacer(Modifier.height(10.dp))
 
-            val (text, atMs, regen) = when (selected) {
-                PlayingKind.DAILY -> Triple(state.dailyText, state.dailyAtMs, vm::regenerateDaily)
-                PlayingKind.WEEKLY -> Triple(state.weeklyText, state.weeklyAtMs, vm::regenerateWeekly)
-                PlayingKind.MONTHLY -> Triple(state.monthlyText, state.monthlyAtMs, vm::regenerateMonthly)
-                PlayingKind.NONE -> Triple("", 0L, {})
-            }
+            val text = state.dailyText
+            val atMs = state.dailyAtMs
+            val regen: () -> Unit = vm::regenerateDaily
 
             if (text.isBlank()) {
                 Text(
-                    text = when (selected) {
-                        PlayingKind.DAILY -> "Noch kein Tagesbriefing vorhanden. Tippe auf Aktualisieren — das Genie braucht ca. 10 Sekunden."
-                        PlayingKind.WEEKLY -> "Dein Wochenrückblick wird sonntags 19:00 erstellt. Du kannst ihn jederzeit manuell anstoßen."
-                        PlayingKind.MONTHLY -> "Der Monatsrückblick wird am 1. des Folgemonats 19:00 erstellt."
-                        PlayingKind.NONE -> ""
-                    },
+                    text = "Noch kein Tagesbriefing vorhanden. Tippe auf Aktualisieren — das Genie braucht ca. 10 Sekunden.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = cosmos.textSecondary,
                 )
@@ -258,22 +229,3 @@ private fun BriefingResponseInput(onSubmit: (String) -> Unit) {
     }
 }
 
-@Composable
-private fun BriefingTabChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val cosmos = LocalCosmos.current
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = Color.Transparent,
-            labelColor = cosmos.textSecondary,
-            selectedContainerColor = CosmosColors.AccentPrimary.copy(alpha = 0.2f),
-            selectedLabelColor = CosmosColors.AccentPrimary,
-        ),
-    )
-}

@@ -1,7 +1,6 @@
 package de.frank.entropyreducer.presentation.dashboard1.detail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +27,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material.icons.outlined.Stop
-import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
-import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.WhisperMicButton
@@ -73,17 +69,17 @@ import java.util.Locale
 /**
  * Vollbild-Detail-Screen einer Entropie-Aufgabe (Frank-Wunsch 2026-05-20).
  *
- * Aufbau 1:1 wie BestJournalFrank's EntryDetailScreen, angepasst auf das Aufgaben-Datenmodell:
+ * Aufbau-Reduktion 2026-05-22 (Frank-Wunsch): Zusammenfassung-Karte, Status-Buttons
+ * und Vorlese-Zeile sind raus — sie reduzierten nicht die Entropie, sie erhoehten sie.
+ *
+ * Aktueller Aufbau:
  * 1. TopAppBar mit Zurück-Pfeil
- * 2. Zusammenfassung-Karte (Title fett + Description)
- * 3. Hero-Karte (Kategorie, Schweregrad, Prio-Score, Severity-Bar)
- * 4. Status-Buttons (4 Stück)
- * 5. Tags
- * 6. KI-Begründung + KI-Notizen
- * 7. Nachträge als eigene Karten (mit Lösch-Button pro Nachtrag)
- * 8. Nachtrag-Aufnahme via Mic
- * 9. Aktions-Zeile mit Vorlesen + Aufnahmedauer (analog Journal)
- * 10. Löschen-Button
+ * 2. Hero-Karte (Kategorie, Title, Schweregrad, Prio-Score, Severity-Bar)
+ * 3. Tags
+ * 4. KI-Begründung + KI-Notizen
+ * 5. Nachträge als eigene Karten (mit Lösch-Button pro Nachtrag)
+ * 6. Nachtrag-Aufnahme via Mic (nur Label "Nachtrag einsprechen", kein Untertitel)
+ * 7. Löschen-Button
  */
 @Composable
 fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hiltViewModel()) {
@@ -141,34 +137,9 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                         .padding(bottom = bottomInset + 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // ── 1. Zusammenfassung-Karte (Title + Description) ──
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            "Zusammenfassung",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = CosmosColors.AccentPrimary,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = entry.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = cosmos.textPrimary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (entry.description.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = entry.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = cosmos.textSecondary,
-                            )
-                        }
-                    }
-                }
-
-                // ── 2. Hero-Karte mit Kategorie + Prio + Severity ──
+                // ── 1. Hero-Karte mit Kategorie + Title + Beschreibung + Prio + Severity ──
+                // Zusammenfassung-Karte oben raus (Frank-Wunsch 2026-05-22) — Title +
+                // Beschreibung sind jetzt direkt in der Hero-Karte, keine doppelte Anzeige.
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Row(verticalAlignment = Alignment.Top) {
@@ -181,10 +152,19 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                                 EntropyCategoryPill(entry.category)
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = "Aufgabe",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = cosmos.textSecondary,
+                                    text = entry.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = cosmos.textPrimary,
+                                    fontWeight = FontWeight.Bold,
                                 )
+                                if (entry.description.isNotBlank()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = entry.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = cosmos.textSecondary,
+                                    )
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
@@ -211,47 +191,9 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     }
                 }
 
-                // ── 3. Status-Buttons (4 Stück) ──
-                Text(
-                    "Status",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = cosmos.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    StatusChip(
-                        label = "Offen",
-                        status = EntryStatus.OFFEN,
-                        current = entry.status,
-                        onClick = viewModel::setStatus,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatusChip(
-                        label = "In Arbeit",
-                        status = EntryStatus.IN_ARBEIT,
-                        current = entry.status,
-                        onClick = viewModel::setStatus,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    StatusChip(
-                        label = "Reduziert",
-                        status = EntryStatus.REDUZIERT,
-                        current = entry.status,
-                        onClick = viewModel::setStatus,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StatusChip(
-                        label = "Archiviert",
-                        status = EntryStatus.ARCHIVIERT,
-                        current = entry.status,
-                        onClick = viewModel::setStatus,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-
-                // ── 4. Tags ──
+                // ── 2. Tags ──
+                // Status-Sektion (Offen/In Arbeit/Reduziert/Archiviert) raus
+                // (Frank-Wunsch 2026-05-22) — zu viele Infos in der Aufgabe.
                 if (entry.tags.isNotEmpty()) {
                     Text(
                         "Tags",
@@ -321,7 +263,9 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     )
                 }
 
-                // ── 7. Nachtrag hinzufügen via Whisper ──
+                // ── 5. Nachtrag hinzufügen via Whisper ──
+                // Untertitel "Whisper Large V3 Turbo" entfernt 2026-05-22 (Frank-Wunsch) —
+                // nur noch der schlichte Label "Nachtrag einsprechen".
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -331,19 +275,13 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                             modifier = Modifier.size(24.dp),
                         )
                         Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Nachtrag einsprechen",
-                                color = cosmos.textPrimary,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                "Whisper Large V3 Turbo — wird als eigene Karte gespeichert.",
-                                color = cosmos.textSecondary,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
+                        Text(
+                            "Nachtrag einsprechen",
+                            color = cosmos.textPrimary,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
+                        )
                         WhisperMicButton(
                             onTranscript = { transcript -> viewModel.addFollowup(transcript) },
                             size = 44.dp,
@@ -351,59 +289,11 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     }
                 }
 
-                // ── 8. Aktions-Zeile: Vorlesen + Status ──
-                Box(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(1.dp)
-                            .background(cosmos.glassBorder.copy(alpha = 0.3f))
-                )
+                // Vorlese-Zeile "Eintrag + Nachträge vorlesen" entfernt 2026-05-22
+                // (Frank-Wunsch). TTS-Funktion bleibt im ViewModel falls spaeter
+                // wieder gebraucht, wird aktuell aber nicht mehr aus dem UI getriggert.
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(
-                        onClick = { viewModel.speakAll() },
-                        modifier = Modifier.size(44.dp),
-                    ) {
-                        when (state.ttsState) {
-                            TtsState.LOADING ->
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    strokeWidth = 2.dp,
-                                    color = CosmosColors.AccentPrimary,
-                                )
-                            TtsState.SPEAKING ->
-                                Icon(
-                                    imageVector = Icons.Outlined.Stop,
-                                    contentDescription = "Vorlesen stoppen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
-                                )
-                            TtsState.IDLE ->
-                                Icon(
-                                    imageVector = Icons.Outlined.VolumeUp,
-                                    contentDescription = "Vorlesen",
-                                    tint = CosmosColors.AccentPrimary,
-                                    modifier = Modifier.size(26.dp),
-                                )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text =
-                            when (state.ttsState) {
-                                TtsState.LOADING -> "TTS wird erzeugt …"
-                                TtsState.SPEAKING -> "Spricht — tippen zum Stoppen"
-                                TtsState.IDLE -> "Eintrag + Nachträge vorlesen"
-                            },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = cosmos.textSecondary,
-                    )
-                }
-
-                // ── 9. Löschen-Button ──
+                // ── 6. Löschen-Button ──
                 Button(
                     onClick = { viewModel.deleteEntry() },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -515,42 +405,6 @@ private fun FollowupCard(
                 keyboardOptions = KeyboardOptions.Default,
             )
         }
-    }
-}
-
-@Composable
-private fun StatusChip(
-    label: String,
-    status: EntryStatus,
-    current: EntryStatus,
-    onClick: (EntryStatus) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val cosmos = LocalCosmos.current
-    val selected = status == current
-    val accent = if (selected) CosmosColors.AccentPrimary else cosmos.textSecondary
-    Box(
-        modifier =
-            modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (selected) CosmosColors.AccentPrimary.copy(alpha = 0.18f) else cosmos.glassBg
-                )
-                .border(
-                    width = if (selected) 1.dp else 0.dp,
-                    color = if (selected) CosmosColors.AccentPrimary else Color.Transparent,
-                    shape = RoundedCornerShape(12.dp),
-                )
-                .clickable { onClick(status) }
-                .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = accent,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        )
     }
 }
 
