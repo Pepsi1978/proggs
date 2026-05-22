@@ -258,7 +258,7 @@ fun TagebuchScreen(
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
-                        backgroundColor = TagebuchAccent.copy(alpha = 0.18f),
+                        backgroundColor = TagebuchAccent.copy(alpha = 0.55f),
                         iconTint = TagebuchAccent,
                         onClick = {
                             inputDialogOpen = true
@@ -277,8 +277,8 @@ fun TagebuchScreen(
                         label = recordLabel,
                         backgroundColor =
                             if (voiceState == VoiceCaptureState.RECORDING)
-                                Color(0xFFE53935).copy(alpha = 0.22f)
-                            else TagebuchAccent.copy(alpha = 0.18f),
+                                Color(0xFFE53935).copy(alpha = 0.55f)
+                            else TagebuchAccent.copy(alpha = 0.55f),
                         iconTint =
                             if (voiceState == VoiceCaptureState.RECORDING) Color(0xFFE53935)
                             else TagebuchAccent,

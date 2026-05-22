@@ -127,15 +127,15 @@ fun MicCaptureActions(
         FabActionButton(
             icon = Icons.Outlined.Edit,
             label = "Schreiben",
-            background = accent.copy(alpha = 0.18f),
+            background = accent.copy(alpha = 0.55f),
             tint = accent,
             onClick = { inputDialogOpen = true },
         )
         FabActionButton(
             icon = recordIcon,
             label = recordLabel,
-            background = if (recording) Color(0xFFE53935).copy(alpha = 0.22f)
-            else accent.copy(alpha = 0.18f),
+            background = if (recording) Color(0xFFE53935).copy(alpha = 0.55f)
+            else accent.copy(alpha = 0.55f),
             tint = if (recording) Color(0xFFE53935) else accent,
             onClick = {
                 when (voiceState) {
