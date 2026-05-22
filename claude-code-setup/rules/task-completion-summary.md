@@ -1,9 +1,9 @@
 # Task-Completion-Summary: Pflicht-Schema am Ende jeder Aufgabe (KRITISCH)
 
 > **Diese Regel gilt für ALLE Aufgaben in ALLEN Projekten — ausnahmslos.**
-> Am Ende JEDER abgeschlossenen Aufgabe folgen drei orange-umrandete Boxen
-> (ERLEDIGTE AUFGABEN, optional NÖTIGE AUFGABEN, VORGESCHLAGENE AUFGABEN),
-> dann die Status-Meldung, dann maximal zwei Intelligenz-Vorschläge.
+> Am Ende JEDER abgeschlossenen Aufgabe folgen drei farbig umrahmte Boxen
+> (ERLEDIGTE AUFGABEN orange, optional NÖTIGE AUFGABEN gelb, VORGESCHLAGENE
+> AUFGABEN grün), dann die Status-Meldung, dann maximal zwei Intelligenz-Vorschläge.
 
 ---
 
@@ -14,7 +14,7 @@ mehrere Aufgaben in einer Session. Am Ende muss er auf einen Blick erkennen kön
 **Welche Aufgaben sind wirklich abgehakt? Welche nur teilweise? Welche gar nicht?
 Was muss als nächstes ran? Was würde die App noch besser machen?**
 Eine fließende Prosa-Zusammenfassung verliert sich bei 5-20 parallelen Aufgaben —
-drei klar abgegrenzte, orange-umrahmte Status-Boxen bleiben scannbar.
+drei klar abgegrenzte, farbig-umrahmte Status-Boxen bleiben scannbar.
 
 ---
 
@@ -22,46 +22,77 @@ drei klar abgegrenzte, orange-umrahmte Status-Boxen bleiben scannbar.
 
 In dieser festen Reihenfolge — getrennt durch jeweils eine Leerzeile:
 
-| Box | Wann | Inhalt |
-|-----|------|--------|
-| 1. **ERLEDIGTE AUFGABEN** | IMMER | Nummerierte Liste aller in dieser Session bearbeiteten Aufgaben mit Status-Symbol |
-| 2. **NÖTIGE AUFGABEN** | NUR wenn in Box 1 mindestens eine Aufgabe mit ⚠️ oder ❗ steht | Was als nächstes gemacht werden muss, weil es diesmal nicht abgeschlossen wurde |
-| 3. **VORGESCHLAGENE AUFGABEN** | IMMER (genau 5 Stück) | Was die App/Software/Umgebung am stärksten verbessern würde, basierend auf dem aktuellen Arbeitskontext |
+| Box | Wann | Farb-Endmarker | Inhalt |
+|-----|------|---------------|--------|
+| 1. **ERLEDIGTE AUFGABEN** | IMMER | 🟠 orange | Nummerierte Liste aller in dieser Session bearbeiteten Aufgaben mit Status-Symbol |
+| 2. **NÖTIGE AUFGABEN** | NUR wenn in Box 1 mindestens eine Aufgabe mit ⚠️ oder ❗ steht | 🟡 gelb | Was als nächstes gemacht werden muss, weil es diesmal nicht abgeschlossen wurde |
+| 3. **VORGESCHLAGENE AUFGABEN** | IMMER (genau 5 Stück) | 🟢 grün | Was die App/Software/Umgebung am stärksten verbessern würde |
 
 ---
 
 ## Format-Bausteine (gelten für ALLE drei Boxen)
 
-### Orange Trennlinie (Vollbreite, oben + unten jeder Box)
+### Die Trennlinie (Hybrid: dünne Heavy-Unicode-Linie mit Farb-Endmarkern)
 
-Vier Zeilen aus jeweils 40 orangen Quadraten — gibt die Eingrenzung auf voller Breite:
+Eine Trennlinie besteht aus:
+1. Einem Farb-Punkt am linken Rand (🟠 / 🟡 / 🟢 je nach Box)
+2. Genau **80 Heavy-Horizontal-Zeichen** `━` (U+2501) in der Mitte
+3. Demselben Farb-Punkt am rechten Rand
 
-```
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-```
-
-**Niemals** durch ═══, ───, ━━━ oder andere Zeichen ersetzen. Immer 🟧 × 40.
-
-### Headline-Zeile
-
-Zwischen den orangen Linien steht der Box-Titel, links und rechts durch je drei 🟧 flankiert:
+Beispiel für ERLEDIGTE AUFGABEN (orange):
 
 ```
-🟧🟧🟧 ERLEDIGTE AUFGABEN 🟧🟧🟧
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
 ```
 
-So wirkt der Titel optisch orange "eingerahmt" — Markdown rendert die Schrift selbst nicht farbig, aber die 🟧-Klammerung macht den Bereich farblich klar.
+Beispiel für NÖTIGE AUFGABEN (gelb):
+
+```
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
+```
+
+Beispiel für VORGESCHLAGENE AUFGABEN (grün):
+
+```
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
+```
+
+**Wichtig:**
+- Genau 80 `━` zwischen den Farb-Punkten — nicht mehr, nicht weniger
+- KEINE quadratischen Symbole 🟧 🟨 🟩 in der Linie — das sieht klobig aus
+- KEINE alternativen Zeichen ═══ oder ─── verwenden
+- Linie steht immer alleine in ihrer Zeile, KEIN Text dahinter
+
+### Box-Aufbau (drei Linien pro Box)
+
+Jede Box besteht aus genau **drei Trennlinien** und einer Headline:
+
+```
+[Trennlinie]
+Headline (z.B. ERLEDIGTE AUFGABEN)
+[Trennlinie]
+
+[Inhalt der Box]
+
+[Trennlinie]
+```
+
+- Linie 1: oben (öffnet die Box)
+- Headline: zwischen Linie 1 und Linie 2, schlicht in Großbuchstaben, KEINE Symbole davor/dahinter
+- Linie 2: schließt die Headline ab und öffnet den Inhalt
+- Inhalt
+- Linie 3: schließt die Box ab
 
 ---
 
-## Box 1 — ERLEDIGTE AUFGABEN (immer)
+## Box 1 — ERLEDIGTE AUFGABEN (immer, orange)
 
 ### Genaues Format
 
 ```
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 ERLEDIGTE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
+ERLEDIGTE AUFGABEN
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
 
 🔵 1. Aufgabe: [2-3 Sätze leichtes Deutsch, was umgesetzt wurde]
    ✅ alles okay
@@ -72,7 +103,7 @@ So wirkt der Titel optisch orange "eingerahmt" — Markdown rendert die Schrift 
 🟢 3. Aufgabe: [2-3 Sätze leichtes Deutsch]
    ❗ [warum es nicht funktioniert hat]
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
 ```
 
 ### Aufbau-Regeln
@@ -95,7 +126,7 @@ So wirkt der Titel optisch orange "eingerahmt" — Markdown rendert die Schrift 
 6. ⚫ (schwarz)
 7. ⚪ (weiß)
 
-**Niemals verwenden:** 🟠 (orange — reserviert für die Eingrenzungs-Linien)
+**Niemals verwenden:** 🟠 (orange — reserviert für die Endmarker der ERLEDIGTE-Trennlinien)
 **Niemals verwenden:** 🔴 (rot — Konflikt mit ❗-Fehler-Status)
 
 ### Die drei Status-Symbole
@@ -110,7 +141,7 @@ Bei ⚠️ und ❗ MUSS eine konkrete Erklärung folgen — nie nur das Symbol a
 
 ---
 
-## Box 2 — NÖTIGE AUFGABEN (nur bei ⚠️ oder ❗)
+## Box 2 — NÖTIGE AUFGABEN (nur bei ⚠️ oder ❗, gelb)
 
 ### Wann erscheinen
 
@@ -120,22 +151,21 @@ markiert ist.** Wenn alle Aufgaben ✅ sind, entfällt diese Box komplett.
 ### Was sie enthält
 
 Für jede ⚠️- oder ❗-Aufgabe aus Box 1: eine konkrete Folge-Aufgabe, die formuliert
-was als nächstes gemacht werden muss. Die Anzahl ergibt sich aus den Lücken — bei
-einer einzelnen ⚠️-Aufgabe steht hier nur eine Folge-Aufgabe.
+was als nächstes gemacht werden muss. Die Anzahl ergibt sich aus den Lücken.
 
 ### Genaues Format
 
 ```
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 NÖTIGE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
+NÖTIGE AUFGABEN
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 
 1. [Konkrete Folge-Aufgabe, max 2 Zeilen leichtes Deutsch.
    Direkt umsetzbar formuliert.]
 
 2. [Konkrete Folge-Aufgabe, max 2 Zeilen leichtes Deutsch.]
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 ```
 
 ### Aufbau-Regeln
@@ -143,14 +173,14 @@ einer einzelnen ⚠️-Aufgabe steht hier nur eine Folge-Aufgabe.
 | Regel | Detail |
 |-------|--------|
 | **Nummerierung** | `1.`, `2.`, `3.` — KEIN "Aufgabe:" Präfix, weil sie noch nicht erledigt sind |
-| **KEIN Farbpunkt** | Schlichte Liste, unterscheidet sich optisch von Box 1 |
+| **KEIN Farbpunkt vor der Nummer** | Schlichte Liste, unterscheidet sich optisch von Box 1 |
 | **KEIN Status-Symbol** | Diese Aufgaben sind noch nicht angegangen worden |
 | **Max 2 Zeilen** | Knapp und direkt umsetzbar |
 | **Leerzeile zwischen Aufgaben** | PFLICHT |
 
 ---
 
-## Box 3 — VORGESCHLAGENE AUFGABEN (immer 5)
+## Box 3 — VORGESCHLAGENE AUFGABEN (immer 5, grün)
 
 ### Wann erscheinen
 
@@ -174,9 +204,9 @@ Bezugspunkt richtet sich nach dem aktuellen Arbeitskontext:
 ### Genaues Format
 
 ```
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 VORGESCHLAGENE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
+VORGESCHLAGENE AUFGABEN
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
 
 1. [Vorschlag in max 2 Zeilen leichtes Deutsch.
    Konkret, umsetzbar, mit klarem Nutzen.]
@@ -189,7 +219,7 @@ Bezugspunkt richtet sich nach dem aktuellen Arbeitskontext:
 
 5. [Vorschlag in max 2 Zeilen leichtes Deutsch.]
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
 ```
 
 ### Aufbau-Regeln
@@ -198,62 +228,12 @@ Bezugspunkt richtet sich nach dem aktuellen Arbeitskontext:
 |-------|--------|
 | **Genau 5 Vorschläge** | Nicht 3, nicht 7 — fünf, immer fünf |
 | **Nummerierung** | `1.`, `2.`, `3.`, `4.`, `5.` — KEIN "Aufgabe:" Präfix |
-| **KEIN Farbpunkt** | Schlichte Liste wie NÖTIGE AUFGABEN |
+| **KEIN Farbpunkt vor der Nummer** | Schlichte Liste wie NÖTIGE AUFGABEN |
 | **Max 2 Zeilen pro Vorschlag** | Wenn es länger braucht: kürzen oder anders priorisieren |
 | **Leichtes Deutsch** | So wie man es einem Freund erklären würde |
 | **Konkret + umsetzbar** | Nicht "vielleicht mal verbessern" — sondern eine Aufgabe die Frank direkt geben könnte |
 | **Leerzeile zwischen Vorschlägen** | PFLICHT |
 | **Reihenfolge** | Stärkster Nutzen zuerst (Nummer 1 ist der wichtigste Vorschlag) |
-
----
-
-## Gesamtreihenfolge am Ende jeder Abschluss-Antwort
-
-```
-1. (während der Arbeit) Tool-Aufrufe, Code-Änderungen, kurze Updates
-2. (optional) Insight-Block
-...
-AM ENDE — in dieser Reihenfolge mit jeweils einer Leerzeile dazwischen:
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 ERLEDIGTE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-🔵 1. Aufgabe: ...
-   ✅ alles okay
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-(NUR falls oben ⚠️ oder ❗ vorkam:)
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 NÖTIGE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-1. ...
-2. ...
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-(IMMER:)
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 VORGESCHLAGENE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-1. ...
-2. ...
-3. ...
-4. ...
-5. ...
-
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-
-Committed und gepusht. / Committed, gepusht und plattformübergreifend.
-
-💡 Intelligenz-Vorschlag 1 (Aufgaben-bezogen): ...
-💡 Intelligenz-Vorschlag 2 (Harness-bezogen): ...
-```
 
 ---
 
@@ -295,33 +275,54 @@ Soll ich das umsetzen?
 
 ---
 
+## Gesamtreihenfolge am Ende jeder Abschluss-Antwort
+
+```
+1. (während der Arbeit) Tool-Aufrufe, Code-Änderungen, kurze Updates
+2. (optional) Insight-Block
+...
+AM ENDE — in dieser Reihenfolge mit jeweils einer Leerzeile dazwischen:
+
+[ERLEDIGTE-AUFGABEN-Box (orange) — IMMER]
+
+[NÖTIGE-AUFGABEN-Box (gelb) — NUR wenn ⚠️/❗ in Box 1]
+
+[VORGESCHLAGENE-AUFGABEN-Box (grün) — IMMER 5]
+
+Committed und gepusht. / Committed, gepusht und plattformübergreifend.
+
+💡 Intelligenz-Vorschlag 1 (Aufgaben-bezogen): ...
+💡 Intelligenz-Vorschlag 2 (Harness-bezogen): ...
+```
+
+---
+
 ## Vollständiges Beispiel (Multi-Task-Session mit gemischten Ergebnissen)
 
 ```
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 ERLEDIGTE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
+ERLEDIGTE AUFGABEN
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
 
-🔵 1. Aufgabe: Die Paywall wurde um drei neue Sprachen
-   erweitert. Türkisch, Polnisch und Schwedisch sind
-   jetzt vollständig übersetzt und werden in der App
-   angezeigt.
+🔵 1. Aufgabe: Die Paywall wurde um drei neue Sprachen erweitert.
+   Türkisch, Polnisch und Schwedisch sind jetzt vollständig
+   übersetzt und werden in der App angezeigt.
    ✅ alles okay
 
-🟣 2. Aufgabe: Das Premium-Bottom-Sheet wurde überarbeitet
-   und zeigt jetzt die neuen Strings. Auf Deutsch und
-   Englisch sieht es korrekt aus.
+🟣 2. Aufgabe: Das Premium-Bottom-Sheet wurde überarbeitet und
+   zeigt jetzt die neuen Strings. Auf Deutsch und Englisch
+   sieht es korrekt aus.
    ⚠️ tschechische Übersetzung steht noch aus
 
 🟢 3. Aufgabe: Der neue Onboarding-Screen sollte einen
    Animations-Effekt bekommen.
    ❗ Compose Animation API hat sich geändert, eigene Session nötig
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 NÖTIGE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
+NÖTIGE AUFGABEN
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 
 1. Tschechische Übersetzung für das Premium-Bottom-Sheet
    nachziehen (Übersetzungs-Skill).
@@ -329,11 +330,11 @@ Soll ich das umsetzen?
 2. Onboarding-Animation auf neue Compose 1.7 Animation-API
    migrieren — eigene Session einplanen.
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
-🟧🟧🟧 VORGESCHLAGENE AUFGABEN 🟧🟧🟧
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
+VORGESCHLAGENE AUFGABEN
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
 
 1. Paywall-A/B-Test einbauen: zwei Layout-Varianten
    randomisiert ausspielen und Conversion vergleichen.
@@ -350,7 +351,7 @@ Soll ich das umsetzen?
 5. Notifications mit smarterer Standardzeit pro Wochentag
    (z.B. später am Wochenende).
 
-🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧🟧
+🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
 
 Committed, gepusht und plattformübergreifend.
 
@@ -384,14 +385,16 @@ noch gepusht" im Status steht, MÜSSEN davor die drei Boxen stehen (Box 2 option
 
 - ❌ Abschluss-Antwort ohne ERLEDIGTE-AUFGABEN-Box
 - ❌ Die alten 3 Punkte (`Aufgabe:` / `Was wurde gemacht:` / `Wie funktioniert es jetzt:`) verwenden — komplett ersetzt
-- ❌ Trennlinien aus ═══ statt 🟧 × 40
-- ❌ Trennlinien kürzer als 40 🟧 — die orange Linie muss VOLLBREITE wirken
+- ❌ Trennlinien mit Quadraten 🟧🟧🟧 statt der Hybrid-Linie 🟠━━━🟠 — sieht klobig aus
+- ❌ Trennlinien mit ═══ oder ─── oder anderen Zeichen statt 🟠━×80🟠 / 🟡━×80🟡 / 🟢━×80🟢
+- ❌ Trennlinien kürzer als 80 ━
+- ❌ Falsche Farbe an den Endmarkern (z.B. 🟢 bei ERLEDIGTE — Orange ist Pflicht für Box 1)
 - ❌ Box 2 (NÖTIGE AUFGABEN) weglassen wenn ⚠️ oder ❗ in Box 1 vorkam
 - ❌ Box 2 (NÖTIGE AUFGABEN) ohne Trigger einfügen (wenn alle ✅)
 - ❌ Box 3 (VORGESCHLAGENE AUFGABEN) mit weniger oder mehr als genau 5 Punkten
 - ❌ Box 3 (VORGESCHLAGENE AUFGABEN) weglassen — sie kommt IMMER
 - ❌ Aufgaben ohne Nummerierung oder ohne Farbpunkt in Box 1
-- ❌ Farbpunkte in Box 2 oder Box 3 (die sind schlicht ohne Punkte)
+- ❌ Farbpunkte vor den Nummern in Box 2 oder Box 3 (die sind schlicht)
 - ❌ Status-Symbol weglassen in Box 1 (jede Aufgabe BRAUCHT ✅, ⚠️ oder ❗)
 - ❌ ⚠️ oder ❗ ohne konkrete Erklärung
 - ❌ Mehrere Aufgaben in einem Punkt zusammenfassen
