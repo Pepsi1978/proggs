@@ -63,25 +63,30 @@ Beispiel für VORGESCHLAGENE AUFGABEN (grün):
 - KEINE alternativen Zeichen ═══ oder ─── verwenden
 - Linie steht immer alleine in ihrer Zeile, KEIN Text dahinter
 
-### Box-Aufbau (drei Linien pro Box)
+### Box-Aufbau (zwei oder drei Trennlinien pro Box)
 
-Jede Box besteht aus genau **drei Trennlinien** und einer Headline:
+Jede Box hat eine obere Trennlinie und eine Trennlinie unter der Headline.
+Eine **untere Abschluss-Trennlinie** gibt es NUR bei der LETZTEN Box (VORGESCHLAGENE
+AUFGABEN) — bei ERLEDIGTE und NÖTIGE wird sie weggelassen, weil die obere Linie der
+NÄCHSTEN Box visuell denselben Job erledigt. So sieht der Übergang sauber aus statt
+mit doppelter Linie.
 
 ```
-[Trennlinie]
+[Trennlinie 1: öffnet die Box]
 Headline (z.B. ERLEDIGTE AUFGABEN)
-[Trennlinie]
+[Trennlinie 2: schließt Headline, öffnet Inhalt]
 
 [Inhalt der Box]
 
-[Trennlinie]
+(KEINE Linie hier bei ERLEDIGTE/NÖTIGE — die nächste Box öffnet selbst.
+ NUR bei der LETZTEN Box VORGESCHLAGENE: hier kommt die untere Abschluss-Linie.)
 ```
 
-- Linie 1: oben (öffnet die Box)
-- Headline: zwischen Linie 1 und Linie 2, schlicht in Großbuchstaben, KEINE Symbole davor/dahinter
-- Linie 2: schließt die Headline ab und öffnet den Inhalt
+- Linie 1: oben (öffnet die Box) — IMMER
+- Headline: schlicht in Großbuchstaben, KEINE Symbole davor/dahinter
+- Linie 2: schließt die Headline ab und öffnet den Inhalt — IMMER
 - Inhalt
-- Linie 3: schließt die Box ab
+- Linie 3 (Abschluss): NUR bei VORGESCHLAGENE AUFGABEN — die anderen Boxen enden ohne sie
 
 ---
 
@@ -103,7 +108,8 @@ ERLEDIGTE AUFGABEN
 🟢 3. Aufgabe: [2-3 Sätze leichtes Deutsch]
    ❗ [warum es nicht funktioniert hat]
 
-🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
+(KEINE untere Abschluss-Linie — die nächste Box (NÖTIGE oder VORGESCHLAGENE)
+ öffnet direkt darunter mit ihrer eigenen oberen Linie.)
 ```
 
 ### Aufbau-Regeln
@@ -165,7 +171,8 @@ NÖTIGE AUFGABEN
 
 2. [Konkrete Folge-Aufgabe, max 2 Zeilen leichtes Deutsch.]
 
-🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
+(KEINE untere Abschluss-Linie — die VORGESCHLAGENE-Box öffnet direkt darunter
+ mit ihrer eigenen oberen grünen Linie.)
 ```
 
 ### Aufbau-Regeln
@@ -318,8 +325,6 @@ ERLEDIGTE AUFGABEN
    Animations-Effekt bekommen.
    ❗ Compose Animation API hat sich geändert, eigene Session nötig
 
-🟠━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟠
-
 🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 NÖTIGE AUFGABEN
 🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
@@ -329,8 +334,6 @@ NÖTIGE AUFGABEN
 
 2. Onboarding-Animation auf neue Compose 1.7 Animation-API
    migrieren — eigene Session einplanen.
-
-🟡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟡
 
 🟢━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🟢
 VORGESCHLAGENE AUFGABEN
