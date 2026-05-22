@@ -36,7 +36,7 @@ namespace TerminalVoiceOverlay.Services
             // Gemini (optional)
             env.TryGetValue("GEMINI_API_KEY", out var geminiKey);
             GeminiApiKey = string.IsNullOrEmpty(geminiKey) ? null : geminiKey;
-            GeminiModel = Get(env, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview");
+            GeminiModel = Get(env, "GEMINI_MODEL", "gemini-3.1-flash-lite");
             GeminiThinkingLevel = Get(env, "GEMINI_THINKING_LEVEL", "MEDIUM");
 
             // Audio

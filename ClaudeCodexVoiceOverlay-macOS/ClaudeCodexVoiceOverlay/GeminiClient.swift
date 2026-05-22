@@ -2,7 +2,7 @@ import Foundation
 
 final class GeminiClient {
     private let apiKey: String
-    private let model = "gemini-3.1-flash-lite-preview"
+    private let model = "gemini-3.1-flash-lite"
     private let retryableStatusCodes: Set<Int> = [429, 500, 503]
     private let maxRetries = 5
     private let delays: [TimeInterval] = [2, 4, 8, 16, 32]

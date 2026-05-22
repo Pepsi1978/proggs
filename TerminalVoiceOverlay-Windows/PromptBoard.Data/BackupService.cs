@@ -180,7 +180,7 @@ public sealed class BackupService : IBackupService
 
                 if (existing is AiImprovementPrompt existingAi && p.IsAiImprovementPrompt)
                 {
-                    existingAi.GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite-preview";
+                    existingAi.GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite";
                     existingAi.IsActiveForImprovement = p.IsActiveForImprovement;
                 }
 
@@ -244,7 +244,7 @@ public sealed class BackupService : IBackupService
                 IsAlwaysOn = p.IsAlwaysOn,
                 SortOrder = p.SortOrder,
                 ImprovedByAiPromptId = p.ImprovedByAiPromptId,
-                GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite-preview",
+                GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite",
                 IsActiveForImprovement = p.IsActiveForImprovement,
                 CreatedAt = p.CreatedAtUtc,
                 UpdatedAt = p.UpdatedAtUtc,

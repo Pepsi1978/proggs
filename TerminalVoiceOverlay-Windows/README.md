@@ -148,7 +148,7 @@ Trage mindestens deinen **Groq API-Key** ein. Die wichtigsten Einstellungen:
 | `WHISPER_MODEL` | Nein | Whisper-Modell (Standard: `whisper-large-v3-turbo`) |
 | `WHISPER_LANG` | Nein | Sprache der Aufnahme (Standard: `de` fuer Deutsch) |
 | `GEMINI_API_KEY` | Nein | Google Gemini API-Key fuer Textkorrektur |
-| `GEMINI_MODEL` | Nein | Gemini-Modell (Standard: `gemini-3.1-flash-lite-preview`) |
+| `GEMINI_MODEL` | Nein | Gemini-Modell (Standard: `gemini-3.1-flash-lite`) |
 | `GEMINI_THINKING_LEVEL` | Nein | Thinking-Level fuer Gemini 3.x: `LOW`, `MEDIUM` oder `HIGH` |
 | `TERMINAL_PROCESS_NAMES` | Nein | Kommagetrennte Terminal-Prozessnamen (Standard: `WindowsTerminal,pwsh,powershell`) |
 

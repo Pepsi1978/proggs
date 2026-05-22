@@ -150,14 +150,14 @@ namespace TerminalVoiceOverlay.Views
                 string? key = settings.GeminiApiKey;
                 if (!string.IsNullOrWhiteSpace(key))
                 {
-                    // gemini-3.1-flash-lite-preview ist das Standard-Modell
+                    // gemini-3.1-flash-lite ist das Standard-Modell
                     // der Voice Terminal Overlay App — alle Gemini-Pfade
                     // (Diktat-Cleanup, Prompt-Improvement, Historie-Titel)
                     // nutzen dasselbe Modell, damit Verhalten und Latenz
                     // ueberall vorhersagbar sind. ThinkingLevel bleibt leer:
                     // das Lite-Modell akzeptiert keinen thinkingConfig-Block,
                     // der Client laesst ihn dann komplett aus dem Payload.
-                    return new GeminiClient(key, "gemini-3.1-flash-lite-preview", "");
+                    return new GeminiClient(key, "gemini-3.1-flash-lite", "");
                 }
             }
             catch (Exception ex)
