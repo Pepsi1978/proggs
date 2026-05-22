@@ -258,8 +258,8 @@ fun ThesenScreen(
                     FabIconButton(
                         icon = Icons.Outlined.Edit,
                         label = "Schreiben",
-                        backgroundColor = ThesenAccent.copy(alpha = 0.18f),
-                        iconTint = ThesenAccent,
+                        backgroundColor = ThesenAccent.copy(alpha = 0.7f),
+                        iconTint = Color.Black,
                         onClick = {
                             inputDialogOpen = true
                             actionsExpanded = false
@@ -277,11 +277,9 @@ fun ThesenScreen(
                         label = recordLabel,
                         backgroundColor =
                             if (voiceState == VoiceCaptureState.RECORDING)
-                                Color(0xFFE53935).copy(alpha = 0.22f)
-                            else ThesenAccent.copy(alpha = 0.18f),
-                        iconTint =
-                            if (voiceState == VoiceCaptureState.RECORDING) Color(0xFFE53935)
-                            else ThesenAccent,
+                                Color(0xFFE53935).copy(alpha = 0.7f)
+                            else ThesenAccent.copy(alpha = 0.7f),
+                        iconTint = Color.Black,
                         onClick = {
                             when (voiceState) {
                                 VoiceCaptureState.IDLE -> {
@@ -664,6 +662,7 @@ internal suspend fun addThesenEntry(context: Context, entry: ThesenEntry) {
         val updated = existing + entry
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 internal suspend fun deleteThesenEntry(context: Context, id: String) {
@@ -672,6 +671,7 @@ internal suspend fun deleteThesenEntry(context: Context, id: String) {
         val updated = existing.filterNot { it.id == id }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 /**
@@ -702,6 +702,7 @@ internal suspend fun updateThesenEntry(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 /**
@@ -720,6 +721,7 @@ internal suspend fun addThesenFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 internal suspend fun updateThesenFollowup(
@@ -739,6 +741,7 @@ internal suspend fun updateThesenFollowup(
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 internal suspend fun deleteThesenFollowup(context: Context, entryId: String, followupId: String) {
@@ -750,6 +753,7 @@ internal suspend fun deleteThesenFollowup(context: Context, entryId: String, fol
         }
         prefs[KEY_ENTRIES] = serializeEntries(updated)
     }
+    de.frank.entropyreducer.data.remote.drive.triggerDriveBackup(context)
 }
 
 private fun parseEntries(raw: String?): List<ThesenEntry> {

@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,6 +82,9 @@ fun BiomarkerHostScreen(
     // (Lifecycle < STARTED). Spart CPU/Akku bei Tab-Wechseln und Sperrbildschirm.
     val state by vm.state.collectAsStateWithLifecycle()
     val cardOrder by vm.cardOrder.collectAsStateWithLifecycle()
+    // Frank-Wunsch 2026-05-22 Phase 2: einheitliche Mic-Aktion mit Rosé-Akzent.
+    var micActionsOpen by remember { mutableStateOf(false) }
+    val tasksVm: de.frank.entropyreducer.presentation.dashboard1.TasksViewModel = hiltViewModel()
     // Frank-Wunsch 2026-05-18: per Karte gewaehlte Hintergrundfarbe.
     val cardColorMap by vm.cardColors.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
@@ -150,7 +154,7 @@ fun BiomarkerHostScreen(
                 currentTab = Routes.BIOMARKER,
                 micState = MicState.IDLE,
                 onTabSelected = onSwitchTab,
-                onMicClick = { onSwitchTab(Routes.TASKS) },
+                onMicClick = { micActionsOpen = !micActionsOpen },
                 onSubAreaSelected = onOpenSubArea,
             )
         },
@@ -199,10 +203,15 @@ fun BiomarkerHostScreen(
                 }
             }
 
+        // Frank-Wunsch 2026-05-22 Phase 2: Box-Wrapper damit MicCaptureActions
+        // ueber dem Grid als Overlay schweben kann (Alignment.BottomCenter).
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding),
+        ) {
         LazyVerticalGrid(
             state = lazyGridState,
             columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize(),
             // Frank-Wunsch 2026-05-09: top auf 0 damit der Sync-Zeitstempel direkt
             // an die jetzt kompakte TopAppBar anschliesst (~8dp natuerliche Luft
             // bleiben durch das vertikale Zentrieren des Titels in der TopAppBar).
@@ -594,6 +603,18 @@ fun BiomarkerHostScreen(
             }
             item("ft_spacer", span = { GridItemSpan(2) }) { Spacer(Modifier.height(80.dp)) }
         }
+        // Frank-Wunsch 2026-05-22 Phase 2: einheitliche Mic-Aktion.
+        // Akzent folgt der BottomBar: Cyan im Switcher, Rosé im Sub-Modus.
+        val switcher = de.frank.entropyreducer.presentation.navigation.LocalBottomBarSwitcher.current
+        val micAccent = if (switcher.showSwitcher) Color(0xFF0891B2) else Color(0xFFFB7185)
+        de.frank.entropyreducer.presentation.components.MicCaptureActions(
+            visible = micActionsOpen,
+            accent = micAccent,
+            onTextCommit = { text, source -> tasksVm.processCapturedText(text, source) },
+            onClose = { micActionsOpen = false },
+            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
+        )
+        }  // close Box
     }
 }
 

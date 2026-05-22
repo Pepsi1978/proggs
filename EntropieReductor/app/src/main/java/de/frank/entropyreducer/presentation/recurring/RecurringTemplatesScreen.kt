@@ -14,14 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,31 +36,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.presentation.components.CosmosScaffold
+import de.frank.entropyreducer.presentation.components.EntropyCategoryPill
 import de.frank.entropyreducer.presentation.components.GlassCard
 import de.frank.entropyreducer.presentation.components.MicCaptureActions
 import de.frank.entropyreducer.presentation.components.MicState
+import de.frank.entropyreducer.presentation.dashboard1.CategoryIconCircle
 import de.frank.entropyreducer.presentation.navigation.CosmosBottomBar
 import de.frank.entropyreducer.presentation.navigation.Routes
 import de.frank.entropyreducer.presentation.theme.CosmosColors
 import de.frank.entropyreducer.presentation.theme.LocalCosmos
+import de.frank.entropyreducer.presentation.theme.color
 
 /**
- * Loop-Reiter (Frank-Wunsch 2026-05-22 abend): einfache Liste der wiederkehrenden
- * Aufgaben. Der Mic-Button in der BottomBar oeffnet jetzt — wie ueberall in der
- * App — die einheitlichen MicCaptureActions (zwei runde Buttons "Schreiben"
- * und "Aufnehmen" in Orange), genau wie der Entropie-Reiter (Frank-Wunsch
- * 2026-05-22, dritte Iteration).
- *
- * BottomBar ist jetzt explizit eingebettet (Frank-Wunsch 2026-05-22): vorher
- * hatte der Screen kein eigenes Scaffold und die Bar verschwand beim Wechsel
- * nach Loop. Jetzt rendert er CosmosScaffold + CosmosBottomBar selbst mit
- * forcedSubMode=Routes.TASKS, damit die Bar in Orange leuchtet.
- *
- * Tap auf Karte: aktiv/pausiert toggeln (Switch).
- * Mülltonne pro Karte: loescht die Vorlage.
+ * Loop-Reiter (Frank-Wunsch 2026-05-22 Phase 2):
+ *  - Aufgaben sehen 1:1 wie im Aufgaben-Reiter aus (GlassCard mit
+ *    CategoryIconCircle + Kategorie-Pill + Titel + Beschreibung + Prio-Zahl).
+ *  - Checkbox LINKS vor jeder Karte (statt Switch rechts).
+ *  - Beim Aktivieren der Checkbox wird sofort eine Aufgabe in den Aufgaben-
+ *    Reiter uebernommen (ueber GenerateRecurringInstancesUseCase im
+ *    ViewModel — lastGeneratedAt=0 erzwingt die naechste Generierung).
+ *  - Solange die Checkbox aktiv ist, wird nach Abschluss der Aufgabe die
+ *    naechste Instanz nach RRULE erzeugt.
+ *  - Mic ueber die BottomBar oeffnet die einheitlichen MicCaptureActions
+ *    in Orange (Aufgaben-Sub-Akzent).
+ *  - BottomBar bleibt sichtbar (forcedSubMode=Routes.TASKS).
  */
 @Composable
 fun RecurringTemplatesScreen(
@@ -70,8 +74,6 @@ fun RecurringTemplatesScreen(
     val templates by viewModel.templates.collectAsState()
     val cosmos = LocalCosmos.current
 
-    // Frank-Wunsch 2026-05-22 (dritte Iteration): kein eckiges Sheet mehr.
-    // Mic-Tap oeffnet die einheitlichen MicCaptureActions.
     var micActionsOpen by remember { mutableStateOf(false) }
 
     CosmosScaffold(
@@ -93,7 +95,7 @@ fun RecurringTemplatesScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
@@ -102,17 +104,16 @@ fun RecurringTemplatesScreen(
                     ),
                 ) {
                     items(templates) { t ->
-                        TemplateCard(
+                        TemplateAsTaskCard(
                             template = t,
-                            onToggle = { viewModel.toggleActive(t) },
+                            onToggleActive = { viewModel.toggleActive(t) },
                             onDelete = { viewModel.delete(t) },
                         )
                     }
                 }
             }
 
-            // Frank-Wunsch 2026-05-22: einheitliche Mic-Aktion in Orange
-            // (Aufgaben-Akzent — Loop ist Sub-Bereich des Aufgaben-Tabs).
+            // Frank-Wunsch 2026-05-22 Phase 2: Mic in Orange (Aufgaben-Sub).
             MicCaptureActions(
                 visible = micActionsOpen,
                 accent = Color(0xFFEA580C),
@@ -154,36 +155,50 @@ private fun EmptyHint(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Frank-Wunsch 2026-05-22 Phase 2 (Aufgabe 3 + 5): Loop-Pattern-Karte sieht
+ * 1:1 wie die EntropyEntryCard im Aufgaben-Reiter aus — gleicher GlassCard,
+ * CategoryIconCircle links, Kategorie-Pill, Titel, Beschreibung, grosse Prio-
+ * Zahl rechts. Davor eine Checkbox; aktiv heisst "wird als Aufgabe uebernommen
+ * und solange aktiv nach jedem Abschluss neu erstellt".
+ *
+ * Die RRULE-Beschreibung (Taeglich, Woechentlich …) erscheint als zweite Zeile
+ * unter der Beschreibung, damit Frank auf einen Blick sieht wann der Eintrag
+ * fällig wird.
+ */
 @Composable
-private fun TemplateCard(
+private fun TemplateAsTaskCard(
     template: RecurringTemplateEntity,
-    onToggle: () -> Unit,
+    onToggleActive: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    val accent = if (template.isActive) CosmosColors.AccentPrimary else cosmos.textSecondary
+    val catColor = template.category.color()
+    val tint = priorityCardTint(template.priorityScore.toDouble(), cosmos.isDark)
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth().clickable { onToggle() },
-        contentPadding = 14.dp,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleActive),
+        tintColor = tint,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Outlined.Repeat,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+        Row(verticalAlignment = Alignment.Top) {
+            // Checkbox links (Frank-Wunsch 2026-05-22: statt Switch rechts).
+            Checkbox(
+                checked = template.isActive,
+                onCheckedChange = { onToggleActive() },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = Color(0xFFEA580C),
+                    uncheckedColor = cosmos.textSecondary,
+                ),
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            CategoryIconCircle(category = template.category, tint = catColor)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EntropyCategoryPill(template.category)
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = template.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -191,24 +206,69 @@ private fun TemplateCard(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                 )
-                Spacer(Modifier.height(2.dp))
+                if (!template.description.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = template.description ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                        maxLines = 2,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = humanReadable(template.rrule),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = cosmos.textSecondary,
                 )
             }
-            Switch(checked = template.isActive, onCheckedChange = { onToggle() })
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Outlined.Delete,
-                    contentDescription = "Löschen",
-                    tint = CosmosColors.Critical,
-                    modifier = Modifier.size(20.dp),
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${template.priorityScore}",
+                    color = priorityColor(template.priorityScore.toDouble()),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
                 )
+                Text(
+                    "Prio",
+                    color = cosmos.textSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Spacer(Modifier.height(4.dp))
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "Löschen",
+                        tint = CosmosColors.Critical,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }
+}
+
+/** Identisch zur Skala in TasksScreen damit die grosse Prio-Zahl die gleiche Farbe trifft. */
+private fun priorityColor(score: Double): Color =
+    when {
+        score >= 80.0 -> CosmosColors.PriorityRed
+        score >= 60.0 -> CosmosColors.PriorityOrange
+        score >= 40.0 -> CosmosColors.PriorityYellow
+        score >= 20.0 -> CosmosColors.PriorityGreen
+        else -> CosmosColors.PriorityBlue
+    }
+
+/** Karten-Hintergrund-Tint identisch zur EntropyEntryCard-Logik. */
+private fun priorityCardTint(score: Double, isDark: Boolean): Color {
+    val base = when {
+        score >= 80.0 -> CosmosColors.PriorityRed
+        score >= 60.0 -> CosmosColors.PriorityOrange
+        score >= 40.0 -> CosmosColors.PriorityYellow
+        score >= 20.0 -> CosmosColors.PriorityGreen
+        else -> CosmosColors.PriorityBlue
+    }
+    return base.copy(alpha = if (isDark) 0.14f else 0.18f)
 }
 
 /** Inline-Items-Helper fuer LazyColumn. */

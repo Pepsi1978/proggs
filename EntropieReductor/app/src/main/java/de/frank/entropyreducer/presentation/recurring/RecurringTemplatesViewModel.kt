@@ -33,7 +33,23 @@ class RecurringTemplatesViewModel @Inject constructor(
 
     fun toggleActive(template: RecurringTemplateEntity) {
         viewModelScope.launch {
-            repo.upsert(template.copy(isActive = !template.isActive, updatedAt = System.currentTimeMillis()))
+            val newActive = !template.isActive
+            repo.upsert(template.copy(isActive = newActive, updatedAt = System.currentTimeMillis()))
+            // Frank-Wunsch 2026-05-22 Phase 2 (Aufgabe 5): wenn die Checkbox
+            // aktiviert wird, soll sofort eine Aufgabe in der Liste erscheinen.
+            // generator() prueft alle aktiven Vorlagen und legt faellige Instanzen
+            // an — durch lastGeneratedAt=0 wird die naechste Occurrence sofort
+            // generiert.
+            if (newActive) {
+                repo.upsert(
+                    template.copy(
+                        isActive = true,
+                        lastGeneratedAt = 0L,
+                        updatedAt = System.currentTimeMillis(),
+                    )
+                )
+                generator()
+            }
         }
     }
 
