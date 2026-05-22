@@ -573,10 +573,16 @@ private fun EditDialog(
 }
 
 private val MODEL_OPTIONS =
-    listOf("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro")
+    listOf(
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+    )
 
 private fun modelLabel(model: String): String =
     when (model) {
+        "gemini-3.1-flash-lite" -> "Gemini 3.1 Flash Lite (neueste Generation, schnell und guenstig)"
         "gemini-2.5-pro" -> "Gemini 2.5 Pro (gruendlich, teurer)"
         "gemini-2.5-flash" -> "Gemini 2.5 Flash (schnell, ausreichend)"
         "gemini-2.5-flash-lite" -> "Gemini 2.5 Flash Lite (sehr schnell, einfache Aufgaben)"
