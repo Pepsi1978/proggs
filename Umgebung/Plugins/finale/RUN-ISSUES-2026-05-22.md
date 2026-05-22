@@ -492,4 +492,66 @@ erhoeht sein und erhoeht werden."
 
 ---
 
+## BUG #16 — Generelle Parallelisierungs-Direktive (Frank 2026-05-22) — UEBERGREIFENDE PLUGIN-REGEL
+
+**Schweregrad:** 🟥 hoch — fundamentale Plugin-Designvorgabe
+
+**Frank-Direktive 2026-05-22 (woertlich):**
+> "Es soll eigentlich so viel wie moeglich parallel arbeiten, innerhalb der Phasen.
+> Nicht nacheinander Agents machen, sondern immer so gut wie moeglich parallel
+> alles starten, was geht. Nicht nur bezogen auf Phase 2, sondern generell."
+
+**Dies ist eine UEBERGREIFENDE Plugin-Regel, die ALLE Phasen betrifft:**
+
+| Phase | Aktuelle Praxis | Soll-Praxis (Frank-Direktive 2026-05-22) |
+|-------|----------------|------------------------------------------|
+| Phase 0 (Skill-Verifikation) | 1 sequenzielles Script | Pro Skill 1 paralleler Verify-Task — 4 parallel statt sequenziell |
+| Phase 1A (Roentgen) | 1 Worker (oder gar keiner bei Delta) | 5-15 parallele Worker, Scope-Split nach Layer/Modul |
+| Phase 1B (Recht) | 1 Worker oder 3 sequenziell | 5-15 parallele Worker nach Jurisdiktion/Kategorie |
+| Phase 1B-cross-lingual (NEU) | 1 Worker fuer 27 Sprachen (BUG #12) | 4-5+ parallele Sprach-Bucket-Worker |
+| Phase 2 (Fix-Applier) | 1 Worker fuer N Findings (BUG #15) | Bei unabhaengigen Findings: 4-12+ parallele Worker |
+| Phase 3a (Strings-Migration) | Sequenziell | Parallel pro Modul/Datei |
+| Phase 3b (Uebersetzungs-Phase) | Theoretisch parallel (1 pro Sprache) — Praxis bei BestJournalAndroid 2026-05-18 unklar | 15 parallele Sprach-Worker (Continuous-Spawning FIN-023) |
+| Phase 3c (Cross-Lingual-Recht) | Sequenziell | Parallel pro Sprache |
+| Phase 4 (Re-Audit) | Theoretisch parallel (mehrere W1/W2/W3) — Praxis 2026-05-18 sequenziell | 5+ parallele Re-Audit-Worker |
+| Phase 5 (Loop-Entscheidung) | Sequenziell-Synthesizer | Bleibt sequenziell (Entscheidung muss zentral sein) |
+
+**Konkrete Plugin-Updates:**
+
+1. **orchestrator.md** muss eine zentrale "Parallel-First"-Direktive bekommen, hoeher
+   in der Hierarchie als FIN-023:
+   ```
+   FIN-029 (Frank-Direktive 2026-05-22): SO VIEL WIE MOEGLICH PARALLEL,
+   INNERHALB JEDER PHASE. Default ist parallel, sequenziell ist die Ausnahme
+   die expliziet gerechtfertigt werden muss.
+   ```
+
+2. **Pre-Flight-Plan** muss pro Phase die geplante Parallelitaet anzeigen:
+   ```
+   Phase 1A: 6 Worker parallel (Roentgen-Layer-Split)
+   Phase 1B: 8 Worker parallel (Recht-Kategorie-Split + 4 Sprach-Buckets cross-lingual)
+   Phase 2: max(N, 8) parallele fix-applier wo N = Anzahl-Findings, sequenziell nur bei <4 Findings
+   ```
+
+3. **Synthesizer-Pattern** muss IMMER eingebaut sein wenn parallele Worker arbeiten —
+   nicht optional. Verhindert Inkonsistenzen wenn 8 Worker ihre Teilergebnisse haben.
+
+4. **Worker-Cap dynamisch:** Sweet-Spot ist 8-15 parallel; bei >15 nimmt Coordination-Overhead
+   ueberhand. Defaults pro Phase definieren statt einmal "15 fuer alles".
+
+5. **Audit-Log:** Pro Phase eintragen wie viele Worker tatsaechlich parallel liefen.
+   Sonst kann man die Parallelitaet nicht im Nachhinein pruefen.
+
+**Verifizierte Geschwindigkeitsverluste in DIESEM Lauf:**
+- Phase 1B-cross-lingual: 8 Min sequenziell, geschaetzt 2 Min mit 5 parallelen Workern (-75%)
+- Phase 2 Fix-Apply: 13 Min sequenziell, geschaetzt 3 Min mit 6 parallelen Workern (-77%)
+- Gesamt-Lauf: ~30 Min, mit voller Parallelisierung erwartet ~10-12 Min (-67%)
+
+**Plugin-Identitaet:** Das `finale`-Plugin sollte nach Frank's Vision "ein Schwarm-System"
+sein, nicht eine sequenzielle Pipeline. Jeder Schritt der parallel laufen KANN, MUSS auch
+parallel laufen — nicht weil Token-Sparen, sondern weil Frank's Zeit kostbarer ist als
+Tokens.
+
+---
+
 (Weitere Bugs werden eingefuegt waehrend der Lauf fortschreitet.)
