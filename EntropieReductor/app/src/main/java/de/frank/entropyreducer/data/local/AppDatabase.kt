@@ -24,6 +24,7 @@ import de.frank.entropyreducer.data.local.dao.PromptExecutionDao
 import de.frank.entropyreducer.data.local.dao.PromptExecutionStepDao
 import de.frank.entropyreducer.data.local.dao.PromptToolPermissionDao
 import de.frank.entropyreducer.data.local.dao.PromptTriggerDao
+import de.frank.entropyreducer.data.local.dao.RecurringTemplateDao
 import de.frank.entropyreducer.data.local.dao.SavedPromptDao
 import de.frank.entropyreducer.data.local.dao.SupplementLogDao
 import de.frank.entropyreducer.data.local.dao.TokenUsageDailyDao
@@ -47,6 +48,7 @@ import de.frank.entropyreducer.data.local.entities.PromptExecutionEntity
 import de.frank.entropyreducer.data.local.entities.PromptExecutionStepEntity
 import de.frank.entropyreducer.data.local.entities.PromptToolPermissionEntity
 import de.frank.entropyreducer.data.local.entities.PromptTriggerEntity
+import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.local.entities.SavedPromptEntity
 import de.frank.entropyreducer.data.local.entities.SupplementLogEntity
 import de.frank.entropyreducer.data.local.entities.TokenUsageDailyEntity
@@ -94,8 +96,10 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             PromptToolPermissionEntity::class,
             TokenUsageDailyEntity::class,
             PromptTriggerEntity::class,
+            // Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22)
+            RecurringTemplateEntity::class,
         ],
-    version = 24,
+    version = 25,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -158,6 +162,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tokenUsageDailyDao(): TokenUsageDailyDao
 
     abstract fun promptTriggerDao(): PromptTriggerDao
+
+    /** Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22). */
+    abstract fun recurringTemplateDao(): RecurringTemplateDao
 
     companion object {
         const val DB_NAME = "entropy_reducer.db"
@@ -761,6 +768,48 @@ abstract class AppDatabase : RoomDatabase() {
             object : Migration(23, 24) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE entropy_entries ADD COLUMN dueAtMs INTEGER")
+                }
+            }
+
+        /**
+         * Schema 24 -> 25 (Sprint 2, Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben.
+         * Neue Tabelle recurring_templates mit RFC-5545-RRULE-Feld. Beim App-Start
+         * erzeugt GenerateRecurringInstancesUseCase aus aktiven Vorlagen normale
+         * EntropyEntries.
+         */
+        val MIGRATION_24_25: Migration =
+            object : Migration(24, 25) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS recurring_templates (
+                            id TEXT NOT NULL PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT,
+                            category TEXT NOT NULL,
+                            priorityScore INTEGER NOT NULL,
+                            severity INTEGER NOT NULL,
+                            estimatedDurationMinutes INTEGER,
+                            rrule TEXT NOT NULL,
+                            timeOfDayMinutes INTEGER NOT NULL DEFAULT 480,
+                            untilEpochMs INTEGER,
+                            nextOccurrenceAt INTEGER,
+                            lastGeneratedAt INTEGER NOT NULL DEFAULT 0,
+                            occurrenceCount INTEGER NOT NULL DEFAULT 0,
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            createdAt INTEGER NOT NULL,
+                            updatedAt INTEGER NOT NULL
+                        )
+                        """.trimIndent()
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_recurring_templates_isActive " +
+                            "ON recurring_templates(isActive)"
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_recurring_templates_nextOccurrenceAt " +
+                            "ON recurring_templates(nextOccurrenceAt)"
+                    )
                 }
             }
     }

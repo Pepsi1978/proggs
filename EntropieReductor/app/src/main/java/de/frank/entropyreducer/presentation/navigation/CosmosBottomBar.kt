@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
@@ -318,7 +319,7 @@ private fun subIconsFor(parentTab: String): List<SubIconMeta> =
             listOf(
                 SubIconMeta(Icons.Outlined.Book, "Entropie"),
                 SubIconMeta(Icons.Outlined.Lightbulb, "Thesen"),
-                SubIconMeta(Icons.Outlined.Insights, "3"),
+                SubIconMeta(Icons.Outlined.Repeat, "Wiederkehrend"),
             )
         else ->
             listOf(

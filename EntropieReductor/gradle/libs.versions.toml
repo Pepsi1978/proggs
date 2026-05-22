@@ -31,6 +31,7 @@ reorderable = "2.4.0"
 healthConnect = "1.1.0-alpha07"
 mapsCompose = "6.4.1"
 playServicesMaps = "19.0.0"
+libRecur = "0.16.1"
 
 [libraries]
 # Compose BOM
@@ -120,6 +121,9 @@ health-connect-client = { group = "androidx.health.connect", name = "connect-cli
 # fuer Jetpack-Compose-Verwendung. API-Key liegt in ~/SK/EntropieReductor/maps-api-key.txt.
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+
+# RFC-5545 RRULE-Parser (Wiederkehrende Aufgaben — Sprint 2, Frank-Wunsch 2026-05-22)
+lib-recur = { group = "org.dmfs", name = "lib-recur", version.ref = "libRecur" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

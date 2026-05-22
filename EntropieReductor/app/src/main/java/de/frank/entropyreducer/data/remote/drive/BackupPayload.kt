@@ -13,6 +13,7 @@ import de.frank.entropyreducer.data.local.entities.OuraPersonalInfoEntity
 import de.frank.entropyreducer.data.local.entities.OuraReadinessEntity
 import de.frank.entropyreducer.data.local.entities.OuraResilienceEntity
 import de.frank.entropyreducer.data.local.entities.OuraSleepDetailEntity
+import de.frank.entropyreducer.data.local.entities.RecurringTemplateEntity
 import de.frank.entropyreducer.data.local.entities.ScientistMessageEntity
 import de.frank.entropyreducer.data.local.entities.ScientistSessionEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
@@ -54,7 +55,7 @@ data class BackupPayload(
     // BackupPayload-Snapshot ohne explizite version-Angabe erstellt wird (z.B.
     // in Tests), wuerde er fueschlich Version 5 melden. Default auf aktuelle
     // Schema-Version anheben damit alle Code-Pfade konsistent sind.
-    val version: Int = 9,
+    val version: Int = 10,
     val exportedAt: Long,
     val entries: List<BackupEntry>,
     val insights: List<BackupInsight> = emptyList(),
@@ -123,6 +124,40 @@ data class BackupPayload(
      * Schema v9: Auto-Trigger-Konfigurationen (CRON, CHAIN, EVENT).
      */
     val promptTriggers: List<BackupPromptTrigger> = emptyList(),
+    /**
+     * Schema v10 (Frank-Wunsch 2026-05-22, Sprint 2.8): Vorlagen wiederkehrender
+     * Aufgaben (RFC-5545 RRULE). Ohne dieses Feld waeren alle Wiederholungs-Vorlagen
+     * nach `adb uninstall` + Restore weg — gleicher Stolperstein wie
+     * promptTriggers + supplements vorher. Default = emptyList damit aeltere
+     * Backups (v1-v9) weiterhin sauber lesbar bleiben.
+     */
+    val recurringTemplates: List<BackupRecurringTemplate> = emptyList(),
+)
+
+/**
+ * Schema v10: 1:1-Spiegel der RecurringTemplateEntity (Sprint 2.8). nextOccurrenceAt
+ * und lastGeneratedAt werden mitgesichert damit der Generator nach Restore nicht
+ * sofort alle Faelligkeiten der Vergangenheit erneut feuert.
+ */
+@Serializable
+data class BackupRecurringTemplate(
+    val id: String,
+    val title: String,
+    val description: String? = null,
+    /** EntropyCategory.name. Unbekannte Werte beim Restore -> SONSTIGES. */
+    val category: String = "SONSTIGES",
+    val priorityScore: Int = 50,
+    val severity: Int = 5,
+    val estimatedDurationMinutes: Int? = null,
+    val rrule: String,
+    val timeOfDayMinutes: Int = 480,
+    val untilEpochMs: Long? = null,
+    val nextOccurrenceAt: Long? = null,
+    val lastGeneratedAt: Long = 0L,
+    val occurrenceCount: Int = 0,
+    val isActive: Boolean = true,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
 /** Schema v8/v9: gespeicherter Prompt mit Kategorie + Agentic-AI-Felder. */
@@ -1298,6 +1333,50 @@ fun BackupEntropyFollowup.toEntity():
         rawText = rawText,
         improvedText = improvedText,
         isImproved = isImproved,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+// =========================================================================
+// Schema v10 (Sprint 2.8, Frank-Wunsch 2026-05-22): RecurringTemplates
+// =========================================================================
+
+fun RecurringTemplateEntity.toBackup(): BackupRecurringTemplate =
+    BackupRecurringTemplate(
+        id = id,
+        title = title,
+        description = description,
+        category = category.name,
+        priorityScore = priorityScore,
+        severity = severity,
+        estimatedDurationMinutes = estimatedDurationMinutes,
+        rrule = rrule,
+        timeOfDayMinutes = timeOfDayMinutes,
+        untilEpochMs = untilEpochMs,
+        nextOccurrenceAt = nextOccurrenceAt,
+        lastGeneratedAt = lastGeneratedAt,
+        occurrenceCount = occurrenceCount,
+        isActive = isActive,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+fun BackupRecurringTemplate.toEntity(): RecurringTemplateEntity =
+    RecurringTemplateEntity(
+        id = id,
+        title = title,
+        description = description,
+        category = parseCategoryCompat(category),
+        priorityScore = priorityScore.coerceIn(0, 100),
+        severity = severity.coerceIn(1, 10),
+        estimatedDurationMinutes = estimatedDurationMinutes,
+        rrule = rrule,
+        timeOfDayMinutes = timeOfDayMinutes.coerceIn(0, 24 * 60 - 1),
+        untilEpochMs = untilEpochMs,
+        nextOccurrenceAt = nextOccurrenceAt,
+        lastGeneratedAt = lastGeneratedAt,
+        occurrenceCount = occurrenceCount.coerceAtLeast(0),
+        isActive = isActive,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

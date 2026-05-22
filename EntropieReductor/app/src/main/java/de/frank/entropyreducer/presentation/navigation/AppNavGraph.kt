@@ -221,7 +221,10 @@ private fun AppNavHostInner(nav: androidx.navigation.NavHostController, modifier
                 // mit Inhalt befuellt.
                 val isTagebuch = parent == Routes.TASKS && index == 1
                 val isThesen = parent == Routes.TASKS && index == 2
-                if (isTagebuch) {
+                val isRecurring = parent == Routes.TASKS && index == 3
+                if (isRecurring) {
+                    de.frank.entropyreducer.presentation.recurring.RecurringTemplatesScreen()
+                } else if (isTagebuch) {
                     TagebuchScreen(
                         onBack = {
                             nav.popBackStack()

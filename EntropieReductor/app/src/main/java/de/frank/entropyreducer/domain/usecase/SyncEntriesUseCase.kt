@@ -68,6 +68,9 @@ constructor(
         de.frank.entropyreducer.data.repository.PromptToolPermissionRepository,
     private val promptTriggerRepo:
         de.frank.entropyreducer.data.repository.PromptTriggerRepository,
+    // Sprint 2.8 (Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben-Vorlagen restorebar.
+    private val recurringTemplateRepo:
+        de.frank.entropyreducer.data.repository.RecurringTemplateRepository,
     private val json: Json,
 ) {
 
@@ -441,6 +444,17 @@ constructor(
                         nextScheduledAt = nextAt,
                     )
                 )
+                inserted++
+            }
+        }
+
+        // --- Wiederkehrende Aufgaben-Vorlagen (v10+, Sprint 2.8, Frank-Wunsch 2026-05-22) ---
+        // Existenz-Strategie pro id: nur neue Templates einspielen, lokale Edits gewinnen.
+        if (payload.recurringTemplates.isNotEmpty()) {
+            val existingIds = recurringTemplateRepo.getAllForBackup().map { it.id }.toHashSet()
+            for (b in payload.recurringTemplates) {
+                if (b.id in existingIds) continue
+                recurringTemplateRepo.upsert(b.toEntity())
                 inserted++
             }
         }

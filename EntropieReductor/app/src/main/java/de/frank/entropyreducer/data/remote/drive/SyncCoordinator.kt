@@ -102,6 +102,11 @@ constructor(
         Lazy<de.frank.entropyreducer.data.repository.PromptToolPermissionRepository>,
     private val promptTriggerRepoLazy:
         Lazy<de.frank.entropyreducer.data.repository.PromptTriggerRepository>,
+    // Sprint 2.8 (Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben-Vorlagen
+    // ins Backup-Payload. Ohne diese Lazy waeren alle RRULE-Vorlagen nach
+    // adb uninstall verloren.
+    private val recurringTemplateRepoLazy:
+        Lazy<de.frank.entropyreducer.data.repository.RecurringTemplateRepository>,
     private val json: Json,
 ) {
 
@@ -275,9 +280,13 @@ constructor(
                 }
             }
 
+            // Sprint 2.8: alle Vorlagen wiederkehrender Aufgaben ins Backup.
+            val recurringTemplateBackups =
+                recurringTemplateRepoLazy.get().getAllForBackup().map { it.toBackup() }
+
             val payload =
                 BackupPayload(
-                    version = 9,
+                    version = 10,
                     exportedAt = System.currentTimeMillis(),
                     entries = entries,
                     insights = insights,
@@ -296,6 +305,7 @@ constructor(
                     savedPrompts = savedPromptBackups,
                     promptToolPermissions = permissionBackups,
                     promptTriggers = triggerBackups,
+                    recurringTemplates = recurringTemplateBackups,
                 )
             // Frank-Bugfix 2026-05-16 (Iteration 2): Defense-in-Depth gegen OOM
             // beim Serialize. Falls jemals ein Backup-Payload zu gross wird

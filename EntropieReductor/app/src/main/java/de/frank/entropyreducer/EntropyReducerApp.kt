@@ -44,6 +44,11 @@ class EntropyReducerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var amazfitRepository: AmazfitRepository
 
+    /** Sprint 2 (Frank-Wunsch 2026-05-22): wiederkehrende Aufgaben beim App-Start erzeugen. */
+    @Inject
+    lateinit var generateRecurringInstances:
+        de.frank.entropyreducer.domain.usecase.GenerateRecurringInstancesUseCase
+
     @Inject lateinit var ouraRepository: OuraRepository
 
     @Inject lateinit var healthConnect: HealthConnectManager
@@ -121,6 +126,20 @@ class EntropyReducerApp : Application(), Configuration.Provider {
                     android.util.Log.w(
                         "EntropyReducerApp",
                         "markRunningAsInterrupted fehlgeschlagen",
+                        it,
+                    )
+                }
+        }
+
+        // Sprint 2 (Frank-Wunsch 2026-05-22): Wiederkehrende Aufgaben generieren.
+        // Laeuft asynchron auf IO, blockiert nicht den App-Start. Idempotent —
+        // mehrfache Aufrufe am gleichen Tag erzeugen keine Duplikate.
+        applicationScope.launch {
+            runCatching { generateRecurringInstances() }
+                .onFailure {
+                    android.util.Log.w(
+                        "EntropyReducerApp",
+                        "GenerateRecurringInstances fehlgeschlagen",
                         it,
                     )
                 }

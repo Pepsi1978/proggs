@@ -30,7 +30,15 @@ enum class EntryStatus { OFFEN, IN_ARBEIT, REDUZIERT, ARCHIVIERT }
  */
 enum class TimeBucket { HEUTE, MORGEN, FREIBLOCK, SPAETER }
 
-enum class EntrySource { NUTZER_MIC, NUTZER_TEXT, SHARE_SHEET, KI_ERKANNT, BIOMARKER_AUTO }
+enum class EntrySource {
+    NUTZER_MIC,
+    NUTZER_TEXT,
+    SHARE_SHEET,
+    KI_ERKANNT,
+    BIOMARKER_AUTO,
+    /** Wiederkehrende Aufgabe — automatisch aus RecurringTemplate erzeugt (Sprint 2). */
+    RECURRING_TEMPLATE,
+}
 
 enum class MemorySource { MANUELL, KI_VORSCHLAG, AUS_PROFIL }
 

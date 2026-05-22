@@ -72,8 +72,8 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 164
-        versionName = "0.11.8"
+        versionCode = 165
+        versionName = "0.11.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -253,6 +253,11 @@ dependencies {
     // eingezeichneter Strecke im Trainings-Detail-Screen.
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
+
+    // RFC-5545 RRULE-Parser (Sprint 2, Frank-Wunsch 2026-05-22) — wiederkehrende Aufgaben.
+    // Apache 2.0, ~120kb. Bietet RecurrenceRule + RecurrenceRuleIterator zum Berechnen
+    // naechster Vorkommen. Wird nur von RecurringTemplateRepository/UseCase importiert.
+    implementation(libs.lib.recur)
 
     // Pruefe Internet-Konnektivitaet
     implementation(libs.core.ktx)

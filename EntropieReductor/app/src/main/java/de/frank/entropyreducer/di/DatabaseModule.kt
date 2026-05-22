@@ -42,6 +42,7 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_21_22,
                 AppDatabase.MIGRATION_22_23,
                 AppDatabase.MIGRATION_23_24,
+                AppDatabase.MIGRATION_24_25,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
@@ -114,6 +115,9 @@ object DatabaseModule {
     @Provides fun provideTokenUsageDailyDao(db: AppDatabase) = db.tokenUsageDailyDao()
 
     @Provides fun providePromptTriggerDao(db: AppDatabase) = db.promptTriggerDao()
+
+    /** Wiederkehrende Aufgaben (Sprint 2, Frank-Wunsch 2026-05-22). */
+    @Provides fun provideRecurringTemplateDao(db: AppDatabase) = db.recurringTemplateDao()
 
     // Frank-Wunsch 2026-05-09 (Abend): Insights und Memories leben jetzt in
     // ScientistDatabase — schema-stabil und ins Drive-Backup mitgesichert.
