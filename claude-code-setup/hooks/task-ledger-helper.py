@@ -26,6 +26,7 @@ Aufruf-Modi:
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 import time
@@ -255,9 +256,15 @@ def cmd_update(session_id, tool_name, tool_input, tool_output_text):
             try:
                 ti = tool_input if isinstance(tool_input, dict) else {}
                 command = ti.get("command", "") or ""
-                # Fix L6.1: --dry-run nur als ECHTES Flag erkennen, nicht als
-                # Substring in einer commit-Message wie `commit -m "added --dry-run"`.
-                is_dry_run = bool(re.search(r"(?:^|\s)--dry-run(?:\s|=|$)", command))
+                # Fix L11.1: --dry-run nur als ECHTES Token erkennen — innerhalb von
+                # Anfuehrungszeichen (z.B. `commit -m "added --dry-run"`) zaehlt es nicht.
+                # shlex.split respektiert die Shell-Quoting-Regeln und liefert echte Tokens.
+                try:
+                    tokens = shlex.split(command)
+                    is_dry_run = any(t == "--dry-run" or t.startswith("--dry-run=") for t in tokens)
+                except ValueError:
+                    # Unparsbar (z.B. unbalancierte Quotes) — Fallback auf altes Pattern.
+                    is_dry_run = bool(re.search(r"(?:^|\s)--dry-run(?:\s|=|$)", command))
                 if "git commit" in command and not is_dry_run:
                     m = re.search(r"\[(?:\S+)\s+([0-9a-f]{7,40})\]", tool_output_text or "")
                     if m:
