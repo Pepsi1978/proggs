@@ -236,6 +236,15 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getInt(KEY_LAST_RESCORE_VERSION, 0)
         set(value) { prefs.edit().putInt(KEY_LAST_RESCORE_VERSION, value).apply() }
 
+    /**
+     * Zeitpunkt (epoch ms) des letzten automatischen Aufgaben-Refresh beim App-Start
+     * (Frank-Wunsch 2026-05-22). Throttle: wir laufen hoechstens einmal pro 6 Stunden,
+     * damit Cold-Starts kurz hintereinander keine Gemini-Quota verbrennen.
+     */
+    var lastStartupRefreshAtMs: Long
+        get() = prefs.getLong(KEY_LAST_STARTUP_REFRESH, 0L)
+        set(value) { prefs.edit().putLong(KEY_LAST_STARTUP_REFRESH, value).apply() }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -283,6 +292,7 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_DRIVE_LAST_BACKUP = "drive_last_backup_ms"
         private const val KEY_CALENDAR_ACCOUNT = "calendar_account_email"
         private const val KEY_LAST_RESCORE_VERSION = "last_rescore_version_code"
+        private const val KEY_LAST_STARTUP_REFRESH = "last_startup_refresh_at_ms"
         // Zepp / Amazfit T-Rex 3
         private const val KEY_ZEPP_EMAIL = "zepp_email"
         private const val KEY_ZEPP_PASSWORD = "zepp_password"

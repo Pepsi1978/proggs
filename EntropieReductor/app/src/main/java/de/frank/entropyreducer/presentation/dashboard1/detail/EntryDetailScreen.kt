@@ -216,7 +216,16 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                     }
                 }
 
-                // ── 5. KI-Begründung + KI-Notizen ──
+                // ── 3. Zeitaufwand-Regler (Frank-Wunsch 2026-05-22) ──
+                // Exponentiell skalierter Schieberegler (5 min … 4 Wochen) plus
+                // manuelle Eingabe. Wert wird vom Briefing beruecksichtigt um zu
+                // pruefen ob die Aufgaben des Tages in die verfuegbare Zeit passen.
+                DurationEstimateCard(
+                    currentMinutes = entry.estimatedDurationMinutes,
+                    onChange = viewModel::setEstimatedDuration,
+                )
+
+                // ── 4. KI-Begründung + KI-Notizen ──
                 if (entry.priorityReason.isNotBlank() || !entry.aiNotes.isNullOrBlank()) {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
@@ -337,6 +346,157 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(color = CosmosColors.AccentPrimary)
+            }
+        }
+    }
+}
+
+/**
+ * Diskrete, exponentiell wachsende Stop-Liste fuer den Zeitaufwand-Regler
+ * (Frank-Wunsch 2026-05-22): am Anfang feine Minuten-Schritte, dann
+ * Stunden, Tage, Wochen.
+ *
+ * 24 Stops decken alles von 5 min bis 4 Wochen ab.
+ */
+private val DURATION_STOPS: IntArray = intArrayOf(
+    5, 10, 15, 20, 30, 45,                              // Minuten (6)
+    60, 90, 120, 180, 240, 300, 420, 600, 720,          // Stunden 1-12h (9)
+    1440, 2160, 2880, 4320, 5760, 7200,                 // Tage 1-5 (6)
+    10080, 20160, 40320,                                // Wochen 1, 2, 4 (3)
+)
+
+private fun durationStopIndexFor(minutes: Int?): Int {
+    if (minutes == null) return -1
+    val idx = DURATION_STOPS.indexOfFirst { it >= minutes }
+    return if (idx < 0) DURATION_STOPS.lastIndex else idx
+}
+
+private fun formatDuration(minutes: Int): String =
+    when {
+        minutes < 60 -> "$minutes min"
+        minutes < 1440 -> {
+            val h = minutes / 60
+            val rest = minutes % 60
+            if (rest == 0) "$h h" else "$h h $rest min"
+        }
+        minutes < 10080 -> {
+            val d = minutes / 1440
+            val restH = (minutes % 1440) / 60
+            if (restH == 0) "$d Tag${if (d > 1) "e" else ""}"
+            else "$d Tag${if (d > 1) "e" else ""} $restH h"
+        }
+        else -> {
+            val w = minutes / 10080
+            val restD = (minutes % 10080) / 1440
+            if (restD == 0) "$w Woche${if (w > 1) "n" else ""}"
+            else "$w Woche${if (w > 1) "n" else ""} $restD Tag${if (restD > 1) "e" else ""}"
+        }
+    }
+
+@Composable
+private fun DurationEstimateCard(
+    currentMinutes: Int?,
+    onChange: (Int?) -> Unit,
+) {
+    val cosmos = LocalCosmos.current
+    val initialStop = remember(currentMinutes) { durationStopIndexFor(currentMinutes) }
+    // Slider-Position in float Stop-Index. -1 = unbestimmt.
+    var sliderPos by remember(initialStop) {
+        mutableStateOf(if (initialStop < 0) 0f else initialStop.toFloat())
+    }
+    var manualText by remember(currentMinutes) {
+        mutableStateOf(currentMinutes?.toString() ?: "")
+    }
+    val sliderMinutes = remember(sliderPos) {
+        DURATION_STOPS[sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)]
+    }
+    val displayMinutes = currentMinutes ?: sliderMinutes
+    val isUnset = currentMinutes == null
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Zeitaufwand",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CosmosColors.AccentPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    if (isUnset) "ohne Schaetzung" else "≈ ${formatDuration(displayMinutes)}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isUnset) cosmos.textSecondary else cosmos.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            androidx.compose.material3.Slider(
+                value = sliderPos,
+                onValueChange = { v -> sliderPos = v },
+                onValueChangeFinished = {
+                    val snapped = sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)
+                    sliderPos = snapped.toFloat()
+                    val m = DURATION_STOPS[snapped]
+                    manualText = m.toString()
+                    onChange(m)
+                },
+                valueRange = 0f..(DURATION_STOPS.lastIndex.toFloat()),
+                steps = DURATION_STOPS.size - 2,
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = CosmosColors.AccentPrimary,
+                    activeTrackColor = CosmosColors.AccentPrimary,
+                    inactiveTrackColor = cosmos.glassBorder,
+                ),
+            )
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "5 min",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "4 Wochen",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cosmos.textSecondary,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = manualText,
+                    onValueChange = { manualText = it.filter { c -> c.isDigit() }.take(6) },
+                    label = { Text("Manuell in Minuten") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = cosmos.textPrimary,
+                        unfocusedTextColor = cosmos.textPrimary,
+                        focusedBorderColor = CosmosColors.AccentPrimary,
+                        unfocusedBorderColor = cosmos.glassBorder,
+                    ),
+                )
+                Spacer(Modifier.width(8.dp))
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        val parsed = manualText.toIntOrNull()
+                        if (parsed != null && parsed > 0) {
+                            onChange(parsed)
+                            sliderPos = durationStopIndexFor(parsed).toFloat().coerceAtLeast(0f)
+                        }
+                    },
+                ) { Text("Setzen") }
+                Spacer(Modifier.width(6.dp))
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        onChange(null)
+                        manualText = ""
+                        sliderPos = 0f
+                    },
+                ) { Text("Loeschen", color = cosmos.textSecondary) }
             }
         }
     }

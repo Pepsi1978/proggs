@@ -193,7 +193,10 @@ class ProcessEntryUseCase @Inject constructor(
      * priorityReason aktualisiert — Title, Beschreibung, Kategorie, Tags und
      * timeBucket bleiben unveraendert (der Eintrag ist ja schon strukturiert).
      */
-    suspend fun rescoreExisting(entry: EntropyEntryEntity): Result<EntropyEntryEntity> {
+    suspend fun rescoreExisting(
+        entry: EntropyEntryEntity,
+        followupTexts: List<String> = emptyList(),
+    ): Result<EntropyEntryEntity> {
         val key = secrets.geminiApiKey
             ?: return Result.failure(IllegalStateException("Kein Gemini-Key hinterlegt"))
         val model = settings.geminiModelFlow.first()
@@ -227,6 +230,16 @@ class ProcessEntryUseCase @Inject constructor(
             }
             entry.estimatedDurationMinutes?.let {
                 appendLine("- Geschaetzte Dauer: $it min")
+            }
+            // Frank-Wunsch 2026-05-22: Nachtraege MUESSEN in die Neubewertung
+            // einfliessen. Wenn Frank z.B. einen Nachtrag spricht "ist jetzt
+            // dringender geworden", muss die Prio entsprechend hoch.
+            if (followupTexts.isNotEmpty()) {
+                appendLine()
+                appendLine("Nachtraege zu diesem Eintrag (chronologisch):")
+                followupTexts.forEachIndexed { idx, text ->
+                    appendLine("- Nachtrag ${idx + 1}: $text")
+                }
             }
         }
 

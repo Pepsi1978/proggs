@@ -11,6 +11,7 @@ import de.frank.entropyreducer.data.local.entities.EntropyEntryFollowupEntity
 import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.domain.model.EntryStatus
 import de.frank.entropyreducer.domain.tts.TtsPlayer
+import de.frank.entropyreducer.domain.usecase.ProcessEntryUseCase
 import de.frank.entropyreducer.domain.tts.TtsResult
 import java.util.UUID
 import javax.inject.Inject
@@ -69,6 +70,7 @@ constructor(
     private val entries: EntryRepository,
     private val followupDao: EntropyEntryFollowupDao,
     private val ttsPlayer: TtsPlayer,
+    private val process: ProcessEntryUseCase,
 ) : AndroidViewModel(application) {
 
     /**
@@ -164,9 +166,11 @@ constructor(
 
     /**
      * Speichert einen neuen Nachtrag. Der Whisper-Mic-Button liefert den Transkript-String; wir
-     * bauen ein FollowupEntity und legen es ab. Nachträge sind eigene Datensätze — der
-     * Haupt-Eintrag wird NICHT automatisch neu bewertet. Frank kann das über die bestehende "Mit
-     * Nachtrag neu bewerten"-Logik der TasksViewModel separat anstoßen.
+     * bauen ein FollowupEntity und legen es ab.
+     *
+     * Frank-Wunsch 2026-05-22: Direkt nach dem Speichern wird der Eintrag neu bewertet —
+     * der Nachtrag fliesst in priorityScore + priorityReason ein. So muss Frank nicht
+     * extra eine "neu bewerten"-Aktion triggern.
      */
     fun addFollowup(transcript: String) {
         val text = transcript.trim()
@@ -186,11 +190,52 @@ constructor(
                         updatedAt = now,
                     )
                 )
+                rescoreWithCurrentFollowups()
             } catch (e: Exception) {
                 errorFlow.value = "Nachtrag konnte nicht gespeichert werden: ${e.message}"
             } finally {
                 addingFollowupFlow.value = false
             }
+        }
+    }
+
+    /**
+     * Sammelt alle Followups des aktuellen Eintrags (chronologisch) und triggert die
+     * Gemini-Neubewertung mit Nachtrags-Kontext. Bei Fehler nur leise loggen — der
+     * Nachtrag selbst ist ja schon gespeichert und der Eintrag bleibt funktional.
+     */
+    private suspend fun rescoreWithCurrentFollowups() {
+        val current = entries.get(entryId) ?: return
+        val allFollowups = followupDao.getByEntryId(entryId)
+        val followupTexts = allFollowups
+            .sortedBy { it.createdAt }
+            .map { it.improvedText?.takeIf { _ -> it.isImproved } ?: it.rawText }
+            .filter { it.isNotBlank() }
+        process.rescoreExisting(current, followupTexts)
+            .onSuccess { reloadTrigger.value = System.currentTimeMillis() }
+            .onFailure { ex ->
+                android.util.Log.w(
+                    "EntryDetailVM",
+                    "Rescore nach Nachtrag fehlgeschlagen: ${ex.message}",
+                )
+            }
+    }
+
+    /**
+     * Setzt die geschaetzte Zeitspanne (in Minuten) fuer den Eintrag. null = unbestimmt
+     * (Default). Wird vom Briefing genutzt um zu pruefen ob die Aufgaben des Tages
+     * ueberhaupt in die verfuegbare Zeit passen.
+     */
+    fun setEstimatedDuration(minutes: Int?) {
+        viewModelScope.launch {
+            val current = entries.get(entryId) ?: return@launch
+            entries.update(
+                current.copy(
+                    estimatedDurationMinutes = minutes,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+            reloadTrigger.value = System.currentTimeMillis()
         }
     }
 

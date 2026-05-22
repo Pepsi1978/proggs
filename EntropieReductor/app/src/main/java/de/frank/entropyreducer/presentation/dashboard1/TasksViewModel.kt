@@ -218,6 +218,40 @@ class TasksViewModel @Inject constructor(
         // er den Ziel-VersionCode erreicht hat, laeuft der Auto-Re-Score nicht
         // mehr. Frank kann jederzeit manuell rescoreAllOpenEntries() ausloesen.
         maybeAutoRescoreOnDoctrineChange()
+        // Auto-Refresh beim App-Start (Frank-Wunsch 2026-05-22): wenn Frank die App
+        // oeffnet sollen Nachtraege/Zeitanpassungen/Prio gepueft werden. Throttle 6h
+        // damit kurze Cold-Starts hintereinander keine Gemini-Quota verbrennen.
+        maybeAutoRefreshOnStartup()
+    }
+
+    /**
+     * Manueller Refresh-Trigger (Frank-Wunsch 2026-05-22): laeuft wenn Frank den
+     * Refresh-Button oben im Aufgabenreiter tippt. Macht den gleichen Job wie der
+     * App-Start-Refresh — Rollover, Bucket-Balance, Auto-Archiv und Rescore aller
+     * offenen Aufgaben. Im Gegensatz zum Auto-Refresh hat dieser keinen Throttle.
+     */
+    fun refreshAll() {
+        rolloverManualBucketsForNewDay()
+        autoArchiveOldResolved()
+        autoBalanceBuckets()
+        rescoreAllOpenEntries()
+    }
+
+    /**
+     * Throttled Auto-Refresh beim App-Start. Laeuft hoechstens einmal pro 6h
+     * — Frank kann zwischendurch jederzeit manuell ueber den Refresh-Button
+     * triggern.
+     */
+    private fun maybeAutoRefreshOnStartup() {
+        val now = System.currentTimeMillis()
+        val last = secrets.lastStartupRefreshAtMs
+        val sixHoursMs = 6 * 60 * 60 * 1000L
+        if (now - last < sixHoursMs) return
+        if (secrets.geminiApiKey.isNullOrBlank()) return
+        secrets.lastStartupRefreshAtMs = now
+        // Buckets + Archiv laufen schon ueber init() — wir muessen nur den
+        // Rescore-Lauf zusaetzlich anstossen.
+        rescoreAllOpenEntries()
     }
 
     /**

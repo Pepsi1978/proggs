@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
@@ -240,6 +241,24 @@ fun TasksScreen(
     CosmosScaffold(
         title = "Entropie Reduktor",
         actions = {
+            // Refresh-Button (Frank-Wunsch 2026-05-22): aktualisiert den
+            // gesamten Aufgabenreiter — Rollover, Bucket-Balance, Auto-Archiv
+            // und neue Bewertung aller offenen Aufgaben mit aktuellen
+            // Nachtraegen + Zeitanpassungen.
+            IconButton(
+                onClick = {
+                    vm.refreshAll()
+                    scope.launch {
+                        snackbar.showSnackbar("Aufgaben werden aktualisiert …")
+                    }
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Refresh,
+                    contentDescription = "Aufgaben aktualisieren",
+                    tint = cosmos.textPrimary,
+                )
+            }
             ThemeToggleIcon(current = themeMode, onCycle = themeVm::cycle)
             IconButton(onClick = onOpenSettings) {
                 Icon(
