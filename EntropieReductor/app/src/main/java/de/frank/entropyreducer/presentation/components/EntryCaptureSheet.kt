@@ -80,7 +80,7 @@ fun EntryCaptureSheet(
     var mode by remember { mutableStateOf(CaptureMode.CHOOSE) }
     var writeText by remember { mutableStateOf("") }
     val micPermission = rememberMicPermissionState(
-        onGranted = { voiceVm.toggle { transcript -> onCommit(transcript, EntrySource.NUTZER_MIC) } },
+        onAllGranted = { voiceVm.toggle { transcript -> onCommit(transcript, EntrySource.NUTZER_MIC) } },
     )
 
     // Bei Fehler kurz anzeigen, dann auf CHOOSE zurueck.
