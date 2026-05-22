@@ -1431,4 +1431,14 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="consent_footer_link_agb">ಬಳಕೆ ನಿಯಮಗಳು</string>
     <string name="ai_output_health_disclaimer">ಚಿಕಿತ್ಸೆ ಅಲ್ಲ — ವೃತ್ತಿಪರ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal ಒಂದು ಡೈರಿ ಮತ್ತು ಚಿಕಿತ್ಸಾ ಸೇವೆ ಅಲ್ಲ. AI ವಿಶ್ಲೇಷಣೆಗಳು ಸ್ವಯಂ-ಪ್ರತಿಫಲನಕ್ಕಾಗಿ ಸೂಚನೆಗಳು ಮಾತ್ರ ಮತ್ತು ವೃತ್ತಿಪರ ಮಾನಸಿಕ ಅಥವಾ ವೈದ್ಯಕೀಯ ಸಲಹೆಯನ್ನು ಬದಲಾಯಿಸುವುದಿಲ್ಲ. ತೀವ್ರ ಸಮಸ್ಯೆಗಳ ಸಮಯದಲ್ಲಿ ತಜ್ಞರನ್ನು ಅಥವಾ ನಿಮ್ಮ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿನ ಬಿಕ್ಕಟ್ಟು ಸಹಾಯ ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.</string>
+    <string name="churn_cancelled">ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ</string>
+    <string name="churn_cancelled_ends_on">ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ಮುಕ್ತಾಯಗೊಳ್ಳುತ್ತದೆ</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ಮುಕ್ತಾಯಗೊಳ್ಳುತ್ತದೆ — ನಂತರ ತಿಂಗಳಿಗೆ <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">ದಯವಿಟ್ಟು ಏನು ನಡೆಯುತ್ತಿದೆ ಎಂದು ಸಂಕ್ಷಿಪ್ತವಾಗಿ ತಿಳಿಸಿ…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ರಂದು ನವೀಕರಿಸಲಾಗುತ್ತದೆ</string>
+    <string name="settings_premium_cancelled">ಪ್ರೀಮಿಯಂ ಚಂದಾದಾರಿಕೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ</string>
+    <string name="settings_premium_cancelled_desc">ಬಿಲ್ಲಿಂಗ್ ಅವಧಿ ಮುಗಿಯುವವರೆಗೆ ನಿಮ್ಮ ಪ್ರೀಮಿಯಂ ವೈಶಿಷ್ಟ್ಯಗಳು ಲಭ್ಯವಿರುತ್ತವೆ. Google Play ಮೂಲಕ ನೀವು ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ರದ್ದುಗೊಳಿಸುವಿಕೆಯನ್ನು ರದ್ದು ಮಾಡಬಹುದು.</string>
+    <string name="settings_premium_cancelled_until">ಪ್ರೀಮಿಯಂ ಚಂದಾದಾರಿಕೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> ವರೆಗೆ ಲಭ್ಯ</string>
+    <string name="settings_theme">ಥೀಮ್</string>
+    <string name="settings_themes_manager">ಥೀಮ್ಸ್ ಮ್ಯಾನೇಜರ್</string>
 </resources>

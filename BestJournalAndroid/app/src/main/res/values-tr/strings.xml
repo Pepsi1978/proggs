@@ -1434,4 +1434,14 @@ Ne yapmak istersin?</string>
     <!-- AI health disclaimers -->
     <string name="ai_output_health_disclaimer">Terapi değildir — profesyonel danışmanlığın yerini almaz.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal bir günlük uygulamasıdır, terapi hizmeti sunmaz. YZ analizleri öz yansıma için öneri niteliğindedir; profesyonel psikolojik veya tıbbi danışmanlığın yerini tutmaz. Acil bir durumda bir uzmana veya ayarlarındaki kriz yardım hattına başvur.</string>
+    <string name="churn_cancelled">İptal Edildi</string>
+    <string name="churn_cancelled_ends_on">İptal edildi — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde sona eriyor</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde sona eriyor — ardından aylık <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">Lütfen bize kısaca ne olduğunu anlat…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> tarihinde yenileniyor</string>
+    <string name="settings_premium_cancelled">Premium abonelik iptal edildi</string>
+    <string name="settings_premium_cancelled_desc">Premium özelliklerine faturalandırma dönemi sonuna kadar erişebilirsin. İptalini istediğin zaman Google Play üzerinden geri alabilirsin.</string>
+    <string name="settings_premium_cancelled_until">Premium abonelik iptal edildi — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> tarihine kadar geçerli</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Tema Yöneticisi</string>
 </resources>

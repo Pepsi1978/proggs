@@ -1455,4 +1455,16 @@
     <string name="consent_footer_link_datenschutz">นโยบายความเป็นส่วนตัว</string>
     <string name="consent_footer_link_impressum">ข้อมูลผู้ให้บริการ</string>
     <string name="consent_footer_link_agb">ข้อกำหนดการใช้งาน</string>
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">ยกเลิกแล้ว</string>
+    <string name="churn_cancelled_ends_on">ยกเลิกแล้ว — สิ้นสุด <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">สิ้นสุด <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — หลังจากนั้น <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ต่อเดือน</string>
+    <string name="churn_reason_other_placeholder">โปรดบอกเราสั้นๆ ว่าเกิดอะไรขึ้น…</string>
+    <string name="churn_renews_on">ต่ออายุอัตโนมัติ <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">ยกเลิก Premium แล้ว</string>
+    <string name="settings_premium_cancelled_desc">ฟีเจอร์ Premium ของคุณยังใช้ได้จนถึงสิ้นรอบการเรียกเก็บเงิน คุณสามารถยกเลิกการยกเลิกได้ตลอดเวลาผ่าน Google Play</string>
+    <string name="settings_premium_cancelled_until">ยกเลิก Premium แล้ว — ยังใช้ได้ถึง <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">ธีม</string>
+    <string name="settings_themes_manager">ตัวจัดการธีม</string>
 </resources>

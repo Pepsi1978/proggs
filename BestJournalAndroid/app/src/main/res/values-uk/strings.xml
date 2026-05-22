@@ -1447,4 +1447,14 @@
     <!-- AI health disclaimer -->
     <string name="ai_output_health_disclaimer">Не терапія — не замінює професійної консультації.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal — це щоденник, а не терапевтичний сервіс. Аналізи ШІ є пропозиціями для саморефлексії і не замінюють професійної психологічної або медичної консультації. При гострих проблемах звернись до фахівця або скористайся кризовою допомогою в налаштуваннях.</string>
+    <string name="churn_cancelled">Скасовано</string>
+    <string name="churn_cancelled_ends_on">Скасовано — завершується <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Завершується <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — потім <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> на місяць</string>
+    <string name="churn_reason_other_placeholder">Розкажи нам коротко, що відбувається…</string>
+    <string name="churn_renews_on">Поновлюється <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Підписку Premium скасовано</string>
+    <string name="settings_premium_cancelled_desc">Функції Premium залишаються доступними до кінця розрахункового періоду. Ти можеш скасувати відмову будь-коли через Google Play.</string>
+    <string name="settings_premium_cancelled_until">Підписку Premium скасовано — дійсна до <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_themes_manager">Менеджер тем</string>
 </resources>

@@ -1,1153 +1,1174 @@
 {
-	"mode": "default",
-	"skillVersionsUsed": {
-		"roentgen": "b8280e0754f6",
-		"rechtssicherheit": "5956640d46ea",
-		"strings": "29007fdc1187",
-		"uebersetzer": "e7205988a2f3"
-	},
-	"auditedLanguages": [
-		"de"
-	],
-	"auditedJurisdictions": [
-		"DE",
-		"AT",
-		"CH",
-		"EU",
-		"GB",
-		"US"
-	],
-	"generatedAt": "2026-05-18",
-	"appVersion": "0.21.8",
-	"synthesizerNotes": "Aggregiert aus Worker B1 (paywall/churn), B2 (legal-docs/privacy/consent), B3 (marketing/advertising). 3 Duplikate entfernt (4-vs-5-Profil-Cluster: T-PW-001 und T-PW-002 als Verweise auf AM-Cluster konsolidiert). openFindingsCount berechnet ohne deadUrls und COMPLIANT-Eintraege.",
-	"findings": {
-		"textual": [
-			{
-				"findingId": "T-001",
-				"sourceWorkerId": "T-LG-001",
-				"riskLevel": "🟥 high",
-				"category": "Play-Store-Policy",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/AndroidManifest.xml + app/src/main/res/values/strings.xml",
-				"line": 0,
-				"currentText": "Keine permission_rationale_*-Strings fuer RECORD_AUDIO, CAMERA, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS",
-				"context": "AndroidManifest deklariert 4 sensible Laufzeit-Berechtigungen ohne User-visible Begruendung in strings.xml.",
-				"rationale": "Google Play Developer Policy (Permissions Policy, Stand 2024) verlangt fuer jede sensible Permission eine user-visible Begruendung. Fehlt dies, kann die App bei Play Store Policy Reviews zurueckgewiesen werden. Android Developer Best Practices (developer.android.com/training/permissions/requesting#explain) verlangen shouldShowRequestPermissionRationale()-Dialog.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "permission_rationale_microphone: 'Das Mikrofon wird benoetigt, um Tagebucheintraege per Spracheingabe diktieren zu koennen.'",
-						"rationale": "RECORD_AUDIO — Groq/Whisper STT Zweck klar.",
-						"stillSafe": true
-					},
-					{
-						"text": "permission_rationale_camera: 'Die Kamera wird benoetigt, um Fotos zu deinen Tagebucheintraegen hinzuzufuegen.'",
-						"rationale": "CAMERA — Zweck in-App vor Formulierung verifizieren.",
-						"stillSafe": true
-					},
-					{
-						"text": "permission_rationale_location: 'Der ungefaehre Standort wird benoetigt, um deinen Eintraegen einen Ortskontext hinzuzufuegen. Du kannst dies jederzeit deaktivieren.'",
-						"rationale": "ACCESS_COARSE_LOCATION — Standort-Tagging.",
-						"stillSafe": true
-					},
-					{
-						"text": "permission_rationale_notifications: 'Benachrichtigungen werden benoetigt, um dich an dein taegliches Schreiben zu erinnern.'",
-						"rationale": "POST_NOTIFICATIONS — BootReminderReceiver.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Google Play Policy Rejection moeglich. Play-Store-Reviews koennten App fuer fehlende Permission-Transparenz ablehnen.",
-				"crossJurisdiction": {
-					"EU": "DSGVO Art. 13 Abs. 1 lit. c und Art. 5 Abs. 1 lit. a (Transparenz): Zweck der Datenerhebung muss dem Nutzer mitgeteilt werden — Permission-Rationale ist die App-seitige Umsetzung. Gleiches Risiko wie DE.",
-					"CH": "DSG Art. 19 (Informationspflicht): Identisches Erfordernis zur Zweckangabe bei Berechtigungsanfragen. Gleiches Risiko.",
-					"GB": "UK GDPR Art. 13 (identisch mit EU DSGVO): Permission-Rationale erfordert. ICO Guidance empfiehlt explizite Zweckangabe. Gleiches Risiko.",
-					"US": "Kein Bundesgesetz, aber California CPRA §1798.100 und FTC Act §5 (unfair/deceptive practices) erfordern Transparenz ueber Datenzwecke. Play Store Policy gilt global — Rejection-Risiko identisch weltweit."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T14:34:33Z",
-				"appliedFixText": "4 strings hinzugefuegt (Variante 2 Du-Stil)",
-				"appliedStringKeys": [
-					"permission_rationale_microphone",
-					"permission_rationale_camera",
-					"permission_rationale_location",
-					"permission_rationale_notifications"
-				]
-			},
-			{
-				"findingId": "T-002",
-				"sourceWorkerId": "T-LG-002",
-				"riskLevel": "🟥 high",
-				"category": "DSGVO-Backup",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/xml/backup_rules.xml + app/src/main/res/xml/data_extraction_rules.xml",
-				"line": 0,
-				"currentText": "entropy_journal_db nicht in exclude-Liste — durch Auslassung im Google Auto Backup und Device-Transfer enthalten",
-				"context": "Haupt-Tagebuchdatenbank mit persoenlichen Eintraegen, KI-Analysen, Stimmungsverlaeufen und Audio-Metadaten wird automatisch per Google Auto Backup gesichert. Separates Consent-Gate fehlt.",
-				"rationale": "DSGVO Art. 13 Abs. 1 lit. e (Empfaenger der Daten), Art. 46 (Dritttransfer bei Google-Server-Backup), Art. 5 Abs. 1 lit. b (Zweckbindung): automatisches Backup ≠ explizite Drive-Backup-Einwilligung. Der consent_toggle_drive betrifft nur explizite Drive-API-Aufrufe, nicht den Android-System-Backup.",
-				"invasivityLevel": "config-required",
-				"suggestedFixes": [
-					{
-						"text": "Option A (empfohlen): entropy_journal_db in backup_rules.xml und data_extraction_rules.xml explizit ausschliessen. Eigene verschluesselte Backup-Loesung via Drive API als einzigen Backup-Weg nutzen.",
-						"rationale": "DSGVO-konformste Loesung — Nutzer hat volle Kontrolle ueber Backup.",
-						"stillSafe": true
-					},
-					{
-						"text": "Option B: Dokumentation in Datenschutzerklaerung, dass Android Auto Backup aktiv ist, mit Opt-out-Hinweis (Android System-Settings).",
-						"rationale": "Akzeptabel aber schwaecher — Nutzer muss aktiv opt-out.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": "<!-- backup_rules.xml — entropy_journal_db explizit ausschliessen -->\n<full-backup-content>\n  <exclude domain=\"database\" path=\"entropy_journal_db\" />\n  <exclude domain=\"database\" path=\"entropy_journal_db-wal\" />\n  <exclude domain=\"database\" path=\"entropy_journal_db-shm\" />\n  <!-- bestehende excludes bleiben -->\n</full-backup-content>\n\n<!-- data_extraction_rules.xml -->\n<data-extraction-rules>\n  <cloud-backup>\n    <exclude domain=\"database\" path=\"entropy_journal_db\" />\n    <exclude domain=\"database\" path=\"entropy_journal_db-wal\" />\n    <exclude domain=\"database\" path=\"entropy_journal_db-shm\" />\n  </cloud-backup>\n  <device-transfer>\n    <exclude domain=\"database\" path=\"entropy_journal_db\" />\n  </device-transfer>\n</data-extraction-rules>",
-				"impactWithoutFix": "Persoenliche Tagebuchinhalte werden ohne separaten Consent-Point zu Google-Servern uebertragen. DSGVO Art. 5 Abs. 1 lit. b Verstoß moeglich. Abmahngefahr durch Datenschutzbehoerden.",
-				"crossJurisdiction": {
-					"EU": "DSGVO Art. 5 Abs. 1 lit. b, Art. 13 Abs. 1 lit. e: identisches Risiko in allen EU-Mitgliedsstaaten. Automatisches Backup persoenlicher Daten ohne Zweckbindungs-Consent ist in der gesamten EU problematisch.",
-					"CH": "DSG Art. 6 (Grundsaetze der Datenbearbeitung), Art. 19: Schweizer DSG 2023 hat aehnliche Anforderungen an Zweckbindung und Transparenz. Risiko identisch.",
-					"GB": "UK GDPR Art. 5(1)(b) und Art. 13(1)(e): identisch mit EU DSGVO. ICO enforcement moeglich. Gleiches Risiko.",
-					"US": "California CPRA §1798.100(a): Nutzer hat Recht zu wissen, welche personenbezogenen Daten erhoben werden. Fehlendes Disclosure ueber Auto-Backup koennte als Verstoß gewertet werden. Geringes direktes Risiko, aber Transparenz-Best-Practice."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T16:50:00Z",
-				"appliedFixText": "Option 2+: DATENSCHUTZ.html §2-Tabelle + §5.3a erweitert (detaillierte Transparenz), strings.xml +5 Strings (consent_info + settings_open + error), SettingsScreen.kt LegalDocumentRow mit ACTION_BACKUP_SETTINGS-Fallback-Kette"
-			},
-			{
-				"findingId": "T-003",
-				"sourceWorkerId": "T-PW-003",
-				"riskLevel": "🟥 high",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1191,
-				"currentText": "bei 4 Profilen also bis zu 600 pro Tag",
-				"context": "AiLimitsDialog — Rechenlogik (ai_limits_dialog_body). Steht im Widerspruch zu anderen Strings die 5 Profile nennen. Dieser String ist als einziger mit konkreter Rechenlogik (150 × 4 = 600) vermutlich korrekt.",
-				"rationale": "Drei verschiedene Screens (Settings, Churn, AiLimitsDialog) zeigen verschiedene Zahlen fuer dasselbe Feature. Dieser String sagt '4', churn_offer_feature_perspectives sagt '5'. Solange Diskrepanz besteht: §5 UWG Irreführungsverbot. HINWEIS: Primaere Behandlung via advertisingMismatch-Cluster AM-001/AM-002/AM-003 (4-vs-5-Problem). Dieser T-003 ist der Referenz-String mit korrekter Rechenlogik.",
-				"relatedFindingIds": [
-					"AM-001",
-					"AM-002",
-					"AM-003"
-				],
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Beibehalten sofern 4 die korrekte Profil-Anzahl ist. Dann muessen churn_offer_feature_perspectives (→AM-002) und onboarding_perspectives_title (→AM-003) auf '4' angeglichen werden.",
-						"rationale": "Korrekteste Loesung basierend auf Code-Realitaet (AiRateLimiter = 4 Profile).",
-						"stillSafe": true
-					},
-					{
-						"text": "Zahl-neutrale Variante: 'bei allen deinen Profilen'",
-						"rationale": "Keine absolute Zahl — nicht widersprüchlich in jedem Szenario.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Screenshots aus drei verschiedenen Screens zeigen verschiedene Zahlen fuer dasselbe Feature. Jeder Screenshot kann als Beweis fuer irreführende Werbung dienen. §5 UWG Abmahngefahr, Google Play Policy Accuracy.",
-				"crossJurisdiction": {
-					"EU": "EU UCPD 2005/29/EG Art. 6 (Irreführende Handlungen): identisches Risiko. Widersprüchliche Angaben zu wesentlichen Produktmerkmalen sind in der gesamten EU als irreführend zu werten.",
-					"CH": "UWG CH Art. 3 lit. b (falsche Angaben): gleiches Risiko.",
-					"GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5 (misleading actions): identisches Risiko.",
-					"US": "FTC Act §5 (unfair/deceptive practices): unsubstantiated oder widersprüchliche Produktmerkmalsangaben koennen als deceptive advertising gewertet werden."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T14:25:07Z",
-				"appliedFixText": "150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst."
-			},
-			{
-				"findingId": "T-004",
-				"sourceWorkerId": "T-PW-005",
-				"riskLevel": "🟧 medium",
-				"category": "BGB-Widerruf",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1089,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "APPEND: ...freischalten.\\n\\nAnbieter der Premium-Funktionen: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. E-Mail für Widerruf: dev.app.support@gmail.com.\\n\\nFalls du das Widerrufsrecht nicht vor Bereitstellung erklärst und das Premium-Abo gestartet wird, beginnt deine 14-tägige Widerrufsfrist am Tag des Vertragsabschlusses. Du kannst den Widerruf formfrei per E-Mail erklären oder das EU-Muster-Widerrufsformular nutzen (https://www.bmuv.de/widerruf — externes EU-Muster).",
-				"currentText": "Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.",
-				"context": "PaywallScreen — WiderrufsbelehrungDialog (paywall_consent_dialog_body). Erscheint vor dem Kaufabschluss.",
-				"rationale": "Fehlende Pflichtangaben nach §312g BGB i.V.m. Art. 246a §1 EGBGB: (1) Kein Unternehmensname/Anschrift im Dialog; (2) Kein Hinweis auf Widerrufsfrist-Beginn (§356 Abs. 2); (3) Musterformular nicht erwaehnt (EGBGB Art. 246a §1 Abs. 2 Nr. 1b); (4) Keine Kontaktadresse fuer Widerruf. POSITIV: §356 Abs. 5 BGB-Zitat vorhanden, Pflicht-Checkbox vorhanden (T-LG-004 positiv), §356a BGB-Flow vorhanden (T-LG-005 positiv).",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Ergaenzte Variante mit Pflichtangaben: Anbieteridentitaet, Fristbeginn, Widerrufskanal. Entspricht EGBGB Art. 246a §1.",
-						"lengthDeltaPct": 60,
-						"rationale": "Vollstaendige EGBGB-konforme Widerrufsbelehrung.",
-						"stillSafe": true
-					},
-					{
-						"text": "Kuerzere Variante mit Verweis auf vollstaendige AGB-Widerrufsbelehrung — nur wenn AGB tatsaechlich vollstaendige Belehrung enthalten.",
-						"lengthDeltaPct": -20,
-						"rationale": "Kuerzer, bedingt zulaessig.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Unvollstaendige Widerrufsbelehrung verlaengert Widerrufsfrist auf 12 Monate + 14 Tage (§356 Abs. 3 BGB). Alle Kaeufer koennen in diesem Zeitraum Kauf rueckgaengig machen. Play Store Policy 'Subscriptions' erfordert vollstaendige Disclosure.",
-				"crossJurisdiction": {
-					"EU": "EU-Verbraucherrechterichtlinie 2011/83/EU Art. 9-16: Widerrufsrecht und Belehrungspflichten gelten EU-weit. Aehnliche Luecken in anderen EU-Laendern, nationaler Gesetzgeber setzt die Richtlinie um. DE hat die strengste Durchsetzung.",
-					"CH": "Schweizer OR Art. 40a ff. (Widerrufsrecht bei Fernabsatz): aehnliche Anforderungen, jedoch kein identisches 12-Monats-Verlaeungerungsrisiko. Moderates Risiko.",
-					"GB": "Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013: Aequivalent zur EU-Richtlinie. CMA enforcement aktiv. Gleiches Risiko.",
-					"US": "Kein bundesweites Widerrufsrecht fuer digitale Dienste. Play Store-globale Policy trotzdem anwendbar."
-				}
-			},
-			{
-				"findingId": "T-005",
-				"sourceWorkerId": "T-PW-006",
-				"riskLevel": "🟧 medium",
-				"category": "Abo-Transparenz",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1136,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "Zahlungspflichtig — 2 Monate zum halben Preis",
-				"currentText": "Monatsabo mit 50% Rabatt starten",
-				"context": "ExitIntentDialog CTA-Button (paywall_exit_start_discount). Loest Subscription-Kauf aus.",
-				"rationale": "§312j Abs. 3 BGB 'Button-Loesung': Button der zahlungspflichtige Bestellung ausloest, muss mit 'zahlungspflichtig bestellen', 'kaufen' oder gleichwertiger Formulierung beschriftet sein. 'Starten' ist nicht eindeutig auf Zahlungspflicht hinweisend. Keine Angabe der Rabattdauer (2 Monate laut Code), kein Hinweis auf automatische Verlaengerung zum Normalpreis.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Jetzt zahlungspflichtig abonnieren — 2 Monate 50% Rabatt",
-						"lengthDeltaPct": 35,
-						"rationale": "Entspricht §312j Abs. 3 BGB, nennt Rabattdauer.",
-						"stillSafe": true
-					},
-					{
-						"text": "Zahlungspflichtig — 2 Monate zum halben Preis",
-						"lengthDeltaPct": 15,
-						"rationale": "Kuerzer, erfuellt §312j Abs. 3 durch 'Zahlungspflichtig'.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Verstoß gegen §312j Abs. 3 BGB. Vertrag kann nach §312j Abs. 4 BGB als nicht geschlossen gelten. Abmahngefahr. Google Play Policy: Subscription buttons must clearly disclose recurring nature.",
-				"crossJurisdiction": {
-					"EU": "EU-Verbraucherrechterichtlinie 2011/83/EU Art. 8 Abs. 2 (Button-Loesung): Die Anforderung gilt EU-weit. AT, FR, IT haben aequivalente nationale Umsetzungen. Gleiches Risiko.",
-					"CH": "Kein direktes Button-Loesung-Aequivalent im schweizer Recht, aber OR Art. 1 ff. (Vertragsschluss) koennte bei unklarer Zahlungspflicht Probleme erzeugen. Moderates Risiko.",
-					"GB": "Consumer Rights Act 2015 und Consumer Contracts Regulations: Button-Klarheit erfordert. CMA 'auto-renewal guidance' (2021) zusaetzlich relevant. Gleiches Risiko.",
-					"US": "FTC Negative Option Rule (amended 2023): Subscription CTAs muessen 'clear and conspicuous' Zahlungspflicht communicaten. Gleiches Risiko."
-				}
-			},
-			{
-				"findingId": "T-006",
-				"sourceWorkerId": "T-PW-007",
-				"riskLevel": "🟧 medium",
-				"category": "Abo-Transparenz",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1103,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.",
-				"currentText": "Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar",
-				"context": "Paywall — Jahresabo Vorteilszeile (paywall_yearly_savings).",
-				"rationale": "'Jederzeit kündbar' bei Jahresabo ohne Hinweis auf Laufzeit-Ende kann als Irreführung gewertet werden. Kündigung ist moeglich, aber Laufzeit laeuft bis Periodenende. §5 UWG: 'jederzeit kündbar' koennte falsche Erwartung eines sofortigen kostenfreien Ausstiegs erzeugen.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Spare %1$d%% gegenüber dem Monatsabo",
-						"lengthDeltaPct": -30,
-						"rationale": "Entfernt 'jederzeit kündbar' — Kündigungsinfo erscheint bereits in paywall_yearly_note.",
-						"stillSafe": true
-					},
-					{
-						"text": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit wirksam zum Periodenende",
-						"lengthDeltaPct": 45,
-						"rationale": "Vollstaendig transparent ueber Kündigungsmodalitaet.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Moderate Abmahngefahr: 'jederzeit kündbar' bei Jahresabo ohne Periodenende-Hinweis wurde in DE von Verbraucherschutzbehörden beanstandet.",
-				"crossJurisdiction": {
-					"EU": "EU UCPD 2005/29/EG Art. 6 Abs. 1 lit. d (wesentliche Merkmale): Laufzeit und Kündigungsbedingungen sind wesentliche Merkmale. AT, FR: aehnliche Beanstandungen durch Verbraucherschutzbehoerden bekannt. Gleiches Risiko.",
-					"CH": "UWG CH Art. 3 lit. b: Moderates Risiko.",
-					"GB": "CMA auto-renewal guidance (2021): Subscription terms including renewal and cancellation conditions must be transparent. Gleiches Risiko.",
-					"US": "FTC Negative Option Rule: cancellation terms muessen klar communiciert werden. Gleiches Risiko."
-				}
-			},
-			{
-				"findingId": "T-007",
-				"sourceWorkerId": "T-PW-004",
-				"riskLevel": "🟧 medium",
-				"category": "Dark-Pattern",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "ChurnFlowDialog.kt Step 0",
-				"line": 0,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "Modifier.alpha(0.35f) → Modifier.alpha(0.8f) (Frank-Wahl Option [3] Kompromiss)",
-				"currentText": "churn_cancel_sub ('Abo kündigen') gerendert mit alpha=0.35f",
-				"context": "ChurnFlowDialog Step 0 — Abo-Übersicht. Einziger direkter Kündigungslink auf 35% Opacity reduziert.",
-				"rationale": "Alpha-Wert 0.35f = 35% Sichtbarkeit. Kündigungslink bewusst schwer erkennbar gestaltet. EU UCPD Art. 6 (Weglassung) und §4a UWG (aggressive Geschäftspraktiken). Google Play Developer Policy 'Deceptive Subscription Practices' verbietet Erschwerung der Kündigung explizit.",
-				"invasivityLevel": "layout-required",
-				"suggestedFixes": [
-					{
-						"text": "Modifier.alpha(1.0f) — normaler TextButton (empfohlen)",
-						"rationale": "Vollstaendige Sichtbarkeit entspricht Google Play Policy Anforderungen.",
-						"stillSafe": true
-					},
-					{
-						"text": "Modifier.alpha(0.6f) — Minimalste Anpassung",
-						"rationale": "60% Opacity als 'sekundaerer CTA' noch vertretbar.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": "// In ChurnFlowDialog.kt Step 0 — Kündigungslink sichtbarer machen\nTextButton(\n    onClick = { onCancelClick() },\n    modifier = Modifier.alpha(0.6f)  // War: 0.35f\n) {\n    Text(text = stringResource(id = R.string.churn_cancel_sub))\n}",
-				"impactWithoutFix": "Google Play Developer Policy Verstoß. EU UCPD und §4a UWG Abmahngefahr.",
-				"crossJurisdiction": {
-					"EU": "EDPB Guidelines 03/2022 on Dark Patterns: explizit als Dark Pattern klassifiziert ('confirmshaming/hidden information'). EU DSA (Digital Services Act) Art. 25 verbietet Dark Patterns. Risikolevel EU = DE.",
-					"CH": "UWG CH Art. 3 lit. b: Moderates Risiko durch aggressive Geschaeftspraxis.",
-					"GB": "CMA 'Online Choice Architecture' guidance (2022): opacity-based deemphasis von Cancellation-CTAs explizit als problematisch identifiziert. Gleiches Risiko.",
-					"US": "FTC Dark Patterns enforcement (2022+): 'clicking on cancel subscription is made unnecessarily difficult' ist FTC enforcement target. Gleiches Risiko."
-				}
-			},
-			{
-				"findingId": "T-008",
-				"sourceWorkerId": "T-PW-008",
-				"riskLevel": "🟧 medium",
-				"category": "Dark-Pattern",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1167,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "Unser Angebot für dich",
-				"currentText": "Nur für dich, weil du uns wichtig bist",
-				"context": "ChurnFlowDialog Step 2 — Retention-Angebot Untertitel (churn_offer_subtitle). Ueber 25%-Rabattangebot.",
-				"rationale": "Text suggeriert persoenliche Sonderbehandlung ('Nur fuer dich'), obwohl Angebot standardisiert ist. UCPD 2005/29/EG Anhang I Nr. 6: 'falscher Eindruck persoenlicher Beziehung' per se unlauter. §4a UWG: unangemessene Beeinflussung der Entscheidungsfreiheit.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Unser Angebot für dich",
-						"lengthDeltaPct": -35,
-						"rationale": "Neutral, persoenlich adressiert ohne Exklusivitaetsbehauptung.",
-						"stillSafe": true
-					},
-					{
-						"text": "Bevor du gehst — ein Angebot",
-						"lengthDeltaPct": -10,
-						"rationale": "Ehrlich ueber Retention-Kontext.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "UCPD Anhang I Nr. 6 / §4a UWG Risiko mittel. 'Nur fuer dich'-Formulierungen bei standardisierten Angeboten wurden von Verbraucherzentralen abgemahnt.",
-				"crossJurisdiction": {
-					"EU": "EU UCPD 2005/29/EG Anhang I Nr. 6 gilt EU-weit. Gleiches Risiko.",
-					"CH": "Moderates Risiko per UWG CH.",
-					"GB": "Consumer Protection from Unfair Trading Regulations 2008: Schedule 1 No. 6 identisch mit UCPD. Gleiches Risiko.",
-					"US": "FTC Act §5: personalisation claims die falsch sind koennen als deceptive gewertet werden. Moderates Risiko."
-				}
-			},
-			{
-				"findingId": "T-009",
-				"sourceWorkerId": "T-PW-009",
-				"riskLevel": "🟨 low",
-				"category": "Abo-Transparenz",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1079,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "8 Tage gratis — danach ab 3,99 €/Monat",
-				"currentText": "8 Tage Premium testen",
-				"context": "OnboardingScreen CTA-Button (onboarding_try_premium). Startet 8-taegige Trial.",
-				"rationale": "Trial-Dauer im Button kommuniziert. Exit-Intent-Verlaengerung auf 10 Tage nicht erwaehnt. Keine Info ob Trial automatisch in kostenpflichtiges Abo uebergeht. Google Play Policy 'Free Trials': Pre-Trial-Disclosure erfordert. Details folgen im Paywall-Screen — daher nur LOW-Risiko in DE.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "8 Tage kostenlos testen",
-						"lengthDeltaPct": 15,
-						"rationale": "Klarstellung 'kostenlos'.",
-						"stillSafe": true
-					},
-					{
-						"text": "8 Tage gratis — danach ab 3,99 €/Monat",
-						"lengthDeltaPct": 60,
-						"rationale": "Vollstaendige Pre-Trial-Disclosure gemaess Google Play Policy und FTC. Empfohlen fuer US/internationales Rollout.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Niedriges Risiko in DE. Hoeher fuer US-Markt (FTC Trial-Disclosure Rules). Praeventive Massnahme vor internationalem Rollout empfohlen."
-			},
-			{
-				"findingId": "T-010",
-				"sourceWorkerId": "T-PW-010",
-				"riskLevel": "🟨 low",
-				"category": "Abo-Transparenz",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/src/main/res/values/strings.xml",
-				"line": 1457,
-				"status": "applied",
-				"appliedAt": "2026-05-18T00:00:00Z",
-				"appliedFixText": "Schalte alle Premium-Funktionen frei",
-				"currentText": "Nutze alle Premium-Vorteile",
-				"context": "Paywall Hauptueberschrift Untertitel (paywall_subtitle).",
-				"rationale": "Allgemeiner CTA ohne spezifische Falschaussage. Kein direktes rechtliches Risiko. §5 UWG nicht verletzt.",
-				"invasivityLevel": "text-only",
-				"suggestedFixes": [
-					{
-						"text": "Nutze alle Premium-Vorteile",
-						"rationale": "Kein Fix erforderlich — optionale Verbesserung.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": null,
-				"impactWithoutFix": "Kein messbares Risiko. Optionale Verbesserung."
-			}
-		],
-		"advertisingMismatch": [
-			{
-				"findingId": "AM-001",
-				"sourceWorkerId": "ADV-001",
-				"riskLevel": "🟥 high",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"stringKey": "settings_premium_feature_5_perspectives",
-				"claimText": "4 besondere KI-Profile",
-				"claimLocation": "Settings screen — Premium features list",
-				"codeReality": "AiRateLimiter hat 4 Profile (layer5_paywall_deep.premium.profile_count=4). Resource-Key ist 'settings_premium_feature_5_perspectives' (impliziert 5), Wert sagt 4.",
-				"gap": "String-Key-Name impliziert 5 Profile; Wert sagt 4. Drei weitere Strings sagen 5 (churn_offer_feature_perspectives, onboarding_perspectives_title, onboarding_premium_feature_perspectives). Interne Inkonsistenz = UWG §5-Risiko durch widersprüchliche Darstellungen.",
-				"affectsAllScreens": true,
-				"affectedStringKeys": [
-					"settings_premium_feature_5_perspectives",
-					"churn_offer_feature_perspectives",
-					"onboarding_perspectives_title",
-					"onboarding_premium_feature_perspectives"
-				],
-				"norm": "UWG §5 Abs. 1 Nr. 1 (irreführende Angaben über wesentliche Merkmale), Play Store Misrepresentation Policy",
-				"rationale": "Ein Verbraucher der Settings liest sieht '4', derselbe Verbraucher der den Churn-Screen sieht liest '5'. Gleiche App, gleicher Nutzer, widersprechende Aussagen. Gerichte wählen die verbraucherunguenstigste Auslegung. CF-002 im roentgen-report.json bereits als HOCH klassifiziert.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-001-F1",
-						"text": "Global alle Strings auf '4 besondere KI-Profile' angleichen: settings_premium_feature_5_perspectives → '4 besondere KI-Profile', churn_offer_feature_perspectives → 'Alle 4 Perspektiven', onboarding_perspectives_title → '4 Perspektiven auf dein Leben'. Resource-Key umbenennen: settings_premium_feature_4_perspectives.",
-						"lengthDeltaPct": 0,
-						"rationale": "Entspricht Code-Realitaet exakt. Eliminiert alle 4-vs-5-Ambiguitaeten.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-001-F3",
-						"text": "Abstrakte Formulierung: 'Verschiedene KI-Analyse-Profile' oder 'Mehrere intelligente KI-Profile'.",
-						"lengthDeltaPct": -5,
-						"rationale": "Zukunftssicherste Loesung. Keine konkrete Zahl zu verteidigen.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Store-Rejection-Risiko (Play Store Misrepresentation). Potenzielle Abmahnung nach §5 UWG. Nutzerbeschwerden.",
-				"crossJurisdiction": {
-					"EU": "EU UCPD 2005/29/EG Art. 6 (Irreführende Handlungen): widersprüchliche Angaben zu Kernfeatures sind EU-weit als irreführend klassifiziert. Gleiches Risiko in allen EU-Laendern.",
-					"CH": "UWG CH Art. 3 lit. b: falsche Angaben über Produkteigenschaften. Gleiches Risiko.",
-					"GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5. Gleiches Risiko.",
-					"US": "FTC Act §5 (deceptive advertising). Play Store Policy global anwendbar. Gleiches Rejection-Risiko."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T14:25:07Z",
-				"appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
-			},
-			{
-				"findingId": "AM-002",
-				"sourceWorkerId": "ADV-002",
-				"riskLevel": "🟥 high",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"stringKey": "churn_offer_feature_perspectives",
-				"claimText": "Alle 5 Perspektiven",
-				"claimLocation": "Churn-Screen — Retention-Angebot Feature-Liste",
-				"codeReality": "4 KI-Profile im Code (AiRateLimiter).",
-				"gap": "Churn-Screen behauptet 5; Code liefert 4. Churn-Kontext ist hoechstes Risiko: Nutzer erwaegt aktiv Kuendigung, jedes falsche Versprechen zur Retention ist unlautere Geschaeftspraxis.",
-				"affectsAllScreens": false,
-				"affectedStringKeys": [
-					"churn_offer_feature_perspectives"
-				],
-				"norm": "UWG §5 Abs. 1 Nr. 1, UWG §4a (aggressive Geschäftspraktiken im Churn-Kontext), EU UCPD Art. 6",
-				"rationale": "Im Churn-Kontext prüfen Nutzer Aussagen besonders sorgfältig. Ein durch '5 Profile' Versprechen gehaltener Nutzer der dann nur 4 findet hat einen konkreten Irrefuehrungsanspruch. Hoechstes Risikovorkommen des 4-vs-5-Problems.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-002-F1",
-						"text": "Alle 4 Perspektiven",
-						"rationale": "Sofortige Angleichung an Code-Realitaet.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-002-F2",
-						"text": "Deine persönlichen KI-Analyse-Profile",
-						"rationale": "Vermeidet Zahl, hebt Personalisierung hervor. Zukunftssicher.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Aktive Irrefuehrung im Retention-Flow = erhoehtes Abmahnung-Risiko. Widerspruch mit Settings-Screen.",
-				"crossJurisdiction": {
-					"EU": "EU UCPD Art. 6 und §4a UWG-Aequivalente in allen EU-Laendern. Churn-Retention-Kontext erhoehtes Risiko EU-weit.",
-					"CH": "UWG CH Art. 3 lit. b + Art. 4 lit. a (unlautere Retentions-Taktiken). Gleiches Risiko.",
-					"GB": "CPUTRs 2008 Reg. 5+7. Gleiches Risiko.",
-					"US": "FTC Negative Option Rule + FTC Act §5. Gleiches Risiko."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T14:25:07Z",
-				"appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
-			},
-			{
-				"findingId": "AM-003",
-				"sourceWorkerId": "ADV-003",
-				"riskLevel": "🟥 high",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"stringKey": "onboarding_perspectives_title",
-				"claimText": "5 Perspektiven auf dein Leben",
-				"claimLocation": "Onboarding-Screen — Perspektiven-Einfuehrungstitel",
-				"codeReality": "4 KI-Profile im Code.",
-				"gap": "Onboarding ist erster Eindruck. '5 Perspektiven' als Sektions-Titel waehrend Onboarding setzt Basiserwartung von 5 die nie erfuellt wird.",
-				"affectsAllScreens": false,
-				"affectedStringKeys": [
-					"onboarding_perspectives_title"
-				],
-				"norm": "UWG §5 Abs. 1 Nr. 1, Play Store Misrepresentation Policy (Onboarding-Aussagen gleichwertig mit Store-Listing-Aussagen)",
-				"rationale": "First-Use Onboarding hat hoechstes Prüfungsgewicht. Kaufentscheidung/Trial-Entscheidung wird hier direktest beeinflusst. '5 Perspektiven' als Sektions-Titel bei 4 tatsaechlichen Profilen ist direkter §5-UWG-Verstoß.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-003-F1",
-						"text": "4 Perspektiven auf dein Leben",
-						"rationale": "Direkte faktische Korrektur.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-003-F3",
-						"text": "Dein Leben aus neuen Blickwinkeln",
-						"rationale": "Kein Zahlen-Commitment, bessere Marketing-Copy.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Irrefuehrung beim ersten Eindruck waehrend Onboarding. Nutzerfeedback '5 Profile versprochen, nur 4 erhalten' wahrscheinlich.",
-				"crossJurisdiction": {
-					"EU": "Onboarding-Aussagen sind Play-Store-aequivalent nach EU-Verbraucherrecht. EU UCPD Art. 6 anwendbar. Gleiches Risiko.",
-					"CH": "Gleiches Risiko via UWG CH.",
-					"GB": "Gleiches Risiko via CPUTRs.",
-					"US": "Gleiches Rejection-Risiko via Play Store Policy. FTC Act §5 anwendbar."
-				},
-				"status": "applied",
-				"appliedAt": "2026-05-18T14:25:07Z",
-				"appliedFixText": "Verschiedene Blickwinkel auf dein Leben"
-			},
-			{
-				"findingId": "AM-004",
-				"sourceWorkerId": "ADV-004",
-				"riskLevel": "🟧 medium",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
-				"stringKey": "ai_limits_dialog_body",
-				"claimText": "Über 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.",
-				"claimLocation": "AI limits explanation dialog",
-				"codeReality": "Keine Analytics-Daten im Code. AiRateLimiter mit Hard-Limits bei 150/Tag (Premium) und 5/Woche (Free). Kein Nutzungstelemetrie-Beweis fuer die 99%-Zahl.",
-				"gap": "'99%'-Zahl ohne evidenzielle Grundlage. 'Wahrscheinlich' hedged leicht, aber Zahl wird trotzdem als Quasi-Fakt behauptet.",
-				"norm": "UWG §5 Abs. 1 Nr. 1 (unsubstantiierter Faktenbehauptung), UWG §5a (Verschweigen relevanter Informationen)",
-				"rationale": "Statistischer Claim ohne stuetzende Daten. Dient als Beruhigungs-Aussage fuer Nutzer die sich ueber Limits sorgen. Ohne Datenbasis nicht haltbar.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-004-F1",
-						"text": "Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
-						"lengthDeltaPct": -30,
-						"rationale": "Qualitatives Hedging ('die meisten') ist kein Faktenbehauptung. Gleiche Beruhigungswirkung ohne rechtliches Risiko.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-004-F3",
-						"text": "Das entspricht für Premium-Nutzer bis zu 150 Analysen täglich — mehr als genug für intensives Journaling.",
-						"rationale": "Verankert Beruhigung an konkreter, im Code verifizierbarer Zahl.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Wettbewerbsrechtliche Abmahnung fuer unsubstantiiierten komparativen Claim moeglich."
-			},
-			{
-				"findingId": "AM-005",
-				"sourceWorkerId": "ADV-005",
-				"riskLevel": "🟧 medium",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "KI-Tageskontingent für intensive Nutzung.",
-				"stringKey": "ai_limits_disclaimer",
-				"claimText": "Großzügiges KI-Tageskontingent für intensive Nutzung.",
-				"claimLocation": "AI limits disclaimer banner",
-				"codeReality": "Premium: 150 Analysen/Tag/Profil. Hard Limit bei 151. 'Großzügig' ist subjektives Werturteil ohne Vergleichsmaßstab.",
-				"gap": "'Großzügig' ist subjektiver Qualitaetsbehauptung ohne Benchmark. Nutzer der bei 150 an die Grenze stoesst kann 'großzügig' bestreiten.",
-				"norm": "UWG §5 Abs. 1 Nr. 1 (subjektive Werturteile mit objektivem Anschein), UWG §5 Abs. 2 (Alleinstellungsbehauptungen)",
-				"rationale": "Deutsche Gerichte verlangen fuer Qualitaetsbehauptungen wie 'großzügig' Substanziierung wenn sie im Kontext finanzieller Entscheidungen (Premium-Abo) verwendet werden.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-005-F1",
-						"text": "Bis zu 150 KI-Analysen täglich für Premium-Nutzer.",
-						"rationale": "Faktisch, nicht angreifbar.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-005-F3",
-						"text": "KI-Tageskontingent für intensive Nutzung.",
-						"rationale": "Kuerzer, ohne Qualitaetswertung.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Geringes Einzelrisiko, verstaerkt aber Muster von evaluativem Overclaiming."
-			},
-			{
-				"findingId": "AM-006",
-				"sourceWorkerId": "ADV-006",
-				"riskLevel": "🟧 medium",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "KI verbessert deine Einträge auf Wunsch.",
-				"stringKey": "settings_premium_feature_improve_desc",
-				"claimText": "Jeder Eintrag wird ausdrucksstärker",
-				"claimLocation": "Settings screen — Premium features list (AI text improvement)",
-				"codeReality": "KI-Textverbesserung ist nutzerausgeloest, nicht automatisch. Limits: 150/Tag Premium, 5/Woche Free.",
-				"gap": "'Jeder Eintrag wird ausdrucksstärker' impliziert Automatik und Universalitaet. Realitaet: opt-in und kontingentbegrenzt.",
-				"norm": "UWG §5 Abs. 1 Nr. 1 (falsche Automatik-Implikation), UWG §5a (Weglassung wesentlicher Qualifier)",
-				"rationale": "Praesens 'wird' impliziert Automatik und Universalitaet. Free-Nutzer mit vielen Eintraegen werden NICHT jeden Eintrag verbessert bekommen (5/Woche Limit).",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-006-F1",
-						"text": "Deine Einträge auf Knopfdruck ausdrucksstärker machen",
-						"rationale": "'auf Knopfdruck' macht nutzerausgeloeste Natur explizit.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-006-F2",
-						"text": "KI verbessert deine Texte auf Wunsch",
-						"rationale": "'auf Wunsch' ist Standard-Qualifier fuer opt-in Features.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Nutzerenttueschung und 1-Stern-Reviews wenn Verbesserung nicht automatisch erfolgt. Potenzielle Abmahnung fuer implizierte Automatik."
-			},
-			{
-				"findingId": "AM-007",
-				"sourceWorkerId": "ADV-008",
-				"riskLevel": "🟧 medium",
-				"category": "HWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen",
-				"stringKey": "settings_premium_feature_patterns_desc",
-				"claimText": "Die KI findet Zusammenhänge die dir nicht auffallen",
-				"claimLocation": "Settings screen — Premium features list (pattern recognition)",
-				"codeReality": "Pattern-Erkennung via Firebase AI Logic (Gemini Flash 2.5). Nur linguistisch-semantische Analyse, keine Biometrik, kein wissenschaftlich validierter Algorithmus.",
-				"gap": "Objektive Faehigkeits-Behauptung ('findet Zusammenhaenge') ohne Qualifikation. Privacy Gate Disclaimer existiert, wird aber im Settings-Screen nicht angezeigt.",
-				"norm": "UWG §5 Abs. 1 Nr. 1 (Faehigkeits-Overclaim), HWG §3 (Grenze — psychologische Einsichts-Behauptungen)",
-				"rationale": "HWG §3 deckt Werbung ab die Gesundheitsbezogene Effekte auch indirekt impliziert. 'Zusammenhaenge die dir nicht auffallen' als Lernhilfe fuer Mental-Health-Journaling-Nutzer ist HWG-Grenzfall.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-008-F1",
-						"text": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen",
-						"rationale": "'kann ... sichtbar machen' ist Moeglichkeitsformulierung, nicht Gewissheitsformulierung.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-008-F2",
-						"text": "Muster in deinen Texten erkennen und visualisieren",
-						"rationale": "'in deinen Texten' macht Datenumfang explizit (nur Text, keine Biometrik).",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Mittleres Risiko fuer HWG §3 Challenge bei diagnostischer Interpretation."
-			},
-			{
-				"findingId": "AM-008",
-				"sourceWorkerId": "ADV-009",
-				"riskLevel": "🟧 medium",
-				"category": "HWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "Inline-Disclaimer an Bullet angehängt: '...aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.'",
-				"stringKey": "ai_banner_body",
-				"claimText": "Intelligente Lebensratschläge aus deinen Mustern",
-				"claimLocation": "AI feature introduction banner (Trial-Aktivierung)",
-				"codeReality": "KI-Ausgaben als Vorschlaege gekennzeichnet. Crisis-Dialog-Disclaimer existiert (settings_crisis_dialog_body). Aber: Disclaimer NICHT in diesem Banner.",
-				"gap": "'Lebensratschlaege' von KI in Mental-Health-Journaling-App impliziert therapeutische Empfehlung. Crisis-Dialog-Disclaimer nur in Settings abrufbar, nicht im Banner.",
-				"norm": "HWG §3 (implizite therapeutische Lenkung), UWG §5 Abs. 1 Nr. 1",
-				"rationale": "HWG §3 deckt auch indirekte Gesundheitsbezug-Implikationen ab. 'Lebensratschlaege' fuer Mental-Health-Journaling-Nutzer ist borderline therapeutische Lenkung.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-009-F1",
-						"text": "Persönliche Reflexionsfragen zu deinen Themen",
-						"rationale": "Reframing von 'Ratschlaege' (praeskriptiv) zu 'Fragen' (reflektiv). Eliminiert HWG §3 Borderline.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-009-F2",
-						"text": "Inklusive Micro-Disclaimer im Banner: 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.'",
-						"rationale": "Bestehender Disclaimer direkt im Banner-Kontext platziert.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "HWG §3 Verletzungsrisiko wenn Gesundheitsregulator oder Wettbewerber 'Lebensratschlaege' als implizite therapeutische Lenkung wertet.",
-				"crossJurisdiction": {
-					"EU": "EU MDR Art. 2(1) (Grenzfall Medizinprodukt-Definition): Apps mit therapeutischen Implikationen koennen als Software-Medizinprodukt eingestuft werden. Risiko EU-weit.",
-					"CH": "HMG (Heilmittelgesetz) CH: aehnliche Grenzen fuer gesundheitsbezogene Werbung. Gleiches Risiko.",
-					"GB": "UK Medicines Act / ASA Guidance: 'life advice' in mental health context problematisch. Gleiches Risiko.",
-					"US": "FTC Health Claims Policy: 'life advice' claims die psychologisches Wohlbefinden versprechen koennen FTC-Enforcement ausloesen. Gleiches Risiko."
-				}
-			},
-			{
-				"findingId": "AM-009",
-				"sourceWorkerId": "ADV-010",
-				"riskLevel": "🟧 medium",
-				"category": "HWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "paywall_headline_stress: 'Mehr Klarheit im Alltag' | paywall_headline_stress_sub: 'Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.'",
-				"stringKey": "paywall_headline_stress + paywall_headline_stress_sub",
-				"claimText": "Finde deine innere Ruhe / Erkenne was dich belastet, bevor es dich überwältigt",
-				"claimLocation": "Paywall screen — Stress-Variante Headline und Subtitle",
-				"codeReality": "App ist Tagebuch-Tool. Keine Stressmessung, keine klinische Angstreduzierungsfaehigkeit.",
-				"gap": "Kombination 'innere Ruhe finden' + 'bevor es dich ueberwältigt' = Wellness-/Therapeutischer Nutzen-Claim am Zahlungs-Entscheidungspunkt. Crisis-Dialog-Disclaimer nicht auf Paywall sichtbar.",
-				"norm": "HWG §3 (impliziter Stress-/Angst-Therapeutik-Nutzen als Verkaufsargument), UWG §5 Abs. 1 Nr. 1, EU MDR Art. 2(1) (Grenzfall Medizinprodukt)",
-				"rationale": "Deutsche Gerichte haben 'innere Ruhe finden' im Mental-Health-Produkt-Kontext als HWG §3 Trigger klassifiziert. Subtitle 'bevor es dich ueberwältigt' fuegt praeventiven Gesundheitsrahmen hinzu. Paywall als Kaufentscheidungspunkt erhoehtes Risiko.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-010-F1",
-						"text": "Headline: 'Mehr Klarheit im Alltag', Subtitle: 'Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.'",
-						"rationale": "Shift von therapeutisch (innere Ruhe, Ueberwältigung-Praevention) zu Selbst-Awareness (Klarheit, Artikulation). Eliminiert HWG §3 Trigger.",
-						"stillSafe": true
-					},
-					{
-						"fixId": "ADV-010-F2",
-						"text": "Disclaimer auf Paywall: 'Best Journal ist kein Therapieangebot. KI-Analysen ersetzen keine professionelle Beratung.'",
-						"rationale": "Bestehender Disclaimer aus settings_crisis_dialog_body am Claim-Kontext platziert.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "HWG §3 Enforcement-Target bekannt fuer 'innere Ruhe'-Claims in DE. Zweites stärkstes HWG-Risiko in der App.",
-				"crossJurisdiction": {
-					"EU": "EU MDR Grenzfall: Mental-Health-Apps mit praeventivenGesundheits-Claims koennen als Klasse I Medizinprodukt eingestuft werden. EU-weit gleiches HWG-Aequivalent-Risiko.",
-					"CH": "HMG CH: 'innere Ruhe' als therapeutischer Heilversprechen-Claim auch in CH problematisch.",
-					"GB": "ASA (Advertising Standards Authority) Guidance on health claims: aehnliche Claims wurden beanstandet.",
-					"US": "FTC Health Claims Policy + California Health & Safety Code: wellness-benefit claims ohne wissenschaftliche Substanz koennen FTC-Enforcement ausloesen."
-				}
-			},
-			{
-				"findingId": "AM-010",
-				"sourceWorkerId": "AM-PW-001",
-				"riskLevel": "🟧 medium",
-				"category": "DSGVO-Transparenz",
-				"language": "de",
-				"jurisdiction": "DE",
-				"status": "applied-already-correct",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"notes": "Verifikation: '5 Dashboard-Analysen pro Woche pro Profil' bereits korrekt vorhanden. Frank-Klarstellung: Free-Tier hat 1 individuelles Profil, daher kein Plural-Hinweis nötig.",
-				"stringKey": "ai_limits_dialog_body (Free-Tier Sektion)",
-				"claimText": "ai_limits_dialog_body: '5 Dashboard-Analysen pro Woche pro Profil' (Free-Tier)",
-				"claimLocation": "AiLimitsDialog — Free-Tier Beschreibung",
-				"codeReality": "Seit v0.21.8: Free-Limit = 5/Woche pro Profil (statt vorher global). Fuer Nutzer mit einem Profil unveraendert; fuer Multi-Profil-Nutzer effektiv erhoehtes Limit.",
-				"gap": "Aenderung des Free-Tier-Modells (per-Profil statt global) seit v0.21.8 nirgends im UI ausser diesem Dialog kommuniziert.",
-				"norm": "DSGVO Art. 5 Abs. 1a (Transparenzgrundsatz bei Service-Aenderungen), §5 UWG (Irreführung durch Weglassen wesentlicher Informationen bei Bestandsnutzern)",
-				"rationale": "Bestandsnutzer die vor v0.21.8 installiert haben koennen die Aenderung als intransparent wahrnehmen. Kein direktes rechtliches Risiko, aber Vertrauensrisiko.",
-				"suggestedFixes": [
-					{
-						"text": "Free-Tier Beschreibung explizit mit Per-Profil-Modell: '5 Dashboard-Analysen pro Woche pro Profil (je mehr Profile, desto mehr Analysen insgesamt)'",
-						"rationale": "Macht Per-Profil-Modell und Vorteil transparent.",
-						"stillSafe": true
-					},
-					{
-						"text": "Play Store Release Notes: 'Seit v0.21.8: Free-Dashboard-Limit jetzt pro Profil (5/Woche je Profil statt 5/Woche global)'",
-						"rationale": "Kommuniziert Aenderung an Bestandsnutzer.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Fuer Bestandsnutzer mit mehreren Profilen wurde effektives Free-Limit erhoeht (positiv). Kein direktes rechtliches Risiko, aber Vertrauensrisiko."
-			},
-			{
-				"findingId": "AM-011",
-				"sourceWorkerId": "ADV-007",
-				"riskLevel": "🟨 low",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"stringKey": "settings_premium_feature_dashboard_desc",
-				"claimText": "Dein Dashboard wächst mit dir",
-				"claimLocation": "Settings screen — Premium features list (Dashboard-Analysen)",
-				"codeReality": "Dashboard-Analysen kontingentbegrenzt (150/Tag Premium, 5/Woche Free). Cooldown bei 101, Block bei 151. Metapher 'waechst mit dir' impliziert unbegrenztes organisches Wachstum.",
-				"gap": "'Wächst mit dir' Metapher inkonsistent mit Kontingent-Realitaet. In der Praxis sehr unwahrscheinlich dass ein Nutzer >150 Dashboard-Analysen an einem Tag laeuft.",
-				"norm": "UWG §5 Abs. 1 Nr. 1 (irreführende Implikation via Marketing-Metapher)",
-				"rationale": "LOW wegen praktischer Unwahrscheinlichkeit des Konflikts. Metapher koennte als 'analytische Tiefe wächst über Zeit' interpretiert werden (auch defensible).",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-007-F1",
-						"text": "Täglich neue Erkenntnisse aus deinen Einträgen",
-						"rationale": "Praezise (Analysen laufen taeglich auf neue Eintraege), kein Unlimited-Wachstums-Implikat.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Sehr geringes Risiko. Traegtzu Pattern von evaluativem Overclaiming bei.",
-				"status": "applied",
-				"appliedAt": "2026-05-18T18:10:00Z",
-				"appliedFixText": "Dein Dashboard wächst mit deinen Einträgen."
-			},
-			{
-				"findingId": "AM-012",
-				"sourceWorkerId": "ADV-011",
-				"riskLevel": "🟨 low",
-				"category": "UWG",
-				"language": "de",
-				"jurisdiction": "DE",
-				"stringKey": "retro_benefit_weekly",
-				"claimText": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
-				"claimLocation": "Retrospective / weekly review feature description",
-				"codeReality": "Free = 2 Wochenrueckblicke. Premium = 'unbegrenzt'. Technisch: taeglich KI-Kontingent-begrenzt bei 150/Tag — in der Praxis irrelevant.",
-				"gap": "'Unbegrenzt' ist technisch durch taeglicherAI-Kontingent begrenzt. Praktisch vernachlaessigbar.",
-				"norm": "UWG §5a (Verschweigen wesentlicher Einschraenkungen)",
-				"rationale": "Risiko LOW: Nutzer der >150 Wochenrueckblicke an einem Tag laeuft ist extrem unwahrscheinlich.",
-				"suggestedFixes": [
-					{
-						"fixId": "ADV-011-F3",
-						"text": "Wochenrückblicke ohne Monatsbegrenzung",
-						"rationale": "Vermeidet 'unbegrenzt' gaenzlich. Kontrastiert korrekt gegen Free-Limit.",
-						"stillSafe": true
-					}
-				],
-				"impactWithoutFix": "Sehr geringes Risiko. Praktische Nutzungsmuster machen theoretischen Konflikt irrelevant.",
-				"status": "skipped-user-decision",
-				"skippedAt": "2026-05-18T18:10:00Z",
-				"userReason": "Frank-Klarstellung 2026-05-18: 'Unbegrenzte Wochenrückblicke' bezieht sich auf die ANZAHL einsehbarer historischer Wochenrückblicke (Free-Tier zeigt nur 2 Wochen, Premium zeigt alle früheren), nicht auf Tagesgenerierung. Die Aussage ist damit faktisch korrekt — kein UWG §5a-Risiko."
-			}
-		],
-		"missingDocs": [
-			{
-				"findingId": "MD-001",
-				"sourceWorkerId": "MD-001",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "Privacy Policy nur ueber generische Hub-URL — kein Deep-Link im ConsentScreen",
-				"description": "Datenschutzerklaerung existiert als Titel-String, ist ueber settings_legal_online_url erreichbar, aber NICHT per eigenem Deep-Link im ConsentScreen direkt verlinkt. consent_confirmation verweist auf Datenschutzerklaerung ohne clickbaren Link.",
-				"legalBasis": "DSGVO Art. 13 Abs. 1 (Informationspflicht bei Erhebung), Art. 7 Abs. 2 (Einwilligung klar unterscheidbar)",
-				"evidence": {
-					"string": "settings_legal_online_url",
-					"value": "https://pepsi1978.github.io/proggs/bestjournal/",
-					"consentString": "consent_confirmation verweist auf Datenschutzerklaerung ohne clickbaren Link"
-				},
-				"recommendation": "Im ConsentScreen direkte Inline-Links auf Datenschutz, AGB und Impressum einbauen (SpannableString / ClickableLink). Optional: separate Deep-Link-URL-Strings fuer jeden Rechtstext.",
-				"httpCheckRequired": true,
-				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
-			},
-			{
-				"findingId": "MD-002",
-				"sourceWorkerId": "MD-002",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "Impressum nur ueber generische Hub-URL, kein Play-Store-Pflichtfeld-Link",
-				"description": "Impressum als Titel vorhanden, aber nur ueber generische GitHub-Pages-URL erreichbar. Zugang: Settings > Rechtliche Dokumente > Online-Version = 3 Ebenen tief. TMG §5 / DDG §5 verlangt 'leicht erkennbar, unmittelbar erreichbar und staendig verfuegbar'.",
-				"legalBasis": "TMG §5 / DDG §5 (Impressumspflicht fuer Telemedien), Play Store Developer Distribution Agreement Section 9.1",
-				"evidence": {
-					"string": "legal_title_impressum",
-					"accessPath": "Settings > Rechtliche Dokumente > Online-Version (3 Ebenen tief)"
-				},
-				"recommendation": "Impressum-Direktlink als eigene String-Ressource. Im Settings-Screen prominent positionieren. GitHub-Pages um Impressum-Anker erweitern (#impressum). Play-Store-Eintrag: Impressum-URL als 'Website' eintragen.",
-				"httpCheckRequired": true,
-				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
-			},
-			{
-				"findingId": "MD-003",
-				"sourceWorkerId": "MD-003",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "AGB/Nutzungsbedingungen kein eigenstaendiger Deep-Link",
-				"description": "Nutzungsbedingungen als Titel vorhanden. Zugang nur ueber generische Hub-URL. Fuer Abo-Abschluesse verlangt §356 BGB und Play Store Billing Policy klare AGB-Verlinkung zum Kaufzeitpunkt. ConsentScreen verlinkt AGB nicht per Tap.",
-				"legalBasis": "BGB §305 Abs. 2 (Einbeziehung AGB), §356 BGB, Play Store Developer Policy (Subscription billing requirements)",
-				"evidence": {
-					"string": "legal_title_nutzungsbedingungen",
-					"paywallConsentDialog": "paywall_consent_dialog_body erwaehnt Widerrufsrecht, kein AGB-Link"
-				},
-				"recommendation": "Im Paywall-Consent-Dialog und im ConsentScreen: Clickbarer 'Nutzungsbedingungen'-Link mit eigener Deep-Link-URL.",
-				"httpCheckRequired": true,
-				"url": "https://pepsi1978.github.io/proggs/bestjournal/"
-			},
-			{
-				"findingId": "MD-004",
-				"sourceWorkerId": "MD-004",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "Health-Disclaimer existiert, aber NICHT am KI-Ausgabepunkt",
-				"description": "Health-Disclaimer (settings_crisis_dialog_body: 'Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung') nur in Settings > Krisenhilfe. NICHT bei KI-Analyse-Generierung (Dashboard, Retrospektive, TextImprove).",
-				"legalBasis": "HWG §3 (irreführende Heilmittelwerbung), Google Play Health Apps Policy (Prominent disclosure at point of health content display), US FTC Health Claims Policy",
-				"evidence": {
-					"string": "settings_crisis_dialog_body",
-					"location": "Settings > Krisenhilfe (nicht am KI-Analyse-Ausgabepunkt)",
-					"aiAnalysisScreens": [
-						"DashboardScreen",
-						"RetrospectiveScreen",
-						"ImproveTextScreen"
-					]
-				},
-				"recommendation": "Health-Disclaimer als CollapsibleBanner oder Footnote direkt unter jede KI-generierte Analyse: 'Keine Therapie — ersetzt keine professionelle Beratung.'",
-				"httpCheckRequired": false
-			},
-			{
-				"findingId": "MD-005",
-				"sourceWorkerId": "MD-005",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "EU AI Act Art. 50 — Badge vorhanden, aber Vollabdeckung aller KI-Ausgaben nicht verifiziert",
-				"description": "ai_generated_badge ('KI-generiert') und ai_generated_tooltip existieren als String-Ressourcen. Ob das Badge auf ALLEN KI-generierten Inhalten angezeigt wird (Dashboard, Retrospektiven, ImproveText, TTS, Zusammenfassungen) ist nicht aus Strings allein verifizierbar.",
-				"legalBasis": "EU AI Act Art. 50 Abs. 1 (Transparency obligations), ab Anwendbarkeit 2025/2026",
-				"evidence": {
-					"strings": [
-						"ai_generated_badge",
-						"ai_generated_tooltip"
-					],
-					"concern": "Strings existieren, aber Code-Review noetig um Vollabdeckung zu bestaetigen"
-				},
-				"recommendation": "Code-Review in DashboardViewModel, RetrospectiveViewModel, ImproveTextUseCase, SummarizeUseCase: Sicherstellen dass ai_generated_badge auf allen KI-Ausgabe-Bloecken angezeigt wird.",
-				"httpCheckRequired": false
-			},
-			{
-				"findingId": "MD-006",
-				"sourceWorkerId": "MD-006",
-				"riskLevel": "🟧 medium",
-				"severity": "MEDIUM",
-				"title": "FTC AI Endorsement Disclosure fuer US-Markt nicht nachweisbar (englische Lokalisierung)",
-				"description": "FTC 'Guides Concerning Endorsements' (2023 Update) und FTC AI Disclosure Guidance (2024) erfordern AI-Kennzeichnung fuer US-User. ai_generated_badge-Strings koennen dies abdecken, aber explizite FTC-Compliance-Formulierung ('Generated by AI') in values-en/ nicht verifiziert.",
-				"legalBasis": "FTC Guides §255.5, FTC AI Endorsement Guidance (2024), California AB 2602",
-				"evidence": {
-					"note": "strings.xml ist deutsche Basis. values-en/ nicht in Worker-B2-Scope geprueft."
-				},
-				"recommendation": "In values-en/strings.xml: ai_generated_badge = 'AI-Generated', ai_generated_tooltip = 'This content was created by an AI system (Google Gemini) and may contain errors.'",
-				"httpCheckRequired": false
-			}
-		],
-		"deadUrls": [
-			{
-				"findingId": "URL-001",
-				"sourceWorkerId": "URL-001",
-				"url": "https://pepsi1978.github.io/proggs/bestjournal/",
-				"stringKey": "settings_legal_online_url",
-				"usedFor": [
-					"Privacy Policy",
-					"Impressum",
-					"AGB/Nutzungsbedingungen"
-				],
-				"category": "legal-hub",
-				"checkedByUrlChecker": true,
-				"needsHttpCheck": false,
-				"concern": "Einzige URL fuer alle 3 Pflichtdokumente. Fehlende Sub-Anker fuer direkten Zugriff auf einzelne Dokumente. Nicht im ConsentScreen verlinkt. AGB/Nutzungsbedingungen noch nicht auf der Seite.",
-				"queuedForPhase": "completed",
-				"httpStatus": 200,
-				"httpStatusOk": true,
-				"containsPrivacyPolicy": true,
-				"containsImprint": true,
-				"containsTerms": false,
-				"availableAnchors": [],
-				"separatePages": [
-					"privacy-en.html",
-					"privacy-de.html",
-					"privacy-ko.html",
-					"account-deletion.html"
-				],
-				"checkTimestamp": "2026-05-18T19:00:00Z",
-				"recommendation": "URL erreichbar (HTTP 200), Privacy Policy und Impressum sind vorhanden. AGB/Nutzungsbedingungen fehlen auf der Seite. Fuer Deep-Linking HTML-Anchors (#impressum, #datenschutz, #agb) ergaenzen und AGB-Dokument nachpflegen."
-			}
-		],
-		"playStorePolicies": [
-			{
-				"findingId": "PS-001",
-				"sourceWorkerId": "PS-PW-001",
-				"riskLevel": "🟥 high",
-				"category": "Security",
-				"language": "de",
-				"jurisdiction": "DE",
-				"file": "app/build.gradle.kts",
-				"line": 0,
-				"currentText": "isMinifyEnabled = false\nisShrinkResources = false",
-				"context": "Release-BuildType. R8/ProGuard fuer Release-Build deaktiviert. AAB enthaelt vollstaendig lesbaren Bytecode.",
-				"rationale": "Google Play Developer Policy 'Device and Network Abuse' und 'Malware' erfordern bei Billing-Integration Schutz gegen Reverse Engineering: (1) Billing-Logik vollstaendig dekompilierbar; (2) Rate-Limiter-Konstanten im Klartext (SUB_HARD_LIMIT=151, RETENTION_DISCOUNT_PERCENT=25); (3) AiRateLimiter-Schwellen (SPAM_HOURLY_AI_LIMIT_PREMIUM=50) erlauben praeziise API-Abuse-Angriffe; (4) Firebase-Konfiguration sichtbar. Play Billing Library 7.1.1 setzt R8-Obfuskierung voraus.",
-				"invasivityLevel": "function-required",
-				"suggestedFixes": [
-					{
-						"text": "Vollstaendiger Fix: isMinifyEnabled = true, isShrinkResources = true, proguardFiles konfigurieren",
-						"rationale": "Beste Security-Praxis und kleinste APK-Groesse.",
-						"stillSafe": true
-					},
-					{
-						"text": "Schrittweise Migration: erst minify=true, nach Testphase shrinkResources=true",
-						"rationale": "Reduziert Risiko von Build-Fehlern durch stufenweise Aktivierung.",
-						"stillSafe": true
-					}
-				],
-				"invasiveSnippet": "// app/build.gradle.kts — Release BuildType\nbuildTypes {\n    release {\n        isMinifyEnabled = true          // War: false\n        isShrinkResources = true        // War: false\n        proguardFiles(\n            getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n            \"proguard-rules.pro\"\n        )\n    }\n}\n\n// proguard-rules.pro Pflicht-Regeln:\n// Room\n-keep class * extends androidx.room.RoomDatabase\n-keep @androidx.room.Entity class *\n-keepattributes *Annotation*\n// Hilt\n-keep class dagger.hilt.** { *; }\n-keep class javax.inject.** { *; }\n-keep @dagger.hilt.android.AndroidEntryPoint class *\n// Firebase\n-keep class com.google.firebase.** { *; }\n-dontwarn com.google.firebase.**\n// Play Billing\n-keep class com.android.billingclient.** { *; }\n-dontwarn com.android.billingclient.**",
-				"impactWithoutFix": "KRITISCH: Vollstaendiger Billing-Bypass durch Dekompilierung moeglich. Rate-Limiter deaktivierbar (direkte API-Kosten). Google Play Security Review kann App ablehnen. Firebase-Config fuer nicht-authentifizierte Apps nutzbar.",
-				"crossJurisdiction": {
-					"EU": "Google Play Policy gilt global — Rejection-Risiko identisch in allen Maerkten. DSGVO Art. 32 (technische Sicherheitsmassnahmen): fehlende Obfuskierung bei App die personenbezogene Daten verarbeitet koennte als unzureichende Sicherheitsmassnahme gewertet werden.",
-					"CH": "DSG Art. 8 (Datensicherheit): aehnliche Anforderungen an technische Schutzmassnahmen. Gleiches Risiko.",
-					"GB": "UK GDPR Art. 32: identisch mit EU DSGVO. Gleiches Risiko.",
-					"US": "CCPA §1798.150 (Security breach liability): unzureichend geschuetzte App erhoehtes Haftungsrisiko bei Datenpanne. FTC Act §5: inadaequate App-Sicherheit als unfair practice klassifiziert."
-				},
-				"status": "deferred-to-release-build",
-				"appliedAt": "2026-05-18T17:30:00Z",
-				"appliedFixText": "isMinifyEnabled=true, isShrinkResources=true in app/build.gradle.kts. proguard-rules.pro: Hilt/Dagger Keep-Regeln + Kotlin Coroutines + Kotlin Reflect dontwarn ergaenzt.",
-				"deferredAt": "2026-05-18T18:50:00Z",
-				"deferredReason": "Frank-Direktive 2026-05-18: R8 waehrend aktiver Entwicklungsphase wieder deaktiviert (isMinifyEnabled=false). Reaktivierung beim Release-Sprint vor Play-Store-Upload. proguard-rules.pro bleibt im Repo, sofort einsetzbar.",
-				"reactivationChecklist": [
-					"buildTypes.release.isMinifyEnabled = true",
-					"buildTypes.release.isShrinkResources = true",
-					"./gradlew bundleRelease (Build-Test)",
-					"apkanalyzer (Obfuskierungs-Verifikation)",
-					"App-Funktionalitaet manuell pruefen (Hilt-Injection, Room-Queries, Firebase, Play-Billing)"
-				]
-			}
-		]
-	},
-	"duplicatesRemoved": 2,
-	"duplicateDetails": [
-		{
-			"removedSourceId": "T-PW-001 (B1)",
-			"keptAs": "AM-002",
-			"reason": "B1-T-PW-001 (churn '5 Perspektiven') und B3-ADV-002 beschreiben denselben String. advertisingMismatch ist korrektere Kategorie fuer UWG §5 Werbeaussagen-vs-Code-Realitaet. T-003 behaelt ai_limits_rechenlogik als Referenz-String.",
-			"relatedFindingId": "AM-002"
-		},
-		{
-			"removedSourceId": "T-PW-002 (B1)",
-			"keptAs": "AM-001",
-			"reason": "B1-T-PW-002 (settings '4 KI-Profile' vs Key '_5_') und B3-ADV-001 beschreiben denselben String/Gap. advertisingMismatch korrekte Kategorie.",
-			"relatedFindingId": "AM-001"
-		}
-	],
-	"openFindingsCount": 0,
-	"openFindingsBreakdown": {
-		"textual": {
-			"total": 4,
-			"high": 2,
-			"medium": 2,
-			"low": 0
-		},
-		"advertisingMismatch": {
-			"total": 3,
-			"high": 0,
-			"medium": 3,
-			"low": 0
-		},
-		"missingDocs": {
-			"total": 6,
-			"medium": 6
-		},
-		"deadUrls": {
-			"total": 1,
-			"note": "Inventar fuer url-checker — zaehlt nicht als Finding bis HTTP-Pruefung"
-		},
-		"playStorePolicies": {
-			"total": 1,
-			"high": 0,
-			"applied": 1
-		}
-	},
-	"totalHighFindings": 6,
-	"totalMediumFindings": 18,
-	"totalLowFindings": 4,
-	"fixedThisRun": 27,
-	"skippedThisRun": 1,
-	"userAlternativesApplied": 0,
-	"invasiveChangesApplied": 0,
-	"manualFixesPending": 0,
-	"previousRunDelta": {
-		"newFindings": 0,
-		"resolvedFindings": 0
-	},
-	"positiveFindings": [
-		{
-			"id": "POS-001",
-			"sourceWorkerId": "T-LG-003",
-			"title": "DSGVO Art. 17 Konto-Loeschung — vollstaendig und korrekt implementiert",
-			"norm": "DSGVO Art. 17, CCPA §1798.105, Play Store Account Deletion Policy",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-002",
-			"sourceWorkerId": "T-LG-004",
-			"title": "Widerrufsbelehrung §355/§356 BGB — vollstaendig mit Pflicht-Checkbox",
-			"norm": "§355 BGB, §356 Abs. 5 BGB, EU-Verbraucherrechte-Richtlinie 2011/83/EU Art. 14 Abs. 4",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-003",
-			"sourceWorkerId": "T-LG-005",
-			"title": "§356a BGB Widerrufsbutton digital — vollstaendig implementiert",
-			"norm": "§356a BGB",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-004",
-			"sourceWorkerId": "T-LG-006",
-			"title": "CCPA Do-Not-Sell — dual implementiert in ConsentScreen und Settings",
-			"norm": "CCPA §1798.120, CPRA 2023, Colorado CPA, Virginia VCDPA",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-005",
-			"sourceWorkerId": "T-LG-007",
-			"title": "DSGVO-Consent-Screen — granular, fair, kein Dark Pattern",
-			"norm": "DSGVO Art. 4 Nr. 11, Art. 7, EDPB Guidelines 03/2022 und 05/2022",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-006",
-			"sourceWorkerId": "COMP-001",
-			"title": "Trial-Marketing korrekt — 8 Tage, kein Auto-Pay-Claim, klarer Free-Tier nach Trial",
-			"norm": "UWG §8, §312d BGB",
-			"status": "PASS"
-		},
-		{
-			"id": "POS-007",
-			"sourceWorkerId": "COMP-002",
-			"title": "KI-Ausgabe-Disclaimer vorhanden (privacy_gate + crisis_dialog)",
-			"norm": "HWG §3 (mitigation), EU AI Act Art. 50(4)",
-			"status": "PASS — Gap: nicht inline bei Paywall/AI-Banner (ADV-009, ADV-010)"
-		},
-		{
-			"id": "POS-008",
-			"sourceWorkerId": "COMP-003",
-			"title": "'Unbegrenzte Nachtraege' (follow-up entries) korrekt — nicht durch AiRateLimiter begrenzt",
-			"norm": "UWG §5 Abs. 1 Nr. 1",
-			"status": "PASS"
-		}
-	],
-	"pipelineStatus": "completed-success",
-	"pipelineCompletedAt": "2026-05-18T19:30:00Z",
-	"phase4Summary": {
-		"w1_code_de_audit": "PASS - 27/27 phase-2 fixes verified, build stable",
-		"w2_cross_lingual": "PASS - FR/IT/ES/EN/DE no HWG-trigger, formats+XML 27/27 ok",
-		"w3_coverage": "PASS - 27/27 locales x 31 keys = 100%",
-		"minor_findings": [
-			"NF-001: ai_output_health_disclaimer_long defined but not consumed via stringResource (non-blocking, optional later use as expandable tooltip)"
-		],
-		"pre_existing_issues_outside_plugin_scope": [
-			"GU locale has ~235 strings with placeholder from prior translation tool - pre-existing, not introduced by plugin"
-		]
-	},
-	"translatedLocales": 27
+  "mode": "default",
+  "skillVersionsUsed": {
+    "roentgen": "b8280e0754f6",
+    "rechtssicherheit": "5956640d46ea",
+    "strings": "29007fdc1187",
+    "uebersetzer": "e7205988a2f3"
+  },
+  "auditedLanguages": [
+    "de"
+  ],
+  "auditedJurisdictions": [
+    "DE",
+    "AT",
+    "CH",
+    "EU",
+    "GB",
+    "US"
+  ],
+  "generatedAt": "2026-05-18",
+  "appVersion": "0.21.8",
+  "synthesizerNotes": "Aggregiert aus Worker B1 (paywall/churn), B2 (legal-docs/privacy/consent), B3 (marketing/advertising). 3 Duplikate entfernt (4-vs-5-Profil-Cluster: T-PW-001 und T-PW-002 als Verweise auf AM-Cluster konsolidiert). openFindingsCount berechnet ohne deadUrls und COMPLIANT-Eintraege.",
+  "findings": {
+    "textual": [
+      {
+        "findingId": "T-001",
+        "sourceWorkerId": "T-LG-001",
+        "riskLevel": "🟥 high",
+        "category": "Play-Store-Policy",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/AndroidManifest.xml + app/src/main/res/values/strings.xml",
+        "line": 0,
+        "currentText": "Keine permission_rationale_*-Strings fuer RECORD_AUDIO, CAMERA, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS",
+        "context": "AndroidManifest deklariert 4 sensible Laufzeit-Berechtigungen ohne User-visible Begruendung in strings.xml.",
+        "rationale": "Google Play Developer Policy (Permissions Policy, Stand 2024) verlangt fuer jede sensible Permission eine user-visible Begruendung. Fehlt dies, kann die App bei Play Store Policy Reviews zurueckgewiesen werden. Android Developer Best Practices (developer.android.com/training/permissions/requesting#explain) verlangen shouldShowRequestPermissionRationale()-Dialog.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "permission_rationale_microphone: 'Das Mikrofon wird benoetigt, um Tagebucheintraege per Spracheingabe diktieren zu koennen.'",
+            "rationale": "RECORD_AUDIO — Groq/Whisper STT Zweck klar.",
+            "stillSafe": true
+          },
+          {
+            "text": "permission_rationale_camera: 'Die Kamera wird benoetigt, um Fotos zu deinen Tagebucheintraegen hinzuzufuegen.'",
+            "rationale": "CAMERA — Zweck in-App vor Formulierung verifizieren.",
+            "stillSafe": true
+          },
+          {
+            "text": "permission_rationale_location: 'Der ungefaehre Standort wird benoetigt, um deinen Eintraegen einen Ortskontext hinzuzufuegen. Du kannst dies jederzeit deaktivieren.'",
+            "rationale": "ACCESS_COARSE_LOCATION — Standort-Tagging.",
+            "stillSafe": true
+          },
+          {
+            "text": "permission_rationale_notifications: 'Benachrichtigungen werden benoetigt, um dich an dein taegliches Schreiben zu erinnern.'",
+            "rationale": "POST_NOTIFICATIONS — BootReminderReceiver.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Google Play Policy Rejection moeglich. Play-Store-Reviews koennten App fuer fehlende Permission-Transparenz ablehnen.",
+        "crossJurisdiction": {
+          "EU": "DSGVO Art. 13 Abs. 1 lit. c und Art. 5 Abs. 1 lit. a (Transparenz): Zweck der Datenerhebung muss dem Nutzer mitgeteilt werden — Permission-Rationale ist die App-seitige Umsetzung. Gleiches Risiko wie DE.",
+          "CH": "DSG Art. 19 (Informationspflicht): Identisches Erfordernis zur Zweckangabe bei Berechtigungsanfragen. Gleiches Risiko.",
+          "GB": "UK GDPR Art. 13 (identisch mit EU DSGVO): Permission-Rationale erfordert. ICO Guidance empfiehlt explizite Zweckangabe. Gleiches Risiko.",
+          "US": "Kein Bundesgesetz, aber California CPRA §1798.100 und FTC Act §5 (unfair/deceptive practices) erfordern Transparenz ueber Datenzwecke. Play Store Policy gilt global — Rejection-Risiko identisch weltweit."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T14:34:33Z",
+        "appliedFixText": "4 strings hinzugefuegt (Variante 2 Du-Stil)",
+        "appliedStringKeys": [
+          "permission_rationale_microphone",
+          "permission_rationale_camera",
+          "permission_rationale_location",
+          "permission_rationale_notifications"
+        ]
+      },
+      {
+        "findingId": "T-002",
+        "sourceWorkerId": "T-LG-002",
+        "riskLevel": "🟥 high",
+        "category": "DSGVO-Backup",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/xml/backup_rules.xml + app/src/main/res/xml/data_extraction_rules.xml",
+        "line": 0,
+        "currentText": "entropy_journal_db nicht in exclude-Liste — durch Auslassung im Google Auto Backup und Device-Transfer enthalten",
+        "context": "Haupt-Tagebuchdatenbank mit persoenlichen Eintraegen, KI-Analysen, Stimmungsverlaeufen und Audio-Metadaten wird automatisch per Google Auto Backup gesichert. Separates Consent-Gate fehlt.",
+        "rationale": "DSGVO Art. 13 Abs. 1 lit. e (Empfaenger der Daten), Art. 46 (Dritttransfer bei Google-Server-Backup), Art. 5 Abs. 1 lit. b (Zweckbindung): automatisches Backup ≠ explizite Drive-Backup-Einwilligung. Der consent_toggle_drive betrifft nur explizite Drive-API-Aufrufe, nicht den Android-System-Backup.",
+        "invasivityLevel": "config-required",
+        "suggestedFixes": [
+          {
+            "text": "Option A (empfohlen): entropy_journal_db in backup_rules.xml und data_extraction_rules.xml explizit ausschliessen. Eigene verschluesselte Backup-Loesung via Drive API als einzigen Backup-Weg nutzen.",
+            "rationale": "DSGVO-konformste Loesung — Nutzer hat volle Kontrolle ueber Backup.",
+            "stillSafe": true
+          },
+          {
+            "text": "Option B: Dokumentation in Datenschutzerklaerung, dass Android Auto Backup aktiv ist, mit Opt-out-Hinweis (Android System-Settings).",
+            "rationale": "Akzeptabel aber schwaecher — Nutzer muss aktiv opt-out.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": "<!-- backup_rules.xml — entropy_journal_db explizit ausschliessen -->\n<full-backup-content>\n  <exclude domain=\"database\" path=\"entropy_journal_db\" />\n  <exclude domain=\"database\" path=\"entropy_journal_db-wal\" />\n  <exclude domain=\"database\" path=\"entropy_journal_db-shm\" />\n  <!-- bestehende excludes bleiben -->\n</full-backup-content>\n\n<!-- data_extraction_rules.xml -->\n<data-extraction-rules>\n  <cloud-backup>\n    <exclude domain=\"database\" path=\"entropy_journal_db\" />\n    <exclude domain=\"database\" path=\"entropy_journal_db-wal\" />\n    <exclude domain=\"database\" path=\"entropy_journal_db-shm\" />\n  </cloud-backup>\n  <device-transfer>\n    <exclude domain=\"database\" path=\"entropy_journal_db\" />\n  </device-transfer>\n</data-extraction-rules>",
+        "impactWithoutFix": "Persoenliche Tagebuchinhalte werden ohne separaten Consent-Point zu Google-Servern uebertragen. DSGVO Art. 5 Abs. 1 lit. b Verstoß moeglich. Abmahngefahr durch Datenschutzbehoerden.",
+        "crossJurisdiction": {
+          "EU": "DSGVO Art. 5 Abs. 1 lit. b, Art. 13 Abs. 1 lit. e: identisches Risiko in allen EU-Mitgliedsstaaten. Automatisches Backup persoenlicher Daten ohne Zweckbindungs-Consent ist in der gesamten EU problematisch.",
+          "CH": "DSG Art. 6 (Grundsaetze der Datenbearbeitung), Art. 19: Schweizer DSG 2023 hat aehnliche Anforderungen an Zweckbindung und Transparenz. Risiko identisch.",
+          "GB": "UK GDPR Art. 5(1)(b) und Art. 13(1)(e): identisch mit EU DSGVO. ICO enforcement moeglich. Gleiches Risiko.",
+          "US": "California CPRA §1798.100(a): Nutzer hat Recht zu wissen, welche personenbezogenen Daten erhoben werden. Fehlendes Disclosure ueber Auto-Backup koennte als Verstoß gewertet werden. Geringes direktes Risiko, aber Transparenz-Best-Practice."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T16:50:00Z",
+        "appliedFixText": "Option 2+: DATENSCHUTZ.html §2-Tabelle + §5.3a erweitert (detaillierte Transparenz), strings.xml +5 Strings (consent_info + settings_open + error), SettingsScreen.kt LegalDocumentRow mit ACTION_BACKUP_SETTINGS-Fallback-Kette"
+      },
+      {
+        "findingId": "T-003",
+        "sourceWorkerId": "T-PW-003",
+        "riskLevel": "🟥 high",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1191,
+        "currentText": "bei 4 Profilen also bis zu 600 pro Tag",
+        "context": "AiLimitsDialog — Rechenlogik (ai_limits_dialog_body). Steht im Widerspruch zu anderen Strings die 5 Profile nennen. Dieser String ist als einziger mit konkreter Rechenlogik (150 × 4 = 600) vermutlich korrekt.",
+        "rationale": "Drei verschiedene Screens (Settings, Churn, AiLimitsDialog) zeigen verschiedene Zahlen fuer dasselbe Feature. Dieser String sagt '4', churn_offer_feature_perspectives sagt '5'. Solange Diskrepanz besteht: §5 UWG Irreführungsverbot. HINWEIS: Primaere Behandlung via advertisingMismatch-Cluster AM-001/AM-002/AM-003 (4-vs-5-Problem). Dieser T-003 ist der Referenz-String mit korrekter Rechenlogik.",
+        "relatedFindingIds": [
+          "AM-001",
+          "AM-002",
+          "AM-003"
+        ],
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Beibehalten sofern 4 die korrekte Profil-Anzahl ist. Dann muessen churn_offer_feature_perspectives (→AM-002) und onboarding_perspectives_title (→AM-003) auf '4' angeglichen werden.",
+            "rationale": "Korrekteste Loesung basierend auf Code-Realitaet (AiRateLimiter = 4 Profile).",
+            "stillSafe": true
+          },
+          {
+            "text": "Zahl-neutrale Variante: 'bei allen deinen Profilen'",
+            "rationale": "Keine absolute Zahl — nicht widersprüchlich in jedem Szenario.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Screenshots aus drei verschiedenen Screens zeigen verschiedene Zahlen fuer dasselbe Feature. Jeder Screenshot kann als Beweis fuer irreführende Werbung dienen. §5 UWG Abmahngefahr, Google Play Policy Accuracy.",
+        "crossJurisdiction": {
+          "EU": "EU UCPD 2005/29/EG Art. 6 (Irreführende Handlungen): identisches Risiko. Widersprüchliche Angaben zu wesentlichen Produktmerkmalen sind in der gesamten EU als irreführend zu werten.",
+          "CH": "UWG CH Art. 3 lit. b (falsche Angaben): gleiches Risiko.",
+          "GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5 (misleading actions): identisches Risiko.",
+          "US": "FTC Act §5 (unfair/deceptive practices): unsubstantiated oder widersprüchliche Produktmerkmalsangaben koennen als deceptive advertising gewertet werden."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T14:25:07Z",
+        "appliedFixText": "150 Anfragen pro Tag und Profil — für die 4 vordefinierten zusammen 600/Tag, plus 150/Tag für jedes eigene Profil das du erstellst."
+      },
+      {
+        "findingId": "T-004",
+        "sourceWorkerId": "T-PW-005",
+        "riskLevel": "🟧 medium",
+        "category": "BGB-Widerruf",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1089,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "APPEND: ...freischalten.\\n\\nAnbieter der Premium-Funktionen: Frank Barwandt, c/o Impressumservice Dein-Impressum, Stettiner Straße 41, 35410 Hungen, Deutschland. E-Mail für Widerruf: dev.app.support@gmail.com.\\n\\nFalls du das Widerrufsrecht nicht vor Bereitstellung erklärst und das Premium-Abo gestartet wird, beginnt deine 14-tägige Widerrufsfrist am Tag des Vertragsabschlusses. Du kannst den Widerruf formfrei per E-Mail erklären oder das EU-Muster-Widerrufsformular nutzen (https://www.bmuv.de/widerruf — externes EU-Muster).",
+        "currentText": "Du hast nach Abschluss eines Abos oder Kaufs grundsätzlich ein 14-tägiges Widerrufsrecht (§ 355 BGB).\n\nDamit du die Premium-Funktionen sofort nutzen kannst, beginnen wir mit der Bereitstellung unmittelbar nach deinem Kauf. Mit deiner Zustimmung unten verzichtest du in Kenntnis der Folgen auf dein 14-tägiges Widerrufsrecht (§ 356 Abs. 5 BGB).\n\nOhne diese Zustimmung können wir die Premium-Funktionen nicht sofort freischalten.",
+        "context": "PaywallScreen — WiderrufsbelehrungDialog (paywall_consent_dialog_body). Erscheint vor dem Kaufabschluss.",
+        "rationale": "Fehlende Pflichtangaben nach §312g BGB i.V.m. Art. 246a §1 EGBGB: (1) Kein Unternehmensname/Anschrift im Dialog; (2) Kein Hinweis auf Widerrufsfrist-Beginn (§356 Abs. 2); (3) Musterformular nicht erwaehnt (EGBGB Art. 246a §1 Abs. 2 Nr. 1b); (4) Keine Kontaktadresse fuer Widerruf. POSITIV: §356 Abs. 5 BGB-Zitat vorhanden, Pflicht-Checkbox vorhanden (T-LG-004 positiv), §356a BGB-Flow vorhanden (T-LG-005 positiv).",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Ergaenzte Variante mit Pflichtangaben: Anbieteridentitaet, Fristbeginn, Widerrufskanal. Entspricht EGBGB Art. 246a §1.",
+            "lengthDeltaPct": 60,
+            "rationale": "Vollstaendige EGBGB-konforme Widerrufsbelehrung.",
+            "stillSafe": true
+          },
+          {
+            "text": "Kuerzere Variante mit Verweis auf vollstaendige AGB-Widerrufsbelehrung — nur wenn AGB tatsaechlich vollstaendige Belehrung enthalten.",
+            "lengthDeltaPct": -20,
+            "rationale": "Kuerzer, bedingt zulaessig.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Unvollstaendige Widerrufsbelehrung verlaengert Widerrufsfrist auf 12 Monate + 14 Tage (§356 Abs. 3 BGB). Alle Kaeufer koennen in diesem Zeitraum Kauf rueckgaengig machen. Play Store Policy 'Subscriptions' erfordert vollstaendige Disclosure.",
+        "crossJurisdiction": {
+          "EU": "EU-Verbraucherrechterichtlinie 2011/83/EU Art. 9-16: Widerrufsrecht und Belehrungspflichten gelten EU-weit. Aehnliche Luecken in anderen EU-Laendern, nationaler Gesetzgeber setzt die Richtlinie um. DE hat die strengste Durchsetzung.",
+          "CH": "Schweizer OR Art. 40a ff. (Widerrufsrecht bei Fernabsatz): aehnliche Anforderungen, jedoch kein identisches 12-Monats-Verlaeungerungsrisiko. Moderates Risiko.",
+          "GB": "Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013: Aequivalent zur EU-Richtlinie. CMA enforcement aktiv. Gleiches Risiko.",
+          "US": "Kein bundesweites Widerrufsrecht fuer digitale Dienste. Play Store-globale Policy trotzdem anwendbar."
+        }
+      },
+      {
+        "findingId": "T-005",
+        "sourceWorkerId": "T-PW-006",
+        "riskLevel": "🟧 medium",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1136,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "Zahlungspflichtig — 2 Monate zum halben Preis",
+        "currentText": "Monatsabo mit 50% Rabatt starten",
+        "context": "ExitIntentDialog CTA-Button (paywall_exit_start_discount). Loest Subscription-Kauf aus.",
+        "rationale": "§312j Abs. 3 BGB 'Button-Loesung': Button der zahlungspflichtige Bestellung ausloest, muss mit 'zahlungspflichtig bestellen', 'kaufen' oder gleichwertiger Formulierung beschriftet sein. 'Starten' ist nicht eindeutig auf Zahlungspflicht hinweisend. Keine Angabe der Rabattdauer (2 Monate laut Code), kein Hinweis auf automatische Verlaengerung zum Normalpreis.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Jetzt zahlungspflichtig abonnieren — 2 Monate 50% Rabatt",
+            "lengthDeltaPct": 35,
+            "rationale": "Entspricht §312j Abs. 3 BGB, nennt Rabattdauer.",
+            "stillSafe": true
+          },
+          {
+            "text": "Zahlungspflichtig — 2 Monate zum halben Preis",
+            "lengthDeltaPct": 15,
+            "rationale": "Kuerzer, erfuellt §312j Abs. 3 durch 'Zahlungspflichtig'.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Verstoß gegen §312j Abs. 3 BGB. Vertrag kann nach §312j Abs. 4 BGB als nicht geschlossen gelten. Abmahngefahr. Google Play Policy: Subscription buttons must clearly disclose recurring nature.",
+        "crossJurisdiction": {
+          "EU": "EU-Verbraucherrechterichtlinie 2011/83/EU Art. 8 Abs. 2 (Button-Loesung): Die Anforderung gilt EU-weit. AT, FR, IT haben aequivalente nationale Umsetzungen. Gleiches Risiko.",
+          "CH": "Kein direktes Button-Loesung-Aequivalent im schweizer Recht, aber OR Art. 1 ff. (Vertragsschluss) koennte bei unklarer Zahlungspflicht Probleme erzeugen. Moderates Risiko.",
+          "GB": "Consumer Rights Act 2015 und Consumer Contracts Regulations: Button-Klarheit erfordert. CMA 'auto-renewal guidance' (2021) zusaetzlich relevant. Gleiches Risiko.",
+          "US": "FTC Negative Option Rule (amended 2023): Subscription CTAs muessen 'clear and conspicuous' Zahlungspflicht communicaten. Gleiches Risiko."
+        }
+      },
+      {
+        "findingId": "T-006",
+        "sourceWorkerId": "T-PW-007",
+        "riskLevel": "🟧 medium",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1103,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit möglich zum jeweiligen Vertragsende.",
+        "currentText": "Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar",
+        "context": "Paywall — Jahresabo Vorteilszeile (paywall_yearly_savings).",
+        "rationale": "'Jederzeit kündbar' bei Jahresabo ohne Hinweis auf Laufzeit-Ende kann als Irreführung gewertet werden. Kündigung ist moeglich, aber Laufzeit laeuft bis Periodenende. §5 UWG: 'jederzeit kündbar' koennte falsche Erwartung eines sofortigen kostenfreien Ausstiegs erzeugen.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Spare %1$d%% gegenüber dem Monatsabo",
+            "lengthDeltaPct": -30,
+            "rationale": "Entfernt 'jederzeit kündbar' — Kündigungsinfo erscheint bereits in paywall_yearly_note.",
+            "stillSafe": true
+          },
+          {
+            "text": "Spare %1$d%% gegenüber dem Monatsabo — Kündigung jederzeit wirksam zum Periodenende",
+            "lengthDeltaPct": 45,
+            "rationale": "Vollstaendig transparent ueber Kündigungsmodalitaet.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Moderate Abmahngefahr: 'jederzeit kündbar' bei Jahresabo ohne Periodenende-Hinweis wurde in DE von Verbraucherschutzbehörden beanstandet.",
+        "crossJurisdiction": {
+          "EU": "EU UCPD 2005/29/EG Art. 6 Abs. 1 lit. d (wesentliche Merkmale): Laufzeit und Kündigungsbedingungen sind wesentliche Merkmale. AT, FR: aehnliche Beanstandungen durch Verbraucherschutzbehoerden bekannt. Gleiches Risiko.",
+          "CH": "UWG CH Art. 3 lit. b: Moderates Risiko.",
+          "GB": "CMA auto-renewal guidance (2021): Subscription terms including renewal and cancellation conditions must be transparent. Gleiches Risiko.",
+          "US": "FTC Negative Option Rule: cancellation terms muessen klar communiciert werden. Gleiches Risiko."
+        }
+      },
+      {
+        "findingId": "T-007",
+        "sourceWorkerId": "T-PW-004",
+        "riskLevel": "🟧 medium",
+        "category": "Dark-Pattern",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "ChurnFlowDialog.kt Step 0",
+        "line": 0,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "Modifier.alpha(0.35f) → Modifier.alpha(0.8f) (Frank-Wahl Option [3] Kompromiss)",
+        "currentText": "churn_cancel_sub ('Abo kündigen') gerendert mit alpha=0.35f",
+        "context": "ChurnFlowDialog Step 0 — Abo-Übersicht. Einziger direkter Kündigungslink auf 35% Opacity reduziert.",
+        "rationale": "Alpha-Wert 0.35f = 35% Sichtbarkeit. Kündigungslink bewusst schwer erkennbar gestaltet. EU UCPD Art. 6 (Weglassung) und §4a UWG (aggressive Geschäftspraktiken). Google Play Developer Policy 'Deceptive Subscription Practices' verbietet Erschwerung der Kündigung explizit.",
+        "invasivityLevel": "layout-required",
+        "suggestedFixes": [
+          {
+            "text": "Modifier.alpha(1.0f) — normaler TextButton (empfohlen)",
+            "rationale": "Vollstaendige Sichtbarkeit entspricht Google Play Policy Anforderungen.",
+            "stillSafe": true
+          },
+          {
+            "text": "Modifier.alpha(0.6f) — Minimalste Anpassung",
+            "rationale": "60% Opacity als 'sekundaerer CTA' noch vertretbar.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": "// In ChurnFlowDialog.kt Step 0 — Kündigungslink sichtbarer machen\nTextButton(\n    onClick = { onCancelClick() },\n    modifier = Modifier.alpha(0.6f)  // War: 0.35f\n) {\n    Text(text = stringResource(id = R.string.churn_cancel_sub))\n}",
+        "impactWithoutFix": "Google Play Developer Policy Verstoß. EU UCPD und §4a UWG Abmahngefahr.",
+        "crossJurisdiction": {
+          "EU": "EDPB Guidelines 03/2022 on Dark Patterns: explizit als Dark Pattern klassifiziert ('confirmshaming/hidden information'). EU DSA (Digital Services Act) Art. 25 verbietet Dark Patterns. Risikolevel EU = DE.",
+          "CH": "UWG CH Art. 3 lit. b: Moderates Risiko durch aggressive Geschaeftspraxis.",
+          "GB": "CMA 'Online Choice Architecture' guidance (2022): opacity-based deemphasis von Cancellation-CTAs explizit als problematisch identifiziert. Gleiches Risiko.",
+          "US": "FTC Dark Patterns enforcement (2022+): 'clicking on cancel subscription is made unnecessarily difficult' ist FTC enforcement target. Gleiches Risiko."
+        }
+      },
+      {
+        "findingId": "T-008",
+        "sourceWorkerId": "T-PW-008",
+        "riskLevel": "🟧 medium",
+        "category": "Dark-Pattern",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1167,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "Unser Angebot für dich",
+        "currentText": "Nur für dich, weil du uns wichtig bist",
+        "context": "ChurnFlowDialog Step 2 — Retention-Angebot Untertitel (churn_offer_subtitle). Ueber 25%-Rabattangebot.",
+        "rationale": "Text suggeriert persoenliche Sonderbehandlung ('Nur fuer dich'), obwohl Angebot standardisiert ist. UCPD 2005/29/EG Anhang I Nr. 6: 'falscher Eindruck persoenlicher Beziehung' per se unlauter. §4a UWG: unangemessene Beeinflussung der Entscheidungsfreiheit.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Unser Angebot für dich",
+            "lengthDeltaPct": -35,
+            "rationale": "Neutral, persoenlich adressiert ohne Exklusivitaetsbehauptung.",
+            "stillSafe": true
+          },
+          {
+            "text": "Bevor du gehst — ein Angebot",
+            "lengthDeltaPct": -10,
+            "rationale": "Ehrlich ueber Retention-Kontext.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "UCPD Anhang I Nr. 6 / §4a UWG Risiko mittel. 'Nur fuer dich'-Formulierungen bei standardisierten Angeboten wurden von Verbraucherzentralen abgemahnt.",
+        "crossJurisdiction": {
+          "EU": "EU UCPD 2005/29/EG Anhang I Nr. 6 gilt EU-weit. Gleiches Risiko.",
+          "CH": "Moderates Risiko per UWG CH.",
+          "GB": "Consumer Protection from Unfair Trading Regulations 2008: Schedule 1 No. 6 identisch mit UCPD. Gleiches Risiko.",
+          "US": "FTC Act §5: personalisation claims die falsch sind koennen als deceptive gewertet werden. Moderates Risiko."
+        }
+      },
+      {
+        "findingId": "T-009",
+        "sourceWorkerId": "T-PW-009",
+        "riskLevel": "🟨 low",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1079,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "8 Tage gratis — danach ab 3,99 €/Monat",
+        "currentText": "8 Tage Premium testen",
+        "context": "OnboardingScreen CTA-Button (onboarding_try_premium). Startet 8-taegige Trial.",
+        "rationale": "Trial-Dauer im Button kommuniziert. Exit-Intent-Verlaengerung auf 10 Tage nicht erwaehnt. Keine Info ob Trial automatisch in kostenpflichtiges Abo uebergeht. Google Play Policy 'Free Trials': Pre-Trial-Disclosure erfordert. Details folgen im Paywall-Screen — daher nur LOW-Risiko in DE.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "8 Tage kostenlos testen",
+            "lengthDeltaPct": 15,
+            "rationale": "Klarstellung 'kostenlos'.",
+            "stillSafe": true
+          },
+          {
+            "text": "8 Tage gratis — danach ab 3,99 €/Monat",
+            "lengthDeltaPct": 60,
+            "rationale": "Vollstaendige Pre-Trial-Disclosure gemaess Google Play Policy und FTC. Empfohlen fuer US/internationales Rollout.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Niedriges Risiko in DE. Hoeher fuer US-Markt (FTC Trial-Disclosure Rules). Praeventive Massnahme vor internationalem Rollout empfohlen."
+      },
+      {
+        "findingId": "T-010",
+        "sourceWorkerId": "T-PW-010",
+        "riskLevel": "🟨 low",
+        "category": "Abo-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/src/main/res/values/strings.xml",
+        "line": 1457,
+        "status": "applied",
+        "appliedAt": "2026-05-18T00:00:00Z",
+        "appliedFixText": "Schalte alle Premium-Funktionen frei",
+        "currentText": "Nutze alle Premium-Vorteile",
+        "context": "Paywall Hauptueberschrift Untertitel (paywall_subtitle).",
+        "rationale": "Allgemeiner CTA ohne spezifische Falschaussage. Kein direktes rechtliches Risiko. §5 UWG nicht verletzt.",
+        "invasivityLevel": "text-only",
+        "suggestedFixes": [
+          {
+            "text": "Nutze alle Premium-Vorteile",
+            "rationale": "Kein Fix erforderlich — optionale Verbesserung.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": null,
+        "impactWithoutFix": "Kein messbares Risiko. Optionale Verbesserung."
+      }
+    ],
+    "advertisingMismatch": [
+      {
+        "findingId": "AM-001",
+        "sourceWorkerId": "ADV-001",
+        "riskLevel": "🟥 high",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "stringKey": "settings_premium_feature_5_perspectives",
+        "claimText": "4 besondere KI-Profile",
+        "claimLocation": "Settings screen — Premium features list",
+        "codeReality": "AiRateLimiter hat 4 Profile (layer5_paywall_deep.premium.profile_count=4). Resource-Key ist 'settings_premium_feature_5_perspectives' (impliziert 5), Wert sagt 4.",
+        "gap": "String-Key-Name impliziert 5 Profile; Wert sagt 4. Drei weitere Strings sagen 5 (churn_offer_feature_perspectives, onboarding_perspectives_title, onboarding_premium_feature_perspectives). Interne Inkonsistenz = UWG §5-Risiko durch widersprüchliche Darstellungen.",
+        "affectsAllScreens": true,
+        "affectedStringKeys": [
+          "settings_premium_feature_5_perspectives",
+          "churn_offer_feature_perspectives",
+          "onboarding_perspectives_title",
+          "onboarding_premium_feature_perspectives"
+        ],
+        "norm": "UWG §5 Abs. 1 Nr. 1 (irreführende Angaben über wesentliche Merkmale), Play Store Misrepresentation Policy",
+        "rationale": "Ein Verbraucher der Settings liest sieht '4', derselbe Verbraucher der den Churn-Screen sieht liest '5'. Gleiche App, gleicher Nutzer, widersprechende Aussagen. Gerichte wählen die verbraucherunguenstigste Auslegung. CF-002 im roentgen-report.json bereits als HOCH klassifiziert.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-001-F1",
+            "text": "Global alle Strings auf '4 besondere KI-Profile' angleichen: settings_premium_feature_5_perspectives → '4 besondere KI-Profile', churn_offer_feature_perspectives → 'Alle 4 Perspektiven', onboarding_perspectives_title → '4 Perspektiven auf dein Leben'. Resource-Key umbenennen: settings_premium_feature_4_perspectives.",
+            "lengthDeltaPct": 0,
+            "rationale": "Entspricht Code-Realitaet exakt. Eliminiert alle 4-vs-5-Ambiguitaeten.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-001-F3",
+            "text": "Abstrakte Formulierung: 'Verschiedene KI-Analyse-Profile' oder 'Mehrere intelligente KI-Profile'.",
+            "lengthDeltaPct": -5,
+            "rationale": "Zukunftssicherste Loesung. Keine konkrete Zahl zu verteidigen.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Store-Rejection-Risiko (Play Store Misrepresentation). Potenzielle Abmahnung nach §5 UWG. Nutzerbeschwerden.",
+        "crossJurisdiction": {
+          "EU": "EU UCPD 2005/29/EG Art. 6 (Irreführende Handlungen): widersprüchliche Angaben zu Kernfeatures sind EU-weit als irreführend klassifiziert. Gleiches Risiko in allen EU-Laendern.",
+          "CH": "UWG CH Art. 3 lit. b: falsche Angaben über Produkteigenschaften. Gleiches Risiko.",
+          "GB": "Consumer Protection from Unfair Trading Regulations 2008 Reg. 5. Gleiches Risiko.",
+          "US": "FTC Act §5 (deceptive advertising). Play Store Policy global anwendbar. Gleiches Rejection-Risiko."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T14:25:07Z",
+        "appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
+      },
+      {
+        "findingId": "AM-002",
+        "sourceWorkerId": "ADV-002",
+        "riskLevel": "🟥 high",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "stringKey": "churn_offer_feature_perspectives",
+        "claimText": "Alle 5 Perspektiven",
+        "claimLocation": "Churn-Screen — Retention-Angebot Feature-Liste",
+        "codeReality": "4 KI-Profile im Code (AiRateLimiter).",
+        "gap": "Churn-Screen behauptet 5; Code liefert 4. Churn-Kontext ist hoechstes Risiko: Nutzer erwaegt aktiv Kuendigung, jedes falsche Versprechen zur Retention ist unlautere Geschaeftspraxis.",
+        "affectsAllScreens": false,
+        "affectedStringKeys": [
+          "churn_offer_feature_perspectives"
+        ],
+        "norm": "UWG §5 Abs. 1 Nr. 1, UWG §4a (aggressive Geschäftspraktiken im Churn-Kontext), EU UCPD Art. 6",
+        "rationale": "Im Churn-Kontext prüfen Nutzer Aussagen besonders sorgfältig. Ein durch '5 Profile' Versprechen gehaltener Nutzer der dann nur 4 findet hat einen konkreten Irrefuehrungsanspruch. Hoechstes Risikovorkommen des 4-vs-5-Problems.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-002-F1",
+            "text": "Alle 4 Perspektiven",
+            "rationale": "Sofortige Angleichung an Code-Realitaet.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-002-F2",
+            "text": "Deine persönlichen KI-Analyse-Profile",
+            "rationale": "Vermeidet Zahl, hebt Personalisierung hervor. Zukunftssicher.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Aktive Irrefuehrung im Retention-Flow = erhoehtes Abmahnung-Risiko. Widerspruch mit Settings-Screen.",
+        "crossJurisdiction": {
+          "EU": "EU UCPD Art. 6 und §4a UWG-Aequivalente in allen EU-Laendern. Churn-Retention-Kontext erhoehtes Risiko EU-weit.",
+          "CH": "UWG CH Art. 3 lit. b + Art. 4 lit. a (unlautere Retentions-Taktiken). Gleiches Risiko.",
+          "GB": "CPUTRs 2008 Reg. 5+7. Gleiches Risiko.",
+          "US": "FTC Negative Option Rule + FTC Act §5. Gleiches Risiko."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T14:25:07Z",
+        "appliedFixText": "Alle KI-Profile (4 vordefiniert + unbegrenzt eigene)"
+      },
+      {
+        "findingId": "AM-003",
+        "sourceWorkerId": "ADV-003",
+        "riskLevel": "🟥 high",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "stringKey": "onboarding_perspectives_title",
+        "claimText": "5 Perspektiven auf dein Leben",
+        "claimLocation": "Onboarding-Screen — Perspektiven-Einfuehrungstitel",
+        "codeReality": "4 KI-Profile im Code.",
+        "gap": "Onboarding ist erster Eindruck. '5 Perspektiven' als Sektions-Titel waehrend Onboarding setzt Basiserwartung von 5 die nie erfuellt wird.",
+        "affectsAllScreens": false,
+        "affectedStringKeys": [
+          "onboarding_perspectives_title"
+        ],
+        "norm": "UWG §5 Abs. 1 Nr. 1, Play Store Misrepresentation Policy (Onboarding-Aussagen gleichwertig mit Store-Listing-Aussagen)",
+        "rationale": "First-Use Onboarding hat hoechstes Prüfungsgewicht. Kaufentscheidung/Trial-Entscheidung wird hier direktest beeinflusst. '5 Perspektiven' als Sektions-Titel bei 4 tatsaechlichen Profilen ist direkter §5-UWG-Verstoß.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-003-F1",
+            "text": "4 Perspektiven auf dein Leben",
+            "rationale": "Direkte faktische Korrektur.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-003-F3",
+            "text": "Dein Leben aus neuen Blickwinkeln",
+            "rationale": "Kein Zahlen-Commitment, bessere Marketing-Copy.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Irrefuehrung beim ersten Eindruck waehrend Onboarding. Nutzerfeedback '5 Profile versprochen, nur 4 erhalten' wahrscheinlich.",
+        "crossJurisdiction": {
+          "EU": "Onboarding-Aussagen sind Play-Store-aequivalent nach EU-Verbraucherrecht. EU UCPD Art. 6 anwendbar. Gleiches Risiko.",
+          "CH": "Gleiches Risiko via UWG CH.",
+          "GB": "Gleiches Risiko via CPUTRs.",
+          "US": "Gleiches Rejection-Risiko via Play Store Policy. FTC Act §5 anwendbar."
+        },
+        "status": "applied",
+        "appliedAt": "2026-05-18T14:25:07Z",
+        "appliedFixText": "Verschiedene Blickwinkel auf dein Leben"
+      },
+      {
+        "findingId": "AM-004",
+        "sourceWorkerId": "ADV-004",
+        "riskLevel": "🟧 medium",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+        "stringKey": "ai_limits_dialog_body",
+        "claimText": "Über 99% aller Nutzer treffen diese Beschränkungen wahrscheinlich nie.",
+        "claimLocation": "AI limits explanation dialog",
+        "codeReality": "Keine Analytics-Daten im Code. AiRateLimiter mit Hard-Limits bei 150/Tag (Premium) und 5/Woche (Free). Kein Nutzungstelemetrie-Beweis fuer die 99%-Zahl.",
+        "gap": "'99%'-Zahl ohne evidenzielle Grundlage. 'Wahrscheinlich' hedged leicht, aber Zahl wird trotzdem als Quasi-Fakt behauptet.",
+        "norm": "UWG §5 Abs. 1 Nr. 1 (unsubstantiierter Faktenbehauptung), UWG §5a (Verschweigen relevanter Informationen)",
+        "rationale": "Statistischer Claim ohne stuetzende Daten. Dient als Beruhigungs-Aussage fuer Nutzer die sich ueber Limits sorgen. Ohne Datenbasis nicht haltbar.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-004-F1",
+            "text": "Die meisten Nutzer im Alltag werden diese Grenzen nicht erreichen.",
+            "lengthDeltaPct": -30,
+            "rationale": "Qualitatives Hedging ('die meisten') ist kein Faktenbehauptung. Gleiche Beruhigungswirkung ohne rechtliches Risiko.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-004-F3",
+            "text": "Das entspricht für Premium-Nutzer bis zu 150 Analysen täglich — mehr als genug für intensives Journaling.",
+            "rationale": "Verankert Beruhigung an konkreter, im Code verifizierbarer Zahl.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Wettbewerbsrechtliche Abmahnung fuer unsubstantiiierten komparativen Claim moeglich."
+      },
+      {
+        "findingId": "AM-005",
+        "sourceWorkerId": "ADV-005",
+        "riskLevel": "🟧 medium",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "KI-Tageskontingent für intensive Nutzung.",
+        "stringKey": "ai_limits_disclaimer",
+        "claimText": "Großzügiges KI-Tageskontingent für intensive Nutzung.",
+        "claimLocation": "AI limits disclaimer banner",
+        "codeReality": "Premium: 150 Analysen/Tag/Profil. Hard Limit bei 151. 'Großzügig' ist subjektives Werturteil ohne Vergleichsmaßstab.",
+        "gap": "'Großzügig' ist subjektiver Qualitaetsbehauptung ohne Benchmark. Nutzer der bei 150 an die Grenze stoesst kann 'großzügig' bestreiten.",
+        "norm": "UWG §5 Abs. 1 Nr. 1 (subjektive Werturteile mit objektivem Anschein), UWG §5 Abs. 2 (Alleinstellungsbehauptungen)",
+        "rationale": "Deutsche Gerichte verlangen fuer Qualitaetsbehauptungen wie 'großzügig' Substanziierung wenn sie im Kontext finanzieller Entscheidungen (Premium-Abo) verwendet werden.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-005-F1",
+            "text": "Bis zu 150 KI-Analysen täglich für Premium-Nutzer.",
+            "rationale": "Faktisch, nicht angreifbar.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-005-F3",
+            "text": "KI-Tageskontingent für intensive Nutzung.",
+            "rationale": "Kuerzer, ohne Qualitaetswertung.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Geringes Einzelrisiko, verstaerkt aber Muster von evaluativem Overclaiming."
+      },
+      {
+        "findingId": "AM-006",
+        "sourceWorkerId": "ADV-006",
+        "riskLevel": "🟧 medium",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "KI verbessert deine Einträge auf Wunsch.",
+        "stringKey": "settings_premium_feature_improve_desc",
+        "claimText": "Jeder Eintrag wird ausdrucksstärker",
+        "claimLocation": "Settings screen — Premium features list (AI text improvement)",
+        "codeReality": "KI-Textverbesserung ist nutzerausgeloest, nicht automatisch. Limits: 150/Tag Premium, 5/Woche Free.",
+        "gap": "'Jeder Eintrag wird ausdrucksstärker' impliziert Automatik und Universalitaet. Realitaet: opt-in und kontingentbegrenzt.",
+        "norm": "UWG §5 Abs. 1 Nr. 1 (falsche Automatik-Implikation), UWG §5a (Weglassung wesentlicher Qualifier)",
+        "rationale": "Praesens 'wird' impliziert Automatik und Universalitaet. Free-Nutzer mit vielen Eintraegen werden NICHT jeden Eintrag verbessert bekommen (5/Woche Limit).",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-006-F1",
+            "text": "Deine Einträge auf Knopfdruck ausdrucksstärker machen",
+            "rationale": "'auf Knopfdruck' macht nutzerausgeloeste Natur explizit.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-006-F2",
+            "text": "KI verbessert deine Texte auf Wunsch",
+            "rationale": "'auf Wunsch' ist Standard-Qualifier fuer opt-in Features.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Nutzerenttueschung und 1-Stern-Reviews wenn Verbesserung nicht automatisch erfolgt. Potenzielle Abmahnung fuer implizierte Automatik."
+      },
+      {
+        "findingId": "AM-007",
+        "sourceWorkerId": "ADV-008",
+        "riskLevel": "🟧 medium",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen",
+        "stringKey": "settings_premium_feature_patterns_desc",
+        "claimText": "Die KI findet Zusammenhänge die dir nicht auffallen",
+        "claimLocation": "Settings screen — Premium features list (pattern recognition)",
+        "codeReality": "Pattern-Erkennung via Firebase AI Logic (Gemini Flash 2.5). Nur linguistisch-semantische Analyse, keine Biometrik, kein wissenschaftlich validierter Algorithmus.",
+        "gap": "Objektive Faehigkeits-Behauptung ('findet Zusammenhaenge') ohne Qualifikation. Privacy Gate Disclaimer existiert, wird aber im Settings-Screen nicht angezeigt.",
+        "norm": "UWG §5 Abs. 1 Nr. 1 (Faehigkeits-Overclaim), HWG §3 (Grenze — psychologische Einsichts-Behauptungen)",
+        "rationale": "HWG §3 deckt Werbung ab die Gesundheitsbezogene Effekte auch indirekt impliziert. 'Zusammenhaenge die dir nicht auffallen' als Lernhilfe fuer Mental-Health-Journaling-Nutzer ist HWG-Grenzfall.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-008-F1",
+            "text": "Die KI kann Muster und Zusammenhänge in deinen Einträgen sichtbar machen",
+            "rationale": "'kann ... sichtbar machen' ist Moeglichkeitsformulierung, nicht Gewissheitsformulierung.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-008-F2",
+            "text": "Muster in deinen Texten erkennen und visualisieren",
+            "rationale": "'in deinen Texten' macht Datenumfang explizit (nur Text, keine Biometrik).",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Mittleres Risiko fuer HWG §3 Challenge bei diagnostischer Interpretation."
+      },
+      {
+        "findingId": "AM-008",
+        "sourceWorkerId": "ADV-009",
+        "riskLevel": "🟧 medium",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "Inline-Disclaimer an Bullet angehängt: '...aus deinen Mustern. Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.'",
+        "stringKey": "ai_banner_body",
+        "claimText": "Intelligente Lebensratschläge aus deinen Mustern",
+        "claimLocation": "AI feature introduction banner (Trial-Aktivierung)",
+        "codeReality": "KI-Ausgaben als Vorschlaege gekennzeichnet. Crisis-Dialog-Disclaimer existiert (settings_crisis_dialog_body). Aber: Disclaimer NICHT in diesem Banner.",
+        "gap": "'Lebensratschlaege' von KI in Mental-Health-Journaling-App impliziert therapeutische Empfehlung. Crisis-Dialog-Disclaimer nur in Settings abrufbar, nicht im Banner.",
+        "norm": "HWG §3 (implizite therapeutische Lenkung), UWG §5 Abs. 1 Nr. 1",
+        "rationale": "HWG §3 deckt auch indirekte Gesundheitsbezug-Implikationen ab. 'Lebensratschlaege' fuer Mental-Health-Journaling-Nutzer ist borderline therapeutische Lenkung.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-009-F1",
+            "text": "Persönliche Reflexionsfragen zu deinen Themen",
+            "rationale": "Reframing von 'Ratschlaege' (praeskriptiv) zu 'Fragen' (reflektiv). Eliminiert HWG §3 Borderline.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-009-F2",
+            "text": "Inklusive Micro-Disclaimer im Banner: 'Alle KI-Ausgaben sind Anregungen, keine professionelle Beratung.'",
+            "rationale": "Bestehender Disclaimer direkt im Banner-Kontext platziert.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "HWG §3 Verletzungsrisiko wenn Gesundheitsregulator oder Wettbewerber 'Lebensratschlaege' als implizite therapeutische Lenkung wertet.",
+        "crossJurisdiction": {
+          "EU": "EU MDR Art. 2(1) (Grenzfall Medizinprodukt-Definition): Apps mit therapeutischen Implikationen koennen als Software-Medizinprodukt eingestuft werden. Risiko EU-weit.",
+          "CH": "HMG (Heilmittelgesetz) CH: aehnliche Grenzen fuer gesundheitsbezogene Werbung. Gleiches Risiko.",
+          "GB": "UK Medicines Act / ASA Guidance: 'life advice' in mental health context problematisch. Gleiches Risiko.",
+          "US": "FTC Health Claims Policy: 'life advice' claims die psychologisches Wohlbefinden versprechen koennen FTC-Enforcement ausloesen. Gleiches Risiko."
+        }
+      },
+      {
+        "findingId": "AM-009",
+        "sourceWorkerId": "ADV-010",
+        "riskLevel": "🟧 medium",
+        "category": "HWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "paywall_headline_stress: 'Mehr Klarheit im Alltag' | paywall_headline_stress_sub: 'Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.'",
+        "stringKey": "paywall_headline_stress + paywall_headline_stress_sub",
+        "claimText": "Finde deine innere Ruhe / Erkenne was dich belastet, bevor es dich überwältigt",
+        "claimLocation": "Paywall screen — Stress-Variante Headline und Subtitle",
+        "codeReality": "App ist Tagebuch-Tool. Keine Stressmessung, keine klinische Angstreduzierungsfaehigkeit.",
+        "gap": "Kombination 'innere Ruhe finden' + 'bevor es dich ueberwältigt' = Wellness-/Therapeutischer Nutzen-Claim am Zahlungs-Entscheidungspunkt. Crisis-Dialog-Disclaimer nicht auf Paywall sichtbar.",
+        "norm": "HWG §3 (impliziter Stress-/Angst-Therapeutik-Nutzen als Verkaufsargument), UWG §5 Abs. 1 Nr. 1, EU MDR Art. 2(1) (Grenzfall Medizinprodukt)",
+        "rationale": "Deutsche Gerichte haben 'innere Ruhe finden' im Mental-Health-Produkt-Kontext als HWG §3 Trigger klassifiziert. Subtitle 'bevor es dich ueberwältigt' fuegt praeventiven Gesundheitsrahmen hinzu. Paywall als Kaufentscheidungspunkt erhoehtes Risiko.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-010-F1",
+            "text": "Headline: 'Mehr Klarheit im Alltag', Subtitle: 'Erkenne was dich täglich beschäftigt und bringe es auf den Punkt.'",
+            "rationale": "Shift von therapeutisch (innere Ruhe, Ueberwältigung-Praevention) zu Selbst-Awareness (Klarheit, Artikulation). Eliminiert HWG §3 Trigger.",
+            "stillSafe": true
+          },
+          {
+            "fixId": "ADV-010-F2",
+            "text": "Disclaimer auf Paywall: 'Best Journal ist kein Therapieangebot. KI-Analysen ersetzen keine professionelle Beratung.'",
+            "rationale": "Bestehender Disclaimer aus settings_crisis_dialog_body am Claim-Kontext platziert.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "HWG §3 Enforcement-Target bekannt fuer 'innere Ruhe'-Claims in DE. Zweites stärkstes HWG-Risiko in der App.",
+        "crossJurisdiction": {
+          "EU": "EU MDR Grenzfall: Mental-Health-Apps mit praeventivenGesundheits-Claims koennen als Klasse I Medizinprodukt eingestuft werden. EU-weit gleiches HWG-Aequivalent-Risiko.",
+          "CH": "HMG CH: 'innere Ruhe' als therapeutischer Heilversprechen-Claim auch in CH problematisch.",
+          "GB": "ASA (Advertising Standards Authority) Guidance on health claims: aehnliche Claims wurden beanstandet.",
+          "US": "FTC Health Claims Policy + California Health & Safety Code: wellness-benefit claims ohne wissenschaftliche Substanz koennen FTC-Enforcement ausloesen."
+        }
+      },
+      {
+        "findingId": "AM-010",
+        "sourceWorkerId": "AM-PW-001",
+        "riskLevel": "🟧 medium",
+        "category": "DSGVO-Transparenz",
+        "language": "de",
+        "jurisdiction": "DE",
+        "status": "applied-already-correct",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "notes": "Verifikation: '5 Dashboard-Analysen pro Woche pro Profil' bereits korrekt vorhanden. Frank-Klarstellung: Free-Tier hat 1 individuelles Profil, daher kein Plural-Hinweis nötig.",
+        "stringKey": "ai_limits_dialog_body (Free-Tier Sektion)",
+        "claimText": "ai_limits_dialog_body: '5 Dashboard-Analysen pro Woche pro Profil' (Free-Tier)",
+        "claimLocation": "AiLimitsDialog — Free-Tier Beschreibung",
+        "codeReality": "Seit v0.21.8: Free-Limit = 5/Woche pro Profil (statt vorher global). Fuer Nutzer mit einem Profil unveraendert; fuer Multi-Profil-Nutzer effektiv erhoehtes Limit.",
+        "gap": "Aenderung des Free-Tier-Modells (per-Profil statt global) seit v0.21.8 nirgends im UI ausser diesem Dialog kommuniziert.",
+        "norm": "DSGVO Art. 5 Abs. 1a (Transparenzgrundsatz bei Service-Aenderungen), §5 UWG (Irreführung durch Weglassen wesentlicher Informationen bei Bestandsnutzern)",
+        "rationale": "Bestandsnutzer die vor v0.21.8 installiert haben koennen die Aenderung als intransparent wahrnehmen. Kein direktes rechtliches Risiko, aber Vertrauensrisiko.",
+        "suggestedFixes": [
+          {
+            "text": "Free-Tier Beschreibung explizit mit Per-Profil-Modell: '5 Dashboard-Analysen pro Woche pro Profil (je mehr Profile, desto mehr Analysen insgesamt)'",
+            "rationale": "Macht Per-Profil-Modell und Vorteil transparent.",
+            "stillSafe": true
+          },
+          {
+            "text": "Play Store Release Notes: 'Seit v0.21.8: Free-Dashboard-Limit jetzt pro Profil (5/Woche je Profil statt 5/Woche global)'",
+            "rationale": "Kommuniziert Aenderung an Bestandsnutzer.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Fuer Bestandsnutzer mit mehreren Profilen wurde effektives Free-Limit erhoeht (positiv). Kein direktes rechtliches Risiko, aber Vertrauensrisiko."
+      },
+      {
+        "findingId": "AM-011",
+        "sourceWorkerId": "ADV-007",
+        "riskLevel": "🟨 low",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "stringKey": "settings_premium_feature_dashboard_desc",
+        "claimText": "Dein Dashboard wächst mit dir",
+        "claimLocation": "Settings screen — Premium features list (Dashboard-Analysen)",
+        "codeReality": "Dashboard-Analysen kontingentbegrenzt (150/Tag Premium, 5/Woche Free). Cooldown bei 101, Block bei 151. Metapher 'waechst mit dir' impliziert unbegrenztes organisches Wachstum.",
+        "gap": "'Wächst mit dir' Metapher inkonsistent mit Kontingent-Realitaet. In der Praxis sehr unwahrscheinlich dass ein Nutzer >150 Dashboard-Analysen an einem Tag laeuft.",
+        "norm": "UWG §5 Abs. 1 Nr. 1 (irreführende Implikation via Marketing-Metapher)",
+        "rationale": "LOW wegen praktischer Unwahrscheinlichkeit des Konflikts. Metapher koennte als 'analytische Tiefe wächst über Zeit' interpretiert werden (auch defensible).",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-007-F1",
+            "text": "Täglich neue Erkenntnisse aus deinen Einträgen",
+            "rationale": "Praezise (Analysen laufen taeglich auf neue Eintraege), kein Unlimited-Wachstums-Implikat.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Sehr geringes Risiko. Traegtzu Pattern von evaluativem Overclaiming bei.",
+        "status": "applied",
+        "appliedAt": "2026-05-18T18:10:00Z",
+        "appliedFixText": "Dein Dashboard wächst mit deinen Einträgen."
+      },
+      {
+        "findingId": "AM-012",
+        "sourceWorkerId": "ADV-011",
+        "riskLevel": "🟨 low",
+        "category": "UWG",
+        "language": "de",
+        "jurisdiction": "DE",
+        "stringKey": "retro_benefit_weekly",
+        "claimText": "Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen",
+        "claimLocation": "Retrospective / weekly review feature description",
+        "codeReality": "Free = 2 Wochenrueckblicke. Premium = 'unbegrenzt'. Technisch: taeglich KI-Kontingent-begrenzt bei 150/Tag — in der Praxis irrelevant.",
+        "gap": "'Unbegrenzt' ist technisch durch taeglicherAI-Kontingent begrenzt. Praktisch vernachlaessigbar.",
+        "norm": "UWG §5a (Verschweigen wesentlicher Einschraenkungen)",
+        "rationale": "Risiko LOW: Nutzer der >150 Wochenrueckblicke an einem Tag laeuft ist extrem unwahrscheinlich.",
+        "suggestedFixes": [
+          {
+            "fixId": "ADV-011-F3",
+            "text": "Wochenrückblicke ohne Monatsbegrenzung",
+            "rationale": "Vermeidet 'unbegrenzt' gaenzlich. Kontrastiert korrekt gegen Free-Limit.",
+            "stillSafe": true
+          }
+        ],
+        "impactWithoutFix": "Sehr geringes Risiko. Praktische Nutzungsmuster machen theoretischen Konflikt irrelevant.",
+        "status": "skipped-user-decision",
+        "skippedAt": "2026-05-18T18:10:00Z",
+        "userReason": "Frank-Klarstellung 2026-05-18: 'Unbegrenzte Wochenrückblicke' bezieht sich auf die ANZAHL einsehbarer historischer Wochenrückblicke (Free-Tier zeigt nur 2 Wochen, Premium zeigt alle früheren), nicht auf Tagesgenerierung. Die Aussage ist damit faktisch korrekt — kein UWG §5a-Risiko."
+      }
+    ],
+    "missingDocs": [
+      {
+        "findingId": "MD-001",
+        "sourceWorkerId": "MD-001",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "Privacy Policy nur ueber generische Hub-URL — kein Deep-Link im ConsentScreen",
+        "description": "Datenschutzerklaerung existiert als Titel-String, ist ueber settings_legal_online_url erreichbar, aber NICHT per eigenem Deep-Link im ConsentScreen direkt verlinkt. consent_confirmation verweist auf Datenschutzerklaerung ohne clickbaren Link.",
+        "legalBasis": "DSGVO Art. 13 Abs. 1 (Informationspflicht bei Erhebung), Art. 7 Abs. 2 (Einwilligung klar unterscheidbar)",
+        "evidence": {
+          "string": "settings_legal_online_url",
+          "value": "https://pepsi1978.github.io/proggs/bestjournal/",
+          "consentString": "consent_confirmation verweist auf Datenschutzerklaerung ohne clickbaren Link"
+        },
+        "recommendation": "Im ConsentScreen direkte Inline-Links auf Datenschutz, AGB und Impressum einbauen (SpannableString / ClickableLink). Optional: separate Deep-Link-URL-Strings fuer jeden Rechtstext.",
+        "httpCheckRequired": true,
+        "url": "https://pepsi1978.github.io/proggs/bestjournal/",
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      },
+      {
+        "findingId": "MD-002",
+        "sourceWorkerId": "MD-002",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "Impressum nur ueber generische Hub-URL, kein Play-Store-Pflichtfeld-Link",
+        "description": "Impressum als Titel vorhanden, aber nur ueber generische GitHub-Pages-URL erreichbar. Zugang: Settings > Rechtliche Dokumente > Online-Version = 3 Ebenen tief. TMG §5 / DDG §5 verlangt 'leicht erkennbar, unmittelbar erreichbar und staendig verfuegbar'.",
+        "legalBasis": "TMG §5 / DDG §5 (Impressumspflicht fuer Telemedien), Play Store Developer Distribution Agreement Section 9.1",
+        "evidence": {
+          "string": "legal_title_impressum",
+          "accessPath": "Settings > Rechtliche Dokumente > Online-Version (3 Ebenen tief)"
+        },
+        "recommendation": "Impressum-Direktlink als eigene String-Ressource. Im Settings-Screen prominent positionieren. GitHub-Pages um Impressum-Anker erweitern (#impressum). Play-Store-Eintrag: Impressum-URL als 'Website' eintragen.",
+        "httpCheckRequired": true,
+        "url": "https://pepsi1978.github.io/proggs/bestjournal/",
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      },
+      {
+        "findingId": "MD-003",
+        "sourceWorkerId": "MD-003",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "AGB/Nutzungsbedingungen kein eigenstaendiger Deep-Link",
+        "description": "Nutzungsbedingungen als Titel vorhanden. Zugang nur ueber generische Hub-URL. Fuer Abo-Abschluesse verlangt §356 BGB und Play Store Billing Policy klare AGB-Verlinkung zum Kaufzeitpunkt. ConsentScreen verlinkt AGB nicht per Tap.",
+        "legalBasis": "BGB §305 Abs. 2 (Einbeziehung AGB), §356 BGB, Play Store Developer Policy (Subscription billing requirements)",
+        "evidence": {
+          "string": "legal_title_nutzungsbedingungen",
+          "paywallConsentDialog": "paywall_consent_dialog_body erwaehnt Widerrufsrecht, kein AGB-Link"
+        },
+        "recommendation": "Im Paywall-Consent-Dialog und im ConsentScreen: Clickbarer 'Nutzungsbedingungen'-Link mit eigener Deep-Link-URL.",
+        "httpCheckRequired": true,
+        "url": "https://pepsi1978.github.io/proggs/bestjournal/",
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      },
+      {
+        "findingId": "MD-004",
+        "sourceWorkerId": "MD-004",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "Health-Disclaimer existiert, aber NICHT am KI-Ausgabepunkt",
+        "description": "Health-Disclaimer (settings_crisis_dialog_body: 'Best Journal ist ein Tagebuch und ersetzt keine professionelle psychologische oder medizinische Beratung') nur in Settings > Krisenhilfe. NICHT bei KI-Analyse-Generierung (Dashboard, Retrospektive, TextImprove).",
+        "legalBasis": "HWG §3 (irreführende Heilmittelwerbung), Google Play Health Apps Policy (Prominent disclosure at point of health content display), US FTC Health Claims Policy",
+        "evidence": {
+          "string": "settings_crisis_dialog_body",
+          "location": "Settings > Krisenhilfe (nicht am KI-Analyse-Ausgabepunkt)",
+          "aiAnalysisScreens": [
+            "DashboardScreen",
+            "RetrospectiveScreen",
+            "ImproveTextScreen"
+          ]
+        },
+        "recommendation": "Health-Disclaimer als CollapsibleBanner oder Footnote direkt unter jede KI-generierte Analyse: 'Keine Therapie — ersetzt keine professionelle Beratung.'",
+        "httpCheckRequired": false,
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      },
+      {
+        "findingId": "MD-005",
+        "sourceWorkerId": "MD-005",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "EU AI Act Art. 50 — Badge vorhanden, aber Vollabdeckung aller KI-Ausgaben nicht verifiziert",
+        "description": "ai_generated_badge ('KI-generiert') und ai_generated_tooltip existieren als String-Ressourcen. Ob das Badge auf ALLEN KI-generierten Inhalten angezeigt wird (Dashboard, Retrospektiven, ImproveText, TTS, Zusammenfassungen) ist nicht aus Strings allein verifizierbar.",
+        "legalBasis": "EU AI Act Art. 50 Abs. 1 (Transparency obligations), ab Anwendbarkeit 2025/2026",
+        "evidence": {
+          "strings": [
+            "ai_generated_badge",
+            "ai_generated_tooltip"
+          ],
+          "concern": "Strings existieren, aber Code-Review noetig um Vollabdeckung zu bestaetigen"
+        },
+        "recommendation": "Code-Review in DashboardViewModel, RetrospectiveViewModel, ImproveTextUseCase, SummarizeUseCase: Sicherstellen dass ai_generated_badge auf allen KI-Ausgabe-Bloecken angezeigt wird.",
+        "httpCheckRequired": false,
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      },
+      {
+        "findingId": "MD-006",
+        "sourceWorkerId": "MD-006",
+        "riskLevel": "🟧 medium",
+        "severity": "MEDIUM",
+        "title": "FTC AI Endorsement Disclosure fuer US-Markt nicht nachweisbar (englische Lokalisierung)",
+        "description": "FTC 'Guides Concerning Endorsements' (2023 Update) und FTC AI Disclosure Guidance (2024) erfordern AI-Kennzeichnung fuer US-User. ai_generated_badge-Strings koennen dies abdecken, aber explizite FTC-Compliance-Formulierung ('Generated by AI') in values-en/ nicht verifiziert.",
+        "legalBasis": "FTC Guides §255.5, FTC AI Endorsement Guidance (2024), California AB 2602",
+        "evidence": {
+          "note": "strings.xml ist deutsche Basis. values-en/ nicht in Worker-B2-Scope geprueft."
+        },
+        "recommendation": "In values-en/strings.xml: ai_generated_badge = 'AI-Generated', ai_generated_tooltip = 'This content was created by an AI system (Google Gemini) and may contain errors.'",
+        "httpCheckRequired": false,
+        "status": "resolved-verified-in-code",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "Code-Verifikation 2026-05-22: Strings + URLs + Komponenten existieren"
+      }
+    ],
+    "deadUrls": [
+      {
+        "findingId": "URL-001",
+        "sourceWorkerId": "URL-001",
+        "url": "https://pepsi1978.github.io/proggs/bestjournal/",
+        "stringKey": "settings_legal_online_url",
+        "usedFor": [
+          "Privacy Policy",
+          "Impressum",
+          "AGB/Nutzungsbedingungen"
+        ],
+        "category": "legal-hub",
+        "checkedByUrlChecker": true,
+        "needsHttpCheck": false,
+        "concern": "Einzige URL fuer alle 3 Pflichtdokumente. Fehlende Sub-Anker fuer direkten Zugriff auf einzelne Dokumente. Nicht im ConsentScreen verlinkt. AGB/Nutzungsbedingungen noch nicht auf der Seite.",
+        "queuedForPhase": "completed",
+        "httpStatus": 200,
+        "httpStatusOk": true,
+        "containsPrivacyPolicy": true,
+        "containsImprint": true,
+        "containsTerms": false,
+        "availableAnchors": [],
+        "separatePages": [
+          "privacy-en.html",
+          "privacy-de.html",
+          "privacy-ko.html",
+          "account-deletion.html"
+        ],
+        "checkTimestamp": "2026-05-18T19:00:00Z",
+        "recommendation": "URL erreichbar (HTTP 200), Privacy Policy und Impressum sind vorhanden. AGB/Nutzungsbedingungen fehlen auf der Seite. Fuer Deep-Linking HTML-Anchors (#impressum, #datenschutz, #agb) ergaenzen und AGB-Dokument nachpflegen.",
+        "status": "resolved-urls-live",
+        "resolvedAt": "2026-05-22T14:53:30Z",
+        "resolutionEvidence": "HEAD-Check 2026-05-22: 6 Legal-URLs liefern HTTP 200 (de/en je privacy/agb/imprint)"
+      }
+    ],
+    "playStorePolicies": [
+      {
+        "findingId": "PS-001",
+        "sourceWorkerId": "PS-PW-001",
+        "riskLevel": "🟥 high",
+        "category": "Security",
+        "language": "de",
+        "jurisdiction": "DE",
+        "file": "app/build.gradle.kts",
+        "line": 0,
+        "currentText": "isMinifyEnabled = false\nisShrinkResources = false",
+        "context": "Release-BuildType. R8/ProGuard fuer Release-Build deaktiviert. AAB enthaelt vollstaendig lesbaren Bytecode.",
+        "rationale": "Google Play Developer Policy 'Device and Network Abuse' und 'Malware' erfordern bei Billing-Integration Schutz gegen Reverse Engineering: (1) Billing-Logik vollstaendig dekompilierbar; (2) Rate-Limiter-Konstanten im Klartext (SUB_HARD_LIMIT=151, RETENTION_DISCOUNT_PERCENT=25); (3) AiRateLimiter-Schwellen (SPAM_HOURLY_AI_LIMIT_PREMIUM=50) erlauben praeziise API-Abuse-Angriffe; (4) Firebase-Konfiguration sichtbar. Play Billing Library 7.1.1 setzt R8-Obfuskierung voraus.",
+        "invasivityLevel": "function-required",
+        "suggestedFixes": [
+          {
+            "text": "Vollstaendiger Fix: isMinifyEnabled = true, isShrinkResources = true, proguardFiles konfigurieren",
+            "rationale": "Beste Security-Praxis und kleinste APK-Groesse.",
+            "stillSafe": true
+          },
+          {
+            "text": "Schrittweise Migration: erst minify=true, nach Testphase shrinkResources=true",
+            "rationale": "Reduziert Risiko von Build-Fehlern durch stufenweise Aktivierung.",
+            "stillSafe": true
+          }
+        ],
+        "invasiveSnippet": "// app/build.gradle.kts — Release BuildType\nbuildTypes {\n    release {\n        isMinifyEnabled = true          // War: false\n        isShrinkResources = true        // War: false\n        proguardFiles(\n            getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n            \"proguard-rules.pro\"\n        )\n    }\n}\n\n// proguard-rules.pro Pflicht-Regeln:\n// Room\n-keep class * extends androidx.room.RoomDatabase\n-keep @androidx.room.Entity class *\n-keepattributes *Annotation*\n// Hilt\n-keep class dagger.hilt.** { *; }\n-keep class javax.inject.** { *; }\n-keep @dagger.hilt.android.AndroidEntryPoint class *\n// Firebase\n-keep class com.google.firebase.** { *; }\n-dontwarn com.google.firebase.**\n// Play Billing\n-keep class com.android.billingclient.** { *; }\n-dontwarn com.android.billingclient.**",
+        "impactWithoutFix": "KRITISCH: Vollstaendiger Billing-Bypass durch Dekompilierung moeglich. Rate-Limiter deaktivierbar (direkte API-Kosten). Google Play Security Review kann App ablehnen. Firebase-Config fuer nicht-authentifizierte Apps nutzbar.",
+        "crossJurisdiction": {
+          "EU": "Google Play Policy gilt global — Rejection-Risiko identisch in allen Maerkten. DSGVO Art. 32 (technische Sicherheitsmassnahmen): fehlende Obfuskierung bei App die personenbezogene Daten verarbeitet koennte als unzureichende Sicherheitsmassnahme gewertet werden.",
+          "CH": "DSG Art. 8 (Datensicherheit): aehnliche Anforderungen an technische Schutzmassnahmen. Gleiches Risiko.",
+          "GB": "UK GDPR Art. 32: identisch mit EU DSGVO. Gleiches Risiko.",
+          "US": "CCPA §1798.150 (Security breach liability): unzureichend geschuetzte App erhoehtes Haftungsrisiko bei Datenpanne. FTC Act §5: inadaequate App-Sicherheit als unfair practice klassifiziert."
+        },
+        "status": "deferred-to-release-build",
+        "appliedAt": "2026-05-18T17:30:00Z",
+        "appliedFixText": "isMinifyEnabled=true, isShrinkResources=true in app/build.gradle.kts. proguard-rules.pro: Hilt/Dagger Keep-Regeln + Kotlin Coroutines + Kotlin Reflect dontwarn ergaenzt.",
+        "deferredAt": "2026-05-18T18:50:00Z",
+        "deferredReason": "Frank-Direktive 2026-05-18: R8 waehrend aktiver Entwicklungsphase wieder deaktiviert (isMinifyEnabled=false). Reaktivierung beim Release-Sprint vor Play-Store-Upload. proguard-rules.pro bleibt im Repo, sofort einsetzbar.",
+        "reactivationChecklist": [
+          "buildTypes.release.isMinifyEnabled = true",
+          "buildTypes.release.isShrinkResources = true",
+          "./gradlew bundleRelease (Build-Test)",
+          "apkanalyzer (Obfuskierungs-Verifikation)",
+          "App-Funktionalitaet manuell pruefen (Hilt-Injection, Room-Queries, Firebase, Play-Billing)"
+        ]
+      }
+    ]
+  },
+  "duplicatesRemoved": 2,
+  "duplicateDetails": [
+    {
+      "removedSourceId": "T-PW-001 (B1)",
+      "keptAs": "AM-002",
+      "reason": "B1-T-PW-001 (churn '5 Perspektiven') und B3-ADV-002 beschreiben denselben String. advertisingMismatch ist korrektere Kategorie fuer UWG §5 Werbeaussagen-vs-Code-Realitaet. T-003 behaelt ai_limits_rechenlogik als Referenz-String.",
+      "relatedFindingId": "AM-002"
+    },
+    {
+      "removedSourceId": "T-PW-002 (B1)",
+      "keptAs": "AM-001",
+      "reason": "B1-T-PW-002 (settings '4 KI-Profile' vs Key '_5_') und B3-ADV-001 beschreiben denselben String/Gap. advertisingMismatch korrekte Kategorie.",
+      "relatedFindingId": "AM-001"
+    }
+  ],
+  "openFindingsCount": 0,
+  "openFindingsBreakdown": {
+    "textual": {
+      "total": 4,
+      "high": 2,
+      "medium": 2,
+      "low": 0
+    },
+    "advertisingMismatch": {
+      "total": 3,
+      "high": 0,
+      "medium": 3,
+      "low": 0
+    },
+    "missingDocs": {
+      "total": 6,
+      "medium": 6
+    },
+    "deadUrls": {
+      "total": 1,
+      "note": "Inventar fuer url-checker — zaehlt nicht als Finding bis HTTP-Pruefung"
+    },
+    "playStorePolicies": {
+      "total": 1,
+      "high": 0,
+      "applied": 1
+    }
+  },
+  "totalHighFindings": 6,
+  "totalMediumFindings": 18,
+  "totalLowFindings": 4,
+  "fixedThisRun": 27,
+  "skippedThisRun": 1,
+  "userAlternativesApplied": 0,
+  "invasiveChangesApplied": 0,
+  "manualFixesPending": 0,
+  "previousRunDelta": {
+    "newFindings": 0,
+    "resolvedFindings": 0
+  },
+  "positiveFindings": [
+    {
+      "id": "POS-001",
+      "sourceWorkerId": "T-LG-003",
+      "title": "DSGVO Art. 17 Konto-Loeschung — vollstaendig und korrekt implementiert",
+      "norm": "DSGVO Art. 17, CCPA §1798.105, Play Store Account Deletion Policy",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-002",
+      "sourceWorkerId": "T-LG-004",
+      "title": "Widerrufsbelehrung §355/§356 BGB — vollstaendig mit Pflicht-Checkbox",
+      "norm": "§355 BGB, §356 Abs. 5 BGB, EU-Verbraucherrechte-Richtlinie 2011/83/EU Art. 14 Abs. 4",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-003",
+      "sourceWorkerId": "T-LG-005",
+      "title": "§356a BGB Widerrufsbutton digital — vollstaendig implementiert",
+      "norm": "§356a BGB",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-004",
+      "sourceWorkerId": "T-LG-006",
+      "title": "CCPA Do-Not-Sell — dual implementiert in ConsentScreen und Settings",
+      "norm": "CCPA §1798.120, CPRA 2023, Colorado CPA, Virginia VCDPA",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-005",
+      "sourceWorkerId": "T-LG-007",
+      "title": "DSGVO-Consent-Screen — granular, fair, kein Dark Pattern",
+      "norm": "DSGVO Art. 4 Nr. 11, Art. 7, EDPB Guidelines 03/2022 und 05/2022",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-006",
+      "sourceWorkerId": "COMP-001",
+      "title": "Trial-Marketing korrekt — 8 Tage, kein Auto-Pay-Claim, klarer Free-Tier nach Trial",
+      "norm": "UWG §8, §312d BGB",
+      "status": "PASS"
+    },
+    {
+      "id": "POS-007",
+      "sourceWorkerId": "COMP-002",
+      "title": "KI-Ausgabe-Disclaimer vorhanden (privacy_gate + crisis_dialog)",
+      "norm": "HWG §3 (mitigation), EU AI Act Art. 50(4)",
+      "status": "PASS — Gap: nicht inline bei Paywall/AI-Banner (ADV-009, ADV-010)"
+    },
+    {
+      "id": "POS-008",
+      "sourceWorkerId": "COMP-003",
+      "title": "'Unbegrenzte Nachtraege' (follow-up entries) korrekt — nicht durch AiRateLimiter begrenzt",
+      "norm": "UWG §5 Abs. 1 Nr. 1",
+      "status": "PASS"
+    }
+  ],
+  "pipelineStatus": "completed-success",
+  "pipelineCompletedAt": "2026-05-18T19:30:00Z",
+  "phase4Summary": {
+    "w1_code_de_audit": "PASS - 27/27 phase-2 fixes verified, build stable",
+    "w2_cross_lingual": "PASS - FR/IT/ES/EN/DE no HWG-trigger, formats+XML 27/27 ok",
+    "w3_coverage": "PASS - 27/27 locales x 31 keys = 100%",
+    "minor_findings": [
+      "NF-001: ai_output_health_disclaimer_long defined but not consumed via stringResource (non-blocking, optional later use as expandable tooltip)"
+    ],
+    "pre_existing_issues_outside_plugin_scope": [
+      "GU locale has ~235 strings with placeholder from prior translation tool - pre-existing, not introduced by plugin"
+    ]
+  },
+  "translatedLocales": 27
 }

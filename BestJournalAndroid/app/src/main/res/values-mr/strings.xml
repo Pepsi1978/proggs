@@ -1550,4 +1550,14 @@ Premium सह: दररोज 150 पर्यंत.</string>
     <!-- AI health disclaimer -->
     <string name="ai_output_health_disclaimer">थेरपी नाही — व्यावसायिक सल्ल्याची जागा घेत नाही.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal एक डायरी आहे, थेरपी सेवा नाही. AI विश्लेषण स्वयंचिंतनासाठी सूचना आहेत आणि व्यावसायिक मनोवैज्ञानिक किंवा वैद्यकीय सल्ल्याची जागा घेत नाहीत. तातडीच्या समस्यांसाठी एखाद्या तज्ञाशी किंवा तुमच्या सेटिंग्जमधील संकट सहाय्याशी संपर्क साधा.</string>
+    <string name="churn_cancelled">रद्द केले</string>
+    <string name="churn_cancelled_ends_on">रद्द केले — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी संपते</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी संपते — त्यानंतर दरमहा <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">कृपया आम्हाला थोडक्यात सांगा काय झाले…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> रोजी नूतनीकरण होते</string>
+    <string name="settings_premium_cancelled">प्रीमियम सदस्यता रद्द केली</string>
+    <string name="settings_premium_cancelled_desc">बिलिंग कालावधी संपेपर्यंत तुमची प्रीमियम वैशिष्ट्ये उपलब्ध राहतील. तुम्ही Google Play द्वारे कधीही रद्दीकरण पूर्ववत करू शकता.</string>
+    <string name="settings_premium_cancelled_until">प्रीमियम सदस्यता रद्द केली — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> पर्यंत उपलब्ध</string>
+    <string name="settings_theme">थीम</string>
+    <string name="settings_themes_manager">थीम्स व्यवस्थापक</string>
 </resources>

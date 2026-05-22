@@ -596,3 +596,405 @@ Tokens.
 ---
 
 (Weitere Bugs werden eingefuegt waehrend der Lauf fortschreitet.)
+
+---
+
+## BUG #17 — Plugin-Cache veraltet: assets/ und schemas/ fehlen (Loop 3)
+
+**Schweregrad:** 🟧 Mittel — FIN-031 (.gitignore-Template) und FIN-036 (Schema-Validation) funktionieren mit installierter Plugin-Version nicht. Fallback erforderlich.
+
+**Symptom:**
+Der via Plugin-Manager installierte Plugin-Cache unter
+`~/.claude/plugins/cache/local/finale/0.1.0/` enthält weder das `assets/`-
+Verzeichnis (mit `android-shield-gitignore` Template) noch das `schemas/`-
+Verzeichnis (mit den FIN-036-JSON-Schemas). Beide existieren nur im Quell-Repo
+unter `~/proggs/Umgebung/Plugins/finale/Plugin/`.
+
+```
+$ ls /c/Users/barwa/.claude/plugins/cache/local/finale/0.1.0/
+README.md  agents/  commands/  hooks/  scripts/  skills/
+# fehlt: assets/, schemas/
+
+$ ls /c/Users/barwa/proggs/Umgebung/Plugins/finale/Plugin/
+agents/  assets/  commands/  hooks/  schemas/  scripts/  skills/  README.md
+```
+
+**Root Cause:**
+Vermutung: Beim Plugin-Update wurde nur ein Teil-Sync des Quell-Repos in den
+Cache übernommen. Entweder hat der Marketplace-Sync `assets/` + `schemas/`
+ausgelassen, oder das Plugin wurde nach Anlegen der beiden Verzeichnisse nie
+neu installiert/aktualisiert.
+
+**Workaround (dieser Lauf):**
+- `.gitignore` in `.android-shield/` per Fallback-Inline-Template erstellt
+  (5 Zeilen statt das ausführlichere Quell-Template).
+- Schemas müssen vor der Schema-Validation aus dem Quell-Repo gelesen werden
+  oder die Validierung wird auf reine Type-Checks reduziert.
+
+**Fix-Vorschläge für Plugin:**
+1. **Plugin neu installieren:** `/plugins refresh` oder vollständig de- und
+   reinstallieren damit `assets/` und `schemas/` synchronisiert werden.
+2. **Manifest-Vollständigkeitscheck:** Beim Plugin-Update sicherstellen dass
+   ALLE Verzeichnisse aus dem Quell-Repo mitgenommen werden (kein selektives Sync).
+3. **Orchestrator-Fallback:** Wenn `${FINALE_PLUGIN_ROOT}/assets/` oder
+   `${FINALE_PLUGIN_ROOT}/schemas/` fehlt, versuche zusätzlich
+   `~/proggs/Umgebung/Plugins/finale/Plugin/assets|schemas/` als Fallback.
+
+**Empfehlung:** Variante 1 sofort (Plugin neu installieren), Variante 3 als
+defensiver Fallback im Orchestrator.
+
+---
+
+## BEOBACHTUNG #1 — verify-skills.sh läuft sauber, aber Phase 0 Schritte sind verteilt auf 5+ Orchestrator-Abschnitte
+
+**Schweregrad:** 🟨 Niedrig — Funktioniert, aber Tracking erfordert Sprünge durch orchestrator.md
+
+**Symptom:**
+Phase 0 hat mittlerweile 8+ Schritte (Schritt -1, 0, 1, 2, 2b, 2c, 3, 4, 5, 6, 7, 8).
+Die Reihenfolge im Orchestrator-Doc ist unverändert (Schritt 0 → 1 → 2 → 2b → 2c → 3 → ...),
+aber Schritt 8 (Audit-Only-Lock) ist optional und kommt am Ende nach 6.
+
+**Vorschlag:**
+Phase 0 in zwei Sub-Phasen aufteilen: **Phase 0a — Verify** (Schritte 0-2c)
+und **Phase 0b — Pre-Flight + Optional Lock** (Schritte 3-8). Macht die
+Doku lesbarer und gibt klare Marker für Resume-Punkte.
+
+
+---
+
+## BUG #18 — Recht-Report wird durch Code-Aenderungen veraltet, kein Auto-Refresh
+
+**Schweregrad:** 🟧 Mittel — fuehrt zu falscher Wahrnehmung "offene Findings" obwohl sie schon im Code geloest sind
+
+**Symptom:**
+Der `recht-report.json` vom 2026-05-18 listete 7 offene Findings (MD-001..MD-006 + URL-001).
+Beim Lauf am 2026-05-22 stellte sich heraus dass ALLE 7 bereits im Code geloest sind
+(ConsentScreen.kt verlinkt direkt zu Privacy/Impressum/AGB; AiOutputDisclaimer.kt + AiGeneratedBadge.kt
+existieren mit Sichtbarkeit auf Dashboard/Retrospective/EntryDetail; URLs liefern HTTP 200; AGB-Seite
+existiert als separates HTML).
+
+**Root Cause:**
+Phase 2 (interaktiver Fix-Workflow) markiert nur Findings die explizit durchgegangen wurden mit
+einem `status`. Wenn der Code zwischen Plugin-Laeufen unabhaengig geaendert wird (z. B. Frank
+implementiert AGB-Verlinkung manuell), bleibt der Report stale. Es gibt keine Phase-1-Refresh-Logik
+die VOR der Anzeige offener Findings prueft ob das Finding noch aktuell ist.
+
+**Workaround (dieser Lauf):**
+- Manueller Code-Verifikations-Check pro Finding (Grep nach Strings/Komponenten + curl-HEAD fuer URLs).
+- `status: resolved-verified-in-code` + `resolutionEvidence` Feld hinzugefuegt.
+- `openFindingsCount` neu berechnet (war faelschlich `0`, sollte mit 7 offen sein gewesen).
+
+**Fix-Vorschlaege fuer Plugin:**
+1. **Phase 1.5 — Stale-Finding-Check:** Vor Phase 2, fuer jedes Finding ohne Status:
+   - Wenn `invasivityLevel: text-only`: pruefe per Grep ob der currentText noch existiert
+   - Wenn `category: missingDocs`: pruefe ob die zugehoerige Komponente/Datei jetzt existiert
+   - Wenn `category: deadUrls`: HEAD-Check ob URL jetzt 200 OK ist
+   - Bei Treffer: automatisch `status: resolved-since-audit` setzen + Hinweis im Pre-Flight
+2. **Audit-Refresh-Mode:** Statt "Fix-Workflow" anbieten "Re-Audit only" der nur die offenen Findings re-evaluiert (nicht der ganze Audit neu).
+3. **Audit-TTL:** Wenn `audit_date > 24h alt`: Pre-Flight-Warnung "Audit ist X Tage alt — Code koennte zwischenzeitlich angepasst worden sein, Stale-Finding-Check empfohlen".
+
+**Empfehlung:** Variante 1 + 3 kombinieren. Phase 1.5 ist optional aber bei aelteren Reports default-an.
+
+
+---
+
+## BUG #19 — FIN-029 Worker-Count empfiehlt 15-20 auch bei Mini-Aufgaben
+
+**Schweregrad:** 🟨 Niedrig — Effizienz-Problem, kein Funktionsfehler
+
+**Symptom:**
+FIN-029 (Frank-Direktive 2026-05-22) empfiehlt 15-20 parallele Worker bei "15+ Aufgaben".
+Bei 11 fehlenden Strings × 27 Sprachen = 27 Sprach-Aufgaben → Empfehlung waeren 20 Worker.
+
+Praktisch ist das ueberdimensioniert:
+- Jeder Worker laedt uebersetzung-Skill (~3000 Token Standard) + Job-Context
+- 20 Worker × ~5000 Token Startup = 100.000 Token nur fuer Worker-Setup
+- Bei 11 Strings ist die eigentliche Arbeit pro Worker winzig
+
+**Tatsaechlich eingesetzt:** 5 Worker, je 3-8 Sprachen. Spawn-Overhead minimal,
+Parallelitaet trotzdem hoch.
+
+**Root Cause:**
+FIN-029 macht keinen Unterschied zwischen "viel Arbeit pro Aufgabe" (z. B. neue Sprache
+mit 1000+ Strings) und "wenig Arbeit pro Aufgabe" (z. B. 10 Strings nachuebersetzen).
+Die Worker-Count-Heuristik braucht eine zweite Dimension.
+
+**Fix-Vorschlag:**
+FIN-029 erweitern um Total-Arbeit-Schaetzung:
+```
+estimatedTotalUnits = aufgabenZahl × ((stringsProSprache) ODER (komponentenProAufgabe))
+if estimatedTotalUnits < 100:
+    workerCount = clamp(aufgabenZahl, 3, 6)         # spawn overhead dominiert
+elif 100 <= estimatedTotalUnits < 1000:
+    workerCount = clamp(aufgabenZahl, 5, 12)
+else:
+    workerCount = clamp(aufgabenZahl, 15, 20)       # bisheriges FIN-029
+```
+
+Beispiel:
+- 11 Strings × 27 Sprachen = 297 Units → 5-12 Worker (statt 15-20)
+- 1000 Strings × 27 Sprachen = 27.000 Units → 15-20 Worker
+- 50 Findings × 5 Jurisdiktionen = 250 Units → 5-12 Worker
+
+**Empfehlung:** FIN-029 Heuristik um Units-Dimension erweitern.
+
+---
+
+## BUG #20 — Plugin sollte "fehlende Strings pro Sprache" automatisch berechnen
+
+**Schweregrad:** 🟨 Niedrig — Convenience
+
+**Symptom:**
+Zum Anstossen von Phase 3b (Uebersetzung) braucht das Plugin einen Job-Plan
+mit "welche Strings fehlen in welcher Sprache". Das Plugin liefert diesen Job-Plan
+nicht. Der Hauptagent muss ihn per Python-Diff selbst generieren:
+
+```python
+# manuell vom Hauptagent geschrieben:
+for lang in langs:
+    found = keys_in(f'app/src/main/res/values-{lang}/strings.xml')
+    missing = de_translatable - found
+    job_plan[lang] = {...}
+```
+
+**Root Cause:**
+Der `strings-skill` hat einen `missing-keys-detector`, aber der ist nicht direkt
+ans Plugin-Phase-3b angebunden. Phase 3b braucht den Job-Plan, aber das Plugin
+loest die Diff-Analyse nicht von selbst aus.
+
+**Fix-Vorschlag:**
+Phase 3b um einen automatischen Vor-Schritt erweitern:
+1. Vor Spawn der Translation-Worker: Diff-Analyse pro Sprache (kann sich Plugin oder
+   strings-skill teilen).
+2. Schreibe das Ergebnis in `<app-root>/.android-shield/translation-jobs/job-plan.json`.
+3. Translation-Worker bekommen den Job-Plan-Pfad als Input statt selbst zu skripten.
+
+**Empfehlung:** Pflicht-Schritt in Phase 3b einbauen, bevor Worker spawnen.
+
+---
+
+## BEOBACHTUNG #2 — uebersetzung-Skill hat keinen "batch-mode" für mehrere Sprachen
+
+**Schweregrad:** 🟨 Niedrig — Workflow-Optimierung
+
+**Symptom:**
+Der `uebersetzung`-Skill arbeitet sprach-fuer-sprach sequentiell mit Verifikation
+und Commit nach jeder Sprache. Das ist sehr saubere Architektur, aber bei
+Multi-Sprach-Spawning erschwert es das pro-Worker-Coordination.
+
+Frank's Memory: "i18n IMMER per Subagent" + "i18n NIEMALS Python" — also muss
+jeder Subagent den Skill aufrufen. Aber der Skill ist auf 1-Sprache-Pro-Aufruf
+ausgelegt. 
+
+**Fix-Vorschlag:**
+uebersetzung-Skill um einen optionalen `--multi-language=true` Modus erweitern:
+- Akzeptiert eine Liste von Sprachen als Input
+- Arbeitet trotzdem sequenziell intern, aber EINE Session
+- Spart das wiederholte Skill-Loading bei mehreren Sprachen pro Subagent
+
+
+---
+
+## BUG #21 — Translation-Worker brauchen Pre-Check vor Insert (Duplikat-Risiko)
+
+**Schweregrad:** 🟧 Mittel — kann Build brechen durch Duplikat-Keys
+
+**Symptom (von Worker A im Lauf 2026-05-22 selbst beobachtet):**
+- en hatte nur 3 von 11 deklarierten "fehlenden" Strings tatsaechlich fehlend
+- 8 Strings waren bereits vorhanden
+- Ohne Pre-Check haette der Worker 8 Duplikate erzeugt → XML mit doppelten <string name="..."> → Android-Build-Fehler
+
+**Root Cause:**
+Job-Plan-Generator (Phase 3b Vor-Schritt, siehe BUG #20) generiert eine pauschale
+"11 fehlende Strings"-Aussage statt einer sprach-spezifischen Liste. Worker bekommen
+die Pauschal-Liste und muessen selbst pruefen welche tatsaechlich fehlen.
+
+**Fix-Vorschlag:**
+Job-Plan-Datei `job-plan.json` enthaelt bereits PRO Sprache die Liste der missing_keys —
+wird aber nicht verbindlich an die Worker durchgereicht. Lösung:
+1. **Worker-Prompt explizit auf job-plan.json verweisen:** "Lies job-plan.json fuer
+   deine Sprachen, dann uebersetze NUR die dort gelisteten Keys."
+2. **Mandatory Pre-Check im Worker:** Vor dem Insert pruefen ob Key schon existiert.
+   Bei Doppelung: skip + Hinweis im JSON-Output.
+
+**Empfehlung:** Variante 1 + 2 kombinieren. Plugin sollte Workers nie eine pauschale
+Liste geben, sondern immer per-Sprache-Diff.
+
+---
+
+## BUG #22 — Translation-Worker Insert via `replace` ist fehleranfaellig
+
+**Schweregrad:** 🟨 Niedrig — Edge-Case, aber real
+
+**Symptom (von Worker A beobachtet):**
+Python `content.replace('</resources>', new_strings + '\n</resources>')` ersetzt
+das ERSTE Vorkommen. Wenn `</resources>` in einem XML-Kommentar erscheint (selten,
+aber moeglich), wird der Insert an falsche Stelle gesetzt.
+
+**Fix-Vorschlag:**
+Standard-Insert-Methode im Worker auf rfind-basiert umstellen:
+```python
+idx = content.rfind('</resources>')
+new_content = content[:idx] + new_strings + '\n' + content[idx:]
+```
+Trifft IMMER das letzte Vorkommen, robust gegen Kommentare.
+
+---
+
+## BUG #23 — pl hatte retro_month_more_entries als einzige Sprache fehlend (atomarer Schreibfehler)
+
+**Schweregrad:** 🟨 Niedrig — Hinweis auf vergangenen Bug
+
+**Symptom (von Worker A beobachtet):**
+`retro_month_more_entries` war in 26 von 27 Sprachen vorhanden, nur pl fehlte.
+Das deutet darauf hin dass beim urspruenglichen Hinzufuegen dieses Strings (in einer
+fruehen Session) der pl-Eintrag uebersehen wurde.
+
+**Fix-Vorschlag (Praevention, nicht akut):**
+1. Beim Hinzufuegen neuer Strings IMMER in alle 27 Sprachen gleichzeitig (auch wenn
+   sie noch nicht uebersetzt sind, dann mit `tools:ignore="MissingTranslation"` oder
+   TODO-Marker).
+2. Cross-Sprachen-Audit als Phase 3c-Pre-Check: jede Sprache muss die GLEICHE Anzahl
+   translatable-Keys haben wie die de-Referenz (modulo bewusst weggelassener Strings
+   mit ignore-Tag).
+
+
+---
+
+## BUG #24 — Plugin-Subagents brauchen PYTHONIOENCODING=utf-8 als Default
+
+**Schweregrad:** 🟧 Mittel — verursacht Worker-Crashes auf Windows
+
+**Symptom (von Worker C im Lauf 2026-05-22 selbst beobachtet):**
+Worker C crashte beim ersten Python-Versuch mit `UnicodeEncodeError: 'charmap' codec`,
+weil Python auf Windows cp1252 als Default-stdout-Encoding nutzt und Emoji
+(z. B. ✅) in print-Statements nicht encodiert.
+
+Bug-Case-Auto-Writer hat mit 83% Aehnlichkeit den bekannten Fix injiziert — der zweite
+Lauf war sofort korrekt mit `PYTHONIOENCODING=utf-8`.
+
+**Root Cause:**
+Subagent-Prompts setzen die Env-Var nicht. Workers muessen den Bug erst selbst
+treffen und reparieren.
+
+**Fix-Vorschlag:**
+1. **Plugin-Subagent-Prompt-Template** um Env-Var-Header erweitern:
+   ```
+   ## ENV-SETUP (PFLICHT vor jeder Python-Operation)
+   `export PYTHONIOENCODING=utf-8` (Bash) oder `$env:PYTHONIOENCODING="utf-8"` (PowerShell)
+   ```
+2. **Boilerplate** in jeden Worker-Prompt: "Bei Python-Aufrufen IMMER mit
+   `PYTHONIOENCODING=utf-8` prefixen."
+
+---
+
+## BUG #25 — Worker brauchen Idempotenz-Guard nach Crash
+
+**Schweregrad:** 🟧 Mittel — verhindert sauberen Retry nach Crash
+
+**Symptom (von Worker C beobachtet):**
+Erster Python-Lauf schrieb die ja-Datei vollstaendig, dann crashte print-Statement
+mit Encoding-Error. Zweiter Lauf hatte keine Built-in-Guard — der Worker musste
+selbst manuelles Already-Present-Check implementieren.
+
+**Fix-Vorschlag:**
+Plugin-Subagent-Prompt-Template muss Idempotenz-Pattern fordern:
+```python
+# Standard-Idempotenz-Check vor jedem Insert
+for key in keys_to_insert:
+    if f'name="{key}"' in existing_content:
+        skipped_already_present.append(key)
+        continue
+    # ... insert
+```
+Output-Schema sollte ein `skipped_already_present: dict[lang, [keys]]`-Feld haben,
+damit Idempotenz im JSON sichtbar wird (siehe Worker-C-Output).
+
+
+---
+
+## BUG #26 — Worker D crashte trotz FIN-005-Token-Cap (Autocompact-Thrashing)
+
+**Schweregrad:** 🟥 Hoch — Worker mit zu vielen Sprachen pro Bucket loest Autocompact-Loops aus
+
+**Symptom (Lauf 2026-05-22):**
+Worker D (Bucket D-Indisch+Dravidisch, 8 Sprachen) crashte mit:
+> "Autocompact is thrashing: the context refilled to the limit within 3 turns
+> of the previous compact, 3 times in a row. A file being read or a tool output
+> is likely too large for the context window."
+
+Vermutung: Worker hat versucht, alle 8 strings.xml-Dateien (je ~1100 Strings,
+~50-80 KB) komplett zu lesen + zu uebersetzen + zu schreiben. Das ueberlastet
+den Worker-Kontext schneller als der 145k-Cap (FIN-005) reagieren kann.
+
+**Workaround dieser Lauf:** Worker D durch zwei Folge-Worker (D-1 mit 4 Sprachen, D-2 mit 4 Sprachen) ersetzt mit strengeren Token-Vorgaben (max 80k, KEIN komplettes Read der bestehenden strings.xml).
+
+**Root Cause:**
+1. FIN-005 Cap (145k Token) reagiert erst sehr spaet
+2. Worker hat keine "max-Sprachen-pro-Bucket"-Empfehlung
+3. Worker liest grosse strings.xml-Dateien komplett statt nur Insert per rfind
+
+**Fix-Vorschlaege fuer Plugin:**
+1. **Max-Sprachen-pro-Worker = 5**: Bucket-Splitter im Orchestrator MUSS Buckets
+   mit >5 Sprachen automatisch in 2 kleinere Buckets aufteilen.
+2. **Standard-Template "rfind-Insert ohne komplettes Read":** Worker-Prompt
+   muss explizit fordern, dass strings.xml NICHT vollstaendig gelesen wird —
+   nur Insert-Position per `tail -1` oder rfind ermitteln.
+3. **Token-Predictor:** Bevor Worker spawned wird, Token-Estimate pro Bucket
+   ausrechnen: `sprachen × strings × 200 + skill_load_overhead`. Wenn >120k
+   -> automatisch aufsplitten.
+
+**Empfehlung:** Alle 3 Varianten kombinieren. Variante 1 ist die robusteste
+und einfach umzusetzen.
+
+---
+
+## BUG #27 — ISO-639-1 vs. Android-Legacy-Code Mapping fehlt im Worker-Prompt
+
+**Schweregrad:** 🟨 Niedrig — koennte Fehler bei neuen Workers verursachen
+
+**Symptom (von Worker E im Lauf 2026-05-22 beobachtet):**
+Indonesisch hat ISO-639-1-Code `id`, aber Android nutzt den Legacy-Code `in`
+(values-in/). Das uebersetzung-Skill hat `id.md`, das Android-Verzeichnis ist
+`values-in/`. Worker musste das selbst erschliessen.
+
+Aehnliche Faelle:
+- Hebraeisch: `he` (ISO) vs `iw` (Android Legacy)
+- Yiddisch: `yi` (ISO) vs `ji` (Android Legacy)
+
+**Fix-Vorschlag:**
+Plugin-Orchestrator-Prompt-Template um eine explizite Mapping-Tabelle erweitern:
+```
+ISO -> Android-Legacy-Mapping:
+- id (Indonesian) -> in (values-in/)
+- he (Hebrew) -> iw (values-iw/)
+- yi (Yiddish) -> ji (values-ji/)
+- pt-BR -> pt-rBR
+- pt-PT -> pt-rPT
+- zh-Hans -> zh-rCN
+- zh-Hant -> zh-rTW
+```
+
+---
+
+## BUG #28 — Worker E: Urdu-Wortstellung am Satzanfang (RTL-Bidi-Falle)
+
+**Schweregrad:** 🟨 Niedrig — Skill loest es, aber Worker ohne Skill-Kontext koennte falsch uebersetzen
+
+**Symptom (von Worker E beobachtet):**
+Urdu setzt Verbalphrase ans Ende. Bei Strings mit `<xliff:g>` am Satzanfang
+(z. B. `churn_renews_on`) muss die Datumsphrase nach Urdu-Syntax umstrukturiert
+werden. Ein naiver Uebersetzer wuerde die deutsche Wortstellung beibehalten —
+das erzeugt unnatuerliche Urdu-Saetze.
+
+**Worker-Empfehlung:** Der uebersetzung-Skill (`ur.md`) hat diese Feinheit
+abgedeckt. Aber falls jemals ein Worker ohne Skill-Aufruf uebersetzen wuerde
+(was BUG #14 verbietet, aber theoretisch passieren koennte), wuerde die
+Qualitaet schlecht.
+
+**Fix-Vorschlag:**
+FIN-032 ("uebersetzung-Skill PFLICHT") muss in JEDEM Worker-Prompt prominenter
+stehen — nicht nur als Floskel sondern mit Beispielen welche Sprach-Fallen ohne
+Skill nicht abgedeckt waeren. Frueher Hinweis "ohne Skill = schlechte Qualitaet"
+verhindert Faulheit.
+

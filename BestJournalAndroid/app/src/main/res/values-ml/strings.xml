@@ -1382,4 +1382,14 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <!-- AI health disclaimer -->
     <string name="ai_output_health_disclaimer">തെറാപ്പിയല്ല — പ്രൊഫഷണൽ ഉപദേശം മാറ്റിവെക്കുന്നില്ല.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal ഒരു ഡയറിയാണ്, തെറാപ്പി ഓഫറല്ല. AI വിശകലനങ്ങൾ സ്വയം-പ്രതിഫലനത്തിനുള്ള നിർദ്ദേശങ്ങളാണ്, അവ പ്രൊഫഷണൽ മനഃശാസ്ത്ര അല്ലെങ്കിൽ വൈദ്യ ഉപദേശം മാറ്റിവെക്കുന്നില്ല. അടിയന്തര പ്രശ്നങ്ങളുണ്ടെങ്കിൽ ഒരു വിദഗ്ധനെ സമീപിക്കൂ അല്ലെങ്കിൽ ക്രമീകരണങ്ങളിലെ ക്രൈസിസ് ഹെൽപ്‌ലൈൻ ഉപയോഗിക്കൂ.</string>
+    <string name="churn_cancelled">റദ്ദാക്കി</string>
+    <string name="churn_cancelled_ends_on">റദ്ദാക്കി — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ന് അവസാനിക്കുന്നു</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ന് അവസാനിക്കുന്നു — പിന്നീട് പ്രതിമാസം <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">ദയവായി ഞങ്ങളോട് എന്താണ് സംഭവിക്കുന്നതെന്ന് ചുരുക്കി പറയൂ…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>-ന് പുതുക്കപ്പെടുന്നു</string>
+    <string name="settings_premium_cancelled">പ്രീമിയം സബ്‌സ്ക്രിപ്ഷൻ റദ്ദാക്കി</string>
+    <string name="settings_premium_cancelled_desc">ബില്ലിംഗ് കാലയളവ് അവസാനിക്കുന്നതുവരെ നിങ്ങളുടെ പ്രീമിയം ഫീച്ചറുകൾ ലഭ്യമായിരിക്കും. Google Play വഴി ഏത് സമയത്തും നിങ്ങൾക്ക് റദ്ദാക്കൽ പഴയപടിയാക്കാം.</string>
+    <string name="settings_premium_cancelled_until">പ്രീമിയം സബ്‌സ്ക്രിപ്ഷൻ റദ്ദാക്കി — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> വരെ ലഭ്യം</string>
+    <string name="settings_theme">തീം</string>
+    <string name="settings_themes_manager">തീംസ് മാനേജർ</string>
 </resources>

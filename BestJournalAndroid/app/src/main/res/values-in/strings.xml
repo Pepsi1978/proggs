@@ -1425,4 +1425,16 @@ Apa yang ingin kamu lakukan?</string>
     <string name="theme_gruvbox">Ambar</string>
     <string name="ai_output_health_disclaimer">Bukan terapi — tidak menggantikan konsultasi profesional.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal adalah buku harian dan bukan layanan terapi. Analisis AI merupakan dorongan untuk refleksi diri dan tidak menggantikan konsultasi psikologis atau medis profesional. Jika kamu menghadapi masalah mendesak, hubungi tenaga ahli atau layanan krisis di pengaturanmu.</string>
+
+    <!-- Churn / Subscription cancellation strings -->
+    <string name="churn_cancelled">Dibatalkan</string>
+    <string name="churn_cancelled_ends_on">Dibatalkan — berakhir pada <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Berakhir pada <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — lalu <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> per bulan</string>
+    <string name="churn_reason_other_placeholder">Ceritakan singkat apa yang terjadi…</string>
+    <string name="churn_renews_on">Diperpanjang otomatis pada <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Langganan Premium dibatalkan</string>
+    <string name="settings_premium_cancelled_desc">Fitur Premium kamu tetap tersedia hingga akhir periode penagihan. Kamu bisa membatalkan pembatalan kapan saja melalui Google Play.</string>
+    <string name="settings_premium_cancelled_until">Langganan Premium dibatalkan — berlaku hingga <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Pengelola Tema</string>
 </resources>

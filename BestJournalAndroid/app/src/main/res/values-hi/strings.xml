@@ -1459,4 +1459,15 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="consent_footer_link_agb">उपयोग की शर्तें</string>
     <string name="ai_output_health_disclaimer">कोई थेरेपी नहीं — पेशेवर सलाह की जगह नहीं।</string>
     <string name="ai_output_health_disclaimer_long">Best Journal एक डायरी है, थेरेपी का विकल्प नहीं। AI विश्लेषण स्व-चिंतन के लिए सुझाव हैं और किसी मनोवैज्ञानिक या चिकित्सीय सलाह की जगह नहीं लेते। गंभीर समस्याओं में किसी विशेषज्ञ या अपनी सेटिंग में क्राइसिस हेल्पलाइन से संपर्क करो।</string>
+
+    <string name="churn_cancelled">रद्द किया गया</string>
+    <string name="churn_cancelled_ends_on">रद्द किया गया — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> को समाप्त होगा</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> को समाप्त — इसके बाद <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> प्रति माह</string>
+    <string name="churn_reason_other_placeholder">कृपया हमें संक्षेप में बताएं कि क्या हुआ…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> को नवीनीकृत होगा</string>
+    <string name="settings_premium_cancelled">प्रीमियम सदस्यता रद्द की गई</string>
+    <string name="settings_premium_cancelled_desc">आपकी प्रीमियम सुविधाएं बिलिंग अवधि के अंत तक उपलब्ध रहेंगी। आप Google Play के माध्यम से किसी भी समय रद्दीकरण को पूर्ववत कर सकते हैं।</string>
+    <string name="settings_premium_cancelled_until">प्रीमियम सदस्यता रद्द की गई — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> तक वैध</string>
+    <string name="settings_theme">थीम</string>
+    <string name="settings_themes_manager">थीम्स मैनेजर</string>
 </resources>

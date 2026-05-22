@@ -1466,4 +1466,16 @@ Premium: 하루 최대 150회.</string>
     <string name="consent_footer_link_agb">이용약관</string>
     <string name="ai_output_health_disclaimer">치료가 아닙니다 — 전문적인 상담을 대체하지 않아요.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal은 일기 앱으로 치료 서비스가 아니에요. AI 분석은 자기 성찰을 위한 영감으로, 전문적인 심리 또는 의학 상담을 대체하지 않아요. 위기 상황이 있다면 설정에 있는 위기상담 전화나 전문가에게 문의해 주세요.</string>
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">구독 취소됨</string>
+    <string name="churn_cancelled_ends_on">취소됨 — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>에 종료</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>에 종료 — 이후 월 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">어떤 점이 불편하셨는지 알려주세요…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>에 자동 갱신</string>
+    <string name="settings_premium_cancelled">프리미엄 구독 취소됨</string>
+    <string name="settings_premium_cancelled_desc">현재 청구 주기가 끝날 때까지 프리미엄 기능을 계속 이용할 수 있어요. Google Play에서 언제든지 취소를 되돌릴 수 있어요.</string>
+    <string name="settings_premium_cancelled_until">프리미엄 구독 취소됨 — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g>까지 이용 가능</string>
+    <string name="settings_theme">테마</string>
+    <string name="settings_themes_manager">테마 관리자</string>
 </resources>

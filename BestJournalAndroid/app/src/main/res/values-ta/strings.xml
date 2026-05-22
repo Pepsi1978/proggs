@@ -1464,4 +1464,15 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="consent_footer_link_agb">பயன்பாட்டு விதிமுறைகள்</string>
     <string name="ai_output_health_disclaimer">சிகிச்சை அல்ல — தொழில்முறை ஆலோசனையை மாற்றாது.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal ஒரு நாட்குறிப்பு, சிகிச்சை சேவை அல்ல. KI பகுப்பாய்வுகள் சுய சிந்தனைக்கான தூண்டுதல்களே, தொழில்முறை உளவியல் அல்லது மருத்துவ ஆலோசனையை மாற்றாது. அவசர சிக்கல்கள் ஏற்பட்டால் நிபுணரிடம் அல்லது உன் அமைப்புகளில் உள்ள நெருக்கடி உதவியை அணுகு.</string>
+
+    <string name="churn_cancelled">ரத்து செய்யப்பட்டது</string>
+    <string name="churn_cancelled_ends_on">ரத்து — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> அன்று முடிவடையும்</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> அன்று முடிவடையும் — பின்னர் மாதம் <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">என்ன நடந்தது என்று சுருக்கமாக சொல்லுங்கள்…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> அன்று புதுப்பிக்கப்படும்</string>
+    <string name="settings_premium_cancelled">பிரீமியம் சந்தா ரத்து செய்யப்பட்டது</string>
+    <string name="settings_premium_cancelled_desc">உங்கள் பிரீமியம் அம்சங்கள் பில்லிங் காலம் முடியும் வரை கிடைக்கும். Google Play மூலம் எப்போது வேண்டுமானாலும் ரத்தை மீண்டும் செயல்தக்கதாக்கலாம்.</string>
+    <string name="settings_premium_cancelled_until">பிரீமியம் சந்தா ரத்து — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> வரை செல்லுபடியாகும்</string>
+    <string name="settings_theme">தீம்</string>
+    <string name="settings_themes_manager">தீம்ஸ் மேனேஜர்</string>
 </resources>

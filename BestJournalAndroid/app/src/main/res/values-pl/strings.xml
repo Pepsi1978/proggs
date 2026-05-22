@@ -1442,4 +1442,15 @@ Co chcesz zrobić?</string>
     <string name="theme_gruvbox">Bursztyn</string>
     <string name="ai_output_health_disclaimer">Nie terapia — nie zastępuje profesjonalnego doradztwa.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal to dziennik, a nie oferta terapeutyczna. Analizy AI to sugestie do autorefleksji i nie zastępują profesjonalnego doradztwa psychologicznego ani medycznego. W przypadku poważnych problemów zwróć się do specjalisty lub skontaktuj się z pomocą kryzysową dostępną w ustawieniach.</string>
+    <string name="churn_cancelled">Anulowano</string>
+    <string name="churn_cancelled_ends_on">Anulowano — kończy się <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Kończy się <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — potem <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> miesięcznie</string>
+    <string name="churn_reason_other_placeholder">Powiedz nam krótko, co się dzieje…</string>
+    <string name="churn_renews_on">Odnawia się <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="retro_month_more_entries">(+ %1$d kolejnych wpisów)</string>
+    <string name="settings_premium_cancelled">Subskrypcja Premium anulowana</string>
+    <string name="settings_premium_cancelled_desc">Twoje funkcje Premium pozostają dostępne do końca okresu rozliczeniowego. Anulowanie możesz cofnąć w dowolnym momencie przez Google Play.</string>
+    <string name="settings_premium_cancelled_until">Subskrypcja Premium anulowana — aktywna do <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Motyw</string>
+    <string name="settings_themes_manager">Menedżer motywów</string>
 </resources>

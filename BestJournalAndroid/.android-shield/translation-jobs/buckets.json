@@ -1,0 +1,9 @@
+{
+  "buckets": [
+    {"id": "A", "name": "Europa-1 (lateinisch)", "langs": ["en", "fr", "es", "it", "nl", "pl"]},
+    {"id": "B", "name": "Europa-2 (lateinisch + Cyrillic)", "langs": ["pt-rBR", "pt-rPT", "tr", "ru", "uk"]},
+    {"id": "C", "name": "Asien-CJK", "langs": ["ja", "ko", "zh-rCN", "zh-rTW", "th"]},
+    {"id": "D", "name": "Indisch + Tamil-Telugu", "langs": ["hi", "bn", "ta", "te", "ml", "kn", "mr", "gu"]},
+    {"id": "E", "name": "RTL + Sonstige", "langs": ["ar", "ur", "in"]}
+  ]
+}

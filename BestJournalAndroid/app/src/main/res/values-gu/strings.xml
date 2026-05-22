@@ -1385,4 +1385,14 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="consent_footer_link_agb">ઉપયોગ-શરતો</string>
     <string name="ai_output_health_disclaimer">ઉપચાર નથી — વ્યાવસાયિક સલાહ-સ્થાન નથી.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal એ ડાયરી છે, ઉપચાર-સેવા નથી. AI-વિશ્લેષણ સ્વ-ચિંતન માટે સૂચનો છે અને વ્યાવસાયિક મનોવૈજ્ઞાનિક અથવા તબીબી સલાહ-સ્થાન નથી. તીવ્ર સમસ્યાઓ વખતે, કૃપા કરી નિષ્ણાત અથવા તમારા સેટિંગ્સ-ની કટોકટી-સહાય-સ્થળ પર સંપર્ક કરો.</string>
+    <string name="churn_cancelled">રદ કર્યું</string>
+    <string name="churn_cancelled_ends_on">રદ કર્યું — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ સમાપ્ત થાય છે</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ સમાપ્ત — ત્યારબાદ દર મહિને <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">કૃપા કરી અમને ટૂંકમાં કહો શું ચાલી રહ્યું છે…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g>ના રોજ નવીનીકૃત થાય છે</string>
+    <string name="settings_premium_cancelled">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું</string>
+    <string name="settings_premium_cancelled_desc">બિલિંગ સમયગાળો સમાપ્ત ન થાય ત્યાં સુધી તમારી પ્રીમિયમ સુવિધાઓ ઉપલબ્ધ રહેશે. તમે Google Play દ્વારા ગમે ત્યારે રદ્દ પૂર્વવત્ કરી શકો છો.</string>
+    <string name="settings_premium_cancelled_until">પ્રીમિયમ સબ્સ્ક્રિપ્શન રદ કર્યું — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> સુધી ઉપલબ્ધ</string>
+    <string name="settings_theme">થીમ</string>
+    <string name="settings_themes_manager">થીમ્સ મેનેજર</string>
 </resources>

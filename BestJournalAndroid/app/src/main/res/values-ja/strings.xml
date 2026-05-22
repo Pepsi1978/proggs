@@ -1466,4 +1466,16 @@ Premiumでは：1日最大150件。</string>
     <string name="ai_output_health_disclaimer">本サービスはセラピーではなく、専門的なカウンセリングの代替にはなりません。</string>
     <string name="ai_output_health_disclaimer_long">Best Journalは日記アプリであり、セラピーサービスではありません。AIによる分析は自己省察のための参考情報であり、専門的な心理的・医療的アドバイスの代替にはなりません。深刻な問題を抱えている場合は、専門家または設定内の危機サポートにご連絡ください。</string>
 
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">解約済み</string>
+    <string name="churn_cancelled_ends_on">解約済み — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> まで有効</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> に終了 — その後は月額 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">少し教えてください…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> に自動更新</string>
+    <string name="settings_premium_cancelled">プレミアム解約済み</string>
+    <string name="settings_premium_cancelled_desc">請求サイクルの終了まで、プレミアム機能はご利用いただけます。Google Play からいつでも解約を取り消すことができます。</string>
+    <string name="settings_premium_cancelled_until">プレミアム解約済み — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> まで有効</string>
+    <string name="settings_theme">テーマ</string>
+    <string name="settings_themes_manager">テーママネージャー</string>
 </resources>

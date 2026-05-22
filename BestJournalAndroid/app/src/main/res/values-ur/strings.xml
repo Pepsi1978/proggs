@@ -1430,4 +1430,16 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="theme_gruvbox">عنبر</string>
     <string name="ai_output_health_disclaimer">کوئی علاج نہیں — پیشہ ورانہ مشورے کا متبادل نہیں۔</string>
     <string name="ai_output_health_disclaimer_long">Best Journal ایک ڈائری ہے نہ کہ علاج کی سہولت۔ AI تجزیے خود غوری کی تجاویز ہیں اور پیشہ ورانہ نفسیاتی یا طبی مشورے کا متبادل نہیں۔ اگر تم کسی فوری مسئلے سے گزر رہے ہو تو اپنی ترتیبات میں موجود کسی ماہر یا بحران امداد سے رابطہ کرو۔</string>
+
+    <!-- Churn / Subscription cancellation strings -->
+    <string name="churn_cancelled">منسوخ</string>
+    <string name="churn_cancelled_ends_on">منسوخ — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو ختم ہو گا</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو ختم — پھر <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> ماہانہ</string>
+    <string name="churn_reason_other_placeholder">براہ کرم ہمیں مختصراً بتائیں کیا ہو رہا ہے…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> کو خودکار تجدید ہو گی</string>
+    <string name="settings_premium_cancelled">Premium سبسکرپشن منسوخ</string>
+    <string name="settings_premium_cancelled_desc">آپ کی Premium سہولیات بلنگ دور کے اختتام تک دستیاب رہیں گی۔ آپ کسی بھی وقت Google Play سے منسوخی واپس لے سکتے ہیں۔</string>
+    <string name="settings_premium_cancelled_until">Premium سبسکرپشن منسوخ — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> تک ساری رہے گی</string>
+    <string name="settings_theme">تھیم</string>
+    <string name="settings_themes_manager">تھیمز مینیجر</string>
 </resources>

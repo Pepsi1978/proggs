@@ -1490,4 +1490,14 @@ Cosa vuoi fare?</string>
     <string name="theme_one_dark">Atelier</string>
     <string name="theme_nord">Notte Polare</string>
     <string name="theme_gruvbox">Ambra</string>
+    <string name="churn_cancelled">Disdetto</string>
+    <string name="churn_cancelled_ends_on">Disdetto — termina il <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Termina il <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — poi <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> al mese</string>
+    <string name="churn_reason_other_placeholder">Dicci brevemente cosa succede…</string>
+    <string name="churn_renews_on">Si rinnova il <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Abbonamento Premium disdetto</string>
+    <string name="settings_premium_cancelled_desc">Le tue funzioni Premium rimangono disponibili fino alla fine del periodo di fatturazione. Puoi annullare la disdetta in qualsiasi momento tramite Google Play.</string>
+    <string name="settings_premium_cancelled_until">Abbonamento Premium disdetto — attivo fino al <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Gestore temi</string>
 </resources>

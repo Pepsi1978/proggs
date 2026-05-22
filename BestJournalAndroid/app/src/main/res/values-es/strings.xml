@@ -1435,4 +1435,14 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="consent_footer_link_agb">Condiciones de uso</string>
     <string name="ai_output_health_disclaimer">No es terapia — no sustituye el asesoramiento profesional.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal es un diario, no una oferta terapéutica. Los análisis de la IA son sugerencias para la autorreflexión y no sustituyen el asesoramiento psicológico o médico profesional. Ante problemas urgentes, contacta con un especialista o el servicio de crisis que encontrarás en tus ajustes.</string>
+    <string name="churn_cancelled">Cancelado</string>
+    <string name="churn_cancelled_ends_on">Cancelado — termina el <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Termina el <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — después <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> al mes</string>
+    <string name="churn_reason_other_placeholder">Cuéntanos brevemente qué ocurre…</string>
+    <string name="churn_renews_on">Se renueva el <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Suscripción Premium cancelada</string>
+    <string name="settings_premium_cancelled_desc">Tus funciones Premium siguen disponibles hasta el fin del período de facturación. Puedes revertir la cancelación en cualquier momento desde Google Play.</string>
+    <string name="settings_premium_cancelled_until">Suscripción Premium cancelada — activa hasta el <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Gestor de temas</string>
 </resources>

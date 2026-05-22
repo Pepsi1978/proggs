@@ -1450,4 +1450,16 @@
     <!-- AI health disclaimers (HWG-compliant) -->
     <string name="ai_output_health_disclaimer">ليس علاجًا — لا يُغني عن المشورة المتخصصة.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal هو تطبيق يوميات وليس عرضًا علاجيًا. تحليلات الذكاء الاصطناعي هي مقترحات للتأمل الذاتي ولا تُغني عن الاستشارة النفسية أو الطبية المتخصصة. في حال وجود مشكلات حادة، تواصل مع متخصص أو خط أزمات الطوارئ في إعداداتك.</string>
+
+    <!-- Churn / Subscription cancellation strings -->
+    <string name="churn_cancelled">ملغى</string>
+    <string name="churn_cancelled_ends_on">ملغى — ينتهي في <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">ينتهي في <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — ثم <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> شهريًا</string>
+    <string name="churn_reason_other_placeholder">أخبرنا باختصار عمّا يجري…</string>
+    <string name="churn_renews_on">يتجدد في <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">تم إلغاء اشتراك Premium</string>
+    <string name="settings_premium_cancelled_desc">ستظل ميزات Premium متاحة حتى نهاية دورة الفوترة الحالية. يمكنك التراجع عن الإلغاء في أي وقت عبر Google Play.</string>
+    <string name="settings_premium_cancelled_until">تم إلغاء اشتراك Premium — ساري حتى <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">مظهر</string>
+    <string name="settings_themes_manager">مدير المظاهر</string>
 </resources>

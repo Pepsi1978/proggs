@@ -1444,4 +1444,15 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <!-- AI health disclaimer strings (HWG §3, EU AI Act Art. 50) -->
     <string name="ai_output_health_disclaimer">কোনো থেরাপি নয় — পেশাদার পরামর্শের বিকল্প নয়।</string>
     <string name="ai_output_health_disclaimer_long">Best Journal একটি ডায়েরি, কোনো থেরাপি সেবা নয়। এআই বিশ্লেষণ স্ব-প্রতিফলনের জন্য পরামর্শ, এটি কোনো পেশাদার মনস্তাত্ত্বিক বা চিকিৎসা পরামর্শের বিকল্প নয়। জরুরি সমস্যায় কোনো বিশেষজ্ঞ বা সেটিংসে থাকা সংকট সহায়তার সাথে যোগাযোগ করো।</string>
+
+    <string name="churn_cancelled">বাতিল করা হয়েছে</string>
+    <string name="churn_cancelled_ends_on">বাতিল — <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> তারিখে শেষ হবে</string>
+    <string name="churn_promo_phase_ends"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> তারিখে শেষ — এরপর মাসে <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">অনুগ্রহ করে সংক্ষেপে বলুন কী হয়েছে…</string>
+    <string name="churn_renews_on"><xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> তারিখে নবায়ন হবে</string>
+    <string name="settings_premium_cancelled">প্রিমিয়াম সাবস্ক্রিপশন বাতিল করা হয়েছে</string>
+    <string name="settings_premium_cancelled_desc">আপনার প্রিমিয়াম ফিচারগুলো বিলিং পিরিয়ডের শেষ পর্যন্ত পাওয়া যাবে। আপনি যেকোনো সময় Google Play-এর মাধ্যমে বাতিল পূর্বাবস্থায় ফিরিয়ে আনতে পারবেন।</string>
+    <string name="settings_premium_cancelled_until">প্রিমিয়াম সাবস্ক্রিপশন বাতিল — <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g> পর্যন্ত সক্রিয়</string>
+    <string name="settings_theme">থিম</string>
+    <string name="settings_themes_manager">থিমস ম্যানেজার</string>
 </resources>

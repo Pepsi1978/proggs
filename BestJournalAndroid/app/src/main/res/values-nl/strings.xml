@@ -1518,4 +1518,14 @@ Wat wil je doen?</string>
     <!-- AI health disclaimer -->
     <string name="ai_output_health_disclaimer">Geen therapie — vervangt geen professioneel advies.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal is een dagboek en geen therapeutisch aanbod. AI-analyses zijn suggesties voor zelfreflectie en vervangen geen professionele psychologische of medische begeleiding. Neem bij acute problemen contact op met een professional of de crisishulp in je instellingen.</string>
+    <string name="churn_cancelled">Opgezegd</string>
+    <string name="churn_cancelled_ends_on">Opgezegd — eindigt op <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Eindigt op <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — daarna <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> per maand</string>
+    <string name="churn_reason_other_placeholder">Vertel ons kort wat er speelt…</string>
+    <string name="churn_renews_on">Wordt verlengd op <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Premium-abonnement opgezegd</string>
+    <string name="settings_premium_cancelled_desc">Je Premium-functies blijven beschikbaar tot het einde van de factureringsperiode. Je kunt de opzegging op elk moment ongedaan maken via Google Play.</string>
+    <string name="settings_premium_cancelled_until">Premium-abonnement opgezegd — actief tot <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Thema</string>
+    <string name="settings_themes_manager">Themabeheer</string>
 </resources>

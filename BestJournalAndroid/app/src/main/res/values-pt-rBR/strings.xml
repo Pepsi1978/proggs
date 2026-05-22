@@ -1432,4 +1432,14 @@ O que você quer fazer?</string>
     <string name="consent_footer_link_agb">Termos de uso</string>
     <string name="ai_output_health_disclaimer">Não é terapia — não substitui aconselhamento profissional.</string>
     <string name="ai_output_health_disclaimer_long">Best Journal é um diário e não oferece terapia. As análises de IA são sugestões para autorreflexo e não substituem aconselhamento psicológico ou médico profissional. Em caso de problemas agudos, procure um profissional de saúde ou a linha de crise nas suas configurações.</string>
+    <string name="churn_cancelled">Cancelado</string>
+    <string name="churn_cancelled_ends_on">Cancelado — encerra em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">Encerra em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> — depois <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g> por mês</string>
+    <string name="churn_reason_other_placeholder">Conta-nos brevemente o que está acontecendo…</string>
+    <string name="churn_renews_on">Renova em <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="settings_premium_cancelled">Assinatura Premium cancelada</string>
+    <string name="settings_premium_cancelled_desc">Seus recursos Premium ficam disponíveis até o fim do período de cobrança. Você pode desfazer o cancelamento a qualquer momento pelo Google Play.</string>
+    <string name="settings_premium_cancelled_until">Assinatura Premium cancelada — válida até <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_themes_manager">Gerenciador de Temas</string>
 </resources>

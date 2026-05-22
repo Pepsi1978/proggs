@@ -1436,4 +1436,16 @@
     <string name="ai_output_health_disclaimer">非心理治療 — 不能取代專業諮詢。</string>
     <string name="ai_output_health_disclaimer_long">Best Journal 是一款日記應用程式，並非心理治療服務。AI 分析僅供自我反思參考，不能取代專業心理或醫療建議。若你有急迫需求，請聯繫專業人士或你設定中的危機求助資源。</string>
 
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">已取消</string>
+    <string name="churn_cancelled_ends_on">已取消 — 到期時間：<xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">優惠於 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 結束 — 之後每月 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">請簡單告訴我們發生了什麼…</string>
+    <string name="churn_renews_on">將於 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 自動續訂</string>
+    <string name="settings_premium_cancelled">高階版訂閱已取消</string>
+    <string name="settings_premium_cancelled_desc">在目前計費週期結束前，你仍可使用所有高階功能。你隨時可以透過 Google Play 撤銷取消操作。</string>
+    <string name="settings_premium_cancelled_until">高階版訂閱已取消 — 有效期至 <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">主題</string>
+    <string name="settings_themes_manager">主題管理員</string>
 </resources>

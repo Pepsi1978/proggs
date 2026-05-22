@@ -1428,4 +1428,16 @@
     <string name="consent_footer_link_agb">使用条款</string>
     <string name="ai_output_health_disclaimer">非治疗建议——不能替代专业咨询。</string>
     <string name="ai_output_health_disclaimer_long">Best Journal 是日记应用，不提供心理治疗服务。AI 分析仅为自我反思的参考，不能替代专业的心理或医疗建议。如遇紧急情况，请联系专业人士或你设置中的危机援助热线。</string>
+
+    <!-- Churn & Theme strings (added 2026-05-22) -->
+    <string name="churn_cancelled">已取消</string>
+    <string name="churn_cancelled_ends_on">已取消 — 到期时间：<xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g></string>
+    <string name="churn_promo_phase_ends">优惠于 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 结束 — 之后每月 <xliff:g id="base_price" example="3,99 €">%2$s</xliff:g></string>
+    <string name="churn_reason_other_placeholder">请简单告诉我们发生了什么…</string>
+    <string name="churn_renews_on">将于 <xliff:g id="date" example="30.04.2026, 18:13">%1$s</xliff:g> 自动续订</string>
+    <string name="settings_premium_cancelled">高级版订阅已取消</string>
+    <string name="settings_premium_cancelled_desc">在当前计费周期结束前，你仍可使用所有高级功能。你随时可以通过 Google Play 撤销取消操作。</string>
+    <string name="settings_premium_cancelled_until">高级版订阅已取消 — 有效期至 <xliff:g id="date" example="30.04.2026, 21:01">%1$s</xliff:g></string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_themes_manager">主题管理器</string>
 </resources>

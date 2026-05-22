@@ -1,0 +1,23 @@
+{
+  "lastRunMode": "default",
+  "lastRunStartedAt": "2026-05-22T14:46:22Z",
+  "lastRunStatus": "in_progress",
+  "skills": {
+    "roentgen-skill": {
+      "sha256": "6af0dc321708ed3ac3ee7be78f8db47929750728158bc78d308ed6e15865f1fa",
+      "mtime": "2026-05-22T16:24:23.601031100+0200"
+    },
+    "rechtssicherheits-skill": {
+      "sha256": "5956640d46ea847c3e3e427ec88928bc229b3be52fdd2db167e6acb2fe8f46ba",
+      "mtime": "2026-05-17T22:53:12.591250900+0200"
+    },
+    "strings-skill": {
+      "sha256": "29007fdc118782ba882c677ca34618cac1399d5efc922589e0948dacddb414a6",
+      "mtime": "2026-05-18T11:33:08.152400100+0200"
+    },
+    "uebersetzer-skill": {
+      "sha256": "e7205988a2f38eb33f7dbdaf8b4ce14c7d6abea71b13ffcd1478a20750d31d7d",
+      "mtime": "2026-05-17T22:06:16.758000500+0200"
+    }
+  }
+}
