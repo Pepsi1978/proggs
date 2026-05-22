@@ -274,6 +274,15 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 
 17. **FIN-040 — WORKER-STANDARD-TEMPLATE (BUG #21+22+25 Frank 2026-05-22):**
 
+    > **TEMPLATE-EXTRAKTION (2026-05-22 Loop 5):** Die vollstaendige Worker-Anleitung
+    > steht jetzt zentral in `${FINALE_PLUGIN_ROOT}/agents/templates/translation-worker.md`
+    > (10 Abschnitte mit Checklist am Ende). Beim Translation-Worker-Spawn MUSS der
+    > Orchestrator diese Datei per File-Read inkludieren statt einzelne Bausteine
+    > inline zu duplizieren. So gibt es genau EINE Update-Stelle fuer Worker-Pflichten.
+    >
+    > Dieser FIN-040-Block bleibt als Kurz-Referenz fuer den Orchestrator selbst —
+    > der Worker-Prompt verweist auf das Template, nicht auf diesen Abschnitt.
+
     Jeder Worker-Prompt MUSS folgende Standard-Bausteine enthalten — verpflichtend,
     nicht optional:
 
@@ -422,6 +431,46 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
     cp -r "$SOURCE/assets" "$CACHE/"
     cp -r "$SOURCE/schemas" "$CACHE/"
     ```
+
+24. **FIN-047 — AUTO-WRITE RUN-ISSUES NACH JEDEM LAUF (Loop 5 2026-05-22):**
+
+    Aktuell ist die Dokumentation neuer Plugin-Bugs nach jedem Lauf ein MANUELLER
+    Schritt (Frank schreibt RUN-ISSUES-<DATUM>.md selbst). Dabei wird oft vergessen,
+    `plugin_bugs_observed`-Eintraege aus Subagent-Outputs zu konsolidieren.
+
+    **Neue Pflicht:** Am ENDE jedes Laufs (egal ob completed / interrupted / error)
+    schreibt der Orchestrator automatisch eine `RUN-ISSUES-<ISO-DATUM>.md`-Datei
+    nach `<app-root>/.android-shield/`.
+
+    **Format:**
+    ```markdown
+    # finale Plugin — RUN-ISSUES <ISO-DATUM>
+
+    > Auto-generiert vom Orchestrator (FIN-047). Konsolidiert
+    > `plugin_bugs_observed`-Eintraege aller Subagents.
+
+    | # | Subagent | Symptom | Evidence | Suggestion |
+    |---|----------|---------|----------|------------|
+    | 1 | uebersetzer-worker-B (tr+pt) | Worker hatte 8 Sprachen, sofort worker_overload | FIN-042 Limit ist 5 | Bucket-Splitter im Orchestrator pruefen |
+    | 2 | fix-applier-3 | ... | ... | ... |
+    ```
+
+    **Spawn-Logik:**
+    1. Phase 5 (Loop-Ende) sammelt alle `plugin_bugs_observed`-Arrays aus den
+       Subagent-Output-JSONs (in `<app-root>/.android-shield/worker-outputs/*.json`).
+    2. Konsolidiert sie in einer Tabelle (oben).
+    3. Wenn Anzahl > 0: schreibt `RUN-ISSUES-<ISO-DATUM>.md`.
+    4. Wenn Anzahl == 0: Datei mit Header "0 Bugs beobachtet — sauberer Lauf" anlegen
+       (so dass Frank IMMER sieht ob Selbstbeobachtung aktiv war).
+    5. Audit-Log Eintrag: `phase5-run-issues-written: <pfad>`
+
+    **Dedup-Logik:** Wenn 2+ Subagents das gleiche Symptom melden (Hash ueber
+    `symptom`-Feld), in einer Zeile zusammenfassen mit `count: N`.
+
+    **Frank-Integration:** Die Datei kann von Frank manuell in `RUN-ISSUES-<DATUM>.md`
+    im Plugin-Repo uebernommen werden — oder per Symlink/Copy direkt verlinkt werden.
+    Der Auto-Schreib-Schritt ersetzt aber NICHT die manuelle Konsolidierung in
+    `ISSUES.md` (die bleibt ein bewusster Frank-Schritt).
 
     Oder via Claude Code Plugin-Manager: `/plugins refresh finale` (wenn unterstuetzt).
 
@@ -1501,6 +1550,25 @@ Auto-Detection: aus `values-*/-Verzeichnissen` Zielsprachen ableiten.
    auf die noch laufenden Workers 2-14 zu warten.
 4. Ergebnis: Bei 26 Zielsprachen × ~5 Min pro Sprache ≈ **~10 Min Gesamtzeit**
    statt ~4 Stunden bei sequenziellem oder wellenweisem Vorgehen.
+
+**Template-Inklusion (FIN-040 Extrakt, Loop 5 2026-05-22):**
+Jeder Translation-Worker-Prompt MUSS am Anfang den Verweis auf das zentrale
+Worker-Template enthalten:
+
+```
+> Pflicht-Lektuere VOR dem ersten Insert/Update:
+> ${FINALE_PLUGIN_ROOT}/agents/templates/translation-worker.md
+>
+> Dort stehen ENV-Setup (PYTHONIOENCODING), Max-Sprachen-Limit, Pre-Check + rfind +
+> Idempotenz, ISO-vs-Android-Mapping, Skill-Pflicht, Apostroph-Validator,
+> Sprach-Fallen-Tabelle und die Checklist am Ende.
+> Der Orchestrator-Prompt nennt NUR die spezifischen Sprachen + Keys deines Buckets —
+> der Rest liegt im Template.
+```
+
+Vorteil: 200+ Zeilen Boilerplate werden NICHT mehr inline in jeden Worker-Prompt
+kopiert. Wenn eine FIN-Direktive geaendert wird (z.B. neue Sprach-Falle), reicht
+ein Update an EINER Stelle (`templates/translation-worker.md`).
 
 **FIN-026 — Agent Teams in Phase 3b:**
 Bei >10 Zielsprachen oder wenn Cross-Lingual-Konflikte wahrscheinlich (z. B.

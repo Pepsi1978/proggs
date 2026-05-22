@@ -70,6 +70,14 @@ Startzeit: 2026-05-22 ~14:53
 - **FIN-044 Apostroph-Validator verbindlich** (Loop 4 — BUG #29)
 - **FIN-045 Cross-Sprachen-Audit (atomarer Schreibfehler)** (Loop 4 — BUG #23)
 - **FIN-046 Plugin-Cache-Refresh-Procedure + Fallback** (Loop 4 — BUG #17)
+- **FIN-047 Auto-Write RUN-ISSUES nach jedem Lauf** (Loop 5 2026-05-22 — Vorschlag 5 aus #934)
+
+**Loop 5 Folge-Aktionen (Frank-Trigger 2026-05-22 abends, alle 5 Vorschlaege aus #934):**
+1. Plugin-Cache aktualisiert: assets/ + schemas/ aus Quell-Repo kopiert → `~/.claude/plugins/cache/local/finale/0.1.0/`
+2. Worker-Template extrahiert: `Plugin/agents/templates/translation-worker.md` (10 Abschnitte mit Checklist) — FIN-040+026 verweisen jetzt darauf statt Boilerplate inline
+3. Pre-Commit-Hook installiert: `~/proggs/.git/hooks/pre-commit` ruft check_apostrophes.py auf alle gestageten values-XX/strings.xml in romanischen Sprachen + tr auf, auto-restage nach Auto-Escape
+4. FIN-047 in orchestrator.md verankert: Auto-Write von RUN-ISSUES-<ISO-DATUM>.md nach jedem Lauf in `.android-shield/`
+5. Frischer `/finale:run` auf BestJournalAndroid als Test (siehe ABSCHLUSS-Sektion unten)
 
 **Zusaetzlich:** Intelligenz-Vorschlag 2 umgesetzt:
 - `~/.claude/scripts/bug-doku-collector.sh` + `.ps1` (siehe `bug-doku-collector.README.md`)

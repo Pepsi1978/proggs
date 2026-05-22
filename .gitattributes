@@ -15,6 +15,9 @@
 *.entitlements text eol=lf
 # Shell-Skripte - immer LF (auch unter Windows)
 *.sh text eol=lf
+# Versionierte Git-Hooks (bash) - immer LF (sonst killt CRLF den Shebang auf macOS/Linux)
+.githooks/pre-commit text eol=lf
+.githooks/pre-push text eol=lf
 # PowerShell - CRLF
 *.ps1 text eol=crlf
 *.psm1 text eol=crlf

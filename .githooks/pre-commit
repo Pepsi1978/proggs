@@ -1,0 +1,90 @@
+#!/bin/bash
+# Pre-commit hook: validate Android strings.xml files for unescaped apostrophes.
+# Triggered by BUG #29 (Worker A apostrophe build-blocker, finale plugin run 2026-05-22).
+# Installed by Claude Code (2026-05-22, Task #14).
+#
+# Behavior:
+# - Looks at all staged values-XX/strings.xml under any Android app in this repo
+# - Runs check_apostrophes.py (auto-escape) on each — it modifies the file in place
+#   if it finds unescaped apostrophes
+# - Auto-re-stages any modified file so the fix lands in the same commit
+# - Only romance + Turkish locales are validated by default (where the bug actually
+#   bites); all other locales are skipped silently
+# - Skipped without error when the validator is not present (fresh checkout)
+
+set -euo pipefail
+
+VALIDATOR="$HOME/.claude/skills/übersetzung/scripts/validators/check_apostrophes.py"
+
+if [ ! -f "$VALIDATOR" ]; then
+    exit 0
+fi
+
+# Locales where unescaped apostrophes commonly break the Android build.
+# Extend this list when a new build-breaking locale shows up.
+APOSTROPHE_LOCALES_REGEX='^(fr|it|es|pt-rBR|pt-rPT|ca|oc|ro|tr)$'
+
+# Collect staged Android strings.xml files (any app, any locale).
+mapfile -t STAGED_FILES < <(
+    git diff --cached --name-only --diff-filter=ACMR \
+      | grep -E 'app/src/main/res/values(-[A-Za-z0-9-]+)?/strings\.xml$' || true
+)
+
+if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
+    exit 0
+fi
+
+FIXED_FILES=()
+FAILED=0
+
+for file in "${STAGED_FILES[@]}"; do
+    # Extract locale from path: values-fr/strings.xml -> fr; values/strings.xml -> default
+    dir=$(dirname "$file")
+    base=$(basename "$dir")
+    if [ "$base" = "values" ]; then
+        locale="default"
+    else
+        locale="${base#values-}"
+    fi
+
+    # Only validate locales where the issue is known to break builds
+    if ! echo "$locale" | grep -qE "$APOSTROPHE_LOCALES_REGEX"; then
+        continue
+    fi
+
+    abs_path="$(pwd)/$file"
+
+    # Validator auto-escapes and rewrites the file; exit 0 on success or no-op
+    output=$(PYTHONIOENCODING=utf-8 python3 "$VALIDATOR" --locale "$locale" --path "$abs_path" 2>&1) || {
+        echo "[pre-commit] validator error on $file:"
+        echo "$output"
+        FAILED=$((FAILED + 1))
+        continue
+    }
+
+    case "$output" in
+        OK:*)
+            # No changes needed
+            ;;
+        Fixed:*)
+            echo "[pre-commit] auto-escaped apostrophes in $file ($output)"
+            FIXED_FILES+=("$file")
+            ;;
+        *)
+            echo "[pre-commit] unexpected validator output on $file: $output"
+            ;;
+    esac
+done
+
+if [ "${#FIXED_FILES[@]}" -gt 0 ]; then
+    # Re-stage the files so the auto-fix is part of this commit
+    git add -- "${FIXED_FILES[@]}"
+    echo "[pre-commit] re-staged ${#FIXED_FILES[@]} auto-escaped file(s)."
+fi
+
+if [ "$FAILED" -gt 0 ]; then
+    echo "[pre-commit] $FAILED file(s) failed validation — fix manually and re-commit."
+    exit 1
+fi
+
+exit 0
