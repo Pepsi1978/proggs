@@ -918,7 +918,7 @@ Premium-এ: প্রতিদিন 150 পর্যন্ত।</string>
     <string name="ai_limit_yearly">বার্ষিক সাবস্ক্রিপশন, %1$s/বছর (37%% সাশ্রয়)</string>
     <string name="ai_limit_no_thanks">না ধন্যবাদ, এআই ছাড়াই এগিয়ে যাও</string>
     <string name="ai_banner_title">তোমার দিনলিপি এআই দ্বারা সমর্থিত</string>
-    <string name="ai_banner_body">• ডিক্টেট করা লেখা স্বয়ংক্রিয়ভাবে উন্নত হয়\n• প্রতিটি লেখার জন্য সারসংক্ষেপ\n• তোমার লেখায় প্যাটার্ন ও সংযোগ আবিষ্কার করো\n• সব এআই-আউটপুট হলো স্ব-প্রতিফলনের পরামর্শ, কোনো পেশাদার পরামর্শ নয়</string>
+    <string name="ai_banner_body">• ডিক্টেট করা লেখা স্বয়ংক্রিয়ভাবে উন্নত হয়\n• প্রতিটি লেখার জন্য সারসংক্ষেপ\n• তোমার লেখায় প্যাটার্ন ও সংযোগ আবিষ্কার করো\n• সমস্ত AI আউটপুট পরামর্শ, পেশাদার পরামর্শ নয়।</string>
     <string name="cd_mic_start">রেকর্ডিং শুরু করো</string>
     <string name="cd_mic_stop">রেকর্ডিং থামাও</string>
     <string name="entry_improve_limit_daily">দৈনিক সীমা শেষ। আগামীকাল আবার চলবে!</string>

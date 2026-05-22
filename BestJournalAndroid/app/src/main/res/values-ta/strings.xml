@@ -419,10 +419,10 @@
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">தினசரி AI உரை மேம்பாடு</string>
-    <string name="settings_premium_feature_improve_desc">KI விரும்பும்போது உன் பதிவுகளை மேம்படுத்துகிறது.</string>
+    <string name="settings_premium_feature_improve_desc">AI கோரிக்கையின் பேரில் உன் பதிவுகளை மேம்படுத்துகிறது.</string>
     <string name="settings_premium_feature_dashboard">தினசரி டாஷ்போர்டு பகுப்பாய்வுகள்</string>
     <string name="settings_premium_feature_dashboard_desc">உன் டாஷ்போர்டு உன் பதிவுகளுடன் வளர்கிறது.</string>
-    <string name="settings_premium_feature_5_perspectives">அனைத்து KI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
+    <string name="settings_premium_feature_5_perspectives">அனைத்து AI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
     <string name="settings_premium_feature_5_perspectives_desc">தெளிவிலிருந்து சுய அறிவு வரை</string>
     <string name="settings_premium_feature_reviews">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
     <string name="settings_premium_feature_reviews_desc">KI உங்கள் கதையை சொல்கிறது</string>
@@ -923,7 +923,7 @@
     <string name="churn_exclusive_offer">பிரத்யேக வாய்ப்பு</string>
     <string name="churn_offer_subtitle">உனக்கான எங்கள் சலுகை</string>
     <string name="churn_offer_feature_ai">தினசரி AI பகுப்பாய்வுகள்</string>
-    <string name="churn_offer_feature_perspectives">அனைத்து KI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
+    <string name="churn_offer_feature_perspectives">அனைத்து AI சுயவிவரங்கள் (4 முன்வரையறை + வரம்பற்ற சொந்தம்)</string>
     <string name="churn_offer_feature_voice">Premium குரல் அங்கீகாரம்</string>
     <string name="churn_offer_auto_renew">தானாக புதுப்பிக்கப்படும், எப்போதும் ரத்து செய்யலாம்</string>
     <string name="churn_accept_offer">வாய்ப்பை ஏற்றுக்கொள்</string>

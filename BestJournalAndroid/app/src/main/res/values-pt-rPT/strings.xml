@@ -918,7 +918,7 @@ Com Premium: até 150 por dia.</string>
     <string name="ai_limit_yearly">Subscrição anual, %1$s/ano (economize 37\u00A0%%)</string>
     <string name="ai_limit_no_thanks">Não, obrigado, continuar sem IA</string>
     <string name="ai_banner_title">O teu diário conta com o apoio da IA</string>
-    <string name="ai_banner_body">• Os textos ditados são melhorados automaticamente\n• Resumos para cada entrada\n• Conselhos de vida inteligentes a partir dos teus padrões\n• Tudo incluído no teu período de teste gratuito Todas as saídas de IA são sugestões, não aconselhamento profissional.</string>
+    <string name="ai_banner_body">• Os textos ditados são melhorados automaticamente\n• Resumos para cada entrada\n• Conselhos de vida inteligentes a partir dos teus padrões\n• Tudo incluído no teu período de teste gratuito.\n• Todas as saídas de IA são sugestões, não aconselhamento profissional.</string>
     <string name="cd_mic_start">Iniciar gravação</string>
     <string name="cd_mic_stop">Parar gravação</string>
     <string name="entry_improve_limit_daily">Atingiste o limite diário. Amanhã há mais!</string>
@@ -1421,11 +1421,7 @@ Se rescindires este contrato, devolveremos todos os pagamentos que recebemos de 
     </plurals>
     <string name="ai_limits_disclaimer">Quota diária de IA para utilização intensiva.</string>
     <string name="ai_limits_dialog_title">Como funciona a quota diária de IA?</string>
-    <string name="ai_limits_dialog_body">150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.
-
-Reseta à meia-noite (hora local).
-
-A maioria dos utilizadores não chegará a estes limites no dia a dia.</string>
+    <string name="ai_limits_dialog_body" formatted="false">COM ASSINATURA PREMIUM\n\nPor dia, tens disponível:\n• 150 pedidos por dia por perfil — nos 4 predefinidos, 600/dia no total, mais 150/dia por cada perfil próprio que criares.\n• Até 150 melhorias de texto\n\nComo funciona em detalhe:\n• Pedidos 1 a 30: na mais alta qualidade de IA\n• Pedidos 31 a 100: na qualidade padrão rápida\n• No 101.º pedido: pausa única de 30 min\n• Pedidos 101 a 150: qualidade padrão rápida\n• A partir do 151.º: sem mais pedidos até amanhã\n\nAlém disso, para todos os utilizadores:\n• No máximo 50 pedidos de IA por hora — depois pausa de 5 min\n\nQuando são repostas as quotas?\nTodos os dias à meia-noite (hora local) começa uma nova quota completa.\n\n──────────\n\nSEM ASSINATURA\n\n• 5 análises de dashboard por semana por perfil\n• 5 melhorias de texto por semana\n• Sempre na qualidade padrão rápida\n• Reposta todas as segundas-feiras à meia-noite (hora local)\n\n──────────\n\nA maioria dos utilizadores não chegará a estes limites no dia a dia.</string>
     <string name="ai_limits_dialog_close">Compreendido</string>
     <string name="theme_neutral">Neutro</string>
     <string name="theme_profile">Cor do perfil — cor do perfil do dashboard</string>
