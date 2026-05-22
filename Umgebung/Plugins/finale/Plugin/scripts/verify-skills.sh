@@ -225,6 +225,59 @@ for name in "${SKILL_NAMES[@]}"; do
       status="error"
       problem="symlink-missing"
     fi
+
+    # AUTO-REPAIR (FIN-030, Frank-Direktive 2026-05-22, BUG #1):
+    # Wenn Symlink fehlt UND das erwartete Ziel existiert: automatisch anlegen.
+    # Funktioniert auf macOS/Linux direkt via ln -s. Auf Windows (Git Bash) MUSS
+    # 'cmd //c mklink /D' verwendet werden weil ln -s sonst Kopien anlegt.
+    if [ -d "$expected_full" ] && [ "$problem" = "symlink-missing" ]; then
+      log "AUTO-REPAIR: versuche Symlink '$link_path' -> '$expected_full' anzulegen..."
+      repair_ok=0
+
+      # Plattform-Erkennung
+      case "$(uname -s 2>/dev/null)" in
+        Darwin|Linux)
+          # macOS/Linux: ln -s sicher
+          if ln -s "$expected_full" "$link_path" 2>/dev/null; then
+            repair_ok=1
+          fi
+          ;;
+        MINGW*|MSYS*|CYGWIN*)
+          # Git Bash auf Windows: cmd mklink ist der einzige zuverlaessige Weg
+          # Pfad-Konvertierung /c/Users/... -> C:\Users\... fuer cmd
+          win_link="$(cygpath -w "$link_path" 2>/dev/null || echo "$link_path")"
+          win_target="$(cygpath -w "$expected_full" 2>/dev/null || echo "$expected_full")"
+          # cmd //c benoetigt doppel-Slash-Escape in Git Bash
+          if cmd.exe //c "mklink /D \"$win_link\" \"$win_target\"" >/dev/null 2>&1; then
+            repair_ok=1
+          fi
+          ;;
+        *)
+          log "AUTO-REPAIR: unbekannte Plattform '$(uname -s)' — Reparatur uebersprungen"
+          ;;
+      esac
+
+      if [ "$repair_ok" = "1" ] && [ -L "$link_path" ]; then
+        log "AUTO-REPAIR OK: '$link_path' -> '$expected_full'"
+        # Re-Evaluiere: jetzt sollte $link_path ein Symlink sein
+        resolved="$(readlink "$link_path" 2>/dev/null || true)"
+        target_exists="true"
+        if [ -f "$link_path/SKILL.md" ]; then
+          skill_md="$link_path/SKILL.md"
+          sha="$(sha256_of "$skill_md" 2>/dev/null || echo "")"
+          mtime="$(mtime_of "$skill_md")"
+          version="$(version_of "$skill_md")"
+          refs="$(references_count_of "$link_path")"
+          status="ok"
+          problem=""
+        else
+          status="error"
+          problem="skill-md-missing-after-repair"
+        fi
+      else
+        log "AUTO-REPAIR FAILED: '$link_path' konnte nicht angelegt werden — Status bleibt 'error/$problem'"
+      fi
+    fi
   else
     resolved="$(readlink "$link_path" 2>/dev/null || true)"
     # Normalisiere /c/... vs C:\... fuer Vergleich (best-effort).

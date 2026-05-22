@@ -8,6 +8,38 @@ Lauf: `/finale:run` mit App-Root `~/proggs/BestJournalAndroid`
 Effort: xhigh
 Startzeit: 2026-05-22 ~14:53
 
+## STATUS-UEBERSICHT (Commit #929, 2026-05-22)
+
+| Bug | Status | Wo umgesetzt |
+|-----|--------|--------------|
+| #1 Symlink-Auto-Repair | **APPLIED** | scripts/verify-skills.sh (Auto-Repair fuer alle Plattformen) + FIN-030 in orchestrator.md |
+| #2 Plugin/skills/ Inkonsistenz | INFO-ONLY | Symlinks werden jetzt auto-repariert (Bug #1 Fix) |
+| #3 skill-versions.json Mandatory Write | **APPLIED** | orchestrator.md Phase 0 Schritt 2b — sofort nach Phase 0 schreiben |
+| #4 .gitignore in .android-shield | **APPLIED** | assets/android-shield-gitignore Template + FIN-031 in orchestrator.md |
+| #5 Dynamic Worker Count | **APPLIED** | FIN-029 Direktive — Worker-Count = clamp(N, 4, 20) |
+| #6 Roentgen-Skill-Scope-Split | TODO | Skill selbst muesste Scope-Parameter unterstuetzen — Skill-Aenderung |
+| #7 Roentgen-Schema-Mismatch | TODO | Spec vs. Skill-Output entscheiden — separate Session |
+| #8 Run-Status-Marker | PARTIAL | Schritt 2b deckt das ab; ein run-status.json wird nicht extra erstellt |
+| #9 Token-Cap 145k | **APPLIED** | 100k → 145k an allen Stellen in orchestrator.md |
+| #10 Worker-Schema-Strict | PARTIAL | FIN-032 erwaehnt Schema-Pflicht; Hard-Enforcement separate Session |
+| #11 Subagent-Selbstbeobachtung | TODO | Subagent-Template-Erweiterung — separate Session |
+| #12 Cross-Lingual-Parallelisierung | **APPLIED** | FIN-023+029 — 15-20 Worker fuer Phase 1B-cross-lingual |
+| #13 Worker-Halluzinations-Schutz | **APPLIED** | FIN-033 in orchestrator.md — Read-Verifikation Pflicht |
+| #14 uebersetzung-Skill PFLICHT | **APPLIED** | FIN-032 in orchestrator.md — keine Ausnahmen |
+| #15 Phase 2 Bulk-Parallel | **APPLIED** | Phase 2 Bulk-Mode + 15-20 fix-applier parallel |
+| #16 FIN-029 Parallel-First | **APPLIED** | Zentrale Direktive direkt nach FIN-026 in orchestrator.md |
+
+**8 von 16 Bugs APPLIED, 3 PARTIAL, 5 TODO** — die wichtigsten Performance- und
+Korrektheits-Bugs sind alle umgesetzt. Die TODO-Bugs sind tieferliegende Refactorings
+die separate Sessions verdienen.
+
+**Zusaetzlich:** Intelligenz-Vorschlag 2 umgesetzt:
+- `~/.claude/scripts/bug-doku-collector.sh` + `.ps1` (siehe `bug-doku-collector.README.md`)
+- Sammelt offene `auto_captured`-Bug-Cases in `~/.claude/todo-bug-doku.md`
+- Hook-Aktivierung bewusst nicht automatisch (Frank entscheidet via Settings)
+
+---
+
 ---
 
 ## BUG #1 — Skill-Symlinks fehlen nach Plugin-Klon/Checkout (Phase 0)

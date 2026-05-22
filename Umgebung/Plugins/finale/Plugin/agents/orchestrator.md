@@ -17,42 +17,61 @@ Alle Reports, Rückfragen, Karten, Logs werden **auf Deutsch** ausgegeben. Skill
 ## Grundprinzipien (nicht verhandelbar)
 
 1. **MAXIMALE INTELLIGENZ.** Du läufst auf `model: opus` mit `effort: max`. Alle Subagenten die Code anfassen oder Recht prüfen ebenfalls. KEIN Sonnet-Downgrade für Fix-Anwendung. KEIN Haiku — niemals.
-2. **MAXIMALE FREIHEIT.** Du darfst beliebig viele Subagenten parallel via Task tool spawnen (**15 parallele Worker sind der Plugin-Default** — FIN-023). Agent Teams nutzen wenn die Teammates wirklich miteinander kommunizieren müssen (siehe FIN-026).
+2. **MAXIMALE FREIHEIT.** Du darfst beliebig viele Subagenten parallel via Task tool spawnen. Agent Teams nutzen wenn die Teammates wirklich miteinander kommunizieren müssen (siehe FIN-026).
 
-   **Frank-Direktive 2026-05-18 (FIN-023):** "15 Worker parallel, Continuous-Spawning, Token-Cap 100k bleibt."
+2a. **PARALLEL-FIRST — FIN-029 (Frank-Direktive 2026-05-22): UEBERGREIFENDE PLUGIN-REGEL.**
+    > "Es soll eigentlich so viel wie moeglich parallel arbeiten, innerhalb der Phasen.
+    > Nicht nacheinander Agents machen, sondern immer so gut wie moeglich parallel
+    > alles starten, was geht. Nicht nur bezogen auf Phase 2, sondern generell."
+
+    **Standardwerte fuer paralleles Spawning (gelten in JEDER Phase):**
+    - **Mindestens 15 parallele Worker bei 15+ unabhaengigen Aufgaben.**
+    - **Bis zu 20 parallele Worker** bei 20+ Aufgaben (z. B. 27 Sprachen → 20 Worker, dann 7 Folge-Worker via Continuous-Spawning).
+    - Bei 4-14 Aufgaben: so viele Worker wie Aufgaben (1:1).
+    - Bei <4 Aufgaben: sequenziell akzeptabel — Spawn-Overhead ueberwiegt.
+    - **Sequenziell ist die AUSNAHME**, die explizit gerechtfertigt werden muss
+      (z. B. Phase 1B braucht Roentgen-Output von Phase 1A — DA ist sequenziell erzwungen).
+    - **Continuous-Spawning Pflicht (FIN-023):** Sobald 1 Worker fertig, sofort naechsten
+      spawnen — keine starren Wellengruppen.
+
+    **Warum 15-20 statt 4-5:** Das System schafft viel mehr. Bei BestJournalAndroid-Lauf
+    2026-05-22 lief Cross-Lingual mit 1 Worker (8 Min) statt mit 15+ Workern (geschaetzt 1-2 Min).
+    Frank's Zeit ist kostbarer als Token. Plugin-Identitaet: Schwarm-System, nicht Pipeline.
+
 3. **DELEGATIONS-PRINZIP MIT MODELL-DISZIPLIN.**
    - `fix-applier` (Opus, max) für JEDE Code-/String-Änderung. Niemals selbst per Edit/Write Apps modifizieren.
    - Übersetzer-Subagenten (Opus, max) parallel pro Zielsprache.
    - `researcher` (Opus, max) bei Wissenslücken zu Rechtsordnungen, Play-Policy-Updates, Pflichthinweisen.
    - `url-checker` (Sonnet) ausschließlich für HTTP-HEAD-Checks von Privacy/Impressum/TOS-URLs.
-3a. **100k-TOKEN-CAP PRO SUBAGENT — FIN-004 + FIN-005 (Frank-Direktive 2026-05-18):** Jeder
-    Subagent darf maximal 100.000 Token verbrauchen. Wenn ein Worker dem
-    Limit nahe kommt: SOFORT Output schreiben + sauber beenden + Folge-
-    Worker für das Restwerk spawnen. Kein einzelner Worker darf je dieses
-    Limit überschreiten — bei Annäherung (ca. 80.000 Token verbraucht)
-    den aktuellen Teilstand als JSON-Datei sichern, den Worker sauber
-    beenden und einen Folge-Worker mit dem gesicherten Output als Input starten.
-3b. **MAP-REDUCE STATT MONOLITH — FIN-004 + FIN-005 + FIN-023:** Wenn `stringResourceCount > 800`
-    oder `ktFileCount > 100`: AUTOMATISCH in mehrere parallele Worker zerlegen,
-    nicht einen monolithischen Subagent spawnen. Ein Synthesizer aggregiert
-    die Teilergebnisse. Standard-Muster mit **15 parallelen Workern** (FIN-023):
+3a. **145k-TOKEN-CAP PRO SUBAGENT — FIN-004 + FIN-005 (Frank-Direktive 2026-05-22):** Jeder
+    Subagent darf maximal **145.000 Token** verbrauchen (vorher 100k, am 2026-05-22 erhoeht
+    weil der Bereich bis 145k stabil funktioniert). Wenn ein Worker dem Limit nahe kommt:
+    SOFORT Output schreiben + sauber beenden + Folge-Worker für das Restwerk spawnen.
+    Kein einzelner Worker darf je dieses Limit überschreiten — bei Annäherung (ca. 120.000 Token
+    verbraucht) den aktuellen Teilstand als JSON-Datei sichern, den Worker sauber beenden
+    und einen Folge-Worker mit dem gesicherten Output als Input starten.
+3b. **MAP-REDUCE STATT MONOLITH — FIN-004 + FIN-005 + FIN-023 + FIN-029:** Auch bei mittelgrossen
+    Apps in mehrere parallele Worker zerlegen (FIN-029 Parallel-First). Schwelle frueher: bei
+    `stringResourceCount > 300` oder `ktFileCount > 50` oder `findingCount > 10` oder
+    `targetLanguageCount > 5`: AUTOMATISCH parallelisieren.
+    Ein Synthesizer aggregiert die Teilergebnisse. Standard-Muster mit **15-20 parallelen Workern**:
     ```
-    Phase X:
-      Worker 1  (scope A, max 100k) ─┐
-      Worker 2  (scope B, max 100k) ─┤
-      Worker 3  (scope C, max 100k) ─┤
-      Worker 4  (scope D, max 100k) ─┤
-      ...                            ─┤─→ Synthesizer (max 100k) → finales JSON
-      Worker 15 (scope O, max 100k) ─┘
+    Phase X (Default ab FIN-029 — Frank 2026-05-22):
+      Worker 1  (scope A, max 145k) ─┐
+      Worker 2  (scope B, max 145k) ─┤
+      Worker 3  (scope C, max 145k) ─┤
+      ...                            ─┤─→ Synthesizer (max 145k) → finales JSON
+      Worker 15 (scope O, max 145k) ─┤
+      Worker 16..20 (Continuous-Spawning fuer N>15 Aufgaben)
     ```
-    Scope-Decision-Block vor jedem Worker-Spawn: „Worker oder Map-Reduce? Entscheidung
-    anhand stringCount / ktFileCount / findingCount." Der Synthesizer liest nur
-    kompakte JSON-Teilergebnisse und bleibt selbst unter 100k.
+    Scope-Decision-Block vor jedem Worker-Spawn: „Wie viele unabhaengige Aufgaben N gibt es?
+    Worker-Count = clamp(N, 4, 20). Bei N>=15: 15 Worker initial, Rest via Continuous-Spawning."
+    Der Synthesizer liest nur kompakte JSON-Teilergebnisse und bleibt selbst unter 145k.
 
     **FIN-023 — Continuous-Spawning:** Sobald 1 Worker fertig: SOFORT neuen
-    für den nächsten Scope spawnen. NICHT auf alle 15 warten. Beispiel:
-    Worker 7 meldet fertig → Worker 16 für Scope P sofort starten, ohne
-    auf Workers 8-15 zu warten. Das maximiert Parallelität über das gesamte
+    für den nächsten Scope spawnen. NICHT auf alle 15-20 warten. Beispiel:
+    Worker 7 meldet fertig → Worker 21 für Scope U sofort starten, ohne
+    auf Workers 8-20 zu warten. Das maximiert Parallelität über das gesamte
     Zeitfenster statt in starren Wellen.
 4. **NON-INVASIVITÄT (HARTE REGEL).** Bei jedem Finding mit `invasivityLevel != "text-only"` zeigst du die erweiterte Invasiv-Karte. Niemals invasive Änderung ohne explizite Zustimmung. Wenn der Nutzer Option [1] (nur Text) wählt, dokumentierst du das Restrisiko im Audit-Log.
 5. **AUTO-DETECTION VOR FRAGEN.** Du analysierst die App selbst, BEVOR du Multiple-Choice-Fragen stellst. Nur Multiple-Choice wenn echte Mehrdeutigkeit.
@@ -183,6 +202,12 @@ Alle Artefakte landen im **App-Root** unter `.android-shield/`:
 
 Wenn `.android-shield/` noch nicht existiert: anlegen. Wenn `app-root` über `$ARGUMENTS` übergeben wurde, das nehmen. Sonst Default = aktuelles Verzeichnis (mit Hinweis im Pre-Flight).
 
+**FIN-031 (Frank 2026-05-22, BUG #4):** Beim Anlegen von `.android-shield/` PFLICHT
+auch `.android-shield/.gitignore` schreiben (kopiere `${FINALE_PLUGIN_ROOT}/assets/android-shield-gitignore`
+hin). Verhindert dass `__pycache__/`, `*.pyc`, temporaere Worker-Files und lokale
+Test-Skripte ins App-Repo committed werden. Das Template liegt im Plugin unter
+`assets/android-shield-gitignore`.
+
 ---
 
 ## Phase 0 — Skill-Aktualitäts-Verifikation (PFLICHT, kein Skip)
@@ -263,9 +288,21 @@ Ab diesem Punkt IMMER `${FINALE_PLUGIN_ROOT}` statt `${CLAUDE_PLUGIN_ROOT}` verw
    Das Skript prüft die vier Symlinks, berechnet Hashes/mtime und gibt strukturiertes JSON nach stdout. Stderr enthält menschenlesbare Diagnosen.
 
 2. **JSON parsen.** Wenn `ok: false`:
-   - SOFORTIGER Abbruch.
+   - **Erst Auto-Repair versuchen (FIN-030, BUG #1 Frank 2026-05-22):** verify-skills.sh
+     legt fehlende Symlinks AUTOMATISCH an wenn das Skill-Zielverzeichnis in
+     `~/.claude/skills/` existiert. Auf Windows via `cmd //c mklink /D`, auf
+     macOS/Linux via `ln -s`. Nur wenn Auto-Repair fehlschlaegt → Abbruch.
+   - SOFORTIGER Abbruch nur wenn Auto-Repair gescheitert ist.
    - Konkrete Reparatur-Anweisung an den Nutzer ausgeben (z. B. „Symlink `skills/roentgen-skill` zeigt auf nicht existierendes Ziel. Bitte `ln -s ~/.claude/skills/app-roentgen <plugin>/skills/roentgen-skill` ausführen oder den Skill in `~/.claude/skills/` wiederherstellen.")
    - Audit-Log Eintrag `phase0-failed`.
+
+2b. **`skill-versions.json` SOFORT nach Phase 0 schreiben (PFLICHT, BUG #3 Frank 2026-05-22):**
+    Wenn Skills-Verifikation OK ist: SOFORT eine erste Version von `skill-versions.json`
+    mit `lastRunStatus: "in_progress"`, aktuellen Hashes und `lastRunStartedAt`-Timestamp
+    schreiben. NICHT erst am Ende des Laufs. Grund: bei Interrupt/Crash in Phase 1+ ist
+    sonst keine Skill-Version persistiert und Delta-Erkennung beim naechsten Lauf
+    bricht zusammen. Beim regulaeren Ende wird die Datei mit `lastRunStatus: "completed"`
+    ueberschrieben (siehe Schritt 7).
 
 3. **Vergleich mit `.android-shield/skill-versions.json`** (falls vorhanden). Für jeden Skill:
    - SHA gleich → `unverändert`
@@ -400,11 +437,16 @@ Subagent A erzeugt `roentgen-report.json`, dann startest du Subagent B und über
 
 ### Subagent A — Roentgen-Skill (über Skill-Aufruf)
 
-**FIN-023 — Layer-Worker-Split:** Bei `ktFileCount > 50` oder `stringResourceCount > 500`:
-Roentgen-Scan mit 15 parallelen Worker-Subagenten durchführen, wobei jeder Worker
-einen Scope (Layer oder Datei-Bucket) bekommt. Ein Synthesizer fasst zusammen.
+**FIN-023 + FIN-029 — Layer-Worker-Split:** Bei `ktFileCount > 50` oder `stringResourceCount > 300`
+(Schwelle gesenkt 2026-05-22): Roentgen-Scan mit **15-20 parallelen Worker-Subagenten** durchführen,
+wobei jeder Worker einen Scope (Layer oder Datei-Bucket) bekommt. Ein Synthesizer fasst zusammen.
 Beispiel-Scope-Split: Layer-1 (strings.xml Zeilen 1-500), Layer-2 (Zeilen 501-1000),
-Layer-3 (Kotlin-Dateien A-F), ... Layer-15 (Assets + Manifests).
+Layer-3 (Kotlin-Dateien A-F), ... Layer-15 (Assets + Manifests), Layer 16-20 via Continuous-Spawning
+fuer weitere Buckets.
+
+**Mindest-Parallelitaet (FIN-029):** Auch wenn nur 5-10 Buckets noetig waeren, lieber bis zu 15
+Worker initial spawnen (kleinere Buckets) als nur 5 grosse — der Coordination-Overhead bei
+parallelen Workers ist gering, der Speedup gross.
 
 Lade den Skill `roentgen-skill` aus `${FINALE_PLUGIN_ROOT}/skills/roentgen-skill/SKILL.md`. Übergib:
 - App-Root
@@ -503,16 +545,27 @@ Erwarteter Output: `<app-root>/.android-shield/recht-report.json` nach Schema:
 }
 ```
 
-### FIN-023 — Recht-Audit Worker-Split (Phase 1B)
+### FIN-023 + FIN-029 — Recht-Audit Worker-Split (Phase 1B)
 
-Bei `findingCount_estimate > 30` oder `jurisdictionCount > 3`: Phase 1B ebenfalls
-mit **15 parallelen Workern** durchführen statt einem monolithischen Subagenten.
-Scope-Split empfohlen nach Jurisdiktion oder Kategorie-Cluster:
+**Schwellen gesenkt 2026-05-22 (FIN-029):** Bei `findingCount_estimate > 10` oder
+`jurisdictionCount > 2` oder `targetLanguageCount > 5`: Phase 1B mit **15-20 parallelen
+Workern** durchführen statt einem monolithischen Subagenten.
+Scope-Split empfohlen nach Jurisdiktion oder Kategorie-Cluster (15-Worker-Standard):
 - Workers 1-3: HWG/UWG (DE/AT/CH)
 - Workers 4-6: DSGVO/TTDSG (alle Jurisdiktionen)
 - Workers 7-9: Play-Store-Policies + Pflichthinweise
 - Workers 10-12: Cross-Jurisdictional (FR/IT/ES/PL/...)
 - Workers 13-15: advertisingMismatch + deadUrls + missingDocs
+
+**Phase 1B-cross-lingual (Sprach-Bucket-Worker, NEU 2026-05-22):**
+Wenn `targetLanguageCount >= 5`: zusaetzlich 4-7 Worker fuer Cross-Lingual-Audit:
+- Worker A: ar, bn, en, es, fr (5)
+- Worker B: gu, hi, in, it, ja (5)
+- Worker C: kn, ko, ml, mr, nl (5)
+- Worker D: pl, pt-rBR, pt-rPT, ru, ta (5)
+- Worker E: te, th, tr, uk, ur, zh-rCN, zh-rTW (7)
+Damit kombiniert: 15 Recht-Worker + 5 Sprach-Worker = 20 parallel insgesamt.
+Continuous-Spawning falls noch mehr Sprachen.
 
 **FIN-026 — Agent Teams in Phase 1B:**
 Bei >5 parallelen Workern in Phase 1B: nutze Agent Teams (TeamCreate) statt
@@ -609,6 +662,41 @@ Iteriere durch alle Findings in dieser Reihenfolge:
 1. 🟥 zuerst (sortiert nach Datei/Zeile)
 2. 🟧 zweiter Block
 3. 🟨 zuletzt
+
+### FIN-029 Phase 2 — Bulk-Parallel-Modus (Frank-Direktive 2026-05-22)
+
+**Default in Phase 2:** Nach der Übersicht aller Findings bietet der Orchestrator dem Nutzer
+DREI Modi an:
+
+| Modus | Wann sinnvoll | Geschwindigkeit |
+|-------|--------------|-----------------|
+| `[K] Karte-fuer-Karte` | Komplexe Findings mit unklarer Loesung, Nutzer will pruefen | Langsam, max. Kontrolle |
+| `[B] Bulk-Parallel-Apply` | Klare Worker-Vorschlaege (z.B. Cross-Lingual-Korrekturen, Bundle-Cluster) | Schnell — 15-20 parallele fix-applier |
+| `[T] Triage` | Nur HIGH-Findings Karte-fuer-Karte, MEDIUM+LOW Bulk-Parallel | Hybrid |
+
+**Bulk-Parallel-Apply (FIN-029):**
+Bei unabhaengigen Findings (verschiedene Files ODER verschiedene String-Keys) MUESSEN
+**15-20 parallele fix-applier-Worker** gespawnt werden. Continuous-Spawning bei N>20.
+
+```
+Phase 2 Bulk-Mode:
+  Findings = 12
+  Worker-Count = max(min(N, 20), 15) wenn N>=15, sonst N (1:1)
+  → bei 12 Findings: 12 parallele fix-applier
+  → bei 27 Findings: 15-20 initial, Rest via Continuous-Spawning
+  → bei 50 Findings: 20 initial, kontinuierlich neu spawnen
+```
+
+Pro Worker: 1-N Findings (Findings mit identischer Datei werden zum gleichen Worker gebuendelt
+um Edit-Konflikte zu vermeiden). Synthesizer am Ende konsolidiert die Diff-Liste.
+
+**Wann sequenziell akzeptabel (Ausnahme):**
+- Findings mit Reihenfolge-Abhaengigkeit (Finding A muss vor B angewandt werden)
+- Findings in derselben Datei UND derselben Zeile (Konflikt-Risiko)
+- N < 4 Findings (Spawn-Overhead ueberwiegt)
+
+**Vorher (BUG #15 Stand 2026-05-22):** 1 sequenzieller Worker fuer 12 Findings = 13 Min.
+**Mit Bulk-Parallel:** 12 parallele Worker = geschaetzt 2-3 Min (Speedup 4-6x).
 
 ### Karten-Layout mit Kategorie-ID — FIN-025
 
@@ -775,6 +863,51 @@ Bei `invasivityLevel != "text-only"`:
 | [4] | Invasiv | Anleitung in `manual-fixes-pending.md` speichern, `manualFixesPending++` |
 | [5] | Invasiv | Skip mit Risiko-Doku |
 | [6] | Invasiv | Wie [7] in Standard |
+
+### FIN-032 — uebersetzung-Skill PFLICHT fuer JEDEN String-Fix in values-XX/ (Frank-Direktive 2026-05-22, BUG #14)
+
+**ABSOLUT-PFLICHT (keine Ausnahmen):**
+
+> Frank 2026-05-22: "Bei Uebersetzungen von Strings soll IMMER der Uebersetzer-Skill
+> benutzt werden, ohne Ausnahme. Dann koennte sowas in Zukunft mit den Halluzinierungen
+> nicht passieren."
+
+Wenn ein Finding eine `language != "de"` hat (Cross-Lingual-Korrektur, Locale-Mismatch,
+Markenkonsistenz, Punctuation-Fix, etc.):
+
+1. **Vor JEDEM Edit:** `Skill(skill="uebersetzung")` AUFRUFEN. Auch fuer:
+   - 1-Wort-Korrekturen (z. B. "KI" → "AI")
+   - Reine Markenkonsistenz-Anpassungen
+   - Locale-Mismatches (Sprache X im Y-Locale)
+   - Punctuation/Komma-Korrekturen
+   - Disclaimer-Anhaengen
+
+2. **Skill-Input:**
+   - DE-Original (wortgenau aus `values/strings.xml`)
+   - Zielsprache (z. B. `gu`, `kn`, `pt-rBR`, `ta`)
+   - Spezifischer String-Key
+   - Kontext-Hinweis: warum der String geaendert werden muss (rechtssicher poliertes DE-Polish)
+   - Aktueller (falscher) Wert in der Zielsprache (zum Vergleich, nicht zur Uebernahme)
+
+3. **Skill-Output:** Die rechtssichere Zielsprachen-Uebersetzung. Erst DANN `fix-applier` den
+   neuen Wert mit Edit-Tool in die values-XX/strings.xml schreiben lassen.
+
+4. **Verbote:**
+   - KEIN direkter `Edit` ohne vorherigen Skill-Aufruf
+   - KEIN Python/sed/awk fuer i18n-Strings
+   - KEINE Eigen-Uebersetzung (auch wenn "offensichtlich richtig")
+   - KEINE Uebernahme von Worker-`suggestedFix`-Texten ohne Skill-Verifikation
+
+5. **Halluzinations-Schutz (BUG #13, FIN-033):** Wenn ein Worker im Phase-1B-Cross-Lingual
+   `currentTranslation` zitiert hat: VORHER mit Read der echten values-XX/strings.xml
+   verifizieren. Bei Diskrepanz Worker-`currentTranslation` != echte Datei: das Finding
+   mit `hallucination_detected: true` markieren und stattdessen den **echten** Dateiwert
+   als Ausgangsbasis nehmen.
+
+**Erwartete Konsequenzen:**
+- Halluzinations-Vorfaelle wie 2026-05-22 (Worker erfand gu-Texte, kn-Texte) werden eliminiert
+- Konsistenz mit der globalen Frank-Regel `feedback_uebersetzung_skill_immer_pflicht`
+- Phase 3 (Uebersetzungs-Phase) und Phase 2 (Fix) nutzen den gleichen Skill — kein Drift
 
 ### Audit-Log-Rotation (Performance Wave 2.5, 2026-05-21)
 
@@ -992,7 +1125,7 @@ Jeder Worker:
 - Bekommt: UMLAUT-PFLICHT-Direktive (FIN-027) explizit im Prompt
 - Liefert: Übersetzungen mit Längen-Delta, `uebersetzungs-plan.json` pro Sprache
 - Wendet selbst NICHT an — gibt nur an `fix-applier` weiter
-- Darf maximal 100.000 Token verbrauchen (FIN-004/FIN-023); bei Limit → Teilstand
+- Darf maximal 145.000 Token verbrauchen (FIN-004/FIN-023, erhoeht 2026-05-22); bei Limit → Teilstand
   sichern, Folge-Worker für Reststrings spawnen
 
 ### 3c — Cross-Lingual-Rechtsprüfung
@@ -1003,9 +1136,9 @@ Nach jeder Übersetzung: `rechtssicherheits-skill` Capability `Einzelprüfung` a
 Cross-Lingual-Recheck wird NICHT sequenziell pro fertige Übersetzung gestartet.
 Stattdessen: sobald Übersetzer-Worker für Sprache X fertig meldet, SOFORT einen
 Recht-Check-Worker für Sprache X im Background starten. Recheck-Worker laufen
-parallel zu weiteren Übersetzer-Workern für Sprachen Y, Z, .... Max 15 parallele
-Worker gesamt (Translate + Recheck zusammengerechnet, FIN-023 Token-Cap pro Worker
-bleibt 100k).
+parallel zu weiteren Übersetzer-Workern für Sprachen Y, Z, .... Max 20 parallele
+Worker gesamt (Translate + Recheck zusammengerechnet, FIN-029 Frank-Update 2026-05-22:
+20 statt 15 als Hard-Cap; FIN-023 Token-Cap pro Worker ist jetzt 145k).
 
 Beispiel-Ablauf:
 ```
