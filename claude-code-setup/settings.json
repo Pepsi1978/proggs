@@ -87,6 +87,10 @@
             "type": "command",
             "command": "bash ~/.claude/hooks/intent-anker.sh",
             "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/task-ledger-prompt.sh\""
           }
         ]
       }
@@ -164,6 +168,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/task-ledger-tool.sh\""
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -234,6 +247,10 @@
             "type": "command",
             "command": "bash ~/.claude/hooks/hyperagent-stop.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/task-ledger-stop.sh\""
           }
         ]
       }

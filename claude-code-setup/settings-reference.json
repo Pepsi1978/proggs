@@ -111,6 +111,10 @@
             "type": "command",
             "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/intent-anker.ps1\"",
             "timeout": 3
+          },
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-prompt.ps1\""
           }
         ]
       }
@@ -258,6 +262,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-tool.ps1\""
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -340,6 +353,10 @@
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/hyperagent-stop.ps1\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File \"%USERPROFILE%/.claude/hooks/task-ledger-stop.ps1\""
           }
         ]
       }

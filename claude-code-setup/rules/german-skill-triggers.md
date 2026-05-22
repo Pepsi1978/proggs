@@ -256,6 +256,43 @@ Bei fehlendem Tool: `pwsh ~/.claude/hooks/path-verify.ps1 -Fix` repariert automa
 
 ---
 
+## 20. Konto-Wechsel-Bruecke & Aufgaben-Ledger (NEU 2026-05-22)
+
+**Zweck:** Wenn Token aufgebraucht und Konto gewechselt wird, kann an der letzten
+Stelle weitergearbeitet werden. Drei Hooks pflegen automatisch
+`~/proggs/.claude/agent-memory/shared/active-tasks.jsonl` mit User-Prompts,
+Files, Commits und Push-Status. Die zwei Skills nutzen den Ledger:
+
+| Deutsche Phrase | Skill | Was er WIRKLICH tut |
+|----------------|-------|---------------------|
+| "ich habe das Konto gewechselt mache weiter", "Konto gewechselt mache weiter mit der letzten Aufgabe", "neues Konto weiter machen", "Token war aus mache weiter", "Tokens waren weg mache weiter" | `aufgaben-bruecke` | Liest Ledger, zeigt Top-Kandidaten, rekonstruiert Stand via git log, schlaegt Fortsetzung vor |
+| "mache mit der letzten Aufgabe weiter", "letzte Aufgabe fortsetzen", "weiter machen an der Stelle", "was war offen", "wir machen weiter", "Bruecke vom letzten Konto" | `aufgaben-bruecke` | Gleich — alle diese Phrasen triggern den Bruecke-Skill |
+| "zeig die offenen Aufgaben", "Aufgaben-Uebersicht", "Ledger zeigen", "Task-Ledger zeigen", "was steht alles offen", "Aufgaben-Tabelle", "Status der Aufgaben" | `aufgaben-visualizer` | Komplette farbige Tabelle aller Eintraege mit Status, Files, Commits, Push-Flag |
+| "was ist gerade in Arbeit" | `aufgaben-visualizer` | Filter `in_progress` |
+| "was ist committed aber nicht gepusht" | `aufgaben-visualizer` | Filter `committed` |
+| "was ist fertig" / "was ist erledigt" | `aufgaben-visualizer` | Filter `done` |
+
+**Wichtige Unterscheidung:** `aufgaben-bruecke` ist fuer Fortsetzung ("ich mache jetzt weiter"),
+`aufgaben-visualizer` ist fuer Ueberblick ("ich will nur schauen"). Bei Trigger-Phrase mit
+"weiter" oder "fortsetzen" IMMER `aufgaben-bruecke`, nicht visualizer.
+
+**Whisper-Korrekturen fuer den Ledger:**
+
+| Whisper hoert | Gemeint ist |
+|---------------|------------|
+| "Konto gewechselt" / "Konto geaendert" / "Account gewechselt" | `aufgaben-bruecke` |
+| "Aufgaben-Bruecke" / "Aufgabenbruecke" / "Brueckenagent" | `aufgaben-bruecke` |
+| "Ledger" / "Letscher" / "Letscha" | `aufgaben-visualizer` (Tabelle zeigen) |
+| "Visualizer" / "Visualiser" | `aufgaben-visualizer` |
+| "Mach weiter wo wir aufgehoert haben" | `aufgaben-bruecke` |
+
+**Technischer Hinweis:** Die Hooks (`task-ledger-prompt.{ps1,sh}`, `task-ledger-tool.{ps1,sh}`,
+`task-ledger-stop.{ps1,sh}`) schreiben automatisch im Hintergrund — Frank muss nichts triggern.
+Sie sind resilient (atomares Write, File-Lock mit Stale-Detection, Graceful Failure, exit 0
+auch im Fehlerfall) und blockieren NIE die Session.
+
+---
+
 ## Whisper Speech-to-Text Korrekturen
 
 | Whisper hoert | Gemeint ist |
