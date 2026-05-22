@@ -68,4 +68,11 @@ data class EntropyEntryEntity(
      * MORGEN-Eintraege werden am naechsten Tag automatisch zu HEUTE.
      */
     val manualBucketSetAt: Long? = null,
+    /**
+     * Frank-Wunsch 2026-05-22 (zweite Iteration): Marker ob estimatedDurationMinutes
+     * vom Benutzer manuell gesetzt wurde. true = manuell, false = KI-Schaetzung.
+     * Die KI darf den Wert beim Rescore nur ueberschreiben wenn dieser Marker false
+     * ist — manuelle Setzungen haben immer Vorrang.
+     */
+    val durationManuallySet: Boolean = false,
 )

@@ -220,8 +220,13 @@ fun EntryDetailScreen(onBack: () -> Unit, viewModel: EntryDetailViewModel = hilt
                 // Exponentiell skalierter Schieberegler (5 min … 4 Wochen) plus
                 // manuelle Eingabe. Wert wird vom Briefing beruecksichtigt um zu
                 // pruefen ob die Aufgaben des Tages in die verfuegbare Zeit passen.
+                // Live-Anzeige waehrend des Schiebens + KI-Schaetzung-Indikator
+                // wenn der aktuelle Wert von der KI stammt (Frank-Wunsch 2026-05-22
+                // zweite Iteration).
                 DurationEstimateCard(
                     currentMinutes = entry.estimatedDurationMinutes,
+                    isAiEstimate =
+                        entry.estimatedDurationMinutes != null && !entry.durationManuallySet,
                     onChange = viewModel::setEstimatedDuration,
                 )
 
@@ -396,6 +401,7 @@ private fun formatDuration(minutes: Int): String =
 @Composable
 private fun DurationEstimateCard(
     currentMinutes: Int?,
+    isAiEstimate: Boolean,
     onChange: (Int?) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -407,11 +413,18 @@ private fun DurationEstimateCard(
     var manualText by remember(currentMinutes) {
         mutableStateOf(currentMinutes?.toString() ?: "")
     }
+    // Frank-Wunsch 2026-05-22 (zweite Iteration): WAEHREND des Schiebens soll die
+    // Anzeige live aktualisieren. Wir tracken den Drag-Status: solange Frank den
+    // Finger auf dem Slider hat, zeigen wir sliderMinutes. Erst beim Loslassen
+    // wird onChange aufgerufen und currentMinutes uebernommen.
+    var isDragging by remember { mutableStateOf(false) }
     val sliderMinutes = remember(sliderPos) {
         DURATION_STOPS[sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)]
     }
-    val displayMinutes = currentMinutes ?: sliderMinutes
-    val isUnset = currentMinutes == null
+    // Live-Wert prioritisieren: solange gerade gezogen wird, IMMER sliderMinutes.
+    // Sonst: currentMinutes (manuell gesetzt) > sliderMinutes (gerundeter Stop).
+    val displayMinutes = if (isDragging) sliderMinutes else (currentMinutes ?: sliderMinutes)
+    val isUnset = currentMinutes == null && !isDragging
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -424,7 +437,11 @@ private fun DurationEstimateCard(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    if (isUnset) "ohne Schaetzung" else "≈ ${formatDuration(displayMinutes)}",
+                    when {
+                        isUnset -> "ohne Schaetzung"
+                        isAiEstimate && !isDragging -> "≈ ${formatDuration(displayMinutes)} · KI"
+                        else -> "≈ ${formatDuration(displayMinutes)}"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     color = if (isUnset) cosmos.textSecondary else cosmos.textPrimary,
                     fontWeight = FontWeight.SemiBold,
@@ -433,12 +450,16 @@ private fun DurationEstimateCard(
             Spacer(Modifier.height(6.dp))
             androidx.compose.material3.Slider(
                 value = sliderPos,
-                onValueChange = { v -> sliderPos = v },
+                onValueChange = { v ->
+                    sliderPos = v
+                    isDragging = true
+                },
                 onValueChangeFinished = {
                     val snapped = sliderPos.toInt().coerceIn(0, DURATION_STOPS.lastIndex)
                     sliderPos = snapped.toFloat()
                     val m = DURATION_STOPS[snapped]
                     manualText = m.toString()
+                    isDragging = false
                     onChange(m)
                 },
                 valueRange = 0f..(DURATION_STOPS.lastIndex.toFloat()),

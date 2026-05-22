@@ -276,9 +276,18 @@ class ProcessEntryUseCase @Inject constructor(
                 }.getOrNull()
             } ?: return Result.failure(IllegalStateException("Re-Score-Antwort nicht parsebar"))
 
+            // Frank-Wunsch 2026-05-22 (zweite Iteration): KI darf den geschaetzten
+            // Zeitaufwand bei Rescore ebenfalls aktualisieren — ABER nur wenn der
+            // Wert noch nicht manuell gesetzt wurde (durationManuallySet = false).
+            // Manuelle Setzungen haben immer Vorrang.
+            val nextDuration: Int? =
+                if (entry.durationManuallySet) entry.estimatedDurationMinutes
+                else parsed.estimatedDurationMinutes ?: entry.estimatedDurationMinutes
+
             val updated = entry.copy(
                 priorityScore = parsed.priorityScore.coerceIn(0.0, 100.0),
                 priorityReason = parsed.priorityReason,
+                estimatedDurationMinutes = nextDuration,
                 updatedAt = System.currentTimeMillis(),
             )
             entries.update(updated)
@@ -292,6 +301,11 @@ class ProcessEntryUseCase @Inject constructor(
     data class RescoreDto(
         val priorityScore: Double,
         val priorityReason: String,
+        /**
+         * Frank-Wunsch 2026-05-22: KI-Dauer-Schaetzung. null = KI weiss nicht, dann
+         * bleibt der alte Wert stehen. Nur uebernommen wenn durationManuallySet=false.
+         */
+        val estimatedDurationMinutes: Int? = null,
     )
 
     companion object {
@@ -481,15 +495,26 @@ $PRIORITY_DOCTRINE
         """.trimIndent()
 
         private const val RESCORE_BASE_PROMPT =
-            "Deine Aufgabe: Bewerte einen bestehenden Entropie-Eintrag NEU nach der aktualisierten priorityScore-Doktrin. Du aenderst KEINE Inhalte, nur priorityScore und priorityReason."
+            "Deine Aufgabe: Bewerte einen bestehenden Entropie-Eintrag NEU nach der aktualisierten priorityScore-Doktrin. Du aenderst KEINE inhaltlichen Felder (Titel/Beschreibung/Kategorie/Tags), aktualisiere priorityScore, priorityReason und (falls noch nicht manuell gesetzt) estimatedDurationMinutes."
 
         private val RESCORE_TAIL_INSTRUCTION = """
 Antworte AUSSCHLIESSLICH in JSON, ohne Markdown-Codeblock, ohne Einleitung, ohne Schluss:
 
 {
   "priorityScore": 0.0-100.0,
-  "priorityReason": "Begruendung in 1 Satz — bezieht sich konkret auf die Entropie-Reduktion"
+  "priorityReason": "Begruendung in 1 Satz — bezieht sich konkret auf die Entropie-Reduktion",
+  "estimatedDurationMinutes": null oder Ganzzahl (geschaetzte Dauer in Minuten)
 }
+
+Hinweis zu estimatedDurationMinutes:
+- Schaetze die realistische Bearbeitungsdauer der Aufgabe in Minuten.
+- Kleine Aufgaben (Anruf, kurze Nachricht): 5-15 min
+- Mittlere Aufgaben (Termin, Dokument schreiben): 30-120 min
+- Komplexe Projekte (Recherche, mehrtaegige Arbeit): in Stunden bis Tagen
+  (1 Tag = 1440 Minuten, 1 Woche = 10080 Minuten)
+- Bei Unklarheit lieber null — kein Raten.
+- Falls Nachtraege Hinweise auf neue Komplexitaet/Dringlichkeit geben, passe die
+  Schaetzung an.
 
 $PRIORITY_DOCTRINE
         """.trimIndent()

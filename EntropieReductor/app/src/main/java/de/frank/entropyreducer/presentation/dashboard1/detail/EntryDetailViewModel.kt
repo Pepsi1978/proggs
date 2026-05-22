@@ -225,6 +225,10 @@ constructor(
      * Setzt die geschaetzte Zeitspanne (in Minuten) fuer den Eintrag. null = unbestimmt
      * (Default). Wird vom Briefing genutzt um zu pruefen ob die Aufgaben des Tages
      * ueberhaupt in die verfuegbare Zeit passen.
+     *
+     * Frank-Wunsch 2026-05-22 (zweite Iteration): durationManuallySet wird mitgesetzt,
+     * damit nachfolgende Rescores den manuellen Wert NICHT mehr ueberschreiben.
+     * null = Loeschen → Flag zurueck auf false → KI darf wieder schaetzen.
      */
     fun setEstimatedDuration(minutes: Int?) {
         viewModelScope.launch {
@@ -232,6 +236,7 @@ constructor(
             entries.update(
                 current.copy(
                     estimatedDurationMinutes = minutes,
+                    durationManuallySet = minutes != null,
                     updatedAt = System.currentTimeMillis(),
                 )
             )

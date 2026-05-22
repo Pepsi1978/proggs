@@ -95,7 +95,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
             TokenUsageDailyEntity::class,
             PromptTriggerEntity::class,
         ],
-    version = 22,
+    version = 23,
     exportSchema = true,
 )
 // Version 10 (2026-05-09 Abend): InsightEntity und MemoryEntryEntity sind aus
@@ -733,6 +733,21 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     db.execSQL(
                         "CREATE INDEX IF NOT EXISTS index_prompt_triggers_isActive ON prompt_triggers(isActive)"
+                    )
+                }
+            }
+
+        /**
+         * Schema 22 -> 23 (Frank-Wunsch 2026-05-22 zweite Iteration): Marker ob die
+         * estimatedDurationMinutes manuell vom Benutzer gesetzt wurde. Default 0
+         * (= false) damit bestehende Eintraege als "KI-Schaetzung" gelten und beim
+         * naechsten Rescore aktualisiert werden duerfen.
+         */
+        val MIGRATION_22_23: Migration =
+            object : Migration(22, 23) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE entropy_entries ADD COLUMN durationManuallySet INTEGER NOT NULL DEFAULT 0"
                     )
                 }
             }

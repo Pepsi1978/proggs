@@ -315,6 +315,12 @@ data class BackupEntry(
     /** Manueller Bucket-Override (Frank-Wunsch 2026-05-09). null = KI-Zuordnung. */
     val manualBucket: String? = null,
     val manualBucketSetAt: Long? = null,
+    /**
+     * Frank-Wunsch 2026-05-22 (zweite Iteration): Marker ob estimatedDurationMinutes
+     * manuell vom Benutzer gesetzt wurde. Default false damit alte Backups als
+     * KI-Schaetzung gelten (Rescore darf sie ueberschreiben).
+     */
+    val durationManuallySet: Boolean = false,
 )
 
 @Serializable
@@ -418,6 +424,7 @@ fun EntropyEntryEntity.toBackup(): BackupEntry =
         biomarkerSnapshotId = biomarkerSnapshotId,
         manualBucket = manualBucket?.name,
         manualBucketSetAt = manualBucketSetAt,
+        durationManuallySet = durationManuallySet,
     )
 
 fun InsightEntity.toBackup(): BackupInsight =
@@ -634,6 +641,7 @@ fun BackupEntry.toEntity(): EntropyEntryEntity =
         biomarkerSnapshotId = biomarkerSnapshotId,
         manualBucket = manualBucket?.let { parseBucketCompat(it) },
         manualBucketSetAt = manualBucketSetAt,
+        durationManuallySet = durationManuallySet,
     )
 
 fun BackupInsight.toEntity(): InsightEntity =
